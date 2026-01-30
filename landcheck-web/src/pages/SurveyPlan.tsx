@@ -123,17 +123,25 @@ export default function SurveyPlan() {
     return same ? pts : [...pts, first];
   };
 
-  // Final coordinates for backend
+  // Final coordinates for backend (always in WGS84)
   const finalCoords = useMemo(() => {
     const validPoints = manualPoints.filter(
       (p) => p.lng !== 0 || p.lat !== 0
     );
     if (validPoints.length >= 3) {
-      const pts = validPoints.map((p) => [Number(p.lng), Number(p.lat)]);
+      // Convert to WGS84 if using projected coordinate system
+      const pts = validPoints.map((p) => {
+        if (coordinateSystem === "wgs84") {
+          return [Number(p.lng), Number(p.lat)];
+        }
+        // Convert from projected to WGS84
+        const [lng, lat] = toWGS84(Number(p.lng), Number(p.lat), coordinateSystem);
+        return [lng, lat];
+      });
       return closeRing(pts);
     }
     return null;
-  }, [manualPoints]);
+  }, [manualPoints, coordinateSystem]);
 
   const stationNames = useMemo(() => {
     return manualPoints.map((p) => (p.station || "").trim());
@@ -202,8 +210,7 @@ export default function SurveyPlan() {
     try {
       setLoading(true);
       const res = await api.post("/plots", {
-        coords: finalCoords,
-        coordinate_system: coordinateSystem,
+        coordinates: finalCoords,
       });
       const id = res.data.plot_id ?? res.data.id;
       setPlotId(id);
@@ -239,6 +246,7 @@ export default function SurveyPlan() {
         surveyor_name: meta.surveyor_name,
         surveyor_rank: meta.surveyor_rank,
         station_names: stationNames,
+        coordinate_system: coordinateSystem,
       };
 
       const res = await api.post(`/plots/${plotId}/report/preview`, payload, {
@@ -253,7 +261,7 @@ export default function SurveyPlan() {
     } finally {
       setPreviewLoading(false);
     }
-  }, [plotId, meta, stationNames]);
+  }, [plotId, meta, stationNames, coordinateSystem]);
 
   // Load preview when step 2 is reached or meta changes
   useEffect(() => {
@@ -278,6 +286,7 @@ export default function SurveyPlan() {
       const res = await api.post(`/plots/${plotId}/orthophoto/preview`, {
         scale_text: meta.scale_text,
         station_names: stationNames,
+        coordinate_system: coordinateSystem,
       }, {
         responseType: "blob",
       });
@@ -329,6 +338,7 @@ export default function SurveyPlan() {
         surveyor_name: meta.surveyor_name,
         surveyor_rank: meta.surveyor_rank,
         station_names: stationNames,
+        coordinate_system: coordinateSystem,
       };
 
       const res = await api.post(url, payload, { responseType: "blob" });
@@ -692,15 +702,13 @@ export default function SurveyPlan() {
                       <h4>Back Computation</h4>
                       <p>Survey calculation sheet</p>
                     </div>
-                    <a
-                      href={`${BACKEND}/plots/${plotId}/back-computation/pdf`}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
                       className="download-btn"
+                      onClick={() => downloadWithJson(`/plots/${plotId}/back-computation/pdf`, `plot_${plotId}_back_computation.pdf`)}
                     >
                       <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       <span>Download PDF</span>
-                    </a>
+                    </button>
                   </div>
                 </div>
               </div>
