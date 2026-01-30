@@ -11,16 +11,16 @@ export async function getFeatures(plotId: number) {
 }
 
 export const surveyPreviewUrl = (id: number) =>
-  `http://localhost:8000/plots/${id}/report/preview`;
+  `http://116.203.123.130:8000//plots/${id}/report/preview`;
 
 export const surveyPdfUrl = (id: number) =>
-  `http://localhost:8000/plots/${id}/report/pdf`;
+  `http://116.203.123.130:8000//plots/${id}/report/pdf`;
 
 export const dwgUrl = (id: number) =>
-  `http://localhost:8000/plots/${id}/survey-plan/dwg`;
+  `http://116.203.123.130:8000//${id}/survey-plan/dwg`;
 
 export const orthoPreviewUrl = (id: number) =>
-  `http://localhost:8000/plots/${id}/orthophoto/preview`;
+  `http://116.203.123.130:8000//${id}/orthophoto/preview`;
 
 export const orthoPdfUrl = (id: number) =>
-  `http://localhost:8000/plots/${id}/orthophoto/pdf`;
+  `http://116.203.123.130:8000//${id}/orthophoto/pdf`;
