@@ -1,0 +1,300 @@
+/* Coordinate Input Component Styles */
+.coord-input-container {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.coord-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.coord-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+  color: #f1f5f9;
+}
+
+.coord-subtitle {
+  font-size: 0.8125rem;
+  margin: 0;
+  color: #94a3b8;
+}
+
+/* Coordinate System Selector */
+.coord-system-selector {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  background: rgba(16, 185, 129, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.coord-system-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.coord-system-select {
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.coord-system-select:hover:not(:disabled) {
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.coord-system-select:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.coord-system-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.coord-system-desc {
+  font-size: 0.75rem;
+  color: #10b981;
+  font-style: italic;
+}
+
+.coord-table-wrapper {
+  overflow-x: auto;
+}
+
+.coord-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.coord-table th {
+  padding: 0.75rem 0.75rem;
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.coord-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.coord-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.coord-table tbody tr.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.col-num {
+  width: 36px;
+}
+
+.col-station {
+  width: 90px;
+}
+
+.col-coord {
+  width: auto;
+  min-width: 140px;
+}
+
+.col-action {
+  width: 40px;
+}
+
+.row-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(16, 185, 129, 0.15);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #10b981;
+}
+
+.station-input {
+  width: 70px;
+  padding: 0.5rem 0.625rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.station-input:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.station-input::placeholder {
+  color: #64748b;
+}
+
+.coord-input {
+  width: 100%;
+  min-width: 130px;
+  padding: 0.5rem 0.625rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 0.875rem;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  transition: all 0.2s ease;
+}
+
+.coord-input:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.coord-input::placeholder {
+  color: #64748b;
+  font-family: inherit;
+}
+
+/* Remove number input spinners */
+.coord-input::-webkit-inner-spin-button,
+.coord-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.coord-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.remove-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.remove-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.remove-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.coord-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(15, 23, 42, 0.3);
+}
+
+.add-point-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 8px;
+  color: #10b981;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-point-btn:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.add-point-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.add-point-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.coord-tip {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .coord-table th,
+  .coord-table td {
+    padding: 0.5rem 0.5rem;
+  }
+
+  .coord-input {
+    min-width: 100px;
+    font-size: 0.8125rem;
+  }
+
+  .station-input {
+    width: 50px;
+  }
+
+  .coord-footer {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+    text-align: center;
+  }
+}
