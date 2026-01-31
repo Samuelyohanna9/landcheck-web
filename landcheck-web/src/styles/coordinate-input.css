@@ -3,6 +3,9 @@
   background: rgba(30, 41, 59, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
   overflow: hidden;
 }
 
@@ -81,6 +84,10 @@
 
 .coord-table-wrapper {
   overflow-x: auto;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  max-height: 300px;
 }
 
 .coord-table {
@@ -238,6 +245,7 @@
   padding: 1rem 1.25rem;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   background: rgba(15, 23, 42, 0.3);
+  flex-shrink: 0;
 }
 
 .add-point-btn {
