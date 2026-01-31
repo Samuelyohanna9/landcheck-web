@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, BACKEND_URL } from "./client";
 
 export async function createPlot(coords: number[][]) {
   const res = await api.post("/plots", coords);
@@ -11,16 +11,16 @@ export async function getFeatures(plotId: number) {
 }
 
 export const surveyPreviewUrl = (id: number) =>
-  `http://116.203.123.130:8000//plots/${id}/report/preview`;
+  `${BACKEND_URL}/plots/${id}/report/preview`;
 
 export const surveyPdfUrl = (id: number) =>
-  `http://116.203.123.130:8000//plots/${id}/report/pdf`;
+  `${BACKEND_URL}/plots/${id}/report/pdf`;
 
 export const dwgUrl = (id: number) =>
-  `http://116.203.123.130:8000//${id}/survey-plan/dwg`;
+  `${BACKEND_URL}/plots/${id}/survey-plan/dwg`;
 
 export const orthoPreviewUrl = (id: number) =>
-  `http://116.203.123.130:8000//${id}/orthophoto/preview`;
+  `${BACKEND_URL}/plots/${id}/orthophoto/preview`;
 
 export const orthoPdfUrl = (id: number) =>
-  `http://116.203.123.130:8000//${id}/orthophoto/pdf`;
+  `${BACKEND_URL}/plots/${id}/orthophoto/pdf`;
