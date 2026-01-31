@@ -1,7 +1,7 @@
 // src/pages/NewPlot.tsx
 import { useEffect, useMemo, useState } from "react";
 import MapView from "../components/MapView";
-import { api } from "../api/client";
+import { api, BACKEND_URL } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
 
 type PlotMeta = {
@@ -21,7 +21,7 @@ type ManualPoint = {
   lat: number;
 };
 
-const BACKEND = "http://127.0.0.1:8000";
+const BACKEND = BACKEND_URL;
 
 export default function NewPlot() {
   // polygon from map (lng/lat)

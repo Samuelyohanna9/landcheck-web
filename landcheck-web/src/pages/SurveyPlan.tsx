@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../api/client";
+import { api, BACKEND_URL } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
 import MapViewEnhanced from "../components/MapViewEnhanced";
 import CoordinateInput from "../components/CoordinateInput";
@@ -24,7 +24,7 @@ type ManualPoint = {
   lat: number;
 };
 
-const BACKEND = "http://127.0.0.1:8000";
+const BACKEND = BACKEND_URL;
 
 const STEPS = [
   { id: 1, title: "Enter Coordinates", description: "Input plot boundary points" },
