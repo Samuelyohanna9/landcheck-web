@@ -73,6 +73,17 @@ export default function SurveyPlan() {
     });
   };
 
+  // Generate station name: A, B, C, ... Z, AA, AB, ... AZ, BA, ... (unlimited)
+  const getStationName = (index: number): string => {
+    let name = "";
+    let num = index;
+    do {
+      name = String.fromCharCode(65 + (num % 26)) + name;
+      num = Math.floor(num / 26) - 1;
+    } while (num >= 0);
+    return name;
+  };
+
   const removePoint = (index: number) => {
     if (manualPoints.length <= 3) {
       toast.error("Minimum 3 points required");
@@ -85,7 +96,7 @@ export default function SurveyPlan() {
     setManualPoints((prev) => [
       ...prev,
       {
-        station: String.fromCharCode(65 + prev.length),
+        station: getStationName(prev.length),
         lng: 0,
         lat: 0,
       },

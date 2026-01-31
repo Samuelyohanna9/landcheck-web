@@ -71,6 +71,17 @@ export default function NewPlot() {
     });
   };
 
+  // Generate station name: A, B, C, ... Z, AA, AB, ... AZ, BA, ... (unlimited)
+  const getStationName = (index: number): string => {
+    let name = "";
+    let num = index;
+    do {
+      name = String.fromCharCode(65 + (num % 26)) + name;
+      num = Math.floor(num / 26) - 1;
+    } while (num >= 0);
+    return name;
+  };
+
   const removePoint = (index: number) => {
     setManualPoints((prev) => prev.filter((_, i) => i !== index));
   };
@@ -79,7 +90,7 @@ export default function NewPlot() {
     setManualPoints((prev) => [
       ...prev,
       {
-        station: String.fromCharCode(65 + prev.length),
+        station: getStationName(prev.length),
         lng: 0,
         lat: 0,
       },
