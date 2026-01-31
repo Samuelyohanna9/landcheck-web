@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { BACKEND_URL } from "../api/client";
 import "../styles/dashboard.css";
 
 type SavedPlot = {
@@ -194,7 +195,7 @@ export default function Dashboard() {
                     </svg>
                   </button>
                   <a
-                    href={`http://127.0.0.1:8000/plots/${plot.id}/report/pdf`}
+                    href={`${BACKEND_URL}/plots/${plot.id}/report/pdf`}
                     target="_blank"
                     rel="noreferrer"
                     className="action-btn download-btn"
