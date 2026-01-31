@@ -268,7 +268,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="landing-footer">
         <div className="footer-content">
-          <p>&copy; 2024 LandCheck - Professional Survey Solutions</p>
+          <p>&copy; 2026 LandCheck - Professional Survey Solutions</p>
           <div className="footer-links">
             <button onClick={() => navigate("/dashboard")}>Dashboard</button>
             <button onClick={() => navigate("/feedback")}>Give Feedback</button>
