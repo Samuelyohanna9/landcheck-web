@@ -1,0 +1,2 @@
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://landcheck-web.pages.dev https://*.trycloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.tile.openstreetmap.org; connect-src 'self' https://response-cattle-changelog-wellington.trycloudflare.com; frame-src 'self'; worker-src 'self' blob:;
