@@ -16,6 +16,7 @@ type PlotMeta = {
   surveyor_name: string;
   surveyor_rank: string;
   scale_text: string;
+  paper_size: string;
 };
 
 type ManualPoint = {
@@ -62,6 +63,7 @@ export default function SurveyPlan() {
     surveyor_name: "",
     surveyor_rank: "",
     scale_text: "1 : 1000",
+    paper_size: "A4",
   });
 
   // Coordinate helpers
@@ -101,6 +103,16 @@ export default function SurveyPlan() {
         lat: 0,
       },
     ]);
+  };
+
+  // Handle bulk upload from CSV/Excel
+  const handleBulkUpload = (points: ManualPoint[]) => {
+    if (points.length < 3) {
+      toast.error("Need at least 3 points for a valid plot boundary");
+      return;
+    }
+    setManualPoints(points);
+    toast.success(`Loaded ${points.length} coordinates from file`);
   };
 
   // Handle coordinates drawn on map (always comes in WGS84)
@@ -258,6 +270,7 @@ export default function SurveyPlan() {
         surveyor_rank: meta.surveyor_rank,
         station_names: stationNames,
         coordinate_system: coordinateSystem,
+        paper_size: meta.paper_size,
       };
 
       const res = await api.post(`/plots/${plotId}/report/preview`, payload, {
@@ -298,6 +311,7 @@ export default function SurveyPlan() {
         scale_text: meta.scale_text,
         station_names: stationNames,
         coordinate_system: coordinateSystem,
+        paper_size: meta.paper_size,
       }, {
         responseType: "blob",
       });
@@ -333,6 +347,7 @@ export default function SurveyPlan() {
       surveyor_name: "",
       surveyor_rank: "",
       scale_text: "1 : 1000",
+      paper_size: "A4",
     });
     toast("Reset completed");
   };
@@ -350,6 +365,7 @@ export default function SurveyPlan() {
         surveyor_rank: meta.surveyor_rank,
         station_names: stationNames,
         coordinate_system: coordinateSystem,
+        paper_size: meta.paper_size,
       };
 
       const res = await api.post(url, payload, { responseType: "blob" });
@@ -437,6 +453,7 @@ export default function SurveyPlan() {
                 onUpdatePoint={updatePoint}
                 onRemovePoint={removePoint}
                 onAddPoint={addPoint}
+                onBulkUpload={handleBulkUpload}
                 disabled={loading}
                 coordinateSystem={coordinateSystem}
                 onCoordinateSystemChange={setCoordinateSystem}
@@ -587,6 +604,28 @@ export default function SurveyPlan() {
                         </button>
                       ))}
                     </div>
+                  </div>
+                  <div className="form-group paper-size-group">
+                    <label>Paper Size</label>
+                    <div className="paper-size-presets">
+                      {["A4", "A3", "A2", "A1", "A0"].map((size) => (
+                        <button
+                          key={size}
+                          type="button"
+                          className={`paper-size-btn ${meta.paper_size === size ? "active" : ""}`}
+                          onClick={() => setMeta((m) => ({ ...m, paper_size: size }))}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="paper-size-hint">
+                      {meta.paper_size === "A4" && "Standard (210 x 297 mm)"}
+                      {meta.paper_size === "A3" && "Large (297 x 420 mm)"}
+                      {meta.paper_size === "A2" && "Extra Large (420 x 594 mm)"}
+                      {meta.paper_size === "A1" && "Poster (594 x 841 mm)"}
+                      {meta.paper_size === "A0" && "Maximum (841 x 1189 mm)"}
+                    </span>
                   </div>
                 </div>
                 <button className="btn-secondary" onClick={loadPreview} disabled={previewLoading}>

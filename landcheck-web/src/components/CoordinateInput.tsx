@@ -1,3 +1,6 @@
+import { useRef } from "react";
+import * as XLSX from "xlsx";
+import Papa from "papaparse";
 import "../styles/coordinate-input.css";
 
 type ManualPoint = {
@@ -18,6 +21,7 @@ type Props = {
   onUpdatePoint: (index: number, key: keyof ManualPoint, value: string | number) => void;
   onRemovePoint: (index: number) => void;
   onAddPoint: () => void;
+  onBulkUpload: (points: ManualPoint[]) => void;
   disabled?: boolean;
   coordinateSystem: string;
   onCoordinateSystemChange: (system: string) => void;
@@ -53,15 +57,28 @@ const getPlaceholders = (system: string): { x: string; y: string } => {
   }
 };
 
+// Generate station name: A, B, C, ... Z, AA, AB, ...
+const getStationName = (index: number): string => {
+  let name = "";
+  let num = index;
+  do {
+    name = String.fromCharCode(65 + (num % 26)) + name;
+    num = Math.floor(num / 26) - 1;
+  } while (num >= 0);
+  return name;
+};
+
 export default function CoordinateInput({
   points,
   onUpdatePoint,
   onRemovePoint,
   onAddPoint,
+  onBulkUpload,
   disabled = false,
   coordinateSystem,
   onCoordinateSystemChange,
 }: Props) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isProjected = coordinateSystem !== "wgs84";
   const xLabel = isProjected ? "Easting (m)" : "Longitude";
   const yLabel = isProjected ? "Northing (m)" : "Latitude";
@@ -69,11 +86,141 @@ export default function CoordinateInput({
   const xPlaceholder = placeholders.x;
   const yPlaceholder = placeholders.y;
 
+  // Parse uploaded file (CSV or Excel)
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const fileName = file.name.toLowerCase();
+
+    if (fileName.endsWith(".csv") || fileName.endsWith(".txt")) {
+      // Parse CSV
+      Papa.parse(file, {
+        complete: (results) => {
+          const parsedPoints = parseCoordinateData(results.data as string[][]);
+          if (parsedPoints.length > 0) {
+            onBulkUpload(parsedPoints);
+          } else {
+            alert("No valid coordinates found in file. Please check the format.");
+          }
+        },
+        error: (error) => {
+          alert(`Error parsing CSV: ${error.message}`);
+        },
+      });
+    } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+      // Parse Excel
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as string[][];
+
+          const parsedPoints = parseCoordinateData(jsonData);
+          if (parsedPoints.length > 0) {
+            onBulkUpload(parsedPoints);
+          } else {
+            alert("No valid coordinates found in file. Please check the format.");
+          }
+        } catch (error) {
+          alert(`Error parsing Excel file: ${error}`);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      alert("Please upload a CSV (.csv) or Excel (.xlsx, .xls) file");
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // Parse coordinate data from rows
+  const parseCoordinateData = (rows: (string | number)[][]): ManualPoint[] => {
+    const points: ManualPoint[] = [];
+
+    // Try to detect column headers
+    let stationCol = -1;
+    let xCol = -1; // Easting or Longitude
+    let yCol = -1; // Northing or Latitude
+
+    // Check first row for headers
+    const firstRow = rows[0]?.map(cell => String(cell).toLowerCase().trim()) || [];
+
+    for (let i = 0; i < firstRow.length; i++) {
+      const header = firstRow[i];
+      if (header.includes("station") || header.includes("point") || header.includes("name") || header.includes("beacon")) {
+        stationCol = i;
+      } else if (header.includes("easting") || header.includes("lng") || header.includes("longitude") || header.includes("x") || header === "e") {
+        xCol = i;
+      } else if (header.includes("northing") || header.includes("lat") || header.includes("latitude") || header.includes("y") || header === "n") {
+        yCol = i;
+      }
+    }
+
+    // If no headers found, assume columns: Station, X/Easting, Y/Northing (or just X, Y)
+    const startRow = (xCol >= 0 || yCol >= 0) ? 1 : 0;
+    if (xCol < 0 && yCol < 0) {
+      // Try to detect based on data
+      const dataRow = rows[0];
+      if (dataRow && dataRow.length >= 2) {
+        if (dataRow.length === 2) {
+          // Assume X, Y
+          xCol = 0;
+          yCol = 1;
+        } else if (dataRow.length >= 3) {
+          // Assume Station, X, Y
+          const firstVal = parseFloat(String(dataRow[0]));
+          if (isNaN(firstVal)) {
+            // First column is text (station name)
+            stationCol = 0;
+            xCol = 1;
+            yCol = 2;
+          } else {
+            // All numeric, assume X, Y, ...
+            xCol = 0;
+            yCol = 1;
+          }
+        }
+      }
+    }
+
+    // Parse data rows
+    for (let i = startRow; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.length < 2) continue;
+
+      const x = parseFloat(String(row[xCol >= 0 ? xCol : 0]));
+      const y = parseFloat(String(row[yCol >= 0 ? yCol : 1]));
+
+      if (isNaN(x) || isNaN(y)) continue;
+
+      let station = "";
+      if (stationCol >= 0 && row[stationCol]) {
+        station = String(row[stationCol]).trim();
+      } else {
+        station = getStationName(points.length);
+      }
+
+      points.push({
+        station,
+        lng: x,
+        lat: y,
+      });
+    }
+
+    return points;
+  };
+
   return (
     <div className="coord-input-container">
       <div className="coord-header">
         <h3 className="coord-title">Plot Coordinates</h3>
-        <p className="coord-subtitle">Enter at least 3 boundary points</p>
+        <p className="coord-subtitle">Enter at least 3 boundary points or upload a file</p>
       </div>
 
       {/* Coordinate System Selector */}
@@ -93,6 +240,28 @@ export default function CoordinateInput({
         </select>
         <span className="coord-system-desc">
           {COORDINATE_SYSTEMS.find(s => s.key === coordinateSystem)?.description}
+        </span>
+      </div>
+
+      {/* File Upload Section */}
+      <div className="coord-upload-section">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,.xlsx,.xls,.txt"
+          onChange={handleFileUpload}
+          disabled={disabled}
+          className="file-input-hidden"
+          id="coord-file-upload"
+        />
+        <label htmlFor="coord-file-upload" className={`upload-btn ${disabled ? 'disabled' : ''}`}>
+          <svg viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+          </svg>
+          Upload CSV/Excel
+        </label>
+        <span className="upload-hint">
+          Format: Station, Easting, Northing (or just Easting, Northing)
         </span>
       </div>
 

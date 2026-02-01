@@ -195,7 +195,7 @@ export default function Dashboard() {
                     </svg>
                   </button>
                   <a
-                    href={`${BACKEND_URL}/plots/${plot.id}/report/pdf`}
+                    href={`${BACKEND_URL}/plots/${plot.id}/download/pdf`}
                     target="_blank"
                     rel="noreferrer"
                     className="action-btn download-btn"
