@@ -1,7 +1,8 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import "../styles/coordinate-input.css";
+import CSVPreviewModal from "./CSVPreviewModal";
 
 type ManualPoint = {
   station: string;
@@ -57,17 +58,6 @@ const getPlaceholders = (system: string): { x: string; y: string } => {
   }
 };
 
-// Generate station name: A, B, C, ... Z, AA, AB, ...
-const getStationName = (index: number): string => {
-  let name = "";
-  let num = index;
-  do {
-    name = String.fromCharCode(65 + (num % 26)) + name;
-    num = Math.floor(num / 26) - 1;
-  } while (num >= 0);
-  return name;
-};
-
 export default function CoordinateInput({
   points,
   onUpdatePoint,
@@ -79,6 +69,8 @@ export default function CoordinateInput({
   onCoordinateSystemChange,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [rawFileData, setRawFileData] = useState<(string | number)[][]>([]);
   const isProjected = coordinateSystem !== "wgs84";
   const xLabel = isProjected ? "Easting (m)" : "Longitude";
   const yLabel = isProjected ? "Northing (m)" : "Latitude";
@@ -86,7 +78,7 @@ export default function CoordinateInput({
   const xPlaceholder = placeholders.x;
   const yPlaceholder = placeholders.y;
 
-  // Parse uploaded file (CSV or Excel)
+  // Parse uploaded file (CSV or Excel) and show preview modal
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -94,14 +86,15 @@ export default function CoordinateInput({
     const fileName = file.name.toLowerCase();
 
     if (fileName.endsWith(".csv") || fileName.endsWith(".txt")) {
-      // Parse CSV
+      // Parse CSV and show preview modal
       Papa.parse(file, {
         complete: (results) => {
-          const parsedPoints = parseCoordinateData(results.data as string[][]);
-          if (parsedPoints.length > 0) {
-            onBulkUpload(parsedPoints);
+          const data = results.data as (string | number)[][];
+          if (data.length > 0) {
+            setRawFileData(data);
+            setShowPreviewModal(true);
           } else {
-            alert("No valid coordinates found in file. Please check the format.");
+            alert("No data found in file. Please check the format.");
           }
         },
         error: (error) => {
@@ -109,20 +102,20 @@ export default function CoordinateInput({
         },
       });
     } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
-      // Parse Excel
+      // Parse Excel and show preview modal
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: "array" });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as string[][];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as (string | number)[][];
 
-          const parsedPoints = parseCoordinateData(jsonData);
-          if (parsedPoints.length > 0) {
-            onBulkUpload(parsedPoints);
+          if (jsonData.length > 0) {
+            setRawFileData(jsonData);
+            setShowPreviewModal(true);
           } else {
-            alert("No valid coordinates found in file. Please check the format.");
+            alert("No data found in file. Please check the format.");
           }
         } catch (error) {
           alert(`Error parsing Excel file: ${error}`);
@@ -139,81 +132,9 @@ export default function CoordinateInput({
     }
   };
 
-  // Parse coordinate data from rows
-  const parseCoordinateData = (rows: (string | number)[][]): ManualPoint[] => {
-    const points: ManualPoint[] = [];
-
-    // Try to detect column headers
-    let stationCol = -1;
-    let xCol = -1; // Easting or Longitude
-    let yCol = -1; // Northing or Latitude
-
-    // Check first row for headers
-    const firstRow = rows[0]?.map(cell => String(cell).toLowerCase().trim()) || [];
-
-    for (let i = 0; i < firstRow.length; i++) {
-      const header = firstRow[i];
-      if (header.includes("station") || header.includes("point") || header.includes("name") || header.includes("beacon")) {
-        stationCol = i;
-      } else if (header.includes("easting") || header.includes("lng") || header.includes("longitude") || header.includes("x") || header === "e") {
-        xCol = i;
-      } else if (header.includes("northing") || header.includes("lat") || header.includes("latitude") || header.includes("y") || header === "n") {
-        yCol = i;
-      }
-    }
-
-    // If no headers found, assume columns: Station, X/Easting, Y/Northing (or just X, Y)
-    const startRow = (xCol >= 0 || yCol >= 0) ? 1 : 0;
-    if (xCol < 0 && yCol < 0) {
-      // Try to detect based on data
-      const dataRow = rows[0];
-      if (dataRow && dataRow.length >= 2) {
-        if (dataRow.length === 2) {
-          // Assume X, Y
-          xCol = 0;
-          yCol = 1;
-        } else if (dataRow.length >= 3) {
-          // Assume Station, X, Y
-          const firstVal = parseFloat(String(dataRow[0]));
-          if (isNaN(firstVal)) {
-            // First column is text (station name)
-            stationCol = 0;
-            xCol = 1;
-            yCol = 2;
-          } else {
-            // All numeric, assume X, Y, ...
-            xCol = 0;
-            yCol = 1;
-          }
-        }
-      }
-    }
-
-    // Parse data rows
-    for (let i = startRow; i < rows.length; i++) {
-      const row = rows[i];
-      if (!row || row.length < 2) continue;
-
-      const x = parseFloat(String(row[xCol >= 0 ? xCol : 0]));
-      const y = parseFloat(String(row[yCol >= 0 ? yCol : 1]));
-
-      if (isNaN(x) || isNaN(y)) continue;
-
-      let station = "";
-      if (stationCol >= 0 && row[stationCol]) {
-        station = String(row[stationCol]).trim();
-      } else {
-        station = getStationName(points.length);
-      }
-
-      points.push({
-        station,
-        lng: x,
-        lat: y,
-      });
-    }
-
-    return points;
+  // Handle confirmed points from preview modal
+  const handlePreviewConfirm = (parsedPoints: ManualPoint[]) => {
+    onBulkUpload(parsedPoints);
   };
 
   return (
@@ -352,6 +273,15 @@ export default function CoordinateInput({
           }
         </span>
       </div>
+
+      {/* CSV Preview Modal */}
+      <CSVPreviewModal
+        isOpen={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        rawData={rawFileData}
+        onConfirm={handlePreviewConfirm}
+        coordinateSystem={coordinateSystem}
+      />
     </div>
   );
 }
