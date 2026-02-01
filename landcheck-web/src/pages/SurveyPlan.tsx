@@ -54,8 +54,10 @@ export default function SurveyPlan() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [orthophotoUrl, setOrthophotoUrl] = useState<string | null>(null);
   const [orthophotoLoading, setOrthophotoLoading] = useState(false);
-  const [useTopoMap, setUseTopoMap] = useState(false);
+  const [topoMapUrl, setTopoMapUrl] = useState<string | null>(null);
+  const [topoMapLoading, setTopoMapLoading] = useState(false);
   const [hasHeightData, setHasHeightData] = useState(false);
+  const [useHeightData, setUseHeightData] = useState(false);
 
   // Survey metadata
   const [meta, setMeta] = useState<PlotMeta>({
@@ -120,8 +122,7 @@ export default function SurveyPlan() {
     const pointsWithHeight = points.filter(p => p.height !== undefined && p.height !== null);
     if (pointsWithHeight.length > 0) {
       setHasHeightData(true);
-      setUseTopoMap(true); // Auto-enable topo map when height data is available
-      toast.success(`Loaded ${points.length} coordinates with elevation data! Topo map enabled.`);
+      toast.success(`Loaded ${points.length} coordinates with elevation data!`);
     } else {
       setHasHeightData(false);
       toast.success(`Loaded ${points.length} coordinates from file`);
@@ -307,14 +308,7 @@ export default function SurveyPlan() {
     }
   }, [currentStep, plotId, loadPreview]);
 
-  // Auto-load orthophoto when scale or topo map changes (if on step 2)
-  useEffect(() => {
-    if (currentStep >= 2 && plotId) {
-      loadOrthophoto();
-    }
-  }, [currentStep, plotId, meta.scale_text, useTopoMap]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Load orthophoto preview
+  // Load orthophoto preview (satellite imagery)
   const loadOrthophoto = useCallback(async () => {
     if (!plotId) return;
 
@@ -325,7 +319,7 @@ export default function SurveyPlan() {
         station_names: stationNames,
         coordinate_system: coordinateSystem,
         paper_size: meta.paper_size,
-        use_topo_map: useTopoMap,
+        use_topo_map: false, // Always satellite for orthophoto
       }, {
         responseType: "blob",
       });
@@ -338,7 +332,41 @@ export default function SurveyPlan() {
     } finally {
       setOrthophotoLoading(false);
     }
-  }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size, useTopoMap]);
+  }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size]);
+
+  // Load topo map preview (OpenTopoMap tiles)
+  const loadTopoMap = useCallback(async () => {
+    if (!plotId) return;
+
+    setTopoMapLoading(true);
+    try {
+      const res = await api.post(`/plots/${plotId}/orthophoto/preview`, {
+        scale_text: meta.scale_text,
+        station_names: stationNames,
+        coordinate_system: coordinateSystem,
+        paper_size: meta.paper_size,
+        use_topo_map: true, // Always topo for topo map
+        use_height_data: useHeightData, // If user wants to overlay their height data
+      }, {
+        responseType: "blob",
+      });
+
+      const url = URL.createObjectURL(res.data);
+      setTopoMapUrl(url);
+    } catch (err) {
+      console.error("Topo map preview error:", err);
+      toast.error("Failed to load topo map preview");
+    } finally {
+      setTopoMapLoading(false);
+    }
+  }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size, useHeightData]);
+
+  // Reload topo map when height data toggle changes
+  useEffect(() => {
+    if (topoMapUrl && plotId) {
+      loadTopoMap();
+    }
+  }, [useHeightData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset everything
   const resetAll = () => {
@@ -352,9 +380,10 @@ export default function SurveyPlan() {
     setFeatures(null);
     setPreviewUrl(null);
     setOrthophotoUrl(null);
+    setTopoMapUrl(null);
     setCurrentStep(1);
-    setUseTopoMap(false);
     setHasHeightData(false);
+    setUseHeightData(false);
     setMeta({
       title_text: "SURVEY PLAN",
       location_text: "",
@@ -369,7 +398,7 @@ export default function SurveyPlan() {
   };
 
   // Download function for PDF endpoints that need JSON body
-  const downloadWithJson = async (url: string, filename: string) => {
+  const downloadWithJson = async (url: string, filename: string, useTopoMap = false) => {
     try {
       const payload = {
         title_text: meta.title_text,
@@ -646,33 +675,6 @@ export default function SurveyPlan() {
                   </div>
                 </div>
 
-                {/* Topo Map Toggle */}
-                <div className="topo-map-section">
-                  <div className="topo-toggle-row">
-                    <label className="topo-toggle">
-                      <input
-                        type="checkbox"
-                        checked={useTopoMap}
-                        onChange={(e) => setUseTopoMap(e.target.checked)}
-                      />
-                      <span className="topo-toggle-slider"></span>
-                      <span className="topo-toggle-label">
-                        🗺️ Use Topo Map (Orthophoto)
-                      </span>
-                    </label>
-                    {hasHeightData && (
-                      <span className="height-data-badge">
-                        📊 Elevation data available
-                      </span>
-                    )}
-                  </div>
-                  <p className="topo-hint">
-                    {useTopoMap
-                      ? "Orthophoto will use OpenTopoMap with terrain and elevation contours"
-                      : "Orthophoto will use satellite imagery"
-                    }
-                  </p>
-                </div>
                 <button className="btn-secondary" onClick={loadPreview} disabled={previewLoading}>
                   {previewLoading ? "Updating..." : "Update Preview"}
                 </button>
@@ -697,9 +699,15 @@ export default function SurveyPlan() {
               <SurveyPreview
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}
+                topoMapPreviewUrl={topoMapUrl}
                 loading={previewLoading}
                 orthophotoLoading={orthophotoLoading}
+                topoMapLoading={topoMapLoading}
                 onRequestOrthophoto={loadOrthophoto}
+                onRequestTopoMap={loadTopoMap}
+                hasHeightData={hasHeightData}
+                useHeightData={useHeightData}
+                onToggleHeightData={setUseHeightData}
               />
             </div>
           </div>
@@ -782,6 +790,27 @@ export default function SurveyPlan() {
                     </a>
                   </div>
 
+                  {/* Topo Map PDF */}
+                  <div className="export-card">
+                    <div className="export-icon topo">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+                        <circle cx="12" cy="9" r="2.5" />
+                      </svg>
+                    </div>
+                    <div className="export-info">
+                      <h4>Topo Map PDF</h4>
+                      <p>Terrain contours with plot overlay</p>
+                    </div>
+                    <button
+                      className="download-btn"
+                      onClick={() => downloadWithJson(`/plots/${plotId}/orthophoto/pdf`, `plot_${plotId}_topomap.pdf`, true)}
+                    >
+                      <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                      <span>Download PDF</span>
+                    </button>
+                  </div>
+
                   {/* Back Computation */}
                   <div className="export-card">
                     <div className="export-icon calc">
@@ -827,9 +856,15 @@ export default function SurveyPlan() {
               <SurveyPreview
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}
+                topoMapPreviewUrl={topoMapUrl}
                 loading={false}
                 orthophotoLoading={orthophotoLoading}
+                topoMapLoading={topoMapLoading}
                 onRequestOrthophoto={loadOrthophoto}
+                onRequestTopoMap={loadTopoMap}
+                hasHeightData={hasHeightData}
+                useHeightData={useHeightData}
+                onToggleHeightData={setUseHeightData}
               />
             </div>
           </div>
