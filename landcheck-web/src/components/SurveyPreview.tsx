@@ -1,22 +1,34 @@
 import { useState, useRef, useEffect } from "react";
 import "../styles/survey-preview.css";
 
-type PreviewType = "survey" | "orthophoto";
+type PreviewType = "survey" | "orthophoto" | "topomap";
 
 type Props = {
   surveyPreviewUrl: string | null;
   orthophotoPreviewUrl: string | null;
+  topoMapPreviewUrl: string | null;
   loading: boolean;
   onRequestOrthophoto: () => void;
+  onRequestTopoMap: () => void;
   orthophotoLoading: boolean;
+  topoMapLoading: boolean;
+  hasHeightData?: boolean;
+  useHeightData?: boolean;
+  onToggleHeightData?: (useHeight: boolean) => void;
 };
 
 export default function SurveyPreview({
   surveyPreviewUrl,
   orthophotoPreviewUrl,
+  topoMapPreviewUrl,
   loading,
   onRequestOrthophoto,
+  onRequestTopoMap,
   orthophotoLoading,
+  topoMapLoading,
+  hasHeightData = false,
+  useHeightData = false,
+  onToggleHeightData,
 }: Props) {
   const [previewType, setPreviewType] = useState<PreviewType>("survey");
   const [zoom, setZoom] = useState(100);
@@ -25,13 +37,46 @@ export default function SurveyPreview({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const currentUrl = previewType === "survey" ? surveyPreviewUrl : orthophotoPreviewUrl;
-  const isLoading = previewType === "survey" ? loading : orthophotoLoading;
+  const getCurrentUrl = () => {
+    switch (previewType) {
+      case "survey":
+        return surveyPreviewUrl;
+      case "orthophoto":
+        return orthophotoPreviewUrl;
+      case "topomap":
+        return topoMapPreviewUrl;
+      default:
+        return null;
+    }
+  };
+
+  const getCurrentLoading = () => {
+    switch (previewType) {
+      case "survey":
+        return loading;
+      case "orthophoto":
+        return orthophotoLoading;
+      case "topomap":
+        return topoMapLoading;
+      default:
+        return false;
+    }
+  };
+
+  const currentUrl = getCurrentUrl();
+  const isLoading = getCurrentLoading();
 
   // Request orthophoto when switching to it if not yet loaded
   useEffect(() => {
     if (previewType === "orthophoto" && !orthophotoPreviewUrl && !orthophotoLoading) {
       onRequestOrthophoto();
+    }
+  }, [previewType]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Request topo map when switching to it if not yet loaded
+  useEffect(() => {
+    if (previewType === "topomap" && !topoMapPreviewUrl && !topoMapLoading) {
+      onRequestTopoMap();
     }
   }, [previewType]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -83,11 +128,24 @@ export default function SurveyPreview({
     }
   };
 
+  const getPreviewLabel = () => {
+    switch (previewType) {
+      case "survey":
+        return "survey plan";
+      case "orthophoto":
+        return "orthophoto";
+      case "topomap":
+        return "topo map";
+      default:
+        return "preview";
+    }
+  };
+
   return (
     <div className="survey-preview-container">
       <div className="preview-header">
-        {/* Preview Type Toggle */}
-        <div className="preview-toggle">
+        {/* Preview Type Toggle - 3 Tabs */}
+        <div className="preview-toggle three-tabs">
           <button
             className={`toggle-btn ${previewType === "survey" ? "active" : ""}`}
             onClick={() => setPreviewType("survey")}
@@ -105,6 +163,15 @@ export default function SurveyPreview({
               <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
             </svg>
             Orthophoto
+          </button>
+          <button
+            className={`toggle-btn ${previewType === "topomap" ? "active" : ""}`}
+            onClick={() => setPreviewType("topomap")}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+            </svg>
+            Topo Map
           </button>
         </div>
 
@@ -129,6 +196,29 @@ export default function SurveyPreview({
         </div>
       </div>
 
+      {/* Height Data Toggle - only show on Topo Map tab if height data available */}
+      {previewType === "topomap" && hasHeightData && onToggleHeightData && (
+        <div className="height-toggle-bar">
+          <label className="height-toggle">
+            <input
+              type="checkbox"
+              checked={useHeightData}
+              onChange={(e) => onToggleHeightData(e.target.checked)}
+            />
+            <span className="height-toggle-slider"></span>
+            <span className="height-toggle-label">
+              📊 Use uploaded elevation data
+            </span>
+          </label>
+          <span className="height-toggle-hint">
+            {useHeightData
+              ? "Showing your elevation data overlay"
+              : "Showing OpenTopoMap terrain contours"
+            }
+          </span>
+        </div>
+      )}
+
       <div
         ref={containerRef}
         className={`preview-paper ${isDragging ? "dragging" : ""} ${zoom > 100 ? "zoomable" : ""}`}
@@ -141,7 +231,7 @@ export default function SurveyPreview({
         {isLoading && (
           <div className="preview-loading">
             <div className="loading-spinner" />
-            <span>Generating {previewType === "survey" ? "survey plan" : "orthophoto"} preview...</span>
+            <span>Generating {getPreviewLabel()} preview...</span>
           </div>
         )}
 
@@ -163,7 +253,7 @@ export default function SurveyPreview({
           >
             <img
               src={currentUrl}
-              alt={`${previewType === "survey" ? "Survey Plan" : "Orthophoto"} Preview`}
+              alt={`${getPreviewLabel()} Preview`}
               className="preview-image"
               style={{
                 transform: `scale(${zoom / 100})`,
@@ -176,7 +266,7 @@ export default function SurveyPreview({
 
       <div className="preview-footer">
         <span className="preview-tip">
-          {zoom > 100 ? "Drag to pan • " : ""}Scroll to zoom • Click toggle to switch preview type
+          {zoom > 100 ? "Drag to pan • " : ""}Scroll to zoom • Click tabs to switch preview type
         </span>
       </div>
     </div>

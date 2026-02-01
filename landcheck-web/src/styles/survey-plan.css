@@ -608,6 +608,11 @@
   color: #a855f7;
 }
 
+.export-icon.topo {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
 .export-info {
   flex: 1;
 }
