@@ -11,15 +11,18 @@
   },
   "dependencies": {
     "@mapbox/mapbox-gl-draw": "^1.5.1",
+    "@types/papaparse": "^5.5.2",
     "@types/proj4": "^2.5.6",
     "axios": "^1.13.4",
     "clsx": "^2.1.1",
     "mapbox-gl": "^3.18.1",
+    "papaparse": "^5.5.3",
     "proj4": "^2.20.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hot-toast": "^2.6.0",
-    "react-router-dom": "^7.13.0"
+    "react-router-dom": "^7.13.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

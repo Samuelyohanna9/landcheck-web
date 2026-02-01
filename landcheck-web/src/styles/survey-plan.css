@@ -496,6 +496,47 @@
   color: #10b981;
 }
 
+/* Paper Size Group */
+.paper-size-group {
+  grid-column: span 2;
+}
+
+.paper-size-presets {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.paper-size-btn {
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.paper-size-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+}
+
+.paper-size-btn.active {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #3b82f6;
+}
+
+.paper-size-hint {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-style: italic;
+}
+
 /* Preview Container */
 .preview-container {
   display: flex;
