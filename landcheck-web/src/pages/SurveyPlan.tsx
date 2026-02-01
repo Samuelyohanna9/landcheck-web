@@ -23,6 +23,7 @@ type ManualPoint = {
   station: string;
   lng: number;
   lat: number;
+  height?: number;
 };
 
 const BACKEND = BACKEND_URL;
@@ -53,6 +54,8 @@ export default function SurveyPlan() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [orthophotoUrl, setOrthophotoUrl] = useState<string | null>(null);
   const [orthophotoLoading, setOrthophotoLoading] = useState(false);
+  const [useTopoMap, setUseTopoMap] = useState(false);
+  const [hasHeightData, setHasHeightData] = useState(false);
 
   // Survey metadata
   const [meta, setMeta] = useState<PlotMeta>({
@@ -112,7 +115,17 @@ export default function SurveyPlan() {
       return;
     }
     setManualPoints(points);
-    toast.success(`Loaded ${points.length} coordinates from file`);
+
+    // Check if points have height data
+    const pointsWithHeight = points.filter(p => p.height !== undefined && p.height !== null);
+    if (pointsWithHeight.length > 0) {
+      setHasHeightData(true);
+      setUseTopoMap(true); // Auto-enable topo map when height data is available
+      toast.success(`Loaded ${points.length} coordinates with elevation data! Topo map enabled.`);
+    } else {
+      setHasHeightData(false);
+      toast.success(`Loaded ${points.length} coordinates from file`);
+    }
   };
 
   // Handle coordinates drawn on map (always comes in WGS84)
@@ -294,12 +307,12 @@ export default function SurveyPlan() {
     }
   }, [currentStep, plotId, loadPreview]);
 
-  // Auto-load orthophoto when scale changes (if on step 2)
+  // Auto-load orthophoto when scale or topo map changes (if on step 2)
   useEffect(() => {
     if (currentStep >= 2 && plotId) {
       loadOrthophoto();
     }
-  }, [currentStep, plotId, meta.scale_text]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentStep, plotId, meta.scale_text, useTopoMap]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load orthophoto preview
   const loadOrthophoto = useCallback(async () => {
@@ -312,6 +325,7 @@ export default function SurveyPlan() {
         station_names: stationNames,
         coordinate_system: coordinateSystem,
         paper_size: meta.paper_size,
+        use_topo_map: useTopoMap,
       }, {
         responseType: "blob",
       });
@@ -324,7 +338,7 @@ export default function SurveyPlan() {
     } finally {
       setOrthophotoLoading(false);
     }
-  }, [plotId, meta.scale_text, stationNames]);
+  }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size, useTopoMap]);
 
   // Reset everything
   const resetAll = () => {
@@ -339,6 +353,8 @@ export default function SurveyPlan() {
     setPreviewUrl(null);
     setOrthophotoUrl(null);
     setCurrentStep(1);
+    setUseTopoMap(false);
+    setHasHeightData(false);
     setMeta({
       title_text: "SURVEY PLAN",
       location_text: "",
@@ -366,6 +382,7 @@ export default function SurveyPlan() {
         station_names: stationNames,
         coordinate_system: coordinateSystem,
         paper_size: meta.paper_size,
+        use_topo_map: useTopoMap,
       };
 
       const res = await api.post(url, payload, { responseType: "blob" });
@@ -627,6 +644,34 @@ export default function SurveyPlan() {
                       {meta.paper_size === "A0" && "Maximum (841 x 1189 mm)"}
                     </span>
                   </div>
+                </div>
+
+                {/* Topo Map Toggle */}
+                <div className="topo-map-section">
+                  <div className="topo-toggle-row">
+                    <label className="topo-toggle">
+                      <input
+                        type="checkbox"
+                        checked={useTopoMap}
+                        onChange={(e) => setUseTopoMap(e.target.checked)}
+                      />
+                      <span className="topo-toggle-slider"></span>
+                      <span className="topo-toggle-label">
+                        🗺️ Use Topo Map (Orthophoto)
+                      </span>
+                    </label>
+                    {hasHeightData && (
+                      <span className="height-data-badge">
+                        📊 Elevation data available
+                      </span>
+                    )}
+                  </div>
+                  <p className="topo-hint">
+                    {useTopoMap
+                      ? "Orthophoto will use OpenTopoMap with terrain and elevation contours"
+                      : "Orthophoto will use satellite imagery"
+                    }
+                  </p>
                 </div>
                 <button className="btn-secondary" onClick={loadPreview} disabled={previewLoading}>
                   {previewLoading ? "Updating..." : "Update Preview"}
