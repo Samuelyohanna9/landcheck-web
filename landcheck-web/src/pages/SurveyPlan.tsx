@@ -57,7 +57,6 @@ export default function SurveyPlan() {
   const [topoMapUrl, setTopoMapUrl] = useState<string | null>(null);
   const [topoMapLoading, setTopoMapLoading] = useState(false);
   const [hasHeightData, setHasHeightData] = useState(false);
-  const [useHeightData, setUseHeightData] = useState(false);
 
   // Survey metadata
   const [meta, setMeta] = useState<PlotMeta>({
@@ -334,11 +333,12 @@ export default function SurveyPlan() {
     }
   }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size]);
 
-  // Load topo map preview (OpenTopoMap tiles)
-  const loadTopoMap = useCallback(async () => {
+  // Load topo map preview (OpenTopoMap tiles or user height data)
+  const loadTopoMap = useCallback(async (source: "opentopomap" | "userdata" = "opentopomap") => {
     if (!plotId) return;
 
     setTopoMapLoading(true);
+
     try {
       const res = await api.post(`/plots/${plotId}/orthophoto/preview`, {
         scale_text: meta.scale_text,
@@ -346,7 +346,7 @@ export default function SurveyPlan() {
         coordinate_system: coordinateSystem,
         paper_size: meta.paper_size,
         use_topo_map: true, // Always topo for topo map
-        use_height_data: useHeightData, // If user wants to overlay their height data
+        topo_source: source, // "opentopomap" or "userdata"
       }, {
         responseType: "blob",
       });
@@ -359,14 +359,15 @@ export default function SurveyPlan() {
     } finally {
       setTopoMapLoading(false);
     }
-  }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size, useHeightData]);
+  }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size]);
 
-  // Reload topo map when height data toggle changes
+  // Invalidate topo map cache when scale or paper size changes
   useEffect(() => {
-    if (topoMapUrl && plotId) {
-      loadTopoMap();
+    // Clear topo map URL so it reloads with new settings
+    if (topoMapUrl) {
+      setTopoMapUrl(null);
     }
-  }, [useHeightData]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [meta.scale_text, meta.paper_size]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset everything
   const resetAll = () => {
@@ -383,7 +384,6 @@ export default function SurveyPlan() {
     setTopoMapUrl(null);
     setCurrentStep(1);
     setHasHeightData(false);
-    setUseHeightData(false);
     setMeta({
       title_text: "SURVEY PLAN",
       location_text: "",
@@ -706,8 +706,6 @@ export default function SurveyPlan() {
                 onRequestOrthophoto={loadOrthophoto}
                 onRequestTopoMap={loadTopoMap}
                 hasHeightData={hasHeightData}
-                useHeightData={useHeightData}
-                onToggleHeightData={setUseHeightData}
               />
             </div>
           </div>
@@ -863,8 +861,6 @@ export default function SurveyPlan() {
                 onRequestOrthophoto={loadOrthophoto}
                 onRequestTopoMap={loadTopoMap}
                 hasHeightData={hasHeightData}
-                useHeightData={useHeightData}
-                onToggleHeightData={setUseHeightData}
               />
             </div>
           </div>
