@@ -5,30 +5,32 @@ type PreviewType = "survey" | "orthophoto" | "topomap";
 type TopoSource = "opentopomap" | "userdata";
 
 type Props = {
+  previewType: PreviewType;
+  onPreviewTypeChange: (type: PreviewType) => void;
+  topoSource: TopoSource;
+  onTopoSourceChange: (source: TopoSource) => void;
   surveyPreviewUrl: string | null;
   orthophotoPreviewUrl: string | null;
   topoMapPreviewUrl: string | null;
   loading: boolean;
-  onRequestOrthophoto: () => void;
-  onRequestTopoMap: (source: TopoSource) => void;
   orthophotoLoading: boolean;
   topoMapLoading: boolean;
   hasHeightData?: boolean;
 };
 
 export default function SurveyPreview({
+  previewType,
+  onPreviewTypeChange,
+  topoSource,
+  onTopoSourceChange,
   surveyPreviewUrl,
   orthophotoPreviewUrl,
   topoMapPreviewUrl,
   loading,
-  onRequestOrthophoto,
-  onRequestTopoMap,
   orthophotoLoading,
   topoMapLoading,
   hasHeightData = false,
 }: Props) {
-  const [previewType, setPreviewType] = useState<PreviewType>("survey");
-  const [topoSource, setTopoSource] = useState<TopoSource>("opentopomap");
   const [zoom, setZoom] = useState(100);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -63,20 +65,6 @@ export default function SurveyPreview({
 
   const currentUrl = getCurrentUrl();
   const isLoading = getCurrentLoading();
-
-  // Request orthophoto when switching to it if not yet loaded
-  useEffect(() => {
-    if (previewType === "orthophoto" && !orthophotoPreviewUrl && !orthophotoLoading) {
-      onRequestOrthophoto();
-    }
-  }, [previewType]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Request topo map when switching to it or changing source
-  useEffect(() => {
-    if (previewType === "topomap") {
-      onRequestTopoMap(topoSource);
-    }
-  }, [previewType, topoSource]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset position when changing preview type
   useEffect(() => {
@@ -140,7 +128,7 @@ export default function SurveyPreview({
   };
 
   const handleTopoSourceChange = (source: TopoSource) => {
-    setTopoSource(source);
+    onTopoSourceChange(source);
   };
 
   return (
@@ -150,7 +138,7 @@ export default function SurveyPreview({
         <div className="preview-toggle three-tabs">
           <button
             className={`toggle-btn ${previewType === "survey" ? "active" : ""}`}
-            onClick={() => setPreviewType("survey")}
+            onClick={() => onPreviewTypeChange("survey")}
           >
             <svg viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
@@ -159,7 +147,7 @@ export default function SurveyPreview({
           </button>
           <button
             className={`toggle-btn ${previewType === "orthophoto" ? "active" : ""}`}
-            onClick={() => setPreviewType("orthophoto")}
+            onClick={() => onPreviewTypeChange("orthophoto")}
           >
             <svg viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
@@ -168,7 +156,7 @@ export default function SurveyPreview({
           </button>
           <button
             className={`toggle-btn ${previewType === "topomap" ? "active" : ""}`}
-            onClick={() => setPreviewType("topomap")}
+            onClick={() => onPreviewTypeChange("topomap")}
           >
             <svg viewBox="0 0 20 20" fill="currentColor">
               <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
