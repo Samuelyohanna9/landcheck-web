@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, BACKEND_URL } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
@@ -62,6 +62,8 @@ export default function SurveyPlan() {
   const [hasHeightData, setHasHeightData] = useState(false);
   const [previewType, setPreviewType] = useState<PreviewType>("survey");
   const [topoSource, setTopoSource] = useState<TopoSource>("opentopomap");
+  const orthophotoRequestId = useRef(0);
+  const topoRequestId = useRef(0);
 
   // Survey metadata
   const [meta, setMeta] = useState<PlotMeta>({
@@ -316,6 +318,7 @@ export default function SurveyPlan() {
   const loadOrthophoto = useCallback(async () => {
     if (!plotId) return;
 
+    const requestId = ++orthophotoRequestId.current;
     setOrthophotoLoading(true);
     try {
       const res = await api.post(`/plots/${plotId}/orthophoto/preview`, {
@@ -328,13 +331,22 @@ export default function SurveyPlan() {
         responseType: "blob",
       });
 
+      if (requestId !== orthophotoRequestId.current) {
+        return;
+      }
+
       const url = URL.createObjectURL(res.data);
-      setOrthophotoUrl(url);
+      setOrthophotoUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return url;
+      });
     } catch (err) {
       console.error("Orthophoto preview error:", err);
       toast.error("Failed to load orthophoto preview");
     } finally {
-      setOrthophotoLoading(false);
+      if (requestId === orthophotoRequestId.current) {
+        setOrthophotoLoading(false);
+      }
     }
   }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size]);
 
@@ -342,6 +354,7 @@ export default function SurveyPlan() {
   const loadTopoMap = useCallback(async (source: "opentopomap" | "userdata" = "opentopomap") => {
     if (!plotId) return;
 
+    const requestId = ++topoRequestId.current;
     setTopoMapLoading(true);
 
     try {
@@ -356,13 +369,22 @@ export default function SurveyPlan() {
         responseType: "blob",
       });
 
+      if (requestId !== topoRequestId.current) {
+        return;
+      }
+
       const url = URL.createObjectURL(res.data);
-      setTopoMapUrl(url);
+      setTopoMapUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return url;
+      });
     } catch (err) {
       console.error("Topo map preview error:", err);
       toast.error("Failed to load topo map preview");
     } finally {
-      setTopoMapLoading(false);
+      if (requestId === topoRequestId.current) {
+        setTopoMapLoading(false);
+      }
     }
   }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size]);
 
@@ -372,13 +394,19 @@ export default function SurveyPlan() {
     if (currentStep !== 2 && currentStep !== 3) return;
 
     if (previewType === "orthophoto") {
-      setOrthophotoUrl(null);
+      setOrthophotoUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
       loadOrthophoto();
       return;
     }
 
     if (previewType === "topomap") {
-      setTopoMapUrl(null);
+      setTopoMapUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
       loadTopoMap(topoSource);
     }
   }, [
@@ -729,6 +757,7 @@ export default function SurveyPlan() {
                 onPreviewTypeChange={setPreviewType}
                 topoSource={topoSource}
                 onTopoSourceChange={setTopoSource}
+                paperSize={meta.paper_size}
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}
                 topoMapPreviewUrl={topoMapUrl}
@@ -886,6 +915,7 @@ export default function SurveyPlan() {
                 onPreviewTypeChange={setPreviewType}
                 topoSource={topoSource}
                 onTopoSourceChange={setTopoSource}
+                paperSize={meta.paper_size}
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}
                 topoMapPreviewUrl={topoMapUrl}

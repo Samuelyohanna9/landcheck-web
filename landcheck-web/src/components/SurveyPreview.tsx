@@ -9,6 +9,7 @@ type Props = {
   onPreviewTypeChange: (type: PreviewType) => void;
   topoSource: TopoSource;
   onTopoSourceChange: (source: TopoSource) => void;
+  paperSize: string;
   surveyPreviewUrl: string | null;
   orthophotoPreviewUrl: string | null;
   topoMapPreviewUrl: string | null;
@@ -23,6 +24,7 @@ export default function SurveyPreview({
   onPreviewTypeChange,
   topoSource,
   onTopoSourceChange,
+  paperSize,
   surveyPreviewUrl,
   orthophotoPreviewUrl,
   topoMapPreviewUrl,
@@ -36,6 +38,26 @@ export default function SurveyPreview({
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const getPaperScale = (size: string) => {
+    switch ((size || "A4").toUpperCase()) {
+      case "A3":
+        return Math.SQRT2; // ~1.414
+      case "A2":
+        return 2;
+      case "A1":
+        return 2 * Math.SQRT2; // ~2.828
+      case "A0":
+        return 4;
+      default:
+        return 1;
+    }
+  };
+
+  const paperScale = previewType === "survey" ? 1 : getPaperScale(paperSize);
+  const effectiveScale = (zoom / 100) * paperScale;
+  const displayZoom = Math.round(effectiveScale * 100);
+  const canPan = effectiveScale > 1.001;
 
   const getCurrentUrl = () => {
     switch (previewType) {
@@ -66,11 +88,11 @@ export default function SurveyPreview({
   const currentUrl = getCurrentUrl();
   const isLoading = getCurrentLoading();
 
-  // Reset position when changing preview type
+  // Reset position when changing preview type or paper size
   useEffect(() => {
     setPosition({ x: 0, y: 0 });
     setZoom(100);
-  }, [previewType]);
+  }, [previewType, paperSize]);
 
   const handleZoomIn = () => {
     setZoom((prev) => Math.min(prev + 25, 300));
@@ -86,7 +108,7 @@ export default function SurveyPreview({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (zoom > 100) {
+    if (canPan) {
       setIsDragging(true);
       setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
     }
@@ -172,7 +194,7 @@ export default function SurveyPreview({
               <path fillRule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
             </svg>
           </button>
-          <span className="zoom-level">{zoom}%</span>
+          <span className="zoom-level">{displayZoom}%</span>
           <button className="zoom-btn" onClick={handleZoomIn} title="Zoom In">
             <svg viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -226,7 +248,7 @@ export default function SurveyPreview({
 
       <div
         ref={containerRef}
-        className={`preview-paper ${isDragging ? "dragging" : ""} ${zoom > 100 ? "zoomable" : ""}`}
+        className={`preview-paper ${isDragging ? "dragging" : ""} ${canPan ? "zoomable" : ""}`}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -261,7 +283,7 @@ export default function SurveyPreview({
               alt={`${getPreviewLabel()} Preview`}
               className="preview-image"
               style={{
-                transform: `scale(${zoom / 100})`,
+                transform: `scale(${effectiveScale})`,
               }}
               draggable={false}
             />
@@ -271,7 +293,7 @@ export default function SurveyPreview({
 
       <div className="preview-footer">
         <span className="preview-tip">
-          {zoom > 100 ? "Drag to pan • " : ""}Scroll to zoom • Click tabs to switch preview type
+          {canPan ? "Drag to pan • " : ""}Scroll to zoom • Click tabs to switch preview type
         </span>
       </div>
     </div>
