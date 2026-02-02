@@ -361,9 +361,12 @@ export default function SurveyPlan() {
     }
   }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size]);
 
-  // Invalidate topo map cache when scale or paper size changes
+  // Invalidate orthophoto and topo map cache when scale or paper size changes
   useEffect(() => {
-    // Clear topo map URL so it reloads with new settings
+    // Clear both URLs so they reload with new settings when user switches tabs
+    if (orthophotoUrl) {
+      setOrthophotoUrl(null);
+    }
     if (topoMapUrl) {
       setTopoMapUrl(null);
     }
@@ -398,10 +401,13 @@ export default function SurveyPlan() {
   };
 
   // Download function for PDF endpoints that need JSON body
-  const downloadWithJson = async (url: string, filename: string, useTopoMap = false) => {
+  const downloadWithJson = async (url: string, filename: string, useTopoMap = false, customTitle?: string) => {
     try {
+      // Use custom title if provided, otherwise use meta title
+      const titleText = customTitle || meta.title_text;
+
       const payload = {
-        title_text: meta.title_text,
+        title_text: titleText,
         location_text: meta.location_text,
         lga_text: meta.lga_text,
         state_text: meta.state_text,
@@ -735,7 +741,7 @@ export default function SurveyPlan() {
                     </div>
                     <button
                       className="download-btn"
-                      onClick={() => downloadWithJson(`/plots/${plotId}/report/pdf`, `plot_${plotId}_report.pdf`)}
+                      onClick={() => downloadWithJson(`/plots/${plotId}/report/pdf`, `plot_${plotId}_survey_plan.pdf`, false, "SURVEY PLAN")}
                     >
                       <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       <span>Download PDF</span>
@@ -757,7 +763,7 @@ export default function SurveyPlan() {
                     </div>
                     <button
                       className="download-btn"
-                      onClick={() => downloadWithJson(`/plots/${plotId}/orthophoto/pdf`, `plot_${plotId}_orthophoto.pdf`)}
+                      onClick={() => downloadWithJson(`/plots/${plotId}/orthophoto/pdf`, `plot_${plotId}_orthophoto.pdf`, false, "ORTHOPHOTO")}
                     >
                       <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       <span>Download PDF</span>
@@ -802,7 +808,7 @@ export default function SurveyPlan() {
                     </div>
                     <button
                       className="download-btn"
-                      onClick={() => downloadWithJson(`/plots/${plotId}/orthophoto/pdf`, `plot_${plotId}_topomap.pdf`, true)}
+                      onClick={() => downloadWithJson(`/plots/${plotId}/orthophoto/pdf`, `plot_${plotId}_topomap.pdf`, true, "TOPO MAP")}
                     >
                       <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       <span>Download PDF</span>
