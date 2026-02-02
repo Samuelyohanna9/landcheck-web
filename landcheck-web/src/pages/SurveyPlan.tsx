@@ -26,6 +26,9 @@ type ManualPoint = {
   height?: number;
 };
 
+type PreviewType = "survey" | "orthophoto" | "topomap";
+type TopoSource = "opentopomap" | "userdata";
+
 const BACKEND = BACKEND_URL;
 
 const STEPS = [
@@ -57,6 +60,8 @@ export default function SurveyPlan() {
   const [topoMapUrl, setTopoMapUrl] = useState<string | null>(null);
   const [topoMapLoading, setTopoMapLoading] = useState(false);
   const [hasHeightData, setHasHeightData] = useState(false);
+  const [previewType, setPreviewType] = useState<PreviewType>("survey");
+  const [topoSource, setTopoSource] = useState<TopoSource>("opentopomap");
 
   // Survey metadata
   const [meta, setMeta] = useState<PlotMeta>({
@@ -372,6 +377,36 @@ export default function SurveyPlan() {
     }
   }, [meta.scale_text, meta.paper_size]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Invalidate topo map cache when source changes
+  useEffect(() => {
+    if (topoMapUrl) {
+      setTopoMapUrl(null);
+    }
+  }, [topoSource]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-load orthophoto/topo map when active and URL is missing
+  useEffect(() => {
+    if (!plotId) return;
+    if (currentStep !== 2 && currentStep !== 3) return;
+
+    if (previewType === "orthophoto" && !orthophotoUrl) {
+      loadOrthophoto();
+    }
+
+    if (previewType === "topomap" && !topoMapUrl) {
+      loadTopoMap(topoSource);
+    }
+  }, [
+    plotId,
+    currentStep,
+    previewType,
+    topoSource,
+    orthophotoUrl,
+    topoMapUrl,
+    loadOrthophoto,
+    loadTopoMap,
+  ]);
+
   // Reset everything
   const resetAll = () => {
     setManualPoints([
@@ -387,6 +422,8 @@ export default function SurveyPlan() {
     setTopoMapUrl(null);
     setCurrentStep(1);
     setHasHeightData(false);
+    setPreviewType("survey");
+    setTopoSource("opentopomap");
     setMeta({
       title_text: "SURVEY PLAN",
       location_text: "",
@@ -703,14 +740,16 @@ export default function SurveyPlan() {
             </div>
             <div className="panel-right preview-container">
               <SurveyPreview
+                previewType={previewType}
+                onPreviewTypeChange={setPreviewType}
+                topoSource={topoSource}
+                onTopoSourceChange={setTopoSource}
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}
                 topoMapPreviewUrl={topoMapUrl}
                 loading={previewLoading}
                 orthophotoLoading={orthophotoLoading}
                 topoMapLoading={topoMapLoading}
-                onRequestOrthophoto={loadOrthophoto}
-                onRequestTopoMap={loadTopoMap}
                 hasHeightData={hasHeightData}
               />
             </div>
@@ -858,14 +897,16 @@ export default function SurveyPlan() {
             </div>
             <div className="panel-right preview-container">
               <SurveyPreview
+                previewType={previewType}
+                onPreviewTypeChange={setPreviewType}
+                topoSource={topoSource}
+                onTopoSourceChange={setTopoSource}
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}
                 topoMapPreviewUrl={topoMapUrl}
                 loading={false}
                 orthophotoLoading={orthophotoLoading}
                 topoMapLoading={topoMapLoading}
-                onRequestOrthophoto={loadOrthophoto}
-                onRequestTopoMap={loadTopoMap}
                 hasHeightData={hasHeightData}
               />
             </div>
