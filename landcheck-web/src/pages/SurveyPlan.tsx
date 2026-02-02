@@ -366,34 +366,19 @@ export default function SurveyPlan() {
     }
   }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size]);
 
-  // Invalidate orthophoto and topo map cache when scale or paper size changes
-  useEffect(() => {
-    // Clear both URLs so they reload with new settings when user switches tabs
-    if (orthophotoUrl) {
-      setOrthophotoUrl(null);
-    }
-    if (topoMapUrl) {
-      setTopoMapUrl(null);
-    }
-  }, [meta.scale_text, meta.paper_size]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Invalidate topo map cache when source changes
-  useEffect(() => {
-    if (topoMapUrl) {
-      setTopoMapUrl(null);
-    }
-  }, [topoSource]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Auto-load orthophoto/topo map when active and URL is missing
+  // Refresh orthophoto/topo previews when active and settings change
   useEffect(() => {
     if (!plotId) return;
     if (currentStep !== 2 && currentStep !== 3) return;
 
-    if (previewType === "orthophoto" && !orthophotoUrl) {
+    if (previewType === "orthophoto") {
+      setOrthophotoUrl(null);
       loadOrthophoto();
+      return;
     }
 
-    if (previewType === "topomap" && !topoMapUrl) {
+    if (previewType === "topomap") {
+      setTopoMapUrl(null);
       loadTopoMap(topoSource);
     }
   }, [
@@ -401,8 +386,8 @@ export default function SurveyPlan() {
     currentStep,
     previewType,
     topoSource,
-    orthophotoUrl,
-    topoMapUrl,
+    meta.scale_text,
+    meta.paper_size,
     loadOrthophoto,
     loadTopoMap,
   ]);
