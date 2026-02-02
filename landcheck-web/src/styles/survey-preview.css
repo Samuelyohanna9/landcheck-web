@@ -223,6 +223,76 @@
   color: #64748b;
 }
 
+/* Topo Source Toggle Bar */
+.topo-source-bar {
+  display: flex;
+  align-items: center;
+  padding: 0.625rem 1rem;
+  background: rgba(245, 158, 11, 0.08);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.15);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.topo-source-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.topo-source-toggle {
+  display: flex;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.topo-source-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.topo-source-btn:hover:not(:disabled) {
+  color: #94a3b8;
+}
+
+.topo-source-btn.active {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+}
+
+.topo-source-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.topo-source-btn .no-data-badge {
+  display: inline-block;
+  padding: 0.125rem 0.25rem;
+  background: rgba(239, 68, 68, 0.2);
+  border-radius: 3px;
+  font-size: 0.625rem;
+  color: #fca5a5;
+  margin-left: 0.25rem;
+}
+
+.topo-source-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-left: auto;
+}
+
 /* Height Toggle Bar for Topo Map */
 .height-toggle-bar {
   display: flex;

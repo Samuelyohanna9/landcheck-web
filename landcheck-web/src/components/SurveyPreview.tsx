@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import "../styles/survey-preview.css";
 
 type PreviewType = "survey" | "orthophoto" | "topomap";
+type TopoSource = "opentopomap" | "userdata";
 
 type Props = {
   surveyPreviewUrl: string | null;
@@ -9,12 +10,10 @@ type Props = {
   topoMapPreviewUrl: string | null;
   loading: boolean;
   onRequestOrthophoto: () => void;
-  onRequestTopoMap: () => void;
+  onRequestTopoMap: (source: TopoSource) => void;
   orthophotoLoading: boolean;
   topoMapLoading: boolean;
   hasHeightData?: boolean;
-  useHeightData?: boolean;
-  onToggleHeightData?: (useHeight: boolean) => void;
 };
 
 export default function SurveyPreview({
@@ -27,10 +26,9 @@ export default function SurveyPreview({
   orthophotoLoading,
   topoMapLoading,
   hasHeightData = false,
-  useHeightData = false,
-  onToggleHeightData,
 }: Props) {
   const [previewType, setPreviewType] = useState<PreviewType>("survey");
+  const [topoSource, setTopoSource] = useState<TopoSource>("opentopomap");
   const [zoom, setZoom] = useState(100);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -73,12 +71,12 @@ export default function SurveyPreview({
     }
   }, [previewType]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Request topo map when switching to it if not yet loaded
+  // Request topo map when switching to it or changing source
   useEffect(() => {
-    if (previewType === "topomap" && !topoMapPreviewUrl && !topoMapLoading) {
-      onRequestTopoMap();
+    if (previewType === "topomap") {
+      onRequestTopoMap(topoSource);
     }
-  }, [previewType]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [previewType, topoSource]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset position when changing preview type
   useEffect(() => {
@@ -141,6 +139,10 @@ export default function SurveyPreview({
     }
   };
 
+  const handleTopoSourceChange = (source: TopoSource) => {
+    setTopoSource(source);
+  };
+
   return (
     <div className="survey-preview-container">
       <div className="preview-header">
@@ -196,24 +198,39 @@ export default function SurveyPreview({
         </div>
       </div>
 
-      {/* Height Data Toggle - only show on Topo Map tab if height data available */}
-      {previewType === "topomap" && hasHeightData && onToggleHeightData && (
-        <div className="height-toggle-bar">
-          <label className="height-toggle">
-            <input
-              type="checkbox"
-              checked={useHeightData}
-              onChange={(e) => onToggleHeightData(e.target.checked)}
-            />
-            <span className="height-toggle-slider"></span>
-            <span className="height-toggle-label">
-              📊 Use uploaded elevation data
-            </span>
-          </label>
-          <span className="height-toggle-hint">
-            {useHeightData
-              ? "Showing your elevation data overlay"
-              : "Showing OpenTopoMap terrain contours"
+      {/* Topo Source Toggle - only show on Topo Map tab */}
+      {previewType === "topomap" && (
+        <div className="topo-source-bar">
+          <span className="topo-source-label">Data Source:</span>
+          <div className="topo-source-toggle">
+            <button
+              className={`topo-source-btn ${topoSource === "opentopomap" ? "active" : ""}`}
+              onClick={() => handleTopoSourceChange("opentopomap")}
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" style={{ width: 14, height: 14 }}>
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clipRule="evenodd" />
+              </svg>
+              OpenTopoMap
+            </button>
+            <button
+              className={`topo-source-btn ${topoSource === "userdata" ? "active" : ""}`}
+              onClick={() => handleTopoSourceChange("userdata")}
+              disabled={!hasHeightData}
+              title={!hasHeightData ? "Upload CSV with height/elevation data to enable" : "Use your uploaded elevation data"}
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" style={{ width: 14, height: 14 }}>
+                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+              Your Data
+              {!hasHeightData && <span className="no-data-badge">No Data</span>}
+            </button>
+          </div>
+          <span className="topo-source-hint">
+            {topoSource === "opentopomap"
+              ? "Terrain contours from OpenTopoMap"
+              : hasHeightData
+              ? "Elevation overlay from your uploaded data"
+              : "Upload CSV with height column to use your data"
             }
           </span>
         </div>
