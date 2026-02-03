@@ -25,24 +25,78 @@ type FeedbackSummary = {
   willing_to_pay: Record<string, number>;
 };
 
+type PlotDetail = {
+  plot_id: number;
+  created_at: string | null;
+  title_text: string | null;
+  location_text: string | null;
+  lga_text: string | null;
+  state_text: string | null;
+  surveyor_name: string | null;
+  surveyor_rank: string | null;
+  scale_text: string | null;
+  paper_size: string | null;
+  coordinate_system: string | null;
+  geometry: { type: string; coordinates: number[][][] } | null;
+  coords: number[][];
+  detected_features: {
+    inside: Record<string, number>;
+    buffer: Record<string, number>;
+  };
+  reports_generated: Record<string, boolean>;
+  meta_updated_at: string | null;
+};
+
+type FeedbackEntry = {
+  id: number;
+  profession: string;
+  experience: string;
+  useful_features: string;
+  problems: string;
+  feature_requests: string;
+  willing_to_pay: string;
+  satisfaction: number;
+  email: string;
+  created_at: string | null;
+};
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [dailyData, setDailyData] = useState<DailyData[]>([]);
   const [feedbackData, setFeedbackData] = useState<FeedbackSummary | null>(null);
+  const [plotDetails, setPlotDetails] = useState<PlotDetail[]>([]);
+  const [feedbackEntries, setFeedbackEntries] = useState<FeedbackEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [analyticsRes, dailyRes, feedbackRes] = await Promise.all([
+        const results = await Promise.allSettled([
           api.get("/analytics/overview"),
           api.get("/analytics/plots/daily?days=14"),
           api.get("/analytics/feedback"),
+          api.get("/analytics/plots/details"),
+          api.get("/feedback"),
         ]);
-        setAnalytics(analyticsRes.data);
-        setDailyData(dailyRes.data);
-        setFeedbackData(feedbackRes.data);
+
+        const [analyticsRes, dailyRes, feedbackRes, plotsRes, feedbackListRes] = results;
+
+        if (analyticsRes.status === "fulfilled") {
+          setAnalytics(analyticsRes.value.data);
+        }
+        if (dailyRes.status === "fulfilled") {
+          setDailyData(dailyRes.value.data);
+        }
+        if (feedbackRes.status === "fulfilled") {
+          setFeedbackData(feedbackRes.value.data);
+        }
+        if (plotsRes.status === "fulfilled") {
+          setPlotDetails(plotsRes.value.data || []);
+        }
+        if (feedbackListRes.status === "fulfilled") {
+          setFeedbackEntries(feedbackListRes.value.data || []);
+        }
       } catch (err) {
         console.error("Failed to fetch analytics:", err);
       } finally {
@@ -53,6 +107,50 @@ export default function AdminDashboard() {
   }, []);
 
   const maxCount = Math.max(...dailyData.map((d) => d.count), 1);
+
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return "N/A";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const renderFeatureSummary = (plot: PlotDetail) => {
+    const inside = plot.detected_features?.inside || {};
+    const buffer = plot.detected_features?.buffer || {};
+    const types = ["building", "road", "river"];
+
+    return (
+      <div className="feature-summary">
+        {types.map((type) => {
+          const count = (inside[type] || 0) + (buffer[type] || 0);
+          return (
+            <div key={type} className="feature-chip">
+              <span className="feature-type">{type}</span>
+              <span className="feature-count">{count}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const reportLabels: Record<string, string> = {
+    survey_plan_pdf: "Survey Plan PDF",
+    survey_plan_preview: "Survey Plan Preview",
+    orthophoto_pdf: "Orthophoto PDF",
+    orthophoto_preview: "Orthophoto Preview",
+    topo_map_pdf: "Topo Map PDF",
+    topo_map_preview: "Topo Map Preview",
+    dwg: "DWG/DXF",
+    back_computation_pdf: "Back Computation PDF",
+  };
 
   return (
     <div className="admin-container">
@@ -231,6 +329,145 @@ export default function AdminDashboard() {
             ) : (
               <div className="no-feedback">
                 <p>No feedback collected yet</p>
+              </div>
+            )}
+          </section>
+
+          {/* Plot Details */}
+          <section className="plots-detail-section">
+            <h2>Plot Details</h2>
+            {plotDetails.length === 0 ? (
+              <div className="no-feedback">
+                <p>No plots available</p>
+              </div>
+            ) : (
+              <div className="plot-detail-list">
+                {plotDetails.map((plot) => (
+                  <div key={plot.plot_id} className="plot-detail-card">
+                    <div className="plot-detail-header">
+                      <div>
+                        <span className="plot-detail-id">Plot #{plot.plot_id}</span>
+                        <span className="plot-detail-date">{formatDateTime(plot.created_at)}</span>
+                      </div>
+                      <div className="plot-detail-badges">
+                        <span className="plot-badge">{plot.scale_text || "Scale N/A"}</span>
+                        <span className="plot-badge">{plot.paper_size || "A4"}</span>
+                        <span className="plot-badge">{plot.coordinate_system || "WGS84"}</span>
+                      </div>
+                    </div>
+
+                    <div className="plot-detail-grid">
+                      <div className="plot-detail-block">
+                        <h4>Location</h4>
+                        <div className="plot-kv">
+                          <span>Title</span>
+                          <span>{plot.title_text || "N/A"}</span>
+                        </div>
+                        <div className="plot-kv">
+                          <span>Location</span>
+                          <span>{plot.location_text || "N/A"}</span>
+                        </div>
+                        <div className="plot-kv">
+                          <span>LGA</span>
+                          <span>{plot.lga_text || "N/A"}</span>
+                        </div>
+                        <div className="plot-kv">
+                          <span>State</span>
+                          <span>{plot.state_text || "N/A"}</span>
+                        </div>
+                      </div>
+
+                      <div className="plot-detail-block">
+                        <h4>Surveyor Info</h4>
+                        <div className="plot-kv">
+                          <span>Name</span>
+                          <span>{plot.surveyor_name || "N/A"}</span>
+                        </div>
+                        <div className="plot-kv">
+                          <span>Rank</span>
+                          <span>{plot.surveyor_rank || "N/A"}</span>
+                        </div>
+                        <div className="plot-kv">
+                          <span>Last Updated</span>
+                          <span>{formatDateTime(plot.meta_updated_at)}</span>
+                        </div>
+                      </div>
+
+                      <div className="plot-detail-block">
+                        <h4>Detected Features</h4>
+                        {renderFeatureSummary(plot)}
+                      </div>
+
+                      <div className="plot-detail-block">
+                        <h4>Reports Generated</h4>
+                        <div className="report-list">
+                          {Object.entries(reportLabels).map(([key, label]) => (
+                            <div key={key} className={`report-item ${plot.reports_generated?.[key] ? "ready" : "missing"}`}>
+                              <span>{label}</span>
+                              <span>{plot.reports_generated?.[key] ? "Ready" : "N/A"}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="plot-detail-block full">
+                        <h4>Geometry / Coordinates</h4>
+                        <pre className="coords-block">
+                          {plot.geometry
+                            ? JSON.stringify(plot.geometry, null, 2)
+                            : plot.coords && plot.coords.length > 0
+                            ? JSON.stringify(plot.coords, null, 2)
+                            : "N/A"}
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Feedback Details */}
+          <section className="feedback-detail-section">
+            <h2>All Feedback Responses</h2>
+            {feedbackEntries.length === 0 ? (
+              <div className="no-feedback">
+                <p>No feedback responses yet</p>
+              </div>
+            ) : (
+              <div className="feedback-table-wrapper">
+                <table className="feedback-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Profession</th>
+                      <th>Experience</th>
+                      <th>Useful Features</th>
+                      <th>Problems</th>
+                      <th>Feature Requests</th>
+                      <th>Willing to Pay</th>
+                      <th>Satisfaction</th>
+                      <th>Email</th>
+                      <th>Submitted</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {feedbackEntries.map((entry) => (
+                      <tr key={entry.id}>
+                        <td>{entry.id}</td>
+                        <td>{entry.profession || "N/A"}</td>
+                        <td>{entry.experience || "N/A"}</td>
+                        <td>{entry.useful_features || "N/A"}</td>
+                        <td className="long-text">{entry.problems || "N/A"}</td>
+                        <td className="long-text">{entry.feature_requests || "N/A"}</td>
+                        <td>{entry.willing_to_pay || "N/A"}</td>
+                        <td>{entry.satisfaction || 0}</td>
+                        <td>{entry.email || "N/A"}</td>
+                        <td>{formatDateTime(entry.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </section>
