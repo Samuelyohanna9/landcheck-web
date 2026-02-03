@@ -133,7 +133,7 @@ export default function NewPlot() {
       // Your backend currently expects: create_plot(coords: list[list[float]])
       // So we POST the raw array for /plots.
       // Metadata + scale will be sent in the next steps (preview/pdf endpoints).
-      const res = await api.post("/plots", finalCoords);
+      const res = await api.post("/plots", { coordinates: finalCoords });
       const id = res.data.plot_id ?? res.data.id;
       setPlotId(id);
 
