@@ -62,6 +62,12 @@ type FeedbackEntry = {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || "";
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isAuthed, setIsAuthed] = useState(() => {
+    return localStorage.getItem("landcheck_admin_auth") === "1";
+  });
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [dailyData, setDailyData] = useState<DailyData[]>([]);
   const [feedbackData, setFeedbackData] = useState<FeedbackSummary | null>(null);
@@ -70,6 +76,11 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isAuthed) {
+      setLoading(false);
+      return;
+    }
+
     const fetchData = async () => {
       try {
         const results = await Promise.allSettled([
@@ -106,7 +117,34 @@ export default function AdminDashboard() {
       }
     };
     fetchData();
-  }, []);
+  }, [isAuthed]);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminPassword) {
+      setAuthError("Admin password is not configured.");
+      return;
+    }
+    if (password === adminPassword) {
+      localStorage.setItem("landcheck_admin_auth", "1");
+      setIsAuthed(true);
+      setPassword("");
+      setAuthError("");
+    } else {
+      setAuthError("Invalid password.");
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("landcheck_admin_auth");
+    setIsAuthed(false);
+    setAnalytics(null);
+    setDailyData([]);
+    setFeedbackData(null);
+    setPlotDetails([]);
+    setFeedbackEntries([]);
+    setLoading(false);
+  };
 
   const maxCount = Math.max(...dailyData.map((d) => d.count), 1);
 
@@ -154,6 +192,28 @@ export default function AdminDashboard() {
     back_computation_pdf: "Back Computation PDF",
   };
 
+  if (!isAuthed) {
+    return (
+      <div className="admin-login">
+        <div className="admin-login-card">
+          <h1>Admin Login</h1>
+          <p>Enter the admin password to continue.</p>
+          <form onSubmit={handleLogin}>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Admin password"
+              autoComplete="current-password"
+            />
+            {authError && <span className="auth-error">{authError}</span>}
+            <button type="submit">Sign In</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="admin-container">
       {/* Header */}
@@ -166,9 +226,14 @@ export default function AdminDashboard() {
           </button>
           <h1>Admin Dashboard</h1>
         </div>
-        <span className="last-updated">
-          {analytics?.generated_at && `Updated: ${new Date(analytics.generated_at).toLocaleString()}`}
-        </span>
+        <div className="header-right">
+          <span className="last-updated">
+            {analytics?.generated_at && `Updated: ${new Date(analytics.generated_at).toLocaleString()}`}
+          </span>
+          <button className="logout-btn" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
       </header>
 
       {loading ? (
