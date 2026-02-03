@@ -37,6 +37,7 @@ export default function SurveyPreview({
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
   const getPaperScale = (size: string) => {
@@ -55,9 +56,34 @@ export default function SurveyPreview({
   };
 
   const paperScale = previewType === "survey" ? 1 : getPaperScale(paperSize);
-  const effectiveScale = (zoom / 100) * paperScale;
-  const displayZoom = Math.round(effectiveScale * 100);
-  const canPan = effectiveScale > 1.001;
+  const zoomScale = zoom / 100;
+  const displayZoom = Math.round(zoomScale * paperScale * 100);
+  const canPan = zoomScale > 1.001 || paperScale > 1.001;
+  const showPaperFrame = previewType !== "survey";
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const updateSize = () => {
+      setContainerSize({
+        width: containerRef.current?.clientWidth || 0,
+        height: containerRef.current?.clientHeight || 0,
+      });
+    };
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const basePaper = { width: 210, height: 297 };
+  const baseScale = containerSize.width && containerSize.height
+    ? Math.min(
+        (containerSize.width * 0.85) / basePaper.width,
+        (containerSize.height * 0.85) / basePaper.height
+      )
+    : 1;
+  const paperWidth = basePaper.width * baseScale * paperScale;
+  const paperHeight = basePaper.height * baseScale * paperScale;
 
   const getCurrentUrl = () => {
     switch (previewType) {
@@ -278,15 +304,32 @@ export default function SurveyPreview({
               transform: `translate(${position.x}px, ${position.y}px)`,
             }}
           >
-            <img
-              src={currentUrl}
-              alt={`${getPreviewLabel()} Preview`}
-              className="preview-image"
-              style={{
-                transform: `scale(${effectiveScale})`,
-              }}
-              draggable={false}
-            />
+            {showPaperFrame ? (
+              <div
+                className="paper-frame"
+                style={{ width: `${paperWidth}px`, height: `${paperHeight}px` }}
+              >
+                <img
+                  src={currentUrl}
+                  alt={`${getPreviewLabel()} Preview`}
+                  className="preview-image paper"
+                  style={{
+                    transform: `scale(${zoomScale})`,
+                  }}
+                  draggable={false}
+                />
+              </div>
+            ) : (
+              <img
+                src={currentUrl}
+                alt={`${getPreviewLabel()} Preview`}
+                className="preview-image"
+                style={{
+                  transform: `scale(${zoomScale})`,
+                }}
+                draggable={false}
+              />
+            )}
           </div>
         )}
       </div>

@@ -1,7 +1,7 @@
 import { api, BACKEND_URL } from "./client";
 
 export async function createPlot(coords: number[][]) {
-  const res = await api.post("/plots", coords);
+  const res = await api.post("/plots", { coordinates: coords });
   return res.data;
 }
 
