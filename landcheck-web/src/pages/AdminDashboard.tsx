@@ -92,10 +92,12 @@ export default function AdminDashboard() {
           setFeedbackData(feedbackRes.value.data);
         }
         if (plotsRes.status === "fulfilled") {
-          setPlotDetails(plotsRes.value.data || []);
+          const data = plotsRes.value.data;
+          setPlotDetails(Array.isArray(data) ? data : []);
         }
         if (feedbackListRes.status === "fulfilled") {
-          setFeedbackEntries(feedbackListRes.value.data || []);
+          const data = feedbackListRes.value.data;
+          setFeedbackEntries(Array.isArray(data) ? data : []);
         }
       } catch (err) {
         console.error("Failed to fetch analytics:", err);
