@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../api/client";
+import { api, BACKEND_URL } from "../api/client";
 import "../styles/admin-dashboard.css";
 
 type Analytics = {
@@ -191,6 +191,14 @@ export default function AdminDashboard() {
     dwg: "DWG/DXF",
     back_computation_pdf: "Back Computation PDF",
   };
+
+  const reportLinks = (plotId: number) => ({
+    survey_plan_pdf: `${BACKEND_URL}/plots/${plotId}/reports/survey-plan`,
+    orthophoto_pdf: `${BACKEND_URL}/plots/${plotId}/reports/orthophoto?map_type=satellite`,
+    topo_map_pdf: `${BACKEND_URL}/plots/${plotId}/reports/orthophoto?map_type=topo`,
+    dwg: `${BACKEND_URL}/plots/${plotId}/survey-plan/dwg`,
+    back_computation_pdf: `${BACKEND_URL}/plots/${plotId}/reports/back-computation`,
+  });
 
   if (!isAuthed) {
     return (
@@ -471,7 +479,22 @@ export default function AdminDashboard() {
                           {Object.entries(reportLabels).map(([key, label]) => (
                             <div key={key} className={`report-item ${plot.reports_generated?.[key] ? "ready" : "missing"}`}>
                               <span>{label}</span>
-                              <span>{plot.reports_generated?.[key] ? "Ready" : "N/A"}</span>
+                              {plot.reports_generated?.[key] ? (
+                                reportLinks(plot.plot_id)[key as keyof ReturnType<typeof reportLinks>] ? (
+                                  <a
+                                    className="report-action"
+                                    href={reportLinks(plot.plot_id)[key as keyof ReturnType<typeof reportLinks>]}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    Open
+                                  </a>
+                                ) : (
+                                  <span>Ready</span>
+                                )
+                              ) : (
+                                <span>N/A</span>
+                              )}
                             </div>
                           ))}
                         </div>
