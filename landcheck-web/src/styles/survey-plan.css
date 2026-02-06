@@ -343,15 +343,6 @@
   cursor: pointer;
 }
 
-.north-arrow-controls {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.north-arrow-controls select {
-  flex: 1;
-}
-
 /* Features Bar - Horizontal Compact Layout */
 .features-bar {
   display: flex;

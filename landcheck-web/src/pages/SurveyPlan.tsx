@@ -30,6 +30,7 @@ type PreviewType = "survey" | "orthophoto" | "topomap";
 type TopoSource = "opentopomap" | "userdata";
 type NorthArrowStyle = "classic" | "triangle" | "compass" | "chevron" | "orienteering" | "star";
 type NorthArrowColor = "black" | "blue";
+type BeaconStyle = "circle" | "square" | "triangle" | "diamond" | "cross";
 
 const BACKEND = BACKEND_URL;
 
@@ -66,6 +67,7 @@ export default function SurveyPlan() {
   const [topoSource, setTopoSource] = useState<TopoSource>("opentopomap");
   const [northArrowStyle, setNorthArrowStyle] = useState<NorthArrowStyle>("classic");
   const [northArrowColor, setNorthArrowColor] = useState<NorthArrowColor>("black");
+  const [beaconStyle, setBeaconStyle] = useState<BeaconStyle>("circle");
   const orthophotoRequestId = useRef(0);
   const topoRequestId = useRef(0);
 
@@ -297,6 +299,7 @@ export default function SurveyPlan() {
         paper_size: meta.paper_size,
         north_arrow_style: northArrowStyle,
         north_arrow_color: northArrowColor,
+        beacon_style: beaconStyle,
       };
 
       const res = await api.post(`/plots/${plotId}/report/preview`, payload, {
@@ -311,7 +314,7 @@ export default function SurveyPlan() {
     } finally {
       setPreviewLoading(false);
     }
-  }, [plotId, meta, stationNames, coordinateSystem, northArrowStyle, northArrowColor]);
+  }, [plotId, meta, stationNames, coordinateSystem, northArrowStyle, northArrowColor, beaconStyle]);
 
   // Load preview when step 2 is reached or meta changes
   useEffect(() => {
@@ -451,6 +454,7 @@ export default function SurveyPlan() {
     setTopoSource("opentopomap");
     setNorthArrowStyle("classic");
     setNorthArrowColor("black");
+    setBeaconStyle("circle");
     setMeta({
       title_text: "SURVEY PLAN",
       location_text: "",
@@ -484,6 +488,7 @@ export default function SurveyPlan() {
         use_topo_map: useTopoMap,
         north_arrow_style: northArrowStyle,
         north_arrow_color: northArrowColor,
+        beacon_style: beaconStyle,
       };
 
       const res = await api.post(url, payload, { responseType: "blob" });
@@ -745,29 +750,6 @@ export default function SurveyPlan() {
                       {meta.paper_size === "A0" && "Maximum (841 x 1189 mm)"}
                     </span>
                   </div>
-                  <div className="form-group">
-                    <label>North Arrow</label>
-                    <div className="north-arrow-controls">
-                      <select
-                        value={northArrowStyle}
-                        onChange={(e) => setNorthArrowStyle(e.target.value as NorthArrowStyle)}
-                      >
-                        <option value="classic">Classic Arrow</option>
-                        <option value="triangle">Triangle</option>
-                        <option value="compass">Compass Rose</option>
-                        <option value="chevron">Chevron</option>
-                        <option value="orienteering">Orienteering</option>
-                        <option value="star">Star</option>
-                      </select>
-                      <select
-                        value={northArrowColor}
-                        onChange={(e) => setNorthArrowColor(e.target.value as NorthArrowColor)}
-                      >
-                        <option value="black">Black</option>
-                        <option value="blue">Blue</option>
-                      </select>
-                    </div>
-                  </div>
                 </div>
 
                 <button className="btn-secondary" onClick={loadPreview} disabled={previewLoading}>
@@ -796,6 +778,12 @@ export default function SurveyPlan() {
                 onPreviewTypeChange={setPreviewType}
                 topoSource={topoSource}
                 onTopoSourceChange={setTopoSource}
+                northArrowStyle={northArrowStyle}
+                northArrowColor={northArrowColor}
+                beaconStyle={beaconStyle}
+                onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
+                onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
+                onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
                 paperSize={meta.paper_size}
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}
@@ -954,6 +942,12 @@ export default function SurveyPlan() {
                 onPreviewTypeChange={setPreviewType}
                 topoSource={topoSource}
                 onTopoSourceChange={setTopoSource}
+                northArrowStyle={northArrowStyle}
+                northArrowColor={northArrowColor}
+                beaconStyle={beaconStyle}
+                onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
+                onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
+                onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
                 paperSize={meta.paper_size}
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}
