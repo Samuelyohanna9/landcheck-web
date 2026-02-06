@@ -9,6 +9,12 @@ type Props = {
   onPreviewTypeChange: (type: PreviewType) => void;
   topoSource: TopoSource;
   onTopoSourceChange: (source: TopoSource) => void;
+  northArrowStyle: string;
+  northArrowColor: string;
+  beaconStyle: string;
+  onNorthArrowStyleChange: (value: string) => void;
+  onNorthArrowColorChange: (value: string) => void;
+  onBeaconStyleChange: (value: string) => void;
   paperSize: string;
   surveyPreviewUrl: string | null;
   orthophotoPreviewUrl: string | null;
@@ -24,6 +30,12 @@ export default function SurveyPreview({
   onPreviewTypeChange,
   topoSource,
   onTopoSourceChange,
+  northArrowStyle,
+  northArrowColor,
+  beaconStyle,
+  onNorthArrowStyleChange,
+  onNorthArrowColorChange,
+  onBeaconStyleChange,
   paperSize,
   surveyPreviewUrl,
   orthophotoPreviewUrl,
@@ -139,6 +151,47 @@ export default function SurveyPreview({
 
   return (
     <div className="survey-preview-container">
+      <div className="preview-ribbon">
+        <div className="ribbon-group">
+          <span className="ribbon-label">North Arrow</span>
+          <select
+            className="ribbon-select"
+            value={northArrowStyle}
+            onChange={(e) => onNorthArrowStyleChange(e.target.value)}
+          >
+            <option value="classic">Classic</option>
+            <option value="triangle">Triangle</option>
+            <option value="compass">Compass</option>
+            <option value="chevron">Chevron</option>
+            <option value="orienteering">Orienteering</option>
+            <option value="star">Star</option>
+          </select>
+          <select
+            className="ribbon-select"
+            value={northArrowColor}
+            onChange={(e) => onNorthArrowColorChange(e.target.value)}
+          >
+            <option value="black">Black</option>
+            <option value="blue">Blue</option>
+          </select>
+        </div>
+        <div className="ribbon-group">
+          <span className="ribbon-label">Beacon Style</span>
+          <select
+            className="ribbon-select"
+            value={beaconStyle}
+            onChange={(e) => onBeaconStyleChange(e.target.value)}
+            disabled={previewType !== "survey"}
+            title={previewType !== "survey" ? "Beacon style applies to Survey Plan only" : undefined}
+          >
+            <option value="circle">Circle</option>
+            <option value="square">Square</option>
+            <option value="triangle">Triangle</option>
+            <option value="diamond">Diamond</option>
+            <option value="cross">Cross</option>
+          </select>
+        </div>
+      </div>
       <div className="preview-header">
         {/* Preview Type Toggle - 3 Tabs */}
         <div className="preview-toggle three-tabs">
