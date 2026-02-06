@@ -31,6 +31,7 @@ type TopoSource = "opentopomap" | "userdata";
 type NorthArrowStyle = "classic" | "triangle" | "compass" | "chevron" | "orienteering" | "star";
 type NorthArrowColor = "black" | "blue";
 type BeaconStyle = "circle" | "square" | "triangle" | "diamond" | "cross";
+type RoadWidthOption = "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
 
 const BACKEND = BACKEND_URL;
 
@@ -68,6 +69,7 @@ export default function SurveyPlan() {
   const [northArrowStyle, setNorthArrowStyle] = useState<NorthArrowStyle>("classic");
   const [northArrowColor, setNorthArrowColor] = useState<NorthArrowColor>("black");
   const [beaconStyle, setBeaconStyle] = useState<BeaconStyle>("circle");
+  const [roadWidth, setRoadWidth] = useState<RoadWidthOption>("10");
   const orthophotoRequestId = useRef(0);
   const topoRequestId = useRef(0);
 
@@ -300,6 +302,7 @@ export default function SurveyPlan() {
         north_arrow_style: northArrowStyle,
         north_arrow_color: northArrowColor,
         beacon_style: beaconStyle,
+        road_width_m: Number(roadWidth),
       };
 
       const res = await api.post(`/plots/${plotId}/report/preview`, payload, {
@@ -314,7 +317,7 @@ export default function SurveyPlan() {
     } finally {
       setPreviewLoading(false);
     }
-  }, [plotId, meta, stationNames, coordinateSystem, northArrowStyle, northArrowColor, beaconStyle]);
+  }, [plotId, meta, stationNames, coordinateSystem, northArrowStyle, northArrowColor, beaconStyle, roadWidth]);
 
   // Load preview when step 2 is reached or meta changes
   useEffect(() => {
@@ -455,6 +458,7 @@ export default function SurveyPlan() {
     setNorthArrowStyle("classic");
     setNorthArrowColor("black");
     setBeaconStyle("circle");
+    setRoadWidth("10");
     setMeta({
       title_text: "SURVEY PLAN",
       location_text: "",
@@ -489,6 +493,7 @@ export default function SurveyPlan() {
         north_arrow_style: northArrowStyle,
         north_arrow_color: northArrowColor,
         beacon_style: beaconStyle,
+        road_width_m: Number(roadWidth),
       };
 
       const res = await api.post(url, payload, { responseType: "blob" });
@@ -781,9 +786,11 @@ export default function SurveyPlan() {
                 northArrowStyle={northArrowStyle}
                 northArrowColor={northArrowColor}
                 beaconStyle={beaconStyle}
+                roadWidth={roadWidth}
                 onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
                 onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
                 onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
+                onRoadWidthChange={(value) => setRoadWidth(value as RoadWidthOption)}
                 paperSize={meta.paper_size}
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}
@@ -945,9 +952,11 @@ export default function SurveyPlan() {
                 northArrowStyle={northArrowStyle}
                 northArrowColor={northArrowColor}
                 beaconStyle={beaconStyle}
+                roadWidth={roadWidth}
                 onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
                 onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
                 onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
+                onRoadWidthChange={(value) => setRoadWidth(value as RoadWidthOption)}
                 paperSize={meta.paper_size}
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}

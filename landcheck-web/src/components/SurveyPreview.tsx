@@ -12,9 +12,11 @@ type Props = {
   northArrowStyle: string;
   northArrowColor: string;
   beaconStyle: string;
+  roadWidth: string;
   onNorthArrowStyleChange: (value: string) => void;
   onNorthArrowColorChange: (value: string) => void;
   onBeaconStyleChange: (value: string) => void;
+  onRoadWidthChange: (value: string) => void;
   paperSize: string;
   surveyPreviewUrl: string | null;
   orthophotoPreviewUrl: string | null;
@@ -33,9 +35,11 @@ export default function SurveyPreview({
   northArrowStyle,
   northArrowColor,
   beaconStyle,
+  roadWidth,
   onNorthArrowStyleChange,
   onNorthArrowColorChange,
   onBeaconStyleChange,
+  onRoadWidthChange,
   paperSize,
   surveyPreviewUrl,
   orthophotoPreviewUrl,
@@ -189,6 +193,25 @@ export default function SurveyPreview({
             <option value="triangle">Triangle</option>
             <option value="diamond">Diamond</option>
             <option value="cross">Cross</option>
+          </select>
+        </div>
+        <div className="ribbon-group">
+          <span className="ribbon-label">Road Width (m)</span>
+          <select
+            className="ribbon-select"
+            value={roadWidth}
+            onChange={(e) => onRoadWidthChange(e.target.value)}
+            disabled={previewType !== "survey"}
+            title={previewType !== "survey" ? "Road width applies to Survey Plan only" : undefined}
+          >
+            <option value="4">4</option>
+            <option value="6">6</option>
+            <option value="8">8</option>
+            <option value="10">10</option>
+            <option value="12">12</option>
+            <option value="15">15</option>
+            <option value="20">20</option>
+            <option value="30">30</option>
           </select>
         </div>
       </div>
