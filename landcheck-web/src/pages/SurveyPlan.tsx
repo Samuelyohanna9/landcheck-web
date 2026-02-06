@@ -28,7 +28,7 @@ type ManualPoint = {
 
 type PreviewType = "survey" | "orthophoto" | "topomap";
 type TopoSource = "opentopomap" | "userdata";
-type NorthArrowStyle = "classic" | "triangle" | "compass";
+type NorthArrowStyle = "classic" | "triangle" | "compass" | "chevron" | "orienteering" | "star";
 type NorthArrowColor = "black" | "blue";
 
 const BACKEND = BACKEND_URL;
@@ -755,6 +755,9 @@ export default function SurveyPlan() {
                         <option value="classic">Classic Arrow</option>
                         <option value="triangle">Triangle</option>
                         <option value="compass">Compass Rose</option>
+                        <option value="chevron">Chevron</option>
+                        <option value="orienteering">Orienteering</option>
+                        <option value="star">Star</option>
                       </select>
                       <select
                         value={northArrowColor}
