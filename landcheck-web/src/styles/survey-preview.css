@@ -20,37 +20,46 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 1rem;
-  padding: 0.5rem 1rem;
-  background: rgba(15, 23, 42, 0.9);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 0.85rem;
+  padding: 0.65rem 1rem;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(12, 20, 35, 0.95));
+  border-bottom: 1px solid rgba(16, 185, 129, 0.22);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .ribbon-group {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  gap: 0.55rem;
+  padding: 0.35rem 0.65rem;
+  background: linear-gradient(135deg, rgba(20, 30, 50, 0.9), rgba(18, 27, 45, 0.9));
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
 .ribbon-label {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #94a3b8;
+  color: #86efac;
   font-weight: 600;
 }
 
 .ribbon-select {
-  background: rgba(15, 23, 42, 0.7);
+  background: rgba(8, 13, 24, 0.85);
   color: #e2e8f0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 0.35rem 0.6rem;
-  font-size: 0.8rem;
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  border-radius: 10px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.82rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ribbon-select:focus {
+  outline: none;
+  border-color: rgba(16, 185, 129, 0.55);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 
 .ribbon-select:disabled {
