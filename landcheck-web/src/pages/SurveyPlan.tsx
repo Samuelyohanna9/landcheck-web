@@ -28,6 +28,8 @@ type ManualPoint = {
 
 type PreviewType = "survey" | "orthophoto" | "topomap";
 type TopoSource = "opentopomap" | "userdata";
+type NorthArrowStyle = "classic" | "triangle" | "compass";
+type NorthArrowColor = "black" | "blue";
 
 const BACKEND = BACKEND_URL;
 
@@ -62,6 +64,8 @@ export default function SurveyPlan() {
   const [hasHeightData, setHasHeightData] = useState(false);
   const [previewType, setPreviewType] = useState<PreviewType>("survey");
   const [topoSource, setTopoSource] = useState<TopoSource>("opentopomap");
+  const [northArrowStyle, setNorthArrowStyle] = useState<NorthArrowStyle>("classic");
+  const [northArrowColor, setNorthArrowColor] = useState<NorthArrowColor>("black");
   const orthophotoRequestId = useRef(0);
   const topoRequestId = useRef(0);
 
@@ -291,6 +295,8 @@ export default function SurveyPlan() {
         station_names: stationNames,
         coordinate_system: coordinateSystem,
         paper_size: meta.paper_size,
+        north_arrow_style: northArrowStyle,
+        north_arrow_color: northArrowColor,
       };
 
       const res = await api.post(`/plots/${plotId}/report/preview`, payload, {
@@ -305,7 +311,7 @@ export default function SurveyPlan() {
     } finally {
       setPreviewLoading(false);
     }
-  }, [plotId, meta, stationNames, coordinateSystem]);
+  }, [plotId, meta, stationNames, coordinateSystem, northArrowStyle, northArrowColor]);
 
   // Load preview when step 2 is reached or meta changes
   useEffect(() => {
@@ -327,6 +333,8 @@ export default function SurveyPlan() {
         coordinate_system: coordinateSystem,
         paper_size: meta.paper_size,
         use_topo_map: false, // Always satellite for orthophoto
+        north_arrow_style: northArrowStyle,
+        north_arrow_color: northArrowColor,
       }, {
         responseType: "blob",
       });
@@ -348,7 +356,7 @@ export default function SurveyPlan() {
         setOrthophotoLoading(false);
       }
     }
-  }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size]);
+  }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size, northArrowStyle, northArrowColor]);
 
   // Load topo map preview (OpenTopoMap tiles or user height data)
   const loadTopoMap = useCallback(async (source: "opentopomap" | "userdata" = "opentopomap") => {
@@ -365,6 +373,8 @@ export default function SurveyPlan() {
         paper_size: meta.paper_size,
         use_topo_map: true, // Always topo for topo map
         topo_source: source, // "opentopomap" or "userdata"
+        north_arrow_style: northArrowStyle,
+        north_arrow_color: northArrowColor,
       }, {
         responseType: "blob",
       });
@@ -386,7 +396,7 @@ export default function SurveyPlan() {
         setTopoMapLoading(false);
       }
     }
-  }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size]);
+  }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size, northArrowStyle, northArrowColor]);
 
   // Refresh orthophoto/topo previews when active and settings change
   useEffect(() => {
@@ -416,6 +426,8 @@ export default function SurveyPlan() {
     topoSource,
     meta.scale_text,
     meta.paper_size,
+    northArrowStyle,
+    northArrowColor,
     loadOrthophoto,
     loadTopoMap,
   ]);
@@ -437,6 +449,8 @@ export default function SurveyPlan() {
     setHasHeightData(false);
     setPreviewType("survey");
     setTopoSource("opentopomap");
+    setNorthArrowStyle("classic");
+    setNorthArrowColor("black");
     setMeta({
       title_text: "SURVEY PLAN",
       location_text: "",
@@ -468,6 +482,8 @@ export default function SurveyPlan() {
         coordinate_system: coordinateSystem,
         paper_size: meta.paper_size,
         use_topo_map: useTopoMap,
+        north_arrow_style: northArrowStyle,
+        north_arrow_color: northArrowColor,
       };
 
       const res = await api.post(url, payload, { responseType: "blob" });
@@ -728,6 +744,26 @@ export default function SurveyPlan() {
                       {meta.paper_size === "A1" && "Poster (594 x 841 mm)"}
                       {meta.paper_size === "A0" && "Maximum (841 x 1189 mm)"}
                     </span>
+                  </div>
+                  <div className="form-group">
+                    <label>North Arrow</label>
+                    <div className="north-arrow-controls">
+                      <select
+                        value={northArrowStyle}
+                        onChange={(e) => setNorthArrowStyle(e.target.value as NorthArrowStyle)}
+                      >
+                        <option value="classic">Classic Arrow</option>
+                        <option value="triangle">Triangle</option>
+                        <option value="compass">Compass Rose</option>
+                      </select>
+                      <select
+                        value={northArrowColor}
+                        onChange={(e) => setNorthArrowColor(e.target.value as NorthArrowColor)}
+                      >
+                        <option value="black">Black</option>
+                        <option value="blue">Blue</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 
