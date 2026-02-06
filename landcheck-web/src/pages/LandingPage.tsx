@@ -16,9 +16,6 @@ export default function LandingPage() {
           <button className="nav-btn feedback-btn" onClick={() => navigate("/feedback")}>Give Feedback</button>
         </nav>
       </header>
-      <div className="maintenance-banner" role="status" aria-live="polite">
-        We are making little improvements. We will be back shortly.
-      </div>
 
       {/* Hero Section */}
       <section className="hero">
