@@ -11,7 +11,7 @@ type FeatureAction = "add" | "delete" | "update";
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (payload: { feature_type: FeatureType; action: FeatureAction; name?: string; geojson: any }) => void;
+  onSave: (payload: { feature_type: FeatureType; action: FeatureAction; name?: string; width_m?: number; geojson: any }) => void;
   plotCoords: number[][] | null;
   featureType: FeatureType;
   setFeatureType: (t: FeatureType) => void;
@@ -19,6 +19,8 @@ type Props = {
   setAction: (a: FeatureAction) => void;
   roadName: string;
   setRoadName: (v: string) => void;
+  roadWidth: string;
+  setRoadWidth: (v: string) => void;
   plotId: number | null;
 };
 
@@ -33,6 +35,8 @@ export default function FeatureOverrideModal({
   setAction,
   roadName,
   setRoadName,
+  roadWidth,
+  setRoadWidth,
   plotId,
 }: Props) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -235,6 +239,7 @@ export default function FeatureOverrideModal({
       feature_type: featureType,
       action,
       name: featureType === "road" ? roadName : undefined,
+      width_m: featureType === "road" ? Number(roadWidth) : undefined,
       geojson: feature.geometry,
     });
   };
@@ -273,6 +278,21 @@ export default function FeatureOverrideModal({
             <div className="field wide">
               <label>Road Name (optional)</label>
               <input value={roadName} onChange={(e) => setRoadName(e.target.value)} placeholder="e.g., Abuja Road" />
+            </div>
+          )}
+          {featureType === "road" && action !== "delete" && (
+            <div className="field">
+              <label>Road Width (m)</label>
+              <select value={roadWidth} onChange={(e) => setRoadWidth(e.target.value)}>
+                <option value="4">4</option>
+                <option value="6">6</option>
+                <option value="8">8</option>
+                <option value="10">10</option>
+                <option value="12">12</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+              </select>
             </div>
           )}
           <div className="hint">
