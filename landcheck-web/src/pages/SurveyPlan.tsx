@@ -71,6 +71,7 @@ export default function SurveyPlan() {
   const [northArrowColor, setNorthArrowColor] = useState<NorthArrowColor>("black");
   const [beaconStyle, setBeaconStyle] = useState<BeaconStyle>("circle");
   const [roadWidth, setRoadWidth] = useState<RoadWidthOption>("10");
+  const [overrideRoadWidth, setOverrideRoadWidth] = useState<RoadWidthOption>("10");
   const [showFeatureEditor, setShowFeatureEditor] = useState(false);
   const [featureType, setFeatureType] = useState<"road" | "building" | "river">("road");
   const [featureAction, setFeatureAction] = useState<"add" | "delete" | "update">("add");
@@ -308,6 +309,7 @@ export default function SurveyPlan() {
         north_arrow_color: northArrowColor,
         beacon_style: beaconStyle,
         road_width_m: Number(roadWidth),
+        road_width_override_m: Number(overrideRoadWidth),
       };
 
       const res = await api.post(`/plots/${plotId}/report/preview`, payload, {
@@ -322,7 +324,7 @@ export default function SurveyPlan() {
     } finally {
       setPreviewLoading(false);
     }
-  }, [plotId, meta, stationNames, coordinateSystem, northArrowStyle, northArrowColor, beaconStyle, roadWidth]);
+  }, [plotId, meta, stationNames, coordinateSystem, northArrowStyle, northArrowColor, beaconStyle, roadWidth, overrideRoadWidth]);
 
   // Load preview when step 2 is reached or meta changes
   useEffect(() => {
@@ -464,6 +466,7 @@ export default function SurveyPlan() {
     setNorthArrowColor("black");
     setBeaconStyle("circle");
     setRoadWidth("10");
+    setOverrideRoadWidth("10");
     setMeta({
       title_text: "SURVEY PLAN",
       location_text: "",
@@ -499,6 +502,7 @@ export default function SurveyPlan() {
         north_arrow_color: northArrowColor,
         beacon_style: beaconStyle,
         road_width_m: Number(roadWidth),
+        road_width_override_m: Number(overrideRoadWidth),
       };
 
       const res = await api.post(url, payload, { responseType: "blob" });
@@ -830,10 +834,12 @@ export default function SurveyPlan() {
                 northArrowColor={northArrowColor}
                 beaconStyle={beaconStyle}
                 roadWidth={roadWidth}
+                overrideRoadWidth={overrideRoadWidth}
                 onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
                 onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
                 onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
                 onRoadWidthChange={(value) => setRoadWidth(value as RoadWidthOption)}
+                onOverrideRoadWidthChange={(value) => setOverrideRoadWidth(value as RoadWidthOption)}
                 paperSize={meta.paper_size}
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}
@@ -996,10 +1002,12 @@ export default function SurveyPlan() {
                 northArrowColor={northArrowColor}
                 beaconStyle={beaconStyle}
                 roadWidth={roadWidth}
+                overrideRoadWidth={overrideRoadWidth}
                 onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
                 onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
                 onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
                 onRoadWidthChange={(value) => setRoadWidth(value as RoadWidthOption)}
+                onOverrideRoadWidthChange={(value) => setOverrideRoadWidth(value as RoadWidthOption)}
                 paperSize={meta.paper_size}
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}
