@@ -5,6 +5,7 @@ import toast, { Toaster } from "react-hot-toast";
 import MapViewEnhanced from "../components/MapViewEnhanced";
 import CoordinateInput from "../components/CoordinateInput";
 import SurveyPreview from "../components/SurveyPreview";
+import FeatureOverrideModal from "../components/FeatureOverrideModal";
 import { fromWGS84, toWGS84 } from "../utils/coordinateConverter";
 import "../styles/survey-plan.css";
 
@@ -70,6 +71,10 @@ export default function SurveyPlan() {
   const [northArrowColor, setNorthArrowColor] = useState<NorthArrowColor>("black");
   const [beaconStyle, setBeaconStyle] = useState<BeaconStyle>("circle");
   const [roadWidth, setRoadWidth] = useState<RoadWidthOption>("10");
+  const [showFeatureEditor, setShowFeatureEditor] = useState(false);
+  const [featureType, setFeatureType] = useState<"road" | "building" | "river">("road");
+  const [featureAction, setFeatureAction] = useState<"add" | "delete" | "update">("add");
+  const [roadName, setRoadName] = useState("");
   const orthophotoRequestId = useRef(0);
   const topoRequestId = useRef(0);
 
@@ -524,6 +529,21 @@ export default function SurveyPlan() {
     return insideCount + bufferCount;
   };
 
+  const handleSaveOverride = async (payload: { feature_type: "road" | "building" | "river"; action: "add" | "delete" | "update"; name?: string; geojson: any }) => {
+    if (!plotId) return;
+    try {
+      await api.post(`/plots/${plotId}/feature-overrides`, payload);
+      toast.success("Feature saved");
+      setShowFeatureEditor(false);
+      loadPreview();
+      if (previewType === "orthophoto") loadOrthophoto();
+      if (previewType === "topomap") loadTopoMap(topoSource);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save feature");
+    }
+  };
+
   return (
     <div className="survey-container">
       <Toaster position="top-right" />
@@ -572,6 +592,18 @@ export default function SurveyPlan() {
 
       {/* Main Content */}
       <div className="survey-content">
+        <FeatureOverrideModal
+          isOpen={showFeatureEditor}
+          onClose={() => setShowFeatureEditor(false)}
+          onSave={handleSaveOverride}
+          plotCoords={finalCoords}
+          featureType={featureType}
+          setFeatureType={setFeatureType}
+          action={featureAction}
+          setAction={setFeatureAction}
+          roadName={roadName}
+          setRoadName={setRoadName}
+        />
         {/* Step 1: Coordinate Input */}
         {currentStep === 1 && (
           <div className="step-panel">
@@ -757,9 +789,14 @@ export default function SurveyPlan() {
                   </div>
                 </div>
 
-                <button className="btn-secondary" onClick={loadPreview} disabled={previewLoading}>
-                  {previewLoading ? "Updating..." : "Update Preview"}
-                </button>
+                <div className="edit-feature-bar">
+                  <button className="btn-secondary" onClick={loadPreview} disabled={previewLoading}>
+                    {previewLoading ? "Updating..." : "Update Preview"}
+                  </button>
+                  <button className="btn-outline" onClick={() => setShowFeatureEditor(true)} disabled={!plotId}>
+                    Edit Features
+                  </button>
+                </div>
               </div>
 
               <div className="action-bar">
