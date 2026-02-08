@@ -19,6 +19,7 @@ type Props = {
   setAction: (a: FeatureAction) => void;
   roadName: string;
   setRoadName: (v: string) => void;
+  plotId: number | null;
 };
 
 export default function FeatureOverrideModal({
@@ -32,6 +33,7 @@ export default function FeatureOverrideModal({
   setAction,
   roadName,
   setRoadName,
+  plotId,
 }: Props) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
@@ -58,6 +60,53 @@ export default function FeatureOverrideModal({
       },
     });
     map.addControl(draw, "top-left");
+
+    const loadFeatures = async () => {
+      if (!plotId) return;
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/plots/${plotId}/features/geojson`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (!map.getSource("roads-src")) {
+          map.addSource("roads-src", { type: "geojson", data: data.roads });
+          map.addLayer({
+            id: "roads-line",
+            type: "line",
+            source: "roads-src",
+            paint: { "line-color": "#0f172a", "line-width": 2 },
+          });
+        } else {
+          (map.getSource("roads-src") as mapboxgl.GeoJSONSource).setData(data.roads);
+        }
+
+        if (!map.getSource("buildings-src")) {
+          map.addSource("buildings-src", { type: "geojson", data: data.buildings });
+          map.addLayer({
+            id: "buildings-line",
+            type: "line",
+            source: "buildings-src",
+            paint: { "line-color": "#1f2937", "line-width": 1.5 },
+          });
+        } else {
+          (map.getSource("buildings-src") as mapboxgl.GeoJSONSource).setData(data.buildings);
+        }
+
+        if (!map.getSource("rivers-src")) {
+          map.addSource("rivers-src", { type: "geojson", data: data.rivers });
+          map.addLayer({
+            id: "rivers-line",
+            type: "line",
+            source: "rivers-src",
+            paint: { "line-color": "#2563eb", "line-width": 1.5 },
+          });
+        } else {
+          (map.getSource("rivers-src") as mapboxgl.GeoJSONSource).setData(data.rivers);
+        }
+      } catch {
+        // ignore
+      }
+    };
 
     map.on("load", () => {
       if (plotCoords && plotCoords.length >= 3) {
@@ -88,6 +137,7 @@ export default function FeatureOverrideModal({
         plotCoords.forEach(([lng, lat]) => bounds.extend([lng, lat]));
         map.fitBounds(bounds, { padding: 40, duration: 0 });
       }
+      loadFeatures();
     });
 
     mapRef.current = map;

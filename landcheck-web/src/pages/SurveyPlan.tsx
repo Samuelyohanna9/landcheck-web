@@ -603,6 +603,7 @@ export default function SurveyPlan() {
           setAction={setFeatureAction}
           roadName={roadName}
           setRoadName={setRoadName}
+          plotId={plotId}
         />
         {/* Step 1: Coordinate Input */}
         {currentStep === 1 && (
