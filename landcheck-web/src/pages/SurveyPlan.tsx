@@ -538,9 +538,11 @@ export default function SurveyPlan() {
       setPreviewUrl(null);
       setOrthophotoUrl(null);
       setTopoMapUrl(null);
-      loadPreview();
-      if (previewType === "orthophoto") loadOrthophoto();
-      if (previewType === "topomap") loadTopoMap(topoSource);
+      setTimeout(() => {
+        loadPreview();
+        if (previewType === "orthophoto") loadOrthophoto();
+        if (previewType === "topomap") loadTopoMap(topoSource);
+      }, 250);
     } catch (err) {
       console.error(err);
       toast.error("Failed to save feature");

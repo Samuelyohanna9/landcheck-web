@@ -76,6 +76,8 @@ export default function FeatureOverrideModal({
             source: "roads-src",
             paint: { "line-color": "#0f172a", "line-width": 2 },
           });
+          map.on("mouseenter", "roads-line", () => (map.getCanvas().style.cursor = "pointer"));
+          map.on("mouseleave", "roads-line", () => (map.getCanvas().style.cursor = ""));
         } else {
           (map.getSource("roads-src") as mapboxgl.GeoJSONSource).setData(data.roads);
         }
@@ -88,6 +90,8 @@ export default function FeatureOverrideModal({
             source: "buildings-src",
             paint: { "line-color": "#1f2937", "line-width": 1.5 },
           });
+          map.on("mouseenter", "buildings-line", () => (map.getCanvas().style.cursor = "pointer"));
+          map.on("mouseleave", "buildings-line", () => (map.getCanvas().style.cursor = ""));
         } else {
           (map.getSource("buildings-src") as mapboxgl.GeoJSONSource).setData(data.buildings);
         }
@@ -100,6 +104,8 @@ export default function FeatureOverrideModal({
             source: "rivers-src",
             paint: { "line-color": "#2563eb", "line-width": 1.5 },
           });
+          map.on("mouseenter", "rivers-line", () => (map.getCanvas().style.cursor = "pointer"));
+          map.on("mouseleave", "rivers-line", () => (map.getCanvas().style.cursor = ""));
         } else {
           (map.getSource("rivers-src") as mapboxgl.GeoJSONSource).setData(data.rivers);
         }
