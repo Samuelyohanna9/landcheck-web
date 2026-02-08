@@ -71,6 +71,7 @@ export default function SurveyPlan() {
   const [northArrowColor, setNorthArrowColor] = useState<NorthArrowColor>("black");
   const [beaconStyle, setBeaconStyle] = useState<BeaconStyle>("circle");
   const [roadWidth, setRoadWidth] = useState<RoadWidthOption>("10");
+  const [newRoadWidth, setNewRoadWidth] = useState<RoadWidthOption>("10");
   const [showFeatureEditor, setShowFeatureEditor] = useState(false);
   const [featureType, setFeatureType] = useState<"road" | "building" | "river">("road");
   const [featureAction, setFeatureAction] = useState<"add" | "delete" | "update">("add");
@@ -608,8 +609,8 @@ export default function SurveyPlan() {
           setAction={setFeatureAction}
           roadName={roadName}
           setRoadName={setRoadName}
-          roadWidth={overrideRoadWidth}
-          setRoadWidth={setOverrideRoadWidth}
+          roadWidth={newRoadWidth}
+          setRoadWidth={setNewRoadWidth}
           plotId={plotId}
         />
         {/* Step 1: Coordinate Input */}
@@ -831,11 +832,9 @@ export default function SurveyPlan() {
                 northArrowStyle={northArrowStyle}
                 northArrowColor={northArrowColor}
                 beaconStyle={beaconStyle}
-                roadWidth={roadWidth}
                 onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
                 onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
                 onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
-                onRoadWidthChange={(value) => setRoadWidth(value as RoadWidthOption)}
                 paperSize={meta.paper_size}
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}
@@ -997,11 +996,9 @@ export default function SurveyPlan() {
                 northArrowStyle={northArrowStyle}
                 northArrowColor={northArrowColor}
                 beaconStyle={beaconStyle}
-                roadWidth={roadWidth}
                 onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
                 onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
                 onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
-                onRoadWidthChange={(value) => setRoadWidth(value as RoadWidthOption)}
                 paperSize={meta.paper_size}
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}
