@@ -190,7 +190,7 @@ export default function FeatureOverrideModal({
         const nm = (feat.properties as any)?.name;
         setRoadName(nm || "");
         const w = (feat.properties as any)?.width_m;
-        if (w) setRoadWidth(String(w));
+        if (w) setRoadWidth(String(w) as Props["roadWidth"]);
       }
       if (action === "add") setAction("update");
     };
