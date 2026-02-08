@@ -11,6 +11,7 @@
 
 .feature-override-card {
   width: min(1100px, 92vw);
+  height: min(90vh, 920px);
   background: #0f172a;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
@@ -95,7 +96,8 @@
 }
 
 .feature-override-map {
-  height: 520px;
+  flex: 1;
+  min-height: 360px;
 }
 
 .feature-override-actions {
@@ -104,4 +106,5 @@
   gap: 0.75rem;
   padding: 0.9rem 1.25rem 1.1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(15, 23, 42, 0.9);
 }
