@@ -444,3 +444,22 @@
     margin: 0 1rem;
   }
 }
+
+@media (max-width: 640px) {
+  .header-left h1 {
+    font-size: 1.125rem;
+  }
+
+  .new-plot-btn {
+    width: 100%;
+  }
+
+  .plot-actions {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .plots-section {
+    padding: 1rem;
+  }
+}

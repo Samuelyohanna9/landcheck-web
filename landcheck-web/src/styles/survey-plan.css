@@ -695,6 +695,14 @@
 }
 
 @media (max-width: 640px) {
+  .survey-content {
+    padding: 1rem;
+  }
+
+  .stepper {
+    padding: 0.75rem;
+  }
+
   .survey-header {
     flex-wrap: wrap;
     gap: 0.5rem;
@@ -717,6 +725,14 @@
 
   .action-bar {
     flex-direction: column;
+  }
+
+  .edit-feature-bar {
+    flex-direction: column;
+  }
+
+  .panel-right {
+    min-height: 320px;
   }
 }
 

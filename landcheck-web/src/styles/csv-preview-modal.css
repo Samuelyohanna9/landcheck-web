@@ -344,4 +344,13 @@
   .csv-preview-table td {
     padding: 0.5rem;
   }
+
+  .csv-modal-footer {
+    flex-direction: column;
+  }
+
+  .csv-btn-cancel,
+  .csv-btn-confirm {
+    width: 100%;
+  }
 }

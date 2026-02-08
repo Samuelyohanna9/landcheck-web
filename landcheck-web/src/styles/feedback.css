@@ -352,3 +352,19 @@
     font-size: 1rem;
   }
 }
+
+@media (max-width: 640px) {
+  .options-grid,
+  .options-row {
+    flex-direction: column;
+  }
+
+  .option-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .satisfaction-row {
+    flex-direction: column;
+  }
+}
