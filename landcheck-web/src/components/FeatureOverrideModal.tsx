@@ -19,8 +19,8 @@ type Props = {
   setAction: (a: FeatureAction) => void;
   roadName: string;
   setRoadName: (v: string) => void;
-  roadWidth: string;
-  setRoadWidth: (v: string) => void;
+  roadWidth: "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
+  setRoadWidth: (v: "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30") => void;
   plotId: number | null;
 };
 
@@ -285,7 +285,7 @@ export default function FeatureOverrideModal({
           {featureType === "road" && action === "add" && (
             <div className="field">
               <label>New Road Width</label>
-              <select value={roadWidth} onChange={(e) => setRoadWidth(e.target.value)}>
+              <select value={roadWidth} onChange={(e) => setRoadWidth(e.target.value as Props["roadWidth"])}>
                 <option value="2">2</option>
                 <option value="4">4</option>
                 <option value="6">6</option>

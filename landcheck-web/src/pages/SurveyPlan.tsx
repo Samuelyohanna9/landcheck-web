@@ -32,7 +32,7 @@ type TopoSource = "opentopomap" | "userdata";
 type NorthArrowStyle = "classic" | "triangle" | "compass" | "chevron" | "orienteering" | "star";
 type NorthArrowColor = "black" | "blue";
 type BeaconStyle = "circle" | "square" | "triangle" | "diamond" | "cross";
-type RoadWidthOption = "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
+type RoadWidthOption = "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
 
 const BACKEND = BACKEND_URL;
 
