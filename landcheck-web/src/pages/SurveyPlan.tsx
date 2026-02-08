@@ -533,7 +533,7 @@ export default function SurveyPlan() {
     return insideCount + bufferCount;
   };
 
-  const handleSaveOverride = async (payload: { feature_type: "road" | "building" | "river"; action: "add" | "delete" | "update"; name?: string; geojson: any }) => {
+  const handleSaveOverride = async (payload: { feature_type: "road" | "building" | "river"; action: "add" | "delete" | "update"; name?: string; width_m?: number; geojson: any }) => {
     if (!plotId) return;
     try {
       await api.post(`/plots/${plotId}/feature-overrides`, payload);
@@ -612,6 +612,8 @@ export default function SurveyPlan() {
           setAction={setFeatureAction}
           roadName={roadName}
           setRoadName={setRoadName}
+          roadWidth={overrideRoadWidth}
+          setRoadWidth={setOverrideRoadWidth}
           plotId={plotId}
         />
         {/* Step 1: Coordinate Input */}
