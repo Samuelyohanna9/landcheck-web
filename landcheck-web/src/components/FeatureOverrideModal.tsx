@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "../styles/feature-override-modal.css";
@@ -38,6 +38,8 @@ export default function FeatureOverrideModal({
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; visible: boolean }>({ x: 0, y: 0, visible: false });
+  const [selectedGeometry, setSelectedGeometry] = useState<any>(null);
 
   useEffect(() => {
     if (!isOpen || mapRef.current || !containerRef.current) return;
@@ -156,6 +158,29 @@ export default function FeatureOverrideModal({
         properties: {},
         geometry: feat.geometry as any,
       });
+      setSelectedGeometry(feat.geometry);
+      if (map.getSource("selected-feature")) {
+        (map.getSource("selected-feature") as mapboxgl.GeoJSONSource).setData({
+          type: "Feature",
+          geometry: feat.geometry,
+          properties: {},
+        } as any);
+      } else {
+        map.addSource("selected-feature", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            geometry: feat.geometry,
+            properties: {},
+          } as any,
+        });
+        map.addLayer({
+          id: "selected-feature-line",
+          type: "line",
+          source: "selected-feature",
+          paint: { "line-color": "#f59e0b", "line-width": 3 },
+        });
+      }
       setFeatureType(featureType);
       if (featureType === "road") {
         const nm = (feat.properties as any)?.name;
@@ -164,9 +189,24 @@ export default function FeatureOverrideModal({
       if (action === "add") setAction("update");
     };
 
+    const contextMenu = (featureType: FeatureType) => (e: mapboxgl.MapLayerMouseEvent) => {
+      e.preventDefault();
+      if (!e.features?.length) return;
+      const feat = e.features[0];
+      if (!feat.geometry) return;
+      selectFeature(featureType)(e);
+      setSelectedGeometry(feat.geometry);
+      setMenu({ x: e.originalEvent.clientX, y: e.originalEvent.clientY, visible: true });
+      setFeatureType(featureType);
+    };
+
     map.on("click", "roads-line", selectFeature("road"));
     map.on("click", "buildings-line", selectFeature("building"));
     map.on("click", "rivers-line", selectFeature("river"));
+
+    map.on("contextmenu", "roads-line", contextMenu("road"));
+    map.on("contextmenu", "buildings-line", contextMenu("building"));
+    map.on("contextmenu", "rivers-line", contextMenu("river"));
 
     mapRef.current = map;
     drawRef.current = draw;
@@ -242,6 +282,38 @@ export default function FeatureOverrideModal({
           <button className="btn-primary" onClick={handleSave}>Save Changes</button>
         </div>
       </div>
+      {menu.visible && (
+        <div
+          className="feature-context-menu"
+          style={{ left: menu.x, top: menu.y }}
+          onMouseLeave={() => setMenu({ ...menu, visible: false })}
+        >
+          <button
+            onClick={() => {
+              setAction("update");
+              setMenu({ ...menu, visible: false });
+            }}
+          >
+            Set Update
+          </button>
+          <button
+            onClick={() => {
+              setAction("delete");
+              setMenu({ ...menu, visible: false });
+            }}
+          >
+            Set Delete
+          </button>
+          <button
+            onClick={() => {
+              setSelectedGeometry(null);
+              setMenu({ ...menu, visible: false });
+            }}
+          >
+            Clear Selection
+          </button>
+        </div>
+      )}
     </div>
   );
 }
