@@ -193,11 +193,11 @@ export default function AdminDashboard() {
   };
 
   const reportLinks = (plotId: number) => ({
-    survey_plan_pdf: `${BACKEND_URL}/plots/${plotId}/reports/survey-plan`,
-    orthophoto_pdf: `${BACKEND_URL}/plots/${plotId}/reports/orthophoto?map_type=satellite`,
-    topo_map_pdf: `${BACKEND_URL}/plots/${plotId}/reports/orthophoto?map_type=topo`,
+    survey_plan_pdf: `${BACKEND_URL}/plots/${plotId}/reports/survey-plan?refresh=1`,
+    orthophoto_pdf: `${BACKEND_URL}/plots/${plotId}/reports/orthophoto?map_type=satellite&refresh=1`,
+    topo_map_pdf: `${BACKEND_URL}/plots/${plotId}/reports/orthophoto?map_type=topo&refresh=1`,
     dwg: `${BACKEND_URL}/plots/${plotId}/survey-plan/dwg`,
-    back_computation_pdf: `${BACKEND_URL}/plots/${plotId}/reports/back-computation`,
+    back_computation_pdf: `${BACKEND_URL}/plots/${plotId}/reports/back-computation?refresh=1`,
   });
 
   if (!isAuthed) {
