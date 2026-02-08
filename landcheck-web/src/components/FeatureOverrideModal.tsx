@@ -222,10 +222,15 @@ export default function FeatureOverrideModal({
     const draw = drawRef.current;
     if (!draw) return;
     const data = draw.getAll();
-    if (!data.features.length) return;
-
-    // Use the most recent feature
-    const feature = data.features[data.features.length - 1];
+    let feature = data.features[data.features.length - 1];
+    if (!feature && selectedGeometry) {
+      feature = {
+        type: "Feature",
+        properties: {},
+        geometry: selectedGeometry,
+      } as any;
+    }
+    if (!feature) return;
     onSave({
       feature_type: featureType,
       action,
@@ -299,6 +304,15 @@ export default function FeatureOverrideModal({
           <button
             onClick={() => {
               setAction("delete");
+              if (selectedGeometry) {
+                onSave({
+                  feature_type: featureType,
+                  action: "delete",
+                  geojson: selectedGeometry,
+                });
+                setMenu({ ...menu, visible: false });
+                return;
+              }
               setMenu({ ...menu, visible: false });
             }}
           >
