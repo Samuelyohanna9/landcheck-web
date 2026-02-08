@@ -140,6 +140,28 @@ export default function FeatureOverrideModal({
       loadFeatures();
     });
 
+    const selectFeature = (featureType: FeatureType) => (e: mapboxgl.MapLayerMouseEvent) => {
+      if (!drawRef.current || !e.features?.length) return;
+      const feat = e.features[0];
+      if (!feat.geometry) return;
+      drawRef.current.deleteAll();
+      drawRef.current.add({
+        type: "Feature",
+        properties: {},
+        geometry: feat.geometry as any,
+      });
+      setFeatureType(featureType);
+      if (featureType === "road") {
+        const nm = (feat.properties as any)?.name;
+        if (nm) setRoadName(nm);
+      }
+      if (action === "add") setAction("update");
+    };
+
+    map.on("click", "roads-line", selectFeature("road"));
+    map.on("click", "buildings-line", selectFeature("building"));
+    map.on("click", "rivers-line", selectFeature("river"));
+
     mapRef.current = map;
     drawRef.current = draw;
 
