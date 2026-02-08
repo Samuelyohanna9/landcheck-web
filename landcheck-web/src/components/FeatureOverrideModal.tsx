@@ -284,8 +284,9 @@ export default function FeatureOverrideModal({
           )}
           {featureType === "road" && action === "add" && (
             <div className="field">
-              <label>New Road Width (m)</label>
+              <label>New Road Width</label>
               <select value={roadWidth} onChange={(e) => setRoadWidth(e.target.value)}>
+                <option value="2">2</option>
                 <option value="4">4</option>
                 <option value="6">6</option>
                 <option value="8">8</option>
