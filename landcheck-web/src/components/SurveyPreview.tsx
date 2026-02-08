@@ -13,12 +13,10 @@ type Props = {
   northArrowColor: string;
   beaconStyle: string;
   roadWidth: string;
-  overrideRoadWidth: string;
   onNorthArrowStyleChange: (value: string) => void;
   onNorthArrowColorChange: (value: string) => void;
   onBeaconStyleChange: (value: string) => void;
   onRoadWidthChange: (value: string) => void;
-  onOverrideRoadWidthChange: (value: string) => void;
   paperSize: string;
   surveyPreviewUrl: string | null;
   orthophotoPreviewUrl: string | null;
@@ -38,12 +36,10 @@ export default function SurveyPreview({
   northArrowColor,
   beaconStyle,
   roadWidth,
-  overrideRoadWidth,
   onNorthArrowStyleChange,
   onNorthArrowColorChange,
   onBeaconStyleChange,
   onRoadWidthChange,
-  onOverrideRoadWidthChange,
   paperSize,
   surveyPreviewUrl,
   orthophotoPreviewUrl,
@@ -207,25 +203,6 @@ export default function SurveyPreview({
             onChange={(e) => onRoadWidthChange(e.target.value)}
             disabled={previewType !== "survey"}
             title={previewType !== "survey" ? "Road width applies to Survey Plan only" : undefined}
-          >
-            <option value="4">4</option>
-            <option value="6">6</option>
-            <option value="8">8</option>
-            <option value="10">10</option>
-            <option value="12">12</option>
-            <option value="15">15</option>
-            <option value="20">20</option>
-            <option value="30">30</option>
-          </select>
-        </div>
-        <div className="ribbon-group">
-          <span className="ribbon-label">Override Width (m)</span>
-          <select
-            className="ribbon-select"
-            value={overrideRoadWidth}
-            onChange={(e) => onOverrideRoadWidthChange(e.target.value)}
-            disabled={previewType !== "survey"}
-            title={previewType !== "survey" ? "Override width applies to Survey Plan only" : undefined}
           >
             <option value="4">4</option>
             <option value="6">6</option>

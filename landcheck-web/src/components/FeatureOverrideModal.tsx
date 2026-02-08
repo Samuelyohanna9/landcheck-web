@@ -152,7 +152,7 @@ export default function FeatureOverrideModal({
       loadFeatures();
     });
 
-    const selectFeature = (featureType: FeatureType) => (e: mapboxgl.MapLayerMouseEvent) => {
+  const selectFeature = (featureType: FeatureType) => (e: mapboxgl.MapLayerMouseEvent) => {
       if (!drawRef.current || !e.features?.length) return;
       const feat = e.features[0];
       if (!feat.geometry) return;
@@ -188,7 +188,9 @@ export default function FeatureOverrideModal({
       setFeatureType(featureType);
       if (featureType === "road") {
         const nm = (feat.properties as any)?.name;
-        if (nm) setRoadName(nm);
+        setRoadName(nm || "");
+        const w = (feat.properties as any)?.width_m;
+        if (w) setRoadWidth(String(w));
       }
       if (action === "add") setAction("update");
     };
