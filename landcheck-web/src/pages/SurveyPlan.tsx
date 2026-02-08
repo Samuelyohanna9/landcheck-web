@@ -535,6 +535,9 @@ export default function SurveyPlan() {
       await api.post(`/plots/${plotId}/feature-overrides`, payload);
       toast.success("Feature saved");
       setShowFeatureEditor(false);
+      setPreviewUrl(null);
+      setOrthophotoUrl(null);
+      setTopoMapUrl(null);
       loadPreview();
       if (previewType === "orthophoto") loadOrthophoto();
       if (previewType === "topomap") loadTopoMap(topoSource);
