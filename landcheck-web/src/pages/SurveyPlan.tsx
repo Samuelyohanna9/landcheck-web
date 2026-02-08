@@ -832,9 +832,11 @@ export default function SurveyPlan() {
                 northArrowStyle={northArrowStyle}
                 northArrowColor={northArrowColor}
                 beaconStyle={beaconStyle}
+                roadWidth={roadWidth}
                 onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
                 onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
                 onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
+                onRoadWidthChange={(value) => setRoadWidth(value as RoadWidthOption)}
                 paperSize={meta.paper_size}
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}
@@ -996,9 +998,11 @@ export default function SurveyPlan() {
                 northArrowStyle={northArrowStyle}
                 northArrowColor={northArrowColor}
                 beaconStyle={beaconStyle}
+                roadWidth={roadWidth}
                 onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
                 onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
                 onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
+                onRoadWidthChange={(value) => setRoadWidth(value as RoadWidthOption)}
                 paperSize={meta.paper_size}
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}
