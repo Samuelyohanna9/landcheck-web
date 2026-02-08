@@ -282,9 +282,9 @@ export default function FeatureOverrideModal({
               <input value={roadName} onChange={(e) => setRoadName(e.target.value)} placeholder="e.g., Abuja Road" />
             </div>
           )}
-          {featureType === "road" && action !== "delete" && (
+          {featureType === "road" && action === "add" && (
             <div className="field">
-              <label>Road Width (m)</label>
+              <label>New Road Width (m)</label>
               <select value={roadWidth} onChange={(e) => setRoadWidth(e.target.value)}>
                 <option value="4">4</option>
                 <option value="6">6</option>
