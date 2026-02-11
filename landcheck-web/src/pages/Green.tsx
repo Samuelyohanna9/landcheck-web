@@ -1,0 +1,587 @@
+import { useEffect, useMemo, useState } from "react";
+import toast, { Toaster } from "react-hot-toast";
+import { api, BACKEND_URL } from "../api/client";
+import TreeMap from "../components/TreeMap";
+import "../styles/green.css";
+
+type Project = {
+  id: number;
+  name: string;
+  location_text: string;
+  sponsor: string;
+  created_at: string;
+  stats?: {
+    total: number;
+    alive: number;
+    dead: number;
+    needs_attention: number;
+    survival_rate: number;
+  };
+};
+
+type Tree = {
+  id: number;
+  project_id: number;
+  lng: number;
+  lat: number;
+  species: string | null;
+  planting_date: string | null;
+  status: string;
+  notes: string | null;
+  photo_url: string | null;
+};
+
+type GreenUser = {
+  id: number;
+  full_name: string;
+  role: string;
+};
+
+export default function Green() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const [trees, setTrees] = useState<Tree[]>([]);
+  const [selectedTreeId, setSelectedTreeId] = useState<number | null>(null);
+  const [treeTasks, setTreeTasks] = useState<any[]>([]);
+  const [treeTimeline, setTreeTimeline] = useState<any | null>(null);
+  const [users, setUsers] = useState<GreenUser[]>([]);
+  const [activeUser, setActiveUser] = useState<string>("");
+  const [myTasks, setMyTasks] = useState<any[]>([]);
+  const [taskEdits, setTaskEdits] = useState<Record<number, { status: string; notes: string; photo_url: string }>>(
+    {}
+  );
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [loadingTrees, setLoadingTrees] = useState(false);
+  const [newTree, setNewTree] = useState({
+    lng: 0,
+    lat: 0,
+    species: "",
+    planting_date: "",
+    status: "alive",
+    notes: "",
+    photo_url: "",
+    created_by: "",
+  });
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string>("");
+  const [mapView, setMapView] = useState<{ lng: number; lat: number; zoom: number; bearing: number; pitch: number } | null>(null);
+
+  const treePoints = useMemo(
+    () => trees.map((t) => ({ id: t.id, lng: t.lng, lat: t.lat, status: t.status })),
+    [trees]
+  );
+
+  const loadProjects = async () => {
+    const res = await api.get("/green/projects");
+    setProjects(res.data);
+  };
+
+  const loadUsers = async () => {
+    const res = await api.get("/green/users");
+    setUsers(res.data);
+  };
+
+  const loadProjectDetail = async (id: number) => {
+    const [projectRes, treesRes] = await Promise.all([
+      api.get(`/green/projects/${id}`),
+      api.get(`/green/projects/${id}/trees`),
+    ]);
+    setActiveProject(projectRes.data);
+    setTrees(treesRes.data);
+  };
+
+  useEffect(() => {
+    loadProjects().catch(() => toast.error("Failed to load projects"));
+    loadUsers().catch(() => toast.error("Failed to load users"));
+  }, []);
+
+  useEffect(() => {
+    if (activeProject && activeUser) {
+      loadMyTasks().catch(() => toast.error("Failed to load tasks"));
+    }
+  }, [activeProject?.id, activeUser]);
+
+  const selectProject = async (project: Project) => {
+    setLoadingTrees(true);
+    try {
+      await loadProjectDetail(project.id);
+    } catch {
+      toast.error("Failed to load project");
+    } finally {
+      setLoadingTrees(false);
+    }
+  };
+
+  const addTree = async () => {
+    if (!activeProject) return;
+    if (!activeUser) {
+      toast.error("Select a field officer first");
+      return;
+    }
+    if (!newTree.lng || !newTree.lat) {
+      toast.error("Pick a point on the map");
+      return;
+    }
+    await api.post("/green/trees", {
+      project_id: activeProject.id,
+      ...newTree,
+      created_by: activeUser,
+    });
+    toast.success("Tree added");
+    setNewTree({
+      lng: 0,
+      lat: 0,
+      species: "",
+      planting_date: "",
+      status: "alive",
+      notes: "",
+      photo_url: "",
+      created_by: "",
+    });
+    setPhotoPreview("");
+    await loadProjectDetail(activeProject.id);
+  };
+
+  const loadTreeDetails = async (treeId: number) => {
+    setSelectedTreeId(treeId);
+    const [tasksRes, timelineRes] = await Promise.all([
+      api.get(`/green/trees/${treeId}/tasks`),
+      api.get(`/green/trees/${treeId}/timeline`),
+    ]);
+    setTreeTasks(tasksRes.data);
+    setTreeTimeline(timelineRes.data);
+  };
+
+  const loadMyTasks = async () => {
+    if (!activeProject || !activeUser) return;
+    const res = await api.get(
+      `/green/tasks?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}`
+    );
+    setMyTasks(res.data);
+    const edits: Record<number, { status: string; notes: string; photo_url: string }> = {};
+    res.data.forEach((t: any) => {
+      edits[t.id] = {
+        status: t.status,
+        notes: t.notes || "",
+        photo_url: t.photo_url || "",
+      };
+    });
+    setTaskEdits(edits);
+    setEditingTaskId(null);
+  };
+
+  const saveTaskUpdate = async (taskId: number) => {
+    const edit = taskEdits[taskId];
+    if (!edit) return;
+    await api.patch(`/green/tasks/${taskId}`, edit);
+    await loadMyTasks();
+    toast.success("Task updated");
+  };
+
+  const onTaskPhotoPicked = (taskId: number, file: File | null) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || "");
+      setTaskEdits((prev) => ({
+        ...prev,
+        [taskId]: {
+          status: prev[taskId]?.status || "pending",
+          notes: prev[taskId]?.notes || "",
+          photo_url: dataUrl,
+        },
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const updateTreeStatus = async (treeId: number, status: string) => {
+    await api.patch(`/green/trees/${treeId}`, { status });
+    if (activeProject) {
+      await loadProjectDetail(activeProject.id);
+    }
+  };
+
+  const exportCsv = async () => {
+    if (!activeProject) return;
+    window.open(`${BACKEND_URL}/green/projects/${activeProject.id}/export/csv`, "_blank");
+  };
+
+  const exportPdf = async () => {
+    if (!activeProject) return;
+    const view = mapView
+      ? `?lng=${mapView.lng}&lat=${mapView.lat}&zoom=${mapView.zoom}&bearing=${mapView.bearing}&pitch=${mapView.pitch}`
+      : "";
+    window.open(`${BACKEND_URL}/green/projects/${activeProject.id}/export/pdf${view}`, "_blank");
+  };
+
+  const useGps = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation not supported on this device");
+      return;
+    }
+    setGpsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setNewTree((prev) => ({
+          ...prev,
+          lng: Number(pos.coords.longitude.toFixed(6)),
+          lat: Number(pos.coords.latitude.toFixed(6)),
+        }));
+        setGpsLoading(false);
+      },
+      () => {
+        toast.error("Unable to get GPS location");
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const onPhotoPicked = (file: File | null) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || "");
+      setPhotoPreview(dataUrl);
+      setNewTree((prev) => ({ ...prev, photo_url: dataUrl }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="green-container">
+      <Toaster position="top-right" />
+      <header className="green-header">
+        <h1>LandCheck Green</h1>
+        <span className="green-badge">MVP</span>
+      </header>
+
+      <div className="green-content">
+        <aside className="green-sidebar">
+          <div className="green-card">
+            <h3>Projects</h3>
+            <div className="project-list">
+              {projects.map((p) => (
+                <button
+                  key={p.id}
+                  className={`project-item ${activeProject?.id === p.id ? "active" : ""}`}
+                  onClick={() => selectProject(p)}
+                >
+                  <strong>{p.name}</strong>
+                  <span>{p.location_text || "No location"}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        <section className="green-main">
+          {activeProject ? (
+            <>
+              <div className="green-card">
+                <div className="project-header">
+                  <div>
+                    <h2>{activeProject.name}</h2>
+                    <p>{activeProject.location_text}</p>
+                  </div>
+                  <div className="project-actions">
+                    <button className="btn-outline" onClick={exportCsv}>
+                      Export CSV
+                    </button>
+                    <button className="btn-outline" onClick={exportPdf}>
+                      Export PDF
+                    </button>
+                  </div>
+                </div>
+                <div className="tree-form-row">
+                  <label>Field Officer</label>
+                  <select
+                    value={activeUser}
+                    onChange={(e) => setActiveUser(e.target.value)}
+                  >
+                    <option value="">Select staff</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.full_name}>
+                        {u.full_name} ({u.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="stats-grid">
+                  <div>
+                    <span>Total</span>
+                    <strong>{activeProject.stats?.total ?? 0}</strong>
+                  </div>
+                  <div>
+                    <span>Alive</span>
+                    <strong>{activeProject.stats?.alive ?? 0}</strong>
+                  </div>
+                  <div>
+                    <span>Dead</span>
+                    <strong>{activeProject.stats?.dead ?? 0}</strong>
+                  </div>
+                  <div>
+                    <span>Needs Attention</span>
+                    <strong>{activeProject.stats?.needs_attention ?? 0}</strong>
+                  </div>
+                  <div>
+                    <span>Survival</span>
+                    <strong>{activeProject.stats?.survival_rate ?? 0}%</strong>
+                  </div>
+                </div>
+              </div>
+
+              {activeUser && (
+                <div className="green-card">
+                  <div className="green-card-header">
+                    <h3>My Tasks</h3>
+                    <button className="btn-outline" onClick={loadMyTasks}>
+                      Refresh
+                    </button>
+                  </div>
+                  {myTasks.length === 0 ? (
+                    <p>No tasks assigned.</p>
+                  ) : (
+                    <div className="tree-table">
+                      <div className="tree-row tree-header">
+                        <span>Task</span>
+                        <span>Tree</span>
+                        <span>Status</span>
+                        <span>Due</span>
+                        <span>Action</span>
+                      </div>
+                      {myTasks.map((t) => (
+                        <div key={t.id} className="tree-row">
+                          <span>{t.task_type}</span>
+                          <span>#{t.tree_id}</span>
+                          <span>
+                            <select
+                              value={taskEdits[t.id]?.status || t.status}
+                              onChange={(e) =>
+                                setTaskEdits((prev) => ({
+                                  ...prev,
+                                  [t.id]: {
+                                    status: e.target.value,
+                                    notes: prev[t.id]?.notes || "",
+                                    photo_url: prev[t.id]?.photo_url || "",
+                                  },
+                                }))
+                              }
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="done">Done</option>
+                              <option value="overdue">Overdue</option>
+                            </select>
+                          </span>
+                          <span>{t.due_date || "-"}</span>
+                          <span>
+                            <button onClick={() => setEditingTaskId(t.id)}>Edit</button>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {editingTaskId && (
+                    <div className="tree-form">
+                      <div className="tree-form-row full">
+                        <label>Notes</label>
+                        <textarea
+                          value={taskEdits[editingTaskId]?.notes || ""}
+                          onChange={(e) =>
+                            setTaskEdits((prev) => ({
+                              ...prev,
+                              [editingTaskId]: {
+                                status: prev[editingTaskId]?.status || "pending",
+                                notes: e.target.value,
+                                photo_url: prev[editingTaskId]?.photo_url || "",
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="tree-form-row full">
+                        <label>Photo Proof</label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={(e) => onTaskPhotoPicked(editingTaskId, e.target.files?.[0] || null)}
+                        />
+                      </div>
+                      <button className="btn-primary" onClick={() => saveTaskUpdate(editingTaskId)}>
+                        Save Task Update
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="green-card">
+                <h3>Map & Add Trees</h3>
+                <div className="map-tools">
+                  <span className="map-hint">Click on map to place tree point</span>
+                </div>
+                <TreeMap
+                  trees={treePoints}
+                  draftPoint={
+                    newTree.lng && newTree.lat ? { lng: newTree.lng, lat: newTree.lat } : null
+                  }
+                  onDraftMove={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
+                  onAddTree={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
+                  onSelectTree={(id) => loadTreeDetails(id)}
+                  onViewChange={(view) => setMapView(view)}
+                />
+                <div className="tree-form">
+                  <div className="tree-form-row">
+                    <label>GPS</label>
+                    <button className="btn-outline" type="button" onClick={useGps} disabled={gpsLoading}>
+                      {gpsLoading ? "Locating..." : "Use GPS Location"}
+                    </button>
+                  </div>
+                  <div className="tree-form-row">
+                    <label>Lng</label>
+                    <input value={newTree.lng || ""} readOnly />
+                  </div>
+                  <div className="tree-form-row">
+                    <label>Lat</label>
+                    <input value={newTree.lat || ""} readOnly />
+                  </div>
+                  <div className="tree-form-row">
+                    <label>Species</label>
+                    <input
+                      value={newTree.species}
+                      onChange={(e) => setNewTree({ ...newTree, species: e.target.value })}
+                    />
+                  </div>
+                  <div className="tree-form-row">
+                    <label>Planting Date</label>
+                    <input
+                      type="date"
+                      value={newTree.planting_date}
+                      onChange={(e) => setNewTree({ ...newTree, planting_date: e.target.value })}
+                    />
+                  </div>
+                  <div className="tree-form-row">
+                    <label>Status</label>
+                    <select
+                      value={newTree.status}
+                      onChange={(e) => setNewTree({ ...newTree, status: e.target.value })}
+                    >
+                      <option value="alive">Alive</option>
+                      <option value="dead">Dead</option>
+                      <option value="needs_attention">Needs attention</option>
+                      <option value="pending_planting">Pending planting</option>
+                    </select>
+                  </div>
+                  <div className="tree-form-row">
+                    <label>Added by</label>
+                    <input
+                      value={activeUser}
+                      readOnly
+                      placeholder="Select field officer"
+                    />
+                  </div>
+                  <div className="tree-form-row full">
+                    <label>Notes</label>
+                    <textarea
+                      value={newTree.notes}
+                      onChange={(e) => setNewTree({ ...newTree, notes: e.target.value })}
+                    />
+                  </div>
+                  <div className="tree-form-row full">
+                    <label>Tree Photo</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => onPhotoPicked(e.target.files?.[0] || null)}
+                    />
+                    {photoPreview && (
+                      <img className="tree-photo-preview" src={photoPreview} alt="Tree preview" />
+                    )}
+                  </div>
+                  <button className="btn-primary" onClick={addTree}>
+                    Add Tree
+                  </button>
+                </div>
+              </div>
+
+              <div className="green-card">
+                <h3>Tree Records</h3>
+                {loadingTrees ? (
+                  <p>Loading trees...</p>
+                ) : (
+                  <div className="tree-table">
+                    <div className="tree-row tree-header">
+                      <span>ID</span>
+                      <span>Species</span>
+                      <span>Status</span>
+                      <span>Actions</span>
+                    </div>
+                    {trees.map((t) => (
+                      <div key={t.id} className="tree-row">
+                        <span>#{t.id}</span>
+                        <span>{t.species || "-"}</span>
+                        <span>{t.status}</span>
+                        <div className="tree-actions">
+                          <button onClick={() => updateTreeStatus(t.id, "alive")}>Alive</button>
+                          <button onClick={() => updateTreeStatus(t.id, "needs_attention")}>
+                            Needs attention
+                          </button>
+                          <button onClick={() => updateTreeStatus(t.id, "dead")}>Dead</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {selectedTreeId && (
+                <div className="green-card">
+                  <h3>Tree Tasks & Timeline</h3>
+                  <div className="tree-table">
+                    <div className="tree-row tree-header">
+                      <span>Task</span>
+                      <span>Assignee</span>
+                      <span>Priority</span>
+                      <span>Status</span>
+                      <span>Due</span>
+                    </div>
+                    {treeTasks.map((t) => (
+                      <div key={t.id} className="tree-row">
+                        <span>{t.task_type}</span>
+                        <span>{t.assignee_name}</span>
+                        <span>{t.priority || "-"}</span>
+                        <span>{t.status}</span>
+                        <span>{t.due_date || "-"}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {treeTimeline && (
+                    <div className="timeline">
+                      <h4>Timeline</h4>
+                      <p>Planted: {treeTimeline.tree?.planting_date || "-"}</p>
+                      <p>Status: {treeTimeline.tree?.status || "-"}</p>
+                      {treeTimeline.visits?.map((v: any, i: number) => (
+                        <p key={i}>
+                          Visit {v.visit_date}: {v.status}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="green-card">
+              <h3>Select a project to begin</h3>
+              <p>Projects are created in LandCheck Work.</p>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
