@@ -341,13 +341,12 @@ export default function Green() {
       <Toaster position="top-right" />
       <header className="green-header">
         <div className="green-brand">
-          <div className="green-brand-logo">LC</div>
+          <img className="green-brand-logo" src="/logo.svg" alt="LandCheck" />
           <div>
             <h1>LandCheck Green</h1>
             <p>Field dashboard for tree monitoring</p>
           </div>
         </div>
-        <span className="green-badge">PWA</span>
       </header>
 
       <main className="green-shell">

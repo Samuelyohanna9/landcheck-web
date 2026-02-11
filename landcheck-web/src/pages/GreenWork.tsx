@@ -281,11 +281,17 @@ export default function GreenWork() {
 
           <div className="green-work-card">
             <h3>Create Work Order</h3>
-            <input
-              placeholder="Assignee name"
+            <select
               value={newOrder.assignee_name}
               onChange={(e) => setNewOrder({ ...newOrder, assignee_name: e.target.value })}
-            />
+            >
+              <option value="">Select assignee</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.full_name}>
+                  {u.full_name}
+                </option>
+              ))}
+            </select>
             <select
               value={newOrder.work_type}
               onChange={(e) => setNewOrder({ ...newOrder, work_type: e.target.value })}
