@@ -261,18 +261,23 @@ export default function Green() {
         <aside className="green-sidebar">
           <div className="green-card">
             <h3>Projects</h3>
-            <div className="project-list">
+            <select
+              value={activeProject?.id || ""}
+              onChange={(e) => {
+                const id = Number(e.target.value);
+                const project = projects.find((p) => p.id === id);
+                if (project) {
+                  selectProject(project);
+                }
+              }}
+            >
+              <option value="">Select project</option>
               {projects.map((p) => (
-                <button
-                  key={p.id}
-                  className={`project-item ${activeProject?.id === p.id ? "active" : ""}`}
-                  onClick={() => selectProject(p)}
-                >
-                  <strong>{p.name}</strong>
-                  <span>{p.location_text || "No location"}</span>
-                </button>
+                <option key={p.id} value={p.id}>
+                  {p.name} {p.location_text ? `- ${p.location_text}` : ""}
+                </option>
               ))}
-            </div>
+            </select>
           </div>
         </aside>
 
@@ -476,11 +481,17 @@ export default function Green() {
                   </div>
                   <div className="tree-form-row">
                     <label>Added by</label>
-                    <input
+                    <select
                       value={activeUser}
-                      readOnly
-                      placeholder="Select field officer"
-                    />
+                      onChange={(e) => setActiveUser(e.target.value)}
+                    >
+                      <option value="">Select field officer</option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.full_name}>
+                          {u.full_name} ({u.role})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="tree-form-row full">
                     <label>Notes</label>
