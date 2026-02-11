@@ -259,18 +259,6 @@ export default function GreenWork() {
             </button>
           </div>
           <div className="green-work-card">
-            <h3>Select Project</h3>
-            <select onChange={(e) => onSelectProject(Number(e.target.value))} value={activeProjectId || ""}>
-              <option value="">Choose project</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="green-work-card">
             <h3>Add User</h3>
             <input
               placeholder="Full name"
@@ -390,6 +378,14 @@ export default function GreenWork() {
             <div className="green-work-row">
               <h3>Progress Dashboard</h3>
               <div className="work-actions">
+                <select onChange={(e) => onSelectProject(Number(e.target.value))} value={activeProjectId || ""}>
+                  <option value="">Select project</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
                 <button onClick={exportWorkCsv}>Export CSV</button>
                 <button onClick={exportWorkPdf}>Export PDF</button>
                 <select
@@ -407,6 +403,27 @@ export default function GreenWork() {
 
             {stats && (
               <div className="green-work-stats">
+                {assigneeFilter === "all" && (
+                  <div className="stat-card">
+                    <h4>All Staff</h4>
+                    <p>
+                      Orders:{" "}
+                      {stats.orders.reduce((sum: number, o: any) => sum + (o.orders || 0), 0)}
+                    </p>
+                    <p>
+                      Target Trees:{" "}
+                      {stats.orders.reduce((sum: number, o: any) => sum + (o.target_trees || 0), 0)}
+                    </p>
+                    <p>
+                      Planted:{" "}
+                      {stats.orders.reduce((sum: number, o: any) => sum + (o.planted_count || 0), 0)}
+                    </p>
+                    <p>
+                      Visits:{" "}
+                      {stats.orders.reduce((sum: number, o: any) => sum + (o.visits_done || 0), 0)}
+                    </p>
+                  </div>
+                )}
                 {stats.orders.map((o: any) => (
                   <div key={o.assignee_name} className="stat-card">
                     <h4>{o.assignee_name}</h4>
