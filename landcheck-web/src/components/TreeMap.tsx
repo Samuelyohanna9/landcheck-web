@@ -156,8 +156,8 @@ export default function TreeMap({
       });
 
       if (enableDraw) {
-        map.on("draw.create", (e) => {
-          const feature = e.features?.[0];
+        map.on("draw.create", (e: any) => {
+          const feature = e?.features?.[0];
           if (!feature || feature.geometry?.type !== "Point") return;
           const [lng, lat] = feature.geometry.coordinates;
           onAddTreeRef.current(lng, lat);
