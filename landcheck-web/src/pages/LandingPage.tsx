@@ -185,17 +185,17 @@ export default function LandingPage() {
           </button>
         </div>
 
-        {/* Land Hazard Analysis Card - Coming Soon */}
-        <div className="service-card disabled">
+        {/* Land Hazard Analysis Card - Flood (Beta) */}
+        <div className="service-card active" onClick={() => navigate("/hazard-analysis")}>
           <div className="card-icon hazard-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
           <h2 className="card-title">Land Hazard Analysis</h2>
-          <span className="card-badge coming-soon">Coming Soon</span>
+          <span className="card-badge live">Flood Risk (Beta)</span>
           <p className="card-description">
-            Comprehensive hazard assessment including flood risk, erosion potential, soil stability, and environmental factors.
+            Flood risk screening using global datasets with map overlay and PDF report.
           </p>
           <ul className="card-features">
             <li>
@@ -229,8 +229,8 @@ export default function LandingPage() {
               Risk mitigation advice
             </li>
           </ul>
-          <button className="card-button secondary" disabled>
-            Coming Soon
+          <button className="card-button primary">
+            Run Flood Analysis
             <svg viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
             </svg>

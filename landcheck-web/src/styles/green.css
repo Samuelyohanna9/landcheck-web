@@ -1,0 +1,238 @@
+.green-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #e2e8f0;
+}
+
+.green-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(10, 30, 20, 0.85);
+}
+
+.green-badge {
+  background: rgba(34, 197, 94, 0.25);
+  color: #22c55e;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.green-content {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.green-sidebar,
+.green-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.green-card {
+  background: rgba(15, 32, 24, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.green-card h3 {
+  margin: 0 0 0.75rem;
+}
+
+.green-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.green-card input,
+.green-card select,
+.green-card textarea {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #e2e8f0;
+  border-radius: 10px;
+  padding: 0.5rem 0.6rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.project-item {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  padding: 0.6rem;
+  text-align: left;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.project-item.active {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.4);
+}
+
+.project-item span {
+  display: block;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.project-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.project-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.stats-grid span {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.stats-grid strong {
+  font-size: 1.2rem;
+}
+
+.tree-form {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.8rem;
+}
+
+.map-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.map-tools .btn-outline.active {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.4);
+}
+
+.map-hint {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.tree-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.tree-form-row.full {
+  grid-column: 1 / -1;
+}
+
+.tree-form textarea {
+  min-height: 70px;
+}
+
+.tree-table {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.tree-row {
+  display: grid;
+  grid-template-columns: 60px 1fr 140px 220px;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(15, 23, 42, 0.7);
+  padding: 0.5rem;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  font-size: 0.85rem;
+}
+
+.tree-row.tree-header {
+  font-weight: 600;
+  background: transparent;
+  border: none;
+}
+
+.tree-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.tree-actions button {
+  background: rgba(10, 30, 20, 0.85);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  color: #e2e8f0;
+  padding: 0.2rem 0.4rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+}
+
+.tree-photo-preview {
+  margin-top: 0.5rem;
+  max-width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+@media (max-width: 1024px) {
+  .green-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .green-content {
+    padding: 1rem;
+  }
+
+  .green-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .project-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tree-form {
+    grid-template-columns: 1fr;
+  }
+
+  .tree-row {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}
