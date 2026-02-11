@@ -120,6 +120,29 @@ export default function Green() {
   }, []);
 
   useEffect(() => {
+    // PWA setup for /green only
+    if (!window.location.pathname.startsWith("/green")) return;
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = "/green/manifest.webmanifest";
+    document.head.appendChild(link);
+
+    const theme = document.createElement("meta");
+    theme.name = "theme-color";
+    theme.content = "#0b1f16";
+    document.head.appendChild(theme);
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/green/sw.js", { scope: "/green/" }).catch(() => {});
+    }
+
+    return () => {
+      document.head.removeChild(link);
+      document.head.removeChild(theme);
+    };
+  }, []);
+
+  useEffect(() => {
     if (activeProject && activeUser) {
       loadMyTasks().catch(() => toast.error("Failed to load tasks"));
     }
