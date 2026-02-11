@@ -213,6 +213,16 @@
   margin-right: 0.35rem;
 }
 
+.task-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.task-actions {
+  gap: 0.35rem;
+}
+
 .tree-photo-preview {
   margin-top: 0.5rem;
   max-width: 100%;
@@ -263,6 +273,17 @@
   .task-row span,
   .task-row select,
   .task-row button {
+    width: 100%;
+  }
+
+  .task-cell::before {
+    content: attr(data-label);
+    color: #94a3b8;
+    font-size: 0.75rem;
+    min-width: 90px;
+  }
+
+  .task-actions {
     width: 100%;
   }
 }

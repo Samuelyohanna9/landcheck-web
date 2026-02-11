@@ -90,6 +90,14 @@ export default function Green() {
     return points.length ? points : null;
   }, [activeUser, trees]);
 
+  const allTreePoints = useMemo(() => {
+    if (!trees.length) return null;
+    const points = trees
+      .map((t) => ({ lng: Number(t.lng), lat: Number(t.lat) }))
+      .filter((p) => Number.isFinite(p.lng) && Number.isFinite(p.lat));
+    return points.length ? points : null;
+  }, [trees]);
+
   const loadProjects = async () => {
     const res = await api.get("/green/projects");
     setProjects(res.data);
@@ -424,9 +432,13 @@ export default function Green() {
                             }
                           }}
                         >
-                          <span>{t.task_type}</span>
-                          <span>#{t.tree_id}</span>
-                          <span>
+                          <span className="task-cell" data-label="Task">
+                            {t.task_type}
+                          </span>
+                          <span className="task-cell" data-label="Tree">
+                            #{t.tree_id}
+                          </span>
+                          <span className="task-cell" data-label="Status">
                             <select
                               value={taskEdits[t.id]?.status || t.status}
                               onChange={(e) =>
@@ -445,8 +457,10 @@ export default function Green() {
                               <option value="overdue">Overdue</option>
                             </select>
                           </span>
-                          <span>{t.due_date || "-"}</span>
-                          <span>
+                          <span className="task-cell" data-label="Due">
+                            {t.due_date || "-"}
+                          </span>
+                          <span className="task-cell task-actions" data-label="Action">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -455,6 +469,16 @@ export default function Green() {
                             >
                               Edit
                             </button>
+                            {Number.isFinite(t.lng) && Number.isFinite(t.lat) && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
+                                }}
+                              >
+                                Locate
+                              </button>
+                            )}
                             {Number.isFinite(t.lng) && Number.isFinite(t.lat) && (
                               <button
                                 onClick={(e) => {
@@ -520,7 +544,7 @@ export default function Green() {
                   onAddTree={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
                   onSelectTree={(id) => loadTreeDetails(id)}
                   onViewChange={(view) => setMapView(view)}
-                  fitBounds={focusPoint || activeUserPoints}
+                  fitBounds={focusPoint || activeUserPoints || allTreePoints}
                 />
                 <div className="tree-form">
                   <div className="tree-form-row">
