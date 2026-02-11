@@ -216,7 +216,7 @@ export default function TreeMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !mapReady) return;
 
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
@@ -234,7 +234,7 @@ export default function TreeMap({
 
       markersRef.current.push(marker);
     });
-  }, [trees]);
+  }, [trees, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
