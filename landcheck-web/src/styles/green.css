@@ -246,6 +246,19 @@
   }
 
   .task-row {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+
+  .tree-row.tree-header {
+    display: none;
+  }
+
+  .task-row span,
+  .task-row select,
+  .task-row button {
+    width: 100%;
   }
 }
