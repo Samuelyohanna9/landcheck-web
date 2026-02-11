@@ -67,6 +67,7 @@ export default function Green() {
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const [mapView, setMapView] = useState<{ lng: number; lat: number; zoom: number; bearing: number; pitch: number } | null>(null);
   const [focusPoint, setFocusPoint] = useState<{ lng: number; lat: number }[] | null>(null);
+  const [plantingOrders, setPlantingOrders] = useState<any[]>([]);
   const [activeSection, setActiveSection] = useState<"tasks" | "map" | "records">("tasks");
 
   const treePoints = useMemo(
@@ -118,6 +119,14 @@ export default function Green() {
     const needs = userTrees.filter((t) => t.status === "needs_attention").length;
     return { total, alive, dead, needs };
   }, [userTrees]);
+
+  const pendingPlanting = useMemo(() => {
+    const orders = plantingOrders.filter((o) => o.work_type === "planting");
+    return orders.reduce((sum: number, o: any) => {
+      const remaining = Math.max((o.target_trees || 0) - (o.planted_count || 0), 0);
+      return sum + remaining;
+    }, 0);
+  }, [plantingOrders]);
 
   const loadProjects = async () => {
     const res = await api.get("/green/projects");
@@ -175,6 +184,16 @@ export default function Green() {
     if (activeProject && activeUser) {
       loadMyTasks().catch(() => toast.error("Failed to load tasks"));
     }
+  }, [activeProject?.id, activeUser]);
+
+  useEffect(() => {
+    if (!activeProject || !activeUser) return;
+    api
+      .get(
+        `/green/work-orders?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}`
+      )
+      .then((res) => setPlantingOrders(res.data || []))
+      .catch(() => setPlantingOrders([]));
   }, [activeProject?.id, activeUser]);
 
   useEffect(() => {
@@ -435,7 +454,7 @@ export default function Green() {
             type="button"
           >
             <span className="tile-icon">📝</span>
-            <span>My Tasks</span>
+            <span>Maintenance Tasks</span>
             <span className="tile-badge">{myTaskCounts.pending}</span>
           </button>
           <button
@@ -445,6 +464,7 @@ export default function Green() {
           >
             <span className="tile-icon">🗺️</span>
             <span>Map & Add Trees</span>
+            {pendingPlanting > 0 && <span className="tile-badge">{pendingPlanting}</span>}
           </button>
           <button
             className={`green-tile ${activeSection === "records" ? "active" : ""}`}
@@ -462,7 +482,7 @@ export default function Green() {
             {activeUser && activeSection === "tasks" && (
               <section className="green-card" id="tasks">
                 <div className="green-card-header">
-                  <h3>My Tasks</h3>
+                  <h3>Maintenance Tasks</h3>
                   <button className="btn-outline" onClick={loadMyTasks}>
                     Refresh
                   </button>
