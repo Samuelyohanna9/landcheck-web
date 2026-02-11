@@ -9,7 +9,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.5rem;
-  background: #a20d43;
+  background: #0f5b2a;
   color: #fff;
 }
 
@@ -163,6 +163,25 @@
   font-weight: 600;
   text-decoration: none;
   box-shadow: 0 8px 16px rgba(15, 23, 42, 0.12);
+  border: none;
+  cursor: pointer;
+  position: relative;
+}
+
+.green-tile.active {
+  outline: 2px solid #0f5b2a;
+  box-shadow: 0 0 0 3px rgba(15, 91, 42, 0.2);
+}
+
+.tile-badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: #0f172a;
+  color: #fff;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
 }
 
 .tile-icon {
