@@ -209,6 +209,10 @@
   font-size: 0.75rem;
 }
 
+.task-row button {
+  margin-right: 0.35rem;
+}
+
 .tree-photo-preview {
   margin-top: 0.5rem;
   max-width: 100%;

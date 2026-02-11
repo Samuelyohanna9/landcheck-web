@@ -208,6 +208,11 @@ export default function Green() {
     toast.success("Task updated");
   };
 
+  const openDirections = (lng: number, lat: number) => {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    window.open(url, "_blank");
+  };
+
   const onTaskPhotoPicked = (taskId: number, file: File | null) => {
     if (!file) return;
     const reader = new FileReader();
@@ -427,6 +432,17 @@ export default function Green() {
                             >
                               Edit
                             </button>
+                            {Number.isFinite(t.lng) && Number.isFinite(t.lat) && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
+                                  openDirections(Number(t.lng), Number(t.lat));
+                                }}
+                              >
+                                Directions
+                              </button>
+                            )}
                           </span>
                         </div>
                       ))}
