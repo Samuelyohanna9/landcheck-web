@@ -21,6 +21,7 @@ type Props = {
   enableDraw?: boolean;
   onSelectTree?: (id: number) => void;
   onViewChange?: (view: { lng: number; lat: number; zoom: number; bearing: number; pitch: number }) => void;
+  fitBounds?: { lng: number; lat: number }[] | null;
 };
 
 const statusColors: Record<string, string> = {
@@ -38,6 +39,7 @@ export default function TreeMap({
   enableDraw = true,
   onSelectTree,
   onViewChange,
+  fitBounds,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -203,6 +205,14 @@ export default function TreeMap({
       setMapError(null);
     }
   }, [mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || !fitBounds || fitBounds.length === 0) return;
+    const bounds = new mapboxgl.LngLatBounds();
+    fitBounds.forEach((p) => bounds.extend([p.lng, p.lat]));
+    map.fitBounds(bounds, { padding: 60, duration: 0, maxZoom: 17 });
+  }, [fitBounds, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
