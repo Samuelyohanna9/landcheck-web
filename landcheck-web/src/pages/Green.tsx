@@ -319,233 +319,259 @@ export default function Green() {
     <div className="green-container">
       <Toaster position="top-right" />
       <header className="green-header">
-        <h1>LandCheck Green</h1>
-        <span className="green-badge">MVP</span>
+        <div className="green-brand">
+          <div className="green-brand-logo">LC</div>
+          <div>
+            <h1>LandCheck Green</h1>
+            <p>Field dashboard for tree monitoring</p>
+          </div>
+        </div>
+        <span className="green-badge">PWA</span>
       </header>
 
-      <div className="green-content">
-        <aside className="green-sidebar">
-          <div className="green-card">
-            <h3>Projects</h3>
-            <select
-              value={activeProject?.id || ""}
-              onChange={(e) => {
-                const id = Number(e.target.value);
-                const project = projects.find((p) => p.id === id);
-                if (project) {
-                  selectProject(project);
-                }
-              }}
-            >
-              <option value="">Select project</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} {p.location_text ? `- ${p.location_text}` : ""}
-                </option>
-              ))}
-            </select>
+      <main className="green-shell">
+        <section className="green-hero-card" id="project">
+          <div className="hero-header">
+            <h2>Project & Field Setup</h2>
+            <div className="hero-actions">
+              <button className="btn-outline" onClick={exportCsv}>
+                Export CSV
+              </button>
+              <button className="btn-outline" onClick={exportPdf}>
+                Export PDF
+              </button>
+            </div>
           </div>
-        </aside>
-
-        <section className="green-main">
-          {activeProject ? (
-            <>
-              <div className="green-card">
-                <div className="project-header">
-                  <div>
-                    <h2>{activeProject.name}</h2>
-                    <p>{activeProject.location_text}</p>
-                  </div>
-                  <div className="project-actions">
-                    <button className="btn-outline" onClick={exportCsv}>
-                      Export CSV
-                    </button>
-                    <button className="btn-outline" onClick={exportPdf}>
-                      Export PDF
-                    </button>
-                  </div>
-                </div>
-                <div className="tree-form-row">
-                  <label>Field Officer</label>
-                  <select
-                    value={activeUser}
-                    onChange={(e) => setActiveUser(e.target.value)}
-                  >
-                    <option value="">Select staff</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.full_name}>
-                        {u.full_name} ({u.role})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="stats-grid">
-                  <div>
-                    <span>Total</span>
-                    <strong>{activeProject.stats?.total ?? 0}</strong>
-                  </div>
-                  <div>
-                    <span>Alive</span>
-                    <strong>{activeProject.stats?.alive ?? 0}</strong>
-                  </div>
-                  <div>
-                    <span>Dead</span>
-                    <strong>{activeProject.stats?.dead ?? 0}</strong>
-                  </div>
-                  <div>
-                    <span>Needs Attention</span>
-                    <strong>{activeProject.stats?.needs_attention ?? 0}</strong>
-                  </div>
-                  <div>
-                    <span>Survival</span>
-                    <strong>{activeProject.stats?.survival_rate ?? 0}%</strong>
-                  </div>
-                </div>
+          <div className="hero-grid">
+            <div className="hero-block">
+              <label>Project</label>
+              <select
+                value={activeProject?.id || ""}
+                onChange={(e) => {
+                  const id = Number(e.target.value);
+                  const project = projects.find((p) => p.id === id);
+                  if (project) {
+                    selectProject(project);
+                  }
+                }}
+              >
+                <option value="">Select project</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} {p.location_text ? `- ${p.location_text}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="hero-block">
+              <label>Field Officer</label>
+              <select value={activeUser} onChange={(e) => setActiveUser(e.target.value)}>
+                <option value="">Select staff</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.full_name}>
+                    {u.full_name} ({u.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="hero-block">
+              <label>Active Project</label>
+              <div className="hero-pill">
+                {activeProject ? activeProject.name : "No project selected"}
               </div>
+              <span className="hero-sub">
+                {activeProject?.location_text || "Select a project to begin"}
+              </span>
+            </div>
+          </div>
+          <div className="stats-grid">
+            <div>
+              <span>Total</span>
+              <strong>{activeProject?.stats?.total ?? 0}</strong>
+            </div>
+            <div>
+              <span>Alive</span>
+              <strong>{activeProject?.stats?.alive ?? 0}</strong>
+            </div>
+            <div>
+              <span>Dead</span>
+              <strong>{activeProject?.stats?.dead ?? 0}</strong>
+            </div>
+            <div>
+              <span>Needs Attention</span>
+              <strong>{activeProject?.stats?.needs_attention ?? 0}</strong>
+            </div>
+            <div>
+              <span>Survival</span>
+              <strong>{activeProject?.stats?.survival_rate ?? 0}%</strong>
+            </div>
+          </div>
+        </section>
 
-              {activeUser && (
-                <div className="green-card">
-                  <div className="green-card-header">
-                    <h3>My Tasks</h3>
-                    <button className="btn-outline" onClick={loadMyTasks}>
-                      Refresh
-                    </button>
-                  </div>
-                  {myTasks.length === 0 ? (
-                    <p>No tasks assigned.</p>
-                  ) : (
-                    <div className="tree-table">
-                      <div className="tree-row tree-header">
-                        <span>Task</span>
-                        <span>Tree</span>
-                        <span>Status</span>
-                        <span>Due</span>
-                        <span>Action</span>
-                      </div>
-                      {myTasks.map((t) => (
-                        <div
-                          key={t.id}
-                          className="tree-row task-row"
-                          onClick={() => {
-                            if (Number.isFinite(t.lng) && Number.isFinite(t.lat)) {
-                              setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
+        <section className="green-tiles">
+          <a className="green-tile" href="#tasks">
+            <span className="tile-icon">📝</span>
+            <span>My Tasks</span>
+          </a>
+          <a className="green-tile" href="#map">
+            <span className="tile-icon">🗺️</span>
+            <span>Map & Add Trees</span>
+          </a>
+          <a className="green-tile" href="#records">
+            <span className="tile-icon">🌳</span>
+            <span>Tree Records</span>
+          </a>
+          <a className="green-tile" href="#timeline">
+            <span className="tile-icon">🧭</span>
+            <span>Timeline</span>
+          </a>
+        </section>
+
+        {activeProject ? (
+          <>
+            {activeUser && (
+              <section className="green-card" id="tasks">
+                <div className="green-card-header">
+                  <h3>My Tasks</h3>
+                  <button className="btn-outline" onClick={loadMyTasks}>
+                    Refresh
+                  </button>
+                </div>
+                {myTasks.length === 0 ? (
+                  <p>No tasks assigned.</p>
+                ) : (
+                  <div className="tree-table">
+                    <div className="tree-row tree-header">
+                      <span>Task</span>
+                      <span>Tree</span>
+                      <span>Status</span>
+                      <span>Due</span>
+                      <span>Action</span>
+                    </div>
+                    {myTasks.map((t) => (
+                      <div
+                        key={t.id}
+                        className="tree-row task-row"
+                        onClick={() => {
+                          if (Number.isFinite(t.lng) && Number.isFinite(t.lat)) {
+                            setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
+                          }
+                        }}
+                      >
+                        <span className="task-cell" data-label="Task">
+                          {t.task_type}
+                        </span>
+                        <span className="task-cell" data-label="Tree">
+                          #{t.tree_id}
+                        </span>
+                        <span className="task-cell" data-label="Status">
+                          <select
+                            value={taskEdits[t.id]?.status || t.status}
+                            onChange={(e) =>
+                              setTaskEdits((prev) => ({
+                                ...prev,
+                                [t.id]: {
+                                  status: e.target.value,
+                                  notes: prev[t.id]?.notes || "",
+                                  photo_url: prev[t.id]?.photo_url || "",
+                                },
+                              }))
                             }
-                          }}
-                        >
-                          <span className="task-cell" data-label="Task">
-                            {t.task_type}
-                          </span>
-                          <span className="task-cell" data-label="Tree">
-                            #{t.tree_id}
-                          </span>
-                          <span className="task-cell" data-label="Status">
-                            <select
-                              value={taskEdits[t.id]?.status || t.status}
-                              onChange={(e) =>
-                                setTaskEdits((prev) => ({
-                                  ...prev,
-                                  [t.id]: {
-                                    status: e.target.value,
-                                    notes: prev[t.id]?.notes || "",
-                                    photo_url: prev[t.id]?.photo_url || "",
-                                  },
-                                }))
-                              }
-                            >
-                              <option value="pending">Pending</option>
-                              <option value="done">Done</option>
-                              <option value="overdue">Overdue</option>
-                            </select>
-                          </span>
-                          <span className="task-cell" data-label="Due">
-                            {t.due_date || "-"}
-                          </span>
-                          <span className="task-cell task-actions" data-label="Action">
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="done">Done</option>
+                            <option value="overdue">Overdue</option>
+                          </select>
+                        </span>
+                        <span className="task-cell" data-label="Due">
+                          {t.due_date || "-"}
+                        </span>
+                        <span className="task-cell task-actions" data-label="Action">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingTaskId(t.id);
+                            }}
+                          >
+                            Edit
+                          </button>
+                          {Number.isFinite(t.lng) && Number.isFinite(t.lat) && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setEditingTaskId(t.id);
+                                setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
                               }}
                             >
-                              Edit
+                              Locate
                             </button>
-                            {Number.isFinite(t.lng) && Number.isFinite(t.lat) && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
-                                }}
-                              >
-                                Locate
-                              </button>
-                            )}
-                            {Number.isFinite(t.lng) && Number.isFinite(t.lat) && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
-                                  openDirections(Number(t.lng), Number(t.lat));
-                                }}
-                              >
-                                Directions
-                              </button>
-                            )}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {editingTaskId && (
-                    <div className="tree-form">
-                      <div className="tree-form-row full">
-                        <label>Notes</label>
-                        <textarea
-                          value={taskEdits[editingTaskId]?.notes || ""}
-                          onChange={(e) =>
-                            setTaskEdits((prev) => ({
-                              ...prev,
-                              [editingTaskId]: {
-                                status: prev[editingTaskId]?.status || "pending",
-                                notes: e.target.value,
-                                photo_url: prev[editingTaskId]?.photo_url || "",
-                              },
-                            }))
-                          }
-                        />
+                          )}
+                          {Number.isFinite(t.lng) && Number.isFinite(t.lat) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
+                                openDirections(Number(t.lng), Number(t.lat));
+                              }}
+                            >
+                              Directions
+                            </button>
+                          )}
+                        </span>
                       </div>
-                      <div className="tree-form-row full">
-                        <label>Photo Proof</label>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          onChange={(e) => onTaskPhotoPicked(editingTaskId, e.target.files?.[0] || null)}
-                        />
-                      </div>
-                      <button className="btn-primary" onClick={() => saveTaskUpdate(editingTaskId)}>
-                        Save Task Update
-                      </button>
+                    ))}
+                  </div>
+                )}
+                {editingTaskId && (
+                  <div className="tree-form">
+                    <div className="tree-form-row full">
+                      <label>Notes</label>
+                      <textarea
+                        value={taskEdits[editingTaskId]?.notes || ""}
+                        onChange={(e) =>
+                          setTaskEdits((prev) => ({
+                            ...prev,
+                            [editingTaskId]: {
+                              status: prev[editingTaskId]?.status || "pending",
+                              notes: e.target.value,
+                              photo_url: prev[editingTaskId]?.photo_url || "",
+                            },
+                          }))
+                        }
+                      />
                     </div>
-                  )}
-                </div>
-              )}
+                    <div className="tree-form-row full">
+                      <label>Photo Proof</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={(e) => onTaskPhotoPicked(editingTaskId, e.target.files?.[0] || null)}
+                      />
+                    </div>
+                    <button className="btn-primary" onClick={() => saveTaskUpdate(editingTaskId)}>
+                      Save Task Update
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
 
-              <div className="green-card">
+            <section className="green-card" id="map">
+              <div className="green-card-header">
                 <h3>Map & Add Trees</h3>
-                <div className="map-tools">
-                  <span className="map-hint">Click on map to place tree point</span>
-                </div>
-                <TreeMap
-                  trees={treePoints}
-                  draftPoint={
-                    newTree.lng && newTree.lat ? { lng: newTree.lng, lat: newTree.lat } : null
-                  }
-                  onDraftMove={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
-                  onAddTree={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
-                  onSelectTree={(id) => loadTreeDetails(id)}
-                  onViewChange={(view) => setMapView(view)}
-                  fitBounds={focusPoint || activeUserPoints || allTreePoints}
-                />
+                <span className="map-hint">Tap a task to zoom to its tree</span>
+              </div>
+              <TreeMap
+                trees={treePoints}
+                draftPoint={
+                  newTree.lng && newTree.lat ? { lng: newTree.lng, lat: newTree.lat } : null
+                }
+                onDraftMove={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
+                onAddTree={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
+                onSelectTree={(id) => loadTreeDetails(id)}
+                onViewChange={(view) => setMapView(view)}
+                fitBounds={focusPoint || activeUserPoints || allTreePoints}
+              />
                 <div className="tree-form">
                   <div className="tree-form-row">
                     <label>GPS</label>
@@ -625,83 +651,82 @@ export default function Green() {
                     Add Tree
                   </button>
                 </div>
-              </div>
+            </section>
 
-              <div className="green-card">
-                <h3>Tree Records</h3>
-                {loadingTrees ? (
-                  <p>Loading trees...</p>
-                ) : (
-                  <div className="tree-table">
-                    <div className="tree-row tree-header">
-                      <span>ID</span>
-                      <span>Species</span>
-                      <span>Status</span>
-                      <span>Actions</span>
-                    </div>
-                    {trees.map((t) => (
-                      <div key={t.id} className="tree-row">
-                        <span>#{t.id}</span>
-                        <span>{t.species || "-"}</span>
-                        <span>{t.status}</span>
-                        <div className="tree-actions">
-                          <button onClick={() => updateTreeStatus(t.id, "alive")}>Alive</button>
-                          <button onClick={() => updateTreeStatus(t.id, "needs_attention")}>
-                            Needs attention
-                          </button>
-                          <button onClick={() => updateTreeStatus(t.id, "dead")}>Dead</button>
-                        </div>
+            <section className="green-card" id="records">
+              <h3>Tree Records</h3>
+              {loadingTrees ? (
+                <p>Loading trees...</p>
+              ) : (
+                <div className="tree-table">
+                  <div className="tree-row tree-header">
+                    <span>ID</span>
+                    <span>Species</span>
+                    <span>Status</span>
+                    <span>Actions</span>
+                  </div>
+                  {trees.map((t) => (
+                    <div key={t.id} className="tree-row">
+                      <span>#{t.id}</span>
+                      <span>{t.species || "-"}</span>
+                      <span>{t.status}</span>
+                      <div className="tree-actions">
+                        <button onClick={() => updateTreeStatus(t.id, "alive")}>Alive</button>
+                        <button onClick={() => updateTreeStatus(t.id, "needs_attention")}>
+                          Needs attention
+                        </button>
+                        <button onClick={() => updateTreeStatus(t.id, "dead")}>Dead</button>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {selectedTreeId && (
+              <section className="green-card" id="timeline">
+                <h3>Tree Tasks & Timeline</h3>
+                <div className="tree-table">
+                  <div className="tree-row tree-header">
+                    <span>Task</span>
+                    <span>Assignee</span>
+                    <span>Priority</span>
+                    <span>Status</span>
+                    <span>Due</span>
+                  </div>
+                  {treeTasks.map((t) => (
+                    <div key={t.id} className="tree-row">
+                      <span>{t.task_type}</span>
+                      <span>{t.assignee_name}</span>
+                      <span>{t.priority || "-"}</span>
+                      <span>{t.status}</span>
+                      <span>{t.due_date || "-"}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {treeTimeline && (
+                  <div className="timeline">
+                    <h4>Timeline</h4>
+                    <p>Planted: {treeTimeline.tree?.planting_date || "-"}</p>
+                    <p>Status: {treeTimeline.tree?.status || "-"}</p>
+                    {treeTimeline.visits?.map((v: any, i: number) => (
+                      <p key={i}>
+                        Visit {v.visit_date}: {v.status}
+                      </p>
                     ))}
                   </div>
                 )}
-              </div>
-
-              {selectedTreeId && (
-                <div className="green-card">
-                  <h3>Tree Tasks & Timeline</h3>
-                  <div className="tree-table">
-                    <div className="tree-row tree-header">
-                      <span>Task</span>
-                      <span>Assignee</span>
-                      <span>Priority</span>
-                      <span>Status</span>
-                      <span>Due</span>
-                    </div>
-                    {treeTasks.map((t) => (
-                      <div key={t.id} className="tree-row">
-                        <span>{t.task_type}</span>
-                        <span>{t.assignee_name}</span>
-                        <span>{t.priority || "-"}</span>
-                        <span>{t.status}</span>
-                        <span>{t.due_date || "-"}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {treeTimeline && (
-                    <div className="timeline">
-                      <h4>Timeline</h4>
-                      <p>Planted: {treeTimeline.tree?.planting_date || "-"}</p>
-                      <p>Status: {treeTimeline.tree?.status || "-"}</p>
-                      {treeTimeline.visits?.map((v: any, i: number) => (
-                        <p key={i}>
-                          Visit {v.visit_date}: {v.status}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="green-card">
-              <h3>Select a project to begin</h3>
-              <p>Projects are created in LandCheck Work.</p>
-            </div>
-          )}
-        </section>
-      </div>
+              </section>
+            )}
+          </>
+        ) : (
+          <section className="green-card">
+            <h3>Select a project to begin</h3>
+            <p>Projects are created in LandCheck Work.</p>
+          </section>
+        )}
+      </main>
     </div>
   );
 }
