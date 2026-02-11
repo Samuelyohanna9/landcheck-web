@@ -66,6 +66,7 @@ export default function Green() {
   const [gpsLoading, setGpsLoading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const [mapView, setMapView] = useState<{ lng: number; lat: number; zoom: number; bearing: number; pitch: number } | null>(null);
+  const [focusPoint, setFocusPoint] = useState<{ lng: number; lat: number }[] | null>(null);
 
   const treePoints = useMemo(
     () =>
@@ -105,7 +106,12 @@ export default function Green() {
       api.get(`/green/projects/${id}/trees`),
     ]);
     setActiveProject(projectRes.data);
-    setTrees(treesRes.data);
+    const normalized = (treesRes.data || []).map((t: any) => ({
+      ...t,
+      lng: Number(t.lng),
+      lat: Number(t.lat),
+    }));
+    setTrees(normalized);
   };
 
   useEffect(() => {
@@ -118,6 +124,12 @@ export default function Green() {
       loadMyTasks().catch(() => toast.error("Failed to load tasks"));
     }
   }, [activeProject?.id, activeUser]);
+
+  useEffect(() => {
+    if (!focusPoint) return;
+    const timer = window.setTimeout(() => setFocusPoint(null), 800);
+    return () => window.clearTimeout(timer);
+  }, [focusPoint]);
 
   const selectProject = async (project: Project) => {
     setLoadingTrees(true);
@@ -375,7 +387,15 @@ export default function Green() {
                         <span>Action</span>
                       </div>
                       {myTasks.map((t) => (
-                        <div key={t.id} className="tree-row">
+                        <div
+                          key={t.id}
+                          className="tree-row task-row"
+                          onClick={() => {
+                            if (Number.isFinite(t.lng) && Number.isFinite(t.lat)) {
+                              setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
+                            }
+                          }}
+                        >
                           <span>{t.task_type}</span>
                           <span>#{t.tree_id}</span>
                           <span>
@@ -399,7 +419,14 @@ export default function Green() {
                           </span>
                           <span>{t.due_date || "-"}</span>
                           <span>
-                            <button onClick={() => setEditingTaskId(t.id)}>Edit</button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTaskId(t.id);
+                              }}
+                            >
+                              Edit
+                            </button>
                           </span>
                         </div>
                       ))}
@@ -454,7 +481,7 @@ export default function Green() {
                   onAddTree={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
                   onSelectTree={(id) => loadTreeDetails(id)}
                   onViewChange={(view) => setMapView(view)}
-                  fitBounds={activeUserPoints}
+                  fitBounds={focusPoint || activeUserPoints}
                 />
                 <div className="tree-form">
                   <div className="tree-form-row">
