@@ -67,6 +67,7 @@ export default function Green() {
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const [mapView, setMapView] = useState<{ lng: number; lat: number; zoom: number; bearing: number; pitch: number } | null>(null);
   const [focusPoint, setFocusPoint] = useState<{ lng: number; lat: number }[] | null>(null);
+  const [activeSection, setActiveSection] = useState<"tasks" | "map" | "records">("tasks");
 
   const treePoints = useMemo(
     () =>
@@ -97,6 +98,26 @@ export default function Green() {
       .filter((p) => Number.isFinite(p.lng) && Number.isFinite(p.lat));
     return points.length ? points : null;
   }, [trees]);
+
+  const userTrees = useMemo(() => {
+    if (!activeUser) return [];
+    return trees.filter((t: any) => (t as any).created_by === activeUser);
+  }, [activeUser, trees]);
+
+  const myTaskCounts = useMemo(() => {
+    const total = myTasks.length;
+    const pending = myTasks.filter((t) => t.status === "pending").length;
+    const done = myTasks.filter((t) => t.status === "done").length;
+    return { total, pending, done };
+  }, [myTasks]);
+
+  const myTreeSummary = useMemo(() => {
+    const total = userTrees.length;
+    const alive = userTrees.filter((t) => t.status === "alive").length;
+    const dead = userTrees.filter((t) => t.status === "dead").length;
+    const needs = userTrees.filter((t) => t.status === "needs_attention").length;
+    return { total, alive, dead, needs };
+  }, [userTrees]);
 
   const loadProjects = async () => {
     const res = await api.get("/green/projects");
@@ -409,27 +430,37 @@ export default function Green() {
         </section>
 
         <section className="green-tiles">
-          <a className="green-tile" href="#tasks">
+          <button
+            className={`green-tile ${activeSection === "tasks" ? "active" : ""}`}
+            onClick={() => setActiveSection("tasks")}
+            type="button"
+          >
             <span className="tile-icon">📝</span>
             <span>My Tasks</span>
-          </a>
-          <a className="green-tile" href="#map">
+            <span className="tile-badge">{myTaskCounts.pending}</span>
+          </button>
+          <button
+            className={`green-tile ${activeSection === "map" ? "active" : ""}`}
+            onClick={() => setActiveSection("map")}
+            type="button"
+          >
             <span className="tile-icon">🗺️</span>
             <span>Map & Add Trees</span>
-          </a>
-          <a className="green-tile" href="#records">
+          </button>
+          <button
+            className={`green-tile ${activeSection === "records" ? "active" : ""}`}
+            onClick={() => setActiveSection("records")}
+            type="button"
+          >
             <span className="tile-icon">🌳</span>
             <span>Tree Records</span>
-          </a>
-          <a className="green-tile" href="#timeline">
-            <span className="tile-icon">🧭</span>
-            <span>Timeline</span>
-          </a>
+            <span className="tile-badge">{myTreeSummary.total}</span>
+          </button>
         </section>
 
         {activeProject ? (
           <>
-            {activeUser && (
+            {activeUser && activeSection === "tasks" && (
               <section className="green-card" id="tasks">
                 <div className="green-card-header">
                   <h3>My Tasks</h3>
@@ -556,6 +587,7 @@ export default function Green() {
               </section>
             )}
 
+            {activeSection === "map" && (
             <section className="green-card" id="map">
               <div className="green-card-header">
                 <h3>Map & Add Trees</h3>
@@ -652,9 +684,35 @@ export default function Green() {
                   </button>
                 </div>
             </section>
+            )}
 
+            {activeSection === "records" && (
             <section className="green-card" id="records">
               <h3>Tree Records</h3>
+              {activeUser && (
+                <div className="stats-grid">
+                  <div>
+                    <span>My Trees</span>
+                    <strong>{myTreeSummary.total}</strong>
+                  </div>
+                  <div>
+                    <span>Alive</span>
+                    <strong>{myTreeSummary.alive}</strong>
+                  </div>
+                  <div>
+                    <span>Dead</span>
+                    <strong>{myTreeSummary.dead}</strong>
+                  </div>
+                  <div>
+                    <span>Needs Attention</span>
+                    <strong>{myTreeSummary.needs}</strong>
+                  </div>
+                  <div>
+                    <span>Tasks Done</span>
+                    <strong>{myTaskCounts.done}</strong>
+                  </div>
+                </div>
+              )}
               {loadingTrees ? (
                 <p>Loading trees...</p>
               ) : (
@@ -682,8 +740,9 @@ export default function Green() {
                 </div>
               )}
             </section>
+            )}
 
-            {selectedTreeId && (
+            {activeSection === "records" && selectedTreeId && (
               <section className="green-card" id="timeline">
                 <h3>Tree Tasks & Timeline</h3>
                 <div className="tree-table">
