@@ -121,6 +121,7 @@ export default function GreenWork() {
     await api.post("/green/work-orders", {
       project_id: activeProjectId,
       ...newOrder,
+      work_type: "planting",
     });
     setNewOrder({
       assignee_name: "",
@@ -280,7 +281,7 @@ export default function GreenWork() {
           </div>
 
           <div className="green-work-card">
-            <h3>Create Work Order</h3>
+            <h3>Assign Tree Planting</h3>
             <select
               value={newOrder.assignee_name}
               onChange={(e) => setNewOrder({ ...newOrder, assignee_name: e.target.value })}
@@ -291,13 +292,6 @@ export default function GreenWork() {
                   {u.full_name}
                 </option>
               ))}
-            </select>
-            <select
-              value={newOrder.work_type}
-              onChange={(e) => setNewOrder({ ...newOrder, work_type: e.target.value })}
-            >
-              <option value="planting">Planting</option>
-              <option value="maintenance">Maintenance</option>
             </select>
             <input
               type="number"
@@ -321,7 +315,7 @@ export default function GreenWork() {
           </div>
 
           <div className="green-work-card">
-            <h3>Assign Task</h3>
+            <h3>Assign Maintenance Task</h3>
             <select
               value={newTask.tree_id}
               onChange={(e) => setNewTask({ ...newTask, tree_id: e.target.value })}
@@ -337,7 +331,6 @@ export default function GreenWork() {
               value={newTask.task_type}
               onChange={(e) => setNewTask({ ...newTask, task_type: e.target.value })}
             >
-              <option value="planting">Planting</option>
               <option value="watering">Watering</option>
               <option value="weeding">Weeding</option>
               <option value="protection">Protection</option>
