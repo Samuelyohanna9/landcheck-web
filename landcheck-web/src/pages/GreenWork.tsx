@@ -219,6 +219,14 @@ export default function GreenWork() {
     return trees.filter((t) => t.created_by === assigneeFilter);
   }, [trees, assigneeFilter]);
 
+  const fitPoints = useMemo(() => {
+    if (assigneeFilter === "all") return null;
+    const points = trees
+      .filter((t) => t.created_by === assigneeFilter)
+      .map((t) => ({ lng: t.lng, lat: t.lat }));
+    return points.length ? points : null;
+  }, [assigneeFilter, trees]);
+
   return (
     <div className="green-work-container">
       <Toaster position="top-right" />
@@ -431,6 +439,7 @@ export default function GreenWork() {
               onAddTree={() => {}}
               enableDraw={false}
               onViewChange={(view) => setMapView(view)}
+              fitBounds={fitPoints}
             />
           </div>
 

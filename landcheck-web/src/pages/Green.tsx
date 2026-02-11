@@ -71,6 +71,14 @@ export default function Green() {
     [trees]
   );
 
+  const activeUserPoints = useMemo(() => {
+    if (!activeUser) return null;
+    const points = trees
+      .filter((t: any) => (t as any).created_by === activeUser)
+      .map((t) => ({ lng: t.lng, lat: t.lat }));
+    return points.length ? points : null;
+  }, [activeUser, trees]);
+
   const loadProjects = async () => {
     const res = await api.get("/green/projects");
     setProjects(res.data);
@@ -436,6 +444,7 @@ export default function Green() {
                   onAddTree={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
                   onSelectTree={(id) => loadTreeDetails(id)}
                   onViewChange={(view) => setMapView(view)}
+                  fitBounds={activeUserPoints}
                 />
                 <div className="tree-form">
                   <div className="tree-form-row">
