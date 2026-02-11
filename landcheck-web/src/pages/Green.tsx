@@ -29,6 +29,7 @@ type Tree = {
   status: string;
   notes: string | null;
   photo_url: string | null;
+  created_by?: string | null;
 };
 
 type GreenUser = {
@@ -67,7 +68,15 @@ export default function Green() {
   const [mapView, setMapView] = useState<{ lng: number; lat: number; zoom: number; bearing: number; pitch: number } | null>(null);
 
   const treePoints = useMemo(
-    () => trees.map((t) => ({ id: t.id, lng: t.lng, lat: t.lat, status: t.status })),
+    () =>
+      trees
+        .map((t) => ({
+          id: t.id,
+          lng: Number(t.lng),
+          lat: Number(t.lat),
+          status: t.status,
+        }))
+        .filter((t) => Number.isFinite(t.lng) && Number.isFinite(t.lat)),
     [trees]
   );
 
@@ -75,7 +84,8 @@ export default function Green() {
     if (!activeUser) return null;
     const points = trees
       .filter((t: any) => (t as any).created_by === activeUser)
-      .map((t) => ({ lng: t.lng, lat: t.lat }));
+      .map((t) => ({ lng: Number(t.lng), lat: Number(t.lat) }))
+      .filter((p) => Number.isFinite(p.lng) && Number.isFinite(p.lat));
     return points.length ? points : null;
   }, [activeUser, trees]);
 
