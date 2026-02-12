@@ -233,12 +233,15 @@ export default function GreenWork() {
     <div className="green-work-container">
       <Toaster position="top-right" />
       <header className="green-work-header">
-        <div className="green-work-brand">
-          <img src="/logo.svg" alt="LandCheck" />
-          <div>
+        <div className="green-work-header-inner">
+          <div className="green-work-brand">
+            <img src="/logo.svg" alt="LandCheck" />
+          </div>
+          <div className="green-work-title">
             <h1>LandCheck Work</h1>
             <span>Assignments & Progress</span>
           </div>
+          <div className="green-work-spacer" />
         </div>
       </header>
 
