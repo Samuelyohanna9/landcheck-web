@@ -206,6 +206,8 @@ export default function Green() {
   });
   const [gpsLoading, setGpsLoading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string>("");
+  const [pendingTreePhoto, setPendingTreePhoto] = useState<File | null>(null);
+  const [addingTree, setAddingTree] = useState(false);
   const [mapView, setMapView] = useState<{
     lng: number;
     lat: number;
@@ -366,6 +368,7 @@ export default function Green() {
 
   const addTree = async () => {
     if (!activeProject) return;
+    if (addingTree) return;
     if (!activeUser) {
       toast.error("Select a field officer first");
       return;
@@ -374,29 +377,56 @@ export default function Green() {
       toast.error("Pick a point on the map");
       return;
     }
-    await api.post("/green/trees", {
-      project_id: activeProject.id,
-      ...newTree,
-      created_by: activeUser,
-    });
-    toast.success("Tree added");
-    setNewTree({
-      lng: 0,
-      lat: 0,
-      species: "",
-      planting_date: "",
-      status: "alive",
-      notes: "",
-      photo_url: "",
-      created_by: "",
-    });
-    setPhotoPreview("");
-    await loadProjectDetail(activeProject.id);
-    if (activeProject && activeUser) {
-      api
-        .get(`/green/work-orders?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}`)
-        .then((res) => setPlantingOrders(res.data || []))
-        .catch(() => setPlantingOrders([]));
+    setAddingTree(true);
+    const loadingId = toast.loading("Saving tree...");
+    try {
+      const createRes = await api.post("/green/trees", {
+        project_id: activeProject.id,
+        ...newTree,
+        photo_url: "",
+        created_by: activeUser,
+      });
+      const createdTreeId = Number(createRes.data?.id || 0);
+      let photoLinked = true;
+
+      if (pendingTreePhoto && Number.isFinite(createdTreeId) && createdTreeId > 0) {
+        toast.loading("Uploading snapped photo...", { id: loadingId });
+        try {
+          await uploadGreenPhoto(pendingTreePhoto, "trees", { treeId: createdTreeId });
+        } catch {
+          photoLinked = false;
+        }
+      }
+
+      if (photoLinked) {
+        toast.success("Tree added", { id: loadingId });
+      } else {
+        toast.error("Tree added, but photo upload failed", { id: loadingId });
+      }
+
+      setNewTree({
+        lng: 0,
+        lat: 0,
+        species: "",
+        planting_date: "",
+        status: "alive",
+        notes: "",
+        photo_url: "",
+        created_by: "",
+      });
+      setPhotoPreview("");
+      setPendingTreePhoto(null);
+      await loadProjectDetail(activeProject.id);
+      if (activeProject && activeUser) {
+        api
+          .get(`/green/work-orders?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}`)
+          .then((res) => setPlantingOrders(res.data || []))
+          .catch(() => setPlantingOrders([]));
+      }
+    } catch {
+      toast.error("Failed to add tree", { id: loadingId });
+    } finally {
+      setAddingTree(false);
     }
   };
 
@@ -522,24 +552,20 @@ export default function Green() {
     );
   };
 
-  const onPhotoPicked = async (file: File | null) => {
-    if (!file) return;
+  const onPhotoPicked = (file: File | null) => {
+    if (!file) {
+      setPendingTreePhoto(null);
+      setPhotoPreview("");
+      return;
+    }
+    setPendingTreePhoto(file);
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = String(reader.result || "");
       setPhotoPreview(dataUrl);
     };
     reader.readAsDataURL(file);
-    const loadingId = toast.loading("Uploading tree photo...");
-    try {
-      const photoUrl = await uploadGreenPhoto(file, "trees");
-      setNewTree((prev) => ({ ...prev, photo_url: photoUrl }));
-      toast.success("Tree photo uploaded", { id: loadingId });
-    } catch {
-      setNewTree((prev) => ({ ...prev, photo_url: "" }));
-      setPhotoPreview("");
-      toast.error("Failed to upload tree photo", { id: loadingId });
-    }
+    setNewTree((prev) => ({ ...prev, photo_url: "" }));
   };
 
   const onInspectedTreePhotoPicked = async (file: File | null) => {
@@ -972,10 +998,11 @@ export default function Green() {
                   capture="environment"
                   onChange={(e) => onPhotoPicked(e.target.files?.[0] || null)}
                 />
+                <small className="tree-photo-hint">Snapped photo uploads automatically when you tap Add Tree.</small>
                 {photoPreview && <img className="tree-photo-preview" src={photoPreview} alt="Tree preview" />}
               </div>
-              <button className="green-btn-primary" type="button" onClick={addTree}>
-                Add Tree
+              <button className="green-btn-primary" type="button" onClick={addTree} disabled={addingTree}>
+                {addingTree ? "Saving..." : "Add Tree"}
               </button>
             </div>
           </section>
