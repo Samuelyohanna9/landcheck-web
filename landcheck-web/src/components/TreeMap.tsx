@@ -28,6 +28,7 @@ type Props = {
   onSelectTree?: (id: number) => void;
   onViewChange?: (view: { lng: number; lat: number; zoom: number; bearing: number; pitch: number }) => void;
   fitBounds?: { lng: number; lat: number }[] | null;
+  minHeight?: number;
 };
 
 type TreeFeatureProps = {
@@ -219,6 +220,7 @@ export default function TreeMap({
   onSelectTree,
   onViewChange,
   fitBounds,
+  minHeight = 420,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -659,7 +661,7 @@ export default function TreeMap({
 
   return (
     <div className="tree-map-wrap">
-      <div ref={containerRef} className="tree-map" style={{ minHeight: 420 }} />
+      <div ref={containerRef} className="tree-map" style={{ minHeight }} />
       {!mapReady && !mapError && (
         <div className="tree-map-overlay">Loading map...</div>
       )}
@@ -673,4 +675,3 @@ export default function TreeMap({
     </div>
   );
 }
-
