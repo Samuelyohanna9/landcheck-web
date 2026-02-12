@@ -200,7 +200,9 @@ const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null,
   const notes = String(tree.notes || base.notes || "");
   const maintenance = detail?.maintenance || { total: 0, done: 0, pending: 0, overdue: 0 };
   const visitsCount = detail?.visits?.length || 0;
-  const hasPhoto = Boolean(tree.photo_url || base.photo_url);
+  const taskPhoto = (detail?.tasks || []).find((task: any) => String(task?.photo_url || "").trim())?.photo_url;
+  const visitPhoto = (detail?.visits || []).find((visit: any) => String(visit?.photo_url || "").trim())?.photo_url;
+  const hasPhoto = Boolean(tree.photo_url || base.photo_url || taskPhoto || visitPhoto);
 
   const recentTasks = (detail?.tasks || [])
     .slice(0, 3)
@@ -235,6 +237,8 @@ const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null,
 const buildInspectData = (base: TreeFeatureProps, detail?: TreePopupDetail | null, loading = false): TreeInspectData => {
   const tree = detail?.tree || {};
   const status = String(tree.status || base.status || "unknown");
+  const taskPhoto = (detail?.tasks || []).find((task: any) => String(task?.photo_url || "").trim())?.photo_url;
+  const visitPhoto = (detail?.visits || []).find((visit: any) => String(visit?.photo_url || "").trim())?.photo_url;
   return {
     id: base.id,
     status,
@@ -243,7 +247,7 @@ const buildInspectData = (base: TreeFeatureProps, detail?: TreePopupDetail | nul
     planting_date: String(tree.planting_date || base.planting_date || ""),
     notes: String(tree.notes || base.notes || ""),
     created_by: String(tree.created_by || base.created_by || "-"),
-    photo_url: String(tree.photo_url || base.photo_url || ""),
+    photo_url: String(tree.photo_url || base.photo_url || taskPhoto || visitPhoto || ""),
     maintenance: detail?.maintenance || { total: 0, done: 0, pending: 0, overdue: 0 },
     tasks: detail?.tasks || [],
     visits: detail?.visits || [],

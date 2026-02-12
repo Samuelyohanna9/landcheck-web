@@ -78,16 +78,60 @@ const formatDateLabel = (value: string | null | undefined) => {
   return date.toLocaleDateString();
 };
 
+const R2_BUCKET_HINT = "photosgreen";
+
+const safeDecode = (value: string) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
+
+const normalizeObjectKey = (value: string) => {
+  let key = String(value || "").trim().replace(/^\/+/, "");
+  if (!key) return "";
+
+  for (let i = 0; i < 3; i += 1) {
+    const decoded = safeDecode(key);
+    if (decoded === key) break;
+    key = decoded;
+  }
+
+  if (key.startsWith(`${R2_BUCKET_HINT}/`)) {
+    key = key.slice(R2_BUCKET_HINT.length + 1);
+  }
+  return key;
+};
+
+const encodeObjectKeyForProxy = (value: string) =>
+  normalizeObjectKey(value)
+    .split("/")
+    .filter(Boolean)
+    .map((part) => encodeURIComponent(safeDecode(part)))
+    .join("/");
+
 const toDisplayPhotoUrl = (url: string | null | undefined) => {
   const raw = String(url || "").trim();
   if (!raw) return "";
-  if (!raw.includes(".r2.cloudflarestorage.com/")) return raw;
+  if (raw.includes("/green/uploads/object/")) return raw;
+
+  const toProxy = (key: string) => {
+    const encoded = encodeObjectKeyForProxy(key);
+    return encoded ? `${BACKEND_URL}/green/uploads/object/${encoded}` : "";
+  };
+
+  if (!/^https?:\/\//i.test(raw)) {
+    return toProxy(raw) || raw;
+  }
+
   try {
     const parsed = new URL(raw);
     const parts = parsed.pathname.split("/").filter(Boolean);
-    if (parts.length < 2) return raw;
-    const key = parts.slice(1).map(encodeURIComponent).join("/");
-    return `${BACKEND_URL}/green/uploads/object/${key}`;
+    if (!parts.length) return raw;
+    const maybeBucket = parts[0]?.toLowerCase() === R2_BUCKET_HINT;
+    const key = (maybeBucket ? parts.slice(1) : parts).join("/");
+    return toProxy(key) || raw;
   } catch {
     return raw;
   }
