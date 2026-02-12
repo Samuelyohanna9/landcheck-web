@@ -53,6 +53,21 @@ const formatDateLabel = (value: string | null | undefined) => {
   return date.toLocaleDateString();
 };
 
+const toDisplayPhotoUrl = (url: string | null | undefined) => {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+  if (!raw.includes(".r2.cloudflarestorage.com/")) return raw;
+  try {
+    const parsed = new URL(raw);
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    if (parts.length < 2) return raw;
+    const key = parts.slice(1).map(encodeURIComponent).join("/");
+    return `${BACKEND_URL}/green/uploads/object/${key}`;
+  } catch {
+    return raw;
+  }
+};
+
 function HomeIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -1084,7 +1099,11 @@ export default function Green() {
             <div className="green-tree-inspector-body">
               <div className="green-tree-inspector-photo-wrap">
                 {inspectedTree.photo_url ? (
-                  <img className="green-tree-inspector-photo" src={inspectedTree.photo_url} alt={`Tree ${inspectedTree.id}`} />
+                  <img
+                    className="green-tree-inspector-photo"
+                    src={toDisplayPhotoUrl(inspectedTree.photo_url)}
+                    alt={`Tree ${inspectedTree.id}`}
+                  />
                 ) : (
                   <div className="green-tree-inspector-photo empty">No tree photo</div>
                 )}
