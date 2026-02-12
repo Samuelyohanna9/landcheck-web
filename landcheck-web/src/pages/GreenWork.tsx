@@ -49,6 +49,10 @@ type WorkTask = {
   status: string;
   due_date: string | null;
   priority?: string | null;
+  notes?: string | null;
+  photo_url?: string | null;
+  created_at?: string | null;
+  completed_at?: string | null;
 };
 
 type WorkForm = "project_focus" | "create_project" | "add_user" | "users" | "assign_work" | "assign_task" | "overview";
@@ -77,6 +81,17 @@ const formatDateLabel = (value: string | null | undefined) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString();
+};
+const formatTaskTypeLabel = (value: string | null | undefined) =>
+  (value || "")
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ") || "Task";
+const taskSortStamp = (task: WorkTask) => {
+  const raw = task.completed_at || task.due_date || task.created_at || "";
+  const stamp = raw ? new Date(raw).getTime() : 0;
+  return Number.isNaN(stamp) ? 0 : stamp;
 };
 
 const R2_BUCKET_HINT = "photosgreen";
@@ -402,6 +417,52 @@ export default function GreenWork() {
         const doneTasks = userTasks.filter((task) => isCompleteStatus(task.status)).length;
         const overdueTasks = userTasks.filter((task) => isOverdueTask(task)).length;
         const pendingTasks = Math.max(userTasks.length - doneTasks - overdueTasks, 0);
+        const lastMaintenanceTask = [...userTasks]
+          .sort((a, b) => taskSortStamp(b) - taskSortStamp(a))[0];
+
+        const typeStats = new Map<
+          string,
+          { type: string; total: number; done: number; pending: number; overdue: number; lastDate: string | null }
+        >();
+        userTasks.forEach((task) => {
+          const taskType = task.task_type || "task";
+          const typeKey = normalizeName(taskType);
+          const current = typeStats.get(typeKey) || {
+            type: taskType,
+            total: 0,
+            done: 0,
+            pending: 0,
+            overdue: 0,
+            lastDate: null,
+          };
+          current.total += 1;
+          if (isCompleteStatus(task.status)) current.done += 1;
+          else if (isOverdueTask(task)) current.overdue += 1;
+          else current.pending += 1;
+
+          const taskDate = task.completed_at || task.due_date || task.created_at || null;
+          if (taskDate) {
+            const nextStamp = new Date(taskDate).getTime();
+            const currentStamp = current.lastDate ? new Date(current.lastDate).getTime() : 0;
+            if (!Number.isNaN(nextStamp) && nextStamp >= currentStamp) {
+              current.lastDate = taskDate;
+            }
+          }
+          typeStats.set(typeKey, current);
+        });
+        const taskTypeBreakdown = Array.from(typeStats.values())
+          .sort((a, b) => b.total - a.total)
+          .slice(0, 4);
+
+        const recentMaintenance = [...userTasks]
+          .sort((a, b) => taskSortStamp(b) - taskSortStamp(a))
+          .slice(0, 3)
+          .map((task) => ({
+            treeId: task.tree_id,
+            type: formatTaskTypeLabel(task.task_type),
+            status: task.status || "-",
+            date: task.completed_at || task.due_date || task.created_at || null,
+          }));
 
         let statusLabel = "No Active Work";
         let statusTone: "danger" | "busy" | "normal" | "idle" = "idle";
@@ -426,12 +487,55 @@ export default function GreenWork() {
           taskDone: doneTasks,
           taskPending: pendingTasks,
           taskOverdue: overdueTasks,
+          taskTypeBreakdown,
+          recentMaintenance,
+          lastMaintenanceType: formatTaskTypeLabel(lastMaintenanceTask?.task_type),
+          lastMaintenanceDate: lastMaintenanceTask?.completed_at || lastMaintenanceTask?.due_date || lastMaintenanceTask?.created_at || null,
           statusLabel,
           statusTone,
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [assignees, users, orders, tasks, trees]);
+
+  const filteredOverviewTasks = useMemo(() => {
+    if (assigneeFilter === "all") return tasks;
+    const key = normalizeName(assigneeFilter);
+    return tasks.filter((task) => normalizeName(task.assignee_name) === key);
+  }, [assigneeFilter, tasks]);
+
+  const maintenanceTypeOverview = useMemo(() => {
+    const typeStats = new Map<
+      string,
+      { type: string; total: number; done: number; pending: number; overdue: number; lastDate: string | null }
+    >();
+    filteredOverviewTasks.forEach((task) => {
+      const taskType = task.task_type || "task";
+      const key = normalizeName(taskType);
+      const current = typeStats.get(key) || {
+        type: taskType,
+        total: 0,
+        done: 0,
+        pending: 0,
+        overdue: 0,
+        lastDate: null,
+      };
+      current.total += 1;
+      if (isCompleteStatus(task.status)) current.done += 1;
+      else if (isOverdueTask(task)) current.overdue += 1;
+      else current.pending += 1;
+      const taskDate = task.completed_at || task.due_date || task.created_at || null;
+      if (taskDate) {
+        const nextStamp = new Date(taskDate).getTime();
+        const currentStamp = current.lastDate ? new Date(current.lastDate).getTime() : 0;
+        if (!Number.isNaN(nextStamp) && nextStamp >= currentStamp) {
+          current.lastDate = taskDate;
+        }
+      }
+      typeStats.set(key, current);
+    });
+    return Array.from(typeStats.values()).sort((a, b) => b.total - a.total);
+  }, [filteredOverviewTasks]);
 
   const filteredOverviewSummary = useMemo(() => {
     if (assigneeFilter === "all") return overviewStaffSummary;
@@ -1028,6 +1132,28 @@ export default function GreenWork() {
                     <span className="overdue">Overdue</span>
                   </div>
                 </div>
+                <div className="green-work-overview-bar-card">
+                  <div className="green-work-overview-bar-head">
+                    <h5>Maintenance Type Activity</h5>
+                    <span>{maintenanceTypeOverview.length} types</span>
+                  </div>
+                  {maintenanceTypeOverview.length === 0 ? (
+                    <p>No maintenance tasks recorded for this filter yet.</p>
+                  ) : (
+                    <div className="green-work-maint-type-list">
+                      {maintenanceTypeOverview.slice(0, 5).map((item) => (
+                        <div key={normalizeName(item.type)} className="green-work-maint-type-item">
+                          <strong>{formatTaskTypeLabel(item.type)}</strong>
+                          <span>Times: {item.total}</span>
+                          <span>
+                            Done/Pending/Overdue: {item.done}/{item.pending}/{item.overdue}
+                          </span>
+                          <span>Last date: {formatDateLabel(item.lastDate)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="green-work-stats green-work-staff-overview">
@@ -1048,6 +1174,9 @@ export default function GreenWork() {
                     </div>
                     <p>Assigned Tasks: {staff.taskTotal}</p>
                     <p>Done: {staff.taskDone} | Pending: {staff.taskPending} | Overdue: {staff.taskOverdue}</p>
+                    <p>
+                      Last Maintenance: {staff.lastMaintenanceType} on {formatDateLabel(staff.lastMaintenanceDate)}
+                    </p>
                     <div className="progress-stack">
                       <span className="stack done" style={{ width: `${calcProgress(staff.taskDone, staff.taskTotal)}%` }} />
                       <span
@@ -1059,6 +1188,27 @@ export default function GreenWork() {
                         style={{ width: `${calcProgress(staff.taskOverdue, staff.taskTotal)}%` }}
                       />
                     </div>
+                    <div className="staff-overview-types">
+                      {staff.taskTypeBreakdown.length === 0 ? (
+                        <span className="staff-overview-type-chip">No maintenance types yet</span>
+                      ) : (
+                        staff.taskTypeBreakdown.map((typeItem: any) => (
+                          <span key={`${staff.name}-${normalizeName(typeItem.type)}`} className="staff-overview-type-chip">
+                            {formatTaskTypeLabel(typeItem.type)}: {typeItem.total}
+                          </span>
+                        ))
+                      )}
+                    </div>
+                    {staff.recentMaintenance.length > 0 && (
+                      <div className="staff-overview-recent">
+                        <strong>Recent Maintenance</strong>
+                        {staff.recentMaintenance.map((entry: any, idx: number) => (
+                          <p key={`${staff.name}-${entry.treeId}-${idx}`}>
+                            Tree #{entry.treeId} | {entry.type} | {entry.status} | {formatDateLabel(entry.date)}
+                          </p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1137,6 +1287,9 @@ export default function GreenWork() {
                   />
                 </label>
               </div>
+              <p className="green-work-tree-maintenance-count">
+                Maintenance Records: {inspectedTree.maintenance.total}
+              </p>
               <h4>Tree #{inspectedTree.id}</h4>
               {inspectedTree.loading && <p className="green-work-note">Loading latest records...</p>}
               <div className="green-work-tree-inspector-grid">
