@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { api, BACKEND_URL } from "../api/client";
 import TreeMap, { type TreeInspectData } from "../components/TreeMap";
@@ -53,6 +53,7 @@ type WorkTask = {
 
 type WorkForm = "project_focus" | "create_project" | "add_user" | "users" | "assign_work" | "assign_task" | "overview";
 type StaffMenuState = { user: GreenUser; x: number; y: number } | null;
+type DrawerFrame = { top: number; left: number; width: number; height: number };
 
 const normalizeName = (value: string | null | undefined) => (value || "").trim().toLowerCase();
 const formatRoleLabel = (role: string) =>
@@ -138,6 +139,8 @@ const toDisplayPhotoUrl = (url: string | null | undefined) => {
 };
 
 export default function GreenWork() {
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const mapCardRef = useRef<HTMLDivElement | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<GreenUser[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
@@ -167,6 +170,7 @@ export default function GreenWork() {
   const [activeForm, setActiveForm] = useState<WorkForm | null>(null);
   const [staffMenu, setStaffMenu] = useState<StaffMenuState>(null);
   const [treePhotoUploading, setTreePhotoUploading] = useState(false);
+  const [drawerFrame, setDrawerFrame] = useState<DrawerFrame | null>(null);
 
   const loadProjects = async () => {
     const res = await api.get("/green/projects");
@@ -520,6 +524,64 @@ export default function GreenWork() {
   }, [activeProjectId, projects]);
   const showSidebar = activeForm !== null && activeForm !== "overview";
   const overviewMode = Boolean(activeProjectId && activeForm === "overview");
+  const activeTreeId = inspectedTree?.id || 0;
+
+  const recalcDrawerFrame = useCallback(() => {
+    const menuButton = menuButtonRef.current;
+    const mapCard = mapCardRef.current;
+    if (!menuButton || !mapCard) return;
+
+    const menuRect = menuButton.getBoundingClientRect();
+    const mapRect = mapCard.getBoundingClientRect();
+    const viewportWidth = window.innerWidth || 1280;
+    const viewportHeight = window.innerHeight || 720;
+
+    const top = Math.round(Math.max(8, menuRect.bottom + 8));
+    const width = Math.round(Math.min(340, Math.max(260, viewportWidth - 16)));
+    const left = Math.round(Math.max(8, Math.min(menuRect.left, viewportWidth - width - 8)));
+    const bottom = Math.round(Math.min(viewportHeight - 8, mapRect.bottom));
+    const height = Math.max(260, bottom - top);
+
+    const next: DrawerFrame = { top, left, width, height };
+    setDrawerFrame((prev) => {
+      if (
+        prev &&
+        prev.top === next.top &&
+        prev.left === next.left &&
+        prev.width === next.width &&
+        prev.height === next.height
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    const frame = window.requestAnimationFrame(recalcDrawerFrame);
+    return () => window.cancelAnimationFrame(frame);
+  }, [recalcDrawerFrame, activeProjectId, activeForm, overviewMode, menuOpen, activeTreeId, showSidebar]);
+
+  useEffect(() => {
+    const onViewportChange = () => {
+      window.requestAnimationFrame(recalcDrawerFrame);
+    };
+    window.addEventListener("resize", onViewportChange);
+    window.addEventListener("scroll", onViewportChange, true);
+    return () => {
+      window.removeEventListener("resize", onViewportChange);
+      window.removeEventListener("scroll", onViewportChange, true);
+    };
+  }, [recalcDrawerFrame]);
+
+  const drawerStyle = drawerFrame
+    ? {
+        top: `${drawerFrame.top}px`,
+        left: `${drawerFrame.left}px`,
+        width: `${drawerFrame.width}px`,
+        height: `${drawerFrame.height}px`,
+      }
+    : undefined;
 
   const openForm = (form: WorkForm) => {
     setActiveForm(form);
@@ -573,6 +635,7 @@ export default function GreenWork() {
             type="button"
             onClick={() => setMenuOpen((prev) => !prev)}
             aria-label="Open forms menu"
+            ref={menuButtonRef}
           >
             <span />
             <span />
@@ -617,7 +680,7 @@ export default function GreenWork() {
         />
       )}
 
-      <aside className={`green-work-menu-drawer ${menuOpen ? "open" : ""}`}>
+      <aside className={`green-work-menu-drawer ${menuOpen ? "open" : ""}`} style={drawerStyle}>
         <div className="green-work-menu-head">
           <strong>Forms Menu</strong>
           <button className="green-work-menu-close" type="button" onClick={() => setMenuOpen(false)} aria-label="Close menu">
@@ -1002,7 +1065,7 @@ export default function GreenWork() {
             </div>
           )}
 
-          <div className={`green-work-card green-work-map-card ${overviewMode ? "overview-map" : ""}`}>
+          <div ref={mapCardRef} className={`green-work-card green-work-map-card ${overviewMode ? "overview-map" : ""}`}>
             <h3>Tree Map by Assignee</h3>
             {!activeProjectId && (
               <p className="green-work-note">Select an active project in Project Focus to load trees and assignments.</p>
@@ -1035,7 +1098,7 @@ export default function GreenWork() {
             onClick={() => setInspectedTree(null)}
             aria-label="Close tree details"
           />
-          <aside className="green-work-tree-drawer green-work-tree-inspector">
+          <aside className="green-work-tree-drawer green-work-tree-inspector" style={drawerStyle}>
             <div className="green-work-tree-drawer-head">
               <strong>Tree Details</strong>
               <button

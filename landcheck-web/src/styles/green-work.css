@@ -250,17 +250,20 @@
   top: 0;
   left: 0;
   width: min(92vw, 320px);
-  height: 100dvh;
+  height: calc(100dvh - 16px);
+  max-height: calc(100dvh - 16px);
   padding: 0.86rem;
   background: linear-gradient(180deg, #f8fff9 0%, #ebf8ed 100%);
-  border-right: 1px solid rgba(27, 73, 44, 0.2);
-  box-shadow: 14px 0 30px rgba(10, 43, 23, 0.24);
+  border: 1px solid rgba(27, 73, 44, 0.2);
+  border-radius: 18px;
+  box-shadow: 0 14px 30px rgba(10, 43, 23, 0.24);
   z-index: 81;
   transform: translateX(-102%);
   transition: transform 0.24s ease;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  overflow: auto;
 }
 
 .green-work-menu-drawer.open {
@@ -283,13 +286,16 @@
   top: 0;
   left: 0;
   width: min(92vw, 320px);
-  height: 100dvh;
+  height: calc(100dvh - 16px);
+  max-height: calc(100dvh - 16px);
   padding: 0.86rem;
   background: linear-gradient(180deg, #f8fff9 0%, #ebf8ed 100%);
-  border-right: 1px solid rgba(27, 73, 44, 0.2);
-  box-shadow: 14px 0 30px rgba(10, 43, 23, 0.24);
+  border: 1px solid rgba(27, 73, 44, 0.2);
+  border-radius: 18px;
+  box-shadow: 0 14px 30px rgba(10, 43, 23, 0.24);
   z-index: 83;
   animation: greenWorkTreeDrawerIn 0.24s ease;
+  overflow: auto;
 }
 
 @keyframes greenWorkTreeDrawerIn {
