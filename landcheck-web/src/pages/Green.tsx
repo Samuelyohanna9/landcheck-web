@@ -447,15 +447,13 @@ export default function Green() {
 
   const openSection = (section: Section) => {
     setActiveSection(section);
-    window.setTimeout(() => {
-      const target = document.getElementById(`green-section-${section}`);
-      target?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 60);
+    setEditingTaskId(null);
   };
 
   const goHome = () => {
     setActiveSection(null);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setEditingTaskId(null);
+    setSelectedTreeId(null);
   };
 
   const totalTrees = activeProject?.stats?.total ?? 0;
@@ -465,7 +463,7 @@ export default function Green() {
   const survivalRate = activeProject?.stats?.survival_rate ?? 0;
 
   return (
-    <div className="green-container">
+    <div className={`green-container ${activeSection === null ? "green-home-mode" : "green-detail-mode"}`}>
       <Toaster position="top-right" />
       <header className="green-header">
         <div className="green-header-inner">
@@ -497,6 +495,8 @@ export default function Green() {
       </header>
 
       <main className="green-shell">
+        {activeSection === null && (
+          <>
         <section className="green-setup-card" id="project">
           <h2>Project & Field Setup</h2>
 
@@ -608,8 +608,18 @@ export default function Green() {
             <span className="green-tile-badge">{myTreeSummary.total}</span>
           </button>
         </section>
+          </>
+        )}
 
-        {!activeProject && (
+        {activeSection !== null && (
+          <div className="green-view-toolbar">
+            <button className="green-back-home" type="button" onClick={goHome}>
+              Back To Home
+            </button>
+          </div>
+        )}
+
+        {activeSection !== null && activeSection !== "profile" && !activeProject && (
           <section className="green-detail-card">
             <h3>Select a project to begin</h3>
             <p>Projects are created in LandCheck Work.</p>
