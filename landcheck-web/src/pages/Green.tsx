@@ -4,7 +4,7 @@ import { api, BACKEND_URL } from "../api/client";
 import TreeMap from "../components/TreeMap";
 import "../styles/green.css";
 
-const GREEN_LOGO_SRC = "/green%20logo.png";
+const GREEN_LOGO_SRC = "/green-logo-cropped.png";
 
 type Project = {
   id: number;
