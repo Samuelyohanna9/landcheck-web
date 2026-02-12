@@ -38,7 +38,7 @@ type GreenUser = {
   role: string;
 };
 
-type Section = "tasks" | "map" | "records";
+type Section = "tasks" | "map" | "records" | "profile";
 
 function HomeIcon() {
   return (
@@ -52,20 +52,6 @@ function ChartIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M4 20h16M6 18v-4M12 18V8M18 18V5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function PinIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path
-        d="M12 21s7-6.6 7-12a7 7 0 10-14 0c0 5.4 7 12 7 12z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      />
-      <circle cx="12" cy="9" r="2.5" fill="currentColor" />
     </svg>
   );
 }
@@ -215,6 +201,11 @@ export default function Green() {
     const needs = userTrees.filter((t) => t.status === "needs_attention").length;
     return { total, alive, dead, needs };
   }, [userTrees]);
+
+  const activeUserDetail = useMemo(() => {
+    if (!activeUser) return null;
+    return users.find((u) => u.full_name === activeUser) || null;
+  }, [activeUser, users]);
 
   const pendingPlanting = useMemo(() => {
     const orders = plantingOrders.filter((o) => o.work_type === "planting");
@@ -817,6 +808,71 @@ export default function Green() {
           </section>
         )}
 
+        {activeSection === "profile" && (
+          <section className="green-detail-card" id="green-section-profile">
+            <h3>Field Officer Details</h3>
+            {!activeUserDetail ? (
+              <p className="green-empty">Select a field officer from setup to view profile details.</p>
+            ) : (
+              <>
+                <div className="green-profile-grid">
+                  <div>
+                    <span>Name</span>
+                    <strong>{activeUserDetail.full_name}</strong>
+                  </div>
+                  <div>
+                    <span>Position</span>
+                    <strong>{activeUserDetail.role.replaceAll("_", " ")}</strong>
+                  </div>
+                  <div>
+                    <span>User ID</span>
+                    <strong>#{activeUserDetail.id}</strong>
+                  </div>
+                  <div>
+                    <span>Active Project</span>
+                    <strong>{activeProject?.name || "Not selected"}</strong>
+                  </div>
+                </div>
+
+                <div className="green-user-summary">
+                  <div>
+                    <span>My Trees</span>
+                    <strong>{myTreeSummary.total}</strong>
+                  </div>
+                  <div>
+                    <span>Alive</span>
+                    <strong>{myTreeSummary.alive}</strong>
+                  </div>
+                  <div>
+                    <span>Dead</span>
+                    <strong>{myTreeSummary.dead}</strong>
+                  </div>
+                  <div>
+                    <span>Needs Attention</span>
+                    <strong>{myTreeSummary.needs}</strong>
+                  </div>
+                  <div>
+                    <span>Pending Tasks</span>
+                    <strong>{myTaskCounts.pending}</strong>
+                  </div>
+                  <div>
+                    <span>Done Tasks</span>
+                    <strong>{myTaskCounts.done}</strong>
+                  </div>
+                  <div>
+                    <span>Task Total</span>
+                    <strong>{myTaskCounts.total}</strong>
+                  </div>
+                  <div>
+                    <span>Pending Planting</span>
+                    <strong>{pendingPlanting}</strong>
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
+        )}
+
         {activeProject && activeSection === "records" && (
           <section className="green-detail-card" id="green-section-records">
             <h3>Tree Records</h3>
@@ -943,18 +999,10 @@ export default function Green() {
         </button>
 
         <button
-          className={`green-nav-item ${activeSection === "map" ? "active" : ""}`}
+          className={`green-nav-item ${activeSection === "profile" ? "active" : ""}`}
           type="button"
-          onClick={() => openSection("map")}
-          aria-label="Map"
-        >
-          <PinIcon />
-        </button>
-        <button
-          className={`green-nav-item ${activeSection === "records" ? "active" : ""}`}
-          type="button"
-          onClick={() => openSection("records")}
-          aria-label="Records"
+          onClick={() => openSection("profile")}
+          aria-label="Profile"
         >
           <UserIcon />
         </button>
