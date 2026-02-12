@@ -220,6 +220,8 @@ export default function Green() {
   const [activeSection, setActiveSection] = useState<Section | null>(null);
   const [installPrompt, setInstallPrompt] = useState<DeferredInstallPrompt | null>(null);
   const [treePhotoUploading, setTreePhotoUploading] = useState(false);
+  const [plantingFlowState, setPlantingFlowState] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [plantingFlowMessage, setPlantingFlowMessage] = useState("");
 
   const treePoints = useMemo(() => {
     if (!activeUser) return [];
@@ -378,7 +380,8 @@ export default function Green() {
       return;
     }
     setAddingTree(true);
-    const loadingId = toast.loading("Saving tree...");
+    setPlantingFlowMessage("Planting tree...");
+    setPlantingFlowState("loading");
     try {
       const createRes = await api.post("/green/trees", {
         project_id: activeProject.id,
@@ -390,18 +393,11 @@ export default function Green() {
       let photoLinked = true;
 
       if (pendingTreePhoto && Number.isFinite(createdTreeId) && createdTreeId > 0) {
-        toast.loading("Uploading snapped photo...", { id: loadingId });
         try {
           await uploadGreenPhoto(pendingTreePhoto, "trees", { treeId: createdTreeId });
         } catch {
           photoLinked = false;
         }
-      }
-
-      if (photoLinked) {
-        toast.success("Tree added", { id: loadingId });
-      } else {
-        toast.error("Tree added, but photo upload failed", { id: loadingId });
       }
 
       setNewTree({
@@ -423,8 +419,15 @@ export default function Green() {
           .then((res) => setPlantingOrders(res.data || []))
           .catch(() => setPlantingOrders([]));
       }
+      if (photoLinked) {
+        setPlantingFlowMessage("Tree successfully planted!");
+      } else {
+        setPlantingFlowMessage("Tree successfully planted! Photo upload failed.");
+      }
+      setPlantingFlowState("success");
     } catch {
-      toast.error("Failed to add tree", { id: loadingId });
+      setPlantingFlowMessage("Failed to plant tree. Please try again.");
+      setPlantingFlowState("error");
     } finally {
       setAddingTree(false);
     }
@@ -462,6 +465,11 @@ export default function Green() {
   const saveTaskUpdate = async (taskId: number) => {
     const edit = taskEdits[taskId];
     if (!edit) return;
+    const task = myTasks.find((entry: any) => entry.id === taskId);
+    if (task?.status === "done") {
+      toast.error("Task is already done and locked");
+      return;
+    }
     await api.patch(`/green/tasks/${taskId}`, edit);
     await loadMyTasks();
     toast.success("Task updated");
@@ -492,6 +500,11 @@ export default function Green() {
 
   const onTaskPhotoPicked = async (taskId: number, file: File | null) => {
     if (!file) return;
+    const task = myTasks.find((entry: any) => entry.id === taskId);
+    if (task?.status === "done") {
+      toast.error("Task is already done and locked");
+      return;
+    }
     const loadingId = toast.loading("Uploading task photo...");
     try {
       const photoUrl = await uploadGreenPhoto(file, "tasks", { taskId });
@@ -612,6 +625,15 @@ export default function Green() {
     setEditingTaskId(null);
     setSelectedTreeId(null);
     setInspectedTree(null);
+  };
+
+  const onPlantingFlowOk = () => {
+    const shouldGoHome = plantingFlowState === "success";
+    setPlantingFlowState("idle");
+    setPlantingFlowMessage("");
+    if (shouldGoHome) {
+      goHome();
+    }
   };
 
   const totalTrees = activeUser ? myTreeSummary.total : 0;
@@ -811,115 +833,144 @@ export default function Green() {
                   <span>Action</span>
                 </div>
                 {myTasks.map((t) => (
-                  <div
-                    key={t.id}
-                    className="tree-row task-row"
-                    onClick={() => {
-                      if (Number.isFinite(t.lng) && Number.isFinite(t.lat)) {
-                        setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
-                      }
-                    }}
-                  >
-                    <span className="task-cell" data-label="Task">
-                      {t.task_type}
-                    </span>
-                    <span className="task-cell" data-label="Tree">
-                      #{t.tree_id}
-                    </span>
-                    <span className="task-cell" data-label="Status">
-                      <select
-                        value={taskEdits[t.id]?.status || t.status}
-                        onChange={(e) =>
-                          setTaskEdits((prev) => ({
-                            ...prev,
-                            [t.id]: {
-                              status: e.target.value,
-                              notes: prev[t.id]?.notes || "",
-                              photo_url: prev[t.id]?.photo_url || "",
-                            },
-                          }))
+                  <div key={t.id} className={`green-task-entry ${t.status === "done" ? "is-done" : ""}`}>
+                    <div
+                      className={`tree-row task-row ${t.status === "done" ? "task-row-locked" : ""}`}
+                      onClick={() => {
+                        if (t.status !== "done" && Number.isFinite(t.lng) && Number.isFinite(t.lat)) {
+                          setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
                         }
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="done">Done</option>
-                        <option value="overdue">Overdue</option>
-                      </select>
-                    </span>
-                    <span className="task-cell" data-label="Due">
-                      {t.due_date || "-"}
-                    </span>
-                    <span className="task-cell task-actions" data-label="Action">
-                      <button
-                        className="green-row-btn"
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingTaskId(t.id);
-                        }}
-                      >
-                        Edit
-                      </button>
-                      {Number.isFinite(t.lng) && Number.isFinite(t.lat) && (
-                        <button
-                          className="green-row-btn"
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
-                          }}
-                        >
-                          Locate
-                        </button>
-                      )}
-                      {Number.isFinite(t.lng) && Number.isFinite(t.lat) && (
-                        <button
-                          className="green-row-btn"
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
-                            openDirections(Number(t.lng), Number(t.lat));
-                          }}
-                        >
-                          Directions
-                        </button>
-                      )}
-                    </span>
+                      }}
+                    >
+                      <span className="task-cell" data-label="Task">
+                        {t.task_type}
+                      </span>
+                      <span className="task-cell" data-label="Tree">
+                        #{t.tree_id}
+                      </span>
+                      <span className="task-cell" data-label="Status">
+                        {t.status === "done" ? (
+                          <span className="green-task-status-badge is-done">
+                            <span className="green-task-status-check" aria-hidden="true">
+                              ✓
+                            </span>
+                            Done
+                          </span>
+                        ) : (
+                          <select
+                            value={taskEdits[t.id]?.status || t.status}
+                            onChange={(e) =>
+                              setTaskEdits((prev) => ({
+                                ...prev,
+                                [t.id]: {
+                                  status: e.target.value,
+                                  notes: prev[t.id]?.notes || "",
+                                  photo_url: prev[t.id]?.photo_url || "",
+                                },
+                              }))
+                            }
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="done">Done</option>
+                            <option value="overdue">Overdue</option>
+                          </select>
+                        )}
+                      </span>
+                      <span className="task-cell" data-label="Due">
+                        {t.due_date || "-"}
+                      </span>
+                      <span className="task-cell task-actions" data-label="Action">
+                        {t.status === "done" ? (
+                          <span className="green-task-locked-pill">
+                            <span aria-hidden="true">✓</span> Locked
+                          </span>
+                        ) : (
+                          <>
+                            <button
+                              className="green-row-btn"
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTaskId((prev) => (prev === t.id ? null : t.id));
+                              }}
+                            >
+                              {editingTaskId === t.id ? "Close" : "Edit"}
+                            </button>
+                            {Number.isFinite(t.lng) && Number.isFinite(t.lat) && (
+                              <button
+                                className="green-row-btn"
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
+                                }}
+                              >
+                                Locate
+                              </button>
+                            )}
+                            {Number.isFinite(t.lng) && Number.isFinite(t.lat) && (
+                              <button
+                                className="green-row-btn"
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
+                                  openDirections(Number(t.lng), Number(t.lat));
+                                }}
+                              >
+                                Directions
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </span>
+                    </div>
+
+                    {editingTaskId === t.id && t.status !== "done" && (
+                      <div className="tree-row task-edit-inline-row">
+                        <div className="task-edit-inline-card">
+                          <div className="tree-form-row full">
+                            <label>Notes</label>
+                            <textarea
+                              value={taskEdits[t.id]?.notes || ""}
+                              onChange={(e) =>
+                                setTaskEdits((prev) => ({
+                                  ...prev,
+                                  [t.id]: {
+                                    status: prev[t.id]?.status || "pending",
+                                    notes: e.target.value,
+                                    photo_url: prev[t.id]?.photo_url || "",
+                                  },
+                                }))
+                              }
+                            />
+                          </div>
+                          <div className="tree-form-row full">
+                            <label>Photo Proof</label>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              onChange={(e) => onTaskPhotoPicked(t.id, e.target.files?.[0] || null)}
+                            />
+                          </div>
+                          <div className="task-edit-inline-actions">
+                            <button className="green-btn-primary" type="button" onClick={() => saveTaskUpdate(t.id)}>
+                              Save Task Update
+                            </button>
+                            <button
+                              className="green-btn-outline"
+                              type="button"
+                              onClick={() => setEditingTaskId(null)}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
-              </div>
-            )}
-
-            {editingTaskId && (
-              <div className="tree-form">
-                <div className="tree-form-row full">
-                  <label>Notes</label>
-                  <textarea
-                    value={taskEdits[editingTaskId]?.notes || ""}
-                    onChange={(e) =>
-                      setTaskEdits((prev) => ({
-                        ...prev,
-                        [editingTaskId]: {
-                          status: prev[editingTaskId]?.status || "pending",
-                          notes: e.target.value,
-                          photo_url: prev[editingTaskId]?.photo_url || "",
-                        },
-                      }))
-                    }
-                  />
-                </div>
-                <div className="tree-form-row full">
-                  <label>Photo Proof</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={(e) => onTaskPhotoPicked(editingTaskId, e.target.files?.[0] || null)}
-                  />
-                </div>
-                <button className="green-btn-primary" type="button" onClick={() => saveTaskUpdate(editingTaskId)}>
-                  Save Task Update
-                </button>
               </div>
             )}
           </section>
@@ -1299,6 +1350,26 @@ export default function Green() {
           <UserIcon />
         </button>
       </nav>
+
+      {plantingFlowState !== "idle" && (
+        <div className="green-planting-overlay" role="dialog" aria-modal="true">
+          <div className="green-planting-modal">
+            {plantingFlowState === "loading" ? (
+              <>
+                <div className="green-planting-spinner" aria-hidden="true" />
+                <p>Planting tree...</p>
+              </>
+            ) : (
+              <>
+                <p>{plantingFlowMessage}</p>
+                <button className="green-btn-primary" type="button" onClick={onPlantingFlowOk}>
+                  OK
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
