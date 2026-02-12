@@ -414,6 +414,42 @@ export default function GreenWork() {
         </div>
       </div>
 
+      {activeProjectId && (
+        <div className="green-work-active-submenu-wrap">
+          <div className="green-work-active-submenu">
+            <span className="green-work-active-submenu-title">{activeProjectName}</span>
+            <button
+              type="button"
+              className={`green-work-submenu-btn ${activeForm === "users" ? "active" : ""}`}
+              onClick={() => openForm("users")}
+            >
+              Users
+            </button>
+            <button
+              type="button"
+              className={`green-work-submenu-btn ${activeForm === "add_user" ? "active" : ""}`}
+              onClick={() => openForm("add_user")}
+            >
+              Add User
+            </button>
+            <button
+              type="button"
+              className={`green-work-submenu-btn ${activeForm === "assign_work" ? "active" : ""}`}
+              onClick={() => openForm("assign_work")}
+            >
+              Assign Tree Planting
+            </button>
+            <button
+              type="button"
+              className={`green-work-submenu-btn ${activeForm === "assign_task" ? "active" : ""}`}
+              onClick={() => openForm("assign_task")}
+            >
+              Assign Maintenance
+            </button>
+          </div>
+        </div>
+      )}
+
       {menuOpen && (
         <button
           type="button"
@@ -444,24 +480,24 @@ export default function GreenWork() {
         >
           Create Project
         </button>
-        <button
-          className={`green-work-menu-item ${activeForm === "add_user" ? "active" : ""}`}
-          type="button"
-          onClick={() => openForm("add_user")}
-        >
-          Add User
-        </button>
-        <button
-          className={`green-work-menu-item ${activeForm === "users" ? "active" : ""}`}
-          type="button"
-          onClick={() => openForm("users")}
-        >
-          Users
-        </button>
         {activeProjectId ? (
           <div className="green-work-menu-group">
             <p className="green-work-menu-subhead">Active Project Actions</p>
             <p className="green-work-menu-subproject">{activeProjectName}</p>
+            <button
+              className={`green-work-menu-item ${activeForm === "users" ? "active" : ""}`}
+              type="button"
+              onClick={() => openForm("users")}
+            >
+              Users
+            </button>
+            <button
+              className={`green-work-menu-item ${activeForm === "add_user" ? "active" : ""}`}
+              type="button"
+              onClick={() => openForm("add_user")}
+            >
+              Add User
+            </button>
             <button
               className={`green-work-menu-item ${activeForm === "assign_work" ? "active" : ""}`}
               type="button"

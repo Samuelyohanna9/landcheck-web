@@ -102,6 +102,51 @@
   color: #1a4a34;
 }
 
+.green-work-active-submenu-wrap {
+  width: min(1880px, calc(100% - 24px));
+  margin: 0 auto;
+  padding-top: 0.5rem;
+}
+
+.green-work-active-submenu {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.44rem;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(26, 81, 45, 0.16);
+  border-radius: 12px;
+  padding: 0.52rem;
+}
+
+.green-work-active-submenu-title {
+  border-radius: 999px;
+  border: 1px solid rgba(23, 88, 45, 0.22);
+  background: #ffffff;
+  color: #21533b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0.42rem 0.68rem;
+}
+
+.green-work-submenu-btn {
+  border: 1px solid rgba(27, 73, 44, 0.2);
+  background: #ffffff;
+  color: #1f4e38;
+  border-radius: 999px;
+  padding: 0.45rem 0.66rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.green-work-submenu-btn.active {
+  border-color: rgba(17, 63, 34, 0.36);
+  background: linear-gradient(180deg, #2ca44f, #1e7f3e);
+  color: #f2fff1;
+}
+
 .green-work-project-chip {
   max-width: min(48vw, 360px);
   white-space: nowrap;
@@ -632,6 +677,26 @@
   .green-work-toolbar-wrap {
     width: calc(100% - 14px);
     padding: 0.58rem 0.75rem 0;
+  }
+
+  .green-work-active-submenu-wrap {
+    width: calc(100% - 14px);
+    padding: 0.46rem 0.75rem 0;
+  }
+
+  .green-work-active-submenu {
+    gap: 0.36rem;
+    padding: 0.44rem;
+  }
+
+  .green-work-active-submenu-title {
+    width: 100%;
+    text-align: center;
+  }
+
+  .green-work-submenu-btn {
+    flex: 1 1 calc(50% - 0.36rem);
+    text-align: center;
   }
 
   .green-work-toolbar-label {
