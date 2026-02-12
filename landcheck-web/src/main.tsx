@@ -11,3 +11,13 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <App />
   </React.StrictMode>
 );
+
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/green/sw.js", { scope: "/green/" })
+      .catch(() => {
+        // Ignore registration errors in UI flow.
+      });
+  });
+}
