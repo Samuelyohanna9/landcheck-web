@@ -10,6 +10,21 @@
   background: rgba(10, 30, 20, 0.85);
 }
 
+.green-work-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  color: #e2e8f0;
+}
+
+.green-work-brand img {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(34, 197, 94, 0.15);
+  padding: 4px;
+}
+
 .green-work-content {
   display: grid;
   grid-template-columns: 320px 1fr;

@@ -143,8 +143,9 @@
 }
 
 .green-tile {
-  background: #7fc037;
-  color: #fff;
+  background: rgba(34, 197, 94, 0.22);
+  color: #e2e8f0;
+  border: 1px solid rgba(34, 197, 94, 0.35);
   border-radius: 12px;
   padding: 1.2rem;
   display: flex;
