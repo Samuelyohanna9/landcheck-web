@@ -217,6 +217,7 @@ export default function Green() {
   const [plantingOrders, setPlantingOrders] = useState<any[]>([]);
   const [activeSection, setActiveSection] = useState<Section | null>(null);
   const [installPrompt, setInstallPrompt] = useState<DeferredInstallPrompt | null>(null);
+  const [treePhotoUploading, setTreePhotoUploading] = useState(false);
 
   const treePoints = useMemo(() => {
     if (!activeUser) return [];
@@ -441,10 +442,16 @@ export default function Green() {
     window.open(url, "_blank");
   };
 
-  const uploadGreenPhoto = async (file: File, folder: "trees" | "tasks") => {
+  const uploadGreenPhoto = async (
+    file: File,
+    folder: "trees" | "tasks",
+    link?: { treeId?: number; taskId?: number }
+  ) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("folder", folder);
+    if (link?.treeId) formData.append("tree_id", String(link.treeId));
+    if (link?.taskId) formData.append("task_id", String(link.taskId));
     const res = await api.post("/green/uploads/photo", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
@@ -457,7 +464,7 @@ export default function Green() {
     if (!file) return;
     const loadingId = toast.loading("Uploading task photo...");
     try {
-      const photoUrl = await uploadGreenPhoto(file, "tasks");
+      const photoUrl = await uploadGreenPhoto(file, "tasks", { taskId });
       setTaskEdits((prev) => ({
         ...prev,
         [taskId]: {
@@ -532,6 +539,25 @@ export default function Green() {
       setNewTree((prev) => ({ ...prev, photo_url: "" }));
       setPhotoPreview("");
       toast.error("Failed to upload tree photo", { id: loadingId });
+    }
+  };
+
+  const onInspectedTreePhotoPicked = async (file: File | null) => {
+    if (!file || !inspectedTree) return;
+    const treeId = inspectedTree.id;
+    setTreePhotoUploading(true);
+    const loadingId = toast.loading("Uploading tree photo...");
+    try {
+      const photoUrl = await uploadGreenPhoto(file, "trees", { treeId });
+      setInspectedTree((prev) => (prev && prev.id === treeId ? { ...prev, photo_url: photoUrl } : prev));
+      if (activeProject) {
+        await loadProjectDetail(activeProject.id);
+      }
+      toast.success("Tree photo updated", { id: loadingId });
+    } catch {
+      toast.error("Failed to upload tree photo", { id: loadingId });
+    } finally {
+      setTreePhotoUploading(false);
     }
   };
 
@@ -1151,6 +1177,21 @@ export default function Green() {
                 ) : (
                   <div className="green-tree-inspector-photo empty">No tree photo</div>
                 )}
+              </div>
+              <div className="green-tree-photo-upload-row">
+                <label className={`green-tree-photo-upload-btn ${treePhotoUploading ? "is-loading" : ""}`}>
+                  {treePhotoUploading ? "Uploading..." : "Upload Tree Photo"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={treePhotoUploading}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      void onInspectedTreePhotoPicked(file);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
               </div>
               <h4>Tree #{inspectedTree.id}</h4>
               {inspectedTree.loading && <p className="green-tree-inspector-loading">Loading latest records...</p>}

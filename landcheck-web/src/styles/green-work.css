@@ -623,6 +623,33 @@
   font-weight: 700;
 }
 
+.green-work-tree-photo-upload-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.4rem;
+}
+
+.green-work-tree-photo-upload-btn {
+  border: 1px solid rgba(24, 75, 44, 0.28);
+  border-radius: 9px;
+  background: #f2faf3;
+  color: #184d34;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.4rem 0.56rem;
+  cursor: pointer;
+}
+
+.green-work-tree-photo-upload-btn input {
+  display: none;
+}
+
+.green-work-tree-photo-upload-btn.is-loading {
+  opacity: 0.66;
+  pointer-events: none;
+}
+
 .green-work-tree-inspector-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

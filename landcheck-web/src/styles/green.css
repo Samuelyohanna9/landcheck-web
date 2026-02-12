@@ -552,6 +552,33 @@
   font-weight: 700;
 }
 
+.green-tree-photo-upload-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.42rem;
+}
+
+.green-tree-photo-upload-btn {
+  border: 1px solid rgba(26, 79, 46, 0.28);
+  border-radius: 9px;
+  background: #f4fbf4;
+  color: #1a4e34;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.42rem 0.58rem;
+  cursor: pointer;
+}
+
+.green-tree-photo-upload-btn input {
+  display: none;
+}
+
+.green-tree-photo-upload-btn.is-loading {
+  opacity: 0.66;
+  pointer-events: none;
+}
+
 .green-tree-inspector-loading {
   margin: 0 0 0.42rem;
   color: #446958;
