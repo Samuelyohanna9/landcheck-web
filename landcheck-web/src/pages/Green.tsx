@@ -41,6 +41,10 @@ type GreenUser = {
 };
 
 type Section = "tasks" | "map" | "records" | "profile";
+type DeferredInstallPrompt = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
 
 function HomeIcon() {
   return (
@@ -145,6 +149,7 @@ export default function Green() {
   const [focusPoint, setFocusPoint] = useState<{ lng: number; lat: number }[] | null>(null);
   const [plantingOrders, setPlantingOrders] = useState<any[]>([]);
   const [activeSection, setActiveSection] = useState<Section | null>(null);
+  const [installPrompt, setInstallPrompt] = useState<DeferredInstallPrompt | null>(null);
 
   const treePoints = useMemo(
     () =>
@@ -256,6 +261,23 @@ export default function Green() {
     const timer = window.setTimeout(() => setFocusPoint(null), 800);
     return () => window.clearTimeout(timer);
   }, [focusPoint]);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as DeferredInstallPrompt);
+    };
+    const handleAppInstalled = () => {
+      setInstallPrompt(null);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt as EventListener);
+    window.addEventListener("appinstalled", handleAppInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt as EventListener);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
+  }, []);
 
   const selectProject = async (project: Project) => {
     setLoadingTrees(true);
@@ -416,6 +438,13 @@ export default function Green() {
     reader.readAsDataURL(file);
   };
 
+  const installGreenApp = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    await installPrompt.userChoice;
+    setInstallPrompt(null);
+  };
+
   const openSection = (section: Section) => {
     setActiveSection(section);
     window.setTimeout(() => {
@@ -452,6 +481,11 @@ export default function Green() {
             </div>
           </div>
           <div className="green-header-actions">
+            {installPrompt && (
+              <button className="green-ghost-btn" onClick={installGreenApp} type="button">
+                Install App
+              </button>
+            )}
             <button className="green-ghost-btn" onClick={exportCsv} disabled={!activeProject} type="button">
               Export CSV
             </button>
