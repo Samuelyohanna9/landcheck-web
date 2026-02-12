@@ -159,6 +159,11 @@ export default function Green() {
           lng: Number(t.lng),
           lat: Number(t.lat),
           status: t.status,
+          species: t.species,
+          planting_date: t.planting_date,
+          notes: t.notes,
+          photo_url: t.photo_url,
+          created_by: t.created_by || "",
         }))
         .filter((t) => Number.isFinite(t.lng) && Number.isFinite(t.lat)),
     [trees]
