@@ -37,7 +37,19 @@ type Tree = {
   status: string;
 };
 
-type WorkForm = "project_focus" | "create_project" | "add_user" | "assign_work" | "assign_task";
+type WorkForm = "project_focus" | "create_project" | "add_user" | "users" | "assign_work" | "assign_task";
+type StaffMenuState = { user: GreenUser; x: number; y: number } | null;
+
+const normalizeName = (value: string | null | undefined) => (value || "").trim().toLowerCase();
+const formatRoleLabel = (role: string) =>
+  role
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+const isCompleteStatus = (status: string | null | undefined) => {
+  const normalized = normalizeName(status);
+  return normalized === "done" || normalized === "completed" || normalized === "closed";
+};
 
 export default function GreenWork() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -68,6 +80,7 @@ export default function GreenWork() {
   const [mapView, setMapView] = useState<{ lng: number; lat: number; zoom: number; bearing: number; pitch: number } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeForm, setActiveForm] = useState<WorkForm | null>(null);
+  const [staffMenu, setStaffMenu] = useState<StaffMenuState>(null);
 
   const loadProjects = async () => {
     const res = await api.get("/green/projects");
@@ -98,6 +111,26 @@ export default function GreenWork() {
     loadProjects().catch(() => toast.error("Failed to load projects"));
     loadUsers().catch(() => toast.error("Failed to load users"));
   }, []);
+
+  useEffect(() => {
+    if (!staffMenu) return;
+    const closeMenu = () => setStaffMenu(null);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeMenu();
+      }
+    };
+    window.addEventListener("click", closeMenu);
+    window.addEventListener("resize", closeMenu);
+    window.addEventListener("scroll", closeMenu, true);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("click", closeMenu);
+      window.removeEventListener("resize", closeMenu);
+      window.removeEventListener("scroll", closeMenu, true);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [staffMenu]);
 
   const onSelectProject = async (id: number) => {
     setActiveProjectId(id);
@@ -270,6 +303,45 @@ export default function GreenWork() {
     return Array.from(grouped.values()).sort((a, b) => a.assignee_name.localeCompare(b.assignee_name));
   }, [orders, trees]);
 
+  const userWorkSummary = useMemo(() => {
+    return users
+      .map((user) => {
+        const userKey = normalizeName(user.full_name);
+        const userOrders = orders.filter((order) => normalizeName(order.assignee_name) === userKey);
+        const userTasks = tasks.filter((task) => normalizeName(task.assignee_name) === userKey);
+        const plantedTrees = trees.filter((tree) => normalizeName(tree.created_by) === userKey).length;
+
+        const targetTrees = userOrders.reduce((sum, order) => sum + Number(order.target_trees || 0), 0);
+        const pendingOrders = userOrders.filter((order) => !isCompleteStatus(order.status)).length;
+        const doneTasks = userTasks.filter((task) => isCompleteStatus(task.status)).length;
+        const pendingTasks = userTasks.filter((task) => !isCompleteStatus(task.status)).length;
+
+        let statusLabel = "No Active Work";
+        let statusTone: "busy" | "normal" | "idle" = "idle";
+        if (pendingOrders > 0 || pendingTasks > 0) {
+          statusLabel = "In Progress";
+          statusTone = "busy";
+        } else if (userOrders.length > 0 || userTasks.length > 0) {
+          statusLabel = "Up To Date";
+          statusTone = "normal";
+        }
+
+        return {
+          user,
+          position: formatRoleLabel(user.role),
+          orderCount: userOrders.length,
+          targetTrees,
+          plantedTrees,
+          totalTasks: userTasks.length,
+          doneTasks,
+          pendingTasks,
+          statusLabel,
+          statusTone,
+        };
+      })
+      .sort((a, b) => a.user.full_name.localeCompare(b.user.full_name));
+  }, [users, orders, tasks, trees]);
+
   const calcProgress = (value: number, target: number) => {
     if (!target || target <= 0) return 0;
     return Math.min((value / target) * 100, 100);
@@ -283,6 +355,27 @@ export default function GreenWork() {
   const openForm = (form: WorkForm) => {
     setActiveForm(form);
     setMenuOpen(false);
+    setStaffMenu(null);
+  };
+
+  const openAssignWorkForUser = (userName: string) => {
+    setNewOrder((prev) => ({ ...prev, assignee_name: userName }));
+    setActiveForm("assign_work");
+    setMenuOpen(false);
+    setStaffMenu(null);
+    if (!activeProjectId) {
+      toast("Select a project in Project Focus before submitting assignment.");
+    }
+  };
+
+  const openAssignTaskForUser = (userName: string) => {
+    setNewTask((prev) => ({ ...prev, assignee_name: userName }));
+    setActiveForm("assign_task");
+    setMenuOpen(false);
+    setStaffMenu(null);
+    if (!activeProjectId) {
+      toast("Select a project in Project Focus before submitting assignment.");
+    }
   };
 
   return (
@@ -297,21 +390,25 @@ export default function GreenWork() {
             <h1>LandCheck Work</h1>
             <span>Assignments & Progress</span>
           </div>
-          <div className="green-work-header-actions">
-            {activeProjectName && <span className="green-work-project-chip">{activeProjectName}</span>}
-            <button
-              className="green-work-menu-btn"
-              type="button"
-              onClick={() => setMenuOpen((prev) => !prev)}
-              aria-label="Open forms menu"
-            >
-              <span />
-              <span />
-              <span />
-            </button>
-          </div>
         </div>
       </header>
+
+      <div className="green-work-toolbar-wrap">
+        <div className="green-work-toolbar">
+          <button
+            className="green-work-menu-btn"
+            type="button"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            aria-label="Open forms menu"
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+          <span className="green-work-toolbar-label">Menu</span>
+          {activeProjectName && <span className="green-work-project-chip">{activeProjectName}</span>}
+        </div>
+      </div>
 
       {menuOpen && (
         <button
@@ -351,6 +448,13 @@ export default function GreenWork() {
           Add User
         </button>
         <button
+          className={`green-work-menu-item ${activeForm === "users" ? "active" : ""}`}
+          type="button"
+          onClick={() => openForm("users")}
+        >
+          Users
+        </button>
+        <button
           className={`green-work-menu-item ${activeForm === "assign_work" ? "active" : ""}`}
           type="button"
           onClick={() => openForm("assign_work")}
@@ -366,15 +470,8 @@ export default function GreenWork() {
         </button>
       </aside>
 
-      <div className="green-work-content">
+      <div className={`green-work-content ${activeForm ? "with-sidebar" : "no-sidebar"}`}>
         <aside className="green-work-sidebar">
-          {activeForm === null && (
-            <div className="green-work-card green-work-placeholder">
-              <h3>Forms Hidden</h3>
-              <p>Tap the menu icon at the top-right to select a form.</p>
-            </div>
-          )}
-
           {activeForm === "project_focus" && (
             <div className="green-work-card">
               <h3>Project Focus</h3>
@@ -446,6 +543,43 @@ export default function GreenWork() {
               <button className="btn-primary" onClick={createUser}>
                 Add User
               </button>
+            </div>
+          )}
+
+          {activeForm === "users" && (
+            <div className="green-work-card">
+              <h3>Users & Staff</h3>
+              {!activeProjectId && <p className="green-work-note">Select project focus to load full assignment status.</p>}
+              <p className="green-work-note">Right-click a staff row to assign tree planting or maintenance.</p>
+              {userWorkSummary.length === 0 && <p className="green-work-note">No users found.</p>}
+              <div className="staff-list">
+                {userWorkSummary.map((item) => (
+                  <button
+                    key={item.user.id}
+                    type="button"
+                    className="staff-row"
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      setStaffMenu({ user: item.user, x: event.clientX, y: event.clientY });
+                    }}
+                  >
+                    <div className="staff-row-head">
+                      <strong>{item.user.full_name}</strong>
+                      <span>{item.position}</span>
+                    </div>
+                    <div className="staff-row-meta">
+                      Planting: {item.orderCount} orders | Target: {item.targetTrees} | Planted: {item.plantedTrees}
+                    </div>
+                    <div className="staff-row-meta">
+                      Maintenance: {item.totalTasks} tasks | Done: {item.doneTasks} | Pending: {item.pendingTasks}
+                    </div>
+                    <div className={`staff-row-status ${item.statusTone}`}>{item.statusLabel}</div>
+                    <div className="progress-bar">
+                      <span style={{ width: `${calcProgress(item.plantedTrees, item.targetTrees)}%` }} />
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -683,6 +817,26 @@ export default function GreenWork() {
           </div>
         </section>
       </div>
+
+      {staffMenu && (
+        <>
+          <button
+            type="button"
+            className="green-work-context-overlay"
+            onClick={() => setStaffMenu(null)}
+            aria-label="Close staff menu"
+          />
+          <div className="green-work-context-menu" style={{ left: staffMenu.x, top: staffMenu.y }}>
+            <div className="green-work-context-title">{staffMenu.user.full_name}</div>
+            <button type="button" onClick={() => openAssignWorkForUser(staffMenu.user.full_name)}>
+              Assign Tree Planting
+            </button>
+            <button type="button" onClick={() => openAssignTaskForUser(staffMenu.user.full_name)}>
+              Assign Maintenance
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
