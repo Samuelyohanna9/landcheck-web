@@ -12,7 +12,11 @@
   --gw-brand-700: #1d8f44;
   --gw-brand-800: #156f38;
   --gw-shadow: 0 14px 34px rgba(21, 58, 35, 0.14);
-  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   color: var(--gw-text);
   font-family: "Nunito Sans", sans-serif;
   background:
@@ -87,6 +91,7 @@
   width: min(1880px, calc(100% - 24px));
   margin: 0 auto;
   padding-top: 0.68rem;
+  flex: none;
 }
 
 .green-work-toolbar {
@@ -106,6 +111,7 @@
   width: min(1880px, calc(100% - 24px));
   margin: 0 auto;
   padding-top: 0.5rem;
+  flex: none;
 }
 
 .green-work-active-submenu {
@@ -342,7 +348,10 @@
   display: grid;
   align-items: start;
   gap: 1.15rem;
-  padding: 1.15rem 0 1.5rem;
+  padding: 1.15rem 0 1rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .green-work-content.with-sidebar {
@@ -363,10 +372,25 @@
   flex-direction: column;
   gap: 0.95rem;
   min-width: 0;
+  min-height: 0;
 }
 
 .green-work-sidebar {
   position: static;
+  overflow: auto;
+}
+
+.green-work-main {
+  overflow: hidden;
+}
+
+.green-work-main.overview-mode {
+  overflow: auto;
+  padding-right: 0.2rem;
+}
+
+.green-work-main.single-mode {
+  overflow: hidden;
 }
 
 .green-work-card {
@@ -383,6 +407,50 @@
   font-size: 1rem;
   letter-spacing: -0.01em;
   color: #133c2a;
+}
+
+.green-work-overview-card {
+  flex: none;
+}
+
+.green-work-task-summary {
+  margin-top: 0.7rem;
+}
+
+.green-work-task-summary h4 {
+  margin: 0 0 0.45rem;
+  font-size: 0.93rem;
+  color: #1b4f38;
+}
+
+.green-work-task-summary-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: #3f6351;
+  margin-bottom: 0.35rem;
+}
+
+.green-work-task-rows {
+  margin-top: 0.48rem;
+}
+
+.green-work-map-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.green-work-map-card .tree-map-wrap {
+  flex: 1;
+  min-height: 0;
+}
+
+.green-work-map-card .tree-map {
+  height: 100%;
+  min-height: 220px;
 }
 
 .green-work-note {
