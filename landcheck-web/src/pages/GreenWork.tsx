@@ -224,6 +224,46 @@ export default function GreenWork() {
     };
   }, [taskStats]);
 
+  const staffOrderSummary = useMemo(() => {
+    const plantedByAssignee = new Map<string, number>();
+    trees.forEach((tree) => {
+      if (!tree.created_by) return;
+      const key = tree.created_by.trim();
+      plantedByAssignee.set(key, (plantedByAssignee.get(key) || 0) + 1);
+    });
+
+    const grouped = new Map<
+      string,
+      { assignee_name: string; target_trees: number; planted_count: number; order_count: number }
+    >();
+
+    orders.forEach((order) => {
+      const assignee = (order.assignee_name || "").trim() || "Unassigned";
+      const current = grouped.get(assignee);
+      const targetTrees = Number(order.target_trees || 0);
+      const plantedCount = Number(order.planted_count || 0);
+
+      if (current) {
+        current.target_trees += targetTrees;
+        current.order_count += 1;
+        return;
+      }
+
+      grouped.set(assignee, {
+        assignee_name: assignee,
+        target_trees: targetTrees,
+        planted_count: plantedCount,
+        order_count: 1,
+      });
+    });
+
+    grouped.forEach((value, key) => {
+      value.planted_count = plantedByAssignee.get(key) || 0;
+    });
+
+    return Array.from(grouped.values()).sort((a, b) => a.assignee_name.localeCompare(b.assignee_name));
+  }, [orders, trees]);
+
   const calcProgress = (value: number, target: number) => {
     if (!target || target <= 0) return 0;
     return Math.min((value / target) * 100, 100);
@@ -487,12 +527,13 @@ export default function GreenWork() {
 
           <div className="green-work-card">
             <h3>Tree Planting Orders</h3>
-            {orders.length === 0 && <p>No work orders yet.</p>}
-            {orders.map((o) => (
-              <div key={o.id} className="work-order-row">
+            {staffOrderSummary.length === 0 && <p>No work orders yet.</p>}
+            {staffOrderSummary.map((o) => (
+              <div key={o.assignee_name} className="work-order-row">
                 <div>
                   <strong>{o.assignee_name}</strong>
-                  <div>Target: {o.target_trees} | Planted: {o.planted_count}</div>
+                  <div>Assigned: {o.target_trees} | Planted: {o.planted_count}</div>
+                  <div>Orders: {o.order_count}</div>
                   <div className="progress-bar">
                     <span
                       style={{ width: `${calcProgress(o.planted_count || 0, o.target_trees || 0)}%` }}
