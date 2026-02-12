@@ -274,46 +274,6 @@ export default function GreenWork() {
     };
   }, [taskStats]);
 
-  const staffOrderSummary = useMemo(() => {
-    const plantedByAssignee = new Map<string, number>();
-    trees.forEach((tree) => {
-      if (!tree.created_by) return;
-      const key = tree.created_by.trim();
-      plantedByAssignee.set(key, (plantedByAssignee.get(key) || 0) + 1);
-    });
-
-    const grouped = new Map<
-      string,
-      { assignee_name: string; target_trees: number; planted_count: number; order_count: number }
-    >();
-
-    orders.forEach((order) => {
-      const assignee = (order.assignee_name || "").trim() || "Unassigned";
-      const current = grouped.get(assignee);
-      const targetTrees = Number(order.target_trees || 0);
-      const plantedCount = Number(order.planted_count || 0);
-
-      if (current) {
-        current.target_trees += targetTrees;
-        current.order_count += 1;
-        return;
-      }
-
-      grouped.set(assignee, {
-        assignee_name: assignee,
-        target_trees: targetTrees,
-        planted_count: plantedCount,
-        order_count: 1,
-      });
-    });
-
-    grouped.forEach((value, key) => {
-      value.planted_count = plantedByAssignee.get(key) || 0;
-    });
-
-    return Array.from(grouped.values()).sort((a, b) => a.assignee_name.localeCompare(b.assignee_name));
-  }, [orders, trees]);
-
   const userWorkSummary = useMemo(() => {
     return users
       .map((user) => {
@@ -869,6 +829,7 @@ export default function GreenWork() {
               trees={filteredTrees}
               onAddTree={() => {}}
               enableDraw={false}
+              minHeight={220}
               onViewChange={(view) => setMapView(view)}
               fitBounds={fitPoints}
             />
