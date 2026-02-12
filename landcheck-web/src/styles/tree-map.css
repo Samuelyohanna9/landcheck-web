@@ -33,7 +33,7 @@
   border-radius: 50%;
   background: var(--tree-marker-outer, rgba(150, 223, 138, 0.78));
   border: 1px solid var(--tree-marker-ring, rgba(88, 171, 80, 0.72));
-  box-shadow: 0 4px 10px rgba(13, 31, 19, 0.24);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28);
   cursor: pointer;
   z-index: 2;
 }
@@ -55,7 +55,7 @@
   height: 32px;
   background: rgba(150, 223, 138, 0.82);
   border-color: rgba(88, 171, 80, 0.8);
-  box-shadow: 0 0 0 4px rgba(99, 194, 103, 0.35);
+  box-shadow: 0 0 0 3px rgba(99, 194, 103, 0.26);
 }
 
 @media (max-width: 720px) {
