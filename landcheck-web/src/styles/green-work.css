@@ -83,8 +83,126 @@
   font-weight: 600;
 }
 
-.green-work-spacer {
-  width: 58px;
+.green-work-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.58rem;
+}
+
+.green-work-project-chip {
+  max-width: min(40vw, 300px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-radius: 999px;
+  border: 1px solid rgba(229, 255, 229, 0.35);
+  background: rgba(14, 68, 34, 0.32);
+  color: #efffec;
+  font-size: 0.79rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.45rem 0.74rem;
+}
+
+.green-work-menu-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  border: 1px solid rgba(228, 255, 226, 0.36);
+  background: linear-gradient(180deg, rgba(46, 170, 84, 0.9), rgba(26, 121, 56, 0.92));
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    0 8px 16px rgba(10, 44, 22, 0.32);
+}
+
+.green-work-menu-btn span {
+  width: 17px;
+  height: 2px;
+  border-radius: 999px;
+  background: #f2fff1;
+}
+
+.green-work-menu-overlay {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: rgba(7, 27, 13, 0.42);
+  z-index: 80;
+  cursor: pointer;
+}
+
+.green-work-menu-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(92vw, 320px);
+  height: 100dvh;
+  padding: 0.86rem;
+  background: linear-gradient(180deg, #f8fff9 0%, #ebf8ed 100%);
+  border-left: 1px solid rgba(27, 73, 44, 0.2);
+  box-shadow: -14px 0 30px rgba(10, 43, 23, 0.24);
+  z-index: 81;
+  transform: translateX(102%);
+  transition: transform 0.24s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.green-work-menu-drawer.open {
+  transform: translateX(0);
+}
+
+.green-work-menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.2rem;
+}
+
+.green-work-menu-head strong {
+  font-family: "Sora", sans-serif;
+  font-size: 1rem;
+  color: #12402d;
+}
+
+.green-work-menu-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(27, 73, 44, 0.22);
+  background: #ffffff;
+  color: #1a4a34;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.green-work-menu-item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(27, 73, 44, 0.18);
+  background: #ffffff;
+  color: #1f4e38;
+  border-radius: 10px;
+  padding: 0.56rem 0.62rem;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.green-work-menu-item.active {
+  background: linear-gradient(180deg, #2ca44f, #1e7f3e);
+  color: #f2fff1;
+  border-color: rgba(17, 63, 34, 0.36);
 }
 
 .green-work-content {
@@ -123,6 +241,18 @@
   font-size: 1rem;
   letter-spacing: -0.01em;
   color: #133c2a;
+}
+
+.green-work-note {
+  margin: 0.35rem 0 0;
+  color: #4a6859;
+  font-size: 0.84rem;
+}
+
+.green-work-placeholder p {
+  margin: 0;
+  color: #496756;
+  font-size: 0.87rem;
 }
 
 .project-controls {
@@ -316,17 +446,13 @@
 
   .green-work-sidebar {
     position: static;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 0.8rem;
   }
 }
 
 @media (max-width: 920px) {
-  .green-work-sidebar {
-    grid-template-columns: 1fr;
-  }
-
   .project-controls-row {
     grid-template-columns: 1fr;
   }
@@ -334,12 +460,19 @@
 
 @media (max-width: 760px) {
   .green-work-header-inner {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto 1fr auto;
     padding: 0.8rem 0.84rem 0.88rem;
   }
 
-  .green-work-spacer {
-    display: none;
+  .green-work-brand {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+  }
+
+  .green-work-menu-btn {
+    width: 38px;
+    height: 38px;
   }
 
   .green-work-title {
@@ -352,6 +485,15 @@
 
   .green-work-title span {
     font-size: 0.8rem;
+  }
+
+  .green-work-project-chip {
+    display: none;
+  }
+
+  .green-work-menu-drawer {
+    width: min(96vw, 310px);
+    padding: 0.74rem;
   }
 
   .green-work-content {

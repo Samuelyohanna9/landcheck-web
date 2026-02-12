@@ -37,6 +37,8 @@ type Tree = {
   status: string;
 };
 
+type WorkForm = "project_focus" | "create_project" | "add_user" | "assign_work" | "assign_task";
+
 export default function GreenWork() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<GreenUser[]>([]);
@@ -64,6 +66,8 @@ export default function GreenWork() {
     notes: "",
   });
   const [mapView, setMapView] = useState<{ lng: number; lat: number; zoom: number; bearing: number; pitch: number } | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeForm, setActiveForm] = useState<WorkForm | null>(null);
 
   const loadProjects = async () => {
     const res = await api.get("/green/projects");
@@ -271,6 +275,16 @@ export default function GreenWork() {
     return Math.min((value / target) * 100, 100);
   };
 
+  const activeProjectName = useMemo(() => {
+    if (!activeProjectId) return "";
+    return projects.find((p) => p.id === activeProjectId)?.name || "";
+  }, [activeProjectId, projects]);
+
+  const openForm = (form: WorkForm) => {
+    setActiveForm(form);
+    setMenuOpen(false);
+  };
+
   return (
     <div className="green-work-container">
       <Toaster position="top-right" />
@@ -283,158 +297,261 @@ export default function GreenWork() {
             <h1>LandCheck Work</h1>
             <span>Assignments & Progress</span>
           </div>
-          <div className="green-work-spacer" />
+          <div className="green-work-header-actions">
+            {activeProjectName && <span className="green-work-project-chip">{activeProjectName}</span>}
+            <button
+              className="green-work-menu-btn"
+              type="button"
+              onClick={() => setMenuOpen((prev) => !prev)}
+              aria-label="Open forms menu"
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+          </div>
         </div>
       </header>
 
+      {menuOpen && (
+        <button
+          type="button"
+          className="green-work-menu-overlay"
+          onClick={() => setMenuOpen(false)}
+          aria-label="Close forms menu"
+        />
+      )}
+
+      <aside className={`green-work-menu-drawer ${menuOpen ? "open" : ""}`}>
+        <div className="green-work-menu-head">
+          <strong>Forms Menu</strong>
+          <button className="green-work-menu-close" type="button" onClick={() => setMenuOpen(false)} aria-label="Close menu">
+            X
+          </button>
+        </div>
+        <button
+          className={`green-work-menu-item ${activeForm === "project_focus" ? "active" : ""}`}
+          type="button"
+          onClick={() => openForm("project_focus")}
+        >
+          Project Focus
+        </button>
+        <button
+          className={`green-work-menu-item ${activeForm === "create_project" ? "active" : ""}`}
+          type="button"
+          onClick={() => openForm("create_project")}
+        >
+          Create Project
+        </button>
+        <button
+          className={`green-work-menu-item ${activeForm === "add_user" ? "active" : ""}`}
+          type="button"
+          onClick={() => openForm("add_user")}
+        >
+          Add User
+        </button>
+        <button
+          className={`green-work-menu-item ${activeForm === "assign_work" ? "active" : ""}`}
+          type="button"
+          onClick={() => openForm("assign_work")}
+        >
+          Assign Tree Planting
+        </button>
+        <button
+          className={`green-work-menu-item ${activeForm === "assign_task" ? "active" : ""}`}
+          type="button"
+          onClick={() => openForm("assign_task")}
+        >
+          Assign Maintenance Task
+        </button>
+      </aside>
+
       <div className="green-work-content">
         <aside className="green-work-sidebar">
-          <div className="green-work-card">
-            <h3>Add User</h3>
-            <input
-              placeholder="Full name"
-              value={newUser.full_name}
-              onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
-            />
-            <select
-              value={newUser.role}
-              onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-            >
-              <option value="admin">Admin</option>
-              <option value="field_officer">Field Officer</option>
-              <option value="volunteer">Volunteer</option>
-              <option value="viewer">Viewer</option>
-            </select>
-            <button className="btn-primary" onClick={createUser}>
-              Add User
-            </button>
-          </div>
+          {activeForm === null && (
+            <div className="green-work-card green-work-placeholder">
+              <h3>Forms Hidden</h3>
+              <p>Tap the menu icon at the top-right to select a form.</p>
+            </div>
+          )}
 
-          <div className="green-work-card">
-            <h3>Assign Tree Planting</h3>
-            <select
-              value={newOrder.assignee_name}
-              onChange={(e) => setNewOrder({ ...newOrder, assignee_name: e.target.value })}
-            >
-              <option value="">Select assignee</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.full_name}>
-                  {u.full_name}
-                </option>
-              ))}
-            </select>
-            <input
-              type="number"
-              placeholder="Target trees"
-              value={newOrder.target_trees}
-              onChange={(e) => setNewOrder({ ...newOrder, target_trees: Number(e.target.value) })}
-            />
-            <input
-              type="date"
-              value={newOrder.due_date}
-              onChange={(e) => setNewOrder({ ...newOrder, due_date: e.target.value })}
-            />
-            <button className="btn-primary" onClick={createWorkOrder}>
-              Assign Work
-            </button>
-          </div>
+          {activeForm === "project_focus" && (
+            <div className="green-work-card">
+              <h3>Project Focus</h3>
+              <select
+                onChange={async (e) => {
+                  const value = e.target.value;
+                  if (!value) {
+                    setActiveProjectId(null);
+                    setOrders([]);
+                    setTrees([]);
+                    setStats(null);
+                    setTaskStats(null);
+                    setTasks([]);
+                    return;
+                  }
+                  await onSelectProject(Number(value));
+                }}
+                value={activeProjectId || ""}
+              >
+                <option value="">Select project</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              {!activeProjectId && <p className="green-work-note">Select a project to load dashboard data.</p>}
+            </div>
+          )}
 
-          <div className="green-work-card">
-            <h3>Assign Maintenance Task</h3>
-            <select
-              value={newTask.tree_id}
-              onChange={(e) => setNewTask({ ...newTask, tree_id: e.target.value })}
-            >
-              <option value="">Select tree</option>
-              {trees.map((t) => (
-                <option key={t.id} value={t.id}>
-                  Tree #{t.id}
-                </option>
-              ))}
-            </select>
-            <select
-              value={newTask.task_type}
-              onChange={(e) => setNewTask({ ...newTask, task_type: e.target.value })}
-            >
-              <option value="watering">Watering</option>
-              <option value="weeding">Weeding</option>
-              <option value="protection">Protection</option>
-              <option value="inspection">Inspection</option>
-              <option value="replacement">Replacement</option>
-            </select>
-            <select
-              value={newTask.assignee_name}
-              onChange={(e) => setNewTask({ ...newTask, assignee_name: e.target.value })}
-            >
-              <option value="">Assign to</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.full_name}>
-                  {u.full_name}
-                </option>
-              ))}
-            </select>
-            <select
-              value={newTask.priority}
-              onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-            >
-              <option value="low">Low</option>
-              <option value="normal">Normal</option>
-              <option value="high">High</option>
-            </select>
-            <input
-              type="date"
-              value={newTask.due_date}
-              onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
-            />
-            <textarea
-              placeholder="Notes"
-              value={newTask.notes}
-              onChange={(e) => setNewTask({ ...newTask, notes: e.target.value })}
-            />
-            <button className="btn-primary" onClick={assignTask}>
-              Assign Task
-            </button>
-          </div>
+          {activeForm === "create_project" && (
+            <div className="green-work-card">
+              <h3>Create Project</h3>
+              <input
+                placeholder="Project name"
+                value={newProject.name}
+                onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+              />
+              <input
+                placeholder="Location"
+                value={newProject.location_text}
+                onChange={(e) => setNewProject({ ...newProject, location_text: e.target.value })}
+              />
+              <input
+                placeholder="Sponsor"
+                value={newProject.sponsor}
+                onChange={(e) => setNewProject({ ...newProject, sponsor: e.target.value })}
+              />
+              <button className="btn-primary" onClick={createProject}>
+                Create Project
+              </button>
+            </div>
+          )}
+
+          {activeForm === "add_user" && (
+            <div className="green-work-card">
+              <h3>Add User</h3>
+              <input
+                placeholder="Full name"
+                value={newUser.full_name}
+                onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+              />
+              <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}>
+                <option value="admin">Admin</option>
+                <option value="field_officer">Field Officer</option>
+                <option value="volunteer">Volunteer</option>
+                <option value="viewer">Viewer</option>
+              </select>
+              <button className="btn-primary" onClick={createUser}>
+                Add User
+              </button>
+            </div>
+          )}
+
+          {activeForm === "assign_work" && (
+            <div className="green-work-card">
+              <h3>Assign Tree Planting</h3>
+              {!activeProjectId && <p className="green-work-note">Select project first from Project Focus.</p>}
+              <select
+                value={newOrder.assignee_name}
+                onChange={(e) => setNewOrder({ ...newOrder, assignee_name: e.target.value })}
+                disabled={!activeProjectId}
+              >
+                <option value="">Select assignee</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.full_name}>
+                    {u.full_name}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                placeholder="Target trees"
+                value={newOrder.target_trees}
+                onChange={(e) => setNewOrder({ ...newOrder, target_trees: Number(e.target.value) })}
+                disabled={!activeProjectId}
+              />
+              <input
+                type="date"
+                value={newOrder.due_date}
+                onChange={(e) => setNewOrder({ ...newOrder, due_date: e.target.value })}
+                disabled={!activeProjectId}
+              />
+              <button className="btn-primary" onClick={createWorkOrder} disabled={!activeProjectId}>
+                Assign Work
+              </button>
+            </div>
+          )}
+
+          {activeForm === "assign_task" && (
+            <div className="green-work-card">
+              <h3>Assign Maintenance Task</h3>
+              {!activeProjectId && <p className="green-work-note">Select project first from Project Focus.</p>}
+              <select
+                value={newTask.tree_id}
+                onChange={(e) => setNewTask({ ...newTask, tree_id: e.target.value })}
+                disabled={!activeProjectId}
+              >
+                <option value="">Select tree</option>
+                {trees.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    Tree #{t.id}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={newTask.task_type}
+                onChange={(e) => setNewTask({ ...newTask, task_type: e.target.value })}
+                disabled={!activeProjectId}
+              >
+                <option value="watering">Watering</option>
+                <option value="weeding">Weeding</option>
+                <option value="protection">Protection</option>
+                <option value="inspection">Inspection</option>
+                <option value="replacement">Replacement</option>
+              </select>
+              <select
+                value={newTask.assignee_name}
+                onChange={(e) => setNewTask({ ...newTask, assignee_name: e.target.value })}
+                disabled={!activeProjectId}
+              >
+                <option value="">Assign to</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.full_name}>
+                    {u.full_name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={newTask.priority}
+                onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
+                disabled={!activeProjectId}
+              >
+                <option value="low">Low</option>
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+              </select>
+              <input
+                type="date"
+                value={newTask.due_date}
+                onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+                disabled={!activeProjectId}
+              />
+              <textarea
+                placeholder="Notes"
+                value={newTask.notes}
+                onChange={(e) => setNewTask({ ...newTask, notes: e.target.value })}
+                disabled={!activeProjectId}
+              />
+              <button className="btn-primary" onClick={assignTask} disabled={!activeProjectId}>
+                Assign Task
+              </button>
+            </div>
+          )}
         </aside>
 
         <section className="green-work-main">
-          <div className="green-work-card project-controls">
-            <div className="project-controls-row">
-              <div className="project-controls-col">
-                <h3>Project Focus</h3>
-                <select onChange={(e) => onSelectProject(Number(e.target.value))} value={activeProjectId || ""}>
-                  <option value="">Select project</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="project-controls-col">
-                <h3>Create Project</h3>
-                <input
-                  placeholder="Project name"
-                  value={newProject.name}
-                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                />
-                <input
-                  placeholder="Location"
-                  value={newProject.location_text}
-                  onChange={(e) => setNewProject({ ...newProject, location_text: e.target.value })}
-                />
-                <input
-                  placeholder="Sponsor"
-                  value={newProject.sponsor}
-                  onChange={(e) => setNewProject({ ...newProject, sponsor: e.target.value })}
-                />
-                <button className="btn-primary" onClick={createProject}>
-                  Create Project
-                </button>
-              </div>
-            </div>
-          </div>
-
           <div className="green-work-card">
             <div className="green-work-row">
               <h3>Progress Dashboard</h3>
@@ -453,6 +570,7 @@ export default function GreenWork() {
                 </select>
               </div>
             </div>
+            {!activeProjectId && <p className="green-work-note">Select a project from the menu to view analytics.</p>}
 
             {stats && (
               <div className="green-work-stats">
@@ -568,3 +686,4 @@ export default function GreenWork() {
     </div>
   );
 }
+
