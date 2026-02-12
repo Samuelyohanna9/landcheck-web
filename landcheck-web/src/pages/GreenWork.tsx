@@ -245,16 +245,6 @@ export default function GreenWork() {
     window.open(`${BACKEND_URL}/green/work-report/pdf?project_id=${activeProjectId}${assignee}${view}`, "_blank");
   };
 
-  const exportTasksCsv = () => {
-    if (!activeProjectId) return;
-    window.open(`${BACKEND_URL}/green/projects/${activeProjectId}/tasks/export/csv`, "_blank");
-  };
-
-  const exportTasksPdf = () => {
-    if (!activeProjectId) return;
-    window.open(`${BACKEND_URL}/green/projects/${activeProjectId}/tasks/export/pdf`, "_blank");
-  };
-
   const assignees = useMemo(() => {
     const namesByKey = new Map<string, string>();
     const addName = (name: string | null | undefined) => {
@@ -273,13 +263,15 @@ export default function GreenWork() {
 
   const filteredTrees = useMemo(() => {
     if (assigneeFilter === "all") return trees;
-    return trees.filter((t) => t.created_by === assigneeFilter);
+    const key = normalizeName(assigneeFilter);
+    return trees.filter((t) => normalizeName(t.created_by) === key);
   }, [trees, assigneeFilter]);
 
   const fitPoints = useMemo(() => {
     if (assigneeFilter === "all") return null;
+    const key = normalizeName(assigneeFilter);
     const points = trees
-      .filter((t) => t.created_by === assigneeFilter)
+      .filter((t) => normalizeName(t.created_by) === key)
       .map((t) => ({ lng: t.lng, lat: t.lat }));
     return points.length ? points : null;
   }, [assigneeFilter, trees]);
@@ -361,6 +353,13 @@ export default function GreenWork() {
       },
     );
   }, [filteredOverviewSummary]);
+  const activeProjectActions: Array<{ form: WorkForm; title: string; note: string }> = [
+    { form: "overview", title: "Overview", note: "Progress + map summary" },
+    { form: "users", title: "Users Board", note: "All staff status and roles" },
+    { form: "add_user", title: "Add Staff", note: "Create new user profile" },
+    { form: "assign_work", title: "Planting Orders", note: "Assign tree planting targets" },
+    { form: "assign_task", title: "Maintenance", note: "Assign maintenance tasks" },
+  ];
 
   const userWorkSummary = useMemo(() => {
     return users
@@ -405,6 +404,10 @@ export default function GreenWork() {
     if (!target || target <= 0) return 0;
     return Math.min((value / target) * 100, 100);
   };
+  const plantingCompletionPct = calcProgress(filteredOverviewTotals.plantedTrees, filteredOverviewTotals.targetTrees);
+  const taskDonePct = calcProgress(filteredOverviewTotals.taskDone, filteredOverviewTotals.taskTotal);
+  const taskPendingPct = calcProgress(filteredOverviewTotals.taskPending, filteredOverviewTotals.taskTotal);
+  const taskOverduePct = calcProgress(filteredOverviewTotals.taskOverdue, filteredOverviewTotals.taskTotal);
 
   const activeProjectName = useMemo(() => {
     if (!activeProjectId) return "";
@@ -476,44 +479,26 @@ export default function GreenWork() {
       </div>
 
       {activeProjectId && (
-        <div className="green-work-active-submenu-wrap">
-          <div className="green-work-active-submenu">
-            <span className="green-work-active-submenu-title">{activeProjectName}</span>
-            <button
-              type="button"
-              className={`green-work-submenu-btn ${activeForm === "overview" ? "active" : ""}`}
-              onClick={() => openForm("overview")}
-            >
-              Overview
-            </button>
-            <button
-              type="button"
-              className={`green-work-submenu-btn ${activeForm === "users" ? "active" : ""}`}
-              onClick={() => openForm("users")}
-            >
-              Users
-            </button>
-            <button
-              type="button"
-              className={`green-work-submenu-btn ${activeForm === "add_user" ? "active" : ""}`}
-              onClick={() => openForm("add_user")}
-            >
-              Add User
-            </button>
-            <button
-              type="button"
-              className={`green-work-submenu-btn ${activeForm === "assign_work" ? "active" : ""}`}
-              onClick={() => openForm("assign_work")}
-            >
-              Assign Tree Planting
-            </button>
-            <button
-              type="button"
-              className={`green-work-submenu-btn ${activeForm === "assign_task" ? "active" : ""}`}
-              onClick={() => openForm("assign_task")}
-            >
-              Assign Maintenance
-            </button>
+        <div className="green-work-active-hub-wrap">
+          <div className="green-work-active-hub">
+            <div className="green-work-active-hub-head">
+              <span className="green-work-active-hub-kicker">Active Project</span>
+              <strong>{activeProjectName}</strong>
+              <p>Select an action to continue.</p>
+            </div>
+            <div className="green-work-action-grid">
+              {activeProjectActions.map((action) => (
+                <button
+                  key={action.form}
+                  type="button"
+                  className={`green-work-action-card ${activeForm === action.form ? "active" : ""}`}
+                  onClick={() => openForm(action.form)}
+                >
+                  <span>{action.title}</span>
+                  <small>{action.note}</small>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -819,8 +804,6 @@ export default function GreenWork() {
                 <div className="work-actions">
                   <button onClick={exportWorkCsv}>Export CSV</button>
                   <button onClick={exportWorkPdf}>Export PDF</button>
-                  <button onClick={exportTasksCsv}>Tasks CSV</button>
-                  <button onClick={exportTasksPdf}>Tasks PDF</button>
                   <select
                     value={assigneeFilter}
                     onChange={(e) => setAssigneeFilter(e.target.value)}
@@ -845,6 +828,36 @@ export default function GreenWork() {
                   <span>Done: {filteredOverviewTotals.taskDone}</span>
                   <span>Pending: {filteredOverviewTotals.taskPending}</span>
                   <span>Overdue: {filteredOverviewTotals.taskOverdue}</span>
+                </div>
+              </div>
+              <div className="green-work-overview-bars">
+                <div className="green-work-overview-bar-card">
+                  <div className="green-work-overview-bar-head">
+                    <h5>Planting Completion</h5>
+                    <span>{Math.round(plantingCompletionPct)}%</span>
+                  </div>
+                  <div className="progress-bar">
+                    <span style={{ width: `${plantingCompletionPct}%` }} />
+                  </div>
+                  <p>
+                    {filteredOverviewTotals.plantedTrees} planted out of {filteredOverviewTotals.targetTrees} target trees.
+                  </p>
+                </div>
+                <div className="green-work-overview-bar-card">
+                  <div className="green-work-overview-bar-head">
+                    <h5>Task Completion Mix</h5>
+                    <span>{Math.round(taskDonePct)}% done</span>
+                  </div>
+                  <div className="progress-stack">
+                    <span className="stack done" style={{ width: `${taskDonePct}%` }} />
+                    <span className="stack pending" style={{ width: `${taskPendingPct}%` }} />
+                    <span className="stack overdue" style={{ width: `${taskOverduePct}%` }} />
+                  </div>
+                  <div className="green-work-overview-legend">
+                    <span className="done">Done</span>
+                    <span className="pending">Pending</span>
+                    <span className="overdue">Overdue</span>
+                  </div>
                 </div>
               </div>
 

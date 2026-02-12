@@ -107,50 +107,92 @@
   color: #1a4a34;
 }
 
-.green-work-active-submenu-wrap {
+.green-work-active-hub-wrap {
   width: min(1880px, calc(100% - 24px));
   margin: 0 auto;
   padding-top: 0.5rem;
   flex: none;
 }
 
-.green-work-active-submenu {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.44rem;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(26, 81, 45, 0.16);
+.green-work-active-hub {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 0.72rem;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(23, 77, 42, 0.16);
+  border-radius: 14px;
+  padding: 0.62rem;
+}
+
+.green-work-active-hub-head {
+  background: linear-gradient(180deg, rgba(245, 252, 245, 0.94), rgba(233, 247, 235, 0.9));
+  border: 1px solid rgba(23, 88, 45, 0.16);
   border-radius: 12px;
-  padding: 0.52rem;
+  padding: 0.56rem 0.62rem;
 }
 
-.green-work-active-submenu-title {
-  border-radius: 999px;
-  border: 1px solid rgba(23, 88, 45, 0.22);
-  background: #ffffff;
-  color: #21533b;
-  font-size: 0.78rem;
+.green-work-active-hub-kicker {
+  display: inline-block;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #2e6048;
   font-weight: 800;
-  line-height: 1;
-  padding: 0.42rem 0.68rem;
 }
 
-.green-work-submenu-btn {
-  border: 1px solid rgba(27, 73, 44, 0.2);
-  background: #ffffff;
-  color: #1f4e38;
-  border-radius: 999px;
-  padding: 0.45rem 0.66rem;
-  font-weight: 700;
+.green-work-active-hub-head strong {
+  display: block;
+  margin-top: 0.16rem;
+  font-family: "Sora", sans-serif;
+  font-size: 0.98rem;
+  color: #123f2c;
+}
+
+.green-work-active-hub-head p {
+  margin: 0.24rem 0 0;
   font-size: 0.8rem;
+  color: #49705c;
+}
+
+.green-work-action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.5rem;
+}
+
+.green-work-action-card {
+  text-align: left;
+  border: 1px solid rgba(27, 73, 44, 0.2);
+  background: linear-gradient(180deg, #ffffff, #f6fcf7);
+  color: #1f4e38;
+  border-radius: 10px;
+  padding: 0.48rem 0.56rem;
+  font-weight: 700;
+  font-size: 0.84rem;
+  line-height: 1.25;
   cursor: pointer;
 }
 
-.green-work-submenu-btn.active {
+.green-work-action-card span {
+  display: block;
+}
+
+.green-work-action-card small {
+  display: block;
+  margin-top: 0.16rem;
+  font-size: 0.74rem;
+  color: #4f6f5f;
+  font-weight: 700;
+}
+
+.green-work-action-card.active {
   border-color: rgba(17, 63, 34, 0.36);
   background: linear-gradient(180deg, #2ca44f, #1e7f3e);
   color: #f2fff1;
+}
+
+.green-work-action-card.active small {
+  color: rgba(239, 255, 237, 0.88);
 }
 
 .green-work-project-chip {
@@ -466,7 +508,8 @@
 }
 
 .green-work-main.overview-mode .green-work-map-card .tree-map {
-  height: clamp(340px, 62dvh, 760px);
+  height: auto;
+  min-height: clamp(420px, 72dvh, 900px);
 }
 
 .green-work-note {
@@ -666,6 +709,81 @@
   margin-bottom: 0;
 }
 
+.green-work-overview-bars {
+  margin-top: 0.66rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 0.56rem;
+}
+
+.green-work-overview-bar-card {
+  border: 1px solid rgba(24, 78, 45, 0.14);
+  background: linear-gradient(180deg, rgba(250, 254, 250, 0.98), rgba(243, 251, 244, 0.95));
+  border-radius: 12px;
+  padding: 0.6rem;
+}
+
+.green-work-overview-bar-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.56rem;
+}
+
+.green-work-overview-bar-head h5 {
+  margin: 0;
+  font-size: 0.86rem;
+  color: #15462f;
+}
+
+.green-work-overview-bar-head span {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #1f6f3f;
+}
+
+.green-work-overview-bar-card p {
+  margin: 0.4rem 0 0;
+  font-size: 0.78rem;
+  color: #476857;
+}
+
+.green-work-overview-legend {
+  margin-top: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.76rem;
+}
+
+.green-work-overview-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  color: #3f6150;
+  font-weight: 700;
+}
+
+.green-work-overview-legend span::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.green-work-overview-legend .done::before {
+  background: #28b353;
+}
+
+.green-work-overview-legend .pending::before {
+  background: #f3ab31;
+}
+
+.green-work-overview-legend .overdue::before {
+  background: #df4b4b;
+}
+
 .staff-overview-card {
   display: flex;
   flex-direction: column;
@@ -825,24 +943,30 @@
     padding: 0.58rem 0.75rem 0;
   }
 
-  .green-work-active-submenu-wrap {
+  .green-work-active-hub-wrap {
     width: calc(100% - 14px);
     padding: 0.46rem 0.75rem 0;
   }
 
-  .green-work-active-submenu {
-    gap: 0.36rem;
-    padding: 0.44rem;
+  .green-work-active-hub {
+    grid-template-columns: 1fr;
+    gap: 0.46rem;
+    padding: 0.46rem;
   }
 
-  .green-work-active-submenu-title {
-    width: 100%;
-    text-align: center;
+  .green-work-active-hub-head {
+    padding: 0.48rem 0.52rem;
   }
 
-  .green-work-submenu-btn {
+  .green-work-action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+
+  .green-work-action-card {
     flex: 1 1 calc(50% - 0.36rem);
-    text-align: center;
+    text-align: left;
+    padding: 0.44rem 0.48rem;
   }
 
   .green-work-toolbar-label {
@@ -909,8 +1033,13 @@
     grid-template-columns: 1fr;
   }
 
+  .green-work-overview-bars {
+    grid-template-columns: 1fr;
+  }
+
   .green-work-main.overview-mode .green-work-map-card .tree-map {
-    height: clamp(280px, 52dvh, 500px);
+    height: auto;
+    min-height: clamp(300px, 56dvh, 560px);
   }
 
   .work-order-row {
