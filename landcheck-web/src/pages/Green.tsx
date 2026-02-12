@@ -122,11 +122,10 @@ export default function Green() {
 
   const pendingPlanting = useMemo(() => {
     const orders = plantingOrders.filter((o) => o.work_type === "planting");
-    return orders.reduce((sum: number, o: any) => {
-      const remaining = Math.max((o.target_trees || 0) - (o.planted_count || 0), 0);
-      return sum + remaining;
-    }, 0);
-  }, [plantingOrders]);
+    const totalTarget = orders.reduce((sum: number, o: any) => sum + (o.target_trees || 0), 0);
+    const planted = userTrees.length;
+    return Math.max(totalTarget - planted, 0);
+  }, [plantingOrders, userTrees.length]);
 
   const loadProjects = async () => {
     const res = await api.get("/green/projects");
@@ -241,6 +240,14 @@ export default function Green() {
     });
     setPhotoPreview("");
     await loadProjectDetail(activeProject.id);
+    if (activeProject && activeUser) {
+      api
+        .get(
+          `/green/work-orders?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}`
+        )
+        .then((res) => setPlantingOrders(res.data || []))
+        .catch(() => setPlantingOrders([]));
+    }
   };
 
   const loadTreeDetails = async (treeId: number) => {

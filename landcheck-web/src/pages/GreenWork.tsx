@@ -232,33 +232,17 @@ export default function GreenWork() {
     <div className="green-work-container">
       <Toaster position="top-right" />
       <header className="green-work-header">
-        <h1>LandCheck Work</h1>
-        <span>Assignments & Progress</span>
+        <div className="green-work-brand">
+          <img src="/logo.svg" alt="LandCheck" />
+          <div>
+            <h1>LandCheck Work</h1>
+            <span>Assignments & Progress</span>
+          </div>
+        </div>
       </header>
 
       <div className="green-work-content">
         <aside className="green-work-sidebar">
-          <div className="green-work-card">
-            <h3>Create Project</h3>
-            <input
-              placeholder="Project name"
-              value={newProject.name}
-              onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-            />
-            <input
-              placeholder="Location"
-              value={newProject.location_text}
-              onChange={(e) => setNewProject({ ...newProject, location_text: e.target.value })}
-            />
-            <input
-              placeholder="Sponsor"
-              value={newProject.sponsor}
-              onChange={(e) => setNewProject({ ...newProject, sponsor: e.target.value })}
-            />
-            <button className="btn-primary" onClick={createProject}>
-              Create Project
-            </button>
-          </div>
           <div className="green-work-card">
             <h3>Add User</h3>
             <input
@@ -298,11 +282,6 @@ export default function GreenWork() {
               placeholder="Target trees"
               value={newOrder.target_trees}
               onChange={(e) => setNewOrder({ ...newOrder, target_trees: Number(e.target.value) })}
-            />
-            <input
-              placeholder="Maintenance schedule"
-              value={newOrder.maintenance_schedule}
-              onChange={(e) => setNewOrder({ ...newOrder, maintenance_schedule: e.target.value })}
             />
             <input
               type="date"
@@ -373,6 +352,28 @@ export default function GreenWork() {
         </aside>
 
         <section className="green-work-main">
+          <div className="green-work-card">
+            <h3>Create Project</h3>
+            <input
+              placeholder="Project name"
+              value={newProject.name}
+              onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+            />
+            <input
+              placeholder="Location"
+              value={newProject.location_text}
+              onChange={(e) => setNewProject({ ...newProject, location_text: e.target.value })}
+            />
+            <input
+              placeholder="Sponsor"
+              value={newProject.sponsor}
+              onChange={(e) => setNewProject({ ...newProject, sponsor: e.target.value })}
+            />
+            <button className="btn-primary" onClick={createProject}>
+              Create Project
+            </button>
+          </div>
+
           <div className="green-work-card">
             <div className="green-work-row">
               <h3>Progress Dashboard</h3>
