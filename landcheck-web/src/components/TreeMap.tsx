@@ -402,91 +402,86 @@ export default function TreeMap({
             },
           });
 
-          map.on("mousemove", (event) => {
-            const feature = map.queryRenderedFeatures(event.point, { layers: TREE_LAYER_IDS })[0];
-            const props = getFeatureProps(feature);
-            if (!props) {
-              hoverTreeIdRef.current = null;
-              if (hoverPopupRef.current) {
-                hoverPopupRef.current.remove();
-                hoverPopupRef.current = null;
-              }
-              if (!clickPopupRef.current) {
-                map.getCanvas().style.cursor = "crosshair";
-              }
-              return;
-            }
+          const supportsHover =
+            typeof window !== "undefined" &&
+            window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
-            map.getCanvas().style.cursor = "pointer";
-            hoverTreeIdRef.current = props.id;
+          const openDetailPopup = (
+            props: TreeFeatureProps,
+            lngLat: mapboxgl.LngLatLike,
+            mode: "hover" | "click"
+          ) => {
+            const popupRef = mode === "hover" ? hoverPopupRef : clickPopupRef;
+            const currentTreeRef = mode === "hover" ? hoverTreeIdRef : clickTreeIdRef;
+
+            currentTreeRef.current = props.id;
             const detail = detailCacheRef.current.get(props.id);
 
-            if (!hoverPopupRef.current) {
-              hoverPopupRef.current = new mapboxgl.Popup({
-                closeButton: false,
+            if (!popupRef.current) {
+              popupRef.current = new mapboxgl.Popup({
+                closeButton: mode === "click",
                 closeOnClick: false,
-                offset: 14,
+                offset: mode === "click" ? 16 : 14,
                 className: "tree-detail-popup",
               });
             }
 
-            hoverPopupRef.current
-              .setLngLat(event.lngLat)
-              .setHTML(buildPopupHtml(props, detail, !detail))
-              .addTo(map);
-
-            if (!detail) {
-              getTreeDetail(props.id)
-                .then((loadedDetail) => {
-                  if (hoverTreeIdRef.current !== props.id || !hoverPopupRef.current) return;
-                  hoverPopupRef.current.setHTML(buildPopupHtml(props, loadedDetail, false));
-                })
-                .catch(() => {
-                  if (hoverTreeIdRef.current !== props.id || !hoverPopupRef.current) return;
-                  hoverPopupRef.current.setHTML(buildPopupHtml(props, null, false));
-                });
-            }
-          });
-
-          map.on("click", (event) => {
-            const feature = map.queryRenderedFeatures(event.point, { layers: TREE_LAYER_IDS })[0];
-            const props = getFeatureProps(feature);
-            if (!props) {
-              clickTreeIdRef.current = null;
-              if (clickPopupRef.current) {
-                clickPopupRef.current.remove();
-                clickPopupRef.current = null;
-              }
-              return;
-            }
-
-            clickTreeIdRef.current = props.id;
-            onSelectTreeRef.current?.(props.id);
-
-            const detail = detailCacheRef.current.get(props.id);
-            if (!clickPopupRef.current) {
-              clickPopupRef.current = new mapboxgl.Popup({
-                closeButton: true,
-                closeOnClick: false,
-                offset: 16,
-                className: "tree-detail-popup",
-              });
-            }
-
-            clickPopupRef.current
-              .setLngLat(event.lngLat)
+            popupRef.current
+              .setLngLat(lngLat)
               .setHTML(buildPopupHtml(props, detail, !detail))
               .addTo(map);
 
             getTreeDetail(props.id)
               .then((loadedDetail) => {
-                if (clickTreeIdRef.current !== props.id || !clickPopupRef.current) return;
-                clickPopupRef.current.setHTML(buildPopupHtml(props, loadedDetail, false));
+                if (currentTreeRef.current !== props.id || !popupRef.current) return;
+                popupRef.current.setHTML(buildPopupHtml(props, loadedDetail, false));
               })
               .catch(() => {
-                if (clickTreeIdRef.current !== props.id || !clickPopupRef.current) return;
-                clickPopupRef.current.setHTML(buildPopupHtml(props, null, false));
+                if (currentTreeRef.current !== props.id || !popupRef.current) return;
+                popupRef.current.setHTML(buildPopupHtml(props, null, false));
               });
+          };
+
+          if (supportsHover) {
+            map.on("mousemove", (event) => {
+              const feature = map.queryRenderedFeatures(event.point, { layers: TREE_LAYER_IDS })[0];
+              const props = getFeatureProps(feature);
+              if (!props) {
+                hoverTreeIdRef.current = null;
+                if (hoverPopupRef.current) {
+                  hoverPopupRef.current.remove();
+                  hoverPopupRef.current = null;
+                }
+                if (!clickPopupRef.current) {
+                  map.getCanvas().style.cursor = "crosshair";
+                }
+                return;
+              }
+              map.getCanvas().style.cursor = "pointer";
+              openDetailPopup(props, event.lngLat, "hover");
+            });
+          }
+
+          const onTreePress = (event: mapboxgl.MapLayerMouseEvent | mapboxgl.MapTouchEvent) => {
+            const props = getFeatureProps(event.features?.[0]);
+            if (!props) return;
+            onSelectTreeRef.current?.(props.id);
+            openDetailPopup(props, event.lngLat, "click");
+          };
+
+          map.on("click", TREE_CORE_LAYER_ID, onTreePress);
+          map.on("click", TREE_OUTER_LAYER_ID, onTreePress);
+          map.on("touchstart", TREE_CORE_LAYER_ID, onTreePress);
+          map.on("touchstart", TREE_OUTER_LAYER_ID, onTreePress);
+
+          map.on("click", (event) => {
+            const feature = map.queryRenderedFeatures(event.point, { layers: TREE_LAYER_IDS })[0];
+            if (feature) return;
+            clickTreeIdRef.current = null;
+            if (clickPopupRef.current) {
+              clickPopupRef.current.remove();
+              clickPopupRef.current = null;
+            }
           });
         }
 
