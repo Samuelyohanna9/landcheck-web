@@ -1,12 +1,15 @@
+self.CACHE_NAME = "green-shell-v2";
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open("green-shell-v1").then((cache) =>
+    caches.open(self.CACHE_NAME).then((cache) =>
       cache.addAll([
         "/green",
         "/green/",
         "/green/manifest.webmanifest",
-        "/green/icons/icon-192.svg",
-        "/green/icons/icon-512.svg",
+        "/green/icons/icon-192.png",
+        "/green/icons/icon-512.png",
+        "/green/icons/icon-512-maskable.png",
       ])
     )
   );
@@ -14,7 +17,15 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((key) => key.startsWith("green-shell-") && key !== self.CACHE_NAME)
+          .map((key) => caches.delete(key))
+      )
+    ).then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener("fetch", (event) => {
@@ -32,7 +43,7 @@ self.addEventListener("fetch", (event) => {
       fetch(req)
         .then((resp) => {
           const copy = resp.clone();
-          caches.open("green-shell-v1").then((cache) => cache.put(req, copy));
+          caches.open(self.CACHE_NAME).then((cache) => cache.put(req, copy));
           return resp;
         })
         .catch(() => caches.match(req).then((resp) => resp || caches.match("/green")))
@@ -46,7 +57,7 @@ self.addEventListener("fetch", (event) => {
       if (cached) return cached;
       return fetch(req).then((resp) => {
         const copy = resp.clone();
-        caches.open("green-shell-v1").then((cache) => cache.put(req, copy));
+        caches.open(self.CACHE_NAME).then((cache) => cache.put(req, copy));
         return resp;
       });
     })
