@@ -382,21 +382,35 @@ export default function Green() {
     window.open(url, "_blank");
   };
 
-  const onTaskPhotoPicked = (taskId: number, file: File | null) => {
+  const uploadGreenPhoto = async (file: File, folder: "trees" | "tasks") => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", folder);
+    const res = await api.post("/green/uploads/photo", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    const url = String(res.data?.url || "");
+    if (!url) throw new Error("Upload URL missing");
+    return url;
+  };
+
+  const onTaskPhotoPicked = async (taskId: number, file: File | null) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result || "");
+    const loadingId = toast.loading("Uploading task photo...");
+    try {
+      const photoUrl = await uploadGreenPhoto(file, "tasks");
       setTaskEdits((prev) => ({
         ...prev,
         [taskId]: {
           status: prev[taskId]?.status || "pending",
           notes: prev[taskId]?.notes || "",
-          photo_url: dataUrl,
+          photo_url: photoUrl,
         },
       }));
-    };
-    reader.readAsDataURL(file);
+      toast.success("Task photo uploaded", { id: loadingId });
+    } catch {
+      toast.error("Failed to upload task photo", { id: loadingId });
+    }
   };
 
   const updateTreeStatus = async (treeId: number, status: string) => {
@@ -442,15 +456,24 @@ export default function Green() {
     );
   };
 
-  const onPhotoPicked = (file: File | null) => {
+  const onPhotoPicked = async (file: File | null) => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = String(reader.result || "");
       setPhotoPreview(dataUrl);
-      setNewTree((prev) => ({ ...prev, photo_url: dataUrl }));
     };
     reader.readAsDataURL(file);
+    const loadingId = toast.loading("Uploading tree photo...");
+    try {
+      const photoUrl = await uploadGreenPhoto(file, "trees");
+      setNewTree((prev) => ({ ...prev, photo_url: photoUrl }));
+      toast.success("Tree photo uploaded", { id: loadingId });
+    } catch {
+      setNewTree((prev) => ({ ...prev, photo_url: "" }));
+      setPhotoPreview("");
+      toast.error("Failed to upload tree photo", { id: loadingId });
+    }
   };
 
   const installGreenApp = async () => {
