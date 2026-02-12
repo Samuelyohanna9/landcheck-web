@@ -346,7 +346,7 @@
   width: min(1880px, calc(100% - 24px));
   margin: 0 auto;
   display: grid;
-  align-items: start;
+  align-items: stretch;
   gap: 1.15rem;
   padding: 1.15rem 0 1rem;
   flex: 1;
@@ -360,6 +360,7 @@
 
 .green-work-content.no-sidebar {
   grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .green-work-content.no-sidebar .green-work-sidebar {
@@ -382,6 +383,7 @@
 
 .green-work-main {
   overflow: hidden;
+  height: 100%;
 }
 
 .green-work-main.overview-mode {
