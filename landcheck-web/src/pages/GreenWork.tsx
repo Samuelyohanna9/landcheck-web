@@ -41,6 +41,16 @@ type Tree = {
   photo_url?: string | null;
 };
 
+type WorkTask = {
+  id: number;
+  tree_id: number;
+  task_type: string;
+  assignee_name: string;
+  status: string;
+  due_date: string | null;
+  priority?: string | null;
+};
+
 type WorkForm = "project_focus" | "create_project" | "add_user" | "users" | "assign_work" | "assign_task" | "overview";
 type StaffMenuState = { user: GreenUser; x: number; y: number } | null;
 
@@ -54,6 +64,13 @@ const isCompleteStatus = (status: string | null | undefined) => {
   const normalized = normalizeName(status);
   return normalized === "done" || normalized === "completed" || normalized === "closed";
 };
+const isOverdueTask = (task: WorkTask) => {
+  if (isCompleteStatus(task.status) || !task.due_date) return false;
+  const dueDate = new Date(task.due_date);
+  if (Number.isNaN(dueDate.getTime())) return false;
+  dueDate.setHours(23, 59, 59, 999);
+  return dueDate.getTime() < Date.now();
+};
 
 export default function GreenWork() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -61,9 +78,7 @@ export default function GreenWork() {
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
   const [orders, setOrders] = useState<WorkOrder[]>([]);
   const [trees, setTrees] = useState<Tree[]>([]);
-  const [stats, setStats] = useState<any>(null);
-  const [taskStats, setTaskStats] = useState<any>(null);
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<WorkTask[]>([]);
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [newOrder, setNewOrder] = useState({
     assignee_name: "",
@@ -97,10 +112,9 @@ export default function GreenWork() {
   };
 
   const loadProjectData = async (projectId: number) => {
-    const [ordersRes, treesRes, statsRes, tasksRes] = await Promise.all([
+    const [ordersRes, treesRes, tasksRes] = await Promise.all([
       api.get(`/green/work-orders?project_id=${projectId}`),
       api.get(`/green/projects/${projectId}/trees`),
-      api.get(`/green/work-stats?project_id=${projectId}`),
       api.get(`/green/tasks?project_id=${projectId}`),
     ]);
     setOrders(ordersRes.data);
@@ -112,10 +126,7 @@ export default function GreenWork() {
       }))
       .filter((tree: any) => Number.isFinite(tree.lng) && Number.isFinite(tree.lat));
     setTrees(normalizedTrees);
-    setStats(statsRes.data);
-    setTasks(tasksRes.data);
-    const taskRes = await api.get(`/green/projects/${projectId}/task-stats`);
-    setTaskStats(taskRes.data);
+    setTasks(Array.isArray(tasksRes.data) ? tasksRes.data : []);
   };
 
   useEffect(() => {
@@ -145,6 +156,7 @@ export default function GreenWork() {
 
   const onSelectProject = async (id: number) => {
     setActiveProjectId(id);
+    setAssigneeFilter("all");
     await loadProjectData(id);
   };
 
@@ -244,12 +256,20 @@ export default function GreenWork() {
   };
 
   const assignees = useMemo(() => {
-    const names = new Set<string>();
-    orders.forEach((o) => names.add(o.assignee_name));
-    trees.forEach((t) => t.created_by && names.add(t.created_by));
-    users.forEach((u) => names.add(u.full_name));
-    return ["all", ...Array.from(names)];
-  }, [orders, trees, users]);
+    const namesByKey = new Map<string, string>();
+    const addName = (name: string | null | undefined) => {
+      const cleanName = (name || "").trim();
+      if (!cleanName) return;
+      const key = normalizeName(cleanName);
+      if (!namesByKey.has(key)) namesByKey.set(key, cleanName);
+    };
+    orders.forEach((o) => addName(o.assignee_name));
+    trees.forEach((t) => addName(t.created_by));
+    tasks.forEach((t) => addName(t.assignee_name));
+    users.forEach((u) => addName(u.full_name));
+    const sortedNames = Array.from(namesByKey.values()).sort((a, b) => a.localeCompare(b));
+    return ["all", ...sortedNames];
+  }, [orders, trees, tasks, users]);
 
   const filteredTrees = useMemo(() => {
     if (assigneeFilter === "all") return trees;
@@ -264,15 +284,83 @@ export default function GreenWork() {
     return points.length ? points : null;
   }, [assigneeFilter, trees]);
 
-  const taskTotals = useMemo(() => {
-    if (!taskStats) return { total: 0, pending: 0, done: 0, overdue: 0 };
-    return {
-      total: taskStats.total || 0,
-      pending: taskStats.pending || 0,
-      done: taskStats.done || 0,
-      overdue: taskStats.overdue || 0,
-    };
-  }, [taskStats]);
+  const overviewStaffSummary = useMemo(() => {
+    const userByKey = new Map(users.map((user) => [normalizeName(user.full_name), user]));
+    const staffNames = assignees.filter((name) => name !== "all");
+
+    return staffNames
+      .map((name) => {
+        const key = normalizeName(name);
+        const linkedUser = userByKey.get(key);
+        const userOrders = orders.filter((order) => normalizeName(order.assignee_name) === key);
+        const userTasks = tasks.filter((task) => normalizeName(task.assignee_name) === key);
+        const plantedTrees = trees.filter((tree) => normalizeName(tree.created_by) === key).length;
+
+        const targetTrees = userOrders.reduce((sum, order) => sum + Number(order.target_trees || 0), 0);
+        const pendingOrders = userOrders.filter((order) => !isCompleteStatus(order.status)).length;
+        const doneTasks = userTasks.filter((task) => isCompleteStatus(task.status)).length;
+        const overdueTasks = userTasks.filter((task) => isOverdueTask(task)).length;
+        const pendingTasks = Math.max(userTasks.length - doneTasks - overdueTasks, 0);
+
+        let statusLabel = "No Active Work";
+        let statusTone: "danger" | "busy" | "normal" | "idle" = "idle";
+        if (overdueTasks > 0) {
+          statusLabel = "Needs Attention";
+          statusTone = "danger";
+        } else if (pendingOrders > 0 || pendingTasks > 0) {
+          statusLabel = "In Progress";
+          statusTone = "busy";
+        } else if (userOrders.length > 0 || userTasks.length > 0 || plantedTrees > 0) {
+          statusLabel = "Up To Date";
+          statusTone = "normal";
+        }
+
+        return {
+          name,
+          position: linkedUser ? formatRoleLabel(linkedUser.role) : "Position not set",
+          orderCount: userOrders.length,
+          targetTrees,
+          plantedTrees,
+          taskTotal: userTasks.length,
+          taskDone: doneTasks,
+          taskPending: pendingTasks,
+          taskOverdue: overdueTasks,
+          statusLabel,
+          statusTone,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [assignees, users, orders, tasks, trees]);
+
+  const filteredOverviewSummary = useMemo(() => {
+    if (assigneeFilter === "all") return overviewStaffSummary;
+    const key = normalizeName(assigneeFilter);
+    return overviewStaffSummary.filter((item) => normalizeName(item.name) === key);
+  }, [assigneeFilter, overviewStaffSummary]);
+
+  const filteredOverviewTotals = useMemo(() => {
+    return filteredOverviewSummary.reduce(
+      (acc, item) => {
+        acc.orderCount += item.orderCount;
+        acc.targetTrees += item.targetTrees;
+        acc.plantedTrees += item.plantedTrees;
+        acc.taskTotal += item.taskTotal;
+        acc.taskDone += item.taskDone;
+        acc.taskPending += item.taskPending;
+        acc.taskOverdue += item.taskOverdue;
+        return acc;
+      },
+      {
+        orderCount: 0,
+        targetTrees: 0,
+        plantedTrees: 0,
+        taskTotal: 0,
+        taskDone: 0,
+        taskPending: 0,
+        taskOverdue: 0,
+      },
+    );
+  }, [filteredOverviewSummary]);
 
   const userWorkSummary = useMemo(() => {
     return users
@@ -517,9 +605,8 @@ export default function GreenWork() {
                     setActiveProjectId(null);
                     setOrders([]);
                     setTrees([]);
-                    setStats(null);
-                    setTaskStats(null);
                     setTasks([]);
+                    setAssigneeFilter("all");
                     return;
                   }
                   await onSelectProject(Number(value));
@@ -747,80 +834,56 @@ export default function GreenWork() {
                 </div>
               </div>
 
-              {stats && (
-                <div className="green-work-stats">
-                  {assigneeFilter === "all" && (
-                    <div className="stat-card">
-                      <h4>All Staff</h4>
-                      <p>
-                        Orders:{" "}
-                        {stats.orders.reduce((sum: number, o: any) => sum + (o.orders || 0), 0)}
-                      </p>
-                      <p>
-                        Target Trees:{" "}
-                        {stats.orders.reduce((sum: number, o: any) => sum + (o.target_trees || 0), 0)}
-                      </p>
-                      <p>
-                        Planted:{" "}
-                        {stats.orders.reduce((sum: number, o: any) => sum + (o.planted_count || 0), 0)}
-                      </p>
-                    </div>
-                  )}
-                  {stats.orders.map((o: any) => (
-                    <div key={o.assignee_name} className="stat-card">
-                      <h4>{o.assignee_name}</h4>
-                      <p>Orders: {o.orders || 0}</p>
-                      <p>Target Trees: {o.target_trees || 0}</p>
-                      <p>Planted: {o.planted_count || 0}</p>
-                      <div className="progress-bar">
-                        <span
-                          style={{ width: `${calcProgress(o.planted_count || 0, o.target_trees || 0)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="green-work-task-summary">
-                <h4>Assigned Task Summary</h4>
+              <div className="green-work-task-summary green-work-overview-summary">
+                <h4>{assigneeFilter === "all" ? "All Staff Overview" : `${assigneeFilter} Overview`}</h4>
                 <div className="green-work-task-summary-stats">
-                  <span>Total: {taskTotals.total}</span>
-                  <span>Done: {taskTotals.done}</span>
-                  <span>Pending: {taskTotals.pending}</span>
-                  <span>Overdue: {taskTotals.overdue}</span>
+                  <span>Staff: {filteredOverviewSummary.length}</span>
+                  <span>Orders: {filteredOverviewTotals.orderCount}</span>
+                  <span>Target Trees: {filteredOverviewTotals.targetTrees}</span>
+                  <span>Planted: {filteredOverviewTotals.plantedTrees}</span>
+                  <span>Tasks: {filteredOverviewTotals.taskTotal}</span>
+                  <span>Done: {filteredOverviewTotals.taskDone}</span>
+                  <span>Pending: {filteredOverviewTotals.taskPending}</span>
+                  <span>Overdue: {filteredOverviewTotals.taskOverdue}</span>
                 </div>
-                <div className="progress-stack">
-                  <span
-                    className="stack done"
-                    style={{ width: `${calcProgress(taskTotals.done, taskTotals.total)}%` }}
-                  />
-                  <span
-                    className="stack pending"
-                    style={{ width: `${calcProgress(taskTotals.pending, taskTotals.total)}%` }}
-                  />
-                  <span
-                    className="stack overdue"
-                    style={{ width: `${calcProgress(taskTotals.overdue, taskTotals.total)}%` }}
-                  />
-                </div>
-                <div className="green-work-task-rows">
-                  {tasks.length === 0 && <p>No tasks assigned yet.</p>}
-                  {tasks.slice(0, 8).map((t) => (
-                    <div key={t.id} className="work-order-row compact">
-                      <div>
-                        <strong>{t.task_type}</strong> - Tree #{t.tree_id}
-                        <div>Assignee: {t.assignee_name} | Priority: {t.priority || "normal"}</div>
-                        <div>Status: {t.status} | Due: {t.due_date || "-"}</div>
-                      </div>
+              </div>
+
+              <div className="green-work-stats green-work-staff-overview">
+                {filteredOverviewSummary.length === 0 && (
+                  <p className="green-work-note">No staff overview data for the selected filter.</p>
+                )}
+                {filteredOverviewSummary.map((staff) => (
+                  <div key={staff.name} className="stat-card staff-overview-card">
+                    <div className="staff-overview-head">
+                      <h4>{staff.name}</h4>
+                      <span className={`staff-overview-status ${staff.statusTone}`}>{staff.statusLabel}</span>
                     </div>
-                  ))}
-                </div>
+                    <p className="staff-overview-position">{staff.position}</p>
+                    <p>Planting Orders: {staff.orderCount}</p>
+                    <p>Target Trees: {staff.targetTrees} | Planted: {staff.plantedTrees}</p>
+                    <div className="progress-bar">
+                      <span style={{ width: `${calcProgress(staff.plantedTrees, staff.targetTrees)}%` }} />
+                    </div>
+                    <p>Assigned Tasks: {staff.taskTotal}</p>
+                    <p>Done: {staff.taskDone} | Pending: {staff.taskPending} | Overdue: {staff.taskOverdue}</p>
+                    <div className="progress-stack">
+                      <span className="stack done" style={{ width: `${calcProgress(staff.taskDone, staff.taskTotal)}%` }} />
+                      <span
+                        className="stack pending"
+                        style={{ width: `${calcProgress(staff.taskPending, staff.taskTotal)}%` }}
+                      />
+                      <span
+                        className="stack overdue"
+                        style={{ width: `${calcProgress(staff.taskOverdue, staff.taskTotal)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          <div className="green-work-card green-work-map-card">
+          <div className={`green-work-card green-work-map-card ${overviewMode ? "overview-map" : ""}`}>
             <h3>Tree Map by Assignee</h3>
             {!activeProjectId && (
               <p className="green-work-note">Select an active project in Project Focus to load trees and assignments.</p>
@@ -829,7 +892,7 @@ export default function GreenWork() {
               trees={filteredTrees}
               onAddTree={() => {}}
               enableDraw={false}
-              minHeight={220}
+              minHeight={overviewMode ? 480 : 220}
               onViewChange={(view) => setMapView(view)}
               fitBounds={fitPoints}
             />

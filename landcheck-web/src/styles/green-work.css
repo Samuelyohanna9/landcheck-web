@@ -389,6 +389,7 @@
 .green-work-main.overview-mode {
   overflow: auto;
   padding-right: 0.2rem;
+  padding-bottom: 0.2rem;
 }
 
 .green-work-main.single-mode {
@@ -453,6 +454,19 @@
 .green-work-map-card .tree-map {
   height: 100%;
   min-height: 220px;
+}
+
+.green-work-main.overview-mode .green-work-map-card {
+  flex: none;
+  min-height: 0;
+}
+
+.green-work-main.overview-mode .green-work-map-card .tree-map-wrap {
+  flex: none;
+}
+
+.green-work-main.overview-mode .green-work-map-card .tree-map {
+  height: clamp(340px, 62dvh, 760px);
 }
 
 .green-work-note {
@@ -621,6 +635,10 @@
   margin-top: 0.78rem;
 }
 
+.green-work-staff-overview {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
 .stat-card {
   background: linear-gradient(180deg, rgba(249, 253, 249, 0.97), rgba(243, 251, 244, 0.96));
   border: 1px solid rgba(24, 77, 45, 0.14);
@@ -638,6 +656,64 @@
   margin: 0.12rem 0;
   color: #3f6351;
   font-size: 0.85rem;
+}
+
+.green-work-overview-summary {
+  margin-top: 0.68rem;
+}
+
+.green-work-overview-summary .green-work-task-summary-stats {
+  margin-bottom: 0;
+}
+
+.staff-overview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.staff-overview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.staff-overview-position {
+  margin: 0.02rem 0 0.18rem;
+  color: #2f624b;
+  font-size: 0.79rem;
+  font-weight: 700;
+}
+
+.staff-overview-status {
+  border-radius: 999px;
+  border: 1px solid rgba(26, 78, 45, 0.16);
+  padding: 0.14rem 0.48rem;
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.staff-overview-status.danger {
+  color: #b84a2f;
+  background: rgba(255, 226, 214, 0.9);
+}
+
+.staff-overview-status.busy {
+  color: #a56d11;
+  background: rgba(255, 241, 206, 0.9);
+}
+
+.staff-overview-status.normal {
+  color: #1f7f40;
+  background: rgba(220, 248, 226, 0.9);
+}
+
+.staff-overview-status.idle {
+  color: #5a7064;
+  background: rgba(233, 240, 236, 0.9);
 }
 
 .work-order-row {
@@ -831,6 +907,10 @@
 
   .green-work-stats {
     grid-template-columns: 1fr;
+  }
+
+  .green-work-main.overview-mode .green-work-map-card .tree-map {
+    height: clamp(280px, 52dvh, 500px);
   }
 
   .work-order-row {
