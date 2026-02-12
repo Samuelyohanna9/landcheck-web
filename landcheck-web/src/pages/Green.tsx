@@ -39,6 +39,7 @@ type GreenUser = {
 };
 
 export default function Green() {
+  const [showWelcome, setShowWelcome] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [trees, setTrees] = useState<Tree[]>([]);
@@ -158,6 +159,13 @@ export default function Green() {
 
   useEffect(() => {
     return undefined;
+  }, []);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem("green_welcome_dismissed");
+    if (stored === "true") {
+      setShowWelcome(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -346,6 +354,24 @@ export default function Green() {
   return (
     <div className="green-container">
       <Toaster position="top-right" />
+      {showWelcome && (
+        <div className="green-welcome-overlay">
+          <div className="green-welcome-card">
+            <img className="green-welcome-logo" src="/logo.svg" alt="LandCheck" />
+            <h2>Welcome to LandCheck Green</h2>
+            <p>Field operations dashboard for tree planting, monitoring, and maintenance.</p>
+            <button
+              className="btn-primary"
+              onClick={() => {
+                window.localStorage.setItem("green_welcome_dismissed", "true");
+                setShowWelcome(false);
+              }}
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
       <header className="green-header">
         <div className="green-brand">
           <img className="green-brand-logo" src="/logo.svg" alt="LandCheck" />
