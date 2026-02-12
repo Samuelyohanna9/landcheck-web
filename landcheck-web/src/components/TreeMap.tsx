@@ -48,6 +48,39 @@ const markerPalettes: Record<string, { outer: string; core: string; ring: string
   },
 };
 
+const TREE_SOURCE_ID = "tree-points";
+const TREE_OUTER_LAYER_ID = "tree-points-outer";
+const TREE_CORE_LAYER_ID = "tree-points-core";
+
+const buildTreeFeatureCollection = (items: TreePoint[]) => {
+  const features = items
+    .map((tree) => {
+      const lng = Number(tree.lng);
+      const lat = Number(tree.lat);
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+      const palette = markerPalettes[tree.status] || markerPalettes.alive;
+      return {
+        type: "Feature",
+        properties: {
+          id: tree.id,
+          outer: palette.outer,
+          core: palette.core,
+          ring: palette.ring,
+        },
+        geometry: {
+          type: "Point",
+          coordinates: [lng, lat],
+        },
+      };
+    })
+    .filter((feature) => feature !== null);
+
+  return {
+    type: "FeatureCollection",
+    features,
+  } as any;
+};
+
 export default function TreeMap({
   trees,
   onAddTree,
@@ -60,7 +93,6 @@ export default function TreeMap({
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
   const draftMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
   const onAddTreeRef = useRef(onAddTree);
@@ -162,6 +194,58 @@ export default function TreeMap({
             },
           });
         }
+
+        if (!map.getSource(TREE_SOURCE_ID)) {
+          map.addSource(TREE_SOURCE_ID, {
+            type: "geojson",
+            data: buildTreeFeatureCollection(trees),
+          });
+          map.addLayer({
+            id: TREE_OUTER_LAYER_ID,
+            type: "circle",
+            source: TREE_SOURCE_ID,
+            paint: {
+              "circle-radius": 12,
+              "circle-color": ["coalesce", ["get", "outer"], markerPalettes.alive.outer],
+              "circle-stroke-width": 1,
+              "circle-stroke-color": ["coalesce", ["get", "ring"], markerPalettes.alive.ring],
+            },
+          });
+          map.addLayer({
+            id: TREE_CORE_LAYER_ID,
+            type: "circle",
+            source: TREE_SOURCE_ID,
+            paint: {
+              "circle-radius": 4,
+              "circle-color": ["coalesce", ["get", "core"], markerPalettes.alive.core],
+              "circle-stroke-width": 1,
+              "circle-stroke-color": "#2f7e34",
+            },
+          });
+
+          const onTreeClick = (event: mapboxgl.MapLayerMouseEvent) => {
+            const feature = event.features?.[0];
+            if (!feature) return;
+            const id = Number(feature.properties?.id);
+            if (!Number.isFinite(id)) return;
+            onSelectTreeRef.current?.(id);
+          };
+
+          const onPointerEnter = () => {
+            map.getCanvas().style.cursor = "pointer";
+          };
+          const onPointerLeave = () => {
+            map.getCanvas().style.cursor = "crosshair";
+          };
+
+          map.on("click", TREE_OUTER_LAYER_ID, onTreeClick);
+          map.on("click", TREE_CORE_LAYER_ID, onTreeClick);
+          map.on("mouseenter", TREE_OUTER_LAYER_ID, onPointerEnter);
+          map.on("mouseleave", TREE_OUTER_LAYER_ID, onPointerLeave);
+          map.on("mouseenter", TREE_CORE_LAYER_ID, onPointerEnter);
+          map.on("mouseleave", TREE_CORE_LAYER_ID, onPointerLeave);
+        }
+
         if (onViewChange) {
           const center = map.getCenter();
           onViewChange({
@@ -246,27 +330,9 @@ export default function TreeMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
-
-    trees.forEach((t) => {
-      const el = document.createElement("div");
-      const palette = markerPalettes[t.status] || markerPalettes.alive;
-      el.className = "tree-marker";
-      el.style.setProperty("--tree-marker-outer", palette.outer);
-      el.style.setProperty("--tree-marker-core", palette.core);
-      el.style.setProperty("--tree-marker-ring", palette.ring);
-      el.title = `Tree ${t.id}`;
-      el.onclick = () => onSelectTreeRef.current?.(t.id);
-      el.innerHTML = '<span class="tree-marker-core" aria-hidden="true"></span>';
-
-      const marker = new mapboxgl.Marker({ element: el, anchor: "center", offset: [0, 0] })
-        .setLngLat([t.lng, t.lat])
-        .addTo(map);
-
-      markersRef.current.push(marker);
-    });
+    const source = map.getSource(TREE_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+    if (!source) return;
+    source.setData(buildTreeFeatureCollection(trees));
   }, [trees, mapReady]);
 
   useEffect(() => {
