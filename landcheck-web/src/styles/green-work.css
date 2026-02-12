@@ -18,11 +18,12 @@
   gap: 0.8rem;
   color: #e2e8f0;
   text-align: center;
+  flex-direction: column;
 }
 
 .green-work-brand img {
-  width: 64px;
-  height: 64px;
+  width: 78px;
+  height: 78px;
   border-radius: 10px;
   background: rgba(34, 197, 94, 0.15);
   padding: 4px;
@@ -47,6 +48,16 @@
   border: 1px solid rgba(34, 197, 94, 0.2);
   border-radius: 14px;
   padding: 1rem;
+}
+
+.project-controls-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.project-controls-col h3 {
+  margin-top: 0;
 }
 
 .green-work-card input,
@@ -107,6 +118,45 @@
   padding: 0.3rem 0.5rem;
   border-radius: 8px;
   font-size: 0.75rem;
+}
+
+.progress-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.5);
+  overflow: hidden;
+  margin-top: 0.4rem;
+}
+
+.progress-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+}
+
+.progress-stack {
+  margin-top: 0.5rem;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  display: flex;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.progress-stack .stack {
+  height: 100%;
+}
+
+.progress-stack .done {
+  background: #22c55e;
+}
+
+.progress-stack .pending {
+  background: #f59e0b;
+}
+
+.progress-stack .overdue {
+  background: #ef4444;
 }
 
 @media (max-width: 1024px) {
