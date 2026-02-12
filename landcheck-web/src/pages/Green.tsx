@@ -495,6 +495,7 @@ export default function Green() {
     const loadingId = toast.loading("Uploading task photo...");
     try {
       const photoUrl = await uploadGreenPhoto(file, "tasks", { taskId });
+      const linkedTask = myTasks.find((task: any) => task.id === taskId);
       setTaskEdits((prev) => ({
         ...prev,
         [taskId]: {
@@ -503,6 +504,13 @@ export default function Green() {
           photo_url: photoUrl,
         },
       }));
+      setMyTasks((prev) => prev.map((task: any) => (task.id === taskId ? { ...task, photo_url: photoUrl } : task)));
+      if (linkedTask && inspectedTree && Number(linkedTask.tree_id) === inspectedTree.id) {
+        setInspectedTree((prev) => (prev ? { ...prev, photo_url: photoUrl } : prev));
+      }
+      if (activeProject) {
+        await loadProjectDetail(activeProject.id);
+      }
       toast.success("Task photo uploaded", { id: loadingId });
     } catch {
       toast.error("Failed to upload task photo", { id: loadingId });
@@ -1220,6 +1228,7 @@ export default function Green() {
                   />
                 </label>
               </div>
+              <p className="green-tree-maintenance-count">Maintenance Records: {inspectedTree.maintenance.total}</p>
               <h4>Tree #{inspectedTree.id}</h4>
               {inspectedTree.loading && <p className="green-tree-inspector-loading">Loading latest records...</p>}
               <div className="green-tree-inspector-grid">
