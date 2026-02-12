@@ -398,6 +398,7 @@
 
 .green-work-content.with-sidebar {
   grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .green-work-content.no-sidebar {
@@ -421,6 +422,21 @@
 .green-work-sidebar {
   position: static;
   overflow: auto;
+}
+
+.green-work-content.with-sidebar .green-work-sidebar {
+  height: 100%;
+  align-self: stretch;
+  border-radius: 22px;
+  border: 1px solid rgba(24, 78, 45, 0.18);
+  background: linear-gradient(180deg, rgba(250, 254, 250, 0.94), rgba(238, 249, 239, 0.92));
+  box-shadow: 0 14px 28px rgba(18, 61, 36, 0.12);
+  padding: 0.72rem;
+}
+
+.green-work-content.with-sidebar .green-work-sidebar .green-work-card {
+  border-radius: 14px;
+  box-shadow: 0 8px 18px rgba(17, 58, 34, 0.1);
 }
 
 .green-work-main {
@@ -912,6 +928,11 @@
     display: flex;
     flex-direction: column;
     gap: 0.8rem;
+  }
+
+  .green-work-content.with-sidebar .green-work-sidebar {
+    border-radius: 16px;
+    padding: 0.6rem;
   }
 }
 
