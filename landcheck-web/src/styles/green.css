@@ -621,7 +621,7 @@
   background: linear-gradient(180deg, rgba(241, 252, 241, 0.98), rgba(224, 244, 224, 0.97));
   box-shadow: 0 12px 30px rgba(16, 63, 32, 0.35);
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   align-items: center;
 }
 
@@ -650,7 +650,7 @@
 }
 
 .green-nav-add {
-  grid-column: 3;
+  grid-column: 2;
   width: 120px;
   height: 76px;
   margin: -2.9rem auto 0;
@@ -667,7 +667,7 @@
 }
 
 .green-bottom-nav .green-nav-item:last-of-type {
-  grid-column: 5;
+  grid-column: 3;
 }
 
 .green-nav-add svg {

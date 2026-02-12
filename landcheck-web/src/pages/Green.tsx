@@ -48,14 +48,6 @@ function HomeIcon() {
   );
 }
 
-function ChartIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M4 20h16M6 18v-4M12 18V8M18 18V5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function UserIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -984,14 +976,6 @@ export default function Green() {
           aria-label="Home"
         >
           <HomeIcon />
-        </button>
-        <button
-          className={`green-nav-item ${activeSection === "tasks" ? "active" : ""}`}
-          type="button"
-          onClick={() => openSection("tasks")}
-          aria-label="Tasks"
-        >
-          <ChartIcon />
         </button>
 
         <button className="green-nav-add" type="button" onClick={() => openSection("map")} aria-label="Add Tree">
