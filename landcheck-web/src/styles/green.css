@@ -449,24 +449,78 @@
 }
 
 .green-map-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(250px, 320px);
-  gap: 0.78rem;
-  align-items: stretch;
+  display: block;
 }
 
 .green-map-canvas {
   min-width: 0;
 }
 
+.green-tree-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  background: rgba(7, 28, 14, 0.42);
+  z-index: 82;
+}
+
+.green-tree-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: min(92vw, 340px);
+  height: 100dvh;
+  z-index: 83;
+  padding: 0.8rem;
+  border-right: 1px solid rgba(26, 82, 52, 0.2);
+  box-shadow: 14px 0 30px rgba(10, 43, 23, 0.24);
+  background: linear-gradient(180deg, #f8fff9 0%, #ebf8ed 100%);
+  animation: greenTreeDrawerIn 0.24s ease;
+}
+
+@keyframes greenTreeDrawerIn {
+  from {
+    transform: translateX(-102%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
 .green-tree-inspector {
+  height: 100%;
   border: 1px solid rgba(26, 84, 55, 0.22);
   border-radius: 14px;
   background: rgba(247, 252, 247, 0.97);
   padding: 0.64rem;
-  min-height: 100%;
-  max-height: 620px;
+  min-height: 0;
+  max-height: none;
   overflow: auto;
+}
+
+.green-tree-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.46rem;
+}
+
+.green-tree-drawer-head strong {
+  font-family: "Sora", sans-serif;
+  font-size: 0.95rem;
+  color: #174631;
+}
+
+.green-tree-drawer-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(27, 73, 44, 0.22);
+  background: #ffffff;
+  color: #1a4a34;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .green-tree-inspector-body h4 {
@@ -852,12 +906,8 @@
     width: min(74%, 500px);
   }
 
-  .green-map-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .green-tree-inspector {
-    max-height: none;
+  .green-tree-drawer {
+    width: min(96vw, 330px);
   }
 }
 

@@ -917,76 +917,97 @@ export default function GreenWork() {
                   onAddTree={() => {}}
                   enableDraw={false}
                   minHeight={overviewMode ? 480 : 220}
-                  onTreeInspect={(detail) => setInspectedTree(detail)}
+                  onTreeInspect={(detail) => {
+                    setInspectedTree(detail);
+                    if (detail) setMenuOpen(false);
+                  }}
                   onViewChange={(view) => setMapView(view)}
                   fitBounds={fitPoints}
                 />
               </div>
-              <aside className="green-work-tree-inspector">
-                {!inspectedTree ? (
-                  <p className="green-work-note">Click a tree on the map to see full details here.</p>
-                ) : (
-                  <div className="green-work-tree-inspector-body">
-                    <div className="green-work-tree-inspector-photo-wrap">
-                      {inspectedTree.photo_url ? (
-                        <img
-                          className="green-work-tree-inspector-photo"
-                          src={inspectedTree.photo_url}
-                          alt={`Tree ${inspectedTree.id}`}
-                        />
-                      ) : (
-                        <div className="green-work-tree-inspector-photo empty">No tree photo</div>
-                      )}
-                    </div>
-                    <h4>Tree #{inspectedTree.id}</h4>
-                    {inspectedTree.loading && <p className="green-work-note">Loading latest records...</p>}
-                    <div className="green-work-tree-inspector-grid">
-                      <div>
-                        <span>Status</span>
-                        <strong>{inspectedTree.status_label}</strong>
-                      </div>
-                      <div>
-                        <span>Species</span>
-                        <strong>{inspectedTree.species}</strong>
-                      </div>
-                      <div>
-                        <span>Planted By</span>
-                        <strong>{inspectedTree.created_by}</strong>
-                      </div>
-                      <div>
-                        <span>Planting Date</span>
-                        <strong>{formatDateLabel(inspectedTree.planting_date)}</strong>
-                      </div>
-                    </div>
-                    <p className="green-work-tree-inspector-notes">{inspectedTree.notes || "No notes."}</p>
-                    <div className="green-work-tree-maintenance-row">
-                      <span>Total: {inspectedTree.maintenance.total}</span>
-                      <span>Done: {inspectedTree.maintenance.done}</span>
-                      <span>Pending: {inspectedTree.maintenance.pending}</span>
-                      <span>Overdue: {inspectedTree.maintenance.overdue}</span>
-                    </div>
-                    <div className="green-work-tree-inspector-tasks">
-                      <h5>Recent Maintenance</h5>
-                      {inspectedTree.tasks.length === 0 ? (
-                        <p>No maintenance records yet.</p>
-                      ) : (
-                        inspectedTree.tasks.slice(0, 5).map((task: any) => (
-                          <div key={task.id} className="green-work-tree-inspector-task">
-                            <strong>{task.task_type || "Task"}</strong>
-                            <span>{task.assignee_name || "-"}</span>
-                            <span>{task.status || "-"}</span>
-                            <span>{formatDateLabel(task.due_date)}</span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </aside>
             </div>
           </div>
         </section>
       </div>
+
+      {inspectedTree && (
+        <>
+          <button
+            type="button"
+            className="green-work-tree-overlay"
+            onClick={() => setInspectedTree(null)}
+            aria-label="Close tree details"
+          />
+          <aside className="green-work-tree-drawer green-work-tree-inspector">
+            <div className="green-work-tree-drawer-head">
+              <strong>Tree Details</strong>
+              <button
+                className="green-work-tree-drawer-close"
+                type="button"
+                onClick={() => setInspectedTree(null)}
+                aria-label="Close tree details"
+              >
+                X
+              </button>
+            </div>
+            <div className="green-work-tree-inspector-body">
+              <div className="green-work-tree-inspector-photo-wrap">
+                {inspectedTree.photo_url ? (
+                  <img
+                    className="green-work-tree-inspector-photo"
+                    src={inspectedTree.photo_url}
+                    alt={`Tree ${inspectedTree.id}`}
+                  />
+                ) : (
+                  <div className="green-work-tree-inspector-photo empty">No tree photo</div>
+                )}
+              </div>
+              <h4>Tree #{inspectedTree.id}</h4>
+              {inspectedTree.loading && <p className="green-work-note">Loading latest records...</p>}
+              <div className="green-work-tree-inspector-grid">
+                <div>
+                  <span>Status</span>
+                  <strong>{inspectedTree.status_label}</strong>
+                </div>
+                <div>
+                  <span>Species</span>
+                  <strong>{inspectedTree.species}</strong>
+                </div>
+                <div>
+                  <span>Planted By</span>
+                  <strong>{inspectedTree.created_by}</strong>
+                </div>
+                <div>
+                  <span>Planting Date</span>
+                  <strong>{formatDateLabel(inspectedTree.planting_date)}</strong>
+                </div>
+              </div>
+              <p className="green-work-tree-inspector-notes">{inspectedTree.notes || "No notes."}</p>
+              <div className="green-work-tree-maintenance-row">
+                <span>Total: {inspectedTree.maintenance.total}</span>
+                <span>Done: {inspectedTree.maintenance.done}</span>
+                <span>Pending: {inspectedTree.maintenance.pending}</span>
+                <span>Overdue: {inspectedTree.maintenance.overdue}</span>
+              </div>
+              <div className="green-work-tree-inspector-tasks">
+                <h5>Recent Maintenance</h5>
+                {inspectedTree.tasks.length === 0 ? (
+                  <p>No maintenance records yet.</p>
+                ) : (
+                  inspectedTree.tasks.slice(0, 5).map((task: any) => (
+                    <div key={task.id} className="green-work-tree-inspector-task">
+                      <strong>{task.task_type || "Task"}</strong>
+                      <span>{task.assignee_name || "-"}</span>
+                      <span>{task.status || "-"}</span>
+                      <span>{formatDateLabel(task.due_date)}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </aside>
+        </>
+      )}
 
       {staffMenu && (
         <>

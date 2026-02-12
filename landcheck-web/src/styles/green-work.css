@@ -267,6 +267,41 @@
   transform: translateX(0);
 }
 
+.green-work-tree-overlay {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: rgba(7, 27, 13, 0.42);
+  z-index: 82;
+  cursor: pointer;
+}
+
+.green-work-tree-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: min(92vw, 320px);
+  height: 100dvh;
+  padding: 0.86rem;
+  background: linear-gradient(180deg, #f8fff9 0%, #ebf8ed 100%);
+  border-right: 1px solid rgba(27, 73, 44, 0.2);
+  box-shadow: 14px 0 30px rgba(10, 43, 23, 0.24);
+  z-index: 83;
+  animation: greenWorkTreeDrawerIn 0.24s ease;
+}
+
+@keyframes greenWorkTreeDrawerIn {
+  from {
+    transform: translateX(-102%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
 .green-work-menu-head {
   display: flex;
   align-items: center;
@@ -515,12 +550,7 @@
 }
 
 .green-work-map-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 330px);
-  gap: 0.66rem;
-  align-items: stretch;
-  min-height: 0;
-  flex: 1;
+  display: block;
 }
 
 .green-work-map-canvas {
@@ -529,12 +559,38 @@
 }
 
 .green-work-tree-inspector {
+  height: 100%;
   border: 1px solid rgba(28, 79, 46, 0.18);
   border-radius: 12px;
   background: linear-gradient(180deg, rgba(250, 253, 250, 0.98), rgba(242, 249, 243, 0.96));
   padding: 0.56rem;
-  max-height: 100%;
+  max-height: none;
+  min-height: 0;
   overflow: auto;
+}
+
+.green-work-tree-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.44rem;
+}
+
+.green-work-tree-drawer-head strong {
+  font-family: "Sora", sans-serif;
+  font-size: 0.95rem;
+  color: #12402d;
+}
+
+.green-work-tree-drawer-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(27, 73, 44, 0.22);
+  background: #ffffff;
+  color: #1a4a34;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .green-work-tree-inspector-body h4 {
@@ -663,7 +719,7 @@
 }
 
 .green-work-main.overview-mode .green-work-map-layout {
-  grid-template-columns: minmax(0, 1fr) minmax(250px, 320px);
+  display: block;
 }
 
 .green-work-note {
@@ -1191,12 +1247,8 @@
     grid-template-columns: 1fr;
   }
 
-  .green-work-map-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .green-work-tree-inspector {
-    max-height: none;
+  .green-work-tree-drawer {
+    width: min(96vw, 310px);
   }
 
   .green-work-overview-bars {
