@@ -78,6 +78,21 @@ const formatDateLabel = (value: string | null | undefined) => {
   return date.toLocaleDateString();
 };
 
+const toDisplayPhotoUrl = (url: string | null | undefined) => {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+  if (!raw.includes(".r2.cloudflarestorage.com/")) return raw;
+  try {
+    const parsed = new URL(raw);
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    if (parts.length < 2) return raw;
+    const key = parts.slice(1).map(encodeURIComponent).join("/");
+    return `${BACKEND_URL}/green/uploads/object/${key}`;
+  } catch {
+    return raw;
+  }
+};
+
 export default function GreenWork() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<GreenUser[]>([]);
@@ -955,7 +970,7 @@ export default function GreenWork() {
                 {inspectedTree.photo_url ? (
                   <img
                     className="green-work-tree-inspector-photo"
-                    src={inspectedTree.photo_url}
+                    src={toDisplayPhotoUrl(inspectedTree.photo_url)}
                     alt={`Tree ${inspectedTree.id}`}
                   />
                 ) : (
