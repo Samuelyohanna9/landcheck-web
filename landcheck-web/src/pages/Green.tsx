@@ -151,40 +151,29 @@ export default function Green() {
   const [activeSection, setActiveSection] = useState<Section | null>(null);
   const [installPrompt, setInstallPrompt] = useState<DeferredInstallPrompt | null>(null);
 
-  const treePoints = useMemo(
-    () =>
-      trees
-        .map((t) => ({
-          id: t.id,
-          lng: Number(t.lng),
-          lat: Number(t.lat),
-          status: t.status,
-          species: t.species,
-          planting_date: t.planting_date,
-          notes: t.notes,
-          photo_url: t.photo_url,
-          created_by: t.created_by || "",
-        }))
-        .filter((t) => Number.isFinite(t.lng) && Number.isFinite(t.lat)),
-    [trees]
-  );
+  const treePoints = useMemo(() => {
+    if (!activeUser) return [];
+    return trees
+      .filter((t: any) => (t as any).created_by === activeUser)
+      .map((t) => ({
+        id: t.id,
+        lng: Number(t.lng),
+        lat: Number(t.lat),
+        status: t.status,
+        species: t.species,
+        planting_date: t.planting_date,
+        notes: t.notes,
+        photo_url: t.photo_url,
+        created_by: t.created_by || "",
+      }))
+      .filter((t) => Number.isFinite(t.lng) && Number.isFinite(t.lat));
+  }, [trees, activeUser]);
 
   const activeUserPoints = useMemo(() => {
     if (!activeUser) return null;
-    const points = trees
-      .filter((t: any) => (t as any).created_by === activeUser)
-      .map((t) => ({ lng: Number(t.lng), lat: Number(t.lat) }))
-      .filter((p) => Number.isFinite(p.lng) && Number.isFinite(p.lat));
+    const points = treePoints.map((t) => ({ lng: t.lng, lat: t.lat }));
     return points.length ? points : null;
-  }, [activeUser, trees]);
-
-  const allTreePoints = useMemo(() => {
-    if (!trees.length) return null;
-    const points = trees
-      .map((t) => ({ lng: Number(t.lng), lat: Number(t.lat) }))
-      .filter((p) => Number.isFinite(p.lng) && Number.isFinite(p.lat));
-    return points.length ? points : null;
-  }, [trees]);
+  }, [activeUser, treePoints]);
 
   const userTrees = useMemo(() => {
     if (!activeUser) return [];
@@ -259,6 +248,16 @@ export default function Green() {
       .get(`/green/work-orders?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}`)
       .then((res) => setPlantingOrders(res.data || []))
       .catch(() => setPlantingOrders([]));
+  }, [activeProject?.id, activeUser]);
+
+  useEffect(() => {
+    if (activeProject && activeUser) return;
+    setMyTasks([]);
+    setTaskEdits({});
+    setPlantingOrders([]);
+    setSelectedTreeId(null);
+    setTreeTasks([]);
+    setTreeTimeline(null);
   }, [activeProject?.id, activeUser]);
 
   useEffect(() => {
@@ -337,7 +336,8 @@ export default function Green() {
       api.get(`/green/trees/${treeId}/tasks`),
       api.get(`/green/trees/${treeId}/timeline`),
     ]);
-    setTreeTasks(tasksRes.data);
+    const scopedTasks = (tasksRes.data || []).filter((task: any) => !activeUser || task.assignee_name === activeUser);
+    setTreeTasks(scopedTasks);
     setTreeTimeline(timelineRes.data);
   };
 
@@ -461,11 +461,11 @@ export default function Green() {
     setSelectedTreeId(null);
   };
 
-  const totalTrees = activeProject?.stats?.total ?? 0;
-  const aliveTrees = activeProject?.stats?.alive ?? 0;
-  const deadTrees = activeProject?.stats?.dead ?? 0;
-  const needsAttentionTrees = activeProject?.stats?.needs_attention ?? 0;
-  const survivalRate = activeProject?.stats?.survival_rate ?? 0;
+  const totalTrees = activeUser ? myTreeSummary.total : 0;
+  const aliveTrees = activeUser ? myTreeSummary.alive : 0;
+  const deadTrees = activeUser ? myTreeSummary.dead : 0;
+  const needsAttentionTrees = activeUser ? myTreeSummary.needs : 0;
+  const survivalRate = totalTrees > 0 ? Math.round((aliveTrees / totalTrees) * 100) : 0;
 
   return (
     <div className={`green-container ${activeSection === null ? "green-home-mode" : "green-detail-mode"}`}>
@@ -550,6 +550,9 @@ export default function Green() {
               </>
             )}
           </div>
+          {activeProject && !activeUser && (
+            <p className="green-empty">Select a field officer to load only their trees and tasks.</p>
+          )}
 
           <div className="green-stats-top">
             <div className="green-stat-item">
@@ -643,6 +646,8 @@ export default function Green() {
               <p className="green-empty">Select a field officer to view assigned tasks.</p>
             ) : myTasks.length === 0 ? (
               <p className="green-empty">No tasks assigned.</p>
+            ) : userTrees.length === 0 ? (
+              <p className="green-empty">No trees recorded yet for this field officer.</p>
             ) : (
               <div className="tree-table">
                 <div className="tree-row tree-header">
@@ -773,6 +778,7 @@ export default function Green() {
               <h3>Map & Add Trees</h3>
               <span className="green-map-hint">Tap a task to zoom to its tree</span>
             </div>
+            {!activeUser && <p className="green-empty">Select a field officer to view only their trees.</p>}
             <TreeMap
               trees={treePoints}
               draftPoint={newTree.lng && newTree.lat ? { lng: newTree.lng, lat: newTree.lat } : null}
@@ -780,7 +786,7 @@ export default function Green() {
               onAddTree={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
               onSelectTree={(id) => loadTreeDetails(id)}
               onViewChange={(view) => setMapView(view)}
-              fitBounds={focusPoint || activeUserPoints || allTreePoints}
+              fitBounds={focusPoint || activeUserPoints}
             />
 
             <div className="tree-form">
@@ -944,7 +950,9 @@ export default function Green() {
               </div>
             )}
 
-            {loadingTrees ? (
+            {!activeUser ? (
+              <p className="green-empty">Select a field officer to view their tree records.</p>
+            ) : loadingTrees ? (
               <p className="green-empty">Loading trees...</p>
             ) : (
               <div className="tree-table">
@@ -954,7 +962,7 @@ export default function Green() {
                   <span>Status</span>
                   <span>Actions</span>
                 </div>
-                {trees.map((t) => (
+                {userTrees.map((t) => (
                   <div key={t.id} className="tree-row record-row">
                     <span>#{t.id}</span>
                     <span>{t.species || "-"}</span>
@@ -981,7 +989,7 @@ export default function Green() {
           </section>
         )}
 
-        {activeProject && activeSection === "records" && selectedTreeId && (
+        {activeProject && activeUser && activeSection === "records" && selectedTreeId && (
           <section className="green-detail-card" id="green-section-timeline">
             <h3>Tree Tasks & Timeline</h3>
             <div className="tree-table">
