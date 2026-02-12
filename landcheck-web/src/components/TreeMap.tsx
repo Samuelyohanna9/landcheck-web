@@ -261,7 +261,7 @@ export default function TreeMap({
       el.onclick = () => onSelectTreeRef.current?.(t.id);
       el.innerHTML = '<span class="tree-marker-core" aria-hidden="true"></span>';
 
-      const marker = new mapboxgl.Marker({ element: el })
+      const marker = new mapboxgl.Marker({ element: el, anchor: "center", offset: [0, 0] })
         .setLngLat([t.lng, t.lat])
         .addTo(map);
 
@@ -292,7 +292,7 @@ export default function TreeMap({
       const el = document.createElement("div");
       el.className = "tree-marker draft";
       el.innerHTML = '<span class="tree-marker-core" aria-hidden="true"></span>';
-      const marker = new mapboxgl.Marker({ element: el, draggable: true })
+      const marker = new mapboxgl.Marker({ element: el, draggable: true, anchor: "center", offset: [0, 0] })
         .setLngLat([draftPoint.lng, draftPoint.lat])
         .addTo(map);
 
