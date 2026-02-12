@@ -448,6 +448,143 @@
   font-size: 0.9rem;
 }
 
+.green-map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 320px);
+  gap: 0.78rem;
+  align-items: stretch;
+}
+
+.green-map-canvas {
+  min-width: 0;
+}
+
+.green-tree-inspector {
+  border: 1px solid rgba(26, 84, 55, 0.22);
+  border-radius: 14px;
+  background: rgba(247, 252, 247, 0.97);
+  padding: 0.64rem;
+  min-height: 100%;
+  max-height: 620px;
+  overflow: auto;
+}
+
+.green-tree-inspector-body h4 {
+  margin: 0.5rem 0 0.4rem;
+  font-family: "Sora", sans-serif;
+  font-size: 0.96rem;
+}
+
+.green-tree-inspector-photo-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(31, 92, 59, 0.22);
+  background: #eef6ef;
+}
+
+.green-tree-inspector-photo {
+  width: 100%;
+  height: 165px;
+  object-fit: cover;
+  display: block;
+}
+
+.green-tree-inspector-photo.empty {
+  height: 165px;
+  display: grid;
+  place-items: center;
+  color: #4c6e5d;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.green-tree-inspector-loading {
+  margin: 0 0 0.42rem;
+  color: #446958;
+  font-size: 0.8rem;
+}
+
+.green-tree-inspector-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.46rem;
+}
+
+.green-tree-inspector-grid > div {
+  border: 1px solid rgba(31, 88, 59, 0.16);
+  border-radius: 10px;
+  background: rgba(243, 251, 245, 0.95);
+  padding: 0.44rem 0.48rem;
+}
+
+.green-tree-inspector-grid span {
+  display: block;
+  font-size: 0.72rem;
+  color: #4e6f5e;
+}
+
+.green-tree-inspector-grid strong {
+  font-size: 0.84rem;
+  color: #1b4f37;
+}
+
+.green-tree-inspector-notes {
+  margin: 0.5rem 0;
+  color: #315645;
+  font-size: 0.81rem;
+}
+
+.green-tree-maintenance-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.36rem;
+  margin-bottom: 0.46rem;
+}
+
+.green-tree-maintenance-row span {
+  border-radius: 999px;
+  border: 1px solid rgba(35, 95, 62, 0.18);
+  background: #ffffff;
+  padding: 0.18rem 0.45rem;
+  font-size: 0.74rem;
+  color: #325444;
+  font-weight: 700;
+}
+
+.green-tree-inspector-tasks h5 {
+  margin: 0 0 0.28rem;
+  font-size: 0.83rem;
+  color: #1f533c;
+}
+
+.green-tree-inspector-tasks p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #496a59;
+}
+
+.green-tree-inspector-task {
+  border: 1px solid rgba(34, 89, 59, 0.14);
+  background: rgba(248, 253, 248, 0.96);
+  border-radius: 10px;
+  padding: 0.36rem 0.42rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.22rem 0.36rem;
+  margin-top: 0.28rem;
+}
+
+.green-tree-inspector-task strong {
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
+  color: #194a34;
+}
+
+.green-tree-inspector-task span {
+  font-size: 0.74rem;
+  color: #476958;
+}
+
 .green-btn-outline,
 .green-row-btn {
   border: 1px solid rgba(37, 117, 59, 0.45);
@@ -713,6 +850,14 @@
 
   .green-tile-wide {
     width: min(74%, 500px);
+  }
+
+  .green-map-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .green-tree-inspector {
+    max-height: none;
   }
 }
 

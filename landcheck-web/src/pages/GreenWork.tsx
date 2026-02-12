@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { api, BACKEND_URL } from "../api/client";
-import TreeMap from "../components/TreeMap";
+import TreeMap, { type TreeInspectData } from "../components/TreeMap";
 import "../styles/green-work.css";
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
@@ -71,6 +71,12 @@ const isOverdueTask = (task: WorkTask) => {
   dueDate.setHours(23, 59, 59, 999);
   return dueDate.getTime() < Date.now();
 };
+const formatDateLabel = (value: string | null | undefined) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString();
+};
 
 export default function GreenWork() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -97,6 +103,7 @@ export default function GreenWork() {
     notes: "",
   });
   const [mapView, setMapView] = useState<{ lng: number; lat: number; zoom: number; bearing: number; pitch: number } | null>(null);
+  const [inspectedTree, setInspectedTree] = useState<TreeInspectData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeForm, setActiveForm] = useState<WorkForm | null>(null);
   const [staffMenu, setStaffMenu] = useState<StaffMenuState>(null);
@@ -157,6 +164,7 @@ export default function GreenWork() {
   const onSelectProject = async (id: number) => {
     setActiveProjectId(id);
     setAssigneeFilter("all");
+    setInspectedTree(null);
     await loadProjectData(id);
   };
 
@@ -592,6 +600,7 @@ export default function GreenWork() {
                     setTrees([]);
                     setTasks([]);
                     setAssigneeFilter("all");
+                    setInspectedTree(null);
                     return;
                   }
                   await onSelectProject(Number(value));
@@ -901,14 +910,80 @@ export default function GreenWork() {
             {!activeProjectId && (
               <p className="green-work-note">Select an active project in Project Focus to load trees and assignments.</p>
             )}
-            <TreeMap
-              trees={filteredTrees}
-              onAddTree={() => {}}
-              enableDraw={false}
-              minHeight={overviewMode ? 480 : 220}
-              onViewChange={(view) => setMapView(view)}
-              fitBounds={fitPoints}
-            />
+            <div className="green-work-map-layout">
+              <div className="green-work-map-canvas">
+                <TreeMap
+                  trees={filteredTrees}
+                  onAddTree={() => {}}
+                  enableDraw={false}
+                  minHeight={overviewMode ? 480 : 220}
+                  onTreeInspect={(detail) => setInspectedTree(detail)}
+                  onViewChange={(view) => setMapView(view)}
+                  fitBounds={fitPoints}
+                />
+              </div>
+              <aside className="green-work-tree-inspector">
+                {!inspectedTree ? (
+                  <p className="green-work-note">Click a tree on the map to see full details here.</p>
+                ) : (
+                  <div className="green-work-tree-inspector-body">
+                    <div className="green-work-tree-inspector-photo-wrap">
+                      {inspectedTree.photo_url ? (
+                        <img
+                          className="green-work-tree-inspector-photo"
+                          src={inspectedTree.photo_url}
+                          alt={`Tree ${inspectedTree.id}`}
+                        />
+                      ) : (
+                        <div className="green-work-tree-inspector-photo empty">No tree photo</div>
+                      )}
+                    </div>
+                    <h4>Tree #{inspectedTree.id}</h4>
+                    {inspectedTree.loading && <p className="green-work-note">Loading latest records...</p>}
+                    <div className="green-work-tree-inspector-grid">
+                      <div>
+                        <span>Status</span>
+                        <strong>{inspectedTree.status_label}</strong>
+                      </div>
+                      <div>
+                        <span>Species</span>
+                        <strong>{inspectedTree.species}</strong>
+                      </div>
+                      <div>
+                        <span>Planted By</span>
+                        <strong>{inspectedTree.created_by}</strong>
+                      </div>
+                      <div>
+                        <span>Planting Date</span>
+                        <strong>{formatDateLabel(inspectedTree.planting_date)}</strong>
+                      </div>
+                    </div>
+                    <p className="green-work-tree-inspector-notes">{inspectedTree.notes || "No notes."}</p>
+                    <div className="green-work-tree-maintenance-row">
+                      <span>Total: {inspectedTree.maintenance.total}</span>
+                      <span>Done: {inspectedTree.maintenance.done}</span>
+                      <span>Pending: {inspectedTree.maintenance.pending}</span>
+                      <span>Overdue: {inspectedTree.maintenance.overdue}</span>
+                    </div>
+                    <div className="green-work-tree-inspector-tasks">
+                      <h5>Recent Maintenance</h5>
+                      {inspectedTree.tasks.length === 0 ? (
+                        <p>No maintenance records yet.</p>
+                      ) : (
+                        inspectedTree.tasks.slice(0, 5).map((task: any) => (
+                          <div key={task.id} className="green-work-tree-inspector-task">
+                            <strong>{task.task_type || "Task"}</strong>
+                            <span>{task.assignee_name || "-"}</span>
+                            <span>{task.status || "-"}</span>
+                            <span>{formatDateLabel(task.due_date)}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </aside>
+            </div>
           </div>
         </section>
       </div>

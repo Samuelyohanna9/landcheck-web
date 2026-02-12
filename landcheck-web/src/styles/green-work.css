@@ -514,6 +514,140 @@
   min-height: 220px;
 }
 
+.green-work-map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 330px);
+  gap: 0.66rem;
+  align-items: stretch;
+  min-height: 0;
+  flex: 1;
+}
+
+.green-work-map-canvas {
+  min-width: 0;
+  min-height: 0;
+}
+
+.green-work-tree-inspector {
+  border: 1px solid rgba(28, 79, 46, 0.18);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(250, 253, 250, 0.98), rgba(242, 249, 243, 0.96));
+  padding: 0.56rem;
+  max-height: 100%;
+  overflow: auto;
+}
+
+.green-work-tree-inspector-body h4 {
+  margin: 0.48rem 0 0.38rem;
+  font-family: "Sora", sans-serif;
+  font-size: 0.92rem;
+  color: #174932;
+}
+
+.green-work-tree-inspector-photo-wrap {
+  border-radius: 10px;
+  border: 1px solid rgba(24, 75, 44, 0.2);
+  overflow: hidden;
+  background: #ecf4ed;
+}
+
+.green-work-tree-inspector-photo {
+  width: 100%;
+  height: 156px;
+  object-fit: cover;
+  display: block;
+}
+
+.green-work-tree-inspector-photo.empty {
+  height: 156px;
+  display: grid;
+  place-items: center;
+  color: #4d6c5e;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.green-work-tree-inspector-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.green-work-tree-inspector-grid > div {
+  border: 1px solid rgba(24, 77, 45, 0.14);
+  border-radius: 9px;
+  background: rgba(247, 252, 247, 0.96);
+  padding: 0.38rem 0.42rem;
+}
+
+.green-work-tree-inspector-grid span {
+  display: block;
+  font-size: 0.7rem;
+  color: #4f6f5f;
+}
+
+.green-work-tree-inspector-grid strong {
+  font-size: 0.8rem;
+  color: #1b4f38;
+}
+
+.green-work-tree-inspector-notes {
+  margin: 0.48rem 0;
+  color: #3d6351;
+  font-size: 0.78rem;
+}
+
+.green-work-tree-maintenance-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.32rem;
+  margin-bottom: 0.42rem;
+}
+
+.green-work-tree-maintenance-row span {
+  border-radius: 999px;
+  border: 1px solid rgba(27, 80, 47, 0.16);
+  background: #ffffff;
+  padding: 0.16rem 0.42rem;
+  font-size: 0.72rem;
+  color: #355846;
+  font-weight: 700;
+}
+
+.green-work-tree-inspector-tasks h5 {
+  margin: 0 0 0.26rem;
+  font-size: 0.8rem;
+  color: #1c4d37;
+}
+
+.green-work-tree-inspector-tasks p {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #4a6758;
+}
+
+.green-work-tree-inspector-task {
+  border: 1px solid rgba(24, 74, 44, 0.14);
+  border-radius: 9px;
+  background: rgba(249, 253, 249, 0.96);
+  padding: 0.34rem 0.4rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.2rem 0.34rem;
+  margin-top: 0.24rem;
+}
+
+.green-work-tree-inspector-task strong {
+  grid-column: 1 / -1;
+  color: #1c4b35;
+  font-size: 0.78rem;
+}
+
+.green-work-tree-inspector-task span {
+  font-size: 0.72rem;
+  color: #446655;
+}
+
 .green-work-main.overview-mode .green-work-map-card {
   flex: none;
   min-height: 0;
@@ -526,6 +660,10 @@
 .green-work-main.overview-mode .green-work-map-card .tree-map {
   height: auto;
   min-height: clamp(420px, 72dvh, 900px);
+}
+
+.green-work-main.overview-mode .green-work-map-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 320px);
 }
 
 .green-work-note {
@@ -1051,6 +1189,14 @@
 
   .green-work-stats {
     grid-template-columns: 1fr;
+  }
+
+  .green-work-map-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .green-work-tree-inspector {
+    max-height: none;
   }
 
   .green-work-overview-bars {
