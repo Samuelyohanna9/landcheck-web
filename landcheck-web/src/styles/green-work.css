@@ -22,9 +22,8 @@
 }
 
 .green-work-header {
-  position: sticky;
-  top: 0;
-  z-index: 30;
+  position: relative;
+  z-index: 1;
   border-bottom: 1px solid rgba(17, 67, 35, 0.18);
   background:
     linear-gradient(145deg, rgba(37, 144, 71, 0.97) 0%, rgba(23, 109, 51, 0.97) 55%, rgba(15, 82, 40, 0.98) 100%);
@@ -96,8 +95,7 @@
 }
 
 .green-work-sidebar {
-  position: sticky;
-  top: 92px;
+  position: static;
 }
 
 .green-work-card {
@@ -323,10 +321,6 @@
 }
 
 @media (max-width: 760px) {
-  .green-work-header {
-    position: static;
-  }
-
   .green-work-header-inner {
     grid-template-columns: auto 1fr;
     padding: 0.8rem 0.84rem 0.88rem;

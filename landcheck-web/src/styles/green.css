@@ -35,9 +35,8 @@
 }
 
 .green-header {
-  position: sticky;
-  top: 0;
-  z-index: 30;
+  position: relative;
+  z-index: 1;
   border-bottom: 1px solid rgba(16, 45, 28, 0.4);
   background:
     linear-gradient(145deg, rgba(42, 151, 72, 0.97) 0%, rgba(22, 104, 49, 0.98) 55%, rgba(16, 81, 40, 0.98) 100%);
