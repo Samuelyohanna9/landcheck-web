@@ -35,6 +35,10 @@ type Tree = {
   lat: number;
   created_by: string | null;
   status: string;
+  species?: string | null;
+  planting_date?: string | null;
+  notes?: string | null;
+  photo_url?: string | null;
 };
 
 type WorkForm = "project_focus" | "create_project" | "add_user" | "users" | "assign_work" | "assign_task";
@@ -100,7 +104,14 @@ export default function GreenWork() {
       api.get(`/green/tasks?project_id=${projectId}`),
     ]);
     setOrders(ordersRes.data);
-    setTrees(treesRes.data);
+    const normalizedTrees = (treesRes.data || [])
+      .map((tree: any) => ({
+        ...tree,
+        lng: Number(tree.lng),
+        lat: Number(tree.lat),
+      }))
+      .filter((tree: any) => Number.isFinite(tree.lng) && Number.isFinite(tree.lat));
+    setTrees(normalizedTrees);
     setStats(statsRes.data);
     setTasks(tasksRes.data);
     const taskRes = await api.get(`/green/projects/${projectId}/task-stats`);

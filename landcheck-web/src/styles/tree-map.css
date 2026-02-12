@@ -58,6 +58,44 @@
   box-shadow: 0 0 0 3px rgba(99, 194, 103, 0.26);
 }
 
+.tree-detail-popup .mapboxgl-popup-content {
+  border-radius: 12px;
+  border: 1px solid rgba(26, 77, 44, 0.16);
+  padding: 0.6rem 0.64rem;
+  box-shadow: 0 10px 22px rgba(10, 36, 20, 0.28);
+}
+
+.tree-popup-card {
+  min-width: 220px;
+  max-width: 300px;
+  font-size: 0.79rem;
+  line-height: 1.35;
+  color: #1f4332;
+}
+
+.tree-popup-card h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+  color: #16462f;
+}
+
+.tree-popup-card p {
+  margin: 0.14rem 0;
+}
+
+.tree-popup-card ul {
+  margin: 0.2rem 0 0;
+  padding-left: 1rem;
+}
+
+.tree-popup-card li {
+  margin: 0.06rem 0;
+}
+
+.tree-popup-muted {
+  color: #557465;
+}
+
 @media (max-width: 720px) {
   .tree-map {
     height: 300px;

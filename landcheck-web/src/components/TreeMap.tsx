@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import { api } from "../api/client";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "../styles/tree-map.css";
 
@@ -11,6 +12,11 @@ export type TreePoint = {
   lng: number;
   lat: number;
   status: string;
+  species?: string | null;
+  planting_date?: string | null;
+  notes?: string | null;
+  photo_url?: string | null;
+  created_by?: string | null;
 };
 
 type Props = {
@@ -24,8 +30,34 @@ type Props = {
   fitBounds?: { lng: number; lat: number }[] | null;
 };
 
+type TreeFeatureProps = {
+  id: number;
+  status: string;
+  status_label: string;
+  species: string;
+  planting_date: string;
+  notes: string;
+  created_by: string;
+  photo_url: string;
+  outer: string;
+  core: string;
+  ring: string;
+  is_alive: number;
+};
+
+type TreePopupDetail = {
+  tree: any | null;
+  tasks: any[];
+  visits: any[];
+  maintenance: {
+    total: number;
+    done: number;
+    pending: number;
+    overdue: number;
+  };
+};
+
 const markerPalettes: Record<string, { outer: string; core: string; ring: string }> = {
-  // Requested style: soft green circle with a smaller center dot.
   alive: {
     outer: "rgba(150, 223, 138, 0.78)",
     core: "#4caf50",
@@ -51,6 +83,51 @@ const markerPalettes: Record<string, { outer: string; core: string; ring: string
 const TREE_SOURCE_ID = "tree-points";
 const TREE_OUTER_LAYER_ID = "tree-points-outer";
 const TREE_CORE_LAYER_ID = "tree-points-core";
+const TREE_LAYER_IDS = [TREE_CORE_LAYER_ID, TREE_OUTER_LAYER_ID];
+
+const normalizeStatus = (status: string | null | undefined) => (status || "").trim().toLowerCase();
+const statusLabel = (status: string | null | undefined) =>
+  normalizeStatus(status)
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ") || "Unknown";
+
+const escapeHtml = (value: string | null | undefined) =>
+  String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+
+const formatDate = (value: string | null | undefined) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString();
+};
+
+const getFeatureProps = (feature: mapboxgl.MapboxGeoJSONFeature | undefined): TreeFeatureProps | null => {
+  if (!feature) return null;
+  const raw = feature.properties || {};
+  const id = Number(raw.id);
+  if (!Number.isFinite(id)) return null;
+  return {
+    id,
+    status: String(raw.status || "unknown"),
+    status_label: String(raw.status_label || "Unknown"),
+    species: String(raw.species || "-"),
+    planting_date: String(raw.planting_date || ""),
+    notes: String(raw.notes || ""),
+    created_by: String(raw.created_by || "-"),
+    photo_url: String(raw.photo_url || ""),
+    outer: String(raw.outer || markerPalettes.alive.outer),
+    core: String(raw.core || markerPalettes.alive.core),
+    ring: String(raw.ring || markerPalettes.alive.ring),
+    is_alive: Number(raw.is_alive || 0),
+  };
+};
 
 const buildTreeFeatureCollection = (items: TreePoint[]) => {
   const features = items
@@ -58,11 +135,22 @@ const buildTreeFeatureCollection = (items: TreePoint[]) => {
       const lng = Number(tree.lng);
       const lat = Number(tree.lat);
       if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
-      const palette = markerPalettes[tree.status] || markerPalettes.alive;
+
+      const normalizedStatus = normalizeStatus(tree.status) || "alive";
+      const palette = markerPalettes[normalizedStatus] || markerPalettes.alive;
+
       return {
         type: "Feature",
         properties: {
           id: tree.id,
+          status: normalizedStatus,
+          status_label: statusLabel(normalizedStatus),
+          species: tree.species || "-",
+          planting_date: tree.planting_date || "",
+          notes: tree.notes || "",
+          created_by: tree.created_by || "-",
+          photo_url: tree.photo_url || "",
+          is_alive: normalizedStatus === "alive" ? 1 : 0,
           outer: palette.outer,
           core: palette.core,
           ring: palette.ring,
@@ -79,6 +167,47 @@ const buildTreeFeatureCollection = (items: TreePoint[]) => {
     type: "FeatureCollection",
     features,
   } as any;
+};
+
+const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null, loading = false) => {
+  const tree = detail?.tree || {};
+  const status = String(tree.status || base.status || "unknown");
+  const species = String(tree.species || base.species || "-");
+  const plantedBy = String(tree.created_by || base.created_by || "-");
+  const plantedDate = String(tree.planting_date || base.planting_date || "");
+  const notes = String(tree.notes || base.notes || "");
+  const maintenance = detail?.maintenance || { total: 0, done: 0, pending: 0, overdue: 0 };
+  const visitsCount = detail?.visits?.length || 0;
+  const hasPhoto = Boolean(tree.photo_url || base.photo_url);
+
+  const recentTasks = (detail?.tasks || [])
+    .slice(0, 3)
+    .map((task: any) => {
+      const taskType = escapeHtml(task.task_type || "task");
+      const taskStatus = escapeHtml(statusLabel(task.status || "pending"));
+      const assignee = escapeHtml(task.assignee_name || "-");
+      return `<li>${taskType} (${taskStatus}) - ${assignee}</li>`;
+    })
+    .join("");
+
+  return `
+    <div class="tree-popup-card">
+      <h4>Tree #${base.id}</h4>
+      <p><strong>Status:</strong> ${escapeHtml(statusLabel(status))}</p>
+      <p><strong>Planter:</strong> ${escapeHtml(plantedBy)}</p>
+      <p><strong>Planted:</strong> ${escapeHtml(formatDate(plantedDate))}</p>
+      <p><strong>Species:</strong> ${escapeHtml(species)}</p>
+      ${notes ? `<p><strong>Notes:</strong> ${escapeHtml(notes)}</p>` : ""}
+      <p><strong>Photo:</strong> ${hasPhoto ? "Available" : "None"}</p>
+      ${
+        loading
+          ? `<p class="tree-popup-muted">Loading maintenance...</p>`
+          : `<p><strong>Maintenance:</strong> ${maintenance.total} total, ${maintenance.done} done, ${maintenance.pending} pending, ${maintenance.overdue} overdue</p>
+             <p><strong>Visits:</strong> ${visitsCount}</p>
+             ${recentTasks ? `<ul>${recentTasks}</ul>` : `<p class="tree-popup-muted">No maintenance records yet.</p>`}`
+      }
+    </div>
+  `;
 };
 
 export default function TreeMap({
@@ -99,8 +228,53 @@ export default function TreeMap({
   const onSelectTreeRef = useRef(onSelectTree);
   const mapReadyRef = useRef(false);
   const mapErrorRef = useRef<string | null>(null);
+  const hoverPopupRef = useRef<mapboxgl.Popup | null>(null);
+  const clickPopupRef = useRef<mapboxgl.Popup | null>(null);
+  const hoverTreeIdRef = useRef<number | null>(null);
+  const clickTreeIdRef = useRef<number | null>(null);
+  const detailCacheRef = useRef<Map<number, TreePopupDetail>>(new Map());
+  const pendingDetailRef = useRef<Map<number, Promise<TreePopupDetail>>>(new Map());
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
+
+  const getTreeDetail = async (treeId: number): Promise<TreePopupDetail> => {
+    const cached = detailCacheRef.current.get(treeId);
+    if (cached) return cached;
+
+    const pending = pendingDetailRef.current.get(treeId);
+    if (pending) return pending;
+
+    const request = (async () => {
+      const [tasksRes, timelineRes] = await Promise.allSettled([
+        api.get(`/green/trees/${treeId}/tasks`),
+        api.get(`/green/trees/${treeId}/timeline`),
+      ]);
+
+      const tasks = tasksRes.status === "fulfilled" && Array.isArray(tasksRes.value.data) ? tasksRes.value.data : [];
+      const timeline = timelineRes.status === "fulfilled" ? timelineRes.value.data : null;
+      const visits = Array.isArray(timeline?.visits) ? timeline.visits : [];
+
+      const maintenance = {
+        total: tasks.length,
+        done: tasks.filter((task: any) => normalizeStatus(task.status) === "done").length,
+        pending: tasks.filter((task: any) => normalizeStatus(task.status) === "pending").length,
+        overdue: tasks.filter((task: any) => normalizeStatus(task.status) === "overdue").length,
+      };
+
+      const detail: TreePopupDetail = {
+        tree: timeline?.tree || null,
+        tasks,
+        visits,
+        maintenance,
+      };
+      detailCacheRef.current.set(treeId, detail);
+      pendingDetailRef.current.delete(treeId);
+      return detail;
+    })();
+
+    pendingDetailRef.current.set(treeId, request);
+    return request;
+  };
 
   useEffect(() => {
     onAddTreeRef.current = onAddTree;
@@ -142,8 +316,8 @@ export default function TreeMap({
         map.addControl(draw, "top-left");
         drawRef.current = draw;
       }
+
       map.on("error", (e) => {
-        // Surface map errors in console for quick diagnosis
         // eslint-disable-next-line no-console
         console.error("Mapbox error:", e?.error || e);
         setMapError(e?.error?.message || "Map failed to load");
@@ -200,10 +374,13 @@ export default function TreeMap({
             type: "geojson",
             data: buildTreeFeatureCollection(trees),
           });
+
+          // Only active (alive) trees keep the outer halo circle.
           map.addLayer({
             id: TREE_OUTER_LAYER_ID,
             type: "circle",
             source: TREE_SOURCE_ID,
+            filter: ["==", ["get", "is_alive"], 1],
             paint: {
               "circle-radius": 12,
               "circle-color": ["coalesce", ["get", "outer"], markerPalettes.alive.outer],
@@ -219,31 +396,96 @@ export default function TreeMap({
               "circle-radius": 4,
               "circle-color": ["coalesce", ["get", "core"], markerPalettes.alive.core],
               "circle-stroke-width": 1,
-              "circle-stroke-color": "#2f7e34",
+              "circle-stroke-color": ["coalesce", ["get", "ring"], "#2f7e34"],
             },
           });
 
-          const onTreeClick = (event: mapboxgl.MapLayerMouseEvent) => {
-            const feature = event.features?.[0];
-            if (!feature) return;
-            const id = Number(feature.properties?.id);
-            if (!Number.isFinite(id)) return;
-            onSelectTreeRef.current?.(id);
-          };
+          map.on("mousemove", (event) => {
+            const feature = map.queryRenderedFeatures(event.point, { layers: TREE_LAYER_IDS })[0];
+            const props = getFeatureProps(feature);
+            if (!props) {
+              hoverTreeIdRef.current = null;
+              if (hoverPopupRef.current) {
+                hoverPopupRef.current.remove();
+                hoverPopupRef.current = null;
+              }
+              if (!clickPopupRef.current) {
+                map.getCanvas().style.cursor = "crosshair";
+              }
+              return;
+            }
 
-          const onPointerEnter = () => {
             map.getCanvas().style.cursor = "pointer";
-          };
-          const onPointerLeave = () => {
-            map.getCanvas().style.cursor = "crosshair";
-          };
+            hoverTreeIdRef.current = props.id;
+            const detail = detailCacheRef.current.get(props.id);
 
-          map.on("click", TREE_OUTER_LAYER_ID, onTreeClick);
-          map.on("click", TREE_CORE_LAYER_ID, onTreeClick);
-          map.on("mouseenter", TREE_OUTER_LAYER_ID, onPointerEnter);
-          map.on("mouseleave", TREE_OUTER_LAYER_ID, onPointerLeave);
-          map.on("mouseenter", TREE_CORE_LAYER_ID, onPointerEnter);
-          map.on("mouseleave", TREE_CORE_LAYER_ID, onPointerLeave);
+            if (!hoverPopupRef.current) {
+              hoverPopupRef.current = new mapboxgl.Popup({
+                closeButton: false,
+                closeOnClick: false,
+                offset: 14,
+                className: "tree-detail-popup",
+              });
+            }
+
+            hoverPopupRef.current
+              .setLngLat(event.lngLat)
+              .setHTML(buildPopupHtml(props, detail, !detail))
+              .addTo(map);
+
+            if (!detail) {
+              getTreeDetail(props.id)
+                .then((loadedDetail) => {
+                  if (hoverTreeIdRef.current !== props.id || !hoverPopupRef.current) return;
+                  hoverPopupRef.current.setHTML(buildPopupHtml(props, loadedDetail, false));
+                })
+                .catch(() => {
+                  if (hoverTreeIdRef.current !== props.id || !hoverPopupRef.current) return;
+                  hoverPopupRef.current.setHTML(buildPopupHtml(props, null, false));
+                });
+            }
+          });
+
+          map.on("click", (event) => {
+            const feature = map.queryRenderedFeatures(event.point, { layers: TREE_LAYER_IDS })[0];
+            const props = getFeatureProps(feature);
+            if (!props) {
+              clickTreeIdRef.current = null;
+              if (clickPopupRef.current) {
+                clickPopupRef.current.remove();
+                clickPopupRef.current = null;
+              }
+              return;
+            }
+
+            clickTreeIdRef.current = props.id;
+            onSelectTreeRef.current?.(props.id);
+
+            const detail = detailCacheRef.current.get(props.id);
+            if (!clickPopupRef.current) {
+              clickPopupRef.current = new mapboxgl.Popup({
+                closeButton: true,
+                closeOnClick: false,
+                offset: 16,
+                className: "tree-detail-popup",
+              });
+            }
+
+            clickPopupRef.current
+              .setLngLat(event.lngLat)
+              .setHTML(buildPopupHtml(props, detail, !detail))
+              .addTo(map);
+
+            getTreeDetail(props.id)
+              .then((loadedDetail) => {
+                if (clickTreeIdRef.current !== props.id || !clickPopupRef.current) return;
+                clickPopupRef.current.setHTML(buildPopupHtml(props, loadedDetail, false));
+              })
+              .catch(() => {
+                if (clickTreeIdRef.current !== props.id || !clickPopupRef.current) return;
+                clickPopupRef.current.setHTML(buildPopupHtml(props, null, false));
+              });
+          });
         }
 
         if (onViewChange) {
@@ -302,6 +544,14 @@ export default function TreeMap({
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
+      }
+      if (hoverPopupRef.current) {
+        hoverPopupRef.current.remove();
+        hoverPopupRef.current = null;
+      }
+      if (clickPopupRef.current) {
+        clickPopupRef.current.remove();
+        clickPopupRef.current = null;
       }
       if (draftMarkerRef.current) {
         draftMarkerRef.current.remove();
