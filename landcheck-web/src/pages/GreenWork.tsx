@@ -351,6 +351,7 @@ export default function GreenWork() {
     if (!activeProjectId) return "";
     return projects.find((p) => p.id === activeProjectId)?.name || "";
   }, [activeProjectId, projects]);
+  const showInitialSinglePage = !activeProjectId && !activeForm;
 
   const openForm = (form: WorkForm) => {
     setActiveForm(form);
@@ -379,7 +380,7 @@ export default function GreenWork() {
   };
 
   return (
-    <div className="green-work-container">
+    <div className={`green-work-container ${showInitialSinglePage ? "pre-project-view" : ""}`}>
       <Toaster position="top-right" />
       <header className="green-work-header">
         <div className="green-work-header-inner">
@@ -686,135 +687,154 @@ export default function GreenWork() {
         </aside>
 
         <section className="green-work-main">
-          <div className="green-work-card">
-            <div className="green-work-row">
-              <h3>Progress Dashboard</h3>
-              <div className="work-actions">
-                <button onClick={exportWorkCsv}>Export CSV</button>
-                <button onClick={exportWorkPdf}>Export PDF</button>
-                <select
-                  value={assigneeFilter}
-                  onChange={(e) => setAssigneeFilter(e.target.value)}
-                >
-                  {assignees.map((a) => (
-                    <option key={a} value={a}>
-                      {a === "all" ? "All staff" : a}
-                    </option>
-                  ))}
-                </select>
+          {!activeProjectId ? (
+            <div className="green-work-card green-work-start-card">
+              <h3>Welcome to LandCheck Work</h3>
+              <p className="green-work-note">
+                Select an active project to unlock Progress Dashboard, Tree Map, Orders, and Assigned Tasks.
+              </p>
+              <p className="green-work-note">Use the menu or start from here.</p>
+              <div className="green-work-start-actions">
+                <button className="btn-primary" type="button" onClick={() => openForm("project_focus")}>
+                  Select Project
+                </button>
+                <button className="btn-primary" type="button" onClick={() => openForm("create_project")}>
+                  Create Project
+                </button>
               </div>
             </div>
-            {!activeProjectId && <p className="green-work-note">Select a project from the menu to view analytics.</p>}
+          ) : (
+            <>
+              <div className="green-work-card">
+                <div className="green-work-row">
+                  <h3>Progress Dashboard</h3>
+                  <div className="work-actions">
+                    <button onClick={exportWorkCsv}>Export CSV</button>
+                    <button onClick={exportWorkPdf}>Export PDF</button>
+                    <select
+                      value={assigneeFilter}
+                      onChange={(e) => setAssigneeFilter(e.target.value)}
+                    >
+                      {assignees.map((a) => (
+                        <option key={a} value={a}>
+                          {a === "all" ? "All staff" : a}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-            {stats && (
-              <div className="green-work-stats">
-                {assigneeFilter === "all" && (
-                  <div className="stat-card">
-                    <h4>All Staff</h4>
-                    <p>
-                      Orders:{" "}
-                      {stats.orders.reduce((sum: number, o: any) => sum + (o.orders || 0), 0)}
-                    </p>
-                    <p>
-                      Target Trees:{" "}
-                      {stats.orders.reduce((sum: number, o: any) => sum + (o.target_trees || 0), 0)}
-                    </p>
-                    <p>
-                      Planted:{" "}
-                      {stats.orders.reduce((sum: number, o: any) => sum + (o.planted_count || 0), 0)}
-                    </p>
+                {stats && (
+                  <div className="green-work-stats">
+                    {assigneeFilter === "all" && (
+                      <div className="stat-card">
+                        <h4>All Staff</h4>
+                        <p>
+                          Orders:{" "}
+                          {stats.orders.reduce((sum: number, o: any) => sum + (o.orders || 0), 0)}
+                        </p>
+                        <p>
+                          Target Trees:{" "}
+                          {stats.orders.reduce((sum: number, o: any) => sum + (o.target_trees || 0), 0)}
+                        </p>
+                        <p>
+                          Planted:{" "}
+                          {stats.orders.reduce((sum: number, o: any) => sum + (o.planted_count || 0), 0)}
+                        </p>
+                      </div>
+                    )}
+                    {stats.orders.map((o: any) => (
+                      <div key={o.assignee_name} className="stat-card">
+                        <h4>{o.assignee_name}</h4>
+                        <p>Orders: {o.orders || 0}</p>
+                        <p>Target Trees: {o.target_trees || 0}</p>
+                        <p>Planted: {o.planted_count || 0}</p>
+                        <div className="progress-bar">
+                          <span
+                            style={{ width: `${calcProgress(o.planted_count || 0, o.target_trees || 0)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
-                {stats.orders.map((o: any) => (
-                  <div key={o.assignee_name} className="stat-card">
-                    <h4>{o.assignee_name}</h4>
-                    <p>Orders: {o.orders || 0}</p>
-                    <p>Target Trees: {o.target_trees || 0}</p>
-                    <p>Planted: {o.planted_count || 0}</p>
-                    <div className="progress-bar">
-                      <span
-                        style={{ width: `${calcProgress(o.planted_count || 0, o.target_trees || 0)}%` }}
-                      />
+
+                {taskStats && (
+                  <div className="green-work-stats">
+                    <div className="stat-card">
+                      <h4>Task Summary</h4>
+                      <p>Total: {taskTotals.total}</p>
+                      <p>Done: {taskTotals.done}</p>
+                      <p>Pending: {taskTotals.pending}</p>
+                      <p>Overdue: {taskTotals.overdue}</p>
+                      <div className="progress-stack">
+                        <span
+                          className="stack done"
+                          style={{ width: `${calcProgress(taskTotals.done, taskTotals.total)}%` }}
+                        />
+                        <span
+                          className="stack pending"
+                          style={{ width: `${calcProgress(taskTotals.pending, taskTotals.total)}%` }}
+                        />
+                        <span
+                          className="stack overdue"
+                          style={{ width: `${calcProgress(taskTotals.overdue, taskTotals.total)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="green-work-card">
+                <h3>Tree Map by Assignee</h3>
+                <TreeMap
+                  trees={filteredTrees}
+                  onAddTree={() => {}}
+                  enableDraw={false}
+                  onViewChange={(view) => setMapView(view)}
+                  fitBounds={fitPoints}
+                />
+              </div>
+
+              <div className="green-work-card">
+                <h3>Tree Planting Orders</h3>
+                {staffOrderSummary.length === 0 && <p>No work orders yet.</p>}
+                {staffOrderSummary.map((o) => (
+                  <div key={o.assignee_name} className="work-order-row">
+                    <div>
+                      <strong>{o.assignee_name}</strong>
+                      <div>Assigned: {o.target_trees} | Planted: {o.planted_count}</div>
+                      <div>Orders: {o.order_count}</div>
+                      <div className="progress-bar">
+                        <span
+                          style={{ width: `${calcProgress(o.planted_count || 0, o.target_trees || 0)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div className="work-actions">
+                  <button onClick={exportTasksCsv}>Export Tasks CSV</button>
+                  <button onClick={exportTasksPdf}>Export Tasks PDF</button>
+                </div>
+              </div>
+
+              <div className="green-work-card">
+                <h3>Assigned Tasks</h3>
+                {tasks.length === 0 && <p>No tasks assigned yet.</p>}
+                {tasks.map((t) => (
+                  <div key={t.id} className="work-order-row">
+                    <div>
+                      <strong>{t.task_type}</strong> - Tree #{t.tree_id}
+                      <div>Assignee: {t.assignee_name} | Priority: {t.priority || "normal"}</div>
+                      <div>Status: {t.status} | Due: {t.due_date || "-"}</div>
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-
-            {taskStats && (
-              <div className="green-work-stats">
-                <div className="stat-card">
-                  <h4>Task Summary</h4>
-                  <p>Total: {taskTotals.total}</p>
-                  <p>Done: {taskTotals.done}</p>
-                  <p>Pending: {taskTotals.pending}</p>
-                  <p>Overdue: {taskTotals.overdue}</p>
-                  <div className="progress-stack">
-                    <span
-                      className="stack done"
-                      style={{ width: `${calcProgress(taskTotals.done, taskTotals.total)}%` }}
-                    />
-                    <span
-                      className="stack pending"
-                      style={{ width: `${calcProgress(taskTotals.pending, taskTotals.total)}%` }}
-                    />
-                    <span
-                      className="stack overdue"
-                      style={{ width: `${calcProgress(taskTotals.overdue, taskTotals.total)}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="green-work-card">
-            <h3>Tree Map by Assignee</h3>
-            <TreeMap
-              trees={filteredTrees}
-              onAddTree={() => {}}
-              enableDraw={false}
-              onViewChange={(view) => setMapView(view)}
-              fitBounds={fitPoints}
-            />
-          </div>
-
-          <div className="green-work-card">
-            <h3>Tree Planting Orders</h3>
-            {staffOrderSummary.length === 0 && <p>No work orders yet.</p>}
-            {staffOrderSummary.map((o) => (
-              <div key={o.assignee_name} className="work-order-row">
-                <div>
-                  <strong>{o.assignee_name}</strong>
-                  <div>Assigned: {o.target_trees} | Planted: {o.planted_count}</div>
-                  <div>Orders: {o.order_count}</div>
-                  <div className="progress-bar">
-                    <span
-                      style={{ width: `${calcProgress(o.planted_count || 0, o.target_trees || 0)}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-            <div className="work-actions">
-              <button onClick={exportTasksCsv}>Export Tasks CSV</button>
-              <button onClick={exportTasksPdf}>Export Tasks PDF</button>
-            </div>
-          </div>
-
-          <div className="green-work-card">
-            <h3>Assigned Tasks</h3>
-            {tasks.length === 0 && <p>No tasks assigned yet.</p>}
-            {tasks.map((t) => (
-              <div key={t.id} className="work-order-row">
-                <div>
-                  <strong>{t.task_type}</strong> - Tree #{t.tree_id}
-                  <div>Assignee: {t.assignee_name} | Priority: {t.priority || "normal"}</div>
-                  <div>Status: {t.status} | Due: {t.due_date || "-"}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+            </>
+          )}
         </section>
       </div>
 
