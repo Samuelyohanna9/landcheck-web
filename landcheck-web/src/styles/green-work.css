@@ -550,11 +550,20 @@
 }
 
 .green-work-map-layout {
-  display: block;
+  display: flex;
+  flex: 1;
+  min-height: 0;
 }
 
 .green-work-map-canvas {
+  display: flex;
+  flex: 1;
   min-width: 0;
+  min-height: 0;
+}
+
+.green-work-map-canvas .tree-map-wrap {
+  flex: 1;
   min-height: 0;
 }
 
