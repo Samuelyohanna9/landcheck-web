@@ -22,11 +22,9 @@ type WorkOrder = {
   assignee_name: string;
   work_type: string;
   target_trees: number;
-  maintenance_schedule: string;
   due_date: string | null;
   status: string;
   planted_count: number;
-  visits_done: number;
 };
 
 type Tree = {
@@ -51,14 +49,13 @@ export default function GreenWork() {
     assignee_name: "",
     work_type: "planting",
     target_trees: 0,
-    maintenance_schedule: "",
     due_date: "",
   });
   const [newUser, setNewUser] = useState({ full_name: "", role: "field_officer" });
   const [newProject, setNewProject] = useState({ name: "", location_text: "", sponsor: "" });
   const [newTask, setNewTask] = useState({
     tree_id: "",
-    task_type: "planting",
+    task_type: "watering",
     assignee_name: "",
     due_date: "",
     priority: "normal",
@@ -127,7 +124,6 @@ export default function GreenWork() {
       assignee_name: "",
       work_type: "planting",
       target_trees: 0,
-      maintenance_schedule: "",
       due_date: "",
     });
     await loadProjectData(activeProjectId);
@@ -163,7 +159,7 @@ export default function GreenWork() {
     });
     setNewTask({
       tree_id: "",
-      task_type: "planting",
+      task_type: "watering",
       assignee_name: "",
       due_date: "",
       priority: "normal",
@@ -171,16 +167,6 @@ export default function GreenWork() {
     });
     await loadProjectData(activeProjectId);
     toast.success("Task assigned");
-  };
-
-  const updateOrder = async (order: WorkOrder, deltaPlanted = 0, deltaVisits = 0) => {
-    await api.patch(`/green/work-orders/${order.id}`, {
-      planted_count: order.planted_count + deltaPlanted,
-      visits_done: order.visits_done + deltaVisits,
-    });
-    if (activeProjectId) {
-      await loadProjectData(activeProjectId);
-    }
   };
 
   const exportWorkCsv = () => {
@@ -227,6 +213,21 @@ export default function GreenWork() {
       .map((t) => ({ lng: t.lng, lat: t.lat }));
     return points.length ? points : null;
   }, [assigneeFilter, trees]);
+
+  const taskTotals = useMemo(() => {
+    if (!taskStats) return { total: 0, pending: 0, done: 0, overdue: 0 };
+    return {
+      total: taskStats.total || 0,
+      pending: taskStats.pending || 0,
+      done: taskStats.done || 0,
+      overdue: taskStats.overdue || 0,
+    };
+  }, [taskStats]);
+
+  const calcProgress = (value: number, target: number) => {
+    if (!target || target <= 0) return 0;
+    return Math.min((value / target) * 100, 100);
+  };
 
   return (
     <div className="green-work-container">
@@ -352,32 +353,10 @@ export default function GreenWork() {
         </aside>
 
         <section className="green-work-main">
-          <div className="green-work-card">
-            <h3>Create Project</h3>
-            <input
-              placeholder="Project name"
-              value={newProject.name}
-              onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-            />
-            <input
-              placeholder="Location"
-              value={newProject.location_text}
-              onChange={(e) => setNewProject({ ...newProject, location_text: e.target.value })}
-            />
-            <input
-              placeholder="Sponsor"
-              value={newProject.sponsor}
-              onChange={(e) => setNewProject({ ...newProject, sponsor: e.target.value })}
-            />
-            <button className="btn-primary" onClick={createProject}>
-              Create Project
-            </button>
-          </div>
-
-          <div className="green-work-card">
-            <div className="green-work-row">
-              <h3>Progress Dashboard</h3>
-              <div className="work-actions">
+          <div className="green-work-card project-controls">
+            <div className="project-controls-row">
+              <div className="project-controls-col">
+                <h3>Project Focus</h3>
                 <select onChange={(e) => onSelectProject(Number(e.target.value))} value={activeProjectId || ""}>
                   <option value="">Select project</option>
                   {projects.map((p) => (
@@ -386,6 +365,35 @@ export default function GreenWork() {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div className="project-controls-col">
+                <h3>Create Project</h3>
+                <input
+                  placeholder="Project name"
+                  value={newProject.name}
+                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                />
+                <input
+                  placeholder="Location"
+                  value={newProject.location_text}
+                  onChange={(e) => setNewProject({ ...newProject, location_text: e.target.value })}
+                />
+                <input
+                  placeholder="Sponsor"
+                  value={newProject.sponsor}
+                  onChange={(e) => setNewProject({ ...newProject, sponsor: e.target.value })}
+                />
+                <button className="btn-primary" onClick={createProject}>
+                  Create Project
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="green-work-card">
+            <div className="green-work-row">
+              <h3>Progress Dashboard</h3>
+              <div className="work-actions">
                 <button onClick={exportWorkCsv}>Export CSV</button>
                 <button onClick={exportWorkPdf}>Export PDF</button>
                 <select
@@ -418,10 +426,6 @@ export default function GreenWork() {
                       Planted:{" "}
                       {stats.orders.reduce((sum: number, o: any) => sum + (o.planted_count || 0), 0)}
                     </p>
-                    <p>
-                      Visits:{" "}
-                      {stats.orders.reduce((sum: number, o: any) => sum + (o.visits_done || 0), 0)}
-                    </p>
                   </div>
                 )}
                 {stats.orders.map((o: any) => (
@@ -430,7 +434,11 @@ export default function GreenWork() {
                     <p>Orders: {o.orders || 0}</p>
                     <p>Target Trees: {o.target_trees || 0}</p>
                     <p>Planted: {o.planted_count || 0}</p>
-                    <p>Visits: {o.visits_done || 0}</p>
+                    <div className="progress-bar">
+                      <span
+                        style={{ width: `${calcProgress(o.planted_count || 0, o.target_trees || 0)}%` }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -440,10 +448,24 @@ export default function GreenWork() {
               <div className="green-work-stats">
                 <div className="stat-card">
                   <h4>Task Summary</h4>
-                  <p>Total: {taskStats.total || 0}</p>
-                  <p>Done: {taskStats.done || 0}</p>
-                  <p>Pending: {taskStats.pending || 0}</p>
-                  <p>Overdue: {taskStats.overdue || 0}</p>
+                  <p>Total: {taskTotals.total}</p>
+                  <p>Done: {taskTotals.done}</p>
+                  <p>Pending: {taskTotals.pending}</p>
+                  <p>Overdue: {taskTotals.overdue}</p>
+                  <div className="progress-stack">
+                    <span
+                      className="stack done"
+                      style={{ width: `${calcProgress(taskTotals.done, taskTotals.total)}%` }}
+                    />
+                    <span
+                      className="stack pending"
+                      style={{ width: `${calcProgress(taskTotals.pending, taskTotals.total)}%` }}
+                    />
+                    <span
+                      className="stack overdue"
+                      style={{ width: `${calcProgress(taskTotals.overdue, taskTotals.total)}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -461,17 +483,18 @@ export default function GreenWork() {
           </div>
 
           <div className="green-work-card">
-            <h3>Work Orders</h3>
+            <h3>Tree Planting Orders</h3>
             {orders.length === 0 && <p>No work orders yet.</p>}
             {orders.map((o) => (
               <div key={o.id} className="work-order-row">
                 <div>
-                  <strong>{o.assignee_name}</strong> - {o.work_type}
-                  <div>Target: {o.target_trees} | Planted: {o.planted_count} | Visits: {o.visits_done}</div>
-                </div>
-                <div className="work-actions">
-                  <button onClick={() => updateOrder(o, 1, 0)}>+1 Planted</button>
-                  <button onClick={() => updateOrder(o, 0, 1)}>+1 Visit</button>
+                  <strong>{o.assignee_name}</strong>
+                  <div>Target: {o.target_trees} | Planted: {o.planted_count}</div>
+                  <div className="progress-bar">
+                    <span
+                      style={{ width: `${calcProgress(o.planted_count || 0, o.target_trees || 0)}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             ))}
