@@ -644,6 +644,10 @@ export default function TreeMap({
     if (!map || !mapReady) return;
     const source = map.getSource(TREE_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
     if (!source) return;
+    // Tree photo/status can change after uploads or updates; clear detail cache
+    // so sidebar/popup always reads the latest server state on next click.
+    detailCacheRef.current.clear();
+    pendingDetailRef.current.clear();
     source.setData(buildTreeFeatureCollection(trees));
   }, [trees, mapReady]);
 

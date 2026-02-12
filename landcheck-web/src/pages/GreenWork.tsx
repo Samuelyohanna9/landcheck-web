@@ -166,6 +166,7 @@ export default function GreenWork() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeForm, setActiveForm] = useState<WorkForm | null>(null);
   const [staffMenu, setStaffMenu] = useState<StaffMenuState>(null);
+  const [treePhotoUploading, setTreePhotoUploading] = useState(false);
 
   const loadProjects = async () => {
     const res = await api.get("/green/projects");
@@ -296,6 +297,43 @@ export default function GreenWork() {
     });
     await loadProjectData(activeProjectId);
     toast.success("Task assigned");
+  };
+
+  const uploadGreenPhoto = async (
+    file: File,
+    folder: "trees" | "tasks",
+    link?: { treeId?: number; taskId?: number }
+  ) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", folder);
+    if (link?.treeId) formData.append("tree_id", String(link.treeId));
+    if (link?.taskId) formData.append("task_id", String(link.taskId));
+    const res = await api.post("/green/uploads/photo", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    const url = String(res.data?.url || "");
+    if (!url) throw new Error("Upload URL missing");
+    return url;
+  };
+
+  const onInspectedTreePhotoPicked = async (file: File | null) => {
+    if (!file || !inspectedTree) return;
+    const treeId = inspectedTree.id;
+    setTreePhotoUploading(true);
+    const loadingId = toast.loading("Uploading tree photo...");
+    try {
+      const photoUrl = await uploadGreenPhoto(file, "trees", { treeId });
+      setInspectedTree((prev) => (prev && prev.id === treeId ? { ...prev, photo_url: photoUrl } : prev));
+      if (activeProjectId) {
+        await loadProjectData(activeProjectId);
+      }
+      toast.success("Tree photo updated", { id: loadingId });
+    } catch {
+      toast.error("Failed to upload tree photo", { id: loadingId });
+    } finally {
+      setTreePhotoUploading(false);
+    }
   };
 
   const exportWorkCsv = () => {
@@ -1020,6 +1058,21 @@ export default function GreenWork() {
                 ) : (
                   <div className="green-work-tree-inspector-photo empty">No tree photo</div>
                 )}
+              </div>
+              <div className="green-work-tree-photo-upload-row">
+                <label className={`green-work-tree-photo-upload-btn ${treePhotoUploading ? "is-loading" : ""}`}>
+                  {treePhotoUploading ? "Uploading..." : "Upload Tree Photo"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={treePhotoUploading}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      void onInspectedTreePhotoPicked(file);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
               </div>
               <h4>Tree #{inspectedTree.id}</h4>
               {inspectedTree.loading && <p className="green-work-note">Loading latest records...</p>}
