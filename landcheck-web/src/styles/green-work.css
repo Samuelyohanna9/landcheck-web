@@ -36,7 +36,7 @@
   width: min(1880px, calc(100% - 24px));
   margin: 0 auto;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 1rem;
   padding: 0.95rem 1.1rem 1.08rem;
@@ -83,26 +83,38 @@
   font-weight: 600;
 }
 
-.green-work-header-actions {
+.green-work-toolbar-wrap {
+  width: min(1880px, calc(100% - 24px));
+  margin: 0 auto;
+  padding-top: 0.68rem;
+}
+
+.green-work-toolbar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 0.58rem;
 }
 
+.green-work-toolbar-label {
+  font-family: "Sora", sans-serif;
+  font-size: 0.9rem;
+  color: #1a4a34;
+}
+
 .green-work-project-chip {
-  max-width: min(40vw, 300px);
+  max-width: min(48vw, 360px);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   border-radius: 999px;
-  border: 1px solid rgba(229, 255, 229, 0.35);
-  background: rgba(14, 68, 34, 0.32);
-  color: #efffec;
+  border: 1px solid rgba(23, 88, 45, 0.22);
+  background: #ffffff;
+  color: #21533b;
   font-size: 0.79rem;
   font-weight: 700;
   line-height: 1;
-  padding: 0.45rem 0.74rem;
+  padding: 0.5rem 0.8rem;
 }
 
 .green-work-menu-btn {
@@ -143,15 +155,15 @@
 .green-work-menu-drawer {
   position: fixed;
   top: 0;
-  right: 0;
+  left: 0;
   width: min(92vw, 320px);
   height: 100dvh;
   padding: 0.86rem;
   background: linear-gradient(180deg, #f8fff9 0%, #ebf8ed 100%);
-  border-left: 1px solid rgba(27, 73, 44, 0.2);
-  box-shadow: -14px 0 30px rgba(10, 43, 23, 0.24);
+  border-right: 1px solid rgba(27, 73, 44, 0.2);
+  box-shadow: 14px 0 30px rgba(10, 43, 23, 0.24);
   z-index: 81;
-  transform: translateX(102%);
+  transform: translateX(-102%);
   transition: transform 0.24s ease;
   display: flex;
   flex-direction: column;
@@ -205,14 +217,71 @@
   border-color: rgba(17, 63, 34, 0.36);
 }
 
+.green-work-context-overlay {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  background: transparent;
+  z-index: 89;
+}
+
+.green-work-context-menu {
+  position: fixed;
+  z-index: 90;
+  min-width: 220px;
+  max-width: min(88vw, 280px);
+  border-radius: 12px;
+  border: 1px solid rgba(24, 74, 44, 0.2);
+  background: #ffffff;
+  box-shadow: 0 16px 26px rgba(12, 43, 23, 0.26);
+  padding: 0.45rem;
+}
+
+.green-work-context-title {
+  padding: 0.3rem 0.35rem 0.4rem;
+  margin-bottom: 0.3rem;
+  border-bottom: 1px solid rgba(23, 82, 45, 0.12);
+  color: #1c4f37;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.green-work-context-menu button {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(28, 80, 47, 0.14);
+  background: #f8fcf8;
+  color: #1d5039;
+  border-radius: 9px;
+  padding: 0.5rem 0.56rem;
+  font-weight: 700;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.green-work-context-menu button + button {
+  margin-top: 0.35rem;
+}
+
 .green-work-content {
   width: min(1880px, calc(100% - 24px));
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
   align-items: start;
   gap: 1.15rem;
   padding: 1.15rem 0 1.5rem;
+}
+
+.green-work-content.with-sidebar {
+  grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+}
+
+.green-work-content.no-sidebar {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.green-work-content.no-sidebar .green-work-sidebar {
+  display: none;
 }
 
 .green-work-sidebar,
@@ -249,10 +318,67 @@
   font-size: 0.84rem;
 }
 
-.green-work-placeholder p {
-  margin: 0;
-  color: #496756;
-  font-size: 0.87rem;
+.staff-list {
+  margin-top: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.48rem;
+}
+
+.staff-row {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(25, 77, 45, 0.14);
+  background: rgba(248, 253, 248, 0.95);
+  border-radius: 12px;
+  padding: 0.58rem;
+  cursor: context-menu;
+}
+
+.staff-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.22rem;
+}
+
+.staff-row-head strong {
+  font-size: 0.92rem;
+  color: #174932;
+}
+
+.staff-row-head span {
+  font-size: 0.76rem;
+  color: #2c6248;
+  background: rgba(36, 139, 72, 0.13);
+  border: 1px solid rgba(23, 96, 49, 0.18);
+  border-radius: 999px;
+  padding: 0.18rem 0.48rem;
+}
+
+.staff-row-meta {
+  color: #3e6552;
+  font-size: 0.81rem;
+  line-height: 1.32;
+}
+
+.staff-row-status {
+  margin-top: 0.26rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.staff-row-status.busy {
+  color: #a04e00;
+}
+
+.staff-row-status.normal {
+  color: #1d7a3e;
+}
+
+.staff-row-status.idle {
+  color: #5f7569;
 }
 
 .project-controls {
@@ -460,7 +586,7 @@
 
 @media (max-width: 760px) {
   .green-work-header-inner {
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto 1fr;
     padding: 0.8rem 0.84rem 0.88rem;
   }
 
@@ -473,6 +599,15 @@
   .green-work-menu-btn {
     width: 38px;
     height: 38px;
+  }
+
+  .green-work-toolbar-wrap {
+    width: calc(100% - 14px);
+    padding: 0.58rem 0.75rem 0;
+  }
+
+  .green-work-toolbar-label {
+    font-size: 0.84rem;
   }
 
   .green-work-title {
