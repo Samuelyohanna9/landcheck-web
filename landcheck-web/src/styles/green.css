@@ -733,6 +733,14 @@
   border: 1px solid rgba(28, 101, 56, 0.4);
 }
 
+.tree-photo-hint {
+  display: block;
+  margin-top: 0.35rem;
+  color: #446958;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .tree-table {
   display: grid;
   gap: 0.4rem;
