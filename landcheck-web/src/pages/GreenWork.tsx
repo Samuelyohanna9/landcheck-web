@@ -351,7 +351,6 @@ export default function GreenWork() {
     if (!activeProjectId) return "";
     return projects.find((p) => p.id === activeProjectId)?.name || "";
   }, [activeProjectId, projects]);
-  const showInitialSinglePage = !activeProjectId && !activeForm;
 
   const openForm = (form: WorkForm) => {
     setActiveForm(form);
@@ -360,27 +359,31 @@ export default function GreenWork() {
   };
 
   const openAssignWorkForUser = (userName: string) => {
+    if (!activeProjectId) {
+      toast("Select an active project first.");
+      setStaffMenu(null);
+      return;
+    }
     setNewOrder((prev) => ({ ...prev, assignee_name: userName }));
     setActiveForm("assign_work");
     setMenuOpen(false);
     setStaffMenu(null);
-    if (!activeProjectId) {
-      toast("Select a project in Project Focus before submitting assignment.");
-    }
   };
 
   const openAssignTaskForUser = (userName: string) => {
+    if (!activeProjectId) {
+      toast("Select an active project first.");
+      setStaffMenu(null);
+      return;
+    }
     setNewTask((prev) => ({ ...prev, assignee_name: userName }));
     setActiveForm("assign_task");
     setMenuOpen(false);
     setStaffMenu(null);
-    if (!activeProjectId) {
-      toast("Select a project in Project Focus before submitting assignment.");
-    }
   };
 
   return (
-    <div className={`green-work-container ${showInitialSinglePage ? "pre-project-view" : ""}`}>
+    <div className="green-work-container">
       <Toaster position="top-right" />
       <header className="green-work-header">
         <div className="green-work-header-inner">
@@ -455,20 +458,28 @@ export default function GreenWork() {
         >
           Users
         </button>
-        <button
-          className={`green-work-menu-item ${activeForm === "assign_work" ? "active" : ""}`}
-          type="button"
-          onClick={() => openForm("assign_work")}
-        >
-          Assign Tree Planting
-        </button>
-        <button
-          className={`green-work-menu-item ${activeForm === "assign_task" ? "active" : ""}`}
-          type="button"
-          onClick={() => openForm("assign_task")}
-        >
-          Assign Maintenance Task
-        </button>
+        {activeProjectId ? (
+          <div className="green-work-menu-group">
+            <p className="green-work-menu-subhead">Active Project Actions</p>
+            <p className="green-work-menu-subproject">{activeProjectName}</p>
+            <button
+              className={`green-work-menu-item ${activeForm === "assign_work" ? "active" : ""}`}
+              type="button"
+              onClick={() => openForm("assign_work")}
+            >
+              Assign Tree Planting
+            </button>
+            <button
+              className={`green-work-menu-item ${activeForm === "assign_task" ? "active" : ""}`}
+              type="button"
+              onClick={() => openForm("assign_task")}
+            >
+              Assign Maintenance Task
+            </button>
+          </div>
+        ) : (
+          <p className="green-work-menu-note">Select active project in Project Focus to enable assignment actions.</p>
+        )}
       </aside>
 
       <div className={`green-work-content ${activeForm ? "with-sidebar" : "no-sidebar"}`}>
@@ -561,6 +572,10 @@ export default function GreenWork() {
                     className="staff-row"
                     onContextMenu={(event) => {
                       event.preventDefault();
+                      if (!activeProjectId) {
+                        toast("Select an active project first.");
+                        return;
+                      }
                       setStaffMenu({ user: item.user, x: event.clientX, y: event.clientY });
                     }}
                   >
@@ -687,23 +702,21 @@ export default function GreenWork() {
         </aside>
 
         <section className="green-work-main">
-          {!activeProjectId ? (
-            <div className="green-work-card green-work-start-card">
-              <h3>Welcome to LandCheck Work</h3>
-              <p className="green-work-note">
-                Select an active project to unlock Progress Dashboard, Tree Map, Orders, and Assigned Tasks.
-              </p>
-              <p className="green-work-note">Use the menu or start from here.</p>
-              <div className="green-work-start-actions">
-                <button className="btn-primary" type="button" onClick={() => openForm("project_focus")}>
-                  Select Project
-                </button>
-                <button className="btn-primary" type="button" onClick={() => openForm("create_project")}>
-                  Create Project
-                </button>
-              </div>
-            </div>
-          ) : (
+          <div className="green-work-card">
+            <h3>Tree Map by Assignee</h3>
+            {!activeProjectId && (
+              <p className="green-work-note">Select an active project in Project Focus to load trees and assignments.</p>
+            )}
+            <TreeMap
+              trees={filteredTrees}
+              onAddTree={() => {}}
+              enableDraw={false}
+              onViewChange={(view) => setMapView(view)}
+              fitBounds={fitPoints}
+            />
+          </div>
+
+          {activeProjectId && (
             <>
               <div className="green-work-card">
                 <div className="green-work-row">
@@ -784,17 +797,6 @@ export default function GreenWork() {
                     </div>
                   </div>
                 )}
-              </div>
-
-              <div className="green-work-card">
-                <h3>Tree Map by Assignee</h3>
-                <TreeMap
-                  trees={filteredTrees}
-                  onAddTree={() => {}}
-                  enableDraw={false}
-                  onViewChange={(view) => setMapView(view)}
-                  fitBounds={fitPoints}
-                />
               </div>
 
               <div className="green-work-card">
