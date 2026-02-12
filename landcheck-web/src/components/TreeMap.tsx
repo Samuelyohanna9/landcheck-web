@@ -24,11 +24,28 @@ type Props = {
   fitBounds?: { lng: number; lat: number }[] | null;
 };
 
-const statusColors: Record<string, string> = {
-  alive: "#22c55e",
-  dead: "#ef4444",
-  needs_attention: "#f59e0b",
-  pending_planting: "#3b82f6",
+const markerPalettes: Record<string, { outer: string; core: string; ring: string }> = {
+  // Requested style: soft green circle with a smaller center dot.
+  alive: {
+    outer: "rgba(150, 223, 138, 0.78)",
+    core: "#4caf50",
+    ring: "rgba(88, 171, 80, 0.72)",
+  },
+  dead: {
+    outer: "rgba(253, 176, 176, 0.74)",
+    core: "#e25353",
+    ring: "rgba(190, 68, 68, 0.68)",
+  },
+  needs_attention: {
+    outer: "rgba(252, 218, 150, 0.76)",
+    core: "#de9a1f",
+    ring: "rgba(176, 118, 24, 0.68)",
+  },
+  pending_planting: {
+    outer: "rgba(170, 211, 255, 0.78)",
+    core: "#3b82f6",
+    ring: "rgba(41, 104, 215, 0.7)",
+  },
 };
 
 export default function TreeMap({
@@ -122,14 +139,26 @@ export default function TreeMap({
             },
           });
           map.addLayer({
-            id: "draft-point-layer",
+            id: "draft-point-layer-outer",
             type: "circle",
             source: "draft-point",
             paint: {
-              "circle-radius": 7,
-              "circle-color": "#22c55e",
-              "circle-stroke-width": 2,
-              "circle-stroke-color": "#0f172a",
+              "circle-radius": 12,
+              "circle-color": "#95df8a",
+              "circle-opacity": 0.72,
+              "circle-stroke-width": 1,
+              "circle-stroke-color": "#57ab4f",
+            },
+          });
+          map.addLayer({
+            id: "draft-point-layer-core",
+            type: "circle",
+            source: "draft-point",
+            paint: {
+              "circle-radius": 4,
+              "circle-color": "#4caf50",
+              "circle-stroke-width": 1,
+              "circle-stroke-color": "#337f38",
             },
           });
         }
@@ -223,10 +252,14 @@ export default function TreeMap({
 
     trees.forEach((t) => {
       const el = document.createElement("div");
+      const palette = markerPalettes[t.status] || markerPalettes.alive;
       el.className = "tree-marker";
-      el.style.background = statusColors[t.status] || "#22c55e";
+      el.style.setProperty("--tree-marker-outer", palette.outer);
+      el.style.setProperty("--tree-marker-core", palette.core);
+      el.style.setProperty("--tree-marker-ring", palette.ring);
       el.title = `Tree ${t.id}`;
       el.onclick = () => onSelectTreeRef.current?.(t.id);
+      el.innerHTML = '<span class="tree-marker-core" aria-hidden="true"></span>';
 
       const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([t.lng, t.lat])
@@ -258,6 +291,7 @@ export default function TreeMap({
     if (!draftMarkerRef.current) {
       const el = document.createElement("div");
       el.className = "tree-marker draft";
+      el.innerHTML = '<span class="tree-marker-core" aria-hidden="true"></span>';
       const marker = new mapboxgl.Marker({ element: el, draggable: true })
         .setLngLat([draftPoint.lng, draftPoint.lat])
         .addTo(map);
@@ -311,7 +345,7 @@ export default function TreeMap({
     <div className="tree-map-wrap">
       <div ref={containerRef} className="tree-map" style={{ minHeight: 420 }} />
       {!mapReady && !mapError && (
-        <div className="tree-map-overlay">Loading map…</div>
+        <div className="tree-map-overlay">Loading map...</div>
       )}
       {mapError && (
         <div className="tree-map-overlay">
@@ -323,3 +357,4 @@ export default function TreeMap({
     </div>
   );
 }
+

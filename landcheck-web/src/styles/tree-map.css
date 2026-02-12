@@ -27,21 +27,35 @@
 }
 
 .tree-marker {
-  width: 14px;
-  height: 14px;
+  position: relative;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  border: 2px solid #0f172a;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6);
+  background: var(--tree-marker-outer, rgba(150, 223, 138, 0.78));
+  border: 1px solid var(--tree-marker-ring, rgba(88, 171, 80, 0.72));
+  box-shadow: 0 4px 10px rgba(13, 31, 19, 0.24);
   cursor: pointer;
   z-index: 2;
 }
 
+.tree-marker-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--tree-marker-core, #4caf50);
+  border: 1px solid rgba(22, 76, 31, 0.58);
+}
+
 .tree-marker.draft {
-  width: 16px;
-  height: 16px;
-  border: 2px solid #0f172a;
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.7);
-  background: #22c55e;
+  width: 32px;
+  height: 32px;
+  background: rgba(150, 223, 138, 0.82);
+  border-color: rgba(88, 171, 80, 0.8);
+  box-shadow: 0 0 0 4px rgba(99, 194, 103, 0.35);
 }
 
 @media (max-width: 720px) {
