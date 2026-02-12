@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { api, BACKEND_URL } from "../api/client";
-import TreeMap from "../components/TreeMap";
+import TreeMap, { type TreeInspectData } from "../components/TreeMap";
 import "../styles/green.css";
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
@@ -44,6 +44,13 @@ type Section = "tasks" | "map" | "records" | "profile";
 type DeferredInstallPrompt = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
+
+const formatDateLabel = (value: string | null | undefined) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString();
 };
 
 function HomeIcon() {
@@ -117,6 +124,7 @@ export default function Green() {
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [trees, setTrees] = useState<Tree[]>([]);
   const [selectedTreeId, setSelectedTreeId] = useState<number | null>(null);
+  const [inspectedTree, setInspectedTree] = useState<TreeInspectData | null>(null);
   const [treeTasks, setTreeTasks] = useState<any[]>([]);
   const [treeTimeline, setTreeTimeline] = useState<any | null>(null);
   const [users, setUsers] = useState<GreenUser[]>([]);
@@ -256,6 +264,7 @@ export default function Green() {
     setTaskEdits({});
     setPlantingOrders([]);
     setSelectedTreeId(null);
+    setInspectedTree(null);
     setTreeTasks([]);
     setTreeTimeline(null);
   }, [activeProject?.id, activeUser]);
@@ -284,6 +293,7 @@ export default function Green() {
   }, []);
 
   const selectProject = async (project: Project) => {
+    setInspectedTree(null);
     setLoadingTrees(true);
     try {
       await loadProjectDetail(project.id);
@@ -459,6 +469,7 @@ export default function Green() {
     setActiveSection(null);
     setEditingTaskId(null);
     setSelectedTreeId(null);
+    setInspectedTree(null);
   };
 
   const totalTrees = activeUser ? myTreeSummary.total : 0;
@@ -779,15 +790,77 @@ export default function Green() {
               <span className="green-map-hint">Tap a task to zoom to its tree</span>
             </div>
             {!activeUser && <p className="green-empty">Select a field officer to view only their trees.</p>}
-            <TreeMap
-              trees={treePoints}
-              draftPoint={newTree.lng && newTree.lat ? { lng: newTree.lng, lat: newTree.lat } : null}
-              onDraftMove={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
-              onAddTree={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
-              onSelectTree={(id) => loadTreeDetails(id)}
-              onViewChange={(view) => setMapView(view)}
-              fitBounds={focusPoint || activeUserPoints}
-            />
+            <div className="green-map-layout">
+              <div className="green-map-canvas">
+                <TreeMap
+                  trees={treePoints}
+                  draftPoint={newTree.lng && newTree.lat ? { lng: newTree.lng, lat: newTree.lat } : null}
+                  onDraftMove={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
+                  onAddTree={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
+                  onSelectTree={(id) => loadTreeDetails(id)}
+                  onTreeInspect={(detail) => setInspectedTree(detail)}
+                  onViewChange={(view) => setMapView(view)}
+                  fitBounds={focusPoint || activeUserPoints}
+                />
+              </div>
+              <aside className="green-tree-inspector">
+                {!inspectedTree ? (
+                  <p className="green-empty">Tap a tree on the map to open its details here.</p>
+                ) : (
+                  <div className="green-tree-inspector-body">
+                    <div className="green-tree-inspector-photo-wrap">
+                      {inspectedTree.photo_url ? (
+                        <img className="green-tree-inspector-photo" src={inspectedTree.photo_url} alt={`Tree ${inspectedTree.id}`} />
+                      ) : (
+                        <div className="green-tree-inspector-photo empty">No tree photo</div>
+                      )}
+                    </div>
+                    <h4>Tree #{inspectedTree.id}</h4>
+                    {inspectedTree.loading && <p className="green-tree-inspector-loading">Loading latest records...</p>}
+                    <div className="green-tree-inspector-grid">
+                      <div>
+                        <span>Status</span>
+                        <strong>{inspectedTree.status_label}</strong>
+                      </div>
+                      <div>
+                        <span>Species</span>
+                        <strong>{inspectedTree.species}</strong>
+                      </div>
+                      <div>
+                        <span>Planted By</span>
+                        <strong>{inspectedTree.created_by}</strong>
+                      </div>
+                      <div>
+                        <span>Planting Date</span>
+                        <strong>{formatDateLabel(inspectedTree.planting_date)}</strong>
+                      </div>
+                    </div>
+                    <p className="green-tree-inspector-notes">{inspectedTree.notes || "No notes."}</p>
+                    <div className="green-tree-maintenance-row">
+                      <span>Total: {inspectedTree.maintenance.total}</span>
+                      <span>Done: {inspectedTree.maintenance.done}</span>
+                      <span>Pending: {inspectedTree.maintenance.pending}</span>
+                      <span>Overdue: {inspectedTree.maintenance.overdue}</span>
+                    </div>
+                    <div className="green-tree-inspector-tasks">
+                      <h5>Recent Maintenance</h5>
+                      {inspectedTree.tasks.length === 0 ? (
+                        <p>No maintenance records yet.</p>
+                      ) : (
+                        inspectedTree.tasks.slice(0, 4).map((task: any) => (
+                          <div key={task.id} className="green-tree-inspector-task">
+                            <strong>{task.task_type || "Task"}</strong>
+                            <span>{task.assignee_name || "-"}</span>
+                            <span>{task.status || "-"}</span>
+                            <span>{formatDateLabel(task.due_date)}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </aside>
+            </div>
 
             <div className="tree-form">
               <div className="tree-form-row">
