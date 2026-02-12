@@ -4,6 +4,8 @@ import { api, BACKEND_URL } from "../api/client";
 import TreeMap from "../components/TreeMap";
 import "../styles/green-work.css";
 
+const GREEN_LOGO_SRC = "/green%20logo.png";
+
 type Project = {
   id: number;
   name: string;
@@ -275,7 +277,7 @@ export default function GreenWork() {
       <header className="green-work-header">
         <div className="green-work-header-inner">
           <div className="green-work-brand">
-            <img src="/logo.svg" alt="LandCheck" />
+            <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
           </div>
           <div className="green-work-title">
             <h1>LandCheck Work</h1>
