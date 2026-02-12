@@ -373,12 +373,15 @@ export default function Green() {
         </div>
       )}
       <header className="green-header">
-        <div className="green-brand">
-          <img className="green-brand-logo" src="/logo.svg" alt="LandCheck" />
-          <div>
+        <div className="green-header-inner">
+          <div className="green-brand">
+            <img className="green-brand-logo" src="/logo.svg" alt="LandCheck" />
+          </div>
+          <div className="green-header-title">
             <h1>LandCheck Green</h1>
             <p>Field dashboard for tree monitoring</p>
           </div>
+          <div className="green-header-spacer" />
         </div>
       </header>
 
