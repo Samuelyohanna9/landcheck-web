@@ -550,19 +550,27 @@
 }
 
 .green-work-map-layout {
-  display: flex;
-  flex: 1;
-  min-height: 0;
+  display: block;
 }
 
 .green-work-map-canvas {
-  display: flex;
-  flex: 1;
   min-width: 0;
   min-height: 0;
 }
 
-.green-work-map-canvas .tree-map-wrap {
+.green-work-main.single-mode .green-work-map-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.green-work-main.single-mode .green-work-map-canvas {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.green-work-main.single-mode .green-work-map-canvas .tree-map-wrap {
   flex: 1;
   min-height: 0;
 }
