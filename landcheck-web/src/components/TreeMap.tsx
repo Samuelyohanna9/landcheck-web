@@ -26,6 +26,7 @@ type Props = {
   onDraftMove?: (lng: number, lat: number) => void;
   enableDraw?: boolean;
   onSelectTree?: (id: number) => void;
+  onTreeInspect?: (detail: TreeInspectData | null) => void;
   onViewChange?: (view: { lng: number; lat: number; zoom: number; bearing: number; pitch: number }) => void;
   fitBounds?: { lng: number; lat: number }[] | null;
   minHeight?: number;
@@ -56,6 +57,26 @@ type TreePopupDetail = {
     pending: number;
     overdue: number;
   };
+};
+
+export type TreeInspectData = {
+  id: number;
+  status: string;
+  status_label: string;
+  species: string;
+  planting_date: string;
+  notes: string;
+  created_by: string;
+  photo_url: string;
+  maintenance: {
+    total: number;
+    done: number;
+    pending: number;
+    overdue: number;
+  };
+  tasks: any[];
+  visits: any[];
+  loading: boolean;
 };
 
 const markerPalettes: Record<string, { outer: string; core: string; ring: string }> = {
@@ -211,6 +232,25 @@ const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null,
   `;
 };
 
+const buildInspectData = (base: TreeFeatureProps, detail?: TreePopupDetail | null, loading = false): TreeInspectData => {
+  const tree = detail?.tree || {};
+  const status = String(tree.status || base.status || "unknown");
+  return {
+    id: base.id,
+    status,
+    status_label: statusLabel(status),
+    species: String(tree.species || base.species || "-"),
+    planting_date: String(tree.planting_date || base.planting_date || ""),
+    notes: String(tree.notes || base.notes || ""),
+    created_by: String(tree.created_by || base.created_by || "-"),
+    photo_url: String(tree.photo_url || base.photo_url || ""),
+    maintenance: detail?.maintenance || { total: 0, done: 0, pending: 0, overdue: 0 },
+    tasks: detail?.tasks || [],
+    visits: detail?.visits || [],
+    loading,
+  };
+};
+
 export default function TreeMap({
   trees,
   onAddTree,
@@ -218,6 +258,7 @@ export default function TreeMap({
   onDraftMove,
   enableDraw = true,
   onSelectTree,
+  onTreeInspect,
   onViewChange,
   fitBounds,
   minHeight = 420,
@@ -228,6 +269,7 @@ export default function TreeMap({
   const drawRef = useRef<MapboxDraw | null>(null);
   const onAddTreeRef = useRef(onAddTree);
   const onSelectTreeRef = useRef(onSelectTree);
+  const onTreeInspectRef = useRef(onTreeInspect);
   const mapReadyRef = useRef(false);
   const mapErrorRef = useRef<string | null>(null);
   const hoverPopupRef = useRef<mapboxgl.Popup | null>(null);
@@ -285,6 +327,10 @@ export default function TreeMap({
   useEffect(() => {
     onSelectTreeRef.current = onSelectTree;
   }, [onSelectTree]);
+
+  useEffect(() => {
+    onTreeInspectRef.current = onTreeInspect;
+  }, [onTreeInspect]);
 
   useEffect(() => {
     if (mapRef.current) return;
@@ -466,6 +512,20 @@ export default function TreeMap({
             const props = getFeatureProps(event.features?.[0]);
             if (!props) return;
             onSelectTreeRef.current?.(props.id);
+
+            const cachedDetail = detailCacheRef.current.get(props.id);
+            if (onTreeInspectRef.current) {
+              onTreeInspectRef.current(buildInspectData(props, cachedDetail, !cachedDetail));
+              getTreeDetail(props.id)
+                .then((loadedDetail) => {
+                  onTreeInspectRef.current?.(buildInspectData(props, loadedDetail, false));
+                })
+                .catch(() => {
+                  onTreeInspectRef.current?.(buildInspectData(props, null, false));
+                });
+              return;
+            }
+
             openDetailPopup(props, event.lngLat, "click");
           };
 
@@ -482,6 +542,7 @@ export default function TreeMap({
               clickPopupRef.current.remove();
               clickPopupRef.current = null;
             }
+            onTreeInspectRef.current?.(null);
           });
         }
 
