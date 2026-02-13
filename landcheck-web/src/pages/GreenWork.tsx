@@ -126,7 +126,7 @@ const toDateInput = (value: Date | null) => {
 const MAINTENANCE_ACTIVITY_ORDER = ["watering", "weeding", "protection", "inspection", "replacement"] as const;
 type MaintenanceActivity = (typeof MAINTENANCE_ACTIVITY_ORDER)[number];
 type SeasonMode = "rainy" | "dry";
-type TaskDueMode = "model" | "manual";
+type TaskDueMode = "model_rainy" | "model_dry" | "manual";
 type LiveStatusTone = "danger" | "warning" | "ok" | "info";
 type MaintenanceModel = {
   label: string;
@@ -202,6 +202,12 @@ const getMaintenanceIntervals = (
   }
 };
 
+const dueModeToSeason = (mode: TaskDueMode): SeasonMode | null => {
+  if (mode === "model_rainy") return "rainy";
+  if (mode === "model_dry") return "dry";
+  return null;
+};
+
 const LIVE_TABLE_SOURCES = [
   {
     label: "FAO - Forest restoration monitoring and maintenance sequence",
@@ -243,6 +249,8 @@ type LiveMaintenanceRow = {
   openTaskId: number | null;
   modelRationale: string;
 };
+
+type LiveTreeMenuState = { treeId: number; x: number; y: number } | null;
 
 const liveToneRank = (tone: LiveStatusTone) => {
   if (tone === "danger") return 0;
@@ -398,7 +406,7 @@ export default function GreenWork() {
     tree_id: "",
     task_type: "watering",
     assignee_name: "",
-    due_mode: "model",
+    due_mode: "model_rainy",
     due_date: "",
     priority: "normal",
     notes: "",
@@ -408,6 +416,7 @@ export default function GreenWork() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeForm, setActiveForm] = useState<WorkForm | null>(null);
   const [staffMenu, setStaffMenu] = useState<StaffMenuState>(null);
+  const [liveTreeMenu, setLiveTreeMenu] = useState<LiveTreeMenuState>(null);
   const [treePhotoUploading, setTreePhotoUploading] = useState(false);
   const [drawerFrame, setDrawerFrame] = useState<DrawerFrame | null>(null);
 
@@ -445,8 +454,11 @@ export default function GreenWork() {
   }, []);
 
   useEffect(() => {
-    if (!staffMenu) return;
-    const closeMenu = () => setStaffMenu(null);
+    if (!staffMenu && !liveTreeMenu) return;
+    const closeMenu = () => {
+      setStaffMenu(null);
+      setLiveTreeMenu(null);
+    };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         closeMenu();
@@ -462,7 +474,7 @@ export default function GreenWork() {
       window.removeEventListener("scroll", closeMenu, true);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [staffMenu]);
+  }, [staffMenu, liveTreeMenu]);
 
   useEffect(() => {
     if (!activeProjectId || activeForm !== "live_table") return;
@@ -524,12 +536,13 @@ export default function GreenWork() {
   const getModelDueForTreeActivity = (
     treeId: number,
     activity: MaintenanceActivity,
+    season: SeasonMode,
   ): { dueDate: Date | null; detail: string } => {
     const tree = trees.find((item) => Number(item.id) === Number(treeId));
     const plantingDateObj = parseDateValue(tree?.planting_date || null);
     const today = startOfDay(new Date());
     const treeAgeDays = plantingDateObj ? Math.max(dayDiff(today, plantingDateObj), 0) : 0;
-    const intervals = getMaintenanceIntervals(activity, treeAgeDays, seasonMode);
+    const intervals = getMaintenanceIntervals(activity, treeAgeDays, season);
     const doneTasks = tasks
       .filter((task) => Number(task.tree_id) === Number(treeId))
       .filter((task) => asMaintenanceActivity(task.task_type) === activity)
@@ -548,9 +561,9 @@ export default function GreenWork() {
         : null;
 
     const detail = latestDoneDate
-      ? `${formatTaskTypeLabel(activity)} model from last completed cycle (+${intervals.repeatDays} days, ${SEASON_LABEL[seasonMode]}).`
+      ? `${formatTaskTypeLabel(activity)} model from last completed cycle (+${intervals.repeatDays} days, ${SEASON_LABEL[season]}).`
       : plantingDateObj
-        ? `${formatTaskTypeLabel(activity)} model from planting date (+${intervals.firstDays} days, ${SEASON_LABEL[seasonMode]}).`
+        ? `${formatTaskTypeLabel(activity)} model from planting date (+${intervals.firstDays} days, ${SEASON_LABEL[season]}).`
         : `No planting date found; choose custom date or set planting date.`;
 
     return { dueDate, detail };
@@ -559,12 +572,16 @@ export default function GreenWork() {
   const assignTaskModelPreview = useMemo(() => {
     const activity = asMaintenanceActivity(newTask.task_type);
     const treeId = Number(newTask.tree_id || 0);
+    const modelSeason = dueModeToSeason(newTask.due_mode);
     if (!activity || !treeId || !Number.isFinite(treeId)) {
       return { dueDate: null as Date | null, dueDateInput: "", detail: "Select tree and maintenance type." };
     }
-    const model = getModelDueForTreeActivity(treeId, activity);
+    if (!modelSeason) {
+      return { dueDate: null as Date | null, dueDateInput: "", detail: "Custom date selected. Choose any due date." };
+    }
+    const model = getModelDueForTreeActivity(treeId, activity, modelSeason);
     return { dueDate: model.dueDate, dueDateInput: toDateInput(model.dueDate), detail: model.detail };
-  }, [newTask.task_type, newTask.tree_id, seasonMode, tasks, trees]);
+  }, [newTask.task_type, newTask.tree_id, newTask.due_mode, tasks, trees]);
 
   const assignTask = async () => {
     if (!activeProjectId) return;
@@ -583,7 +600,7 @@ export default function GreenWork() {
     }
 
     let dueDateToSubmit: string | null = null;
-    if (newTask.due_mode === "model") {
+    if (newTask.due_mode === "model_rainy" || newTask.due_mode === "model_dry") {
       if (!assignTaskModelPreview.dueDateInput) {
         toast.error("Model due date unavailable. Choose custom date or set planting date.");
         return;
@@ -608,7 +625,7 @@ export default function GreenWork() {
       tree_id: "",
       task_type: "watering",
       assignee_name: "",
-      due_mode: "model",
+      due_mode: "model_rainy",
       due_date: "",
       priority: "normal",
       notes: "",
@@ -1149,30 +1166,57 @@ export default function GreenWork() {
     setActiveForm(form);
     setMenuOpen(false);
     setStaffMenu(null);
+    setLiveTreeMenu(null);
   };
 
   const openAssignWorkForUser = (userName: string) => {
     if (!activeProjectId) {
       toast("Select an active project first.");
       setStaffMenu(null);
+      setLiveTreeMenu(null);
       return;
     }
     setNewOrder((prev) => ({ ...prev, assignee_name: userName }));
     setActiveForm("assign_work");
     setMenuOpen(false);
     setStaffMenu(null);
+    setLiveTreeMenu(null);
   };
 
   const openAssignTaskForUser = (userName: string) => {
     if (!activeProjectId) {
       toast("Select an active project first.");
       setStaffMenu(null);
+      setLiveTreeMenu(null);
       return;
     }
     setNewTask((prev) => ({ ...prev, assignee_name: userName }));
     setActiveForm("assign_task");
     setMenuOpen(false);
     setStaffMenu(null);
+    setLiveTreeMenu(null);
+  };
+
+  const openAssignTaskForTree = (treeId: number) => {
+    if (!activeProjectId) {
+      toast("Select an active project first.");
+      setLiveTreeMenu(null);
+      return;
+    }
+    const tree = trees.find((entry) => Number(entry.id) === Number(treeId));
+    const owner = tree?.created_by || "";
+    const ownerExists = owner
+      ? users.some((u) => normalizeName(u.full_name) === normalizeName(owner))
+      : false;
+    setNewTask((prev) => ({
+      ...prev,
+      tree_id: String(treeId),
+      assignee_name: ownerExists ? owner : prev.assignee_name,
+    }));
+    setActiveForm("assign_task");
+    setMenuOpen(false);
+    setLiveTreeMenu(null);
+    toast.success(`Tree #${treeId} ready for maintenance assignment`);
   };
 
   return (
@@ -1425,6 +1469,7 @@ export default function GreenWork() {
                         toast("Select an active project first.");
                         return;
                       }
+                      setLiveTreeMenu(null);
                       setStaffMenu({ user: item.user, x: event.clientX, y: event.clientY });
                     }}
                   >
@@ -1536,10 +1581,11 @@ export default function GreenWork() {
                 onChange={(e) => setNewTask({ ...newTask, due_mode: e.target.value as TaskDueMode })}
                 disabled={!activeProjectId}
               >
-                <option value="model">Date Based On Model ({SEASON_LABEL[seasonMode]})</option>
+                <option value="model_rainy">Date Based On Model (Rainy Season)</option>
+                <option value="model_dry">Date Based On Model (Dry Season)</option>
                 <option value="manual">Other Date (Custom)</option>
               </select>
-              {newTask.due_mode === "model" ? (
+              {newTask.due_mode !== "manual" ? (
                 <>
                   <input type="date" value={assignTaskModelPreview.dueDateInput} readOnly disabled />
                   <p className="green-work-note">{assignTaskModelPreview.detail}</p>
@@ -1767,7 +1813,17 @@ export default function GreenWork() {
                       liveMaintenanceRows.map((row) => (
                         <tr key={row.key} className={`tone-${row.tone}`}>
                           <td>
-                            <span className="green-work-live-tree-link">#{row.treeId}</span>
+                            <button
+                              type="button"
+                              className="green-work-live-tree-link"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setStaffMenu(null);
+                                setLiveTreeMenu({ treeId: row.treeId, x: event.clientX, y: event.clientY });
+                              }}
+                            >
+                              #{row.treeId}
+                            </button>
                           </td>
                           <td>{row.assignee}</td>
                           <td>
@@ -1960,6 +2016,23 @@ export default function GreenWork() {
               Assign Tree Planting
             </button>
             <button type="button" onClick={() => openAssignTaskForUser(staffMenu.user.full_name)}>
+              Assign Maintenance
+            </button>
+          </div>
+        </>
+      )}
+
+      {liveTreeMenu && (
+        <>
+          <button
+            type="button"
+            className="green-work-context-overlay"
+            onClick={() => setLiveTreeMenu(null)}
+            aria-label="Close tree menu"
+          />
+          <div className="green-work-context-menu" style={{ left: liveTreeMenu.x, top: liveTreeMenu.y }}>
+            <div className="green-work-context-title">Tree #{liveTreeMenu.treeId}</div>
+            <button type="button" onClick={() => openAssignTaskForTree(liveTreeMenu.treeId)}>
               Assign Maintenance
             </button>
           </div>
