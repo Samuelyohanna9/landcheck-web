@@ -653,44 +653,6 @@ export default function GreenWork() {
     return { dueDate, detail, blocked: false };
   };
 
-  const assignTaskModelPreview = useMemo(() => {
-    const activity = asMaintenanceActivity(newTask.task_type);
-    const treeId = Number(newTask.tree_id || 0);
-    const modelSeason = dueModeToSeason(newTask.due_mode);
-    if (!activity || !treeId || !Number.isFinite(treeId)) {
-      return {
-        dueDate: null as Date | null,
-        dueDateInput: "",
-        detail: "Select tree and maintenance type.",
-        isPastDue: false,
-        daysPastDue: 0,
-        blocked: false,
-      };
-    }
-    if (!modelSeason) {
-      return {
-        dueDate: null as Date | null,
-        dueDateInput: "",
-        detail: "Custom date selected. Choose any due date.",
-        isPastDue: false,
-        daysPastDue: 0,
-        blocked: false,
-      };
-    }
-    const model = getModelDueForTreeActivity(treeId, activity, modelSeason, activeProjectMaturityMap);
-    const today = startOfDay(new Date());
-    const countdown = model.dueDate ? dayDiff(model.dueDate, today) : null;
-    const isPastDue = countdown !== null && countdown < 0;
-    return {
-      dueDate: model.dueDate,
-      dueDateInput: toDateInput(model.dueDate),
-      detail: model.detail,
-      isPastDue,
-      daysPastDue: isPastDue ? Math.abs(countdown || 0) : 0,
-      blocked: model.blocked,
-    };
-  }, [newTask.task_type, newTask.tree_id, newTask.due_mode, tasks, trees, activeProjectMaturityMap]);
-
   const assignTask = async () => {
     if (!activeProjectId) return;
     if (!newTask.tree_id) {
@@ -892,6 +854,44 @@ export default function GreenWork() {
     const speciesLabel = projectSpeciesOptions.find((item) => item.key === selectedMaturitySpecies)?.label || "species";
     toast.success(`${speciesLabel}: pegged at ${Math.round(years)} years`);
   };
+
+  const assignTaskModelPreview = useMemo(() => {
+    const activity = asMaintenanceActivity(newTask.task_type);
+    const treeId = Number(newTask.tree_id || 0);
+    const modelSeason = dueModeToSeason(newTask.due_mode);
+    if (!activity || !treeId || !Number.isFinite(treeId)) {
+      return {
+        dueDate: null as Date | null,
+        dueDateInput: "",
+        detail: "Select tree and maintenance type.",
+        isPastDue: false,
+        daysPastDue: 0,
+        blocked: false,
+      };
+    }
+    if (!modelSeason) {
+      return {
+        dueDate: null as Date | null,
+        dueDateInput: "",
+        detail: "Custom date selected. Choose any due date.",
+        isPastDue: false,
+        daysPastDue: 0,
+        blocked: false,
+      };
+    }
+    const model = getModelDueForTreeActivity(treeId, activity, modelSeason, activeProjectMaturityMap);
+    const today = startOfDay(new Date());
+    const countdown = model.dueDate ? dayDiff(model.dueDate, today) : null;
+    const isPastDue = countdown !== null && countdown < 0;
+    return {
+      dueDate: model.dueDate,
+      dueDateInput: toDateInput(model.dueDate),
+      detail: model.detail,
+      isPastDue,
+      daysPastDue: isPastDue ? Math.abs(countdown || 0) : 0,
+      blocked: model.blocked,
+    };
+  }, [newTask.task_type, newTask.tree_id, newTask.due_mode, tasks, trees, activeProjectMaturityMap]);
 
   const filteredTrees = useMemo(() => {
     if (assigneeFilter === "all") return trees;
