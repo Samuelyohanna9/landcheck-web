@@ -2194,7 +2194,7 @@ export default function GreenWork() {
           )}
 
           <div ref={mapCardRef} className={`green-work-card green-work-map-card ${overviewMode ? "overview-map" : ""}`}>
-            <h3>Tree Map by Assignee</h3>
+            <h3>Trees on Map</h3>
             {!activeProjectId && (
               <p className="green-work-note">Select an active project in Project Focus to load trees and assignments.</p>
             )}
