@@ -574,13 +574,34 @@ export default function GreenWork() {
     const treeId = Number(newTask.tree_id || 0);
     const modelSeason = dueModeToSeason(newTask.due_mode);
     if (!activity || !treeId || !Number.isFinite(treeId)) {
-      return { dueDate: null as Date | null, dueDateInput: "", detail: "Select tree and maintenance type." };
+      return {
+        dueDate: null as Date | null,
+        dueDateInput: "",
+        detail: "Select tree and maintenance type.",
+        isPastDue: false,
+        daysPastDue: 0,
+      };
     }
     if (!modelSeason) {
-      return { dueDate: null as Date | null, dueDateInput: "", detail: "Custom date selected. Choose any due date." };
+      return {
+        dueDate: null as Date | null,
+        dueDateInput: "",
+        detail: "Custom date selected. Choose any due date.",
+        isPastDue: false,
+        daysPastDue: 0,
+      };
     }
     const model = getModelDueForTreeActivity(treeId, activity, modelSeason);
-    return { dueDate: model.dueDate, dueDateInput: toDateInput(model.dueDate), detail: model.detail };
+    const today = startOfDay(new Date());
+    const countdown = model.dueDate ? dayDiff(model.dueDate, today) : null;
+    const isPastDue = countdown !== null && countdown < 0;
+    return {
+      dueDate: model.dueDate,
+      dueDateInput: toDateInput(model.dueDate),
+      detail: model.detail,
+      isPastDue,
+      daysPastDue: isPastDue ? Math.abs(countdown || 0) : 0,
+    };
   }, [newTask.task_type, newTask.tree_id, newTask.due_mode, tasks, trees]);
 
   const assignTask = async () => {
@@ -601,6 +622,10 @@ export default function GreenWork() {
 
     let dueDateToSubmit: string | null = null;
     if (newTask.due_mode === "model_rainy" || newTask.due_mode === "model_dry") {
+      if (assignTaskModelPreview.isPastDue) {
+        toast.error("Model date has passed. Choose Other Date (Custom).");
+        return;
+      }
       if (!assignTaskModelPreview.dueDateInput) {
         toast.error("Model due date unavailable. Choose custom date or set planting date.");
         return;
@@ -1589,6 +1614,12 @@ export default function GreenWork() {
                 <>
                   <input type="date" value={assignTaskModelPreview.dueDateInput} readOnly disabled />
                   <p className="green-work-note">{assignTaskModelPreview.detail}</p>
+                  {assignTaskModelPreview.isPastDue && (
+                    <p className="green-work-note danger">
+                      Model date passed by {assignTaskModelPreview.daysPastDue} day
+                      {assignTaskModelPreview.daysPastDue === 1 ? "" : "s"}. Select Other Date (Custom).
+                    </p>
+                  )}
                   <p className="green-work-note">Model is computed from selected maintenance type and season.</p>
                 </>
               ) : (
