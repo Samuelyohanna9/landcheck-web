@@ -154,6 +154,31 @@
   color: #49705c;
 }
 
+.green-work-season-picker {
+  margin-top: 0.44rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.green-work-season-picker label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #2a5d46;
+}
+
+.green-work-season-picker select {
+  width: 100%;
+  border: 1px solid rgba(27, 79, 49, 0.22);
+  border-radius: 9px;
+  background: #ffffff;
+  color: #1d4f39;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 0.42rem 0.5rem;
+}
+
 .green-work-action-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
