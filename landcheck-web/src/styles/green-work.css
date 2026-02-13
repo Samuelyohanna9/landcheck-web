@@ -1175,8 +1175,13 @@
   color: #1a5e3d;
   font-weight: 800;
   text-decoration: underline;
-  cursor: default;
+  cursor: pointer;
   padding: 0;
+  font: inherit;
+}
+
+.green-work-live-tree-link:hover {
+  color: #0f4a2f;
 }
 
 .green-work-live-hint {
