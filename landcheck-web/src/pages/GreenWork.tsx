@@ -310,6 +310,63 @@ const toDisplayPhotoUrl = (url: string | null | undefined) => {
   }
 };
 
+const renderActionIcon = (form: WorkForm) => {
+  switch (form) {
+    case "overview":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 19h16M7 16V9M12 16V5M17 16v-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+    case "live_table":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path
+            d="M4 6h16v12H4zM4 10h16M9 10v8M15 10v8"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+    case "users":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="8" cy="9" r="3" fill="none" stroke="currentColor" strokeWidth="2" />
+          <circle cx="16.5" cy="10" r="2.5" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path d="M3.5 19c1-2.6 3.3-4 6.5-4s5.5 1.4 6.5 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+    case "add_user":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="10" cy="8" r="3" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path d="M4 19c1-2.5 3-4 6-4s5 1.5 6 4M18 8v6M15 11h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+    case "assign_work":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 19h16M6 16l3-6 3 3 4-7 2 3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case "assign_task":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M6 4h12v16H6zM9 8h6M9 12h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M8 17l2 2 4-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+    default:
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="2" />
+        </svg>
+      );
+  }
+};
+
 export default function GreenWork() {
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const mapCardRef = useRef<HTMLDivElement | null>(null);
@@ -491,9 +548,9 @@ export default function GreenWork() {
         : null;
 
     const detail = latestDoneDate
-      ? `Based on last completed cycle (+${intervals.repeatDays} days, ${SEASON_LABEL[seasonMode]}).`
+      ? `${formatTaskTypeLabel(activity)} model from last completed cycle (+${intervals.repeatDays} days, ${SEASON_LABEL[seasonMode]}).`
       : plantingDateObj
-        ? `Based on planting date (+${intervals.firstDays} days, ${SEASON_LABEL[seasonMode]}).`
+        ? `${formatTaskTypeLabel(activity)} model from planting date (+${intervals.firstDays} days, ${SEASON_LABEL[seasonMode]}).`
         : `No planting date found; choose custom date or set planting date.`;
 
     return { dueDate, detail };
@@ -1178,8 +1235,13 @@ export default function GreenWork() {
                   className={`green-work-action-card ${activeForm === action.form ? "active" : ""}`}
                   onClick={() => openForm(action.form)}
                 >
-                  <span>{action.title}</span>
-                  <small>{action.note}</small>
+                  <span className="green-work-action-icon" aria-hidden="true">
+                    {renderActionIcon(action.form)}
+                  </span>
+                  <span className="green-work-action-copy">
+                    <span>{action.title}</span>
+                    <small>{action.note}</small>
+                  </span>
                 </button>
               ))}
             </div>
@@ -1481,6 +1543,7 @@ export default function GreenWork() {
                 <>
                   <input type="date" value={assignTaskModelPreview.dueDateInput} readOnly disabled />
                   <p className="green-work-note">{assignTaskModelPreview.detail}</p>
+                  <p className="green-work-note">Model is computed from selected maintenance type and season.</p>
                 </>
               ) : (
                 <input
