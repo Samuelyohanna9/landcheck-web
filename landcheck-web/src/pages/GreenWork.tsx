@@ -247,8 +247,6 @@ const LIVE_TABLE_SOURCES = [
   },
 ];
 
-const SPECIES_MATURITY_STORAGE_KEY = "green_work_species_maturity_years_v1";
-
 type LiveMaintenanceRow = {
   key: string;
   treeId: number;
@@ -456,10 +454,11 @@ export default function GreenWork() {
   };
 
   const loadProjectData = async (projectId: number) => {
-    const [ordersRes, treesRes, tasksRes] = await Promise.all([
+    const [ordersRes, treesRes, tasksRes, speciesMaturityRes] = await Promise.all([
       api.get(`/green/work-orders?project_id=${projectId}`),
       api.get(`/green/projects/${projectId}/trees`),
       api.get(`/green/tasks?project_id=${projectId}`),
+      api.get(`/green/projects/${projectId}/species-maturity`),
     ]);
     setOrders(ordersRes.data);
     const normalizedTrees = (treesRes.data || [])
@@ -471,33 +470,28 @@ export default function GreenWork() {
       .filter((tree: any) => Number.isFinite(tree.lng) && Number.isFinite(tree.lat));
     setTrees(normalizedTrees);
     setTasks(Array.isArray(tasksRes.data) ? tasksRes.data : []);
+    const serverMapRaw = speciesMaturityRes.data?.map || {};
+    const serverMap = Object.entries(serverMapRaw).reduce(
+      (acc, [key, value]) => {
+        const normalizedKey = normalizeName(key);
+        const years = Number(value);
+        if (normalizedKey && Number.isFinite(years) && years > 0) {
+          acc[normalizedKey] = Math.round(years);
+        }
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+    setSpeciesMaturityByProject((prev) => ({
+      ...prev,
+      [String(projectId)]: serverMap,
+    }));
   };
 
   useEffect(() => {
     loadProjects().catch(() => toast.error("Failed to load projects"));
     loadUsers().catch(() => toast.error("Failed to load users"));
   }, []);
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(SPECIES_MATURITY_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object") {
-        setSpeciesMaturityByProject(parsed as Record<string, Record<string, number>>);
-      }
-    } catch {
-      // ignore invalid local storage payload
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(SPECIES_MATURITY_STORAGE_KEY, JSON.stringify(speciesMaturityByProject));
-    } catch {
-      // ignore storage quota or availability errors
-    }
-  }, [speciesMaturityByProject]);
 
   useEffect(() => {
     if (!staffMenu && !liveTreeMenu) return;
@@ -829,7 +823,7 @@ export default function GreenWork() {
     setSelectedMaturityYears(currentYears ? String(currentYears) : "3");
   }, [selectedMaturitySpecies, activeProjectMaturityMap]);
 
-  const saveSpeciesMaturityYears = () => {
+  const saveSpeciesMaturityYears = async () => {
     if (!activeProjectId) return;
     if (!selectedMaturitySpecies) {
       toast.error("Select species");
@@ -840,19 +834,30 @@ export default function GreenWork() {
       toast.error("Select years between 1 and 15");
       return;
     }
-    setSpeciesMaturityByProject((prev) => {
-      const projectKey = String(activeProjectId);
-      const nextProjectMap = {
-        ...(prev[projectKey] || {}),
-        [selectedMaturitySpecies]: Math.round(years),
-      };
-      return {
-        ...prev,
-        [projectKey]: nextProjectMap,
-      };
-    });
-    const speciesLabel = projectSpeciesOptions.find((item) => item.key === selectedMaturitySpecies)?.label || "species";
-    toast.success(`${speciesLabel}: pegged at ${Math.round(years)} years`);
+    const speciesLabel = projectSpeciesOptions.find((item) => item.key === selectedMaturitySpecies)?.label || selectedMaturitySpecies;
+    const payload = {
+      species_key: selectedMaturitySpecies,
+      species_label: speciesLabel,
+      maturity_years: Math.round(years),
+    };
+    try {
+      const res = await api.put(`/green/projects/${activeProjectId}/species-maturity`, payload);
+      const savedKey = normalizeName(res.data?.species_key || selectedMaturitySpecies);
+      const savedYears = Number(res.data?.maturity_years || Math.round(years));
+      setSpeciesMaturityByProject((prev) => {
+        const projectKey = String(activeProjectId);
+        return {
+          ...prev,
+          [projectKey]: {
+            ...(prev[projectKey] || {}),
+            [savedKey]: Math.round(savedYears),
+          },
+        };
+      });
+      toast.success(`${speciesLabel}: pegged at ${Math.round(savedYears)} years`);
+    } catch {
+      toast.error("Failed to save species peg years");
+    }
   };
 
   const assignTaskModelPreview = useMemo(() => {
@@ -2354,4 +2359,3 @@ export default function GreenWork() {
     </div>
   );
 }
-
