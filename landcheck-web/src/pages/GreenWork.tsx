@@ -208,6 +208,25 @@ const dueModeToSeason = (mode: TaskDueMode): SeasonMode | null => {
   return null;
 };
 
+const getSpeciesMaturityYears = (species: string | null | undefined) => {
+  const normalized = normalizeName(species);
+  if (!normalized) return 3;
+  if (normalized.includes("mangrove")) return 5;
+  if (normalized.includes("eucalyptus") || normalized.includes("casuarina")) return 2;
+  if (normalized.includes("acacia") || normalized.includes("gmelina")) return 3;
+  return 3;
+};
+
+const getLifecycleStartDate = (
+  plantingDateObj: Date | null,
+  replacementDoneDateObj: Date | null,
+) => {
+  if (plantingDateObj && replacementDoneDateObj) {
+    return replacementDoneDateObj.getTime() > plantingDateObj.getTime() ? replacementDoneDateObj : plantingDateObj;
+  }
+  return replacementDoneDateObj || plantingDateObj;
+};
+
 const LIVE_TABLE_SOURCES = [
   {
     label: "FAO - Forest restoration monitoring and maintenance sequence",
@@ -537,11 +556,48 @@ export default function GreenWork() {
     treeId: number,
     activity: MaintenanceActivity,
     season: SeasonMode,
-  ): { dueDate: Date | null; detail: string } => {
+  ): { dueDate: Date | null; detail: string; blocked: boolean } => {
     const tree = trees.find((item) => Number(item.id) === Number(treeId));
     const plantingDateObj = parseDateValue(tree?.planting_date || null);
+    const treeStatus = normalizeName(tree?.status || "alive");
     const today = startOfDay(new Date());
-    const treeAgeDays = plantingDateObj ? Math.max(dayDiff(today, plantingDateObj), 0) : 0;
+    const replacementDoneTasks = tasks
+      .filter((task) => Number(task.tree_id) === Number(treeId))
+      .filter((task) => asMaintenanceActivity(task.task_type) === "replacement")
+      .filter((task) => isCompleteStatus(task.status))
+      .sort((a, b) => taskSortStamp(b) - taskSortStamp(a));
+    const latestReplacementDoneDate = parseDateValue(
+      replacementDoneTasks[0]?.completed_at || replacementDoneTasks[0]?.due_date || replacementDoneTasks[0]?.created_at || null,
+    );
+    const lifecycleStartDate = getLifecycleStartDate(plantingDateObj, latestReplacementDoneDate);
+    const treeAgeDays = lifecycleStartDate ? Math.max(dayDiff(today, lifecycleStartDate), 0) : 0;
+    const maturityYears = getSpeciesMaturityYears(tree?.species || null);
+    const maturityReached = treeStatus === "alive" && treeAgeDays >= maturityYears * 365;
+
+    if (treeStatus === "dead" && activity !== "replacement") {
+      return {
+        dueDate: null,
+        detail: "Tree is marked dead. Assign replacement first, then restart maintenance after replanting.",
+        blocked: true,
+      };
+    }
+
+    if (treeStatus === "dead" && activity === "replacement") {
+      return {
+        dueDate: today,
+        detail: "Tree is marked dead. Replacement is due immediately (today).",
+        blocked: false,
+      };
+    }
+
+    if (maturityReached) {
+      return {
+        dueDate: null,
+        detail: `Tree reached self-sustaining stage (~${maturityYears} years). Model schedule is closed unless you use custom intervention.`,
+        blocked: true,
+      };
+    }
+
     const intervals = getMaintenanceIntervals(activity, treeAgeDays, season);
     const doneTasks = tasks
       .filter((task) => Number(task.tree_id) === Number(treeId))
@@ -556,17 +612,17 @@ export default function GreenWork() {
 
     const dueDate = latestDoneDate
       ? addDays(latestDoneDate, intervals.repeatDays)
-      : plantingDateObj
-        ? addDays(plantingDateObj, intervals.firstDays)
+      : lifecycleStartDate
+        ? addDays(lifecycleStartDate, intervals.firstDays)
         : null;
 
     const detail = latestDoneDate
       ? `${formatTaskTypeLabel(activity)} model from last completed cycle (+${intervals.repeatDays} days, ${SEASON_LABEL[season]}).`
-      : plantingDateObj
-        ? `${formatTaskTypeLabel(activity)} model from planting date (+${intervals.firstDays} days, ${SEASON_LABEL[season]}).`
+      : lifecycleStartDate
+        ? `${formatTaskTypeLabel(activity)} model from lifecycle start (+${intervals.firstDays} days, ${SEASON_LABEL[season]}).`
         : `No planting date found; choose custom date or set planting date.`;
 
-    return { dueDate, detail };
+    return { dueDate, detail, blocked: false };
   };
 
   const assignTaskModelPreview = useMemo(() => {
@@ -580,6 +636,7 @@ export default function GreenWork() {
         detail: "Select tree and maintenance type.",
         isPastDue: false,
         daysPastDue: 0,
+        blocked: false,
       };
     }
     if (!modelSeason) {
@@ -589,6 +646,7 @@ export default function GreenWork() {
         detail: "Custom date selected. Choose any due date.",
         isPastDue: false,
         daysPastDue: 0,
+        blocked: false,
       };
     }
     const model = getModelDueForTreeActivity(treeId, activity, modelSeason);
@@ -601,6 +659,7 @@ export default function GreenWork() {
       detail: model.detail,
       isPastDue,
       daysPastDue: isPastDue ? Math.abs(countdown || 0) : 0,
+      blocked: model.blocked,
     };
   }, [newTask.task_type, newTask.tree_id, newTask.due_mode, tasks, trees]);
 
@@ -622,6 +681,10 @@ export default function GreenWork() {
 
     let dueDateToSubmit: string | null = null;
     if (newTask.due_mode === "model_rainy" || newTask.due_mode === "model_dry") {
+      if (assignTaskModelPreview.blocked) {
+        toast.error(assignTaskModelPreview.detail);
+        return;
+      }
       if (assignTaskModelPreview.isPastDue) {
         toast.error("Model date has passed. Choose Other Date (Custom).");
         return;
@@ -938,9 +1001,20 @@ export default function GreenWork() {
 
     const rows: LiveMaintenanceRow[] = [];
     scopedTrees.forEach((tree) => {
+      const treeStatus = normalizeName(tree.status || "alive");
       const plantingDateObj = parseDateValue(tree.planting_date);
-      const treeAgeDays = plantingDateObj ? Math.max(dayDiff(today, plantingDateObj), 0) : null;
+      const replacementTaskBucket = [...(taskBuckets.get(`${tree.id}:replacement`) || [])];
+      const replacementDoneTasks = replacementTaskBucket
+        .filter((task) => isCompleteStatus(task.status))
+        .sort((a, b) => taskSortStamp(b) - taskSortStamp(a));
+      const latestReplacementDoneDate = parseDateValue(
+        replacementDoneTasks[0]?.completed_at || replacementDoneTasks[0]?.due_date || replacementDoneTasks[0]?.created_at || null,
+      );
+      const lifecycleStartDate = getLifecycleStartDate(plantingDateObj, latestReplacementDoneDate);
+      const treeAgeDays = lifecycleStartDate ? Math.max(dayDiff(today, lifecycleStartDate), 0) : null;
       const assignee = tree.created_by || "-";
+      const maturityYears = getSpeciesMaturityYears(tree.species || null);
+      const maturityReached = treeStatus === "alive" && treeAgeDays !== null && treeAgeDays >= maturityYears * 365;
 
       MAINTENANCE_ACTIVITY_ORDER.forEach((activity) => {
         const model = MAINTENANCE_MODEL[activity];
@@ -963,11 +1037,17 @@ export default function GreenWork() {
 
         const latestDoneDate = parseDateValue(latestDone?.completed_at || latestDone?.due_date || latestDone?.created_at || null);
         const intervals = getMaintenanceIntervals(activity, Math.max(treeAgeDays || 0, 0), seasonMode);
-        const modelDue = latestDoneDate
+        let modelDue = latestDoneDate
           ? addDays(latestDoneDate, intervals.repeatDays)
-          : plantingDateObj
-            ? addDays(plantingDateObj, intervals.firstDays)
+          : lifecycleStartDate
+            ? addDays(lifecycleStartDate, intervals.firstDays)
             : null;
+        if (treeStatus === "dead") {
+          modelDue = activity === "replacement" ? today : null;
+        }
+        if (maturityReached) {
+          modelDue = null;
+        }
         const assignedDue = parseDateValue(activeTask?.due_date || null);
 
         let effectiveDue: Date | null = null;
@@ -983,10 +1063,40 @@ export default function GreenWork() {
         let indicator = "On schedule";
         let statusText = "No open task";
 
-        if (!plantingDateObj && !activeTask) {
+        if (treeStatus === "dead" && activity !== "replacement") {
+          tone = "danger";
+          indicator = "Tree marked dead";
+          statusText = activeTask ? `Task #${activeTask.id} paused until replacement` : "Paused until replacement/replant";
+        } else if (treeStatus === "dead" && activity === "replacement") {
+          statusText = activeTask ? `Task #${activeTask.id} ${activeTask.status || "pending"}` : "Assign replacement now";
+          if (activeTask) {
+            if (countdownDays !== null && countdownDays < 0) {
+              tone = "danger";
+              indicator = `Replacement overdue by ${Math.abs(countdownDays)} day${Math.abs(countdownDays) === 1 ? "" : "s"}`;
+            } else if (countdownDays !== null && countdownDays <= 3) {
+              tone = "warning";
+              indicator = `Replacement due in ${countdownDays} day${countdownDays === 1 ? "" : "s"}`;
+            } else {
+              tone = "warning";
+              indicator = "Replacement assigned";
+            }
+          } else {
+            tone = "danger";
+            indicator = "Replacement required immediately";
+          }
+        } else if (maturityReached) {
+          statusText = "Self-sustaining stage reached";
+          if (notDoneTasks.length > 0) {
+            tone = "warning";
+            indicator = `Lifecycle complete (~${maturityYears} years), close pending tasks`;
+          } else {
+            tone = "ok";
+            indicator = `Lifecycle complete (~${maturityYears} years)`;
+          }
+        } else if (!lifecycleStartDate && !activeTask) {
           tone = "info";
-          indicator = "Planting date missing";
-          statusText = "Set planting date for model schedule";
+          indicator = "Lifecycle start date missing";
+          statusText = "Set planting date or replacement completion date";
         } else if (activeTask) {
           statusText = `Task #${activeTask.id} ${activeTask.status || "pending"}`;
           if (countdownDays !== null && countdownDays < 0) {
@@ -1033,7 +1143,9 @@ export default function GreenWork() {
           pendingCount: notDoneTasks.length,
           overdueCount: overdueTasks.length,
           openTaskId: activeTask?.id || null,
-          modelRationale: `${model.rationale} ${SEASON_LABEL[seasonMode]}: first ${intervals.firstDays}d, repeat ${intervals.repeatDays}d.`,
+          modelRationale: `${model.rationale} ${SEASON_LABEL[seasonMode]}: first ${intervals.firstDays}d, repeat ${intervals.repeatDays}d.${
+            latestReplacementDoneDate ? " Lifecycle reset from latest replacement completion." : ""
+          }`,
         });
       });
     });
@@ -1233,10 +1345,12 @@ export default function GreenWork() {
     const ownerExists = owner
       ? users.some((u) => normalizeName(u.full_name) === normalizeName(owner))
       : false;
+    const treeStatus = normalizeName(tree?.status || "alive");
     setNewTask((prev) => ({
       ...prev,
       tree_id: String(treeId),
       assignee_name: ownerExists ? owner : prev.assignee_name,
+      task_type: treeStatus === "dead" ? "replacement" : prev.task_type,
     }));
     setActiveForm("assign_task");
     setMenuOpen(false);
@@ -1603,6 +1717,9 @@ export default function GreenWork() {
                 <>
                   <input type="date" value={assignTaskModelPreview.dueDateInput} readOnly disabled />
                   <p className="green-work-note">{assignTaskModelPreview.detail}</p>
+                  {assignTaskModelPreview.blocked && (
+                    <p className="green-work-note danger">Model cannot auto-schedule this case. Choose Other Date (Custom).</p>
+                  )}
                   {assignTaskModelPreview.isPastDue && (
                     <p className="green-work-note danger">
                       Model date passed by {assignTaskModelPreview.daysPastDue} day
