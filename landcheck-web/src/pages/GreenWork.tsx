@@ -1284,17 +1284,6 @@ export default function GreenWork() {
               <span className="green-work-active-hub-kicker">Active Project</span>
               <strong>{activeProjectName}</strong>
               <p>Select an action to continue.</p>
-              <div className="green-work-season-picker">
-                <label htmlFor="green-work-season-select">Season Model</label>
-                <select
-                  id="green-work-season-select"
-                  value={seasonMode}
-                  onChange={(e) => setSeasonMode(e.target.value as SeasonMode)}
-                >
-                  <option value="rainy">Rainy Season</option>
-                  <option value="dry">Dry Season</option>
-                </select>
-              </div>
             </div>
             <div className="green-work-action-grid">
               {activeProjectActions.map((action) => (
@@ -1805,6 +1794,17 @@ export default function GreenWork() {
                     ))}
                   </select>
                 </div>
+              </div>
+              <div className="green-work-live-season-row">
+                <label htmlFor="green-work-live-season-select">Season Model</label>
+                <select
+                  id="green-work-live-season-select"
+                  value={seasonMode}
+                  onChange={(e) => setSeasonMode(e.target.value as SeasonMode)}
+                >
+                  <option value="rainy">Rainy Season</option>
+                  <option value="dry">Dry Season</option>
+                </select>
               </div>
 
               <div className="green-work-live-summary">
