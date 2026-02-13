@@ -1090,6 +1090,81 @@
   padding: 0.34rem 0.46rem;
 }
 
+.green-work-live-maturity-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.44rem;
+}
+
+.green-work-live-maturity-row label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #2a5d46;
+}
+
+.green-work-live-maturity-row select {
+  width: min(220px, 100%);
+  border: 1px solid rgba(27, 79, 49, 0.22);
+  border-radius: 9px;
+  background: #ffffff;
+  color: #1d4f39;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.34rem 0.46rem;
+  margin-bottom: 0;
+}
+
+.green-work-live-years-btn {
+  border: 1px solid rgba(23, 93, 48, 0.32);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #2ca44f, #1e7f3e);
+  color: #ecffec;
+  font-weight: 700;
+  font-size: 0.83rem;
+  line-height: 1;
+  padding: 0.52rem 0.78rem;
+  cursor: pointer;
+  box-shadow: 0 7px 14px rgba(18, 72, 37, 0.2);
+}
+
+.green-work-live-years-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.green-work-live-maturity-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.34rem;
+}
+
+.green-work-live-maturity-chip {
+  border-radius: 999px;
+  border: 1px solid rgba(26, 78, 46, 0.16);
+  background: #f6fbf6;
+  color: #2f5f48;
+  font-size: 0.73rem;
+  font-weight: 800;
+  line-height: 1.2;
+  padding: 0.18rem 0.5rem;
+}
+
+.green-work-live-maturity-chip.is-set {
+  background: rgba(220, 248, 226, 0.92);
+  color: #1d7640;
+  border-color: rgba(30, 121, 62, 0.28);
+}
+
+.green-work-live-maturity-chip.is-empty {
+  background: rgba(239, 245, 241, 0.96);
+  color: #557261;
+  border-color: rgba(68, 101, 84, 0.22);
+}
+
 .green-work-live-summary {
   display: flex;
   flex-wrap: wrap;
@@ -1641,6 +1716,17 @@
   }
 
   .green-work-live-season-row select {
+    width: 100%;
+  }
+
+  .green-work-live-maturity-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.24rem;
+  }
+
+  .green-work-live-maturity-row select,
+  .green-work-live-years-btn {
     width: 100%;
   }
 

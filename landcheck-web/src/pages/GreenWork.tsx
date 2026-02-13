@@ -208,13 +208,14 @@ const dueModeToSeason = (mode: TaskDueMode): SeasonMode | null => {
   return null;
 };
 
-const getSpeciesMaturityYears = (species: string | null | undefined) => {
+const getSpeciesMaturityYears = (
+  species: string | null | undefined,
+  speciesMaturityMap: Record<string, number>,
+) => {
   const normalized = normalizeName(species);
-  if (!normalized) return 3;
-  if (normalized.includes("mangrove")) return 5;
-  if (normalized.includes("eucalyptus") || normalized.includes("casuarina")) return 2;
-  if (normalized.includes("acacia") || normalized.includes("gmelina")) return 3;
-  return 3;
+  if (!normalized) return null;
+  const years = speciesMaturityMap[normalized];
+  return Number.isFinite(years) && years > 0 ? years : null;
 };
 
 const getLifecycleStartDate = (
@@ -245,6 +246,8 @@ const LIVE_TABLE_SOURCES = [
     url: "https://www.nimet.gov.ng/news?id=94",
   },
 ];
+
+const SPECIES_MATURITY_STORAGE_KEY = "green_work_species_maturity_years_v1";
 
 type LiveMaintenanceRow = {
   key: string;
@@ -436,6 +439,9 @@ export default function GreenWork() {
   const [activeForm, setActiveForm] = useState<WorkForm | null>(null);
   const [staffMenu, setStaffMenu] = useState<StaffMenuState>(null);
   const [liveTreeMenu, setLiveTreeMenu] = useState<LiveTreeMenuState>(null);
+  const [speciesMaturityByProject, setSpeciesMaturityByProject] = useState<Record<string, Record<string, number>>>({});
+  const [selectedMaturitySpecies, setSelectedMaturitySpecies] = useState("");
+  const [selectedMaturityYears, setSelectedMaturityYears] = useState("3");
   const [treePhotoUploading, setTreePhotoUploading] = useState(false);
   const [drawerFrame, setDrawerFrame] = useState<DrawerFrame | null>(null);
 
@@ -471,6 +477,27 @@ export default function GreenWork() {
     loadProjects().catch(() => toast.error("Failed to load projects"));
     loadUsers().catch(() => toast.error("Failed to load users"));
   }, []);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(SPECIES_MATURITY_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        setSpeciesMaturityByProject(parsed as Record<string, Record<string, number>>);
+      }
+    } catch {
+      // ignore invalid local storage payload
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SPECIES_MATURITY_STORAGE_KEY, JSON.stringify(speciesMaturityByProject));
+    } catch {
+      // ignore storage quota or availability errors
+    }
+  }, [speciesMaturityByProject]);
 
   useEffect(() => {
     if (!staffMenu && !liveTreeMenu) return;
@@ -556,6 +583,7 @@ export default function GreenWork() {
     treeId: number,
     activity: MaintenanceActivity,
     season: SeasonMode,
+    speciesMaturityMap: Record<string, number>,
   ): { dueDate: Date | null; detail: string; blocked: boolean } => {
     const tree = trees.find((item) => Number(item.id) === Number(treeId));
     const plantingDateObj = parseDateValue(tree?.planting_date || null);
@@ -571,8 +599,8 @@ export default function GreenWork() {
     );
     const lifecycleStartDate = getLifecycleStartDate(plantingDateObj, latestReplacementDoneDate);
     const treeAgeDays = lifecycleStartDate ? Math.max(dayDiff(today, lifecycleStartDate), 0) : 0;
-    const maturityYears = getSpeciesMaturityYears(tree?.species || null);
-    const maturityReached = treeStatus === "alive" && treeAgeDays >= maturityYears * 365;
+    const maturityYears = getSpeciesMaturityYears(tree?.species || null, speciesMaturityMap);
+    const maturityReached = treeStatus === "alive" && maturityYears !== null && treeAgeDays >= maturityYears * 365;
 
     if (treeStatus === "dead" && activity !== "replacement") {
       return {
@@ -593,7 +621,7 @@ export default function GreenWork() {
     if (maturityReached) {
       return {
         dueDate: null,
-        detail: `Tree reached self-sustaining stage (~${maturityYears} years). Model schedule is closed unless you use custom intervention.`,
+        detail: `Tree reached self-sustaining stage (~${maturityYears || "-"} years). Model schedule is closed unless you use custom intervention.`,
         blocked: true,
       };
     }
@@ -649,7 +677,7 @@ export default function GreenWork() {
         blocked: false,
       };
     }
-    const model = getModelDueForTreeActivity(treeId, activity, modelSeason);
+    const model = getModelDueForTreeActivity(treeId, activity, modelSeason, activeProjectMaturityMap);
     const today = startOfDay(new Date());
     const countdown = model.dueDate ? dayDiff(model.dueDate, today) : null;
     const isPastDue = countdown !== null && countdown < 0;
@@ -661,7 +689,7 @@ export default function GreenWork() {
       daysPastDue: isPastDue ? Math.abs(countdown || 0) : 0,
       blocked: model.blocked,
     };
-  }, [newTask.task_type, newTask.tree_id, newTask.due_mode, tasks, trees]);
+  }, [newTask.task_type, newTask.tree_id, newTask.due_mode, tasks, trees, activeProjectMaturityMap]);
 
   const assignTask = async () => {
     if (!activeProjectId) return;
@@ -788,6 +816,82 @@ export default function GreenWork() {
     const sortedNames = Array.from(namesByKey.values()).sort((a, b) => a.localeCompare(b));
     return ["all", ...sortedNames];
   }, [orders, trees, tasks, users]);
+
+  const projectSpeciesOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    trees.forEach((tree) => {
+      const raw = String(tree.species || "").trim();
+      if (!raw) return;
+      const key = normalizeName(raw);
+      if (!map.has(key)) map.set(key, raw);
+    });
+    return Array.from(map.entries())
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [trees]);
+
+  const activeProjectMaturityMap = useMemo(() => {
+    if (!activeProjectId) return {};
+    return speciesMaturityByProject[String(activeProjectId)] || {};
+  }, [activeProjectId, speciesMaturityByProject]);
+
+  const speciesMaturityRows = useMemo(
+    () =>
+      projectSpeciesOptions.map((item) => ({
+        ...item,
+        years: activeProjectMaturityMap[item.key] ?? null,
+      })),
+    [projectSpeciesOptions, activeProjectMaturityMap],
+  );
+
+  useEffect(() => {
+    if (!projectSpeciesOptions.length) {
+      setSelectedMaturitySpecies("");
+      return;
+    }
+    const exists = projectSpeciesOptions.some((item) => item.key === selectedMaturitySpecies);
+    if (!selectedMaturitySpecies || !exists) {
+      const first = projectSpeciesOptions[0];
+      setSelectedMaturitySpecies(first.key);
+      const currentYears = activeProjectMaturityMap[first.key];
+      setSelectedMaturityYears(currentYears ? String(currentYears) : "3");
+    }
+  }, [projectSpeciesOptions, selectedMaturitySpecies, activeProjectMaturityMap]);
+
+  useEffect(() => {
+    if (!selectedMaturitySpecies) {
+      setSelectedMaturityYears("3");
+      return;
+    }
+    const currentYears = activeProjectMaturityMap[selectedMaturitySpecies];
+    setSelectedMaturityYears(currentYears ? String(currentYears) : "3");
+  }, [selectedMaturitySpecies, activeProjectMaturityMap]);
+
+  const saveSpeciesMaturityYears = () => {
+    if (!activeProjectId) return;
+    if (!selectedMaturitySpecies) {
+      toast.error("Select species");
+      return;
+    }
+    const years = Number(selectedMaturityYears);
+    if (!Number.isFinite(years) || years < 1 || years > 15) {
+      toast.error("Select years between 1 and 15");
+      return;
+    }
+    setSpeciesMaturityByProject((prev) => {
+      const projectKey = String(activeProjectId);
+      const nextProjectMap = {
+        ...(prev[projectKey] || {}),
+        [selectedMaturitySpecies]: Math.round(years),
+      };
+      return {
+        ...prev,
+        [projectKey]: nextProjectMap,
+      };
+    });
+    const speciesLabel = projectSpeciesOptions.find((item) => item.key === selectedMaturitySpecies)?.label || "species";
+    toast.success(`${speciesLabel}: pegged at ${Math.round(years)} years`);
+  };
 
   const filteredTrees = useMemo(() => {
     if (assigneeFilter === "all") return trees;
@@ -1013,8 +1117,9 @@ export default function GreenWork() {
       const lifecycleStartDate = getLifecycleStartDate(plantingDateObj, latestReplacementDoneDate);
       const treeAgeDays = lifecycleStartDate ? Math.max(dayDiff(today, lifecycleStartDate), 0) : null;
       const assignee = tree.created_by || "-";
-      const maturityYears = getSpeciesMaturityYears(tree.species || null);
-      const maturityReached = treeStatus === "alive" && treeAgeDays !== null && treeAgeDays >= maturityYears * 365;
+      const maturityYears = getSpeciesMaturityYears(tree.species || null, activeProjectMaturityMap);
+      const maturityReached =
+        treeStatus === "alive" && treeAgeDays !== null && maturityYears !== null && treeAgeDays >= maturityYears * 365;
 
       MAINTENANCE_ACTIVITY_ORDER.forEach((activity) => {
         const model = MAINTENANCE_MODEL[activity];
@@ -1088,10 +1193,10 @@ export default function GreenWork() {
           statusText = "Self-sustaining stage reached";
           if (notDoneTasks.length > 0) {
             tone = "warning";
-            indicator = `Lifecycle complete (~${maturityYears} years), close pending tasks`;
+            indicator = `Lifecycle complete (~${maturityYears || "-"} years), close pending tasks`;
           } else {
             tone = "ok";
-            indicator = `Lifecycle complete (~${maturityYears} years)`;
+            indicator = `Lifecycle complete (~${maturityYears || "-"} years)`;
           }
         } else if (!lifecycleStartDate && !activeTask) {
           tone = "info";
@@ -1159,7 +1264,7 @@ export default function GreenWork() {
       if (a.treeId !== b.treeId) return a.treeId - b.treeId;
       return a.activityLabel.localeCompare(b.activityLabel);
     });
-  }, [assigneeFilter, tasks, trees, seasonMode]);
+  }, [assigneeFilter, tasks, trees, seasonMode, activeProjectMaturityMap]);
 
   const liveMaintenanceSummary = useMemo(() => {
     return liveMaintenanceRows.reduce(
@@ -1922,6 +2027,66 @@ export default function GreenWork() {
                   <option value="rainy">Rainy Season</option>
                   <option value="dry">Dry Season</option>
                 </select>
+              </div>
+              <div className="green-work-live-maturity-row">
+                <label htmlFor="green-work-live-species-select">Species</label>
+                <select
+                  id="green-work-live-species-select"
+                  value={selectedMaturitySpecies}
+                  onChange={(e) => {
+                    const speciesKey = e.target.value;
+                    setSelectedMaturitySpecies(speciesKey);
+                    const currentYears = activeProjectMaturityMap[speciesKey];
+                    setSelectedMaturityYears(currentYears ? String(currentYears) : "3");
+                  }}
+                >
+                  {projectSpeciesOptions.length === 0 ? (
+                    <option value="">No species in this project yet</option>
+                  ) : (
+                    projectSpeciesOptions.map((item) => (
+                      <option key={item.key} value={item.key}>
+                        {item.label}
+                      </option>
+                    ))
+                  )}
+                </select>
+
+                <label htmlFor="green-work-live-years-select">Peg Years</label>
+                <select
+                  id="green-work-live-years-select"
+                  value={selectedMaturityYears}
+                  onChange={(e) => setSelectedMaturityYears(e.target.value)}
+                  disabled={!selectedMaturitySpecies}
+                >
+                  {Array.from({ length: 15 }, (_, index) => index + 1).map((years) => (
+                    <option key={years} value={years}>
+                      {years} {years === 1 ? "Year" : "Years"}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  className="green-work-live-years-btn"
+                  onClick={saveSpeciesMaturityYears}
+                  disabled={!selectedMaturitySpecies}
+                >
+                  Save Peg
+                </button>
+              </div>
+              <div className="green-work-live-maturity-list">
+                {speciesMaturityRows.length === 0 ? (
+                  <span className="green-work-live-maturity-chip is-empty">Add trees with species to configure peg years.</span>
+                ) : (
+                  speciesMaturityRows.map((item) => (
+                    <span
+                      key={item.key}
+                      className={`green-work-live-maturity-chip ${item.years ? "is-set" : "is-empty"}`}
+                    >
+                      {item.label}: {item.years ? `${item.years} years` : "Not set"}
+                    </span>
+                  ))
+                )}
               </div>
 
               <div className="green-work-live-summary">
