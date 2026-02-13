@@ -115,56 +115,91 @@ const addDays = (date: Date, days: number) => {
 };
 const dayDiff = (target: Date, reference: Date) =>
   Math.round((startOfDay(target).getTime() - startOfDay(reference).getTime()) / 86400000);
+const toDateInput = (value: Date | null) => {
+  if (!value) return "";
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 const MAINTENANCE_ACTIVITY_ORDER = ["watering", "weeding", "protection", "inspection", "replacement"] as const;
 type MaintenanceActivity = (typeof MAINTENANCE_ACTIVITY_ORDER)[number];
+type SeasonMode = "rainy" | "dry";
+type TaskDueMode = "model" | "manual";
 type LiveStatusTone = "danger" | "warning" | "ok" | "info";
 type MaintenanceModel = {
   label: string;
-  firstDays: number;
-  repeatDays: (treeAgeDays: number) => number;
   rationale: string;
 };
 
 const MAINTENANCE_MODEL: Record<MaintenanceActivity, MaintenanceModel> = {
   watering: {
     label: "Watering",
-    firstDays: 0,
-    repeatDays: (ageDays) => {
-      if (ageDays < 90) return 7;
-      if (ageDays < 180) return 10;
-      return 14;
-    },
     rationale: "Early establishment needs frequent moisture checks; interval increases as trees establish.",
   },
   weeding: {
     label: "Weeding",
-    firstDays: 30,
-    repeatDays: (ageDays) => {
-      if (ageDays < 365) return 60;
-      if (ageDays < 730) return 120;
-      return 180;
-    },
     rationale: "Heavy control in years 1-2, then reduced cycle once canopy suppression improves.",
   },
   protection: {
     label: "Protection",
-    firstDays: 0,
-    repeatDays: () => 30,
     rationale: "Protection checks should be continuous, with tighter monitoring in dry-season risk windows.",
   },
   inspection: {
     label: "Inspection",
-    firstDays: 14,
-    repeatDays: (ageDays) => (ageDays < 180 ? 30 : 90),
     rationale: "Early fortnight check, then monthly in establishment period, then quarterly supervision.",
   },
   replacement: {
     label: "Replacement",
-    firstDays: 42,
-    repeatDays: () => 180,
     rationale: "Initial refill around week 6-8 with later mortality checks in follow-up cycles.",
   },
+};
+
+const SEASON_LABEL: Record<SeasonMode, string> = {
+  rainy: "Rainy Season",
+  dry: "Dry Season",
+};
+
+const asMaintenanceActivity = (value: string | null | undefined): MaintenanceActivity | null => {
+  const key = normalizeName(value) as MaintenanceActivity;
+  return MAINTENANCE_ACTIVITY_ORDER.includes(key) ? key : null;
+};
+
+const getMaintenanceIntervals = (
+  activity: MaintenanceActivity,
+  treeAgeDays: number,
+  season: SeasonMode,
+): { firstDays: number; repeatDays: number } => {
+  switch (activity) {
+    case "watering":
+      return season === "rainy"
+        ? { firstDays: 0, repeatDays: treeAgeDays < 90 ? 14 : 21 }
+        : { firstDays: 0, repeatDays: treeAgeDays < 90 ? 5 : 7 };
+    case "weeding":
+      if (season === "rainy") {
+        if (treeAgeDays < 365) return { firstDays: 21, repeatDays: 45 };
+        if (treeAgeDays < 730) return { firstDays: 30, repeatDays: 90 };
+        return { firstDays: 30, repeatDays: 150 };
+      }
+      if (treeAgeDays < 365) return { firstDays: 35, repeatDays: 90 };
+      if (treeAgeDays < 730) return { firstDays: 45, repeatDays: 150 };
+      return { firstDays: 45, repeatDays: 210 };
+    case "protection":
+      return season === "rainy"
+        ? { firstDays: 0, repeatDays: 45 }
+        : { firstDays: 0, repeatDays: 21 };
+    case "inspection":
+      return season === "rainy"
+        ? { firstDays: 14, repeatDays: treeAgeDays < 180 ? 30 : 90 }
+        : { firstDays: 7, repeatDays: treeAgeDays < 180 ? 21 : 60 };
+    case "replacement":
+      return season === "rainy"
+        ? { firstDays: 42, repeatDays: 180 }
+        : { firstDays: 56, repeatDays: 210 };
+    default:
+      return { firstDays: 30, repeatDays: 90 };
+  }
 };
 
 const LIVE_TABLE_SOURCES = [
@@ -293,10 +328,20 @@ export default function GreenWork() {
   });
   const [newUser, setNewUser] = useState({ full_name: "", role: "field_officer" });
   const [newProject, setNewProject] = useState({ name: "", location_text: "", sponsor: "" });
-  const [newTask, setNewTask] = useState({
+  const [seasonMode, setSeasonMode] = useState<SeasonMode>("rainy");
+  const [newTask, setNewTask] = useState<{
+    tree_id: string;
+    task_type: string;
+    assignee_name: string;
+    due_mode: TaskDueMode;
+    due_date: string;
+    priority: string;
+    notes: string;
+  }>({
     tree_id: "",
     task_type: "watering",
     assignee_name: "",
+    due_mode: "model",
     due_date: "",
     priority: "normal",
     notes: "",
@@ -419,6 +464,51 @@ export default function GreenWork() {
     toast.success("User added");
   };
 
+  const getModelDueForTreeActivity = (
+    treeId: number,
+    activity: MaintenanceActivity,
+  ): { dueDate: Date | null; detail: string } => {
+    const tree = trees.find((item) => Number(item.id) === Number(treeId));
+    const plantingDateObj = parseDateValue(tree?.planting_date || null);
+    const today = startOfDay(new Date());
+    const treeAgeDays = plantingDateObj ? Math.max(dayDiff(today, plantingDateObj), 0) : 0;
+    const intervals = getMaintenanceIntervals(activity, treeAgeDays, seasonMode);
+    const doneTasks = tasks
+      .filter((task) => Number(task.tree_id) === Number(treeId))
+      .filter((task) => asMaintenanceActivity(task.task_type) === activity)
+      .filter((task) => isCompleteStatus(task.status))
+      .sort((a, b) => taskSortStamp(b) - taskSortStamp(a));
+
+    const latestDone = doneTasks[0] || null;
+    const latestDoneDate = parseDateValue(
+      latestDone?.completed_at || latestDone?.due_date || latestDone?.created_at || null,
+    );
+
+    const dueDate = latestDoneDate
+      ? addDays(latestDoneDate, intervals.repeatDays)
+      : plantingDateObj
+        ? addDays(plantingDateObj, intervals.firstDays)
+        : null;
+
+    const detail = latestDoneDate
+      ? `Based on last completed cycle (+${intervals.repeatDays} days, ${SEASON_LABEL[seasonMode]}).`
+      : plantingDateObj
+        ? `Based on planting date (+${intervals.firstDays} days, ${SEASON_LABEL[seasonMode]}).`
+        : `No planting date found; choose custom date or set planting date.`;
+
+    return { dueDate, detail };
+  };
+
+  const assignTaskModelPreview = useMemo(() => {
+    const activity = asMaintenanceActivity(newTask.task_type);
+    const treeId = Number(newTask.tree_id || 0);
+    if (!activity || !treeId || !Number.isFinite(treeId)) {
+      return { dueDate: null as Date | null, dueDateInput: "", detail: "Select tree and maintenance type." };
+    }
+    const model = getModelDueForTreeActivity(treeId, activity);
+    return { dueDate: model.dueDate, dueDateInput: toDateInput(model.dueDate), detail: model.detail };
+  }, [newTask.task_type, newTask.tree_id, seasonMode, tasks, trees]);
+
   const assignTask = async () => {
     if (!activeProjectId) return;
     if (!newTask.tree_id) {
@@ -429,10 +519,31 @@ export default function GreenWork() {
       toast.error("Assign a user");
       return;
     }
+    const activity = asMaintenanceActivity(newTask.task_type);
+    if (!activity) {
+      toast.error("Select a valid maintenance type");
+      return;
+    }
+
+    let dueDateToSubmit: string | null = null;
+    if (newTask.due_mode === "model") {
+      if (!assignTaskModelPreview.dueDateInput) {
+        toast.error("Model due date unavailable. Choose custom date or set planting date.");
+        return;
+      }
+      dueDateToSubmit = assignTaskModelPreview.dueDateInput;
+    } else {
+      if (!newTask.due_date) {
+        toast.error("Select custom due date");
+        return;
+      }
+      dueDateToSubmit = newTask.due_date;
+    }
+
     await api.post(`/green/trees/${newTask.tree_id}/tasks`, {
-      task_type: newTask.task_type,
+      task_type: activity,
       assignee_name: newTask.assignee_name,
-      due_date: newTask.due_date || null,
+      due_date: dueDateToSubmit,
       priority: newTask.priority,
       notes: newTask.notes,
     });
@@ -440,6 +551,7 @@ export default function GreenWork() {
       tree_id: "",
       task_type: "watering",
       assignee_name: "",
+      due_mode: "model",
       due_date: "",
       priority: "normal",
       notes: "",
@@ -706,8 +818,8 @@ export default function GreenWork() {
 
     const taskBuckets = new Map<string, WorkTask[]>();
     relevantTasks.forEach((task) => {
-      const typeKey = normalizeName(task.task_type) as MaintenanceActivity;
-      if (!MAINTENANCE_ACTIVITY_ORDER.includes(typeKey)) return;
+      const typeKey = asMaintenanceActivity(task.task_type);
+      if (!typeKey) return;
       const key = `${task.tree_id}:${typeKey}`;
       const bucket = taskBuckets.get(key);
       if (bucket) bucket.push(task);
@@ -751,11 +863,11 @@ export default function GreenWork() {
             })[0] || null;
 
         const latestDoneDate = parseDateValue(latestDone?.completed_at || latestDone?.due_date || latestDone?.created_at || null);
-        const repeatDays = model.repeatDays(Math.max(treeAgeDays || 0, 0));
+        const intervals = getMaintenanceIntervals(activity, Math.max(treeAgeDays || 0, 0), seasonMode);
         const modelDue = latestDoneDate
-          ? addDays(latestDoneDate, repeatDays)
+          ? addDays(latestDoneDate, intervals.repeatDays)
           : plantingDateObj
-            ? addDays(plantingDateObj, model.firstDays)
+            ? addDays(plantingDateObj, intervals.firstDays)
             : null;
         const assignedDue = parseDateValue(activeTask?.due_date || null);
 
@@ -822,7 +934,7 @@ export default function GreenWork() {
           pendingCount: notDoneTasks.length,
           overdueCount: overdueTasks.length,
           openTaskId: activeTask?.id || null,
-          modelRationale: model.rationale,
+          modelRationale: `${model.rationale} ${SEASON_LABEL[seasonMode]}: first ${intervals.firstDays}d, repeat ${intervals.repeatDays}d.`,
         });
       });
     });
@@ -836,7 +948,7 @@ export default function GreenWork() {
       if (a.treeId !== b.treeId) return a.treeId - b.treeId;
       return a.activityLabel.localeCompare(b.activityLabel);
     });
-  }, [assigneeFilter, tasks, trees]);
+  }, [assigneeFilter, tasks, trees, seasonMode]);
 
   const liveMaintenanceSummary = useMemo(() => {
     return liveMaintenanceRows.reduce(
@@ -1046,6 +1158,17 @@ export default function GreenWork() {
               <span className="green-work-active-hub-kicker">Active Project</span>
               <strong>{activeProjectName}</strong>
               <p>Select an action to continue.</p>
+              <div className="green-work-season-picker">
+                <label htmlFor="green-work-season-select">Season Model</label>
+                <select
+                  id="green-work-season-select"
+                  value={seasonMode}
+                  onChange={(e) => setSeasonMode(e.target.value as SeasonMode)}
+                >
+                  <option value="rainy">Rainy Season</option>
+                  <option value="dry">Dry Season</option>
+                </select>
+              </div>
             </div>
             <div className="green-work-action-grid">
               {activeProjectActions.map((action) => (
@@ -1346,12 +1469,27 @@ export default function GreenWork() {
                 <option value="normal">Normal</option>
                 <option value="high">High</option>
               </select>
-              <input
-                type="date"
-                value={newTask.due_date}
-                onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+              <select
+                value={newTask.due_mode}
+                onChange={(e) => setNewTask({ ...newTask, due_mode: e.target.value as TaskDueMode })}
                 disabled={!activeProjectId}
-              />
+              >
+                <option value="model">Date Based On Model ({SEASON_LABEL[seasonMode]})</option>
+                <option value="manual">Other Date (Custom)</option>
+              </select>
+              {newTask.due_mode === "model" ? (
+                <>
+                  <input type="date" value={assignTaskModelPreview.dueDateInput} readOnly disabled />
+                  <p className="green-work-note">{assignTaskModelPreview.detail}</p>
+                </>
+              ) : (
+                <input
+                  type="date"
+                  value={newTask.due_date}
+                  onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+                  disabled={!activeProjectId}
+                />
+              )}
               <textarea
                 placeholder="Notes"
                 value={newTask.notes}
@@ -1530,6 +1668,7 @@ export default function GreenWork() {
               </div>
 
               <div className="green-work-live-summary">
+                <span className="green-work-live-pill neutral">Season: {SEASON_LABEL[seasonMode]}</span>
                 <span className="green-work-live-pill danger">Danger: {liveMaintenanceSummary.danger}</span>
                 <span className="green-work-live-pill warning">In Progress / Due Soon: {liveMaintenanceSummary.warning}</span>
                 <span className="green-work-live-pill ok">On Track: {liveMaintenanceSummary.ok}</span>
@@ -1606,7 +1745,8 @@ export default function GreenWork() {
               <div className="green-work-live-sources">
                 <h4>Schedule Sources</h4>
                 <p>
-                  Cadence is a Nigeria-adapted field model for live monitoring. Review intervals seasonally by state-level rainfall outlook.
+                  Cadence is a Nigeria-adapted field model for live monitoring using {SEASON_LABEL[seasonMode]} assumptions.
+                  Review intervals seasonally by state-level rainfall outlook.
                 </p>
                 <ul>
                   {LIVE_TABLE_SOURCES.map((source) => (
