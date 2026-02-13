@@ -55,7 +55,15 @@ type WorkTask = {
   completed_at?: string | null;
 };
 
-type WorkForm = "project_focus" | "create_project" | "add_user" | "users" | "assign_work" | "assign_task" | "overview";
+type WorkForm =
+  | "project_focus"
+  | "create_project"
+  | "add_user"
+  | "users"
+  | "assign_work"
+  | "assign_task"
+  | "overview"
+  | "live_table";
 type StaffMenuState = { user: GreenUser; x: number; y: number } | null;
 type DrawerFrame = { top: number; left: number; width: number; height: number };
 
@@ -92,6 +100,120 @@ const taskSortStamp = (task: WorkTask) => {
   const raw = task.completed_at || task.due_date || task.created_at || "";
   const stamp = raw ? new Date(raw).getTime() : 0;
   return Number.isNaN(stamp) ? 0 : stamp;
+};
+const parseDateValue = (value: string | null | undefined) => {
+  if (!value) return null;
+  const normalized = value.length <= 10 ? `${value}T00:00:00` : value;
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+const startOfDay = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate());
+const addDays = (date: Date, days: number) => {
+  const next = new Date(date.getTime());
+  next.setDate(next.getDate() + days);
+  return next;
+};
+const dayDiff = (target: Date, reference: Date) =>
+  Math.round((startOfDay(target).getTime() - startOfDay(reference).getTime()) / 86400000);
+
+const MAINTENANCE_ACTIVITY_ORDER = ["watering", "weeding", "protection", "inspection", "replacement"] as const;
+type MaintenanceActivity = (typeof MAINTENANCE_ACTIVITY_ORDER)[number];
+type LiveStatusTone = "danger" | "warning" | "ok" | "info";
+type MaintenanceModel = {
+  label: string;
+  firstDays: number;
+  repeatDays: (treeAgeDays: number) => number;
+  rationale: string;
+};
+
+const MAINTENANCE_MODEL: Record<MaintenanceActivity, MaintenanceModel> = {
+  watering: {
+    label: "Watering",
+    firstDays: 0,
+    repeatDays: (ageDays) => {
+      if (ageDays < 90) return 7;
+      if (ageDays < 180) return 10;
+      return 14;
+    },
+    rationale: "Early establishment needs frequent moisture checks; interval increases as trees establish.",
+  },
+  weeding: {
+    label: "Weeding",
+    firstDays: 30,
+    repeatDays: (ageDays) => {
+      if (ageDays < 365) return 60;
+      if (ageDays < 730) return 120;
+      return 180;
+    },
+    rationale: "Heavy control in years 1-2, then reduced cycle once canopy suppression improves.",
+  },
+  protection: {
+    label: "Protection",
+    firstDays: 0,
+    repeatDays: () => 30,
+    rationale: "Protection checks should be continuous, with tighter monitoring in dry-season risk windows.",
+  },
+  inspection: {
+    label: "Inspection",
+    firstDays: 14,
+    repeatDays: (ageDays) => (ageDays < 180 ? 30 : 90),
+    rationale: "Early fortnight check, then monthly in establishment period, then quarterly supervision.",
+  },
+  replacement: {
+    label: "Replacement",
+    firstDays: 42,
+    repeatDays: () => 180,
+    rationale: "Initial refill around week 6-8 with later mortality checks in follow-up cycles.",
+  },
+};
+
+const LIVE_TABLE_SOURCES = [
+  {
+    label: "FAO - Forest restoration monitoring and maintenance sequence",
+    url: "https://www.fao.org/sustainable-forest-management-toolbox/modules/forest-restoration/en",
+  },
+  {
+    label: "FAO - Post-planting operations (watering, protection, replacement)",
+    url: "https://www.fao.org/4/u2247e/u2247e0a.htm",
+  },
+  {
+    label: "FAO - Savanna plantation field maintenance practices (Nigeria-relevant context)",
+    url: "https://www.fao.org/4/93269e/93269e03.htm",
+  },
+  {
+    label: "NiMet seasonal outlook context for local onset/dry-period planning",
+    url: "https://www.nimet.gov.ng/news?id=94",
+  },
+];
+
+type LiveMaintenanceRow = {
+  key: string;
+  treeId: number;
+  assignee: string;
+  activity: MaintenanceActivity;
+  activityLabel: string;
+  plantingDate: string | null;
+  treeAgeDays: number | null;
+  lastDoneAt: string | null;
+  modelDueDate: string | null;
+  assignedDueDate: string | null;
+  effectiveDueDate: string | null;
+  countdownDays: number | null;
+  tone: LiveStatusTone;
+  indicator: string;
+  statusText: string;
+  doneCount: number;
+  pendingCount: number;
+  overdueCount: number;
+  openTaskId: number | null;
+  modelRationale: string;
+};
+
+const liveToneRank = (tone: LiveStatusTone) => {
+  if (tone === "danger") return 0;
+  if (tone === "warning") return 1;
+  if (tone === "info") return 2;
+  return 3;
 };
 
 const R2_BUCKET_HINT = "photosgreen";
@@ -239,6 +361,14 @@ export default function GreenWork() {
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [staffMenu]);
+
+  useEffect(() => {
+    if (!activeProjectId || activeForm !== "live_table") return;
+    const timer = window.setInterval(() => {
+      void loadProjectData(activeProjectId).catch(() => {});
+    }, 20000);
+    return () => window.clearInterval(timer);
+  }, [activeProjectId, activeForm]);
 
   const onSelectProject = async (id: number) => {
     setActiveProjectId(id);
@@ -566,8 +696,166 @@ export default function GreenWork() {
       },
     );
   }, [filteredOverviewSummary]);
+
+  const liveMaintenanceRows = useMemo<LiveMaintenanceRow[]>(() => {
+    const today = startOfDay(new Date());
+    const assigneeKey = assigneeFilter === "all" ? "" : normalizeName(assigneeFilter);
+    const relevantTasks = assigneeKey
+      ? tasks.filter((task) => normalizeName(task.assignee_name) === assigneeKey)
+      : tasks;
+
+    const taskBuckets = new Map<string, WorkTask[]>();
+    relevantTasks.forEach((task) => {
+      const typeKey = normalizeName(task.task_type) as MaintenanceActivity;
+      if (!MAINTENANCE_ACTIVITY_ORDER.includes(typeKey)) return;
+      const key = `${task.tree_id}:${typeKey}`;
+      const bucket = taskBuckets.get(key);
+      if (bucket) bucket.push(task);
+      else taskBuckets.set(key, [task]);
+    });
+
+    const scopedTrees =
+      assigneeFilter === "all"
+        ? trees
+        : trees.filter((tree) => {
+            const ownerMatch = normalizeName(tree.created_by) === assigneeKey;
+            if (ownerMatch) return true;
+            return MAINTENANCE_ACTIVITY_ORDER.some((activity) =>
+              taskBuckets.has(`${tree.id}:${activity}`)
+            );
+          });
+
+    const rows: LiveMaintenanceRow[] = [];
+    scopedTrees.forEach((tree) => {
+      const plantingDateObj = parseDateValue(tree.planting_date);
+      const treeAgeDays = plantingDateObj ? Math.max(dayDiff(today, plantingDateObj), 0) : null;
+      const assignee = tree.created_by || "-";
+
+      MAINTENANCE_ACTIVITY_ORDER.forEach((activity) => {
+        const model = MAINTENANCE_MODEL[activity];
+        const bucket = [...(taskBuckets.get(`${tree.id}:${activity}`) || [])];
+        const doneTasks = bucket.filter((task) => isCompleteStatus(task.status));
+        const notDoneTasks = bucket.filter((task) => !isCompleteStatus(task.status));
+        const overdueTasks = notDoneTasks.filter((task) => isOverdueTask(task));
+
+        const latestDone = doneTasks.sort((a, b) => taskSortStamp(b) - taskSortStamp(a))[0] || null;
+        const activeTask =
+          notDoneTasks
+            .slice()
+            .sort((a, b) => {
+              const aDate = parseDateValue(a.due_date || a.created_at || null);
+              const bDate = parseDateValue(b.due_date || b.created_at || null);
+              const aStamp = aDate ? aDate.getTime() : Number.MAX_SAFE_INTEGER;
+              const bStamp = bDate ? bDate.getTime() : Number.MAX_SAFE_INTEGER;
+              return aStamp - bStamp;
+            })[0] || null;
+
+        const latestDoneDate = parseDateValue(latestDone?.completed_at || latestDone?.due_date || latestDone?.created_at || null);
+        const repeatDays = model.repeatDays(Math.max(treeAgeDays || 0, 0));
+        const modelDue = latestDoneDate
+          ? addDays(latestDoneDate, repeatDays)
+          : plantingDateObj
+            ? addDays(plantingDateObj, model.firstDays)
+            : null;
+        const assignedDue = parseDateValue(activeTask?.due_date || null);
+
+        let effectiveDue: Date | null = null;
+        if (modelDue && assignedDue) {
+          effectiveDue = modelDue.getTime() <= assignedDue.getTime() ? modelDue : assignedDue;
+        } else {
+          effectiveDue = modelDue || assignedDue;
+        }
+
+        const countdownDays = effectiveDue ? dayDiff(effectiveDue, today) : null;
+
+        let tone: LiveStatusTone = "ok";
+        let indicator = "On schedule";
+        let statusText = "No open task";
+
+        if (!plantingDateObj && !activeTask) {
+          tone = "info";
+          indicator = "Planting date missing";
+          statusText = "Set planting date for model schedule";
+        } else if (activeTask) {
+          statusText = `Task #${activeTask.id} ${activeTask.status || "pending"}`;
+          if (countdownDays !== null && countdownDays < 0) {
+            tone = "danger";
+            indicator = `Overdue by ${Math.abs(countdownDays)} day${Math.abs(countdownDays) === 1 ? "" : "s"}`;
+          } else if (countdownDays !== null && countdownDays <= 3) {
+            tone = "warning";
+            indicator = `Due in ${countdownDays} day${countdownDays === 1 ? "" : "s"}`;
+          } else {
+            tone = "warning";
+            indicator = "Assigned and in progress";
+          }
+        } else if (countdownDays !== null && countdownDays < 0) {
+          tone = "danger";
+          indicator = `Not done, overdue by ${Math.abs(countdownDays)} day${Math.abs(countdownDays) === 1 ? "" : "s"}`;
+          statusText = "No open task assigned";
+        } else if (countdownDays !== null && countdownDays <= 7) {
+          tone = "warning";
+          indicator = `Due in ${countdownDays} day${countdownDays === 1 ? "" : "s"}`;
+          statusText = "Upcoming window";
+        } else if (doneTasks.length > 0) {
+          tone = "ok";
+          indicator = "Cycle completed";
+          statusText = "Waiting for next cycle";
+        }
+
+        rows.push({
+          key: `${tree.id}-${activity}`,
+          treeId: tree.id,
+          assignee,
+          activity,
+          activityLabel: model.label,
+          plantingDate: tree.planting_date || null,
+          treeAgeDays,
+          lastDoneAt: latestDone?.completed_at || latestDone?.due_date || latestDone?.created_at || null,
+          modelDueDate: modelDue ? modelDue.toISOString() : null,
+          assignedDueDate: assignedDue ? assignedDue.toISOString() : null,
+          effectiveDueDate: effectiveDue ? effectiveDue.toISOString() : null,
+          countdownDays,
+          tone,
+          indicator,
+          statusText,
+          doneCount: doneTasks.length,
+          pendingCount: notDoneTasks.length,
+          overdueCount: overdueTasks.length,
+          openTaskId: activeTask?.id || null,
+          modelRationale: model.rationale,
+        });
+      });
+    });
+
+    return rows.sort((a, b) => {
+      const toneDiff = liveToneRank(a.tone) - liveToneRank(b.tone);
+      if (toneDiff !== 0) return toneDiff;
+      const aCountdown = a.countdownDays ?? Number.MAX_SAFE_INTEGER;
+      const bCountdown = b.countdownDays ?? Number.MAX_SAFE_INTEGER;
+      if (aCountdown !== bCountdown) return aCountdown - bCountdown;
+      if (a.treeId !== b.treeId) return a.treeId - b.treeId;
+      return a.activityLabel.localeCompare(b.activityLabel);
+    });
+  }, [assigneeFilter, tasks, trees]);
+
+  const liveMaintenanceSummary = useMemo(() => {
+    return liveMaintenanceRows.reduce(
+      (acc, row) => {
+        acc.total += 1;
+        if (row.tone === "danger") acc.danger += 1;
+        if (row.tone === "warning") acc.warning += 1;
+        if (row.tone === "ok") acc.ok += 1;
+        if (row.tone === "info") acc.info += 1;
+        if (row.countdownDays !== null && row.countdownDays <= 7 && row.countdownDays >= 0) acc.dueSoon += 1;
+        return acc;
+      },
+      { total: 0, danger: 0, warning: 0, ok: 0, info: 0, dueSoon: 0 },
+    );
+  }, [liveMaintenanceRows]);
+
   const activeProjectActions: Array<{ form: WorkForm; title: string; note: string }> = [
     { form: "overview", title: "Overview", note: "Progress + map summary" },
+    { form: "live_table", title: "Live Maintenance", note: "Cycle due table + alerts" },
     { form: "users", title: "Users Board", note: "All staff status and roles" },
     { form: "add_user", title: "Add Staff", note: "Create new user profile" },
     { form: "assign_work", title: "Planting Orders", note: "Assign tree planting targets" },
@@ -626,8 +914,9 @@ export default function GreenWork() {
     if (!activeProjectId) return "";
     return projects.find((p) => p.id === activeProjectId)?.name || "";
   }, [activeProjectId, projects]);
-  const showSidebar = activeForm !== null && activeForm !== "overview";
+  const showSidebar = activeForm !== null && activeForm !== "overview" && activeForm !== "live_table";
   const overviewMode = Boolean(activeProjectId && activeForm === "overview");
+  const liveTableMode = Boolean(activeProjectId && activeForm === "live_table");
   const activeTreeId = inspectedTree?.id || 0;
 
   const recalcDrawerFrame = useCallback(() => {
@@ -815,6 +1104,13 @@ export default function GreenWork() {
               onClick={() => openForm("overview")}
             >
               Overview
+            </button>
+            <button
+              className={`green-work-menu-item ${activeForm === "live_table" ? "active" : ""}`}
+              type="button"
+              onClick={() => openForm("live_table")}
+            >
+              Live Maintenance Table
             </button>
             <button
               className={`green-work-menu-item ${activeForm === "users" ? "active" : ""}`}
@@ -1069,7 +1365,7 @@ export default function GreenWork() {
           )}
         </aside>
 
-        <section className={`green-work-main ${overviewMode ? "overview-mode" : "single-mode"}`}>
+        <section className={`green-work-main ${overviewMode || liveTableMode ? "overview-mode" : "single-mode"}`}>
           {activeProjectId && activeForm === "overview" && (
             <div className="green-work-card green-work-overview-card">
               <div className="green-work-row">
@@ -1215,6 +1511,116 @@ export default function GreenWork() {
             </div>
           )}
 
+          {activeProjectId && activeForm === "live_table" && (
+            <div className="green-work-card green-work-live-card">
+              <div className="green-work-row">
+                <h3>Live Maintenance Table</h3>
+                <div className="work-actions">
+                  <button type="button" onClick={() => void loadProjectData(activeProjectId)}>
+                    Refresh
+                  </button>
+                  <select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}>
+                    {assignees.map((a) => (
+                      <option key={a} value={a}>
+                        {a === "all" ? "All staff" : a}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="green-work-live-summary">
+                <span className="green-work-live-pill danger">Danger: {liveMaintenanceSummary.danger}</span>
+                <span className="green-work-live-pill warning">In Progress / Due Soon: {liveMaintenanceSummary.warning}</span>
+                <span className="green-work-live-pill ok">On Track: {liveMaintenanceSummary.ok}</span>
+                <span className="green-work-live-pill info">Needs Planting Date: {liveMaintenanceSummary.info}</span>
+                <span className="green-work-live-pill neutral">Rows: {liveMaintenanceSummary.total}</span>
+              </div>
+
+              <div className="green-work-live-table-wrap">
+                <table className="green-work-live-table">
+                  <thead>
+                    <tr>
+                      <th>Tree</th>
+                      <th>Staff</th>
+                      <th>Activity</th>
+                      <th>Tree Age</th>
+                      <th>Last Done</th>
+                      <th>Model Due</th>
+                      <th>Assigned Due</th>
+                      <th>Countdown</th>
+                      <th>Status</th>
+                      <th>Indicator</th>
+                      <th>Progress</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {liveMaintenanceRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={11} className="green-work-live-empty">
+                          No tree maintenance rows available for this filter.
+                        </td>
+                      </tr>
+                    ) : (
+                      liveMaintenanceRows.map((row) => (
+                        <tr key={row.key} className={`tone-${row.tone}`}>
+                          <td>
+                            <span className="green-work-live-tree-link">#{row.treeId}</span>
+                          </td>
+                          <td>{row.assignee}</td>
+                          <td>
+                            <strong>{row.activityLabel}</strong>
+                            <span className="green-work-live-hint">{row.modelRationale}</span>
+                          </td>
+                          <td>{row.treeAgeDays === null ? "-" : `${row.treeAgeDays}d`}</td>
+                          <td>{formatDateLabel(row.lastDoneAt)}</td>
+                          <td>{formatDateLabel(row.modelDueDate)}</td>
+                          <td>{formatDateLabel(row.assignedDueDate)}</td>
+                          <td
+                            className={`green-work-live-countdown ${
+                              row.countdownDays !== null && row.countdownDays < 0 ? "overdue" : ""
+                            }`}
+                          >
+                            {row.countdownDays === null
+                              ? "-"
+                              : row.countdownDays < 0
+                                ? `${Math.abs(row.countdownDays)}d late`
+                                : row.countdownDays === 0
+                                  ? "Due today"
+                                  : `${row.countdownDays}d left`}
+                          </td>
+                          <td>{row.statusText}</td>
+                          <td>
+                            <span className={`green-work-live-indicator ${row.tone}`}>{row.indicator}</span>
+                          </td>
+                          <td>
+                            Done {row.doneCount} | Open {row.pendingCount} | Overdue {row.overdueCount}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="green-work-live-sources">
+                <h4>Schedule Sources</h4>
+                <p>
+                  Cadence is a Nigeria-adapted field model for live monitoring. Review intervals seasonally by state-level rainfall outlook.
+                </p>
+                <ul>
+                  {LIVE_TABLE_SOURCES.map((source) => (
+                    <li key={source.url}>
+                      <a href={source.url} target="_blank" rel="noreferrer">
+                        {source.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
           <div ref={mapCardRef} className={`green-work-card green-work-map-card ${overviewMode ? "overview-map" : ""}`}>
             <h3>Tree Map by Assignee</h3>
             {!activeProjectId && (
@@ -1226,7 +1632,7 @@ export default function GreenWork() {
                   trees={filteredTrees}
                   onAddTree={() => {}}
                   enableDraw={false}
-                  minHeight={overviewMode ? 480 : 220}
+                  minHeight={overviewMode || liveTableMode ? 480 : 220}
                   onTreeInspect={(detail) => {
                     setInspectedTree(detail);
                     if (detail) setMenuOpen(false);

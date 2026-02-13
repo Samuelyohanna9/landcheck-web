@@ -1015,6 +1015,204 @@
   color: #476857;
 }
 
+.green-work-live-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.62rem;
+}
+
+.green-work-live-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+}
+
+.green-work-live-pill {
+  border-radius: 999px;
+  border: 1px solid rgba(25, 80, 47, 0.18);
+  background: #f7fbf7;
+  color: #214e39;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.18rem 0.5rem;
+}
+
+.green-work-live-pill.danger {
+  background: rgba(255, 226, 226, 0.95);
+  color: #a83a30;
+  border-color: rgba(183, 62, 50, 0.3);
+}
+
+.green-work-live-pill.warning {
+  background: rgba(255, 245, 222, 0.95);
+  color: #915b0f;
+  border-color: rgba(176, 119, 26, 0.3);
+}
+
+.green-work-live-pill.ok {
+  background: rgba(222, 250, 228, 0.95);
+  color: #1f7c3f;
+  border-color: rgba(31, 124, 63, 0.28);
+}
+
+.green-work-live-pill.info {
+  background: rgba(232, 240, 255, 0.95);
+  color: #2f5a99;
+  border-color: rgba(48, 90, 153, 0.28);
+}
+
+.green-work-live-table-wrap {
+  border: 1px solid rgba(23, 76, 45, 0.14);
+  border-radius: 12px;
+  background: rgba(251, 254, 251, 0.97);
+  overflow: auto;
+}
+
+.green-work-live-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1060px;
+}
+
+.green-work-live-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #edf7ee;
+  border-bottom: 1px solid rgba(20, 77, 43, 0.18);
+  color: #1b4b35;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 0.46rem 0.42rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.green-work-live-table tbody td {
+  border-bottom: 1px solid rgba(23, 74, 44, 0.1);
+  padding: 0.45rem 0.42rem;
+  font-size: 0.79rem;
+  vertical-align: top;
+  color: #274d3c;
+}
+
+.green-work-live-table tbody tr.tone-danger {
+  background: rgba(255, 235, 235, 0.82);
+}
+
+.green-work-live-table tbody tr.tone-warning {
+  background: rgba(255, 245, 225, 0.72);
+}
+
+.green-work-live-table tbody tr.tone-info {
+  background: rgba(234, 241, 255, 0.72);
+}
+
+.green-work-live-table tbody tr:hover {
+  background: rgba(222, 248, 226, 0.82);
+}
+
+.green-work-live-tree-link {
+  border: 0;
+  background: transparent;
+  color: #1a5e3d;
+  font-weight: 800;
+  text-decoration: underline;
+  cursor: default;
+  padding: 0;
+}
+
+.green-work-live-hint {
+  display: block;
+  margin-top: 0.14rem;
+  color: #4f6e5f;
+  font-size: 0.71rem;
+  line-height: 1.24;
+  max-width: 240px;
+}
+
+.green-work-live-countdown {
+  font-weight: 800;
+  color: #21513a;
+}
+
+.green-work-live-countdown.overdue {
+  color: #bb3f2e;
+}
+
+.green-work-live-indicator {
+  display: inline-flex;
+  border-radius: 999px;
+  border: 1px solid rgba(26, 77, 46, 0.16);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.15rem 0.42rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.green-work-live-indicator.danger {
+  background: rgba(255, 225, 225, 0.94);
+  color: #b94330;
+  border-color: rgba(185, 67, 48, 0.32);
+}
+
+.green-work-live-indicator.warning {
+  background: rgba(255, 239, 209, 0.95);
+  color: #9e6615;
+  border-color: rgba(158, 102, 21, 0.3);
+}
+
+.green-work-live-indicator.ok {
+  background: rgba(221, 249, 227, 0.94);
+  color: #1f7b3f;
+  border-color: rgba(31, 123, 63, 0.29);
+}
+
+.green-work-live-indicator.info {
+  background: rgba(231, 240, 255, 0.95);
+  color: #2d5b9a;
+  border-color: rgba(45, 91, 154, 0.3);
+}
+
+.green-work-live-empty {
+  text-align: center;
+  color: #4f6f5f;
+  padding: 1rem 0.5rem;
+  font-weight: 700;
+}
+
+.green-work-live-sources {
+  border-top: 1px solid rgba(23, 76, 45, 0.12);
+  padding-top: 0.55rem;
+}
+
+.green-work-live-sources h4 {
+  margin: 0 0 0.22rem;
+  font-size: 0.86rem;
+  color: #194a34;
+}
+
+.green-work-live-sources p {
+  margin: 0 0 0.32rem;
+  color: #4d6b5c;
+  font-size: 0.78rem;
+}
+
+.green-work-live-sources ul {
+  margin: 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.22rem;
+}
+
+.green-work-live-sources a {
+  color: #1b5b3b;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
 .green-work-maint-type-list {
   margin-top: 0.42rem;
   display: flex;
