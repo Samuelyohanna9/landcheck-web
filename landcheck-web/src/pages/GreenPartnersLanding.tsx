@@ -97,7 +97,7 @@ export default function GreenPartnersLanding() {
               <img
                 key={shot.src}
                 className={`gp-demo-image ${index === activeShot ? "active" : ""}`}
-                src={shot.src}
+                src={encodeURI(shot.src)}
                 alt={shot.label}
               />
             ))}
