@@ -318,6 +318,12 @@
   transition: opacity 0.55s ease;
 }
 
+.gp-laptop-shot.fit-contain {
+  object-fit: contain;
+  object-position: center;
+  background: #0f141b;
+}
+
 .gp-laptop-shot.active {
   opacity: 1;
 }

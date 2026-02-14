@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/green-partners.css";
 
-type LaptopShot = { src: string; label: string };
+type LaptopShot = { src: string; label: string; fit?: "cover" | "contain" };
 type Capability = { title: string; detail: string };
 
 const navItems = ["Who We Serve", "Platform", "Resource Library", "Partnerships"];
@@ -10,8 +10,8 @@ const navItems = ["Who We Serve", "Platform", "Resource Library", "Partnerships"
 const laptopShots: LaptopShot[] = [
   { src: "/Screenshot lndcheck work.png", label: "LandCheck Work - Assignment and operations board" },
   { src: "/Screenshot landcheck work 2.png", label: "LandCheck Work - Team task execution and supervision" },
-  { src: "/Screenshot landcheck report.png", label: "LandCheck - Program reporting output" },
-  { src: "/Screenshot landcheck report 2.png", label: "LandCheck - Evidence-rich partner report view" },
+  { src: "/Screenshot landcheck report.png", label: "LandCheck - Program reporting output", fit: "contain" },
+  { src: "/Screenshot landcheck report 2.png", label: "LandCheck - Evidence-rich partner report view", fit: "contain" },
 ];
 const phoneScreenshot = "/screenshot phone-green.jpg";
 const laptopKeys = Array.from({ length: 56 }, (_, index) => index);
@@ -124,7 +124,7 @@ export default function GreenPartnersLanding() {
                     key={shot.src}
                     src={encodeURI(shot.src)}
                     alt={shot.label}
-                    className={`gp-laptop-shot ${index === activeLaptopShot ? "active" : ""}`}
+                    className={`gp-laptop-shot ${shot.fit === "contain" ? "fit-contain" : "fit-cover"} ${index === activeLaptopShot ? "active" : ""}`}
                   />
                 ))}
               </div>
