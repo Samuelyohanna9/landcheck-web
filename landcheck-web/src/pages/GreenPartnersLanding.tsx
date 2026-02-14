@@ -1,9 +1,11 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/green-partners.css";
 
 type DemoShot = { src: string; label: string };
-type CapabilityHighlight = { title: string; detail: string };
+type Capability = { title: string; detail: string };
+
+const navItems = ["Who We Serve", "Platform", "Resource Library", "Partnerships"];
 
 const demoShots: DemoShot[] = [
   { src: "/Screenshotgreen.png", label: "LandCheck Green - Field dashboard and project controls" },
@@ -14,30 +16,22 @@ const demoShots: DemoShot[] = [
   { src: "/Screenshot landcheck report 2.png", label: "Decision-ready reporting outputs from active projects" },
 ];
 
-const capabilityHighlights: CapabilityHighlight[] = [
+const capabilities: Capability[] = [
   {
-    title: "Field Capture + Verification",
+    title: "Inventory + Field Capture",
     detail: "GPS tree capture with species, status, notes, and photo evidence.",
   },
   {
-    title: "Operations Command",
-    detail: "Assign planting and maintenance by staff, project, and tree.",
+    title: "Maintenance + Work Orders",
+    detail: "Assign and track planting and maintenance work by project, staff, and tree.",
   },
   {
-    title: "Live Maintenance Intelligence",
-    detail: "Rainy and dry season due-cycle monitoring with risk signals.",
+    title: "Live Monitoring Intelligence",
+    detail: "Season-based due-cycle monitoring with risk indicators and lifecycle controls.",
   },
   {
-    title: "Species Lifecycle Governance",
-    detail: "Peg species maturity years and close cycles at the right stage.",
-  },
-  {
-    title: "Tree-Level Accountability",
-    detail: "Open each tree to review history, ownership, and task timeline.",
-  },
-  {
-    title: "Decision-Ready Reporting",
-    detail: "Generate structured CSV/PDF evidence for partners and funders.",
+    title: "Program Reporting",
+    detail: "Export structured CSV/PDF outputs for agencies, donors, investors, and collaborations.",
   },
 ];
 
@@ -54,59 +48,74 @@ export default function GreenPartnersLanding() {
 
   return (
     <div className="green-partners-page">
-      <header className="gp-topbar">
-        <button type="button" className="gp-brand" onClick={() => navigate("/")}>
+      <header className="gp-nav">
+        <button type="button" className="gp-nav-brand" onClick={() => navigate("/")}>
           <img src="/green logo.png" alt="LandCheck Green" />
         </button>
-        <a className="gp-top-cta" href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Partnership">
-          Partner: landchecktech@gmail.com
+
+        <nav className="gp-nav-links" aria-label="Partner navigation">
+          {navItems.map((item) => (
+            <button key={item} type="button">
+              {item}
+            </button>
+          ))}
+        </nav>
+
+        <a className="gp-nav-cta" href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Partnership">
+          Free Consultation
         </a>
       </header>
 
-      <main className="gp-stage">
-        <section className="gp-copy-panel">
-          <p className="gp-kicker">Restoration Intelligence Platform</p>
-          <h1>Professional Program Control for Climate Partnerships</h1>
-          <p className="gp-subtitle">
-            LandCheck Green + Work gives implementers, regulators, and funders one transparent system to execute,
-            verify, and report tree programs from planting through long-term maintenance.
+      <section className="gp-hero-banner">
+        <div className="gp-hero-tint" />
+        <div className="gp-hero-copy">
+          <p>TREE PROGRAM SOFTWARE</p>
+          <h1>LANDCHECK GREEN + WORK</h1>
+          <span>INVENTORY, MONITORING, MAINTENANCE, OUTREACH, REPORTING, WORK ORDERS</span>
+        </div>
+      </section>
+
+      <main className="gp-suite">
+        <section className="gp-suite-copy">
+          <h2>RESTORATION SOFTWARE SUITE</h2>
+          <p>
+            LandCheck Green + Work provides an operational system for NGOs, environmental organizations, government
+            agencies, donors, investors, and CSR programs to execute and verify tree projects with confidence.
           </p>
 
           <div className="gp-audience-row">
             <span>NGOs</span>
             <span>Government Agencies</span>
-            <span>Donors</span>
-            <span>Investors</span>
-            <span>CSR Programs</span>
+            <span>Donors + Investors</span>
             <span>Environmental Organizations</span>
           </div>
 
           <div className="gp-capability-grid">
-            {capabilityHighlights.map((item) => (
-              <div key={item.title} className="gp-capability-item">
+            {capabilities.map((item) => (
+              <article key={item.title} className="gp-capability-card">
                 <h3>{item.title}</h3>
                 <p>{item.detail}</p>
-              </div>
+              </article>
             ))}
           </div>
 
-          <div className="gp-impact-row">
+          <div className="gp-proof-row">
             <div>
-              <span>Operational Trust</span>
-              <strong>Real-time team and field visibility</strong>
+              <span>Execution Visibility</span>
+              <strong>Live staff and task monitoring</strong>
             </div>
             <div>
-              <span>Audit Confidence</span>
+              <span>Data Integrity</span>
               <strong>Tree-level evidence and timelines</strong>
             </div>
             <div>
-              <span>Funding Assurance</span>
-              <strong>Structured outputs for partner reporting</strong>
+              <span>Operational Intelligence</span>
+              <strong>Season + lifecycle controls</strong>
             </div>
           </div>
         </section>
 
-        <section className="gp-demo-panel">
+        <section className="gp-suite-demo">
           <div className="gp-demo-frame">
             {demoShots.map((shot, index) => (
               <img
@@ -116,9 +125,7 @@ export default function GreenPartnersLanding() {
                 alt={shot.label}
               />
             ))}
-            <div className="gp-demo-overlay">
-              <p>{demoShots[activeShot].label}</p>
-            </div>
+            <div className="gp-demo-label">{demoShots[activeShot].label}</div>
           </div>
 
           <div className="gp-demo-dots">
@@ -133,11 +140,12 @@ export default function GreenPartnersLanding() {
             ))}
           </div>
 
-          <a className="gp-main-cta" href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Pilot%20Request">
-            Request Partnership Deck
+          <a className="gp-suite-cta" href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Pilot%20Request">
+            Partner: landchecktech@gmail.com
           </a>
         </section>
       </main>
     </div>
   );
 }
+
