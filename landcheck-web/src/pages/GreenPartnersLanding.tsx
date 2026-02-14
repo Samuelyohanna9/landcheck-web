@@ -42,7 +42,6 @@ export default function GreenPartnersLanding() {
       <header className="gp-topbar">
         <button type="button" className="gp-brand" onClick={() => navigate("/")}>
           <img src="/green logo.png" alt="LandCheck Green" />
-          <span>LandCheck Green + Work</span>
         </button>
         <a className="gp-top-cta" href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Partnership">
           Partner: landchecktech@gmail.com
