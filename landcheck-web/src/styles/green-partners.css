@@ -287,13 +287,21 @@
   aspect-ratio: 16 / 10;
 }
 
-.gp-laptop-screen img {
+.gp-laptop-shot {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  object-position: center;
+  object-fit: cover;
+  object-position: center top;
   display: block;
   background: #dfe6e3;
+  opacity: 0;
+  transition: opacity 0.55s ease;
+}
+
+.gp-laptop-shot.active {
+  opacity: 1;
 }
 
 .gp-laptop-base {
@@ -373,8 +381,8 @@
   width: 100%;
   height: 100%;
   border-radius: 12px;
-  object-fit: contain;
-  object-position: center;
+  object-fit: cover;
+  object-position: center top;
   background: #dfe6e3;
   display: block;
 }
