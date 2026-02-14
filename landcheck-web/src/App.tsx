@@ -7,6 +7,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import HazardAnalysis from "./pages/HazardAnalysis";
 import Green from "./pages/Green";
 import GreenWork from "./pages/GreenWork";
+import GreenPartnersLanding from "./pages/GreenPartnersLanding";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/hazard-analysis" element={<HazardAnalysis />} />
         <Route path="/green" element={<Green />} />
         <Route path="/green-work" element={<GreenWork />} />
+        <Route path="/green-partners" element={<GreenPartnersLanding />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/feedback" element={<Feedback />} />
         <Route path="/admin" element={<AdminDashboard />} />

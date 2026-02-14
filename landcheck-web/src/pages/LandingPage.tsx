@@ -12,6 +12,7 @@ export default function LandingPage() {
           <img src="/logo.svg" alt="LandCheck" className="logo-image" />
         </div>
         <nav className="nav-links">
+          <button className="nav-btn green-hub-btn" onClick={() => navigate("/green-partners")}>Green + Work</button>
           <button className="nav-btn" onClick={() => navigate("/dashboard")}>My Plots</button>
           <button className="nav-btn feedback-btn" onClick={() => navigate("/feedback")}>Give Feedback</button>
         </nav>
