@@ -1521,7 +1521,15 @@ export default function GreenWork() {
                     {renderActionIcon(action.form)}
                   </span>
                   <span className="green-work-action-copy">
-                    <span>{action.title}</span>
+                    <span className="green-work-action-title-row">
+                      <span>{action.title}</span>
+                      {action.form === "live_table" && (
+                        <span className="green-work-live-badge" aria-label="Live monitoring active">
+                          <span className="green-work-live-badge-dot" aria-hidden="true" />
+                          Live
+                        </span>
+                      )}
+                    </span>
                     <small>{action.note}</small>
                   </span>
                 </button>
@@ -2008,7 +2016,14 @@ export default function GreenWork() {
           {activeProjectId && activeForm === "live_table" && (
             <div className="green-work-card green-work-live-card">
               <div className="green-work-row">
-                <h3>Live Maintenance Table</h3>
+                <h3 className="green-work-live-title">
+                  <span className="green-work-live-title-text">Live Maintenance Table</span>
+                  <span className="green-work-live-title-indicator" aria-label="Live monitoring active">
+                    <span className="green-work-live-title-dot" aria-hidden="true" />
+                    <span className="green-work-live-title-wave" aria-hidden="true" />
+                    Live Monitoring
+                  </span>
+                </h3>
                 <div className="work-actions">
                   <button type="button" onClick={() => void loadProjectData(activeProjectId)}>
                     Refresh
