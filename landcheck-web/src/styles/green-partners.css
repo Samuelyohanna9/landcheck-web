@@ -419,20 +419,19 @@
   overflow: hidden;
   aspect-ratio: 9 / 18;
   padding: 4px;
+  background: #dfe6e3;
 }
 
 .gp-phone-shot {
   position: absolute;
   inset: 4px;
   border-radius: 12px;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center center;
   background: #dfe6e3;
   display: block;
-  width: auto;
-  height: auto;
-  min-width: calc(100% - 8px);
-  min-height: calc(100% - 8px);
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
   opacity: 0;
   transition: opacity 0.55s ease;
 }
@@ -701,8 +700,8 @@
   .gp-phone-shot {
     inset: 3px;
     border-radius: 8px;
-    min-width: calc(100% - 6px);
-    min-height: calc(100% - 6px);
+    width: calc(100% - 6px);
+    height: calc(100% - 6px);
   }
 
   .gp-phone-home {
