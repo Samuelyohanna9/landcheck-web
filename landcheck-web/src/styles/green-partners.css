@@ -275,6 +275,10 @@
 .gp-laptop {
   position: relative;
   width: min(96%, 620px);
+  perspective: 1400px;
+  transform-style: preserve-3d;
+  transform: rotateY(-6deg) rotateX(2deg);
+  transform-origin: center center;
 }
 
 .gp-laptop-screen {
@@ -285,6 +289,8 @@
   box-shadow: 0 16px 28px rgba(0, 0, 0, 0.28);
   overflow: hidden;
   aspect-ratio: 16 / 10;
+  transform-origin: bottom center;
+  transform: rotateX(3deg);
 }
 
 .gp-laptop-shot {
@@ -305,18 +311,20 @@
 }
 
 .gp-laptop-base {
-  width: 82%;
-  height: 8px;
-  margin: -1px auto 0;
+  width: 86%;
+  height: 10px;
+  margin: -2px auto 0;
   border-radius: 0 0 8px 8px;
-  background: linear-gradient(180deg, #a5b0bb 0%, #8f99a3 100%);
+  background: linear-gradient(180deg, #c4ccd6 0%, #8f99a3 100%);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
 }
 
 .gp-laptop-deck {
-  width: 116%;
-  height: 54px;
-  margin: 0 auto;
-  transform: translateX(-8%);
+  width: 118%;
+  height: 72px;
+  margin: -1px auto 0;
+  transform: translateX(-9%) rotateX(46deg);
+  transform-origin: top center;
   border-radius: 0 0 20px 20px;
   border: 1px solid rgba(107, 119, 133, 0.72);
   border-top-color: rgba(188, 197, 208, 0.84);
@@ -327,13 +335,13 @@
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 6px;
-  padding-top: 6px;
+  gap: 8px;
+  padding-top: 10px;
 }
 
 .gp-laptop-keys {
-  width: 66%;
-  height: 16px;
+  width: 74%;
+  height: 18px;
   border-radius: 7px;
   border: 1px solid rgba(118, 128, 141, 0.5);
   background:
@@ -345,8 +353,8 @@
 }
 
 .gp-laptop-trackpad {
-  width: 28%;
-  height: 12px;
+  width: 34%;
+  height: 14px;
   border-radius: 7px;
   border: 1px solid rgba(118, 128, 141, 0.48);
   background: linear-gradient(180deg, rgba(191, 200, 211, 0.92), rgba(163, 172, 183, 0.88));
@@ -587,6 +595,7 @@
     border-width: 7px;
     border-bottom-width: 9px;
     border-radius: 10px 10px 6px 6px;
+    transform: none;
   }
 
   .gp-laptop-base {
@@ -597,7 +606,7 @@
 
   .gp-laptop-deck {
     width: 118%;
-    transform: translateX(-9%);
+    transform: translateX(-9%) rotateX(44deg);
     height: 34px;
     border-radius: 0 0 12px 12px;
     gap: 3px;
