@@ -201,6 +201,39 @@
   font-weight: 700;
 }
 
+.green-work-action-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.34rem;
+}
+
+.green-work-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(27, 116, 55, 0.3);
+  background: rgba(38, 150, 73, 0.12);
+  color: #1e6f3f;
+  font-size: 0.56rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0.14rem 0.36rem 0.13rem;
+  white-space: nowrap;
+}
+
+.green-work-live-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #24bd52;
+  box-shadow: 0 0 0 0 rgba(36, 189, 82, 0.58);
+  animation: greenWorkLivePulse 1.45s ease-out infinite;
+}
+
 .green-work-action-icon {
   width: 30px;
   height: 30px;
@@ -232,6 +265,17 @@
   border-color: rgba(229, 255, 233, 0.32);
   background: rgba(11, 74, 34, 0.28);
   color: #f3fff3;
+}
+
+.green-work-action-card.active .green-work-live-badge {
+  border-color: rgba(213, 255, 223, 0.44);
+  background: rgba(11, 66, 32, 0.35);
+  color: #e9ffed;
+}
+
+.green-work-action-card.active .green-work-live-badge-dot {
+  background: #6eff9a;
+  box-shadow: 0 0 0 0 rgba(110, 255, 154, 0.62);
 }
 
 .green-work-project-chip {
@@ -1065,6 +1109,54 @@
   gap: 0.62rem;
 }
 
+.green-work-live-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.48rem;
+}
+
+.green-work-live-title-indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  border: 1px solid rgba(30, 118, 58, 0.34);
+  background: rgba(39, 152, 74, 0.14);
+  color: #1f6d3e;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0.22rem 0.5rem 0.2rem 0.44rem;
+  overflow: hidden;
+}
+
+.green-work-live-title-dot {
+  position: relative;
+  z-index: 2;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #26b853;
+}
+
+.green-work-live-title-wave {
+  position: absolute;
+  left: 0.72rem;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: 2px solid rgba(38, 184, 83, 0.56);
+  transform: translate(-50%, -50%);
+  animation: greenWorkLiveRipple 1.8s ease-out infinite;
+  pointer-events: none;
+}
+
 .green-work-live-season-row {
   display: flex;
   align-items: center;
@@ -1577,6 +1669,37 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
+@keyframes greenWorkLivePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(36, 189, 82, 0.58);
+  }
+
+  75% {
+    box-shadow: 0 0 0 8px rgba(36, 189, 82, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(36, 189, 82, 0);
+  }
+}
+
+@keyframes greenWorkLiveRipple {
+  0% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+
+  80% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(3.6);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(3.6);
+  }
+}
+
 @media (max-width: 1320px) {
   .green-work-content {
     grid-template-columns: 1fr;
@@ -1692,6 +1815,15 @@
   .green-work-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .green-work-live-title {
+    gap: 0.34rem;
+  }
+
+  .green-work-live-title-indicator {
+    font-size: 0.56rem;
+    padding: 0.2rem 0.44rem 0.18rem 0.4rem;
   }
 
   .work-actions {
