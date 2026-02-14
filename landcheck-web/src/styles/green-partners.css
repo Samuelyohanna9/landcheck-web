@@ -274,14 +274,15 @@
 
 .gp-laptop {
   position: relative;
-  width: min(96%, 620px);
-  perspective: 1400px;
+  width: min(98%, 640px);
+  perspective: 1200px;
   transform-style: preserve-3d;
-  transform: rotateY(-6deg) rotateX(2deg);
-  transform-origin: center center;
+  transform: rotateY(-4deg);
+  transform-origin: center 62%;
 }
 
 .gp-laptop-screen {
+  position: relative;
   border-radius: 14px 14px 8px 8px;
   border: 10px solid #1a1d23;
   border-bottom-width: 12px;
@@ -289,8 +290,19 @@
   box-shadow: 0 16px 28px rgba(0, 0, 0, 0.28);
   overflow: hidden;
   aspect-ratio: 16 / 10;
-  transform-origin: bottom center;
-  transform: rotateX(3deg);
+}
+
+.gp-laptop-screen::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 42px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(227, 236, 245, 0.42);
+  z-index: 5;
 }
 
 .gp-laptop-shot {
@@ -298,10 +310,10 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  object-position: center;
+  object-fit: cover;
+  object-position: center center;
   display: block;
-  background: #0f141b;
+  background: #dfe6e3;
   opacity: 0;
   transition: opacity 0.55s ease;
 }
@@ -310,20 +322,30 @@
   opacity: 1;
 }
 
-.gp-laptop-base {
-  width: 86%;
+.gp-laptop-hinge {
+  width: 46%;
   height: 10px;
   margin: -2px auto 0;
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 10px 10px;
+  background: linear-gradient(180deg, #3f4752 0%, #171b22 100%);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.gp-laptop-base {
+  width: 106%;
+  height: 14px;
+  margin: -2px auto 0;
+  transform: translateX(-3%);
+  border-radius: 0 0 10px 10px;
   background: linear-gradient(180deg, #c4ccd6 0%, #8f99a3 100%);
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.22);
 }
 
 .gp-laptop-deck {
-  width: 118%;
-  height: 72px;
+  width: 122%;
+  height: 88px;
   margin: -1px auto 0;
-  transform: translateX(-9%) rotateX(46deg);
+  transform: translateX(-11%) rotateX(56deg);
   transform-origin: top center;
   border-radius: 0 0 20px 20px;
   border: 1px solid rgba(107, 119, 133, 0.72);
@@ -335,28 +357,34 @@
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 8px;
-  padding-top: 10px;
+  gap: 10px;
+  padding-top: 12px;
 }
 
 .gp-laptop-keys {
-  width: 74%;
-  height: 18px;
-  border-radius: 7px;
-  border: 1px solid rgba(118, 128, 141, 0.5);
-  background:
-    repeating-linear-gradient(
-      90deg,
-      rgba(130, 140, 150, 0.72) 0 6px,
-      rgba(176, 185, 196, 0.86) 6px 10px
-    );
+  width: 84%;
+  height: 44px;
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+  padding: 2px;
+  background: rgba(115, 125, 136, 0.38);
+  border: 1px solid rgba(116, 126, 139, 0.5);
+}
+
+.gp-key {
+  border-radius: 3px;
+  background: linear-gradient(180deg, #131720 0%, #080a10 100%);
+  box-shadow: inset 0 1px 0 rgba(220, 230, 242, 0.1);
 }
 
 .gp-laptop-trackpad {
-  width: 34%;
-  height: 14px;
-  border-radius: 7px;
-  border: 1px solid rgba(118, 128, 141, 0.48);
+  width: 38%;
+  height: 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(110, 120, 132, 0.58);
   background: linear-gradient(180deg, rgba(191, 200, 211, 0.92), rgba(163, 172, 183, 0.88));
 }
 
@@ -389,9 +417,9 @@
   width: 100%;
   height: 100%;
   border-radius: 12px;
-  object-fit: contain;
-  object-position: center;
-  background: #0f141b;
+  object-fit: cover;
+  object-position: center center;
+  background: #dfe6e3;
   display: block;
 }
 
@@ -591,37 +619,49 @@
     min-height: 230px;
   }
 
+  .gp-laptop {
+    transform: none;
+  }
+
   .gp-laptop-screen {
     border-width: 7px;
     border-bottom-width: 9px;
     border-radius: 10px 10px 6px 6px;
-    transform: none;
+  }
+
+  .gp-laptop-hinge {
+    width: 40%;
+    height: 7px;
+    margin-top: -1px;
   }
 
   .gp-laptop-base {
-    width: 78%;
-    height: 7px;
+    width: 98%;
+    height: 9px;
+    transform: translateX(-1%);
     border-radius: 0 0 7px 7px;
   }
 
   .gp-laptop-deck {
-    width: 118%;
-    transform: translateX(-9%) rotateX(44deg);
-    height: 34px;
+    width: 114%;
+    transform: translateX(-7%) rotateX(54deg);
+    height: 52px;
     border-radius: 0 0 12px 12px;
-    gap: 3px;
-    padding-top: 4px;
+    gap: 5px;
+    padding-top: 7px;
   }
 
   .gp-laptop-keys {
-    width: 70%;
-    height: 10px;
+    width: 82%;
+    height: 24px;
     border-radius: 4px;
+    gap: 2px;
+    padding: 1px;
   }
 
   .gp-laptop-trackpad {
-    width: 30%;
-    height: 7px;
+    width: 34%;
+    height: 9px;
     border-radius: 4px;
   }
 
