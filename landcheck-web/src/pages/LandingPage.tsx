@@ -113,51 +113,21 @@ export default function LandingPage() {
         <section className="lp-platform">
           <div className="lp-platform-copy">
             <h2>LANDCHECK OPERATION HUB</h2>
-            <p>
-              LandCheck is building the foundation for a trusted digital land registry and verification system for
-              Nigeria. Teams can execute survey production and flood screening workflows in one consistent environment.
-            </p>
-
-            <div className="lp-chip-row">
-              <span>Surveyors</span>
-              <span>Planners</span>
-              <span>Developers</span>
-              <span>Real-Estate Firms</span>
-              <span>Land Owners</span>
-            </div>
-
-            <div className="lp-capability-grid">
-              <article className="lp-capability-card">
-                <h3>Survey Plan Production</h3>
-                <p>Create true-scale plans with precise coordinate handling and professional deliverables.</p>
-              </article>
-              <article className="lp-capability-card">
-                <h3>Flood Hazard Screening</h3>
-                <p>Use global datasets for flood risk map overlays and fast preliminary risk reports.</p>
-              </article>
-              <article className="lp-capability-card">
-                <h3>Automated Feature Detection</h3>
-                <p>Identify buildings, roads, and rivers quickly inside mapping workflows.</p>
-              </article>
-              <article className="lp-capability-card">
-                <h3>Report-Ready Outputs</h3>
-                <p>Export structured PDF and DWG outputs for projects, compliance, and stakeholder review.</p>
-              </article>
-            </div>
-
-            <div className="lp-proof-row">
-              <div>
-                <span>Execution Visibility</span>
-                <strong>End-to-end survey workflow clarity</strong>
-              </div>
-              <div>
-                <span>Data Integrity</span>
-                <strong>Coordinate-consistent production standards</strong>
-              </div>
-              <div>
-                <span>Risk Intelligence</span>
-                <strong>Flood screening for informed decisions</strong>
-              </div>
+            <p className="lp-platform-kicker">SURVEY PLAN PRODUCTION AND FLOOD INTELLIGENCE SOFTWARE</p>
+            <div className="lp-platform-divider" aria-hidden="true" />
+            <div className="lp-platform-body">
+              <p>
+                LandCheck provides a unified digital workspace for survey plan production and flood hazard screening in
+                Nigeria, so teams can execute critical land workflows in one consistent environment.
+              </p>
+              <p>
+                The platform supports precise coordinate handling, map-driven production, and report-ready outputs that
+                help surveyors, planners, developers, and institutions move from field data to decisions faster.
+              </p>
+              <p>
+                By combining verification-focused survey workflows with early flood risk intelligence, LandCheck reduces
+                operational delays, improves data confidence, and strengthens land project governance.
+              </p>
             </div>
           </div>
 
