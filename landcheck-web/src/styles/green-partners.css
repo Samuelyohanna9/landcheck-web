@@ -76,7 +76,7 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  background: url("/landcheck green.png") center top / cover no-repeat;
+  background: url("/landcheck green.png") center 68% / cover no-repeat;
 }
 
 .gp-hero-tint {
@@ -394,6 +394,10 @@
     gap: 6px;
   }
 
+  .gp-hero-banner {
+    background-position: center 72%;
+  }
+
   .gp-hero-copy p {
     font-size: 0.6rem;
     letter-spacing: 0.17em;
@@ -488,4 +492,3 @@
     border-radius: 8px;
   }
 }
-
