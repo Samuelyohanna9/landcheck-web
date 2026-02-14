@@ -13,7 +13,7 @@ const laptopShots: LaptopShot[] = [
   { src: "/Screenshot landcheck report.png", label: "LandCheck - Program reporting output" },
   { src: "/Screenshot landcheck report 2.png", label: "LandCheck - Evidence-rich partner report view" },
 ];
-const phoneScreenshot = "/Screenshotgreen.png";
+const phoneScreenshot = "/screenshot phone-green.jpg";
 
 const capabilities: Capability[] = [
   {
