@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../styles/green-partners.css";
 
 type DemoShot = { src: string; label: string };
+type CapabilityHighlight = { title: string; detail: string };
 
 const demoShots: DemoShot[] = [
   { src: "/Screenshotgreen.png", label: "LandCheck Green - Field dashboard and project controls" },
@@ -13,17 +14,31 @@ const demoShots: DemoShot[] = [
   { src: "/Screenshot landcheck report 2.png", label: "Decision-ready reporting outputs from active projects" },
 ];
 
-const capabilityHighlights = [
-  "Project-based reforestation command center",
-  "GPS tree capture with species, status, and notes",
-  "Auto-linked tree photo evidence to cloud storage",
-  "Live tree map with tree-level detail sidebar",
-  "Task assignment by staff, tree, and maintenance type",
-  "Rainy and dry season due-cycle modeling",
-  "Species peg years and lifecycle closure logic",
-  "Overdue and risk indicators for supervisors",
-  "Per-staff performance and operational summaries",
-  "CSV and PDF project/work reporting exports",
+const capabilityHighlights: CapabilityHighlight[] = [
+  {
+    title: "Field Capture + Verification",
+    detail: "GPS tree capture with species, status, notes, and photo evidence.",
+  },
+  {
+    title: "Operations Command",
+    detail: "Assign planting and maintenance by staff, project, and tree.",
+  },
+  {
+    title: "Live Maintenance Intelligence",
+    detail: "Rainy and dry season due-cycle monitoring with risk signals.",
+  },
+  {
+    title: "Species Lifecycle Governance",
+    detail: "Peg species maturity years and close cycles at the right stage.",
+  },
+  {
+    title: "Tree-Level Accountability",
+    detail: "Open each tree to review history, ownership, and task timeline.",
+  },
+  {
+    title: "Decision-Ready Reporting",
+    detail: "Generate structured CSV/PDF evidence for partners and funders.",
+  },
 ];
 
 export default function GreenPartnersLanding() {
@@ -51,41 +66,42 @@ export default function GreenPartnersLanding() {
       <main className="gp-stage">
         <section className="gp-copy-panel">
           <p className="gp-kicker">Restoration Intelligence Platform</p>
-          <h1>Built to Attract Serious Climate Partners</h1>
+          <h1>Professional Program Control for Climate Partnerships</h1>
           <p className="gp-subtitle">
-            LandCheck Green + Work gives NGOs, environmental organizations, government agencies, donors, and investors a
-            transparent system for managing tree programs from planting to long-term maintenance outcomes.
+            LandCheck Green + Work gives implementers, regulators, and funders one transparent system to execute,
+            verify, and report tree programs from planting through long-term maintenance.
           </p>
 
           <div className="gp-audience-row">
             <span>NGOs</span>
-            <span>Government</span>
+            <span>Government Agencies</span>
             <span>Donors</span>
             <span>Investors</span>
             <span>CSR Programs</span>
-            <span>Environmental Orgs</span>
+            <span>Environmental Organizations</span>
           </div>
 
           <div className="gp-capability-grid">
             {capabilityHighlights.map((item) => (
-              <div key={item} className="gp-capability-item">
-                {item}
+              <div key={item.title} className="gp-capability-item">
+                <h3>{item.title}</h3>
+                <p>{item.detail}</p>
               </div>
             ))}
           </div>
 
           <div className="gp-impact-row">
             <div>
-              <span>Execution Visibility</span>
-              <strong>Live staff and task monitoring</strong>
+              <span>Operational Trust</span>
+              <strong>Real-time team and field visibility</strong>
             </div>
             <div>
-              <span>Data Integrity</span>
+              <span>Audit Confidence</span>
               <strong>Tree-level evidence and timelines</strong>
             </div>
             <div>
-              <span>Operational Intelligence</span>
-              <strong>Season model + lifecycle controls</strong>
+              <span>Funding Assurance</span>
+              <strong>Structured outputs for partner reporting</strong>
             </div>
           </div>
         </section>
