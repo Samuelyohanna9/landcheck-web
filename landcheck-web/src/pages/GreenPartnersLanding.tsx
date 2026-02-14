@@ -106,6 +106,10 @@ export default function GreenPartnersLanding() {
                 <img src={encodeURI(laptopScreenshot)} alt="LandCheck Work on laptop" />
               </div>
               <div className="gp-laptop-base" />
+              <div className="gp-laptop-deck">
+                <div className="gp-laptop-keys" />
+                <div className="gp-laptop-trackpad" />
+              </div>
             </div>
 
             <div className="gp-phone">
