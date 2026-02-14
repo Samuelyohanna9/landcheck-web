@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../styles/green-partners.css";
 
 type LaptopShot = { src: string; label: string; fit?: "cover" | "contain" };
+type PhoneShot = { src: string; label: string };
 type Capability = { title: string; detail: string };
 
 const navItems = ["Who We Serve", "Platform", "Resource Library", "Partnerships"];
@@ -13,7 +14,10 @@ const laptopShots: LaptopShot[] = [
   { src: "/Screenshot landcheck report.png", label: "LandCheck - Program reporting output", fit: "contain" },
   { src: "/Screenshot landcheck report 2.png", label: "LandCheck - Evidence-rich partner report view", fit: "contain" },
 ];
-const phoneScreenshot = "/screenshot phone-green.jpg";
+const phoneShots: PhoneShot[] = [
+  { src: "/screenshot phone-green.jpg", label: "LandCheck Green - Field dashboard" },
+  { src: "/phonr scrennshot 2.jpg", label: "LandCheck Green - Add tree with mapped positions" },
+];
 const laptopKeys = Array.from({ length: 56 }, (_, index) => index);
 
 const capabilities: Capability[] = [
@@ -38,10 +42,12 @@ const capabilities: Capability[] = [
 export default function GreenPartnersLanding() {
   const navigate = useNavigate();
   const [activeLaptopShot, setActiveLaptopShot] = useState(0);
+  const [activePhoneShot, setActivePhoneShot] = useState(0);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
       setActiveLaptopShot((prev) => (prev + 1) % laptopShots.length);
+      setActivePhoneShot((prev) => (prev + 1) % phoneShots.length);
     }, 3200);
     return () => window.clearInterval(timer);
   }, []);
@@ -143,7 +149,14 @@ export default function GreenPartnersLanding() {
             <div className="gp-phone">
               <div className="gp-phone-notch" />
               <div className="gp-phone-screen">
-                <img src={encodeURI(phoneScreenshot)} alt="LandCheck Green on phone" />
+                {phoneShots.map((shot, index) => (
+                  <img
+                    key={shot.src}
+                    src={encodeURI(shot.src)}
+                    alt={shot.label}
+                    className={`gp-phone-shot ${index === activePhoneShot ? "active" : ""}`}
+                  />
+                ))}
               </div>
               <div className="gp-phone-home" />
             </div>
@@ -151,7 +164,7 @@ export default function GreenPartnersLanding() {
 
           <div className="gp-device-labels">
             <span>Laptop view: {laptopShots[activeLaptopShot].label}</span>
-            <span>Phone view: LandCheck Green</span>
+            <span>Phone view: {phoneShots[activePhoneShot].label}</span>
           </div>
 
           <a className="gp-suite-cta" href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Pilot%20Request">
