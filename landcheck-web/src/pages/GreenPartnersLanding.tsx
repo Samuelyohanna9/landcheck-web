@@ -1,20 +1,12 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/green-partners.css";
 
-type DemoShot = { src: string; label: string };
 type Capability = { title: string; detail: string };
 
 const navItems = ["Who We Serve", "Platform", "Resource Library", "Partnerships"];
 
-const demoShots: DemoShot[] = [
-  { src: "/Screenshotgreen.png", label: "LandCheck Green - Field dashboard and project controls" },
-  { src: "/screenshotlandche green 2.png", label: "LandCheck Green - Mobile operations and status flow" },
-  { src: "/Screenshot lndcheck work.png", label: "LandCheck Work - Assignment and operations board" },
-  { src: "/Screenshot landcheck work 2.png", label: "LandCheck Work - Team task execution and supervision" },
-  { src: "/Screenshot landcheck report.png", label: "Program reporting for partners, donors, and agencies" },
-  { src: "/Screenshot landcheck report 2.png", label: "Decision-ready reporting outputs from active projects" },
-];
+const laptopScreenshot = "/Screenshot lndcheck work.png";
+const phoneScreenshot = "/Screenshotgreen.png";
 
 const capabilities: Capability[] = [
   {
@@ -37,14 +29,6 @@ const capabilities: Capability[] = [
 
 export default function GreenPartnersLanding() {
   const navigate = useNavigate();
-  const [activeShot, setActiveShot] = useState(0);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setActiveShot((prev) => (prev + 1) % demoShots.length);
-    }, 3600);
-    return () => window.clearInterval(timer);
-  }, []);
 
   return (
     <div className="green-partners-page">
@@ -77,7 +61,7 @@ export default function GreenPartnersLanding() {
 
       <main className="gp-suite">
         <section className="gp-suite-copy">
-          <h2>RESTORATION SOFTWARE SUITE</h2>
+          <h2>TREE PLANTING AND MONITORING SOFTWARE</h2>
           <p>
             LandCheck Green + Work provides an operational system for NGOs, environmental organizations, government
             agencies, donors, investors, and CSR programs to execute and verify tree projects with confidence.
@@ -116,28 +100,26 @@ export default function GreenPartnersLanding() {
         </section>
 
         <section className="gp-suite-demo">
-          <div className="gp-demo-frame">
-            {demoShots.map((shot, index) => (
-              <img
-                key={shot.src}
-                className={`gp-demo-image ${index === activeShot ? "active" : ""}`}
-                src={encodeURI(shot.src)}
-                alt={shot.label}
-              />
-            ))}
-            <div className="gp-demo-label">{demoShots[activeShot].label}</div>
+          <div className="gp-device-showcase">
+            <div className="gp-laptop">
+              <div className="gp-laptop-screen">
+                <img src={encodeURI(laptopScreenshot)} alt="LandCheck Work on laptop" />
+              </div>
+              <div className="gp-laptop-base" />
+            </div>
+
+            <div className="gp-phone">
+              <div className="gp-phone-notch" />
+              <div className="gp-phone-screen">
+                <img src={encodeURI(phoneScreenshot)} alt="LandCheck Green on phone" />
+              </div>
+              <div className="gp-phone-home" />
+            </div>
           </div>
 
-          <div className="gp-demo-dots">
-            {demoShots.map((shot, index) => (
-              <button
-                key={shot.src}
-                type="button"
-                className={index === activeShot ? "active" : ""}
-                onClick={() => setActiveShot(index)}
-                aria-label={`Show screenshot ${index + 1}`}
-              />
-            ))}
+          <div className="gp-device-labels">
+            <span>Laptop view: LandCheck Work</span>
+            <span>Phone view: LandCheck Green</span>
           </div>
 
           <a className="gp-suite-cta" href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Pilot%20Request">
@@ -148,4 +130,3 @@ export default function GreenPartnersLanding() {
     </div>
   );
 }
-
