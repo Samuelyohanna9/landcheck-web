@@ -1,83 +1,41 @@
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/green-partners.css";
 
-type Capability = {
-  title: string;
-  detail: string;
-  bullets: string[];
-};
+type DemoShot = { src: string; label: string };
 
-type PartnerTrack = {
-  title: string;
-  detail: string;
-  outcomes: string[];
-};
-
-const capabilities: Capability[] = [
-  {
-    title: "Project Command Center",
-    detail: "Create and manage restoration projects with active project focus and structured execution views.",
-    bullets: ["Project setup with location context", "Action-driven workspace", "Cross-team project visibility"],
-  },
-  {
-    title: "Field Tree Capture + Evidence",
-    detail: "Capture trees on-map with GPS coordinates, species, planting date, status, notes, and photo evidence.",
-    bullets: ["Map-based tree creation", "Mobile camera upload", "Auto-linked tree photo records"],
-  },
-  {
-    title: "Live Workforce Coordination",
-    detail: "Assign planting and maintenance to specific staff and monitor status across teams.",
-    bullets: ["User board with role and status", "Task assignment by tree and assignee", "Per-user operational filtering"],
-  },
-  {
-    title: "Season-Based Maintenance Intelligence",
-    detail: "Run live maintenance scheduling with rainy/dry models and species maturity peg years by project.",
-    bullets: ["Live due-cycle table", "Risk indicators for overdue work", "Species lifecycle closure logic"],
-  },
-  {
-    title: "Tree-Level Accountability",
-    detail: "Open any tree to see maintenance history, who worked on it, status, and timeline records.",
-    bullets: ["Tree sidebar inspection", "Task-level done/pending/overdue totals", "Timeline and maintenance traces"],
-  },
-  {
-    title: "Decision-Ready Reporting",
-    detail: "Export project and operational outputs for governance reviews, donor updates, and program reporting.",
-    bullets: ["CSV/PDF exports", "Map-aware reporting", "Tree and maintenance summary outputs"],
-  },
+const demoShots: DemoShot[] = [
+  { src: "/Screenshotgreen.png", label: "LandCheck Green - Field dashboard and project controls" },
+  { src: "/screenshotlandche green 2.png", label: "LandCheck Green - Mobile operations and status flow" },
+  { src: "/Screenshot lndcheck work.png", label: "LandCheck Work - Assignment and operations board" },
+  { src: "/Screenshot landcheck work 2.png", label: "LandCheck Work - Team task execution and supervision" },
+  { src: "/Screenshot landcheck report.png", label: "Program reporting for partners, donors, and agencies" },
+  { src: "/Screenshot landcheck report 2.png", label: "Decision-ready reporting outputs from active projects" },
 ];
 
-const partnerTracks: PartnerTrack[] = [
-  {
-    title: "NGOs & Environmental Organizations",
-    detail: "Run reforestation programs with transparent field execution and verifiable monitoring.",
-    outcomes: ["Track survival beyond planting day", "View staff output by project and assignee", "Share structured donor-ready updates"],
-  },
-  {
-    title: "Government Agencies",
-    detail: "Coordinate public restoration activities with stronger operational control and field evidence.",
-    outcomes: ["Monitor regional teams with one system", "Identify overdue interventions early", "Improve policy reporting confidence"],
-  },
-  {
-    title: "Donors, CSR & Climate Funds",
-    detail: "Gain visibility into what was planted, maintained, and completed across funded programs.",
-    outcomes: ["Tree-level traceability", "Status-based risk alerts", "Standardized reporting pathways"],
-  },
-  {
-    title: "Research & Monitoring Teams",
-    detail: "Use structured records to evaluate implementation quality and operational performance over time.",
-    outcomes: ["Species-level lifecycle parameters", "Maintenance completion evidence", "Consistent project datasets"],
-  },
-];
-
-const deliveryFlow = [
-  "Define program goals, geographies, and partner teams.",
-  "Onboard staff and start project operations in Green + Work.",
-  "Capture trees, assign maintenance, and monitor live due cycles.",
-  "Export verified progress updates for stakeholders and funders.",
+const capabilityHighlights = [
+  "Project-based reforestation command center",
+  "GPS tree capture with species, status, and notes",
+  "Auto-linked tree photo evidence to cloud storage",
+  "Live tree map with tree-level detail sidebar",
+  "Task assignment by staff, tree, and maintenance type",
+  "Rainy and dry season due-cycle modeling",
+  "Species peg years and lifecycle closure logic",
+  "Overdue and risk indicators for supervisors",
+  "Per-staff performance and operational summaries",
+  "CSV and PDF project/work reporting exports",
 ];
 
 export default function GreenPartnersLanding() {
   const navigate = useNavigate();
+  const [activeShot, setActiveShot] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveShot((prev) => (prev + 1) % demoShots.length);
+    }, 3600);
+    return () => window.clearInterval(timer);
+  }, []);
 
   return (
     <div className="green-partners-page">
@@ -86,120 +44,85 @@ export default function GreenPartnersLanding() {
           <img src="/green logo.png" alt="LandCheck Green" />
           <span>LandCheck Green + Work</span>
         </button>
-        <div className="gp-top-actions">
-          <button type="button" className="gp-top-link" onClick={() => navigate("/green")}>
-            Open Green
-          </button>
-          <button type="button" className="gp-top-link" onClick={() => navigate("/green-work")}>
-            Open Work
-          </button>
-          <a className="gp-top-cta" href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Partnership">
-            Partner With Us
-          </a>
-        </div>
+        <a className="gp-top-cta" href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Partnership">
+          Partner: landchecktech@gmail.com
+        </a>
       </header>
 
-      <section className="gp-hero">
-        <div className="gp-hero-panel" data-animate>
-          <p className="gp-kicker">Built for NGOs, Governments, Donors, and Climate Programs</p>
-          <h1>Turn Tree Planting Into Verifiable Long-Term Impact</h1>
+      <main className="gp-stage">
+        <section className="gp-copy-panel">
+          <p className="gp-kicker">Restoration Intelligence Platform</p>
+          <h1>Built to Attract Serious Climate Partners</h1>
           <p className="gp-subtitle">
-            LandCheck Green + LandCheck Work connects field operations, maintenance intelligence, and tree-level evidence
-            so restoration partners can manage execution with confidence.
+            LandCheck Green + Work gives NGOs, environmental organizations, government agencies, donors, and investors a
+            transparent system for managing tree programs from planting to long-term maintenance outcomes.
           </p>
-          <div className="gp-hero-actions">
-            <a className="gp-btn gp-btn-primary" href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Collaboration">
-              Start Collaboration
-            </a>
-            <button type="button" className="gp-btn gp-btn-soft" onClick={() => navigate("/green-work")}>
-              Explore Operations App
-            </button>
-          </div>
-          <div className="gp-hero-stats">
-            <div>
-              <span>Verified Trees</span>
-              <strong>Map + species + photo records</strong>
-            </div>
-            <div>
-              <span>Live Supervision</span>
-              <strong>Per-user assignments and progress</strong>
-            </div>
-            <div>
-              <span>Maintenance Intelligence</span>
-              <strong>Season model + species lifecycle pegs</strong>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      <main className="gp-main">
-        <section className="gp-section">
-          <div className="gp-head">
-            <p>Platform Capability</p>
-            <h2>What Green + Work Already Delivers</h2>
+          <div className="gp-audience-row">
+            <span>NGOs</span>
+            <span>Government</span>
+            <span>Donors</span>
+            <span>Investors</span>
+            <span>CSR Programs</span>
+            <span>Environmental Orgs</span>
           </div>
+
           <div className="gp-capability-grid">
-            {capabilities.map((item) => (
-              <article key={item.title} className="gp-card" data-animate>
-                <h3>{item.title}</h3>
-                <p>{item.detail}</p>
-                <ul>
-                  {item.bullets.map((bullet) => (
-                    <li key={bullet}>{bullet}</li>
-                  ))}
-                </ul>
-              </article>
+            {capabilityHighlights.map((item) => (
+              <div key={item} className="gp-capability-item">
+                {item}
+              </div>
             ))}
+          </div>
+
+          <div className="gp-impact-row">
+            <div>
+              <span>Execution Visibility</span>
+              <strong>Live staff and task monitoring</strong>
+            </div>
+            <div>
+              <span>Data Integrity</span>
+              <strong>Tree-level evidence and timelines</strong>
+            </div>
+            <div>
+              <span>Operational Intelligence</span>
+              <strong>Season model + lifecycle controls</strong>
+            </div>
           </div>
         </section>
 
-        <section className="gp-section gp-section-alt">
-          <div className="gp-head">
-            <p>Collaboration Models</p>
-            <h2>How Partners Can Work With LandCheck</h2>
+        <section className="gp-demo-panel">
+          <div className="gp-demo-frame">
+            {demoShots.map((shot, index) => (
+              <img
+                key={shot.src}
+                className={`gp-demo-image ${index === activeShot ? "active" : ""}`}
+                src={shot.src}
+                alt={shot.label}
+              />
+            ))}
+            <div className="gp-demo-overlay">
+              <p>{demoShots[activeShot].label}</p>
+            </div>
           </div>
-          <div className="gp-track-grid">
-            {partnerTracks.map((track) => (
-              <article key={track.title} className="gp-track" data-animate>
-                <h3>{track.title}</h3>
-                <p>{track.detail}</p>
-                <ul>
-                  {track.outcomes.map((outcome) => (
-                    <li key={outcome}>{outcome}</li>
-                  ))}
-                </ul>
-              </article>
+
+          <div className="gp-demo-dots">
+            {demoShots.map((shot, index) => (
+              <button
+                key={shot.src}
+                type="button"
+                className={index === activeShot ? "active" : ""}
+                onClick={() => setActiveShot(index)}
+                aria-label={`Show screenshot ${index + 1}`}
+              />
             ))}
           </div>
-        </section>
 
-        <section className="gp-section">
-          <div className="gp-head">
-            <p>Deployment Path</p>
-            <h2>Partner Rollout in 4 Steps</h2>
-          </div>
-          <div className="gp-flow">
-            {deliveryFlow.map((step, index) => (
-              <article key={step} className="gp-flow-step" data-animate>
-                <span>{index + 1}</span>
-                <p>{step}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="gp-cta" data-animate>
-          <h2>Let’s Build High-Integrity Restoration Programs Together</h2>
-          <p>
-            If you are funding, running, or supervising restoration projects, we can support a pilot and scale pathway
-            tailored to your program structure.
-          </p>
-          <a className="gp-btn gp-btn-primary" href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Pilot%20Request">
-            Contact: landchecktech@gmail.com
+          <a className="gp-main-cta" href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Pilot%20Request">
+            Request Partnership Deck
           </a>
         </section>
       </main>
     </div>
   );
 }
-
