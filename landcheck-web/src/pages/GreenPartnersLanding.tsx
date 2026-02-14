@@ -56,7 +56,7 @@ export default function GreenPartnersLanding() {
     <div className="green-partners-page">
       <header className="gp-nav">
         <button type="button" className="gp-nav-brand" onClick={() => navigate("/")}>
-          <img src="/green logo.png" alt="LandCheck Green" />
+          <img src="/green-logo-cropped-700.png" alt="LandCheck Green" />
         </button>
 
         <nav className="gp-nav-links" aria-label="Partner navigation">
