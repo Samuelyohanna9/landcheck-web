@@ -1,11 +1,18 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/green-partners.css";
 
+type LaptopShot = { src: string; label: string };
 type Capability = { title: string; detail: string };
 
 const navItems = ["Who We Serve", "Platform", "Resource Library", "Partnerships"];
 
-const laptopScreenshot = "/Screenshot lndcheck work.png";
+const laptopShots: LaptopShot[] = [
+  { src: "/Screenshot lndcheck work.png", label: "LandCheck Work - Assignment and operations board" },
+  { src: "/Screenshot landcheck work 2.png", label: "LandCheck Work - Team task execution and supervision" },
+  { src: "/Screenshot landcheck report.png", label: "LandCheck - Program reporting output" },
+  { src: "/Screenshot landcheck report 2.png", label: "LandCheck - Evidence-rich partner report view" },
+];
 const phoneScreenshot = "/Screenshotgreen.png";
 
 const capabilities: Capability[] = [
@@ -29,6 +36,14 @@ const capabilities: Capability[] = [
 
 export default function GreenPartnersLanding() {
   const navigate = useNavigate();
+  const [activeLaptopShot, setActiveLaptopShot] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveLaptopShot((prev) => (prev + 1) % laptopShots.length);
+    }, 3200);
+    return () => window.clearInterval(timer);
+  }, []);
 
   return (
     <div className="green-partners-page">
@@ -103,7 +118,14 @@ export default function GreenPartnersLanding() {
           <div className="gp-device-showcase">
             <div className="gp-laptop">
               <div className="gp-laptop-screen">
-                <img src={encodeURI(laptopScreenshot)} alt="LandCheck Work on laptop" />
+                {laptopShots.map((shot, index) => (
+                  <img
+                    key={shot.src}
+                    src={encodeURI(shot.src)}
+                    alt={shot.label}
+                    className={`gp-laptop-shot ${index === activeLaptopShot ? "active" : ""}`}
+                  />
+                ))}
               </div>
               <div className="gp-laptop-base" />
               <div className="gp-laptop-deck">
@@ -122,7 +144,7 @@ export default function GreenPartnersLanding() {
           </div>
 
           <div className="gp-device-labels">
-            <span>Laptop view: LandCheck Work</span>
+            <span>Laptop view: {laptopShots[activeLaptopShot].label}</span>
             <span>Phone view: LandCheck Green</span>
           </div>
 
