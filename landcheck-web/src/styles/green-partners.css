@@ -7,6 +7,7 @@
   --gp-border: rgba(214, 255, 224, 0.22);
   --gp-chip: rgba(18, 80, 47, 0.68);
   --gp-accent: #20ab5e;
+  --gp-accent-2: #0f7d45;
   min-height: 100dvh;
   height: 100dvh;
   overflow: hidden;
@@ -15,8 +16,8 @@
   color: var(--gp-text);
   font-family: "Outfit", sans-serif;
   background:
-    linear-gradient(130deg, rgba(3, 20, 11, 0.85) 0%, rgba(6, 36, 20, 0.68) 38%, rgba(8, 50, 26, 0.5) 100%),
-    url("/landcheck green.png") center center / cover no-repeat;
+    linear-gradient(180deg, rgba(3, 20, 11, 0.2) 0%, rgba(5, 31, 18, 0.44) 54%, rgba(5, 31, 17, 0.64) 100%),
+    url("/landcheck green.png") center top / cover no-repeat;
 }
 
 .gp-topbar {
@@ -31,27 +32,23 @@
 
 .gp-brand {
   border: 1px solid var(--gp-border);
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.96);
   color: #113e28;
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 12px;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  padding: 0;
   cursor: pointer;
 }
 
 .gp-brand img {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
   object-fit: cover;
-}
-
-.gp-brand span {
-  font-family: "Plus Jakarta Sans", sans-serif;
-  font-size: 0.88rem;
-  font-weight: 800;
 }
 
 .gp-top-cta {
@@ -300,16 +297,13 @@
   }
 
   .gp-brand {
-    padding: 6px 9px;
+    width: 44px;
+    height: 44px;
   }
 
   .gp-brand img {
-    width: 28px;
-    height: 28px;
-  }
-
-  .gp-brand span {
-    font-size: 0.76rem;
+    width: 30px;
+    height: 30px;
   }
 
   .gp-top-cta {
