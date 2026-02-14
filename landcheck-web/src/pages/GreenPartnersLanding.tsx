@@ -14,6 +14,7 @@ const laptopShots: LaptopShot[] = [
   { src: "/Screenshot landcheck report 2.png", label: "LandCheck - Evidence-rich partner report view" },
 ];
 const phoneScreenshot = "/screenshot phone-green.jpg";
+const laptopKeys = Array.from({ length: 56 }, (_, index) => index);
 
 const capabilities: Capability[] = [
   {
@@ -127,9 +128,14 @@ export default function GreenPartnersLanding() {
                   />
                 ))}
               </div>
+              <div className="gp-laptop-hinge" />
               <div className="gp-laptop-base" />
               <div className="gp-laptop-deck">
-                <div className="gp-laptop-keys" />
+                <div className="gp-laptop-keys">
+                  {laptopKeys.map((keyId) => (
+                    <span key={keyId} className="gp-key" />
+                  ))}
+                </div>
                 <div className="gp-laptop-trackpad" />
               </div>
             </div>
