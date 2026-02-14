@@ -9,8 +9,6 @@ import "../styles/landing.css";
 
 type LaptopShot = { src: string; label: string; fit?: "cover" | "contain" };
 
-const navItems = ["Who We Serve", "Platform", "Resource Library", "Partnerships"];
-
 const planProductionShots: LaptopShot[] = [
   { src: planProduction1, label: "Survey plan production workspace", fit: "contain" },
   { src: planProduction2, label: "Coordinate workflow and boundary plotting", fit: "contain" },
@@ -80,14 +78,6 @@ export default function LandingPage() {
         <button type="button" className="lp-nav-brand" onClick={() => navigate("/")}>
           <img src="/logo.svg" alt="LandCheck" />
         </button>
-
-        <nav className="lp-nav-links" aria-label="Main navigation">
-          {navItems.map((item) => (
-            <button key={item} type="button">
-              {item}
-            </button>
-          ))}
-        </nav>
 
         <div className="lp-nav-actions">
           <button type="button" className="lp-nav-btn subtle" onClick={() => navigate("/green-partners")}>
@@ -195,10 +185,6 @@ export default function LandingPage() {
                   <div className="lp-laptop-trackpad" />
                 </div>
               </div>
-            </div>
-
-            <div className="lp-device-labels">
-              <span>Laptop view: {planProductionShots[activeShot].label}</span>
             </div>
 
             <div className="lp-demo-actions">
