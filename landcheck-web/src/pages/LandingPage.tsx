@@ -117,16 +117,17 @@ export default function LandingPage() {
             <div className="lp-platform-divider" aria-hidden="true" />
             <div className="lp-platform-body">
               <p>
-                LandCheck provides a unified digital workspace for survey plan production and flood hazard screening in
-                Nigeria, so teams can execute critical land workflows in one consistent environment.
+                LandCheck is first of its kind in Nigerian surveying profession- a  powerful web application designed to reduce what
+                used to be hours of CAD work into just minutes of clicks + flood hazard screening that can be done in seconds. 
+                It is built to help surveyors, planners, developers, real estate firms, and land owners move from field data to 
+                decisions faster and with more confidence.
+              <p>
+                The platform can generate accurate, true-scale professional survey plan from coordinates inputs and CSV/EXCEL upload. 
+                Automatic detection of buildings, roads and rivers anywhere in Nigeria, feature edits, custom road names and some survey plan
+                styling tools. Export DWG, PDF, Computation sheets, preview and download ready made orthophoto and topographic map.
               </p>
               <p>
-                The platform supports precise coordinate handling, map-driven production, and report-ready outputs that
-                help surveyors, planners, developers, and institutions move from field data to decisions faster.
-              </p>
-              <p>
-                By combining verification-focused survey workflows with early flood risk intelligence, LandCheck reduces
-                operational delays, improves data confidence, and strengthens land project governance.
+                Additionally perform flood risk analysis of any land in Nigeria (Beta version currently) using global datasets and get a detailed report with risk indicators, and map overlay.
               </p>
             </div>
           </div>

@@ -665,6 +665,7 @@
   }
 
   .gp-nav {
+    grid-template-columns: auto 1fr auto;
     min-height: 56px;
     padding: 7px 10px;
   }
@@ -684,8 +685,15 @@
   }
 
   .gp-nav-cta {
-    font-size: 0.72rem;
-    padding: 9px 10px;
+    grid-column: 3;
+    justify-self: end;
+    width: auto;
+    max-width: 52vw;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.68rem;
+    padding: 8px 10px;
   }
 
   .gp-hero-copy {
@@ -869,6 +877,17 @@
 }
 
 @media (max-width: 520px) {
+  .gp-nav {
+    padding: 6px 8px;
+    gap: 8px;
+  }
+
+  .gp-nav-cta {
+    max-width: 56vw;
+    font-size: 0.64rem;
+    padding: 7px 9px;
+  }
+
   .gp-suite {
     width: calc(100% - 10px);
   }
