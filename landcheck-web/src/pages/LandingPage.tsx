@@ -121,6 +121,7 @@ export default function LandingPage() {
                 used to be hours of CAD work into just minutes of clicks + flood hazard screening that can be done in seconds. 
                 It is built to help surveyors, planners, developers, real estate firms, and land owners move from field data to 
                 decisions faster and with more confidence.
+              </p>
               <p>
                 The platform can generate accurate, true-scale professional survey plan from coordinates inputs and CSV/EXCEL upload. 
                 Automatic detection of buildings, roads and rivers anywhere in Nigeria, feature edits, custom road names and some survey plan
