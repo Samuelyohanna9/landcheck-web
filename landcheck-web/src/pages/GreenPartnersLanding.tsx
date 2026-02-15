@@ -162,11 +162,6 @@ export default function GreenPartnersLanding() {
             </div>
           </div>
 
-          <div className="gp-device-labels">
-            <span>Laptop view: {laptopShots[activeLaptopShot].label}</span>
-            <span>Phone view: {phoneShots[activePhoneShot].label}</span>
-          </div>
-
           <a className="gp-suite-cta" href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Pilot%20Request">
             Partner: landchecktech@gmail.com
           </a>
