@@ -568,10 +568,12 @@ const SpeciesAgeSurvivalChart = ({
   title,
   context,
   series,
+  emptyMessage,
 }: {
   title: string;
   context: string;
   series: SpeciesSurvivalSeries[];
+  emptyMessage?: string;
 }) => {
   const [hovered, setHovered] = useState<{
     species: string;
@@ -603,7 +605,7 @@ const SpeciesAgeSurvivalChart = ({
         <span>{series.length} species</span>
       </div>
       {series.length === 0 ? (
-        <p className="green-work-note">No species with eligible age checkpoints yet.</p>
+        <p className="green-work-note">{emptyMessage || "No species with planting dates yet."}</p>
       ) : (
         <>
           <svg
@@ -2110,55 +2112,124 @@ export default function GreenWork() {
     const age = (kpiCurrent?.age_survival || {}) as any;
     return Number(age?.trees_missing_planting_date || 0);
   }, [kpiCurrent]);
+  const speciesMissingPlantingFromTrees = useMemo(
+    () => trees.reduce((sum, tree) => (parseDateValue(tree?.planting_date || null) ? sum : sum + 1), 0),
+    [trees],
+  );
   const speciesAgeSurvivalSeries = useMemo(() => {
     const age = (kpiCurrent?.age_survival || {}) as any;
-    const rawRows = Array.isArray(age?.species_breakdown) ? age.species_breakdown : [];
     const checkpoints = [30, 90, 180];
-    const baseRows = rawRows
-      .map((row: any) => {
-        const species = String(row?.species_label || row?.species_key || "Unknown Species");
-        const trees = Number(row?.trees_with_planting_date || 0);
-        const liveRateRaw = Number(row?.current_survival_rate);
-        const liveRate = Number.isFinite(liveRateRaw) ? liveRateRaw : 0;
-        let carryRate = liveRate;
-        const points = checkpoints.map((day) => {
-          const bucket = row?.[`day_${day}`] || {};
-          const eligible = Number(bucket?.eligible_trees || 0);
-          const survived = Number(bucket?.survived_trees || 0);
-          const rawRate = Number(bucket?.survival_rate);
-          if (eligible > 0 && Number.isFinite(rawRate)) {
-            carryRate = rawRate;
+    const rawRows = Array.isArray(age?.species_breakdown) ? age.species_breakdown : [];
+
+    const toSeriesRows = (rows: any[], source: "server" | "client_fallback") =>
+      rows
+        .map((row: any) => {
+          const species = String(row?.species_label || row?.species_key || "Unknown Species");
+          const treesRaw = Number(row?.trees_with_planting_date ?? row?.current_total_trees ?? 0);
+          const trees = Number.isFinite(treesRaw) ? treesRaw : 0;
+          const checkpointSource =
+            source === "server"
+              ? "measured at checkpoint"
+              : "estimated from current status (fallback when KPI snapshot is unavailable)";
+          const provisionalSource =
+            source === "server"
+              ? "carried from earlier checkpoint/live"
+              : "estimated carry-forward from current status (fallback)";
+          const liveRateRaw = Number(row?.current_survival_rate);
+          const liveRate = Number.isFinite(liveRateRaw) ? liveRateRaw : 0;
+          let carryRate = liveRate;
+          const points = checkpoints.map((day) => {
+            const bucket = row?.[`day_${day}`] || {};
+            const eligible = Number(bucket?.eligible_trees || 0);
+            const survived = Number(bucket?.survived_trees || 0);
+            const rawRate = Number(bucket?.survival_rate);
+            if (eligible > 0 && Number.isFinite(rawRate)) {
+              carryRate = rawRate;
+              return {
+                day,
+                label: `${day}d`,
+                value: rawRate,
+                eligible,
+                survived,
+                provisional: source !== "server",
+                source: checkpointSource,
+              };
+            }
             return {
               day,
               label: `${day}d`,
-              value: rawRate,
+              value: carryRate,
               eligible,
               survived,
-              provisional: false,
-              source: "measured at checkpoint",
+              provisional: true,
+              source: day === 30 ? "live current status (before first checkpoint)" : provisionalSource,
             };
-          }
+          });
           return {
-            day,
-            label: `${day}d`,
-            value: carryRate,
-            eligible,
-            survived,
-            provisional: true,
-            source: day === 30 ? "live current status (before first checkpoint)" : "carried from earlier checkpoint/live",
+            species,
+            trees,
+            points,
           };
+        })
+        .filter((row: any) => row.trees > 0)
+        .sort((a: any, b: any) => {
+          if (b.trees !== a.trees) return b.trees - a.trees;
+          return String(a.species).localeCompare(String(b.species));
         });
-        return {
-          species,
-          trees,
-          points,
-        };
-      })
-      .filter((row: any) => row.trees > 0)
-      .sort((a: any, b: any) => {
-        if (b.trees !== a.trees) return b.trees - a.trees;
-        return String(a.species).localeCompare(String(b.species));
-      });
+
+    const fallbackRows = (() => {
+      const speciesMap = new Map<string, any>();
+      const today = startOfDay(new Date());
+      for (const tree of trees) {
+        const plantingDateObj = parseDateValue(tree?.planting_date || null);
+        if (!plantingDateObj) continue;
+        const speciesRaw = String(tree?.species || "").trim();
+        const speciesLabel = speciesRaw || "Unknown Species";
+        const speciesKey = normalizeName(speciesLabel) || "__unknown__";
+        const statusValue = normalizeTreeStatus(tree?.status || "healthy");
+        const isHealthy = HEALTHY_TREE_STATUSES.has(statusValue);
+        const ageDays = Math.max(dayDiff(today, plantingDateObj), 0);
+        if (!speciesMap.has(speciesKey)) {
+          speciesMap.set(speciesKey, {
+            species_key: speciesKey,
+            species_label: speciesLabel,
+            trees_with_planting_date: 0,
+            current_total_trees: 0,
+            current_healthy_trees: 0,
+            current_survival_rate: 0,
+            day_30: { eligible_trees: 0, survived_trees: 0, survival_rate: 0 },
+            day_90: { eligible_trees: 0, survived_trees: 0, survival_rate: 0 },
+            day_180: { eligible_trees: 0, survived_trees: 0, survival_rate: 0 },
+          });
+        }
+        const row = speciesMap.get(speciesKey);
+        row.trees_with_planting_date += 1;
+        row.current_total_trees += 1;
+        if (isHealthy) row.current_healthy_trees += 1;
+        for (const checkpointDay of checkpoints) {
+          if (ageDays < checkpointDay) continue;
+          const bucket = row[`day_${checkpointDay}`];
+          bucket.eligible_trees += 1;
+          if (isHealthy) bucket.survived_trees += 1;
+        }
+      }
+      const computedRows = Array.from(speciesMap.values());
+      for (const row of computedRows) {
+        for (const checkpointDay of checkpoints) {
+          const bucket = row[`day_${checkpointDay}`];
+          const eligible = Number(bucket?.eligible_trees || 0);
+          const survived = Number(bucket?.survived_trees || 0);
+          bucket.survival_rate = eligible > 0 ? Math.round((survived / eligible) * 1000) / 10 : 0;
+        }
+        const total = Number(row.current_total_trees || 0);
+        const healthy = Number(row.current_healthy_trees || 0);
+        row.current_survival_rate = total > 0 ? Math.round((healthy / total) * 1000) / 10 : 0;
+      }
+      return computedRows;
+    })();
+
+    const serverRows = toSeriesRows(rawRows, "server");
+    const baseRows = serverRows.length > 0 ? serverRows : toSeriesRows(fallbackRows, "client_fallback");
 
     const palette = [
       "#16a34a",
@@ -2182,7 +2253,16 @@ export default function GreenWork() {
       ...row,
       color: palette[idx % palette.length],
     }));
-  }, [kpiCurrent]);
+  }, [kpiCurrent, trees]);
+  const speciesAgeSurvivalEmptyMessage = useMemo(() => {
+    if (speciesAgeSurvivalSeries.length > 0) return "";
+    if (trees.length === 0) return "No trees in this project yet.";
+    const missingCount = ageSurvivalMissingPlantingDate > 0 ? ageSurvivalMissingPlantingDate : speciesMissingPlantingFromTrees;
+    if (missingCount > 0) {
+      return `No species lines yet: ${missingCount} tree(s) are missing planting date.`;
+    }
+    return "Species lines are not available yet. Refresh project data to load KPI checkpoints.";
+  }, [speciesAgeSurvivalSeries, trees, ageSurvivalMissingPlantingDate, speciesMissingPlantingFromTrees]);
 
   const activeProjectName = useMemo(() => {
     if (!activeProjectId) return "";
@@ -2958,7 +3038,8 @@ export default function GreenWork() {
               <SpeciesAgeSurvivalChart
                 title="Species Survival Lines (30/90/180-day checkpoints)"
                 series={speciesAgeSurvivalSeries}
-                context="Context: each line is one species in this project; early points are live/provisional until checkpoints are reached."
+                emptyMessage={speciesAgeSurvivalEmptyMessage}
+                context="Context: each line is one species from planting date; before each checkpoint the value is provisional, then it pegs to the reached checkpoint rate."
               />
 
               {carbonSummary && (
