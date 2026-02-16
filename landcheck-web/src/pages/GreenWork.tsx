@@ -78,6 +78,23 @@ type StaffMenuState = { user: GreenUser; x: number; y: number } | null;
 type DrawerFrame = { top: number; left: number; width: number; height: number };
 
 const normalizeName = (value: string | null | undefined) => (value || "").trim().toLowerCase();
+const normalizeTreeStatus = (value: string | null | undefined) => {
+  const raw = (value || "").trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
+  if (raw === "deseas" || raw === "diseased") return "disease";
+  if (raw === "needreplacement" || raw === "needsreplacement") return "need_replacement";
+  if (raw === "needs_replacement") return "need_replacement";
+  return raw || "healthy";
+};
+const REPLACEMENT_TRIGGER_STATUSES = new Set(["dead", "damaged", "removed", "need_replacement"]);
+const HEALTHY_TREE_STATUSES = new Set(["alive", "healthy"]);
+const isReplacementTriggerStatus = (value: string | null | undefined) =>
+  REPLACEMENT_TRIGGER_STATUSES.has(normalizeTreeStatus(value));
+const treeStatusLabel = (value: string | null | undefined) =>
+  normalizeTreeStatus(value)
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ") || "Unknown";
 const formatRoleLabel = (role: string) =>
   role
     .split("_")
@@ -718,7 +735,8 @@ export default function GreenWork() {
   ): { dueDate: Date | null; detail: string; blocked: boolean } => {
     const tree = trees.find((item) => Number(item.id) === Number(treeId));
     const plantingDateObj = parseDateValue(tree?.planting_date || null);
-    const treeStatus = normalizeName(tree?.status || "alive");
+    const treeStatus = normalizeTreeStatus(tree?.status || "healthy");
+    const replacementRequired = isReplacementTriggerStatus(treeStatus);
     const today = startOfDay(new Date());
     const replacementDoneTasks = tasks
       .filter((task) => Number(task.tree_id) === Number(treeId))
@@ -731,21 +749,29 @@ export default function GreenWork() {
     const lifecycleStartDate = getLifecycleStartDate(plantingDateObj, latestReplacementDoneDate);
     const treeAgeDays = lifecycleStartDate ? Math.max(dayDiff(today, lifecycleStartDate), 0) : 0;
     const maturityYears = getSpeciesMaturityYears(tree?.species || null, speciesMaturityMap);
-    const maturityReached = treeStatus === "alive" && maturityYears !== null && treeAgeDays >= maturityYears * 365;
+    const maturityReached = HEALTHY_TREE_STATUSES.has(treeStatus) && maturityYears !== null && treeAgeDays >= maturityYears * 365;
 
-    if (treeStatus === "dead" && activity !== "replacement") {
+    if (replacementRequired && activity !== "replacement") {
       return {
         dueDate: null,
-        detail: "Tree is marked dead. Assign replacement first, then restart maintenance after replanting.",
+        detail: `Tree status is '${treeStatusLabel(treeStatus)}'. Assign replacement first, then continue maintenance after replanting.`,
         blocked: true,
       };
     }
 
-    if (treeStatus === "dead" && activity === "replacement") {
+    if (replacementRequired && activity === "replacement") {
       return {
         dueDate: today,
-        detail: "Tree is marked dead. Replacement is due immediately (today).",
+        detail: `Tree status is '${treeStatusLabel(treeStatus)}'. Replacement is due immediately (today).`,
         blocked: false,
+      };
+    }
+
+    if (!replacementRequired && activity === "replacement") {
+      return {
+        dueDate: null,
+        detail: `Replacement is condition-triggered only. Current tree status is '${treeStatusLabel(treeStatus)}'.`,
+        blocked: true,
       };
     }
 
@@ -1299,7 +1325,8 @@ export default function GreenWork() {
 
     const rows: LiveMaintenanceRow[] = [];
     scopedTrees.forEach((tree) => {
-      const treeStatus = normalizeName(tree.status || "alive");
+      const treeStatus = normalizeTreeStatus(tree.status || "healthy");
+      const replacementRequired = isReplacementTriggerStatus(treeStatus);
       const plantingDateObj = parseDateValue(tree.planting_date);
       const replacementTaskBucket = [...(taskBuckets.get(`${tree.id}:replacement`) || [])];
       const replacementDoneTasks = replacementTaskBucket
@@ -1313,7 +1340,10 @@ export default function GreenWork() {
       const assignee = tree.created_by || "-";
       const maturityYears = getSpeciesMaturityYears(tree.species || null, activeProjectMaturityMap);
       const maturityReached =
-        treeStatus === "alive" && treeAgeDays !== null && maturityYears !== null && treeAgeDays >= maturityYears * 365;
+        HEALTHY_TREE_STATUSES.has(treeStatus) &&
+        treeAgeDays !== null &&
+        maturityYears !== null &&
+        treeAgeDays >= maturityYears * 365;
 
       MAINTENANCE_ACTIVITY_ORDER.forEach((activity) => {
         const model = MAINTENANCE_MODEL[activity];
@@ -1341,10 +1371,12 @@ export default function GreenWork() {
           : lifecycleStartDate
             ? addDays(lifecycleStartDate, intervals.firstDays)
             : null;
-        if (treeStatus === "dead") {
+        if (replacementRequired) {
           modelDue = activity === "replacement" ? today : null;
+        } else if (activity === "replacement") {
+          modelDue = null;
         }
-        if (maturityReached) {
+        if (maturityReached && activity !== "replacement") {
           modelDue = null;
         }
         const assignedDue = parseDateValue(activeTask?.due_date || null);
@@ -1362,11 +1394,11 @@ export default function GreenWork() {
         let indicator = "On schedule";
         let statusText = "No open task";
 
-        if (treeStatus === "dead" && activity !== "replacement") {
+        if (replacementRequired && activity !== "replacement") {
           tone = "danger";
-          indicator = "Tree marked dead";
+          indicator = `Tree status '${treeStatusLabel(treeStatus)}' requires replacement`;
           statusText = activeTask ? `Task #${activeTask.id} paused until replacement` : "Paused until replacement/replant";
-        } else if (treeStatus === "dead" && activity === "replacement") {
+        } else if (replacementRequired && activity === "replacement") {
           statusText = activeTask ? `Task #${activeTask.id} ${activeTask.status || "pending"}` : "Assign replacement now";
           if (activeTask) {
             if (countdownDays !== null && countdownDays < 0) {
@@ -1382,6 +1414,16 @@ export default function GreenWork() {
           } else {
             tone = "danger";
             indicator = "Replacement required immediately";
+          }
+        } else if (!replacementRequired && activity === "replacement") {
+          if (activeTask) {
+            tone = "warning";
+            indicator = "Replacement assigned, but tree status does not currently require replacement";
+            statusText = `Task #${activeTask.id} ${activeTask.status || "pending"}`;
+          } else {
+            tone = "info";
+            indicator = "Replacement opens only for dead, damaged, removed, or needs replacement";
+            statusText = "Not required";
           }
         } else if (maturityReached) {
           statusText = "Self-sustaining stage reached";
@@ -1442,9 +1484,12 @@ export default function GreenWork() {
           pendingCount: notDoneTasks.length,
           overdueCount: overdueTasks.length,
           openTaskId: activeTask?.id || null,
-          modelRationale: `${model.rationale} ${SEASON_LABEL[seasonMode]}: first ${intervals.firstDays}d, repeat ${intervals.repeatDays}d.${
-            latestReplacementDoneDate ? " Lifecycle reset from latest replacement completion." : ""
-          }`,
+          modelRationale:
+            activity === "replacement"
+              ? "Replacement is condition-triggered (dead/damaged/removed/needs replacement), not a routine cyclical task."
+              : `${model.rationale} ${SEASON_LABEL[seasonMode]}: first ${intervals.firstDays}d, repeat ${intervals.repeatDays}d.${
+                  latestReplacementDoneDate ? " Lifecycle reset from latest replacement completion." : ""
+                }`,
         });
       });
     });
@@ -1654,17 +1699,18 @@ export default function GreenWork() {
     const ownerExists = owner
       ? users.some((u) => normalizeName(u.full_name) === normalizeName(owner))
       : false;
-    const treeStatus = normalizeName(tree?.status || "alive");
+    const treeStatus = normalizeTreeStatus(tree?.status || "healthy");
+    const replacementRequired = isReplacementTriggerStatus(treeStatus);
     setNewTask((prev) => ({
       ...prev,
       tree_id: String(treeId),
       assignee_name: ownerExists ? owner : prev.assignee_name,
-      task_type: treeStatus === "dead" ? "replacement" : (preferredTaskType || prev.task_type),
+      task_type: replacementRequired ? "replacement" : (preferredTaskType || prev.task_type),
     }));
     setActiveForm("assign_task");
     setMenuOpen(false);
     setLiveTreeMenu(null);
-    const pickedType = treeStatus === "dead" ? "replacement" : (preferredTaskType || "maintenance");
+    const pickedType = replacementRequired ? "replacement" : (preferredTaskType || "maintenance");
     toast.success(`Tree #${treeId} ready. ${formatTaskTypeLabel(pickedType)} prefilled.`);
   };
 
