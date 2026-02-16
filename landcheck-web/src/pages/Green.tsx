@@ -917,7 +917,7 @@ export default function Green() {
             <span className="green-tile-label">Maintenance Tasks</span>
             <span className="green-tile-meta">
               <span className="green-tile-meta-item is-review">Submitted {myTaskCounts.submitted}</span>
-              <span className="green-tile-meta-item is-review-approved">Approved {myTaskCounts.done}</span>
+              <span className="green-tile-meta-item is-approved">Approved {myTaskCounts.done}</span>
             </span>
             <span className={`green-tile-badge ${myTaskCounts.undone > 0 ? "green-tile-badge-assigned" : ""}`}>{myTaskCounts.undone}</span>
             {myTaskCounts.rejected > 0 && <span className="green-tile-badge green-tile-badge-rejected">{myTaskCounts.rejected}</span>}
@@ -933,7 +933,7 @@ export default function Green() {
             </span>
             <span className="green-tile-label">Map & Add Trees</span>
             <span className="green-tile-meta">
-              <span className="green-tile-meta-item is-submitted">Submitted {plantingReviewCounts.submitted}</span>
+              <span className="green-tile-meta-item is-review">Submitted {plantingReviewCounts.submitted}</span>
               <span className="green-tile-meta-item is-approved">Approved {plantingReviewCounts.approved}</span>
             </span>
             <span className={`green-tile-badge ${pendingPlanting > 0 ? "green-tile-badge-assigned" : ""}`}>{pendingPlanting}</span>
@@ -1194,7 +1194,7 @@ export default function Green() {
               <span className="green-map-hint">Tap a task to zoom to its tree</span>
             </div>
             <div className="green-map-planting-summary">
-              <span className="green-task-status-badge is-submitted">Submitted: {plantingReviewCounts.submitted}</span>
+              <span className="green-task-status-badge is-review">Submitted: {plantingReviewCounts.submitted}</span>
               <span className="green-task-status-badge is-done">Approved: {plantingReviewCounts.approved}</span>
               <span className={`green-task-status-badge ${pendingPlanting > 0 ? "is-submitted" : "is-done"}`}>
                 Remaining: {pendingPlanting}
