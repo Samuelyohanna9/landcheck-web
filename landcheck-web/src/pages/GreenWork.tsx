@@ -1941,6 +1941,10 @@ export default function GreenWork() {
       };
     });
   }, [kpiCurrent]);
+  const ageSurvivalMissingPlantingDate = useMemo(() => {
+    const age = (kpiCurrent?.age_survival || {}) as any;
+    return Number(age?.trees_missing_planting_date || 0);
+  }, [kpiCurrent]);
 
   const activeProjectName = useMemo(() => {
     if (!activeProjectId) return "";
@@ -2691,6 +2695,11 @@ export default function GreenWork() {
                   <p className="green-work-chart-context">
                     Context: trees eligible once planted for at least the checkpoint age.
                   </p>
+                  {ageSurvivalMissingPlantingDate > 0 && (
+                    <p className="green-work-chart-context">
+                      {ageSurvivalMissingPlantingDate} tree(s) excluded because planting date is missing.
+                    </p>
+                  )}
                 </div>
               </div>
 
