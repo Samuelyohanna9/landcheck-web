@@ -20,7 +20,11 @@ const canRegisterGreenSw =
 if (canRegisterGreenSw) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/green/sw.js", { scope: "/green/" })
+      .register("/sw.js", { scope: "/" })
+      .then((registration) => {
+        // Auto-check for SW updates every 30 minutes
+        setInterval(() => registration.update(), 30 * 60 * 1000);
+      })
       .catch(() => {
         // Ignore registration errors in UI flow.
       });

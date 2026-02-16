@@ -635,8 +635,21 @@ export default function Green() {
       }
     };
 
+    // When app returns from background on mobile, re-check online status and sync
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        setIsOnline(navigator.onLine);
+        if (navigator.onLine) {
+          void syncQueued(true);
+        } else {
+          void refreshSyncStatus();
+        }
+      }
+    };
+
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.addEventListener("message", handleWorkerMessage);
     }
@@ -644,6 +657,7 @@ export default function Green() {
       cancelled = true;
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.removeEventListener("message", handleWorkerMessage);
       }
