@@ -442,6 +442,39 @@
   letter-spacing: -0.01em;
 }
 
+.green-tile-meta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+}
+
+.green-tile-meta-item {
+  border-radius: 999px;
+  border: 1px solid rgba(53, 84, 69, 0.28);
+  background: rgba(239, 245, 242, 0.95);
+  color: #234136;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.2rem 0.42rem;
+}
+
+.green-tile-meta-item.is-submitted {
+  border-color: rgba(180, 108, 24, 0.4);
+  background: rgba(255, 244, 220, 0.95);
+  color: #9a5800;
+}
+
+.green-tile-meta-item.is-approved {
+  border-color: rgba(24, 108, 50, 0.35);
+  background: rgba(234, 251, 236, 0.95);
+  color: #1b6b35;
+}
+
 .green-detail-card h3 {
   margin: 0 0 0.65rem;
   font-family: "Sora", sans-serif;
@@ -1212,6 +1245,15 @@
     line-height: 1.1;
   }
 
+  .green-container.green-home-mode .green-tile-meta {
+    gap: 0.2rem;
+  }
+
+  .green-container.green-home-mode .green-tile-meta-item {
+    font-size: 0.58rem;
+    padding: 0.16rem 0.3rem;
+  }
+
   .green-container.green-home-mode .green-tile-badge {
     min-width: 24px;
     font-size: 0.8rem;
@@ -1281,6 +1323,11 @@
 
   .green-tile-label {
     font-size: 0.78rem;
+  }
+
+  .green-tile-meta-item {
+    font-size: 0.62rem;
+    padding: 0.18rem 0.34rem;
   }
 
   .green-tile-badge {
