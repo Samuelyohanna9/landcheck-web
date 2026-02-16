@@ -60,6 +60,12 @@ const normalizeTreeStatus = (value: string | null | undefined) => {
   if (raw === "needs_replacement") return "need_replacement";
   return raw || "healthy";
 };
+const formatTreeConditionLabel = (value: string | null | undefined) =>
+  normalizeTreeStatus(value)
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ") || "Healthy";
 const HEALTHY_TREE_STATUSES = new Set(["alive", "healthy"]);
 const DEAD_TREE_STATUSES = new Set(["dead", "removed"]);
 const ATTENTION_TREE_STATUSES = new Set([
@@ -971,7 +977,7 @@ export default function Green() {
                             <span className="green-task-status-check" aria-hidden="true">
                               ✓
                             </span>
-                            Approved
+                            {`Approved / ${formatTreeConditionLabel(t.reported_tree_status || t.tree_status || "healthy")}`}
                           </span>
                         ) : isTaskSubmitted(t) ? (
                           <span className="green-task-status-badge">
@@ -1096,34 +1102,32 @@ export default function Green() {
                               onChange={(e) => onTaskPhotoPicked(t.id, e.target.files?.[0] || null)}
                             />
                           </div>
-                          {normalizeTaskState(t.task_type) === "inspection" && (
-                            <div className="tree-form-row full">
-                              <label>Inspection Tree Condition</label>
-                              <select
-                                value={
-                                  taskEdits[t.id]?.tree_status ||
-                                  normalizeTreeStatus(t.reported_tree_status || t.tree_status || "healthy")
-                                }
-                                onChange={(e) =>
-                                  setTaskEdits((prev) => ({
-                                    ...prev,
-                                    [t.id]: {
-                                      status: prev[t.id]?.status || "pending",
-                                      notes: prev[t.id]?.notes || "",
-                                      photo_url: prev[t.id]?.photo_url || "",
-                                      tree_status: e.target.value,
-                                    },
-                                  }))
-                                }
-                              >
-                                {INSPECTION_STATUS_OPTIONS.map((option) => (
-                                  <option key={option.value} value={option.value}>
-                                    {option.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
+                          <div className="tree-form-row full">
+                            <label>Tree Condition</label>
+                            <select
+                              value={
+                                taskEdits[t.id]?.tree_status ||
+                                normalizeTreeStatus(t.reported_tree_status || t.tree_status || "healthy")
+                              }
+                              onChange={(e) =>
+                                setTaskEdits((prev) => ({
+                                  ...prev,
+                                  [t.id]: {
+                                    status: prev[t.id]?.status || "pending",
+                                    notes: prev[t.id]?.notes || "",
+                                    photo_url: prev[t.id]?.photo_url || "",
+                                    tree_status: e.target.value,
+                                  },
+                                }))
+                              }
+                            >
+                              {INSPECTION_STATUS_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                           <div className="task-edit-inline-actions">
                             <button className="green-btn-primary" type="button" onClick={() => saveTaskUpdate(t.id)}>
                               Save Task Update
