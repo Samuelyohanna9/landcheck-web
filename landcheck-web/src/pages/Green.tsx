@@ -418,7 +418,14 @@ export default function Green() {
   }, [userTrees]);
 
   const refreshSyncStatus = async () => {
-    const [pending, conflicts] = await Promise.all([getOfflineQueueCount(), getOfflineConflictCount()]);
+    let pending = 0;
+    let conflicts = 0;
+    try {
+      [pending, conflicts] = await Promise.all([getOfflineQueueCount(), getOfflineConflictCount()]);
+    } catch {
+      pending = 0;
+      conflicts = 0;
+    }
     setSyncPendingCount(pending);
     setSyncConflictCount(conflicts);
     if (typeof navigator !== "undefined") {
@@ -437,9 +444,9 @@ export default function Green() {
       const res = await api.get("/green/projects");
       const list = Array.isArray(res.data) ? res.data : [];
       setProjects(list);
-      await cacheProjectsOffline(list);
+      await cacheProjectsOffline(list).catch(() => {});
     } catch (error) {
-      const cached = await getCachedProjectsOffline();
+      const cached = await getCachedProjectsOffline().catch(() => []);
       if (cached.length > 0) {
         setProjects(cached);
         return;
@@ -453,9 +460,9 @@ export default function Green() {
       const res = await api.get("/green/users");
       const list = Array.isArray(res.data) ? res.data : [];
       setUsers(list);
-      await cacheUsersOffline(list);
+      await cacheUsersOffline(list).catch(() => {});
     } catch (error) {
-      const cached = await getCachedUsersOffline();
+      const cached = await getCachedUsersOffline().catch(() => []);
       if (cached.length > 0) {
         setUsers(cached);
         return;
@@ -474,14 +481,14 @@ export default function Green() {
       const normalized = mergeTreesById(Array.isArray(treesRes.data) ? treesRes.data : []);
       setTrees(normalized);
       await Promise.all([
-        cacheProjectDetailOffline(id, projectRes.data),
-        cacheProjectTreesOffline(id, normalized),
+        cacheProjectDetailOffline(id, projectRes.data).catch(() => {}),
+        cacheProjectTreesOffline(id, normalized).catch(() => {}),
       ]);
     } catch (error) {
       const [cachedProject, cachedTrees, pendingDrafts] = await Promise.all([
-        getCachedProjectDetailOffline(id),
-        getCachedProjectTreesOffline(id),
-        getPendingTreeDraftsOffline(id),
+        getCachedProjectDetailOffline(id).catch(() => null),
+        getCachedProjectTreesOffline(id).catch(() => []),
+        getPendingTreeDraftsOffline(id).catch(() => []),
       ]);
       const mergedTrees = mergeTreesById([...(cachedTrees || []), ...(pendingDrafts || [])]);
       if (cachedProject) {
@@ -505,9 +512,9 @@ export default function Green() {
       );
       const rows = Array.isArray(res.data) ? res.data : [];
       setPlantingOrders(rows);
-      await cacheWorkOrdersOffline(projectId, assigneeName, rows);
+      await cacheWorkOrdersOffline(projectId, assigneeName, rows).catch(() => {});
     } catch (error) {
-      const cached = await getCachedWorkOrdersOffline(projectId, assigneeName);
+      const cached = await getCachedWorkOrdersOffline(projectId, assigneeName).catch(() => []);
       if (cached.length > 0) {
         setPlantingOrders(cached);
         return;
@@ -568,7 +575,18 @@ export default function Green() {
         setSyncInProgress(true);
       }
       try {
-        const result = await syncGreenQueueOffline(api);
+        let result: { synced: number; failed: number; conflicts: number; pending: number } = {
+          synced: 0,
+          failed: 0,
+          conflicts: 0,
+          pending: 0,
+        };
+        try {
+          result = await syncGreenQueueOffline(api);
+        } catch {
+          // If IndexedDB/background sync is unavailable, keep UI running live-only.
+          result = { synced: 0, failed: 0, conflicts: 0, pending: 0 };
+        }
         if (cancelled) return;
         if (result.synced > 0 || result.conflicts > 0) {
           if (activeProject) {
@@ -795,13 +813,13 @@ export default function Green() {
       setTreeTasks(scopedTasks);
       setTreeTimeline(timelineRes.data);
       await Promise.all([
-        cacheTreeTasksOffline(treeId, tasks),
-        cacheTreeTimelineOffline(treeId, timelineRes.data),
+        cacheTreeTasksOffline(treeId, tasks).catch(() => {}),
+        cacheTreeTimelineOffline(treeId, timelineRes.data).catch(() => {}),
       ]);
     } catch (error) {
       const [cachedTasks, cachedTimeline] = await Promise.all([
-        getCachedTreeTasksOffline(treeId),
-        getCachedTreeTimelineOffline(treeId),
+        getCachedTreeTasksOffline(treeId).catch(() => []),
+        getCachedTreeTimelineOffline(treeId).catch(() => null),
       ]);
       const scopedTasks = (cachedTasks || []).filter((task: any) => !activeUser || task.assignee_name === activeUser);
       if (scopedTasks.length > 0 || cachedTimeline) {
@@ -824,9 +842,9 @@ export default function Green() {
         `/green/tasks?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}&_ts=${stamp}`
       );
       rows = Array.isArray(res.data) ? res.data : [];
-      await cacheTasksOffline(activeProject.id, activeUser, rows);
+      await cacheTasksOffline(activeProject.id, activeUser, rows).catch(() => {});
     } catch (error) {
-      rows = await getCachedTasksOffline(activeProject.id, activeUser);
+      rows = await getCachedTasksOffline(activeProject.id, activeUser).catch(() => []);
       if (rows.length === 0) {
         setMyTasks([]);
         setTaskEdits({});

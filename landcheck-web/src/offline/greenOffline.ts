@@ -60,6 +60,9 @@ function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
 
 function openDb(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
+  if (typeof indexedDB === "undefined") {
+    return Promise.reject(new Error("IndexedDB is not available in this browser context."));
+  }
   dbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
@@ -77,6 +80,7 @@ function openDb(): Promise<IDBDatabase> {
       }
     };
     request.onsuccess = () => resolve(request.result);
+    request.onblocked = () => reject(new Error("IndexedDB open blocked by another tab."));
     request.onerror = () => reject(request.error || new Error("Failed to open IndexedDB"));
   });
   return dbPromise;
@@ -88,17 +92,26 @@ async function withStore<T>(
   handler: (store: IDBObjectStore) => Promise<T> | T,
 ): Promise<T> {
   const db = await openDb();
-  return new Promise<T>((resolve, reject) => {
-    const tx = db.transaction(storeName, mode);
-    const store = tx.objectStore(storeName);
-    Promise.resolve(handler(store))
-      .then((result) => {
-        tx.oncomplete = () => resolve(result);
-        tx.onerror = () => reject(tx.error || new Error("IndexedDB transaction failed"));
-        tx.onabort = () => reject(tx.error || new Error("IndexedDB transaction aborted"));
-      })
-      .catch((error) => reject(error));
+  const tx = db.transaction(storeName, mode);
+  const store = tx.objectStore(storeName);
+  const txDone = new Promise<void>((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error("IndexedDB transaction failed"));
+    tx.onabort = () => reject(tx.error || new Error("IndexedDB transaction aborted"));
   });
+  try {
+    const result = await handler(store);
+    await txDone;
+    return result;
+  } catch (error) {
+    try {
+      tx.abort();
+    } catch {
+      // Ignore abort errors when transaction already completed.
+    }
+    await txDone.catch(() => {});
+    throw error;
+  }
 }
 
 async function kvSet<T>(key: string, value: T): Promise<void> {
