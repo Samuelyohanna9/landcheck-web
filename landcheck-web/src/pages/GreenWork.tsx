@@ -78,14 +78,6 @@ type WorkForm =
   | "verra_reports";
 type StaffMenuState = { user: GreenUser; x: number; y: number } | null;
 type DrawerFrame = { top: number; left: number; width: number; height: number };
-type KpiTrendItem = {
-  snapshot_at: string;
-  metrics: {
-    survival_rate?: number;
-    evidence_complete_rate?: number;
-    [key: string]: any;
-  };
-};
 type VerraExportHistoryItem = {
   id: number;
   season_mode: string;
@@ -475,96 +467,25 @@ const renderActionIcon = (form: WorkForm) => {
   }
 };
 
-const TrendMiniChart = ({
-  title,
-  color,
-  context,
-  points,
-}: {
-  title: string;
-  color: string;
-  context: string;
-  points: Array<{ label: string; value: number }>;
-}) => {
-  const safePoints = points.length >= 2 ? points : [{ label: "start", value: 0 }, { label: "now", value: 0 }];
-  const maxY = Math.max(100, ...safePoints.map((point) => Number(point.value || 0)));
-  const minY = 0;
-  const width = 420;
-  const height = 168;
-  const left = 40;
-  const right = 14;
-  const top = 22;
-  const bottom = 36;
-  const chartWidth = width - left - right;
-  const chartHeight = height - top - bottom;
-  const yTicks = [0, 25, 50, 75, 100];
-  const xStep = safePoints.length > 1 ? chartWidth / (safePoints.length - 1) : chartWidth;
-  const toY = (value: number) => top + (1 - (value - minY) / Math.max(maxY - minY, 1)) * chartHeight;
-  const pathData = safePoints
-    .map((point, index) => {
-      const x = left + xStep * index;
-      const y = toY(Number(point.value || 0));
-      return `${index === 0 ? "M" : "L"}${x},${y}`;
-    })
-    .join(" ");
-
-  const firstLabel = safePoints[0]?.label || "";
-  const lastLabel = safePoints[safePoints.length - 1]?.label || "";
-
-  return (
-    <div className="green-work-trend-card">
-      <div className="green-work-overview-bar-head">
-        <h5>{title}</h5>
-        <span>{(safePoints[safePoints.length - 1]?.value ?? 0).toFixed(1)}%</span>
-      </div>
-      <svg className="green-work-trend-svg" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" role="img" aria-label={title}>
-        {yTicks.map((tick) => {
-          const y = toY(tick);
-          return (
-            <g key={`${title}-${tick}`}>
-              <line x1={left} y1={y} x2={left + chartWidth} y2={y} stroke="#d6e2db" strokeWidth="1" />
-              <text x={left - 8} y={y + 3} textAnchor="end" fontSize="10" fill="#5f7c70">
-                {tick}
-              </text>
-            </g>
-          );
-        })}
-        <path d={pathData} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        {safePoints.map((point, index) => {
-          const x = left + xStep * index;
-          const y = toY(Number(point.value || 0));
-          return <circle key={`${title}-dot-${index}`} cx={x} cy={y} r="3" fill={color} />;
-        })}
-        <text x={left} y={height - 12} fontSize="10" fill="#5f7c70">
-          {firstLabel}
-        </text>
-        <text x={left + chartWidth} y={height - 12} textAnchor="end" fontSize="10" fill="#5f7c70">
-          {lastLabel}
-        </text>
-      </svg>
-      <p className="green-work-chart-context">{context}</p>
-    </div>
-  );
-};
-
-type SpeciesSurvivalPoint = {
+type SpeciesDailySurvivalPoint = {
   day: number;
+  date: string;
   label: string;
-  value: number | null;
+  value: number;
   eligible: number;
   survived: number;
-  provisional: boolean;
-  source: string;
+  phase: string;
 };
 
-type SpeciesSurvivalSeries = {
+type SpeciesDailySurvivalSeries = {
   species: string;
   trees: number;
+  startDate: string;
   color: string;
-  points: SpeciesSurvivalPoint[];
+  points: SpeciesDailySurvivalPoint[];
 };
 
-const SpeciesAgeSurvivalChart = ({
+const SpeciesDailySurvivalChart = ({
   title,
   context,
   series,
@@ -572,29 +493,31 @@ const SpeciesAgeSurvivalChart = ({
 }: {
   title: string;
   context: string;
-  series: SpeciesSurvivalSeries[];
+  series: SpeciesDailySurvivalSeries[];
   emptyMessage?: string;
 }) => {
   const [hovered, setHovered] = useState<{
     species: string;
     trees: number;
-    point: SpeciesSurvivalPoint;
+    point: SpeciesDailySurvivalPoint;
     color: string;
   } | null>(null);
-  const width = 520;
-  const height = 210;
-  const left = 46;
-  const right = 14;
+  const width = 620;
+  const height = 246;
+  const left = 48;
+  const right = 16;
   const top = 18;
-  const bottom = 46;
+  const bottom = 44;
   const chartWidth = width - left - right;
   const chartHeight = height - top - bottom;
   const yTicks = [0, 20, 40, 60, 80, 100];
-  const checkpoints = [30, 90, 180];
+  const maxDay = Math.max(0, ...series.flatMap((item) => item.points.map((point) => Number(point.day || 0))));
+  const markerTicks = Array.from(new Set([0, 30, 90, 180, maxDay]))
+    .filter((day) => Number.isFinite(day) && day >= 0 && day <= maxDay)
+    .sort((a, b) => a - b);
   const xForDay = (day: number) => {
-    const idx = checkpoints.indexOf(day);
-    const pos = idx >= 0 ? idx : 0;
-    return left + (pos / Math.max(checkpoints.length - 1, 1)) * chartWidth;
+    const safeDay = Math.min(Math.max(day, 0), Math.max(maxDay, 1));
+    return left + (safeDay / Math.max(maxDay, 1)) * chartWidth;
   };
   const yForValue = (value: number) => top + (1 - value / 100) * chartHeight;
 
@@ -626,26 +549,34 @@ const SpeciesAgeSurvivalChart = ({
                 </g>
               );
             })}
-            {checkpoints.map((day) => {
+            {markerTicks.map((day) => {
               const x = xForDay(day);
               return (
                 <g key={`species-x-${day}`}>
                   <line x1={x} y1={top} x2={x} y2={top + chartHeight} stroke="#e4ede8" strokeWidth="1" />
                   <text x={x} y={height - 16} textAnchor="middle" fontSize="10" fill="#5f7c70">
-                    {day}d
+                    d{day}
                   </text>
                 </g>
               );
             })}
             {series.map((item) => {
-              const visible = item.points.filter((point) => point.value !== null && Number.isFinite(point.value));
+              const visible = item.points.filter((point) => Number.isFinite(point.value));
               const path = visible
                 .map((point, idx) => {
                   const x = xForDay(point.day);
-                  const y = yForValue(Number(point.value || 0));
+                  const y = yForValue(Number(point.value));
                   return `${idx === 0 ? "M" : "L"}${x},${y}`;
                 })
                 .join(" ");
+              const markerStep = maxDay > 180 ? Math.max(Math.ceil(maxDay / 90), 1) : 7;
+              const markerDays = new Set<number>([0, 30, 90, 180, maxDay]);
+              const markers = visible.filter((point, idx) => {
+                const lastIdx = visible.length - 1;
+                if (idx === 0 || idx === lastIdx) return true;
+                if (markerDays.has(point.day)) return true;
+                return point.day % markerStep === 0;
+              });
               return (
                 <g key={`species-line-${item.species}`}>
                   {visible.length >= 2 && (
@@ -659,18 +590,18 @@ const SpeciesAgeSurvivalChart = ({
                       opacity={0.9}
                     />
                   )}
-                  {visible.map((point) => {
+                  {markers.map((point) => {
                     const x = xForDay(point.day);
-                    const y = yForValue(Number(point.value || 0));
+                    const y = yForValue(Number(point.value));
                     return (
                       <circle
-                        key={`species-dot-${item.species}-${point.day}`}
+                        key={`species-dot-${item.species}-${point.day}-${point.date}`}
                         cx={x}
                         cy={y}
-                        r="3.4"
-                        fill={point.provisional ? "#ffffff" : item.color}
+                        r="2.8"
+                        fill="#ffffff"
                         stroke={item.color}
-                        strokeWidth={point.provisional ? "1.8" : "1.1"}
+                        strokeWidth="1.6"
                         onMouseEnter={() =>
                           setHovered({
                             species: item.species,
@@ -698,13 +629,12 @@ const SpeciesAgeSurvivalChart = ({
           <div className="green-work-species-hover">
             {hovered ? (
               <span>
-                <strong style={{ color: hovered.color }}>{hovered.species}</strong> | {hovered.point.label}:{" "}
-                {hovered.point.value !== null ? `${hovered.point.value.toFixed(1)}%` : "n/a"} | Cohort{" "}
-                {hovered.point.survived}/{hovered.point.eligible} | Trees {hovered.trees} |{" "}
-                {hovered.point.provisional ? `Provisional (${hovered.point.source})` : "Checkpoint"}
+                <strong style={{ color: hovered.color }}>{hovered.species}</strong> | {hovered.point.label} (
+                {hovered.point.date}): {hovered.point.value.toFixed(1)}% | Cohort {hovered.point.survived}/
+                {hovered.point.eligible} | Trees {hovered.trees} | {hovered.point.phase}
               </span>
             ) : (
-              <span>Hover a point to view species checkpoint details.</span>
+              <span>Hover a point to view daily species survival details.</span>
             )}
           </div>
         </>
@@ -812,8 +742,8 @@ export default function GreenWork() {
   });
   const [serverLiveSources, setServerLiveSources] = useState<{ label: string; url: string }[]>(LIVE_TABLE_SOURCES);
   const [reviewNoteByTaskId, setReviewNoteByTaskId] = useState<Record<number, string>>({});
-  const [kpiTrend, setKpiTrend] = useState<KpiTrendItem[]>([]);
   const [kpiCurrent, setKpiCurrent] = useState<Record<string, any> | null>(null);
+  const [speciesDailyTrend, setSpeciesDailyTrend] = useState<Record<string, any> | null>(null);
   const [verraFilters, setVerraFilters] = useState<{
     monitoring_start: string;
     monitoring_end: string;
@@ -920,12 +850,14 @@ export default function GreenWork() {
     }
 
     if (kpiRes.status === "fulfilled" && kpiRes.value.data) {
-      const trendRows = Array.isArray(kpiRes.value.data.trend) ? kpiRes.value.data.trend : [];
-      setKpiTrend(trendRows);
       setKpiCurrent(kpiRes.value.data.current || null);
+      const speciesDailyPayload = kpiRes.value.data?.species_daily_survival;
+      setSpeciesDailyTrend(
+        speciesDailyPayload && typeof speciesDailyPayload === "object" ? speciesDailyPayload : null,
+      );
     } else {
-      setKpiTrend([]);
       setKpiCurrent(null);
+      setSpeciesDailyTrend(null);
     }
   };
 
@@ -2043,59 +1975,6 @@ export default function GreenWork() {
   const taskPendingPct = calcProgress(filteredOverviewTotals.taskPending, filteredOverviewTotals.taskTotal);
   const taskOverduePct = calcProgress(filteredOverviewTotals.taskOverdue, filteredOverviewTotals.taskTotal);
 
-  const trendPoints = useMemo(() => {
-    const toLabel = (iso: string) => {
-      if (!iso) return "";
-      const parsed = new Date(iso);
-      if (Number.isNaN(parsed.getTime())) return iso.slice(0, 10);
-      const month = String(parsed.getMonth() + 1).padStart(2, "0");
-      const day = String(parsed.getDate()).padStart(2, "0");
-      return `${month}/${day}`;
-    };
-    const healthyNow = trees.filter((tree) => HEALTHY_TREE_STATUSES.has(normalizeTreeStatus(tree.status))).length;
-    const fallbackSurvival =
-      Number(kpiCurrent?.survival_rate || 0) ||
-      (trees.length > 0 ? Math.round((healthyNow / trees.length) * 1000) / 10 : 0);
-    const fallbackEvidence = Number(kpiCurrent?.evidence_complete_rate || 0) || 0;
-
-    const source = Array.isArray(kpiTrend) ? kpiTrend : [];
-    const compact = source.length > 18
-      ? source.filter((_, index) => {
-          const step = Math.max(Math.ceil((source.length - 1) / 17), 1);
-          return index % step === 0 || index === source.length - 1;
-        })
-      : source;
-    const survival = compact
-      .map((item) => ({
-        label: toLabel(String(item.snapshot_at || "")),
-        value: Number(item.metrics?.survival_rate || 0),
-      }))
-      .filter((item) => Number.isFinite(item.value));
-    const evidence = compact
-      .map((item) => ({
-        label: toLabel(String(item.snapshot_at || "")),
-        value: Number(item.metrics?.evidence_complete_rate || 0),
-      }))
-      .filter((item) => Number.isFinite(item.value));
-
-    return {
-      survival:
-        survival.length >= 2
-          ? survival
-          : [
-              { label: "start", value: fallbackSurvival },
-              { label: "now", value: fallbackSurvival },
-            ],
-      evidence:
-        evidence.length >= 2
-          ? evidence
-          : [
-              { label: "start", value: fallbackEvidence },
-              { label: "now", value: fallbackEvidence },
-            ],
-    };
-  }, [kpiTrend, kpiCurrent, trees]);
-
   const ageSurvivalCheckpoints = useMemo(() => {
     const age = (kpiCurrent?.age_survival || {}) as any;
     return [30, 90, 180].map((day) => {
@@ -2116,121 +1995,8 @@ export default function GreenWork() {
     () => trees.reduce((sum, tree) => (parseDateValue(tree?.planting_date || null) ? sum : sum + 1), 0),
     [trees],
   );
-  const speciesAgeSurvivalSeries = useMemo(() => {
-    const age = (kpiCurrent?.age_survival || {}) as any;
-    const checkpoints = [30, 90, 180];
-    const rawRows = Array.isArray(age?.species_breakdown) ? age.species_breakdown : [];
-
-    const toSeriesRows = (rows: any[], source: "server" | "client_fallback") =>
-      rows
-        .map((row: any) => {
-          const species = String(row?.species_label || row?.species_key || "Unknown Species");
-          const treesRaw = Number(row?.trees_with_planting_date ?? row?.current_total_trees ?? 0);
-          const trees = Number.isFinite(treesRaw) ? treesRaw : 0;
-          const checkpointSource =
-            source === "server"
-              ? "measured at checkpoint"
-              : "estimated from current status (fallback when KPI snapshot is unavailable)";
-          const provisionalSource =
-            source === "server"
-              ? "carried from earlier checkpoint/live"
-              : "estimated carry-forward from current status (fallback)";
-          const liveRateRaw = Number(row?.current_survival_rate);
-          const liveRate = Number.isFinite(liveRateRaw) ? liveRateRaw : 0;
-          let carryRate = liveRate;
-          const points = checkpoints.map((day) => {
-            const bucket = row?.[`day_${day}`] || {};
-            const eligible = Number(bucket?.eligible_trees || 0);
-            const survived = Number(bucket?.survived_trees || 0);
-            const rawRate = Number(bucket?.survival_rate);
-            if (eligible > 0 && Number.isFinite(rawRate)) {
-              carryRate = rawRate;
-              return {
-                day,
-                label: `${day}d`,
-                value: rawRate,
-                eligible,
-                survived,
-                provisional: source !== "server",
-                source: checkpointSource,
-              };
-            }
-            return {
-              day,
-              label: `${day}d`,
-              value: carryRate,
-              eligible,
-              survived,
-              provisional: true,
-              source: day === 30 ? "live current status (before first checkpoint)" : provisionalSource,
-            };
-          });
-          return {
-            species,
-            trees,
-            points,
-          };
-        })
-        .filter((row: any) => row.trees > 0)
-        .sort((a: any, b: any) => {
-          if (b.trees !== a.trees) return b.trees - a.trees;
-          return String(a.species).localeCompare(String(b.species));
-        });
-
-    const fallbackRows = (() => {
-      const speciesMap = new Map<string, any>();
-      const today = startOfDay(new Date());
-      for (const tree of trees) {
-        const plantingDateObj = parseDateValue(tree?.planting_date || null);
-        if (!plantingDateObj) continue;
-        const speciesRaw = String(tree?.species || "").trim();
-        const speciesLabel = speciesRaw || "Unknown Species";
-        const speciesKey = normalizeName(speciesLabel) || "__unknown__";
-        const statusValue = normalizeTreeStatus(tree?.status || "healthy");
-        const isHealthy = HEALTHY_TREE_STATUSES.has(statusValue);
-        const ageDays = Math.max(dayDiff(today, plantingDateObj), 0);
-        if (!speciesMap.has(speciesKey)) {
-          speciesMap.set(speciesKey, {
-            species_key: speciesKey,
-            species_label: speciesLabel,
-            trees_with_planting_date: 0,
-            current_total_trees: 0,
-            current_healthy_trees: 0,
-            current_survival_rate: 0,
-            day_30: { eligible_trees: 0, survived_trees: 0, survival_rate: 0 },
-            day_90: { eligible_trees: 0, survived_trees: 0, survival_rate: 0 },
-            day_180: { eligible_trees: 0, survived_trees: 0, survival_rate: 0 },
-          });
-        }
-        const row = speciesMap.get(speciesKey);
-        row.trees_with_planting_date += 1;
-        row.current_total_trees += 1;
-        if (isHealthy) row.current_healthy_trees += 1;
-        for (const checkpointDay of checkpoints) {
-          if (ageDays < checkpointDay) continue;
-          const bucket = row[`day_${checkpointDay}`];
-          bucket.eligible_trees += 1;
-          if (isHealthy) bucket.survived_trees += 1;
-        }
-      }
-      const computedRows = Array.from(speciesMap.values());
-      for (const row of computedRows) {
-        for (const checkpointDay of checkpoints) {
-          const bucket = row[`day_${checkpointDay}`];
-          const eligible = Number(bucket?.eligible_trees || 0);
-          const survived = Number(bucket?.survived_trees || 0);
-          bucket.survival_rate = eligible > 0 ? Math.round((survived / eligible) * 1000) / 10 : 0;
-        }
-        const total = Number(row.current_total_trees || 0);
-        const healthy = Number(row.current_healthy_trees || 0);
-        row.current_survival_rate = total > 0 ? Math.round((healthy / total) * 1000) / 10 : 0;
-      }
-      return computedRows;
-    })();
-
-    const serverRows = toSeriesRows(rawRows, "server");
-    const baseRows = serverRows.length > 0 ? serverRows : toSeriesRows(fallbackRows, "client_fallback");
-
+  const speciesDailySurvivalSeries = useMemo(() => {
+    const rawRows = Array.isArray(speciesDailyTrend?.species) ? speciesDailyTrend.species : [];
     const palette = [
       "#16a34a",
       "#0ea5e9",
@@ -2249,20 +2015,77 @@ export default function GreenWork() {
       "#65a30d",
       "#0284c7",
     ];
-    return baseRows.map((row: any, idx: number) => ({
-      ...row,
-      color: palette[idx % palette.length],
-    }));
-  }, [kpiCurrent, trees]);
-  const speciesAgeSurvivalEmptyMessage = useMemo(() => {
-    if (speciesAgeSurvivalSeries.length > 0) return "";
+    return rawRows
+      .map((row: any) => {
+        const species = String(row?.species_label || row?.species_key || "Unknown Species");
+        const treesRaw = Number(row?.trees_with_planting_date || 0);
+        const treesWithPlantingDate = Number.isFinite(treesRaw) ? treesRaw : 0;
+        const pointsRaw = Array.isArray(row?.points) ? row.points : [];
+        const points = pointsRaw
+          .map((point: any) => {
+            const dayValue = Number(point?.day_since_species_start ?? point?.day ?? 0);
+            const rateValue = Number(point?.survival_rate ?? point?.value ?? 0);
+            const eligibleValue = Number(point?.eligible_trees ?? point?.eligible ?? 0);
+            const survivedValue = Number(point?.survived_trees ?? point?.survived ?? 0);
+            const day = Number.isFinite(dayValue) ? Math.max(Math.round(dayValue), 0) : 0;
+            const phase =
+              String(point?.phase || "").trim() ||
+              (day >= 180 ? "past 180 days" : day >= 90 ? "past 90 days" : day >= 30 ? "past 30 days" : "0-29 days");
+            return {
+              day,
+              date: String(point?.date || ""),
+              label: `day ${day}`,
+              value: Number.isFinite(rateValue) ? Math.max(Math.min(rateValue, 100), 0) : 0,
+              eligible: Number.isFinite(eligibleValue) ? Math.max(Math.round(eligibleValue), 0) : 0,
+              survived: Number.isFinite(survivedValue) ? Math.max(Math.round(survivedValue), 0) : 0,
+              phase,
+            };
+          })
+          .filter((point: any) => Number.isFinite(point.day) && Number.isFinite(point.value))
+          .sort((a: any, b: any) => a.day - b.day);
+        return {
+          species,
+          trees: treesWithPlantingDate,
+          startDate: String(row?.start_date || ""),
+          points,
+        };
+      })
+      .filter((row: any) => row.trees > 0 && row.points.length > 0)
+      .sort((a: any, b: any) => {
+        if (b.trees !== a.trees) return b.trees - a.trees;
+        return String(a.species).localeCompare(String(b.species));
+      })
+      .map((row: any, idx: number) => ({
+        ...row,
+        color: palette[idx % palette.length],
+      }));
+  }, [speciesDailyTrend]);
+  const speciesDailySurvivalEmptyMessage = useMemo(() => {
+    if (speciesDailySurvivalSeries.length > 0) return "";
     if (trees.length === 0) return "No trees in this project yet.";
-    const missingCount = ageSurvivalMissingPlantingDate > 0 ? ageSurvivalMissingPlantingDate : speciesMissingPlantingFromTrees;
+    const serverMissingCount = Number(speciesDailyTrend?.trees_missing_planting_date || 0);
+    const missingCount =
+      serverMissingCount > 0
+        ? serverMissingCount
+        : ageSurvivalMissingPlantingDate > 0
+        ? ageSurvivalMissingPlantingDate
+        : speciesMissingPlantingFromTrees;
     if (missingCount > 0) {
       return `No species lines yet: ${missingCount} tree(s) are missing planting date.`;
     }
-    return "Species lines are not available yet. Refresh project data to load KPI checkpoints.";
-  }, [speciesAgeSurvivalSeries, trees, ageSurvivalMissingPlantingDate, speciesMissingPlantingFromTrees]);
+    return "No species daily survival timeline yet. Submit maintenance status updates and refresh.";
+  }, [
+    speciesDailySurvivalSeries,
+    trees,
+    speciesDailyTrend,
+    ageSurvivalMissingPlantingDate,
+    speciesMissingPlantingFromTrees,
+  ]);
+  const speciesDailySurvivalContext = useMemo(() => {
+    const startRaw = String(speciesDailyTrend?.start_date || "").trim();
+    const startLabel = startRaw ? formatDateLabel(startRaw) : "first planting date";
+    return `Context: each line is one species, tracked daily from planting date (${startLabel} start). Status updates come from maintenance/task-review tree status logs; after day 30, the phase is marked as past 30 days and continues forward.`;
+  }, [speciesDailyTrend]);
 
   const activeProjectName = useMemo(() => {
     if (!activeProjectId) return "";
@@ -3021,25 +2844,11 @@ export default function GreenWork() {
                 </div>
               </div>
 
-              <div className="green-work-overview-trends">
-                <TrendMiniChart
-                  title="Survival Trend (Planting Cohorts)"
-                  color="#16a34a"
-                  points={trendPoints.survival}
-                  context="Context: monthly cumulative healthy share from planting cohorts (planting date + current status basis)."
-                />
-                <TrendMiniChart
-                  title="Evidence Trend (Task Activity)"
-                  color="#9a5800"
-                  points={trendPoints.evidence}
-                  context="Context: monthly cumulative completion of required-proof task evidence."
-                />
-              </div>
-              <SpeciesAgeSurvivalChart
-                title="Species Survival Lines (30/90/180-day checkpoints)"
-                series={speciesAgeSurvivalSeries}
-                emptyMessage={speciesAgeSurvivalEmptyMessage}
-                context="Context: each line is one species from planting date; before each checkpoint the value is provisional, then it pegs to the reached checkpoint rate. Trees older than 180 days are included in the 180-day checkpoint."
+              <SpeciesDailySurvivalChart
+                title="Species Survival Trend (Daily from Planting Date)"
+                series={speciesDailySurvivalSeries}
+                emptyMessage={speciesDailySurvivalEmptyMessage}
+                context={speciesDailySurvivalContext}
               />
 
               {carbonSummary && (
