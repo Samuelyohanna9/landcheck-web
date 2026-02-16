@@ -505,7 +505,7 @@ export default function GreenWork() {
     trees_missing_age_data: number;
     trees_with_fallback_age: number;
     trees_pending_review: number;
-    top_species: { species: string; count: number; co2_kg: number }[];
+    top_species: { species: string; model_species?: string; count: number; co2_kg: number }[];
   } | null>(null);
   const [speciesMaturityByProject, setSpeciesMaturityByProject] = useState<Record<string, Record<string, number>>>({});
   const [selectedMaturitySpecies, setSelectedMaturitySpecies] = useState("");
@@ -2385,7 +2385,12 @@ export default function GreenWork() {
                       <h5>Top Species by CO2 Contribution</h5>
                       {carbonSummary.top_species.slice(0, 5).map((sp) => (
                         <div key={sp.species} className="green-work-carbon-sp-row">
-                          <span className="green-work-carbon-sp-name">{sp.species}</span>
+                          <span className="green-work-carbon-sp-name">
+                            {sp.species}
+                            {sp.model_species && normalizeName(sp.model_species) !== normalizeName(sp.species) && (
+                              <small className="green-work-carbon-sp-model">model: {sp.model_species}</small>
+                            )}
+                          </span>
                           <span className="green-work-carbon-sp-count">{sp.count} trees</span>
                           <span className="green-work-carbon-sp-co2">{sp.co2_kg.toFixed(1)} kg CO2</span>
                         </div>
