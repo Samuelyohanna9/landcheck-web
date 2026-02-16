@@ -1929,6 +1929,19 @@ export default function GreenWork() {
     };
   }, [kpiTrend, kpiCurrent, trees]);
 
+  const ageSurvivalCheckpoints = useMemo(() => {
+    const age = (kpiCurrent?.age_survival || {}) as any;
+    return [30, 90, 180].map((day) => {
+      const bucket = age?.[`day_${day}`] || {};
+      return {
+        day,
+        survivalRate: Number(bucket?.survival_rate || 0),
+        survivedTrees: Number(bucket?.survived_trees || 0),
+        eligibleTrees: Number(bucket?.eligible_trees || 0),
+      };
+    });
+  }, [kpiCurrent]);
+
   const activeProjectName = useMemo(() => {
     if (!activeProjectId) return "";
     return projects.find((p) => p.id === activeProjectId)?.name || "";
@@ -2656,6 +2669,28 @@ export default function GreenWork() {
                       ))}
                     </div>
                   )}
+                </div>
+                <div className="green-work-overview-bar-card">
+                  <div className="green-work-overview-bar-head">
+                    <h5>Age-Based Survival</h5>
+                    <span>30/90/180 days</span>
+                  </div>
+                  <div className="green-work-maint-type-list">
+                    {ageSurvivalCheckpoints.map((item) => (
+                      <div key={`age-survival-${item.day}`} className="green-work-maint-type-item">
+                        <strong>Day {item.day}</strong>
+                        <span>
+                          Survival: {item.eligibleTrees > 0 ? `${item.survivalRate.toFixed(1)}%` : "n/a"}
+                        </span>
+                        <span>
+                          Cohort: {item.survivedTrees}/{item.eligibleTrees} surviving
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="green-work-chart-context">
+                    Context: trees eligible once planted for at least the checkpoint age.
+                  </p>
                 </div>
               </div>
 
