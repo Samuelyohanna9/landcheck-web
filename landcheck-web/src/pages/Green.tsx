@@ -53,6 +53,30 @@ const formatDateLabel = (value: string | null | undefined) => {
   return date.toLocaleDateString();
 };
 const normalizeTaskState = (value: string | null | undefined) => (value || "").trim().toLowerCase();
+const normalizeTreeStatus = (value: string | null | undefined) => {
+  const raw = (value || "").trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
+  if (raw === "deseas" || raw === "diseased") return "disease";
+  if (raw === "needreplacement" || raw === "needsreplacement") return "need_replacement";
+  if (raw === "needs_replacement") return "need_replacement";
+  return raw || "healthy";
+};
+const HEALTHY_TREE_STATUSES = new Set(["alive", "healthy"]);
+const DEAD_TREE_STATUSES = new Set(["dead", "removed"]);
+const ATTENTION_TREE_STATUSES = new Set([
+  "needs_attention",
+  "pest",
+  "disease",
+  "need_replacement",
+  "damaged",
+]);
+const INSPECTION_STATUS_OPTIONS = [
+  { value: "healthy", label: "Healthy" },
+  { value: "pest", label: "Pest" },
+  { value: "disease", label: "Disease" },
+  { value: "need_replacement", label: "Need replacement" },
+  { value: "damaged", label: "Damaged" },
+  { value: "removed", label: "Removed" },
+];
 const isLegacyDoneWithoutReview = (task: any) => {
   const status = normalizeTaskState(task?.status);
   const review = normalizeTaskState(task?.review_state || "none");
@@ -218,7 +242,7 @@ export default function Green() {
   const [users, setUsers] = useState<GreenUser[]>([]);
   const [activeUser, setActiveUser] = useState<string>(storedActiveUser);
   const [myTasks, setMyTasks] = useState<any[]>([]);
-  const [taskEdits, setTaskEdits] = useState<Record<number, { status: string; notes: string; photo_url: string }>>(
+  const [taskEdits, setTaskEdits] = useState<Record<number, { status: string; notes: string; photo_url: string; tree_status: string }>>(
     {}
   );
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
@@ -228,7 +252,7 @@ export default function Green() {
     lat: 0,
     species: "",
     planting_date: "",
-    status: "alive",
+    status: "healthy",
     notes: "",
     photo_url: "",
     created_by: "",
@@ -291,10 +315,10 @@ export default function Green() {
 
   const myTreeSummary = useMemo(() => {
     const total = userTrees.length;
-    const alive = userTrees.filter((t) => t.status === "alive").length;
-    const dead = userTrees.filter((t) => t.status === "dead").length;
-    const needs = userTrees.filter((t) => t.status === "needs_attention").length;
-    return { total, alive, dead, needs };
+    const healthy = userTrees.filter((t) => HEALTHY_TREE_STATUSES.has(normalizeTreeStatus(t.status))).length;
+    const dead = userTrees.filter((t) => DEAD_TREE_STATUSES.has(normalizeTreeStatus(t.status))).length;
+    const needs = userTrees.filter((t) => ATTENTION_TREE_STATUSES.has(normalizeTreeStatus(t.status))).length;
+    return { total, healthy, dead, needs };
   }, [userTrees]);
 
   const activeUserDetail = useMemo(() => {
@@ -456,7 +480,7 @@ export default function Green() {
         lat: 0,
         species: "",
         planting_date: "",
-        status: "alive",
+        status: "healthy",
         notes: "",
         photo_url: "",
         created_by: "",
@@ -501,12 +525,13 @@ export default function Green() {
       `/green/tasks?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}`
     );
     setMyTasks(res.data);
-    const edits: Record<number, { status: string; notes: string; photo_url: string }> = {};
+    const edits: Record<number, { status: string; notes: string; photo_url: string; tree_status: string }> = {};
     res.data.forEach((t: any) => {
       edits[t.id] = {
         status: t.status,
         notes: t.notes || "",
         photo_url: t.photo_url || "",
+        tree_status: normalizeTreeStatus(t.tree_status || "healthy"),
       };
     });
     setTaskEdits(edits);
@@ -533,7 +558,12 @@ export default function Green() {
       toast.error("Task is locked for review");
       return;
     }
-    const edit = taskEdits[taskId] || { status: task.status || "pending", notes: task.notes || "", photo_url: task.photo_url || "" };
+    const edit = taskEdits[taskId] || {
+      status: task.status || "pending",
+      notes: task.notes || "",
+      photo_url: task.photo_url || "",
+      tree_status: normalizeTreeStatus(task.tree_status || "healthy"),
+    };
     if (!hasTaskEvidence(task, edit)) {
       toast.error("Add notes and photo proof before submission.");
       return;
@@ -543,6 +573,7 @@ export default function Green() {
       await api.post(`/green/tasks/${taskId}/submit`, {
         notes: edit.notes,
         photo_url: edit.photo_url,
+        tree_status: edit.tree_status,
         actor_name: activeUser || "",
       });
       await loadMyTasks();
@@ -596,6 +627,7 @@ export default function Green() {
           status: prev[taskId]?.status || "pending",
           notes: prev[taskId]?.notes || "",
           photo_url: photoUrl,
+          tree_status: prev[taskId]?.tree_status || normalizeTreeStatus(linkedTask?.tree_status || "healthy"),
         },
       }));
       setMyTasks((prev) => prev.map((task: any) => (task.id === taskId ? { ...task, photo_url: photoUrl } : task)));
@@ -715,10 +747,10 @@ export default function Green() {
   };
 
   const totalTrees = activeUser ? myTreeSummary.total : 0;
-  const aliveTrees = activeUser ? myTreeSummary.alive : 0;
+  const healthyTrees = activeUser ? myTreeSummary.healthy : 0;
   const deadTrees = activeUser ? myTreeSummary.dead : 0;
   const needsAttentionTrees = activeUser ? myTreeSummary.needs : 0;
-  const survivalRate = totalTrees > 0 ? Math.round((aliveTrees / totalTrees) * 100) : 0;
+  const survivalRate = totalTrees > 0 ? Math.round((healthyTrees / totalTrees) * 100) : 0;
 
   return (
     <div className={`green-container ${activeSection === null ? "green-home-mode" : "green-detail-mode"}`}>
@@ -813,8 +845,8 @@ export default function Green() {
               <strong className="green-stat-total">{totalTrees}</strong>
             </div>
             <div className="green-stat-item">
-              <span>Alive</span>
-              <strong className="green-stat-alive">{aliveTrees}</strong>
+              <span>Healthy</span>
+              <strong className="green-stat-alive">{healthyTrees}</strong>
             </div>
             <div className="green-stat-item">
               <span>Dead</span>
@@ -952,6 +984,7 @@ export default function Green() {
                                   status: e.target.value,
                                   notes: prev[t.id]?.notes || "",
                                   photo_url: prev[t.id]?.photo_url || "",
+                                  tree_status: prev[t.id]?.tree_status || normalizeTreeStatus(t.tree_status || "healthy"),
                                 },
                               }))
                             }
@@ -1026,14 +1059,15 @@ export default function Green() {
                               onChange={(e) =>
                                 setTaskEdits((prev) => ({
                                   ...prev,
-                                  [t.id]: {
-                                    status: prev[t.id]?.status || "pending",
-                                    notes: e.target.value,
-                                    photo_url: prev[t.id]?.photo_url || "",
-                                  },
-                                }))
-                              }
-                            />
+                                [t.id]: {
+                                  status: prev[t.id]?.status || "pending",
+                                  notes: e.target.value,
+                                  photo_url: prev[t.id]?.photo_url || "",
+                                  tree_status: prev[t.id]?.tree_status || normalizeTreeStatus(t.tree_status || "healthy"),
+                                },
+                              }))
+                            }
+                          />
                           </div>
                           <div className="tree-form-row full">
                             <label>Photo Proof</label>
@@ -1044,6 +1078,31 @@ export default function Green() {
                               onChange={(e) => onTaskPhotoPicked(t.id, e.target.files?.[0] || null)}
                             />
                           </div>
+                          {normalizeTaskState(t.task_type) === "inspection" && (
+                            <div className="tree-form-row full">
+                              <label>Inspection Tree Condition</label>
+                              <select
+                                value={taskEdits[t.id]?.tree_status || normalizeTreeStatus(t.tree_status || "healthy")}
+                                onChange={(e) =>
+                                  setTaskEdits((prev) => ({
+                                    ...prev,
+                                    [t.id]: {
+                                      status: prev[t.id]?.status || "pending",
+                                      notes: prev[t.id]?.notes || "",
+                                      photo_url: prev[t.id]?.photo_url || "",
+                                      tree_status: e.target.value,
+                                    },
+                                  }))
+                                }
+                              >
+                                {INSPECTION_STATUS_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
                           <div className="task-edit-inline-actions">
                             <button className="green-btn-primary" type="button" onClick={() => saveTaskUpdate(t.id)}>
                               Save Task Update
@@ -1118,6 +1177,12 @@ export default function Green() {
               <div className="tree-form-row">
                 <label>Status</label>
                 <select value={newTree.status} onChange={(e) => setNewTree({ ...newTree, status: e.target.value })}>
+                  <option value="healthy">Healthy</option>
+                  <option value="pest">Pest</option>
+                  <option value="disease">Disease</option>
+                  <option value="need_replacement">Need replacement</option>
+                  <option value="damaged">Damaged</option>
+                  <option value="removed">Removed</option>
                   <option value="alive">Alive</option>
                   <option value="dead">Dead</option>
                   <option value="needs_attention">Needs attention</option>
@@ -1189,8 +1254,8 @@ export default function Green() {
                     <strong>{myTreeSummary.total}</strong>
                   </div>
                   <div>
-                    <span>Alive</span>
-                    <strong>{myTreeSummary.alive}</strong>
+                    <span>Healthy</span>
+                    <strong>{myTreeSummary.healthy}</strong>
                   </div>
                   <div>
                     <span>Dead</span>
@@ -1236,8 +1301,8 @@ export default function Green() {
                   <strong>{myTreeSummary.total}</strong>
                 </div>
                 <div>
-                  <span>Alive</span>
-                  <strong>{myTreeSummary.alive}</strong>
+                  <span>Healthy</span>
+                  <strong>{myTreeSummary.healthy}</strong>
                 </div>
                 <div>
                   <span>Dead</span>
@@ -1272,18 +1337,27 @@ export default function Green() {
                     <span>{t.species || "-"}</span>
                     <span>{t.status}</span>
                     <div className="tree-actions">
-                      <button className="green-row-btn" type="button" onClick={() => updateTreeStatus(t.id, "alive")}>
-                        Alive
+                      <button className="green-row-btn" type="button" onClick={() => updateTreeStatus(t.id, "healthy")}>
+                        Healthy
                       </button>
                       <button
                         className="green-row-btn"
                         type="button"
-                        onClick={() => updateTreeStatus(t.id, "needs_attention")}
+                        onClick={() => updateTreeStatus(t.id, "pest")}
                       >
-                        Needs attention
+                        Pest
                       </button>
-                      <button className="green-row-btn" type="button" onClick={() => updateTreeStatus(t.id, "dead")}>
-                        Dead
+                      <button className="green-row-btn" type="button" onClick={() => updateTreeStatus(t.id, "disease")}>
+                        Disease
+                      </button>
+                      <button className="green-row-btn" type="button" onClick={() => updateTreeStatus(t.id, "need_replacement")}>
+                        Need replacement
+                      </button>
+                      <button className="green-row-btn" type="button" onClick={() => updateTreeStatus(t.id, "damaged")}>
+                        Damaged
+                      </button>
+                      <button className="green-row-btn" type="button" onClick={() => updateTreeStatus(t.id, "removed")}>
+                        Removed
                       </button>
                     </div>
                   </div>

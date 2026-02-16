@@ -85,10 +85,45 @@ const markerPalettes: Record<string, { outer: string; core: string; ring: string
     core: "#4caf50",
     ring: "rgba(88, 171, 80, 0.72)",
   },
+  healthy: {
+    outer: "rgba(140, 223, 132, 0.8)",
+    core: "#2f9e44",
+    ring: "rgba(47, 158, 68, 0.74)",
+  },
+  pest: {
+    outer: "rgba(252, 236, 179, 0.82)",
+    core: "#e0a800",
+    ring: "rgba(176, 125, 10, 0.74)",
+  },
+  disease: {
+    outer: "rgba(255, 216, 173, 0.82)",
+    core: "#f08c00",
+    ring: "rgba(199, 95, 16, 0.74)",
+  },
+  need_replacement: {
+    outer: "rgba(253, 176, 176, 0.82)",
+    core: "#ef4444",
+    ring: "rgba(185, 28, 28, 0.74)",
+  },
+  needs_replacement: {
+    outer: "rgba(253, 176, 176, 0.82)",
+    core: "#ef4444",
+    ring: "rgba(185, 28, 28, 0.74)",
+  },
+  damaged: {
+    outer: "rgba(253, 176, 176, 0.82)",
+    core: "#dc2626",
+    ring: "rgba(153, 27, 27, 0.74)",
+  },
   dead: {
     outer: "rgba(253, 176, 176, 0.74)",
     core: "#e25353",
     ring: "rgba(190, 68, 68, 0.68)",
+  },
+  removed: {
+    outer: "rgba(223, 223, 223, 0.82)",
+    core: "#6b7280",
+    ring: "rgba(75, 85, 99, 0.68)",
   },
   needs_attention: {
     outer: "rgba(252, 218, 150, 0.76)",
@@ -107,7 +142,14 @@ const TREE_OUTER_LAYER_ID = "tree-points-outer";
 const TREE_CORE_LAYER_ID = "tree-points-core";
 const TREE_LAYER_IDS = [TREE_CORE_LAYER_ID, TREE_OUTER_LAYER_ID];
 
-const normalizeStatus = (status: string | null | undefined) => (status || "").trim().toLowerCase();
+const ACTIVE_TREE_STATUSES = new Set(["alive", "healthy", "pest", "disease", "needs_attention"]);
+const normalizeStatus = (status: string | null | undefined) => {
+  const raw = (status || "").trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
+  if (raw === "deseas" || raw === "diseased") return "disease";
+  if (raw === "needreplacement" || raw === "needsreplacement") return "need_replacement";
+  if (raw === "needs_replacement") return "need_replacement";
+  return raw;
+};
 const statusLabel = (status: string | null | undefined) =>
   normalizeStatus(status)
     .split("_")
@@ -172,7 +214,7 @@ const buildTreeFeatureCollection = (items: TreePoint[]) => {
           notes: tree.notes || "",
           created_by: tree.created_by || "-",
           photo_url: tree.photo_url || "",
-          is_alive: normalizedStatus === "alive" ? 1 : 0,
+          is_alive: ACTIVE_TREE_STATUSES.has(normalizedStatus) ? 1 : 0,
           outer: palette.outer,
           core: palette.core,
           ring: palette.ring,
