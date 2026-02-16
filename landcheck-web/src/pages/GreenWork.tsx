@@ -547,6 +547,168 @@ const TrendMiniChart = ({
   );
 };
 
+type SpeciesSurvivalPoint = {
+  day: number;
+  label: string;
+  value: number | null;
+  eligible: number;
+  survived: number;
+};
+
+type SpeciesSurvivalSeries = {
+  species: string;
+  trees: number;
+  color: string;
+  points: SpeciesSurvivalPoint[];
+};
+
+const SpeciesAgeSurvivalChart = ({
+  title,
+  context,
+  series,
+}: {
+  title: string;
+  context: string;
+  series: SpeciesSurvivalSeries[];
+}) => {
+  const [hovered, setHovered] = useState<{
+    species: string;
+    trees: number;
+    point: SpeciesSurvivalPoint;
+    color: string;
+  } | null>(null);
+  const width = 520;
+  const height = 210;
+  const left = 46;
+  const right = 14;
+  const top = 18;
+  const bottom = 46;
+  const chartWidth = width - left - right;
+  const chartHeight = height - top - bottom;
+  const yTicks = [0, 20, 40, 60, 80, 100];
+  const checkpoints = [30, 90, 180];
+  const xForDay = (day: number) => {
+    const idx = checkpoints.indexOf(day);
+    const pos = idx >= 0 ? idx : 0;
+    return left + (pos / Math.max(checkpoints.length - 1, 1)) * chartWidth;
+  };
+  const yForValue = (value: number) => top + (1 - value / 100) * chartHeight;
+
+  return (
+    <div className="green-work-trend-card green-work-species-chart-card">
+      <div className="green-work-overview-bar-head">
+        <h5>{title}</h5>
+        <span>{series.length} species</span>
+      </div>
+      {series.length === 0 ? (
+        <p className="green-work-note">No species with eligible age checkpoints yet.</p>
+      ) : (
+        <>
+          <svg
+            className="green-work-species-svg"
+            viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="none"
+            role="img"
+            aria-label={title}
+          >
+            {yTicks.map((tick) => {
+              const y = yForValue(tick);
+              return (
+                <g key={`species-y-${tick}`}>
+                  <line x1={left} y1={y} x2={left + chartWidth} y2={y} stroke="#d6e2db" strokeWidth="1" />
+                  <text x={left - 8} y={y + 3} textAnchor="end" fontSize="10" fill="#5f7c70">
+                    {tick}
+                  </text>
+                </g>
+              );
+            })}
+            {checkpoints.map((day) => {
+              const x = xForDay(day);
+              return (
+                <g key={`species-x-${day}`}>
+                  <line x1={x} y1={top} x2={x} y2={top + chartHeight} stroke="#e4ede8" strokeWidth="1" />
+                  <text x={x} y={height - 16} textAnchor="middle" fontSize="10" fill="#5f7c70">
+                    {day}d
+                  </text>
+                </g>
+              );
+            })}
+            {series.map((item) => {
+              const visible = item.points.filter((point) => point.value !== null && Number.isFinite(point.value));
+              const path = visible
+                .map((point, idx) => {
+                  const x = xForDay(point.day);
+                  const y = yForValue(Number(point.value || 0));
+                  return `${idx === 0 ? "M" : "L"}${x},${y}`;
+                })
+                .join(" ");
+              return (
+                <g key={`species-line-${item.species}`}>
+                  {visible.length >= 2 && (
+                    <path
+                      d={path}
+                      fill="none"
+                      stroke={item.color}
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={0.9}
+                    />
+                  )}
+                  {visible.map((point) => {
+                    const x = xForDay(point.day);
+                    const y = yForValue(Number(point.value || 0));
+                    return (
+                      <circle
+                        key={`species-dot-${item.species}-${point.day}`}
+                        cx={x}
+                        cy={y}
+                        r="3.4"
+                        fill={item.color}
+                        stroke="#ffffff"
+                        strokeWidth="1"
+                        onMouseEnter={() =>
+                          setHovered({
+                            species: item.species,
+                            trees: item.trees,
+                            point,
+                            color: item.color,
+                          })
+                        }
+                        onMouseLeave={() => setHovered(null)}
+                      />
+                    );
+                  })}
+                </g>
+              );
+            })}
+          </svg>
+          <div className="green-work-species-legend">
+            {series.map((item) => (
+              <span key={`species-chip-${item.species}`} className="green-work-species-chip">
+                <span className="green-work-species-chip-dot" style={{ backgroundColor: item.color }} />
+                {item.species} ({item.trees})
+              </span>
+            ))}
+          </div>
+          <div className="green-work-species-hover">
+            {hovered ? (
+              <span>
+                <strong style={{ color: hovered.color }}>{hovered.species}</strong> | {hovered.point.label}:{" "}
+                {hovered.point.value !== null ? `${hovered.point.value.toFixed(1)}%` : "n/a"} | Cohort{" "}
+                {hovered.point.survived}/{hovered.point.eligible} | Trees {hovered.trees}
+              </span>
+            ) : (
+              <span>Hover a point to view species checkpoint details.</span>
+            )}
+          </div>
+        </>
+      )}
+      <p className="green-work-chart-context">{context}</p>
+    </div>
+  );
+};
+
 export default function GreenWork() {
   const storedProjectIdRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_active_project_id") || "" : "";
   const storedProjectId = Number(storedProjectIdRaw || "0");
@@ -1945,6 +2107,63 @@ export default function GreenWork() {
     const age = (kpiCurrent?.age_survival || {}) as any;
     return Number(age?.trees_missing_planting_date || 0);
   }, [kpiCurrent]);
+  const speciesAgeSurvivalSeries = useMemo(() => {
+    const age = (kpiCurrent?.age_survival || {}) as any;
+    const rawRows = Array.isArray(age?.species_breakdown) ? age.species_breakdown : [];
+    const checkpoints = [30, 90, 180];
+    const baseRows = rawRows
+      .map((row: any) => {
+        const species = String(row?.species_label || row?.species_key || "Unknown Species");
+        const trees = Number(row?.trees_with_planting_date || 0);
+        const points = checkpoints.map((day) => {
+          const bucket = row?.[`day_${day}`] || {};
+          const eligible = Number(bucket?.eligible_trees || 0);
+          const survived = Number(bucket?.survived_trees || 0);
+          const rawRate = Number(bucket?.survival_rate);
+          const value = eligible > 0 && Number.isFinite(rawRate) ? rawRate : null;
+          return {
+            day,
+            label: `${day}d`,
+            value,
+            eligible,
+            survived,
+          };
+        });
+        return {
+          species,
+          trees,
+          points,
+        };
+      })
+      .filter((row: any) => row.points.some((point: any) => point.eligible > 0))
+      .sort((a: any, b: any) => {
+        if (b.trees !== a.trees) return b.trees - a.trees;
+        return String(a.species).localeCompare(String(b.species));
+      });
+
+    const palette = [
+      "#16a34a",
+      "#0ea5e9",
+      "#f97316",
+      "#8b5cf6",
+      "#dc2626",
+      "#0891b2",
+      "#7c3aed",
+      "#15803d",
+      "#b45309",
+      "#334155",
+      "#0f766e",
+      "#4338ca",
+      "#a21caf",
+      "#ea580c",
+      "#65a30d",
+      "#0284c7",
+    ];
+    return baseRows.map((row: any, idx: number) => ({
+      ...row,
+      color: palette[idx % palette.length],
+    }));
+  }, [kpiCurrent]);
 
   const activeProjectName = useMemo(() => {
     if (!activeProjectId) return "";
@@ -2717,6 +2936,11 @@ export default function GreenWork() {
                   context="Context: monthly cumulative completion of required-proof task evidence."
                 />
               </div>
+              <SpeciesAgeSurvivalChart
+                title="Species Survival Lines (30/90/180-day checkpoints)"
+                series={speciesAgeSurvivalSeries}
+                context="Context: each line is one species in this project; hover points for live cohort details."
+              />
 
               {carbonSummary && (
                 <div className="green-work-carbon-panel">

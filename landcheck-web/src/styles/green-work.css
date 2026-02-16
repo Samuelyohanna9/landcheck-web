@@ -1146,6 +1146,57 @@
   display: block;
 }
 
+.green-work-species-chart-card {
+  margin-top: 0.56rem;
+  min-height: 258px;
+}
+
+.green-work-species-svg {
+  width: 100%;
+  height: 188px;
+  display: block;
+}
+
+.green-work-species-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.34rem;
+  margin-top: 0.34rem;
+}
+
+.green-work-species-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid rgba(26, 74, 44, 0.16);
+  border-radius: 999px;
+  padding: 0.16rem 0.44rem;
+  background: rgba(248, 253, 249, 0.92);
+  color: #305744;
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.green-work-species-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  display: inline-block;
+  flex: 0 0 8px;
+}
+
+.green-work-species-hover {
+  margin-top: 0.38rem;
+  border: 1px solid rgba(24, 79, 45, 0.16);
+  border-radius: 8px;
+  background: rgba(249, 253, 250, 0.94);
+  color: #355b48;
+  font-size: 0.69rem;
+  line-height: 1.35;
+  padding: 0.34rem 0.46rem;
+}
+
 .green-work-verra-card {
   display: flex;
   flex-direction: column;
@@ -2088,6 +2139,10 @@
 
   .green-work-trend-svg {
     height: 138px;
+  }
+
+  .green-work-species-svg {
+    height: 172px;
   }
 
   .green-work-main.overview-mode .green-work-map-card .tree-map {
