@@ -431,6 +431,13 @@
   color: #00695c;
   margin-top: 0.15rem;
 }
+.green-carbon-subvalue {
+  display: block;
+  margin-top: 0.12rem;
+  font-size: 0.56rem;
+  color: #2e5e52;
+  line-height: 1.2;
+}
 .green-carbon-method {
   font-size: 0.55rem;
   color: #80cbc4;
@@ -1481,6 +1488,12 @@
     font-size: 0.54rem;
     margin-top: 0.1rem;
     line-height: 1.2;
+  }
+
+  .green-container.green-home-mode .green-carbon-subvalue {
+    font-size: 0.48rem;
+    margin-top: 0.08rem;
+    line-height: 1.15;
   }
 
   .green-container.green-home-mode .green-carbon-warning {
