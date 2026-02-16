@@ -94,6 +94,12 @@ const formatDateLabel = (value: string | null | undefined) => {
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString();
 };
+const formatTonnesOrKg = (tonnes: number, kg: number, tonneDigits = 2, kgDigits = 1) => {
+  const t = Number(tonnes || 0);
+  const k = Number(kg || 0);
+  if (Math.abs(t) >= 0.01) return `${t.toFixed(tonneDigits)} t`;
+  return `${k.toFixed(kgDigits)} kg`;
+};
 const normalizeTaskState = (value: string | null | undefined) => (value || "").trim().toLowerCase();
 const normalizeTreeStatus = (value: string | null | undefined) => {
   const raw = (value || "").trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
@@ -1226,6 +1232,18 @@ export default function Green() {
   const deadTrees = activeUser ? myTreeSummary.dead : 0;
   const needsAttentionTrees = activeUser ? myTreeSummary.needs : 0;
   const survivalRate = totalTrees > 0 ? Math.round((healthyTrees / totalTrees) * 100) : 0;
+  const carbonCurrentValue = activeProject?.carbon
+    ? formatTonnesOrKg(activeProject.carbon.current_co2_tonnes, activeProject.carbon.current_co2_kg, 2, 1)
+    : "0 kg";
+  const carbonAnnualValue = activeProject?.carbon
+    ? formatTonnesOrKg(activeProject.carbon.annual_co2_tonnes, activeProject.carbon.annual_co2_kg, 2, 1)
+    : "0 kg";
+  const carbonProjectedValue = activeProject?.carbon
+    ? `${Number(activeProject.carbon.projected_lifetime_co2_tonnes || 0).toFixed(2)} t`
+    : "0.00 t";
+  const carbonPerTreeValue = activeProject?.carbon
+    ? `${Number(activeProject.carbon.co2_per_tree_avg_kg || 0).toFixed(1)} kg`
+    : "0.0 kg";
   const syncPrimaryText = syncInProgress ? "Syncing" : isOnline ? "Online" : "Offline";
   const syncSecondaryText =
     syncPendingCount > 0 ? `${syncPendingCount} pending` : isOnline ? "All synced" : "Waiting for connection";
@@ -1358,20 +1376,20 @@ export default function Green() {
               <h3 className="green-carbon-title">Carbon Impact</h3>
               <div className="green-carbon-grid">
                 <div className="green-carbon-card">
-                  <span className="green-carbon-value">{activeProject.carbon.current_co2_tonnes.toFixed(1)}</span>
-                  <span className="green-carbon-label">tonnes CO2 sequestered</span>
+                  <span className="green-carbon-value">{carbonCurrentValue}</span>
+                  <span className="green-carbon-label">CO2 sequestered (current)</span>
                 </div>
                 <div className="green-carbon-card">
-                  <span className="green-carbon-value">{activeProject.carbon.annual_co2_tonnes.toFixed(1)}</span>
-                  <span className="green-carbon-label">tonnes CO2 / year</span>
+                  <span className="green-carbon-value">{carbonAnnualValue}</span>
+                  <span className="green-carbon-label">estimated CO2 / year now</span>
                 </div>
                 <div className="green-carbon-card green-carbon-card-accent">
-                  <span className="green-carbon-value">{activeProject.carbon.projected_lifetime_co2_tonnes.toFixed(0)}</span>
-                  <span className="green-carbon-label">tonnes projected (40yr)</span>
+                  <span className="green-carbon-value">{carbonProjectedValue}</span>
+                  <span className="green-carbon-label">projected stock by year 40</span>
                 </div>
                 <div className="green-carbon-card">
-                  <span className="green-carbon-value">{activeProject.carbon.co2_per_tree_avg_kg.toFixed(1)}</span>
-                  <span className="green-carbon-label">kg CO2 avg/tree</span>
+                  <span className="green-carbon-value">{carbonPerTreeValue}</span>
+                  <span className="green-carbon-label">average current per tree</span>
                 </div>
               </div>
               {(activeProject.carbon.current_co2_tonnes <= 0 || activeProject.carbon.projected_lifetime_co2_tonnes <= 0) && (
@@ -1383,6 +1401,9 @@ export default function Green() {
                     ` Pending review: ${activeProject.carbon.trees_pending_review}.`}
                 </p>
               )}
+              <p className="green-carbon-explain">
+                Annual is based on trees&apos; current ages; 40-year value is cumulative modeled stock by year 40.
+              </p>
               <p className="green-carbon-method">IPCC Tier 1 + Chave et al. (2014)</p>
             </div>
           )}
