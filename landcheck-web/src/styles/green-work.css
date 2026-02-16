@@ -160,10 +160,29 @@
 }
 
 .green-work-action-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  display: flex;
+  flex-wrap: nowrap;
   align-items: stretch;
   gap: 0.36rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(26, 92, 51, 0.45) rgba(225, 239, 229, 0.9);
+  padding-bottom: 0.1rem;
+}
+
+.green-work-action-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.green-work-action-grid::-webkit-scrollbar-track {
+  background: rgba(225, 239, 229, 0.9);
+  border-radius: 999px;
+}
+
+.green-work-action-grid::-webkit-scrollbar-thumb {
+  background: rgba(26, 92, 51, 0.45);
+  border-radius: 999px;
 }
 
 .green-work-action-card {
@@ -183,6 +202,8 @@
   align-items: center;
   gap: 0.42rem;
   height: 100%;
+  flex: 0 0 clamp(170px, 12vw, 216px);
+  min-width: 170px;
 }
 
 .green-work-action-copy {
@@ -2018,13 +2039,16 @@
   }
 
   .green-work-action-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: nowrap;
     gap: 0.4rem;
+    overflow-x: auto;
   }
 
   .green-work-action-card {
     text-align: left;
     padding: 0.44rem 0.48rem;
+    flex: 0 0 min(250px, 74vw);
   }
 
   .green-work-toolbar-label {
