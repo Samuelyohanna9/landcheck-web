@@ -346,6 +346,7 @@ export default function TreeMap({
   const clickPopupRef = useRef<mapboxgl.Popup | null>(null);
   const hoverTreeIdRef = useRef<number | null>(null);
   const clickTreeIdRef = useRef<number | null>(null);
+  const suppressNextDrawDeleteRef = useRef(false);
   const detailCacheRef = useRef<Map<number, TreePopupDetail>>(new Map());
   const pendingDetailRef = useRef<Map<number, Promise<TreePopupDetail>>>(new Map());
   const [mapError, setMapError] = useState<string | null>(null);
@@ -628,6 +629,9 @@ export default function TreeMap({
               clickPopupRef.current = null;
             }
             onTreeInspectRef.current?.(null);
+            if (enableDraw) {
+              onAddTreeRef.current(event.lngLat.lng, event.lngLat.lat);
+            }
           });
         }
 
@@ -664,6 +668,10 @@ export default function TreeMap({
         });
 
         map.on("draw.delete", () => {
+          if (suppressNextDrawDeleteRef.current) {
+            suppressNextDrawDeleteRef.current = false;
+            return;
+          }
           onAddTreeRef.current(0, 0);
         });
       }
@@ -746,7 +754,12 @@ export default function TreeMap({
         source.setData({ type: "FeatureCollection", features: [] });
       }
       if (drawRef.current) {
+        const existing = drawRef.current.getAll()?.features?.length || 0;
+        suppressNextDrawDeleteRef.current = existing > 0;
         drawRef.current.deleteAll();
+        window.setTimeout(() => {
+          suppressNextDrawDeleteRef.current = false;
+        }, 0);
       }
       return;
     }
@@ -786,6 +799,8 @@ export default function TreeMap({
       });
     }
     if (drawRef.current) {
+      const existing = drawRef.current.getAll()?.features?.length || 0;
+      suppressNextDrawDeleteRef.current = existing > 0;
       drawRef.current.deleteAll();
       drawRef.current.add({
         type: "Feature",
@@ -795,6 +810,9 @@ export default function TreeMap({
           coordinates: [draftPoint.lng, draftPoint.lat],
         },
       });
+      window.setTimeout(() => {
+        suppressNextDrawDeleteRef.current = false;
+      }, 0);
     }
   }, [draftPoint, onDraftMove, mapReady]);
 
