@@ -553,6 +553,8 @@ type SpeciesSurvivalPoint = {
   value: number | null;
   eligible: number;
   survived: number;
+  provisional: boolean;
+  source: string;
 };
 
 type SpeciesSurvivalSeries = {
@@ -664,9 +666,9 @@ const SpeciesAgeSurvivalChart = ({
                         cx={x}
                         cy={y}
                         r="3.4"
-                        fill={item.color}
-                        stroke="#ffffff"
-                        strokeWidth="1"
+                        fill={point.provisional ? "#ffffff" : item.color}
+                        stroke={item.color}
+                        strokeWidth={point.provisional ? "1.8" : "1.1"}
                         onMouseEnter={() =>
                           setHovered({
                             species: item.species,
@@ -696,7 +698,8 @@ const SpeciesAgeSurvivalChart = ({
               <span>
                 <strong style={{ color: hovered.color }}>{hovered.species}</strong> | {hovered.point.label}:{" "}
                 {hovered.point.value !== null ? `${hovered.point.value.toFixed(1)}%` : "n/a"} | Cohort{" "}
-                {hovered.point.survived}/{hovered.point.eligible} | Trees {hovered.trees}
+                {hovered.point.survived}/{hovered.point.eligible} | Trees {hovered.trees} |{" "}
+                {hovered.point.provisional ? `Provisional (${hovered.point.source})` : "Checkpoint"}
               </span>
             ) : (
               <span>Hover a point to view species checkpoint details.</span>
@@ -2115,18 +2118,34 @@ export default function GreenWork() {
       .map((row: any) => {
         const species = String(row?.species_label || row?.species_key || "Unknown Species");
         const trees = Number(row?.trees_with_planting_date || 0);
+        const liveRateRaw = Number(row?.current_survival_rate);
+        const liveRate = Number.isFinite(liveRateRaw) ? liveRateRaw : 0;
+        let carryRate = liveRate;
         const points = checkpoints.map((day) => {
           const bucket = row?.[`day_${day}`] || {};
           const eligible = Number(bucket?.eligible_trees || 0);
           const survived = Number(bucket?.survived_trees || 0);
           const rawRate = Number(bucket?.survival_rate);
-          const value = eligible > 0 && Number.isFinite(rawRate) ? rawRate : null;
+          if (eligible > 0 && Number.isFinite(rawRate)) {
+            carryRate = rawRate;
+            return {
+              day,
+              label: `${day}d`,
+              value: rawRate,
+              eligible,
+              survived,
+              provisional: false,
+              source: "measured at checkpoint",
+            };
+          }
           return {
             day,
             label: `${day}d`,
-            value,
+            value: carryRate,
             eligible,
             survived,
+            provisional: true,
+            source: day === 30 ? "live current status (before first checkpoint)" : "carried from earlier checkpoint/live",
           };
         });
         return {
@@ -2135,7 +2154,7 @@ export default function GreenWork() {
           points,
         };
       })
-      .filter((row: any) => row.points.some((point: any) => point.eligible > 0))
+      .filter((row: any) => row.trees > 0)
       .sort((a: any, b: any) => {
         if (b.trees !== a.trees) return b.trees - a.trees;
         return String(a.species).localeCompare(String(b.species));
@@ -2939,7 +2958,7 @@ export default function GreenWork() {
               <SpeciesAgeSurvivalChart
                 title="Species Survival Lines (30/90/180-day checkpoints)"
                 series={speciesAgeSurvivalSeries}
-                context="Context: each line is one species in this project; hover points for live cohort details."
+                context="Context: each line is one species in this project; early points are live/provisional until checkpoints are reached."
               />
 
               {carbonSummary && (
