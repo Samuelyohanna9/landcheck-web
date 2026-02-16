@@ -1241,9 +1241,13 @@ export default function Green() {
   const carbonProjectedValue = activeProject?.carbon
     ? `${Number(activeProject.carbon.projected_lifetime_co2_tonnes || 0).toFixed(2)} t`
     : "0.00 t";
+  const projectAliveTreeCount = Number(activeProject?.stats?.alive || 0);
   const carbonPerTreeValue = activeProject?.carbon
     ? `${Number(activeProject.carbon.co2_per_tree_avg_kg || 0).toFixed(1)} kg`
     : "0.0 kg";
+  const carbonAnnualPerTreeValue = activeProject?.carbon
+    ? `${(projectAliveTreeCount > 0 ? Number(activeProject.carbon.annual_co2_kg || 0) / projectAliveTreeCount : 0).toFixed(2)} kg/yr`
+    : "0.00 kg/yr";
   const syncPrimaryText = syncInProgress ? "Syncing" : isOnline ? "Online" : "Offline";
   const syncSecondaryText =
     syncPendingCount > 0 ? `${syncPendingCount} pending` : isOnline ? "All synced" : "Waiting for connection";
@@ -1390,6 +1394,7 @@ export default function Green() {
                 <div className="green-carbon-card">
                   <span className="green-carbon-value">{carbonPerTreeValue}</span>
                   <span className="green-carbon-label">average current per tree</span>
+                  <span className="green-carbon-subvalue">{carbonAnnualPerTreeValue} average annual per tree</span>
                 </div>
               </div>
               {(activeProject.carbon.current_co2_tonnes <= 0 || activeProject.carbon.projected_lifetime_co2_tonnes <= 0) && (
