@@ -404,6 +404,12 @@
   box-shadow: 0 5px 12px rgba(22, 88, 39, 0.32);
 }
 
+.green-tile-badge-assigned {
+  background: linear-gradient(180deg, #f7b731, #d18a05);
+  color: #2f2200;
+  box-shadow: 0 5px 12px rgba(166, 111, 8, 0.32);
+}
+
 .green-tile-badge-rejected {
   right: auto;
   left: 14px;

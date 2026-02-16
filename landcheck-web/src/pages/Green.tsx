@@ -343,6 +343,11 @@ export default function Green() {
     return Math.max(totalTarget - planted, 0);
   }, [plantingOrders, userTrees.length]);
 
+  const assignedPlanting = useMemo(() => {
+    const orders = plantingOrders.filter((o) => String(o?.work_type || "").toLowerCase() === "planting");
+    return orders.reduce((sum: number, o: any) => sum + Number(o?.target_trees || 0), 0);
+  }, [plantingOrders]);
+
   const loadProjects = async () => {
     const res = await api.get("/green/projects");
     setProjects(res.data);
@@ -401,8 +406,9 @@ export default function Green() {
 
   useEffect(() => {
     if (!activeProject || !activeUser) return;
+    const stamp = Date.now();
     api
-      .get(`/green/work-orders?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}`)
+      .get(`/green/work-orders?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}&_ts=${stamp}`)
       .then((res) => setPlantingOrders(res.data || []))
       .catch(() => setPlantingOrders([]));
   }, [activeProject?.id, activeUser]);
@@ -499,8 +505,9 @@ export default function Green() {
       setPendingTreePhoto(null);
       await loadProjectDetail(activeProject.id);
       if (activeProject && activeUser) {
+        const stamp = Date.now();
         api
-          .get(`/green/work-orders?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}`)
+          .get(`/green/work-orders?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}&_ts=${stamp}`)
           .then((res) => setPlantingOrders(res.data || []))
           .catch(() => setPlantingOrders([]));
       }
@@ -900,7 +907,7 @@ export default function Green() {
               <TaskTileIcon />
             </span>
             <span className="green-tile-label">Maintenance Tasks</span>
-            <span className="green-tile-badge">{myTaskCounts.pending}</span>
+            <span className={`green-tile-badge ${myTaskCounts.pending > 0 ? "green-tile-badge-assigned" : ""}`}>{myTaskCounts.pending}</span>
             {myTaskCounts.rejected > 0 && <span className="green-tile-badge green-tile-badge-rejected">{myTaskCounts.rejected}</span>}
           </button>
 
@@ -913,7 +920,7 @@ export default function Green() {
               <MapTileIcon />
             </span>
             <span className="green-tile-label">Map & Add Trees</span>
-            {pendingPlanting > 0 && <span className="green-tile-badge">{pendingPlanting}</span>}
+            <span className={`green-tile-badge ${assignedPlanting > 0 ? "green-tile-badge-assigned" : ""}`}>{assignedPlanting}</span>
           </button>
 
           <button

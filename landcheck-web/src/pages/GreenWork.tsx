@@ -712,18 +712,27 @@ export default function GreenWork() {
       toast.error("Assignee name required");
       return;
     }
-    await api.post("/green/work-orders", {
-      project_id: activeProjectId,
-      ...newOrder,
-      work_type: "planting",
-    });
-    setNewOrder({
-      assignee_name: "",
-      work_type: "planting",
-      target_trees: 0,
-      due_date: "",
-    });
-    await loadProjectData(activeProjectId);
+    if (Number(newOrder.target_trees || 0) <= 0) {
+      toast.error("Target trees must be greater than 0");
+      return;
+    }
+    try {
+      await api.post("/green/work-orders", {
+        project_id: activeProjectId,
+        ...newOrder,
+        work_type: "planting",
+      });
+      setNewOrder({
+        assignee_name: "",
+        work_type: "planting",
+        target_trees: 0,
+        due_date: "",
+      });
+      await loadProjectData(activeProjectId);
+      toast.success("Planting order assigned");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to assign planting order");
+    }
   };
 
   const createUser = async () => {
@@ -1130,11 +1139,10 @@ export default function GreenWork() {
   }, [trees, assigneeFilter]);
 
   const fitPoints = useMemo(() => {
-    if (assigneeFilter === "all") return null;
-    const key = normalizeName(assigneeFilter);
-    const points = trees
-      .filter((t) => normalizeName(t.created_by) === key)
-      .map((t) => ({ lng: t.lng, lat: t.lat }));
+    const points = (assigneeFilter === "all"
+      ? trees
+      : trees.filter((t) => normalizeName(t.created_by) === normalizeName(assigneeFilter))
+    ).map((t) => ({ lng: t.lng, lat: t.lat }));
     return points.length ? points : null;
   }, [assigneeFilter, trees]);
 
