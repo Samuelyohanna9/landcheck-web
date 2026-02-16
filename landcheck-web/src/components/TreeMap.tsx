@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import { api } from "../api/client";
+import {
+  cacheTreeTasksOffline,
+  cacheTreeTimelineOffline,
+  getCachedTreeTasksOffline,
+  getCachedTreeTimelineOffline,
+} from "../offline/greenOffline";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "../styles/tree-map.css";
 
@@ -353,31 +359,46 @@ export default function TreeMap({
     if (pending) return pending;
 
     const request = (async () => {
-      const [tasksRes, timelineRes] = await Promise.allSettled([
-        api.get(`/green/trees/${treeId}/tasks`),
-        api.get(`/green/trees/${treeId}/timeline`),
-      ]);
+      try {
+        const [tasksRes, timelineRes] = await Promise.allSettled([
+          api.get(`/green/trees/${treeId}/tasks`),
+          api.get(`/green/trees/${treeId}/timeline`),
+        ]);
 
-      const tasks = tasksRes.status === "fulfilled" && Array.isArray(tasksRes.value.data) ? tasksRes.value.data : [];
-      const timeline = timelineRes.status === "fulfilled" ? timelineRes.value.data : null;
-      const visits = Array.isArray(timeline?.visits) ? timeline.visits : [];
+        let tasks = tasksRes.status === "fulfilled" && Array.isArray(tasksRes.value.data) ? tasksRes.value.data : [];
+        let timeline = timelineRes.status === "fulfilled" ? timelineRes.value.data : null;
 
-      const maintenance = {
-        total: tasks.length,
-        done: tasks.filter((task: any) => normalizeStatus(task.status) === "done").length,
-        pending: tasks.filter((task: any) => normalizeStatus(task.status) === "pending").length,
-        overdue: tasks.filter((task: any) => normalizeStatus(task.status) === "overdue").length,
-      };
+        if (tasksRes.status === "fulfilled") {
+          await cacheTreeTasksOffline(treeId, tasks).catch(() => {});
+        } else {
+          tasks = await getCachedTreeTasksOffline(treeId);
+        }
 
-      const detail: TreePopupDetail = {
-        tree: timeline?.tree || null,
-        tasks,
-        visits,
-        maintenance,
-      };
-      detailCacheRef.current.set(treeId, detail);
-      pendingDetailRef.current.delete(treeId);
-      return detail;
+        if (timelineRes.status === "fulfilled") {
+          await cacheTreeTimelineOffline(treeId, timelineRes.value.data).catch(() => {});
+        } else {
+          timeline = await getCachedTreeTimelineOffline(treeId);
+        }
+
+        const visits = Array.isArray(timeline?.visits) ? timeline.visits : [];
+        const maintenance = {
+          total: tasks.length,
+          done: tasks.filter((task: any) => normalizeStatus(task.status) === "done").length,
+          pending: tasks.filter((task: any) => normalizeStatus(task.status) === "pending").length,
+          overdue: tasks.filter((task: any) => normalizeStatus(task.status) === "overdue").length,
+        };
+
+        const detail: TreePopupDetail = {
+          tree: timeline?.tree || null,
+          tasks,
+          visits,
+          maintenance,
+        };
+        detailCacheRef.current.set(treeId, detail);
+        return detail;
+      } finally {
+        pendingDetailRef.current.delete(treeId);
+      }
     })();
 
     pendingDetailRef.current.set(treeId, request);
