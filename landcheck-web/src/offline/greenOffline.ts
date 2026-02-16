@@ -63,7 +63,7 @@ function openDb(): Promise<IDBDatabase> {
   if (typeof indexedDB === "undefined") {
     return Promise.reject(new Error("IndexedDB is not available in this browser context."));
   }
-  dbPromise = new Promise((resolve, reject) => {
+  dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
@@ -79,9 +79,24 @@ function openDb(): Promise<IDBDatabase> {
         photosStore.createIndex("createdAt", "createdAt", { unique: false });
       }
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const db = request.result;
+      // If the connection is unexpectedly closed (e.g., mobile background),
+      // clear the singleton so the next call re-opens it.
+      db.onclose = () => {
+        dbPromise = null;
+      };
+      db.onversionchange = () => {
+        db.close();
+        dbPromise = null;
+      };
+      resolve(db);
+    };
     request.onblocked = () => reject(new Error("IndexedDB open blocked by another tab."));
-    request.onerror = () => reject(request.error || new Error("Failed to open IndexedDB"));
+    request.onerror = () => {
+      dbPromise = null;
+      reject(request.error || new Error("Failed to open IndexedDB"));
+    };
   });
   return dbPromise;
 }
@@ -92,26 +107,40 @@ async function withStore<T>(
   handler: (store: IDBObjectStore) => Promise<T> | T,
 ): Promise<T> {
   const db = await openDb();
-  const tx = db.transaction(storeName, mode);
-  const store = tx.objectStore(storeName);
-  const txDone = new Promise<void>((resolve, reject) => {
-    tx.oncomplete = () => resolve();
+  return new Promise<T>((resolve, reject) => {
+    const tx = db.transaction(storeName, mode);
+    const store = tx.objectStore(storeName);
+    let handlerResult: T | undefined;
+    let handlerError: Error | null = null;
+
+    tx.oncomplete = () => {
+      if (handlerError) reject(handlerError);
+      else resolve(handlerResult as T);
+    };
     tx.onerror = () => reject(tx.error || new Error("IndexedDB transaction failed"));
     tx.onabort = () => reject(tx.error || new Error("IndexedDB transaction aborted"));
-  });
-  try {
-    const result = await handler(store);
-    await txDone;
-    return result;
-  } catch (error) {
+
+    // Execute handler synchronously within the transaction context.
+    // The handler should only use requestToPromise() which resolves
+    // on the same microtask tick as the IDB request success event.
     try {
-      tx.abort();
-    } catch {
-      // Ignore abort errors when transaction already completed.
+      const maybePromise = handler(store);
+      if (maybePromise && typeof (maybePromise as any).then === "function") {
+        (maybePromise as Promise<T>).then(
+          (val) => { handlerResult = val; },
+          (err) => {
+            handlerError = err;
+            try { tx.abort(); } catch { /* noop */ }
+          },
+        );
+      } else {
+        handlerResult = maybePromise as T;
+      }
+    } catch (err) {
+      handlerError = err as Error;
+      try { tx.abort(); } catch { /* noop */ }
     }
-    await txDone.catch(() => {});
-    throw error;
-  }
+  });
 }
 
 async function kvSet<T>(key: string, value: T): Promise<void> {
@@ -160,12 +189,18 @@ function normalizeAssignee(value: string | null | undefined) {
 }
 
 export function isLikelyNetworkError(error: any): boolean {
-  const message = String(error?.message || "");
+  if (!error) return false;
+  // Axios wraps errors – if there's a response from the server, it's not a network error
+  if (error.response) return false;
+  const message = String(error.message || "");
+  const code = String(error.code || "");
   return Boolean(
-    !error?.response &&
-      (error?.code === "ERR_NETWORK" ||
-        error?.code === "ECONNABORTED" ||
-        /network error|failed to fetch|load failed/i.test(message)),
+    code === "ERR_NETWORK" ||
+    code === "ECONNABORTED" ||
+    code === "ETIMEDOUT" ||
+    error.name === "TypeError" ||
+    /network\s*error|failed\s*to\s*fetch|load\s*failed|net::ERR_|networkerror|offline|abort/i.test(message) ||
+    (!navigator.onLine),
   );
 }
 

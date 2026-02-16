@@ -202,6 +202,12 @@
 
 .green-sync-badge.is-syncing {
   border-color: rgba(180, 244, 191, 0.56);
+  animation: green-sync-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes green-sync-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 .green-sync-badge.has-pending {
