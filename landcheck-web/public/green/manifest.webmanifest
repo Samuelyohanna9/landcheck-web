@@ -3,8 +3,9 @@
   "short_name": "Green",
   "description": "Tree mapping, monitoring, and reporting for LandCheck Green.",
   "start_url": "/green",
-  "scope": "/green/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0b1f16",
   "theme_color": "#22c55e",
   "icons": [

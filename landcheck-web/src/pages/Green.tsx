@@ -339,6 +339,7 @@ export default function Green() {
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const [pendingTreePhoto, setPendingTreePhoto] = useState<File | null>(null);
   const [addingTree, setAddingTree] = useState(false);
+  const [mapDrawMode, setMapDrawMode] = useState(false);
   const [, setMapView] = useState<{
     lng: number;
     lat: number;
@@ -1724,6 +1725,24 @@ export default function Green() {
               </span>
             </div>
             {!activeUser && <p className="green-empty">Select a field officer to view only their trees.</p>}
+            <div className="green-map-mode-toggle">
+              <button
+                type="button"
+                className={`green-map-mode-btn ${!mapDrawMode ? "active" : ""}`}
+                onClick={() => setMapDrawMode(false)}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 11l2-2m0 0l7-7 7 7M5 9v10a2 2 0 002 2h10a2 2 0 002-2V9" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+                Navigate
+              </button>
+              <button
+                type="button"
+                className={`green-map-mode-btn ${mapDrawMode ? "active" : ""}`}
+                onClick={() => setMapDrawMode(true)}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M12 2v4m0 12v4m-10-10h4m12 0h4" /></svg>
+                Add Tree
+              </button>
+            </div>
             <div className="green-map-layout">
               <div className="green-map-canvas">
                 <TreeMap
@@ -1731,6 +1750,7 @@ export default function Green() {
                   draftPoint={newTree.lng && newTree.lat ? { lng: newTree.lng, lat: newTree.lat } : null}
                   onDraftMove={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
                   onAddTree={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
+                  drawActive={mapDrawMode}
                   onSelectTree={(id) => loadTreeDetails(id)}
                   onTreeInspect={(detail) => setInspectedTree(detail)}
                   onViewChange={(view) => setMapView(view)}
