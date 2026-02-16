@@ -53,14 +53,17 @@ const formatDateLabel = (value: string | null | undefined) => {
   return date.toLocaleDateString();
 };
 const normalizeTaskState = (value: string | null | undefined) => (value || "").trim().toLowerCase();
-const isTaskApproved = (task: any) => normalizeTaskState(task?.review_state) === "approved";
+const isLegacyDoneWithoutReview = (task: any) => {
+  const status = normalizeTaskState(task?.status);
+  const review = normalizeTaskState(task?.review_state || "none");
+  return (status === "done" || status === "completed" || status === "closed") && review === "none";
+};
+const isTaskApproved = (task: any) => normalizeTaskState(task?.review_state) === "approved" || isLegacyDoneWithoutReview(task);
 const isTaskSubmitted = (task: any) => normalizeTaskState(task?.review_state) === "submitted";
 const isTaskRejected = (task: any) => normalizeTaskState(task?.review_state) === "rejected";
 const isTaskLockedForField = (task: any) => isTaskApproved(task) || isTaskSubmitted(task);
 const isTaskDoneForSummary = (task: any) => {
-  const isDone = normalizeTaskState(task?.status) === "done";
-  const review = normalizeTaskState(task?.review_state || "none");
-  return isDone && (review === "approved" || review === "none");
+  return isTaskApproved(task);
 };
 const hasTaskEvidence = (task: any, edit?: { notes?: string; photo_url?: string }) => {
   const notes = (edit?.notes ?? task?.notes ?? "").trim();
