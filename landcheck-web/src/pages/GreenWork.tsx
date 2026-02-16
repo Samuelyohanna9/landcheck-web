@@ -512,12 +512,39 @@ const SpeciesDailySurvivalChart = ({
   const chartHeight = height - top - bottom;
   const yTicks = [0, 20, 40, 60, 80, 100];
   const maxDay = Math.max(0, ...series.flatMap((item) => item.points.map((point) => Number(point.day || 0))));
-  const markerTicks = Array.from(new Set([0, 30, 90, 180, maxDay]))
-    .filter((day) => Number.isFinite(day) && day >= 0 && day <= maxDay)
+  const dayDomainMax = Math.max(maxDay, 30);
+  const markerTicks = Array.from(
+    new Set(dayDomainMax <= 30 ? [0, 7, 14, 21, 30] : [0, 30, 60, 90, 120, 150, 180, maxDay, dayDomainMax]),
+  )
+    .filter((day) => Number.isFinite(day) && day >= 0 && day <= dayDomainMax)
     .sort((a, b) => a - b);
+  const overlapOffsets = useMemo(() => {
+    const grouped = new Map<string, string[]>();
+    series.forEach((item) => {
+      const signature = item.points.map((point) => `${point.day}:${point.value.toFixed(1)}`).join("|");
+      const key = signature || `single-${item.species}`;
+      const members = grouped.get(key) || [];
+      members.push(item.species);
+      grouped.set(key, members);
+    });
+    const offsets = new Map<string, number>();
+    grouped.forEach((members) => {
+      const sorted = [...members].sort((a, b) => a.localeCompare(b));
+      const center = (sorted.length - 1) / 2;
+      sorted.forEach((speciesName, index) => {
+        const offset = sorted.length > 1 ? (index - center) * 0.8 : 0;
+        offsets.set(speciesName, offset);
+      });
+    });
+    return offsets;
+  }, [series]);
+  const displayValue = (speciesName: string, rawValue: number) => {
+    const offset = Number(overlapOffsets.get(speciesName) || 0);
+    return Math.max(Math.min(rawValue + offset, 100), 0);
+  };
   const xForDay = (day: number) => {
-    const safeDay = Math.min(Math.max(day, 0), Math.max(maxDay, 1));
-    return left + (safeDay / Math.max(maxDay, 1)) * chartWidth;
+    const safeDay = Math.min(Math.max(day, 0), Math.max(dayDomainMax, 1));
+    return left + (safeDay / Math.max(dayDomainMax, 1)) * chartWidth;
   };
   const yForValue = (value: number) => top + (1 - value / 100) * chartHeight;
 
@@ -565,12 +592,12 @@ const SpeciesDailySurvivalChart = ({
               const path = visible
                 .map((point, idx) => {
                   const x = xForDay(point.day);
-                  const y = yForValue(Number(point.value));
+                  const y = yForValue(displayValue(item.species, Number(point.value)));
                   return `${idx === 0 ? "M" : "L"}${x},${y}`;
                 })
                 .join(" ");
-              const markerStep = maxDay > 180 ? Math.max(Math.ceil(maxDay / 90), 1) : 7;
-              const markerDays = new Set<number>([0, 30, 90, 180, maxDay]);
+              const markerStep = dayDomainMax > 180 ? Math.max(Math.ceil(dayDomainMax / 90), 1) : 7;
+              const markerDays = new Set<number>([0, 30, 90, 180, maxDay, dayDomainMax]);
               const markers = visible.filter((point, idx) => {
                 const lastIdx = visible.length - 1;
                 if (idx === 0 || idx === lastIdx) return true;
@@ -592,7 +619,7 @@ const SpeciesDailySurvivalChart = ({
                   )}
                   {markers.map((point) => {
                     const x = xForDay(point.day);
-                    const y = yForValue(Number(point.value));
+                    const y = yForValue(displayValue(item.species, Number(point.value)));
                     return (
                       <circle
                         key={`species-dot-${item.species}-${point.day}-${point.date}`}
