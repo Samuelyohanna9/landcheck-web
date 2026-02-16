@@ -1125,6 +1125,91 @@
   line-height: 1.35;
 }
 
+.green-work-overview-trends {
+  margin-top: 0.66rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.56rem;
+}
+
+.green-work-trend-card {
+  border: 1px solid rgba(24, 78, 45, 0.14);
+  background: linear-gradient(180deg, rgba(249, 253, 250, 0.98), rgba(239, 249, 241, 0.95));
+  border-radius: 12px;
+  padding: 0.62rem;
+  min-height: 192px;
+}
+
+.green-work-trend-svg {
+  width: 100%;
+  height: 150px;
+  display: block;
+}
+
+.green-work-verra-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.64rem;
+}
+
+.green-work-verra-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.52rem;
+}
+
+.green-work-verra-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #2a5d46;
+}
+
+.green-work-verra-filters label.is-wide {
+  grid-column: 1 / -1;
+}
+
+.green-work-verra-filters input,
+.green-work-verra-filters select,
+.green-work-verra-filters textarea {
+  width: 100%;
+  border: 1px solid rgba(27, 79, 49, 0.22);
+  border-radius: 9px;
+  background: #ffffff;
+  color: #1d4f39;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.4rem 0.5rem;
+  margin-bottom: 0;
+}
+
+.green-work-verra-filters textarea {
+  resize: vertical;
+  min-height: 84px;
+}
+
+.green-work-verra-history {
+  border: 1px solid rgba(24, 78, 45, 0.14);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(251, 254, 252, 0.98), rgba(243, 251, 246, 0.96));
+  padding: 0.58rem;
+}
+
+.green-work-verra-history h4 {
+  margin: 0 0 0.46rem;
+  font-size: 0.92rem;
+  color: #184f35;
+}
+
+.green-work-verra-table th,
+.green-work-verra-table td {
+  font-size: 0.73rem;
+}
+
 .green-work-live-card {
   display: flex;
   flex-direction: column;
@@ -1991,6 +2076,18 @@
 
   .green-work-overview-bars {
     grid-template-columns: 1fr;
+  }
+
+  .green-work-overview-trends {
+    grid-template-columns: 1fr;
+  }
+
+  .green-work-verra-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .green-work-trend-svg {
+    height: 138px;
   }
 
   .green-work-main.overview-mode .green-work-map-card .tree-map {
