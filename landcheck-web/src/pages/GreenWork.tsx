@@ -3039,7 +3039,7 @@ export default function GreenWork() {
                 title="Species Survival Lines (30/90/180-day checkpoints)"
                 series={speciesAgeSurvivalSeries}
                 emptyMessage={speciesAgeSurvivalEmptyMessage}
-                context="Context: each line is one species from planting date; before each checkpoint the value is provisional, then it pegs to the reached checkpoint rate."
+                context="Context: each line is one species from planting date; before each checkpoint the value is provisional, then it pegs to the reached checkpoint rate. Trees older than 180 days are included in the 180-day checkpoint."
               />
 
               {carbonSummary && (
