@@ -1893,7 +1893,10 @@ export default function GreenWork() {
 
     const source = Array.isArray(kpiTrend) ? kpiTrend : [];
     const compact = source.length > 18
-      ? source.filter((_, index) => index % Math.ceil(source.length / 18) === 0)
+      ? source.filter((_, index) => {
+          const step = Math.max(Math.ceil((source.length - 1) / 17), 1);
+          return index % step === 0 || index === source.length - 1;
+        })
       : source;
     const survival = compact
       .map((item) => ({
@@ -2658,16 +2661,16 @@ export default function GreenWork() {
 
               <div className="green-work-overview-trends">
                 <TrendMiniChart
-                  title="Survival Trend (Historical)"
+                  title="Survival Trend (Planting Cohorts)"
                   color="#16a34a"
                   points={trendPoints.survival}
-                  context="Context: project-wide survival snapshots stored over time."
+                  context="Context: monthly cumulative healthy share from planting cohorts (planting date + current status basis)."
                 />
                 <TrendMiniChart
-                  title="Evidence Trend (Historical)"
+                  title="Evidence Trend (Task Activity)"
                   color="#9a5800"
                   points={trendPoints.evidence}
-                  context="Context: required-proof tasks with complete notes + photo over time."
+                  context="Context: monthly cumulative completion of required-proof task evidence."
                 />
               </div>
 
