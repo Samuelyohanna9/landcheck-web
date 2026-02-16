@@ -711,6 +711,18 @@ export default function Green() {
     window.open(`${BACKEND_URL}/green/projects/${activeProject.id}/donor-report/pdf`, "_blank");
   };
 
+  const exportVerra = async () => {
+    if (!activeProject) return;
+    const params = new URLSearchParams({
+      season_mode: "rainy",
+      format: "zip",
+    });
+    if (activeUser) {
+      params.set("assignee_name", activeUser);
+    }
+    window.open(`${BACKEND_URL}/green/projects/${activeProject.id}/export/verra-vcs?${params.toString()}`, "_blank");
+  };
+
   const useGps = () => {
     if (!navigator.geolocation) {
       toast.error("Geolocation not supported on this device");
@@ -833,6 +845,9 @@ export default function Green() {
             </button>
             <button className="green-ghost-btn" onClick={exportPdf} disabled={!activeProject} type="button">
               Export PDF
+            </button>
+            <button className="green-ghost-btn" onClick={exportVerra} disabled={!activeProject} type="button">
+              Export Verra VCS
             </button>
           </div>
         </div>

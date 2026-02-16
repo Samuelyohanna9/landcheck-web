@@ -1118,6 +1118,13 @@
   color: #476857;
 }
 
+.green-work-chart-context {
+  margin-top: 0.3rem;
+  font-size: 0.68rem;
+  color: #5d766a;
+  line-height: 1.35;
+}
+
 .green-work-live-card {
   display: flex;
   flex-direction: column;

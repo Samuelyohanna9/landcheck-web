@@ -1017,6 +1017,19 @@ export default function GreenWork() {
     window.open(`${BACKEND_URL}/green/donor/export/pdf?project_id=${activeProjectId}`, "_blank");
   };
 
+  const exportWorkVerra = () => {
+    if (!activeProjectId) return;
+    const params = new URLSearchParams({
+      project_id: String(activeProjectId),
+      season_mode: seasonMode,
+      format: "zip",
+    });
+    if (assigneeFilter !== "all") {
+      params.set("assignee_name", assigneeFilter);
+    }
+    window.open(`${BACKEND_URL}/green/donor/export/verra-vcs?${params.toString()}`, "_blank");
+  };
+
   const assignees = useMemo(() => {
     const namesByKey = new Map<string, string>();
     const addName = (name: string | null | undefined) => {
@@ -2252,6 +2265,7 @@ export default function GreenWork() {
                 <div className="work-actions">
                   <button onClick={exportWorkCsv}>Export CSV</button>
                   <button onClick={exportWorkPdf}>Export PDF</button>
+                  <button onClick={exportWorkVerra}>Export Verra VCS</button>
                   <select
                     value={assigneeFilter}
                     onChange={(e) => setAssigneeFilter(e.target.value)}
@@ -2309,6 +2323,7 @@ export default function GreenWork() {
                   <p>
                     {filteredOverviewTotals.plantedTrees} planted out of {filteredOverviewTotals.targetTrees} target trees.
                   </p>
+                  <p className="green-work-chart-context">Context: shown for the current staff filter.</p>
                 </div>
                 <div className="green-work-overview-bar-card">
                   <div className="green-work-overview-bar-head">
@@ -2325,6 +2340,9 @@ export default function GreenWork() {
                     <span className="pending">Pending</span>
                     <span className="overdue">Overdue</span>
                   </div>
+                  <p className="green-work-chart-context">
+                    Context: percentages use all tasks in scope (status + review state).
+                  </p>
                 </div>
                 <div className="green-work-overview-bar-card">
                   <div className="green-work-overview-bar-head">
@@ -2353,6 +2371,9 @@ export default function GreenWork() {
               {carbonSummary && (
                 <div className="green-work-carbon-panel">
                   <h4>Carbon Impact Summary</h4>
+                  <p className="green-work-chart-context">
+                    Context: current/annual are stock-flow estimates; projection is long-term modeled potential.
+                  </p>
                   <div className="green-work-carbon-grid">
                     <div className="green-work-carbon-stat">
                       <span className="green-work-carbon-val">{carbonSummary.current_co2_tonnes.toFixed(1)}</span>
