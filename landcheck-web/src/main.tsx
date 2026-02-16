@@ -12,7 +12,12 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   </React.StrictMode>
 );
 
-if (import.meta.env.PROD && "serviceWorker" in navigator) {
+const canRegisterGreenSw =
+  typeof window !== "undefined" &&
+  "serviceWorker" in navigator &&
+  (import.meta.env.PROD || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+if (canRegisterGreenSw) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/green/sw.js", { scope: "/green/" })
