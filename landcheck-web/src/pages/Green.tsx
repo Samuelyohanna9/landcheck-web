@@ -928,6 +928,10 @@ export default function Green() {
               <MapTileIcon />
             </span>
             <span className="green-tile-label">Map & Add Trees</span>
+            <span className="green-tile-meta">
+              <span className="green-tile-meta-item is-submitted">Submitted {plantingReviewCounts.submitted}</span>
+              <span className="green-tile-meta-item is-approved">Approved {plantingReviewCounts.approved}</span>
+            </span>
             <span className={`green-tile-badge ${pendingPlanting > 0 ? "green-tile-badge-assigned" : ""}`}>{pendingPlanting}</span>
           </button>
 
@@ -1185,15 +1189,13 @@ export default function Green() {
               <h3>Map & Add Trees</h3>
               <span className="green-map-hint">Tap a task to zoom to its tree</span>
             </div>
-            {activeUser && (
-              <div className="green-map-planting-summary">
-                <span className="green-task-status-badge is-submitted">Submitted: {plantingReviewCounts.submitted}</span>
-                <span className="green-task-status-badge is-done">Approved: {plantingReviewCounts.approved}</span>
-                <span className={`green-task-status-badge ${pendingPlanting > 0 ? "is-submitted" : "is-done"}`}>
-                  Remaining: {pendingPlanting}
-                </span>
-              </div>
-            )}
+            <div className="green-map-planting-summary">
+              <span className="green-task-status-badge is-submitted">Submitted: {plantingReviewCounts.submitted}</span>
+              <span className="green-task-status-badge is-done">Approved: {plantingReviewCounts.approved}</span>
+              <span className={`green-task-status-badge ${pendingPlanting > 0 ? "is-submitted" : "is-done"}`}>
+                Remaining: {pendingPlanting}
+              </span>
+            </div>
             {!activeUser && <p className="green-empty">Select a field officer to view only their trees.</p>}
             <div className="green-map-layout">
               <div className="green-map-canvas">
