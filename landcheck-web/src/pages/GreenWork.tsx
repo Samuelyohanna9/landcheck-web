@@ -502,6 +502,9 @@ export default function GreenWork() {
     annual_co2_tonnes: number;
     projected_lifetime_co2_tonnes: number;
     co2_per_tree_avg_kg: number;
+    trees_missing_age_data: number;
+    trees_with_fallback_age: number;
+    trees_pending_review: number;
     top_species: { species: string; count: number; co2_kg: number }[];
   } | null>(null);
   const [speciesMaturityByProject, setSpeciesMaturityByProject] = useState<Record<string, Record<string, number>>>({});
@@ -605,6 +608,9 @@ export default function GreenWork() {
         annual_co2_tonnes: Number(carbonRes.value.data.annual_co2_tonnes || 0),
         projected_lifetime_co2_tonnes: Number(carbonRes.value.data.projected_lifetime_co2_tonnes || 0),
         co2_per_tree_avg_kg: Number(carbonRes.value.data.co2_per_tree_avg_kg || 0),
+        trees_missing_age_data: Number(carbonRes.value.data.trees_missing_age_data || 0),
+        trees_with_fallback_age: Number(carbonRes.value.data.trees_with_fallback_age || 0),
+        trees_pending_review: Number(carbonRes.value.data.trees_pending_review || 0),
         top_species: Array.isArray(carbonRes.value.data.top_species) ? carbonRes.value.data.top_species : [],
       });
     } else {
@@ -2344,7 +2350,7 @@ export default function GreenWork() {
                 </div>
               </div>
 
-              {carbonSummary && (carbonSummary.current_co2_tonnes > 0 || carbonSummary.projected_lifetime_co2_tonnes > 0) && (
+              {carbonSummary && (
                 <div className="green-work-carbon-panel">
                   <h4>Carbon Impact Summary</h4>
                   <div className="green-work-carbon-grid">
@@ -2365,6 +2371,15 @@ export default function GreenWork() {
                       <span className="green-work-carbon-lbl">kg CO2 avg/tree</span>
                     </div>
                   </div>
+                  {(carbonSummary.current_co2_tonnes <= 0 || carbonSummary.projected_lifetime_co2_tonnes <= 0) && (
+                    <p className="green-work-carbon-warning">
+                      CO2 is low/zero. Check tree planting dates and review status.
+                      {carbonSummary.trees_missing_age_data > 0 &&
+                        ` Missing age data: ${carbonSummary.trees_missing_age_data}.`}
+                      {carbonSummary.trees_pending_review > 0 &&
+                        ` Pending review: ${carbonSummary.trees_pending_review}.`}
+                    </p>
+                  )}
                   {carbonSummary.top_species.length > 0 && (
                     <div className="green-work-carbon-species">
                       <h5>Top Species by CO2 Contribution</h5>

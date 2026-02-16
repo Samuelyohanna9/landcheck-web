@@ -1609,6 +1609,17 @@
   text-align: right;
 }
 
+.green-work-carbon-warning {
+  margin: 0.6rem 0 0;
+  padding: 0.45rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid rgba(180, 108, 24, 0.35);
+  background: rgba(255, 244, 220, 0.9);
+  color: #7b4d08;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
 .staff-overview-card {
   display: flex;
   flex-direction: column;
