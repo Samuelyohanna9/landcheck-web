@@ -1501,7 +1501,21 @@
   }
 
   .green-container.green-home-mode .green-tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-flow: row;
     gap: 0.46rem;
+  }
+
+  .green-container.green-home-mode .green-tiles > :nth-child(1) {
+    order: 1;
+  }
+
+  .green-container.green-home-mode .green-tiles > :nth-child(2) {
+    order: 2;
+  }
+
+  .green-container.green-home-mode .green-tiles > :nth-child(3) {
+    order: 3;
   }
 
   .green-container.green-home-mode .green-tile {
@@ -1541,8 +1555,8 @@
   }
 
   .green-container.green-home-mode .green-tile-wide {
-    grid-column: 1 / -1;
-    width: min(70%, 240px);
+    grid-column: auto;
+    width: 100%;
   }
 
   .green-shell {
