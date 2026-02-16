@@ -438,6 +438,13 @@
   text-align: right;
 }
 
+.green-carbon-explain {
+  margin: 0.36rem 0 0;
+  color: #3f6659;
+  font-size: 0.62rem;
+  line-height: 1.3;
+}
+
 .green-carbon-warning {
   margin: 0.5rem 0 0;
   padding: 0.38rem 0.5rem;
@@ -1447,6 +1454,52 @@
     font-size: 0.96rem;
   }
 
+  .green-container.green-home-mode .green-carbon-panel {
+    margin-top: 0.45rem;
+    padding: 0.52rem;
+    border-radius: 9px;
+  }
+
+  .green-container.green-home-mode .green-carbon-title {
+    margin-bottom: 0.36rem;
+    font-size: 0.74rem;
+  }
+
+  .green-container.green-home-mode .green-carbon-grid {
+    gap: 0.32rem;
+  }
+
+  .green-container.green-home-mode .green-carbon-card {
+    padding: 0.34rem 0.28rem;
+  }
+
+  .green-container.green-home-mode .green-carbon-value {
+    font-size: 0.94rem;
+  }
+
+  .green-container.green-home-mode .green-carbon-label {
+    font-size: 0.54rem;
+    margin-top: 0.1rem;
+    line-height: 1.2;
+  }
+
+  .green-container.green-home-mode .green-carbon-warning {
+    margin-top: 0.36rem;
+    padding: 0.3rem 0.38rem;
+    font-size: 0.56rem;
+  }
+
+  .green-container.green-home-mode .green-carbon-explain {
+    margin-top: 0.28rem;
+    font-size: 0.53rem;
+    line-height: 1.2;
+  }
+
+  .green-container.green-home-mode .green-carbon-method {
+    margin-top: 0.2rem;
+    font-size: 0.48rem;
+  }
+
   .green-container.green-home-mode .green-tiles {
     gap: 0.46rem;
   }
@@ -1615,5 +1668,38 @@
     color: #59806e;
     font-size: 0.76rem;
     font-weight: 700;
+  }
+}
+
+@media (max-width: 430px) {
+  .green-container.green-home-mode .green-header-inner {
+    padding: 0.6rem 0.62rem 0.68rem;
+  }
+
+  .green-container.green-home-mode .green-brand-logo {
+    width: 52px;
+    height: 52px;
+  }
+
+  .green-container.green-home-mode .green-header-title h1 {
+    font-size: 1.02rem;
+  }
+
+  .green-container.green-home-mode .green-header-title p {
+    font-size: 0.72rem;
+  }
+
+  .green-container.green-home-mode .green-shell {
+    height: calc(100dvh - 150px);
+    padding-left: 0.56rem;
+    padding-right: 0.56rem;
+  }
+
+  .green-container.green-home-mode .green-tile-label {
+    font-size: 0.64rem;
+  }
+
+  .green-container.green-home-mode .green-tile-meta-item {
+    font-size: 0.5rem;
   }
 }
