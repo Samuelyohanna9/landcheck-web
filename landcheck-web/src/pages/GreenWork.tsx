@@ -493,13 +493,11 @@ export default function GreenWork() {
   };
 
   const loadProjectData = async (projectId: number) => {
-    const [ordersRes, treesRes, tasksRes, speciesMaturityRes, reviewQueueRes, alertsRes] = await Promise.all([
+    const [ordersRes, treesRes, tasksRes, speciesMaturityRes] = await Promise.all([
       api.get(`/green/work-orders?project_id=${projectId}`),
       api.get(`/green/projects/${projectId}/trees`),
       api.get(`/green/tasks?project_id=${projectId}`),
       api.get(`/green/projects/${projectId}/species-maturity`),
-      api.get(`/green/tasks/review-queue?project_id=${projectId}`),
-      api.get(`/green/projects/${projectId}/alerts?refresh=true&status=open`),
     ]);
     setOrders(ordersRes.data);
     const normalizedTrees = (treesRes.data || [])
@@ -511,14 +509,6 @@ export default function GreenWork() {
       .filter((tree: any) => Number.isFinite(tree.lng) && Number.isFinite(tree.lat));
     setTrees(normalizedTrees);
     setTasks(Array.isArray(tasksRes.data) ? tasksRes.data : []);
-    setReviewQueue(Array.isArray(reviewQueueRes.data) ? reviewQueueRes.data : []);
-    setAlertsList(Array.isArray(alertsRes.data?.items) ? alertsRes.data.items : []);
-    setAlertsSummary({
-      total: Number(alertsRes.data?.summary?.total || 0),
-      danger: Number(alertsRes.data?.summary?.danger || 0),
-      warning: Number(alertsRes.data?.summary?.warning || 0),
-      info: Number(alertsRes.data?.summary?.info || 0),
-    });
     const serverMapRaw = speciesMaturityRes.data?.map || {};
     const serverMap = Object.entries(serverMapRaw).reduce(
       (acc, [key, value]) => {
@@ -535,6 +525,30 @@ export default function GreenWork() {
       ...prev,
       [String(projectId)]: serverMap,
     }));
+
+    const [reviewQueueRes, alertsRes] = await Promise.allSettled([
+      api.get(`/green/tasks/review-queue?project_id=${projectId}`),
+      api.get(`/green/projects/${projectId}/alerts?refresh=true&status=open`),
+    ]);
+
+    if (reviewQueueRes.status === "fulfilled") {
+      setReviewQueue(Array.isArray(reviewQueueRes.value.data) ? reviewQueueRes.value.data : []);
+    } else {
+      setReviewQueue([]);
+    }
+
+    if (alertsRes.status === "fulfilled") {
+      setAlertsList(Array.isArray(alertsRes.value.data?.items) ? alertsRes.value.data.items : []);
+      setAlertsSummary({
+        total: Number(alertsRes.value.data?.summary?.total || 0),
+        danger: Number(alertsRes.value.data?.summary?.danger || 0),
+        warning: Number(alertsRes.value.data?.summary?.warning || 0),
+        info: Number(alertsRes.value.data?.summary?.info || 0),
+      });
+    } else {
+      setAlertsList([]);
+      setAlertsSummary({ total: 0, danger: 0, warning: 0, info: 0 });
+    }
   };
 
   const loadServerLiveMaintenance = useCallback(
