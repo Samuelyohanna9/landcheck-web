@@ -340,9 +340,15 @@ export default function Green() {
   const pendingPlanting = useMemo(() => {
     const orders = plantingOrders.filter((o) => o.work_type === "planting");
     const totalTarget = orders.reduce((sum: number, o: any) => sum + (o.target_trees || 0), 0);
-    const planted = userTrees.filter((t) => normalizeTreeStatus(t.status) !== "pending_planting").length;
+    const planted = userTrees.length;
     return Math.max(totalTarget - planted, 0);
   }, [plantingOrders, userTrees]);
+
+  const plantingReviewCounts = useMemo(() => {
+    const submitted = userTrees.filter((t) => normalizeTreeStatus(t.status) === "pending_planting").length;
+    const approved = Math.max(userTrees.length - submitted, 0);
+    return { submitted, approved };
+  }, [userTrees]);
 
   const loadProjects = async () => {
     const res = await api.get("/green/projects");
@@ -421,12 +427,6 @@ export default function Green() {
   }, [activeProject?.id, activeUser]);
 
   useEffect(() => {
-    if (!focusPoint) return;
-    const timer = window.setTimeout(() => setFocusPoint(null), 800);
-    return () => window.clearTimeout(timer);
-  }, [focusPoint]);
-
-  useEffect(() => {
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
       setInstallPrompt(event as DeferredInstallPrompt);
@@ -477,11 +477,16 @@ export default function Green() {
         created_by: activeUser,
       });
       const createdTreeId = Number(createRes.data?.id || 0);
+      const reviewTaskId = Number(createRes.data?.review_task_id || 0);
       let photoLinked = true;
 
       if (pendingTreePhoto && Number.isFinite(createdTreeId) && createdTreeId > 0) {
         try {
-          await uploadGreenPhoto(pendingTreePhoto, "trees", { treeId: createdTreeId });
+          if (Number.isFinite(reviewTaskId) && reviewTaskId > 0) {
+            await uploadGreenPhoto(pendingTreePhoto, "tasks", { taskId: reviewTaskId });
+          } else {
+            await uploadGreenPhoto(pendingTreePhoto, "trees", { treeId: createdTreeId });
+          }
         } catch {
           photoLinked = false;
         }
@@ -508,7 +513,11 @@ export default function Green() {
           .catch(() => setPlantingOrders([]));
       }
       if (photoLinked) {
-        setPlantingFlowMessage("Tree successfully planted!");
+        setPlantingFlowMessage(
+          Number.isFinite(reviewTaskId) && reviewTaskId > 0
+            ? "Tree submitted for supervisor review."
+            : "Tree successfully planted!"
+        );
       } else {
         setPlantingFlowMessage("Tree successfully planted! Photo upload failed.");
       }
@@ -1176,6 +1185,15 @@ export default function Green() {
               <h3>Map & Add Trees</h3>
               <span className="green-map-hint">Tap a task to zoom to its tree</span>
             </div>
+            {activeUser && (
+              <div className="green-map-planting-summary">
+                <span className="green-task-status-badge is-submitted">Submitted: {plantingReviewCounts.submitted}</span>
+                <span className="green-task-status-badge is-done">Approved: {plantingReviewCounts.approved}</span>
+                <span className={`green-task-status-badge ${pendingPlanting > 0 ? "is-submitted" : "is-done"}`}>
+                  Remaining: {pendingPlanting}
+                </span>
+              </div>
+            )}
             {!activeUser && <p className="green-empty">Select a field officer to view only their trees.</p>}
             <div className="green-map-layout">
               <div className="green-map-canvas">
