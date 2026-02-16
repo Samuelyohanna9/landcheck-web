@@ -340,6 +340,56 @@
   color: #11313b;
 }
 
+/* Carbon Impact Panel */
+.green-carbon-panel {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #e0f2f1 0%, #e8f5e9 100%);
+  border-radius: 8px;
+  border: 1px solid #b2dfdb;
+}
+.green-carbon-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #004d40;
+  margin: 0 0 0.5rem;
+  letter-spacing: 0.02em;
+}
+.green-carbon-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+.green-carbon-card {
+  background: rgba(255,255,255,0.85);
+  border-radius: 6px;
+  padding: 0.5rem;
+  text-align: center;
+}
+.green-carbon-card-accent {
+  background: rgba(0,77,64,0.08);
+  border: 1px solid #80cbc4;
+}
+.green-carbon-value {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #004d40;
+  line-height: 1.2;
+}
+.green-carbon-label {
+  display: block;
+  font-size: 0.65rem;
+  color: #00695c;
+  margin-top: 0.15rem;
+}
+.green-carbon-method {
+  font-size: 0.55rem;
+  color: #80cbc4;
+  margin: 0.4rem 0 0;
+  text-align: right;
+}
+
 .green-tiles {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

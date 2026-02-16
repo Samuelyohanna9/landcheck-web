@@ -1531,6 +1531,84 @@
   background: #df4b4b;
 }
 
+/* Carbon Impact Panel */
+.green-work-carbon-panel {
+  margin-top: 0.75rem;
+  padding: 0.85rem;
+  background: linear-gradient(135deg, #e0f2f1 0%, #e8f5e9 100%);
+  border-radius: 8px;
+  border: 1px solid #b2dfdb;
+}
+.green-work-carbon-panel h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #004d40;
+  margin: 0 0 0.6rem;
+}
+.green-work-carbon-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+.green-work-carbon-stat {
+  background: rgba(255,255,255,0.85);
+  border-radius: 6px;
+  padding: 0.6rem 0.4rem;
+  text-align: center;
+}
+.green-work-carbon-stat.accent {
+  background: rgba(0,77,64,0.08);
+  border: 1px solid #80cbc4;
+}
+.green-work-carbon-val {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #004d40;
+  line-height: 1.2;
+}
+.green-work-carbon-lbl {
+  display: block;
+  font-size: 0.68rem;
+  color: #00695c;
+  margin-top: 0.15rem;
+}
+.green-work-carbon-species {
+  margin-top: 0.6rem;
+}
+.green-work-carbon-species h5 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #004d40;
+  margin: 0 0 0.35rem;
+}
+.green-work-carbon-sp-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.72rem;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid rgba(0,77,64,0.08);
+}
+.green-work-carbon-sp-name {
+  flex: 1;
+  font-weight: 600;
+  color: #004d40;
+}
+.green-work-carbon-sp-count {
+  color: #555;
+}
+.green-work-carbon-sp-co2 {
+  font-weight: 700;
+  color: #2e7d32;
+}
+.green-work-carbon-method {
+  font-size: 0.58rem;
+  color: #80cbc4;
+  margin: 0.5rem 0 0;
+  text-align: right;
+}
+
 .staff-overview-card {
   display: flex;
   flex-direction: column;

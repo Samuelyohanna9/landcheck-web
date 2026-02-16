@@ -497,6 +497,13 @@ export default function GreenWork() {
   );
   const [staffMenu, setStaffMenu] = useState<StaffMenuState>(null);
   const [liveTreeMenu, setLiveTreeMenu] = useState<LiveTreeMenuState>(null);
+  const [carbonSummary, setCarbonSummary] = useState<{
+    current_co2_tonnes: number;
+    annual_co2_tonnes: number;
+    projected_lifetime_co2_tonnes: number;
+    co2_per_tree_avg_kg: number;
+    top_species: { species: string; count: number; co2_kg: number }[];
+  } | null>(null);
   const [speciesMaturityByProject, setSpeciesMaturityByProject] = useState<Record<string, Record<string, number>>>({});
   const [selectedMaturitySpecies, setSelectedMaturitySpecies] = useState("");
   const [selectedMaturityYears, setSelectedMaturityYears] = useState("3");
@@ -567,9 +574,10 @@ export default function GreenWork() {
       [String(projectId)]: serverMap,
     }));
 
-    const [reviewQueueRes, alertsRes] = await Promise.allSettled([
+    const [reviewQueueRes, alertsRes, carbonRes] = await Promise.allSettled([
       api.get(`/green/tasks/review-queue?project_id=${projectId}&_ts=${stamp}`),
       api.get(`/green/projects/${projectId}/alerts?refresh=true&status=open&_ts=${stamp}`),
+      api.get(`/green/projects/${projectId}/carbon-summary?_ts=${stamp}`),
     ]);
 
     if (reviewQueueRes.status === "fulfilled") {
@@ -589,6 +597,18 @@ export default function GreenWork() {
     } else {
       setAlertsList([]);
       setAlertsSummary({ total: 0, danger: 0, warning: 0, info: 0 });
+    }
+
+    if (carbonRes.status === "fulfilled" && carbonRes.value.data) {
+      setCarbonSummary({
+        current_co2_tonnes: Number(carbonRes.value.data.current_co2_tonnes || 0),
+        annual_co2_tonnes: Number(carbonRes.value.data.annual_co2_tonnes || 0),
+        projected_lifetime_co2_tonnes: Number(carbonRes.value.data.projected_lifetime_co2_tonnes || 0),
+        co2_per_tree_avg_kg: Number(carbonRes.value.data.co2_per_tree_avg_kg || 0),
+        top_species: Array.isArray(carbonRes.value.data.top_species) ? carbonRes.value.data.top_species : [],
+      });
+    } else {
+      setCarbonSummary(null);
     }
   };
 
@@ -2323,6 +2343,43 @@ export default function GreenWork() {
                   )}
                 </div>
               </div>
+
+              {carbonSummary && (carbonSummary.current_co2_tonnes > 0 || carbonSummary.projected_lifetime_co2_tonnes > 0) && (
+                <div className="green-work-carbon-panel">
+                  <h4>Carbon Impact Summary</h4>
+                  <div className="green-work-carbon-grid">
+                    <div className="green-work-carbon-stat">
+                      <span className="green-work-carbon-val">{carbonSummary.current_co2_tonnes.toFixed(1)}</span>
+                      <span className="green-work-carbon-lbl">tonnes CO2 sequestered</span>
+                    </div>
+                    <div className="green-work-carbon-stat">
+                      <span className="green-work-carbon-val">{carbonSummary.annual_co2_tonnes.toFixed(1)}</span>
+                      <span className="green-work-carbon-lbl">tonnes CO2 / year</span>
+                    </div>
+                    <div className="green-work-carbon-stat accent">
+                      <span className="green-work-carbon-val">{carbonSummary.projected_lifetime_co2_tonnes.toFixed(0)}</span>
+                      <span className="green-work-carbon-lbl">tonnes projected (40yr)</span>
+                    </div>
+                    <div className="green-work-carbon-stat">
+                      <span className="green-work-carbon-val">{carbonSummary.co2_per_tree_avg_kg.toFixed(1)}</span>
+                      <span className="green-work-carbon-lbl">kg CO2 avg/tree</span>
+                    </div>
+                  </div>
+                  {carbonSummary.top_species.length > 0 && (
+                    <div className="green-work-carbon-species">
+                      <h5>Top Species by CO2 Contribution</h5>
+                      {carbonSummary.top_species.slice(0, 5).map((sp) => (
+                        <div key={sp.species} className="green-work-carbon-sp-row">
+                          <span className="green-work-carbon-sp-name">{sp.species}</span>
+                          <span className="green-work-carbon-sp-count">{sp.count} trees</span>
+                          <span className="green-work-carbon-sp-co2">{sp.co2_kg.toFixed(1)} kg CO2</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <p className="green-work-carbon-method">Methodology: IPCC Tier 1 + Chave et al. (2014) pantropical allometric equation</p>
+                </div>
+              )}
 
               <div className="green-work-stats green-work-staff-overview">
                 {filteredOverviewSummary.length === 0 && (

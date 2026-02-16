@@ -6,6 +6,15 @@ import "../styles/green.css";
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
 
+type CarbonData = {
+  current_co2_kg: number;
+  current_co2_tonnes: number;
+  annual_co2_kg: number;
+  annual_co2_tonnes: number;
+  projected_lifetime_co2_tonnes: number;
+  co2_per_tree_avg_kg: number;
+};
+
 type Project = {
   id: number;
   name: string;
@@ -19,6 +28,7 @@ type Project = {
     needs_attention: number;
     survival_rate: number;
   };
+  carbon?: CarbonData;
 };
 
 type Tree = {
@@ -903,6 +913,31 @@ export default function Green() {
             <span>Survival Rate</span>
             <strong>{survivalRate}%</strong>
           </div>
+
+          {activeProject?.carbon && (activeProject.carbon.current_co2_tonnes > 0 || activeProject.carbon.projected_lifetime_co2_tonnes > 0) && (
+            <div className="green-carbon-panel">
+              <h3 className="green-carbon-title">Carbon Impact</h3>
+              <div className="green-carbon-grid">
+                <div className="green-carbon-card">
+                  <span className="green-carbon-value">{activeProject.carbon.current_co2_tonnes.toFixed(1)}</span>
+                  <span className="green-carbon-label">tonnes CO2 sequestered</span>
+                </div>
+                <div className="green-carbon-card">
+                  <span className="green-carbon-value">{activeProject.carbon.annual_co2_tonnes.toFixed(1)}</span>
+                  <span className="green-carbon-label">tonnes CO2 / year</span>
+                </div>
+                <div className="green-carbon-card green-carbon-card-accent">
+                  <span className="green-carbon-value">{activeProject.carbon.projected_lifetime_co2_tonnes.toFixed(0)}</span>
+                  <span className="green-carbon-label">tonnes projected (40yr)</span>
+                </div>
+                <div className="green-carbon-card">
+                  <span className="green-carbon-value">{activeProject.carbon.co2_per_tree_avg_kg.toFixed(1)}</span>
+                  <span className="green-carbon-label">kg CO2 avg/tree</span>
+                </div>
+              </div>
+              <p className="green-carbon-method">IPCC Tier 1 + Chave et al. (2014)</p>
+            </div>
+          )}
         </section>
 
         <section className="green-tiles">
