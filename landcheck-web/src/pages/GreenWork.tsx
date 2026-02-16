@@ -52,6 +52,7 @@ type WorkTask = {
   reviewed_at?: string | null;
   reviewed_by?: string | null;
   review_notes?: string | null;
+  reported_tree_status?: string | null;
   due_date: string | null;
   priority?: string | null;
   notes?: string | null;
@@ -678,6 +679,14 @@ export default function GreenWork() {
     return () => window.clearInterval(timer);
   }, [activeProjectId, activeForm, seasonMode, assigneeFilter, loadServerLiveMaintenance]);
 
+  useEffect(() => {
+    if (!activeProjectId || activeForm !== "review_queue") return;
+    const timer = window.setInterval(() => {
+      void loadProjectData(activeProjectId).catch(() => {});
+    }, 12000);
+    return () => window.clearInterval(timer);
+  }, [activeProjectId, activeForm]);
+
   const onSelectProject = async (id: number) => {
     setActiveProjectId(id);
     setAssigneeFilter("all");
@@ -964,12 +973,12 @@ export default function GreenWork() {
 
   const exportWorkCsv = () => {
     if (!activeProjectId) return;
-    window.open(`${BACKEND_URL}/green/projects/${activeProjectId}/donor-report/csv`, "_blank");
+    window.open(`${BACKEND_URL}/green/donor/export/csv?project_id=${activeProjectId}`, "_blank");
   };
 
   const exportWorkPdf = () => {
     if (!activeProjectId) return;
-    window.open(`${BACKEND_URL}/green/projects/${activeProjectId}/donor-report/pdf`, "_blank");
+    window.open(`${BACKEND_URL}/green/donor/export/pdf?project_id=${activeProjectId}`, "_blank");
   };
 
   const assignees = useMemo(() => {
@@ -1346,6 +1355,9 @@ export default function GreenWork() {
         treeAgeDays >= maturityYears * 365;
 
       MAINTENANCE_ACTIVITY_ORDER.forEach((activity) => {
+        if (activity === "replacement" && !replacementRequired) {
+          return;
+        }
         const model = MAINTENANCE_MODEL[activity];
         const bucket = [...(taskBuckets.get(`${tree.id}:${activity}`) || [])];
         const doneTasks = bucket.filter((task) => isCompleteStatus(task.status, task.review_state));
@@ -1373,8 +1385,10 @@ export default function GreenWork() {
             : null;
         if (replacementRequired) {
           modelDue = activity === "replacement" ? today : null;
-        } else if (activity === "replacement") {
-          modelDue = null;
+        } else if (treeStatus === "need_watering" && activity === "watering") {
+          modelDue = today;
+        } else if (treeStatus === "need_protection" && activity === "protection") {
+          modelDue = today;
         }
         if (maturityReached && activity !== "replacement") {
           modelDue = null;
@@ -1415,16 +1429,14 @@ export default function GreenWork() {
             tone = "danger";
             indicator = "Replacement required immediately";
           }
-        } else if (!replacementRequired && activity === "replacement") {
-          if (activeTask) {
-            tone = "warning";
-            indicator = "Replacement assigned, but tree status does not currently require replacement";
-            statusText = `Task #${activeTask.id} ${activeTask.status || "pending"}`;
-          } else {
-            tone = "info";
-            indicator = "Replacement opens only for dead, damaged, removed, or needs replacement";
-            statusText = "Not required";
-          }
+        } else if (treeStatus === "need_watering" && activity === "watering") {
+          tone = activeTask ? "warning" : "danger";
+          indicator = "Inspection flagged need watering";
+          statusText = activeTask ? `Task #${activeTask.id} ${activeTask.status || "pending"}` : "Action required";
+        } else if (treeStatus === "need_protection" && activity === "protection") {
+          tone = activeTask ? "warning" : "danger";
+          indicator = "Inspection flagged need protection";
+          statusText = activeTask ? `Task #${activeTask.id} ${activeTask.status || "pending"}` : "Action required";
         } else if (maturityReached) {
           statusText = "Self-sustaining stage reached";
           if (notDoneTasks.length > 0) {
@@ -2121,7 +2133,16 @@ export default function GreenWork() {
 
           {activeForm === "review_queue" && (
             <div className="green-work-card">
-              <h3>Supervisor Review Queue</h3>
+              <div className="green-work-row">
+                <h3>Supervisor Review Queue</h3>
+                {activeProjectId && (
+                  <div className="work-actions">
+                    <button type="button" onClick={() => void loadProjectData(activeProjectId)}>
+                      Refresh
+                    </button>
+                  </div>
+                )}
+              </div>
               {!activeProjectId && <p className="green-work-note">Select project first from Project Focus.</p>}
               {activeProjectId && reviewQueue.length === 0 && <p className="green-work-note">No submitted tasks awaiting review.</p>}
               <div className="staff-list">
@@ -2139,6 +2160,14 @@ export default function GreenWork() {
                     <div className="staff-row-meta">
                       Review: {task.review_state || "none"} | Submitted: {formatDateLabel(task.submitted_at || task.created_at)}
                     </div>
+                    {task.reported_tree_status && (
+                      <div className="staff-row-meta">
+                        Reported condition: {formatTaskTypeLabel(task.reported_tree_status)}
+                      </div>
+                    )}
+                    {task.review_notes && (
+                      <div className="staff-row-meta">Latest supervisor note: {task.review_notes}</div>
+                    )}
                     <div className="staff-row-meta">
                       Evidence: {task.photo_url ? "photo" : "no-photo"} / {task.notes ? "notes" : "no-notes"}
                     </div>

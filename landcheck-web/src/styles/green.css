@@ -404,6 +404,14 @@
   box-shadow: 0 5px 12px rgba(22, 88, 39, 0.32);
 }
 
+.green-tile-badge-rejected {
+  right: auto;
+  left: 14px;
+  background: linear-gradient(180deg, #ef4444, #b91c1c);
+  color: #fff7f7;
+  box-shadow: 0 5px 12px rgba(123, 22, 22, 0.34);
+}
+
 .green-tile-icon {
   position: relative;
   z-index: 1;
@@ -855,6 +863,11 @@
   padding: 0.28rem 0.54rem;
 }
 
+.green-task-review-note {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
 .task-actions,
 .tree-actions {
   display: flex;
@@ -1180,6 +1193,11 @@
     right: 5px;
   }
 
+  .green-container.green-home-mode .green-tile-badge-rejected {
+    left: 5px;
+    right: auto;
+  }
+
   .green-container.green-home-mode .green-tile-wide {
     width: min(70%, 240px);
   }
@@ -1244,6 +1262,11 @@
     font-size: 1rem;
     top: 8px;
     right: 8px;
+  }
+
+  .green-tile-badge-rejected {
+    left: 8px;
+    right: auto;
   }
 
   .green-tile-wide {
