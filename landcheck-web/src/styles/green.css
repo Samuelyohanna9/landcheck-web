@@ -475,6 +475,18 @@
   color: #1b6b35;
 }
 
+.green-tile-meta-item.is-review {
+  border-color: rgba(70, 42, 18, 0.56);
+  background: linear-gradient(180deg, #7c4a20, #5f3718);
+  color: #fff5e8;
+}
+
+.green-tile-meta-item.is-review-approved {
+  border-color: rgba(84, 50, 20, 0.56);
+  background: linear-gradient(180deg, #8a5427, #6b3f1c);
+  color: #fff5e8;
+}
+
 .green-detail-card h3 {
   margin: 0 0 0.65rem;
   font-family: "Sora", sans-serif;

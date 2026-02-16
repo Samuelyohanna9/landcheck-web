@@ -915,6 +915,10 @@ export default function Green() {
               <TaskTileIcon />
             </span>
             <span className="green-tile-label">Maintenance Tasks</span>
+            <span className="green-tile-meta">
+              <span className="green-tile-meta-item is-review">Submitted {myTaskCounts.submitted}</span>
+              <span className="green-tile-meta-item is-review-approved">Approved {myTaskCounts.done}</span>
+            </span>
             <span className={`green-tile-badge ${myTaskCounts.undone > 0 ? "green-tile-badge-assigned" : ""}`}>{myTaskCounts.undone}</span>
             {myTaskCounts.rejected > 0 && <span className="green-tile-badge green-tile-badge-rejected">{myTaskCounts.rejected}</span>}
           </button>
