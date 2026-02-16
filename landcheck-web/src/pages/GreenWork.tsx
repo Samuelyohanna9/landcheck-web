@@ -284,7 +284,7 @@ type LiveMaintenanceRow = {
   modelRationale: string;
 };
 
-type LiveTreeMenuState = { treeId: number; x: number; y: number } | null;
+type LiveTreeMenuState = { treeId: number; x: number; y: number; taskType?: string } | null;
 
 const liveToneRank = (tone: LiveStatusTone) => {
   if (tone === "danger") return 0;
@@ -417,15 +417,34 @@ const renderActionIcon = (form: WorkForm) => {
 };
 
 export default function GreenWork() {
+  const storedProjectIdRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_active_project_id") || "" : "";
+  const storedProjectId = Number(storedProjectIdRaw || "0");
+  const storedFormRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_active_form") || "" : "";
+  const storedAssigneeFilter = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_assignee_filter") || "all" : "all";
+  const storedSeason = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_season_mode") || "rainy" : "rainy";
+  const allowedForms: WorkForm[] = [
+    "project_focus",
+    "create_project",
+    "add_user",
+    "users",
+    "assign_work",
+    "assign_task",
+    "review_queue",
+    "overview",
+    "live_table",
+  ];
+
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const mapCardRef = useRef<HTMLDivElement | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<GreenUser[]>([]);
-  const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
+  const [activeProjectId, setActiveProjectId] = useState<number | null>(
+    Number.isFinite(storedProjectId) && storedProjectId > 0 ? storedProjectId : null
+  );
   const [orders, setOrders] = useState<WorkOrder[]>([]);
   const [trees, setTrees] = useState<Tree[]>([]);
   const [tasks, setTasks] = useState<WorkTask[]>([]);
-  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+  const [assigneeFilter, setAssigneeFilter] = useState<string>(storedAssigneeFilter || "all");
   const [newOrder, setNewOrder] = useState({
     assignee_name: "",
     work_type: "planting",
@@ -434,7 +453,7 @@ export default function GreenWork() {
   });
   const [newUser, setNewUser] = useState({ full_name: "", role: "field_officer" });
   const [newProject, setNewProject] = useState({ name: "", location_text: "", sponsor: "" });
-  const [seasonMode, setSeasonMode] = useState<SeasonMode>("rainy");
+  const [seasonMode, setSeasonMode] = useState<SeasonMode>(storedSeason === "dry" ? "dry" : "rainy");
   const [newTask, setNewTask] = useState<{
     tree_id: string;
     task_type: string;
@@ -452,10 +471,12 @@ export default function GreenWork() {
     priority: "normal",
     notes: "",
   });
-  const [mapView, setMapView] = useState<{ lng: number; lat: number; zoom: number; bearing: number; pitch: number } | null>(null);
+  const [, setMapView] = useState<{ lng: number; lat: number; zoom: number; bearing: number; pitch: number } | null>(null);
   const [inspectedTree, setInspectedTree] = useState<TreeInspectData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activeForm, setActiveForm] = useState<WorkForm | null>(null);
+  const [activeForm, setActiveForm] = useState<WorkForm | null>(
+    allowedForms.includes(storedFormRaw as WorkForm) ? (storedFormRaw as WorkForm) : null
+  );
   const [staffMenu, setStaffMenu] = useState<StaffMenuState>(null);
   const [liveTreeMenu, setLiveTreeMenu] = useState<LiveTreeMenuState>(null);
   const [speciesMaturityByProject, setSpeciesMaturityByProject] = useState<Record<string, Record<string, number>>>({});
@@ -481,6 +502,7 @@ export default function GreenWork() {
     dueSoon: 0,
   });
   const [serverLiveSources, setServerLiveSources] = useState<{ label: string; url: string }[]>(LIVE_TABLE_SOURCES);
+  const [reviewNoteByTaskId, setReviewNoteByTaskId] = useState<Record<number, string>>({});
 
   const loadProjects = async () => {
     const res = await api.get("/green/projects");
@@ -577,6 +599,32 @@ export default function GreenWork() {
     loadProjects().catch(() => toast.error("Failed to load projects"));
     loadUsers().catch(() => toast.error("Failed to load users"));
   }, []);
+
+  useEffect(() => {
+    if (!projects.length || !activeProjectId) return;
+    const exists = projects.some((project) => Number(project.id) === Number(activeProjectId));
+    if (!exists) {
+      setActiveProjectId(null);
+      return;
+    }
+    void loadProjectData(activeProjectId).catch(() => toast.error("Failed to load project data"));
+  }, [projects, activeProjectId]);
+
+  useEffect(() => {
+    localStorage.setItem("landcheck_work_active_project_id", activeProjectId ? String(activeProjectId) : "");
+  }, [activeProjectId]);
+
+  useEffect(() => {
+    localStorage.setItem("landcheck_work_active_form", activeForm || "");
+  }, [activeForm]);
+
+  useEffect(() => {
+    localStorage.setItem("landcheck_work_assignee_filter", assigneeFilter || "all");
+  }, [assigneeFilter]);
+
+  useEffect(() => {
+    localStorage.setItem("landcheck_work_season_mode", seasonMode);
+  }, [seasonMode]);
 
   useEffect(() => {
     if (!staffMenu && !liveTreeMenu) return;
@@ -805,18 +853,28 @@ export default function GreenWork() {
 
   const reviewSubmittedTask = async (taskId: number, decision: "approve" | "reject") => {
     if (!activeProjectId) return;
+    const reviewNote = (reviewNoteByTaskId[taskId] || "").trim();
+    if (decision === "reject" && !reviewNote) {
+      toast.error("Write a rejection note before rejecting.");
+      return;
+    }
     const loadingId = toast.loading(decision === "approve" ? "Approving task..." : "Rejecting task...");
     try {
       await api.post(`/green/tasks/${taskId}/review`, {
         decision,
         reviewer_name: "supervisor",
-        review_notes: decision === "approve" ? "Approved by supervisor." : "Rejected. Update evidence and resubmit.",
+        review_notes: reviewNote || (decision === "approve" ? "Approved by supervisor." : "Rejected. Update evidence and resubmit."),
         season_mode: seasonMode,
       });
       await Promise.all([
         loadProjectData(activeProjectId),
         loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter),
       ]);
+      setReviewNoteByTaskId((prev) => {
+        const next = { ...prev };
+        delete next[taskId];
+        return next;
+      });
       toast.success(decision === "approve" ? "Task approved" : "Task rejected", { id: loadingId });
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || "Failed to review task", { id: loadingId });
@@ -880,16 +938,12 @@ export default function GreenWork() {
 
   const exportWorkCsv = () => {
     if (!activeProjectId) return;
-    window.open(`${BACKEND_URL}/green/work-stats/export/csv?project_id=${activeProjectId}`, "_blank");
+    window.open(`${BACKEND_URL}/green/projects/${activeProjectId}/donor-report/csv`, "_blank");
   };
 
   const exportWorkPdf = () => {
     if (!activeProjectId) return;
-    const assignee = assigneeFilter !== "all" ? `&assignee_name=${encodeURIComponent(assigneeFilter)}` : "";
-    const view = mapView
-      ? `&lng=${mapView.lng}&lat=${mapView.lat}&zoom=${mapView.zoom}&bearing=${mapView.bearing}&pitch=${mapView.pitch}`
-      : "";
-    window.open(`${BACKEND_URL}/green/work-report/pdf?project_id=${activeProjectId}${assignee}${view}`, "_blank");
+    window.open(`${BACKEND_URL}/green/projects/${activeProjectId}/donor-report/pdf`, "_blank");
   };
 
   const assignees = useMemo(() => {
@@ -1589,7 +1643,7 @@ export default function GreenWork() {
     setLiveTreeMenu(null);
   };
 
-  const openAssignTaskForTree = (treeId: number) => {
+  const openAssignTaskForTree = (treeId: number, preferredTaskType?: string) => {
     if (!activeProjectId) {
       toast("Select an active project first.");
       setLiveTreeMenu(null);
@@ -1605,12 +1659,13 @@ export default function GreenWork() {
       ...prev,
       tree_id: String(treeId),
       assignee_name: ownerExists ? owner : prev.assignee_name,
-      task_type: treeStatus === "dead" ? "replacement" : prev.task_type,
+      task_type: treeStatus === "dead" ? "replacement" : (preferredTaskType || prev.task_type),
     }));
     setActiveForm("assign_task");
     setMenuOpen(false);
     setLiveTreeMenu(null);
-    toast.success(`Tree #${treeId} ready for maintenance assignment`);
+    const pickedType = treeStatus === "dead" ? "replacement" : (preferredTaskType || "maintenance");
+    toast.success(`Tree #${treeId} ready. ${formatTaskTypeLabel(pickedType)} prefilled.`);
   };
 
   return (
@@ -2041,6 +2096,21 @@ export default function GreenWork() {
                     <div className="staff-row-meta">
                       Evidence: {task.photo_url ? "photo" : "no-photo"} / {task.notes ? "notes" : "no-notes"}
                     </div>
+                    {task.photo_url && (
+                      <div className="green-work-review-photo">
+                        <img src={toDisplayPhotoUrl(task.photo_url)} alt={`Task ${task.id} evidence`} />
+                      </div>
+                    )}
+                    <textarea
+                      placeholder="Supervisor note (required for reject)"
+                      value={reviewNoteByTaskId[task.id] ?? task.review_notes ?? ""}
+                      onChange={(e) =>
+                        setReviewNoteByTaskId((prev) => ({
+                          ...prev,
+                          [task.id]: e.target.value,
+                        }))
+                      }
+                    />
                     <div className="work-actions">
                       <button type="button" onClick={() => void reviewSubmittedTask(task.id, "approve")}>
                         Approve
@@ -2373,7 +2443,7 @@ export default function GreenWork() {
                               onClick={(event) => {
                                 event.stopPropagation();
                                 setStaffMenu(null);
-                                setLiveTreeMenu({ treeId: row.treeId, x: event.clientX, y: event.clientY });
+                                setLiveTreeMenu({ treeId: row.treeId, x: event.clientX, y: event.clientY, taskType: row.activity });
                               }}
                             >
                               #{row.treeId}
@@ -2586,7 +2656,7 @@ export default function GreenWork() {
           />
           <div className="green-work-context-menu" style={{ left: liveTreeMenu.x, top: liveTreeMenu.y }}>
             <div className="green-work-context-title">Tree #{liveTreeMenu.treeId}</div>
-            <button type="button" onClick={() => openAssignTaskForTree(liveTreeMenu.treeId)}>
+            <button type="button" onClick={() => openAssignTaskForTree(liveTreeMenu.treeId, liveTreeMenu.taskType)}>
               Assign Maintenance
             </button>
           </div>

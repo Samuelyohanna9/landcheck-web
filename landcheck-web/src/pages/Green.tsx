@@ -197,15 +197,26 @@ function TreeTileIcon() {
 }
 
 export default function Green() {
+  const storedActiveUser = typeof window !== "undefined" ? localStorage.getItem("landcheck_green_active_user") || "" : "";
+  const storedSectionRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_green_active_section") || "" : "";
+  const storedProjectIdRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_green_active_project_id") || "" : "";
+  const storedProjectId = Number(storedProjectIdRaw || "0");
+  const storedSection = (["tasks", "map", "records", "profile"] as Section[]).includes(storedSectionRaw as Section)
+    ? (storedSectionRaw as Section)
+    : null;
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const [pendingRestoreProjectId, setPendingRestoreProjectId] = useState<number | null>(
+    Number.isFinite(storedProjectId) && storedProjectId > 0 ? storedProjectId : null
+  );
   const [trees, setTrees] = useState<Tree[]>([]);
   const [selectedTreeId, setSelectedTreeId] = useState<number | null>(null);
   const [inspectedTree, setInspectedTree] = useState<TreeInspectData | null>(null);
   const [treeTasks, setTreeTasks] = useState<any[]>([]);
   const [treeTimeline, setTreeTimeline] = useState<any | null>(null);
   const [users, setUsers] = useState<GreenUser[]>([]);
-  const [activeUser, setActiveUser] = useState<string>("");
+  const [activeUser, setActiveUser] = useState<string>(storedActiveUser);
   const [myTasks, setMyTasks] = useState<any[]>([]);
   const [taskEdits, setTaskEdits] = useState<Record<number, { status: string; notes: string; photo_url: string }>>(
     {}
@@ -226,7 +237,7 @@ export default function Green() {
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const [pendingTreePhoto, setPendingTreePhoto] = useState<File | null>(null);
   const [addingTree, setAddingTree] = useState(false);
-  const [mapView, setMapView] = useState<{
+  const [, setMapView] = useState<{
     lng: number;
     lat: number;
     zoom: number;
@@ -235,7 +246,7 @@ export default function Green() {
   } | null>(null);
   const [focusPoint, setFocusPoint] = useState<{ lng: number; lat: number }[] | null>(null);
   const [plantingOrders, setPlantingOrders] = useState<any[]>([]);
-  const [activeSection, setActiveSection] = useState<Section | null>(null);
+  const [activeSection, setActiveSection] = useState<Section | null>(storedSection);
   const [installPrompt, setInstallPrompt] = useState<DeferredInstallPrompt | null>(null);
   const [treePhotoUploading, setTreePhotoUploading] = useState(false);
   const [plantingFlowState, setPlantingFlowState] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -326,6 +337,27 @@ export default function Green() {
     loadProjects().catch(() => toast.error("Failed to load projects"));
     loadUsers().catch(() => toast.error("Failed to load users"));
   }, []);
+
+  useEffect(() => {
+    if (!projects.length || !pendingRestoreProjectId || activeProject) return;
+    const project = projects.find((item) => Number(item.id) === Number(pendingRestoreProjectId));
+    if (project) {
+      void selectProject(project);
+    }
+    setPendingRestoreProjectId(null);
+  }, [projects, pendingRestoreProjectId, activeProject]);
+
+  useEffect(() => {
+    localStorage.setItem("landcheck_green_active_user", activeUser || "");
+  }, [activeUser]);
+
+  useEffect(() => {
+    localStorage.setItem("landcheck_green_active_section", activeSection || "");
+  }, [activeSection]);
+
+  useEffect(() => {
+    localStorage.setItem("landcheck_green_active_project_id", activeProject ? String(activeProject.id) : "");
+  }, [activeProject?.id, activeProject]);
 
   useEffect(() => {
     if (activeProject && activeUser) {
@@ -588,15 +620,12 @@ export default function Green() {
 
   const exportCsv = async () => {
     if (!activeProject) return;
-    window.open(`${BACKEND_URL}/green/projects/${activeProject.id}/export/csv`, "_blank");
+    window.open(`${BACKEND_URL}/green/projects/${activeProject.id}/donor-report/csv`, "_blank");
   };
 
   const exportPdf = async () => {
     if (!activeProject) return;
-    const view = mapView
-      ? `?lng=${mapView.lng}&lat=${mapView.lat}&zoom=${mapView.zoom}&bearing=${mapView.bearing}&pitch=${mapView.pitch}`
-      : "";
-    window.open(`${BACKEND_URL}/green/projects/${activeProject.id}/export/pdf${view}`, "_blank");
+    window.open(`${BACKEND_URL}/green/projects/${activeProject.id}/donor-report/pdf`, "_blank");
   };
 
   const useGps = () => {
@@ -910,7 +939,7 @@ export default function Green() {
                             Submitted
                           </span>
                         ) : isTaskRejected(t) ? (
-                          <span className="green-task-status-badge">
+                          <span className="green-task-status-badge is-rejected">
                             Rejected
                           </span>
                         ) : (
@@ -928,6 +957,7 @@ export default function Green() {
                             }
                           >
                             <option value="pending">Pending</option>
+                            <option value="done">Done</option>
                             <option value="overdue">Overdue</option>
                           </select>
                         )}
@@ -963,18 +993,6 @@ export default function Green() {
                             >
                               {isTaskSubmitted(t) ? "Awaiting Review" : "Submit"}
                             </button>
-                            {Number.isFinite(t.lng) && Number.isFinite(t.lat) && (
-                              <button
-                                className="green-row-btn"
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
-                                }}
-                              >
-                                Locate
-                              </button>
-                            )}
                             {Number.isFinite(t.lng) && Number.isFinite(t.lat) && (
                               <button
                                 className="green-row-btn"
