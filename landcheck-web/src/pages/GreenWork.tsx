@@ -603,7 +603,7 @@ export default function GreenWork() {
     priority: "normal",
     notes: "",
   });
-  const [, setMapView] = useState<{ lng: number; lat: number; zoom: number; bearing: number; pitch: number } | null>(null);
+  const [mapView, setMapView] = useState<{ lng: number; lat: number; zoom: number; bearing: number; pitch: number } | null>(null);
   const [inspectedTree, setInspectedTree] = useState<TreeInspectData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeForm, setActiveForm] = useState<WorkForm | null>(
@@ -1168,7 +1168,20 @@ export default function GreenWork() {
 
   const exportWorkPdf = () => {
     if (!activeProjectId) return;
-    window.open(`${BACKEND_URL}/green/donor/export/pdf?project_id=${activeProjectId}`, "_blank");
+    const params = new URLSearchParams({
+      project_id: String(activeProjectId),
+    });
+    if (assigneeFilter !== "all") {
+      params.set("assignee_name", assigneeFilter);
+    }
+    if (mapView) {
+      params.set("lng", String(mapView.lng));
+      params.set("lat", String(mapView.lat));
+      params.set("zoom", String(mapView.zoom));
+      params.set("bearing", String(mapView.bearing));
+      params.set("pitch", String(mapView.pitch));
+    }
+    window.open(`${BACKEND_URL}/green/work-report/pdf?${params.toString()}`, "_blank");
   };
 
   const exportWorkVerra = () => {
