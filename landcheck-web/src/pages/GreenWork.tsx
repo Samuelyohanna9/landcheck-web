@@ -106,8 +106,14 @@ type VerraExportHistoryItem = {
   } | null;
   created_at: string;
 };
+type VerraExportFormat = "zip" | "json" | "docx";
 
 const normalizeName = (value: string | null | undefined) => (value || "").trim().toLowerCase();
+const normalizeVerraExportFormat = (value: string | null | undefined): VerraExportFormat => {
+  const normalized = normalizeName(value);
+  if (normalized === "json" || normalized === "docx") return normalized;
+  return "zip";
+};
 const normalizeTreeStatus = (value: string | null | undefined) => {
   const raw = (value || "").trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
   if (raw === "deseas" || raw === "diseased") return "disease";
@@ -1188,7 +1194,7 @@ export default function GreenWork() {
   };
 
   const exportVerraPackage = (
-    format: "zip" | "json",
+    format: VerraExportFormat,
     overrides?: Partial<typeof verraFilters>,
   ) => {
     if (!activeProjectId) return;
@@ -2776,6 +2782,9 @@ export default function GreenWork() {
                   <button type="button" onClick={() => exportVerraPackage("json")}>
                     Export Verra JSON
                   </button>
+                  <button type="button" onClick={() => exportVerraPackage("docx")}>
+                    Export Verra DOCX
+                  </button>
                   <button type="button" onClick={() => void loadVerraHistory(activeProjectId)}>
                     Refresh History
                   </button>
@@ -2901,7 +2910,7 @@ export default function GreenWork() {
                                   className="green-work-live-tree-link"
                                   onClick={() =>
                                     exportVerraPackage(
-                                      String(item.output_format || "zip").toLowerCase() === "json" ? "json" : "zip",
+                                      normalizeVerraExportFormat(item.output_format),
                                       {
                                         monitoring_start: item.monitoring_start || "",
                                         monitoring_end: item.monitoring_end || "",
