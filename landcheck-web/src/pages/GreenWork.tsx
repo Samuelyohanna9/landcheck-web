@@ -74,9 +74,38 @@ type WorkForm =
   | "assign_task"
   | "review_queue"
   | "overview"
-  | "live_table";
+  | "live_table"
+  | "verra_reports";
 type StaffMenuState = { user: GreenUser; x: number; y: number } | null;
 type DrawerFrame = { top: number; left: number; width: number; height: number };
+type KpiTrendItem = {
+  snapshot_at: string;
+  metrics: {
+    survival_rate?: number;
+    evidence_complete_rate?: number;
+    [key: string]: any;
+  };
+};
+type VerraExportHistoryItem = {
+  id: number;
+  season_mode: string;
+  assignee_name: string | null;
+  output_format: string;
+  monitoring_start: string | null;
+  monitoring_end: string | null;
+  methodology_id: string | null;
+  verifier_notes: string | null;
+  generated_by: string | null;
+  file_name: string | null;
+  payload_summary?: {
+    tree_inventory_count?: number;
+    task_timeline_count?: number;
+    live_maintenance_count?: number;
+    co2_current_tonnes?: number;
+    co2_projected_lifetime_tonnes?: number;
+  } | null;
+  created_at: string;
+};
 
 const normalizeName = (value: string | null | undefined) => (value || "").trim().toLowerCase();
 const normalizeTreeStatus = (value: string | null | undefined) => {
@@ -425,6 +454,12 @@ const renderActionIcon = (form: WorkForm) => {
           <path d="M8 17l2 2 4-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
       );
+    case "verra_reports":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M6 3h9l3 3v15H6zM15 3v3h3M9 10h6M9 14h6M9 18h4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
     default:
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -432,6 +467,78 @@ const renderActionIcon = (form: WorkForm) => {
         </svg>
       );
   }
+};
+
+const TrendMiniChart = ({
+  title,
+  color,
+  context,
+  points,
+}: {
+  title: string;
+  color: string;
+  context: string;
+  points: Array<{ label: string; value: number }>;
+}) => {
+  const safePoints = points.length >= 2 ? points : [{ label: "start", value: 0 }, { label: "now", value: 0 }];
+  const maxY = Math.max(100, ...safePoints.map((point) => Number(point.value || 0)));
+  const minY = 0;
+  const width = 420;
+  const height = 168;
+  const left = 40;
+  const right = 14;
+  const top = 22;
+  const bottom = 36;
+  const chartWidth = width - left - right;
+  const chartHeight = height - top - bottom;
+  const yTicks = [0, 25, 50, 75, 100];
+  const xStep = safePoints.length > 1 ? chartWidth / (safePoints.length - 1) : chartWidth;
+  const toY = (value: number) => top + (1 - (value - minY) / Math.max(maxY - minY, 1)) * chartHeight;
+  const pathData = safePoints
+    .map((point, index) => {
+      const x = left + xStep * index;
+      const y = toY(Number(point.value || 0));
+      return `${index === 0 ? "M" : "L"}${x},${y}`;
+    })
+    .join(" ");
+
+  const firstLabel = safePoints[0]?.label || "";
+  const lastLabel = safePoints[safePoints.length - 1]?.label || "";
+
+  return (
+    <div className="green-work-trend-card">
+      <div className="green-work-overview-bar-head">
+        <h5>{title}</h5>
+        <span>{(safePoints[safePoints.length - 1]?.value ?? 0).toFixed(1)}%</span>
+      </div>
+      <svg className="green-work-trend-svg" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" role="img" aria-label={title}>
+        {yTicks.map((tick) => {
+          const y = toY(tick);
+          return (
+            <g key={`${title}-${tick}`}>
+              <line x1={left} y1={y} x2={left + chartWidth} y2={y} stroke="#d6e2db" strokeWidth="1" />
+              <text x={left - 8} y={y + 3} textAnchor="end" fontSize="10" fill="#5f7c70">
+                {tick}
+              </text>
+            </g>
+          );
+        })}
+        <path d={pathData} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        {safePoints.map((point, index) => {
+          const x = left + xStep * index;
+          const y = toY(Number(point.value || 0));
+          return <circle key={`${title}-dot-${index}`} cx={x} cy={y} r="3" fill={color} />;
+        })}
+        <text x={left} y={height - 12} fontSize="10" fill="#5f7c70">
+          {firstLabel}
+        </text>
+        <text x={left + chartWidth} y={height - 12} textAnchor="end" fontSize="10" fill="#5f7c70">
+          {lastLabel}
+        </text>
+      </svg>
+      <p className="green-work-chart-context">{context}</p>
+    </div>
+  );
 };
 
 export default function GreenWork() {
@@ -450,6 +557,7 @@ export default function GreenWork() {
     "review_queue",
     "overview",
     "live_table",
+    "verra_reports",
   ];
 
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -531,6 +639,26 @@ export default function GreenWork() {
   });
   const [serverLiveSources, setServerLiveSources] = useState<{ label: string; url: string }[]>(LIVE_TABLE_SOURCES);
   const [reviewNoteByTaskId, setReviewNoteByTaskId] = useState<Record<number, string>>({});
+  const [kpiTrend, setKpiTrend] = useState<KpiTrendItem[]>([]);
+  const [kpiCurrent, setKpiCurrent] = useState<Record<string, any> | null>(null);
+  const [verraFilters, setVerraFilters] = useState<{
+    monitoring_start: string;
+    monitoring_end: string;
+    methodology_id: string;
+    verifier_notes: string;
+    generated_by: string;
+    season_mode: SeasonMode;
+    assignee_name: string;
+  }>({
+    monitoring_start: "",
+    monitoring_end: "",
+    methodology_id: "",
+    verifier_notes: "",
+    generated_by: "supervisor",
+    season_mode: storedSeason === "dry" ? "dry" : "rainy",
+    assignee_name: "all",
+  });
+  const [verraHistory, setVerraHistory] = useState<VerraExportHistoryItem[]>([]);
 
   const loadProjects = async () => {
     const res = await api.get("/green/projects");
@@ -577,10 +705,11 @@ export default function GreenWork() {
       [String(projectId)]: serverMap,
     }));
 
-    const [reviewQueueRes, alertsRes, carbonRes] = await Promise.allSettled([
+    const [reviewQueueRes, alertsRes, carbonRes, kpiRes] = await Promise.allSettled([
       api.get(`/green/tasks/review-queue?project_id=${projectId}&_ts=${stamp}`),
       api.get(`/green/projects/${projectId}/alerts?refresh=true&status=open&_ts=${stamp}`),
       api.get(`/green/projects/${projectId}/carbon-summary?_ts=${stamp}`),
+      api.get(`/green/reports/kpi?project_id=${projectId}&days=180&snapshot=true&_ts=${stamp}`),
     ]);
 
     if (reviewQueueRes.status === "fulfilled") {
@@ -616,7 +745,21 @@ export default function GreenWork() {
     } else {
       setCarbonSummary(null);
     }
+
+    if (kpiRes.status === "fulfilled" && kpiRes.value.data) {
+      const trendRows = Array.isArray(kpiRes.value.data.trend) ? kpiRes.value.data.trend : [];
+      setKpiTrend(trendRows);
+      setKpiCurrent(kpiRes.value.data.current || null);
+    } else {
+      setKpiTrend([]);
+      setKpiCurrent(null);
+    }
   };
+
+  const loadVerraHistory = useCallback(async (projectId: number) => {
+    const res = await api.get(`/green/projects/${projectId}/verra/exports?limit=100`);
+    setVerraHistory(Array.isArray(res.data) ? res.data : []);
+  }, []);
 
   const loadServerLiveMaintenance = useCallback(
     async (projectId: number, season: SeasonMode, assignee: string) => {
@@ -713,6 +856,11 @@ export default function GreenWork() {
     }, 12000);
     return () => window.clearInterval(timer);
   }, [activeProjectId, activeForm]);
+
+  useEffect(() => {
+    if (!activeProjectId || activeForm !== "verra_reports") return;
+    void loadVerraHistory(activeProjectId).catch(() => {});
+  }, [activeProjectId, activeForm, loadVerraHistory]);
 
   const onSelectProject = async (id: number) => {
     setActiveProjectId(id);
@@ -1019,15 +1167,62 @@ export default function GreenWork() {
 
   const exportWorkVerra = () => {
     if (!activeProjectId) return;
+    const quickSeason = verraFilters.season_mode || seasonMode;
+    const quickAssignee = verraFilters.assignee_name && verraFilters.assignee_name !== "all"
+      ? verraFilters.assignee_name
+      : assigneeFilter !== "all"
+        ? assigneeFilter
+        : "";
     const params = new URLSearchParams({
       project_id: String(activeProjectId),
-      season_mode: seasonMode,
+      season_mode: quickSeason,
       format: "zip",
     });
-    if (assigneeFilter !== "all") {
-      params.set("assignee_name", assigneeFilter);
+    if (quickAssignee) {
+      params.set("assignee_name", quickAssignee);
     }
     window.open(`${BACKEND_URL}/green/donor/export/verra-vcs?${params.toString()}`, "_blank");
+    window.setTimeout(() => {
+      void loadVerraHistory(activeProjectId).catch(() => {});
+    }, 900);
+  };
+
+  const exportVerraPackage = (
+    format: "zip" | "json",
+    overrides?: Partial<typeof verraFilters>,
+  ) => {
+    if (!activeProjectId) return;
+    const merged = {
+      ...verraFilters,
+      ...(overrides || {}),
+    };
+    const params = new URLSearchParams({
+      project_id: String(activeProjectId),
+      season_mode: merged.season_mode || "rainy",
+      format,
+    });
+    if (merged.assignee_name && merged.assignee_name !== "all") {
+      params.set("assignee_name", merged.assignee_name);
+    }
+    if (merged.monitoring_start) {
+      params.set("monitoring_start", merged.monitoring_start);
+    }
+    if (merged.monitoring_end) {
+      params.set("monitoring_end", merged.monitoring_end);
+    }
+    if (merged.methodology_id.trim()) {
+      params.set("methodology_id", merged.methodology_id.trim());
+    }
+    if (merged.verifier_notes.trim()) {
+      params.set("verifier_notes", merged.verifier_notes.trim());
+    }
+    if (merged.generated_by.trim()) {
+      params.set("generated_by", merged.generated_by.trim());
+    }
+    window.open(`${BACKEND_URL}/green/donor/export/verra-vcs?${params.toString()}`, "_blank");
+    window.setTimeout(() => {
+      void loadVerraHistory(activeProjectId).catch(() => {});
+    }, 1200);
   };
 
   const assignees = useMemo(() => {
@@ -1045,6 +1240,17 @@ export default function GreenWork() {
     const sortedNames = Array.from(namesByKey.values()).sort((a, b) => a.localeCompare(b));
     return ["all", ...sortedNames];
   }, [orders, trees, tasks, users]);
+
+  useEffect(() => {
+    setVerraFilters((prev) => {
+      const assigneeExists = prev.assignee_name === "all" || assignees.includes(prev.assignee_name);
+      return {
+        ...prev,
+        season_mode: prev.season_mode || seasonMode,
+        assignee_name: assigneeExists ? prev.assignee_name : "all",
+      };
+    });
+  }, [assignees, seasonMode]);
 
   const projectSpeciesOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -1595,6 +1801,7 @@ export default function GreenWork() {
   const activeProjectActions: Array<{ form: WorkForm; title: string; note: string }> = [
     { form: "overview", title: "Overview", note: "Progress + map summary" },
     { form: "live_table", title: "Live Maintenance", note: "Cycle due table + alerts" },
+    { form: "verra_reports", title: "Verra Reports", note: "VCS package + history" },
     { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
     { form: "users", title: "Users Board", note: "All staff status and roles" },
     { form: "add_user", title: "Add Staff", note: "Create new user profile" },
@@ -1650,13 +1857,68 @@ export default function GreenWork() {
   const taskPendingPct = calcProgress(filteredOverviewTotals.taskPending, filteredOverviewTotals.taskTotal);
   const taskOverduePct = calcProgress(filteredOverviewTotals.taskOverdue, filteredOverviewTotals.taskTotal);
 
+  const trendPoints = useMemo(() => {
+    const toLabel = (iso: string) => {
+      if (!iso) return "";
+      const parsed = new Date(iso);
+      if (Number.isNaN(parsed.getTime())) return iso.slice(0, 10);
+      const month = String(parsed.getMonth() + 1).padStart(2, "0");
+      const day = String(parsed.getDate()).padStart(2, "0");
+      return `${month}/${day}`;
+    };
+    const healthyNow = trees.filter((tree) => HEALTHY_TREE_STATUSES.has(normalizeTreeStatus(tree.status))).length;
+    const fallbackSurvival =
+      Number(kpiCurrent?.survival_rate || 0) ||
+      (trees.length > 0 ? Math.round((healthyNow / trees.length) * 1000) / 10 : 0);
+    const fallbackEvidence = Number(kpiCurrent?.evidence_complete_rate || 0) || 0;
+
+    const source = Array.isArray(kpiTrend) ? kpiTrend : [];
+    const compact = source.length > 18
+      ? source.filter((_, index) => index % Math.ceil(source.length / 18) === 0)
+      : source;
+    const survival = compact
+      .map((item) => ({
+        label: toLabel(String(item.snapshot_at || "")),
+        value: Number(item.metrics?.survival_rate || 0),
+      }))
+      .filter((item) => Number.isFinite(item.value));
+    const evidence = compact
+      .map((item) => ({
+        label: toLabel(String(item.snapshot_at || "")),
+        value: Number(item.metrics?.evidence_complete_rate || 0),
+      }))
+      .filter((item) => Number.isFinite(item.value));
+
+    return {
+      survival:
+        survival.length >= 2
+          ? survival
+          : [
+              { label: "start", value: fallbackSurvival },
+              { label: "now", value: fallbackSurvival },
+            ],
+      evidence:
+        evidence.length >= 2
+          ? evidence
+          : [
+              { label: "start", value: fallbackEvidence },
+              { label: "now", value: fallbackEvidence },
+            ],
+    };
+  }, [kpiTrend, kpiCurrent, trees]);
+
   const activeProjectName = useMemo(() => {
     if (!activeProjectId) return "";
     return projects.find((p) => p.id === activeProjectId)?.name || "";
   }, [activeProjectId, projects]);
-  const showSidebar = activeForm !== null && activeForm !== "overview" && activeForm !== "live_table";
+  const showSidebar =
+    activeForm !== null &&
+    activeForm !== "overview" &&
+    activeForm !== "live_table" &&
+    activeForm !== "verra_reports";
   const overviewMode = Boolean(activeProjectId && activeForm === "overview");
   const liveTableMode = Boolean(activeProjectId && activeForm === "live_table");
+  const verraMode = Boolean(activeProjectId && activeForm === "verra_reports");
   const activeTreeId = inspectedTree?.id || 0;
 
   const recalcDrawerFrame = useCallback(() => {
@@ -1895,6 +2157,13 @@ export default function GreenWork() {
               onClick={() => openForm("live_table")}
             >
               Live Maintenance Table
+            </button>
+            <button
+              className={`green-work-menu-item ${activeForm === "verra_reports" ? "active" : ""}`}
+              type="button"
+              onClick={() => openForm("verra_reports")}
+            >
+              Verra Reports
             </button>
             <button
               className={`green-work-menu-item ${activeForm === "review_queue" ? "active" : ""}`}
@@ -2257,7 +2526,7 @@ export default function GreenWork() {
           )}
         </aside>
 
-        <section className={`green-work-main ${overviewMode || liveTableMode ? "overview-mode" : "single-mode"}`}>
+        <section className={`green-work-main ${overviewMode || liveTableMode || verraMode ? "overview-mode" : "single-mode"}`}>
           {activeProjectId && activeForm === "overview" && (
             <div className="green-work-card green-work-overview-card">
               <div className="green-work-row">
@@ -2366,6 +2635,21 @@ export default function GreenWork() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              <div className="green-work-overview-trends">
+                <TrendMiniChart
+                  title="Survival Trend (Historical)"
+                  color="#16a34a"
+                  points={trendPoints.survival}
+                  context="Context: project-wide survival snapshots stored over time."
+                />
+                <TrendMiniChart
+                  title="Evidence Trend (Historical)"
+                  color="#9a5800"
+                  points={trendPoints.evidence}
+                  context="Context: required-proof tasks with complete notes + photo over time."
+                />
               </div>
 
               {carbonSummary && (
@@ -2477,6 +2761,171 @@ export default function GreenWork() {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {activeProjectId && activeForm === "verra_reports" && (
+            <div className="green-work-card green-work-verra-card">
+              <div className="green-work-row">
+                <h3>Verra Reports</h3>
+                <div className="work-actions">
+                  <button type="button" onClick={() => exportVerraPackage("zip")}>
+                    Export Verra ZIP
+                  </button>
+                  <button type="button" onClick={() => exportVerraPackage("json")}>
+                    Export Verra JSON
+                  </button>
+                  <button type="button" onClick={() => void loadVerraHistory(activeProjectId)}>
+                    Refresh History
+                  </button>
+                </div>
+              </div>
+
+              <p className="green-work-chart-context">
+                Use monitoring-period and verifier metadata filters before export. Every export is logged under this project for one-click rerun.
+              </p>
+
+              <div className="green-work-verra-filters">
+                <label>
+                  Monitoring Start
+                  <input
+                    type="date"
+                    value={verraFilters.monitoring_start}
+                    onChange={(e) => setVerraFilters((prev) => ({ ...prev, monitoring_start: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  Monitoring End
+                  <input
+                    type="date"
+                    value={verraFilters.monitoring_end}
+                    onChange={(e) => setVerraFilters((prev) => ({ ...prev, monitoring_end: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  Season Model
+                  <select
+                    value={verraFilters.season_mode}
+                    onChange={(e) =>
+                      setVerraFilters((prev) => ({
+                        ...prev,
+                        season_mode: (e.target.value === "dry" ? "dry" : "rainy") as SeasonMode,
+                      }))
+                    }
+                  >
+                    <option value="rainy">Rainy Season</option>
+                    <option value="dry">Dry Season</option>
+                  </select>
+                </label>
+                <label>
+                  Staff Scope
+                  <select
+                    value={verraFilters.assignee_name}
+                    onChange={(e) => setVerraFilters((prev) => ({ ...prev, assignee_name: e.target.value }))}
+                  >
+                    {assignees.map((a) => (
+                      <option key={`verra-assignee-${a}`} value={a}>
+                        {a === "all" ? "All staff" : a}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Methodology ID
+                  <input
+                    type="text"
+                    placeholder="e.g. VM0047"
+                    value={verraFilters.methodology_id}
+                    onChange={(e) => setVerraFilters((prev) => ({ ...prev, methodology_id: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  Generated By
+                  <input
+                    type="text"
+                    placeholder="Supervisor name"
+                    value={verraFilters.generated_by}
+                    onChange={(e) => setVerraFilters((prev) => ({ ...prev, generated_by: e.target.value }))}
+                  />
+                </label>
+                <label className="is-wide">
+                  Verifier-ready Notes
+                  <textarea
+                    rows={3}
+                    placeholder="Notes for verifier package context..."
+                    value={verraFilters.verifier_notes}
+                    onChange={(e) => setVerraFilters((prev) => ({ ...prev, verifier_notes: e.target.value }))}
+                  />
+                </label>
+              </div>
+
+              <div className="green-work-verra-history">
+                <h4>Project Export History</h4>
+                {verraHistory.length === 0 ? (
+                  <p className="green-work-note">No Verra export history yet for this project.</p>
+                ) : (
+                  <div className="green-work-live-table-wrap">
+                    <table className="green-work-live-table green-work-verra-table">
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Period</th>
+                          <th>Methodology</th>
+                          <th>Scope</th>
+                          <th>Format</th>
+                          <th>Summary</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {verraHistory.map((item) => {
+                          const periodText =
+                            item.monitoring_start || item.monitoring_end
+                              ? `${item.monitoring_start || "..."} to ${item.monitoring_end || "..."}`
+                              : "Full project";
+                          const summary = item.payload_summary || {};
+                          return (
+                            <tr key={`verra-history-${item.id}`}>
+                              <td>{formatDateLabel(item.created_at)}</td>
+                              <td>{periodText}</td>
+                              <td>{item.methodology_id || "-"}</td>
+                              <td>{item.assignee_name || "All staff"}</td>
+                              <td>{String(item.output_format || "zip").toUpperCase()}</td>
+                              <td>
+                                Trees {Number(summary.tree_inventory_count || 0)} | Tasks {Number(summary.task_timeline_count || 0)}
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="green-work-live-tree-link"
+                                  onClick={() =>
+                                    exportVerraPackage(
+                                      String(item.output_format || "zip").toLowerCase() === "json" ? "json" : "zip",
+                                      {
+                                        monitoring_start: item.monitoring_start || "",
+                                        monitoring_end: item.monitoring_end || "",
+                                        methodology_id: item.methodology_id || "",
+                                        verifier_notes: item.verifier_notes || "",
+                                        generated_by: item.generated_by || "supervisor",
+                                        season_mode: (String(item.season_mode || "rainy").toLowerCase() === "dry"
+                                          ? "dry"
+                                          : "rainy") as SeasonMode,
+                                        assignee_name: item.assignee_name || "all",
+                                      },
+                                    )
+                                  }
+                                >
+                                  Export again
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}
