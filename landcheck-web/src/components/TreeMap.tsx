@@ -100,6 +100,16 @@ const markerPalettes: Record<string, { outer: string; core: string; ring: string
     core: "#f08c00",
     ring: "rgba(199, 95, 16, 0.74)",
   },
+  need_watering: {
+    outer: "rgba(180, 231, 255, 0.82)",
+    core: "#0ea5e9",
+    ring: "rgba(3, 105, 161, 0.74)",
+  },
+  need_protection: {
+    outer: "rgba(230, 210, 255, 0.82)",
+    core: "#a855f7",
+    ring: "rgba(109, 40, 217, 0.74)",
+  },
   need_replacement: {
     outer: "rgba(253, 176, 176, 0.82)",
     core: "#ef4444",
@@ -142,7 +152,15 @@ const TREE_OUTER_LAYER_ID = "tree-points-outer";
 const TREE_CORE_LAYER_ID = "tree-points-core";
 const TREE_LAYER_IDS = [TREE_CORE_LAYER_ID, TREE_OUTER_LAYER_ID];
 
-const ACTIVE_TREE_STATUSES = new Set(["alive", "healthy", "pest", "disease", "needs_attention"]);
+const ACTIVE_TREE_STATUSES = new Set([
+  "alive",
+  "healthy",
+  "pest",
+  "disease",
+  "needs_attention",
+  "need_watering",
+  "need_protection",
+]);
 const normalizeStatus = (status: string | null | undefined) => {
   const raw = (status || "").trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
   if (raw === "deseas" || raw === "diseased") return "disease";

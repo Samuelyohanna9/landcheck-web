@@ -68,14 +68,17 @@ const ATTENTION_TREE_STATUSES = new Set([
   "disease",
   "need_replacement",
   "damaged",
+  "need_watering",
+  "need_protection",
 ]);
 const INSPECTION_STATUS_OPTIONS = [
   { value: "healthy", label: "Healthy" },
   { value: "pest", label: "Pest" },
   { value: "disease", label: "Disease" },
-  { value: "need_replacement", label: "Need replacement" },
   { value: "damaged", label: "Damaged" },
   { value: "removed", label: "Removed" },
+  { value: "need_watering", label: "Need watering" },
+  { value: "need_protection", label: "Need protection" },
 ];
 const isLegacyDoneWithoutReview = (task: any) => {
   const status = normalizeTaskState(task?.status);
@@ -252,7 +255,7 @@ export default function Green() {
     lat: 0,
     species: "",
     planting_date: "",
-    status: "healthy",
+    status: "alive",
     notes: "",
     photo_url: "",
     created_by: "",
@@ -307,10 +310,11 @@ export default function Green() {
 
   const myTaskCounts = useMemo(() => {
     const total = myTasks.length;
-    const pending = myTasks.filter((t) => !isTaskDoneForSummary(t)).length;
+    const pending = myTasks.filter((t) => !isTaskDoneForSummary(t) && !isTaskSubmitted(t) && !isTaskRejected(t)).length;
     const done = myTasks.filter((t) => isTaskDoneForSummary(t)).length;
     const submitted = myTasks.filter((t) => isTaskSubmitted(t)).length;
-    return { total, pending, done, submitted };
+    const rejected = myTasks.filter((t) => isTaskRejected(t)).length;
+    return { total, pending, done, submitted, rejected };
   }, [myTasks]);
 
   const myTreeSummary = useMemo(() => {
@@ -480,7 +484,7 @@ export default function Green() {
         lat: 0,
         species: "",
         planting_date: "",
-        status: "healthy",
+        status: "alive",
         notes: "",
         photo_url: "",
         created_by: "",
@@ -531,7 +535,7 @@ export default function Green() {
         status: t.status,
         notes: t.notes || "",
         photo_url: t.photo_url || "",
-        tree_status: normalizeTreeStatus(t.tree_status || "healthy"),
+        tree_status: normalizeTreeStatus(t.reported_tree_status || t.tree_status || "healthy"),
       };
     });
     setTaskEdits(edits);
@@ -562,7 +566,7 @@ export default function Green() {
       status: task.status || "pending",
       notes: task.notes || "",
       photo_url: task.photo_url || "",
-      tree_status: normalizeTreeStatus(task.tree_status || "healthy"),
+      tree_status: normalizeTreeStatus(task.reported_tree_status || task.tree_status || "healthy"),
     };
     if (!hasTaskEvidence(task, edit)) {
       toast.error("Add notes and photo proof before submission.");
@@ -627,7 +631,9 @@ export default function Green() {
           status: prev[taskId]?.status || "pending",
           notes: prev[taskId]?.notes || "",
           photo_url: photoUrl,
-          tree_status: prev[taskId]?.tree_status || normalizeTreeStatus(linkedTask?.tree_status || "healthy"),
+          tree_status:
+            prev[taskId]?.tree_status ||
+            normalizeTreeStatus(linkedTask?.reported_tree_status || linkedTask?.tree_status || "healthy"),
         },
       }));
       setMyTasks((prev) => prev.map((task: any) => (task.id === taskId ? { ...task, photo_url: photoUrl } : task)));
@@ -875,6 +881,7 @@ export default function Green() {
             </span>
             <span className="green-tile-label">Maintenance Tasks</span>
             <span className="green-tile-badge">{myTaskCounts.pending}</span>
+            {myTaskCounts.rejected > 0 && <span className="green-tile-badge green-tile-badge-rejected">{myTaskCounts.rejected}</span>}
           </button>
 
           <button
@@ -984,7 +991,9 @@ export default function Green() {
                                   status: e.target.value,
                                   notes: prev[t.id]?.notes || "",
                                   photo_url: prev[t.id]?.photo_url || "",
-                                  tree_status: prev[t.id]?.tree_status || normalizeTreeStatus(t.tree_status || "healthy"),
+                                  tree_status:
+                                    prev[t.id]?.tree_status ||
+                                    normalizeTreeStatus(t.reported_tree_status || t.tree_status || "healthy"),
                                 },
                               }))
                             }
@@ -1048,6 +1057,13 @@ export default function Green() {
                         Review: {t.review_state || "none"} | Evidence: {hasTaskEvidence(t, taskEdits[t.id]) ? "complete" : "missing"}
                       </span>
                     </div>
+                    {isTaskRejected(t) && t.review_notes && (
+                      <div className="tree-row">
+                        <span className="task-cell green-task-review-note" data-label="Supervisor note">
+                          Supervisor note: {t.review_notes}
+                        </span>
+                      </div>
+                    )}
 
                     {editingTaskId === t.id && !isTaskLockedForField(t) && (
                       <div className="tree-row task-edit-inline-row">
@@ -1063,7 +1079,9 @@ export default function Green() {
                                   status: prev[t.id]?.status || "pending",
                                   notes: e.target.value,
                                   photo_url: prev[t.id]?.photo_url || "",
-                                  tree_status: prev[t.id]?.tree_status || normalizeTreeStatus(t.tree_status || "healthy"),
+                                  tree_status:
+                                    prev[t.id]?.tree_status ||
+                                    normalizeTreeStatus(t.reported_tree_status || t.tree_status || "healthy"),
                                 },
                               }))
                             }
@@ -1082,7 +1100,10 @@ export default function Green() {
                             <div className="tree-form-row full">
                               <label>Inspection Tree Condition</label>
                               <select
-                                value={taskEdits[t.id]?.tree_status || normalizeTreeStatus(t.tree_status || "healthy")}
+                                value={
+                                  taskEdits[t.id]?.tree_status ||
+                                  normalizeTreeStatus(t.reported_tree_status || t.tree_status || "healthy")
+                                }
                                 onChange={(e) =>
                                   setTaskEdits((prev) => ({
                                     ...prev,
@@ -1177,15 +1198,7 @@ export default function Green() {
               <div className="tree-form-row">
                 <label>Status</label>
                 <select value={newTree.status} onChange={(e) => setNewTree({ ...newTree, status: e.target.value })}>
-                  <option value="healthy">Healthy</option>
-                  <option value="pest">Pest</option>
-                  <option value="disease">Disease</option>
-                  <option value="need_replacement">Need replacement</option>
-                  <option value="damaged">Damaged</option>
-                  <option value="removed">Removed</option>
                   <option value="alive">Alive</option>
-                  <option value="dead">Dead</option>
-                  <option value="needs_attention">Needs attention</option>
                   <option value="pending_planting">Pending planting</option>
                 </select>
               </div>
