@@ -316,11 +316,12 @@ export default function Green() {
 
   const myTaskCounts = useMemo(() => {
     const total = myTasks.length;
+    const undone = myTasks.filter((t) => !isTaskApproved(t)).length;
     const pending = myTasks.filter((t) => !isTaskDoneForSummary(t) && !isTaskSubmitted(t) && !isTaskRejected(t)).length;
     const done = myTasks.filter((t) => isTaskDoneForSummary(t)).length;
     const submitted = myTasks.filter((t) => isTaskSubmitted(t)).length;
     const rejected = myTasks.filter((t) => isTaskRejected(t)).length;
-    return { total, pending, done, submitted, rejected };
+    return { total, undone, pending, done, submitted, rejected };
   }, [myTasks]);
 
   const myTreeSummary = useMemo(() => {
@@ -339,14 +340,9 @@ export default function Green() {
   const pendingPlanting = useMemo(() => {
     const orders = plantingOrders.filter((o) => o.work_type === "planting");
     const totalTarget = orders.reduce((sum: number, o: any) => sum + (o.target_trees || 0), 0);
-    const planted = userTrees.length;
+    const planted = userTrees.filter((t) => normalizeTreeStatus(t.status) !== "pending_planting").length;
     return Math.max(totalTarget - planted, 0);
-  }, [plantingOrders, userTrees.length]);
-
-  const assignedPlanting = useMemo(() => {
-    const orders = plantingOrders.filter((o) => String(o?.work_type || "").toLowerCase() === "planting");
-    return orders.reduce((sum: number, o: any) => sum + Number(o?.target_trees || 0), 0);
-  }, [plantingOrders]);
+  }, [plantingOrders, userTrees]);
 
   const loadProjects = async () => {
     const res = await api.get("/green/projects");
@@ -701,11 +697,14 @@ export default function Green() {
     setGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        const lat = Number(pos.coords.latitude.toFixed(6));
         setNewTree((prev) => ({
           ...prev,
-          lng: Number(pos.coords.longitude.toFixed(6)),
-          lat: Number(pos.coords.latitude.toFixed(6)),
+          lng,
+          lat,
         }));
+        setFocusPoint([{ lng, lat }]);
         setGpsLoading(false);
       },
       () => {
@@ -907,7 +906,7 @@ export default function Green() {
               <TaskTileIcon />
             </span>
             <span className="green-tile-label">Maintenance Tasks</span>
-            <span className={`green-tile-badge ${myTaskCounts.pending > 0 ? "green-tile-badge-assigned" : ""}`}>{myTaskCounts.pending}</span>
+            <span className={`green-tile-badge ${myTaskCounts.undone > 0 ? "green-tile-badge-assigned" : ""}`}>{myTaskCounts.undone}</span>
             {myTaskCounts.rejected > 0 && <span className="green-tile-badge green-tile-badge-rejected">{myTaskCounts.rejected}</span>}
           </button>
 
@@ -920,7 +919,7 @@ export default function Green() {
               <MapTileIcon />
             </span>
             <span className="green-tile-label">Map & Add Trees</span>
-            <span className={`green-tile-badge ${assignedPlanting > 0 ? "green-tile-badge-assigned" : ""}`}>{assignedPlanting}</span>
+            <span className={`green-tile-badge ${pendingPlanting > 0 ? "green-tile-badge-assigned" : ""}`}>{pendingPlanting}</span>
           </button>
 
           <button

@@ -1344,6 +1344,9 @@ export default function GreenWork() {
     const rows: LiveMaintenanceRow[] = [];
     scopedTrees.forEach((tree) => {
       const treeStatus = normalizeTreeStatus(tree.status || "healthy");
+      if (treeStatus === "pending_planting") {
+        return;
+      }
       const replacementRequired = isReplacementTriggerStatus(treeStatus);
       const plantingDateObj = parseDateValue(tree.planting_date);
       const replacementTaskBucket = [...(taskBuckets.get(`${tree.id}:replacement`) || [])];
