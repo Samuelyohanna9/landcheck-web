@@ -531,8 +531,9 @@ export default function Green() {
 
   const loadMyTasks = async () => {
     if (!activeProject || !activeUser) return;
+    const stamp = Date.now();
     const res = await api.get(
-      `/green/tasks?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}`
+      `/green/tasks?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}&_ts=${stamp}`
     );
     setMyTasks(res.data);
     const edits: Record<number, { status: string; notes: string; photo_url: string; tree_status: string }> = {};
@@ -586,6 +587,19 @@ export default function Green() {
         tree_status: edit.tree_status,
         actor_name: activeUser || "",
       });
+      setMyTasks((prev) =>
+        prev.map((task: any) =>
+          task.id === taskId
+            ? {
+                ...task,
+                status: "done",
+                review_state: "submitted",
+                reported_tree_status: edit.tree_status || task.reported_tree_status || task.tree_status,
+                review_notes: null,
+              }
+            : task
+        )
+      );
       await loadMyTasks();
       if (activeProject) {
         await loadProjectDetail(activeProject.id);
@@ -980,7 +994,7 @@ export default function Green() {
                             {`Approved / ${formatTreeConditionLabel(t.reported_tree_status || t.tree_status || "healthy")}`}
                           </span>
                         ) : isTaskSubmitted(t) ? (
-                          <span className="green-task-status-badge">
+                          <span className="green-task-status-badge is-submitted">
                             Submitted
                           </span>
                         ) : isTaskRejected(t) ? (

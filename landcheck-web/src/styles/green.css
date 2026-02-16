@@ -830,13 +830,25 @@
   align-items: center;
   gap: 0.3rem;
   border-radius: 999px;
-  border: 1px solid rgba(24, 108, 50, 0.35);
-  background: rgba(234, 251, 236, 0.95);
-  color: #1b6b35;
+  border: 1px solid rgba(53, 84, 69, 0.28);
+  background: rgba(239, 245, 242, 0.95);
+  color: #234136;
   font-size: 0.8rem;
   font-weight: 800;
   line-height: 1;
   padding: 0.27rem 0.54rem;
+}
+
+.green-task-status-badge.is-done {
+  border-color: rgba(24, 108, 50, 0.35);
+  background: rgba(234, 251, 236, 0.95);
+  color: #1b6b35;
+}
+
+.green-task-status-badge.is-submitted {
+  border-color: rgba(180, 108, 24, 0.4);
+  background: rgba(255, 244, 220, 0.95);
+  color: #9a5800;
 }
 
 .green-task-status-badge.is-rejected {
