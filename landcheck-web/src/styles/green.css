@@ -390,6 +390,17 @@
   text-align: right;
 }
 
+.green-carbon-warning {
+  margin: 0.5rem 0 0;
+  padding: 0.38rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(180, 108, 24, 0.35);
+  background: rgba(255, 244, 220, 0.9);
+  color: #7b4d08;
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+
 .green-tiles {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

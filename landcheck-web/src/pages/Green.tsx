@@ -13,6 +13,9 @@ type CarbonData = {
   annual_co2_tonnes: number;
   projected_lifetime_co2_tonnes: number;
   co2_per_tree_avg_kg: number;
+  trees_missing_age_data?: number;
+  trees_with_fallback_age?: number;
+  trees_pending_review?: number;
 };
 
 type Project = {
@@ -914,7 +917,7 @@ export default function Green() {
             <strong>{survivalRate}%</strong>
           </div>
 
-          {activeProject?.carbon && (activeProject.carbon.current_co2_tonnes > 0 || activeProject.carbon.projected_lifetime_co2_tonnes > 0) && (
+          {activeProject?.carbon && (
             <div className="green-carbon-panel">
               <h3 className="green-carbon-title">Carbon Impact</h3>
               <div className="green-carbon-grid">
@@ -935,6 +938,15 @@ export default function Green() {
                   <span className="green-carbon-label">kg CO2 avg/tree</span>
                 </div>
               </div>
+              {(activeProject.carbon.current_co2_tonnes <= 0 || activeProject.carbon.projected_lifetime_co2_tonnes <= 0) && (
+                <p className="green-carbon-warning">
+                  CO2 is low/zero. Check tree planting dates and review status.
+                  {(activeProject.carbon.trees_missing_age_data || 0) > 0 &&
+                    ` Missing age data: ${activeProject.carbon.trees_missing_age_data}.`}
+                  {(activeProject.carbon.trees_pending_review || 0) > 0 &&
+                    ` Pending review: ${activeProject.carbon.trees_pending_review}.`}
+                </p>
+              )}
               <p className="green-carbon-method">IPCC Tier 1 + Chave et al. (2014)</p>
             </div>
           )}
