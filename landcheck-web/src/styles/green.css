@@ -462,6 +462,14 @@
   font-size: 0.9rem;
 }
 
+.green-map-planting-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.55rem;
+}
+
 .green-map-layout {
   display: block;
 }
