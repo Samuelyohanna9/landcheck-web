@@ -533,11 +533,12 @@ export default function GreenWork() {
   };
 
   const loadProjectData = async (projectId: number) => {
+    const stamp = Date.now();
     const [ordersRes, treesRes, tasksRes, speciesMaturityRes] = await Promise.all([
-      api.get(`/green/work-orders?project_id=${projectId}`),
-      api.get(`/green/projects/${projectId}/trees`),
-      api.get(`/green/tasks?project_id=${projectId}`),
-      api.get(`/green/projects/${projectId}/species-maturity`),
+      api.get(`/green/work-orders?project_id=${projectId}&_ts=${stamp}`),
+      api.get(`/green/projects/${projectId}/trees?_ts=${stamp}`),
+      api.get(`/green/tasks?project_id=${projectId}&_ts=${stamp}`),
+      api.get(`/green/projects/${projectId}/species-maturity?_ts=${stamp}`),
     ]);
     setOrders(ordersRes.data);
     const normalizedTrees = (treesRes.data || [])
@@ -567,8 +568,8 @@ export default function GreenWork() {
     }));
 
     const [reviewQueueRes, alertsRes] = await Promise.allSettled([
-      api.get(`/green/tasks/review-queue?project_id=${projectId}`),
-      api.get(`/green/projects/${projectId}/alerts?refresh=true&status=open`),
+      api.get(`/green/tasks/review-queue?project_id=${projectId}&_ts=${stamp}`),
+      api.get(`/green/projects/${projectId}/alerts?refresh=true&status=open&_ts=${stamp}`),
     ]);
 
     if (reviewQueueRes.status === "fulfilled") {
