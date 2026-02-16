@@ -52,6 +52,21 @@ const formatDateLabel = (value: string | null | undefined) => {
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString();
 };
+const normalizeTaskState = (value: string | null | undefined) => (value || "").trim().toLowerCase();
+const isTaskApproved = (task: any) => normalizeTaskState(task?.review_state) === "approved";
+const isTaskSubmitted = (task: any) => normalizeTaskState(task?.review_state) === "submitted";
+const isTaskRejected = (task: any) => normalizeTaskState(task?.review_state) === "rejected";
+const isTaskLockedForField = (task: any) => isTaskApproved(task) || isTaskSubmitted(task);
+const isTaskDoneForSummary = (task: any) => {
+  const isDone = normalizeTaskState(task?.status) === "done";
+  const review = normalizeTaskState(task?.review_state || "none");
+  return isDone && (review === "approved" || review === "none");
+};
+const hasTaskEvidence = (task: any, edit?: { notes?: string; photo_url?: string }) => {
+  const notes = (edit?.notes ?? task?.notes ?? "").trim();
+  const photo = (edit?.photo_url ?? task?.photo_url ?? "").trim();
+  return Boolean(notes && photo);
+};
 
 const R2_BUCKET_HINT = "photosgreen";
 
@@ -254,9 +269,10 @@ export default function Green() {
 
   const myTaskCounts = useMemo(() => {
     const total = myTasks.length;
-    const pending = myTasks.filter((t) => t.status === "pending").length;
-    const done = myTasks.filter((t) => t.status === "done").length;
-    return { total, pending, done };
+    const pending = myTasks.filter((t) => !isTaskDoneForSummary(t)).length;
+    const done = myTasks.filter((t) => isTaskDoneForSummary(t)).length;
+    const submitted = myTasks.filter((t) => isTaskSubmitted(t)).length;
+    return { total, pending, done, submitted };
   }, [myTasks]);
 
   const myTreeSummary = useMemo(() => {
@@ -466,13 +482,43 @@ export default function Green() {
     const edit = taskEdits[taskId];
     if (!edit) return;
     const task = myTasks.find((entry: any) => entry.id === taskId);
-    if (task?.status === "done") {
-      toast.error("Task is already done and locked");
+    if (isTaskLockedForField(task)) {
+      toast.error("Task is locked for review");
       return;
     }
     await api.patch(`/green/tasks/${taskId}`, edit);
     await loadMyTasks();
     toast.success("Task updated");
+  };
+
+  const submitTaskForReview = async (taskId: number) => {
+    const task = myTasks.find((entry: any) => entry.id === taskId);
+    if (!task) return;
+    if (isTaskLockedForField(task)) {
+      toast.error("Task is locked for review");
+      return;
+    }
+    const edit = taskEdits[taskId] || { status: task.status || "pending", notes: task.notes || "", photo_url: task.photo_url || "" };
+    if (!hasTaskEvidence(task, edit)) {
+      toast.error("Add notes and photo proof before submission.");
+      return;
+    }
+    const loadingId = toast.loading("Submitting task for supervisor review...");
+    try {
+      await api.post(`/green/tasks/${taskId}/submit`, {
+        notes: edit.notes,
+        photo_url: edit.photo_url,
+        actor_name: activeUser || "",
+      });
+      await loadMyTasks();
+      if (activeProject) {
+        await loadProjectDetail(activeProject.id);
+      }
+      toast.success("Task submitted for review", { id: loadingId });
+      setEditingTaskId(null);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to submit task", { id: loadingId });
+    }
   };
 
   const openDirections = (lng: number, lat: number) => {
@@ -501,8 +547,8 @@ export default function Green() {
   const onTaskPhotoPicked = async (taskId: number, file: File | null) => {
     if (!file) return;
     const task = myTasks.find((entry: any) => entry.id === taskId);
-    if (task?.status === "done") {
-      toast.error("Task is already done and locked");
+    if (isTaskLockedForField(task)) {
+      toast.error("Task is locked for review");
       return;
     }
     const loadingId = toast.loading("Uploading task photo...");
@@ -833,11 +879,11 @@ export default function Green() {
                   <span>Action</span>
                 </div>
                 {myTasks.map((t) => (
-                  <div key={t.id} className={`green-task-entry ${t.status === "done" ? "is-done" : ""}`}>
+                  <div key={t.id} className={`green-task-entry ${isTaskLockedForField(t) ? "is-done" : ""}`}>
                     <div
-                      className={`tree-row task-row ${t.status === "done" ? "task-row-locked" : ""}`}
+                      className={`tree-row task-row ${isTaskLockedForField(t) ? "task-row-locked" : ""}`}
                       onClick={() => {
-                        if (t.status !== "done" && Number.isFinite(t.lng) && Number.isFinite(t.lat)) {
+                        if (!isTaskLockedForField(t) && Number.isFinite(t.lng) && Number.isFinite(t.lat)) {
                           setFocusPoint([{ lng: Number(t.lng), lat: Number(t.lat) }]);
                         }
                       }}
@@ -849,12 +895,20 @@ export default function Green() {
                         #{t.tree_id}
                       </span>
                       <span className="task-cell" data-label="Status">
-                        {t.status === "done" ? (
+                        {isTaskApproved(t) ? (
                           <span className="green-task-status-badge is-done">
                             <span className="green-task-status-check" aria-hidden="true">
                               ✓
                             </span>
-                            Done
+                            Approved
+                          </span>
+                        ) : isTaskSubmitted(t) ? (
+                          <span className="green-task-status-badge">
+                            Submitted
+                          </span>
+                        ) : isTaskRejected(t) ? (
+                          <span className="green-task-status-badge">
+                            Rejected
                           </span>
                         ) : (
                           <select
@@ -871,7 +925,6 @@ export default function Green() {
                             }
                           >
                             <option value="pending">Pending</option>
-                            <option value="done">Done</option>
                             <option value="overdue">Overdue</option>
                           </select>
                         )}
@@ -880,9 +933,9 @@ export default function Green() {
                         {t.due_date || "-"}
                       </span>
                       <span className="task-cell task-actions" data-label="Action">
-                        {t.status === "done" ? (
+                        {isTaskLockedForField(t) ? (
                           <span className="green-task-locked-pill">
-                            <span aria-hidden="true">✓</span> Locked
+                            <span aria-hidden="true">✓</span> {isTaskSubmitted(t) ? "Submitted" : "Approved"}
                           </span>
                         ) : (
                           <>
@@ -895,6 +948,17 @@ export default function Green() {
                               }}
                             >
                               {editingTaskId === t.id ? "Close" : "Edit"}
+                            </button>
+                            <button
+                              className="green-row-btn"
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void submitTaskForReview(t.id);
+                              }}
+                              disabled={isTaskSubmitted(t)}
+                            >
+                              {isTaskSubmitted(t) ? "Awaiting Review" : "Submit"}
                             </button>
                             {Number.isFinite(t.lng) && Number.isFinite(t.lat) && (
                               <button
@@ -925,8 +989,13 @@ export default function Green() {
                         )}
                       </span>
                     </div>
+                    <div className="tree-row">
+                      <span className="task-cell" data-label="Verification">
+                        Review: {t.review_state || "none"} | Evidence: {hasTaskEvidence(t, taskEdits[t.id]) ? "complete" : "missing"}
+                      </span>
+                    </div>
 
-                    {editingTaskId === t.id && t.status !== "done" && (
+                    {editingTaskId === t.id && !isTaskLockedForField(t) && (
                       <div className="tree-row task-edit-inline-row">
                         <div className="task-edit-inline-card">
                           <div className="tree-form-row full">
@@ -1117,6 +1186,10 @@ export default function Green() {
                   <div>
                     <span>Done Tasks</span>
                     <strong>{myTaskCounts.done}</strong>
+                  </div>
+                  <div>
+                    <span>Submitted</span>
+                    <strong>{myTaskCounts.submitted}</strong>
                   </div>
                   <div>
                     <span>Task Total</span>

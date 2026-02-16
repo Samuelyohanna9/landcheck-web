@@ -47,12 +47,21 @@ type WorkTask = {
   task_type: string;
   assignee_name: string;
   status: string;
+  review_state?: string | null;
+  submitted_at?: string | null;
+  reviewed_at?: string | null;
+  reviewed_by?: string | null;
+  review_notes?: string | null;
   due_date: string | null;
   priority?: string | null;
   notes?: string | null;
   photo_url?: string | null;
   created_at?: string | null;
   completed_at?: string | null;
+};
+
+type ReviewQueueTask = WorkTask & {
+  tree_status?: string | null;
 };
 
 type WorkForm =
@@ -62,6 +71,7 @@ type WorkForm =
   | "users"
   | "assign_work"
   | "assign_task"
+  | "review_queue"
   | "overview"
   | "live_table";
 type StaffMenuState = { user: GreenUser; x: number; y: number } | null;
@@ -73,12 +83,16 @@ const formatRoleLabel = (role: string) =>
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
-const isCompleteStatus = (status: string | null | undefined) => {
+const isCompleteStatus = (status: string | null | undefined, reviewState?: string | null | undefined) => {
   const normalized = normalizeName(status);
-  return normalized === "done" || normalized === "completed" || normalized === "closed";
+  const done = normalized === "done" || normalized === "completed" || normalized === "closed";
+  if (!done) return false;
+  if (reviewState === undefined) return true;
+  const review = normalizeName(reviewState || "none");
+  return review === "approved" || review === "none";
 };
 const isOverdueTask = (task: WorkTask) => {
-  if (isCompleteStatus(task.status) || !task.due_date) return false;
+  if (isCompleteStatus(task.status, task.review_state) || !task.due_date) return false;
   const dueDate = new Date(task.due_date);
   if (Number.isNaN(dueDate.getTime())) return false;
   dueDate.setHours(23, 59, 59, 999);
@@ -386,6 +400,13 @@ const renderActionIcon = (form: WorkForm) => {
           <path d="M8 17l2 2 4-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
       );
+    case "review_queue":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M6 4h12v16H6zM9 9h6M9 13h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M8 17l2 2 4-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
     default:
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -442,6 +463,24 @@ export default function GreenWork() {
   const [selectedMaturityYears, setSelectedMaturityYears] = useState("3");
   const [treePhotoUploading, setTreePhotoUploading] = useState(false);
   const [drawerFrame, setDrawerFrame] = useState<DrawerFrame | null>(null);
+  const [reviewQueue, setReviewQueue] = useState<ReviewQueueTask[]>([]);
+  const [alertsSummary, setAlertsSummary] = useState<{ total: number; danger: number; warning: number; info: number }>({
+    total: 0,
+    danger: 0,
+    warning: 0,
+    info: 0,
+  });
+  const [alertsList, setAlertsList] = useState<any[]>([]);
+  const [serverLiveRows, setServerLiveRows] = useState<LiveMaintenanceRow[]>([]);
+  const [serverLiveSummary, setServerLiveSummary] = useState<{ total: number; danger: number; warning: number; ok: number; info: number; dueSoon: number }>({
+    total: 0,
+    danger: 0,
+    warning: 0,
+    ok: 0,
+    info: 0,
+    dueSoon: 0,
+  });
+  const [serverLiveSources, setServerLiveSources] = useState<{ label: string; url: string }[]>(LIVE_TABLE_SOURCES);
 
   const loadProjects = async () => {
     const res = await api.get("/green/projects");
@@ -454,11 +493,13 @@ export default function GreenWork() {
   };
 
   const loadProjectData = async (projectId: number) => {
-    const [ordersRes, treesRes, tasksRes, speciesMaturityRes] = await Promise.all([
+    const [ordersRes, treesRes, tasksRes, speciesMaturityRes, reviewQueueRes, alertsRes] = await Promise.all([
       api.get(`/green/work-orders?project_id=${projectId}`),
       api.get(`/green/projects/${projectId}/trees`),
       api.get(`/green/tasks?project_id=${projectId}`),
       api.get(`/green/projects/${projectId}/species-maturity`),
+      api.get(`/green/tasks/review-queue?project_id=${projectId}`),
+      api.get(`/green/projects/${projectId}/alerts?refresh=true&status=open`),
     ]);
     setOrders(ordersRes.data);
     const normalizedTrees = (treesRes.data || [])
@@ -470,6 +511,14 @@ export default function GreenWork() {
       .filter((tree: any) => Number.isFinite(tree.lng) && Number.isFinite(tree.lat));
     setTrees(normalizedTrees);
     setTasks(Array.isArray(tasksRes.data) ? tasksRes.data : []);
+    setReviewQueue(Array.isArray(reviewQueueRes.data) ? reviewQueueRes.data : []);
+    setAlertsList(Array.isArray(alertsRes.data?.items) ? alertsRes.data.items : []);
+    setAlertsSummary({
+      total: Number(alertsRes.data?.summary?.total || 0),
+      danger: Number(alertsRes.data?.summary?.danger || 0),
+      warning: Number(alertsRes.data?.summary?.warning || 0),
+      info: Number(alertsRes.data?.summary?.info || 0),
+    });
     const serverMapRaw = speciesMaturityRes.data?.map || {};
     const serverMap = Object.entries(serverMapRaw).reduce(
       (acc, [key, value]) => {
@@ -487,6 +536,28 @@ export default function GreenWork() {
       [String(projectId)]: serverMap,
     }));
   };
+
+  const loadServerLiveMaintenance = useCallback(
+    async (projectId: number, season: SeasonMode, assignee: string) => {
+      const query = new URLSearchParams();
+      query.set("season_mode", season);
+      if (assignee !== "all") {
+        query.set("assignee_name", assignee);
+      }
+      const res = await api.get(`/green/projects/${projectId}/live-maintenance?${query.toString()}`);
+      setServerLiveRows(Array.isArray(res.data?.rows) ? res.data.rows : []);
+      setServerLiveSummary({
+        total: Number(res.data?.summary?.total || 0),
+        danger: Number(res.data?.summary?.danger || 0),
+        warning: Number(res.data?.summary?.warning || 0),
+        ok: Number(res.data?.summary?.ok || 0),
+        info: Number(res.data?.summary?.info || 0),
+        dueSoon: Number(res.data?.summary?.dueSoon || 0),
+      });
+      setServerLiveSources(Array.isArray(res.data?.sources) && res.data.sources.length ? res.data.sources : LIVE_TABLE_SOURCES);
+    },
+    [],
+  );
 
   useEffect(() => {
     loadProjects().catch(() => toast.error("Failed to load projects"));
@@ -518,11 +589,15 @@ export default function GreenWork() {
 
   useEffect(() => {
     if (!activeProjectId || activeForm !== "live_table") return;
+    void loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter).catch(() => {});
     const timer = window.setInterval(() => {
-      void loadProjectData(activeProjectId).catch(() => {});
+      void Promise.all([
+        loadProjectData(activeProjectId),
+        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter),
+      ]).catch(() => {});
     }, 20000);
     return () => window.clearInterval(timer);
-  }, [activeProjectId, activeForm]);
+  }, [activeProjectId, activeForm, seasonMode, assigneeFilter, loadServerLiveMaintenance]);
 
   const onSelectProject = async (id: number) => {
     setActiveProjectId(id);
@@ -586,7 +661,7 @@ export default function GreenWork() {
     const replacementDoneTasks = tasks
       .filter((task) => Number(task.tree_id) === Number(treeId))
       .filter((task) => asMaintenanceActivity(task.task_type) === "replacement")
-      .filter((task) => isCompleteStatus(task.status))
+      .filter((task) => isCompleteStatus(task.status, task.review_state))
       .sort((a, b) => taskSortStamp(b) - taskSortStamp(a));
     const latestReplacementDoneDate = parseDateValue(
       replacementDoneTasks[0]?.completed_at || replacementDoneTasks[0]?.due_date || replacementDoneTasks[0]?.created_at || null,
@@ -624,7 +699,7 @@ export default function GreenWork() {
     const doneTasks = tasks
       .filter((task) => Number(task.tree_id) === Number(treeId))
       .filter((task) => asMaintenanceActivity(task.task_type) === activity)
-      .filter((task) => isCompleteStatus(task.status))
+      .filter((task) => isCompleteStatus(task.status, task.review_state))
       .sort((a, b) => taskSortStamp(b) - taskSortStamp(a));
 
     const latestDone = doneTasks[0] || null;
@@ -686,12 +761,20 @@ export default function GreenWork() {
       dueDateToSubmit = newTask.due_date;
     }
 
+    const modelSeason =
+      newTask.due_mode === "model_dry"
+        ? "dry"
+        : newTask.due_mode === "model_rainy"
+          ? "rainy"
+          : seasonMode;
+
     await api.post(`/green/trees/${newTask.tree_id}/tasks`, {
       task_type: activity,
       assignee_name: newTask.assignee_name,
       due_date: dueDateToSubmit,
       priority: newTask.priority,
       notes: newTask.notes,
+      model_season: modelSeason,
     });
     setNewTask({
       tree_id: "",
@@ -704,6 +787,44 @@ export default function GreenWork() {
     });
     await loadProjectData(activeProjectId);
     toast.success("Task assigned");
+  };
+
+  const reviewSubmittedTask = async (taskId: number, decision: "approve" | "reject") => {
+    if (!activeProjectId) return;
+    const loadingId = toast.loading(decision === "approve" ? "Approving task..." : "Rejecting task...");
+    try {
+      await api.post(`/green/tasks/${taskId}/review`, {
+        decision,
+        reviewer_name: "supervisor",
+        review_notes: decision === "approve" ? "Approved by supervisor." : "Rejected. Update evidence and resubmit.",
+        season_mode: seasonMode,
+      });
+      await Promise.all([
+        loadProjectData(activeProjectId),
+        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter),
+      ]);
+      toast.success(decision === "approve" ? "Task approved" : "Task rejected", { id: loadingId });
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to review task", { id: loadingId });
+    }
+  };
+
+  const reopenApprovedTask = async (taskId: number) => {
+    if (!activeProjectId) return;
+    const loadingId = toast.loading("Reopening task...");
+    try {
+      await api.post(`/green/tasks/${taskId}/reopen`, {
+        reviewer_name: "supervisor",
+        reason: "Reopened for correction.",
+      });
+      await Promise.all([
+        loadProjectData(activeProjectId),
+        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter),
+      ]);
+      toast.success("Task reopened", { id: loadingId });
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to reopen task", { id: loadingId });
+    }
   };
 
   const uploadGreenPhoto = async (
@@ -927,7 +1048,7 @@ export default function GreenWork() {
 
         const targetTrees = userOrders.reduce((sum, order) => sum + Number(order.target_trees || 0), 0);
         const pendingOrders = userOrders.filter((order) => !isCompleteStatus(order.status)).length;
-        const doneTasks = userTasks.filter((task) => isCompleteStatus(task.status)).length;
+        const doneTasks = userTasks.filter((task) => isCompleteStatus(task.status, task.review_state)).length;
         const overdueTasks = userTasks.filter((task) => isOverdueTask(task)).length;
         const pendingTasks = Math.max(userTasks.length - doneTasks - overdueTasks, 0);
         const lastMaintenanceTask = [...userTasks]
@@ -949,7 +1070,7 @@ export default function GreenWork() {
             lastDate: null,
           };
           current.total += 1;
-          if (isCompleteStatus(task.status)) current.done += 1;
+          if (isCompleteStatus(task.status, task.review_state)) current.done += 1;
           else if (isOverdueTask(task)) current.overdue += 1;
           else current.pending += 1;
 
@@ -1034,7 +1155,7 @@ export default function GreenWork() {
         lastDate: null,
       };
       current.total += 1;
-      if (isCompleteStatus(task.status)) current.done += 1;
+      if (isCompleteStatus(task.status, task.review_state)) current.done += 1;
       else if (isOverdueTask(task)) current.overdue += 1;
       else current.pending += 1;
       const taskDate = task.completed_at || task.due_date || task.created_at || null;
@@ -1114,7 +1235,7 @@ export default function GreenWork() {
       const plantingDateObj = parseDateValue(tree.planting_date);
       const replacementTaskBucket = [...(taskBuckets.get(`${tree.id}:replacement`) || [])];
       const replacementDoneTasks = replacementTaskBucket
-        .filter((task) => isCompleteStatus(task.status))
+        .filter((task) => isCompleteStatus(task.status, task.review_state))
         .sort((a, b) => taskSortStamp(b) - taskSortStamp(a));
       const latestReplacementDoneDate = parseDateValue(
         replacementDoneTasks[0]?.completed_at || replacementDoneTasks[0]?.due_date || replacementDoneTasks[0]?.created_at || null,
@@ -1129,8 +1250,8 @@ export default function GreenWork() {
       MAINTENANCE_ACTIVITY_ORDER.forEach((activity) => {
         const model = MAINTENANCE_MODEL[activity];
         const bucket = [...(taskBuckets.get(`${tree.id}:${activity}`) || [])];
-        const doneTasks = bucket.filter((task) => isCompleteStatus(task.status));
-        const notDoneTasks = bucket.filter((task) => !isCompleteStatus(task.status));
+        const doneTasks = bucket.filter((task) => isCompleteStatus(task.status, task.review_state));
+        const notDoneTasks = bucket.filter((task) => !isCompleteStatus(task.status, task.review_state));
         const overdueTasks = notDoneTasks.filter((task) => isOverdueTask(task));
 
         const latestDone = doneTasks.sort((a, b) => taskSortStamp(b) - taskSortStamp(a))[0] || null;
@@ -1286,9 +1407,19 @@ export default function GreenWork() {
     );
   }, [liveMaintenanceRows]);
 
+  const effectiveLiveRows = useMemo(
+    () => (serverLiveRows.length ? serverLiveRows : liveMaintenanceRows),
+    [serverLiveRows, liveMaintenanceRows],
+  );
+  const effectiveLiveSummary = useMemo(
+    () => (serverLiveRows.length ? serverLiveSummary : liveMaintenanceSummary),
+    [serverLiveRows.length, serverLiveSummary, liveMaintenanceSummary],
+  );
+
   const activeProjectActions: Array<{ form: WorkForm; title: string; note: string }> = [
     { form: "overview", title: "Overview", note: "Progress + map summary" },
     { form: "live_table", title: "Live Maintenance", note: "Cycle due table + alerts" },
+    { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
     { form: "users", title: "Users Board", note: "All staff status and roles" },
     { form: "add_user", title: "Add Staff", note: "Create new user profile" },
     { form: "assign_work", title: "Planting Orders", note: "Assign tree planting targets" },
@@ -1305,8 +1436,8 @@ export default function GreenWork() {
 
         const targetTrees = userOrders.reduce((sum, order) => sum + Number(order.target_trees || 0), 0);
         const pendingOrders = userOrders.filter((order) => !isCompleteStatus(order.status)).length;
-        const doneTasks = userTasks.filter((task) => isCompleteStatus(task.status)).length;
-        const pendingTasks = userTasks.filter((task) => !isCompleteStatus(task.status)).length;
+        const doneTasks = userTasks.filter((task) => isCompleteStatus(task.status, task.review_state)).length;
+        const pendingTasks = userTasks.filter((task) => !isCompleteStatus(task.status, task.review_state)).length;
 
         let statusLabel = "No Active Work";
         let statusTone: "busy" | "normal" | "idle" = "idle";
@@ -1588,6 +1719,13 @@ export default function GreenWork() {
               Live Maintenance Table
             </button>
             <button
+              className={`green-work-menu-item ${activeForm === "review_queue" ? "active" : ""}`}
+              type="button"
+              onClick={() => openForm("review_queue")}
+            >
+              Review Queue ({reviewQueue.length})
+            </button>
+            <button
               className={`green-work-menu-item ${activeForm === "users" ? "active" : ""}`}
               type="button"
               onClick={() => openForm("users")}
@@ -1865,6 +2003,48 @@ export default function GreenWork() {
               </button>
             </div>
           )}
+
+          {activeForm === "review_queue" && (
+            <div className="green-work-card">
+              <h3>Supervisor Review Queue</h3>
+              {!activeProjectId && <p className="green-work-note">Select project first from Project Focus.</p>}
+              {activeProjectId && reviewQueue.length === 0 && <p className="green-work-note">No submitted tasks awaiting review.</p>}
+              <div className="staff-list">
+                {reviewQueue.map((task) => (
+                  <div key={task.id} className="staff-row">
+                    <div className="staff-row-head">
+                      <strong>
+                        Task #{task.id} - {formatTaskTypeLabel(task.task_type)}
+                      </strong>
+                      <span>{task.assignee_name || "-"}</span>
+                    </div>
+                    <div className="staff-row-meta">
+                      Tree #{task.tree_id} | Due: {formatDateLabel(task.due_date)} | Priority: {task.priority || "normal"}
+                    </div>
+                    <div className="staff-row-meta">
+                      Review: {task.review_state || "none"} | Submitted: {formatDateLabel(task.submitted_at || task.created_at)}
+                    </div>
+                    <div className="staff-row-meta">
+                      Evidence: {task.photo_url ? "photo" : "no-photo"} / {task.notes ? "notes" : "no-notes"}
+                    </div>
+                    <div className="work-actions">
+                      <button type="button" onClick={() => void reviewSubmittedTask(task.id, "approve")}>
+                        Approve
+                      </button>
+                      <button type="button" onClick={() => void reviewSubmittedTask(task.id, "reject")}>
+                        Reject
+                      </button>
+                      {normalizeName(task.review_state) === "approved" && (
+                        <button type="button" onClick={() => void reopenApprovedTask(task.id)}>
+                          Reopen
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </aside>
 
         <section className={`green-work-main ${overviewMode || liveTableMode ? "overview-mode" : "single-mode"}`}>
@@ -1900,7 +2080,26 @@ export default function GreenWork() {
                   <span>Pending: {filteredOverviewTotals.taskPending}</span>
                   <span>Overdue: {filteredOverviewTotals.taskOverdue}</span>
                 </div>
+                <div className="green-work-task-summary-stats">
+                  <span>Open Alerts: {alertsSummary.total}</span>
+                  <span>Danger: {alertsSummary.danger}</span>
+                  <span>Warning: {alertsSummary.warning}</span>
+                  <span>Info: {alertsSummary.info}</span>
+                  <span>Awaiting Review: {reviewQueue.length}</span>
+                </div>
               </div>
+              {alertsList.length > 0 && (
+                <div className="green-work-card">
+                  <h4>Live Alerts</h4>
+                  <div className="green-work-note">
+                    {alertsList.slice(0, 5).map((alert: any) => (
+                      <p key={alert.id}>
+                        [{String(alert.severity || "warning").toUpperCase()}] {alert.message}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="green-work-overview-bars">
                 <div className="green-work-overview-bar-card">
                   <div className="green-work-overview-bar-head">
@@ -2025,7 +2224,15 @@ export default function GreenWork() {
                   </span>
                 </h3>
                 <div className="work-actions">
-                  <button type="button" onClick={() => void loadProjectData(activeProjectId)}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void Promise.all([
+                        loadProjectData(activeProjectId),
+                        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter),
+                      ])
+                    }
+                  >
                     Refresh
                   </button>
                   <select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}>
@@ -2111,11 +2318,11 @@ export default function GreenWork() {
 
               <div className="green-work-live-summary">
                 <span className="green-work-live-pill neutral">Season: {SEASON_LABEL[seasonMode]}</span>
-                <span className="green-work-live-pill danger">Danger: {liveMaintenanceSummary.danger}</span>
-                <span className="green-work-live-pill warning">In Progress / Due Soon: {liveMaintenanceSummary.warning}</span>
-                <span className="green-work-live-pill ok">On Track: {liveMaintenanceSummary.ok}</span>
-                <span className="green-work-live-pill info">Needs Planting Date: {liveMaintenanceSummary.info}</span>
-                <span className="green-work-live-pill neutral">Rows: {liveMaintenanceSummary.total}</span>
+                <span className="green-work-live-pill danger">Danger: {effectiveLiveSummary.danger}</span>
+                <span className="green-work-live-pill warning">In Progress / Due Soon: {effectiveLiveSummary.warning}</span>
+                <span className="green-work-live-pill ok">On Track: {effectiveLiveSummary.ok}</span>
+                <span className="green-work-live-pill info">Needs Planting Date: {effectiveLiveSummary.info}</span>
+                <span className="green-work-live-pill neutral">Rows: {effectiveLiveSummary.total}</span>
               </div>
 
               <div className="green-work-live-table-wrap">
@@ -2136,14 +2343,14 @@ export default function GreenWork() {
                     </tr>
                   </thead>
                   <tbody>
-                    {liveMaintenanceRows.length === 0 ? (
+                    {effectiveLiveRows.length === 0 ? (
                       <tr>
                         <td colSpan={11} className="green-work-live-empty">
                           No tree maintenance rows available for this filter.
                         </td>
                       </tr>
                     ) : (
-                      liveMaintenanceRows.map((row) => (
+                      effectiveLiveRows.map((row) => (
                         <tr key={row.key} className={`tone-${row.tone}`}>
                           <td>
                             <button
@@ -2201,7 +2408,7 @@ export default function GreenWork() {
                   Review intervals seasonally by state-level rainfall outlook.
                 </p>
                 <ul>
-                  {LIVE_TABLE_SOURCES.map((source) => (
+                  {serverLiveSources.map((source) => (
                     <li key={source.url}>
                       <a href={source.url} target="_blank" rel="noreferrer">
                         {source.label}
