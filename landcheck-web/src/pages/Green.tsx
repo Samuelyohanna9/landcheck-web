@@ -2,6 +2,35 @@ import { useEffect, useMemo, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { api, BACKEND_URL } from "../api/client";
 import TreeMap, { type TreeInspectData } from "../components/TreeMap";
+import {
+  cacheProjectDetailOffline,
+  cacheProjectTreesOffline,
+  cacheProjectsOffline,
+  cacheTasksOffline,
+  cacheTreeTasksOffline,
+  cacheTreeTimelineOffline,
+  cacheUsersOffline,
+  cacheWorkOrdersOffline,
+  getCachedProjectDetailOffline,
+  getCachedProjectTreesOffline,
+  getCachedProjectsOffline,
+  getCachedTasksOffline,
+  getCachedTreeTasksOffline,
+  getCachedTreeTimelineOffline,
+  getCachedUsersOffline,
+  getCachedWorkOrdersOffline,
+  getOfflineConflictCount,
+  getOfflineQueueCount,
+  getPendingTreeDraftsOffline,
+  isLikelyNetworkError,
+  queueCreateTreeOffline,
+  queuePhotoUploadOffline,
+  queueTaskSubmitOffline,
+  queueTaskUpdateOffline,
+  queueTreeStatusOffline,
+  registerGreenBackgroundSync,
+  syncGreenQueueOffline,
+} from "../offline/greenOffline";
 import "../styles/green.css";
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
@@ -115,6 +144,27 @@ const hasTaskEvidence = (task: any, edit?: { notes?: string; photo_url?: string 
   const notes = (edit?.notes ?? task?.notes ?? "").trim();
   const photo = (edit?.photo_url ?? task?.photo_url ?? "").trim();
   return Boolean(notes && photo);
+};
+const isLocalBlobUrl = (value: string | null | undefined) => String(value || "").trim().startsWith("blob:");
+const sanitizeTaskEditForApi = (edit: { status: string; notes: string; photo_url: string; tree_status: string }) => {
+  const payload: Record<string, any> = {
+    status: edit.status,
+    notes: edit.notes,
+    tree_status: edit.tree_status,
+  };
+  if (edit.photo_url && !isLocalBlobUrl(edit.photo_url)) {
+    payload.photo_url = edit.photo_url;
+  }
+  return payload;
+};
+const mergeTreesById = (rows: any[]) => {
+  const seen = new Map<number, any>();
+  rows.forEach((row) => {
+    const id = Number(row?.id);
+    if (!Number.isFinite(id)) return;
+    seen.set(id, { ...row, id, lng: Number(row.lng), lat: Number(row.lat) });
+  });
+  return Array.from(seen.values());
 };
 
 const R2_BUCKET_HINT = "photosgreen";
@@ -297,6 +347,10 @@ export default function Green() {
   const [treePhotoUploading, setTreePhotoUploading] = useState(false);
   const [plantingFlowState, setPlantingFlowState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [plantingFlowMessage, setPlantingFlowMessage] = useState("");
+  const [syncPendingCount, setSyncPendingCount] = useState(0);
+  const [syncConflictCount, setSyncConflictCount] = useState(0);
+  const [syncInProgress, setSyncInProgress] = useState(false);
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator === "undefined" ? true : navigator.onLine);
 
   const treePoints = useMemo(() => {
     if (!activeUser) return [];
@@ -363,28 +417,103 @@ export default function Green() {
     return { submitted, approved };
   }, [userTrees]);
 
+  const refreshSyncStatus = async () => {
+    const [pending, conflicts] = await Promise.all([getOfflineQueueCount(), getOfflineConflictCount()]);
+    setSyncPendingCount(pending);
+    setSyncConflictCount(conflicts);
+    if (typeof navigator !== "undefined") {
+      setIsOnline(navigator.onLine);
+    }
+    return { pending, conflicts };
+  };
+
+  const showOfflineQueuedToast = async (message: string) => {
+    const { pending } = await refreshSyncStatus();
+    toast.success(`${message} (${pending} pending sync)`);
+  };
+
   const loadProjects = async () => {
-    const res = await api.get("/green/projects");
-    setProjects(res.data);
+    try {
+      const res = await api.get("/green/projects");
+      const list = Array.isArray(res.data) ? res.data : [];
+      setProjects(list);
+      await cacheProjectsOffline(list);
+    } catch (error) {
+      const cached = await getCachedProjectsOffline();
+      if (cached.length > 0) {
+        setProjects(cached);
+        return;
+      }
+      throw error;
+    }
   };
 
   const loadUsers = async () => {
-    const res = await api.get("/green/users");
-    setUsers(res.data);
+    try {
+      const res = await api.get("/green/users");
+      const list = Array.isArray(res.data) ? res.data : [];
+      setUsers(list);
+      await cacheUsersOffline(list);
+    } catch (error) {
+      const cached = await getCachedUsersOffline();
+      if (cached.length > 0) {
+        setUsers(cached);
+        return;
+      }
+      throw error;
+    }
   };
 
   const loadProjectDetail = async (id: number) => {
-    const [projectRes, treesRes] = await Promise.all([
-      api.get(`/green/projects/${id}`),
-      api.get(`/green/projects/${id}/trees`),
-    ]);
-    setActiveProject(projectRes.data);
-    const normalized = (treesRes.data || []).map((t: any) => ({
-      ...t,
-      lng: Number(t.lng),
-      lat: Number(t.lat),
-    }));
-    setTrees(normalized);
+    try {
+      const [projectRes, treesRes] = await Promise.all([
+        api.get(`/green/projects/${id}`),
+        api.get(`/green/projects/${id}/trees`),
+      ]);
+      setActiveProject(projectRes.data);
+      const normalized = mergeTreesById(Array.isArray(treesRes.data) ? treesRes.data : []);
+      setTrees(normalized);
+      await Promise.all([
+        cacheProjectDetailOffline(id, projectRes.data),
+        cacheProjectTreesOffline(id, normalized),
+      ]);
+    } catch (error) {
+      const [cachedProject, cachedTrees, pendingDrafts] = await Promise.all([
+        getCachedProjectDetailOffline(id),
+        getCachedProjectTreesOffline(id),
+        getPendingTreeDraftsOffline(id),
+      ]);
+      const mergedTrees = mergeTreesById([...(cachedTrees || []), ...(pendingDrafts || [])]);
+      if (cachedProject) {
+        setActiveProject(cachedProject);
+      }
+      if (mergedTrees.length > 0) {
+        setTrees(mergedTrees);
+      }
+      if (cachedProject || mergedTrees.length > 0) {
+        return;
+      }
+      throw error;
+    }
+  };
+
+  const loadWorkOrders = async (projectId: number, assigneeName: string) => {
+    try {
+      const stamp = Date.now();
+      const res = await api.get(
+        `/green/work-orders?project_id=${projectId}&assignee_name=${encodeURIComponent(assigneeName)}&_ts=${stamp}`
+      );
+      const rows = Array.isArray(res.data) ? res.data : [];
+      setPlantingOrders(rows);
+      await cacheWorkOrdersOffline(projectId, assigneeName, rows);
+    } catch (error) {
+      const cached = await getCachedWorkOrdersOffline(projectId, assigneeName);
+      if (cached.length > 0) {
+        setPlantingOrders(cached);
+        return;
+      }
+      throw error;
+    }
   };
 
   useEffect(() => {
@@ -421,11 +550,80 @@ export default function Green() {
 
   useEffect(() => {
     if (!activeProject || !activeUser) return;
-    const stamp = Date.now();
-    api
-      .get(`/green/work-orders?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}&_ts=${stamp}`)
-      .then((res) => setPlantingOrders(res.data || []))
-      .catch(() => setPlantingOrders([]));
+    loadWorkOrders(activeProject.id, activeUser).catch(() => setPlantingOrders([]));
+  }, [activeProject?.id, activeUser]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const syncQueued = async (showToastOnSuccess = false) => {
+      if (!navigator.onLine) {
+        if (!cancelled) {
+          setIsOnline(false);
+          await refreshSyncStatus();
+        }
+        return;
+      }
+      if (!cancelled) {
+        setIsOnline(true);
+        setSyncInProgress(true);
+      }
+      try {
+        const result = await syncGreenQueueOffline(api);
+        if (cancelled) return;
+        if (result.synced > 0 || result.conflicts > 0) {
+          if (activeProject) {
+            await loadProjectDetail(activeProject.id).catch(() => {});
+          }
+          if (activeProject && activeUser) {
+            await loadMyTasks().catch(() => {});
+            await loadWorkOrders(activeProject.id, activeUser).catch(() => {});
+          }
+        }
+        if (showToastOnSuccess && result.synced > 0) {
+          toast.success(`Synced ${result.synced} offline update${result.synced === 1 ? "" : "s"}.`);
+        }
+        if (result.conflicts > 0) {
+          toast.error(`${result.conflicts} offline update${result.conflicts === 1 ? "" : "s"} needs review.`);
+        }
+      } finally {
+        if (!cancelled) {
+          setSyncInProgress(false);
+          await refreshSyncStatus();
+        }
+      }
+    };
+
+    void registerGreenBackgroundSync();
+    void refreshSyncStatus();
+    void syncQueued(false);
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      void syncQueued(true);
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      void refreshSyncStatus();
+    };
+    const handleWorkerMessage = (event: MessageEvent) => {
+      if (event?.data?.type === "GREEN_SYNC_QUEUE") {
+        void syncQueued(true);
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", handleWorkerMessage);
+    }
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.removeEventListener("message", handleWorkerMessage);
+      }
+    };
   }, [activeProject?.id, activeUser]);
 
   useEffect(() => {
@@ -500,8 +698,15 @@ export default function Green() {
           } else {
             await uploadGreenPhoto(pendingTreePhoto, "trees", { treeId: createdTreeId });
           }
-        } catch {
+        } catch (uploadError) {
           photoLinked = false;
+          if (isLikelyNetworkError(uploadError) && activeProject) {
+            const link = Number.isFinite(reviewTaskId) && reviewTaskId > 0 ? { taskId: reviewTaskId } : { treeId: createdTreeId };
+            await queuePhotoUploadOffline(pendingTreePhoto, Number.isFinite(reviewTaskId) && reviewTaskId > 0 ? "tasks" : "trees", link, {
+              projectId: activeProject.id,
+              assigneeName: activeUser || "",
+            }).catch(() => {});
+          }
         }
       }
 
@@ -519,11 +724,7 @@ export default function Green() {
       setPendingTreePhoto(null);
       await loadProjectDetail(activeProject.id);
       if (activeProject && activeUser) {
-        const stamp = Date.now();
-        api
-          .get(`/green/work-orders?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}&_ts=${stamp}`)
-          .then((res) => setPlantingOrders(res.data || []))
-          .catch(() => setPlantingOrders([]));
+        await loadWorkOrders(activeProject.id, activeUser).catch(() => setPlantingOrders([]));
       }
       if (photoLinked) {
         setPlantingFlowMessage(
@@ -535,9 +736,48 @@ export default function Green() {
         setPlantingFlowMessage("Tree successfully planted! Photo upload failed.");
       }
       setPlantingFlowState("success");
-    } catch {
-      setPlantingFlowMessage("Failed to plant tree. Please try again.");
-      setPlantingFlowState("error");
+    } catch (error: any) {
+      if (isLikelyNetworkError(error)) {
+        try {
+          const queued = await queueCreateTreeOffline(
+            {
+              project_id: activeProject.id,
+              ...newTree,
+              photo_url: "",
+              created_by: activeUser,
+            },
+            { projectId: activeProject.id, assigneeName: activeUser },
+            pendingTreePhoto
+          );
+          setTrees((prev) =>
+            mergeTreesById([
+              queued.tempTree,
+              ...prev,
+            ]) as Tree[]
+          );
+          setNewTree({
+            lng: 0,
+            lat: 0,
+            species: "",
+            planting_date: "",
+            status: "alive",
+            notes: "",
+            photo_url: "",
+            created_by: "",
+          });
+          setPhotoPreview("");
+          setPendingTreePhoto(null);
+          setPlantingFlowMessage("Saved offline. Tree will sync automatically when online.");
+          setPlantingFlowState("success");
+          await showOfflineQueuedToast("Tree saved offline.");
+        } catch {
+          setPlantingFlowMessage("Failed to store tree offline.");
+          setPlantingFlowState("error");
+        }
+      } else {
+        setPlantingFlowMessage("Failed to plant tree. Please try again.");
+        setPlantingFlowState("error");
+      }
     } finally {
       setAddingTree(false);
     }
@@ -545,24 +785,61 @@ export default function Green() {
 
   const loadTreeDetails = async (treeId: number) => {
     setSelectedTreeId(treeId);
-    const [tasksRes, timelineRes] = await Promise.all([
-      api.get(`/green/trees/${treeId}/tasks`),
-      api.get(`/green/trees/${treeId}/timeline`),
-    ]);
-    const scopedTasks = (tasksRes.data || []).filter((task: any) => !activeUser || task.assignee_name === activeUser);
-    setTreeTasks(scopedTasks);
-    setTreeTimeline(timelineRes.data);
+    try {
+      const [tasksRes, timelineRes] = await Promise.all([
+        api.get(`/green/trees/${treeId}/tasks`),
+        api.get(`/green/trees/${treeId}/timeline`),
+      ]);
+      const tasks = Array.isArray(tasksRes.data) ? tasksRes.data : [];
+      const scopedTasks = tasks.filter((task: any) => !activeUser || task.assignee_name === activeUser);
+      setTreeTasks(scopedTasks);
+      setTreeTimeline(timelineRes.data);
+      await Promise.all([
+        cacheTreeTasksOffline(treeId, tasks),
+        cacheTreeTimelineOffline(treeId, timelineRes.data),
+      ]);
+    } catch (error) {
+      const [cachedTasks, cachedTimeline] = await Promise.all([
+        getCachedTreeTasksOffline(treeId),
+        getCachedTreeTimelineOffline(treeId),
+      ]);
+      const scopedTasks = (cachedTasks || []).filter((task: any) => !activeUser || task.assignee_name === activeUser);
+      if (scopedTasks.length > 0 || cachedTimeline) {
+        setTreeTasks(scopedTasks);
+        setTreeTimeline(cachedTimeline);
+        return;
+      }
+      setTreeTasks([]);
+      setTreeTimeline(null);
+      toast.error("Failed to load tree details");
+    }
   };
 
   const loadMyTasks = async () => {
     if (!activeProject || !activeUser) return;
-    const stamp = Date.now();
-    const res = await api.get(
-      `/green/tasks?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}&_ts=${stamp}`
-    );
-    setMyTasks(res.data);
+    let rows: any[] = [];
+    try {
+      const stamp = Date.now();
+      const res = await api.get(
+        `/green/tasks?project_id=${activeProject.id}&assignee_name=${encodeURIComponent(activeUser)}&_ts=${stamp}`
+      );
+      rows = Array.isArray(res.data) ? res.data : [];
+      await cacheTasksOffline(activeProject.id, activeUser, rows);
+    } catch (error) {
+      rows = await getCachedTasksOffline(activeProject.id, activeUser);
+      if (rows.length === 0) {
+        setMyTasks([]);
+        setTaskEdits({});
+        setEditingTaskId(null);
+        if (!isLikelyNetworkError(error)) {
+          toast.error("Failed to load tasks");
+        }
+        return;
+      }
+    }
+    setMyTasks(rows);
     const edits: Record<number, { status: string; notes: string; photo_url: string; tree_status: string }> = {};
-    res.data.forEach((t: any) => {
+    rows.forEach((t: any) => {
       edits[t.id] = {
         status: t.status,
         notes: t.notes || "",
@@ -582,9 +859,28 @@ export default function Green() {
       toast.error("Task is locked for review");
       return;
     }
-    await api.patch(`/green/tasks/${taskId}`, edit);
-    await loadMyTasks();
-    toast.success("Task updated");
+    const payload = sanitizeTaskEditForApi(edit);
+    try {
+      await api.patch(`/green/tasks/${taskId}`, payload);
+      await loadMyTasks();
+      toast.success("Task updated");
+    } catch (error) {
+      if (isLikelyNetworkError(error) && activeProject && activeUser) {
+        try {
+          await queueTaskUpdateOffline(taskId, payload, {
+            projectId: activeProject.id,
+            assigneeName: activeUser,
+          });
+          setMyTasks((prev) => prev.map((row: any) => (row.id === taskId ? { ...row, ...edit } : row)));
+          await showOfflineQueuedToast("Task update saved offline.");
+          return;
+        } catch {
+          toast.error("Failed to queue task update offline");
+          return;
+        }
+      }
+      toast.error("Failed to update task");
+    }
   };
 
   const submitTaskForReview = async (taskId: number) => {
@@ -605,13 +901,16 @@ export default function Green() {
       return;
     }
     const loadingId = toast.loading("Submitting task for supervisor review...");
+    const submitPayload: Record<string, any> = {
+      notes: edit.notes,
+      tree_status: edit.tree_status,
+      actor_name: activeUser || "",
+    };
+    if (edit.photo_url && !isLocalBlobUrl(edit.photo_url)) {
+      submitPayload.photo_url = edit.photo_url;
+    }
     try {
-      await api.post(`/green/tasks/${taskId}/submit`, {
-        notes: edit.notes,
-        photo_url: edit.photo_url,
-        tree_status: edit.tree_status,
-        actor_name: activeUser || "",
-      });
+      await api.post(`/green/tasks/${taskId}/submit`, submitPayload);
       setMyTasks((prev) =>
         prev.map((task: any) =>
           task.id === taskId
@@ -632,6 +931,34 @@ export default function Green() {
       toast.success("Task submitted for review", { id: loadingId });
       setEditingTaskId(null);
     } catch (error: any) {
+      if (isLikelyNetworkError(error) && activeProject && activeUser) {
+        try {
+          await queueTaskSubmitOffline(taskId, submitPayload, {
+            projectId: activeProject.id,
+            assigneeName: activeUser,
+          });
+          setMyTasks((prev) =>
+            prev.map((task: any) =>
+              task.id === taskId
+                ? {
+                    ...task,
+                    status: "done",
+                    review_state: "submitted",
+                    reported_tree_status: edit.tree_status || task.reported_tree_status || task.tree_status,
+                    review_notes: null,
+                  }
+                : task
+            )
+          );
+          toast.success("Task submission queued offline", { id: loadingId });
+          setEditingTaskId(null);
+          await showOfflineQueuedToast("Task submission saved offline.");
+          return;
+        } catch {
+          toast.error("Failed to queue task submission offline", { id: loadingId });
+          return;
+        }
+      }
       toast.error(error?.response?.data?.detail || "Failed to submit task", { id: loadingId });
     }
   };
@@ -689,50 +1016,86 @@ export default function Green() {
         await loadProjectDetail(activeProject.id);
       }
       toast.success("Task photo uploaded", { id: loadingId });
-    } catch {
+    } catch (error) {
+      if (isLikelyNetworkError(error) && activeProject && activeUser) {
+        try {
+          const queued = await queuePhotoUploadOffline(file, "tasks", { taskId }, {
+            projectId: activeProject.id,
+            assigneeName: activeUser,
+          });
+          setTaskEdits((prev) => ({
+            ...prev,
+            [taskId]: {
+              status: prev[taskId]?.status || "pending",
+              notes: prev[taskId]?.notes || "",
+              photo_url: queued.localPreviewUrl,
+              tree_status:
+                prev[taskId]?.tree_status ||
+                normalizeTreeStatus(task?.reported_tree_status || task?.tree_status || "healthy"),
+            },
+          }));
+          setMyTasks((prev) =>
+            prev.map((row: any) => (row.id === taskId ? { ...row, photo_url: queued.localPreviewUrl } : row))
+          );
+          if (task && inspectedTree && Number(task.tree_id) === inspectedTree.id) {
+            setInspectedTree((prev) => (prev ? { ...prev, photo_url: queued.localPreviewUrl } : prev));
+          }
+          toast.success("Task photo queued offline", { id: loadingId });
+          await showOfflineQueuedToast("Task photo saved offline.");
+          return;
+        } catch {
+          toast.error("Failed to queue task photo offline", { id: loadingId });
+          return;
+        }
+      }
       toast.error("Failed to upload task photo", { id: loadingId });
     }
   };
 
   const updateTreeStatus = async (treeId: number, status: string) => {
-    await api.patch(`/green/trees/${treeId}`, { status });
-    if (activeProject) {
-      await loadProjectDetail(activeProject.id);
+    try {
+      await api.patch(`/green/trees/${treeId}`, { status });
+      if (activeProject) {
+        await loadProjectDetail(activeProject.id);
+      }
+    } catch (error) {
+      if (isLikelyNetworkError(error) && activeProject) {
+        try {
+          await queueTreeStatusOffline(treeId, status, {
+            projectId: activeProject.id,
+            assigneeName: activeUser || "",
+          });
+          setTrees((prev) => prev.map((tree) => (tree.id === treeId ? { ...tree, status } : tree)));
+          setInspectedTree((prev) =>
+            prev && Number(prev.id) === Number(treeId)
+              ? { ...prev, status, status_label: formatTreeConditionLabel(status) }
+              : prev
+          );
+          await showOfflineQueuedToast("Tree status saved offline.");
+          return;
+        } catch {
+          toast.error("Failed to queue tree status offline");
+          return;
+        }
+      }
+      toast.error("Failed to update tree status");
     }
-  };
-
-  const exportCsv = async () => {
-    if (!activeProject) return;
-    window.open(`${BACKEND_URL}/green/projects/${activeProject.id}/donor-report/csv`, "_blank");
   };
 
   const exportPdf = async () => {
-    if (!activeProject) return;
-    window.open(`${BACKEND_URL}/green/projects/${activeProject.id}/donor-report/pdf`, "_blank");
-  };
-
-  const exportVerra = async () => {
-    if (!activeProject) return;
-    const params = new URLSearchParams({
-      season_mode: "rainy",
-      format: "zip",
-    });
-    if (activeUser) {
-      params.set("assignee_name", activeUser);
+    if (!activeProject || !activeUser) {
+      toast.error("Select a project and field officer first.");
+      return;
     }
-    window.open(`${BACKEND_URL}/green/projects/${activeProject.id}/export/verra-vcs?${params.toString()}`, "_blank");
-  };
-
-  const exportVerraDocx = async () => {
-    if (!activeProject) return;
-    const params = new URLSearchParams({
-      season_mode: "rainy",
-      format: "docx",
-    });
-    if (activeUser) {
-      params.set("assignee_name", activeUser);
+    if (!navigator.onLine) {
+      toast.error("Offline now. Reconnect to export PDF.");
+      return;
     }
-    window.open(`${BACKEND_URL}/green/projects/${activeProject.id}/export/verra-vcs?${params.toString()}`, "_blank");
+    const params = new URLSearchParams({
+      assignee_name: activeUser,
+      _ts: String(Date.now()),
+    });
+    window.open(`${BACKEND_URL}/green/projects/${activeProject.id}/donor-report/pdf?${params.toString()}`, "_blank");
   };
 
   const useGps = () => {
@@ -789,7 +1152,23 @@ export default function Green() {
         await loadProjectDetail(activeProject.id);
       }
       toast.success("Tree photo updated", { id: loadingId });
-    } catch {
+    } catch (error) {
+      if (isLikelyNetworkError(error) && activeProject) {
+        try {
+          const queued = await queuePhotoUploadOffline(file, "trees", { treeId }, {
+            projectId: activeProject.id,
+            assigneeName: activeUser || "",
+          });
+          setInspectedTree((prev) => (prev && prev.id === treeId ? { ...prev, photo_url: queued.localPreviewUrl } : prev));
+          setTrees((prev) => prev.map((tree) => (tree.id === treeId ? { ...tree, photo_url: queued.localPreviewUrl } : tree)));
+          toast.success("Tree photo queued offline", { id: loadingId });
+          await showOfflineQueuedToast("Tree photo saved offline.");
+          return;
+        } catch {
+          toast.error("Failed to queue tree photo offline", { id: loadingId });
+          return;
+        }
+      }
       toast.error("Failed to upload tree photo", { id: loadingId });
     } finally {
       setTreePhotoUploading(false);
@@ -829,6 +1208,18 @@ export default function Green() {
   const deadTrees = activeUser ? myTreeSummary.dead : 0;
   const needsAttentionTrees = activeUser ? myTreeSummary.needs : 0;
   const survivalRate = totalTrees > 0 ? Math.round((healthyTrees / totalTrees) * 100) : 0;
+  const syncPrimaryText = syncInProgress ? "Syncing" : isOnline ? "Online" : "Offline";
+  const syncSecondaryText =
+    syncPendingCount > 0 ? `${syncPendingCount} pending` : isOnline ? "All synced" : "Waiting for connection";
+  const syncClassName = [
+    "green-sync-badge",
+    isOnline ? "is-online" : "is-offline",
+    syncInProgress ? "is-syncing" : "",
+    syncPendingCount > 0 ? "has-pending" : "",
+    syncConflictCount > 0 ? "has-conflicts" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className={`green-container ${activeSection === null ? "green-home-mode" : "green-detail-mode"}`}>
@@ -847,23 +1238,20 @@ export default function Green() {
             </div>
           </div>
           <div className="green-header-actions">
+            <div className={syncClassName} aria-live="polite">
+              <strong>{syncPrimaryText}</strong>
+              <span>{syncSecondaryText}</span>
+              {syncConflictCount > 0 && (
+                <small>
+                  {syncConflictCount} conflict{syncConflictCount === 1 ? "" : "s"}
+                </small>
+              )}
+            </div>
             {installPrompt && (
               <button className="green-ghost-btn" onClick={installGreenApp} type="button">
                 Install App
               </button>
             )}
-            <button className="green-ghost-btn" onClick={exportCsv} disabled={!activeProject} type="button">
-              Export CSV
-            </button>
-            <button className="green-ghost-btn" onClick={exportPdf} disabled={!activeProject} type="button">
-              Export PDF
-            </button>
-            <button className="green-ghost-btn" onClick={exportVerra} disabled={!activeProject} type="button">
-              Export Verra VCS
-            </button>
-            <button className="green-ghost-btn" onClick={exportVerraDocx} disabled={!activeProject} type="button">
-              Export Verra DOCX
-            </button>
           </div>
         </div>
       </header>
@@ -1423,6 +1811,25 @@ export default function Green() {
                     <span>Pending Planting</span>
                     <strong>{pendingPlanting}</strong>
                   </div>
+                </div>
+                <div className="green-profile-export">
+                  <h4>My Report Export</h4>
+                  <p>Export PDF includes only this field officer's work in the selected project.</p>
+                  <button
+                    className="green-btn-primary"
+                    type="button"
+                    onClick={exportPdf}
+                    disabled={!activeProject || !activeUser || syncInProgress}
+                  >
+                    Export My Work (PDF)
+                  </button>
+                  {!activeProject && <small>Select a project to enable export.</small>}
+                  {activeProject && !isOnline && <small>Offline now. Reconnect to generate the PDF report.</small>}
+                  {activeProject && activeUser && isOnline && (
+                    <small>
+                      Filter: {activeUser} ({activeProject.name})
+                    </small>
+                  )}
                 </div>
               </>
             )}

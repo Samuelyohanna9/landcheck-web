@@ -145,6 +145,7 @@
   gap: 0.65rem;
   flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: center;
 }
 
 .green-ghost-btn {
@@ -162,6 +163,53 @@
 .green-ghost-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.green-sync-badge {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 152px;
+  padding: 0.44rem 0.62rem;
+  border-radius: 12px;
+  border: 1px solid rgba(187, 243, 177, 0.38);
+  background: linear-gradient(180deg, rgba(16, 70, 38, 0.94), rgba(13, 52, 29, 0.95));
+  color: #efffec;
+  box-shadow: 0 6px 14px rgba(9, 40, 23, 0.28);
+}
+
+.green-sync-badge strong {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.green-sync-badge span {
+  font-size: 0.78rem;
+  color: rgba(239, 255, 236, 0.92);
+}
+
+.green-sync-badge small {
+  font-size: 0.72rem;
+  color: #ffd7d7;
+  font-weight: 700;
+}
+
+.green-sync-badge.is-offline {
+  border-color: rgba(255, 213, 153, 0.46);
+  background: linear-gradient(180deg, rgba(112, 71, 19, 0.95), rgba(83, 48, 11, 0.95));
+}
+
+.green-sync-badge.is-syncing {
+  border-color: rgba(180, 244, 191, 0.56);
+}
+
+.green-sync-badge.has-pending {
+  border-color: rgba(255, 241, 186, 0.62);
+}
+
+.green-sync-badge.has-conflicts {
+  border-color: rgba(255, 171, 171, 0.72);
 }
 
 .green-shell {
@@ -1070,6 +1118,34 @@
   letter-spacing: -0.02em;
 }
 
+.green-profile-export {
+  margin-top: 0.55rem;
+  border: 1px solid rgba(29, 87, 60, 0.22);
+  border-radius: 12px;
+  background: rgba(245, 252, 246, 0.96);
+  padding: 0.68rem 0.74rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.green-profile-export h4 {
+  margin: 0;
+  font-family: "Sora", sans-serif;
+  font-size: 0.98rem;
+  color: #1a4f36;
+}
+
+.green-profile-export p {
+  margin: 0;
+  color: #45695a;
+  font-size: 0.84rem;
+}
+
+.green-profile-export small {
+  color: #5a796b;
+  font-size: 0.76rem;
+}
+
 .timeline {
   margin-top: 0.7rem;
   border: 1px solid rgba(32, 82, 63, 0.2);
@@ -1230,6 +1306,12 @@
   }
 
   .green-container.green-home-mode .green-header-actions {
+    display: flex;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .green-container.green-home-mode .green-header-actions .green-ghost-btn {
     display: none;
   }
 
