@@ -31,6 +31,7 @@ type Props = {
   draftPoint?: { lng: number; lat: number } | null;
   onDraftMove?: (lng: number, lat: number) => void;
   enableDraw?: boolean;
+  drawActive?: boolean;
   onSelectTree?: (id: number) => void;
   onTreeInspect?: (detail: TreeInspectData | null) => void;
   onViewChange?: (view: { lng: number; lat: number; zoom: number; bearing: number; pitch: number }) => void;
@@ -327,6 +328,7 @@ export default function TreeMap({
   draftPoint,
   onDraftMove,
   enableDraw = true,
+  drawActive = true,
   onSelectTree,
   onTreeInspect,
   onViewChange,
@@ -347,6 +349,7 @@ export default function TreeMap({
   const hoverTreeIdRef = useRef<number | null>(null);
   const clickTreeIdRef = useRef<number | null>(null);
   const suppressNextDrawDeleteRef = useRef(false);
+  const drawActiveRef = useRef(drawActive);
   const detailCacheRef = useRef<Map<number, TreePopupDetail>>(new Map());
   const pendingDetailRef = useRef<Map<number, Promise<TreePopupDetail>>>(new Map());
   const [mapError, setMapError] = useState<string | null>(null);
@@ -417,6 +420,30 @@ export default function TreeMap({
   useEffect(() => {
     onTreeInspectRef.current = onTreeInspect;
   }, [onTreeInspect]);
+
+  useEffect(() => {
+    drawActiveRef.current = drawActive;
+    const map = mapRef.current;
+    if (!map || !mapReadyRef.current) return;
+    if (drawActive) {
+      map.getCanvas().style.cursor = "crosshair";
+      // Re-enable draw controls if they exist
+      if (drawRef.current) {
+        try {
+          drawRef.current.changeMode("draw_point");
+        } catch { /* noop */ }
+      }
+    } else {
+      map.getCanvas().style.cursor = "";
+      // Switch draw to simple_select so it doesn't intercept taps
+      if (drawRef.current) {
+        try {
+          drawRef.current.changeMode("simple_select");
+          drawRef.current.deleteAll();
+        } catch { /* noop */ }
+      }
+    }
+  }, [drawActive]);
 
   useEffect(() => {
     if (mapRef.current) return;
@@ -617,8 +644,8 @@ export default function TreeMap({
 
           map.on("click", TREE_CORE_LAYER_ID, onTreePress);
           map.on("click", TREE_OUTER_LAYER_ID, onTreePress);
-          map.on("touchstart", TREE_CORE_LAYER_ID, onTreePress);
-          map.on("touchstart", TREE_OUTER_LAYER_ID, onTreePress);
+          // On touch devices, use click (which fires on tap) instead of touchstart
+          // to avoid interfering with map pan/zoom gestures
 
           map.on("click", (event) => {
             const feature = map.queryRenderedFeatures(event.point, { layers: TREE_LAYER_IDS })[0];
@@ -629,7 +656,8 @@ export default function TreeMap({
               clickPopupRef.current = null;
             }
             onTreeInspectRef.current?.(null);
-            if (enableDraw) {
+            // Only place a tree when draw mode is active
+            if (enableDraw && drawActiveRef.current) {
               onAddTreeRef.current(event.lngLat.lng, event.lngLat.lat);
             }
           });
@@ -661,6 +689,7 @@ export default function TreeMap({
 
       if (enableDraw) {
         map.on("draw.create", (e: any) => {
+          if (!drawActiveRef.current) return;
           const feature = e?.features?.[0];
           if (!feature || feature.geometry?.type !== "Point") return;
           const [lng, lat] = feature.geometry.coordinates;
@@ -819,8 +848,8 @@ export default function TreeMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    map.getCanvas().style.cursor = "crosshair";
-  }, []);
+    map.getCanvas().style.cursor = drawActive ? "crosshair" : "";
+  }, [drawActive]);
 
   return (
     <div className="tree-map-wrap">

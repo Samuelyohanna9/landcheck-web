@@ -1,11 +1,10 @@
-self.CACHE_NAME = "green-shell-v6";
+self.CACHE_NAME = "green-shell-v7";
 self.MAP_CACHE_NAME = "green-map-v2";
 self.SYNC_TAG = "green-sync-queue";
 
 /* ── Precache list ─────────────────────────────────────────────── */
 self.PRECACHE_URLS = [
   "/green",
-  "/green/",
   "/green/manifest.webmanifest",
   "/green/icons/icon-192.png",
   "/green/icons/icon-512.png",
@@ -57,11 +56,7 @@ self.addEventListener("sync", (event) => {
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clients) => {
-        if (clients.length === 0) {
-          // No open client windows – nothing we can do from SW alone
-          // The queue will be processed next time the app opens
-          return;
-        }
+        if (clients.length === 0) return;
         clients.forEach((client) => {
           client.postMessage({ type: "GREEN_SYNC_QUEUE" });
         });
@@ -72,9 +67,9 @@ self.addEventListener("sync", (event) => {
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 function isMapboxRequest(url) {
-  const host = String(url.hostname || "").toLowerCase();
+  var host = String(url.hostname || "").toLowerCase();
   if (!host.endsWith(".mapbox.com") && host !== "mapbox.com") return false;
-  const path = String(url.pathname || "");
+  var path = String(url.pathname || "");
   return (
     path.includes("/styles/v1/") ||
     path.includes("/tiles/") ||
@@ -87,8 +82,11 @@ function isMapboxRequest(url) {
 
 function isGreenRoute(pathname) {
   return (
+    pathname === "/" ||
     pathname === "/green" ||
+    pathname === "/green/" ||
     pathname === "/green-work" ||
+    pathname === "/green-work/" ||
     pathname.startsWith("/green/") ||
     pathname.startsWith("/green-work/")
   );
@@ -97,41 +95,61 @@ function isGreenRoute(pathname) {
 function isGreenAsset(pathname) {
   return (
     pathname.startsWith("/green/") ||
+    pathname.startsWith("/green-work/") ||
     pathname === "/green" ||
-    pathname === "/green-logo-cropped-760.png" ||
-    pathname === "/green%20logo.png" ||
     pathname === "/green-work" ||
-    pathname.startsWith("/green-work/")
+    pathname === "/green-logo-cropped-760.png" ||
+    pathname === "/green-logo-cropped-700.png" ||
+    pathname === "/green%20logo.png"
   );
+}
+
+/**
+ * Try to find the SPA shell HTML in the cache.
+ * iOS Safari may cache it under different keys depending on how the page was first loaded,
+ * so we try multiple variants.
+ */
+function findCachedShell() {
+  return caches.open(self.CACHE_NAME).then(function (cache) {
+    return cache.match("/green").then(function (resp) {
+      if (resp) return resp;
+      return cache.match("/green/");
+    }).then(function (resp) {
+      if (resp) return resp;
+      return cache.match("/");
+    }).then(function (resp) {
+      if (resp) return resp;
+      // Last resort: look for any cached HTML response
+      return cache.match(new Request(self.registration.scope));
+    });
+  });
 }
 
 /* ── Fetch handler ─────────────────────────────────────────────── */
 self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  const url = new URL(req.url);
-  const isSameOrigin = url.origin === self.location.origin;
+  var req = event.request;
+  var url = new URL(req.url);
+  var isSameOrigin = url.origin === self.location.origin;
 
   // Only handle GET requests
   if (req.method !== "GET") return;
 
   // Skip API calls – let them go straight to network
   if (isSameOrigin && url.pathname.startsWith("/api/")) return;
-  if (isSameOrigin && url.pathname.startsWith("/green/") && url.pathname.includes("/api/")) return;
 
   /* ── Mapbox tile / style / font caching (stale-while-revalidate) ── */
   if (isMapboxRequest(url)) {
     event.respondWith(
-      caches.open(self.MAP_CACHE_NAME).then((mapCache) =>
-        mapCache.match(req).then((cached) => {
-          const networkFetch = fetch(req)
-            .then((resp) => {
+      caches.open(self.MAP_CACHE_NAME).then(function (mapCache) {
+        return mapCache.match(req).then(function (cached) {
+          var networkFetch = fetch(req)
+            .then(function (resp) {
               if (resp && resp.ok) {
                 mapCache.put(req, resp.clone());
               }
               return resp;
             })
-            .catch((err) => {
-              // Network failed – return cached version if we have one
+            .catch(function () {
               if (cached) return cached;
               return new Response("Offline map resource unavailable", {
                 status: 503,
@@ -139,49 +157,59 @@ self.addEventListener("fetch", (event) => {
               });
             });
 
-          // If we have a cache hit, serve it immediately and revalidate in background
           if (cached) {
-            event.waitUntil(networkFetch.catch(() => {}));
+            event.waitUntil(networkFetch.catch(function () {}));
             return cached;
           }
 
-          // No cache hit – wait for network
           return networkFetch;
-        })
-      )
+        });
+      })
     );
     return;
   }
 
-  /* ── SPA navigation (network-first → cache → /green fallback) ── */
-  const isAppNavigation =
-    req.mode === "navigate" && isSameOrigin && isGreenRoute(url.pathname);
+  /* ── SPA navigation (network-first → cache → shell fallback) ────── */
+  var isAppNavigation = req.mode === "navigate" && isSameOrigin;
 
   if (isAppNavigation) {
     event.respondWith(
       fetch(req)
-        .then((resp) => {
+        .then(function (resp) {
           if (resp.ok) {
-            const copy = resp.clone();
-            caches
-              .open(self.CACHE_NAME)
-              .then((cache) => cache.put(req, copy));
+            var copy = resp.clone();
+            caches.open(self.CACHE_NAME).then(function (cache) {
+              cache.put(req, copy);
+              // Also store under /green key so offline fallback always works
+              if (url.pathname === "/green" || url.pathname === "/green/" || url.pathname === "/") {
+                cache.put("/green", resp.clone());
+              }
+            });
           }
           return resp;
         })
-        .catch(() =>
-          caches
+        .catch(function () {
+          // Offline: try to serve from cache
+          return caches
             .match(req)
-            .then((resp) => resp || caches.match("/green"))
-            .then(
-              (resp) =>
+            .then(function (resp) {
+              if (resp) return resp;
+              // SPA: any navigation can be served by the shell HTML
+              return findCachedShell();
+            })
+            .then(function (resp) {
+              return (
                 resp ||
-                new Response("Offline – please reconnect", {
-                  status: 503,
-                  headers: { "Content-Type": "text/html" },
-                })
-            )
-        )
+                new Response(
+                  '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LandCheck Green - Offline</title><style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#0b1f16;color:#efffec;text-align:center}h1{font-size:1.4rem}p{color:#a0c9a8;margin-top:0.5rem}</style></head><body><div><h1>You are offline</h1><p>Please reconnect to the internet and reload.</p></div></body></html>',
+                  {
+                    status: 200,
+                    headers: { "Content-Type": "text/html; charset=utf-8" },
+                  }
+                )
+              );
+            });
+        })
     );
     return;
   }
@@ -190,19 +218,19 @@ self.addEventListener("fetch", (event) => {
   if (!isSameOrigin) return;
 
   /* ── Static assets (cache-first) ── */
-  const isBuildAsset = url.pathname.startsWith("/assets/");
-  const isCacheableStatic = isGreenAsset(url.pathname) || isBuildAsset;
+  var isBuildAsset = url.pathname.startsWith("/assets/");
+  var isCacheableStatic = isGreenAsset(url.pathname) || isBuildAsset;
   if (!isCacheableStatic) return;
 
   event.respondWith(
-    caches.match(req).then((cached) => {
+    caches.match(req).then(function (cached) {
       if (cached) return cached;
-      return fetch(req).then((resp) => {
+      return fetch(req).then(function (resp) {
         if (resp.ok) {
-          const copy = resp.clone();
-          caches
-            .open(self.CACHE_NAME)
-            .then((cache) => cache.put(req, copy));
+          var copy = resp.clone();
+          caches.open(self.CACHE_NAME).then(function (cache) {
+            cache.put(req, copy);
+          });
         }
         return resp;
       });
