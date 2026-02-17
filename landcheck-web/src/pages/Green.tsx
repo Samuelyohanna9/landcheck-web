@@ -98,6 +98,14 @@ type Custodian = {
   verification_status?: string | null;
 };
 
+type ActiveActorOption = {
+  value: string;
+  label: string;
+  role: string;
+  actorType: "staff" | "custodian";
+  id: number;
+};
+
 type Section = "tasks" | "map" | "records" | "profile";
 type DeferredInstallPrompt = Event & {
   prompt: () => Promise<void>;
@@ -457,8 +465,49 @@ export default function Green() {
 
   const activeUserDetail = useMemo(() => {
     if (!activeUser) return null;
-    return users.find((u) => u.full_name === activeUser) || null;
-  }, [activeUser, users]);
+    const staff = users.find((u) => u.full_name === activeUser);
+    if (staff) return staff;
+    const custodian = projectCustodians.find((c) => c.name === activeUser);
+    if (!custodian) return null;
+    return {
+      id: custodian.id,
+      full_name: custodian.name,
+      role: `custodian_${custodian.custodian_type}`,
+    } as GreenUser;
+  }, [activeUser, users, projectCustodians]);
+  const activeActorOptions = useMemo<ActiveActorOption[]>(() => {
+    const byKey = new Map<string, ActiveActorOption>();
+    users.forEach((user) => {
+      const value = String(user.full_name || "").trim();
+      if (!value) return;
+      const key = value.toLowerCase();
+      if (byKey.has(key)) return;
+      byKey.set(key, {
+        value,
+        label: `${user.full_name} (${user.role})`,
+        role: user.role,
+        actorType: "staff",
+        id: user.id,
+      });
+    });
+    projectCustodians.forEach((custodian) => {
+      const value = String(custodian.name || "").trim();
+      if (!value) return;
+      const key = value.toLowerCase();
+      if (byKey.has(key)) return;
+      byKey.set(key, {
+        value,
+        label: `${custodian.name} (custodian: ${custodian.custodian_type})`,
+        role: `custodian_${custodian.custodian_type}`,
+        actorType: "custodian",
+        id: custodian.id,
+      });
+    });
+    return Array.from(byKey.values()).sort((a, b) => {
+      if (a.actorType !== b.actorType) return a.actorType === "staff" ? -1 : 1;
+      return a.value.localeCompare(b.value);
+    });
+  }, [users, projectCustodians]);
 
   const pendingPlanting = useMemo(() => {
     const orders = plantingOrders.filter((o) => o.work_type === "planting");
@@ -792,7 +841,7 @@ export default function Green() {
     if (!activeProject) return;
     if (addingTree) return;
     if (!activeUser) {
-      toast.error("Select a field officer first");
+      toast.error("Select a staff or custodian first");
       return;
     }
     if (!newTree.lng || !newTree.lat) {
@@ -1244,7 +1293,7 @@ export default function Green() {
 
   const exportPdf = async () => {
     if (!activeProject || !activeUser) {
-      toast.error("Select a project and field officer first.");
+      toast.error("Select a project and staff/custodian first.");
       return;
     }
     if (!navigator.onLine) {
@@ -1460,10 +1509,10 @@ export default function Green() {
               </select>
 
               <select value={activeUser} onChange={(e) => setActiveUser(e.target.value)}>
-                <option value="">Select field officer</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.full_name}>
-                    {u.full_name} ({u.role})
+                <option value="">Select staff or custodian</option>
+                {activeActorOptions.map((option) => (
+                  <option key={`${option.actorType}-${option.id}`} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
@@ -1484,7 +1533,7 @@ export default function Green() {
             )}
           </div>
           {activeProject && !activeUser && (
-            <p className="green-empty">Select a field officer to load only their trees and tasks.</p>
+            <p className="green-empty">Select a staff member or custodian to load only their trees and tasks.</p>
           )}
 
           <div className="green-stats-top">
@@ -1623,11 +1672,11 @@ export default function Green() {
               </button>
             </div>
             {!activeUser ? (
-              <p className="green-empty">Select a field officer to view assigned tasks.</p>
+              <p className="green-empty">Select a staff member or custodian to view assigned tasks.</p>
             ) : myTasks.length === 0 ? (
               <p className="green-empty">No tasks assigned.</p>
             ) : userTrees.length === 0 ? (
-              <p className="green-empty">No trees recorded yet for this field officer.</p>
+              <p className="green-empty">No trees recorded yet for this selected user.</p>
             ) : (
               <div className="tree-table">
                 <div className="tree-row tree-header">
@@ -1845,7 +1894,7 @@ export default function Green() {
                 Remaining: {pendingPlanting}
               </span>
             </div>
-            {!activeUser && <p className="green-empty">Select a field officer to view only their trees.</p>}
+            {!activeUser && <p className="green-empty">Select a staff member or custodian to view only their trees.</p>}
             <div className="green-map-mode-toggle">
               <button
                 type="button"
@@ -1979,14 +2028,14 @@ export default function Green() {
               <div className="tree-form-row">
                 <label>Added by</label>
                 <select value={activeUser} onChange={(e) => setActiveUser(e.target.value)}>
-                  <option value="">Select field officer</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.full_name}>
-                      {u.full_name} ({u.role})
+                  <option value="">Select staff or custodian</option>
+                  {activeActorOptions.map((option) => (
+                    <option key={`map-${option.actorType}-${option.id}`} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
-                  </select>
-                </div>
+                </select>
+              </div>
               {newTree.tree_origin === "existing_inventory" && (
                 <>
                   <div className="tree-form-row">
@@ -2058,9 +2107,9 @@ export default function Green() {
 
         {activeSection === "profile" && (
           <section className="green-detail-card" id="green-section-profile">
-            <h3>Field Officer Details</h3>
+            <h3>User Details</h3>
             {!activeUserDetail ? (
-              <p className="green-empty">Select a field officer from setup to view profile details.</p>
+              <p className="green-empty">Select a staff member or custodian from setup to view profile details.</p>
             ) : (
               <>
                 <div className="green-profile-grid">
@@ -2122,7 +2171,7 @@ export default function Green() {
                 </div>
                 <div className="green-profile-export">
                   <h4>My Report Export</h4>
-                  <p>Export PDF includes only this field officer's work in the selected project.</p>
+                  <p>Export PDF includes only this selected user&apos;s work in the selected project.</p>
                   <button
                     className="green-btn-primary"
                     type="button"
@@ -2173,7 +2222,7 @@ export default function Green() {
             )}
 
             {!activeUser ? (
-              <p className="green-empty">Select a field officer to view their tree records.</p>
+              <p className="green-empty">Select a staff member or custodian to view their tree records.</p>
             ) : loadingTrees ? (
               <p className="green-empty">Loading trees...</p>
             ) : (

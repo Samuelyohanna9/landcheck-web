@@ -2649,6 +2649,10 @@ export default function GreenWork() {
   const activeProjectActions: Array<{ form: WorkForm; title: string; note: string }> = [
     { form: "overview", title: "Overview", note: "Progress + map summary" },
     { form: "live_table", title: "Live Maintenance", note: "Cycle due table + alerts" },
+    { form: "users", title: "Users", note: "All staff status + roles" },
+    { form: "add_user", title: "Add Staff", note: "Create user profile" },
+    { form: "assign_work", title: "Planting Orders", note: "Assign planting targets" },
+    { form: "assign_task", title: "Maintenance", note: "Assign maintenance tasks" },
     { form: "custodians", title: "Custodians", note: "Registry + verification" },
     { form: "distribution_events", title: "Distributed Events", note: "Distribution + allocations" },
     { form: "existing_tree_intake", title: "Existing Trees", note: "Imported/intake records" },
