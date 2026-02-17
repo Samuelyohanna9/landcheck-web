@@ -992,69 +992,89 @@ export default function GreenWork() {
 
   const loadProjectData = async (projectId: number) => {
     const stamp = Date.now();
-    const [projectRes, ordersRes, treesRes, tasksRes, speciesMaturityRes] = await Promise.all([
+    const [projectRes, ordersRes, treesRes, tasksRes, speciesMaturityRes] = await Promise.allSettled([
       api.get(`/green/projects/${projectId}?_ts=${stamp}`),
       api.get(`/green/work-orders?project_id=${projectId}&_ts=${stamp}`),
       api.get(`/green/projects/${projectId}/trees?_ts=${stamp}`),
       api.get(`/green/tasks?project_id=${projectId}&_ts=${stamp}`),
       api.get(`/green/projects/${projectId}/species-maturity?_ts=${stamp}`),
     ]);
-    const projectDetail = projectRes.data || {};
-    setProjects((prev) => {
-      const idx = prev.findIndex((item) => Number(item.id) === Number(projectId));
-      if (idx < 0) return prev;
-      const next = [...prev];
-      next[idx] = { ...next[idx], ...projectDetail };
-      return next;
-    });
-    const settingsPayload = projectDetail?.settings || projectDetail || {};
-    const plantingModel = String(settingsPayload?.planting_model || "direct").trim().toLowerCase() as PlantingModel;
-    setProjectSettingsDraft({
-      planting_model:
-        plantingModel === "community_distributed" || plantingModel === "mixed" || plantingModel === "direct"
-          ? plantingModel
-          : "direct",
-      allow_existing_tree_link: Boolean(settingsPayload?.allow_existing_tree_link),
-      default_existing_tree_scope:
-        String(settingsPayload?.default_existing_tree_scope || "exclude_from_planting_kpi").trim().toLowerCase() ===
-        "include_in_planting_kpi"
-          ? "include_in_planting_kpi"
-          : "exclude_from_planting_kpi",
-    });
-    setOrders(ordersRes.data);
-    const normalizedTrees = (treesRes.data || [])
-      .map((tree: any) => ({
-        ...tree,
-        lng: Number(tree.lng),
-        lat: Number(tree.lat),
-        tree_height_m:
-          Number.isFinite(Number(tree.tree_height_m)) && Number(tree.tree_height_m) >= 0
-            ? Number(tree.tree_height_m)
-            : null,
-        tree_origin: String(tree.tree_origin || "new_planting").toLowerCase(),
-        attribution_scope: String(tree.attribution_scope || "full").toLowerCase(),
-        count_in_planting_kpis: tree.count_in_planting_kpis !== false,
-        count_in_carbon_scope: tree.count_in_carbon_scope !== false,
-      }))
-      .filter((tree: any) => Number.isFinite(tree.lng) && Number.isFinite(tree.lat));
-    setTrees(normalizedTrees);
-    setTasks(Array.isArray(tasksRes.data) ? tasksRes.data : []);
-    const serverMapRaw = speciesMaturityRes.data?.map || {};
-    const serverMap = Object.entries(serverMapRaw).reduce(
-      (acc, [key, value]) => {
-        const normalizedKey = normalizeName(key);
-        const years = Number(value);
-        if (normalizedKey && Number.isFinite(years) && years > 0) {
-          acc[normalizedKey] = Math.round(years);
-        }
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
-    setSpeciesMaturityByProject((prev) => ({
-      ...prev,
-      [String(projectId)]: serverMap,
-    }));
+    if (projectRes.status === "fulfilled") {
+      const projectDetail = projectRes.value.data || {};
+      setProjects((prev) => {
+        const idx = prev.findIndex((item) => Number(item.id) === Number(projectId));
+        if (idx < 0) return prev;
+        const next = [...prev];
+        next[idx] = { ...next[idx], ...projectDetail };
+        return next;
+      });
+      const settingsPayload = projectDetail?.settings || projectDetail || {};
+      const plantingModel = String(settingsPayload?.planting_model || "direct").trim().toLowerCase() as PlantingModel;
+      setProjectSettingsDraft({
+        planting_model:
+          plantingModel === "community_distributed" || plantingModel === "mixed" || plantingModel === "direct"
+            ? plantingModel
+            : "direct",
+        allow_existing_tree_link: Boolean(settingsPayload?.allow_existing_tree_link),
+        default_existing_tree_scope:
+          String(settingsPayload?.default_existing_tree_scope || "exclude_from_planting_kpi").trim().toLowerCase() ===
+          "include_in_planting_kpi"
+            ? "include_in_planting_kpi"
+            : "exclude_from_planting_kpi",
+      });
+    }
+
+    if (ordersRes.status === "fulfilled") {
+      setOrders(Array.isArray(ordersRes.value.data) ? ordersRes.value.data : []);
+    } else {
+      setOrders([]);
+    }
+
+    if (treesRes.status === "fulfilled") {
+      const normalizedTrees = (treesRes.value.data || [])
+        .map((tree: any) => ({
+          ...tree,
+          lng: Number(tree.lng),
+          lat: Number(tree.lat),
+          tree_height_m:
+            Number.isFinite(Number(tree.tree_height_m)) && Number(tree.tree_height_m) >= 0
+              ? Number(tree.tree_height_m)
+              : null,
+          tree_origin: String(tree.tree_origin || "new_planting").toLowerCase(),
+          attribution_scope: String(tree.attribution_scope || "full").toLowerCase(),
+          count_in_planting_kpis: tree.count_in_planting_kpis !== false,
+          count_in_carbon_scope: tree.count_in_carbon_scope !== false,
+        }))
+        .filter((tree: any) => Number.isFinite(tree.lng) && Number.isFinite(tree.lat));
+      setTrees(normalizedTrees);
+    } else {
+      setTrees([]);
+    }
+
+    if (tasksRes.status === "fulfilled") {
+      setTasks(Array.isArray(tasksRes.value.data) ? tasksRes.value.data : []);
+    } else {
+      setTasks([]);
+    }
+
+    if (speciesMaturityRes.status === "fulfilled") {
+      const serverMapRaw = speciesMaturityRes.value.data?.map || {};
+      const serverMap = Object.entries(serverMapRaw).reduce(
+        (acc, [key, value]) => {
+          const normalizedKey = normalizeName(key);
+          const years = Number(value);
+          if (normalizedKey && Number.isFinite(years) && years > 0) {
+            acc[normalizedKey] = Math.round(years);
+          }
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+      setSpeciesMaturityByProject((prev) => ({
+        ...prev,
+        [String(projectId)]: serverMap,
+      }));
+    }
 
     const [reviewQueueRes, alertsRes, carbonRes, kpiRes] = await Promise.allSettled([
       api.get(`/green/tasks/review-queue?project_id=${projectId}&_ts=${stamp}`),
