@@ -10,6 +10,15 @@ type Project = {
   id: number;
   name: string;
   location_text: string;
+  sponsor?: string | null;
+  planting_model?: "direct" | "community_distributed" | "mixed";
+  allow_existing_tree_link?: boolean;
+  default_existing_tree_scope?: "exclude_from_planting_kpi" | "include_in_planting_kpi";
+  settings?: {
+    planting_model?: "direct" | "community_distributed" | "mixed";
+    allow_existing_tree_link?: boolean;
+    default_existing_tree_scope?: "exclude_from_planting_kpi" | "include_in_planting_kpi";
+  };
 };
 
 type GreenUser = {
@@ -39,7 +48,79 @@ type Tree = {
   planting_date?: string | null;
   notes?: string | null;
   photo_url?: string | null;
+  tree_origin?: "new_planting" | "existing_inventory" | "natural_regeneration";
+  attribution_scope?: "full" | "monitor_only";
+  count_in_planting_kpis?: boolean;
+  count_in_carbon_scope?: boolean;
+  source_project_id?: number | null;
+  tree_height_m?: number | null;
+  custodian_id?: number | null;
+  custodian_name?: string | null;
 };
+
+type CustodianType = "household" | "school" | "community_group";
+type Custodian = {
+  id: number;
+  project_id: number;
+  custodian_type: CustodianType;
+  name: string;
+  phone?: string | null;
+  address_text?: string | null;
+  community_name?: string | null;
+  verification_status?: string | null;
+  created_by?: string | null;
+  created_at?: string;
+};
+
+type DistributionEvent = {
+  id: number;
+  project_id: number;
+  event_date: string;
+  species?: string | null;
+  quantity: number;
+  source_batch_ref?: string | null;
+  distributed_by?: string | null;
+  notes?: string | null;
+  created_at?: string;
+};
+
+type DistributionAllocation = {
+  id: number;
+  event_id: number;
+  project_id: number;
+  custodian_id: number;
+  custodian_name?: string | null;
+  custodian_type?: CustodianType | null;
+  event_date?: string | null;
+  species?: string | null;
+  event_quantity?: number | null;
+  quantity_allocated: number;
+  expected_planting_start?: string | null;
+  expected_planting_end?: string | null;
+  followup_cycle_days: number;
+  notes?: string | null;
+  created_at?: string;
+};
+
+type ExistingTreeCandidate = {
+  id: number;
+  project_id: number;
+  species?: string | null;
+  planting_date?: string | null;
+  status: string;
+  tree_origin?: string | null;
+  tree_height_m?: number | null;
+  created_by?: string | null;
+  created_at?: string;
+  source_project_id?: number | null;
+  lng: number;
+  lat: number;
+  already_referenced?: boolean;
+};
+
+type PlantingModel = "direct" | "community_distributed" | "mixed";
+type ExistingScopeValue = "exclude_from_planting_kpi" | "include_in_planting_kpi";
+type TreeImportMode = "reference" | "transfer";
 
 type WorkTask = {
   id: number;
@@ -180,6 +261,28 @@ const toDateInput = (value: Date | null) => {
   const month = String(value.getMonth() + 1).padStart(2, "0");
   const day = String(value.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+};
+const parseTreeHeightInput = (value: string | number | null | undefined): number | null => {
+  if (value === null || value === undefined) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 120) return null;
+  return Number(parsed.toFixed(2));
+};
+const formatTreeHeight = (value: number | null | undefined) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return "-";
+  return `${numeric.toFixed(2)} m`;
+};
+const formatTreeOriginLabel = (value: string | null | undefined) => {
+  const key = normalizeName(value);
+  if (key === "existing_inventory") return "Existing inventory";
+  if (key === "natural_regeneration") return "Natural regeneration";
+  return "New planting";
+};
+const formatAttributionScopeLabel = (value: string | null | undefined) => {
+  return normalizeName(value) === "monitor_only" ? "Monitor only" : "Full attribution";
 };
 
 const MAINTENANCE_ACTIVITY_ORDER = ["watering", "weeding", "protection", "inspection", "replacement"] as const;
@@ -709,6 +812,93 @@ export default function GreenWork() {
   });
   const [newUser, setNewUser] = useState({ full_name: "", role: "field_officer" });
   const [newProject, setNewProject] = useState({ name: "", location_text: "", sponsor: "" });
+  const [projectSettingsDraft, setProjectSettingsDraft] = useState<{
+    planting_model: PlantingModel;
+    allow_existing_tree_link: boolean;
+    default_existing_tree_scope: ExistingScopeValue;
+  }>({
+    planting_model: "direct",
+    allow_existing_tree_link: false,
+    default_existing_tree_scope: "exclude_from_planting_kpi",
+  });
+  const [custodians, setCustodians] = useState<Custodian[]>([]);
+  const [newCustodian, setNewCustodian] = useState<{
+    custodian_type: CustodianType;
+    name: string;
+    phone: string;
+    address_text: string;
+    community_name: string;
+    verification_status: string;
+  }>({
+    custodian_type: "household",
+    name: "",
+    phone: "",
+    address_text: "",
+    community_name: "",
+    verification_status: "pending",
+  });
+  const [distributionEvents, setDistributionEvents] = useState<DistributionEvent[]>([]);
+  const [distributionAllocations, setDistributionAllocations] = useState<DistributionAllocation[]>([]);
+  const [newDistributionEvent, setNewDistributionEvent] = useState<{
+    event_date: string;
+    species: string;
+    quantity: number;
+    source_batch_ref: string;
+    distributed_by: string;
+    notes: string;
+  }>({
+    event_date: "",
+    species: "",
+    quantity: 0,
+    source_batch_ref: "",
+    distributed_by: "",
+    notes: "",
+  });
+  const [newAllocation, setNewAllocation] = useState<{
+    event_id: string;
+    custodian_id: string;
+    quantity_allocated: number;
+    expected_planting_start: string;
+    expected_planting_end: string;
+    followup_cycle_days: number;
+    notes: string;
+  }>({
+    event_id: "",
+    custodian_id: "",
+    quantity_allocated: 0,
+    expected_planting_start: "",
+    expected_planting_end: "",
+    followup_cycle_days: 14,
+    notes: "",
+  });
+  const [existingCandidates, setExistingCandidates] = useState<ExistingTreeCandidate[]>([]);
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<number[]>([]);
+  const [importSourceProjectId, setImportSourceProjectId] = useState<number | null>(null);
+  const [importForm, setImportForm] = useState<{
+    mode: TreeImportMode;
+    attribution_scope: "full" | "monitor_only";
+    count_in_planting_kpis: boolean;
+    count_in_carbon_scope: boolean;
+  }>({
+    mode: "reference",
+    attribution_scope: "monitor_only",
+    count_in_planting_kpis: false,
+    count_in_carbon_scope: true,
+  });
+  const [importLoading, setImportLoading] = useState(false);
+  const [treeMetaDraftById, setTreeMetaDraftById] = useState<
+    Record<
+      number,
+      {
+        tree_height_m: string;
+        tree_origin: "new_planting" | "existing_inventory" | "natural_regeneration";
+        attribution_scope: "full" | "monitor_only";
+        count_in_planting_kpis: boolean;
+        count_in_carbon_scope: boolean;
+      }
+    >
+  >({});
+  const [savingTreeMetaId, setSavingTreeMetaId] = useState<number | null>(null);
   const [seasonMode, setSeasonMode] = useState<SeasonMode>(storedSeason === "dry" ? "dry" : "rainy");
   const [newTask, setNewTask] = useState<{
     tree_id: string;
@@ -802,18 +992,49 @@ export default function GreenWork() {
 
   const loadProjectData = async (projectId: number) => {
     const stamp = Date.now();
-    const [ordersRes, treesRes, tasksRes, speciesMaturityRes] = await Promise.all([
+    const [projectRes, ordersRes, treesRes, tasksRes, speciesMaturityRes] = await Promise.all([
+      api.get(`/green/projects/${projectId}?_ts=${stamp}`),
       api.get(`/green/work-orders?project_id=${projectId}&_ts=${stamp}`),
       api.get(`/green/projects/${projectId}/trees?_ts=${stamp}`),
       api.get(`/green/tasks?project_id=${projectId}&_ts=${stamp}`),
       api.get(`/green/projects/${projectId}/species-maturity?_ts=${stamp}`),
     ]);
+    const projectDetail = projectRes.data || {};
+    setProjects((prev) => {
+      const idx = prev.findIndex((item) => Number(item.id) === Number(projectId));
+      if (idx < 0) return prev;
+      const next = [...prev];
+      next[idx] = { ...next[idx], ...projectDetail };
+      return next;
+    });
+    const settingsPayload = projectDetail?.settings || projectDetail || {};
+    const plantingModel = String(settingsPayload?.planting_model || "direct").trim().toLowerCase() as PlantingModel;
+    setProjectSettingsDraft({
+      planting_model:
+        plantingModel === "community_distributed" || plantingModel === "mixed" || plantingModel === "direct"
+          ? plantingModel
+          : "direct",
+      allow_existing_tree_link: Boolean(settingsPayload?.allow_existing_tree_link),
+      default_existing_tree_scope:
+        String(settingsPayload?.default_existing_tree_scope || "exclude_from_planting_kpi").trim().toLowerCase() ===
+        "include_in_planting_kpi"
+          ? "include_in_planting_kpi"
+          : "exclude_from_planting_kpi",
+    });
     setOrders(ordersRes.data);
     const normalizedTrees = (treesRes.data || [])
       .map((tree: any) => ({
         ...tree,
         lng: Number(tree.lng),
         lat: Number(tree.lat),
+        tree_height_m:
+          Number.isFinite(Number(tree.tree_height_m)) && Number(tree.tree_height_m) >= 0
+            ? Number(tree.tree_height_m)
+            : null,
+        tree_origin: String(tree.tree_origin || "new_planting").toLowerCase(),
+        attribution_scope: String(tree.attribution_scope || "full").toLowerCase(),
+        count_in_planting_kpis: tree.count_in_planting_kpis !== false,
+        count_in_carbon_scope: tree.count_in_carbon_scope !== false,
       }))
       .filter((tree: any) => Number.isFinite(tree.lng) && Number.isFinite(tree.lat));
     setTrees(normalizedTrees);
@@ -915,6 +1136,275 @@ export default function GreenWork() {
     [],
   );
 
+  const loadCommunityData = useCallback(async (projectId: number) => {
+    const [custodianRes, eventsRes, allocationsRes] = await Promise.allSettled([
+      api.get(`/green/projects/${projectId}/custodians`),
+      api.get(`/green/projects/${projectId}/distribution-events`),
+      api.get(`/green/projects/${projectId}/distribution-allocations`),
+    ]);
+    setCustodians(
+      custodianRes.status === "fulfilled" && Array.isArray(custodianRes.value.data)
+        ? custodianRes.value.data
+        : [],
+    );
+    setDistributionEvents(
+      eventsRes.status === "fulfilled" && Array.isArray(eventsRes.value.data)
+        ? eventsRes.value.data
+        : [],
+    );
+    setDistributionAllocations(
+      allocationsRes.status === "fulfilled" && Array.isArray(allocationsRes.value.data)
+        ? allocationsRes.value.data
+        : [],
+    );
+  }, []);
+
+  const loadExistingCandidates = useCallback(
+    async (targetProjectId: number, sourceProjectId: number | null) => {
+      if (!targetProjectId || !sourceProjectId || Number(sourceProjectId) === Number(targetProjectId)) {
+        setExistingCandidates([]);
+        setSelectedCandidateIds([]);
+        return;
+      }
+      try {
+        const res = await api.get(
+          `/green/projects/${targetProjectId}/existing-tree-candidates?source_project_id=${sourceProjectId}`
+        );
+        const rows = Array.isArray(res.data) ? res.data : [];
+        setExistingCandidates(rows);
+        setSelectedCandidateIds([]);
+      } catch {
+        setExistingCandidates([]);
+        setSelectedCandidateIds([]);
+        toast.error("Failed to load existing-tree candidates");
+      }
+    },
+    [],
+  );
+
+  const saveProjectSettings = async () => {
+    if (!activeProjectId) return;
+    try {
+      const res = await api.patch(`/green/projects/${activeProjectId}/settings`, {
+        planting_model: projectSettingsDraft.planting_model,
+        allow_existing_tree_link: projectSettingsDraft.allow_existing_tree_link,
+        default_existing_tree_scope: projectSettingsDraft.default_existing_tree_scope,
+      });
+      setProjects((prev) =>
+        prev.map((item) => (Number(item.id) === Number(activeProjectId) ? { ...item, ...res.data } : item))
+      );
+      toast.success("Project settings updated");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to update project settings");
+    }
+  };
+
+  const createCustodian = async () => {
+    if (!activeProjectId) return;
+    if (!newCustodian.name.trim()) {
+      toast.error("Custodian name required");
+      return;
+    }
+    try {
+      await api.post(`/green/projects/${activeProjectId}/custodians`, {
+        custodian_type: newCustodian.custodian_type,
+        name: newCustodian.name.trim(),
+        phone: newCustodian.phone || null,
+        address_text: newCustodian.address_text || null,
+        community_name: newCustodian.community_name || null,
+        verification_status: newCustodian.verification_status || "pending",
+      });
+      setNewCustodian({
+        custodian_type: "household",
+        name: "",
+        phone: "",
+        address_text: "",
+        community_name: "",
+        verification_status: "pending",
+      });
+      await loadCommunityData(activeProjectId);
+      toast.success("Custodian added");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to add custodian");
+    }
+  };
+
+  const updateCustodianVerification = async (custodianId: number, nextStatus: string) => {
+    if (!activeProjectId) return;
+    try {
+      await api.patch(`/green/custodians/${custodianId}`, {
+        verification_status: nextStatus,
+      });
+      setCustodians((prev) =>
+        prev.map((item) =>
+          Number(item.id) === Number(custodianId) ? { ...item, verification_status: nextStatus } : item
+        )
+      );
+      toast.success("Custodian updated");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to update custodian");
+    }
+  };
+
+  const createDistributionEvent = async () => {
+    if (!activeProjectId) return;
+    if (!newDistributionEvent.event_date) {
+      toast.error("Distribution date required");
+      return;
+    }
+    if (Number(newDistributionEvent.quantity || 0) <= 0) {
+      toast.error("Quantity must be greater than 0");
+      return;
+    }
+    try {
+      await api.post(`/green/projects/${activeProjectId}/distribution-events`, {
+        event_date: newDistributionEvent.event_date,
+        species: newDistributionEvent.species || null,
+        quantity: Number(newDistributionEvent.quantity || 0),
+        source_batch_ref: newDistributionEvent.source_batch_ref || null,
+        distributed_by: newDistributionEvent.distributed_by || null,
+        notes: newDistributionEvent.notes || null,
+      });
+      setNewDistributionEvent({
+        event_date: "",
+        species: "",
+        quantity: 0,
+        source_batch_ref: "",
+        distributed_by: "",
+        notes: "",
+      });
+      await loadCommunityData(activeProjectId);
+      toast.success("Distribution event created");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to create distribution event");
+    }
+  };
+
+  const upsertDistributionAllocation = async () => {
+    if (!activeProjectId) return;
+    const eventId = Number(newAllocation.event_id || 0);
+    const custodianId = Number(newAllocation.custodian_id || 0);
+    if (!eventId || !custodianId) {
+      toast.error("Choose event and custodian");
+      return;
+    }
+    if (Number(newAllocation.quantity_allocated || 0) <= 0) {
+      toast.error("Allocated quantity must be greater than 0");
+      return;
+    }
+    try {
+      await api.post(`/green/distribution-events/${eventId}/allocations`, {
+        custodian_id: custodianId,
+        quantity_allocated: Number(newAllocation.quantity_allocated || 0),
+        expected_planting_start: newAllocation.expected_planting_start || null,
+        expected_planting_end: newAllocation.expected_planting_end || null,
+        followup_cycle_days: Number(newAllocation.followup_cycle_days || 14),
+        notes: newAllocation.notes || null,
+      });
+      setNewAllocation({
+        event_id: "",
+        custodian_id: "",
+        quantity_allocated: 0,
+        expected_planting_start: "",
+        expected_planting_end: "",
+        followup_cycle_days: 14,
+        notes: "",
+      });
+      await loadCommunityData(activeProjectId);
+      toast.success("Allocation saved");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to save allocation");
+    }
+  };
+
+  const toggleCandidateSelection = (treeId: number) => {
+    setSelectedCandidateIds((prev) =>
+      prev.includes(treeId) ? prev.filter((id) => id !== treeId) : [...prev, treeId]
+    );
+  };
+
+  const importExistingTrees = async () => {
+    if (!activeProjectId || !importSourceProjectId) return;
+    if (selectedCandidateIds.length === 0) {
+      toast.error("Select at least one tree to import");
+      return;
+    }
+    setImportLoading(true);
+    try {
+      await api.post(`/green/projects/${activeProjectId}/existing-trees/import`, {
+        source_project_id: importSourceProjectId,
+        tree_ids: selectedCandidateIds,
+        mode: importForm.mode,
+        attribution_scope: importForm.attribution_scope,
+        count_in_planting_kpis: importForm.count_in_planting_kpis,
+        count_in_carbon_scope: importForm.count_in_carbon_scope,
+      });
+      setSelectedCandidateIds([]);
+      await Promise.all([
+        loadProjectData(activeProjectId),
+        loadCommunityData(activeProjectId),
+        loadExistingCandidates(activeProjectId, importSourceProjectId),
+      ]);
+      toast.success("Existing trees imported");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to import existing trees");
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const saveTreeMeta = async (treeId: number) => {
+    if (!activeProjectId) return;
+    const draft = treeMetaDraftById[treeId];
+    if (!draft) return;
+    const parsedHeight = parseTreeHeightInput(draft.tree_height_m);
+    if (String(draft.tree_height_m || "").trim() && parsedHeight === null) {
+      toast.error("Tree height must be a number between 0 and 120.");
+      return;
+    }
+    setSavingTreeMetaId(treeId);
+    try {
+      await api.patch(`/green/trees/${treeId}`, {
+        tree_height_m: parsedHeight,
+        tree_origin: draft.tree_origin,
+        attribution_scope: draft.attribution_scope,
+        count_in_planting_kpis: draft.count_in_planting_kpis,
+        count_in_carbon_scope: draft.count_in_carbon_scope,
+      });
+      setTrees((prev) =>
+        prev.map((tree) =>
+          Number(tree.id) === Number(treeId)
+            ? {
+                ...tree,
+                tree_height_m: parsedHeight,
+                tree_origin: draft.tree_origin,
+                attribution_scope: draft.attribution_scope,
+                count_in_planting_kpis: draft.count_in_planting_kpis,
+                count_in_carbon_scope: draft.count_in_carbon_scope,
+              }
+            : tree
+        )
+      );
+      setInspectedTree((prev) =>
+        prev && Number(prev.id) === Number(treeId)
+          ? {
+              ...prev,
+              tree_height_m: parsedHeight,
+              tree_origin: draft.tree_origin,
+              attribution_scope: draft.attribution_scope,
+              count_in_planting_kpis: draft.count_in_planting_kpis,
+              count_in_carbon_scope: draft.count_in_carbon_scope,
+            }
+          : prev
+      );
+      toast.success("Tree metadata updated");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to update tree metadata");
+    } finally {
+      setSavingTreeMetaId(null);
+    }
+  };
+
   useEffect(() => {
     loadProjects().catch(() => toast.error("Failed to load projects"));
     loadUsers().catch(() => toast.error("Failed to load users"));
@@ -994,10 +1484,56 @@ export default function GreenWork() {
     void loadVerraHistory(activeProjectId).catch(() => {});
   }, [activeProjectId, activeForm, loadVerraHistory]);
 
+  useEffect(() => {
+    if (!activeProjectId) {
+      setCustodians([]);
+      setDistributionEvents([]);
+      setDistributionAllocations([]);
+      return;
+    }
+    void loadCommunityData(activeProjectId).catch(() => {});
+  }, [activeProjectId, loadCommunityData]);
+
+  useEffect(() => {
+    if (!activeProjectId || !importSourceProjectId || Number(importSourceProjectId) === Number(activeProjectId)) {
+      setExistingCandidates([]);
+      setSelectedCandidateIds([]);
+      return;
+    }
+    void loadExistingCandidates(activeProjectId, importSourceProjectId).catch(() => {});
+  }, [activeProjectId, importSourceProjectId, loadExistingCandidates]);
+
+  useEffect(() => {
+    setTreeMetaDraftById((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      trees.forEach((tree) => {
+        const treeId = Number(tree.id);
+        if (!treeId || next[treeId]) return;
+        next[treeId] = {
+          tree_height_m:
+            tree.tree_height_m === null || tree.tree_height_m === undefined ? "" : String(tree.tree_height_m),
+          tree_origin: (tree.tree_origin || "new_planting") as
+            | "new_planting"
+            | "existing_inventory"
+            | "natural_regeneration",
+          attribution_scope: (tree.attribution_scope || "full") as "full" | "monitor_only",
+          count_in_planting_kpis: tree.count_in_planting_kpis !== false,
+          count_in_carbon_scope: tree.count_in_carbon_scope !== false,
+        };
+        changed = true;
+      });
+      return changed ? next : prev;
+    });
+  }, [trees]);
+
   const onSelectProject = async (id: number) => {
     setActiveProjectId(id);
     setAssigneeFilter("all");
     setInspectedTree(null);
+    setImportSourceProjectId(null);
+    setExistingCandidates([]);
+    setSelectedCandidateIds([]);
     await loadProjectData(id);
   };
 
@@ -2114,6 +2650,35 @@ export default function GreenWork() {
     return `Context: each line is one species, tracked daily from planting date (${startLabel} start). Status updates come from maintenance/task-review tree status logs; after day 30, the phase is marked as past 30 days and continues forward.`;
   }, [speciesDailyTrend]);
 
+  const activeProjectRecord = useMemo(() => {
+    if (!activeProjectId) return null;
+    return projects.find((p) => Number(p.id) === Number(activeProjectId)) || null;
+  }, [projects, activeProjectId]);
+  const sourceProjectOptions = useMemo(
+    () => projects.filter((project) => Number(project.id) !== Number(activeProjectId)),
+    [projects, activeProjectId],
+  );
+  const selectedInspectTreeMeta = useMemo(() => {
+    if (!inspectedTree) return null;
+    const treeId = Number(inspectedTree.id || 0);
+    if (!treeId) return null;
+    return (
+      treeMetaDraftById[treeId] || {
+        tree_height_m:
+          inspectedTree.tree_height_m === null || inspectedTree.tree_height_m === undefined
+            ? ""
+            : String(inspectedTree.tree_height_m),
+        tree_origin: (inspectedTree.tree_origin || "new_planting") as
+          | "new_planting"
+          | "existing_inventory"
+          | "natural_regeneration",
+        attribution_scope: (inspectedTree.attribution_scope || "full") as "full" | "monitor_only",
+        count_in_planting_kpis: inspectedTree.count_in_planting_kpis !== false,
+        count_in_carbon_scope: inspectedTree.count_in_carbon_scope !== false,
+      }
+    );
+  }, [inspectedTree, treeMetaDraftById]);
+
   const activeProjectName = useMemo(() => {
     if (!activeProjectId) return "";
     return projects.find((p) => p.id === activeProjectId)?.name || "";
@@ -2416,33 +2981,382 @@ export default function GreenWork() {
       <div className={`green-work-content ${showSidebar ? "with-sidebar" : "no-sidebar"}`}>
         <aside className="green-work-sidebar">
           {activeForm === "project_focus" && (
-            <div className="green-work-card">
-              <h3>Project Focus</h3>
-              <select
-                onChange={async (e) => {
-                  const value = e.target.value;
-                  if (!value) {
-                    setActiveProjectId(null);
-                    setOrders([]);
-                    setTrees([]);
-                    setTasks([]);
-                    setAssigneeFilter("all");
-                    setInspectedTree(null);
-                    return;
-                  }
-                  await onSelectProject(Number(value));
-                }}
-                value={activeProjectId || ""}
-              >
-                <option value="">Select project</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-              {!activeProjectId && <p className="green-work-note">Select a project to load dashboard data.</p>}
-            </div>
+            <>
+              <div className="green-work-card">
+                <h3>Project Focus</h3>
+                <select
+                  onChange={async (e) => {
+                    const value = e.target.value;
+                    if (!value) {
+                      setActiveProjectId(null);
+                      setOrders([]);
+                      setTrees([]);
+                      setTasks([]);
+                      setAssigneeFilter("all");
+                      setInspectedTree(null);
+                      setCustodians([]);
+                      setDistributionEvents([]);
+                      setDistributionAllocations([]);
+                      setExistingCandidates([]);
+                      setSelectedCandidateIds([]);
+                      setImportSourceProjectId(null);
+                      return;
+                    }
+                    await onSelectProject(Number(value));
+                  }}
+                  value={activeProjectId || ""}
+                >
+                  <option value="">Select project</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                {!activeProjectId && <p className="green-work-note">Select a project to load dashboard data.</p>}
+                {activeProjectRecord && (
+                  <p className="green-work-note">
+                    Active model: {formatTaskTypeLabel(activeProjectRecord.planting_model || "direct")} | Existing-tree import:{" "}
+                    {activeProjectRecord.allow_existing_tree_link ? "enabled" : "disabled"}
+                  </p>
+                )}
+              </div>
+
+              {activeProjectId && (
+                <>
+                  <div className="green-work-card">
+                    <h3>Project Settings</h3>
+                    <label>
+                      Planting model
+                      <select
+                        value={projectSettingsDraft.planting_model}
+                        onChange={(e) =>
+                          setProjectSettingsDraft((prev) => ({
+                            ...prev,
+                            planting_model: e.target.value as PlantingModel,
+                          }))
+                        }
+                      >
+                        <option value="direct">Direct planting</option>
+                        <option value="community_distributed">Community distributed</option>
+                        <option value="mixed">Mixed model</option>
+                      </select>
+                    </label>
+                    <label>
+                      Existing-tree default scope
+                      <select
+                        value={projectSettingsDraft.default_existing_tree_scope}
+                        onChange={(e) =>
+                          setProjectSettingsDraft((prev) => ({
+                            ...prev,
+                            default_existing_tree_scope: e.target.value as ExistingScopeValue,
+                          }))
+                        }
+                      >
+                        <option value="exclude_from_planting_kpi">Exclude from planting KPI</option>
+                        <option value="include_in_planting_kpi">Include in planting KPI</option>
+                      </select>
+                    </label>
+                    <label className="green-work-checkbox-row">
+                      <input
+                        type="checkbox"
+                        checked={projectSettingsDraft.allow_existing_tree_link}
+                        onChange={(e) =>
+                          setProjectSettingsDraft((prev) => ({
+                            ...prev,
+                            allow_existing_tree_link: e.target.checked,
+                          }))
+                        }
+                      />
+                      <span>Allow existing-tree import/linking</span>
+                    </label>
+                    <button className="btn-primary" type="button" onClick={() => void saveProjectSettings()}>
+                      Save Project Settings
+                    </button>
+                  </div>
+
+                  <div className="green-work-card">
+                    <h3>Community Custodians</h3>
+                    <select
+                      value={newCustodian.custodian_type}
+                      onChange={(e) =>
+                        setNewCustodian((prev) => ({ ...prev, custodian_type: e.target.value as CustodianType }))
+                      }
+                    >
+                      <option value="household">Household</option>
+                      <option value="school">School</option>
+                      <option value="community_group">Community Group</option>
+                    </select>
+                    <input
+                      placeholder="Custodian name"
+                      value={newCustodian.name}
+                      onChange={(e) => setNewCustodian((prev) => ({ ...prev, name: e.target.value }))}
+                    />
+                    <input
+                      placeholder="Phone"
+                      value={newCustodian.phone}
+                      onChange={(e) => setNewCustodian((prev) => ({ ...prev, phone: e.target.value }))}
+                    />
+                    <input
+                      placeholder="Community / School name"
+                      value={newCustodian.community_name}
+                      onChange={(e) => setNewCustodian((prev) => ({ ...prev, community_name: e.target.value }))}
+                    />
+                    <input
+                      placeholder="Address"
+                      value={newCustodian.address_text}
+                      onChange={(e) => setNewCustodian((prev) => ({ ...prev, address_text: e.target.value }))}
+                    />
+                    <button className="btn-primary" type="button" onClick={() => void createCustodian()}>
+                      Add Custodian
+                    </button>
+                    <div className="staff-list">
+                      {custodians.length === 0 ? (
+                        <p className="green-work-note">No custodians yet in this project.</p>
+                      ) : (
+                        custodians.map((custodian) => (
+                          <div key={`custodian-${custodian.id}`} className="staff-row">
+                            <div className="staff-row-head">
+                              <strong>{custodian.name}</strong>
+                              <span>{formatTaskTypeLabel(custodian.custodian_type)}</span>
+                            </div>
+                            <div className="staff-row-meta">
+                              {custodian.community_name || "-"} | {custodian.phone || "-"}
+                            </div>
+                            <div className="staff-row-meta">
+                              Verification: {custodian.verification_status || "pending"}
+                            </div>
+                            <div className="work-actions">
+                              <button
+                                type="button"
+                                onClick={() => void updateCustodianVerification(custodian.id, "verified")}
+                              >
+                                Mark Verified
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void updateCustodianVerification(custodian.id, "pending")}
+                              >
+                                Mark Pending
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="green-work-card">
+                    <h3>Distribution Events & Allocations</h3>
+                    <input
+                      type="date"
+                      value={newDistributionEvent.event_date}
+                      onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, event_date: e.target.value }))}
+                    />
+                    <input
+                      placeholder="Species (optional)"
+                      value={newDistributionEvent.species}
+                      onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, species: e.target.value }))}
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="Quantity"
+                      value={newDistributionEvent.quantity}
+                      onChange={(e) =>
+                        setNewDistributionEvent((prev) => ({ ...prev, quantity: Number(e.target.value || 0) }))
+                      }
+                    />
+                    <input
+                      placeholder="Batch reference"
+                      value={newDistributionEvent.source_batch_ref}
+                      onChange={(e) =>
+                        setNewDistributionEvent((prev) => ({ ...prev, source_batch_ref: e.target.value }))
+                      }
+                    />
+                    <input
+                      placeholder="Distributed by"
+                      value={newDistributionEvent.distributed_by}
+                      onChange={(e) =>
+                        setNewDistributionEvent((prev) => ({ ...prev, distributed_by: e.target.value }))
+                      }
+                    />
+                    <textarea
+                      placeholder="Distribution notes"
+                      value={newDistributionEvent.notes}
+                      onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, notes: e.target.value }))}
+                    />
+                    <button className="btn-primary" type="button" onClick={() => void createDistributionEvent()}>
+                      Create Distribution Event
+                    </button>
+
+                    <h4>Allocate Seedlings</h4>
+                    <select
+                      value={newAllocation.event_id}
+                      onChange={(e) => setNewAllocation((prev) => ({ ...prev, event_id: e.target.value }))}
+                    >
+                      <option value="">Select event</option>
+                      {distributionEvents.map((event) => (
+                        <option key={`event-${event.id}`} value={event.id}>
+                          {event.event_date} | {event.species || "Mixed"} | Qty {event.quantity}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={newAllocation.custodian_id}
+                      onChange={(e) => setNewAllocation((prev) => ({ ...prev, custodian_id: e.target.value }))}
+                    >
+                      <option value="">Select custodian</option>
+                      {custodians.map((custodian) => (
+                        <option key={`alloc-custodian-${custodian.id}`} value={custodian.id}>
+                          {custodian.name} ({formatTaskTypeLabel(custodian.custodian_type)})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="Allocated quantity"
+                      value={newAllocation.quantity_allocated}
+                      onChange={(e) =>
+                        setNewAllocation((prev) => ({
+                          ...prev,
+                          quantity_allocated: Number(e.target.value || 0),
+                        }))
+                      }
+                    />
+                    <input
+                      type="date"
+                      value={newAllocation.expected_planting_start}
+                      onChange={(e) =>
+                        setNewAllocation((prev) => ({ ...prev, expected_planting_start: e.target.value }))
+                      }
+                    />
+                    <input
+                      type="date"
+                      value={newAllocation.expected_planting_end}
+                      onChange={(e) =>
+                        setNewAllocation((prev) => ({ ...prev, expected_planting_end: e.target.value }))
+                      }
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      placeholder="Follow-up cycle days"
+                      value={newAllocation.followup_cycle_days}
+                      onChange={(e) =>
+                        setNewAllocation((prev) => ({
+                          ...prev,
+                          followup_cycle_days: Number(e.target.value || 14),
+                        }))
+                      }
+                    />
+                    <textarea
+                      placeholder="Allocation notes"
+                      value={newAllocation.notes}
+                      onChange={(e) => setNewAllocation((prev) => ({ ...prev, notes: e.target.value }))}
+                    />
+                    <button className="btn-primary" type="button" onClick={() => void upsertDistributionAllocation()}>
+                      Save Allocation
+                    </button>
+                    <p className="green-work-note">Saved allocations: {distributionAllocations.length}</p>
+                  </div>
+
+                  <div className="green-work-card">
+                    <h3>Import Existing Trees</h3>
+                    {!projectSettingsDraft.allow_existing_tree_link && (
+                      <p className="green-work-note danger">
+                        Existing-tree import is disabled. Enable it in Project Settings first.
+                      </p>
+                    )}
+                    <select
+                      value={importSourceProjectId || ""}
+                      onChange={(e) => setImportSourceProjectId(e.target.value ? Number(e.target.value) : null)}
+                    >
+                      <option value="">Select source project</option>
+                      {sourceProjectOptions.map((project) => (
+                        <option key={`source-project-${project.id}`} value={project.id}>
+                          {project.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={importForm.mode}
+                      onChange={(e) =>
+                        setImportForm((prev) => ({ ...prev, mode: e.target.value as TreeImportMode }))
+                      }
+                    >
+                      <option value="reference">Reference (duplicate into this project)</option>
+                      <option value="transfer">Transfer (move tree to this project)</option>
+                    </select>
+                    <select
+                      value={importForm.attribution_scope}
+                      onChange={(e) =>
+                        setImportForm((prev) => ({
+                          ...prev,
+                          attribution_scope: e.target.value as "full" | "monitor_only",
+                        }))
+                      }
+                    >
+                      <option value="monitor_only">Monitor only</option>
+                      <option value="full">Full attribution</option>
+                    </select>
+                    <label className="green-work-checkbox-row">
+                      <input
+                        type="checkbox"
+                        checked={importForm.count_in_planting_kpis}
+                        onChange={(e) =>
+                          setImportForm((prev) => ({ ...prev, count_in_planting_kpis: e.target.checked }))
+                        }
+                      />
+                      <span>Count imported trees in planting KPIs</span>
+                    </label>
+                    <label className="green-work-checkbox-row">
+                      <input
+                        type="checkbox"
+                        checked={importForm.count_in_carbon_scope}
+                        onChange={(e) =>
+                          setImportForm((prev) => ({ ...prev, count_in_carbon_scope: e.target.checked }))
+                        }
+                      />
+                      <span>Count imported trees in carbon scope</span>
+                    </label>
+                    <div className="green-work-candidate-list">
+                      {existingCandidates.length === 0 ? (
+                        <p className="green-work-note">No candidate trees loaded yet.</p>
+                      ) : (
+                        existingCandidates.map((candidate) => (
+                          <label key={`candidate-${candidate.id}`} className="green-work-candidate-row">
+                            <input
+                              type="checkbox"
+                              checked={selectedCandidateIds.includes(candidate.id)}
+                              onChange={() => toggleCandidateSelection(candidate.id)}
+                            />
+                            <span>
+                              #{candidate.id} | {candidate.species || "-"} | {formatDateLabel(candidate.planting_date)} |{" "}
+                              {formatTreeHeight(candidate.tree_height_m)} | {formatTaskTypeLabel(candidate.status)}
+                            </span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                    <button
+                      className="btn-primary"
+                      type="button"
+                      disabled={
+                        importLoading ||
+                        !projectSettingsDraft.allow_existing_tree_link ||
+                        !importSourceProjectId ||
+                        selectedCandidateIds.length === 0
+                      }
+                      onClick={() => void importExistingTrees()}
+                    >
+                      {importLoading ? "Importing..." : `Import Selected Trees (${selectedCandidateIds.length})`}
+                    </button>
+                  </div>
+                </>
+              )}
+            </>
           )}
 
           {activeForm === "create_project" && (
@@ -3461,7 +4375,133 @@ export default function GreenWork() {
                   <span>Planting Date</span>
                   <strong>{formatDateLabel(inspectedTree.planting_date)}</strong>
                 </div>
+                <div>
+                  <span>Tree Height</span>
+                  <strong>{formatTreeHeight(inspectedTree.tree_height_m)}</strong>
+                </div>
+                <div>
+                  <span>Tree Origin</span>
+                  <strong>{formatTreeOriginLabel(inspectedTree.tree_origin)}</strong>
+                </div>
+                <div>
+                  <span>Attribution</span>
+                  <strong>{formatAttributionScopeLabel(inspectedTree.attribution_scope)}</strong>
+                </div>
+                <div>
+                  <span>Scope Flags</span>
+                  <strong>
+                    {inspectedTree.count_in_planting_kpis ? "Planting KPI" : "No KPI"} /{" "}
+                    {inspectedTree.count_in_carbon_scope ? "Carbon" : "No Carbon"}
+                  </strong>
+                </div>
+                <div>
+                  <span>Custodian</span>
+                  <strong>{inspectedTree.custodian_name || "-"}</strong>
+                </div>
               </div>
+              {selectedInspectTreeMeta && (
+                <div className="green-work-tree-meta-edit">
+                  <label>
+                    Height (m)
+                    <input
+                      type="number"
+                      min={0}
+                      max={120}
+                      step="0.01"
+                      value={selectedInspectTreeMeta.tree_height_m}
+                      onChange={(e) =>
+                        setTreeMetaDraftById((prev) => ({
+                          ...prev,
+                          [inspectedTree.id]: {
+                            ...selectedInspectTreeMeta,
+                            tree_height_m: e.target.value,
+                          },
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Origin
+                    <select
+                      value={selectedInspectTreeMeta.tree_origin}
+                      onChange={(e) =>
+                        setTreeMetaDraftById((prev) => ({
+                          ...prev,
+                          [inspectedTree.id]: {
+                            ...selectedInspectTreeMeta,
+                            tree_origin: e.target.value as
+                              | "new_planting"
+                              | "existing_inventory"
+                              | "natural_regeneration",
+                          },
+                        }))
+                      }
+                    >
+                      <option value="new_planting">New planting</option>
+                      <option value="existing_inventory">Existing inventory</option>
+                      <option value="natural_regeneration">Natural regeneration</option>
+                    </select>
+                  </label>
+                  <label>
+                    Attribution
+                    <select
+                      value={selectedInspectTreeMeta.attribution_scope}
+                      onChange={(e) =>
+                        setTreeMetaDraftById((prev) => ({
+                          ...prev,
+                          [inspectedTree.id]: {
+                            ...selectedInspectTreeMeta,
+                            attribution_scope: e.target.value as "full" | "monitor_only",
+                          },
+                        }))
+                      }
+                    >
+                      <option value="full">Full attribution</option>
+                      <option value="monitor_only">Monitor only</option>
+                    </select>
+                  </label>
+                  <label className="green-work-checkbox-row">
+                    <input
+                      type="checkbox"
+                      checked={selectedInspectTreeMeta.count_in_planting_kpis}
+                      onChange={(e) =>
+                        setTreeMetaDraftById((prev) => ({
+                          ...prev,
+                          [inspectedTree.id]: {
+                            ...selectedInspectTreeMeta,
+                            count_in_planting_kpis: e.target.checked,
+                          },
+                        }))
+                      }
+                    />
+                    <span>Count in planting KPI</span>
+                  </label>
+                  <label className="green-work-checkbox-row">
+                    <input
+                      type="checkbox"
+                      checked={selectedInspectTreeMeta.count_in_carbon_scope}
+                      onChange={(e) =>
+                        setTreeMetaDraftById((prev) => ({
+                          ...prev,
+                          [inspectedTree.id]: {
+                            ...selectedInspectTreeMeta,
+                            count_in_carbon_scope: e.target.checked,
+                          },
+                        }))
+                      }
+                    />
+                    <span>Count in carbon scope</span>
+                  </label>
+                  <button
+                    className="green-work-tree-meta-save"
+                    type="button"
+                    disabled={savingTreeMetaId === inspectedTree.id}
+                    onClick={() => void saveTreeMeta(inspectedTree.id)}
+                  >
+                    {savingTreeMetaId === inspectedTree.id ? "Saving..." : "Save Tree Metadata"}
+                  </button>
+                </div>
+              )}
               <p className="green-work-tree-inspector-notes">{inspectedTree.notes || "No notes."}</p>
               <div className="green-work-tree-maintenance-row">
                 <span>Total: {inspectedTree.maintenance.total}</span>
