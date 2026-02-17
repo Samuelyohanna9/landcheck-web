@@ -1290,6 +1290,42 @@
   gap: 0.8rem;
 }
 
+.green-work-field-label {
+  display: block;
+  margin: 0 0 0.28rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--green-700);
+}
+
+.green-work-toggle-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  margin-bottom: 0.38rem;
+}
+
+.green-work-toggle-btn {
+  border: 1px solid var(--gw-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--green-800);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.45rem 0.52rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.green-work-toggle-btn.active {
+  border-color: rgba(21, 101, 49, 0.45);
+  background: linear-gradient(180deg, var(--green-500), var(--green-700));
+  color: #ffffff;
+}
+
 /* ── Stats Grid ── */
 .green-work-stats {
   display: grid;

@@ -3169,23 +3169,47 @@ export default function GreenWork() {
                         <option value="include_in_planting_kpi">Include in planting KPI</option>
                       </select>
                     </label>
-                    <label className="green-work-checkbox-row">
-                      <input
-                        type="checkbox"
-                        checked={projectSettingsDraft.allow_existing_tree_link}
-                        onChange={(e) =>
-                          setProjectSettingsDraft((prev) => ({
-                            ...prev,
-                            allow_existing_tree_link: e.target.checked,
-                          }))
-                        }
-                      />
-                      <span>Allow existing-tree import/linking</span>
-                    </label>
-                    <button className="btn-primary" type="button" onClick={() => void saveProjectSettings()}>
-                      Save Project Settings
-                    </button>
-                  </div>
+                        <div>
+                          <span className="green-work-field-label">Existing-tree import/linking</span>
+                          <div className="green-work-toggle-row">
+                            <button
+                              type="button"
+                              className={`green-work-toggle-btn ${
+                                projectSettingsDraft.allow_existing_tree_link ? "active" : ""
+                              }`}
+                              onClick={() =>
+                                setProjectSettingsDraft((prev) => ({
+                                  ...prev,
+                                  allow_existing_tree_link: true,
+                                }))
+                              }
+                            >
+                              Enable
+                            </button>
+                            <button
+                              type="button"
+                              className={`green-work-toggle-btn ${
+                                !projectSettingsDraft.allow_existing_tree_link ? "active" : ""
+                              }`}
+                              onClick={() =>
+                                setProjectSettingsDraft((prev) => ({
+                                  ...prev,
+                                  allow_existing_tree_link: false,
+                                }))
+                              }
+                            >
+                              Disable
+                            </button>
+                          </div>
+                          <p className="green-work-note">
+                            When enabled, this project can import or link trees from another project
+                            (reference/transfer) without re-planting.
+                          </p>
+                        </div>
+                        <button className="btn-primary" type="button" onClick={() => void saveProjectSettings()}>
+                          Save Project Settings
+                        </button>
+                      </div>
                   {!showCommunityWorkflow && (
                     <p className="green-work-note">
                       Community setup is hidden because the project is in Direct planting mode.
