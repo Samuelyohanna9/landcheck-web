@@ -1108,6 +1108,28 @@
   grid-column: 1 / -1;
 }
 
+.tree-form-row.tree-form-checkbox {
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.tree-form-row.tree-form-checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.tree-form-row.tree-form-checkbox input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  accent-color: var(--green-600);
+}
+
 .tree-form textarea {
   min-height: 80px;
 }

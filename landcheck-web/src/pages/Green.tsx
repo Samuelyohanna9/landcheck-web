@@ -90,6 +90,14 @@ type GreenUser = {
   role: string;
 };
 
+type Custodian = {
+  id: number;
+  project_id: number;
+  custodian_type: "household" | "school" | "community_group";
+  name: string;
+  verification_status?: string | null;
+};
+
 type Section = "tasks" | "map" | "records" | "profile";
 type DeferredInstallPrompt = Event & {
   prompt: () => Promise<void>;
@@ -354,10 +362,16 @@ export default function Green() {
     planting_date: "",
     tree_height_m: "",
     status: "alive",
+    tree_origin: "new_planting" as "new_planting" | "existing_inventory",
+    attribution_scope: "full" as "full" | "monitor_only",
+    count_in_planting_kpis: true,
+    count_in_carbon_scope: true,
+    custodian_id: "",
     notes: "",
     photo_url: "",
     created_by: "",
   });
+  const [projectCustodians, setProjectCustodians] = useState<Custodian[]>([]);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const [pendingTreePhoto, setPendingTreePhoto] = useState<File | null>(null);
@@ -418,6 +432,10 @@ export default function Green() {
     if (!activeUser) return [];
     return trees.filter((t: any) => (t as any).created_by === activeUser);
   }, [activeUser, trees]);
+  const userPlantingTrees = useMemo(
+    () => userTrees.filter((tree) => String(tree.tree_origin || "new_planting").toLowerCase() === "new_planting"),
+    [userTrees],
+  );
 
   const myTaskCounts = useMemo(() => {
     const total = myTasks.length;
@@ -445,15 +463,15 @@ export default function Green() {
   const pendingPlanting = useMemo(() => {
     const orders = plantingOrders.filter((o) => o.work_type === "planting");
     const totalTarget = orders.reduce((sum: number, o: any) => sum + (o.target_trees || 0), 0);
-    const planted = userTrees.length;
+    const planted = userPlantingTrees.length;
     return Math.max(totalTarget - planted, 0);
-  }, [plantingOrders, userTrees]);
+  }, [plantingOrders, userPlantingTrees]);
 
   const plantingReviewCounts = useMemo(() => {
-    const submitted = userTrees.filter((t) => normalizeTreeStatus(t.status) === "pending_planting").length;
-    const approved = Math.max(userTrees.length - submitted, 0);
+    const submitted = userPlantingTrees.filter((t) => normalizeTreeStatus(t.status) === "pending_planting").length;
+    const approved = Math.max(userPlantingTrees.length - submitted, 0);
     return { submitted, approved };
-  }, [userTrees]);
+  }, [userPlantingTrees]);
 
   const refreshSyncStatus = async () => {
     let pending = 0;
@@ -511,15 +529,26 @@ export default function Green() {
 
   const loadProjectDetail = async (id: number) => {
     try {
-      const [projectRes, treesRes] = await Promise.all([
+      const [projectRes, treesRes, custodiansRes] = await Promise.allSettled([
         api.get(`/green/projects/${id}`),
         api.get(`/green/projects/${id}/trees`),
+        api.get(`/green/projects/${id}/custodians`),
       ]);
-      setActiveProject(projectRes.data);
-      const normalized = mergeTreesById(Array.isArray(treesRes.data) ? treesRes.data : []);
+
+      if (projectRes.status !== "fulfilled" || treesRes.status !== "fulfilled") {
+        throw new Error("Failed to load required project data");
+      }
+
+      setActiveProject(projectRes.value.data);
+      const normalized = mergeTreesById(Array.isArray(treesRes.value.data) ? treesRes.value.data : []);
+      const custodians =
+        custodiansRes.status === "fulfilled" && Array.isArray(custodiansRes.value.data)
+          ? custodiansRes.value.data
+          : [];
+      setProjectCustodians(custodians);
       setTrees(normalized);
       await Promise.all([
-        cacheProjectDetailOffline(id, projectRes.data).catch(() => {}),
+        cacheProjectDetailOffline(id, projectRes.value.data).catch(() => {}),
         cacheProjectTreesOffline(id, normalized).catch(() => {}),
       ]);
     } catch (error) {
@@ -536,6 +565,7 @@ export default function Green() {
         setTrees(mergedTrees);
       }
       if (cachedProject || mergedTrees.length > 0) {
+        setProjectCustodians([]);
         return;
       }
       throw error;
@@ -705,6 +735,9 @@ export default function Green() {
     setInspectedTree(null);
     setTreeTasks([]);
     setTreeTimeline(null);
+    if (!activeProject) {
+      setProjectCustodians([]);
+    }
   }, [activeProject?.id, activeUser]);
 
   useEffect(() => {
@@ -736,6 +769,25 @@ export default function Green() {
     }
   };
 
+  const resetNewTreeForm = () => {
+    setNewTree({
+      lng: 0,
+      lat: 0,
+      species: "",
+      planting_date: "",
+      tree_height_m: "",
+      status: "alive",
+      tree_origin: "new_planting",
+      attribution_scope: "full",
+      count_in_planting_kpis: true,
+      count_in_carbon_scope: true,
+      custodian_id: "",
+      notes: "",
+      photo_url: "",
+      created_by: "",
+    });
+  };
+
   const addTree = async () => {
     if (!activeProject) return;
     if (addingTree) return;
@@ -752,17 +804,28 @@ export default function Green() {
       toast.error("Tree height must be a number between 0 and 120.");
       return;
     }
+    const treePayload = {
+      project_id: activeProject.id,
+      lng: Number(newTree.lng),
+      lat: Number(newTree.lat),
+      species: (newTree.species || "").trim(),
+      planting_date: newTree.planting_date || null,
+      status: newTree.status,
+      tree_origin: newTree.tree_origin,
+      attribution_scope: newTree.attribution_scope,
+      count_in_planting_kpis: newTree.tree_origin === "existing_inventory" ? newTree.count_in_planting_kpis : true,
+      count_in_carbon_scope: newTree.count_in_carbon_scope,
+      custodian_id: newTree.custodian_id ? Number(newTree.custodian_id) : null,
+      tree_height_m: treeHeightValue,
+      notes: newTree.notes,
+      photo_url: "",
+      created_by: activeUser,
+    };
     setAddingTree(true);
-    setPlantingFlowMessage("Planting tree...");
+    setPlantingFlowMessage(newTree.tree_origin === "existing_inventory" ? "Saving existing tree..." : "Planting tree...");
     setPlantingFlowState("loading");
     try {
-      const createRes = await api.post("/green/trees", {
-        project_id: activeProject.id,
-        ...newTree,
-        tree_height_m: treeHeightValue,
-        photo_url: "",
-        created_by: activeUser,
-      });
+      const createRes = await api.post("/green/trees", treePayload);
       const createdTreeId = Number(createRes.data?.id || 0);
       const reviewTaskId = Number(createRes.data?.review_task_id || 0);
       let photoLinked = true;
@@ -786,17 +849,7 @@ export default function Green() {
         }
       }
 
-      setNewTree({
-        lng: 0,
-        lat: 0,
-        species: "",
-        planting_date: "",
-        tree_height_m: "",
-        status: "alive",
-        notes: "",
-        photo_url: "",
-        created_by: "",
-      });
+      resetNewTreeForm();
       setPhotoPreview("");
       setPendingTreePhoto(null);
       await loadProjectDetail(activeProject.id);
@@ -805,25 +858,25 @@ export default function Green() {
       }
       if (photoLinked) {
         setPlantingFlowMessage(
-          Number.isFinite(reviewTaskId) && reviewTaskId > 0
+          treePayload.tree_origin === "existing_inventory"
+            ? "Existing tree saved."
+            : Number.isFinite(reviewTaskId) && reviewTaskId > 0
             ? "Tree submitted for supervisor review."
             : "Tree successfully planted!"
         );
       } else {
-        setPlantingFlowMessage("Tree successfully planted! Photo upload failed.");
+        setPlantingFlowMessage(
+          treePayload.tree_origin === "existing_inventory"
+            ? "Existing tree saved. Photo upload failed."
+            : "Tree successfully planted! Photo upload failed."
+        );
       }
       setPlantingFlowState("success");
     } catch (error: any) {
       if (isLikelyNetworkError(error)) {
         try {
           const queued = await queueCreateTreeOffline(
-            {
-              project_id: activeProject.id,
-              ...newTree,
-              tree_height_m: parseTreeHeightInput(newTree.tree_height_m),
-              photo_url: "",
-              created_by: activeUser,
-            },
+            treePayload,
             { projectId: activeProject.id, assigneeName: activeUser },
             pendingTreePhoto
           );
@@ -833,20 +886,14 @@ export default function Green() {
               ...prev,
             ]) as Tree[]
           );
-          setNewTree({
-            lng: 0,
-            lat: 0,
-            species: "",
-            planting_date: "",
-            tree_height_m: "",
-            status: "alive",
-            notes: "",
-            photo_url: "",
-            created_by: "",
-          });
+          resetNewTreeForm();
           setPhotoPreview("");
           setPendingTreePhoto(null);
-          setPlantingFlowMessage("Saved offline. Tree will sync automatically when online.");
+          setPlantingFlowMessage(
+            treePayload.tree_origin === "existing_inventory"
+              ? "Existing tree saved offline and will sync automatically."
+              : "Saved offline. Tree will sync automatically when online."
+          );
           setPlantingFlowState("success");
           await showOfflineQueuedToast("Tree saved offline.");
         } catch {
@@ -854,7 +901,11 @@ export default function Green() {
           setPlantingFlowState("error");
         }
       } else {
-        setPlantingFlowMessage("Failed to plant tree. Please try again.");
+        setPlantingFlowMessage(
+          treePayload.tree_origin === "existing_inventory"
+            ? "Failed to save existing tree. Please try again."
+            : "Failed to plant tree. Please try again."
+        );
         setPlantingFlowState("error");
       }
     } finally {
@@ -1849,7 +1900,27 @@ export default function Green() {
                 <input value={newTree.species} onChange={(e) => setNewTree({ ...newTree, species: e.target.value })} />
               </div>
               <div className="tree-form-row">
-                <label>Planting Date</label>
+                <label>Tree Entry Type</label>
+                <select
+                  value={newTree.tree_origin}
+                  onChange={(e) => {
+                    const nextOrigin = e.target.value === "existing_inventory" ? "existing_inventory" : "new_planting";
+                    setNewTree((prev) => ({
+                      ...prev,
+                      tree_origin: nextOrigin,
+                      status: nextOrigin === "existing_inventory" ? "healthy" : "alive",
+                      attribution_scope: nextOrigin === "existing_inventory" ? "monitor_only" : "full",
+                      count_in_planting_kpis: nextOrigin === "existing_inventory" ? false : true,
+                      count_in_carbon_scope: true,
+                    }));
+                  }}
+                >
+                  <option value="new_planting">New Planting</option>
+                  <option value="existing_inventory">Existing Tree</option>
+                </select>
+              </div>
+              <div className="tree-form-row">
+                <label>{newTree.tree_origin === "existing_inventory" ? "Reference Date" : "Planting Date"}</label>
                 <input
                   type="date"
                   value={newTree.planting_date}
@@ -1871,10 +1942,40 @@ export default function Green() {
               <div className="tree-form-row">
                 <label>Status</label>
                 <select value={newTree.status} onChange={(e) => setNewTree({ ...newTree, status: e.target.value })}>
-                  <option value="alive">Alive</option>
-                  <option value="pending_planting">Pending planting</option>
+                  {newTree.tree_origin === "existing_inventory" ? (
+                    <>
+                      <option value="healthy">Healthy</option>
+                      <option value="alive">Alive</option>
+                      <option value="needs_attention">Needs attention</option>
+                      <option value="damaged">Damaged</option>
+                      <option value="removed">Removed</option>
+                      <option value="need_watering">Need watering</option>
+                      <option value="need_protection">Need protection</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="alive">Alive</option>
+                      <option value="pending_planting">Pending planting</option>
+                    </>
+                  )}
                 </select>
               </div>
+              {newTree.tree_origin === "existing_inventory" && (
+                <div className="tree-form-row">
+                  <label>Custodian</label>
+                  <select
+                    value={newTree.custodian_id}
+                    onChange={(e) => setNewTree({ ...newTree, custodian_id: e.target.value })}
+                  >
+                    <option value="">No custodian</option>
+                    {projectCustodians.map((custodian) => (
+                      <option key={custodian.id} value={String(custodian.id)}>
+                        {custodian.name} ({custodian.custodian_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="tree-form-row">
                 <label>Added by</label>
                 <select value={activeUser} onChange={(e) => setActiveUser(e.target.value)}>
@@ -1884,8 +1985,55 @@ export default function Green() {
                       {u.full_name} ({u.role})
                     </option>
                   ))}
-                </select>
-              </div>
+                  </select>
+                </div>
+              {newTree.tree_origin === "existing_inventory" && (
+                <>
+                  <div className="tree-form-row">
+                    <label>Attribution Scope</label>
+                    <select
+                      value={newTree.attribution_scope}
+                      onChange={(e) =>
+                        setNewTree({
+                          ...newTree,
+                          attribution_scope: e.target.value === "full" ? "full" : "monitor_only",
+                        })
+                      }
+                    >
+                      <option value="monitor_only">Monitor only</option>
+                      <option value="full">Full attribution</option>
+                    </select>
+                  </div>
+                  <div className="tree-form-row tree-form-checkbox">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={newTree.count_in_planting_kpis}
+                        onChange={(e) =>
+                          setNewTree({
+                            ...newTree,
+                            count_in_planting_kpis: e.target.checked,
+                          })
+                        }
+                      />
+                      <span>Count in planting KPIs</span>
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={newTree.count_in_carbon_scope}
+                        onChange={(e) =>
+                          setNewTree({
+                            ...newTree,
+                            count_in_carbon_scope: e.target.checked,
+                          })
+                        }
+                      />
+                      <span>Count in carbon scope</span>
+                    </label>
+                  </div>
+                </>
+              )}
               <div className="tree-form-row full">
                 <label>Notes</label>
                 <textarea value={newTree.notes} onChange={(e) => setNewTree({ ...newTree, notes: e.target.value })} />
@@ -1902,7 +2050,7 @@ export default function Green() {
                 {photoPreview && <img className="tree-photo-preview" src={photoPreview} alt="Tree preview" />}
               </div>
               <button className="green-btn-primary" type="button" onClick={addTree} disabled={addingTree}>
-                {addingTree ? "Saving..." : "Add Tree"}
+                {addingTree ? "Saving..." : newTree.tree_origin === "existing_inventory" ? "Save Existing Tree" : "Add Tree"}
               </button>
             </div>
           </section>
