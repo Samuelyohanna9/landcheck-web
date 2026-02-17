@@ -971,6 +971,80 @@
   color: var(--gw-subtext);
 }
 
+.green-work-tree-meta-edit {
+  margin: 0.42rem 0;
+  border: 1px solid var(--gw-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.88);
+  padding: 0.44rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.green-work-tree-meta-edit label {
+  display: grid;
+  gap: 0.18rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--green-700);
+}
+
+.green-work-tree-meta-edit input,
+.green-work-tree-meta-edit select {
+  margin: 0;
+}
+
+.green-work-tree-meta-save {
+  border: none;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, var(--green-500), var(--green-700));
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.42rem 0.62rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.green-work-tree-meta-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.green-work-candidate-list {
+  border: 1px solid var(--gw-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.8);
+  max-height: 220px;
+  overflow: auto;
+  padding: 0.36rem;
+  margin-bottom: 0.5rem;
+}
+
+.green-work-candidate-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.26rem 0.18rem;
+  border-radius: var(--radius-sm);
+}
+
+.green-work-candidate-row:hover {
+  background: var(--green-50);
+}
+
+.green-work-candidate-row input[type="checkbox"] {
+  width: auto;
+  margin: 0.12rem 0 0;
+  accent-color: var(--green-600);
+}
+
+.green-work-candidate-row span {
+  font-size: 0.76rem;
+  line-height: 1.3;
+  color: var(--green-800);
+}
+
 /* ── Overview Mode Map ── */
 .green-work-main.overview-mode .green-work-map-card {
   flex: none;
@@ -1115,6 +1189,25 @@
 .green-work-card textarea {
   min-height: 80px;
   resize: vertical;
+}
+
+.green-work-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.48rem;
+}
+
+.green-work-checkbox-row input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  accent-color: var(--green-600);
+}
+
+.green-work-checkbox-row span {
+  font-size: 0.82rem;
+  color: var(--green-800);
+  font-weight: 700;
 }
 
 .green-work-card input:focus,

@@ -964,6 +964,26 @@
   font-size: 0.78rem;
 }
 
+.green-tree-height-inline {
+  margin-top: 0.45rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.green-tree-height-inline label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--green-700);
+}
+
+.green-tree-height-inline input {
+  flex: 1;
+  min-width: 140px;
+  margin: 0;
+}
+
 .green-tree-maintenance-row {
   display: flex;
   flex-wrap: wrap;
@@ -1176,7 +1196,21 @@
 }
 
 .record-row {
-  grid-template-columns: 0.5fr 1fr 0.7fr 1.4fr;
+  grid-template-columns: 0.5fr 1fr 1fr 0.7fr 1.4fr;
+}
+
+.green-tree-height-edit {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.green-tree-height-edit input {
+  min-width: 82px;
+  max-width: 96px;
+  margin: 0;
+  padding: 0.34rem 0.42rem;
+  font-size: 0.78rem;
 }
 
 .timeline-row {

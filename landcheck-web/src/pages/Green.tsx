@@ -74,6 +74,14 @@ type Tree = {
   notes: string | null;
   photo_url: string | null;
   created_by?: string | null;
+  tree_height_m?: number | null;
+  tree_origin?: "new_planting" | "existing_inventory" | "natural_regeneration";
+  attribution_scope?: "full" | "monitor_only";
+  count_in_planting_kpis?: boolean;
+  count_in_carbon_scope?: boolean;
+  source_project_id?: number | null;
+  custodian_id?: number | null;
+  custodian_name?: string | null;
 };
 
 type GreenUser = {
@@ -93,6 +101,20 @@ const formatDateLabel = (value: string | null | undefined) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString();
+};
+const parseTreeHeightInput = (value: string | number | null | undefined): number | null => {
+  if (value === null || value === undefined) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return null;
+  if (parsed < 0 || parsed > 120) return null;
+  return Number(parsed.toFixed(2));
+};
+const formatTreeHeight = (value: number | null | undefined) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return "-";
+  return `${numeric.toFixed(2)} m`;
 };
 const formatTonnesOrKg = (tonnes: number, kg: number, tonneDigits = 2, kgDigits = 1) => {
   const t = Number(tonnes || 0);
@@ -330,6 +352,7 @@ export default function Green() {
     lat: 0,
     species: "",
     planting_date: "",
+    tree_height_m: "",
     status: "alive",
     notes: "",
     photo_url: "",
@@ -358,6 +381,8 @@ export default function Green() {
   const [syncConflictCount, setSyncConflictCount] = useState(0);
   const [syncInProgress, setSyncInProgress] = useState(false);
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator === "undefined" ? true : navigator.onLine);
+  const [treeHeightDraftById, setTreeHeightDraftById] = useState<Record<number, string>>({});
+  const [savingTreeHeightId, setSavingTreeHeightId] = useState<number | null>(null);
 
   const treePoints = useMemo(() => {
     if (!activeUser) return [];
@@ -373,6 +398,12 @@ export default function Green() {
         notes: t.notes,
         photo_url: t.photo_url,
         created_by: t.created_by || "",
+        tree_height_m: t.tree_height_m ?? null,
+        tree_origin: t.tree_origin || "new_planting",
+        attribution_scope: t.attribution_scope || "full",
+        count_in_planting_kpis: t.count_in_planting_kpis !== false,
+        count_in_carbon_scope: t.count_in_carbon_scope !== false,
+        custodian_name: t.custodian_name || "",
       }))
       .filter((t) => Number.isFinite(t.lng) && Number.isFinite(t.lat));
   }, [trees, activeUser]);
@@ -716,6 +747,11 @@ export default function Green() {
       toast.error("Pick a point on the map");
       return;
     }
+    const treeHeightValue = parseTreeHeightInput(newTree.tree_height_m);
+    if (newTree.tree_height_m && treeHeightValue === null) {
+      toast.error("Tree height must be a number between 0 and 120.");
+      return;
+    }
     setAddingTree(true);
     setPlantingFlowMessage("Planting tree...");
     setPlantingFlowState("loading");
@@ -723,6 +759,7 @@ export default function Green() {
       const createRes = await api.post("/green/trees", {
         project_id: activeProject.id,
         ...newTree,
+        tree_height_m: treeHeightValue,
         photo_url: "",
         created_by: activeUser,
       });
@@ -754,6 +791,7 @@ export default function Green() {
         lat: 0,
         species: "",
         planting_date: "",
+        tree_height_m: "",
         status: "alive",
         notes: "",
         photo_url: "",
@@ -782,6 +820,7 @@ export default function Green() {
             {
               project_id: activeProject.id,
               ...newTree,
+              tree_height_m: parseTreeHeightInput(newTree.tree_height_m),
               photo_url: "",
               created_by: activeUser,
             },
@@ -799,6 +838,7 @@ export default function Green() {
             lat: 0,
             species: "",
             planting_date: "",
+            tree_height_m: "",
             status: "alive",
             notes: "",
             photo_url: "",
@@ -819,6 +859,36 @@ export default function Green() {
       }
     } finally {
       setAddingTree(false);
+    }
+  };
+
+  const updateTreeHeight = async (treeId: number, rawHeight: string) => {
+    if (!activeProject) return;
+    const parsed = parseTreeHeightInput(rawHeight);
+    if (String(rawHeight || "").trim() && parsed === null) {
+      toast.error("Tree height must be a number between 0 and 120.");
+      return;
+    }
+    setSavingTreeHeightId(treeId);
+    try {
+      await api.patch(`/green/trees/${treeId}`, {
+        tree_height_m: parsed,
+      });
+      setTrees((prev) => prev.map((tree) => (tree.id === treeId ? { ...tree, tree_height_m: parsed } : tree)));
+      setInspectedTree((prev) =>
+        prev && Number(prev.id) === Number(treeId)
+          ? {
+              ...prev,
+              tree_height_m: parsed,
+            }
+          : prev
+      );
+      setTreeHeightDraftById((prev) => ({ ...prev, [treeId]: parsed === null ? "" : String(parsed) }));
+      toast.success("Tree height updated");
+    } catch {
+      toast.error("Failed to update tree height");
+    } finally {
+      setSavingTreeHeightId(null);
     }
   };
 
@@ -1787,6 +1857,18 @@ export default function Green() {
                 />
               </div>
               <div className="tree-form-row">
+                <label>Tree Height (m)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={120}
+                  step="0.01"
+                  placeholder="Optional"
+                  value={newTree.tree_height_m}
+                  onChange={(e) => setNewTree({ ...newTree, tree_height_m: e.target.value })}
+                />
+              </div>
+              <div className="tree-form-row">
                 <label>Status</label>
                 <select value={newTree.status} onChange={(e) => setNewTree({ ...newTree, status: e.target.value })}>
                   <option value="alive">Alive</option>
@@ -1951,6 +2033,7 @@ export default function Green() {
                 <div className="tree-row tree-header">
                   <span>ID</span>
                   <span>Species</span>
+                  <span>Height</span>
                   <span>Status</span>
                   <span>Actions</span>
                 </div>
@@ -1958,6 +2041,46 @@ export default function Green() {
                   <div key={t.id} className="tree-row record-row">
                     <span>#{t.id}</span>
                     <span>{t.species || "-"}</span>
+                    <span>
+                      <div className="green-tree-height-edit">
+                        <input
+                          type="number"
+                          min={0}
+                          max={120}
+                          step="0.01"
+                          value={
+                            treeHeightDraftById[t.id] !== undefined
+                              ? treeHeightDraftById[t.id]
+                              : t.tree_height_m === null || t.tree_height_m === undefined
+                              ? ""
+                              : String(t.tree_height_m)
+                          }
+                          onChange={(e) =>
+                            setTreeHeightDraftById((prev) => ({
+                              ...prev,
+                              [t.id]: e.target.value,
+                            }))
+                          }
+                          placeholder="m"
+                        />
+                        <button
+                          className="green-row-btn"
+                          type="button"
+                          disabled={savingTreeHeightId === t.id}
+                          onClick={() => {
+                            const value =
+                              treeHeightDraftById[t.id] !== undefined
+                                ? treeHeightDraftById[t.id]
+                                : t.tree_height_m === null || t.tree_height_m === undefined
+                                ? ""
+                                : String(t.tree_height_m);
+                            void updateTreeHeight(t.id, value);
+                          }}
+                        >
+                          {savingTreeHeightId === t.id ? "Saving..." : "Save"}
+                        </button>
+                      </div>
+                    </span>
                     <span>{t.status}</span>
                     <div className="tree-actions">
                       <button className="green-row-btn" type="button" onClick={() => updateTreeStatus(t.id, "healthy")}>
@@ -2017,6 +2140,7 @@ export default function Green() {
                 <h4>Timeline</h4>
                 <p>Planted: {treeTimeline.tree?.planting_date || "-"}</p>
                 <p>Status: {treeTimeline.tree?.status || "-"}</p>
+                <p>Height: {formatTreeHeight(treeTimeline.tree?.tree_height_m)}</p>
                 {treeTimeline.visits?.map((v: any, i: number) => (
                   <p key={i}>
                     Visit {v.visit_date}: {v.status}
@@ -2090,6 +2214,53 @@ export default function Green() {
                   <span>Planting Date</span>
                   <strong>{formatDateLabel(inspectedTree.planting_date)}</strong>
                 </div>
+                <div>
+                  <span>Tree Height</span>
+                  <strong>{formatTreeHeight(inspectedTree.tree_height_m)}</strong>
+                </div>
+                <div>
+                  <span>Origin</span>
+                  <strong>{formatTreeConditionLabel(inspectedTree.tree_origin || "new_planting")}</strong>
+                </div>
+              </div>
+              <div className="green-tree-height-inline">
+                <label>Update Height (m)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={120}
+                  step="0.01"
+                  value={
+                    treeHeightDraftById[inspectedTree.id] !== undefined
+                      ? treeHeightDraftById[inspectedTree.id]
+                      : inspectedTree.tree_height_m === null || inspectedTree.tree_height_m === undefined
+                      ? ""
+                      : String(inspectedTree.tree_height_m)
+                  }
+                  onChange={(e) =>
+                    setTreeHeightDraftById((prev) => ({
+                      ...prev,
+                      [inspectedTree.id]: e.target.value,
+                    }))
+                  }
+                  placeholder="Tree height in meters"
+                />
+                <button
+                  className="green-btn-outline"
+                  type="button"
+                  disabled={savingTreeHeightId === inspectedTree.id}
+                  onClick={() => {
+                    const value =
+                      treeHeightDraftById[inspectedTree.id] !== undefined
+                        ? treeHeightDraftById[inspectedTree.id]
+                        : inspectedTree.tree_height_m === null || inspectedTree.tree_height_m === undefined
+                        ? ""
+                        : String(inspectedTree.tree_height_m);
+                    void updateTreeHeight(inspectedTree.id, value);
+                  }}
+                >
+                  {savingTreeHeightId === inspectedTree.id ? "Saving..." : "Save Height"}
+                </button>
               </div>
               <p className="green-tree-inspector-notes">{inspectedTree.notes || "No notes."}</p>
               <div className="green-tree-maintenance-row">

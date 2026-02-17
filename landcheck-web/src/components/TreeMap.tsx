@@ -23,6 +23,12 @@ export type TreePoint = {
   notes?: string | null;
   photo_url?: string | null;
   created_by?: string | null;
+  tree_height_m?: number | null;
+  tree_origin?: string | null;
+  attribution_scope?: string | null;
+  count_in_planting_kpis?: boolean;
+  count_in_carbon_scope?: boolean;
+  custodian_name?: string | null;
 };
 
 type Props = {
@@ -48,6 +54,12 @@ type TreeFeatureProps = {
   notes: string;
   created_by: string;
   photo_url: string;
+  tree_height_m: number | null;
+  tree_origin: string;
+  attribution_scope: string;
+  count_in_planting_kpis: number;
+  count_in_carbon_scope: number;
+  custodian_name: string;
   outer: string;
   core: string;
   ring: string;
@@ -75,6 +87,12 @@ export type TreeInspectData = {
   notes: string;
   created_by: string;
   photo_url: string;
+  tree_height_m: number | null;
+  tree_origin: string;
+  attribution_scope: string;
+  count_in_planting_kpis: boolean;
+  count_in_carbon_scope: boolean;
+  custodian_name: string;
   maintenance: {
     total: number;
     done: number;
@@ -196,6 +214,11 @@ const formatDate = (value: string | null | undefined) => {
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString();
 };
+const formatHeight = (value: number | null | undefined) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return "-";
+  return `${numeric.toFixed(2)} m`;
+};
 
 const getFeatureProps = (feature: mapboxgl.MapboxGeoJSONFeature | undefined): TreeFeatureProps | null => {
   if (!feature) return null;
@@ -211,6 +234,15 @@ const getFeatureProps = (feature: mapboxgl.MapboxGeoJSONFeature | undefined): Tr
     notes: String(raw.notes || ""),
     created_by: String(raw.created_by || "-"),
     photo_url: String(raw.photo_url || ""),
+    tree_height_m:
+      Number.isFinite(Number(raw.tree_height_m)) && Number(raw.tree_height_m) >= 0
+        ? Number(raw.tree_height_m)
+        : null,
+    tree_origin: String(raw.tree_origin || "new_planting"),
+    attribution_scope: String(raw.attribution_scope || "full"),
+    count_in_planting_kpis: Number(raw.count_in_planting_kpis ? 1 : 0),
+    count_in_carbon_scope: Number(raw.count_in_carbon_scope ? 1 : 0),
+    custodian_name: String(raw.custodian_name || ""),
     outer: String(raw.outer || markerPalettes.alive.outer),
     core: String(raw.core || markerPalettes.alive.core),
     ring: String(raw.ring || markerPalettes.alive.ring),
@@ -239,6 +271,15 @@ const buildTreeFeatureCollection = (items: TreePoint[]) => {
           notes: tree.notes || "",
           created_by: tree.created_by || "-",
           photo_url: tree.photo_url || "",
+          tree_height_m:
+            Number.isFinite(Number(tree.tree_height_m)) && Number(tree.tree_height_m) >= 0
+              ? Number(tree.tree_height_m)
+              : null,
+          tree_origin: String(tree.tree_origin || "new_planting"),
+          attribution_scope: String(tree.attribution_scope || "full"),
+          count_in_planting_kpis: tree.count_in_planting_kpis === false ? 0 : 1,
+          count_in_carbon_scope: tree.count_in_carbon_scope === false ? 0 : 1,
+          custodian_name: tree.custodian_name || "",
           is_alive: ACTIVE_TREE_STATUSES.has(normalizedStatus) ? 1 : 0,
           outer: palette.outer,
           core: palette.core,
@@ -265,6 +306,12 @@ const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null,
   const plantedBy = String(tree.created_by || base.created_by || "-");
   const plantedDate = String(tree.planting_date || base.planting_date || "");
   const notes = String(tree.notes || base.notes || "");
+  const treeHeight = Number.isFinite(Number(tree.tree_height_m)) ? Number(tree.tree_height_m) : base.tree_height_m;
+  const treeOrigin = String(tree.tree_origin || base.tree_origin || "new_planting");
+  const attributionScope = String(tree.attribution_scope || base.attribution_scope || "full");
+  const plantingScope = tree.count_in_planting_kpis ?? Boolean(base.count_in_planting_kpis);
+  const carbonScope = tree.count_in_carbon_scope ?? Boolean(base.count_in_carbon_scope);
+  const custodianName = String(tree.custodian_name || base.custodian_name || "");
   const maintenance = detail?.maintenance || { total: 0, done: 0, pending: 0, overdue: 0 };
   const visitsCount = detail?.visits?.length || 0;
   const taskPhoto = (detail?.tasks || []).find((task: any) => String(task?.photo_url || "").trim())?.photo_url;
@@ -288,6 +335,11 @@ const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null,
       <p><strong>Planter:</strong> ${escapeHtml(plantedBy)}</p>
       <p><strong>Planted:</strong> ${escapeHtml(formatDate(plantedDate))}</p>
       <p><strong>Species:</strong> ${escapeHtml(species)}</p>
+      <p><strong>Height:</strong> ${escapeHtml(formatHeight(treeHeight))}</p>
+      <p><strong>Origin:</strong> ${escapeHtml(statusLabel(treeOrigin))}</p>
+      <p><strong>Attribution:</strong> ${escapeHtml(statusLabel(attributionScope))}</p>
+      <p><strong>Scope:</strong> ${plantingScope ? "Planting KPI" : "No KPI"} / ${carbonScope ? "Carbon" : "No Carbon"}</p>
+      ${custodianName ? `<p><strong>Custodian:</strong> ${escapeHtml(custodianName)}</p>` : ""}
       ${notes ? `<p><strong>Notes:</strong> ${escapeHtml(notes)}</p>` : ""}
       <p><strong>Photo:</strong> ${hasPhoto ? "Available" : "None"}</p>
       ${
@@ -306,6 +358,12 @@ const buildInspectData = (base: TreeFeatureProps, detail?: TreePopupDetail | nul
   const status = String(tree.status || base.status || "unknown");
   const taskPhoto = (detail?.tasks || []).find((task: any) => String(task?.photo_url || "").trim())?.photo_url;
   const visitPhoto = (detail?.visits || []).find((visit: any) => String(visit?.photo_url || "").trim())?.photo_url;
+  const treeHeight = Number.isFinite(Number(tree.tree_height_m)) ? Number(tree.tree_height_m) : base.tree_height_m;
+  const treeOrigin = String(tree.tree_origin || base.tree_origin || "new_planting");
+  const attributionScope = String(tree.attribution_scope || base.attribution_scope || "full");
+  const plantingScope = tree.count_in_planting_kpis ?? Boolean(base.count_in_planting_kpis);
+  const carbonScope = tree.count_in_carbon_scope ?? Boolean(base.count_in_carbon_scope);
+  const custodianName = String(tree.custodian_name || base.custodian_name || "");
   return {
     id: base.id,
     status,
@@ -315,6 +373,12 @@ const buildInspectData = (base: TreeFeatureProps, detail?: TreePopupDetail | nul
     notes: String(tree.notes || base.notes || ""),
     created_by: String(tree.created_by || base.created_by || "-"),
     photo_url: String(tree.photo_url || base.photo_url || taskPhoto || visitPhoto || ""),
+    tree_height_m: Number.isFinite(Number(treeHeight)) ? Number(treeHeight) : null,
+    tree_origin: treeOrigin,
+    attribution_scope: attributionScope,
+    count_in_planting_kpis: Boolean(plantingScope),
+    count_in_carbon_scope: Boolean(carbonScope),
+    custodian_name: custodianName,
     maintenance: detail?.maintenance || { total: 0, done: 0, pending: 0, overdue: 0 },
     tasks: detail?.tasks || [],
     visits: detail?.visits || [],
