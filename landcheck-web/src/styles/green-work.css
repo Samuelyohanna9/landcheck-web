@@ -1326,6 +1326,11 @@
   color: #ffffff;
 }
 
+.green-work-toggle-btn:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
 /* ── Stats Grid ── */
 .green-work-stats {
   display: grid;

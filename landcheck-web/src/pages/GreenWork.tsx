@@ -874,6 +874,7 @@ export default function GreenWork() {
   const [existingCandidates, setExistingCandidates] = useState<ExistingTreeCandidate[]>([]);
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<number[]>([]);
   const [importSourceProjectId, setImportSourceProjectId] = useState<number | null>(null);
+  const [allowExistingToggleSaving, setAllowExistingToggleSaving] = useState(false);
   const [importForm, setImportForm] = useState<{
     mode: TreeImportMode;
     attribution_scope: "full" | "monitor_only";
@@ -1202,6 +1203,40 @@ export default function GreenWork() {
     },
     [],
   );
+
+  const setAllowExistingTreeLink = async (nextValue: boolean) => {
+    setProjectSettingsDraft((prev) => ({ ...prev, allow_existing_tree_link: nextValue }));
+    if (!activeProjectId) return;
+
+    setAllowExistingToggleSaving(true);
+    try {
+      const res = await api.patch(`/green/projects/${activeProjectId}/settings`, {
+        allow_existing_tree_link: nextValue,
+      });
+      const persisted = Boolean(res.data?.allow_existing_tree_link ?? nextValue);
+      setProjects((prev) =>
+        prev.map((item) => (Number(item.id) === Number(activeProjectId) ? { ...item, ...res.data } : item))
+      );
+      setProjectSettingsDraft((prev) => ({
+        ...prev,
+        allow_existing_tree_link: persisted,
+      }));
+      if (!persisted) {
+        setImportSourceProjectId(null);
+        setExistingCandidates([]);
+        setSelectedCandidateIds([]);
+      }
+      toast.success(persisted ? "Existing-tree import enabled" : "Existing-tree import disabled");
+    } catch (error: any) {
+      setProjectSettingsDraft((prev) => ({
+        ...prev,
+        allow_existing_tree_link: !nextValue,
+      }));
+      toast.error(error?.response?.data?.detail || "Failed to update import setting");
+    } finally {
+      setAllowExistingToggleSaving(false);
+    }
+  };
 
   const saveProjectSettings = async () => {
     if (!activeProjectId) return;
@@ -3105,7 +3140,7 @@ export default function GreenWork() {
                 {activeProjectRecord && (
                   <p className="green-work-note">
                     Active model: {formatTaskTypeLabel(activeProjectRecord.planting_model || "direct")} | Existing-tree import:{" "}
-                    {activeProjectRecord.allow_existing_tree_link ? "enabled" : "disabled"}
+                    {projectSettingsDraft.allow_existing_tree_link ? "enabled" : "disabled"}
                   </p>
                 )}
               </div>
@@ -3177,12 +3212,8 @@ export default function GreenWork() {
                               className={`green-work-toggle-btn ${
                                 projectSettingsDraft.allow_existing_tree_link ? "active" : ""
                               }`}
-                              onClick={() =>
-                                setProjectSettingsDraft((prev) => ({
-                                  ...prev,
-                                  allow_existing_tree_link: true,
-                                }))
-                              }
+                              disabled={allowExistingToggleSaving}
+                              onClick={() => void setAllowExistingTreeLink(true)}
                             >
                               Enable
                             </button>
@@ -3191,12 +3222,8 @@ export default function GreenWork() {
                               className={`green-work-toggle-btn ${
                                 !projectSettingsDraft.allow_existing_tree_link ? "active" : ""
                               }`}
-                              onClick={() =>
-                                setProjectSettingsDraft((prev) => ({
-                                  ...prev,
-                                  allow_existing_tree_link: false,
-                                }))
-                              }
+                              disabled={allowExistingToggleSaving}
+                              onClick={() => void setAllowExistingTreeLink(false)}
                             >
                               Disable
                             </button>
