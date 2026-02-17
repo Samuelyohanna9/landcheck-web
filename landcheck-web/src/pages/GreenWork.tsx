@@ -886,6 +886,7 @@ export default function GreenWork() {
     count_in_carbon_scope: true,
   });
   const [importLoading, setImportLoading] = useState(false);
+  const [projectSetupExpanded, setProjectSetupExpanded] = useState(false);
   const [treeMetaDraftById, setTreeMetaDraftById] = useState<
     Record<
       number,
@@ -1213,6 +1214,12 @@ export default function GreenWork() {
       setProjects((prev) =>
         prev.map((item) => (Number(item.id) === Number(activeProjectId) ? { ...item, ...res.data } : item))
       );
+      if (!projectSettingsDraft.allow_existing_tree_link) {
+        setImportSourceProjectId(null);
+        setExistingCandidates([]);
+        setSelectedCandidateIds([]);
+      }
+      setProjectSetupExpanded(false);
       toast.success("Project settings updated");
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || "Failed to update project settings");
@@ -1341,6 +1348,28 @@ export default function GreenWork() {
     setSelectedCandidateIds((prev) =>
       prev.includes(treeId) ? prev.filter((id) => id !== treeId) : [...prev, treeId]
     );
+  };
+
+  const onImportModeChange = (mode: TreeImportMode) => {
+    setImportForm((prev) => {
+      if (prev.mode === mode) return prev;
+      if (mode === "transfer") {
+        return {
+          ...prev,
+          mode,
+          attribution_scope: "full",
+          count_in_planting_kpis: true,
+          count_in_carbon_scope: true,
+        };
+      }
+      return {
+        ...prev,
+        mode,
+        attribution_scope: "monitor_only",
+        count_in_planting_kpis: projectSettingsDraft.default_existing_tree_scope === "include_in_planting_kpi",
+        count_in_carbon_scope: true,
+      };
+    });
   };
 
   const importExistingTrees = async () => {
@@ -1503,6 +1532,19 @@ export default function GreenWork() {
     if (!activeProjectId || activeForm !== "verra_reports") return;
     void loadVerraHistory(activeProjectId).catch(() => {});
   }, [activeProjectId, activeForm, loadVerraHistory]);
+
+  useEffect(() => {
+    setProjectSetupExpanded(false);
+  }, [activeProjectId]);
+
+  useEffect(() => {
+    setImportForm((prev) => {
+      if (prev.mode === "transfer") return prev;
+      const nextPlantingScope = projectSettingsDraft.default_existing_tree_scope === "include_in_planting_kpi";
+      if (prev.count_in_planting_kpis === nextPlantingScope) return prev;
+      return { ...prev, count_in_planting_kpis: nextPlantingScope };
+    });
+  }, [projectSettingsDraft.default_existing_tree_scope]);
 
   useEffect(() => {
     if (!activeProjectId) {
@@ -2698,6 +2740,32 @@ export default function GreenWork() {
       }
     );
   }, [inspectedTree, treeMetaDraftById]);
+  const projectModel = projectSettingsDraft.planting_model;
+  const isCommunityModel = projectModel === "community_distributed" || projectModel === "mixed";
+  const hasCommunityData = custodians.length > 0 || distributionEvents.length > 0 || distributionAllocations.length > 0;
+  const showCommunityWorkflow = isCommunityModel || hasCommunityData;
+  const showImportWorkflow =
+    projectSettingsDraft.allow_existing_tree_link ||
+    existingCandidates.length > 0 ||
+    selectedCandidateIds.length > 0;
+  const workflowReadySummary = useMemo(() => {
+    const speciesMaturitySet = Object.keys(activeProjectMaturityMap).length;
+    return {
+      custodians: custodians.length,
+      events: distributionEvents.length,
+      allocations: distributionAllocations.length,
+      importEnabled: projectSettingsDraft.allow_existing_tree_link,
+      importSelected: selectedCandidateIds.length,
+      speciesMaturitySet,
+    };
+  }, [
+    custodians.length,
+    distributionEvents.length,
+    distributionAllocations.length,
+    projectSettingsDraft.allow_existing_tree_link,
+    selectedCandidateIds.length,
+    activeProjectMaturityMap,
+  ]);
 
   const activeProjectName = useMemo(() => {
     if (!activeProjectId) return "";
@@ -3044,6 +3112,30 @@ export default function GreenWork() {
 
               {activeProjectId && (
                 <>
+                  <div className="green-work-card green-work-project-flow-card">
+                    <h3>Workflow State</h3>
+                    <div className="green-work-flow-summary">
+                      <span className="green-work-flow-pill">Model: {formatTaskTypeLabel(projectModel)}</span>
+                      <span className="green-work-flow-pill">Custodians: {workflowReadySummary.custodians}</span>
+                      <span className="green-work-flow-pill">Events: {workflowReadySummary.events}</span>
+                      <span className="green-work-flow-pill">Allocations: {workflowReadySummary.allocations}</span>
+                      <span className="green-work-flow-pill">
+                        Existing-tree import: {workflowReadySummary.importEnabled ? "Enabled" : "Disabled"}
+                      </span>
+                    </div>
+                    <p className="green-work-note">
+                      Setup panels are hidden by default to reduce clutter. Open them only when you need to change
+                      rules.
+                    </p>
+                    <div className="work-actions">
+                      <button type="button" onClick={() => setProjectSetupExpanded((prev) => !prev)}>
+                        {projectSetupExpanded ? "Hide Setup Panels" : "Show Setup Panels"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {projectSetupExpanded && (
+                    <>
                   <div className="green-work-card">
                     <h3>Project Settings</h3>
                     <label>
@@ -3094,9 +3186,25 @@ export default function GreenWork() {
                       Save Project Settings
                     </button>
                   </div>
+                  {!showCommunityWorkflow && (
+                    <p className="green-work-note">
+                      Community setup is hidden because the project is in Direct planting mode.
+                    </p>
+                  )}
+                  {!showImportWorkflow && (
+                    <p className="green-work-note">
+                      Existing-tree import setup is hidden. Enable import in Project Settings when needed.
+                    </p>
+                  )}
 
+                  {showCommunityWorkflow && (
                   <div className="green-work-card">
                     <h3>Community Custodians</h3>
+                    {!isCommunityModel && hasCommunityData && (
+                      <p className="green-work-note">
+                        Community records exist from an earlier setup. They remain visible for continuity.
+                      </p>
+                    )}
                     <select
                       value={newCustodian.custodian_type}
                       onChange={(e) =>
@@ -3165,7 +3273,9 @@ export default function GreenWork() {
                       )}
                     </div>
                   </div>
+                  )}
 
+                  {showCommunityWorkflow && (
                   <div className="green-work-card">
                     <h3>Distribution Events & Allocations</h3>
                     <input
@@ -3214,6 +3324,7 @@ export default function GreenWork() {
                     <select
                       value={newAllocation.event_id}
                       onChange={(e) => setNewAllocation((prev) => ({ ...prev, event_id: e.target.value }))}
+                      disabled={distributionEvents.length === 0}
                     >
                       <option value="">Select event</option>
                       {distributionEvents.map((event) => (
@@ -3225,6 +3336,7 @@ export default function GreenWork() {
                     <select
                       value={newAllocation.custodian_id}
                       onChange={(e) => setNewAllocation((prev) => ({ ...prev, custodian_id: e.target.value }))}
+                      disabled={custodians.length === 0}
                     >
                       <option value="">Select custodian</option>
                       {custodians.map((custodian) => (
@@ -3276,12 +3388,19 @@ export default function GreenWork() {
                       value={newAllocation.notes}
                       onChange={(e) => setNewAllocation((prev) => ({ ...prev, notes: e.target.value }))}
                     />
-                    <button className="btn-primary" type="button" onClick={() => void upsertDistributionAllocation()}>
+                    <button
+                      className="btn-primary"
+                      type="button"
+                      disabled={distributionEvents.length === 0 || custodians.length === 0}
+                      onClick={() => void upsertDistributionAllocation()}
+                    >
                       Save Allocation
                     </button>
                     <p className="green-work-note">Saved allocations: {distributionAllocations.length}</p>
                   </div>
+                  )}
 
+                  {showImportWorkflow && (
                   <div className="green-work-card">
                     <h3>Import Existing Trees</h3>
                     {!projectSettingsDraft.allow_existing_tree_link && (
@@ -3302,9 +3421,7 @@ export default function GreenWork() {
                     </select>
                     <select
                       value={importForm.mode}
-                      onChange={(e) =>
-                        setImportForm((prev) => ({ ...prev, mode: e.target.value as TreeImportMode }))
-                      }
+                      onChange={(e) => onImportModeChange(e.target.value as TreeImportMode)}
                     >
                       <option value="reference">Reference (duplicate into this project)</option>
                       <option value="transfer">Transfer (move tree to this project)</option>
@@ -3328,6 +3445,7 @@ export default function GreenWork() {
                         onChange={(e) =>
                           setImportForm((prev) => ({ ...prev, count_in_planting_kpis: e.target.checked }))
                         }
+                        disabled={importForm.mode === "transfer"}
                       />
                       <span>Count imported trees in planting KPIs</span>
                     </label>
@@ -3338,6 +3456,7 @@ export default function GreenWork() {
                         onChange={(e) =>
                           setImportForm((prev) => ({ ...prev, count_in_carbon_scope: e.target.checked }))
                         }
+                        disabled={importForm.mode === "transfer"}
                       />
                       <span>Count imported trees in carbon scope</span>
                     </label>
@@ -3374,6 +3493,9 @@ export default function GreenWork() {
                       {importLoading ? "Importing..." : `Import Selected Trees (${selectedCandidateIds.length})`}
                     </button>
                   </div>
+                  )}
+                    </>
+                  )}
                 </>
               )}
             </>

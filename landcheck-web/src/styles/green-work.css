@@ -713,6 +713,28 @@
   flex: none;
 }
 
+.green-work-project-flow-card {
+  border-style: dashed;
+}
+
+.green-work-flow-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.34rem;
+  margin-bottom: 0.45rem;
+}
+
+.green-work-flow-pill {
+  border: 1px solid var(--gw-border);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--green-800);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.22rem 0.45rem;
+}
+
 /* ── Task Summary ── */
 .green-work-task-summary {
   margin-top: 0.6rem;
