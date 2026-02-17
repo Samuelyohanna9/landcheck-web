@@ -480,16 +480,22 @@ export default function TreeMap({
 
       map.on("error", (e) => {
         // eslint-disable-next-line no-console
-        console.error("Mapbox error:", e?.error || e);
-        setMapError(e?.error?.message || "Map failed to load");
-        mapErrorRef.current = e?.error?.message || "Map failed to load";
+        console.warn("Mapbox error:", e?.error || e);
+        // Only show fatal error if the map never managed to load at all.
+        // Tile/style loading errors when offline are expected and non-fatal —
+        // the map still renders with cached tiles and blank areas for uncached ones.
+        if (!mapReadyRef.current) {
+          const msg = e?.error?.message || "Map failed to load";
+          setMapError(msg);
+          mapErrorRef.current = msg;
+        }
       });
 
       const timeout = window.setTimeout(() => {
         if (!mapReadyRef.current && !mapErrorRef.current) {
           setMapError("Map load timed out. Check network/token or domain restrictions.");
         }
-      }, 8000);
+      }, 12000);
 
       map.once("load", () => {
         window.clearTimeout(timeout);

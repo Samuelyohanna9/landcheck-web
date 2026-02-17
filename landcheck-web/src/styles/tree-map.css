@@ -1,13 +1,39 @@
+/* ═══════════════════════════════════════════════════════════════
+   TreeMap Component — LandCheck
+   ═══════════════════════════════════════════════════════════════ */
+
 .tree-map-wrap {
   position: relative;
+  border-radius: 16px;
+  overflow: hidden;
 }
 
 .tree-map {
   height: 420px;
   border-radius: 16px;
   overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  background: #0f172a;
+  border: 1px solid rgba(34, 90, 58, 0.15);
+  background: linear-gradient(135deg, #e8f5e9 0%, #dcedc8 100%);
+  -webkit-touch-callout: none;
+  touch-action: pan-x pan-y;
+}
+
+/* Ensure Mapbox controls are above overlays */
+.tree-map .mapboxgl-ctrl-top-right,
+.tree-map .mapboxgl-ctrl-top-left {
+  z-index: 2;
+}
+
+.tree-map .mapboxgl-ctrl-group {
+  border-radius: 10px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  border: none !important;
+  overflow: hidden;
+}
+
+.tree-map .mapboxgl-ctrl-group button {
+  width: 36px !important;
+  height: 36px !important;
 }
 
 .tree-map-overlay {
@@ -15,27 +41,41 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
   justify-content: center;
-  color: #e2e8f0;
-  background: rgba(15, 23, 42, 0.85);
+  color: #2f5a4a;
+  background: rgba(240, 248, 241, 0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border-radius: 16px;
   font-size: 0.9rem;
   text-align: center;
-  padding: 1rem;
+  padding: 1.2rem;
+  z-index: 3;
 }
 
+.tree-map-overlay strong {
+  font-size: 1rem;
+  color: #1a4a34;
+}
+
+/* ── Markers ─────────────────────────────────────────────── */
 .tree-marker {
   position: relative;
   width: 30px;
   height: 30px;
   border-radius: 50%;
   background: var(--tree-marker-outer, rgba(150, 223, 138, 0.78));
-  border: 1px solid var(--tree-marker-ring, rgba(88, 171, 80, 0.72));
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28);
+  border: 1.5px solid var(--tree-marker-ring, rgba(88, 171, 80, 0.72));
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   z-index: 2;
+  transition: transform 0.15s ease;
+}
+
+.tree-marker:active {
+  transform: scale(1.15);
 }
 
 .tree-marker-core {
@@ -51,53 +91,105 @@
 }
 
 .tree-marker.draft {
-  width: 32px;
-  height: 32px;
-  background: rgba(150, 223, 138, 0.82);
+  width: 34px;
+  height: 34px;
+  background: rgba(150, 223, 138, 0.85);
   border-color: rgba(88, 171, 80, 0.8);
-  box-shadow: 0 0 0 3px rgba(99, 194, 103, 0.26);
+  box-shadow:
+    0 0 0 4px rgba(99, 194, 103, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: draftPulse 2s ease-in-out infinite;
 }
 
+@keyframes draftPulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(99, 194, 103, 0.2), 0 2px 8px rgba(0, 0, 0, 0.2); }
+  50% { box-shadow: 0 0 0 8px rgba(99, 194, 103, 0.1), 0 2px 8px rgba(0, 0, 0, 0.2); }
+}
+
+/* ── Popup ────────────────────────────────────────────────── */
 .tree-detail-popup .mapboxgl-popup-content {
-  border-radius: 12px;
-  border: 1px solid rgba(26, 77, 44, 0.16);
-  padding: 0.6rem 0.64rem;
-  box-shadow: 0 10px 22px rgba(10, 36, 20, 0.28);
+  border-radius: 14px;
+  border: 1px solid rgba(34, 90, 58, 0.12);
+  padding: 0.65rem 0.7rem;
+  box-shadow: 0 8px 24px rgba(10, 36, 20, 0.18);
+  background: #ffffff;
+}
+
+.tree-detail-popup .mapboxgl-popup-close-button {
+  font-size: 1.1rem;
+  color: #6b8f7b;
+  padding: 4px 8px;
 }
 
 .tree-popup-card {
-  min-width: 220px;
-  max-width: 300px;
-  font-size: 0.79rem;
-  line-height: 1.35;
-  color: #1f4332;
+  min-width: 200px;
+  max-width: 280px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #2f5a4a;
 }
 
 .tree-popup-card h4 {
   margin: 0 0 0.35rem;
-  font-size: 0.9rem;
-  color: #16462f;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #1a4a34;
+  font-family: "Sora", sans-serif;
 }
 
 .tree-popup-card p {
-  margin: 0.14rem 0;
+  margin: 0.2rem 0;
+}
+
+.tree-popup-card p strong {
+  color: #1a4a34;
 }
 
 .tree-popup-card ul {
-  margin: 0.2rem 0 0;
+  margin: 0.25rem 0 0;
   padding-left: 1rem;
 }
 
 .tree-popup-card li {
-  margin: 0.06rem 0;
+  margin: 0.08rem 0;
+  font-size: 0.76rem;
 }
 
 .tree-popup-muted {
-  color: #557465;
+  color: #7a9e8d;
+  font-style: italic;
 }
 
+/* ── Mobile ────────────────────────────────────────────────── */
 @media (max-width: 720px) {
   .tree-map {
-    height: 300px;
+    height: 320px;
+    border-radius: 14px;
+  }
+
+  .tree-map-wrap {
+    border-radius: 14px;
+  }
+
+  .tree-map .mapboxgl-ctrl-group button {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .tree-popup-card {
+    min-width: 180px;
+    max-width: 240px;
+    font-size: 0.78rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .tree-map {
+    height: 280px;
+    border-radius: 12px;
+  }
+
+  .tree-map-wrap {
+    border-radius: 12px;
   }
 }
