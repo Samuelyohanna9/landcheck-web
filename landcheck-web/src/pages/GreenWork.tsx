@@ -2740,6 +2740,70 @@ export default function GreenWork() {
         .sort((a, b) => Number(b.id || 0) - Number(a.id || 0)),
     [trees],
   );
+  const custodianLiveRows = useMemo(() => {
+    const allocationMap = new Map<
+      number,
+      { allocations: number; seedlings: number; eventIds: Set<number>; lastEventDate: string | null }
+    >();
+    distributionAllocations.forEach((row) => {
+      const custodianId = Number(row.custodian_id || 0);
+      if (!custodianId) return;
+      const existing = allocationMap.get(custodianId) || {
+        allocations: 0,
+        seedlings: 0,
+        eventIds: new Set<number>(),
+        lastEventDate: null,
+      };
+      existing.allocations += 1;
+      existing.seedlings += Number(row.quantity_allocated || 0);
+      if (Number(row.event_id || 0) > 0) existing.eventIds.add(Number(row.event_id));
+      const eventDate = String(row.event_date || "").trim();
+      if (eventDate && (!existing.lastEventDate || eventDate > existing.lastEventDate)) {
+        existing.lastEventDate = eventDate;
+      }
+      allocationMap.set(custodianId, existing);
+    });
+
+    const treeMap = new Map<number, { total: number; existing: number; healthy: number }>();
+    trees.forEach((tree) => {
+      const custodianId = Number(tree.custodian_id || 0);
+      if (!custodianId) return;
+      const existing = treeMap.get(custodianId) || { total: 0, existing: 0, healthy: 0 };
+      existing.total += 1;
+      const origin = normalizeName(String(tree.tree_origin || "").replaceAll(" ", "_"));
+      if (origin && origin !== "new_planting") existing.existing += 1;
+      const status = normalizeTreeStatus(tree.status || "");
+      if (HEALTHY_TREE_STATUSES.has(status)) existing.healthy += 1;
+      treeMap.set(custodianId, existing);
+    });
+
+    return custodians
+      .map((custodian) => {
+        const alloc = allocationMap.get(Number(custodian.id)) || {
+          allocations: 0,
+          seedlings: 0,
+          eventIds: new Set<number>(),
+          lastEventDate: null,
+        };
+        const tree = treeMap.get(Number(custodian.id)) || { total: 0, existing: 0, healthy: 0 };
+        const healthyRate = tree.total > 0 ? (tree.healthy / tree.total) * 100 : null;
+        return {
+          custodian,
+          allocations: alloc.allocations,
+          seedlings: alloc.seedlings,
+          eventCount: alloc.eventIds.size,
+          lastEventDate: alloc.lastEventDate,
+          treeTotal: tree.total,
+          existingTreeTotal: tree.existing,
+          healthyRate,
+        };
+      })
+      .sort((a, b) => {
+        if (b.seedlings !== a.seedlings) return b.seedlings - a.seedlings;
+        if (b.treeTotal !== a.treeTotal) return b.treeTotal - a.treeTotal;
+        return String(a.custodian.name || "").localeCompare(String(b.custodian.name || ""));
+      });
+  }, [custodians, distributionAllocations, trees]);
   const custodianSummary = useMemo(() => {
     const totalAllocated = distributionAllocations.reduce(
       (sum, row) => sum + Number(row.quantity_allocated || 0),
@@ -2765,6 +2829,7 @@ export default function GreenWork() {
     activeForm !== "overview" &&
     activeForm !== "live_table" &&
     activeForm !== "verra_reports";
+  const detailScrollMode = activeForm === "existing_tree_intake" || activeForm === "custodian_hub";
   const overviewMode = Boolean(activeProjectId && activeForm === "overview");
   const liveTableMode = Boolean(activeProjectId && activeForm === "live_table");
   const verraMode = Boolean(activeProjectId && activeForm === "verra_reports");
@@ -3071,7 +3136,7 @@ export default function GreenWork() {
 
       <div
         className={`green-work-content ${showSidebar ? "with-sidebar" : "no-sidebar"} ${
-          activeForm === "existing_tree_intake" ? "existing-tree-mode" : ""
+          detailScrollMode ? "detail-scroll-mode" : ""
         }`}
       >
         <aside className="green-work-sidebar">
@@ -3518,12 +3583,14 @@ export default function GreenWork() {
                   onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, event_date: e.target.value }))}
                   disabled={!activeProjectId}
                 />
+                <p className="green-work-field-tip">Tip: use the actual day seedlings were handed out.</p>
                 <input
                   placeholder="Species (optional)"
                   value={newDistributionEvent.species}
                   onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, species: e.target.value }))}
                   disabled={!activeProjectId}
                 />
+                <p className="green-work-field-tip">Tip: enter a species only if this event was single-species.</p>
                 <input
                   type="number"
                   min={0}
@@ -3534,24 +3601,28 @@ export default function GreenWork() {
                   }
                   disabled={!activeProjectId}
                 />
+                <p className="green-work-field-tip">Tip: total seedlings dispatched in this event.</p>
                 <input
                   placeholder="Batch reference"
                   value={newDistributionEvent.source_batch_ref}
                   onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, source_batch_ref: e.target.value }))}
                   disabled={!activeProjectId}
                 />
+                <p className="green-work-field-tip">Tip: use a batch ID or delivery note number for traceability.</p>
                 <input
                   placeholder="Distributed by"
                   value={newDistributionEvent.distributed_by}
                   onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, distributed_by: e.target.value }))}
                   disabled={!activeProjectId}
                 />
+                <p className="green-work-field-tip">Tip: enter supervisor/staff name responsible for handout.</p>
                 <textarea
                   placeholder="Distribution notes"
                   value={newDistributionEvent.notes}
                   onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, notes: e.target.value }))}
                   disabled={!activeProjectId}
                 />
+                <p className="green-work-field-tip">Tip: add location, partner, or any exception notes for audit.</p>
                 <button className="btn-primary" type="button" onClick={() => void createDistributionEvent()} disabled={!activeProjectId}>
                   Create Distribution Event
                 </button>
@@ -3569,6 +3640,7 @@ export default function GreenWork() {
                     </option>
                   ))}
                 </select>
+                <p className="green-work-field-tip">Tip: choose the distribution event this allocation belongs to.</p>
                 <select
                   value={newAllocation.custodian_id}
                   onChange={(e) => setNewAllocation((prev) => ({ ...prev, custodian_id: e.target.value }))}
@@ -3581,6 +3653,7 @@ export default function GreenWork() {
                     </option>
                   ))}
                 </select>
+                <p className="green-work-field-tip">Tip: select the receiving custodian (household/school/group).</p>
                 <input
                   type="number"
                   min={0}
@@ -3591,18 +3664,21 @@ export default function GreenWork() {
                   }
                   disabled={!activeProjectId}
                 />
+                <p className="green-work-field-tip">Tip: number of seedlings assigned to this custodian.</p>
                 <input
                   type="date"
                   value={newAllocation.expected_planting_start}
                   onChange={(e) => setNewAllocation((prev) => ({ ...prev, expected_planting_start: e.target.value }))}
                   disabled={!activeProjectId}
                 />
+                <p className="green-work-field-tip">Tip: planned planting start date for field follow-up.</p>
                 <input
                   type="date"
                   value={newAllocation.expected_planting_end}
                   onChange={(e) => setNewAllocation((prev) => ({ ...prev, expected_planting_end: e.target.value }))}
                   disabled={!activeProjectId}
                 />
+                <p className="green-work-field-tip">Tip: target completion date for planting this allocation.</p>
                 <input
                   type="number"
                   min={1}
@@ -3613,12 +3689,14 @@ export default function GreenWork() {
                   }
                   disabled={!activeProjectId}
                 />
+                <p className="green-work-field-tip">Tip: how often (in days) supervisors should revisit this custodian.</p>
                 <textarea
                   placeholder="Allocation notes"
                   value={newAllocation.notes}
                   onChange={(e) => setNewAllocation((prev) => ({ ...prev, notes: e.target.value }))}
                   disabled={!activeProjectId}
                 />
+                <p className="green-work-field-tip">Tip: note constraints, replacements, or site-specific instructions.</p>
                 <button
                   className="btn-primary"
                   type="button"
@@ -4625,6 +4703,71 @@ export default function GreenWork() {
                           <td>{formatTreeHeight(tree.tree_height_m)}</td>
                           <td>{tree.custodian_name || "-"}</td>
                           <td>{tree.created_by || "-"}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeProjectId && activeForm === "custodian_hub" && (
+            <div className="green-work-card">
+              <div className="green-work-row">
+                <h3>Custodian Live Results Table</h3>
+                <div className="work-actions">
+                  <button type="button" onClick={() => void Promise.all([loadProjectData(activeProjectId), loadCommunityData(activeProjectId)])}>
+                    Refresh
+                  </button>
+                </div>
+              </div>
+              <p className="green-work-chart-context">
+                Context: live roll-up by custodian using allocations + tracked tree statuses in this project.
+              </p>
+              <div className="green-work-live-summary">
+                <span className="green-work-live-pill neutral">Custodians: {custodianLiveRows.length}</span>
+                <span className="green-work-live-pill ok">Verified: {custodianSummary.verifiedCustodians}</span>
+                <span className="green-work-live-pill neutral">Seedlings Allocated: {custodianSummary.allocatedSeedlings}</span>
+              </div>
+              <div className="green-work-live-table-wrap">
+                <table className="green-work-live-table">
+                  <thead>
+                    <tr>
+                      <th>Custodian</th>
+                      <th>Type</th>
+                      <th>Verification</th>
+                      <th>Contact</th>
+                      <th>Allocations</th>
+                      <th>Seedlings</th>
+                      <th>Events</th>
+                      <th>Trees Tracked</th>
+                      <th>Existing Trees</th>
+                      <th>Healthy %</th>
+                      <th>Last Event</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {custodianLiveRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={11} className="green-work-live-empty">
+                          No custodian activity records yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      custodianLiveRows.map((row) => (
+                        <tr key={`custodian-live-${row.custodian.id}`}>
+                          <td>{row.custodian.name || "-"}</td>
+                          <td>{formatTaskTypeLabel(row.custodian.custodian_type)}</td>
+                          <td>{formatTaskTypeLabel(row.custodian.verification_status || "pending")}</td>
+                          <td>{row.custodian.phone || row.custodian.email || "-"}</td>
+                          <td>{row.allocations}</td>
+                          <td>{row.seedlings}</td>
+                          <td>{row.eventCount}</td>
+                          <td>{row.treeTotal}</td>
+                          <td>{row.existingTreeTotal}</td>
+                          <td>{row.healthyRate === null ? "-" : `${row.healthyRate.toFixed(1)}%`}</td>
+                          <td>{formatDateLabel(row.lastEventDate)}</td>
                         </tr>
                       ))
                     )}
