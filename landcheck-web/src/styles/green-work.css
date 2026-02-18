@@ -1395,6 +1395,11 @@
   margin-top: 0.35rem;
 }
 
+.green-work-project-danger-zone {
+  border-color: rgba(127, 29, 29, 0.18);
+  background: linear-gradient(180deg, rgba(255, 245, 245, 0.92) 0%, rgba(255, 250, 250, 0.96) 100%);
+}
+
 .green-work-project-options {
   margin-top: 0.35rem;
 }

@@ -1573,6 +1573,12 @@ export default function GreenWork() {
   }, [activeProjectId]);
 
   useEffect(() => {
+    if (!showProjectDangerOptions) {
+      setProjectSetupExpanded(false);
+    }
+  }, [showProjectDangerOptions]);
+
+  useEffect(() => {
     setTreeMetaDraftById((prev) => {
       const next = { ...prev };
       let changed = false;
@@ -3293,17 +3299,13 @@ export default function GreenWork() {
                       {showProjectDangerOptions ? "Hide Project Options" : "Project Options"}
                     </button>
                     {showProjectDangerOptions && (
-                      <div className="work-actions green-work-project-danger-actions">
-                        <button type="button" className="green-work-danger-btn" onClick={openDeleteProjectModal}>
-                          Delete Project
-                        </button>
-                      </div>
+                      <p className="green-work-note">Workflow setup options are now visible below.</p>
                     )}
                   </div>
                 )}
               </div>
 
-              {activeProjectId && (
+              {activeProjectId && showProjectDangerOptions && (
                 <>
                   <div className="green-work-card green-work-project-flow-card">
                     <h3>Workflow State</h3>
@@ -3843,10 +3845,22 @@ export default function GreenWork() {
                   <button type="button" onClick={exportCustodianPdf} disabled={!activeProjectId}>
                     Export Custodian PDF
                   </button>
-                </div>
-              </div>
-            </>
-          )}
+                    </div>
+                  </div>
+
+                  <div className="green-work-card green-work-project-danger-zone">
+                    <h3>Delete Project</h3>
+                    <p className="green-work-note danger">
+                      Permanent action. This will remove project data and cannot be undone.
+                    </p>
+                    <div className="work-actions green-work-project-danger-actions">
+                      <button type="button" className="green-work-danger-btn" onClick={openDeleteProjectModal}>
+                        Delete Project
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
 
           {activeForm === "existing_tree_intake" && (
             <div className="green-work-card">
