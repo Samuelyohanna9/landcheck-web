@@ -2829,7 +2829,8 @@ export default function GreenWork() {
     activeForm !== "overview" &&
     activeForm !== "live_table" &&
     activeForm !== "verra_reports";
-  const detailScrollMode = activeForm === "existing_tree_intake" || activeForm === "custodian_hub";
+  const detailScrollMode = activeForm === "existing_tree_intake";
+  const custodianHubMode = activeForm === "custodian_hub";
   const overviewMode = Boolean(activeProjectId && activeForm === "overview");
   const liveTableMode = Boolean(activeProjectId && activeForm === "live_table");
   const verraMode = Boolean(activeProjectId && activeForm === "verra_reports");
@@ -3137,7 +3138,7 @@ export default function GreenWork() {
       <div
         className={`green-work-content ${showSidebar ? "with-sidebar" : "no-sidebar"} ${
           detailScrollMode ? "detail-scroll-mode" : ""
-        }`}
+        } ${custodianHubMode ? "custodian-hub-mode" : ""}`}
       >
         <aside className="green-work-sidebar">
           {activeForm === "project_focus" && (
