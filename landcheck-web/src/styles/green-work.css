@@ -635,6 +635,10 @@
   grid-template-rows: minmax(0, 1fr);
 }
 
+.green-work-content.with-sidebar.custodian-hub-mode {
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+}
+
 .green-work-content.with-sidebar.detail-scroll-mode {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto;
@@ -689,6 +693,11 @@
 .green-work-main {
   overflow: hidden;
   height: 100%;
+}
+
+.green-work-content.with-sidebar.custodian-hub-mode .green-work-main {
+  overflow: auto;
+  padding-right: 0.2rem;
 }
 
 .green-work-content.with-sidebar.detail-scroll-mode .green-work-main {
