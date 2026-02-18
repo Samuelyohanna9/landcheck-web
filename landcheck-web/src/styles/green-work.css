@@ -1395,6 +1395,27 @@
   margin-top: 0.35rem;
 }
 
+.green-work-project-options {
+  margin-top: 0.35rem;
+}
+
+.green-work-option-toggle {
+  width: auto;
+  border: 1px dashed rgba(22, 76, 42, 0.3);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--green-700);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.34rem 0.52rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.green-work-option-toggle:active {
+  background: var(--green-50);
+}
+
 .green-work-card .green-work-danger-btn,
 .work-actions .green-work-danger-btn {
   background: linear-gradient(180deg, #ef4444, #b91c1c);
