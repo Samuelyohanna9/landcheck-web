@@ -477,6 +477,75 @@
   overflow: auto;
 }
 
+.green-work-delete-overlay {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.42);
+  z-index: 95;
+}
+
+.green-work-delete-modal {
+  position: fixed;
+  z-index: 96;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(92vw, 460px);
+  border: 1px solid rgba(127, 29, 29, 0.26);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #fff5f5 0%, #fffafa 100%);
+  box-shadow: var(--shadow-xl);
+  padding: 0.8rem;
+}
+
+.green-work-delete-modal h3 {
+  margin: 0 0 0.45rem;
+  color: #7f1d1d;
+  font-family: "Sora", sans-serif;
+  font-size: 1rem;
+}
+
+.green-work-delete-warning {
+  margin: 0 0 0.45rem;
+  font-size: 0.84rem;
+  color: #7f1d1d;
+}
+
+.green-work-delete-target {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  color: #1f2937;
+}
+
+.green-work-delete-target strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: #7f1d1d;
+  font-family: "Sora", sans-serif;
+  font-size: 0.95rem;
+}
+
+.green-work-delete-modal input {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid rgba(127, 29, 29, 0.28);
+  border-radius: var(--radius-sm);
+  color: #111827;
+  padding: 0.52rem 0.58rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.88rem;
+  font-family: inherit;
+}
+
+.green-work-delete-modal input:focus {
+  outline: none;
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18);
+}
+
 @keyframes greenWorkTreeDrawerIn {
   from { transform: translateX(-102%); }
   to { transform: translateX(0); }
@@ -1320,6 +1389,16 @@
 
 .work-actions button {
   width: auto;
+}
+
+.green-work-project-danger-actions {
+  margin-top: 0.35rem;
+}
+
+.green-work-card .green-work-danger-btn,
+.work-actions .green-work-danger-btn {
+  background: linear-gradient(180deg, #ef4444, #b91c1c);
+  color: #ffffff;
 }
 
 .green-work-export-photo-toggle {

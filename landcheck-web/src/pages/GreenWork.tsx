@@ -956,6 +956,9 @@ export default function GreenWork() {
   const [drawerFrame, setDrawerFrame] = useState<DrawerFrame | null>(null);
   const [reviewQueue, setReviewQueue] = useState<ReviewQueueTask[]>([]);
   const [includePhotosInWorkPdf, setIncludePhotosInWorkPdf] = useState(false);
+  const [deleteProjectModalOpen, setDeleteProjectModalOpen] = useState(false);
+  const [deleteProjectConfirmName, setDeleteProjectConfirmName] = useState("");
+  const [deletingProject, setDeletingProject] = useState(false);
   const [alertsSummary, setAlertsSummary] = useState<{ total: number; danger: number; warning: number; info: number }>({
     total: 0,
     danger: 0,
@@ -1003,6 +1006,18 @@ export default function GreenWork() {
   const loadUsers = async () => {
     const res = await api.get("/green/users");
     setUsers(res.data);
+  };
+
+  const clearActiveProjectContext = () => {
+    setActiveProjectId(null);
+    setOrders([]);
+    setTrees([]);
+    setTasks([]);
+    setAssigneeFilter("all");
+    setInspectedTree(null);
+    setCustodians([]);
+    setDistributionEvents([]);
+    setDistributionAllocations([]);
   };
 
   const loadProjectData = async (projectId: number) => {
@@ -1496,6 +1511,24 @@ export default function GreenWork() {
   }, [staffMenu, liveTreeMenu]);
 
   useEffect(() => {
+    if (!deleteProjectModalOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeDeleteProjectModal();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [deleteProjectModalOpen, deletingProject]);
+
+  useEffect(() => {
+    if (!activeProjectId && deleteProjectModalOpen) {
+      setDeleteProjectModalOpen(false);
+      setDeleteProjectConfirmName("");
+    }
+  }, [activeProjectId, deleteProjectModalOpen]);
+
+  useEffect(() => {
     if (!activeProjectId || activeForm !== "live_table") return;
     void loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter).catch(() => {});
     const timer = window.setInterval(() => {
@@ -1574,6 +1607,45 @@ export default function GreenWork() {
     setProjects((prev) => [res.data, ...prev]);
     setNewProject({ name: "", location_text: "", sponsor: "" });
     toast.success("Project created");
+  };
+
+  const openDeleteProjectModal = () => {
+    if (!activeProjectRecord) return;
+    setDeleteProjectConfirmName("");
+    setDeleteProjectModalOpen(true);
+  };
+
+  const closeDeleteProjectModal = () => {
+    if (deletingProject) return;
+    setDeleteProjectModalOpen(false);
+    setDeleteProjectConfirmName("");
+  };
+
+  const deleteProject = async () => {
+    if (!activeProjectRecord) return;
+    const projectId = Number(activeProjectRecord.id);
+    const projectName = String(activeProjectRecord.name || "").trim();
+    const confirmValue = deleteProjectConfirmName.trim();
+    if (!confirmValue || confirmValue !== projectName) {
+      toast.error("Type the exact project name to confirm deletion.");
+      return;
+    }
+    setDeletingProject(true);
+    try {
+      await api.delete(`/green/projects/${projectId}`, {
+        data: { confirm_name: confirmValue },
+      });
+      setDeleteProjectModalOpen(false);
+      setDeleteProjectConfirmName("");
+      clearActiveProjectContext();
+      await loadProjects();
+      setActiveForm("project_focus");
+      toast.success("Project deleted");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to delete project");
+    } finally {
+      setDeletingProject(false);
+    }
   };
 
   const createWorkOrder = async () => {
@@ -2717,6 +2789,10 @@ export default function GreenWork() {
     if (!activeProjectId) return null;
     return projects.find((p) => Number(p.id) === Number(activeProjectId)) || null;
   }, [projects, activeProjectId]);
+  const deleteProjectNameMatches = useMemo(() => {
+    if (!activeProjectRecord) return false;
+    return deleteProjectConfirmName.trim() === String(activeProjectRecord.name || "").trim();
+  }, [deleteProjectConfirmName, activeProjectRecord]);
   const selectedInspectTreeMeta = useMemo(() => {
     if (!inspectedTree) return null;
     const treeId = Number(inspectedTree.id || 0);
@@ -3182,15 +3258,7 @@ export default function GreenWork() {
                   onChange={async (e) => {
                     const value = e.target.value;
                     if (!value) {
-                      setActiveProjectId(null);
-                      setOrders([]);
-                      setTrees([]);
-                      setTasks([]);
-                      setAssigneeFilter("all");
-                      setInspectedTree(null);
-                      setCustodians([]);
-                      setDistributionEvents([]);
-                      setDistributionAllocations([]);
+                      clearActiveProjectContext();
                       return;
                     }
                     await onSelectProject(Number(value));
@@ -3209,6 +3277,13 @@ export default function GreenWork() {
                   <p className="green-work-note">
                     Active model: {formatTaskTypeLabel(activeProjectRecord.planting_model || "direct")}
                   </p>
+                )}
+                {activeProjectRecord && (
+                  <div className="work-actions green-work-project-danger-actions">
+                    <button type="button" className="green-work-danger-btn" onClick={openDeleteProjectModal}>
+                      Delete Project
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -5109,6 +5184,49 @@ export default function GreenWork() {
               </div>
             </div>
           </aside>
+        </>
+      )}
+
+      {deleteProjectModalOpen && activeProjectRecord && (
+        <>
+          <button
+            type="button"
+            className="green-work-delete-overlay"
+            onClick={closeDeleteProjectModal}
+            aria-label="Close delete project dialog"
+          />
+          <section className="green-work-delete-modal" role="dialog" aria-modal="true" aria-labelledby="green-work-delete-title">
+            <h3 id="green-work-delete-title">Delete Project</h3>
+            <p className="green-work-delete-warning">
+              Are you sure you want to delete this project? This permanently removes all related trees, tasks,
+              reports, custodians, and workflow records.
+            </p>
+            <p className="green-work-delete-target">
+              Type project name exactly to confirm:
+              <strong>{activeProjectRecord.name}</strong>
+            </p>
+            <input
+              type="text"
+              value={deleteProjectConfirmName}
+              onChange={(e) => setDeleteProjectConfirmName(e.target.value)}
+              placeholder="Type exact project name"
+              disabled={deletingProject}
+              autoFocus
+            />
+            <div className="work-actions">
+              <button type="button" onClick={closeDeleteProjectModal} disabled={deletingProject}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="green-work-danger-btn"
+                onClick={() => void deleteProject()}
+                disabled={deletingProject || !deleteProjectNameMatches}
+              >
+                {deletingProject ? "Deleting..." : "Delete Permanently"}
+              </button>
+            </div>
+          </section>
         </>
       )}
 
