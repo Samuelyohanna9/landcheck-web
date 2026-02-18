@@ -162,10 +162,9 @@ type WorkForm =
   | "overview"
   | "live_table"
   | "verra_reports"
-  | "custodians"
-  | "distribution_events"
+  | "custodian_hub"
   | "existing_tree_intake"
-  | "custodian_reports";
+  ;
 type StaffMenuState = { user: GreenUser; x: number; y: number } | null;
 type DrawerFrame = { top: number; left: number; width: number; height: number };
 type VerraExportHistoryItem = {
@@ -570,7 +569,7 @@ const renderActionIcon = (form: WorkForm) => {
           <path d="M6 3h9l3 3v15H6zM15 3v3h3M9 10h6M9 14h6M9 18h4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       );
-    case "custodians":
+    case "custodian_hub":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" strokeWidth="2" />
@@ -578,25 +577,11 @@ const renderActionIcon = (form: WorkForm) => {
           <path d="M16 8h5M18.5 5.5v5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
       );
-    case "distribution_events":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M4 12h16M12 4v16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" />
-        </svg>
-      );
     case "existing_tree_intake":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path d="M12 4l4 5h-3v8h-2V9H8l4-5z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
           <path d="M4 20h16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-      );
-    case "custodian_reports":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M6 3h9l3 3v15H6zM15 3v3h3M9 10h6M9 14h6M9 18h4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M16 18l2 2 4-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
       );
     default:
@@ -816,15 +801,17 @@ export default function GreenWork() {
   const storedProjectIdRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_active_project_id") || "" : "";
   const storedProjectId = Number(storedProjectIdRaw || "0");
   const storedFormRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_active_form") || "" : "";
+  const storedFormNormalized =
+    storedFormRaw === "custodians" || storedFormRaw === "distribution_events" || storedFormRaw === "custodian_reports"
+      ? "custodian_hub"
+      : storedFormRaw;
   const storedAssigneeFilter = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_assignee_filter") || "all" : "all";
   const storedSeason = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_season_mode") || "rainy" : "rainy";
   const allowedForms: WorkForm[] = [
     "project_focus",
     "create_project",
-    "custodians",
-    "distribution_events",
+    "custodian_hub",
     "existing_tree_intake",
-    "custodian_reports",
     "add_user",
     "users",
     "assign_work",
@@ -975,7 +962,7 @@ export default function GreenWork() {
   const [inspectedTree, setInspectedTree] = useState<TreeInspectData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeForm, setActiveForm] = useState<WorkForm | null>(
-    allowedForms.includes(storedFormRaw as WorkForm) ? (storedFormRaw as WorkForm) : null
+    allowedForms.includes(storedFormNormalized as WorkForm) ? (storedFormNormalized as WorkForm) : null
   );
   const [staffMenu, setStaffMenu] = useState<StaffMenuState>(null);
   const [liveTreeMenu, setLiveTreeMenu] = useState<LiveTreeMenuState>(null);
@@ -2653,10 +2640,8 @@ export default function GreenWork() {
     { form: "add_user", title: "Add Staff", note: "Create user profile" },
     { form: "assign_work", title: "Planting Orders", note: "Assign planting targets" },
     { form: "assign_task", title: "Maintenance", note: "Assign maintenance tasks" },
-    { form: "custodians", title: "Custodians", note: "Registry + verification" },
-    { form: "distribution_events", title: "Distributed Events", note: "Distribution + allocations" },
+    { form: "custodian_hub", title: "Custodian Hub", note: "Overview + custodians + events + report" },
     { form: "existing_tree_intake", title: "Existing Trees", note: "Imported/intake records" },
-    { form: "custodian_reports", title: "Custodian Reports", note: "Community PDF report" },
     { form: "verra_reports", title: "Verra Reports", note: "VCS package + history" },
     { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
   ];
@@ -3152,18 +3137,11 @@ export default function GreenWork() {
               Live Maintenance Table
             </button>
             <button
-              className={`green-work-menu-item ${activeForm === "custodians" ? "active" : ""}`}
+              className={`green-work-menu-item ${activeForm === "custodian_hub" ? "active" : ""}`}
               type="button"
-              onClick={() => openForm("custodians")}
+              onClick={() => openForm("custodian_hub")}
             >
-              Custodians
-            </button>
-            <button
-              className={`green-work-menu-item ${activeForm === "distribution_events" ? "active" : ""}`}
-              type="button"
-              onClick={() => openForm("distribution_events")}
-            >
-              Distributed Events
+              Custodian Hub
             </button>
             <button
               className={`green-work-menu-item ${activeForm === "existing_tree_intake" ? "active" : ""}`}
@@ -3171,13 +3149,6 @@ export default function GreenWork() {
               onClick={() => openForm("existing_tree_intake")}
             >
               Existing Trees
-            </button>
-            <button
-              className={`green-work-menu-item ${activeForm === "custodian_reports" ? "active" : ""}`}
-              type="button"
-              onClick={() => openForm("custodian_reports")}
-            >
-              Custodian Reports
             </button>
             <button
               className={`green-work-menu-item ${activeForm === "verra_reports" ? "active" : ""}`}
@@ -3375,7 +3346,7 @@ export default function GreenWork() {
                   )}
                   {(showCommunityWorkflow || showImportWorkflow) && (
                     <p className="green-work-note">
-                      Community workflow now runs in dedicated tabs: Custodians, Distributed Events, and Existing Trees.
+                      Community workflow now runs in one Custodian Hub tab, plus Existing Trees where needed.
                     </p>
                   )}
 
@@ -3683,240 +3654,269 @@ export default function GreenWork() {
             </>
           )}
 
-          {activeForm === "custodians" && (
-            <div className="green-work-card">
-              <h3>Custodians</h3>
-              {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
-              <p className="green-work-note">
-                Custodian records are separate from staff users and do not change Live Maintenance rows.
-              </p>
-              <select
-                value={newCustodian.custodian_type}
-                onChange={(e) =>
-                  setNewCustodian((prev) => ({ ...prev, custodian_type: e.target.value as CustodianType }))
-                }
-                disabled={!activeProjectId}
-              >
-                <option value="household">Household</option>
-                <option value="school">School</option>
-                <option value="community_group">Community Group</option>
-              </select>
-              <input
-                placeholder="Custodian name"
-                value={newCustodian.name}
-                onChange={(e) => setNewCustodian((prev) => ({ ...prev, name: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <input
-                placeholder="Contact person"
-                value={newCustodian.contact_person}
-                onChange={(e) => setNewCustodian((prev) => ({ ...prev, contact_person: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <input
-                placeholder="Primary phone"
-                value={newCustodian.phone}
-                onChange={(e) => setNewCustodian((prev) => ({ ...prev, phone: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <input
-                placeholder="Alternate phone"
-                value={newCustodian.alt_phone}
-                onChange={(e) => setNewCustodian((prev) => ({ ...prev, alt_phone: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <input
-                placeholder="Email"
-                value={newCustodian.email}
-                onChange={(e) => setNewCustodian((prev) => ({ ...prev, email: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <input
-                placeholder="Community / School name"
-                value={newCustodian.community_name}
-                onChange={(e) => setNewCustodian((prev) => ({ ...prev, community_name: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <input
-                placeholder="Local government area"
-                value={newCustodian.local_government}
-                onChange={(e) => setNewCustodian((prev) => ({ ...prev, local_government: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <input
-                placeholder="Address"
-                value={newCustodian.address_text}
-                onChange={(e) => setNewCustodian((prev) => ({ ...prev, address_text: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <textarea
-                placeholder="Notes"
-                value={newCustodian.notes}
-                onChange={(e) => setNewCustodian((prev) => ({ ...prev, notes: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <button className="btn-primary" type="button" onClick={() => void createCustodian()} disabled={!activeProjectId}>
-                Add Custodian
-              </button>
-              <div className="staff-list">
-                {custodians.length === 0 ? (
-                  <p className="green-work-note">No custodians yet in this project.</p>
-                ) : (
-                  custodians.map((custodian) => (
-                    <div key={`custodian-tab-${custodian.id}`} className="staff-row">
-                      <div className="staff-row-head">
-                        <strong>{custodian.name}</strong>
-                        <span>{formatTaskTypeLabel(custodian.custodian_type)}</span>
-                      </div>
-                      <div className="staff-row-meta">
-                        Contact: {custodian.contact_person || "-"} | {custodian.phone || "-"} | {custodian.email || "-"}
-                      </div>
-                      <div className="staff-row-meta">
-                        Community: {custodian.community_name || "-"} | LGA: {custodian.local_government || "-"}
-                      </div>
-                      <div className="staff-row-meta">
-                        Verification: {custodian.verification_status || "pending"}
-                      </div>
-                      {custodian.notes && <div className="staff-row-meta">Notes: {custodian.notes}</div>}
-                      <div className="work-actions">
-                        <button type="button" onClick={() => void updateCustodianVerification(custodian.id, "verified")}>
-                          Mark Verified
-                        </button>
-                        <button type="button" onClick={() => void updateCustodianVerification(custodian.id, "pending")}>
-                          Mark Pending
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
+          {activeForm === "custodian_hub" && (
+            <>
+              <div className="green-work-card">
+                <h3>Custodian Live Overview</h3>
+                {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
+                <div className="green-work-flow-summary">
+                  <span className="green-work-flow-pill">Custodians: {custodianSummary.totalCustodians}</span>
+                  <span className="green-work-flow-pill">Verified: {custodianSummary.verifiedCustodians}</span>
+                  <span className="green-work-flow-pill">Events: {custodianSummary.totalEvents}</span>
+                  <span className="green-work-flow-pill">Allocations: {custodianSummary.totalAllocations}</span>
+                  <span className="green-work-flow-pill">Seedlings: {custodianSummary.allocatedSeedlings}</span>
+                  <span className="green-work-flow-pill">Existing Trees: {custodianSummary.existingTrees}</span>
+                </div>
+                <p className="green-work-note">
+                  One hub for monitoring, custodian registration, distribution events, and custodian PDF export.
+                </p>
               </div>
-            </div>
-          )}
 
-          {activeForm === "distribution_events" && (
-            <div className="green-work-card">
-              <h3>Distributed Events</h3>
-              {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
-              <p className="green-work-note">
-                Distribution tracking is kept separate so supervisor monitoring stays clear.
-              </p>
-              <input
-                type="date"
-                value={newDistributionEvent.event_date}
-                onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, event_date: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <input
-                placeholder="Species (optional)"
-                value={newDistributionEvent.species}
-                onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, species: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <input
-                type="number"
-                min={0}
-                placeholder="Quantity"
-                value={newDistributionEvent.quantity}
-                onChange={(e) =>
-                  setNewDistributionEvent((prev) => ({ ...prev, quantity: Number(e.target.value || 0) }))
-                }
-                disabled={!activeProjectId}
-              />
-              <input
-                placeholder="Batch reference"
-                value={newDistributionEvent.source_batch_ref}
-                onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, source_batch_ref: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <input
-                placeholder="Distributed by"
-                value={newDistributionEvent.distributed_by}
-                onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, distributed_by: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <textarea
-                placeholder="Distribution notes"
-                value={newDistributionEvent.notes}
-                onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, notes: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <button className="btn-primary" type="button" onClick={() => void createDistributionEvent()} disabled={!activeProjectId}>
-                Create Distribution Event
-              </button>
+              <div className="green-work-card">
+                <h3>Add Custodian</h3>
+                {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
+                <p className="green-work-note">
+                  Custodian records are separate from staff users and do not change Live Maintenance rows.
+                </p>
+                <select
+                  value={newCustodian.custodian_type}
+                  onChange={(e) =>
+                    setNewCustodian((prev) => ({ ...prev, custodian_type: e.target.value as CustodianType }))
+                  }
+                  disabled={!activeProjectId}
+                >
+                  <option value="household">Household</option>
+                  <option value="school">School</option>
+                  <option value="community_group">Community Group</option>
+                </select>
+                <input
+                  placeholder="Custodian name"
+                  value={newCustodian.name}
+                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, name: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <input
+                  placeholder="Contact person"
+                  value={newCustodian.contact_person}
+                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, contact_person: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <input
+                  placeholder="Primary phone"
+                  value={newCustodian.phone}
+                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, phone: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <input
+                  placeholder="Alternate phone"
+                  value={newCustodian.alt_phone}
+                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, alt_phone: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <input
+                  placeholder="Email"
+                  value={newCustodian.email}
+                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, email: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <input
+                  placeholder="Community / School name"
+                  value={newCustodian.community_name}
+                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, community_name: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <input
+                  placeholder="Local government area"
+                  value={newCustodian.local_government}
+                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, local_government: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <input
+                  placeholder="Address"
+                  value={newCustodian.address_text}
+                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, address_text: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <textarea
+                  placeholder="Notes"
+                  value={newCustodian.notes}
+                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, notes: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <button className="btn-primary" type="button" onClick={() => void createCustodian()} disabled={!activeProjectId}>
+                  Add Custodian
+                </button>
+                <div className="staff-list">
+                  {custodians.length === 0 ? (
+                    <p className="green-work-note">No custodians yet in this project.</p>
+                  ) : (
+                    custodians.map((custodian) => (
+                      <div key={`custodian-tab-${custodian.id}`} className="staff-row">
+                        <div className="staff-row-head">
+                          <strong>{custodian.name}</strong>
+                          <span>{formatTaskTypeLabel(custodian.custodian_type)}</span>
+                        </div>
+                        <div className="staff-row-meta">
+                          Contact: {custodian.contact_person || "-"} | {custodian.phone || "-"} | {custodian.email || "-"}
+                        </div>
+                        <div className="staff-row-meta">
+                          Community: {custodian.community_name || "-"} | LGA: {custodian.local_government || "-"}
+                        </div>
+                        <div className="staff-row-meta">
+                          Verification: {custodian.verification_status || "pending"}
+                        </div>
+                        {custodian.notes && <div className="staff-row-meta">Notes: {custodian.notes}</div>}
+                        <div className="work-actions">
+                          <button type="button" onClick={() => void updateCustodianVerification(custodian.id, "verified")}>
+                            Mark Verified
+                          </button>
+                          <button type="button" onClick={() => void updateCustodianVerification(custodian.id, "pending")}>
+                            Mark Pending
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
 
-              <h4>Allocate Seedlings</h4>
-              <select
-                value={newAllocation.event_id}
-                onChange={(e) => setNewAllocation((prev) => ({ ...prev, event_id: e.target.value }))}
-                disabled={!activeProjectId || distributionEvents.length === 0}
-              >
-                <option value="">Select event</option>
-                {distributionEvents.map((event) => (
-                  <option key={`dist-event-${event.id}`} value={event.id}>
-                    {event.event_date} | {event.species || "Mixed"} | Qty {event.quantity}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={newAllocation.custodian_id}
-                onChange={(e) => setNewAllocation((prev) => ({ ...prev, custodian_id: e.target.value }))}
-                disabled={!activeProjectId || custodians.length === 0}
-              >
-                <option value="">Select custodian</option>
-                {custodians.map((custodian) => (
-                  <option key={`dist-custodian-${custodian.id}`} value={custodian.id}>
-                    {custodian.name} ({formatTaskTypeLabel(custodian.custodian_type)})
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                min={0}
-                placeholder="Allocated quantity"
-                value={newAllocation.quantity_allocated}
-                onChange={(e) =>
-                  setNewAllocation((prev) => ({ ...prev, quantity_allocated: Number(e.target.value || 0) }))
-                }
-                disabled={!activeProjectId}
-              />
-              <input
-                type="date"
-                value={newAllocation.expected_planting_start}
-                onChange={(e) => setNewAllocation((prev) => ({ ...prev, expected_planting_start: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <input
-                type="date"
-                value={newAllocation.expected_planting_end}
-                onChange={(e) => setNewAllocation((prev) => ({ ...prev, expected_planting_end: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <input
-                type="number"
-                min={1}
-                placeholder="Follow-up cycle days"
-                value={newAllocation.followup_cycle_days}
-                onChange={(e) =>
-                  setNewAllocation((prev) => ({ ...prev, followup_cycle_days: Number(e.target.value || 14) }))
-                }
-                disabled={!activeProjectId}
-              />
-              <textarea
-                placeholder="Allocation notes"
-                value={newAllocation.notes}
-                onChange={(e) => setNewAllocation((prev) => ({ ...prev, notes: e.target.value }))}
-                disabled={!activeProjectId}
-              />
-              <button
-                className="btn-primary"
-                type="button"
-                disabled={!activeProjectId || distributionEvents.length === 0 || custodians.length === 0}
-                onClick={() => void upsertDistributionAllocation()}
-              >
-                Save Allocation
-              </button>
-              <p className="green-work-note">Saved allocations: {distributionAllocations.length}</p>
-            </div>
+              <div className="green-work-card">
+                <h3>Distributed Events</h3>
+                {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
+                <p className="green-work-note">
+                  Distribution tracking is kept separate so supervisor monitoring stays clear.
+                </p>
+                <input
+                  type="date"
+                  value={newDistributionEvent.event_date}
+                  onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, event_date: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <input
+                  placeholder="Species (optional)"
+                  value={newDistributionEvent.species}
+                  onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, species: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Quantity"
+                  value={newDistributionEvent.quantity}
+                  onChange={(e) =>
+                    setNewDistributionEvent((prev) => ({ ...prev, quantity: Number(e.target.value || 0) }))
+                  }
+                  disabled={!activeProjectId}
+                />
+                <input
+                  placeholder="Batch reference"
+                  value={newDistributionEvent.source_batch_ref}
+                  onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, source_batch_ref: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <input
+                  placeholder="Distributed by"
+                  value={newDistributionEvent.distributed_by}
+                  onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, distributed_by: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <textarea
+                  placeholder="Distribution notes"
+                  value={newDistributionEvent.notes}
+                  onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, notes: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <button className="btn-primary" type="button" onClick={() => void createDistributionEvent()} disabled={!activeProjectId}>
+                  Create Distribution Event
+                </button>
+
+                <h4>Allocate Seedlings</h4>
+                <select
+                  value={newAllocation.event_id}
+                  onChange={(e) => setNewAllocation((prev) => ({ ...prev, event_id: e.target.value }))}
+                  disabled={!activeProjectId || distributionEvents.length === 0}
+                >
+                  <option value="">Select event</option>
+                  {distributionEvents.map((event) => (
+                    <option key={`dist-event-${event.id}`} value={event.id}>
+                      {event.event_date} | {event.species || "Mixed"} | Qty {event.quantity}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={newAllocation.custodian_id}
+                  onChange={(e) => setNewAllocation((prev) => ({ ...prev, custodian_id: e.target.value }))}
+                  disabled={!activeProjectId || custodians.length === 0}
+                >
+                  <option value="">Select custodian</option>
+                  {custodians.map((custodian) => (
+                    <option key={`dist-custodian-${custodian.id}`} value={custodian.id}>
+                      {custodian.name} ({formatTaskTypeLabel(custodian.custodian_type)})
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Allocated quantity"
+                  value={newAllocation.quantity_allocated}
+                  onChange={(e) =>
+                    setNewAllocation((prev) => ({ ...prev, quantity_allocated: Number(e.target.value || 0) }))
+                  }
+                  disabled={!activeProjectId}
+                />
+                <input
+                  type="date"
+                  value={newAllocation.expected_planting_start}
+                  onChange={(e) => setNewAllocation((prev) => ({ ...prev, expected_planting_start: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <input
+                  type="date"
+                  value={newAllocation.expected_planting_end}
+                  onChange={(e) => setNewAllocation((prev) => ({ ...prev, expected_planting_end: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="Follow-up cycle days"
+                  value={newAllocation.followup_cycle_days}
+                  onChange={(e) =>
+                    setNewAllocation((prev) => ({ ...prev, followup_cycle_days: Number(e.target.value || 14) }))
+                  }
+                  disabled={!activeProjectId}
+                />
+                <textarea
+                  placeholder="Allocation notes"
+                  value={newAllocation.notes}
+                  onChange={(e) => setNewAllocation((prev) => ({ ...prev, notes: e.target.value }))}
+                  disabled={!activeProjectId}
+                />
+                <button
+                  className="btn-primary"
+                  type="button"
+                  disabled={!activeProjectId || distributionEvents.length === 0 || custodians.length === 0}
+                  onClick={() => void upsertDistributionAllocation()}
+                >
+                  Save Allocation
+                </button>
+                <p className="green-work-note">Saved allocations: {distributionAllocations.length}</p>
+              </div>
+
+              <div className="green-work-card">
+                <h3>Custodian Report</h3>
+                {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
+                <p className="green-work-note">
+                  Export includes custodians, distribution history, and Existing Tree intake only.
+                </p>
+                <div className="work-actions">
+                  <button type="button" onClick={exportCustodianPdf} disabled={!activeProjectId}>
+                    Export Custodian PDF
+                  </button>
+                </div>
+              </div>
+            </>
           )}
 
           {activeForm === "existing_tree_intake" && (
@@ -4063,29 +4063,6 @@ export default function GreenWork() {
                     )}
                   </tbody>
                 </table>
-              </div>
-            </div>
-          )}
-
-          {activeForm === "custodian_reports" && (
-            <div className="green-work-card">
-              <h3>Custodian Reports</h3>
-              {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
-              <div className="green-work-flow-summary">
-                <span className="green-work-flow-pill">Custodians: {custodianSummary.totalCustodians}</span>
-                <span className="green-work-flow-pill">Verified: {custodianSummary.verifiedCustodians}</span>
-                <span className="green-work-flow-pill">Events: {custodianSummary.totalEvents}</span>
-                <span className="green-work-flow-pill">Allocations: {custodianSummary.totalAllocations}</span>
-                <span className="green-work-flow-pill">Seedlings: {custodianSummary.allocatedSeedlings}</span>
-                <span className="green-work-flow-pill">Existing Trees: {custodianSummary.existingTrees}</span>
-              </div>
-              <p className="green-work-note">
-                Export includes custodians, distribution history, and Existing Tree intake only.
-              </p>
-              <div className="work-actions">
-                <button type="button" onClick={exportCustodianPdf} disabled={!activeProjectId}>
-                  Export Custodian PDF
-                </button>
               </div>
             </div>
           )}
