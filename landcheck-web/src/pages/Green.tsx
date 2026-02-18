@@ -837,6 +837,17 @@ export default function Green() {
     });
   };
 
+  const primeWorkExistingTreeView = (projectId: number, treeId?: number | null) => {
+    if (typeof window === "undefined" || !projectId) return;
+    localStorage.setItem("landcheck_work_active_project_id", String(projectId));
+    localStorage.setItem("landcheck_work_active_form", "existing_tree_intake");
+    localStorage.setItem("landcheck_work_existing_tree_refresh_at", String(Date.now()));
+    const normalizedTreeId = Number(treeId || 0);
+    if (Number.isFinite(normalizedTreeId) && normalizedTreeId > 0) {
+      localStorage.setItem("landcheck_work_existing_tree_focus_id", String(normalizedTreeId));
+    }
+  };
+
   const addTree = async () => {
     if (!activeProject) return;
     if (addingTree) return;
@@ -902,6 +913,9 @@ export default function Green() {
       setPhotoPreview("");
       setPendingTreePhoto(null);
       await loadProjectDetail(activeProject.id);
+      if (treePayload.tree_origin === "existing_inventory") {
+        primeWorkExistingTreeView(activeProject.id, createdTreeId);
+      }
       if (activeProject && activeUser) {
         await loadWorkOrders(activeProject.id, activeUser).catch(() => setPlantingOrders([]));
       }
@@ -938,6 +952,9 @@ export default function Green() {
           resetNewTreeForm();
           setPhotoPreview("");
           setPendingTreePhoto(null);
+          if (treePayload.tree_origin === "existing_inventory") {
+            primeWorkExistingTreeView(activeProject.id, queued.tempTree?.id || null);
+          }
           setPlantingFlowMessage(
             treePayload.tree_origin === "existing_inventory"
               ? "Existing tree saved offline and will sync automatically."

@@ -1570,6 +1570,57 @@ export default function GreenWork() {
   }, [seasonMode]);
 
   useEffect(() => {
+    const handleCrossTabWorkContext = (event: StorageEvent) => {
+      if (
+        !event.key ||
+        (event.key !== "landcheck_work_active_project_id" &&
+          event.key !== "landcheck_work_active_form" &&
+          event.key !== "landcheck_work_existing_tree_refresh_at")
+      ) {
+        return;
+      }
+
+      const rawForm = localStorage.getItem("landcheck_work_active_form") || "";
+      const normalizedForm =
+        rawForm === "custodians" || rawForm === "distribution_events" || rawForm === "custodian_reports"
+          ? "custodian_hub"
+          : rawForm;
+      const validForms: WorkForm[] = [
+        "project_focus",
+        "create_project",
+        "custodian_hub",
+        "existing_tree_intake",
+        "add_user",
+        "users",
+        "assign_work",
+        "assign_task",
+        "review_queue",
+        "overview",
+        "live_table",
+        "verra_reports",
+      ];
+      const nextForm = validForms.includes(normalizedForm as WorkForm) ? (normalizedForm as WorkForm) : null;
+      const nextProjectId = Number(localStorage.getItem("landcheck_work_active_project_id") || "0");
+
+      if (nextForm && nextForm !== activeForm) {
+        setActiveForm(nextForm);
+      }
+
+      if (Number.isFinite(nextProjectId) && nextProjectId > 0) {
+        if (Number(nextProjectId) !== Number(activeProjectId || 0)) {
+          setActiveProjectId(nextProjectId);
+        }
+        if (nextForm === "existing_tree_intake" || event.key === "landcheck_work_existing_tree_refresh_at") {
+          void loadProjectData(nextProjectId).catch(() => {});
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleCrossTabWorkContext);
+    return () => window.removeEventListener("storage", handleCrossTabWorkContext);
+  }, [activeForm, activeProjectId, loadProjectData]);
+
+  useEffect(() => {
     if (!staffMenu && !liveTreeMenu) return;
     const closeMenu = () => {
       setStaffMenu(null);
