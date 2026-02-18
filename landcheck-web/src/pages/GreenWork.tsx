@@ -3296,7 +3296,7 @@ export default function GreenWork() {
                       className="green-work-option-toggle"
                       onClick={() => setShowProjectDangerOptions((prev) => !prev)}
                     >
-                      {showProjectDangerOptions ? "Hide Project Options" : "Project Options (Setup + Delete)"}
+                      {showProjectDangerOptions ? "Hide Project Options" : "Project Options"}
                     </button>
                     {showProjectDangerOptions && (
                       <p className="green-work-note">
