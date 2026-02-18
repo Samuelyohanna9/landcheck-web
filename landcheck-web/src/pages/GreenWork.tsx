@@ -3309,6 +3309,18 @@ export default function GreenWork() {
 
               {activeProjectId && showProjectDangerOptions && (
                 <>
+                  <div className="green-work-card green-work-project-danger-zone">
+                    <h3>Delete Project</h3>
+                    <p className="green-work-note danger">
+                      Permanent action. This will remove project data and cannot be undone.
+                    </p>
+                    <div className="work-actions green-work-project-danger-actions">
+                      <button type="button" className="green-work-danger-btn" onClick={openDeleteProjectModal}>
+                        Delete Project
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="green-work-card green-work-project-flow-card">
                     <h3>Workflow State</h3>
                     <div className="green-work-flow-summary">
@@ -3837,27 +3849,15 @@ export default function GreenWork() {
                 <p className="green-work-note">Saved allocations: {distributionAllocations.length}</p>
               </div>
 
-              <div className="green-work-card">
-                <h3>Custodian Report</h3>
-                {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
-                <p className="green-work-note">
-                  Export includes custodians, distribution history, and Existing Tree intake only.
+                  <div className="green-work-card">
+                    <h3>Custodian Report</h3>
+                    {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
+                    <p className="green-work-note">
+                      Export includes custodians, distribution history, and Existing Tree intake only.
                 </p>
                 <div className="work-actions">
-                  <button type="button" onClick={exportCustodianPdf} disabled={!activeProjectId}>
-                    Export Custodian PDF
-                  </button>
-                    </div>
-                  </div>
-
-                  <div className="green-work-card green-work-project-danger-zone">
-                    <h3>Delete Project</h3>
-                    <p className="green-work-note danger">
-                      Permanent action. This will remove project data and cannot be undone.
-                    </p>
-                    <div className="work-actions green-work-project-danger-actions">
-                      <button type="button" className="green-work-danger-btn" onClick={openDeleteProjectModal}>
-                        Delete Project
+                      <button type="button" onClick={exportCustodianPdf} disabled={!activeProjectId}>
+                        Export Custodian PDF
                       </button>
                     </div>
                   </div>
