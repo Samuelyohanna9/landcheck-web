@@ -3296,10 +3296,12 @@ export default function GreenWork() {
                       className="green-work-option-toggle"
                       onClick={() => setShowProjectDangerOptions((prev) => !prev)}
                     >
-                      {showProjectDangerOptions ? "Hide Project Options" : "Project Options"}
+                      {showProjectDangerOptions ? "Hide Project Options" : "Project Options (Setup + Delete)"}
                     </button>
                     {showProjectDangerOptions && (
-                      <p className="green-work-note">Workflow setup options are now visible below.</p>
+                      <p className="green-work-note">
+                        Workflow setup options are now visible below. Delete Project is in the final card at the bottom.
+                      </p>
                     )}
                   </div>
                 )}
