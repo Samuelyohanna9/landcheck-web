@@ -3309,18 +3309,6 @@ export default function GreenWork() {
 
               {activeProjectId && showProjectDangerOptions && (
                 <>
-                  <div className="green-work-card green-work-project-danger-zone">
-                    <h3>Delete Project</h3>
-                    <p className="green-work-note danger">
-                      Permanent action. This will remove project data and cannot be undone.
-                    </p>
-                    <div className="work-actions green-work-project-danger-actions">
-                      <button type="button" className="green-work-danger-btn" onClick={openDeleteProjectModal}>
-                        Delete Project
-                      </button>
-                    </div>
-                  </div>
-
                   <div className="green-work-card green-work-project-flow-card">
                     <h3>Workflow State</h3>
                     <div className="green-work-flow-summary">
@@ -3581,6 +3569,18 @@ export default function GreenWork() {
 
                     </>
                   )}
+
+                  <div className="green-work-card green-work-project-danger-zone">
+                    <h3>Delete Project</h3>
+                    <p className="green-work-note danger">
+                      Permanent action. This will remove project data and cannot be undone.
+                    </p>
+                    <div className="work-actions green-work-project-danger-actions">
+                      <button type="button" className="green-work-danger-btn" onClick={openDeleteProjectModal}>
+                        Delete Project
+                      </button>
+                    </div>
+                  </div>
                 </>
               )}
             </>
