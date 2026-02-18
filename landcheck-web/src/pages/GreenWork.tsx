@@ -949,6 +949,7 @@ export default function GreenWork() {
   const [treePhotoUploading, setTreePhotoUploading] = useState(false);
   const [drawerFrame, setDrawerFrame] = useState<DrawerFrame | null>(null);
   const [reviewQueue, setReviewQueue] = useState<ReviewQueueTask[]>([]);
+  const [includePhotosInWorkPdf, setIncludePhotosInWorkPdf] = useState(false);
   const [alertsSummary, setAlertsSummary] = useState<{ total: number; danger: number; warning: number; info: number }>({
     total: 0,
     danger: 0,
@@ -1854,6 +1855,9 @@ export default function GreenWork() {
     const params = new URLSearchParams({
       project_id: String(activeProjectId),
     });
+    if (includePhotosInWorkPdf) {
+      params.set("include_photos", "true");
+    }
     if (assigneeFilter !== "all") {
       params.set("assignee_name", assigneeFilter);
     }
@@ -4029,6 +4033,14 @@ export default function GreenWork() {
                   <button onClick={exportWorkCsv}>Export CSV</button>
                   <button onClick={exportWorkPdf}>Export PDF</button>
                   <button onClick={exportWorkVerra}>Export Verra VCS</button>
+                  <label className="green-work-export-photo-toggle">
+                    <input
+                      type="checkbox"
+                      checked={includePhotosInWorkPdf}
+                      onChange={(e) => setIncludePhotosInWorkPdf(e.target.checked)}
+                    />
+                    <span>Include photos (appendix)</span>
+                  </label>
                   <select
                     value={assigneeFilter}
                     onChange={(e) => setAssigneeFilter(e.target.value)}

@@ -405,6 +405,7 @@ export default function Green() {
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator === "undefined" ? true : navigator.onLine);
   const [treeHeightDraftById, setTreeHeightDraftById] = useState<Record<number, string>>({});
   const [savingTreeHeightId, setSavingTreeHeightId] = useState<number | null>(null);
+  const [includePhotosInReport, setIncludePhotosInReport] = useState(false);
 
   const treePoints = useMemo(() => {
     if (!activeUser) return [];
@@ -1321,6 +1322,9 @@ export default function Green() {
       assignee_name: activeUser,
       _ts: String(Date.now()),
     });
+    if (includePhotosInReport) {
+      params.set("include_photos", "true");
+    }
     window.open(`${BACKEND_URL}/green/projects/${activeProject.id}/donor-report/pdf?${params.toString()}`, "_blank");
   };
 
@@ -2189,6 +2193,14 @@ export default function Green() {
                 <div className="green-profile-export">
                   <h4>My Report Export</h4>
                   <p>Export PDF includes only this selected user&apos;s work in the selected project.</p>
+                  <label className="green-profile-export-toggle">
+                    <input
+                      type="checkbox"
+                      checked={includePhotosInReport}
+                      onChange={(e) => setIncludePhotosInReport(e.target.checked)}
+                    />
+                    <span>Include tree photos in appendix (6 per page)</span>
+                  </label>
                   <button
                     className="green-btn-primary"
                     type="button"
@@ -2204,6 +2216,7 @@ export default function Green() {
                       Filter: {activeUser} ({activeProject.name})
                     </small>
                   )}
+                  {includePhotosInReport && <small>Photo pages are appended after analytics and record pages.</small>}
                 </div>
               </>
             )}
