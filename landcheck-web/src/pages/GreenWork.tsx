@@ -959,6 +959,7 @@ export default function GreenWork() {
   const [deleteProjectModalOpen, setDeleteProjectModalOpen] = useState(false);
   const [deleteProjectConfirmName, setDeleteProjectConfirmName] = useState("");
   const [deletingProject, setDeletingProject] = useState(false);
+  const [showProjectDangerOptions, setShowProjectDangerOptions] = useState(false);
   const [alertsSummary, setAlertsSummary] = useState<{ total: number; danger: number; warning: number; info: number }>({
     total: 0,
     danger: 0,
@@ -1566,6 +1567,10 @@ export default function GreenWork() {
     }
     void loadCommunityData(activeProjectId).catch(() => {});
   }, [activeProjectId, loadCommunityData]);
+
+  useEffect(() => {
+    setShowProjectDangerOptions(false);
+  }, [activeProjectId]);
 
   useEffect(() => {
     setTreeMetaDraftById((prev) => {
@@ -3279,10 +3284,21 @@ export default function GreenWork() {
                   </p>
                 )}
                 {activeProjectRecord && (
-                  <div className="work-actions green-work-project-danger-actions">
-                    <button type="button" className="green-work-danger-btn" onClick={openDeleteProjectModal}>
-                      Delete Project
+                  <div className="green-work-project-options">
+                    <button
+                      type="button"
+                      className="green-work-option-toggle"
+                      onClick={() => setShowProjectDangerOptions((prev) => !prev)}
+                    >
+                      {showProjectDangerOptions ? "Hide Project Options" : "Project Options"}
                     </button>
+                    {showProjectDangerOptions && (
+                      <div className="work-actions green-work-project-danger-actions">
+                        <button type="button" className="green-work-danger-btn" onClick={openDeleteProjectModal}>
+                          Delete Project
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
