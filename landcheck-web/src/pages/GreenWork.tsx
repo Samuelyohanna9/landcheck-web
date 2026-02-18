@@ -107,25 +107,8 @@ type DistributionAllocation = {
   created_at?: string;
 };
 
-type ExistingTreeCandidate = {
-  id: number;
-  project_id: number;
-  species?: string | null;
-  planting_date?: string | null;
-  status: string;
-  tree_origin?: string | null;
-  tree_height_m?: number | null;
-  created_by?: string | null;
-  created_at?: string;
-  source_project_id?: number | null;
-  lng: number;
-  lat: number;
-  already_referenced?: boolean;
-};
-
 type PlantingModel = "direct" | "community_distributed" | "mixed";
 type ExistingScopeValue = "exclude_from_planting_kpi" | "include_in_planting_kpi";
-type TreeImportMode = "reference" | "transfer";
 
 type WorkTask = {
   id: number;
@@ -910,22 +893,6 @@ export default function GreenWork() {
     followup_cycle_days: 14,
     notes: "",
   });
-  const [existingCandidates, setExistingCandidates] = useState<ExistingTreeCandidate[]>([]);
-  const [selectedCandidateIds, setSelectedCandidateIds] = useState<number[]>([]);
-  const [importSourceProjectId, setImportSourceProjectId] = useState<number | null>(null);
-  const [allowExistingToggleSaving, setAllowExistingToggleSaving] = useState(false);
-  const [importForm, setImportForm] = useState<{
-    mode: TreeImportMode;
-    attribution_scope: "full" | "monitor_only";
-    count_in_planting_kpis: boolean;
-    count_in_carbon_scope: boolean;
-  }>({
-    mode: "reference",
-    attribution_scope: "monitor_only",
-    count_in_planting_kpis: false,
-    count_in_carbon_scope: true,
-  });
-  const [importLoading, setImportLoading] = useState(false);
   const [projectSetupExpanded, setProjectSetupExpanded] = useState(false);
   const [treeMetaDraftById, setTreeMetaDraftById] = useState<
     Record<
@@ -1220,79 +1187,15 @@ export default function GreenWork() {
     );
   }, []);
 
-  const loadExistingCandidates = useCallback(
-    async (targetProjectId: number, sourceProjectId: number | null) => {
-      if (!targetProjectId || !sourceProjectId || Number(sourceProjectId) === Number(targetProjectId)) {
-        setExistingCandidates([]);
-        setSelectedCandidateIds([]);
-        return;
-      }
-      try {
-        const res = await api.get(
-          `/green/projects/${targetProjectId}/existing-tree-candidates?source_project_id=${sourceProjectId}`
-        );
-        const rows = Array.isArray(res.data?.items) ? res.data.items : [];
-        setExistingCandidates(rows);
-        setSelectedCandidateIds([]);
-      } catch {
-        setExistingCandidates([]);
-        setSelectedCandidateIds([]);
-        toast.error("Failed to load Existing Tree candidates");
-      }
-    },
-    [],
-  );
-
-  const setAllowExistingTreeLink = async (nextValue: boolean) => {
-    setProjectSettingsDraft((prev) => ({ ...prev, allow_existing_tree_link: nextValue }));
-    if (!activeProjectId) return;
-
-    setAllowExistingToggleSaving(true);
-    try {
-      const res = await api.patch(`/green/projects/${activeProjectId}/settings`, {
-        allow_existing_tree_link: nextValue,
-      });
-      const persisted = Boolean(res.data?.allow_existing_tree_link ?? nextValue);
-      setProjects((prev) =>
-        prev.map((item) => (Number(item.id) === Number(activeProjectId) ? { ...item, ...res.data } : item))
-      );
-      setProjectSettingsDraft((prev) => ({
-        ...prev,
-        allow_existing_tree_link: persisted,
-      }));
-      if (!persisted) {
-        setImportSourceProjectId(null);
-        setExistingCandidates([]);
-        setSelectedCandidateIds([]);
-      }
-      toast.success(persisted ? "Existing Tree import enabled" : "Existing Tree import disabled");
-    } catch (error: any) {
-      setProjectSettingsDraft((prev) => ({
-        ...prev,
-        allow_existing_tree_link: !nextValue,
-      }));
-      toast.error(error?.response?.data?.detail || "Failed to update import setting");
-    } finally {
-      setAllowExistingToggleSaving(false);
-    }
-  };
-
   const saveProjectSettings = async () => {
     if (!activeProjectId) return;
     try {
       const res = await api.patch(`/green/projects/${activeProjectId}/settings`, {
         planting_model: projectSettingsDraft.planting_model,
-        allow_existing_tree_link: projectSettingsDraft.allow_existing_tree_link,
-        default_existing_tree_scope: projectSettingsDraft.default_existing_tree_scope,
       });
       setProjects((prev) =>
         prev.map((item) => (Number(item.id) === Number(activeProjectId) ? { ...item, ...res.data } : item))
       );
-      if (!projectSettingsDraft.allow_existing_tree_link) {
-        setImportSourceProjectId(null);
-        setExistingCandidates([]);
-        setSelectedCandidateIds([]);
-      }
       setProjectSetupExpanded(false);
       toast.success("Project settings updated");
     } catch (error: any) {
@@ -1425,64 +1328,6 @@ export default function GreenWork() {
       toast.success("Allocation saved");
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || "Failed to save allocation");
-    }
-  };
-
-  const toggleCandidateSelection = (treeId: number) => {
-    setSelectedCandidateIds((prev) =>
-      prev.includes(treeId) ? prev.filter((id) => id !== treeId) : [...prev, treeId]
-    );
-  };
-
-  const onImportModeChange = (mode: TreeImportMode) => {
-    setImportForm((prev) => {
-      if (prev.mode === mode) return prev;
-      if (mode === "transfer") {
-        return {
-          ...prev,
-          mode,
-          attribution_scope: "full",
-          count_in_planting_kpis: true,
-          count_in_carbon_scope: true,
-        };
-      }
-      return {
-        ...prev,
-        mode,
-        attribution_scope: "monitor_only",
-        count_in_planting_kpis: projectSettingsDraft.default_existing_tree_scope === "include_in_planting_kpi",
-        count_in_carbon_scope: true,
-      };
-    });
-  };
-
-  const importExistingTrees = async () => {
-    if (!activeProjectId || !importSourceProjectId) return;
-    if (selectedCandidateIds.length === 0) {
-      toast.error("Select at least one tree to import");
-      return;
-    }
-    setImportLoading(true);
-    try {
-      await api.post(`/green/projects/${activeProjectId}/existing-trees/import`, {
-        source_project_id: importSourceProjectId,
-        tree_ids: selectedCandidateIds,
-        mode: importForm.mode,
-        attribution_scope: importForm.attribution_scope,
-        count_in_planting_kpis: importForm.count_in_planting_kpis,
-        count_in_carbon_scope: importForm.count_in_carbon_scope,
-      });
-      setSelectedCandidateIds([]);
-      await Promise.all([
-        loadProjectData(activeProjectId),
-        loadCommunityData(activeProjectId),
-        loadExistingCandidates(activeProjectId, importSourceProjectId),
-      ]);
-      toast.success("Existing trees imported");
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail || "Failed to import existing trees");
-    } finally {
-      setImportLoading(false);
     }
   };
 
@@ -1673,15 +1518,6 @@ export default function GreenWork() {
   }, [activeProjectId]);
 
   useEffect(() => {
-    setImportForm((prev) => {
-      if (prev.mode === "transfer") return prev;
-      const nextPlantingScope = projectSettingsDraft.default_existing_tree_scope === "include_in_planting_kpi";
-      if (prev.count_in_planting_kpis === nextPlantingScope) return prev;
-      return { ...prev, count_in_planting_kpis: nextPlantingScope };
-    });
-  }, [projectSettingsDraft.default_existing_tree_scope]);
-
-  useEffect(() => {
     if (!activeProjectId) {
       setCustodians([]);
       setDistributionEvents([]);
@@ -1690,15 +1526,6 @@ export default function GreenWork() {
     }
     void loadCommunityData(activeProjectId).catch(() => {});
   }, [activeProjectId, loadCommunityData]);
-
-  useEffect(() => {
-    if (!activeProjectId || !importSourceProjectId || Number(importSourceProjectId) === Number(activeProjectId)) {
-      setExistingCandidates([]);
-      setSelectedCandidateIds([]);
-      return;
-    }
-    void loadExistingCandidates(activeProjectId, importSourceProjectId).catch(() => {});
-  }, [activeProjectId, importSourceProjectId, loadExistingCandidates]);
 
   useEffect(() => {
     setTreeMetaDraftById((prev) => {
@@ -1728,9 +1555,6 @@ export default function GreenWork() {
     setActiveProjectId(id);
     setAssigneeFilter("all");
     setInspectedTree(null);
-    setImportSourceProjectId(null);
-    setExistingCandidates([]);
-    setSelectedCandidateIds([]);
     await loadProjectData(id);
   };
 
@@ -2692,7 +2516,7 @@ export default function GreenWork() {
     { form: "assign_work", title: "Planting Orders", note: "Assign planting targets" },
     { form: "assign_task", title: "Maintenance", note: "Assign maintenance tasks" },
     { form: "custodian_hub", title: "Custodian Hub", note: "Overview + custodians + events + report" },
-    { form: "existing_tree_intake", title: "Existing Trees", note: "Imported/intake records" },
+    { form: "existing_tree_intake", title: "Existing Trees", note: "Existing tree detail records" },
     { form: "verra_reports", title: "Verra Reports", note: "VCS package + history" },
     { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
   ];
@@ -2861,10 +2685,6 @@ export default function GreenWork() {
     if (!activeProjectId) return null;
     return projects.find((p) => Number(p.id) === Number(activeProjectId)) || null;
   }, [projects, activeProjectId]);
-  const sourceProjectOptions = useMemo(
-    () => projects.filter((project) => Number(project.id) !== Number(activeProjectId)),
-    [projects, activeProjectId],
-  );
   const selectedInspectTreeMeta = useMemo(() => {
     if (!inspectedTree) return null;
     const treeId = Number(inspectedTree.id || 0);
@@ -2889,28 +2709,19 @@ export default function GreenWork() {
   const isCommunityModel = projectModel === "community_distributed" || projectModel === "mixed";
   const hasCommunityData = custodians.length > 0 || distributionEvents.length > 0 || distributionAllocations.length > 0;
   const showCommunityWorkflow = isCommunityModel || hasCommunityData;
-  const showImportWorkflow =
-    projectSettingsDraft.allow_existing_tree_link ||
-    existingCandidates.length > 0 ||
-    selectedCandidateIds.length > 0;
   const showLegacyCommunitySetup = false;
-  const showLegacyImportSetup = false;
   const workflowReadySummary = useMemo(() => {
     const speciesMaturitySet = Object.keys(activeProjectMaturityMap).length;
     return {
       custodians: custodians.length,
       events: distributionEvents.length,
       allocations: distributionAllocations.length,
-      importEnabled: projectSettingsDraft.allow_existing_tree_link,
-      importSelected: selectedCandidateIds.length,
       speciesMaturitySet,
     };
   }, [
     custodians.length,
     distributionEvents.length,
     distributionAllocations.length,
-    projectSettingsDraft.allow_existing_tree_link,
-    selectedCandidateIds.length,
     activeProjectMaturityMap,
   ]);
   const existingTreeIntakeRows = useMemo(
@@ -3281,9 +3092,6 @@ export default function GreenWork() {
                       setCustodians([]);
                       setDistributionEvents([]);
                       setDistributionAllocations([]);
-                      setExistingCandidates([]);
-                      setSelectedCandidateIds([]);
-                      setImportSourceProjectId(null);
                       return;
                     }
                     await onSelectProject(Number(value));
@@ -3300,8 +3108,7 @@ export default function GreenWork() {
                 {!activeProjectId && <p className="green-work-note">Select a project to load dashboard data.</p>}
                 {activeProjectRecord && (
                   <p className="green-work-note">
-                    Active model: {formatTaskTypeLabel(activeProjectRecord.planting_model || "direct")} | Existing Tree import:{" "}
-                    {projectSettingsDraft.allow_existing_tree_link ? "enabled" : "disabled"}
+                    Active model: {formatTaskTypeLabel(activeProjectRecord.planting_model || "direct")}
                   </p>
                 )}
               </div>
@@ -3315,9 +3122,7 @@ export default function GreenWork() {
                       <span className="green-work-flow-pill">Custodians: {workflowReadySummary.custodians}</span>
                       <span className="green-work-flow-pill">Events: {workflowReadySummary.events}</span>
                       <span className="green-work-flow-pill">Allocations: {workflowReadySummary.allocations}</span>
-                      <span className="green-work-flow-pill">
-                        Existing Tree import: {workflowReadySummary.importEnabled ? "Enabled" : "Disabled"}
-                      </span>
+                      <span className="green-work-flow-pill">Existing Trees: {existingTreeIntakeRows.length}</span>
                     </div>
                     <p className="green-work-note">
                       Setup panels are hidden by default to reduce clutter. Open them only when you need to change
@@ -3350,50 +3155,6 @@ export default function GreenWork() {
                         <option value="mixed">Mixed model</option>
                       </select>
                     </label>
-                    <label>
-                      Existing Tree default scope
-                      <select
-                        value={projectSettingsDraft.default_existing_tree_scope}
-                        onChange={(e) =>
-                          setProjectSettingsDraft((prev) => ({
-                            ...prev,
-                            default_existing_tree_scope: e.target.value as ExistingScopeValue,
-                          }))
-                        }
-                      >
-                        <option value="exclude_from_planting_kpi">Exclude from planting KPI</option>
-                        <option value="include_in_planting_kpi">Include in planting KPI</option>
-                      </select>
-                    </label>
-                        <div>
-                          <span className="green-work-field-label">Existing Tree import/linking</span>
-                          <div className="green-work-toggle-row">
-                            <button
-                              type="button"
-                              className={`green-work-toggle-btn ${
-                                projectSettingsDraft.allow_existing_tree_link ? "active" : ""
-                              }`}
-                              disabled={allowExistingToggleSaving}
-                              onClick={() => void setAllowExistingTreeLink(true)}
-                            >
-                              Enable
-                            </button>
-                            <button
-                              type="button"
-                              className={`green-work-toggle-btn ${
-                                !projectSettingsDraft.allow_existing_tree_link ? "active" : ""
-                              }`}
-                              disabled={allowExistingToggleSaving}
-                              onClick={() => void setAllowExistingTreeLink(false)}
-                            >
-                              Disable
-                            </button>
-                          </div>
-                          <p className="green-work-note">
-                            When enabled, this project can import or link trees from another project
-                            (reference/transfer) without re-planting.
-                          </p>
-                        </div>
                         <button className="btn-primary" type="button" onClick={() => void saveProjectSettings()}>
                           Save Project Settings
                         </button>
@@ -3403,14 +3164,9 @@ export default function GreenWork() {
                       Community setup is hidden because the project is in Direct planting mode.
                     </p>
                   )}
-                  {!showImportWorkflow && (
+                  {showCommunityWorkflow && (
                     <p className="green-work-note">
-                      Existing Tree import setup is hidden. Enable import in Project Settings when needed.
-                    </p>
-                  )}
-                  {(showCommunityWorkflow || showImportWorkflow) && (
-                    <p className="green-work-note">
-                      Community workflow now runs in one Custodian Hub tab, plus Existing Trees where needed.
+                      Community workflow now runs in one Custodian Hub tab.
                     </p>
                   )}
 
@@ -3617,100 +3373,6 @@ export default function GreenWork() {
                   </div>
                   )}
 
-                  {showLegacyImportSetup && showImportWorkflow && (
-                  <div className="green-work-card">
-                    <h3>Import Existing Trees</h3>
-                    {!projectSettingsDraft.allow_existing_tree_link && (
-                      <p className="green-work-note danger">
-                        Existing Tree import is disabled. Enable it in Project Settings first.
-                      </p>
-                    )}
-                    <select
-                      value={importSourceProjectId || ""}
-                      onChange={(e) => setImportSourceProjectId(e.target.value ? Number(e.target.value) : null)}
-                    >
-                      <option value="">Select source project</option>
-                      {sourceProjectOptions.map((project) => (
-                        <option key={`source-project-${project.id}`} value={project.id}>
-                          {project.name}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={importForm.mode}
-                      onChange={(e) => onImportModeChange(e.target.value as TreeImportMode)}
-                    >
-                      <option value="reference">Reference (duplicate into this project)</option>
-                      <option value="transfer">Transfer (move tree to this project)</option>
-                    </select>
-                    <select
-                      value={importForm.attribution_scope}
-                      onChange={(e) =>
-                        setImportForm((prev) => ({
-                          ...prev,
-                          attribution_scope: e.target.value as "full" | "monitor_only",
-                        }))
-                      }
-                    >
-                      <option value="monitor_only">Monitor only</option>
-                      <option value="full">Full attribution</option>
-                    </select>
-                    <label className="green-work-checkbox-row">
-                      <input
-                        type="checkbox"
-                        checked={importForm.count_in_planting_kpis}
-                        onChange={(e) =>
-                          setImportForm((prev) => ({ ...prev, count_in_planting_kpis: e.target.checked }))
-                        }
-                        disabled={importForm.mode === "transfer"}
-                      />
-                      <span>Count imported trees in planting KPIs</span>
-                    </label>
-                    <label className="green-work-checkbox-row">
-                      <input
-                        type="checkbox"
-                        checked={importForm.count_in_carbon_scope}
-                        onChange={(e) =>
-                          setImportForm((prev) => ({ ...prev, count_in_carbon_scope: e.target.checked }))
-                        }
-                        disabled={importForm.mode === "transfer"}
-                      />
-                      <span>Count imported trees in carbon scope</span>
-                    </label>
-                    <div className="green-work-candidate-list">
-                      {existingCandidates.length === 0 ? (
-                        <p className="green-work-note">No candidate trees loaded yet.</p>
-                      ) : (
-                        existingCandidates.map((candidate) => (
-                          <label key={`candidate-${candidate.id}`} className="green-work-candidate-row">
-                            <input
-                              type="checkbox"
-                              checked={selectedCandidateIds.includes(candidate.id)}
-                              onChange={() => toggleCandidateSelection(candidate.id)}
-                            />
-                            <span>
-                              #{candidate.id} | {candidate.species || "-"} | {formatDateLabel(candidate.planting_date)} |{" "}
-                              {formatTreeHeight(candidate.tree_height_m)} | {formatTaskTypeLabel(candidate.status)}
-                            </span>
-                          </label>
-                        ))
-                      )}
-                    </div>
-                    <button
-                      className="btn-primary"
-                      type="button"
-                      disabled={
-                        importLoading ||
-                        !projectSettingsDraft.allow_existing_tree_link ||
-                        !importSourceProjectId ||
-                        selectedCandidateIds.length === 0
-                      }
-                      onClick={() => void importExistingTrees()}
-                    >
-                      {importLoading ? "Importing..." : `Import Selected Trees (${selectedCandidateIds.length})`}
-                    </button>
-                  </div>
-                  )}
                     </>
                   )}
                 </>
@@ -3987,111 +3649,7 @@ export default function GreenWork() {
             <div className="green-work-card">
               <h3>Existing Trees</h3>
               {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
-              <div>
-                <span className="green-work-field-label">Existing Tree import/linking</span>
-                <div className="green-work-toggle-row">
-                  <button
-                    type="button"
-                    className={`green-work-toggle-btn ${projectSettingsDraft.allow_existing_tree_link ? "active" : ""}`}
-                    disabled={!activeProjectId || allowExistingToggleSaving}
-                    onClick={() => void setAllowExistingTreeLink(true)}
-                  >
-                    Enable
-                  </button>
-                  <button
-                    type="button"
-                    className={`green-work-toggle-btn ${!projectSettingsDraft.allow_existing_tree_link ? "active" : ""}`}
-                    disabled={!activeProjectId || allowExistingToggleSaving}
-                    onClick={() => void setAllowExistingTreeLink(false)}
-                  >
-                    Disable
-                  </button>
-                </div>
-              </div>
-              {!projectSettingsDraft.allow_existing_tree_link && (
-                <p className="green-work-note danger">Enable Existing Tree linking/import to pull trees from another project.</p>
-              )}
-              <select
-                value={importSourceProjectId || ""}
-                onChange={(e) => setImportSourceProjectId(e.target.value ? Number(e.target.value) : null)}
-                disabled={!activeProjectId}
-              >
-                <option value="">Select source project</option>
-                {sourceProjectOptions.map((project) => (
-                  <option key={`existing-source-${project.id}`} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={importForm.mode}
-                onChange={(e) => onImportModeChange(e.target.value as TreeImportMode)}
-                disabled={!activeProjectId}
-              >
-                <option value="reference">Reference (duplicate into this project)</option>
-                <option value="transfer">Transfer (move tree to this project)</option>
-              </select>
-              <select
-                value={importForm.attribution_scope}
-                onChange={(e) =>
-                  setImportForm((prev) => ({ ...prev, attribution_scope: e.target.value as "full" | "monitor_only" }))
-                }
-                disabled={!activeProjectId}
-              >
-                <option value="monitor_only">Monitor only</option>
-                <option value="full">Full attribution</option>
-              </select>
-              <label className="green-work-checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={importForm.count_in_planting_kpis}
-                  onChange={(e) => setImportForm((prev) => ({ ...prev, count_in_planting_kpis: e.target.checked }))}
-                  disabled={!activeProjectId || importForm.mode === "transfer"}
-                />
-                <span>Count imported trees in planting KPIs</span>
-              </label>
-              <label className="green-work-checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={importForm.count_in_carbon_scope}
-                  onChange={(e) => setImportForm((prev) => ({ ...prev, count_in_carbon_scope: e.target.checked }))}
-                  disabled={!activeProjectId || importForm.mode === "transfer"}
-                />
-                <span>Count imported trees in carbon scope</span>
-              </label>
-              <div className="green-work-candidate-list">
-                {existingCandidates.length === 0 ? (
-                  <p className="green-work-note">No candidate trees loaded yet.</p>
-                ) : (
-                  existingCandidates.map((candidate) => (
-                    <label key={`existing-candidate-${candidate.id}`} className="green-work-candidate-row">
-                      <input
-                        type="checkbox"
-                        checked={selectedCandidateIds.includes(candidate.id)}
-                        onChange={() => toggleCandidateSelection(candidate.id)}
-                      />
-                      <span>
-                        #{candidate.id} | {candidate.species || "-"} | {formatDateLabel(candidate.planting_date)} |{" "}
-                        {formatTreeHeight(candidate.tree_height_m)} | {formatTaskTypeLabel(candidate.status)}
-                      </span>
-                    </label>
-                  ))
-                )}
-              </div>
-              <button
-                className="btn-primary"
-                type="button"
-                disabled={
-                  importLoading ||
-                  !activeProjectId ||
-                  !projectSettingsDraft.allow_existing_tree_link ||
-                  !importSourceProjectId ||
-                  selectedCandidateIds.length === 0
-                }
-                onClick={() => void importExistingTrees()}
-              >
-                {importLoading ? "Importing..." : `Import Selected Trees (${selectedCandidateIds.length})`}
-              </button>
+              <p className="green-work-note">This tab shows existing trees captured directly in Green for this project.</p>
             </div>
           )}
 
@@ -5028,7 +4586,7 @@ export default function GreenWork() {
                 </div>
               </div>
               <p className="green-work-chart-context">
-                Context: trees tagged as Existing/Imported using origin, attribution scope, KPI scope, or source-project linkage.
+                Context: trees tagged as Existing using origin, attribution scope, KPI scope, or source-project linkage.
               </p>
               <div className="green-work-live-summary">
                 <span className="green-work-live-pill neutral">Rows: {existingTreeIntakeRows.length}</span>
