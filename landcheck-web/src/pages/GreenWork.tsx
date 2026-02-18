@@ -2916,7 +2916,16 @@ export default function GreenWork() {
   const existingTreeIntakeRows = useMemo(
     () =>
       trees
-        .filter((tree) => normalizeName(tree.tree_origin) !== "new_planting")
+        .filter((tree) => {
+          const origin = normalizeName(String(tree.tree_origin || "").replaceAll(" ", "_"));
+          const scope = normalizeName(String(tree.attribution_scope || "").replaceAll(" ", "_"));
+          const hasSourceProject = Number(tree.source_project_id || 0) > 0;
+          if (origin && origin !== "new_planting") return true;
+          if (scope === "monitor_only") return true;
+          if (tree.count_in_planting_kpis === false) return true;
+          if (hasSourceProject) return true;
+          return false;
+        })
         .sort((a, b) => Number(b.id || 0) - Number(a.id || 0)),
     [trees],
   );
@@ -4083,42 +4092,6 @@ export default function GreenWork() {
               >
                 {importLoading ? "Importing..." : `Import Selected Trees (${selectedCandidateIds.length})`}
               </button>
-              <div className="green-work-live-table-wrap">
-                <table className="green-work-live-table">
-                  <thead>
-                    <tr>
-                      <th>Tree</th>
-                      <th>Species</th>
-                      <th>Origin</th>
-                      <th>Status</th>
-                      <th>Height</th>
-                      <th>Custodian</th>
-                      <th>Created By</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {existingTreeIntakeRows.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="green-work-live-empty">
-                          No Existing Tree intake records yet in this project.
-                        </td>
-                      </tr>
-                    ) : (
-                      existingTreeIntakeRows.slice(0, 200).map((tree) => (
-                        <tr key={`intake-tree-${tree.id}`}>
-                          <td>#{tree.id}</td>
-                          <td>{tree.species || "-"}</td>
-                          <td>{formatTreeOriginLabel(tree.tree_origin)}</td>
-                          <td>{formatTaskTypeLabel(tree.status)}</td>
-                          <td>{formatTreeHeight(tree.tree_height_m)}</td>
-                          <td>{tree.custodian_name || "-"}</td>
-                          <td>{tree.created_by || "-"}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
             </div>
           )}
 
@@ -5040,6 +5013,65 @@ export default function GreenWork() {
                     </li>
                   ))}
                 </ul>
+              </div>
+            </div>
+          )}
+
+          {activeProjectId && activeForm === "existing_tree_intake" && (
+            <div className="green-work-card">
+              <div className="green-work-row">
+                <h3>Existing Tree Live Table</h3>
+                <div className="work-actions">
+                  <button type="button" onClick={() => void loadProjectData(activeProjectId)}>
+                    Refresh
+                  </button>
+                </div>
+              </div>
+              <p className="green-work-chart-context">
+                Context: trees tagged as Existing/Imported using origin, attribution scope, KPI scope, or source-project linkage.
+              </p>
+              <div className="green-work-live-summary">
+                <span className="green-work-live-pill neutral">Rows: {existingTreeIntakeRows.length}</span>
+              </div>
+              <div className="green-work-live-table-wrap">
+                <table className="green-work-live-table">
+                  <thead>
+                    <tr>
+                      <th>Tree</th>
+                      <th>Species</th>
+                      <th>Date</th>
+                      <th>Origin</th>
+                      <th>Attribution</th>
+                      <th>Status</th>
+                      <th>Height</th>
+                      <th>Custodian</th>
+                      <th>Created By</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {existingTreeIntakeRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="green-work-live-empty">
+                          No Existing Tree records found in this project yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      existingTreeIntakeRows.slice(0, 500).map((tree) => (
+                        <tr key={`existing-main-${tree.id}`}>
+                          <td>#{tree.id}</td>
+                          <td>{tree.species || "-"}</td>
+                          <td>{formatDateLabel(tree.planting_date)}</td>
+                          <td>{formatTreeOriginLabel(tree.tree_origin)}</td>
+                          <td>{formatAttributionScopeLabel(tree.attribution_scope)}</td>
+                          <td>{formatTaskTypeLabel(tree.status)}</td>
+                          <td>{formatTreeHeight(tree.tree_height_m)}</td>
+                          <td>{tree.custodian_name || "-"}</td>
+                          <td>{tree.created_by || "-"}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
