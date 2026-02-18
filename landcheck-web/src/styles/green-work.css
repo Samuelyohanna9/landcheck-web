@@ -635,6 +635,11 @@
   grid-template-rows: minmax(0, 1fr);
 }
 
+.green-work-content.with-sidebar.existing-tree-mode {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+}
+
 .green-work-content.no-sidebar {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
@@ -670,6 +675,11 @@
   padding: 0.65rem;
 }
 
+.green-work-content.with-sidebar.existing-tree-mode .green-work-sidebar {
+  height: auto;
+  overflow: visible;
+}
+
 .green-work-content.with-sidebar .green-work-sidebar .green-work-card {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
@@ -678,6 +688,15 @@
 .green-work-main {
   overflow: hidden;
   height: 100%;
+}
+
+.green-work-content.with-sidebar.existing-tree-mode .green-work-main {
+  height: auto;
+  overflow: visible;
+}
+
+.green-work-content.with-sidebar.existing-tree-mode .green-work-map-card {
+  flex: none;
 }
 
 .green-work-main.overview-mode {
