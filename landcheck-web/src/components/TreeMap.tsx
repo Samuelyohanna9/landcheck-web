@@ -37,11 +37,14 @@ type Props = {
   draftPoint?: { lng: number; lat: number } | null;
   onDraftMove?: (lng: number, lat: number) => void;
   enableDraw?: boolean;
+  drawMode?: "point" | "polygon";
   drawActive?: boolean;
+  onPolygonChange?: (geometry: { type: "Polygon" | "MultiPolygon"; coordinates: any } | null) => void;
   onSelectTree?: (id: number) => void;
   onTreeInspect?: (detail: TreeInspectData | null) => void;
   onViewChange?: (view: { lng: number; lat: number; zoom: number; bearing: number; pitch: number }) => void;
   fitBounds?: { lng: number; lat: number }[] | null;
+  assignmentAreas?: Array<{ id?: number | string; label?: string | null; geojson: any }>;
   minHeight?: number;
 };
 
@@ -176,6 +179,9 @@ const TREE_SOURCE_ID = "tree-points";
 const TREE_OUTER_LAYER_ID = "tree-points-outer";
 const TREE_CORE_LAYER_ID = "tree-points-core";
 const TREE_LAYER_IDS = [TREE_CORE_LAYER_ID, TREE_OUTER_LAYER_ID];
+const ASSIGNMENT_AREA_SOURCE_ID = "assigned-planting-areas";
+const ASSIGNMENT_AREA_FILL_LAYER_ID = "assigned-planting-areas-fill";
+const ASSIGNMENT_AREA_LINE_LAYER_ID = "assigned-planting-areas-line";
 
 const ACTIVE_TREE_STATUSES = new Set([
   "alive",
@@ -299,6 +305,44 @@ const buildTreeFeatureCollection = (items: TreePoint[]) => {
   } as any;
 };
 
+const normalizeAreaGeometry = (value: any): { type: "Polygon" | "MultiPolygon"; coordinates: any } | null => {
+  if (!value) return null;
+  let raw = value;
+  if (typeof raw === "string") {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+  const geometry = raw?.type === "Feature" ? raw?.geometry : raw;
+  if (!geometry || (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon")) return null;
+  if (!Array.isArray(geometry.coordinates) || geometry.coordinates.length === 0) return null;
+  return { type: geometry.type, coordinates: geometry.coordinates };
+};
+
+const buildAssignmentAreaFeatureCollection = (areas: Array<{ id?: number | string; label?: string | null; geojson: any }>) => {
+  const features = (areas || [])
+    .map((area, index) => {
+      const geometry = normalizeAreaGeometry(area.geojson);
+      if (!geometry) return null;
+      return {
+        type: "Feature",
+        properties: {
+          id: area.id ?? index + 1,
+          label: area.label || `Assigned area ${index + 1}`,
+        },
+        geometry,
+      };
+    })
+    .filter((feature) => feature !== null);
+
+  return {
+    type: "FeatureCollection",
+    features,
+  } as any;
+};
+
 const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null, loading = false) => {
   const tree = detail?.tree || {};
   const status = String(tree.status || base.status || "unknown");
@@ -392,11 +436,14 @@ export default function TreeMap({
   draftPoint,
   onDraftMove,
   enableDraw = true,
+  drawMode = "point",
   drawActive = true,
+  onPolygonChange,
   onSelectTree,
   onTreeInspect,
   onViewChange,
   fitBounds,
+  assignmentAreas = [],
   minHeight = 420,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -404,6 +451,7 @@ export default function TreeMap({
   const draftMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
   const onAddTreeRef = useRef(onAddTree);
+  const onPolygonChangeRef = useRef(onPolygonChange);
   const onSelectTreeRef = useRef(onSelectTree);
   const onTreeInspectRef = useRef(onTreeInspect);
   const mapReadyRef = useRef(false);
@@ -414,6 +462,7 @@ export default function TreeMap({
   const clickTreeIdRef = useRef<number | null>(null);
   const suppressNextDrawDeleteRef = useRef(false);
   const drawActiveRef = useRef(drawActive);
+  const drawModeRef = useRef<"point" | "polygon">(drawMode);
   const detailCacheRef = useRef<Map<number, TreePopupDetail>>(new Map());
   const pendingDetailRef = useRef<Map<number, Promise<TreePopupDetail>>>(new Map());
   const [mapError, setMapError] = useState<string | null>(null);
@@ -478,6 +527,22 @@ export default function TreeMap({
   }, [onAddTree]);
 
   useEffect(() => {
+    onPolygonChangeRef.current = onPolygonChange;
+  }, [onPolygonChange]);
+
+  useEffect(() => {
+    drawModeRef.current = drawMode;
+    const map = mapRef.current;
+    if (!map || !mapReadyRef.current || !drawRef.current) return;
+    if (!drawActiveRef.current) return;
+    try {
+      drawRef.current.changeMode(drawMode === "polygon" ? "draw_polygon" : "draw_point");
+    } catch {
+      // noop
+    }
+  }, [drawMode]);
+
+  useEffect(() => {
     onSelectTreeRef.current = onSelectTree;
   }, [onSelectTree]);
 
@@ -494,7 +559,7 @@ export default function TreeMap({
       // Re-enable draw controls if they exist
       if (drawRef.current) {
         try {
-          drawRef.current.changeMode("draw_point");
+          drawRef.current.changeMode(drawModeRef.current === "polygon" ? "draw_polygon" : "draw_point");
         } catch { /* noop */ }
       }
     } else {
@@ -503,7 +568,9 @@ export default function TreeMap({
       if (drawRef.current) {
         try {
           drawRef.current.changeMode("simple_select");
-          drawRef.current.deleteAll();
+          if (drawModeRef.current === "point") {
+            drawRef.current.deleteAll();
+          }
         } catch { /* noop */ }
       }
     }
@@ -534,7 +601,8 @@ export default function TreeMap({
         const draw = new MapboxDraw({
           displayControlsDefault: false,
           controls: {
-            point: true,
+            point: drawMode === "point",
+            polygon: drawMode === "polygon",
             trash: true,
           },
         });
@@ -596,6 +664,32 @@ export default function TreeMap({
               "circle-color": "#4caf50",
               "circle-stroke-width": 1,
               "circle-stroke-color": "#337f38",
+            },
+          });
+        }
+
+        if (!map.getSource(ASSIGNMENT_AREA_SOURCE_ID)) {
+          map.addSource(ASSIGNMENT_AREA_SOURCE_ID, {
+            type: "geojson",
+            data: buildAssignmentAreaFeatureCollection(assignmentAreas),
+          });
+          map.addLayer({
+            id: ASSIGNMENT_AREA_FILL_LAYER_ID,
+            type: "fill",
+            source: ASSIGNMENT_AREA_SOURCE_ID,
+            paint: {
+              "fill-color": "#22c55e",
+              "fill-opacity": 0.14,
+            },
+          });
+          map.addLayer({
+            id: ASSIGNMENT_AREA_LINE_LAYER_ID,
+            type: "line",
+            source: ASSIGNMENT_AREA_SOURCE_ID,
+            paint: {
+              "line-color": "#15803d",
+              "line-width": 2.4,
+              "line-opacity": 0.95,
             },
           });
         }
@@ -758,17 +852,45 @@ export default function TreeMap({
       });
 
       if (enableDraw) {
-        map.on("draw.create", (e: any) => {
+        const handleDrawGeometryChange = (e: any) => {
           if (!drawActiveRef.current) return;
           const feature = e?.features?.[0];
-          if (!feature || feature.geometry?.type !== "Point") return;
+          if (!feature) return;
+
+          const isPolygonMode = drawModeRef.current === "polygon";
+          if (isPolygonMode) {
+            const geometry = normalizeAreaGeometry(feature.geometry);
+            if (!geometry) return;
+            const draw = drawRef.current;
+            const currentId = String(feature.id || "");
+            if (draw && currentId) {
+              const allFeatures = draw.getAll()?.features || [];
+              allFeatures.forEach((item: any) => {
+                const itemId = String(item?.id || "");
+                if (itemId && itemId !== currentId) {
+                  draw.delete(itemId);
+                }
+              });
+            }
+            onPolygonChangeRef.current?.(geometry);
+            return;
+          }
+
+          if (feature.geometry?.type !== "Point") return;
           const [lng, lat] = feature.geometry.coordinates;
           onAddTreeRef.current(lng, lat);
-        });
+        };
+
+        map.on("draw.create", handleDrawGeometryChange);
+        map.on("draw.update", handleDrawGeometryChange);
 
         map.on("draw.delete", () => {
           if (suppressNextDrawDeleteRef.current) {
             suppressNextDrawDeleteRef.current = false;
+            return;
+          }
+          if (drawModeRef.current === "polygon") {
+            onPolygonChangeRef.current?.(null);
             return;
           }
           onAddTreeRef.current(0, 0);
@@ -838,6 +960,14 @@ export default function TreeMap({
     pendingDetailRef.current.clear();
     source.setData(buildTreeFeatureCollection(trees));
   }, [trees, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const source = map.getSource(ASSIGNMENT_AREA_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+    if (!source) return;
+    source.setData(buildAssignmentAreaFeatureCollection(assignmentAreas));
+  }, [assignmentAreas, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;

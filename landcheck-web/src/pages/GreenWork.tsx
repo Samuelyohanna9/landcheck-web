@@ -36,6 +36,9 @@ type WorkOrder = {
   due_date: string | null;
   status: string;
   planted_count: number;
+  area_enabled?: boolean;
+  area_label?: string | null;
+  area_geojson?: any;
 };
 
 type Tree = {
@@ -822,6 +825,9 @@ export default function GreenWork() {
     target_trees: 0,
     due_date: "",
   });
+  const [newOrderAreaEnabled, setNewOrderAreaEnabled] = useState(false);
+  const [newOrderAreaLabel, setNewOrderAreaLabel] = useState("");
+  const [newOrderAreaGeometry, setNewOrderAreaGeometry] = useState<{ type: "Polygon" | "MultiPolygon"; coordinates: any } | null>(null);
   const [newUser, setNewUser] = useState({ full_name: "", role: "field_officer" });
   const [newProject, setNewProject] = useState({ name: "", location_text: "", sponsor: "" });
   const [projectSettingsDraft, setProjectSettingsDraft] = useState<{
@@ -1580,11 +1586,18 @@ export default function GreenWork() {
       toast.error("Target trees must be greater than 0");
       return;
     }
+    if (newOrderAreaEnabled && !newOrderAreaGeometry) {
+      toast.error("Draw the planting area polygon before assigning.");
+      return;
+    }
     try {
       await api.post("/green/work-orders", {
         project_id: activeProjectId,
         ...newOrder,
         work_type: "planting",
+        area_enabled: newOrderAreaEnabled,
+        area_label: newOrderAreaEnabled ? (newOrderAreaLabel || "").trim() || null : null,
+        area_geojson: newOrderAreaEnabled ? newOrderAreaGeometry : null,
       });
       setNewOrder({
         assignee_name: "",
@@ -1592,6 +1605,9 @@ export default function GreenWork() {
         target_trees: 0,
         due_date: "",
       });
+      setNewOrderAreaEnabled(false);
+      setNewOrderAreaLabel("");
+      setNewOrderAreaGeometry(null);
       await loadProjectData(activeProjectId);
       toast.success("Planting order assigned");
     } catch (error: any) {
@@ -3851,6 +3867,54 @@ export default function GreenWork() {
                 onChange={(e) => setNewOrder({ ...newOrder, due_date: e.target.value })}
                 disabled={!activeProjectId}
               />
+              <label className="green-work-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={newOrderAreaEnabled}
+                  onChange={(e) => {
+                    const next = e.target.checked;
+                    setNewOrderAreaEnabled(next);
+                    if (!next) {
+                      setNewOrderAreaLabel("");
+                      setNewOrderAreaGeometry(null);
+                    }
+                  }}
+                  disabled={!activeProjectId}
+                />
+                <span>Enable planting area (optional)</span>
+              </label>
+              {newOrderAreaEnabled && (
+                <div className="green-work-assignment-area">
+                  <label className="green-work-field-label" htmlFor="order-area-label">
+                    Area Label
+                  </label>
+                  <input
+                    id="order-area-label"
+                    type="text"
+                    placeholder="Optional (e.g. Block A - East plot)"
+                    value={newOrderAreaLabel}
+                    onChange={(e) => setNewOrderAreaLabel(e.target.value)}
+                    disabled={!activeProjectId}
+                  />
+                  <p className="green-work-note">
+                    Draw polygon on the map for this planting assignment. Use the trash icon to clear and redraw.
+                  </p>
+                  <div className="green-work-assignment-map">
+                    <TreeMap
+                      trees={trees}
+                      onAddTree={() => {}}
+                      enableDraw
+                      drawMode="polygon"
+                      drawActive
+                      onPolygonChange={(geometry) => setNewOrderAreaGeometry(geometry)}
+                      minHeight={300}
+                    />
+                  </div>
+                  <p className="green-work-note">
+                    {newOrderAreaGeometry ? "Area captured and will be linked to this work order." : "No area polygon captured yet."}
+                  </p>
+                </div>
+              )}
               <button className="btn-primary" onClick={createWorkOrder} disabled={!activeProjectId}>
                 Assign Work
               </button>
