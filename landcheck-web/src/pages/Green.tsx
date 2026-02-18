@@ -90,6 +90,20 @@ type GreenUser = {
   role: string;
 };
 
+type WorkOrder = {
+  id: number;
+  project_id: number;
+  assignee_name: string;
+  work_type: string;
+  target_trees: number;
+  due_date: string | null;
+  status: string;
+  planted_count: number;
+  area_enabled?: boolean;
+  area_label?: string | null;
+  area_geojson?: any;
+};
+
 type Custodian = {
   id: number;
   project_id: number;
@@ -209,6 +223,52 @@ const mergeTreesById = (rows: any[]) => {
     seen.set(id, { ...row, id, lng: Number(row.lng), lat: Number(row.lat) });
   });
   return Array.from(seen.values());
+};
+const normalizeOrderAreaGeometry = (value: any): { type: "Polygon" | "MultiPolygon"; coordinates: any } | null => {
+  if (!value) return null;
+  let raw = value;
+  if (typeof raw === "string") {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+  const geometry = raw?.type === "Feature" ? raw.geometry : raw;
+  if (!geometry || (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon")) return null;
+  if (!Array.isArray(geometry.coordinates) || geometry.coordinates.length === 0) return null;
+  return { type: geometry.type, coordinates: geometry.coordinates };
+};
+const extractAreaPoints = (geometry: { type: "Polygon" | "MultiPolygon"; coordinates: any } | null) => {
+  if (!geometry) return [] as { lng: number; lat: number }[];
+  const points: { lng: number; lat: number }[] = [];
+  if (geometry.type === "Polygon") {
+    (geometry.coordinates || []).forEach((ring: any) => {
+      if (!Array.isArray(ring)) return;
+      ring.forEach((point: any) => {
+        const lng = Number(point?.[0]);
+        const lat = Number(point?.[1]);
+        if (Number.isFinite(lng) && Number.isFinite(lat)) points.push({ lng, lat });
+      });
+    });
+  } else {
+    (geometry.coordinates || []).forEach((polygon: any) => {
+      if (!Array.isArray(polygon)) return;
+      polygon.forEach((ring: any) => {
+        if (!Array.isArray(ring)) return;
+        ring.forEach((point: any) => {
+          const lng = Number(point?.[0]);
+          const lat = Number(point?.[1]);
+          if (Number.isFinite(lng) && Number.isFinite(lat)) points.push({ lng, lat });
+        });
+      });
+    });
+  }
+  return points;
+};
+const isClosedWorkOrder = (value: string | null | undefined) => {
+  const status = normalizeTaskState(value);
+  return status === "done" || status === "completed" || status === "closed" || status === "cancelled";
 };
 
 const R2_BUCKET_HINT = "photosgreen";
@@ -393,7 +453,7 @@ export default function Green() {
     pitch: number;
   } | null>(null);
   const [focusPoint, setFocusPoint] = useState<{ lng: number; lat: number }[] | null>(null);
-  const [plantingOrders, setPlantingOrders] = useState<any[]>([]);
+  const [plantingOrders, setPlantingOrders] = useState<WorkOrder[]>([]);
   const [activeSection, setActiveSection] = useState<Section | null>(storedSection);
   const [installPrompt, setInstallPrompt] = useState<DeferredInstallPrompt | null>(null);
   const [treePhotoUploading, setTreePhotoUploading] = useState(false);
@@ -436,6 +496,27 @@ export default function Green() {
     const points = treePoints.map((t) => ({ lng: t.lng, lat: t.lat }));
     return points.length ? points : null;
   }, [activeUser, treePoints]);
+  const assignedPlantingAreas = useMemo(() => {
+    if (!activeUser) return [] as Array<{ id: number; label: string; geojson: any }>;
+    return plantingOrders
+      .filter((order) => order.work_type === "planting")
+      .filter((order) => !isClosedWorkOrder(order.status))
+      .filter((order) => Boolean(order.area_enabled) && Boolean(order.area_geojson))
+      .map((order) => ({
+        id: order.id,
+        label: (order.area_label || "").trim() || `Assigned area #${order.id}`,
+        geojson: order.area_geojson,
+      }));
+  }, [activeUser, plantingOrders]);
+  const assignedPlantingAreaPoints = useMemo(() => {
+    const points = assignedPlantingAreas.flatMap((area) => extractAreaPoints(normalizeOrderAreaGeometry(area.geojson)));
+    return points.length ? points : null;
+  }, [assignedPlantingAreas]);
+  const mapFitPoints = useMemo(() => {
+    if (focusPoint && focusPoint.length) return focusPoint;
+    if (assignedPlantingAreaPoints && assignedPlantingAreaPoints.length) return assignedPlantingAreaPoints;
+    return activeUserPoints;
+  }, [focusPoint, assignedPlantingAreaPoints, activeUserPoints]);
 
   const userTrees = useMemo(() => {
     if (!activeUser) return [];
@@ -628,13 +709,30 @@ export default function Green() {
       const res = await api.get(
         `/green/work-orders?project_id=${projectId}&assignee_name=${encodeURIComponent(assigneeName)}&_ts=${stamp}`
       );
-      const rows = Array.isArray(res.data) ? res.data : [];
+      const rows = (Array.isArray(res.data) ? res.data : []).map((row: any) => {
+        const areaGeometry = normalizeOrderAreaGeometry(row?.area_geojson);
+        return {
+          ...row,
+          area_enabled: Boolean(row?.area_enabled) && Boolean(areaGeometry),
+          area_geojson: areaGeometry,
+          area_label: typeof row?.area_label === "string" ? row.area_label : null,
+        } as WorkOrder;
+      });
       setPlantingOrders(rows);
       await cacheWorkOrdersOffline(projectId, assigneeName, rows).catch(() => {});
     } catch (error) {
       const cached = await getCachedWorkOrdersOffline(projectId, assigneeName).catch(() => []);
       if (cached.length > 0) {
-        setPlantingOrders(cached);
+        const normalized = cached.map((row: any) => {
+          const areaGeometry = normalizeOrderAreaGeometry(row?.area_geojson);
+          return {
+            ...row,
+            area_enabled: Boolean(row?.area_enabled) && Boolean(areaGeometry),
+            area_geojson: areaGeometry,
+            area_label: typeof row?.area_label === "string" ? row.area_label : null,
+          } as WorkOrder;
+        });
+        setPlantingOrders(normalized);
         return;
       }
       throw error;
@@ -1936,6 +2034,14 @@ export default function Green() {
             </div>
             <div className="green-map-layout">
               <div className="green-map-canvas">
+                {assignedPlantingAreas.length > 0 && (
+                  <div className="green-map-area-banner">
+                    <strong>Assigned planting area enabled</strong>
+                    <span>
+                      {assignedPlantingAreas.length} plot{assignedPlantingAreas.length === 1 ? "" : "s"} visible on map for this user.
+                    </span>
+                  </div>
+                )}
                 <TreeMap
                   trees={treePoints}
                   draftPoint={newTree.lng && newTree.lat ? { lng: newTree.lng, lat: newTree.lat } : null}
@@ -1945,7 +2051,8 @@ export default function Green() {
                   onSelectTree={(id) => loadTreeDetails(id)}
                   onTreeInspect={(detail) => setInspectedTree(detail)}
                   onViewChange={(view) => setMapView(view)}
-                  fitBounds={focusPoint || activeUserPoints}
+                  fitBounds={mapFitPoints}
+                  assignmentAreas={assignedPlantingAreas}
                 />
               </div>
             </div>
