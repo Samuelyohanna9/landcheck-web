@@ -2112,6 +2112,10 @@ export default function GreenWork() {
     const key = normalizeName(assigneeFilter);
     return trees.filter((t) => normalizeName(t.created_by) === key);
   }, [trees, assigneeFilter]);
+  const projectFitPoints = useMemo(() => {
+    const points = trees.map((t) => ({ lng: t.lng, lat: t.lat }));
+    return points.length ? points : null;
+  }, [trees]);
 
   const fitPoints = useMemo(() => {
     const points = (assigneeFilter === "all"
@@ -2120,6 +2124,14 @@ export default function GreenWork() {
     ).map((t) => ({ lng: t.lng, lat: t.lat }));
     return points.length ? points : null;
   }, [assigneeFilter, trees]);
+  const mapTrees =
+    activeProjectId && activeForm === "assign_work" && newOrderAreaEnabled
+      ? trees
+      : filteredTrees;
+  const mapFitPoints =
+    activeProjectId && activeForm === "assign_work" && newOrderAreaEnabled
+      ? projectFitPoints
+      : fitPoints;
 
   const overviewStaffSummary = useMemo(() => {
     const userByKey = new Map(users.map((user) => [normalizeName(user.full_name), user]));
@@ -2854,6 +2866,7 @@ export default function GreenWork() {
   const overviewMode = Boolean(activeProjectId && activeForm === "overview");
   const liveTableMode = Boolean(activeProjectId && activeForm === "live_table");
   const verraMode = Boolean(activeProjectId && activeForm === "verra_reports");
+  const assignWorkAreaMode = Boolean(activeProjectId && activeForm === "assign_work" && newOrderAreaEnabled);
   const activeTreeId = inspectedTree?.id || 0;
 
   const recalcDrawerFrame = useCallback(() => {
@@ -2890,7 +2903,7 @@ export default function GreenWork() {
   useLayoutEffect(() => {
     const frame = window.requestAnimationFrame(recalcDrawerFrame);
     return () => window.cancelAnimationFrame(frame);
-  }, [recalcDrawerFrame, activeProjectId, activeForm, overviewMode, menuOpen, activeTreeId, showSidebar]);
+  }, [recalcDrawerFrame, activeProjectId, activeForm, overviewMode, assignWorkAreaMode, menuOpen, activeTreeId, showSidebar]);
 
   useEffect(() => {
     const onViewportChange = () => {
@@ -3897,19 +3910,8 @@ export default function GreenWork() {
                     disabled={!activeProjectId}
                   />
                   <p className="green-work-note">
-                    Draw polygon on the map for this planting assignment. Use the trash icon to clear and redraw.
+                    Draw polygon on the full map panel below (same tab map). Use the map trash icon to clear and redraw.
                   </p>
-                  <div className="green-work-assignment-map">
-                    <TreeMap
-                      trees={trees}
-                      onAddTree={() => {}}
-                      enableDraw
-                      drawMode="polygon"
-                      drawActive
-                      onPolygonChange={(geometry) => setNewOrderAreaGeometry(geometry)}
-                      minHeight={300}
-                    />
-                  </div>
                   <p className="green-work-note">
                     {newOrderAreaGeometry ? "Area captured and will be linked to this work order." : "No area polygon captured yet."}
                   </p>
@@ -4855,23 +4857,31 @@ export default function GreenWork() {
           )}
 
           <div ref={mapCardRef} className={`green-work-card green-work-map-card ${overviewMode ? "overview-map" : ""}`}>
-            <h3>Trees on Map</h3>
+            <h3>{assignWorkAreaMode ? "Planting Area Map (Polygon Draw)" : "Trees on Map"}</h3>
             {!activeProjectId && (
               <p className="green-work-note">Select an active project in Project Focus to load trees and assignments.</p>
+            )}
+            {assignWorkAreaMode && (
+              <p className="green-work-note">
+                Polygon draw mode is enabled for this assignment. Draw one area on this map, then click Assign Work.
+              </p>
             )}
             <div className="green-work-map-layout">
               <div className="green-work-map-canvas">
                 <TreeMap
-                  trees={filteredTrees}
+                  trees={mapTrees}
                   onAddTree={() => {}}
-                  enableDraw={false}
-                  minHeight={overviewMode || liveTableMode ? 480 : 220}
+                  enableDraw={assignWorkAreaMode}
+                  drawMode={assignWorkAreaMode ? "polygon" : "point"}
+                  drawActive={assignWorkAreaMode}
+                  onPolygonChange={assignWorkAreaMode ? (geometry) => setNewOrderAreaGeometry(geometry) : undefined}
+                  minHeight={overviewMode || liveTableMode || assignWorkAreaMode ? 480 : 220}
                   onTreeInspect={(detail) => {
                     setInspectedTree(detail);
                     if (detail) setMenuOpen(false);
                   }}
                   onViewChange={(view) => setMapView(view)}
-                  fitBounds={fitPoints}
+                  fitBounds={mapFitPoints}
                 />
               </div>
             </div>

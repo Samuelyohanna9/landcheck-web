@@ -1272,13 +1272,6 @@
   margin: 0 0 0.52rem;
 }
 
-.green-work-assignment-map .tree-map-wrap {
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  border: 1px solid rgba(22, 76, 42, 0.14);
-  min-height: 300px;
-}
-
 .green-work-card input:focus,
 .green-work-card select:focus,
 .green-work-card textarea:focus {
