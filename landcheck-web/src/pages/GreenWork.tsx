@@ -3249,7 +3249,11 @@ export default function GreenWork() {
         )}
       </aside>
 
-      <div className={`green-work-content ${showSidebar ? "with-sidebar" : "no-sidebar"}`}>
+      <div
+        className={`green-work-content ${showSidebar ? "with-sidebar" : "no-sidebar"} ${
+          activeForm === "existing_tree_intake" ? "existing-tree-mode" : ""
+        }`}
+      >
         <aside className="green-work-sidebar">
           {activeForm === "project_focus" && (
             <>
