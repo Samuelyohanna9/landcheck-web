@@ -1401,6 +1401,21 @@
   font-size: 0.82rem;
 }
 
+.green-profile-export-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--green-800);
+  font-weight: 700;
+}
+
+.green-profile-export-toggle input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  accent-color: var(--green-600);
+}
+
 .green-profile-export small {
   color: var(--card-subtle);
   font-size: 0.74rem;
