@@ -96,6 +96,7 @@ type WorkOrder = {
   assignee_name: string;
   work_type: string;
   target_trees: number;
+  species_allocations?: Array<{ species: string; count: number }>;
   due_date: string | null;
   status: string;
   planted_count: number;
@@ -169,6 +170,7 @@ const normalizeTreeStatus = (value: string | null | undefined) => {
   if (raw === "needs_replacement") return "need_replacement";
   return raw || "healthy";
 };
+const normalizeSpeciesKey = (value: string | null | undefined) => String(value || "").trim().toLowerCase();
 const formatTreeConditionLabel = (value: string | null | undefined) =>
   normalizeTreeStatus(value)
     .split("_")
@@ -274,6 +276,30 @@ const mergeTreesById = (rows: any[]) => {
     seen.set(id, { ...row, id, lng: Number(row.lng), lat: Number(row.lat) });
   });
   return Array.from(seen.values());
+};
+const normalizeSpeciesAllocations = (
+  value: unknown,
+): Array<{ species: string; count: number }> => {
+  if (!Array.isArray(value)) return [];
+  const merged = new Map<string, { species: string; count: number }>();
+  value.forEach((entry) => {
+    if (!entry || typeof entry !== "object") return;
+    const row = entry as Record<string, any>;
+    const species = String(row.species || "").trim();
+    const count = Number(row.count || 0);
+    if (!species || !Number.isFinite(count) || count <= 0) return;
+    const key = species.toLowerCase();
+    const existing = merged.get(key);
+    if (existing) {
+      existing.count += Math.round(count);
+      return;
+    }
+    merged.set(key, {
+      species,
+      count: Math.round(count),
+    });
+  });
+  return Array.from(merged.values());
 };
 const normalizeOrderAreaGeometry = (value: any): { type: "Polygon" | "MultiPolygon"; coordinates: any } | null => {
   if (!value) return null;
@@ -576,6 +602,72 @@ export default function Green() {
     () => userTrees.filter((tree) => String(tree.tree_origin || "new_planting").toLowerCase() === "new_planting"),
     [userTrees],
   );
+  const activePlantingOrders = useMemo(
+    () =>
+      plantingOrders
+        .filter((order) => order.work_type === "planting")
+        .filter((order) => !isClosedWorkOrder(order.status)),
+    [plantingOrders],
+  );
+  const activeOrderSpeciesAllocations = useMemo(() => {
+    const merged = new Map<string, { species: string; count: number }>();
+    activePlantingOrders.forEach((order) => {
+      const rows = normalizeSpeciesAllocations(order.species_allocations);
+      rows.forEach((row) => {
+        const key = normalizeSpeciesKey(row.species);
+        if (!key) return;
+        const existing = merged.get(key);
+        if (existing) {
+          existing.count += Number(row.count || 0);
+          return;
+        }
+        merged.set(key, {
+          species: row.species,
+          count: Number(row.count || 0),
+        });
+      });
+    });
+    return Array.from(merged.values()).sort((a, b) => a.species.localeCompare(b.species));
+  }, [activePlantingOrders]);
+  const hasSpeciesBasedPlantingAllocation = activeOrderSpeciesAllocations.length > 0;
+  const plantedSpeciesCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    userPlantingTrees.forEach((tree) => {
+      const key = normalizeSpeciesKey(tree.species);
+      if (!key) return;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return counts;
+  }, [userPlantingTrees]);
+  const speciesAllocationOptions = useMemo(
+    () =>
+      activeOrderSpeciesAllocations.map((allocation) => {
+        const key = normalizeSpeciesKey(allocation.species);
+        const planted = plantedSpeciesCounts.get(key) || 0;
+        const remaining = Math.max(Number(allocation.count || 0) - planted, 0);
+        return {
+          species: allocation.species,
+          total: Number(allocation.count || 0),
+          planted,
+          remaining,
+        };
+      }),
+    [activeOrderSpeciesAllocations, plantedSpeciesCounts],
+  );
+  const plantedBySpeciesSummary = useMemo(() => {
+    const map = new Map<string, { species: string; count: number }>();
+    userPlantingTrees.forEach((tree) => {
+      const label = String(tree.species || "").trim() || "Unspecified";
+      const key = normalizeSpeciesKey(label);
+      const existing = map.get(key);
+      if (existing) {
+        existing.count += 1;
+        return;
+      }
+      map.set(key, { species: label, count: 1 });
+    });
+    return Array.from(map.values()).sort((a, b) => b.count - a.count || a.species.localeCompare(b.species));
+  }, [userPlantingTrees]);
 
   const myTaskCounts = useMemo(() => {
     const total = myTasks.length;
@@ -766,6 +858,7 @@ export default function Green() {
           area_enabled: Boolean(row?.area_enabled) && Boolean(areaGeometry),
           area_geojson: areaGeometry,
           area_label: typeof row?.area_label === "string" ? row.area_label : null,
+          species_allocations: normalizeSpeciesAllocations(row?.species_allocations),
         } as WorkOrder;
       });
       setPlantingOrders(rows);
@@ -780,6 +873,7 @@ export default function Green() {
             area_enabled: Boolean(row?.area_enabled) && Boolean(areaGeometry),
             area_geojson: areaGeometry,
             area_label: typeof row?.area_label === "string" ? row.area_label : null,
+            species_allocations: normalizeSpeciesAllocations(row?.species_allocations),
           } as WorkOrder;
         });
         setPlantingOrders(normalized);
@@ -825,6 +919,25 @@ export default function Green() {
     if (!activeProject || !activeUser) return;
     loadWorkOrders(activeProject.id, activeUser).catch(() => setPlantingOrders([]));
   }, [activeProject?.id, activeUser]);
+
+  useEffect(() => {
+    if (newTree.tree_origin === "existing_inventory") return;
+    if (!hasSpeciesBasedPlantingAllocation || speciesAllocationOptions.length === 0) return;
+    const allowedKeys = new Set(speciesAllocationOptions.map((item) => normalizeSpeciesKey(item.species)));
+    const currentKey = normalizeSpeciesKey(newTree.species);
+    if (currentKey && allowedKeys.has(currentKey)) return;
+    setNewTree((prev) => {
+      if (prev.tree_origin === "existing_inventory") return prev;
+      const firstSpecies = speciesAllocationOptions[0]?.species || "";
+      if (!firstSpecies || normalizeSpeciesKey(prev.species) === normalizeSpeciesKey(firstSpecies)) return prev;
+      return { ...prev, species: firstSpecies };
+    });
+  }, [
+    newTree.tree_origin,
+    newTree.species,
+    hasSpeciesBasedPlantingAllocation,
+    speciesAllocationOptions,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1009,6 +1122,18 @@ export default function Green() {
       toast.error("Pick a point on the map");
       return;
     }
+    const speciesValue = String(newTree.species || "").trim();
+    if (newTree.tree_origin !== "existing_inventory" && hasSpeciesBasedPlantingAllocation) {
+      const allowedKeys = new Set(speciesAllocationOptions.map((item) => normalizeSpeciesKey(item.species)));
+      if (!speciesValue) {
+        toast.error("Select one of your assigned species before adding this tree.");
+        return;
+      }
+      if (!allowedKeys.has(normalizeSpeciesKey(speciesValue))) {
+        toast.error("Selected species is outside your assigned planting species list.");
+        return;
+      }
+    }
     const treeHeightValue = parseTreeHeightInput(newTree.tree_height_m);
     if (newTree.tree_height_m && treeHeightValue === null) {
       toast.error("Tree height must be a number between 0 and 120.");
@@ -1018,7 +1143,7 @@ export default function Green() {
       project_id: activeProject.id,
       lng: Number(newTree.lng),
       lat: Number(newTree.lat),
-      species: (newTree.species || "").trim(),
+      species: speciesValue,
       planting_date: newTree.planting_date || null,
       status: newTree.status,
       tree_origin: newTree.tree_origin,
@@ -2201,7 +2326,32 @@ export default function Green() {
               </div>
               <div className="tree-form-row">
                 <label>Species</label>
-                <input value={newTree.species} onChange={(e) => setNewTree({ ...newTree, species: e.target.value })} />
+                {newTree.tree_origin !== "existing_inventory" && hasSpeciesBasedPlantingAllocation ? (
+                  <>
+                    <select
+                      value={newTree.species}
+                      onChange={(e) => setNewTree({ ...newTree, species: e.target.value })}
+                    >
+                      <option value="">Select assigned species</option>
+                      {speciesAllocationOptions.map((item) => (
+                        <option key={`assigned-species-${item.species}`} value={item.species}>
+                          {item.species}
+                        </option>
+                      ))}
+                    </select>
+                    <small className="green-species-allocation-hint">
+                      Assigned:{" "}
+                      {speciesAllocationOptions
+                        .map((item) => `${item.species} (${item.remaining} remaining)`)
+                        .join(", ")}
+                    </small>
+                  </>
+                ) : (
+                  <input
+                    value={newTree.species}
+                    onChange={(e) => setNewTree({ ...newTree, species: e.target.value })}
+                  />
+                )}
               </div>
               <div className="tree-form-row">
                 <label>Tree Entry Type</label>
@@ -2423,6 +2573,21 @@ export default function Green() {
                     <span>Pending Planting</span>
                     <strong>{pendingPlanting}</strong>
                   </div>
+                </div>
+                <div className="green-profile-species">
+                  <h4>Trees Planted By Species</h4>
+                  {plantedBySpeciesSummary.length === 0 ? (
+                    <p className="green-empty">No planted trees recorded yet for this user.</p>
+                  ) : (
+                    <div className="green-profile-species-list">
+                      {plantedBySpeciesSummary.map((item) => (
+                        <div key={`profile-species-${item.species}`} className="green-profile-species-row">
+                          <span>{item.species}</span>
+                          <strong>{item.count}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="green-profile-export">
                   <h4>My Report Export</h4>
