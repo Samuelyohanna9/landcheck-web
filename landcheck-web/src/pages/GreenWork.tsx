@@ -131,6 +131,11 @@ type WorkTask = {
   photo_url?: string | null;
   created_at?: string | null;
   completed_at?: string | null;
+  activity_lng?: number | null;
+  activity_lat?: number | null;
+  activity_recorded_at?: string | null;
+  tree_lng?: number | null;
+  tree_lat?: number | null;
 };
 
 type ReviewQueueTask = WorkTask & {
@@ -223,6 +228,45 @@ const formatDateLabel = (value: string | null | undefined) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString();
+};
+const formatDateTimeLabel = (value: string | null | undefined) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+};
+const toFiniteCoord = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === "") return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+const formatGpsPair = (lng: number | null, lat: number | null) => {
+  if (lng === null || lat === null) return "Not captured";
+  return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+};
+const computeDistanceMeters = (
+  fromLng: number | null,
+  fromLat: number | null,
+  toLng: number | null,
+  toLat: number | null,
+) => {
+  if (fromLng === null || fromLat === null || toLng === null || toLat === null) return null;
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+  const earthRadiusMeters = 6371000;
+  const dLat = toRadians(toLat - fromLat);
+  const dLng = toRadians(toLng - fromLng);
+  const fromLatRad = toRadians(fromLat);
+  const toLatRad = toRadians(toLat);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(fromLatRad) * Math.cos(toLatRad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthRadiusMeters * c;
+};
+const formatDistanceMeters = (distanceMeters: number | null) => {
+  if (distanceMeters === null || !Number.isFinite(distanceMeters)) return "Not available";
+  if (distanceMeters < 1000) return `${Math.round(distanceMeters)} m`;
+  return `${(distanceMeters / 1000).toFixed(2)} km`;
 };
 const formatTaskTypeLabel = (value: string | null | undefined) =>
   (value || "")
@@ -2053,6 +2097,18 @@ export default function GreenWork() {
     const sortedNames = Array.from(namesByKey.values()).sort((a, b) => a.localeCompare(b));
     return ["all", ...sortedNames];
   }, [orders, trees, tasks, users]);
+
+  const treeCoordinatesById = useMemo(() => {
+    const map = new Map<number, { lng: number; lat: number }>();
+    trees.forEach((tree) => {
+      const treeId = Number(tree.id);
+      const lng = Number(tree.lng);
+      const lat = Number(tree.lat);
+      if (!Number.isFinite(treeId) || !Number.isFinite(lng) || !Number.isFinite(lat)) return;
+      map.set(treeId, { lng, lat });
+    });
+    return map;
+  }, [trees]);
 
   useEffect(() => {
     setVerraFilters((prev) => {
@@ -4137,7 +4193,25 @@ export default function GreenWork() {
               {!activeProjectId && <p className="green-work-note">Select project first from Project Focus.</p>}
               {activeProjectId && reviewQueue.length === 0 && <p className="green-work-note">No submitted tasks awaiting review.</p>}
               <div className="staff-list">
-                {reviewQueue.map((task) => (
+                {reviewQueue.map((task) => {
+                  const fallbackTreeCoords = treeCoordinatesById.get(Number(task.tree_id));
+                  const originalTreeLng = toFiniteCoord(task.tree_lng) ?? toFiniteCoord(fallbackTreeCoords?.lng);
+                  const originalTreeLat = toFiniteCoord(task.tree_lat) ?? toFiniteCoord(fallbackTreeCoords?.lat);
+                  const maintenanceLng = toFiniteCoord(task.activity_lng);
+                  const maintenanceLat = toFiniteCoord(task.activity_lat);
+                  const distanceFromTreeMeters = computeDistanceMeters(
+                    originalTreeLng,
+                    originalTreeLat,
+                    maintenanceLng,
+                    maintenanceLat,
+                  );
+                  let distanceToneClass = "is-unknown";
+                  if (distanceFromTreeMeters !== null) {
+                    if (distanceFromTreeMeters <= 10) distanceToneClass = "is-close";
+                    else if (distanceFromTreeMeters <= 30) distanceToneClass = "is-near";
+                    else distanceToneClass = "is-far";
+                  }
+                  return (
                   <div key={task.id} className="staff-row">
                     <div className="staff-row-head">
                       <strong>
@@ -4150,6 +4224,16 @@ export default function GreenWork() {
                     </div>
                     <div className="staff-row-meta">
                       Review: {task.review_state || "none"} | Submitted: {formatDateLabel(task.submitted_at || task.created_at)}
+                    </div>
+                    <div className="staff-row-meta">
+                      Tree GPS: {formatGpsPair(originalTreeLng, originalTreeLat)}
+                    </div>
+                    <div className="staff-row-meta">
+                      Maintenance GPS: {formatGpsPair(maintenanceLng, maintenanceLat)}
+                      {task.activity_recorded_at ? ` | Captured: ${formatDateTimeLabel(task.activity_recorded_at)}` : ""}
+                    </div>
+                    <div className={`staff-row-meta green-work-review-distance ${distanceToneClass}`}>
+                      Distance from tree: {formatDistanceMeters(distanceFromTreeMeters)}
                     </div>
                     {task.reported_tree_status && (
                       <div className="staff-row-meta">
@@ -4191,7 +4275,7 @@ export default function GreenWork() {
                       )}
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
             </div>
           )}
