@@ -113,6 +113,20 @@ type Custodian = {
   verification_status?: string | null;
 };
 
+type DistributionAllocation = {
+  id: number;
+  event_id: number;
+  project_id: number;
+  custodian_id: number;
+  custodian_name?: string | null;
+  quantity_allocated: number;
+  supervision_target?: number;
+  supervision_assigned?: number;
+  supervision_done?: number;
+  supervision_live?: number;
+  supervision_remaining?: number;
+};
+
 type ActiveActorOption = {
   value: string;
   label: string;
@@ -126,6 +140,7 @@ type TaskEdit = {
   status: string;
   notes: string;
   photo_url: string;
+  photo_urls: string[];
   tree_status: string;
   activity_lng: number | null;
   activity_lat: number | null;
@@ -209,10 +224,28 @@ const isTaskLockedForField = (task: any) => isTaskApproved(task) || isTaskSubmit
 const isTaskDoneForSummary = (task: any) => {
   return isTaskApproved(task);
 };
-const hasTaskEvidence = (task: any, edit?: { notes?: string; photo_url?: string }) => {
+const normalizePhotoList = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const rows: string[] = [];
+  value.forEach((item) => {
+    const raw = String(item || "").trim();
+    if (!raw || seen.has(raw)) return;
+    seen.add(raw);
+    rows.push(raw);
+  });
+  return rows;
+};
+const getTaskPhotoUrls = (task: any, edit?: { photo_url?: string; photo_urls?: string[] }) => {
+  const merged = normalizePhotoList(edit?.photo_urls ?? task?.photo_urls);
+  const fallback = String(edit?.photo_url ?? task?.photo_url ?? "").trim();
+  if (fallback && !merged.includes(fallback)) merged.push(fallback);
+  return merged;
+};
+const hasTaskEvidence = (task: any, edit?: { notes?: string; photo_url?: string; photo_urls?: string[] }) => {
   const notes = (edit?.notes ?? task?.notes ?? "").trim();
-  const photo = (edit?.photo_url ?? task?.photo_url ?? "").trim();
-  return Boolean(notes && photo);
+  const photos = getTaskPhotoUrls(task, edit);
+  return Boolean(notes && photos.length > 0);
 };
 const toFiniteNumber = (value: unknown): number | null => {
   if (value === null || value === undefined || value === "") return null;
@@ -239,6 +272,11 @@ const sanitizeTaskEditForApi = (edit: TaskEdit) => {
     notes: edit.notes,
     tree_status: edit.tree_status,
   };
+  const normalizedPhotoUrls = normalizePhotoList(edit.photo_urls).filter((url) => !isLocalBlobUrl(url));
+  if (normalizedPhotoUrls.length) {
+    payload.photo_urls = normalizedPhotoUrls;
+    payload.photo_url = normalizedPhotoUrls[normalizedPhotoUrls.length - 1];
+  }
   if (edit.photo_url && !isLocalBlobUrl(edit.photo_url)) {
     payload.photo_url = edit.photo_url;
   }
@@ -258,10 +296,15 @@ const buildTaskEdit = (task: any, overrides?: Partial<TaskEdit>): TaskEdit => {
     ? overrides?.activity_recorded_at
     : task?.activity_recorded_at;
   const treeStatusSource = overrides?.tree_status ?? task?.reported_tree_status ?? task?.tree_status ?? "healthy";
+  const mergedPhotoUrls = getTaskPhotoUrls(task, {
+    photo_url: overrides?.photo_url,
+    photo_urls: hasOwn(overrides, "photo_urls") ? overrides?.photo_urls : undefined,
+  });
   return {
     status: overrides?.status ?? task?.status ?? "pending",
     notes: overrides?.notes ?? task?.notes ?? "",
-    photo_url: overrides?.photo_url ?? task?.photo_url ?? "",
+    photo_url: mergedPhotoUrls[mergedPhotoUrls.length - 1] || "",
+    photo_urls: mergedPhotoUrls,
     tree_status: normalizeTreeStatus(treeStatusSource),
     activity_lng: toFiniteNumber(gpsLngRaw),
     activity_lat: toFiniteNumber(gpsLatRaw),
@@ -516,6 +559,7 @@ export default function Green() {
     created_by: "",
   });
   const [projectCustodians, setProjectCustodians] = useState<Custodian[]>([]);
+  const [projectAllocations, setProjectAllocations] = useState<DistributionAllocation[]>([]);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const [pendingTreePhoto, setPendingTreePhoto] = useState<File | null>(null);
@@ -596,8 +640,16 @@ export default function Green() {
 
   const userTrees = useMemo(() => {
     if (!activeUser) return [];
+    if (activeUserIsCustodian) {
+      const custodianId = Number(activeUserDetail?.id || 0);
+      return trees.filter((t: any) => {
+        const byCustodian = custodianId > 0 && Number((t as any).custodian_id || 0) === custodianId;
+        const byCreator = (t as any).created_by === activeUser;
+        return byCustodian || byCreator;
+      });
+    }
     return trees.filter((t: any) => (t as any).created_by === activeUser);
-  }, [activeUser, trees]);
+  }, [activeUser, activeUserDetail, activeUserIsCustodian, trees]);
   const userPlantingTrees = useMemo(
     () => userTrees.filter((tree) => String(tree.tree_origin || "new_planting").toLowerCase() === "new_planting"),
     [userTrees],
@@ -699,6 +751,10 @@ export default function Green() {
       role: `custodian_${custodian.custodian_type}`,
     } as GreenUser;
   }, [activeUser, users, projectCustodians]);
+  const activeUserIsCustodian = useMemo(
+    () => Boolean(activeUserDetail && String(activeUserDetail.role || "").startsWith("custodian_")),
+    [activeUserDetail],
+  );
   const activeActorOptions = useMemo<ActiveActorOption[]>(() => {
     const byKey = new Map<string, ActiveActorOption>();
     users.forEach((user) => {
@@ -734,11 +790,30 @@ export default function Green() {
   }, [users, projectCustodians]);
 
   const pendingPlanting = useMemo(() => {
+    if (activeUserIsCustodian) {
+      const custodianId = Number(activeUserDetail?.id || 0);
+      if (!custodianId) return 0;
+      const allocatedByDistribution = projectAllocations
+        .filter((row) => Number(row.custodian_id || 0) === custodianId)
+        .reduce((sum, row) => sum + Number(row.quantity_allocated || 0), 0);
+      const allocatedByWorkOrders = plantingOrders
+        .filter((row) => row.work_type === "planting")
+        .reduce((sum, row) => sum + Number(row.target_trees || 0), 0);
+      const allocated = Math.max(allocatedByDistribution, allocatedByWorkOrders);
+      const planted = trees.filter((tree) => {
+        const origin = String(tree.tree_origin || "new_planting").toLowerCase();
+        if (origin !== "new_planting") return false;
+        const linkedCustodian = Number(tree.custodian_id || 0) === custodianId;
+        const plantedByCustodian = normalizeName(tree.created_by) === normalizeName(activeUser);
+        return linkedCustodian || plantedByCustodian;
+      }).length;
+      return Math.max(allocated - planted, 0);
+    }
     const orders = plantingOrders.filter((o) => o.work_type === "planting");
     const totalTarget = orders.reduce((sum: number, o: any) => sum + (o.target_trees || 0), 0);
     const planted = userPlantingTrees.length;
     return Math.max(totalTarget - planted, 0);
-  }, [plantingOrders, userPlantingTrees]);
+  }, [activeUser, activeUserDetail, activeUserIsCustodian, plantingOrders, projectAllocations, trees, userPlantingTrees]);
 
   const plantingReviewCounts = useMemo(() => {
     const submitted = userPlantingTrees.filter((t) => normalizeTreeStatus(t.status) === "pending_planting").length;
@@ -802,10 +877,11 @@ export default function Green() {
 
   const loadProjectDetail = async (id: number) => {
     try {
-      const [projectRes, treesRes, custodiansRes] = await Promise.allSettled([
+      const [projectRes, treesRes, custodiansRes, allocationsRes] = await Promise.allSettled([
         api.get(`/green/projects/${id}`),
         api.get(`/green/projects/${id}/trees`),
         api.get(`/green/projects/${id}/custodians`),
+        api.get(`/green/projects/${id}/distribution-allocations`),
       ]);
 
       if (projectRes.status !== "fulfilled" || treesRes.status !== "fulfilled") {
@@ -818,7 +894,12 @@ export default function Green() {
         custodiansRes.status === "fulfilled" && Array.isArray(custodiansRes.value.data)
           ? custodiansRes.value.data
           : [];
+      const allocations =
+        allocationsRes.status === "fulfilled" && Array.isArray(allocationsRes.value.data)
+          ? allocationsRes.value.data
+          : [];
       setProjectCustodians(custodians);
+      setProjectAllocations(allocations);
       setTrees(normalized);
       await Promise.all([
         cacheProjectDetailOffline(id, projectRes.value.data).catch(() => {}),
@@ -839,6 +920,7 @@ export default function Green() {
       }
       if (cachedProject || mergedTrees.length > 0) {
         setProjectCustodians([]);
+        setProjectAllocations([]);
         return;
       }
       throw error;
@@ -1049,8 +1131,29 @@ export default function Green() {
     setTreeTimeline(null);
     if (!activeProject) {
       setProjectCustodians([]);
+      setProjectAllocations([]);
     }
   }, [activeProject?.id, activeUser]);
+
+  useEffect(() => {
+    if (activeUserIsCustodian && activeSection === "tasks") {
+      setActiveSection("map");
+    }
+  }, [activeUserIsCustodian, activeSection]);
+
+  useEffect(() => {
+    if (!activeUserIsCustodian) return;
+    const custodianId = Number(activeUserDetail?.id || 0);
+    if (!custodianId) return;
+    setNewTree((prev) =>
+      String(prev.custodian_id || "") === String(custodianId)
+        ? prev
+        : {
+            ...prev,
+            custodian_id: String(custodianId),
+          },
+    );
+  }, [activeUserIsCustodian, activeUserDetail?.id]);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (event: Event) => {
@@ -1398,9 +1501,16 @@ export default function Green() {
       tree_status: edit.tree_status,
       actor_name: activeUser || "",
     };
-    if (edit.photo_url && !isLocalBlobUrl(edit.photo_url)) {
+    const submitPhotoUrls = normalizePhotoList(edit.photo_urls).filter((url) => !isLocalBlobUrl(url));
+    if (submitPhotoUrls.length) {
+      submitPayload.photo_urls = submitPhotoUrls;
+      submitPayload.photo_url = submitPhotoUrls[submitPhotoUrls.length - 1];
+    } else if (edit.photo_url && !isLocalBlobUrl(edit.photo_url)) {
       submitPayload.photo_url = edit.photo_url;
     }
+    const optimisticPhotoUrls = normalizePhotoList(edit.photo_urls);
+    const optimisticPhotoUrl =
+      optimisticPhotoUrls[optimisticPhotoUrls.length - 1] || edit.photo_url || String(task.photo_url || "");
     if (edit.activity_lng !== null && edit.activity_lat !== null) {
       submitPayload.activity_lng = Number(edit.activity_lng.toFixed(6));
       submitPayload.activity_lat = Number(edit.activity_lat.toFixed(6));
@@ -1417,6 +1527,8 @@ export default function Green() {
                 review_state: "submitted",
                 reported_tree_status: edit.tree_status || task.reported_tree_status || task.tree_status,
                 review_notes: null,
+                photo_urls: optimisticPhotoUrls,
+                photo_url: optimisticPhotoUrl,
                 activity_lng: edit.activity_lng ?? task.activity_lng,
                 activity_lat: edit.activity_lat ?? task.activity_lat,
                 activity_recorded_at: edit.activity_recorded_at || task.activity_recorded_at,
@@ -1446,6 +1558,8 @@ export default function Green() {
                     review_state: "submitted",
                     reported_tree_status: edit.tree_status || task.reported_tree_status || task.tree_status,
                     review_notes: null,
+                    photo_urls: optimisticPhotoUrls,
+                    photo_url: optimisticPhotoUrl,
                     activity_lng: edit.activity_lng ?? task.activity_lng,
                     activity_lat: edit.activity_lat ?? task.activity_lat,
                     activity_recorded_at: edit.activity_recorded_at || task.activity_recorded_at,
@@ -1489,60 +1603,98 @@ export default function Green() {
     return url;
   };
 
-  const onTaskPhotoPicked = async (taskId: number, file: File | null) => {
-    if (!file) return;
+  const onTaskPhotoPicked = async (taskId: number, files: FileList | File[] | null) => {
+    const pickedFiles = files ? Array.from(files).filter(Boolean) : [];
+    if (!pickedFiles.length) return;
     const task = myTasks.find((entry: any) => entry.id === taskId);
     if (isTaskLockedForField(task)) {
       toast.error("Task is locked for review");
       return;
     }
-    const loadingId = toast.loading("Uploading task photo...");
+    const loadingId = toast.loading(
+      pickedFiles.length === 1 ? "Uploading task photo..." : `Uploading ${pickedFiles.length} task photos...`,
+    );
+    const initialTask = myTasks.find((entry: any) => entry.id === taskId) || task;
+    let mergedUrls = getTaskPhotoUrls(initialTask, taskEdits[taskId]);
+    let uploadedCount = 0;
+    let queuedCount = 0;
+    let failedCount = 0;
     try {
-      const photoUrl = await uploadGreenPhoto(file, "tasks", { taskId });
-      const linkedTask = myTasks.find((task: any) => task.id === taskId);
+      for (const file of pickedFiles) {
+        try {
+          const photoUrl = await uploadGreenPhoto(file, "tasks", { taskId });
+          uploadedCount += 1;
+          if (photoUrl && !mergedUrls.includes(photoUrl)) {
+            mergedUrls = [...mergedUrls, photoUrl];
+          }
+        } catch (error) {
+          if (isLikelyNetworkError(error) && activeProject && activeUser) {
+            try {
+              const queued = await queuePhotoUploadOffline(file, "tasks", { taskId }, {
+                projectId: activeProject.id,
+                assigneeName: activeUser,
+              });
+              queuedCount += 1;
+              if (queued.localPreviewUrl && !mergedUrls.includes(queued.localPreviewUrl)) {
+                mergedUrls = [...mergedUrls, queued.localPreviewUrl];
+              }
+              continue;
+            } catch {
+              failedCount += 1;
+              continue;
+            }
+          }
+          failedCount += 1;
+          continue;
+        }
+      }
+      const latestPhoto = mergedUrls[mergedUrls.length - 1] || "";
+      const linkedTask = myTasks.find((entry: any) => entry.id === taskId) || task;
       setTaskEdits((prev) => ({
         ...prev,
         [taskId]: buildTaskEdit(linkedTask || task, {
           ...prev[taskId],
-          photo_url: photoUrl,
+          photo_url: latestPhoto,
+          photo_urls: mergedUrls,
         }),
       }));
-      setMyTasks((prev) => prev.map((task: any) => (task.id === taskId ? { ...task, photo_url: photoUrl } : task)));
+      setMyTasks((prev) =>
+        prev.map((row: any) =>
+          row.id === taskId
+            ? {
+                ...row,
+                photo_url: latestPhoto,
+                photo_urls: mergedUrls,
+              }
+            : row,
+        ),
+      );
       if (linkedTask && inspectedTree && Number(linkedTask.tree_id) === inspectedTree.id) {
-        setInspectedTree((prev) => (prev ? { ...prev, photo_url: photoUrl } : prev));
+        setInspectedTree((prev) => (prev ? { ...prev, photo_url: latestPhoto } : prev));
       }
-      if (activeProject) {
+      if (uploadedCount > 0 && activeProject) {
         await loadProjectDetail(activeProject.id);
       }
-      toast.success("Task photo uploaded", { id: loadingId });
-    } catch (error) {
-      if (isLikelyNetworkError(error) && activeProject && activeUser) {
-        try {
-          const queued = await queuePhotoUploadOffline(file, "tasks", { taskId }, {
-            projectId: activeProject.id,
-            assigneeName: activeUser,
-          });
-          setTaskEdits((prev) => ({
-            ...prev,
-            [taskId]: buildTaskEdit(task, {
-              ...prev[taskId],
-              photo_url: queued.localPreviewUrl,
-            }),
-          }));
-          setMyTasks((prev) =>
-            prev.map((row: any) => (row.id === taskId ? { ...row, photo_url: queued.localPreviewUrl } : row))
-          );
-          if (task && inspectedTree && Number(task.tree_id) === inspectedTree.id) {
-            setInspectedTree((prev) => (prev ? { ...prev, photo_url: queued.localPreviewUrl } : prev));
-          }
-          toast.success("Task photo queued offline", { id: loadingId });
-          await showOfflineQueuedToast("Task photo saved offline.");
-          return;
-        } catch {
-          toast.error("Failed to queue task photo offline", { id: loadingId });
-          return;
-        }
+      if (uploadedCount > 0 && queuedCount > 0) {
+        toast.success(`Uploaded ${uploadedCount}, queued ${queuedCount} offline`, { id: loadingId });
+      } else if (uploadedCount > 0) {
+        toast.success(
+          uploadedCount === 1 ? "Task photo uploaded" : `${uploadedCount} task photos uploaded`,
+          { id: loadingId },
+        );
+      } else if (queuedCount > 0) {
+        toast.success(
+          queuedCount === 1 ? "Task photo queued offline" : `${queuedCount} task photos queued offline`,
+          { id: loadingId },
+        );
+        await showOfflineQueuedToast("Task photos saved offline.");
+      } else {
+        toast.error("No photos were processed", { id: loadingId });
       }
+      if (failedCount > 0) {
+        toast.error(`${failedCount} photo upload${failedCount === 1 ? "" : "s"} failed`);
+      }
+    } catch {
       toast.error("Failed to upload task photo", { id: loadingId });
     }
   };
@@ -1939,9 +2091,14 @@ export default function Green() {
 
         <section className="green-tiles">
           <button
-            className={`green-tile ${activeSection === "tasks" ? "active" : ""}`}
-            onClick={() => openSection("tasks")}
+            className={`green-tile ${activeSection === "tasks" ? "active" : ""} ${activeUserIsCustodian ? "is-disabled" : ""}`}
+            onClick={() => {
+              if (activeUserIsCustodian) return;
+              openSection("tasks");
+            }}
             type="button"
+            disabled={activeUserIsCustodian}
+            title={activeUserIsCustodian ? "Maintenance tasks are disabled for custodian users." : undefined}
           >
             <span className="green-tile-icon" aria-hidden="true">
               <TaskTileIcon />
@@ -1951,7 +2108,9 @@ export default function Green() {
               <span className="green-tile-meta-item is-review">Submitted {myTaskCounts.submitted}</span>
               <span className="green-tile-meta-item is-approved">Approved {myTaskCounts.done}</span>
             </span>
-            <span className={`green-tile-badge ${myTaskCounts.undone > 0 ? "green-tile-badge-assigned" : ""}`}>{myTaskCounts.undone}</span>
+            <span className={`green-tile-badge ${myTaskCounts.undone > 0 ? "green-tile-badge-assigned" : ""}`}>
+              {activeUserIsCustodian ? "-" : myTaskCounts.undone}
+            </span>
             {myTaskCounts.rejected > 0 && <span className="green-tile-badge green-tile-badge-rejected">{myTaskCounts.rejected}</span>}
           </button>
 
@@ -2011,6 +2170,10 @@ export default function Green() {
             </div>
             {!activeUser ? (
               <p className="green-empty">Select a staff member or custodian to view assigned tasks.</p>
+            ) : activeUserIsCustodian ? (
+              <p className="green-empty">
+                Maintenance tasks are disabled for custodians. Use Map & Add Trees to record custodian planting.
+              </p>
             ) : myTasks.length === 0 ? (
               <p className="green-empty">No tasks assigned.</p>
             ) : userTrees.length === 0 ? (
@@ -2026,6 +2189,7 @@ export default function Green() {
                 </div>
                 {myTasks.map((t) => {
                   const taskEdit = taskEdits[t.id];
+                  const evidencePhotos = getTaskPhotoUrls(t, taskEdit);
                   const activityLng = toFiniteNumber(hasOwn(taskEdit, "activity_lng") ? taskEdit?.activity_lng : t.activity_lng);
                   const activityLat = toFiniteNumber(hasOwn(taskEdit, "activity_lat") ? taskEdit?.activity_lat : t.activity_lat);
                   const hasActivityGps = activityLng !== null && activityLat !== null;
@@ -2146,6 +2310,15 @@ export default function Green() {
                         </span>
                       </div>
                     )}
+                    {normalizeTaskState(t.task_type) === "supervision" && (
+                      <div className="tree-row">
+                        <span className="task-cell" data-label="Supervision">
+                          Custodian: {t.custodian_name || "-"} | Community: {t.custodian_community_name || "-"} | Contact:{" "}
+                          {t.custodian_phone || t.custodian_email || t.custodian_contact_person || "-"} | Visit{" "}
+                          {Number(t.supervision_visit_no || 0) || "-"} / {Number(t.supervision_total_visits || 0) || "-"}
+                        </span>
+                      </div>
+                    )}
 
                     {editingTaskId === t.id && !isTaskLockedForField(t) && (
                       <div className="tree-row task-edit-inline-row">
@@ -2171,8 +2344,15 @@ export default function Green() {
                               type="file"
                               accept="image/*"
                               capture="environment"
-                              onChange={(e) => onTaskPhotoPicked(t.id, e.target.files?.[0] || null)}
+                              multiple
+                              onChange={(e) => {
+                                void onTaskPhotoPicked(t.id, e.target.files);
+                                e.currentTarget.value = "";
+                              }}
                             />
+                            <small className="green-species-allocation-hint">
+                              {evidencePhotos.length} photo{evidencePhotos.length === 1 ? "" : "s"} attached
+                            </small>
                           </div>
                           <div className="tree-form-row full">
                             <label>Tree Condition</label>
