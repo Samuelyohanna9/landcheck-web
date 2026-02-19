@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { api, BACKEND_URL } from "../api/client";
 import TreeMap, { type TreeInspectData } from "../components/TreeMap";
@@ -104,6 +104,11 @@ type DistributionAllocation = {
   species?: string | null;
   event_quantity?: number | null;
   quantity_allocated: number;
+  supervision_target?: number;
+  supervision_assigned?: number;
+  supervision_done?: number;
+  supervision_live?: number;
+  supervision_remaining?: number;
   expected_planting_start?: string | null;
   expected_planting_end?: string | null;
   followup_cycle_days: number;
@@ -130,6 +135,7 @@ type WorkTask = {
   priority?: string | null;
   notes?: string | null;
   photo_url?: string | null;
+  photo_urls?: string[] | null;
   created_at?: string | null;
   completed_at?: string | null;
   activity_lng?: number | null;
@@ -137,6 +143,17 @@ type WorkTask = {
   activity_recorded_at?: string | null;
   tree_lng?: number | null;
   tree_lat?: number | null;
+  tree_species?: string | null;
+  custodian_id?: number | null;
+  custodian_name?: string | null;
+  custodian_type?: string | null;
+  custodian_community_name?: string | null;
+  custodian_contact_person?: string | null;
+  custodian_phone?: string | null;
+  custodian_email?: string | null;
+  distribution_allocation_id?: number | null;
+  supervision_visit_no?: number | null;
+  supervision_total_visits?: number | null;
 };
 
 type ReviewQueueTask = WorkTask & {
@@ -560,6 +577,26 @@ const toDisplayPhotoUrl = (url: string | null | undefined) => {
   }
 };
 
+const normalizePhotoList = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const rows: string[] = [];
+  value.forEach((item) => {
+    const raw = String(item || "").trim();
+    if (!raw || seen.has(raw)) return;
+    seen.add(raw);
+    rows.push(raw);
+  });
+  return rows;
+};
+
+const getTaskPhotoUrls = (task: Partial<WorkTask> | null | undefined): string[] => {
+  const urls = normalizePhotoList((task as any)?.photo_urls);
+  const primary = String((task as any)?.photo_url || "").trim();
+  if (primary && !urls.includes(primary)) urls.push(primary);
+  return urls;
+};
+
 const renderActionIcon = (form: WorkForm) => {
   switch (form) {
     case "overview":
@@ -956,6 +993,7 @@ export default function GreenWork() {
     event_id: string;
     custodian_id: string;
     quantity_allocated: number;
+    supervision_target: number;
     expected_planting_start: string;
     expected_planting_end: string;
     followup_cycle_days: number;
@@ -964,11 +1002,20 @@ export default function GreenWork() {
     event_id: "",
     custodian_id: "",
     quantity_allocated: 0,
+    supervision_target: 1,
     expected_planting_start: "",
     expected_planting_end: "",
     followup_cycle_days: 14,
     notes: "",
   });
+  const [custodianAssignDraft, setCustodianAssignDraft] = useState<{
+    custodian_id: number;
+    allocation_id: number;
+    assignee_name: string;
+    visits_to_assign: number;
+    due_date: string;
+    priority: string;
+  } | null>(null);
   const [projectSetupExpanded, setProjectSetupExpanded] = useState(false);
   const [treeMetaDraftById, setTreeMetaDraftById] = useState<
     Record<
@@ -1091,6 +1138,7 @@ export default function GreenWork() {
     setCustodians([]);
     setDistributionEvents([]);
     setDistributionAllocations([]);
+    setCustodianAssignDraft(null);
   };
 
   const loadProjectData = async (projectId: number) => {
@@ -1407,10 +1455,15 @@ export default function GreenWork() {
       toast.error("Allocated quantity must be greater than 0");
       return;
     }
+    if (Number(newAllocation.supervision_target || 0) < 0) {
+      toast.error("Supervision target cannot be negative");
+      return;
+    }
     try {
       await api.post(`/green/distribution-events/${eventId}/allocations`, {
         custodian_id: custodianId,
         quantity_allocated: Number(newAllocation.quantity_allocated || 0),
+        supervision_target: Number(newAllocation.supervision_target || 0),
         expected_planting_start: newAllocation.expected_planting_start || null,
         expected_planting_end: newAllocation.expected_planting_end || null,
         followup_cycle_days: Number(newAllocation.followup_cycle_days || 14),
@@ -1420,6 +1473,7 @@ export default function GreenWork() {
         event_id: "",
         custodian_id: "",
         quantity_allocated: 0,
+        supervision_target: 1,
         expected_planting_start: "",
         expected_planting_end: "",
         followup_cycle_days: 14,
@@ -1429,6 +1483,67 @@ export default function GreenWork() {
       toast.success("Allocation saved");
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || "Failed to save allocation");
+    }
+  };
+
+  const openCustodianSupervisionAssign = (custodianId: number) => {
+    const allocationRows = distributionAllocations
+      .filter((row) => Number(row.custodian_id) === Number(custodianId))
+      .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+    if (allocationRows.length === 0) {
+      toast.error("No allocation found for this custodian yet.");
+      return;
+    }
+    const preferred =
+      allocationRows.find((row) => Number(row.supervision_remaining || 0) > 0) ||
+      allocationRows.find((row) => Number(row.supervision_target || 0) > 0) ||
+      allocationRows[0];
+    const suggestedAssignee =
+      users.find((user) => normalizeName(user.role) === "field_officer") ||
+      users.find((user) => normalizeName(user.role) === "supervisor") ||
+      users[0];
+    setCustodianAssignDraft({
+      custodian_id: Number(custodianId),
+      allocation_id: Number(preferred.id || 0),
+      assignee_name: suggestedAssignee?.full_name || "",
+      visits_to_assign: 1,
+      due_date: "",
+      priority: "normal",
+    });
+  };
+
+  const assignCustodianSupervision = async () => {
+    if (!activeProjectId || !custodianAssignDraft) return;
+    const allocationId = Number(custodianAssignDraft.allocation_id || 0);
+    if (!allocationId) {
+      toast.error("Choose an allocation first.");
+      return;
+    }
+    if (!String(custodianAssignDraft.assignee_name || "").trim()) {
+      toast.error("Select a supervision assignee.");
+      return;
+    }
+    if (Number(custodianAssignDraft.visits_to_assign || 0) <= 0) {
+      toast.error("Visits to assign must be at least 1.");
+      return;
+    }
+    try {
+      const res = await api.post(`/green/distribution-allocations/${allocationId}/assign-supervision`, {
+        assignee_name: custodianAssignDraft.assignee_name,
+        visits_to_assign: Number(custodianAssignDraft.visits_to_assign || 1),
+        due_date: custodianAssignDraft.due_date || null,
+        priority: custodianAssignDraft.priority || "normal",
+        actor_name: "supervisor",
+      });
+      await Promise.all([loadProjectData(activeProjectId), loadCommunityData(activeProjectId)]);
+      const createdCount = Number(res?.data?.created_count || 0);
+      toast.success(
+        createdCount > 0
+          ? `Assigned ${createdCount} supervision visit${createdCount === 1 ? "" : "s"}.`
+          : "No new supervision tasks assigned.",
+      );
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to assign supervision");
     }
   };
 
@@ -2977,7 +3092,17 @@ export default function GreenWork() {
   const custodianLiveRows = useMemo(() => {
     const allocationMap = new Map<
       number,
-      { allocations: number; seedlings: number; eventIds: Set<number>; lastEventDate: string | null }
+      {
+        allocations: number;
+        seedlings: number;
+        eventIds: Set<number>;
+        lastEventDate: string | null;
+        supervisionTarget: number;
+        supervisionAssigned: number;
+        supervisionDone: number;
+        supervisionLive: number;
+        supervisionRemaining: number;
+      }
     >();
     distributionAllocations.forEach((row) => {
       const custodianId = Number(row.custodian_id || 0);
@@ -2987,9 +3112,19 @@ export default function GreenWork() {
         seedlings: 0,
         eventIds: new Set<number>(),
         lastEventDate: null,
+        supervisionTarget: 0,
+        supervisionAssigned: 0,
+        supervisionDone: 0,
+        supervisionLive: 0,
+        supervisionRemaining: 0,
       };
       existing.allocations += 1;
       existing.seedlings += Number(row.quantity_allocated || 0);
+      existing.supervisionTarget += Number(row.supervision_target || 0);
+      existing.supervisionAssigned += Number(row.supervision_assigned || 0);
+      existing.supervisionDone += Number(row.supervision_done || 0);
+      existing.supervisionLive += Number(row.supervision_live || 0);
+      existing.supervisionRemaining += Number(row.supervision_remaining || 0);
       if (Number(row.event_id || 0) > 0) existing.eventIds.add(Number(row.event_id));
       const eventDate = String(row.event_date || "").trim();
       if (eventDate && (!existing.lastEventDate || eventDate > existing.lastEventDate)) {
@@ -3018,9 +3153,22 @@ export default function GreenWork() {
           seedlings: 0,
           eventIds: new Set<number>(),
           lastEventDate: null,
+          supervisionTarget: 0,
+          supervisionAssigned: 0,
+          supervisionDone: 0,
+          supervisionLive: 0,
+          supervisionRemaining: 0,
         };
         const tree = treeMap.get(Number(custodian.id)) || { total: 0, existing: 0, healthy: 0 };
         const healthyRate = tree.total > 0 ? (tree.healthy / tree.total) * 100 : null;
+        const defaultAllocation = distributionAllocations
+          .filter((allocation) => Number(allocation.custodian_id) === Number(custodian.id))
+          .sort((a, b) => Number(b.id || 0) - Number(a.id || 0))
+          .find((allocation) => Number(allocation.supervision_remaining || 0) > 0)
+          || distributionAllocations
+            .filter((allocation) => Number(allocation.custodian_id) === Number(custodian.id))
+            .sort((a, b) => Number(b.id || 0) - Number(a.id || 0))[0]
+          || null;
         return {
           custodian,
           allocations: alloc.allocations,
@@ -3030,6 +3178,12 @@ export default function GreenWork() {
           treeTotal: tree.total,
           existingTreeTotal: tree.existing,
           healthyRate,
+          supervisionTarget: alloc.supervisionTarget,
+          supervisionAssigned: alloc.supervisionAssigned,
+          supervisionDone: alloc.supervisionDone,
+          supervisionLive: alloc.supervisionLive,
+          supervisionRemaining: alloc.supervisionRemaining,
+          defaultAllocationId: defaultAllocation ? Number(defaultAllocation.id || 0) : null,
         };
       })
       .sort((a, b) => {
@@ -3043,6 +3197,18 @@ export default function GreenWork() {
       (sum, row) => sum + Number(row.quantity_allocated || 0),
       0,
     );
+    const supervisionTarget = distributionAllocations.reduce(
+      (sum, row) => sum + Number(row.supervision_target || 0),
+      0,
+    );
+    const supervisionAssigned = distributionAllocations.reduce(
+      (sum, row) => sum + Number(row.supervision_assigned || 0),
+      0,
+    );
+    const supervisionDone = distributionAllocations.reduce(
+      (sum, row) => sum + Number(row.supervision_done || 0),
+      0,
+    );
     const verified = custodians.filter((row) => normalizeName(row.verification_status) === "verified").length;
     return {
       totalCustodians: custodians.length,
@@ -3050,6 +3216,10 @@ export default function GreenWork() {
       totalEvents: distributionEvents.length,
       totalAllocations: distributionAllocations.length,
       allocatedSeedlings: totalAllocated,
+      supervisionTarget,
+      supervisionAssigned,
+      supervisionDone,
+      supervisionLive: Math.max(supervisionAssigned - supervisionDone, 0),
       existingTrees: existingTreeIntakeRows.length,
     };
   }, [custodians, distributionEvents, distributionAllocations, existingTreeIntakeRows.length]);
@@ -3712,6 +3882,10 @@ export default function GreenWork() {
                   <span className="green-work-flow-pill">Events: {custodianSummary.totalEvents}</span>
                   <span className="green-work-flow-pill">Allocations: {custodianSummary.totalAllocations}</span>
                   <span className="green-work-flow-pill">Seedlings: {custodianSummary.allocatedSeedlings}</span>
+                  <span className="green-work-flow-pill">
+                    Supervision: {custodianSummary.supervisionDone}/{custodianSummary.supervisionTarget} done
+                  </span>
+                  <span className="green-work-flow-pill">Supervision Live: {custodianSummary.supervisionLive}</span>
                   <span className="green-work-flow-pill">Existing Trees: {custodianSummary.existingTrees}</span>
                 </div>
                 <p className="green-work-note">
@@ -3922,6 +4096,19 @@ export default function GreenWork() {
                 />
                 <p className="green-work-field-tip">Tip: number of seedlings assigned to this custodian.</p>
                 <input
+                  type="number"
+                  min={0}
+                  placeholder="Supervision target (visits)"
+                  value={newAllocation.supervision_target}
+                  onChange={(e) =>
+                    setNewAllocation((prev) => ({ ...prev, supervision_target: Number(e.target.value || 0) }))
+                  }
+                  disabled={!activeProjectId}
+                />
+                <p className="green-work-field-tip">
+                  Tip: number of supervisor follow-up visits planned for this allocation.
+                </p>
+                <input
                   type="date"
                   value={newAllocation.expected_planting_start}
                   onChange={(e) => setNewAllocation((prev) => ({ ...prev, expected_planting_start: e.target.value }))}
@@ -3968,7 +4155,7 @@ export default function GreenWork() {
                     <h3>Custodian Report</h3>
                     {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
                     <p className="green-work-note">
-                      Export includes custodians, distribution history, and Existing Tree intake only.
+                      Export includes custodians, distribution history, supervision tracking, and photo appendix for supervision visits.
                 </p>
                 <div className="work-actions">
                       <button type="button" onClick={exportCustodianPdf} disabled={!activeProjectId}>
@@ -4342,6 +4529,7 @@ export default function GreenWork() {
                   const originalTreeLat = toFiniteCoord(task.tree_lat) ?? toFiniteCoord(fallbackTreeCoords?.lat);
                   const maintenanceLng = toFiniteCoord(task.activity_lng);
                   const maintenanceLat = toFiniteCoord(task.activity_lat);
+                  const evidencePhotos = getTaskPhotoUrls(task);
                   const distanceFromTreeMeters = computeDistanceMeters(
                     originalTreeLng,
                     originalTreeLat,
@@ -4386,12 +4574,31 @@ export default function GreenWork() {
                     {task.review_notes && (
                       <div className="staff-row-meta">Latest supervisor note: {task.review_notes}</div>
                     )}
+                    {(task.custodian_name || normalizeName(task.task_type) === "supervision") && (
+                      <div className="staff-row-meta">
+                        Custodian: {task.custodian_name || "-"} | Community: {task.custodian_community_name || "-"} | Contact:{" "}
+                        {task.custodian_phone || task.custodian_email || task.custodian_contact_person || "-"}
+                      </div>
+                    )}
+                    {normalizeName(task.task_type) === "supervision" && (
+                      <div className="staff-row-meta">
+                        Supervision visit: {Number(task.supervision_visit_no || 0) || "-"} /{" "}
+                        {Number(task.supervision_total_visits || 0) || "-"}
+                      </div>
+                    )}
                     <div className="staff-row-meta">
-                      Evidence: {task.photo_url ? "photo" : "no-photo"} / {task.notes ? "notes" : "no-notes"}
+                      Evidence: {evidencePhotos.length} photo{evidencePhotos.length === 1 ? "" : "s"} /{" "}
+                      {task.notes ? "notes" : "no-notes"}
                     </div>
-                    {task.photo_url && (
+                    {evidencePhotos.length > 0 && (
                       <div className="green-work-review-photo">
-                        <img src={toDisplayPhotoUrl(task.photo_url)} alt={`Task ${task.id} evidence`} />
+                        {evidencePhotos.map((photoUrl, photoIndex) => (
+                          <img
+                            key={`review-task-${task.id}-photo-${photoIndex}`}
+                            src={toDisplayPhotoUrl(photoUrl)}
+                            alt={`Task ${task.id} evidence ${photoIndex + 1}`}
+                          />
+                        ))}
                       </div>
                     )}
                     <textarea
@@ -5142,6 +5349,10 @@ export default function GreenWork() {
                 <span className="green-work-live-pill neutral">Custodians: {custodianLiveRows.length}</span>
                 <span className="green-work-live-pill ok">Verified: {custodianSummary.verifiedCustodians}</span>
                 <span className="green-work-live-pill neutral">Seedlings Allocated: {custodianSummary.allocatedSeedlings}</span>
+                <span className="green-work-live-pill neutral">
+                  Supervision: {custodianSummary.supervisionDone}/{custodianSummary.supervisionTarget} done
+                </span>
+                <span className="green-work-live-pill warning">Supervision Live: {custodianSummary.supervisionLive}</span>
               </div>
               <div className="green-work-live-table-wrap">
                 <table className="green-work-live-table">
@@ -5157,32 +5368,157 @@ export default function GreenWork() {
                       <th>Trees Tracked</th>
                       <th>Existing Trees</th>
                       <th>Healthy %</th>
+                      <th>Sup Target</th>
+                      <th>Sup Live</th>
+                      <th>Sup Done</th>
                       <th>Last Event</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {custodianLiveRows.length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="green-work-live-empty">
+                        <td colSpan={15} className="green-work-live-empty">
                           No custodian activity records yet.
                         </td>
                       </tr>
                     ) : (
-                      custodianLiveRows.map((row) => (
-                        <tr key={`custodian-live-${row.custodian.id}`}>
-                          <td>{row.custodian.name || "-"}</td>
-                          <td>{formatTaskTypeLabel(row.custodian.custodian_type)}</td>
-                          <td>{formatTaskTypeLabel(row.custodian.verification_status || "pending")}</td>
-                          <td>{row.custodian.phone || row.custodian.email || "-"}</td>
-                          <td>{row.allocations}</td>
-                          <td>{row.seedlings}</td>
-                          <td>{row.eventCount}</td>
-                          <td>{row.treeTotal}</td>
-                          <td>{row.existingTreeTotal}</td>
-                          <td>{row.healthyRate === null ? "-" : `${row.healthyRate.toFixed(1)}%`}</td>
-                          <td>{formatDateLabel(row.lastEventDate)}</td>
-                        </tr>
-                      ))
+                      custodianLiveRows.map((row) => {
+                        const rowAllocations = distributionAllocations
+                          .filter((item) => Number(item.custodian_id) === Number(row.custodian.id))
+                          .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+                        const isAssignOpen = Number(custodianAssignDraft?.custodian_id || 0) === Number(row.custodian.id);
+                        const selectedAllocation = rowAllocations.find(
+                          (item) => Number(item.id) === Number(custodianAssignDraft?.allocation_id || 0),
+                        );
+                        return (
+                          <Fragment key={`custodian-live-wrap-${row.custodian.id}`}>
+                            <tr key={`custodian-live-${row.custodian.id}`}>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="green-work-link-btn"
+                                  onClick={() => openCustodianSupervisionAssign(Number(row.custodian.id))}
+                                >
+                                  {row.custodian.name || "-"}
+                                </button>
+                              </td>
+                              <td>{formatTaskTypeLabel(row.custodian.custodian_type)}</td>
+                              <td>{formatTaskTypeLabel(row.custodian.verification_status || "pending")}</td>
+                              <td>{row.custodian.phone || row.custodian.email || "-"}</td>
+                              <td>{row.allocations}</td>
+                              <td>{row.seedlings}</td>
+                              <td>{row.eventCount}</td>
+                              <td>{row.treeTotal}</td>
+                              <td>{row.existingTreeTotal}</td>
+                              <td>{row.healthyRate === null ? "-" : `${row.healthyRate.toFixed(1)}%`}</td>
+                              <td>{row.supervisionTarget}</td>
+                              <td>{row.supervisionLive}</td>
+                              <td>{row.supervisionDone}</td>
+                              <td>{formatDateLabel(row.lastEventDate)}</td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="green-row-btn"
+                                  onClick={() => openCustodianSupervisionAssign(Number(row.custodian.id))}
+                                >
+                                  Assign Supervision
+                                </button>
+                              </td>
+                            </tr>
+                            {isAssignOpen && (
+                              <tr key={`custodian-live-assign-${row.custodian.id}`} className="green-work-live-subrow">
+                                <td colSpan={15}>
+                                  <div className="green-work-inline-form">
+                                    <label>
+                                      Allocation
+                                      <select
+                                        value={custodianAssignDraft?.allocation_id || ""}
+                                        onChange={(e) =>
+                                          setCustodianAssignDraft((prev) =>
+                                            prev
+                                              ? { ...prev, allocation_id: Number(e.target.value || 0) }
+                                              : prev,
+                                          )
+                                        }
+                                      >
+                                        {rowAllocations.map((allocation) => (
+                                          <option key={`row-allocation-${allocation.id}`} value={allocation.id}>
+                                            #{allocation.id} | {allocation.event_date || "-"} | {allocation.species || "Mixed"} |
+                                            target {Number(allocation.supervision_target || 0)} | live{" "}
+                                            {Number(allocation.supervision_live || 0)} | done {Number(allocation.supervision_done || 0)}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                    <label>
+                                      Assign To
+                                      <select
+                                        value={custodianAssignDraft?.assignee_name || ""}
+                                        onChange={(e) =>
+                                          setCustodianAssignDraft((prev) =>
+                                            prev ? { ...prev, assignee_name: e.target.value } : prev,
+                                          )
+                                        }
+                                      >
+                                        <option value="">Select staff</option>
+                                        {users.map((user) => (
+                                          <option key={`custody-assign-user-${user.id}`} value={user.full_name}>
+                                            {user.full_name} ({formatRoleLabel(user.role)})
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                    <label>
+                                      Visits To Assign
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={30}
+                                        value={custodianAssignDraft?.visits_to_assign || 1}
+                                        onChange={(e) =>
+                                          setCustodianAssignDraft((prev) =>
+                                            prev ? { ...prev, visits_to_assign: Number(e.target.value || 1) } : prev,
+                                          )
+                                        }
+                                      />
+                                    </label>
+                                    <label>
+                                      Due Date (optional)
+                                      <input
+                                        type="date"
+                                        value={custodianAssignDraft?.due_date || ""}
+                                        onChange={(e) =>
+                                          setCustodianAssignDraft((prev) =>
+                                            prev ? { ...prev, due_date: e.target.value } : prev,
+                                          )
+                                        }
+                                      />
+                                    </label>
+                                    <div className="work-actions">
+                                      <button type="button" onClick={() => void assignCustodianSupervision()}>
+                                        Assign
+                                      </button>
+                                      <button type="button" onClick={() => setCustodianAssignDraft(null)}>
+                                        Cancel
+                                      </button>
+                                    </div>
+                                    {selectedAllocation && (
+                                      <p className="green-work-note">
+                                        Allocation #{selectedAllocation.id}: supervision target{" "}
+                                        {Number(selectedAllocation.supervision_target || 0)}, live{" "}
+                                        {Number(selectedAllocation.supervision_live || 0)}, done{" "}
+                                        {Number(selectedAllocation.supervision_done || 0)}, remaining{" "}
+                                        {Number(selectedAllocation.supervision_remaining || 0)}.
+                                      </p>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
