@@ -1245,6 +1245,22 @@
   line-height: 1.32;
 }
 
+.green-work-review-distance {
+  font-weight: 700;
+}
+
+.green-work-review-distance.is-close {
+  color: var(--green-700);
+}
+
+.green-work-review-distance.is-near {
+  color: var(--amber-700);
+}
+
+.green-work-review-distance.is-far {
+  color: var(--red-700);
+}
+
 .green-work-review-photo {
   margin-top: 0.36rem;
   border-radius: var(--radius-sm);
