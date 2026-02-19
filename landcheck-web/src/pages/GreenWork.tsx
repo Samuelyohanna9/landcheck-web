@@ -33,6 +33,7 @@ type WorkOrder = {
   assignee_name: string;
   work_type: string;
   target_trees: number;
+  species_allocations?: Array<{ species: string; count: number }>;
   due_date: string | null;
   status: string;
   planted_count: number;
@@ -321,6 +322,27 @@ const formatTreeOriginLabel = (value: string | null | undefined) => {
 };
 const formatAttributionScopeLabel = (value: string | null | undefined) => {
   return normalizeName(value) === "monitor_only" ? "Monitor only" : "Full attribution";
+};
+const normalizeSpeciesAllocations = (
+  value: unknown,
+): Array<{ species: string; count: number }> => {
+  if (!Array.isArray(value)) return [];
+  const merged = new Map<string, { species: string; count: number }>();
+  value.forEach((entry) => {
+    if (!entry || typeof entry !== "object") return;
+    const row = entry as Record<string, any>;
+    const species = String(row.species || "").trim();
+    const count = Number(row.count || 0);
+    if (!species || !Number.isFinite(count) || count <= 0) return;
+    const key = normalizeName(species);
+    const existing = merged.get(key);
+    if (existing) {
+      existing.count += Math.round(count);
+      return;
+    }
+    merged.set(key, { species, count: Math.round(count) });
+  });
+  return Array.from(merged.values());
 };
 
 const MAINTENANCE_ACTIVITY_ORDER = ["watering", "weeding", "protection", "inspection", "replacement"] as const;
@@ -869,6 +891,10 @@ export default function GreenWork() {
     target_trees: 0,
     due_date: "",
   });
+  const [newOrderSpeciesMode, setNewOrderSpeciesMode] = useState(false);
+  const [newOrderSpeciesAllocations, setNewOrderSpeciesAllocations] = useState<Array<{ species: string; count: number }>>([
+    { species: "", count: 0 },
+  ]);
   const [newOrderAreaEnabled, setNewOrderAreaEnabled] = useState(false);
   const [newOrderAreaLabel, setNewOrderAreaLabel] = useState("");
   const [newOrderAreaGeometry, setNewOrderAreaGeometry] = useState<{ type: "Polygon" | "MultiPolygon"; coordinates: any } | null>(null);
@@ -1056,6 +1082,8 @@ export default function GreenWork() {
   const clearActiveProjectContext = () => {
     setActiveProjectId(null);
     setOrders([]);
+    setNewOrderSpeciesMode(false);
+    setNewOrderSpeciesAllocations([{ species: "", count: 0 }]);
     setTrees([]);
     setTasks([]);
     setAssigneeFilter("all");
@@ -1100,7 +1128,13 @@ export default function GreenWork() {
     }
 
     if (ordersRes.status === "fulfilled") {
-      setOrders(Array.isArray(ordersRes.value.data) ? ordersRes.value.data : []);
+      const normalizedOrders = (Array.isArray(ordersRes.value.data) ? ordersRes.value.data : []).map((row: any) => ({
+        ...row,
+        target_trees: Number(row?.target_trees || 0),
+        planted_count: Number(row?.planted_count || 0),
+        species_allocations: normalizeSpeciesAllocations(row?.species_allocations),
+      }));
+      setOrders(normalizedOrders);
     } else {
       setOrders([]);
     }
@@ -1709,19 +1743,30 @@ export default function GreenWork() {
       toast.error("Assignee name required");
       return;
     }
-    if (Number(newOrder.target_trees || 0) <= 0) {
+    if (newOrderSpeciesMode && normalizedNewOrderSpeciesAllocations.length === 0) {
+      toast.error("Add at least one species with tree count.");
+      return;
+    }
+    if (!newOrderSpeciesMode && Number(newOrder.target_trees || 0) <= 0) {
       toast.error("Target trees must be greater than 0");
+      return;
+    }
+    if (newOrderSpeciesMode && Number(newOrderSpeciesTargetTotal || 0) <= 0) {
+      toast.error("Species allocation total must be greater than 0.");
       return;
     }
     if (newOrderAreaEnabled && !newOrderAreaGeometry) {
       toast.error("Draw the planting area polygon before assigning.");
       return;
     }
+    const targetTrees = newOrderSpeciesMode ? newOrderSpeciesTargetTotal : Number(newOrder.target_trees || 0);
     try {
       await api.post("/green/work-orders", {
         project_id: activeProjectId,
         ...newOrder,
         work_type: "planting",
+        target_trees: targetTrees,
+        species_allocations: newOrderSpeciesMode ? normalizedNewOrderSpeciesAllocations : null,
         area_enabled: newOrderAreaEnabled,
         area_label: newOrderAreaEnabled ? (newOrderAreaLabel || "").trim() || null : null,
         area_geojson: newOrderAreaEnabled ? newOrderAreaGeometry : null,
@@ -1732,6 +1777,8 @@ export default function GreenWork() {
         target_trees: 0,
         due_date: "",
       });
+      setNewOrderSpeciesMode(false);
+      setNewOrderSpeciesAllocations([{ species: "", count: 0 }]);
       setNewOrderAreaEnabled(false);
       setNewOrderAreaLabel("");
       setNewOrderAreaGeometry(null);
@@ -2133,6 +2180,18 @@ export default function GreenWork() {
       .map(([key, label]) => ({ key, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [trees]);
+  const normalizedNewOrderSpeciesAllocations = useMemo(
+    () => normalizeSpeciesAllocations(newOrderSpeciesAllocations),
+    [newOrderSpeciesAllocations],
+  );
+  const newOrderSpeciesTargetTotal = useMemo(
+    () =>
+      normalizedNewOrderSpeciesAllocations.reduce(
+        (sum, item) => sum + Number(item.count || 0),
+        0,
+      ),
+    [normalizedNewOrderSpeciesAllocations],
+  );
 
   const activeProjectMaturityMap = useMemo(() => {
     if (!activeProjectId) return {};
@@ -4033,10 +4092,94 @@ export default function GreenWork() {
               <input
                 type="number"
                 placeholder="Target trees"
-                value={newOrder.target_trees}
+                value={newOrderSpeciesMode ? newOrderSpeciesTargetTotal : newOrder.target_trees}
                 onChange={(e) => setNewOrder({ ...newOrder, target_trees: Number(e.target.value) })}
+                readOnly={newOrderSpeciesMode}
                 disabled={!activeProjectId}
               />
+              <label className="green-work-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={newOrderSpeciesMode}
+                  onChange={(e) => {
+                    const next = e.target.checked;
+                    setNewOrderSpeciesMode(next);
+                    if (!next) {
+                      setNewOrderSpeciesAllocations([{ species: "", count: 0 }]);
+                    }
+                  }}
+                  disabled={!activeProjectId}
+                />
+                <span>Enable species-based allocation (optional)</span>
+              </label>
+              {newOrderSpeciesMode && (
+                <div className="green-work-species-allocation">
+                  <label className="green-work-field-label">Species allocation rows</label>
+                  <datalist id="green-work-order-species-options">
+                    {projectSpeciesOptions.map((option) => (
+                      <option key={`order-species-${option.key}`} value={option.label} />
+                    ))}
+                  </datalist>
+                  {newOrderSpeciesAllocations.map((row, index) => (
+                    <div key={`species-allocation-${index}`} className="green-work-species-allocation-row">
+                      <input
+                        type="text"
+                        list="green-work-order-species-options"
+                        placeholder="Species name"
+                        value={row.species}
+                        onChange={(e) =>
+                          setNewOrderSpeciesAllocations((prev) =>
+                            prev.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, species: e.target.value } : item,
+                            ),
+                          )
+                        }
+                        disabled={!activeProjectId}
+                      />
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        placeholder="Trees"
+                        value={row.count || ""}
+                        onChange={(e) =>
+                          setNewOrderSpeciesAllocations((prev) =>
+                            prev.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, count: Number(e.target.value || 0) } : item,
+                            ),
+                          )
+                        }
+                        disabled={!activeProjectId}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setNewOrderSpeciesAllocations((prev) =>
+                            prev.length <= 1 ? [{ species: "", count: 0 }] : prev.filter((_, itemIndex) => itemIndex !== index),
+                          )
+                        }
+                        disabled={!activeProjectId}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <div className="work-actions">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNewOrderSpeciesAllocations((prev) => [...prev, { species: "", count: 0 }])
+                      }
+                      disabled={!activeProjectId}
+                    >
+                      Add Species Row
+                    </button>
+                  </div>
+                  <p className="green-work-note">
+                    Total species allocation: {newOrderSpeciesTargetTotal} tree{newOrderSpeciesTargetTotal === 1 ? "" : "s"}.
+                  </p>
+                </div>
+              )}
               <input
                 type="date"
                 value={newOrder.due_date}

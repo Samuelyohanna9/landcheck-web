@@ -1349,6 +1349,26 @@
   font-weight: 700;
 }
 
+.green-work-species-allocation {
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--gw-border);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.green-work-species-allocation-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px auto;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.green-work-species-allocation-row input {
+  margin-bottom: 0;
+}
+
 .green-work-assignment-area {
   border: 1px solid rgba(22, 76, 42, 0.14);
   background: rgba(255, 255, 255, 0.7);
@@ -2603,6 +2623,10 @@
     max-width: none;
     min-width: 0;
     width: 100%;
+  }
+
+  .green-work-species-allocation-row {
+    grid-template-columns: 1fr;
   }
 
   .green-work-live-season-row {
