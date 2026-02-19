@@ -531,6 +531,15 @@ export async function queueTaskSubmitOffline(
       notes: payload?.notes ?? task?.notes,
       photo_url: payload?.photo_url ?? task?.photo_url,
       reported_tree_status: payload?.tree_status ?? task?.reported_tree_status,
+      activity_lng:
+        payload?.activity_lng !== undefined && payload?.activity_lng !== null
+          ? payload?.activity_lng
+          : task?.activity_lng,
+      activity_lat:
+        payload?.activity_lat !== undefined && payload?.activity_lat !== null
+          ? payload?.activity_lat
+          : task?.activity_lat,
+      activity_recorded_at: payload?.activity_recorded_at ?? task?.activity_recorded_at,
     }));
   }
   await registerGreenBackgroundSync();

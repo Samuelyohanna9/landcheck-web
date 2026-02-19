@@ -121,6 +121,15 @@ type ActiveActorOption = {
 };
 
 type Section = "tasks" | "map" | "records" | "profile";
+type TaskEdit = {
+  status: string;
+  notes: string;
+  photo_url: string;
+  tree_status: string;
+  activity_lng: number | null;
+  activity_lat: number | null;
+  activity_recorded_at: string;
+};
 type DeferredInstallPrompt = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
@@ -203,8 +212,26 @@ const hasTaskEvidence = (task: any, edit?: { notes?: string; photo_url?: string 
   const photo = (edit?.photo_url ?? task?.photo_url ?? "").trim();
   return Boolean(notes && photo);
 };
+const toFiniteNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === "") return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+const hasOwn = (value: unknown, key: string) => Boolean(value && Object.prototype.hasOwnProperty.call(value, key));
+const hasTaskGpsCapture = (task: any, edit?: { activity_lng?: number | null; activity_lat?: number | null }) => {
+  const lngSource = hasOwn(edit, "activity_lng") ? edit?.activity_lng : task?.activity_lng;
+  const latSource = hasOwn(edit, "activity_lat") ? edit?.activity_lat : task?.activity_lat;
+  return toFiniteNumber(lngSource) !== null && toFiniteNumber(latSource) !== null;
+};
+const formatDateTimeLabel = (value: string | null | undefined) => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const dt = new Date(raw);
+  if (Number.isNaN(dt.getTime())) return raw;
+  return dt.toLocaleString();
+};
 const isLocalBlobUrl = (value: string | null | undefined) => String(value || "").trim().startsWith("blob:");
-const sanitizeTaskEditForApi = (edit: { status: string; notes: string; photo_url: string; tree_status: string }) => {
+const sanitizeTaskEditForApi = (edit: TaskEdit) => {
   const payload: Record<string, any> = {
     status: edit.status,
     notes: edit.notes,
@@ -213,7 +240,31 @@ const sanitizeTaskEditForApi = (edit: { status: string; notes: string; photo_url
   if (edit.photo_url && !isLocalBlobUrl(edit.photo_url)) {
     payload.photo_url = edit.photo_url;
   }
+  const activityLng = toFiniteNumber(edit.activity_lng);
+  const activityLat = toFiniteNumber(edit.activity_lat);
+  if (activityLng !== null && activityLat !== null) {
+    payload.activity_lng = Number(activityLng.toFixed(6));
+    payload.activity_lat = Number(activityLat.toFixed(6));
+    payload.activity_recorded_at = (edit.activity_recorded_at || "").trim() || new Date().toISOString();
+  }
   return payload;
+};
+const buildTaskEdit = (task: any, overrides?: Partial<TaskEdit>): TaskEdit => {
+  const gpsLngRaw = hasOwn(overrides, "activity_lng") ? overrides?.activity_lng : task?.activity_lng;
+  const gpsLatRaw = hasOwn(overrides, "activity_lat") ? overrides?.activity_lat : task?.activity_lat;
+  const gpsRecordedAtRaw = hasOwn(overrides, "activity_recorded_at")
+    ? overrides?.activity_recorded_at
+    : task?.activity_recorded_at;
+  const treeStatusSource = overrides?.tree_status ?? task?.reported_tree_status ?? task?.tree_status ?? "healthy";
+  return {
+    status: overrides?.status ?? task?.status ?? "pending",
+    notes: overrides?.notes ?? task?.notes ?? "",
+    photo_url: overrides?.photo_url ?? task?.photo_url ?? "",
+    tree_status: normalizeTreeStatus(treeStatusSource),
+    activity_lng: toFiniteNumber(gpsLngRaw),
+    activity_lat: toFiniteNumber(gpsLatRaw),
+    activity_recorded_at: String(gpsRecordedAtRaw || "").trim(),
+  };
 };
 const mergeTreesById = (rows: any[]) => {
   const seen = new Map<number, any>();
@@ -418,10 +469,9 @@ export default function Green() {
   const [users, setUsers] = useState<GreenUser[]>([]);
   const [activeUser, setActiveUser] = useState<string>(storedActiveUser);
   const [myTasks, setMyTasks] = useState<any[]>([]);
-  const [taskEdits, setTaskEdits] = useState<Record<number, { status: string; notes: string; photo_url: string; tree_status: string }>>(
-    {}
-  );
+  const [taskEdits, setTaskEdits] = useState<Record<number, TaskEdit>>({});
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [taskGpsLoadingId, setTaskGpsLoadingId] = useState<number | null>(null);
   const [loadingTrees, setLoadingTrees] = useState(false);
   const [newTree, setNewTree] = useState({
     lng: 0,
@@ -878,6 +928,7 @@ export default function Green() {
     if (activeProject && activeUser) return;
     setMyTasks([]);
     setTaskEdits({});
+    setTaskGpsLoadingId(null);
     setPlantingOrders([]);
     setSelectedTreeId(null);
     setInspectedTree(null);
@@ -1156,6 +1207,7 @@ export default function Green() {
         setMyTasks([]);
         setTaskEdits({});
         setEditingTaskId(null);
+        setTaskGpsLoadingId(null);
         if (!isLikelyNetworkError(error)) {
           toast.error("Failed to load tasks");
         }
@@ -1163,23 +1215,18 @@ export default function Green() {
       }
     }
     setMyTasks(rows);
-    const edits: Record<number, { status: string; notes: string; photo_url: string; tree_status: string }> = {};
+    const edits: Record<number, TaskEdit> = {};
     rows.forEach((t: any) => {
-      edits[t.id] = {
-        status: t.status,
-        notes: t.notes || "",
-        photo_url: t.photo_url || "",
-        tree_status: normalizeTreeStatus(t.reported_tree_status || t.tree_status || "healthy"),
-      };
+      edits[t.id] = buildTaskEdit(t);
     });
     setTaskEdits(edits);
     setEditingTaskId(null);
+    setTaskGpsLoadingId(null);
   };
 
   const saveTaskUpdate = async (taskId: number) => {
-    const edit = taskEdits[taskId];
-    if (!edit) return;
     const task = myTasks.find((entry: any) => entry.id === taskId);
+    const edit = buildTaskEdit(task, taskEdits[taskId]);
     if (isTaskLockedForField(task)) {
       toast.error("Task is locked for review");
       return;
@@ -1215,12 +1262,7 @@ export default function Green() {
       toast.error("Task is locked for review");
       return;
     }
-    const edit = taskEdits[taskId] || {
-      status: task.status || "pending",
-      notes: task.notes || "",
-      photo_url: task.photo_url || "",
-      tree_status: normalizeTreeStatus(task.reported_tree_status || task.tree_status || "healthy"),
-    };
+    const edit = buildTaskEdit(task, taskEdits[taskId]);
     if (!hasTaskEvidence(task, edit)) {
       toast.error("Add notes and photo proof before submission.");
       return;
@@ -1234,6 +1276,11 @@ export default function Green() {
     if (edit.photo_url && !isLocalBlobUrl(edit.photo_url)) {
       submitPayload.photo_url = edit.photo_url;
     }
+    if (edit.activity_lng !== null && edit.activity_lat !== null) {
+      submitPayload.activity_lng = Number(edit.activity_lng.toFixed(6));
+      submitPayload.activity_lat = Number(edit.activity_lat.toFixed(6));
+      submitPayload.activity_recorded_at = (edit.activity_recorded_at || "").trim() || new Date().toISOString();
+    }
     try {
       await api.post(`/green/tasks/${taskId}/submit`, submitPayload);
       setMyTasks((prev) =>
@@ -1245,6 +1292,9 @@ export default function Green() {
                 review_state: "submitted",
                 reported_tree_status: edit.tree_status || task.reported_tree_status || task.tree_status,
                 review_notes: null,
+                activity_lng: edit.activity_lng ?? task.activity_lng,
+                activity_lat: edit.activity_lat ?? task.activity_lat,
+                activity_recorded_at: edit.activity_recorded_at || task.activity_recorded_at,
               }
             : task
         )
@@ -1271,6 +1321,9 @@ export default function Green() {
                     review_state: "submitted",
                     reported_tree_status: edit.tree_status || task.reported_tree_status || task.tree_status,
                     review_notes: null,
+                    activity_lng: edit.activity_lng ?? task.activity_lng,
+                    activity_lat: edit.activity_lat ?? task.activity_lat,
+                    activity_recorded_at: edit.activity_recorded_at || task.activity_recorded_at,
                   }
                 : task
             )
@@ -1324,14 +1377,10 @@ export default function Green() {
       const linkedTask = myTasks.find((task: any) => task.id === taskId);
       setTaskEdits((prev) => ({
         ...prev,
-        [taskId]: {
-          status: prev[taskId]?.status || "pending",
-          notes: prev[taskId]?.notes || "",
+        [taskId]: buildTaskEdit(linkedTask || task, {
+          ...prev[taskId],
           photo_url: photoUrl,
-          tree_status:
-            prev[taskId]?.tree_status ||
-            normalizeTreeStatus(linkedTask?.reported_tree_status || linkedTask?.tree_status || "healthy"),
-        },
+        }),
       }));
       setMyTasks((prev) => prev.map((task: any) => (task.id === taskId ? { ...task, photo_url: photoUrl } : task)));
       if (linkedTask && inspectedTree && Number(linkedTask.tree_id) === inspectedTree.id) {
@@ -1350,14 +1399,10 @@ export default function Green() {
           });
           setTaskEdits((prev) => ({
             ...prev,
-            [taskId]: {
-              status: prev[taskId]?.status || "pending",
-              notes: prev[taskId]?.notes || "",
+            [taskId]: buildTaskEdit(task, {
+              ...prev[taskId],
               photo_url: queued.localPreviewUrl,
-              tree_status:
-                prev[taskId]?.tree_status ||
-                normalizeTreeStatus(task?.reported_tree_status || task?.tree_status || "healthy"),
-            },
+            }),
           }));
           setMyTasks((prev) =>
             prev.map((row: any) => (row.id === taskId ? { ...row, photo_url: queued.localPreviewUrl } : row))
@@ -1447,6 +1492,55 @@ export default function Green() {
       () => {
         toast.error("Unable to get GPS location");
         setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const captureTaskGps = (taskId: number) => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation not supported on this device");
+      return;
+    }
+    const task = myTasks.find((entry: any) => entry.id === taskId);
+    if (!task || isTaskLockedForField(task)) {
+      toast.error("Task is locked for review");
+      return;
+    }
+    setTaskGpsLoadingId(taskId);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const recordedAt = new Date().toISOString();
+        setTaskEdits((prev) => ({
+          ...prev,
+          [taskId]: buildTaskEdit(task, {
+            ...prev[taskId],
+            activity_lng: lng,
+            activity_lat: lat,
+            activity_recorded_at: recordedAt,
+          }),
+        }));
+        setMyTasks((prev) =>
+          prev.map((row: any) =>
+            row.id === taskId
+              ? {
+                  ...row,
+                  activity_lng: lng,
+                  activity_lat: lat,
+                  activity_recorded_at: recordedAt,
+                }
+              : row
+          )
+        );
+        setFocusPoint([{ lng, lat }]);
+        toast.success("Maintenance GPS captured");
+        setTaskGpsLoadingId(null);
+      },
+      () => {
+        toast.error("Unable to get GPS location");
+        setTaskGpsLoadingId(null);
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -1805,7 +1899,17 @@ export default function Green() {
                   <span>Due</span>
                   <span>Action</span>
                 </div>
-                {myTasks.map((t) => (
+                {myTasks.map((t) => {
+                  const taskEdit = taskEdits[t.id];
+                  const activityLng = toFiniteNumber(hasOwn(taskEdit, "activity_lng") ? taskEdit?.activity_lng : t.activity_lng);
+                  const activityLat = toFiniteNumber(hasOwn(taskEdit, "activity_lat") ? taskEdit?.activity_lat : t.activity_lat);
+                  const hasActivityGps = activityLng !== null && activityLat !== null;
+                  const activityRecordedAt = String(
+                    hasOwn(taskEdit, "activity_recorded_at")
+                      ? taskEdit?.activity_recorded_at || ""
+                      : t.activity_recorded_at || ""
+                  ).trim();
+                  return (
                   <div key={t.id} className={`green-task-entry ${isTaskLockedForField(t) ? "is-done" : ""}`}>
                     <div
                       className={`tree-row task-row ${isTaskLockedForField(t) ? "task-row-locked" : ""}`}
@@ -1843,14 +1947,10 @@ export default function Green() {
                             onChange={(e) =>
                               setTaskEdits((prev) => ({
                                 ...prev,
-                                [t.id]: {
+                                [t.id]: buildTaskEdit(t, {
+                                  ...prev[t.id],
                                   status: e.target.value,
-                                  notes: prev[t.id]?.notes || "",
-                                  photo_url: prev[t.id]?.photo_url || "",
-                                  tree_status:
-                                    prev[t.id]?.tree_status ||
-                                    normalizeTreeStatus(t.reported_tree_status || t.tree_status || "healthy"),
-                                },
+                                }),
                               }))
                             }
                           >
@@ -1910,7 +2010,8 @@ export default function Green() {
                     </div>
                     <div className="tree-row">
                       <span className="task-cell" data-label="Verification">
-                        Review: {t.review_state || "none"} | Evidence: {hasTaskEvidence(t, taskEdits[t.id]) ? "complete" : "missing"}
+                        Review: {t.review_state || "none"} | Evidence: {hasTaskEvidence(t, taskEdits[t.id]) ? "complete" : "missing"} | GPS:{" "}
+                        {hasTaskGpsCapture(t, taskEdits[t.id]) ? "captured" : "missing"}
                       </span>
                     </div>
                     {isTaskRejected(t) && t.review_notes && (
@@ -1931,17 +2032,13 @@ export default function Green() {
                               onChange={(e) =>
                                 setTaskEdits((prev) => ({
                                   ...prev,
-                                [t.id]: {
-                                  status: prev[t.id]?.status || "pending",
-                                  notes: e.target.value,
-                                  photo_url: prev[t.id]?.photo_url || "",
-                                  tree_status:
-                                    prev[t.id]?.tree_status ||
-                                    normalizeTreeStatus(t.reported_tree_status || t.tree_status || "healthy"),
-                                },
-                              }))
-                            }
-                          />
+                                  [t.id]: buildTaskEdit(t, {
+                                    ...prev[t.id],
+                                    notes: e.target.value,
+                                  }),
+                                }))
+                              }
+                            />
                           </div>
                           <div className="tree-form-row full">
                             <label>Photo Proof</label>
@@ -1962,12 +2059,10 @@ export default function Green() {
                               onChange={(e) =>
                                 setTaskEdits((prev) => ({
                                   ...prev,
-                                  [t.id]: {
-                                    status: prev[t.id]?.status || "pending",
-                                    notes: prev[t.id]?.notes || "",
-                                    photo_url: prev[t.id]?.photo_url || "",
+                                  [t.id]: buildTaskEdit(t, {
+                                    ...prev[t.id],
                                     tree_status: e.target.value,
-                                  },
+                                  }),
                                 }))
                               }
                             >
@@ -1977,6 +2072,38 @@ export default function Green() {
                                 </option>
                               ))}
                             </select>
+                          </div>
+                          <div className="tree-form-row full">
+                            <label>Maintenance GPS</label>
+                            <div className="green-task-gps-actions">
+                              <button
+                                className="green-btn-outline"
+                                type="button"
+                                onClick={() => captureTaskGps(t.id)}
+                                disabled={taskGpsLoadingId === t.id}
+                              >
+                                {taskGpsLoadingId === t.id ? "Locating..." : "Use Current GPS"}
+                              </button>
+                              {hasActivityGps && (
+                                <button
+                                  className="green-row-btn"
+                                  type="button"
+                                  onClick={() => {
+                                    setFocusPoint([{ lng: Number(activityLng), lat: Number(activityLat) }]);
+                                    openDirections(Number(activityLng), Number(activityLat));
+                                  }}
+                                >
+                                  Open GPS Point
+                                </button>
+                              )}
+                            </div>
+                            <p className="green-task-gps-meta">
+                              {hasActivityGps
+                                ? `Captured at ${Number(activityLat).toFixed(6)}, ${Number(activityLng).toFixed(6)}${
+                                    activityRecordedAt ? ` on ${formatDateTimeLabel(activityRecordedAt)}` : ""
+                                  }`
+                                : "No maintenance GPS captured yet."}
+                            </p>
                           </div>
                           <div className="task-edit-inline-actions">
                             <button className="green-btn-primary" type="button" onClick={() => saveTaskUpdate(t.id)}>
@@ -1994,7 +2121,7 @@ export default function Green() {
                       </div>
                     )}
                   </div>
-                ))}
+                )})}
               </div>
             )}
           </section>

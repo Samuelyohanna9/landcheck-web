@@ -1239,6 +1239,20 @@
   gap: 0.4rem;
 }
 
+.green-task-gps-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.green-task-gps-meta {
+  margin: 0.35rem 0 0;
+  color: var(--card-subtle);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 .record-row {
   grid-template-columns: 0.5fr 1fr 1fr 0.7fr 1.4fr;
 }
