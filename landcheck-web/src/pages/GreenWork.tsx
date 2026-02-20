@@ -1037,6 +1037,7 @@ export default function GreenWork() {
     priority: string;
   } | null>(null);
   const [projectSetupExpanded, setProjectSetupExpanded] = useState(false);
+  const [custodianOptionsExpanded, setCustodianOptionsExpanded] = useState(false);
   const [treeMetaDraftById, setTreeMetaDraftById] = useState<
     Record<
       number,
@@ -4010,8 +4011,24 @@ export default function GreenWork() {
                 <p className="green-work-note">
                   One hub for monitoring, custodian registration, distribution events, and custodian PDF export.
                 </p>
+                <div className="work-actions">
+                  <button
+                    type="button"
+                    className="green-work-option-toggle"
+                    onClick={() => setCustodianOptionsExpanded((prev) => !prev)}
+                  >
+                    {custodianOptionsExpanded ? "Hide Custodian Options" : "Custodian Options"}
+                  </button>
+                </div>
+                {!custodianOptionsExpanded && (
+                  <p className="green-work-note">
+                    Setup forms are hidden to reduce clutter. Open Custodian Options to add custodians, events, allocations, and export reports.
+                  </p>
+                )}
               </div>
 
+              {custodianOptionsExpanded && (
+                <>
               <div className="green-work-card">
                 <h3>Add Custodian</h3>
                 {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
@@ -4288,8 +4305,10 @@ export default function GreenWork() {
                       <button type="button" onClick={exportCustodianPdf} disabled={!activeProjectId}>
                         Export Custodian PDF
                       </button>
-                    </div>
                   </div>
+                </div>
+                </>
+              )}
                 </>
               )}
 
