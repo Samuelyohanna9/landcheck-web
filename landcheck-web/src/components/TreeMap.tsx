@@ -617,7 +617,9 @@ export default function TreeMap({
         // Tile/style loading errors when offline are expected and non-fatal —
         // the map still renders with cached tiles and blank areas for uncached ones.
         if (!mapReadyRef.current) {
-          const msg = e?.error?.message || "Map failed to load";
+          const msg = !navigator.onLine
+            ? "Offline — map using cached tiles. Some areas may appear blank."
+            : (e?.error?.message || "Map failed to load");
           setMapError(msg);
           mapErrorRef.current = msg;
         }
@@ -625,9 +627,13 @@ export default function TreeMap({
 
       const timeout = window.setTimeout(() => {
         if (!mapReadyRef.current && !mapErrorRef.current) {
-          setMapError("Map load timed out. Check network/token or domain restrictions.");
+          setMapError(
+            navigator.onLine
+              ? "Map load timed out. Check network/token or domain restrictions."
+              : "Offline — map loading from cache. Some tiles may be unavailable."
+          );
         }
-      }, 12000);
+      }, navigator.onLine ? 12000 : 20000);
 
       map.once("load", () => {
         window.clearTimeout(timeout);

@@ -1217,6 +1217,7 @@ export default function GreenWork() {
         next[idx] = { ...next[idx], ...projectDetail };
         return next;
       });
+      cacheProjectDetailOffline(projectId, projectDetail).catch(() => {});
       const settingsPayload = projectDetail?.settings || projectDetail || {};
       const plantingModel = String(settingsPayload?.planting_model || "direct").trim().toLowerCase() as PlantingModel;
       setProjectSettingsDraft({
@@ -1262,8 +1263,11 @@ export default function GreenWork() {
         }))
         .filter((tree: any) => Number.isFinite(tree.lng) && Number.isFinite(tree.lat));
       setTrees(normalizedTrees);
+      cacheProjectTreesOffline(projectId, normalizedTrees).catch(() => {});
     } else {
-      setTrees([]);
+      // Offline fallback for trees
+      const cachedTrees = await getCachedProjectTreesOffline(projectId).catch(() => []);
+      setTrees(cachedTrees.length > 0 ? cachedTrees : []);
     }
 
     if (tasksRes.status === "fulfilled") {
