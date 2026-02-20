@@ -8,10 +8,12 @@ import HazardAnalysis from "./pages/HazardAnalysis";
 import Green from "./pages/Green";
 import GreenWork from "./pages/GreenWork";
 import GreenPartnersLanding from "./pages/GreenPartnersLanding";
+import SeoRouteMeta from "./components/SeoRouteMeta";
 
 export default function App() {
   return (
     <BrowserRouter>
+      <SeoRouteMeta />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/survey-plan" element={<SurveyPlan />} />

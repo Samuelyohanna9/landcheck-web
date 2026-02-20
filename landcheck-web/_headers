@@ -1,2 +1,27 @@
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.pages.dev; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.tile.openstreetmap.org; connect-src 'self' https://*.trycloudflare.com; frame-src 'self'; worker-src 'self' blob:;
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/green
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/green/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/green-work
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/green-work/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/dashboard
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/dashboard/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/admin
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/admin/*
+  X-Robots-Tag: noindex, nofollow, noarchive
