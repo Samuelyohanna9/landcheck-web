@@ -1073,6 +1073,8 @@ export default function GreenWork() {
   const [drawerFrame, setDrawerFrame] = useState<DrawerFrame | null>(null);
   const [reviewQueue, setReviewQueue] = useState<ReviewQueueTask[]>([]);
   const [includePhotosInWorkPdf, setIncludePhotosInWorkPdf] = useState(false);
+  const [includePhotosInCustodianPdf, setIncludePhotosInCustodianPdf] = useState(true);
+  const [deletingTreeId, setDeletingTreeId] = useState<number | null>(null);
   const [deleteProjectModalOpen, setDeleteProjectModalOpen] = useState(false);
   const [deleteProjectConfirmName, setDeleteProjectConfirmName] = useState("");
   const [deletingProject, setDeletingProject] = useState(false);
@@ -1596,6 +1598,41 @@ export default function GreenWork() {
       toast.error(error?.response?.data?.detail || "Failed to update tree metadata");
     } finally {
       setSavingTreeMetaId(null);
+    }
+  };
+
+  const deleteTreeFromWork = async (treeId: number) => {
+    if (!activeProjectId || deletingTreeId !== null) return;
+    const confirmValue = window.prompt(
+      `Delete Tree #${treeId}? Type ${treeId} to confirm. This removes related maintenance/tasks permanently.`,
+      "",
+    );
+    if (confirmValue === null) return;
+    if (confirmValue.trim() !== String(treeId)) {
+      toast.error("Tree id confirmation did not match.");
+      return;
+    }
+    setDeletingTreeId(treeId);
+    try {
+      await api.delete(`/green/trees/${treeId}`, {
+        params: {
+          project_id: activeProjectId,
+          confirm_tree_id: treeId,
+          actor_name: "supervisor",
+        },
+      });
+      setInspectedTree((prev) => (prev && Number(prev.id) === Number(treeId) ? null : prev));
+      setTreeMetaDraftById((prev) => {
+        const next = { ...prev };
+        delete next[treeId];
+        return next;
+      });
+      await loadProjectData(activeProjectId);
+      toast.success(`Tree #${treeId} deleted`);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to delete tree");
+    } finally {
+      setDeletingTreeId(null);
     }
   };
 
@@ -2202,6 +2239,7 @@ export default function GreenWork() {
     if (!activeProjectId) return;
     const params = new URLSearchParams({
       _ts: String(Date.now()),
+      include_photos: includePhotosInCustodianPdf ? "true" : "false",
     });
     window.open(`${BACKEND_URL}/green/projects/${activeProjectId}/custodians/export/pdf?${params.toString()}`, "_blank");
   };
@@ -4155,9 +4193,17 @@ export default function GreenWork() {
                     <h3>Custodian Report</h3>
                     {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
                     <p className="green-work-note">
-                      Export includes custodians, distribution history, supervision tracking, and photo appendix for supervision visits.
-                </p>
-                <div className="work-actions">
+                      Export includes custodians, distribution history, and supervision tracking. Photo appendix is optional.
+                    </p>
+                    <div className="work-actions">
+                      <label className="green-work-export-photo-toggle">
+                        <input
+                          type="checkbox"
+                          checked={includePhotosInCustodianPdf}
+                          onChange={(e) => setIncludePhotosInCustodianPdf(e.target.checked)}
+                        />
+                        Include photos
+                      </label>
                       <button type="button" onClick={exportCustodianPdf} disabled={!activeProjectId}>
                         Export Custodian PDF
                       </button>
@@ -4302,16 +4348,11 @@ export default function GreenWork() {
               {newOrderSpeciesMode && (
                 <div className="green-work-species-allocation">
                   <label className="green-work-field-label">Species allocation rows</label>
-                  <datalist id="green-work-order-species-options">
-                    {projectSpeciesOptions.map((option) => (
-                      <option key={`order-species-${option.key}`} value={option.label} />
-                    ))}
-                  </datalist>
+                  <p className="green-work-note">Enter species names manually exactly as you want field officers to select them in Green.</p>
                   {newOrderSpeciesAllocations.map((row, index) => (
                     <div key={`species-allocation-${index}`} className="green-work-species-allocation-row">
                       <input
                         type="text"
-                        list="green-work-order-species-options"
                         placeholder="Species name"
                         value={row.species}
                         onChange={(e) =>
@@ -5753,6 +5794,19 @@ export default function GreenWork() {
                   >
                     {savingTreeMetaId === inspectedTree.id ? "Saving..." : "Save Tree Metadata"}
                   </button>
+                  <div className="work-actions">
+                    <button
+                      className="green-work-danger-btn"
+                      type="button"
+                      disabled={deletingTreeId === inspectedTree.id}
+                      onClick={() => void deleteTreeFromWork(inspectedTree.id)}
+                    >
+                      {deletingTreeId === inspectedTree.id ? "Deleting Tree..." : "Delete Tree"}
+                    </button>
+                  </div>
+                  <p className="green-work-note danger">
+                    Deleting a tree permanently removes that tree and all related maintenance records/tasks.
+                  </p>
                 </div>
               )}
               <p className="green-work-tree-inspector-notes">{inspectedTree.notes || "No notes."}</p>
