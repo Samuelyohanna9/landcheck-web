@@ -176,6 +176,7 @@ type WorkForm =
   | "create_project"
   | "add_user"
   | "users"
+  | "map_view"
   | "assign_work"
   | "assign_task"
   | "review_queue"
@@ -643,6 +644,13 @@ const renderActionIcon = (form: WorkForm) => {
           <path d="M4 19c1-2.5 3-4 6-4s5 1.5 6 4M18 8v6M15 11h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
       );
+    case "map_view":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 6l5-2 6 2 5-2v14l-5 2-6-2-5 2z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M9 4v14M15 6v14" fill="none" stroke="currentColor" strokeWidth="2" />
+        </svg>
+      );
     case "assign_work":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -914,6 +922,7 @@ export default function GreenWork() {
     "existing_tree_intake",
     "add_user",
     "users",
+    "map_view",
     "assign_work",
     "assign_task",
     "review_queue",
@@ -1750,6 +1759,7 @@ export default function GreenWork() {
         "existing_tree_intake",
         "add_user",
         "users",
+        "map_view",
         "assign_work",
         "assign_task",
         "review_queue",
@@ -1968,7 +1978,7 @@ export default function GreenWork() {
       return;
     }
     if (newOrderAreaEnabled && !newOrderAreaGeometry) {
-      toast.error("Draw the planting area polygon before assigning.");
+      toast.error("Open Map View and draw the planting area polygon before assigning.");
       return;
     }
     const targetTrees = newOrderSpeciesMode ? newOrderSpeciesTargetTotal : Number(newOrder.target_trees || 0);
@@ -2536,11 +2546,11 @@ export default function GreenWork() {
     return points.length ? points : null;
   }, [assigneeFilter, trees]);
   const mapTrees =
-    activeProjectId && activeForm === "assign_work" && newOrderAreaEnabled
+    activeProjectId && newOrderAreaEnabled
       ? trees
       : filteredTrees;
   const mapFitPoints =
-    activeProjectId && activeForm === "assign_work" && newOrderAreaEnabled
+    activeProjectId && newOrderAreaEnabled
       ? projectFitPoints
       : fitPoints;
 
@@ -2952,7 +2962,8 @@ export default function GreenWork() {
   );
 
   const activeProjectActions: Array<{ form: WorkForm; title: string; note: string }> = [
-    { form: "overview", title: "Overview", note: "Progress + map summary" },
+    { form: "overview", title: "Overview", note: "Progress summary" },
+    { form: "map_view", title: "Map View", note: "Trees + draw polygons" },
     { form: "live_table", title: "Live Maintenance", note: "Cycle due table + alerts" },
     { form: "users", title: "Users", note: "All staff status + roles" },
     { form: "add_user", title: "Add Staff", note: "Create user profile" },
@@ -3330,29 +3341,31 @@ export default function GreenWork() {
     activeForm !== null &&
     activeForm !== "overview" &&
     activeForm !== "live_table" &&
-    activeForm !== "verra_reports";
+    activeForm !== "verra_reports" &&
+    activeForm !== "map_view";
   const detailScrollMode = activeForm === "existing_tree_intake";
   const custodianHubMode = activeForm === "custodian_hub";
   const overviewMode = Boolean(activeProjectId && activeForm === "overview");
+  const mapViewMode = Boolean(activeProjectId && activeForm === "map_view");
   const liveTableMode = Boolean(activeProjectId && activeForm === "live_table");
   const verraMode = Boolean(activeProjectId && activeForm === "verra_reports");
-  const assignWorkAreaMode = Boolean(activeProjectId && activeForm === "assign_work" && newOrderAreaEnabled);
+  const mapAreaDrawMode = Boolean(activeProjectId && newOrderAreaEnabled);
   const activeTreeId = inspectedTree?.id || 0;
 
   const recalcDrawerFrame = useCallback(() => {
     const menuButton = menuButtonRef.current;
     const mapCard = mapCardRef.current;
-    if (!menuButton || !mapCard) return;
+    if (!menuButton) return;
 
     const menuRect = menuButton.getBoundingClientRect();
-    const mapRect = mapCard.getBoundingClientRect();
+    const mapRect = mapCard?.getBoundingClientRect() || null;
     const viewportWidth = window.innerWidth || 1280;
     const viewportHeight = window.innerHeight || 720;
 
     const top = Math.round(Math.max(8, menuRect.bottom + 8));
     const width = Math.round(Math.min(340, Math.max(260, viewportWidth - 16)));
     const left = Math.round(Math.max(8, Math.min(menuRect.left, viewportWidth - width - 8)));
-    const bottom = Math.round(Math.min(viewportHeight - 8, mapRect.bottom));
+    const bottom = Math.round(mapRect ? Math.min(viewportHeight - 8, mapRect.bottom) : viewportHeight - 8);
     const height = Math.max(260, bottom - top);
 
     const next: DrawerFrame = { top, left, width, height };
@@ -3373,7 +3386,7 @@ export default function GreenWork() {
   useLayoutEffect(() => {
     const frame = window.requestAnimationFrame(recalcDrawerFrame);
     return () => window.cancelAnimationFrame(frame);
-  }, [recalcDrawerFrame, activeProjectId, activeForm, overviewMode, assignWorkAreaMode, menuOpen, activeTreeId, showSidebar]);
+  }, [recalcDrawerFrame, activeProjectId, activeForm, overviewMode, mapViewMode, mapAreaDrawMode, menuOpen, activeTreeId, showSidebar]);
 
   useEffect(() => {
     const onViewportChange = () => {
@@ -3568,6 +3581,13 @@ export default function GreenWork() {
               onClick={() => openForm("overview")}
             >
               Overview
+            </button>
+            <button
+              className={`green-work-menu-item ${activeForm === "map_view" ? "active" : ""}`}
+              type="button"
+              onClick={() => openForm("map_view")}
+            >
+              Map View
             </button>
             <button
               className={`green-work-menu-item ${activeForm === "live_table" ? "active" : ""}`}
@@ -4504,11 +4524,16 @@ export default function GreenWork() {
                     disabled={!activeProjectId}
                   />
                   <p className="green-work-note">
-                    Draw polygon on the full map panel below (same tab map). Use the map trash icon to clear and redraw.
+                    Draw polygon in the dedicated Map View tab. Use map trash icon to clear and redraw.
                   </p>
                   <p className="green-work-note">
                     {newOrderAreaGeometry ? "Area captured and will be linked to this work order." : "No area polygon captured yet."}
                   </p>
+                  <div className="work-actions">
+                    <button type="button" onClick={() => openForm("map_view")} disabled={!activeProjectId}>
+                      Open Map View
+                    </button>
+                  </div>
                 </div>
               )}
               <button className="btn-primary" onClick={createWorkOrder} disabled={!activeProjectId}>
@@ -5627,36 +5652,42 @@ export default function GreenWork() {
             </div>
           )}
 
-          <div ref={mapCardRef} className={`green-work-card green-work-map-card ${overviewMode ? "overview-map" : ""}`}>
-            <h3>{assignWorkAreaMode ? "Planting Area Map (Polygon Draw)" : "Trees on Map"}</h3>
-            {!activeProjectId && (
-              <p className="green-work-note">Select an active project in Project Focus to load trees and assignments.</p>
-            )}
-            {assignWorkAreaMode && (
+          {activeProjectId && activeForm === "map_view" && (
+            <div ref={mapCardRef} className="green-work-card green-work-map-card">
+              <h3>{mapAreaDrawMode ? "Map View (Polygon Draw Enabled)" : "Map View"}</h3>
               <p className="green-work-note">
-                Polygon draw mode is enabled for this assignment. Draw one area on this map, then click Assign Work.
+                {mapAreaDrawMode
+                  ? "Planting-area draw is enabled from Assign Tree Planting. Draw polygon here, then return to assign work."
+                  : "Project tree map view. Inspect trees and monitor field positions."}
               </p>
-            )}
-            <div className="green-work-map-layout">
-              <div className="green-work-map-canvas">
-                <TreeMap
-                  trees={mapTrees}
-                  onAddTree={() => {}}
-                  enableDraw={assignWorkAreaMode}
-                  drawMode={assignWorkAreaMode ? "polygon" : "point"}
-                  drawActive={assignWorkAreaMode}
-                  onPolygonChange={assignWorkAreaMode ? (geometry) => setNewOrderAreaGeometry(geometry) : undefined}
-                  minHeight={overviewMode || liveTableMode || assignWorkAreaMode ? 480 : 220}
-                  onTreeInspect={(detail) => {
-                    setInspectedTree(detail);
-                    if (detail) setMenuOpen(false);
-                  }}
-                  onViewChange={(view) => setMapView(view)}
-                  fitBounds={mapFitPoints}
-                />
+              {mapAreaDrawMode && (
+                <div className="work-actions">
+                  <button type="button" onClick={() => openForm("assign_work")}>
+                    Back To Assign Tree Planting
+                  </button>
+                </div>
+              )}
+              <div className="green-work-map-layout">
+                <div className="green-work-map-canvas">
+                  <TreeMap
+                    trees={mapTrees}
+                    onAddTree={() => {}}
+                    enableDraw={mapAreaDrawMode}
+                    drawMode={mapAreaDrawMode ? "polygon" : "point"}
+                    drawActive={mapAreaDrawMode}
+                    onPolygonChange={mapAreaDrawMode ? (geometry) => setNewOrderAreaGeometry(geometry) : undefined}
+                    minHeight={mapAreaDrawMode ? 520 : 500}
+                    onTreeInspect={(detail) => {
+                      setInspectedTree(detail);
+                      if (detail) setMenuOpen(false);
+                    }}
+                    onViewChange={(view) => setMapView(view)}
+                    fitBounds={mapFitPoints}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </section>
       </div>
 
