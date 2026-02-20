@@ -1978,7 +1978,7 @@ export default function GreenWork() {
       return;
     }
     if (newOrderAreaEnabled && !newOrderAreaGeometry) {
-      toast.error("Open Map View and draw the planting area polygon before assigning.");
+      toast.error("Draw the planting area polygon in this tab before assigning.");
       return;
     }
     const targetTrees = newOrderSpeciesMode ? newOrderSpeciesTargetTotal : Number(newOrder.target_trees || 0);
@@ -3347,9 +3347,10 @@ export default function GreenWork() {
   const custodianHubMode = activeForm === "custodian_hub";
   const overviewMode = Boolean(activeProjectId && activeForm === "overview");
   const mapViewMode = Boolean(activeProjectId && activeForm === "map_view");
+  const assignWorkAreaMode = Boolean(activeProjectId && activeForm === "assign_work" && newOrderAreaEnabled);
   const liveTableMode = Boolean(activeProjectId && activeForm === "live_table");
   const verraMode = Boolean(activeProjectId && activeForm === "verra_reports");
-  const mapAreaDrawMode = Boolean(activeProjectId && newOrderAreaEnabled);
+  const mapAreaDrawMode = Boolean(activeProjectId && newOrderAreaEnabled && (activeForm === "assign_work" || activeForm === "map_view"));
   const activeTreeId = inspectedTree?.id || 0;
 
   const recalcDrawerFrame = useCallback(() => {
@@ -4524,16 +4525,11 @@ export default function GreenWork() {
                     disabled={!activeProjectId}
                   />
                   <p className="green-work-note">
-                    Draw polygon in the dedicated Map View tab. Use map trash icon to clear and redraw.
+                    When enabled, polygon map appears on the right side of this tab. Use map trash icon to clear and redraw.
                   </p>
                   <p className="green-work-note">
                     {newOrderAreaGeometry ? "Area captured and will be linked to this work order." : "No area polygon captured yet."}
                   </p>
-                  <div className="work-actions">
-                    <button type="button" onClick={() => openForm("map_view")} disabled={!activeProjectId}>
-                      Open Map View
-                    </button>
-                  </div>
                 </div>
               )}
               <button className="btn-primary" onClick={createWorkOrder} disabled={!activeProjectId}>
@@ -5652,15 +5648,23 @@ export default function GreenWork() {
             </div>
           )}
 
-          {activeProjectId && activeForm === "map_view" && (
+          {activeProjectId && (activeForm === "map_view" || assignWorkAreaMode) && (
             <div ref={mapCardRef} className="green-work-card green-work-map-card">
-              <h3>{mapAreaDrawMode ? "Map View (Polygon Draw Enabled)" : "Map View"}</h3>
+              <h3>
+                {assignWorkAreaMode
+                  ? "Planting Area Map (Polygon Draw)"
+                  : mapAreaDrawMode
+                    ? "Map View (Polygon Draw Enabled)"
+                    : "Map View"}
+              </h3>
               <p className="green-work-note">
-                {mapAreaDrawMode
-                  ? "Planting-area draw is enabled from Assign Tree Planting. Draw polygon here, then return to assign work."
-                  : "Project tree map view. Inspect trees and monitor field positions."}
+                {assignWorkAreaMode
+                  ? "Draw one polygon for this planting order in this tab, then click Assign Work."
+                  : mapAreaDrawMode
+                    ? "Planting-area draw is enabled from Assign Tree Planting. Draw polygon here, then return to assign work."
+                    : "Project tree map view. Inspect trees and monitor field positions."}
               </p>
-              {mapAreaDrawMode && (
+              {mapAreaDrawMode && !assignWorkAreaMode && (
                 <div className="work-actions">
                   <button type="button" onClick={() => openForm("assign_work")}>
                     Back To Assign Tree Planting
