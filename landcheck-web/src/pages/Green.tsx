@@ -11,6 +11,8 @@ import {
   cacheTreeTimelineOffline,
   cacheUsersOffline,
   cacheWorkOrdersOffline,
+  cacheProjectCustodiansOffline,
+  cacheProjectAllocationsOffline,
   getCachedProjectDetailOffline,
   getCachedProjectTreesOffline,
   getCachedProjectsOffline,
@@ -19,6 +21,8 @@ import {
   getCachedTreeTimelineOffline,
   getCachedUsersOffline,
   getCachedWorkOrdersOffline,
+  getCachedProjectCustodiansOffline,
+  getCachedProjectAllocationsOffline,
   getOfflineConflictCount,
   getOfflineQueueCount,
   getPendingTreeDraftsOffline,
@@ -30,6 +34,7 @@ import {
   queueTreeStatusOffline,
   registerGreenBackgroundSync,
   syncGreenQueueOffline,
+  precacheMapTilesForArea,
 } from "../offline/greenOffline";
 import "../styles/green.css";
 
@@ -905,12 +910,20 @@ export default function Green() {
       await Promise.all([
         cacheProjectDetailOffline(id, projectRes.value.data).catch(() => {}),
         cacheProjectTreesOffline(id, normalized).catch(() => {}),
+        cacheProjectCustodiansOffline(id, custodians).catch(() => {}),
+        cacheProjectAllocationsOffline(id, allocations).catch(() => {}),
       ]);
+      // Pre-cache map tiles for the project area so the map works offline
+      if (normalized.length > 0 && navigator.onLine) {
+        precacheMapTilesForArea(normalized).catch(() => {});
+      }
     } catch (error) {
-      const [cachedProject, cachedTrees, pendingDrafts] = await Promise.all([
+      const [cachedProject, cachedTrees, pendingDrafts, cachedCustodians, cachedAllocations] = await Promise.all([
         getCachedProjectDetailOffline(id).catch(() => null),
         getCachedProjectTreesOffline(id).catch(() => []),
         getPendingTreeDraftsOffline(id).catch(() => []),
+        getCachedProjectCustodiansOffline(id).catch(() => []),
+        getCachedProjectAllocationsOffline(id).catch(() => []),
       ]);
       const mergedTrees = mergeTreesById([...(cachedTrees || []), ...(pendingDrafts || [])]);
       if (cachedProject) {
@@ -920,8 +933,8 @@ export default function Green() {
         setTrees(mergedTrees);
       }
       if (cachedProject || mergedTrees.length > 0) {
-        setProjectCustodians([]);
-        setProjectAllocations([]);
+        setProjectCustodians(cachedCustodians || []);
+        setProjectAllocations(cachedAllocations || []);
         return;
       }
       throw error;
@@ -1767,11 +1780,11 @@ export default function Green() {
         setFocusPoint([{ lng, lat }]);
         setGpsLoading(false);
       },
-      () => {
-        toast.error("Unable to get GPS location");
+      (err) => {
+        toast.error(err.code === 1 ? "GPS permission denied" : "Unable to get GPS location. Ensure location services are on.");
         setGpsLoading(false);
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 30000, maximumAge: 60000 }
     );
   };
 
@@ -1816,11 +1829,11 @@ export default function Green() {
         toast.success("Maintenance GPS captured");
         setTaskGpsLoadingId(null);
       },
-      () => {
-        toast.error("Unable to get GPS location");
+      (err) => {
+        toast.error(err.code === 1 ? "GPS permission denied" : "Unable to get GPS location. Ensure location services are on.");
         setTaskGpsLoadingId(null);
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 30000, maximumAge: 60000 }
     );
   };
 

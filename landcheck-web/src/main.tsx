@@ -24,9 +24,42 @@ if (canRegisterGreenSw) {
       .then((registration) => {
         // Auto-check for SW updates every 30 minutes
         setInterval(() => registration.update(), 30 * 60 * 1000);
+
+        // Pre-cache Vite build assets (hashed JS/CSS bundles) so the app
+        // shell is fully available offline. We scrape <link> and <script>
+        // tags from the current page since Vite injects them at build time.
+        if (navigator.serviceWorker.controller) {
+          precacheBuildAssets();
+        } else {
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            precacheBuildAssets();
+          }, { once: true });
+        }
       })
       .catch(() => {
         // Ignore registration errors in UI flow.
       });
   });
+}
+
+function precacheBuildAssets() {
+  const urls: string[] = [];
+  document.querySelectorAll('link[rel="stylesheet"][href^="/assets/"]').forEach((el) => {
+    const href = (el as HTMLLinkElement).href;
+    if (href) urls.push(href);
+  });
+  document.querySelectorAll('script[src*="/assets/"]').forEach((el) => {
+    const src = (el as HTMLScriptElement).src;
+    if (src) urls.push(src);
+  });
+  // Also cache the logo
+  urls.push("/green-logo-cropped-760.png");
+  urls.push("/green-logo-cropped-700.png");
+
+  if (urls.length > 0 && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: "PRECACHE_BUILD_ASSETS",
+      urls,
+    });
+  }
 }

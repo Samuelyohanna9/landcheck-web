@@ -2,6 +2,17 @@ import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, use
 import toast, { Toaster } from "react-hot-toast";
 import { api, BACKEND_URL } from "../api/client";
 import TreeMap, { type TreeInspectData } from "../components/TreeMap";
+import {
+  cacheProjectsOffline,
+  cacheUsersOffline,
+  cacheProjectDetailOffline,
+  cacheProjectTreesOffline,
+  getCachedProjectsOffline,
+  getCachedUsersOffline,
+  getCachedProjectDetailOffline,
+  getCachedProjectTreesOffline,
+  isLikelyNetworkError,
+} from "../offline/greenOffline";
 import "../styles/green-work.css";
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
@@ -1119,13 +1130,31 @@ export default function GreenWork() {
   const [verraHistory, setVerraHistory] = useState<VerraExportHistoryItem[]>([]);
 
   const loadProjects = async () => {
-    const res = await api.get("/green/projects");
-    setProjects(res.data);
+    try {
+      const res = await api.get("/green/projects");
+      setProjects(res.data);
+      cacheProjectsOffline(res.data).catch(() => {});
+    } catch (error) {
+      if (isLikelyNetworkError(error)) {
+        const cached = await getCachedProjectsOffline().catch(() => []);
+        if (cached.length > 0) { setProjects(cached); return; }
+      }
+      throw error;
+    }
   };
 
   const loadUsers = async () => {
-    const res = await api.get("/green/users");
-    setUsers(res.data);
+    try {
+      const res = await api.get("/green/users");
+      setUsers(res.data);
+      cacheUsersOffline(res.data).catch(() => {});
+    } catch (error) {
+      if (isLikelyNetworkError(error)) {
+        const cached = await getCachedUsersOffline().catch(() => []);
+        if (cached.length > 0) { setUsers(cached); return; }
+      }
+      throw error;
+    }
   };
 
   const clearActiveProjectContext = () => {
@@ -1145,13 +1174,40 @@ export default function GreenWork() {
 
   const loadProjectData = async (projectId: number) => {
     const stamp = Date.now();
-    const [projectRes, ordersRes, treesRes, tasksRes, speciesMaturityRes] = await Promise.allSettled([
-      api.get(`/green/projects/${projectId}?_ts=${stamp}`),
-      api.get(`/green/work-orders?project_id=${projectId}&_ts=${stamp}`),
-      api.get(`/green/projects/${projectId}/trees?_ts=${stamp}`),
-      api.get(`/green/tasks?project_id=${projectId}&_ts=${stamp}`),
-      api.get(`/green/projects/${projectId}/species-maturity?_ts=${stamp}`),
-    ]);
+    let projectRes: PromiseSettledResult<any>,
+      ordersRes: PromiseSettledResult<any>,
+      treesRes: PromiseSettledResult<any>,
+      tasksRes: PromiseSettledResult<any>,
+      speciesMaturityRes: PromiseSettledResult<any>;
+
+    try {
+      [projectRes, ordersRes, treesRes, tasksRes, speciesMaturityRes] = await Promise.allSettled([
+        api.get(`/green/projects/${projectId}?_ts=${stamp}`),
+        api.get(`/green/work-orders?project_id=${projectId}&_ts=${stamp}`),
+        api.get(`/green/projects/${projectId}/trees?_ts=${stamp}`),
+        api.get(`/green/tasks?project_id=${projectId}&_ts=${stamp}`),
+        api.get(`/green/projects/${projectId}/species-maturity?_ts=${stamp}`),
+      ]);
+    } catch {
+      // Total failure (unlikely with allSettled, but handle offline gracefully)
+      const [cachedProject, cachedTrees] = await Promise.all([
+        getCachedProjectDetailOffline(projectId).catch(() => null),
+        getCachedProjectTreesOffline(projectId).catch(() => []),
+      ]);
+      if (cachedProject) {
+        setProjects((prev) => {
+          const idx = prev.findIndex((item) => Number(item.id) === Number(projectId));
+          if (idx < 0) return prev;
+          const next = [...prev];
+          next[idx] = { ...next[idx], ...cachedProject };
+          return next;
+        });
+      }
+      if (cachedTrees && cachedTrees.length > 0) {
+        setTrees(cachedTrees.filter((t: any) => Number.isFinite(Number(t.lng)) && Number.isFinite(Number(t.lat))));
+      }
+      return;
+    }
     if (projectRes.status === "fulfilled") {
       const projectDetail = projectRes.value.data || {};
       setProjects((prev) => {

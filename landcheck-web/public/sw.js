@@ -1,9 +1,9 @@
-self.CACHE_NAME = "green-shell-v7";
-self.MAP_CACHE_NAME = "green-map-v2";
-self.SYNC_TAG = "green-sync-queue";
+var CACHE_NAME = "green-shell-v8";
+var MAP_CACHE_NAME = "green-map-v3";
+var SYNC_TAG = "green-sync-queue";
 
 /* ── Precache list ─────────────────────────────────────────────── */
-self.PRECACHE_URLS = [
+var PRECACHE_URLS = [
   "/green",
   "/green/manifest.webmanifest",
   "/green/icons/icon-192.png",
@@ -12,57 +12,153 @@ self.PRECACHE_URLS = [
 ];
 
 /* ── Install ───────────────────────────────────────────────────── */
-self.addEventListener("install", (event) => {
+self.addEventListener("install", function (event) {
   event.waitUntil(
-    caches.open(self.CACHE_NAME).then((cache) =>
-      Promise.allSettled(
-        self.PRECACHE_URLS.map((url) =>
-          cache.add(url).catch((err) => {
+    caches.open(CACHE_NAME).then(function (cache) {
+      return Promise.allSettled(
+        PRECACHE_URLS.map(function (url) {
+          return cache.add(url).catch(function (err) {
             console.warn("[SW] precache skip:", url, err.message);
-          })
-        )
-      )
-    )
+          });
+        })
+      );
+    })
   );
   self.skipWaiting();
 });
 
 /* ── Activate ──────────────────────────────────────────────────── */
-self.addEventListener("activate", (event) => {
+self.addEventListener("activate", function (event) {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) =>
-        Promise.all(
+      .then(function (keys) {
+        return Promise.all(
           keys
-            .filter((key) => {
-              const isOldShell =
-                key.startsWith("green-shell-") && key !== self.CACHE_NAME;
-              const isOldMap =
-                key.startsWith("green-map-") && key !== self.MAP_CACHE_NAME;
+            .filter(function (key) {
+              var isOldShell =
+                key.startsWith("green-shell-") && key !== CACHE_NAME;
+              var isOldMap =
+                key.startsWith("green-map-") && key !== MAP_CACHE_NAME;
               return isOldShell || isOldMap;
             })
-            .map((key) => caches.delete(key))
-        )
-      )
-      .then(() => self.clients.claim())
+            .map(function (key) {
+              return caches.delete(key);
+            })
+        );
+      })
+      .then(function () {
+        return self.clients.claim();
+      })
   );
 });
 
 /* ── Background Sync ───────────────────────────────────────────── */
-self.addEventListener("sync", (event) => {
-  if (event.tag !== self.SYNC_TAG) return;
+self.addEventListener("sync", function (event) {
+  if (event.tag !== SYNC_TAG) return;
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
-      .then((clients) => {
+      .then(function (clients) {
         if (clients.length === 0) return;
-        clients.forEach((client) => {
+        clients.forEach(function (client) {
           client.postMessage({ type: "GREEN_SYNC_QUEUE" });
         });
       })
-      .catch(() => {})
+      .catch(function () {})
   );
+});
+
+/* ── Message handler for tile pre-caching ──────────────────────── */
+self.addEventListener("message", function (event) {
+  var data = event.data || {};
+
+  /* Pre-cache map tiles for a bounding box */
+  if (data.type === "PRECACHE_MAP_TILES") {
+    var urls = data.urls || [];
+    if (urls.length === 0) return;
+    event.waitUntil(
+      caches.open(MAP_CACHE_NAME).then(function (cache) {
+        var done = 0;
+        var total = urls.length;
+        var batchSize = 6; // Limit concurrent fetches
+
+        function fetchBatch(startIndex) {
+          var batch = urls.slice(startIndex, startIndex + batchSize);
+          if (batch.length === 0) {
+            // Notify client we're done
+            if (event.source) {
+              event.source.postMessage({
+                type: "PRECACHE_MAP_TILES_DONE",
+                cached: done,
+                total: total,
+              });
+            }
+            return Promise.resolve();
+          }
+
+          return Promise.allSettled(
+            batch.map(function (url) {
+              return cache.match(url).then(function (existing) {
+                if (existing) {
+                  done++;
+                  return; // Already cached
+                }
+                return fetch(url)
+                  .then(function (resp) {
+                    if (resp && resp.ok) {
+                      done++;
+                      return cache.put(url, resp);
+                    }
+                  })
+                  .catch(function () {
+                    // Skip failed tiles silently
+                  });
+              });
+            })
+          ).then(function () {
+            // Report progress
+            if (event.source) {
+              event.source.postMessage({
+                type: "PRECACHE_MAP_TILES_PROGRESS",
+                cached: done,
+                total: total,
+              });
+            }
+            return fetchBatch(startIndex + batchSize);
+          });
+        }
+
+        return fetchBatch(0);
+      })
+    );
+    return;
+  }
+
+  /* Pre-cache Vite build assets (JS/CSS bundles) */
+  if (data.type === "PRECACHE_BUILD_ASSETS") {
+    var assetUrls = data.urls || [];
+    if (assetUrls.length === 0) return;
+    event.waitUntil(
+      caches.open(CACHE_NAME).then(function (cache) {
+        return Promise.allSettled(
+          assetUrls.map(function (url) {
+            return cache.match(url).then(function (existing) {
+              if (existing) return;
+              return fetch(url)
+                .then(function (resp) {
+                  if (resp && resp.ok) {
+                    return cache.put(url, resp);
+                  }
+                })
+                .catch(function () {});
+            });
+          })
+        );
+      })
+    );
+    return;
+  }
 });
 
 /* ── Helpers ───────────────────────────────────────────────────── */
@@ -110,23 +206,27 @@ function isGreenAsset(pathname) {
  * so we try multiple variants.
  */
 function findCachedShell() {
-  return caches.open(self.CACHE_NAME).then(function (cache) {
-    return cache.match("/green").then(function (resp) {
-      if (resp) return resp;
-      return cache.match("/green/");
-    }).then(function (resp) {
-      if (resp) return resp;
-      return cache.match("/");
-    }).then(function (resp) {
-      if (resp) return resp;
-      // Last resort: look for any cached HTML response
-      return cache.match(new Request(self.registration.scope));
-    });
+  return caches.open(CACHE_NAME).then(function (cache) {
+    return cache
+      .match("/green")
+      .then(function (resp) {
+        if (resp) return resp;
+        return cache.match("/green/");
+      })
+      .then(function (resp) {
+        if (resp) return resp;
+        return cache.match("/");
+      })
+      .then(function (resp) {
+        if (resp) return resp;
+        // Last resort: look for any cached HTML response
+        return cache.match(new Request(self.registration.scope));
+      });
   });
 }
 
 /* ── Fetch handler ─────────────────────────────────────────────── */
-self.addEventListener("fetch", (event) => {
+self.addEventListener("fetch", function (event) {
   var req = event.request;
   var url = new URL(req.url);
   var isSameOrigin = url.origin === self.location.origin;
@@ -140,7 +240,7 @@ self.addEventListener("fetch", (event) => {
   /* ── Mapbox tile / style / font caching (stale-while-revalidate) ── */
   if (isMapboxRequest(url)) {
     event.respondWith(
-      caches.open(self.MAP_CACHE_NAME).then(function (mapCache) {
+      caches.open(MAP_CACHE_NAME).then(function (mapCache) {
         return mapCache.match(req).then(function (cached) {
           var networkFetch = fetch(req)
             .then(function (resp) {
@@ -151,6 +251,29 @@ self.addEventListener("fetch", (event) => {
             })
             .catch(function () {
               if (cached) return cached;
+              // Return transparent 1x1 PNG for missing raster tiles instead of error
+              if (
+                url.pathname.includes("/tiles/") ||
+                url.pathname.includes("/v4/")
+              ) {
+                return new Response(
+                  Uint8Array.from(
+                    atob(
+                      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAABJRUEFTkSuQmCC"
+                    ),
+                    function (c) {
+                      return c.charCodeAt(0);
+                    }
+                  ),
+                  {
+                    status: 200,
+                    headers: {
+                      "Content-Type": "image/png",
+                      "Cache-Control": "no-store",
+                    },
+                  }
+                );
+              }
               return new Response("Offline map resource unavailable", {
                 status: 503,
                 statusText: "Offline",
@@ -158,6 +281,7 @@ self.addEventListener("fetch", (event) => {
             });
 
           if (cached) {
+            // Serve cached tile immediately; update in background
             event.waitUntil(networkFetch.catch(function () {}));
             return cached;
           }
@@ -178,10 +302,14 @@ self.addEventListener("fetch", (event) => {
         .then(function (resp) {
           if (resp.ok) {
             var copy = resp.clone();
-            caches.open(self.CACHE_NAME).then(function (cache) {
+            caches.open(CACHE_NAME).then(function (cache) {
               cache.put(req, copy);
               // Also store under /green key so offline fallback always works
-              if (url.pathname === "/green" || url.pathname === "/green/" || url.pathname === "/") {
+              if (
+                url.pathname === "/green" ||
+                url.pathname === "/green/" ||
+                url.pathname === "/"
+              ) {
                 cache.put("/green", resp.clone());
               }
             });
@@ -228,7 +356,7 @@ self.addEventListener("fetch", (event) => {
       return fetch(req).then(function (resp) {
         if (resp.ok) {
           var copy = resp.clone();
-          caches.open(self.CACHE_NAME).then(function (cache) {
+          caches.open(CACHE_NAME).then(function (cache) {
             cache.put(req, copy);
           });
         }
