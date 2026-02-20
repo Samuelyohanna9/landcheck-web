@@ -180,6 +180,14 @@ function kvKeyTreeTimeline(treeId: number) {
   return `green:tree:${treeId}:timeline`;
 }
 
+function kvKeyProjectCustodians(projectId: number) {
+  return `green:project:${projectId}:custodians`;
+}
+
+function kvKeyProjectAllocations(projectId: number) {
+  return `green:project:${projectId}:allocations`;
+}
+
 function kvKeyTreeIdMap(tempTreeId: number) {
   return `green:tree-id-map:${tempTreeId}`;
 }
@@ -352,6 +360,22 @@ export async function cacheWorkOrdersOffline(projectId: number, assigneeName: st
 
 export async function getCachedWorkOrdersOffline(projectId: number, assigneeName: string): Promise<any[]> {
   return (await kvGet<any[]>(kvKeyWorkOrders(projectId, normalizeAssignee(assigneeName)))) || [];
+}
+
+export async function cacheProjectCustodiansOffline(projectId: number, custodians: any[]): Promise<void> {
+  await kvSet(kvKeyProjectCustodians(projectId), Array.isArray(custodians) ? custodians : []);
+}
+
+export async function getCachedProjectCustodiansOffline(projectId: number): Promise<any[]> {
+  return (await kvGet<any[]>(kvKeyProjectCustodians(projectId))) || [];
+}
+
+export async function cacheProjectAllocationsOffline(projectId: number, allocations: any[]): Promise<void> {
+  await kvSet(kvKeyProjectAllocations(projectId), Array.isArray(allocations) ? allocations : []);
+}
+
+export async function getCachedProjectAllocationsOffline(projectId: number): Promise<any[]> {
+  return (await kvGet<any[]>(kvKeyProjectAllocations(projectId))) || [];
 }
 
 export async function cacheTreeTasksOffline(treeId: number, tasks: any[]): Promise<void> {
@@ -779,4 +803,147 @@ export async function syncGreenQueueOffline(
     syncPromise = null;
   });
   return syncPromise;
+}
+
+/* ── Map tile pre-caching ───────────────────────────────────────── */
+
+const MAPBOX_TOKEN = (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_MAPBOX_TOKEN) || "";
+
+/**
+ * Generate Mapbox tile URLs for a bounding box at multiple zoom levels.
+ * Uses satellite-streets raster tiles so the map renders offline.
+ */
+function tileCoordsForBounds(
+  bounds: { west: number; south: number; east: number; north: number },
+  zooms: number[],
+): Array<{ z: number; x: number; y: number }> {
+  const coords: Array<{ z: number; x: number; y: number }> = [];
+  for (const z of zooms) {
+    const n = Math.pow(2, z);
+    const xMin = Math.max(0, Math.floor(((bounds.west + 180) / 360) * n));
+    const xMax = Math.min(n - 1, Math.floor(((bounds.east + 180) / 360) * n));
+    const yMin = Math.max(
+      0,
+      Math.floor(
+        ((1 - Math.log(Math.tan((bounds.north * Math.PI) / 180) + 1 / Math.cos((bounds.north * Math.PI) / 180)) / Math.PI) / 2) * n,
+      ),
+    );
+    const yMax = Math.min(
+      n - 1,
+      Math.floor(
+        ((1 - Math.log(Math.tan((bounds.south * Math.PI) / 180) + 1 / Math.cos((bounds.south * Math.PI) / 180)) / Math.PI) / 2) * n,
+      ),
+    );
+    for (let x = xMin; x <= xMax; x++) {
+      for (let y = yMin; y <= yMax; y++) {
+        coords.push({ z, x, y });
+      }
+    }
+  }
+  return coords;
+}
+
+/**
+ * Pre-cache map tiles for a project area so the map works fully offline.
+ * Call this after loading a project's trees to seed the tile cache.
+ *
+ * @param trees - Array of objects with lng/lat
+ * @param onProgress - Optional callback with (cached, total)
+ * @returns Promise that resolves when done
+ */
+export async function precacheMapTilesForArea(
+  trees: Array<{ lng: number; lat: number }>,
+  onProgress?: (cached: number, total: number) => void,
+): Promise<{ cached: number; total: number }> {
+  if (!MAPBOX_TOKEN || trees.length === 0) return { cached: 0, total: 0 };
+  if (!("serviceWorker" in navigator) || !navigator.serviceWorker.controller) {
+    return { cached: 0, total: 0 };
+  }
+
+  // Calculate bounding box with padding
+  let west = Infinity, south = Infinity, east = -Infinity, north = -Infinity;
+  for (const t of trees) {
+    const lng = Number(t.lng);
+    const lat = Number(t.lat);
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
+    if (lng < west) west = lng;
+    if (lng > east) east = lng;
+    if (lat < south) south = lat;
+    if (lat > north) north = lat;
+  }
+
+  if (!Number.isFinite(west)) return { cached: 0, total: 0 };
+
+  // Add ~500m padding
+  const pad = 0.005;
+  west -= pad;
+  south -= pad;
+  east += pad;
+  north += pad;
+
+  // Cache zoom levels 12-16 (project working range)
+  const tileCoords = tileCoordsForBounds({ west, south, east, north }, [12, 13, 14, 15, 16]);
+
+  // Limit to a reasonable number of tiles to avoid excessive downloads
+  const MAX_TILES = 500;
+  const limited = tileCoords.slice(0, MAX_TILES);
+
+  // Generate raster tile URLs
+  const urls = limited.map(
+    ({ z, x, y }) =>
+      `https://api.mapbox.com/v4/mapbox.satellite/${z}/${x}/${y}@2x.jpg90?access_token=${MAPBOX_TOKEN}`,
+  );
+
+  // Also pre-cache the style JSON so the map can initialize offline
+  urls.push(
+    `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12?access_token=${MAPBOX_TOKEN}`,
+  );
+
+  // Pre-cache sprite sheets (needed for map icons/labels to render offline)
+  const spriteBase = `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/sprite`;
+  urls.push(`${spriteBase}?access_token=${MAPBOX_TOKEN}`);
+  urls.push(`${spriteBase}.json?access_token=${MAPBOX_TOKEN}`);
+  urls.push(`${spriteBase}@2x?access_token=${MAPBOX_TOKEN}`);
+  urls.push(`${spriteBase}@2x.json?access_token=${MAPBOX_TOKEN}`);
+
+  // Pre-cache the most common font stacks used by satellite-streets-v12
+  const fontBase = `https://api.mapbox.com/fonts/v1/mapbox`;
+  const fontRanges = ["0-255", "256-511", "512-767", "768-1023"];
+  const fontStacks = [
+    "DIN+Pro+Regular,Arial+Unicode+MS+Regular",
+    "DIN+Pro+Medium,Arial+Unicode+MS+Regular",
+    "DIN+Pro+Bold,Arial+Unicode+MS+Bold",
+  ];
+  for (const stack of fontStacks) {
+    for (const range of fontRanges) {
+      urls.push(`${fontBase}/${stack}/${range}.pbf?access_token=${MAPBOX_TOKEN}`);
+    }
+  }
+
+  return new Promise((resolve) => {
+    const handler = (event: MessageEvent) => {
+      const msg = event.data || {};
+      if (msg.type === "PRECACHE_MAP_TILES_PROGRESS" && onProgress) {
+        onProgress(msg.cached, msg.total);
+      }
+      if (msg.type === "PRECACHE_MAP_TILES_DONE") {
+        navigator.serviceWorker.removeEventListener("message", handler);
+        resolve({ cached: msg.cached || 0, total: msg.total || 0 });
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handler);
+
+    // Send tiles to SW for caching
+    navigator.serviceWorker.controller!.postMessage({
+      type: "PRECACHE_MAP_TILES",
+      urls,
+    });
+
+    // Safety timeout - don't hang forever
+    setTimeout(() => {
+      navigator.serviceWorker.removeEventListener("message", handler);
+      resolve({ cached: 0, total: urls.length });
+    }, 120000);
+  });
 }
