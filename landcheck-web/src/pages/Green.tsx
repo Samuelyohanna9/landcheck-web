@@ -177,6 +177,7 @@ const formatTonnesOrKg = (tonnes: number, kg: number, tonneDigits = 2, kgDigits 
   if (Math.abs(t) >= 0.01) return `${t.toFixed(tonneDigits)} t`;
   return `${k.toFixed(kgDigits)} kg`;
 };
+const normalizeName = (value: string | null | undefined) => String(value || "").trim().toLowerCase();
 const normalizeTaskState = (value: string | null | undefined) => (value || "").trim().toLowerCase();
 const normalizeTreeStatus = (value: string | null | undefined) => {
   const raw = (value || "").trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
@@ -638,6 +639,23 @@ export default function Green() {
     return activeUserPoints;
   }, [focusPoint, assignedPlantingAreaPoints, activeUserPoints]);
 
+  const activeUserDetail = useMemo(() => {
+    if (!activeUser) return null;
+    const staff = users.find((u) => u.full_name === activeUser);
+    if (staff) return staff;
+    const custodian = projectCustodians.find((c) => c.name === activeUser);
+    if (!custodian) return null;
+    return {
+      id: custodian.id,
+      full_name: custodian.name,
+      role: `custodian_${custodian.custodian_type}`,
+    } as GreenUser;
+  }, [activeUser, users, projectCustodians]);
+  const activeUserIsCustodian = useMemo(
+    () => Boolean(activeUserDetail && String(activeUserDetail.role || "").startsWith("custodian_")),
+    [activeUserDetail],
+  );
+
   const userTrees = useMemo(() => {
     if (!activeUser) return [];
     if (activeUserIsCustodian) {
@@ -738,23 +756,6 @@ export default function Green() {
     const needs = userTrees.filter((t) => ATTENTION_TREE_STATUSES.has(normalizeTreeStatus(t.status))).length;
     return { total, healthy, dead, needs };
   }, [userTrees]);
-
-  const activeUserDetail = useMemo(() => {
-    if (!activeUser) return null;
-    const staff = users.find((u) => u.full_name === activeUser);
-    if (staff) return staff;
-    const custodian = projectCustodians.find((c) => c.name === activeUser);
-    if (!custodian) return null;
-    return {
-      id: custodian.id,
-      full_name: custodian.name,
-      role: `custodian_${custodian.custodian_type}`,
-    } as GreenUser;
-  }, [activeUser, users, projectCustodians]);
-  const activeUserIsCustodian = useMemo(
-    () => Boolean(activeUserDetail && String(activeUserDetail.role || "").startsWith("custodian_")),
-    [activeUserDetail],
-  );
   const activeActorOptions = useMemo<ActiveActorOption[]>(() => {
     const byKey = new Map<string, ActiveActorOption>();
     users.forEach((user) => {
