@@ -2730,3 +2730,140 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* Overview mini charts (added) */
+.green-work-overview-mini-grid {
+  margin-top: 0.58rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.5rem;
+}
+
+.green-work-overview-chart-card {
+  border: 1px solid var(--gw-border);
+  background: rgba(255, 255, 255, 0.82);
+  border-radius: var(--radius-md);
+  padding: 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+  min-height: 196px;
+}
+
+.green-work-overview-donut-layout {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.green-work-overview-donut-svg {
+  width: 108px;
+  height: 108px;
+  display: block;
+}
+
+.green-work-overview-donut-total {
+  fill: var(--green-900);
+  font-size: 16px;
+  font-weight: 800;
+  font-family: "Sora", sans-serif;
+}
+
+.green-work-overview-donut-total-label {
+  fill: var(--gw-subtext);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.green-work-overview-donut-legend {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.green-work-overview-donut-legend-row {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.green-work-overview-donut-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  display: inline-block;
+}
+
+.green-work-overview-donut-label {
+  font-size: 0.67rem;
+  color: var(--green-800);
+  font-weight: 700;
+}
+
+.green-work-overview-donut-value {
+  font-size: 0.64rem;
+  color: var(--gw-subtext);
+  font-weight: 700;
+}
+
+.green-work-overview-species-card {
+  min-height: 210px;
+}
+
+.green-work-overview-species-bars {
+  display: grid;
+  gap: 0.28rem;
+  max-height: 172px;
+  overflow: auto;
+  padding-right: 0.12rem;
+}
+
+.green-work-overview-species-row {
+  display: grid;
+  grid-template-columns: minmax(62px, 96px) minmax(0, 1fr) auto;
+  gap: 0.28rem;
+  align-items: center;
+}
+
+.green-work-overview-species-name {
+  font-size: 0.64rem;
+  color: var(--green-800);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.green-work-overview-species-track {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(15, 61, 31, 0.1);
+  overflow: hidden;
+}
+
+.green-work-overview-species-track > span {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: var(--radius-pill);
+}
+
+.green-work-overview-species-count {
+  font-size: 0.64rem;
+  color: var(--green-700);
+  font-weight: 800;
+}
+
+@media (max-width: 760px) {
+  .green-work-overview-mini-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .green-work-overview-donut-layout {
+    grid-template-columns: 1fr;
+    justify-items: flex-start;
+  }
+}

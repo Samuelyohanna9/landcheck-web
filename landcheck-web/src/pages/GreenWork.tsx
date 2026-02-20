@@ -719,6 +719,157 @@ type SpeciesDailySurvivalSeries = {
   points: SpeciesDailySurvivalPoint[];
 };
 
+type OverviewDonutSegment = {
+  label: string;
+  value: number;
+  color: string;
+};
+
+type OverviewSpeciesBarRow = {
+  species: string;
+  count: number;
+  color: string;
+};
+
+const OVERVIEW_SPECIES_COLORS = [
+  "#15803d",
+  "#0ea5e9",
+  "#ea580c",
+  "#7c3aed",
+  "#e11d48",
+  "#0891b2",
+  "#65a30d",
+  "#b45309",
+  "#334155",
+  "#2563eb",
+];
+
+const OverviewDonutCard = ({
+  title,
+  totalLabel,
+  context,
+  segments,
+}: {
+  title: string;
+  totalLabel: string;
+  context: string;
+  segments: OverviewDonutSegment[];
+}) => {
+  const normalizedSegments = segments
+    .map((segment) => ({
+      ...segment,
+      value: Number.isFinite(Number(segment.value)) ? Math.max(Number(segment.value), 0) : 0,
+    }))
+    .filter((segment) => segment.value > 0);
+  const total = normalizedSegments.reduce((sum, segment) => sum + segment.value, 0);
+  const radius = 38;
+  const strokeWidth = 14;
+  const circumference = 2 * Math.PI * radius;
+  let arcOffset = 0;
+
+  return (
+    <div className="green-work-overview-chart-card">
+      <div className="green-work-overview-bar-head">
+        <h5>{title}</h5>
+        <span>{total} {totalLabel}</span>
+      </div>
+      {total <= 0 ? (
+        <p className="green-work-note">No data yet for this scope.</p>
+      ) : (
+        <div className="green-work-overview-donut-layout">
+          <svg className="green-work-overview-donut-svg" viewBox="0 0 120 120" role="img" aria-label={title}>
+            <circle cx="60" cy="60" r={radius} fill="none" stroke="#e3ece6" strokeWidth={strokeWidth} />
+            {normalizedSegments.map((segment) => {
+              const dash = (segment.value / total) * circumference;
+              const node = (
+                <circle
+                  key={`overview-donut-${title}-${segment.label}`}
+                  cx="60"
+                  cy="60"
+                  r={radius}
+                  fill="none"
+                  stroke={segment.color}
+                  strokeWidth={strokeWidth}
+                  strokeLinecap="butt"
+                  strokeDasharray={`${dash} ${circumference - dash}`}
+                  strokeDashoffset={-arcOffset}
+                  transform="rotate(-90 60 60)"
+                />
+              );
+              arcOffset += dash;
+              return node;
+            })}
+            <text x="60" y="56" textAnchor="middle" className="green-work-overview-donut-total">
+              {Math.round(total)}
+            </text>
+            <text x="60" y="72" textAnchor="middle" className="green-work-overview-donut-total-label">
+              {totalLabel}
+            </text>
+          </svg>
+          <div className="green-work-overview-donut-legend">
+            {normalizedSegments.map((segment) => {
+              const pct = total > 0 ? (segment.value / total) * 100 : 0;
+              return (
+                <div key={`overview-donut-legend-${title}-${segment.label}`} className="green-work-overview-donut-legend-row">
+                  <span className="green-work-overview-donut-dot" style={{ backgroundColor: segment.color }} />
+                  <span className="green-work-overview-donut-label">{segment.label}</span>
+                  <span className="green-work-overview-donut-value">
+                    {segment.value} ({pct.toFixed(0)}%)
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      <p className="green-work-chart-context">{context}</p>
+    </div>
+  );
+};
+
+const OverviewSpeciesBarCard = ({
+  title,
+  context,
+  rows,
+}: {
+  title: string;
+  context: string;
+  rows: OverviewSpeciesBarRow[];
+}) => {
+  const visibleRows = rows.slice(0, 10);
+  const maxCount = Math.max(1, ...visibleRows.map((row) => Number(row.count || 0)));
+
+  return (
+    <div className="green-work-overview-chart-card green-work-overview-species-card">
+      <div className="green-work-overview-bar-head">
+        <h5>{title}</h5>
+        <span>{rows.length} species</span>
+      </div>
+      {visibleRows.length === 0 ? (
+        <p className="green-work-note">No planted trees with species labels yet.</p>
+      ) : (
+        <div className="green-work-overview-species-bars">
+          {visibleRows.map((row) => {
+            const widthPct = Math.max(Math.min((Number(row.count || 0) / maxCount) * 100, 100), 0);
+            return (
+              <div key={`overview-species-bar-${row.species}`} className="green-work-overview-species-row">
+                <span className="green-work-overview-species-name" title={row.species}>
+                  {row.species}
+                </span>
+                <div className="green-work-overview-species-track">
+                  <span style={{ width: `${widthPct}%`, backgroundColor: row.color }} />
+                </div>
+                <span className="green-work-overview-species-count">{row.count}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <p className="green-work-chart-context">{context}</p>
+    </div>
+  );
+};
+
 const SpeciesDailySurvivalChart = ({
   title,
   context,
@@ -2722,6 +2873,63 @@ export default function GreenWork() {
     );
   }, [filteredOverviewSummary]);
 
+  const scopedOverviewTrees = useMemo(() => {
+    if (assigneeFilter === "all") return trees;
+    const scopedKey = normalizeName(assigneeFilter);
+    return trees.filter((tree) => normalizeName(tree.created_by) === scopedKey);
+  }, [assigneeFilter, trees]);
+  const treeHealthMixSegments = useMemo<OverviewDonutSegment[]>(() => {
+    const totals = {
+      healthy: 0,
+      attention: 0,
+      loss: 0,
+      pending: 0,
+    };
+    scopedOverviewTrees.forEach((tree) => {
+      const status = normalizeTreeStatus(tree.status || "");
+      if (status === "pending_planting") {
+        totals.pending += 1;
+      } else if (status === "dead" || status === "removed") {
+        totals.loss += 1;
+      } else if (HEALTHY_TREE_STATUSES.has(status)) {
+        totals.healthy += 1;
+      } else {
+        totals.attention += 1;
+      }
+    });
+    return [
+      { label: "Healthy", value: totals.healthy, color: "#16a34a" },
+      { label: "Attention", value: totals.attention, color: "#f59e0b" },
+      { label: "Dead/Removed", value: totals.loss, color: "#dc2626" },
+      { label: "Pending", value: totals.pending, color: "#0ea5e9" },
+    ];
+  }, [scopedOverviewTrees]);
+  const speciesPlantedRows = useMemo<OverviewSpeciesBarRow[]>(() => {
+    const bySpecies = new Map<string, { species: string; count: number }>();
+    scopedOverviewTrees.forEach((tree) => {
+      if (tree.count_in_planting_kpis === false) return;
+      const status = normalizeTreeStatus(tree.status || "");
+      if (status === "pending_planting") return;
+      const species = String(tree.species || "").trim() || "Unspecified";
+      const key = normalizeName(species);
+      const current = bySpecies.get(key);
+      if (current) {
+        current.count += 1;
+      } else {
+        bySpecies.set(key, { species, count: 1 });
+      }
+    });
+    return Array.from(bySpecies.values())
+      .sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return a.species.localeCompare(b.species);
+      })
+      .map((row, index) => ({
+        ...row,
+        color: OVERVIEW_SPECIES_COLORS[index % OVERVIEW_SPECIES_COLORS.length],
+      }));
+  }, [scopedOverviewTrees]);
+
   const liveMaintenanceRows = useMemo<LiveMaintenanceRow[]>(() => {
     const today = startOfDay(new Date());
     const assigneeKey = assigneeFilter === "all" ? "" : normalizeName(assigneeFilter);
@@ -3333,6 +3541,48 @@ export default function GreenWork() {
       existingTrees: existingTreeIntakeRows.length,
     };
   }, [custodians, distributionEvents, distributionAllocations, existingTreeIntakeRows.length]);
+  const overviewExecutionMix = useMemo<{
+    title: string;
+    totalLabel: string;
+    context: string;
+    segments: OverviewDonutSegment[];
+  }>(() => {
+    if (showCommunityWorkflow) {
+      const done = Number(custodianSummary.supervisionDone || 0);
+      const live = Number(custodianSummary.supervisionLive || 0);
+      const pending = Math.max(Number(custodianSummary.supervisionTarget || 0) - done - live, 0);
+      return {
+        title: "Supervision Progress Mix",
+        totalLabel: "Visits",
+        context:
+          "Context: done = completed supervision visits, live = assigned pending visits, pending = still unassigned visits.",
+        segments: [
+          { label: "Done", value: done, color: "#16a34a" },
+          { label: "Live", value: live, color: "#0ea5e9" },
+          { label: "Pending", value: pending, color: "#f59e0b" },
+        ],
+      };
+    }
+    return {
+      title: "Task Execution Mix",
+      totalLabel: "Tasks",
+      context: "Context: done/pending/overdue maintenance tasks for the current project scope.",
+      segments: [
+        { label: "Done", value: filteredOverviewTotals.taskDone, color: "#16a34a" },
+        { label: "Pending", value: filteredOverviewTotals.taskPending, color: "#f59e0b" },
+        { label: "Overdue", value: filteredOverviewTotals.taskOverdue, color: "#dc2626" },
+      ],
+    };
+  }, [
+    showCommunityWorkflow,
+    custodianSummary.supervisionDone,
+    custodianSummary.supervisionLive,
+    custodianSummary.supervisionTarget,
+    filteredOverviewTotals.taskDone,
+    filteredOverviewTotals.taskPending,
+    filteredOverviewTotals.taskOverdue,
+  ]);
+  const overviewScopeLabel = assigneeFilter === "all" ? "all staff in this project" : `${assigneeFilter} only`;
 
   const activeProjectName = useMemo(() => {
     if (!activeProjectId) return "";
@@ -4834,6 +5084,25 @@ export default function GreenWork() {
                   </div>
                 </div>
               )}
+              <div className="green-work-overview-mini-grid">
+                <OverviewDonutCard
+                  title="Tree Health Mix"
+                  totalLabel="Trees"
+                  segments={treeHealthMixSegments}
+                  context={`Context: status distribution for ${overviewScopeLabel}.`}
+                />
+                <OverviewDonutCard
+                  title={overviewExecutionMix.title}
+                  totalLabel={overviewExecutionMix.totalLabel}
+                  segments={overviewExecutionMix.segments}
+                  context={overviewExecutionMix.context}
+                />
+                <OverviewSpeciesBarCard
+                  title="Trees Planted by Species"
+                  rows={speciesPlantedRows}
+                  context={`Context: planted tree count per species for ${overviewScopeLabel}.`}
+                />
+              </div>
               <div className="green-work-overview-bars">
                 <div className="green-work-overview-bar-card">
                   <div className="green-work-overview-bar-head">
