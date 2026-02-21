@@ -456,6 +456,15 @@ const toDisplayPhotoUrl = (url: string | null | undefined) => {
   }
 };
 
+const readGreenIntroSeen = () => {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.sessionStorage.getItem("landcheck_green_intro_seen") === "1";
+  } catch {
+    return false;
+  }
+};
+
 function HomeIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -592,6 +601,7 @@ export default function Green() {
   const [treeHeightDraftById, setTreeHeightDraftById] = useState<Record<number, string>>({});
   const [savingTreeHeightId, setSavingTreeHeightId] = useState<number | null>(null);
   const [includePhotosInReport, setIncludePhotosInReport] = useState(false);
+  const [introGateOpen, setIntroGateOpen] = useState<boolean>(() => !readGreenIntroSeen());
 
   const treePoints = useMemo(() => {
     if (!activeUser) return [];
@@ -1906,6 +1916,15 @@ export default function Green() {
     setSelectedTreeId(null);
     setInspectedTree(null);
   };
+  const continueFromIntro = () => {
+    setIntroGateOpen(false);
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem("landcheck_green_intro_seen", "1");
+    } catch {
+      // ignore storage errors
+    }
+  };
 
   const onPlantingFlowOk = () => {
     const shouldGoHome = plantingFlowState === "success";
@@ -1986,6 +2005,26 @@ export default function Green() {
       </header>
 
       <main className="green-shell">
+        {activeSection === null && introGateOpen && (
+          <section className="green-intro-card" id="green-intro">
+            <span className="green-intro-kicker">LandCheck Green</span>
+            <h2>Field Workflow At A Glance</h2>
+            <p>
+              Select your project and profile, then continue to capture tree planting, maintenance evidence, GPS proof,
+              and offline-safe updates from the field.
+            </p>
+            <div className="green-intro-pills">
+              <span>Live map + tree tracking</span>
+              <span>Offline queue + sync</span>
+              <span>Supervisor-ready evidence</span>
+            </div>
+            <button className="green-btn-primary green-intro-continue" type="button" onClick={continueFromIntro}>
+              Continue
+            </button>
+          </section>
+        )}
+        {(activeSection !== null || !introGateOpen) && (
+          <>
         {activeSection === null && (
           <>
         <section className="green-setup-card" id="project">
@@ -2969,6 +3008,8 @@ export default function Green() {
               </div>
             )}
           </section>
+        )}
+          </>
         )}
       </main>
 

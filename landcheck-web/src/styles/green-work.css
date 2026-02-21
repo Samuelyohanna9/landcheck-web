@@ -2495,26 +2495,16 @@
 
 /* ── Responsive: Wide Tablet ── */
 @media (max-width: 1320px) {
-  .green-work-action-grid {
-    grid-auto-flow: row;
-    grid-auto-columns: auto;
-    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
-    gap: 0.2rem;
-  }
-
-  .green-work-action-card {
-    min-height: 56px;
-    padding: 0.24rem 0.26rem;
-    font-size: 0.7rem;
-  }
-
-  .green-work-action-card .green-work-action-copy > small {
-    font-size: 0.56rem;
-  }
-
   .green-work-content {
-    grid-template-columns: 1fr;
-    width: min(1180px, calc(100% - 20px));
+    width: min(1320px, calc(100% - 18px));
+  }
+
+  .green-work-content.with-sidebar {
+    grid-template-columns: minmax(250px, 298px) minmax(0, 1fr);
+  }
+
+  .green-work-content.with-sidebar.custodian-hub-mode {
+    grid-template-columns: minmax(238px, 282px) minmax(0, 1fr);
   }
 
   .green-work-sidebar {
@@ -2527,6 +2517,86 @@
   .green-work-content.with-sidebar .green-work-sidebar {
     border-radius: var(--radius-md);
     padding: 0.55rem;
+  }
+}
+
+@media (max-width: 1140px) {
+  .green-work-content {
+    width: min(1120px, calc(100% - 16px));
+  }
+
+  .green-work-content.with-sidebar {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .green-work-content.with-sidebar .green-work-sidebar {
+    height: auto;
+    max-height: 40dvh;
+    overflow: auto;
+  }
+
+  .green-work-main {
+    height: auto;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 1360px) {
+  .green-work-active-hub {
+    grid-template-columns: 1fr;
+    gap: 0.42rem;
+  }
+
+  .green-work-active-hub-head {
+    min-height: 0;
+  }
+
+  .green-work-action-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.34rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.12rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(23, 83, 45, 0.3) transparent;
+  }
+
+  .green-work-action-grid::-webkit-scrollbar {
+    height: 5px;
+  }
+
+  .green-work-action-grid::-webkit-scrollbar-thumb {
+    background: rgba(23, 83, 45, 0.28);
+    border-radius: var(--radius-pill);
+  }
+
+  .green-work-action-card {
+    flex: 0 0 50px;
+    width: 50px;
+    min-width: 50px;
+    min-height: 50px;
+    padding: 0.24rem;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    align-content: center;
+    gap: 0.2rem;
+  }
+
+  .green-work-action-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .green-work-action-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .green-work-action-copy {
+    display: none;
   }
 }
 
@@ -2575,17 +2645,37 @@
   }
 
   .green-work-action-grid {
-    display: grid;
-    grid-auto-flow: row;
-    grid-auto-columns: auto;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: nowrap;
     gap: 0.35rem;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .green-work-action-card {
-    text-align: left;
-    padding: 0.4rem 0.44rem;
-    min-width: 0;
+    flex: 0 0 48px;
+    width: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 0.2rem;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    align-content: center;
+    gap: 0.16rem;
+  }
+
+  .green-work-action-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .green-work-action-icon svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .green-work-action-copy {
+    display: none;
   }
 
   .green-work-toolbar-label {
