@@ -7,7 +7,7 @@
   overflow-y: auto;
   display: grid;
   grid-template-rows: auto minmax(220px, 36dvh) minmax(0, 1fr);
-  background: #ffffff;
+  background: #eef2f6;
   color: #132f22;
   font-family: "Outfit", sans-serif;
 }
@@ -19,8 +19,8 @@
   align-items: center;
   gap: 16px;
   padding: 10px 22px;
-  background: #ffffff;
-  border-bottom: 1px solid rgba(17, 53, 34, 0.12);
+  background: linear-gradient(180deg, rgba(13, 17, 24, 0.96), rgba(16, 22, 31, 0.94));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .gp-nav-brand {
@@ -50,7 +50,7 @@
 .gp-nav-links button {
   border: 0;
   background: transparent;
-  color: #1b4a33;
+  color: rgba(234, 245, 237, 0.9);
   font-family: "Plus Jakarta Sans", sans-serif;
   font-size: 0.92rem;
   font-weight: 700;
@@ -77,16 +77,14 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  background: #ffffff;
-  border-bottom: 1px solid rgba(20, 72, 42, 0.08);
+  background: url("/landcheck green.png") center 68% / cover no-repeat;
 }
 
 .gp-hero-tint {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 8% 14%, rgba(40, 170, 93, 0.14), transparent 40%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 253, 250, 0.82) 100%);
+    linear-gradient(180deg, rgba(6, 10, 16, 0.62) 0%, rgba(7, 17, 23, 0.46) 58%, rgba(9, 21, 28, 0.38) 100%);
 }
 
 .gp-hero-copy {
@@ -104,7 +102,7 @@
 
 .gp-hero-copy p {
   margin: 0;
-  color: #2d6f48;
+  color: rgba(229, 243, 233, 0.95);
   font-size: 0.86rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -113,7 +111,7 @@
 
 .gp-hero-copy h1 {
   margin: 0;
-  color: #163b2a;
+  color: #f5fbf6;
   font-family: "Plus Jakarta Sans", sans-serif;
   font-size: clamp(1.8rem, 4.7vw, 4rem);
   letter-spacing: 0.01em;
@@ -122,7 +120,7 @@
 
 .gp-hero-copy span {
   margin: 0;
-  color: #3f6f56;
+  color: rgba(236, 248, 239, 0.95);
   font-size: clamp(0.76rem, 1.3vw, 1.3rem);
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -145,7 +143,7 @@
   min-height: 0;
   border-radius: 16px;
   border: 1px solid rgba(17, 53, 34, 0.12);
-  background: #ffffff;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 251, 248, 0.98));
   box-shadow: 0 12px 24px rgba(16, 52, 34, 0.09);
 }
 
@@ -157,7 +155,10 @@
   flex-direction: column;
   gap: 10px;
   border: 1px solid rgba(22, 83, 49, 0.26);
-  background: #ffffff;
+  background:
+    radial-gradient(circle at 8% 10%, rgba(89, 201, 133, 0.26), transparent 34%),
+    radial-gradient(circle at 92% 2%, rgba(79, 160, 255, 0.2), transparent 36%),
+    linear-gradient(152deg, rgba(244, 255, 248, 0.98) 0%, rgba(234, 250, 241, 0.98) 46%, rgba(247, 255, 251, 0.98) 100%);
   box-shadow:
     0 18px 34px rgba(14, 56, 34, 0.14),
     inset 0 1px 0 rgba(255, 255, 255, 0.62);
@@ -176,7 +177,7 @@
   bottom: -92px;
   width: 220px;
   height: 220px;
-  background: radial-gradient(circle, rgba(41, 141, 83, 0.08) 0%, rgba(41, 141, 83, 0) 72%);
+  background: radial-gradient(circle, rgba(41, 141, 83, 0.22) 0%, rgba(41, 141, 83, 0) 72%);
 }
 
 .gp-suite-copy::after {
@@ -184,7 +185,7 @@
   top: -64px;
   width: 170px;
   height: 170px;
-  background: radial-gradient(circle, rgba(77, 145, 255, 0.08) 0%, rgba(77, 145, 255, 0) 70%);
+  background: radial-gradient(circle, rgba(77, 145, 255, 0.16) 0%, rgba(77, 145, 255, 0) 70%);
 }
 
 .gp-suite-copy > * {
