@@ -3770,6 +3770,8 @@ export default function GreenWork() {
                   type="button"
                   className={`green-work-action-card ${activeForm === action.form ? "active" : ""}`}
                   onClick={() => openForm(action.form)}
+                  title={`${action.title} - ${action.note}`}
+                  aria-label={action.title}
                 >
                   <span className="green-work-action-icon" aria-hidden="true">
                     {renderActionIcon(action.form)}
