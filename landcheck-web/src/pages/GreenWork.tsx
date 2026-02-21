@@ -1,7 +1,9 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { api, BACKEND_URL } from "../api/client";
 import TreeMap, { type TreeInspectData } from "../components/TreeMap";
+import { clearWorkAuthed } from "../auth/workAuth";
 import {
   cacheProjectsOffline,
   cacheUsersOffline,
@@ -1084,6 +1086,7 @@ export default function GreenWork() {
 
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const mapCardRef = useRef<HTMLDivElement | null>(null);
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<GreenUser[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(
@@ -3668,6 +3671,11 @@ export default function GreenWork() {
     setLiveTreeMenu(null);
   };
 
+  const onLogoutWork = () => {
+    clearWorkAuthed();
+    navigate("/green-work/login", { replace: true });
+  };
+
   const openAssignWorkForUser = (userName: string) => {
     if (!activeProjectId) {
       toast("Select an active project first.");
@@ -3752,6 +3760,9 @@ export default function GreenWork() {
           </button>
           <span className="green-work-toolbar-label">Menu</span>
           {activeProjectName && <span className="green-work-project-chip">{activeProjectName}</span>}
+          <button type="button" className="green-work-auth-btn" onClick={onLogoutWork}>
+            Logout
+          </button>
         </div>
       </div>
 

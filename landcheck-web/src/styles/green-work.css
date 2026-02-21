@@ -148,6 +148,24 @@
   color: var(--green-800);
 }
 
+.green-work-auth-btn {
+  margin-left: auto;
+  border: 1px solid rgba(15, 61, 31, 0.24);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--green-800);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0.45rem 0.64rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.green-work-auth-btn:active {
+  transform: scale(0.97);
+}
+
 /* ── Active Hub ── */
 .green-work-active-hub-wrap {
   width: min(1880px, calc(100% - 24px));
