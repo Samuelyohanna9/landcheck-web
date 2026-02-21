@@ -1,8 +1,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap");
 
 .landcheck-landing {
-  --lp-bg-0: #edf2f7;
-  --lp-bg-1: #e4edf5;
+  --lp-bg-0: #ffffff;
+  --lp-bg-1: #ffffff;
   --lp-text: #112f22;
   --lp-subtext: #3b5b4b;
   --lp-brand: #178346;
@@ -10,7 +10,7 @@
   min-height: 100dvh;
   display: grid;
   grid-template-rows: auto minmax(220px, 34dvh) minmax(0, 1fr) auto;
-  background: linear-gradient(180deg, var(--lp-bg-0), var(--lp-bg-1));
+  background: #ffffff;
   color: var(--lp-text);
   font-family: "Outfit", sans-serif;
   overflow-x: hidden;
@@ -23,8 +23,8 @@
   gap: 0.9rem;
   min-height: 72px;
   padding: 0.6rem 1.1rem;
-  border-bottom: 1px solid rgba(227, 250, 234, 0.22);
-  background: linear-gradient(180deg, rgba(14, 20, 28, 0.96), rgba(18, 26, 36, 0.93));
+  border-bottom: 1px solid rgba(17, 53, 34, 0.12);
+  background: #ffffff;
 }
 
 .lp-nav-brand {
@@ -83,9 +83,9 @@
 }
 
 .lp-nav-btn.subtle {
-  border-color: rgba(194, 218, 201, 0.28);
-  background: rgba(212, 237, 219, 0.08);
-  color: rgba(224, 245, 229, 0.92);
+  border-color: rgba(25, 96, 56, 0.22);
+  background: #ffffff;
+  color: #1b5b35;
 }
 
 .lp-nav-btn.primary {
@@ -98,15 +98,16 @@
 .lp-hero {
   position: relative;
   overflow: hidden;
-  background: url("/Digital-Land-Survey.jpg") center 40% / cover no-repeat;
+  background: #ffffff;
+  border-bottom: 1px solid rgba(20, 72, 42, 0.08);
 }
 
 .lp-hero-tint {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 8% 12%, rgba(22, 71, 42, 0.36), transparent 36%),
-    linear-gradient(180deg, rgba(8, 14, 20, 0.52), rgba(10, 20, 30, 0.32));
+    radial-gradient(circle at 8% 12%, rgba(43, 162, 92, 0.14), transparent 38%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 252, 250, 0.82));
 }
 
 .lp-hero-copy {
@@ -124,7 +125,7 @@
 
 .lp-hero-copy p {
   margin: 0;
-  color: rgba(231, 245, 234, 0.95);
+  color: #2a6e46;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   font-size: 0.72rem;
@@ -134,7 +135,7 @@
 .lp-hero-copy h1 {
   margin: 0;
   max-width: 980px;
-  color: #f3fef6;
+  color: #153d2a;
   font-family: "Plus Jakarta Sans", sans-serif;
   font-size: clamp(1.42rem, 3.3vw, 3.2rem);
   line-height: 1.07;
@@ -143,7 +144,7 @@
 
 .lp-hero-copy span {
   margin: 0;
-  color: rgba(232, 248, 236, 0.96);
+  color: #3c6b52;
   font-size: clamp(0.63rem, 1.05vw, 1.03rem);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -161,9 +162,9 @@
 
 .lp-hero-cta {
   border-radius: 999px;
-  border: 1px solid rgba(220, 246, 226, 0.32);
-  background: rgba(17, 76, 42, 0.44);
-  color: #effff2;
+  border: 1px solid rgba(20, 72, 42, 0.2);
+  background: #ffffff;
+  color: #1a6137;
   font-family: "Plus Jakarta Sans", sans-serif;
   font-size: 0.76rem;
   font-weight: 800;
