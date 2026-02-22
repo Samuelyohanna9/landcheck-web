@@ -5,7 +5,7 @@ import "../styles/feature-override-modal.css";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
-type FeatureType = "road" | "building" | "river";
+type FeatureType = "road" | "building" | "river" | "fence";
 type FeatureAction = "add" | "delete" | "update";
 
 type Props = {
@@ -74,8 +74,13 @@ export default function FeatureOverrideModal({
         if (!res.ok) return;
         const data = await res.json();
 
+        const roadsData = data.roads || { type: "FeatureCollection", features: [] };
+        const buildingsData = data.buildings || { type: "FeatureCollection", features: [] };
+        const riversData = data.rivers || { type: "FeatureCollection", features: [] };
+        const fencesData = data.fences || { type: "FeatureCollection", features: [] };
+
         if (!map.getSource("roads-src")) {
-          map.addSource("roads-src", { type: "geojson", data: data.roads });
+          map.addSource("roads-src", { type: "geojson", data: roadsData });
           map.addLayer({
             id: "roads-line",
             type: "line",
@@ -85,11 +90,11 @@ export default function FeatureOverrideModal({
           map.on("mouseenter", "roads-line", () => (map.getCanvas().style.cursor = "pointer"));
           map.on("mouseleave", "roads-line", () => (map.getCanvas().style.cursor = ""));
         } else {
-          (map.getSource("roads-src") as mapboxgl.GeoJSONSource).setData(data.roads);
+          (map.getSource("roads-src") as mapboxgl.GeoJSONSource).setData(roadsData as any);
         }
 
         if (!map.getSource("buildings-src")) {
-          map.addSource("buildings-src", { type: "geojson", data: data.buildings });
+          map.addSource("buildings-src", { type: "geojson", data: buildingsData });
           map.addLayer({
             id: "buildings-line",
             type: "line",
@@ -99,11 +104,11 @@ export default function FeatureOverrideModal({
           map.on("mouseenter", "buildings-line", () => (map.getCanvas().style.cursor = "pointer"));
           map.on("mouseleave", "buildings-line", () => (map.getCanvas().style.cursor = ""));
         } else {
-          (map.getSource("buildings-src") as mapboxgl.GeoJSONSource).setData(data.buildings);
+          (map.getSource("buildings-src") as mapboxgl.GeoJSONSource).setData(buildingsData as any);
         }
 
         if (!map.getSource("rivers-src")) {
-          map.addSource("rivers-src", { type: "geojson", data: data.rivers });
+          map.addSource("rivers-src", { type: "geojson", data: riversData });
           map.addLayer({
             id: "rivers-line",
             type: "line",
@@ -113,7 +118,25 @@ export default function FeatureOverrideModal({
           map.on("mouseenter", "rivers-line", () => (map.getCanvas().style.cursor = "pointer"));
           map.on("mouseleave", "rivers-line", () => (map.getCanvas().style.cursor = ""));
         } else {
-          (map.getSource("rivers-src") as mapboxgl.GeoJSONSource).setData(data.rivers);
+          (map.getSource("rivers-src") as mapboxgl.GeoJSONSource).setData(riversData as any);
+        }
+
+        if (!map.getSource("fences-src")) {
+          map.addSource("fences-src", { type: "geojson", data: fencesData });
+          map.addLayer({
+            id: "fences-line",
+            type: "line",
+            source: "fences-src",
+            paint: {
+              "line-color": "#111827",
+              "line-width": 1.5,
+              "line-dasharray": [1.5, 1.5],
+            },
+          });
+          map.on("mouseenter", "fences-line", () => (map.getCanvas().style.cursor = "pointer"));
+          map.on("mouseleave", "fences-line", () => (map.getCanvas().style.cursor = ""));
+        } else {
+          (map.getSource("fences-src") as mapboxgl.GeoJSONSource).setData(fencesData as any);
         }
       } catch {
         // ignore
@@ -209,10 +232,12 @@ export default function FeatureOverrideModal({
     map.on("click", "roads-line", selectFeature("road"));
     map.on("click", "buildings-line", selectFeature("building"));
     map.on("click", "rivers-line", selectFeature("river"));
+    map.on("click", "fences-line", selectFeature("fence"));
 
     map.on("contextmenu", "roads-line", contextMenu("road"));
     map.on("contextmenu", "buildings-line", contextMenu("building"));
     map.on("contextmenu", "rivers-line", contextMenu("river"));
+    map.on("contextmenu", "fences-line", contextMenu("fence"));
 
     mapRef.current = map;
     drawRef.current = draw;
@@ -266,6 +291,7 @@ export default function FeatureOverrideModal({
               <option value="road">Road</option>
               <option value="building">Building</option>
               <option value="river">River</option>
+              <option value="fence">Fence</option>
             </select>
           </div>
           <div className="field">
@@ -299,7 +325,7 @@ export default function FeatureOverrideModal({
             </div>
           )}
           <div className="hint">
-            Tip: Use line tool for roads/rivers and polygon tool for buildings. Delete draws a mask to remove detected features.
+            Tip: Use line tool for roads, rivers, and fences; polygon tool for buildings. Delete draws a mask to remove detected features.
           </div>
         </div>
 
