@@ -16,6 +16,7 @@ type PlotMeta = {
   state_text: string;
   surveyor_name: string;
   surveyor_rank: string;
+  certification_statement: string;
   scale_text: string;
   paper_size: string;
 };
@@ -35,6 +36,8 @@ type BeaconStyle = "circle" | "square" | "triangle" | "diamond" | "cross";
 type RoadWidthOption = "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
 
 const BACKEND = BACKEND_URL;
+const DEFAULT_CERTIFICATION_STATEMENT =
+  "I hereby certify that this survey plan is a true representation of the survey executed by me and conforms with the regulations of surveying profession.";
 
 const STEPS = [
   { id: 1, title: "Enter Coordinates", description: "Input plot boundary points" },
@@ -73,7 +76,7 @@ export default function SurveyPlan() {
   const [roadWidth, setRoadWidth] = useState<RoadWidthOption>("10");
   const [newRoadWidth, setNewRoadWidth] = useState<RoadWidthOption>("10");
   const [showFeatureEditor, setShowFeatureEditor] = useState(false);
-  const [featureType, setFeatureType] = useState<"road" | "building" | "river">("road");
+  const [featureType, setFeatureType] = useState<"road" | "building" | "river" | "fence">("road");
   const [featureAction, setFeatureAction] = useState<"add" | "delete" | "update">("add");
   const [roadName, setRoadName] = useState("");
   const orthophotoRequestId = useRef(0);
@@ -87,6 +90,7 @@ export default function SurveyPlan() {
     state_text: "",
     surveyor_name: "",
     surveyor_rank: "",
+    certification_statement: DEFAULT_CERTIFICATION_STATEMENT,
     scale_text: "1 : 1000",
     paper_size: "A4",
   });
@@ -302,6 +306,7 @@ export default function SurveyPlan() {
         scale_text: meta.scale_text,
         surveyor_name: meta.surveyor_name,
         surveyor_rank: meta.surveyor_rank,
+        certification_statement: meta.certification_statement,
         station_names: stationNames,
         coordinate_system: coordinateSystem,
         paper_size: meta.paper_size,
@@ -472,6 +477,7 @@ export default function SurveyPlan() {
       state_text: "",
       surveyor_name: "",
       surveyor_rank: "",
+      certification_statement: DEFAULT_CERTIFICATION_STATEMENT,
       scale_text: "1 : 1000",
       paper_size: "A4",
     });
@@ -492,6 +498,7 @@ export default function SurveyPlan() {
         scale_text: meta.scale_text,
         surveyor_name: meta.surveyor_name,
         surveyor_rank: meta.surveyor_rank,
+        certification_statement: meta.certification_statement,
         station_names: stationNames,
         coordinate_system: coordinateSystem,
         paper_size: meta.paper_size,
@@ -530,7 +537,7 @@ export default function SurveyPlan() {
     return insideCount + bufferCount;
   };
 
-  const handleSaveOverride = async (payload: { feature_type: "road" | "building" | "river"; action: "add" | "delete" | "update"; name?: string; width_m?: number; geojson: any }) => {
+  const handleSaveOverride = async (payload: { feature_type: "road" | "building" | "river" | "fence"; action: "add" | "delete" | "update"; name?: string; width_m?: number; geojson: any }) => {
     if (!plotId) return;
     try {
       await api.post(`/plots/${plotId}/feature-overrides`, payload);
@@ -742,6 +749,15 @@ export default function SurveyPlan() {
                       value={meta.surveyor_rank}
                       onChange={(e) => setMeta((m) => ({ ...m, surveyor_rank: e.target.value }))}
                       placeholder="Surveyor rank"
+                    />
+                  </div>
+                  <div className="form-group full-width">
+                    <label>Certification Statement (Editable)</label>
+                    <textarea
+                      value={meta.certification_statement}
+                      onChange={(e) => setMeta((m) => ({ ...m, certification_statement: e.target.value }))}
+                      placeholder={DEFAULT_CERTIFICATION_STATEMENT}
+                      rows={3}
                     />
                   </div>
                   <div className="form-group scale-group">
