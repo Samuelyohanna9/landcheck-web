@@ -103,6 +103,7 @@ type WorkOrder = {
   work_type: string;
   target_trees: number;
   species_allocations?: Array<{ species: string; count: number }>;
+  auto_assign_first_cycle_maintenance?: boolean;
   due_date: string | null;
   status: string;
   planted_count: number;
