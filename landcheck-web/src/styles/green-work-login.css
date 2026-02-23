@@ -139,7 +139,7 @@
   box-shadow: 0 0 0 3px rgba(42, 168, 82, 0.18);
 }
 
-.work-login-form button {
+.work-login-form > button {
   margin-top: 0.5rem;
   width: 100%;
   border: 0;
@@ -155,7 +155,7 @@
   cursor: pointer;
 }
 
-.work-login-form button:active {
+.work-login-form > button:active {
   transform: scale(0.98);
 }
 
