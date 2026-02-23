@@ -1319,6 +1319,12 @@ export default function GreenWork() {
   });
   const [orgLogoUploading, setOrgLogoUploading] = useState(false);
   const [editingAdminUserId, setEditingAdminUserId] = useState<number | null>(null);
+  const [latestGeneratedUserCredentials, setLatestGeneratedUserCredentials] = useState<{
+    full_name: string;
+    user_uid?: string | null;
+    username: string;
+    password: string;
+  } | null>(null);
   const [projectSettingsDraft, setProjectSettingsDraft] = useState<{
     planting_model: PlantingModel;
     allow_existing_tree_link: boolean;
@@ -1650,6 +1656,23 @@ export default function GreenWork() {
     });
   };
 
+  const copyGeneratedUserCredentials = async () => {
+    if (!latestGeneratedUserCredentials) return;
+    const lines = [
+      `Name: ${latestGeneratedUserCredentials.full_name}`,
+      `User ID: ${latestGeneratedUserCredentials.user_uid || "-"}`,
+      `Username: ${latestGeneratedUserCredentials.username}`,
+      `Temporary Password: ${latestGeneratedUserCredentials.password}`,
+    ];
+    const textValue = lines.join("\n");
+    try {
+      await navigator.clipboard.writeText(textValue);
+      toast.success("Generated credentials copied");
+    } catch {
+      window.prompt("Copy generated credentials", textValue);
+    }
+  };
+
   const saveRoleDefinition = async () => {
     if (!newRoleDraft.role_name.trim()) {
       toast.error("Role name required");
@@ -1697,10 +1720,6 @@ export default function GreenWork() {
       return;
     }
     const loginEnabled = Boolean(adminUserDraft.allow_green || adminUserDraft.allow_work);
-    if (!editingAdminUserId && loginEnabled && !adminUserDraft.work_password.trim()) {
-      toast.error("Login password is required when Green or Work access is enabled");
-      return;
-    }
     const roleIdNum = Number(adminUserDraft.role_id || 0);
     const orgIdNum = Number(adminUserDraft.organization_id || 0);
     const isEditing = Boolean(editingAdminUserId);
@@ -1722,10 +1741,25 @@ export default function GreenWork() {
     try {
       if (editingAdminUserId) {
         await api.patch(`/green/users/${editingAdminUserId}`, payload);
+        setLatestGeneratedUserCredentials(null);
         toast.success("User updated");
       } else {
-        await api.post("/green/users", payload);
-        toast.success("User created");
+        const res = await api.post("/green/users", payload);
+        const created = (res.data || {}) as any;
+        const generatedPassword = String(created.generated_password || "").trim();
+        const generatedUsername = String(created.generated_login_username || created.work_username || "").trim();
+        if (generatedPassword && generatedUsername) {
+          setLatestGeneratedUserCredentials({
+            full_name: String(created.full_name || payload.full_name),
+            user_uid: created.user_uid || payload.user_uid || null,
+            username: generatedUsername,
+            password: generatedPassword,
+          });
+          toast.success("User created. Temporary login credentials generated.");
+        } else {
+          setLatestGeneratedUserCredentials(null);
+          toast.success("User created");
+        }
       }
       resetAdminUserDraft();
       await Promise.all([loadUsers(), loadAdminUsers(), loadAdminOverview()]);
@@ -5573,7 +5607,7 @@ export default function GreenWork() {
                 />
                 <input
                   type="password"
-                  placeholder={editingAdminUserId ? "Set / reset login password (required if missing)" : "Login password"}
+                  placeholder={editingAdminUserId ? "Set / reset login password (leave blank to keep current)" : "Login password (optional: auto-generated)"}
                   value={adminUserDraft.work_password}
                   onChange={(e) => setAdminUserDraft((prev) => ({ ...prev, work_password: e.target.value }))}
                 />
@@ -5598,6 +5632,28 @@ export default function GreenWork() {
                     Clear
                   </button>
                 </div>
+                {latestGeneratedUserCredentials && (
+                  <div className="green-work-note" role="status" aria-live="polite">
+                    <strong>Generated Login Credentials (shown once):</strong>
+                    <div>
+                      Name: {latestGeneratedUserCredentials.full_name} | User ID: {latestGeneratedUserCredentials.user_uid || "-"}
+                    </div>
+                    <div>
+                      Username: <code>{latestGeneratedUserCredentials.username}</code>
+                    </div>
+                    <div>
+                      Temporary Password: <code>{latestGeneratedUserCredentials.password}</code>
+                    </div>
+                    <div className="work-actions" style={{ marginTop: "0.35rem" }}>
+                      <button type="button" onClick={() => void copyGeneratedUserCredentials()}>
+                        Copy Credentials
+                      </button>
+                      <button type="button" onClick={() => setLatestGeneratedUserCredentials(null)}>
+                        Clear Display
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div className="staff-list">
                   {adminUsersLoading ? (
                     <p className="green-work-note">Loading user directory...</p>
