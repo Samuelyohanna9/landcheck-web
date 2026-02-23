@@ -1249,6 +1249,7 @@ export default function GreenWork() {
   const [reviewQueue, setReviewQueue] = useState<ReviewQueueTask[]>([]);
   const [includePhotosInWorkPdf, setIncludePhotosInWorkPdf] = useState(false);
   const [includePhotosInCustodianPdf, setIncludePhotosInCustodianPdf] = useState(true);
+  const [includePhotosInExistingTreesPdf, setIncludePhotosInExistingTreesPdf] = useState(true);
   const [deletingTreeId, setDeletingTreeId] = useState<number | null>(null);
   const [deleteProjectModalOpen, setDeleteProjectModalOpen] = useState(false);
   const [deleteProjectConfirmName, setDeleteProjectConfirmName] = useState("");
@@ -2467,6 +2468,23 @@ export default function GreenWork() {
       include_photos: includePhotosInCustodianPdf ? "true" : "false",
     });
     window.open(`${BACKEND_URL}/green/projects/${activeProjectId}/custodians/export/pdf?${params.toString()}`, "_blank");
+  };
+
+  const exportExistingTreesCsv = () => {
+    if (!activeProjectId) return;
+    const params = new URLSearchParams({
+      _ts: String(Date.now()),
+    });
+    window.open(`${BACKEND_URL}/green/projects/${activeProjectId}/existing-trees/export/csv?${params.toString()}`, "_blank");
+  };
+
+  const exportExistingTreesPdf = () => {
+    if (!activeProjectId) return;
+    const params = new URLSearchParams({
+      _ts: String(Date.now()),
+      include_photos: includePhotosInExistingTreesPdf ? "true" : "false",
+    });
+    window.open(`${BACKEND_URL}/green/projects/${activeProjectId}/existing-trees/export/pdf?${params.toString()}`, "_blank");
   };
 
   const exportVerraPackage = (
@@ -5701,6 +5719,20 @@ export default function GreenWork() {
               <div className="green-work-row">
                 <h3>Existing Tree Live Table</h3>
                 <div className="work-actions">
+                  <button type="button" onClick={exportExistingTreesCsv}>
+                    Export CSV
+                  </button>
+                  <button type="button" onClick={exportExistingTreesPdf}>
+                    Export PDF
+                  </button>
+                  <label className="green-work-export-photo-toggle">
+                    <input
+                      type="checkbox"
+                      checked={includePhotosInExistingTreesPdf}
+                      onChange={(e) => setIncludePhotosInExistingTreesPdf(e.target.checked)}
+                    />
+                    <span>Include photos (appendix)</span>
+                  </label>
                   <button type="button" onClick={() => void loadProjectData(activeProjectId)}>
                     Refresh
                   </button>
