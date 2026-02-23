@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { api, BACKEND_URL } from "../api/client";
@@ -78,6 +78,7 @@ type Project = {
 type Tree = {
   id: number;
   project_id: number;
+  project_tree_no?: number | null;
   lng: number;
   lat: number;
   species: string | null;
@@ -216,6 +217,8 @@ const normalizeTreeStatus = (value: string | null | undefined) => {
   return raw || "healthy";
 };
 const normalizeSpeciesKey = (value: string | null | undefined) => String(value || "").trim().toLowerCase();
+const canUseBrowserNotifications = () =>
+  typeof window !== "undefined" && "Notification" in window && typeof Notification !== "undefined";
 const formatTreeConditionLabel = (value: string | null | undefined) =>
   normalizeTreeStatus(value)
     .split("_")
@@ -639,9 +642,21 @@ export default function Green() {
   const [savingTreeAgeMonthsId, setSavingTreeAgeMonthsId] = useState<number | null>(null);
   const [includePhotosInReport, setIncludePhotosInReport] = useState(false);
   const [introGateOpen, setIntroGateOpen] = useState<boolean>(() => !readGreenIntroSeen());
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">(() => {
+    if (!canUseBrowserNotifications()) return "unsupported";
+    try {
+      return Notification.permission;
+    } catch {
+      return "default";
+    }
+  });
   const greenSessionPartnerLogo = greenAuthUser?.organization_logo_url || null;
   const greenSessionPartnerName = greenAuthUser?.organization_name || null;
   const isLockedGreenUserSession = Boolean(lockedGreenActorName);
+  const seenTaskIdsRef = useRef<Set<number>>(new Set());
+  const seenOrderIdsRef = useRef<Set<number>>(new Set());
+  const taskNotifyPrimedRef = useRef(false);
+  const orderNotifyPrimedRef = useRef(false);
 
   const logoutGreen = () => {
     clearGreenAuthed();
@@ -653,12 +668,45 @@ export default function Green() {
     navigate("/green/login", { replace: true });
   };
 
+  const requestGreenNotificationPermission = async () => {
+    if (!canUseBrowserNotifications()) return;
+    try {
+      const result = await Notification.requestPermission();
+      setNotificationPermission(result);
+      if (result === "granted") {
+        toast.success("Notifications enabled");
+      }
+    } catch {
+      toast.error("Unable to enable notifications on this device/browser.");
+    }
+  };
+
+  const pushFieldNotification = (title: string, body: string) => {
+    toast.success(body);
+    if (!canUseBrowserNotifications()) return;
+    try {
+      if (Notification.permission !== "granted") return;
+      const note = new Notification(title, {
+        body,
+        icon: GREEN_LOGO_SRC,
+        tag: `green-${title.toLowerCase().replace(/\s+/g, "-")}`,
+      });
+      setTimeout(() => note.close(), 6000);
+    } catch {
+      // Ignore browser notification failures; toast already shown.
+    }
+  };
+
   const treePoints = useMemo(() => {
     if (!activeUser) return [];
     return trees
       .filter((t: any) => (t as any).created_by === activeUser)
       .map((t) => ({
         id: t.id,
+        project_tree_no:
+          Number.isFinite(Number((t as any).project_tree_no)) && Number((t as any).project_tree_no) > 0
+            ? Number((t as any).project_tree_no)
+            : null,
         lng: Number(t.lng),
         lat: Number(t.lat),
         status: t.status,
@@ -1037,6 +1085,31 @@ export default function Green() {
           species_allocations: normalizeSpeciesAllocations(row?.species_allocations),
         } as WorkOrder;
       });
+      const nextOrderIds = new Set<number>(rows.map((row: any) => Number(row?.id || 0)).filter((id) => id > 0));
+      if (orderNotifyPrimedRef.current) {
+        const newOrders = rows.filter((row: any) => {
+          const id = Number(row?.id || 0);
+          return id > 0 && !seenOrderIdsRef.current.has(id);
+        });
+        if (newOrders.length > 0) {
+          const newPlantingCount = newOrders.filter((row: any) => String(row?.work_type || "").toLowerCase() === "planting").length;
+          const newMaintenanceOrderCount = Math.max(newOrders.length - newPlantingCount, 0);
+          if (newPlantingCount > 0) {
+            pushFieldNotification(
+              "New Planting Order",
+              `${newPlantingCount} new planting order${newPlantingCount === 1 ? "" : "s"} assigned to you.`,
+            );
+          }
+          if (newMaintenanceOrderCount > 0) {
+            pushFieldNotification(
+              "New Work Order",
+              `${newMaintenanceOrderCount} new work order${newMaintenanceOrderCount === 1 ? "" : "s"} assigned to you.`,
+            );
+          }
+        }
+      }
+      seenOrderIdsRef.current = nextOrderIds;
+      orderNotifyPrimedRef.current = true;
       setPlantingOrders(rows);
       await cacheWorkOrdersOffline(projectId, assigneeName, rows).catch(() => {});
     } catch (error) {
@@ -1094,6 +1167,23 @@ export default function Green() {
   useEffect(() => {
     if (!activeProject || !activeUser) return;
     loadWorkOrders(activeProject.id, activeUser).catch(() => setPlantingOrders([]));
+  }, [activeProject?.id, activeUser]);
+
+  useEffect(() => {
+    seenTaskIdsRef.current = new Set();
+    seenOrderIdsRef.current = new Set();
+    taskNotifyPrimedRef.current = false;
+    orderNotifyPrimedRef.current = false;
+  }, [activeProject?.id, activeUser]);
+
+  useEffect(() => {
+    if (!activeProject || !activeUser) return;
+    const timer = window.setInterval(() => {
+      if (!navigator.onLine) return;
+      loadMyTasks().catch(() => {});
+      loadWorkOrders(activeProject.id, activeUser).catch(() => {});
+    }, 45000);
+    return () => window.clearInterval(timer);
   }, [activeProject?.id, activeUser]);
 
   useEffect(() => {
@@ -1576,6 +1666,23 @@ export default function Green() {
         return;
       }
     }
+    const nextTaskIds = new Set<number>(rows.map((row: any) => Number(row?.id || 0)).filter((id) => id > 0));
+    if (taskNotifyPrimedRef.current) {
+      const newTasks = rows.filter((row: any) => {
+        const id = Number(row?.id || 0);
+        if (!(id > 0) || seenTaskIdsRef.current.has(id)) return false;
+        const reviewState = String(row?.review_state || "").toLowerCase();
+        return reviewState !== "approved";
+      });
+      if (newTasks.length > 0) {
+        pushFieldNotification(
+          "New Maintenance Task",
+          `${newTasks.length} new task${newTasks.length === 1 ? "" : "s"} assigned to you.`,
+        );
+      }
+    }
+    seenTaskIdsRef.current = nextTaskIds;
+    taskNotifyPrimedRef.current = true;
     setMyTasks(rows);
     const edits: Record<number, TaskEdit> = {};
     rows.forEach((t: any) => {
@@ -2116,6 +2223,11 @@ export default function Green() {
             {installPrompt && (
               <button className="green-ghost-btn" onClick={installGreenApp} type="button">
                 Install App
+              </button>
+            )}
+            {notificationPermission === "default" && (
+              <button className="green-ghost-btn" onClick={requestGreenNotificationPermission} type="button">
+                Enable Alerts
               </button>
             )}
             {greenAuthUser?.full_name && (
@@ -3215,7 +3327,7 @@ export default function Green() {
                 </label>
               </div>
               <p className="green-tree-maintenance-count">Maintenance Records: {inspectedTree.maintenance.total}</p>
-              <h4>Tree #{inspectedTree.id}</h4>
+              <h4>Tree #{(inspectedTree as any).project_tree_no || inspectedTree.id}</h4>
               {inspectedTree.loading && <p className="green-tree-inspector-loading">Loading latest records...</p>}
               <div className="green-tree-inspector-grid">
                 <div>

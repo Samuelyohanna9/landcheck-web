@@ -98,6 +98,29 @@
   padding: 0.66rem 0.7rem;
 }
 
+.work-login-password-wrap {
+  position: relative;
+}
+
+.work-login-password-wrap input {
+  padding-right: 4.4rem;
+}
+
+.work-login-password-eye {
+  position: absolute;
+  top: 50%;
+  right: 0.4rem;
+  transform: translateY(-50%);
+  border: 1px solid rgba(20, 80, 40, 0.2);
+  border-radius: 7px;
+  background: #f5f9f6;
+  color: #184a2a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.28rem 0.45rem;
+  cursor: pointer;
+}
+
 .work-login-form select {
   width: 100%;
   border: 1px solid rgba(20, 80, 40, 0.2);

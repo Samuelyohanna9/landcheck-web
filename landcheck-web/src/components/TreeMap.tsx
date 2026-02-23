@@ -15,6 +15,7 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 export type TreePoint = {
   id: number;
+  project_tree_no?: number | null;
   lng: number;
   lat: number;
   status: string;
@@ -51,6 +52,7 @@ type Props = {
 
 type TreeFeatureProps = {
   id: number;
+  project_tree_no: number | null;
   status: string;
   status_label: string;
   species: string;
@@ -85,6 +87,7 @@ type TreePopupDetail = {
 
 export type TreeInspectData = {
   id: number;
+  project_tree_no?: number | null;
   status: string;
   status_label: string;
   species: string;
@@ -236,6 +239,8 @@ const getFeatureProps = (feature: mapboxgl.MapboxGeoJSONFeature | undefined): Tr
   if (!Number.isFinite(id)) return null;
   return {
     id,
+    project_tree_no:
+      Number.isFinite(Number(raw.project_tree_no)) && Number(raw.project_tree_no) > 0 ? Number(raw.project_tree_no) : null,
     status: String(raw.status || "unknown"),
     status_label: String(raw.status_label || "Unknown"),
     species: String(raw.species || "-"),
@@ -277,6 +282,10 @@ const buildTreeFeatureCollection = (items: TreePoint[]) => {
         type: "Feature",
         properties: {
           id: tree.id,
+          project_tree_no:
+            Number.isFinite(Number((tree as any).project_tree_no)) && Number((tree as any).project_tree_no) > 0
+              ? Number((tree as any).project_tree_no)
+              : null,
           status: normalizedStatus,
           status_label: statusLabel(normalizedStatus),
           species: tree.species || "-",
@@ -386,7 +395,7 @@ const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null,
 
   return `
     <div class="tree-popup-card">
-      <h4>Tree #${base.id}</h4>
+      <h4>Tree #${base.project_tree_no || base.id}</h4>
       <p><strong>Status:</strong> ${escapeHtml(statusLabel(status))}</p>
       <p><strong>Planter:</strong> ${escapeHtml(plantedBy)}</p>
       <p><strong>Planted:</strong> ${escapeHtml(formatDate(plantedDate))}</p>
@@ -424,6 +433,7 @@ const buildInspectData = (base: TreeFeatureProps, detail?: TreePopupDetail | nul
   const custodianName = String(tree.custodian_name || base.custodian_name || "");
   return {
     id: base.id,
+    project_tree_no: base.project_tree_no,
     status,
     status_label: statusLabel(status),
     species: String(tree.species || base.species || "-"),

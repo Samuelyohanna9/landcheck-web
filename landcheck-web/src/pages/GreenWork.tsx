@@ -145,6 +145,7 @@ type WorkOrder = {
 
 type Tree = {
   id: number;
+  project_tree_no?: number | null;
   lng: number;
   lat: number;
   created_by: string | null;
@@ -1337,6 +1338,8 @@ export default function GreenWork() {
     username: string;
     password: string;
   } | null>(null);
+  const [adminCredentialOrgId, setAdminCredentialOrgId] = useState<string>("");
+  const [adminCredentialIncludeInactive, setAdminCredentialIncludeInactive] = useState(true);
   const [projectSettingsDraft, setProjectSettingsDraft] = useState<{
     planting_model: PlantingModel;
     allow_existing_tree_link: boolean;
@@ -1706,6 +1709,20 @@ export default function GreenWork() {
     } catch {
       window.prompt("Copy generated credentials", textValue);
     }
+  };
+
+  const exportAdminCredentialsPdf = () => {
+    const orgId = Number(adminCredentialOrgId || 0);
+    if (!(orgId > 0)) {
+      toast.error("Select an organization first");
+      return;
+    }
+    const params = new URLSearchParams();
+    params.set("include_inactive", adminCredentialIncludeInactive ? "true" : "false");
+    window.open(
+      `${BACKEND_URL}/green/admin/organizations/${orgId}/credentials/export/pdf?${params.toString()}`,
+      "_blank"
+    );
   };
 
   const saveRoleDefinition = async () => {
@@ -2334,7 +2351,7 @@ export default function GreenWork() {
   const deleteTreeFromWork = async (treeId: number) => {
     if (!activeProjectId || deletingTreeId !== null) return;
     const confirmValue = window.prompt(
-      `Delete Tree #${treeId}? Type ${treeId} to confirm. This removes related maintenance/tasks permanently.`,
+      `Delete ${formatProjectTreeLabelById(treeId)}? Type ${treeId} to confirm. This removes related maintenance/tasks permanently.`,
       "",
     );
     if (confirmValue === null) return;
@@ -2358,7 +2375,7 @@ export default function GreenWork() {
         return next;
       });
       await loadProjectData(activeProjectId);
-      toast.success(`Tree #${treeId} deleted`);
+      toast.success(`${formatProjectTreeLabelById(treeId)} deleted`);
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || "Failed to delete tree");
     } finally {
@@ -2380,6 +2397,13 @@ export default function GreenWork() {
       setAdminUsers([]);
     }
   }, [canAccessSuperAdmin]);
+
+  useEffect(() => {
+    if (!canAccessSuperAdmin) return;
+    if (adminCredentialOrgId) return;
+    if (!organizations.length) return;
+    setAdminCredentialOrgId(String(organizations[0].id));
+  }, [canAccessSuperAdmin, adminCredentialOrgId, organizations]);
 
   useEffect(() => {
     if (!projects.length || !activeProjectId) return;
@@ -4135,6 +4159,15 @@ export default function GreenWork() {
         .sort((a, b) => Number(b.id || 0) - Number(a.id || 0)),
     [trees],
   );
+  const formatProjectTreeLabelById = useCallback(
+    (treeId: number | string | null | undefined) => {
+      const numericId = Number(treeId || 0);
+      const treeRow = trees.find((tree) => Number(tree.id) === numericId);
+      const localNo = Number((treeRow as any)?.project_tree_no || 0);
+      return `Tree #${localNo > 0 ? localNo : numericId}`;
+    },
+    [trees],
+  );
   const custodianLiveRows = useMemo(() => {
     const allocationMap = new Map<
       number,
@@ -4463,7 +4496,7 @@ export default function GreenWork() {
     setMenuOpen(false);
     setLiveTreeMenu(null);
     const pickedType = replacementRequired ? "replacement" : (preferredTaskType || "maintenance");
-    toast.success(`Tree #${treeId} ready. ${formatTaskTypeLabel(pickedType)} prefilled.`);
+    toast.success(`${formatProjectTreeLabelById(treeId)} ready. ${formatTaskTypeLabel(pickedType)} prefilled.`);
   };
 
   return (
@@ -5382,6 +5415,33 @@ export default function GreenWork() {
                     </button>
                   )}
                 </div>
+                <div className="green-work-stack" style={{ marginTop: "0.75rem" }}>
+                  <h4 style={{ margin: 0 }}>Credential Download (PDF)</h4>
+                  <p className="green-work-note" style={{ marginTop: 0 }}>
+                    Print organization user login usernames and access details.
+                  </p>
+                  <select value={adminCredentialOrgId} onChange={(e) => setAdminCredentialOrgId(e.target.value)}>
+                    <option value="">Select organization</option>
+                    {organizations.map((org) => (
+                      <option key={`admin-cred-org-${org.id}`} value={org.id}>
+                        {org.name} {org.status ? `(${org.status})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <label className="green-work-checkbox-row">
+                    <input
+                      type="checkbox"
+                      checked={adminCredentialIncludeInactive}
+                      onChange={(e) => setAdminCredentialIncludeInactive(e.target.checked)}
+                    />
+                    <span>Include inactive users</span>
+                  </label>
+                  <div className="work-actions">
+                    <button type="button" onClick={exportAdminCredentialsPdf}>
+                      Export Credentials PDF
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="green-work-card">
@@ -6195,7 +6255,7 @@ export default function GreenWork() {
                 <option value="">Select tree</option>
                 {trees.map((t) => (
                   <option key={t.id} value={t.id}>
-                    Tree #{t.id}
+                    {formatProjectTreeLabelById(t.id)}
                   </option>
                 ))}
               </select>
@@ -6318,7 +6378,7 @@ export default function GreenWork() {
                       <span>{task.assignee_name || "-"}</span>
                     </div>
                     <div className="staff-row-meta">
-                      Tree #{task.tree_id} | Due: {formatDateLabel(task.due_date)} | Priority: {task.priority || "normal"}
+                      {formatProjectTreeLabelById(task.tree_id)} | Due: {formatDateLabel(task.due_date)} | Priority: {task.priority || "normal"}
                     </div>
                     <div className="staff-row-meta">
                       Review: {task.review_state || "none"} | Submitted: {formatDateLabel(task.submitted_at || task.created_at)}
@@ -6672,7 +6732,7 @@ export default function GreenWork() {
                         <strong>Recent Maintenance</strong>
                         {staff.recentMaintenance.map((entry: any, idx: number) => (
                           <p key={`${staff.name}-${entry.treeId}-${idx}`}>
-                            Tree #{entry.treeId} | {entry.type} | {entry.status} | {formatDateLabel(entry.date)}
+                            {formatProjectTreeLabelById(entry.treeId)} | {entry.type} | {entry.status} | {formatDateLabel(entry.date)}
                           </p>
                         ))}
                       </div>
@@ -7129,7 +7189,7 @@ export default function GreenWork() {
                         const metric = existingTreeMetricsById[Number(tree.id)];
                         return (
                           <tr key={`existing-main-${tree.id}`}>
-                            <td>#{tree.id}</td>
+                            <td>{formatProjectTreeLabelById(tree.id).replace("Tree ", "")}</td>
                             <td>{tree.species || "-"}</td>
                             <td>{formatDateLabel(tree.planting_date)}</td>
                             <td>{formatTreeOriginLabel(tree.tree_origin)}</td>
@@ -7441,7 +7501,7 @@ export default function GreenWork() {
               <p className="green-work-tree-maintenance-count">
                 Maintenance Records: {inspectedTree.maintenance.total}
               </p>
-              <h4>Tree #{inspectedTree.id}</h4>
+              <h4>{formatProjectTreeLabelById(inspectedTree.id)}</h4>
               {inspectedTree.loading && <p className="green-work-note">Loading latest records...</p>}
               <div className="green-work-tree-inspector-grid">
                 <div>
@@ -7699,7 +7759,7 @@ export default function GreenWork() {
             aria-label="Close tree menu"
           />
           <div className="green-work-context-menu" style={{ left: liveTreeMenu.x, top: liveTreeMenu.y }}>
-            <div className="green-work-context-title">Tree #{liveTreeMenu.treeId}</div>
+            <div className="green-work-context-title">{formatProjectTreeLabelById(liveTreeMenu.treeId)}</div>
             <button type="button" onClick={() => openAssignTaskForTree(liveTreeMenu.treeId, liveTreeMenu.taskType)}>
               Assign Maintenance
             </button>
