@@ -47,6 +47,7 @@ type WorkOrder = {
   work_type: string;
   target_trees: number;
   species_allocations?: Array<{ species: string; count: number }>;
+  auto_assign_first_cycle_maintenance?: boolean;
   due_date: string | null;
   status: string;
   planted_count: number;
@@ -1138,6 +1139,7 @@ export default function GreenWork() {
     assignee_name: "",
     work_type: "planting",
     target_trees: 0,
+    auto_assign_first_cycle_maintenance: false,
     due_date: "",
   });
   const [newOrderSpeciesMode, setNewOrderSpeciesMode] = useState(false);
@@ -1485,6 +1487,7 @@ export default function GreenWork() {
         ...row,
         target_trees: Number(row?.target_trees || 0),
         planted_count: Number(row?.planted_count || 0),
+        auto_assign_first_cycle_maintenance: Boolean(row?.auto_assign_first_cycle_maintenance),
         species_allocations: normalizeSpeciesAllocations(row?.species_allocations),
       }));
       setOrders(normalizedOrders);
@@ -2247,6 +2250,7 @@ export default function GreenWork() {
         assignee_name: "",
         work_type: "planting",
         target_trees: 0,
+        auto_assign_first_cycle_maintenance: false,
         due_date: "",
       });
       setNewOrderSpeciesMode(false);
@@ -4940,6 +4944,23 @@ export default function GreenWork() {
                 onChange={(e) => setNewOrder({ ...newOrder, due_date: e.target.value })}
                 disabled={!activeProjectId}
               />
+              <label className="green-work-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={Boolean(newOrder.auto_assign_first_cycle_maintenance)}
+                  onChange={(e) =>
+                    setNewOrder({ ...newOrder, auto_assign_first_cycle_maintenance: e.target.checked })
+                  }
+                  disabled={!activeProjectId}
+                />
+                <span>
+                  New planting order: auto-assign first-cycle maintenance to the same field officer (optional)
+                </span>
+              </label>
+              <p className="green-work-note">
+                When enabled, day-one and first-cycle maintenance tasks from the model are created automatically for the same
+                officer as soon as planting is submitted.
+              </p>
               <label className="green-work-checkbox-row">
                 <input
                   type="checkbox"
