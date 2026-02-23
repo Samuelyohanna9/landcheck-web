@@ -3053,7 +3053,17 @@ export default function GreenWork() {
       : tasks;
 
     const taskBuckets = new Map<string, WorkTask[]>();
+    const plantingTaskBuckets = new Map<number, WorkTask[]>();
     relevantTasks.forEach((task) => {
+      const normalizedTaskType = normalizeName(task.task_type);
+      if (normalizedTaskType === "planting") {
+        const treeId = Number(task.tree_id || 0);
+        if (treeId > 0) {
+          const plantingBucket = plantingTaskBuckets.get(treeId);
+          if (plantingBucket) plantingBucket.push(task);
+          else plantingTaskBuckets.set(treeId, [task]);
+        }
+      }
       const typeKey = asMaintenanceActivity(task.task_type);
       if (!typeKey) return;
       const key = `${task.tree_id}:${typeKey}`;
@@ -3076,9 +3086,26 @@ export default function GreenWork() {
     const rows: LiveMaintenanceRow[] = [];
     scopedTrees.forEach((tree) => {
       const treeStatus = normalizeTreeStatus(tree.status || "healthy");
+      let plantingSubmissionTask: WorkTask | null = null;
       if (treeStatus === "pending_planting") {
-        return;
+        const submittedPlantings = [...(plantingTaskBuckets.get(Number(tree.id)) || [])]
+          .filter((task) => {
+            const statusKey = normalizeName(task.status);
+            const reviewKey = normalizeName(task.review_state || "none");
+            const isDone = statusKey === "done" || statusKey === "completed" || statusKey === "closed";
+            return isDone && reviewKey === "submitted";
+          })
+          .sort((a, b) => {
+            const aDate = parseDateValue(a.submitted_at || a.created_at || a.due_date || null);
+            const bDate = parseDateValue(b.submitted_at || b.created_at || b.due_date || null);
+            const aStamp = aDate ? aDate.getTime() : 0;
+            const bStamp = bDate ? bDate.getTime() : 0;
+            return bStamp - aStamp;
+          });
+        plantingSubmissionTask = submittedPlantings[0] || null;
+        if (!plantingSubmissionTask) return;
       }
+      const provisionalPendingApproval = treeStatus === "pending_planting" && Boolean(plantingSubmissionTask);
       const replacementRequired = isReplacementTriggerStatus(treeStatus);
       const plantingDateObj = parseDateValue(tree.planting_date);
       const replacementTaskBucket = [...(taskBuckets.get(`${tree.id}:replacement`) || [])];
@@ -3220,6 +3247,35 @@ export default function GreenWork() {
           statusText = "Waiting for next cycle";
         }
 
+        let modelRationale =
+          activity === "replacement"
+            ? "Replacement is condition-triggered (dead/damaged/removed/needs replacement), not a routine cyclical task."
+            : `${model.rationale} ${SEASON_LABEL[seasonMode]}: first ${intervals.firstDays}d, repeat ${intervals.repeatDays}d.${
+                latestReplacementDoneDate ? " Lifecycle reset from latest replacement completion." : ""
+              }`;
+
+        if (provisionalPendingApproval) {
+          const plantingTaskLabel = plantingSubmissionTask ? `Planting task #${plantingSubmissionTask.id}` : "Planting task";
+          statusText = `${plantingTaskLabel} submitted (awaiting supervisor approval)`;
+          if (countdownDays === null) {
+            tone = "warning";
+            indicator = "Provisional preview while planting approval is pending";
+          } else if (countdownDays < 0) {
+            tone = "danger";
+            indicator = `Provisional: ${Math.abs(countdownDays)}d overdue from planting date while approval is pending`;
+          } else if (countdownDays === 0) {
+            tone = "warning";
+            indicator = "Provisional: due today from planting date once approved";
+          } else if (countdownDays <= 7) {
+            tone = "warning";
+            indicator = `Provisional: due in ${countdownDays} day${countdownDays === 1 ? "" : "s"} from planting date`;
+          } else {
+            tone = "info";
+            indicator = `Provisional: due in ${countdownDays} day${countdownDays === 1 ? "" : "s"} from planting date`;
+          }
+          modelRationale = `${modelRationale} Provisional preview only: planting submission is awaiting supervisor approval. Rows are visible for planning, but maintenance workflow activates after approval.`;
+        }
+
         rows.push({
           key: `${tree.id}-${activity}`,
           treeId: tree.id,
@@ -3240,12 +3296,7 @@ export default function GreenWork() {
           pendingCount: notDoneTasks.length,
           overdueCount: overdueTasks.length,
           openTaskId: activeTask?.id || null,
-          modelRationale:
-            activity === "replacement"
-              ? "Replacement is condition-triggered (dead/damaged/removed/needs replacement), not a routine cyclical task."
-              : `${model.rationale} ${SEASON_LABEL[seasonMode]}: first ${intervals.firstDays}d, repeat ${intervals.repeatDays}d.${
-                  latestReplacementDoneDate ? " Lifecycle reset from latest replacement completion." : ""
-                }`,
+          modelRationale,
         });
       });
     });
