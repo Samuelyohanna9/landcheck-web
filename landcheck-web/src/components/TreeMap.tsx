@@ -611,6 +611,11 @@ export default function TreeMap({
         zoom: 6,
       });
 
+      // Keep zoom interactions explicitly enabled across desktop/mobile embeds.
+      map.scrollZoom.enable();
+      map.boxZoom.enable();
+      map.doubleClickZoom.enable();
+      map.touchZoomRotate.enable();
       map.addControl(new mapboxgl.NavigationControl(), "top-right");
       if (enableDraw) {
         const draw = new MapboxDraw({
@@ -1075,6 +1080,26 @@ export default function TreeMap({
   return (
     <div className="tree-map-wrap">
       <div ref={containerRef} className="tree-map" style={{ minHeight }} />
+      <div className="tree-map-zoom-buttons" aria-label="Map zoom controls">
+        <button
+          type="button"
+          className="tree-map-zoom-btn"
+          aria-label="Zoom in"
+          onClick={() => mapRef.current?.zoomIn({ duration: 180 })}
+          disabled={!mapReady || Boolean(mapError)}
+        >
+          +
+        </button>
+        <button
+          type="button"
+          className="tree-map-zoom-btn"
+          aria-label="Zoom out"
+          onClick={() => mapRef.current?.zoomOut({ duration: 180 })}
+          disabled={!mapReady || Boolean(mapError)}
+        >
+          -
+        </button>
+      </div>
       {!mapReady && !mapError && (
         <div className="tree-map-overlay">Loading map...</div>
       )}
