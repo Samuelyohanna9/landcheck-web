@@ -5763,6 +5763,30 @@ export default function GreenWork() {
                           >
                             {user.is_active === false ? "Activate" : "Deactivate"}
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const label = String(user.full_name || `user #${user.id}`);
+                              const confirmed = window.confirm(
+                                `Delete ${label}? This removes the user login and profile from LandCheck Work/Green.`
+                              );
+                              if (!confirmed) return;
+                              void api
+                                .delete(`/green/users/${user.id}`)
+                                .then(async () => {
+                                  if (Number(editingAdminUserId || 0) === Number(user.id)) {
+                                    resetAdminUserDraft();
+                                  }
+                                  await Promise.all([loadUsers(), loadAdminUsers(), loadAdminOverview()]);
+                                  toast.success("User deleted");
+                                })
+                                .catch((error: any) => {
+                                  toast.error(error?.response?.data?.detail || "Failed to delete user");
+                                });
+                            }}
+                          >
+                            Delete
+                          </button>
                         </div>
                       </div>
                     ))
