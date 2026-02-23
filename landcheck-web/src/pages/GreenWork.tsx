@@ -1195,6 +1195,8 @@ const SpeciesDailySurvivalChart = ({
 };
 
 export default function GreenWork() {
+  const workAuthSession = getWorkAuthSession();
+  const canAccessSuperAdmin = workAuthSession?.auth_mode === "env_admin";
   const storedProjectIdRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_active_project_id") || "" : "";
   const storedProjectId = Number(storedProjectIdRaw || "0");
   const storedFormRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_active_form") || "" : "";
@@ -1441,7 +1443,12 @@ export default function GreenWork() {
   const [inspectedTree, setInspectedTree] = useState<TreeInspectData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeForm, setActiveForm] = useState<WorkForm | null>(
-    allowedForms.includes(storedFormNormalized as WorkForm) ? (storedFormNormalized as WorkForm) : null
+    allowedForms.includes(storedFormNormalized as WorkForm) &&
+      (storedFormNormalized as WorkForm) !== "super_admin"
+      ? (storedFormNormalized as WorkForm)
+      : canAccessSuperAdmin && (storedFormNormalized as WorkForm) === "super_admin"
+      ? "super_admin"
+      : null
   );
   const [staffMenu, setStaffMenu] = useState<StaffMenuState>(null);
   const [liveTreeMenu, setLiveTreeMenu] = useState<LiveTreeMenuState>(null);
@@ -4020,7 +4027,6 @@ export default function GreenWork() {
     if (!activeProjectId) return null;
     return projects.find((p) => Number(p.id) === Number(activeProjectId)) || null;
   }, [projects, activeProjectId]);
-  const workAuthSession = getWorkAuthSession();
   const partnerLogoUrl =
     activeProjectRecord?.organization_logo_url || workAuthSession?.user?.organization_logo_url || null;
   const partnerLogoName = activeProjectRecord?.organization_name || workAuthSession?.user?.organization_name || "Partner";
@@ -4338,6 +4344,11 @@ export default function GreenWork() {
     : undefined;
 
   const openForm = (form: WorkForm) => {
+    if (form === "super_admin" && !canAccessSuperAdmin) {
+      toast.error("Super Admin access is restricted.");
+      setMenuOpen(false);
+      return;
+    }
     setActiveForm(form);
     setMenuOpen(false);
     setStaffMenu(null);
@@ -4348,6 +4359,12 @@ export default function GreenWork() {
     clearWorkAuthed();
     navigate("/green-work/login", { replace: true });
   };
+
+  useEffect(() => {
+    if (canAccessSuperAdmin) return;
+    if (activeForm !== "super_admin") return;
+    setActiveForm(activeProjectId ? "overview" : "project_focus");
+  }, [activeForm, activeProjectId, canAccessSuperAdmin]);
 
   const openAssignWorkForUser = (userName: string) => {
     if (!activeProjectId) {
@@ -4498,13 +4515,15 @@ export default function GreenWork() {
             X
           </button>
         </div>
-        <button
-          className={`green-work-menu-item ${activeForm === "super_admin" ? "active" : ""}`}
-          type="button"
-          onClick={() => openForm("super_admin")}
-        >
-          Super Admin
-        </button>
+        {canAccessSuperAdmin && (
+          <button
+            className={`green-work-menu-item ${activeForm === "super_admin" ? "active" : ""}`}
+            type="button"
+            onClick={() => openForm("super_admin")}
+          >
+            Super Admin
+          </button>
+        )}
         <button
           className={`green-work-menu-item ${activeForm === "project_focus" ? "active" : ""}`}
           type="button"
@@ -5272,7 +5291,7 @@ export default function GreenWork() {
             </div>
           )}
 
-          {activeForm === "super_admin" && (
+          {activeForm === "super_admin" && canAccessSuperAdmin && (
             <>
               <div className="green-work-card">
                 <h3>Super Admin - Organizations & Platform Monitor</h3>
