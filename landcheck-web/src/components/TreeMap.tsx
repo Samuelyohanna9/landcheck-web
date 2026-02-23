@@ -480,6 +480,7 @@ export default function TreeMap({
   const drawModeRef = useRef<"point" | "polygon">(drawMode);
   const detailCacheRef = useRef<Map<number, TreePopupDetail>>(new Map());
   const pendingDetailRef = useRef<Map<number, Promise<TreePopupDetail>>>(new Map());
+  const lastAppliedFitSignatureRef = useRef<string>("");
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
@@ -970,9 +971,17 @@ export default function TreeMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady || !fitBounds || fitBounds.length === 0) return;
+    const signature = fitBounds
+      .filter((p) => Number.isFinite(Number(p?.lng)) && Number.isFinite(Number(p?.lat)))
+      .map((p) => `${Number(p.lng).toFixed(6)},${Number(p.lat).toFixed(6)}`)
+      .sort()
+      .join("|");
+    if (!signature) return;
+    if (lastAppliedFitSignatureRef.current === signature) return;
     const bounds = new mapboxgl.LngLatBounds();
     fitBounds.forEach((p) => bounds.extend([p.lng, p.lat]));
     map.fitBounds(bounds, { padding: 60, duration: 0, maxZoom: 17 });
+    lastAppliedFitSignatureRef.current = signature;
   }, [fitBounds, mapReady]);
 
   useEffect(() => {
