@@ -21,6 +21,10 @@ const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
 
 type Project = {
   id: number;
+  organization_id?: number | null;
+  organization_name?: string | null;
+  organization_slug?: string | null;
+  organization_status?: string | null;
   name: string;
   location_text: string;
   sponsor?: string | null;
@@ -36,8 +40,86 @@ type Project = {
 
 type GreenUser = {
   id: number;
+  user_uid?: string | null;
   full_name: string;
   role: string;
+  role_id?: number | null;
+  role_uid?: string | null;
+  role_key?: string | null;
+  role_name?: string | null;
+  organization_id?: number | null;
+  organization_name?: string | null;
+  organization_slug?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
+  is_active?: boolean;
+  updated_at?: string | null;
+};
+
+type Organization = {
+  id: number;
+  name: string;
+  slug: string;
+  short_name?: string | null;
+  status?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  website_url?: string | null;
+  country?: string | null;
+  state_region?: string | null;
+  city?: string | null;
+  address_text?: string | null;
+  notes?: string | null;
+  is_active?: boolean;
+  projects_count?: number;
+  trees_count?: number;
+  tasks_count?: number;
+  pending_review_count?: number;
+  open_alert_count?: number;
+  last_activity_at?: string | null;
+};
+
+type AdminOverview = {
+  totals: {
+    organizations: number;
+    active_organizations: number;
+    projects: number;
+    unassigned_projects: number;
+    trees: number;
+    tasks: number;
+    pending_reviews: number;
+    open_alerts: number;
+    users: number;
+    roles: number;
+  };
+  organizations: Organization[];
+  recent_activity: Array<{
+    id: number;
+    project_id?: number | null;
+    entity_type?: string | null;
+    entity_id?: number | null;
+    action?: string | null;
+    actor?: string | null;
+    created_at: string;
+    project_name?: string | null;
+    organization_id?: number | null;
+    organization_name?: string | null;
+    organization_slug?: string | null;
+  }>;
+};
+
+type RoleDefinition = {
+  id: number;
+  role_uid: string;
+  role_key: string;
+  role_name: string;
+  description?: string | null;
+  scope?: string | null;
+  is_system?: boolean;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
 };
 
 type WorkOrder = {
@@ -188,6 +270,7 @@ type ReviewQueueTask = WorkTask & {
 };
 
 type WorkForm =
+  | "super_admin"
   | "project_focus"
   | "create_project"
   | "add_user"
@@ -227,6 +310,8 @@ type VerraExportHistoryItem = {
 type VerraExportFormat = "zip" | "json" | "docx";
 
 const normalizeName = (value: string | null | undefined) => (value || "").trim().toLowerCase();
+const generateUiUniqueId = (prefix: string) =>
+  `${prefix}-${Math.random().toString(36).slice(2, 6).toUpperCase()}${Date.now().toString(36).slice(-4).toUpperCase()}`;
 const normalizeVerraExportFormat = (value: string | null | undefined): VerraExportFormat => {
   const normalized = normalizeName(value);
   if (normalized === "json" || normalized === "docx") return normalized;
@@ -652,6 +737,13 @@ const getTaskPhotoUrls = (task: Partial<WorkTask> | null | undefined): string[] 
 
 const renderActionIcon = (form: WorkForm) => {
   switch (form) {
+    case "super_admin":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M12 3l2.2 3.5 4.1.9-2.8 3 0.5 4.2-4-1.7-4 1.7 0.5-4.2-2.8-3 4.1-.9L12 3z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M6 20h12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
     case "overview":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -1108,6 +1200,7 @@ export default function GreenWork() {
   const storedAssigneeFilter = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_assignee_filter") || "all" : "all";
   const storedSeason = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_season_mode") || "rainy" : "rainy";
   const allowedForms: WorkForm[] = [
+    "super_admin",
     "project_focus",
     "create_project",
     "custodian_hub",
@@ -1127,6 +1220,9 @@ export default function GreenWork() {
   const mapCardRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [adminOverview, setAdminOverview] = useState<AdminOverview | null>(null);
+  const [adminOverviewLoading, setAdminOverviewLoading] = useState(false);
   const [users, setUsers] = useState<GreenUser[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(
     Number.isFinite(storedProjectId) && storedProjectId > 0 ? storedProjectId : null
@@ -1150,7 +1246,64 @@ export default function GreenWork() {
   const [newOrderAreaLabel, setNewOrderAreaLabel] = useState("");
   const [newOrderAreaGeometry, setNewOrderAreaGeometry] = useState<{ type: "Polygon" | "MultiPolygon"; coordinates: any } | null>(null);
   const [newUser, setNewUser] = useState({ full_name: "", role: "field_officer" });
-  const [newProject, setNewProject] = useState({ name: "", location_text: "", sponsor: "" });
+  const [newProject, setNewProject] = useState({ name: "", location_text: "", sponsor: "", organization_id: "" });
+  const [newOrganization, setNewOrganization] = useState({
+    name: "",
+    slug: "",
+    short_name: "",
+    status: "pilot",
+    contact_email: "",
+    contact_phone: "",
+    website_url: "",
+    country: "Nigeria",
+    state_region: "",
+    city: "",
+    address_text: "",
+    notes: "",
+    is_active: true,
+  });
+  const [editingOrganizationId, setEditingOrganizationId] = useState<number | null>(null);
+  const [roles, setRoles] = useState<RoleDefinition[]>([]);
+  const [adminUsers, setAdminUsers] = useState<GreenUser[]>([]);
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false);
+  const [newRoleDraft, setNewRoleDraft] = useState<{
+    role_uid: string;
+    role_key: string;
+    role_name: string;
+    description: string;
+    scope: string;
+    is_active: boolean;
+  }>({
+    role_uid: "",
+    role_key: "",
+    role_name: "",
+    description: "",
+    scope: "platform",
+    is_active: true,
+  });
+  const [editingRoleId, setEditingRoleId] = useState<number | null>(null);
+  const [adminUserDraft, setAdminUserDraft] = useState<{
+    user_uid: string;
+    full_name: string;
+    email: string;
+    phone: string;
+    organization_id: string;
+    role_id: string;
+    role: string;
+    notes: string;
+    is_active: boolean;
+  }>({
+    user_uid: "",
+    full_name: "",
+    email: "",
+    phone: "",
+    organization_id: "",
+    role_id: "",
+    role: "field_officer",
+    notes: "",
+    is_active: true,
+  });
+  const [editingAdminUserId, setEditingAdminUserId] = useState<number | null>(null);
   const [projectSettingsDraft, setProjectSettingsDraft] = useState<{
     planting_model: PlantingModel;
     allow_existing_tree_link: boolean;
@@ -1350,6 +1503,52 @@ export default function GreenWork() {
     }
   };
 
+  const loadOrganizations = async () => {
+    try {
+      const res = await api.get("/green/admin/organizations");
+      setOrganizations(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setOrganizations([]);
+      throw new Error("Failed to load organizations");
+    }
+  };
+
+  const loadAdminOverview = async () => {
+    setAdminOverviewLoading(true);
+    try {
+      const res = await api.get("/green/admin/overview");
+      setAdminOverview(res.data || null);
+    } catch {
+      setAdminOverview(null);
+      throw new Error("Failed to load super admin overview");
+    } finally {
+      setAdminOverviewLoading(false);
+    }
+  };
+
+  const loadRoles = async () => {
+    try {
+      const res = await api.get("/green/admin/roles?include_inactive=true");
+      setRoles(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setRoles([]);
+      throw new Error("Failed to load roles");
+    }
+  };
+
+  const loadAdminUsers = async () => {
+    setAdminUsersLoading(true);
+    try {
+      const res = await api.get("/green/users?include_inactive=true");
+      setAdminUsers(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setAdminUsers([]);
+      throw new Error("Failed to load admin users");
+    } finally {
+      setAdminUsersLoading(false);
+    }
+  };
+
   const loadExistingTreeMetrics = useCallback(async (projectId: number) => {
     if (!projectId) {
       setExistingTreeMetricsById({});
@@ -1403,6 +1602,124 @@ export default function GreenWork() {
       }
       throw error;
     }
+  };
+
+  const resetRoleDraft = () => {
+    setEditingRoleId(null);
+    setNewRoleDraft({
+      role_uid: "",
+      role_key: "",
+      role_name: "",
+      description: "",
+      scope: "platform",
+      is_active: true,
+    });
+  };
+
+  const resetAdminUserDraft = () => {
+    setEditingAdminUserId(null);
+    setAdminUserDraft({
+      user_uid: "",
+      full_name: "",
+      email: "",
+      phone: "",
+      organization_id: "",
+      role_id: "",
+      role: "field_officer",
+      notes: "",
+      is_active: true,
+    });
+  };
+
+  const saveRoleDefinition = async () => {
+    if (!newRoleDraft.role_name.trim()) {
+      toast.error("Role name required");
+      return;
+    }
+    const payload = {
+      role_uid: newRoleDraft.role_uid.trim() || null,
+      role_key: newRoleDraft.role_key.trim() || null,
+      role_name: newRoleDraft.role_name.trim(),
+      description: newRoleDraft.description.trim() || null,
+      scope: newRoleDraft.scope.trim() || "platform",
+      is_active: newRoleDraft.is_active,
+    };
+    try {
+      if (editingRoleId) {
+        await api.patch(`/green/admin/roles/${editingRoleId}`, payload);
+        toast.success("Role updated");
+      } else {
+        await api.post("/green/admin/roles", payload);
+        toast.success("Role created");
+      }
+      resetRoleDraft();
+      await Promise.all([loadRoles(), loadUsers(), loadAdminUsers(), loadAdminOverview()]);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to save role");
+    }
+  };
+
+  const editRoleDefinition = (roleDef: RoleDefinition) => {
+    setEditingRoleId(Number(roleDef.id));
+    setNewRoleDraft({
+      role_uid: String(roleDef.role_uid || ""),
+      role_key: String(roleDef.role_key || ""),
+      role_name: String(roleDef.role_name || ""),
+      description: String(roleDef.description || ""),
+      scope: String(roleDef.scope || "platform"),
+      is_active: roleDef.is_active !== false,
+    });
+    setActiveForm("super_admin");
+  };
+
+  const saveAdminUser = async () => {
+    if (!adminUserDraft.full_name.trim()) {
+      toast.error("User full name required");
+      return;
+    }
+    const roleIdNum = Number(adminUserDraft.role_id || 0);
+    const orgIdNum = Number(adminUserDraft.organization_id || 0);
+    const isEditing = Boolean(editingAdminUserId);
+    const payload = {
+      user_uid: adminUserDraft.user_uid.trim() || null,
+      full_name: adminUserDraft.full_name.trim(),
+      email: adminUserDraft.email.trim() || null,
+      phone: adminUserDraft.phone.trim() || null,
+      organization_id: Number.isFinite(orgIdNum) && orgIdNum > 0 ? orgIdNum : (isEditing ? 0 : null),
+      role_id: Number.isFinite(roleIdNum) && roleIdNum > 0 ? roleIdNum : (isEditing ? 0 : null),
+      role: adminUserDraft.role.trim() || "field_officer",
+      notes: adminUserDraft.notes.trim() || null,
+      is_active: adminUserDraft.is_active,
+    };
+    try {
+      if (editingAdminUserId) {
+        await api.patch(`/green/users/${editingAdminUserId}`, payload);
+        toast.success("User updated");
+      } else {
+        await api.post("/green/users", payload);
+        toast.success("User created");
+      }
+      resetAdminUserDraft();
+      await Promise.all([loadUsers(), loadAdminUsers(), loadAdminOverview()]);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to save user");
+    }
+  };
+
+  const editAdminUser = (user: GreenUser) => {
+    setEditingAdminUserId(Number(user.id));
+    setAdminUserDraft({
+      user_uid: String(user.user_uid || ""),
+      full_name: String(user.full_name || ""),
+      email: String(user.email || ""),
+      phone: String(user.phone || ""),
+      organization_id: user.organization_id ? String(user.organization_id) : "",
+      role_id: user.role_id ? String(user.role_id) : "",
+      role: String(user.role || "field_officer"),
+      notes: String(user.notes || ""),
+      is_active: user.is_active !== false,
+    });
+    setActiveForm("super_admin");
   };
 
   const clearActiveProjectContext = () => {
@@ -1952,6 +2269,10 @@ export default function GreenWork() {
   useEffect(() => {
     loadProjects().catch(() => toast.error("Failed to load projects"));
     loadUsers().catch(() => toast.error("Failed to load users"));
+    loadOrganizations().catch(() => toast.error("Failed to load organizations"));
+    loadRoles().catch(() => toast.error("Failed to load roles"));
+    loadAdminUsers().catch(() => toast.error("Failed to load user directory"));
+    loadAdminOverview().catch(() => toast.error("Failed to load super admin overview"));
   }, []);
 
   useEffect(() => {
@@ -2167,10 +2488,107 @@ export default function GreenWork() {
       toast.error("Project name required");
       return;
     }
-    const res = await api.post("/green/projects", newProject);
+    const orgId = Number(newProject.organization_id || 0);
+    const payload = {
+      ...newProject,
+      organization_id: Number.isFinite(orgId) && orgId > 0 ? orgId : null,
+    };
+    const res = await api.post("/green/projects", payload);
     setProjects((prev) => [res.data, ...prev]);
-    setNewProject({ name: "", location_text: "", sponsor: "" });
+    setNewProject({ name: "", location_text: "", sponsor: "", organization_id: "" });
+    void loadAdminOverview().catch(() => {});
     toast.success("Project created");
+  };
+
+  const saveOrganization = async () => {
+    if (!newOrganization.name.trim()) {
+      toast.error("Organization name required");
+      return;
+    }
+    const payload = {
+      ...newOrganization,
+      status: (newOrganization.status || "pilot").trim().toLowerCase() || "pilot",
+    };
+    try {
+      if (editingOrganizationId) {
+        await api.patch(`/green/admin/organizations/${editingOrganizationId}`, payload);
+        toast.success("Organization updated");
+      } else {
+        await api.post("/green/admin/organizations", payload);
+        toast.success("Organization created");
+      }
+      setEditingOrganizationId(null);
+      setNewOrganization({
+        name: "",
+        slug: "",
+        short_name: "",
+        status: "pilot",
+        contact_email: "",
+        contact_phone: "",
+        website_url: "",
+        country: "Nigeria",
+        state_region: "",
+        city: "",
+        address_text: "",
+        notes: "",
+        is_active: true,
+      });
+      await Promise.all([loadOrganizations(), loadProjects(), loadAdminOverview()]);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to save organization");
+    }
+  };
+
+  const editOrganization = (org: Organization) => {
+    setEditingOrganizationId(Number(org.id));
+    setNewOrganization({
+      name: String(org.name || ""),
+      slug: String(org.slug || ""),
+      short_name: String(org.short_name || ""),
+      status: String(org.status || "pilot"),
+      contact_email: String(org.contact_email || ""),
+      contact_phone: String(org.contact_phone || ""),
+      website_url: String(org.website_url || ""),
+      country: String(org.country || ""),
+      state_region: String(org.state_region || ""),
+      city: String(org.city || ""),
+      address_text: String(org.address_text || ""),
+      notes: String(org.notes || ""),
+      is_active: org.is_active !== false,
+    });
+    setActiveForm("super_admin");
+  };
+
+  const clearOrganizationDraft = () => {
+    setEditingOrganizationId(null);
+    setNewOrganization({
+      name: "",
+      slug: "",
+      short_name: "",
+      status: "pilot",
+      contact_email: "",
+      contact_phone: "",
+      website_url: "",
+      country: "Nigeria",
+      state_region: "",
+      city: "",
+      address_text: "",
+      notes: "",
+      is_active: true,
+    });
+  };
+
+  const assignProjectOrganization = async (projectId: number, organizationIdValue: string) => {
+    try {
+      const orgIdNum = Number(organizationIdValue || 0);
+      await api.patch(`/green/projects/${projectId}/organization`, {
+        organization_id: Number.isFinite(orgIdNum) && orgIdNum > 0 ? orgIdNum : null,
+      });
+      await Promise.all([loadProjects(), loadAdminOverview()]);
+      toast.success("Project organization updated");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to update project organization");
+    }
   };
 
   const openDeleteProjectModal = () => {
@@ -3990,6 +4408,13 @@ export default function GreenWork() {
           </button>
         </div>
         <button
+          className={`green-work-menu-item ${activeForm === "super_admin" ? "active" : ""}`}
+          type="button"
+          onClick={() => openForm("super_admin")}
+        >
+          Super Admin
+        </button>
+        <button
           className={`green-work-menu-item ${activeForm === "project_focus" ? "active" : ""}`}
           type="button"
           onClick={() => openForm("project_focus")}
@@ -4114,11 +4539,17 @@ export default function GreenWork() {
                   <option value="">Select project</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name}
+                      {p.name}{p.organization_name ? ` (${p.organization_name})` : ""}
                     </option>
                   ))}
                 </select>
                 {!activeProjectId && <p className="green-work-note">Select a project to load dashboard data.</p>}
+                {activeProjectRecord?.organization_name && (
+                  <p className="green-work-note">
+                    Organization: {activeProjectRecord.organization_name}
+                    {activeProjectRecord.organization_status ? ` (${activeProjectRecord.organization_status})` : ""}
+                  </p>
+                )}
                 {activeProjectRecord && (
                   <p className="green-work-note">
                     Active model: {formatTaskTypeLabel(activeProjectRecord.planting_model || "direct")}
@@ -4750,9 +5181,481 @@ export default function GreenWork() {
             </div>
           )}
 
+          {activeForm === "super_admin" && (
+            <>
+              <div className="green-work-card">
+                <h3>Super Admin - Organizations & Platform Monitor</h3>
+                <p className="green-work-note">
+                  Create partner organizations, link projects, and monitor activity across all organizations from one place.
+                </p>
+                <div className="green-work-flow-summary">
+                  <span className="green-work-flow-pill">
+                    Orgs: {adminOverview?.totals?.organizations ?? organizations.length}
+                  </span>
+                  <span className="green-work-flow-pill">
+                    Active Orgs: {adminOverview?.totals?.active_organizations ?? 0}
+                  </span>
+                  <span className="green-work-flow-pill">
+                    Projects: {adminOverview?.totals?.projects ?? projects.length}
+                  </span>
+                  <span className="green-work-flow-pill">
+                    Unassigned Projects: {adminOverview?.totals?.unassigned_projects ?? 0}
+                  </span>
+                  <span className="green-work-flow-pill">Trees: {adminOverview?.totals?.trees ?? 0}</span>
+                  <span className="green-work-flow-pill">Tasks: {adminOverview?.totals?.tasks ?? 0}</span>
+                  <span className="green-work-flow-pill">
+                    Pending Reviews: {adminOverview?.totals?.pending_reviews ?? 0}
+                  </span>
+                  <span className="green-work-flow-pill">Open Alerts: {adminOverview?.totals?.open_alerts ?? 0}</span>
+                  <span className="green-work-flow-pill">Roles: {adminOverview?.totals?.roles ?? roles.length}</span>
+                </div>
+                <div className="work-actions">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void Promise.all([loadOrganizations(), loadProjects(), loadRoles(), loadAdminUsers(), loadAdminOverview()])
+                        .then(() => toast.success("Super admin dashboard refreshed"))
+                        .catch(() => toast.error("Failed to refresh super admin dashboard"));
+                    }}
+                  >
+                    {adminOverviewLoading ? "Refreshing..." : "Refresh Monitoring"}
+                  </button>
+                  {editingOrganizationId && (
+                    <button type="button" onClick={clearOrganizationDraft}>
+                      Cancel Edit
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="green-work-card">
+                <h3>{editingOrganizationId ? "Edit Organization" : "Add Organization"}</h3>
+                <input
+                  placeholder="Organization name"
+                  value={newOrganization.name}
+                  onChange={(e) => setNewOrganization((prev) => ({ ...prev, name: e.target.value }))}
+                />
+                <input
+                  placeholder="Slug (optional)"
+                  value={newOrganization.slug}
+                  onChange={(e) => setNewOrganization((prev) => ({ ...prev, slug: e.target.value }))}
+                />
+                <input
+                  placeholder="Short name (optional)"
+                  value={newOrganization.short_name}
+                  onChange={(e) => setNewOrganization((prev) => ({ ...prev, short_name: e.target.value }))}
+                />
+                <select
+                  value={newOrganization.status}
+                  onChange={(e) => setNewOrganization((prev) => ({ ...prev, status: e.target.value }))}
+                >
+                  <option value="pilot">Pilot</option>
+                  <option value="active">Active</option>
+                  <option value="paused">Paused</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+                <input
+                  placeholder="Contact email"
+                  value={newOrganization.contact_email}
+                  onChange={(e) => setNewOrganization((prev) => ({ ...prev, contact_email: e.target.value }))}
+                />
+                <input
+                  placeholder="Contact phone"
+                  value={newOrganization.contact_phone}
+                  onChange={(e) => setNewOrganization((prev) => ({ ...prev, contact_phone: e.target.value }))}
+                />
+                <input
+                  placeholder="Website"
+                  value={newOrganization.website_url}
+                  onChange={(e) => setNewOrganization((prev) => ({ ...prev, website_url: e.target.value }))}
+                />
+                <input
+                  placeholder="Country"
+                  value={newOrganization.country}
+                  onChange={(e) => setNewOrganization((prev) => ({ ...prev, country: e.target.value }))}
+                />
+                <input
+                  placeholder="State / Region"
+                  value={newOrganization.state_region}
+                  onChange={(e) => setNewOrganization((prev) => ({ ...prev, state_region: e.target.value }))}
+                />
+                <input
+                  placeholder="City"
+                  value={newOrganization.city}
+                  onChange={(e) => setNewOrganization((prev) => ({ ...prev, city: e.target.value }))}
+                />
+                <input
+                  placeholder="Address"
+                  value={newOrganization.address_text}
+                  onChange={(e) => setNewOrganization((prev) => ({ ...prev, address_text: e.target.value }))}
+                />
+                <textarea
+                  placeholder="Notes"
+                  value={newOrganization.notes}
+                  onChange={(e) => setNewOrganization((prev) => ({ ...prev, notes: e.target.value }))}
+                />
+                <label className="green-work-checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={newOrganization.is_active}
+                    onChange={(e) => setNewOrganization((prev) => ({ ...prev, is_active: e.target.checked }))}
+                  />
+                  <span>Organization active</span>
+                </label>
+                <div className="work-actions">
+                  <button className="btn-primary" type="button" onClick={() => void saveOrganization()}>
+                    {editingOrganizationId ? "Update Organization" : "Add Organization"}
+                  </button>
+                  <button type="button" onClick={clearOrganizationDraft}>
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              <div className="green-work-card">
+                <h3>{editingRoleId ? "Edit Role" : "Create Role"}</h3>
+                <p className="green-work-note">
+                  Roles can be created with unique IDs and then assigned to users from the user directory below.
+                </p>
+                <input
+                  placeholder="Role name (e.g. Supervisor)"
+                  value={newRoleDraft.role_name}
+                  onChange={(e) => setNewRoleDraft((prev) => ({ ...prev, role_name: e.target.value }))}
+                />
+                <div className="work-actions">
+                  <input
+                    placeholder="Role unique ID (optional)"
+                    value={newRoleDraft.role_uid}
+                    onChange={(e) => setNewRoleDraft((prev) => ({ ...prev, role_uid: e.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setNewRoleDraft((prev) => ({ ...prev, role_uid: generateUiUniqueId("ROL") }))}
+                  >
+                    Generate Role ID
+                  </button>
+                </div>
+                <input
+                  placeholder="Role key (optional, e.g. field_officer)"
+                  value={newRoleDraft.role_key}
+                  onChange={(e) => setNewRoleDraft((prev) => ({ ...prev, role_key: e.target.value }))}
+                  disabled={Boolean(editingRoleId && roles.find((r) => Number(r.id) === editingRoleId)?.is_system)}
+                />
+                <input
+                  placeholder="Scope (default: platform)"
+                  value={newRoleDraft.scope}
+                  onChange={(e) => setNewRoleDraft((prev) => ({ ...prev, scope: e.target.value }))}
+                />
+                <textarea
+                  placeholder="Role description"
+                  value={newRoleDraft.description}
+                  onChange={(e) => setNewRoleDraft((prev) => ({ ...prev, description: e.target.value }))}
+                />
+                <label className="green-work-checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={newRoleDraft.is_active}
+                    onChange={(e) => setNewRoleDraft((prev) => ({ ...prev, is_active: e.target.checked }))}
+                  />
+                  <span>Role active</span>
+                </label>
+                <div className="work-actions">
+                  <button className="btn-primary" type="button" onClick={() => void saveRoleDefinition()}>
+                    {editingRoleId ? "Update Role" : "Create Role"}
+                  </button>
+                  <button type="button" onClick={resetRoleDraft}>
+                    Clear
+                  </button>
+                </div>
+                <div className="staff-list">
+                  {roles.length === 0 ? (
+                    <p className="green-work-note">No roles found.</p>
+                  ) : (
+                    roles.map((roleDef) => (
+                      <div key={`role-${roleDef.id}`} className="staff-row">
+                        <div className="staff-row-head">
+                          <strong>{roleDef.role_name}</strong>
+                          <span>
+                            {roleDef.role_key}
+                            {roleDef.is_system ? " | system" : ""}
+                            {roleDef.is_active === false ? " | inactive" : ""}
+                          </span>
+                        </div>
+                        <div className="staff-row-meta">
+                          ID: {roleDef.role_uid || "-"} | Scope: {roleDef.scope || "platform"}
+                        </div>
+                        {roleDef.description && <div className="staff-row-meta">{roleDef.description}</div>}
+                        <div className="work-actions">
+                          <button type="button" onClick={() => editRoleDefinition(roleDef)}>
+                            Edit
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="green-work-card">
+                <h3>{editingAdminUserId ? "Edit User" : "Create User"}</h3>
+                <p className="green-work-note">
+                  Create users with unique IDs, link them to an organization, and assign a custom role.
+                </p>
+                <input
+                  placeholder="Full name"
+                  value={adminUserDraft.full_name}
+                  onChange={(e) => setAdminUserDraft((prev) => ({ ...prev, full_name: e.target.value }))}
+                />
+                <div className="work-actions">
+                  <input
+                    placeholder="User unique ID (optional)"
+                    value={adminUserDraft.user_uid}
+                    onChange={(e) => setAdminUserDraft((prev) => ({ ...prev, user_uid: e.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setAdminUserDraft((prev) => ({ ...prev, user_uid: generateUiUniqueId("USR") }))}
+                  >
+                    Generate User ID
+                  </button>
+                </div>
+                <input
+                  placeholder="Email"
+                  value={adminUserDraft.email}
+                  onChange={(e) => setAdminUserDraft((prev) => ({ ...prev, email: e.target.value }))}
+                />
+                <input
+                  placeholder="Phone"
+                  value={adminUserDraft.phone}
+                  onChange={(e) => setAdminUserDraft((prev) => ({ ...prev, phone: e.target.value }))}
+                />
+                <select
+                  value={adminUserDraft.organization_id}
+                  onChange={(e) => setAdminUserDraft((prev) => ({ ...prev, organization_id: e.target.value }))}
+                >
+                  <option value="">No organization (platform user)</option>
+                  {organizations.map((org) => (
+                    <option key={`admin-user-org-${org.id}`} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={adminUserDraft.role_id}
+                  onChange={(e) => {
+                    const roleId = e.target.value;
+                    const roleDef = roles.find((r) => String(r.id) === String(roleId));
+                    setAdminUserDraft((prev) => ({
+                      ...prev,
+                      role_id: roleId,
+                      role: roleDef?.role_key || prev.role || "field_officer",
+                    }));
+                  }}
+                >
+                  <option value="">Select custom role (optional)</option>
+                  {roles
+                    .filter((r) => r.is_active !== false)
+                    .map((roleDef) => (
+                      <option key={`admin-user-role-${roleDef.id}`} value={roleDef.id}>
+                        {roleDef.role_name} ({roleDef.role_key})
+                      </option>
+                    ))}
+                </select>
+                <input
+                  placeholder="Fallback role key (used if no custom role selected)"
+                  value={adminUserDraft.role}
+                  onChange={(e) => setAdminUserDraft((prev) => ({ ...prev, role: e.target.value }))}
+                />
+                <textarea
+                  placeholder="Notes"
+                  value={adminUserDraft.notes}
+                  onChange={(e) => setAdminUserDraft((prev) => ({ ...prev, notes: e.target.value }))}
+                />
+                <label className="green-work-checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={adminUserDraft.is_active}
+                    onChange={(e) => setAdminUserDraft((prev) => ({ ...prev, is_active: e.target.checked }))}
+                  />
+                  <span>User active</span>
+                </label>
+                <div className="work-actions">
+                  <button className="btn-primary" type="button" onClick={() => void saveAdminUser()}>
+                    {editingAdminUserId ? "Update User" : "Create User"}
+                  </button>
+                  <button type="button" onClick={resetAdminUserDraft}>
+                    Clear
+                  </button>
+                </div>
+                <div className="staff-list">
+                  {adminUsersLoading ? (
+                    <p className="green-work-note">Loading user directory...</p>
+                  ) : adminUsers.length === 0 ? (
+                    <p className="green-work-note">No users found.</p>
+                  ) : (
+                    adminUsers.map((user) => (
+                      <div key={`admin-user-${user.id}`} className="staff-row">
+                        <div className="staff-row-head">
+                          <strong>{user.full_name}</strong>
+                          <span>
+                            {user.role_name || user.role || "-"}
+                            {user.is_active === false ? " | inactive" : ""}
+                          </span>
+                        </div>
+                        <div className="staff-row-meta">
+                          User ID: {user.user_uid || "-"} | Role Key: {user.role_key || user.role || "-"}
+                        </div>
+                        <div className="staff-row-meta">
+                          Org: {user.organization_name || "Unassigned"} | {user.email || "-"} {user.phone ? `| ${user.phone}` : ""}
+                        </div>
+                        {user.notes && <div className="staff-row-meta">{user.notes}</div>}
+                        <div className="work-actions">
+                          <button type="button" onClick={() => editAdminUser(user)}>
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void api
+                                .patch(`/green/users/${user.id}`, { is_active: user.is_active === false })
+                                .then(async () => {
+                                  await Promise.all([loadUsers(), loadAdminUsers(), loadAdminOverview()]);
+                                  toast.success(user.is_active === false ? "User activated" : "User deactivated");
+                                })
+                                .catch((error: any) => {
+                                  toast.error(error?.response?.data?.detail || "Failed to update user status");
+                                });
+                            }}
+                          >
+                            {user.is_active === false ? "Activate" : "Deactivate"}
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="green-work-card">
+                <h3>Organizations Monitoring</h3>
+                <p className="green-work-note">Monitor projects, trees, tasks, reviews, and alerts per organization.</p>
+                <div className="staff-list">
+                  {(adminOverview?.organizations || organizations).length === 0 ? (
+                    <p className="green-work-note">No organizations yet.</p>
+                  ) : (
+                    (adminOverview?.organizations || organizations).map((org) => (
+                      <div key={`org-${org.id}`} className="staff-row">
+                        <div className="staff-row-head">
+                          <strong>{org.name}</strong>
+                          <span>
+                            {(org.status || "pilot").toString()}
+                            {org.is_active === false ? " - inactive" : ""}
+                          </span>
+                        </div>
+                        <div className="staff-row-meta">
+                          Slug: {org.slug || "-"} | Projects: {Number(org.projects_count || 0)} | Trees:{" "}
+                          {Number(org.trees_count || 0)} | Tasks: {Number(org.tasks_count || 0)}
+                        </div>
+                        <div className="staff-row-meta">
+                          Pending Reviews: {Number(org.pending_review_count || 0)} | Open Alerts: {Number(org.open_alert_count || 0)}
+                          {org.last_activity_at ? ` | Last Activity: ${new Date(org.last_activity_at).toLocaleString()}` : ""}
+                        </div>
+                        <div className="staff-row-meta">
+                          {org.contact_email || "-"} {org.contact_phone ? `| ${org.contact_phone}` : ""}{" "}
+                          {org.city || org.country ? `| ${[org.city, org.country].filter(Boolean).join(", ")}` : ""}
+                        </div>
+                        <div className="work-actions">
+                          <button type="button" onClick={() => editOrganization(org)}>
+                            Edit
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="green-work-card">
+                <h3>Project Organization Assignment</h3>
+                <p className="green-work-note">
+                  Link each project to an organization so monitoring, reporting, and future access controls stay organized.
+                </p>
+                <div className="staff-list">
+                  {projects.length === 0 ? (
+                    <p className="green-work-note">No projects found.</p>
+                  ) : (
+                    projects.map((project) => (
+                      <div key={`project-org-${project.id}`} className="staff-row">
+                        <div className="staff-row-head">
+                          <strong>{project.name}</strong>
+                          <span>{project.location_text || "No location"}</span>
+                        </div>
+                        <div className="staff-row-meta">
+                          Current organization: {project.organization_name || "Unassigned"}
+                        </div>
+                        <div className="work-actions">
+                          <select
+                            value={project.organization_id ? String(project.organization_id) : ""}
+                            onChange={(e) => void assignProjectOrganization(project.id, e.target.value)}
+                          >
+                            <option value="">Unassigned</option>
+                            {organizations.map((org) => (
+                              <option key={`project-org-option-${project.id}-${org.id}`} value={org.id}>
+                                {org.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="green-work-card">
+                <h3>Recent Platform Activity</h3>
+                <p className="green-work-note">Latest audit events across all organizations and projects.</p>
+                <div className="staff-list">
+                  {(adminOverview?.recent_activity || []).length === 0 ? (
+                    <p className="green-work-note">No recent activity yet.</p>
+                  ) : (
+                    (adminOverview?.recent_activity || []).slice(0, 40).map((event) => (
+                      <div key={`admin-activity-${event.id}`} className="staff-row">
+                        <div className="staff-row-head">
+                          <strong>{event.action || "activity"}</strong>
+                          <span>{event.created_at ? new Date(event.created_at).toLocaleString() : "-"}</span>
+                        </div>
+                        <div className="staff-row-meta">
+                          Org: {event.organization_name || "Unassigned"} | Project: {event.project_name || "n/a"}
+                        </div>
+                        <div className="staff-row-meta">
+                          Entity: {event.entity_type || "-"} #{event.entity_id ?? "-"} | Actor: {event.actor || "system"}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
           {activeForm === "create_project" && (
             <div className="green-work-card">
               <h3>Create Project</h3>
+              <select
+                value={newProject.organization_id}
+                onChange={(e) => setNewProject({ ...newProject, organization_id: e.target.value })}
+              >
+                <option value="">No organization (unassigned)</option>
+                {organizations.map((org) => (
+                  <option key={org.id} value={org.id}>
+                    {org.name} {org.status ? `(${org.status})` : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="green-work-note">
+                Link project to an organization now, or assign it later in Super Admin.
+              </p>
               <input
                 placeholder="Project name"
                 value={newProject.name}
@@ -4825,6 +5728,9 @@ export default function GreenWork() {
                     </div>
                     <div className="staff-row-meta">
                       Maintenance: {item.totalTasks} tasks | Done: {item.doneTasks} | Pending: {item.pendingTasks}
+                    </div>
+                    <div className="staff-row-meta">
+                      User ID: {item.user.user_uid || "-"} | Org: {item.user.organization_name || "Unassigned"}
                     </div>
                     <div className={`staff-row-status ${item.statusTone}`}>{item.statusLabel}</div>
                     <div className="progress-bar">
