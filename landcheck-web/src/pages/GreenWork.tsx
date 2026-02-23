@@ -358,11 +358,6 @@ const formatTreeHeight = (value: number | null | undefined) => {
   if (!Number.isFinite(numeric) || numeric < 0) return "-";
   return `${numeric.toFixed(2)} m`;
 };
-const formatTreeAgeMonths = (value: number | null | undefined) => {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric) || numeric < 0) return "-";
-  return `${Math.round(numeric)} mo`;
-};
 const formatExistingTreeAgeLabel = (
   tree: Pick<Tree, "tree_age_months">,
   metric?: ExistingTreeMetric | null,
