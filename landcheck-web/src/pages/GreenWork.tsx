@@ -1197,8 +1197,9 @@ const SpeciesDailySurvivalChart = ({
 export default function GreenWork() {
   const workAuthSession = getWorkAuthSession();
   const canAccessSuperAdmin = workAuthSession?.auth_mode === "env_admin";
+  const isPartnerWorkSession = workAuthSession?.auth_mode === "partner_user";
   const workScopedOrganizationId =
-    workAuthSession?.auth_mode === "partner_user" && Number.isFinite(Number(workAuthSession?.user?.organization_id))
+    isPartnerWorkSession && Number.isFinite(Number(workAuthSession?.user?.organization_id))
       ? Number(workAuthSession?.user?.organization_id)
       : null;
   const storedProjectIdRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_active_project_id") || "" : "";
@@ -1527,6 +1528,10 @@ export default function GreenWork() {
   const [verraHistory, setVerraHistory] = useState<VerraExportHistoryItem[]>([]);
 
   const loadProjects = async () => {
+    if (isPartnerWorkSession && !workScopedOrganizationId) {
+      setProjects([]);
+      return;
+    }
     try {
       const url = workScopedOrganizationId ? `/green/projects?organization_id=${workScopedOrganizationId}` : "/green/projects";
       const res = await api.get(url);
@@ -1633,6 +1638,10 @@ export default function GreenWork() {
   }, []);
 
   const loadUsers = async () => {
+    if (isPartnerWorkSession && !workScopedOrganizationId) {
+      setUsers([]);
+      return;
+    }
     try {
       const url = workScopedOrganizationId ? `/green/users?organization_id=${workScopedOrganizationId}` : "/green/users";
       const res = await api.get(url);
@@ -2583,6 +2592,10 @@ export default function GreenWork() {
   const createProject = async () => {
     if (!newProject.name.trim()) {
       toast.error("Project name required");
+      return;
+    }
+    if (isPartnerWorkSession && !workScopedOrganizationId) {
+      toast.error("Your user account is not linked to an organization.");
       return;
     }
     const forcedOrgId = workScopedOrganizationId;
