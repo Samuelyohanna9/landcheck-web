@@ -1719,7 +1719,6 @@ export default function GreenWork() {
       toast.error("User full name required");
       return;
     }
-    const loginEnabled = Boolean(adminUserDraft.allow_green || adminUserDraft.allow_work);
     const roleIdNum = Number(adminUserDraft.role_id || 0);
     const orgIdNum = Number(adminUserDraft.organization_id || 0);
     const isEditing = Boolean(editingAdminUserId);
