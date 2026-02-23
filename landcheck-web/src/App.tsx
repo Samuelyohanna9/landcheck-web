@@ -7,14 +7,20 @@ import Feedback from "./pages/Feedback";
 import AdminDashboard from "./pages/AdminDashboard";
 import HazardAnalysis from "./pages/HazardAnalysis";
 import Green from "./pages/Green";
+import GreenLogin from "./pages/GreenLogin";
 import GreenWork from "./pages/GreenWork";
 import GreenWorkLogin from "./pages/GreenWorkLogin";
 import GreenPartnersLanding from "./pages/GreenPartnersLanding";
 import SeoRouteMeta from "./components/SeoRouteMeta";
+import { isGreenAuthed } from "./auth/greenAuth";
 import { isWorkAuthed } from "./auth/workAuth";
 
 function WorkProtectedRoute({ element }: { element: ReactElement }) {
   return isWorkAuthed() ? element : <Navigate to="/green-work/login" replace />;
+}
+
+function GreenProtectedRoute({ element }: { element: ReactElement }) {
+  return isGreenAuthed() ? element : <Navigate to="/green/login" replace />;
 }
 
 export default function App() {
@@ -25,7 +31,8 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/survey-plan" element={<SurveyPlan />} />
         <Route path="/hazard-analysis" element={<HazardAnalysis />} />
-        <Route path="/green" element={<Green />} />
+        <Route path="/green/login" element={<GreenLogin />} />
+        <Route path="/green" element={<GreenProtectedRoute element={<Green />} />} />
         <Route path="/green-work/login" element={<GreenWorkLogin />} />
         <Route path="/green-work" element={<WorkProtectedRoute element={<GreenWork />} />} />
         <Route path="/green-partners" element={<GreenPartnersLanding />} />
