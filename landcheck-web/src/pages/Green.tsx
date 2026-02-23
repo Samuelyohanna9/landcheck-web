@@ -54,6 +54,11 @@ type CarbonData = {
 
 type Project = {
   id: number;
+  organization_id?: number | null;
+  organization_name?: string | null;
+  organization_slug?: string | null;
+  organization_status?: string | null;
+  organization_logo_url?: string | null;
   name: string;
   location_text: string;
   sponsor: string;
@@ -92,8 +97,14 @@ type Tree = {
 
 type GreenUser = {
   id: number;
+  user_uid?: string | null;
   full_name: string;
   role: string;
+  allow_green?: boolean;
+  allow_work?: boolean;
+  organization_id?: number | null;
+  organization_name?: string | null;
+  organization_logo_url?: string | null;
 };
 
 type WorkOrder = {
@@ -792,6 +803,7 @@ export default function Green() {
   const activeActorOptions = useMemo<ActiveActorOption[]>(() => {
     const byKey = new Map<string, ActiveActorOption>();
     users.forEach((user) => {
+      if (user.allow_green === false) return;
       const value = String(user.full_name || "").trim();
       if (!value) return;
       const key = value.toLowerCase();
@@ -822,6 +834,11 @@ export default function Green() {
       return a.value.localeCompare(b.value);
     });
   }, [users, projectCustodians]);
+  useEffect(() => {
+    if (!activeUser) return;
+    if (activeActorOptions.some((option) => option.value === activeUser)) return;
+    setActiveUser("");
+  }, [activeUser, activeActorOptions]);
 
   const pendingPlanting = useMemo(() => {
     if (activeUserIsCustodian) {
@@ -2032,11 +2049,16 @@ export default function Green() {
       <Toaster position="top-right" />
       <header className="green-header">
         <div className="green-header-inner">
-          <div className="green-header-brand">
-            <div className="green-brand-logo" aria-hidden="true">
-              <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
-            </div>
-            <div className="green-header-title">
+            <div className="green-header-brand">
+              <div className="green-brand-logo" aria-hidden="true">
+                <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
+              </div>
+              {activeProject?.organization_logo_url ? (
+                <div className="green-brand-logo green-brand-logo-partner" aria-hidden="true">
+                  <img src={activeProject.organization_logo_url} alt={`${activeProject.organization_name || "Partner"} logo`} />
+                </div>
+              ) : null}
+              <div className="green-header-title">
               <h1>
                 LandCheck <span>Green</span>
               </h1>

@@ -84,25 +84,29 @@
 }
 
 .green-work-brand {
-  width: 50px;
-  height: 50px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  background: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 2px 8px rgba(12, 52, 27, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   flex-shrink: 0;
 }
 
 .green-work-brand img {
-  width: 106%;
-  height: 106%;
+  width: 50px;
+  height: 50px;
   display: block;
   object-fit: contain;
   object-position: center;
   border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(12, 52, 27, 0.2);
+}
+
+.green-work-brand img.green-work-partner-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 9px;
+  border-color: rgba(255, 255, 255, 0.75);
 }
 
 .green-work-title {
@@ -1456,6 +1460,64 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.green-work-brand-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 12px;
+  border: 1px solid rgba(20, 80, 40, 0.15);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.green-work-brand-preview img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  border-radius: 9px;
+  background: #fff;
+  border: 1px solid rgba(20, 80, 40, 0.16);
+}
+
+.green-work-brand-preview span {
+  color: #2b5140;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.green-work-brand-preview.compact {
+  margin-bottom: 0.35rem;
+  padding: 0.35rem 0.45rem;
+}
+
+.green-work-brand-preview.compact img {
+  width: 34px;
+  height: 34px;
+}
+
+.green-work-inline-upload-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(22, 78, 46, 0.18);
+  background: rgba(255, 255, 255, 0.85);
+  color: #194c30;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.green-work-inline-upload-btn input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .green-work-card .btn-primary:active,
 .work-actions button:active {
   transform: scale(0.97);
@@ -2632,9 +2694,18 @@
   }
 
   .green-work-brand {
+    gap: 0.28rem;
+  }
+
+  .green-work-brand img {
     width: 44px;
     height: 44px;
     border-radius: var(--radius-sm);
+  }
+
+  .green-work-brand img.green-work-partner-logo {
+    width: 36px;
+    height: 36px;
   }
 
   .green-work-menu-btn {
