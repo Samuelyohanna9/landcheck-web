@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { api, BACKEND_URL } from "../api/client";
 import TreeMap, { type TreeInspectData } from "../components/TreeMap";
-import { clearWorkAuthed } from "../auth/workAuth";
+import { clearWorkAuthed, getWorkAuthSession } from "../auth/workAuth";
 import {
   cacheProjectsOffline,
   cacheUsersOffline,
@@ -25,6 +25,7 @@ type Project = {
   organization_name?: string | null;
   organization_slug?: string | null;
   organization_status?: string | null;
+  organization_logo_url?: string | null;
   name: string;
   location_text: string;
   sponsor?: string | null;
@@ -52,6 +53,9 @@ type GreenUser = {
   organization_slug?: string | null;
   email?: string | null;
   phone?: string | null;
+  allow_green?: boolean;
+  allow_work?: boolean;
+  work_username?: string | null;
   notes?: string | null;
   is_active?: boolean;
   updated_at?: string | null;
@@ -62,6 +66,7 @@ type Organization = {
   name: string;
   slug: string;
   short_name?: string | null;
+  logo_url?: string | null;
   status?: string | null;
   contact_email?: string | null;
   contact_phone?: string | null;
@@ -1251,6 +1256,7 @@ export default function GreenWork() {
     name: "",
     slug: "",
     short_name: "",
+    logo_url: "",
     status: "pilot",
     contact_email: "",
     contact_phone: "",
@@ -1290,6 +1296,10 @@ export default function GreenWork() {
     organization_id: string;
     role_id: string;
     role: string;
+    allow_green: boolean;
+    allow_work: boolean;
+    work_username: string;
+    work_password: string;
     notes: string;
     is_active: boolean;
   }>({
@@ -1300,9 +1310,14 @@ export default function GreenWork() {
     organization_id: "",
     role_id: "",
     role: "field_officer",
+    allow_green: true,
+    allow_work: false,
+    work_username: "",
+    work_password: "",
     notes: "",
     is_active: true,
   });
+  const [orgLogoUploading, setOrgLogoUploading] = useState(false);
   const [editingAdminUserId, setEditingAdminUserId] = useState<number | null>(null);
   const [projectSettingsDraft, setProjectSettingsDraft] = useState<{
     planting_model: PlantingModel;
@@ -1626,6 +1641,10 @@ export default function GreenWork() {
       organization_id: "",
       role_id: "",
       role: "field_officer",
+      allow_green: true,
+      allow_work: false,
+      work_username: "",
+      work_password: "",
       notes: "",
       is_active: true,
     });
@@ -1688,6 +1707,10 @@ export default function GreenWork() {
       organization_id: Number.isFinite(orgIdNum) && orgIdNum > 0 ? orgIdNum : (isEditing ? 0 : null),
       role_id: Number.isFinite(roleIdNum) && roleIdNum > 0 ? roleIdNum : (isEditing ? 0 : null),
       role: adminUserDraft.role.trim() || "field_officer",
+      allow_green: adminUserDraft.allow_green,
+      allow_work: adminUserDraft.allow_work,
+      work_username: adminUserDraft.work_username.trim() || null,
+      work_password: adminUserDraft.work_password,
       notes: adminUserDraft.notes.trim() || null,
       is_active: adminUserDraft.is_active,
     };
@@ -1716,6 +1739,10 @@ export default function GreenWork() {
       organization_id: user.organization_id ? String(user.organization_id) : "",
       role_id: user.role_id ? String(user.role_id) : "",
       role: String(user.role || "field_officer"),
+      allow_green: user.allow_green !== false,
+      allow_work: Boolean(user.allow_work),
+      work_username: String(user.work_username || ""),
+      work_password: "",
       notes: String(user.notes || ""),
       is_active: user.is_active !== false,
     });
@@ -2522,6 +2549,7 @@ export default function GreenWork() {
         name: "",
         slug: "",
         short_name: "",
+        logo_url: "",
         status: "pilot",
         contact_email: "",
         contact_phone: "",
@@ -2545,6 +2573,7 @@ export default function GreenWork() {
       name: String(org.name || ""),
       slug: String(org.slug || ""),
       short_name: String(org.short_name || ""),
+      logo_url: String(org.logo_url || ""),
       status: String(org.status || "pilot"),
       contact_email: String(org.contact_email || ""),
       contact_phone: String(org.contact_phone || ""),
@@ -2565,6 +2594,7 @@ export default function GreenWork() {
       name: "",
       slug: "",
       short_name: "",
+      logo_url: "",
       status: "pilot",
       contact_email: "",
       contact_phone: "",
@@ -2894,7 +2924,7 @@ export default function GreenWork() {
 
   const uploadGreenPhoto = async (
     file: File,
-    folder: "trees" | "tasks",
+    folder: string,
     link?: { treeId?: number; taskId?: number }
   ) => {
     const formData = new FormData();
@@ -2908,6 +2938,22 @@ export default function GreenWork() {
     const url = String(res.data?.url || "");
     if (!url) throw new Error("Upload URL missing");
     return url;
+  };
+
+  const onOrganizationLogoPicked = async (file: File | null) => {
+    if (!file) return;
+    setOrgLogoUploading(true);
+    const loadingId = toast.loading("Uploading organization logo...");
+    try {
+      const slugBase = (newOrganization.slug || newOrganization.name || "organization").trim().toLowerCase().replace(/\s+/g, "-");
+      const logoUrl = await uploadGreenPhoto(file, `organizations/${slugBase || "logos"}`);
+      setNewOrganization((prev) => ({ ...prev, logo_url: logoUrl }));
+      toast.success("Organization logo uploaded", { id: loadingId });
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to upload organization logo", { id: loadingId });
+    } finally {
+      setOrgLogoUploading(false);
+    }
   };
 
   const onInspectedTreePhotoPicked = async (file: File | null) => {
@@ -3936,6 +3982,10 @@ export default function GreenWork() {
     if (!activeProjectId) return null;
     return projects.find((p) => Number(p.id) === Number(activeProjectId)) || null;
   }, [projects, activeProjectId]);
+  const workAuthSession = getWorkAuthSession();
+  const partnerLogoUrl =
+    activeProjectRecord?.organization_logo_url || workAuthSession?.user?.organization_logo_url || null;
+  const partnerLogoName = activeProjectRecord?.organization_name || workAuthSession?.user?.organization_name || "Partner";
   const deleteProjectNameMatches = useMemo(() => {
     if (!activeProjectRecord) return false;
     return deleteProjectConfirmName.trim() === String(activeProjectRecord.name || "").trim();
@@ -4322,6 +4372,9 @@ export default function GreenWork() {
         <div className="green-work-header-inner">
           <div className="green-work-brand">
             <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
+            {partnerLogoUrl ? (
+              <img className="green-work-partner-logo" src={partnerLogoUrl} alt={`${partnerLogoName} logo`} />
+            ) : null}
           </div>
           <div className="green-work-title">
             <h1>LandCheck Work</h1>
@@ -5230,6 +5283,12 @@ export default function GreenWork() {
 
               <div className="green-work-card">
                 <h3>{editingOrganizationId ? "Edit Organization" : "Add Organization"}</h3>
+                {newOrganization.logo_url ? (
+                  <div className="green-work-brand-preview">
+                    <img src={newOrganization.logo_url} alt="Organization logo preview" />
+                    <span>Organization logo preview</span>
+                  </div>
+                ) : null}
                 <input
                   placeholder="Organization name"
                   value={newOrganization.name}
@@ -5245,6 +5304,26 @@ export default function GreenWork() {
                   value={newOrganization.short_name}
                   onChange={(e) => setNewOrganization((prev) => ({ ...prev, short_name: e.target.value }))}
                 />
+                <div className="work-actions">
+                  <input
+                    placeholder="Logo URL (auto-filled after upload)"
+                    value={newOrganization.logo_url}
+                    onChange={(e) => setNewOrganization((prev) => ({ ...prev, logo_url: e.target.value }))}
+                  />
+                  <label className="green-work-inline-upload-btn">
+                    {orgLogoUploading ? "Uploading..." : "Upload Logo"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={orgLogoUploading}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        void onOrganizationLogoPicked(file);
+                        e.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
                 <select
                   value={newOrganization.status}
                   onChange={(e) => setNewOrganization((prev) => ({ ...prev, status: e.target.value }))}
@@ -5466,6 +5545,33 @@ export default function GreenWork() {
                   value={adminUserDraft.role}
                   onChange={(e) => setAdminUserDraft((prev) => ({ ...prev, role: e.target.value }))}
                 />
+                <label className="green-work-checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={adminUserDraft.allow_green}
+                    onChange={(e) => setAdminUserDraft((prev) => ({ ...prev, allow_green: e.target.checked }))}
+                  />
+                  <span>Enable LandCheck Green access</span>
+                </label>
+                <label className="green-work-checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={adminUserDraft.allow_work}
+                    onChange={(e) => setAdminUserDraft((prev) => ({ ...prev, allow_work: e.target.checked }))}
+                  />
+                  <span>Enable LandCheck Work access</span>
+                </label>
+                <input
+                  placeholder="Work username (for Work login)"
+                  value={adminUserDraft.work_username}
+                  onChange={(e) => setAdminUserDraft((prev) => ({ ...prev, work_username: e.target.value }))}
+                />
+                <input
+                  type="password"
+                  placeholder={editingAdminUserId ? "Set / reset Work password (optional)" : "Work password"}
+                  value={adminUserDraft.work_password}
+                  onChange={(e) => setAdminUserDraft((prev) => ({ ...prev, work_password: e.target.value }))}
+                />
                 <textarea
                   placeholder="Notes"
                   value={adminUserDraft.notes}
@@ -5507,6 +5613,9 @@ export default function GreenWork() {
                         </div>
                         <div className="staff-row-meta">
                           Org: {user.organization_name || "Unassigned"} | {user.email || "-"} {user.phone ? `| ${user.phone}` : ""}
+                        </div>
+                        <div className="staff-row-meta">
+                          Access: {user.allow_green !== false ? "Green" : "-"}{user.allow_work ? " / Work" : ""} | Work username: {user.work_username || "-"}
                         </div>
                         {user.notes && <div className="staff-row-meta">{user.notes}</div>}
                         <div className="work-actions">
@@ -5552,6 +5661,12 @@ export default function GreenWork() {
                             {org.is_active === false ? " - inactive" : ""}
                           </span>
                         </div>
+                        {org.logo_url ? (
+                          <div className="green-work-brand-preview compact">
+                            <img src={org.logo_url} alt={`${org.name} logo`} />
+                            <span>Logo attached</span>
+                          </div>
+                        ) : null}
                         <div className="staff-row-meta">
                           Slug: {org.slug || "-"} | Projects: {Number(org.projects_count || 0)} | Trees:{" "}
                           {Number(org.trees_count || 0)} | Tasks: {Number(org.tasks_count || 0)}
