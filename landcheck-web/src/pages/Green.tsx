@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import { api, BACKEND_URL } from "../api/client";
+import { clearGreenAuthed, getGreenAuthSession } from "../auth/greenAuth";
 import TreeMap, { type TreeInspectData } from "../components/TreeMap";
 import {
   cacheProjectDetailOffline,
@@ -554,7 +556,17 @@ function TreeTileIcon() {
 }
 
 export default function Green() {
-  const storedActiveUser = typeof window !== "undefined" ? localStorage.getItem("landcheck_green_active_user") || "" : "";
+  const navigate = useNavigate();
+  const greenAuthSession = useMemo(() => getGreenAuthSession(), []);
+  const greenAuthUser = greenAuthSession?.user || null;
+  const greenScopedOrganizationId =
+    greenAuthSession?.auth_mode === "partner_user" && Number.isFinite(Number(greenAuthUser?.organization_id))
+      ? Number(greenAuthUser?.organization_id)
+      : null;
+  const lockedGreenActorName =
+    greenAuthSession?.auth_mode === "partner_user" ? String(greenAuthUser?.full_name || "").trim() : "";
+  const storedActiveUserRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_green_active_user") || "" : "";
+  const storedActiveUser = lockedGreenActorName || storedActiveUserRaw;
   const storedSectionRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_green_active_section") || "" : "";
   const storedProjectIdRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_green_active_project_id") || "" : "";
   const storedProjectId = Number(storedProjectIdRaw || "0");
@@ -627,6 +639,19 @@ export default function Green() {
   const [savingTreeAgeMonthsId, setSavingTreeAgeMonthsId] = useState<number | null>(null);
   const [includePhotosInReport, setIncludePhotosInReport] = useState(false);
   const [introGateOpen, setIntroGateOpen] = useState<boolean>(() => !readGreenIntroSeen());
+  const greenSessionPartnerLogo = greenAuthUser?.organization_logo_url || null;
+  const greenSessionPartnerName = greenAuthUser?.organization_name || null;
+  const isLockedGreenUserSession = Boolean(lockedGreenActorName);
+
+  const logoutGreen = () => {
+    clearGreenAuthed();
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("landcheck_green_active_user");
+      window.localStorage.removeItem("landcheck_green_active_section");
+      window.localStorage.removeItem("landcheck_green_active_project_id");
+    }
+    navigate("/green/login", { replace: true });
+  };
 
   const treePoints = useMemo(() => {
     if (!activeUser) return [];
@@ -835,10 +860,16 @@ export default function Green() {
     });
   }, [users, projectCustodians]);
   useEffect(() => {
+    if (!lockedGreenActorName) return;
+    if (activeUser === lockedGreenActorName) return;
+    setActiveUser(lockedGreenActorName);
+  }, [activeUser, lockedGreenActorName]);
+  useEffect(() => {
     if (!activeUser) return;
+    if (lockedGreenActorName && activeUser === lockedGreenActorName) return;
     if (activeActorOptions.some((option) => option.value === activeUser)) return;
     setActiveUser("");
-  }, [activeUser, activeActorOptions]);
+  }, [activeUser, activeActorOptions, lockedGreenActorName]);
 
   const pendingPlanting = useMemo(() => {
     if (activeUserIsCustodian) {
@@ -896,7 +927,9 @@ export default function Green() {
 
   const loadProjects = async () => {
     try {
-      const res = await api.get("/green/projects");
+      const res = await api.get(
+        greenScopedOrganizationId ? `/green/projects?organization_id=${greenScopedOrganizationId}` : "/green/projects"
+      );
       const list = Array.isArray(res.data) ? res.data : [];
       setProjects(list);
       await cacheProjectsOffline(list).catch(() => {});
@@ -912,7 +945,9 @@ export default function Green() {
 
   const loadUsers = async () => {
     try {
-      const res = await api.get("/green/users");
+      const res = await api.get(
+        greenScopedOrganizationId ? `/green/users?organization_id=${greenScopedOrganizationId}` : "/green/users"
+      );
       const list = Array.isArray(res.data) ? res.data : [];
       setUsers(list);
       await cacheUsersOffline(list).catch(() => {});
@@ -2053,9 +2088,12 @@ export default function Green() {
               <div className="green-brand-logo" aria-hidden="true">
                 <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
               </div>
-              {activeProject?.organization_logo_url ? (
+              {(activeProject?.organization_logo_url || greenSessionPartnerLogo) ? (
                 <div className="green-brand-logo green-brand-logo-partner" aria-hidden="true">
-                  <img src={activeProject.organization_logo_url} alt={`${activeProject.organization_name || "Partner"} logo`} />
+                  <img
+                    src={activeProject?.organization_logo_url || greenSessionPartnerLogo || ""}
+                    alt={`${activeProject?.organization_name || greenSessionPartnerName || "Partner"} logo`}
+                  />
                 </div>
               ) : null}
               <div className="green-header-title">
@@ -2080,6 +2118,14 @@ export default function Green() {
                 Install App
               </button>
             )}
+            {greenAuthUser?.full_name && (
+              <span className="green-profile-chip" title={greenAuthUser.organization_name || undefined}>
+                {greenAuthUser.full_name}
+              </span>
+            )}
+            <button className="green-ghost-btn" onClick={logoutGreen} type="button">
+              Logout
+            </button>
           </div>
         </div>
       </header>
@@ -2131,7 +2177,12 @@ export default function Green() {
                 ))}
               </select>
 
-              <select value={activeUser} onChange={(e) => setActiveUser(e.target.value)}>
+              <select
+                value={activeUser}
+                onChange={(e) => setActiveUser(e.target.value)}
+                disabled={isLockedGreenUserSession}
+                title={isLockedGreenUserSession ? "Logged in user is fixed for this session." : undefined}
+              >
                 <option value="">Select staff or custodian</option>
                 {activeActorOptions.map((option) => (
                   <option key={`${option.actorType}-${option.id}`} value={option.value}>
@@ -2141,6 +2192,11 @@ export default function Green() {
               </select>
             </div>
           </div>
+          {isLockedGreenUserSession && (
+            <p className="green-empty">
+              Logged in as {lockedGreenActorName}. Project list is limited to your organization.
+            </p>
+          )}
 
           <div className={`green-project-status ${activeProject ? "selected" : "empty"}`}>
             {activeProject ? (
@@ -2763,7 +2819,12 @@ export default function Green() {
               )}
               <div className="tree-form-row">
                 <label>Added by</label>
-                <select value={activeUser} onChange={(e) => setActiveUser(e.target.value)}>
+                <select
+                  value={activeUser}
+                  onChange={(e) => setActiveUser(e.target.value)}
+                  disabled={isLockedGreenUserSession}
+                  title={isLockedGreenUserSession ? "Logged in user is fixed for this session." : undefined}
+                >
                   <option value="">Select staff or custodian</option>
                   {activeActorOptions.map((option) => (
                     <option key={`map-${option.actorType}-${option.id}`} value={option.value}>

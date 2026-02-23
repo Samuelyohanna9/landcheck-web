@@ -172,6 +172,22 @@
   align-items: center;
 }
 
+.green-profile-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 220px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.42rem 0.7rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── Ghost Button ── */
 .green-ghost-btn {
   border: 1px solid rgba(255, 255, 255, 0.25);
