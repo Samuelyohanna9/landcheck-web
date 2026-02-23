@@ -1197,6 +1197,10 @@ const SpeciesDailySurvivalChart = ({
 export default function GreenWork() {
   const workAuthSession = getWorkAuthSession();
   const canAccessSuperAdmin = workAuthSession?.auth_mode === "env_admin";
+  const workScopedOrganizationId =
+    workAuthSession?.auth_mode === "partner_user" && Number.isFinite(Number(workAuthSession?.user?.organization_id))
+      ? Number(workAuthSession?.user?.organization_id)
+      : null;
   const storedProjectIdRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_active_project_id") || "" : "";
   const storedProjectId = Number(storedProjectIdRaw || "0");
   const storedFormRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_work_active_form") || "" : "";
@@ -1253,7 +1257,12 @@ export default function GreenWork() {
   const [newOrderAreaLabel, setNewOrderAreaLabel] = useState("");
   const [newOrderAreaGeometry, setNewOrderAreaGeometry] = useState<{ type: "Polygon" | "MultiPolygon"; coordinates: any } | null>(null);
   const [newUser, setNewUser] = useState({ full_name: "", role: "field_officer" });
-  const [newProject, setNewProject] = useState({ name: "", location_text: "", sponsor: "", organization_id: "" });
+  const [newProject, setNewProject] = useState({
+    name: "",
+    location_text: "",
+    sponsor: "",
+    organization_id: workScopedOrganizationId ? String(workScopedOrganizationId) : "",
+  });
   const [newOrganization, setNewOrganization] = useState({
     name: "",
     slug: "",
@@ -1519,13 +1528,18 @@ export default function GreenWork() {
 
   const loadProjects = async () => {
     try {
-      const res = await api.get("/green/projects");
-      setProjects(res.data);
-      cacheProjectsOffline(res.data).catch(() => {});
+      const url = workScopedOrganizationId ? `/green/projects?organization_id=${workScopedOrganizationId}` : "/green/projects";
+      const res = await api.get(url);
+      const rows = Array.isArray(res.data) ? res.data : [];
+      setProjects(rows);
+      cacheProjectsOffline(rows).catch(() => {});
     } catch (error) {
       if (isLikelyNetworkError(error)) {
         const cached = await getCachedProjectsOffline().catch(() => []);
-        if (cached.length > 0) { setProjects(cached); return; }
+        const scopedCached = workScopedOrganizationId
+          ? cached.filter((row: any) => Number(row?.organization_id || 0) === Number(workScopedOrganizationId))
+          : cached;
+        if (scopedCached.length > 0) { setProjects(scopedCached); return; }
       }
       throw error;
     }
@@ -1620,13 +1634,18 @@ export default function GreenWork() {
 
   const loadUsers = async () => {
     try {
-      const res = await api.get("/green/users");
-      setUsers(res.data);
-      cacheUsersOffline(res.data).catch(() => {});
+      const url = workScopedOrganizationId ? `/green/users?organization_id=${workScopedOrganizationId}` : "/green/users";
+      const res = await api.get(url);
+      const rows = Array.isArray(res.data) ? res.data : [];
+      setUsers(rows);
+      cacheUsersOffline(rows).catch(() => {});
     } catch (error) {
       if (isLikelyNetworkError(error)) {
         const cached = await getCachedUsersOffline().catch(() => []);
-        if (cached.length > 0) { setUsers(cached); return; }
+        const scopedCached = workScopedOrganizationId
+          ? cached.filter((row: any) => Number(row?.organization_id || 0) === Number(workScopedOrganizationId))
+          : cached;
+        if (scopedCached.length > 0) { setUsers(scopedCached); return; }
       }
       throw error;
     }
@@ -2341,11 +2360,17 @@ export default function GreenWork() {
   useEffect(() => {
     loadProjects().catch(() => toast.error("Failed to load projects"));
     loadUsers().catch(() => toast.error("Failed to load users"));
-    loadOrganizations().catch(() => toast.error("Failed to load organizations"));
-    loadRoles().catch(() => toast.error("Failed to load roles"));
-    loadAdminUsers().catch(() => toast.error("Failed to load user directory"));
-    loadAdminOverview().catch(() => toast.error("Failed to load super admin overview"));
-  }, []);
+    if (canAccessSuperAdmin) {
+      loadOrganizations().catch(() => toast.error("Failed to load organizations"));
+      loadRoles().catch(() => toast.error("Failed to load roles"));
+      loadAdminUsers().catch(() => toast.error("Failed to load user directory"));
+      loadAdminOverview().catch(() => toast.error("Failed to load super admin overview"));
+    } else {
+      setOrganizations([]);
+      setAdminOverview(null);
+      setAdminUsers([]);
+    }
+  }, [canAccessSuperAdmin]);
 
   useEffect(() => {
     if (!projects.length || !activeProjectId) return;
@@ -2560,15 +2585,23 @@ export default function GreenWork() {
       toast.error("Project name required");
       return;
     }
-    const orgId = Number(newProject.organization_id || 0);
+    const forcedOrgId = workScopedOrganizationId;
+    const orgId = forcedOrgId || Number(newProject.organization_id || 0);
     const payload = {
       ...newProject,
       organization_id: Number.isFinite(orgId) && orgId > 0 ? orgId : null,
     };
     const res = await api.post("/green/projects", payload);
     setProjects((prev) => [res.data, ...prev]);
-    setNewProject({ name: "", location_text: "", sponsor: "", organization_id: "" });
-    void loadAdminOverview().catch(() => {});
+    setNewProject({
+      name: "",
+      location_text: "",
+      sponsor: "",
+      organization_id: forcedOrgId ? String(forcedOrgId) : "",
+    });
+    if (canAccessSuperAdmin) {
+      void loadAdminOverview().catch(() => {});
+    }
     toast.success("Project created");
   };
 
@@ -5836,20 +5869,29 @@ export default function GreenWork() {
           {activeForm === "create_project" && (
             <div className="green-work-card">
               <h3>Create Project</h3>
-              <select
-                value={newProject.organization_id}
-                onChange={(e) => setNewProject({ ...newProject, organization_id: e.target.value })}
-              >
-                <option value="">No organization (unassigned)</option>
-                {organizations.map((org) => (
-                  <option key={org.id} value={org.id}>
-                    {org.name} {org.status ? `(${org.status})` : ""}
-                  </option>
-                ))}
-              </select>
-              <p className="green-work-note">
-                Link project to an organization now, or assign it later in Super Admin.
-              </p>
+              {canAccessSuperAdmin ? (
+                <>
+                  <select
+                    value={newProject.organization_id}
+                    onChange={(e) => setNewProject({ ...newProject, organization_id: e.target.value })}
+                  >
+                    <option value="">No organization (unassigned)</option>
+                    {organizations.map((org) => (
+                      <option key={org.id} value={org.id}>
+                        {org.name} {org.status ? `(${org.status})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="green-work-note">
+                    Link project to an organization now, or assign it later in Super Admin.
+                  </p>
+                </>
+              ) : (
+                <p className="green-work-note">
+                  Organization: <strong>{workAuthSession?.user?.organization_name || "Assigned organization"}</strong>
+                  {" "} (projects created here are automatically linked to your organization).
+                </p>
+              )}
               <input
                 placeholder="Project name"
                 value={newProject.name}
