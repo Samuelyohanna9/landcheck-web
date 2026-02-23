@@ -1696,6 +1696,11 @@ export default function GreenWork() {
       toast.error("User full name required");
       return;
     }
+    const loginEnabled = Boolean(adminUserDraft.allow_green || adminUserDraft.allow_work);
+    if (!editingAdminUserId && loginEnabled && !adminUserDraft.work_password.trim()) {
+      toast.error("Login password is required when Green or Work access is enabled");
+      return;
+    }
     const roleIdNum = Number(adminUserDraft.role_id || 0);
     const orgIdNum = Number(adminUserDraft.organization_id || 0);
     const isEditing = Boolean(editingAdminUserId);
@@ -5562,13 +5567,13 @@ export default function GreenWork() {
                   <span>Enable LandCheck Work access</span>
                 </label>
                 <input
-                  placeholder="Work username (for Work login)"
+                  placeholder="Login username (optional; defaults to generated User ID)"
                   value={adminUserDraft.work_username}
                   onChange={(e) => setAdminUserDraft((prev) => ({ ...prev, work_username: e.target.value }))}
                 />
                 <input
                   type="password"
-                  placeholder={editingAdminUserId ? "Set / reset Work password (optional)" : "Work password"}
+                  placeholder={editingAdminUserId ? "Set / reset login password (required if missing)" : "Login password"}
                   value={adminUserDraft.work_password}
                   onChange={(e) => setAdminUserDraft((prev) => ({ ...prev, work_password: e.target.value }))}
                 />
@@ -5615,7 +5620,7 @@ export default function GreenWork() {
                           Org: {user.organization_name || "Unassigned"} | {user.email || "-"} {user.phone ? `| ${user.phone}` : ""}
                         </div>
                         <div className="staff-row-meta">
-                          Access: {user.allow_green !== false ? "Green" : "-"}{user.allow_work ? " / Work" : ""} | Work username: {user.work_username || "-"}
+                          Access: {user.allow_green !== false ? "Green" : "-"}{user.allow_work ? " / Work" : ""} | Login username: {user.work_username || "-"}
                         </div>
                         {user.notes && <div className="staff-row-meta">{user.notes}</div>}
                         <div className="work-actions">
