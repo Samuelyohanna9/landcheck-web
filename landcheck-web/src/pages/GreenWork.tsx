@@ -71,8 +71,21 @@ type Tree = {
   count_in_carbon_scope?: boolean;
   source_project_id?: number | null;
   tree_height_m?: number | null;
+  tree_age_months?: number | null;
   custodian_id?: number | null;
   custodian_name?: string | null;
+};
+type ExistingTreeMetric = {
+  tree_id: number;
+  tree_age_months?: number | null;
+  age_years?: number | null;
+  age_source?: string | null;
+  current_co2_kg?: number | null;
+  annual_co2_kg?: number | null;
+  lifetime_co2_kg?: number | null;
+  co2_in_scope?: boolean;
+  co2_height_source?: string | null;
+  height_used_for_co2?: boolean;
 };
 
 type CustodianType = "household" | "school" | "community_group";
@@ -344,6 +357,36 @@ const formatTreeHeight = (value: number | null | undefined) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric) || numeric < 0) return "-";
   return `${numeric.toFixed(2)} m`;
+};
+const formatTreeAgeMonths = (value: number | null | undefined) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return "-";
+  return `${Math.round(numeric)} mo`;
+};
+const formatExistingTreeAgeLabel = (
+  tree: Pick<Tree, "tree_age_months">,
+  metric?: ExistingTreeMetric | null,
+) => {
+  const years = Number(metric?.age_years);
+  const ageSource = normalizeName(metric?.age_source || "");
+  const monthsValue =
+    metric?.tree_age_months !== undefined && metric?.tree_age_months !== null
+      ? Number(metric.tree_age_months)
+      : Number(tree.tree_age_months);
+  const hasMonths = Number.isFinite(monthsValue) && monthsValue >= 0;
+  const hasYears = Number.isFinite(years) && years >= 0 && ageSource !== "none";
+  if (hasYears && hasMonths) return `${years.toFixed(1)}y / ${Math.round(monthsValue)}m`;
+  if (hasYears) return `${years.toFixed(1)}y`;
+  if (hasMonths) return `${Math.round(monthsValue)}m`;
+  return "-";
+};
+const formatExistingTreeCo2Label = (metric?: ExistingTreeMetric | null) => {
+  if (!metric) return "-";
+  if (metric.co2_in_scope === false) return "Excluded";
+  const kg = Number(metric.current_co2_kg);
+  if (!Number.isFinite(kg)) return "-";
+  if (kg >= 1000) return `${(kg / 1000).toFixed(2)} t`;
+  return `${kg.toFixed(1)} kg`;
 };
 const formatTreeOriginLabel = (value: string | null | undefined) => {
   const key = normalizeName(value);
@@ -1250,6 +1293,8 @@ export default function GreenWork() {
   const [includePhotosInWorkPdf, setIncludePhotosInWorkPdf] = useState(false);
   const [includePhotosInCustodianPdf, setIncludePhotosInCustodianPdf] = useState(true);
   const [includePhotosInExistingTreesPdf, setIncludePhotosInExistingTreesPdf] = useState(true);
+  const [existingTreeMetricsById, setExistingTreeMetricsById] = useState<Record<number, ExistingTreeMetric>>({});
+  const [existingTreeMetricsLoading, setExistingTreeMetricsLoading] = useState(false);
   const [deletingTreeId, setDeletingTreeId] = useState<number | null>(null);
   const [deleteProjectModalOpen, setDeleteProjectModalOpen] = useState(false);
   const [deleteProjectConfirmName, setDeleteProjectConfirmName] = useState("");
@@ -1307,6 +1352,47 @@ export default function GreenWork() {
       throw error;
     }
   };
+
+  const loadExistingTreeMetrics = useCallback(async (projectId: number) => {
+    if (!projectId) {
+      setExistingTreeMetricsById({});
+      return;
+    }
+    setExistingTreeMetricsLoading(true);
+    try {
+      const stamp = Date.now();
+      const res = await api.get(`/green/projects/${projectId}/existing-trees/metrics?_ts=${stamp}`);
+      const rows = Array.isArray(res.data?.items) ? res.data.items : [];
+      const next: Record<number, ExistingTreeMetric> = {};
+      rows.forEach((row: any) => {
+        const treeId = Number(row?.tree_id || 0);
+        if (!Number.isFinite(treeId) || treeId <= 0) return;
+        next[treeId] = {
+          tree_id: treeId,
+          tree_age_months:
+            Number.isFinite(Number(row?.tree_age_months)) && Number(row?.tree_age_months) >= 0
+              ? Number(row.tree_age_months)
+              : null,
+          age_years:
+            Number.isFinite(Number(row?.age_years)) && Number(row?.age_years) >= 0
+              ? Number(row.age_years)
+              : null,
+          age_source: row?.age_source || "none",
+          current_co2_kg: Number.isFinite(Number(row?.current_co2_kg)) ? Number(row.current_co2_kg) : null,
+          annual_co2_kg: Number.isFinite(Number(row?.annual_co2_kg)) ? Number(row.annual_co2_kg) : null,
+          lifetime_co2_kg: Number.isFinite(Number(row?.lifetime_co2_kg)) ? Number(row.lifetime_co2_kg) : null,
+          co2_in_scope: row?.co2_in_scope !== false,
+          co2_height_source: row?.co2_height_source || null,
+          height_used_for_co2: Boolean(row?.height_used_for_co2),
+        };
+      });
+      setExistingTreeMetricsById(next);
+    } catch {
+      setExistingTreeMetricsById({});
+    } finally {
+      setExistingTreeMetricsLoading(false);
+    }
+  }, []);
 
   const loadUsers = async () => {
     try {
@@ -1420,6 +1506,10 @@ export default function GreenWork() {
           tree_height_m:
             Number.isFinite(Number(tree.tree_height_m)) && Number(tree.tree_height_m) >= 0
               ? Number(tree.tree_height_m)
+              : null,
+          tree_age_months:
+            Number.isFinite(Number(tree.tree_age_months)) && Number(tree.tree_age_months) >= 0
+              ? Number(tree.tree_age_months)
               : null,
           tree_origin: String(tree.tree_origin || "new_planting").toLowerCase(),
           attribution_scope: String(tree.attribution_scope || "full").toLowerCase(),
@@ -2009,6 +2099,15 @@ export default function GreenWork() {
     if (!activeProjectId || activeForm !== "verra_reports") return;
     void loadVerraHistory(activeProjectId).catch(() => {});
   }, [activeProjectId, activeForm, loadVerraHistory]);
+
+  useEffect(() => {
+    if (!activeProjectId) {
+      setExistingTreeMetricsById({});
+      return;
+    }
+    if (activeForm !== "existing_tree_intake") return;
+    void loadExistingTreeMetrics(activeProjectId).catch(() => {});
+  }, [activeProjectId, activeForm, loadExistingTreeMetrics]);
 
   useEffect(() => {
     setProjectSetupExpanded(false);
@@ -5733,7 +5832,15 @@ export default function GreenWork() {
                     />
                     <span>Include photos (appendix)</span>
                   </label>
-                  <button type="button" onClick={() => void loadProjectData(activeProjectId)}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void Promise.all([
+                        loadProjectData(activeProjectId),
+                        loadExistingTreeMetrics(activeProjectId),
+                      ])
+                    }
+                  >
                     Refresh
                   </button>
                 </div>
@@ -5743,6 +5850,9 @@ export default function GreenWork() {
               </p>
               <div className="green-work-live-summary">
                 <span className="green-work-live-pill neutral">Rows: {existingTreeIntakeRows.length}</span>
+                <span className={`green-work-live-pill ${existingTreeMetricsLoading ? "warning" : "ok"}`}>
+                  CO2 Metrics: {existingTreeMetricsLoading ? "Loading..." : `${Object.keys(existingTreeMetricsById).length} rows`}
+                </span>
               </div>
               <div className="green-work-live-table-wrap">
                 <table className="green-work-live-table">
@@ -5754,7 +5864,9 @@ export default function GreenWork() {
                       <th>Origin</th>
                       <th>Attribution</th>
                       <th>Status</th>
+                      <th>Age</th>
                       <th>Height</th>
+                      <th>CO2</th>
                       <th>Custodian</th>
                       <th>Created By</th>
                     </tr>
@@ -5762,24 +5874,29 @@ export default function GreenWork() {
                   <tbody>
                     {existingTreeIntakeRows.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="green-work-live-empty">
+                        <td colSpan={11} className="green-work-live-empty">
                           No Existing Tree records found in this project yet.
                         </td>
                       </tr>
                     ) : (
-                      existingTreeIntakeRows.slice(0, 500).map((tree) => (
-                        <tr key={`existing-main-${tree.id}`}>
-                          <td>#{tree.id}</td>
-                          <td>{tree.species || "-"}</td>
-                          <td>{formatDateLabel(tree.planting_date)}</td>
-                          <td>{formatTreeOriginLabel(tree.tree_origin)}</td>
-                          <td>{formatAttributionScopeLabel(tree.attribution_scope)}</td>
-                          <td>{formatTaskTypeLabel(tree.status)}</td>
-                          <td>{formatTreeHeight(tree.tree_height_m)}</td>
-                          <td>{tree.custodian_name || "-"}</td>
-                          <td>{tree.created_by || "-"}</td>
-                        </tr>
-                      ))
+                      existingTreeIntakeRows.slice(0, 500).map((tree) => {
+                        const metric = existingTreeMetricsById[Number(tree.id)];
+                        return (
+                          <tr key={`existing-main-${tree.id}`}>
+                            <td>#{tree.id}</td>
+                            <td>{tree.species || "-"}</td>
+                            <td>{formatDateLabel(tree.planting_date)}</td>
+                            <td>{formatTreeOriginLabel(tree.tree_origin)}</td>
+                            <td>{formatAttributionScopeLabel(tree.attribution_scope)}</td>
+                            <td>{formatTaskTypeLabel(tree.status)}</td>
+                            <td>{formatExistingTreeAgeLabel(tree, metric)}</td>
+                            <td>{formatTreeHeight(tree.tree_height_m)}</td>
+                            <td>{formatExistingTreeCo2Label(metric)}</td>
+                            <td>{tree.custodian_name || "-"}</td>
+                            <td>{tree.created_by || "-"}</td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
