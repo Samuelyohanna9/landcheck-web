@@ -80,6 +80,7 @@ type Tree = {
   photo_url: string | null;
   created_by?: string | null;
   tree_height_m?: number | null;
+  tree_age_months?: number | null;
   tree_origin?: "new_planting" | "existing_inventory" | "natural_regeneration";
   attribution_scope?: "full" | "monitor_only";
   count_in_planting_kpis?: boolean;
@@ -170,6 +171,15 @@ const parseTreeHeightInput = (value: string | number | null | undefined): number
   if (!Number.isFinite(parsed)) return null;
   if (parsed < 0 || parsed > 120) return null;
   return Number(parsed.toFixed(2));
+};
+const parseTreeAgeMonthsInput = (value: string | number | null | undefined): number | null => {
+  if (value === null || value === undefined) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return null;
+  if (parsed < 0 || parsed > 2400) return null;
+  return Number(parsed.toFixed(1));
 };
 const formatTreeHeight = (value: number | null | undefined) => {
   const numeric = Number(value);
@@ -563,6 +573,7 @@ export default function Green() {
     species: "",
     planting_date: "",
     tree_height_m: "",
+    tree_age_months: "",
     status: "alive",
     tree_origin: "new_planting" as "new_planting" | "existing_inventory",
     attribution_scope: "full" as "full" | "monitor_only",
@@ -600,6 +611,8 @@ export default function Green() {
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator === "undefined" ? true : navigator.onLine);
   const [treeHeightDraftById, setTreeHeightDraftById] = useState<Record<number, string>>({});
   const [savingTreeHeightId, setSavingTreeHeightId] = useState<number | null>(null);
+  const [treeAgeMonthsDraftById, setTreeAgeMonthsDraftById] = useState<Record<number, string>>({});
+  const [savingTreeAgeMonthsId, setSavingTreeAgeMonthsId] = useState<number | null>(null);
   const [includePhotosInReport, setIncludePhotosInReport] = useState(false);
   const [introGateOpen, setIntroGateOpen] = useState<boolean>(() => !readGreenIntroSeen());
 
@@ -618,6 +631,10 @@ export default function Green() {
         photo_url: t.photo_url,
         created_by: t.created_by || "",
         tree_height_m: t.tree_height_m ?? null,
+        tree_age_months:
+          Number.isFinite(Number((t as any).tree_age_months)) && Number((t as any).tree_age_months) >= 0
+            ? Number((t as any).tree_age_months)
+            : null,
         tree_origin: t.tree_origin || "new_planting",
         attribution_scope: t.attribution_scope || "full",
         count_in_planting_kpis: t.count_in_planting_kpis !== false,
@@ -1215,6 +1232,7 @@ export default function Green() {
       species: "",
       planting_date: "",
       tree_height_m: "",
+      tree_age_months: "",
       status: "alive",
       tree_origin: "new_planting",
       attribution_scope: "full",
@@ -1266,6 +1284,15 @@ export default function Green() {
       toast.error("Tree height must be a number between 0 and 120.");
       return;
     }
+    const treeAgeMonthsValue = parseTreeAgeMonthsInput(newTree.tree_age_months);
+    if (newTree.tree_age_months && treeAgeMonthsValue === null) {
+      toast.error("Tree age (months) must be a number between 0 and 2400.");
+      return;
+    }
+    if (newTree.tree_origin === "existing_inventory" && !newTree.planting_date && treeAgeMonthsValue === null) {
+      toast.error("For Existing Tree, provide a reference date or estimated age (months) for accurate CO2.");
+      return;
+    }
     const treePayload = {
       project_id: activeProject.id,
       lng: Number(newTree.lng),
@@ -1279,6 +1306,7 @@ export default function Green() {
       count_in_carbon_scope: newTree.count_in_carbon_scope,
       custodian_id: newTree.custodian_id ? Number(newTree.custodian_id) : null,
       tree_height_m: treeHeightValue,
+      tree_age_months: newTree.tree_origin === "existing_inventory" ? treeAgeMonthsValue : null,
       notes: newTree.notes,
       photo_url: "",
       created_by: activeUser,
@@ -1408,6 +1436,35 @@ export default function Green() {
       toast.error("Failed to update tree height");
     } finally {
       setSavingTreeHeightId(null);
+    }
+  };
+
+  const updateTreeAgeMonths = async (treeId: number, rawAgeMonths: string) => {
+    const parsed = parseTreeAgeMonthsInput(rawAgeMonths);
+    if (String(rawAgeMonths || "").trim() && parsed === null) {
+      toast.error("Estimated tree age must be a number between 0 and 2400 months.");
+      return;
+    }
+    setSavingTreeAgeMonthsId(treeId);
+    try {
+      await api.patch(`/green/trees/${treeId}`, {
+        tree_age_months: parsed,
+      });
+      setTrees((prev) => prev.map((tree) => (tree.id === treeId ? { ...tree, tree_age_months: parsed } : tree)));
+      setInspectedTree((prev) =>
+        prev && Number(prev.id) === Number(treeId)
+          ? ({
+              ...prev,
+              tree_age_months: parsed,
+            } as any)
+          : prev
+      );
+      setTreeAgeMonthsDraftById((prev) => ({ ...prev, [treeId]: parsed === null ? "" : String(parsed) }));
+      toast.success("Tree age updated");
+    } catch {
+      toast.error("Failed to update tree age");
+    } finally {
+      setSavingTreeAgeMonthsId(null);
     }
   };
 
@@ -2599,6 +2656,7 @@ export default function Green() {
                       attribution_scope: nextOrigin === "existing_inventory" ? "monitor_only" : "full",
                       count_in_planting_kpis: nextOrigin === "existing_inventory" ? false : true,
                       count_in_carbon_scope: true,
+                      tree_age_months: nextOrigin === "existing_inventory" ? prev.tree_age_months : "",
                     }));
                   }}
                 >
@@ -2614,6 +2672,23 @@ export default function Green() {
                   onChange={(e) => setNewTree({ ...newTree, planting_date: e.target.value })}
                 />
               </div>
+              {newTree.tree_origin === "existing_inventory" && (
+                <div className="tree-form-row">
+                  <label>Estimated Age (months)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={2400}
+                    step="1"
+                    placeholder="Optional if exact planting date is unknown"
+                    value={newTree.tree_age_months}
+                    onChange={(e) => setNewTree({ ...newTree, tree_age_months: e.target.value })}
+                  />
+                  <small className="tree-form-help">
+                    Optional. Used for CO2 estimation when planting date is not available for an existing tree.
+                  </small>
+                </div>
+              )}
               <div className="tree-form-row">
                 <label>Tree Height (m)</label>
                 <input
@@ -3080,6 +3155,14 @@ export default function Green() {
                   <strong>{formatTreeHeight(inspectedTree.tree_height_m)}</strong>
                 </div>
                 <div>
+                  <span>Age (months)</span>
+                  <strong>
+                    {Number.isFinite(Number((inspectedTree as any).tree_age_months))
+                      ? String(Math.round(Number((inspectedTree as any).tree_age_months)))
+                      : "-"}
+                  </strong>
+                </div>
+                <div>
                   <span>Origin</span>
                   <strong>{formatTreeConditionLabel(inspectedTree.tree_origin || "new_planting")}</strong>
                 </div>
@@ -3123,6 +3206,49 @@ export default function Green() {
                   {savingTreeHeightId === inspectedTree.id ? "Saving..." : "Save Height"}
                 </button>
               </div>
+              {(inspectedTree.tree_origin || "new_planting") !== "new_planting" && (
+                <div className="green-tree-height-inline">
+                  <label>Update Estimated Age (months)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={2400}
+                    step="1"
+                    value={
+                      treeAgeMonthsDraftById[inspectedTree.id] !== undefined
+                        ? treeAgeMonthsDraftById[inspectedTree.id]
+                        : (inspectedTree as any).tree_age_months === null ||
+                            (inspectedTree as any).tree_age_months === undefined
+                          ? ""
+                          : String((inspectedTree as any).tree_age_months)
+                    }
+                    onChange={(e) =>
+                      setTreeAgeMonthsDraftById((prev) => ({
+                        ...prev,
+                        [inspectedTree.id]: e.target.value,
+                      }))
+                    }
+                    placeholder="Estimated age in months (optional)"
+                  />
+                  <button
+                    className="green-btn-outline"
+                    type="button"
+                    disabled={savingTreeAgeMonthsId === inspectedTree.id}
+                    onClick={() => {
+                      const value =
+                        treeAgeMonthsDraftById[inspectedTree.id] !== undefined
+                          ? treeAgeMonthsDraftById[inspectedTree.id]
+                          : (inspectedTree as any).tree_age_months === null ||
+                              (inspectedTree as any).tree_age_months === undefined
+                            ? ""
+                            : String((inspectedTree as any).tree_age_months);
+                      void updateTreeAgeMonths(inspectedTree.id, value);
+                    }}
+                  >
+                    {savingTreeAgeMonthsId === inspectedTree.id ? "Saving..." : "Save Age"}
+                  </button>
+                </div>
+              )}
               <p className="green-tree-inspector-notes">{inspectedTree.notes || "No notes."}</p>
               <div className="green-tree-maintenance-row">
                 <span>Total: {inspectedTree.maintenance.total}</span>

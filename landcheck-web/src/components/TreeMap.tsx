@@ -24,6 +24,7 @@ export type TreePoint = {
   photo_url?: string | null;
   created_by?: string | null;
   tree_height_m?: number | null;
+  tree_age_months?: number | null;
   tree_origin?: string | null;
   attribution_scope?: string | null;
   count_in_planting_kpis?: boolean;
@@ -58,6 +59,7 @@ type TreeFeatureProps = {
   created_by: string;
   photo_url: string;
   tree_height_m: number | null;
+  tree_age_months: number | null;
   tree_origin: string;
   attribution_scope: string;
   count_in_planting_kpis: number;
@@ -91,6 +93,7 @@ export type TreeInspectData = {
   created_by: string;
   photo_url: string;
   tree_height_m: number | null;
+  tree_age_months: number | null;
   tree_origin: string;
   attribution_scope: string;
   count_in_planting_kpis: boolean;
@@ -244,6 +247,10 @@ const getFeatureProps = (feature: mapboxgl.MapboxGeoJSONFeature | undefined): Tr
       Number.isFinite(Number(raw.tree_height_m)) && Number(raw.tree_height_m) >= 0
         ? Number(raw.tree_height_m)
         : null,
+    tree_age_months:
+      Number.isFinite(Number(raw.tree_age_months)) && Number(raw.tree_age_months) >= 0
+        ? Number(raw.tree_age_months)
+        : null,
     tree_origin: String(raw.tree_origin || "new_planting"),
     attribution_scope: String(raw.attribution_scope || "full"),
     count_in_planting_kpis: Number(raw.count_in_planting_kpis ? 1 : 0),
@@ -280,6 +287,10 @@ const buildTreeFeatureCollection = (items: TreePoint[]) => {
           tree_height_m:
             Number.isFinite(Number(tree.tree_height_m)) && Number(tree.tree_height_m) >= 0
               ? Number(tree.tree_height_m)
+              : null,
+          tree_age_months:
+            Number.isFinite(Number(tree.tree_age_months)) && Number(tree.tree_age_months) >= 0
+              ? Number(tree.tree_age_months)
               : null,
           tree_origin: String(tree.tree_origin || "new_planting"),
           attribution_scope: String(tree.attribution_scope || "full"),
@@ -351,6 +362,7 @@ const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null,
   const plantedDate = String(tree.planting_date || base.planting_date || "");
   const notes = String(tree.notes || base.notes || "");
   const treeHeight = Number.isFinite(Number(tree.tree_height_m)) ? Number(tree.tree_height_m) : base.tree_height_m;
+  const treeAgeMonths = Number.isFinite(Number(tree.tree_age_months)) ? Number(tree.tree_age_months) : base.tree_age_months;
   const treeOrigin = String(tree.tree_origin || base.tree_origin || "new_planting");
   const attributionScope = String(tree.attribution_scope || base.attribution_scope || "full");
   const plantingScope = tree.count_in_planting_kpis ?? Boolean(base.count_in_planting_kpis);
@@ -380,6 +392,7 @@ const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null,
       <p><strong>Planted:</strong> ${escapeHtml(formatDate(plantedDate))}</p>
       <p><strong>Species:</strong> ${escapeHtml(species)}</p>
       <p><strong>Height:</strong> ${escapeHtml(formatHeight(treeHeight))}</p>
+      ${Number.isFinite(Number(treeAgeMonths)) ? `<p><strong>Age (months):</strong> ${escapeHtml(String(Math.round(Number(treeAgeMonths))))}</p>` : ""}
       <p><strong>Origin:</strong> ${escapeHtml(statusLabel(treeOrigin))}</p>
       <p><strong>Attribution:</strong> ${escapeHtml(statusLabel(attributionScope))}</p>
       <p><strong>Scope:</strong> ${plantingScope ? "Planting KPI" : "No KPI"} / ${carbonScope ? "Carbon" : "No Carbon"}</p>
@@ -403,6 +416,7 @@ const buildInspectData = (base: TreeFeatureProps, detail?: TreePopupDetail | nul
   const taskPhoto = (detail?.tasks || []).find((task: any) => String(task?.photo_url || "").trim())?.photo_url;
   const visitPhoto = (detail?.visits || []).find((visit: any) => String(visit?.photo_url || "").trim())?.photo_url;
   const treeHeight = Number.isFinite(Number(tree.tree_height_m)) ? Number(tree.tree_height_m) : base.tree_height_m;
+  const treeAgeMonths = Number.isFinite(Number(tree.tree_age_months)) ? Number(tree.tree_age_months) : base.tree_age_months;
   const treeOrigin = String(tree.tree_origin || base.tree_origin || "new_planting");
   const attributionScope = String(tree.attribution_scope || base.attribution_scope || "full");
   const plantingScope = tree.count_in_planting_kpis ?? Boolean(base.count_in_planting_kpis);
@@ -418,6 +432,7 @@ const buildInspectData = (base: TreeFeatureProps, detail?: TreePopupDetail | nul
     created_by: String(tree.created_by || base.created_by || "-"),
     photo_url: String(tree.photo_url || base.photo_url || taskPhoto || visitPhoto || ""),
     tree_height_m: Number.isFinite(Number(treeHeight)) ? Number(treeHeight) : null,
+    tree_age_months: Number.isFinite(Number(treeAgeMonths)) ? Number(treeAgeMonths) : null,
     tree_origin: treeOrigin,
     attribution_scope: attributionScope,
     count_in_planting_kpis: Boolean(plantingScope),
