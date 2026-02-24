@@ -35,30 +35,26 @@ export const getWorkAuthSession = (): WorkAuthSession | null => {
   const raw = window.localStorage.getItem(WORK_AUTH_STORAGE_KEY);
   if (!raw) return null;
   if (raw === "1") {
-    // Backward compatibility with older sessions.
-    return {
-      authed: true,
-      auth_mode: "env_admin",
-      logged_in_at: new Date().toISOString(),
-      user: {
-        id: 0,
-        user_uid: "SYS-ADMIN",
-        full_name: "System Admin",
-        role: "super_admin",
-        role_key: "super_admin",
-        role_name: "Super Admin",
-        allow_work: true,
-        allow_green: true,
-      },
-    };
+    // Legacy flag-only sessions are no longer accepted because they bypass org-scoped login.
+    window.localStorage.removeItem(WORK_AUTH_STORAGE_KEY);
+    return null;
   }
   try {
     const parsed = JSON.parse(raw);
-    if (parsed && parsed.authed && parsed.user) return parsed as WorkAuthSession;
+    if (!(parsed && parsed.authed && parsed.user)) {
+      window.localStorage.removeItem(WORK_AUTH_STORAGE_KEY);
+      return null;
+    }
+    const session = parsed as WorkAuthSession;
+    if (session.auth_mode === "partner_user" && !Number.isFinite(Number(session.user?.organization_id))) {
+      window.localStorage.removeItem(WORK_AUTH_STORAGE_KEY);
+      return null;
+    }
+    return session;
   } catch {
+    window.localStorage.removeItem(WORK_AUTH_STORAGE_KEY);
     return null;
   }
-  return null;
 };
 
 export const isWorkAuthed = () => Boolean(getWorkAuthSession());
@@ -66,7 +62,7 @@ export const isWorkAuthed = () => Boolean(getWorkAuthSession());
 export const setWorkAuthed = (session?: Partial<WorkAuthSession>) => {
   if (typeof window === "undefined") return;
   if (!session || !session.user) {
-    window.localStorage.setItem(WORK_AUTH_STORAGE_KEY, "1");
+    window.localStorage.removeItem(WORK_AUTH_STORAGE_KEY);
     return;
   }
   const normalized: WorkAuthSession = {
@@ -117,4 +113,3 @@ export const loginWork = async (params: { username: string; password: string; or
   setWorkAuthed(session);
   return session;
 };
-
