@@ -4590,6 +4590,11 @@ export default function GreenWork() {
           </button>
           <span className="green-work-toolbar-label">Menu</span>
           {activeProjectName && <span className="green-work-project-chip">{activeProjectName}</span>}
+          {workAuthSession?.user?.full_name && (
+            <span className="green-work-profile-chip" title={workAuthSession.user.organization_name || undefined}>
+              {workAuthSession.user.full_name}
+            </span>
+          )}
           <button type="button" className="green-work-auth-btn" onClick={onLogoutWork}>
             Logout
           </button>
