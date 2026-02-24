@@ -1725,6 +1725,43 @@ export default function GreenWork() {
     );
   };
 
+  const resetAdminUserPasswordAndEmail = async (user: GreenUser) => {
+    const label = String(user.full_name || `user #${user.id}`);
+    const confirmed = window.confirm(
+      `Reset password and send new login credentials to ${label}${user.email ? ` (${user.email})` : ""}?`
+    );
+    if (!confirmed) return;
+    try {
+      const res = await api.post(`/green/users/${user.id}/reset-password`, {
+        send_credentials_email: true,
+      });
+      const payload = (res.data || {}) as any;
+      const generatedPassword = String(payload.generated_password || "").trim();
+      const generatedUsername = String(payload.generated_login_username || payload.work_username || "").trim();
+      if (generatedPassword && generatedUsername) {
+        setLatestGeneratedUserCredentials({
+          full_name: String(payload.full_name || user.full_name || ""),
+          user_uid: payload.user_uid || user.user_uid || null,
+          username: generatedUsername,
+          password: generatedPassword,
+        });
+      }
+      const emailSent = payload?.credentials_email_sent === true;
+      const emailError = String(payload?.credentials_email_error || "").trim();
+      if (emailSent) {
+        toast.success("Password reset and credentials emailed.");
+      } else if (emailError) {
+        toast.success("Password reset completed.");
+        toast.error(`Credential email not sent: ${emailError}`);
+      } else {
+        toast.success("Password reset completed.");
+      }
+      await Promise.all([loadUsers(), loadAdminUsers(), loadAdminOverview()]);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to reset password");
+    }
+  };
+
   const saveRoleDefinition = async () => {
     if (!newRoleDraft.role_name.trim()) {
       toast.error("Role name required");
@@ -1771,9 +1808,14 @@ export default function GreenWork() {
       toast.error("User full name required");
       return;
     }
+    const loginEnabled = Boolean(adminUserDraft.allow_green || adminUserDraft.allow_work);
+    const isEditing = Boolean(editingAdminUserId);
+    if (!isEditing && loginEnabled && !adminUserDraft.email.trim()) {
+      toast.error("Email is required so the new user can receive login credentials.");
+      return;
+    }
     const roleIdNum = Number(adminUserDraft.role_id || 0);
     const orgIdNum = Number(adminUserDraft.organization_id || 0);
-    const isEditing = Boolean(editingAdminUserId);
     const payload = {
       user_uid: adminUserDraft.user_uid.trim() || null,
       full_name: adminUserDraft.full_name.trim(),
@@ -1799,6 +1841,8 @@ export default function GreenWork() {
         const created = (res.data || {}) as any;
         const generatedPassword = String(created.generated_password || "").trim();
         const generatedUsername = String(created.generated_login_username || created.work_username || "").trim();
+        const emailSent = created?.credentials_email_sent === true;
+        const emailError = String(created?.credentials_email_error || "").trim();
         if (generatedPassword && generatedUsername) {
           setLatestGeneratedUserCredentials({
             full_name: String(created.full_name || payload.full_name),
@@ -1806,10 +1850,24 @@ export default function GreenWork() {
             username: generatedUsername,
             password: generatedPassword,
           });
-          toast.success("User created. Temporary login credentials generated.");
+          if (emailSent) {
+            toast.success("User created. Login credentials generated and emailed.");
+          } else if (emailError) {
+            toast.success("User created. Temporary login credentials generated.");
+            toast.error(`Credential email not sent: ${emailError}`);
+          } else {
+            toast.success("User created. Temporary login credentials generated.");
+          }
         } else {
           setLatestGeneratedUserCredentials(null);
-          toast.success("User created");
+          if (emailSent) {
+            toast.success("User created. Login credentials emailed.");
+          } else if (emailError) {
+            toast.success("User created");
+            toast.error(`Credential email not sent: ${emailError}`);
+          } else {
+            toast.success("User created");
+          }
         }
       }
       resetAdminUserDraft();
@@ -5822,6 +5880,9 @@ export default function GreenWork() {
                             }}
                           >
                             {user.is_active === false ? "Activate" : "Deactivate"}
+                          </button>
+                          <button type="button" onClick={() => void resetAdminUserPasswordAndEmail(user)}>
+                            Reset + Email
                           </button>
                           <button
                             type="button"
