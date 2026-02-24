@@ -396,6 +396,23 @@
   padding: 0.45rem 0.72rem;
 }
 
+.green-work-profile-chip {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: min(28vw, 240px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(15, 61, 31, 0.18);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--green-800);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0.45rem 0.68rem;
+}
+
 /* ── Menu Button ── */
 .green-work-menu-btn {
   width: 40px;
@@ -2799,6 +2816,12 @@
 
   .green-work-project-chip {
     display: none;
+  }
+
+  .green-work-profile-chip {
+    max-width: 44vw;
+    font-size: 0.72rem;
+    padding: 0.4rem 0.52rem;
   }
 
   .green-work-menu-drawer {
