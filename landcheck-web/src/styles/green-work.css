@@ -142,6 +142,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
@@ -154,6 +155,7 @@
 
 .green-work-auth-btn {
   margin-left: auto;
+  flex: 0 0 auto;
   border: 1px solid rgba(15, 61, 31, 0.24);
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.9);
@@ -378,6 +380,8 @@
 
 /* ── Project Chip ── */
 .green-work-project-chip {
+  flex: 1 1 auto;
+  min-width: 0;
   max-width: min(48vw, 360px);
   white-space: nowrap;
   overflow: hidden;
@@ -627,6 +631,11 @@
   background: linear-gradient(180deg, var(--green-500), var(--green-700));
   color: #ffffff;
   border-color: rgba(15, 61, 31, 0.25);
+}
+
+.green-work-menu-item-logout {
+  margin-top: 0.12rem;
+  border-color: rgba(180, 35, 35, 0.2);
 }
 
 .green-work-menu-group {
@@ -2769,6 +2778,11 @@
 
   .green-work-toolbar-label {
     font-size: 0.8rem;
+  }
+
+  .green-work-auth-btn {
+    padding: 0.42rem 0.56rem;
+    font-size: 0.72rem;
   }
 
   .green-work-title {

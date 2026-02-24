@@ -4675,6 +4675,13 @@ export default function GreenWork() {
         >
           Create Project
         </button>
+        <button
+          className="green-work-menu-item green-work-menu-item-logout"
+          type="button"
+          onClick={onLogoutWork}
+        >
+          Logout
+        </button>
         {activeProjectId ? (
           <div className="green-work-menu-group">
             <p className="green-work-menu-subhead">Active Project Actions</p>
