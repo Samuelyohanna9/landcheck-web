@@ -4497,6 +4497,39 @@ export default function GreenWork() {
     navigate("/green-work/login", { replace: true });
   };
 
+  const onChangeWorkPassword = async () => {
+    const authUser = workAuthSession?.user;
+    if (!authUser?.id || authUser.id <= 0) {
+      toast.error("Password change is not available for this account.");
+      return;
+    }
+    const currentPassword = window.prompt("Enter your current password");
+    if (currentPassword === null) return;
+    const newPassword = window.prompt("Enter a new password (minimum 6 characters)");
+    if (newPassword === null) return;
+    const confirmPassword = window.prompt("Confirm your new password");
+    if (confirmPassword === null) return;
+    if (newPassword !== confirmPassword) {
+      toast.error("New password confirmation does not match.");
+      return;
+    }
+    if (String(newPassword).length < 6) {
+      toast.error("New password must be at least 6 characters.");
+      return;
+    }
+    try {
+      await api.post("/green/auth/change-password", {
+        user_id: authUser.id,
+        current_password: currentPassword,
+        new_password: newPassword,
+        app: "work",
+      });
+      toast.success("Password updated successfully.");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to change password");
+    }
+  };
+
   useEffect(() => {
     if (canAccessSuperAdmin) return;
     if (activeForm !== "super_admin") return;
@@ -4595,6 +4628,11 @@ export default function GreenWork() {
               {workAuthSession.user.full_name}
             </span>
           )}
+          {workAuthSession?.user?.id && workAuthSession.user.id > 0 && (
+            <button type="button" className="green-work-auth-btn" onClick={onChangeWorkPassword}>
+              Change Password
+            </button>
+          )}
           <button type="button" className="green-work-auth-btn" onClick={onLogoutWork}>
             Logout
           </button>
@@ -4679,6 +4717,14 @@ export default function GreenWork() {
           onClick={() => openForm("create_project")}
         >
           Create Project
+        </button>
+        <button
+          className="green-work-menu-item"
+          type="button"
+          onClick={onChangeWorkPassword}
+          disabled={!workAuthSession?.user?.id || workAuthSession.user.id <= 0}
+        >
+          Change Password
         </button>
         <button
           className="green-work-menu-item green-work-menu-item-logout"
