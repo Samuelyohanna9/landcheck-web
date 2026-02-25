@@ -1487,6 +1487,14 @@ export default function GreenWork() {
   const [existingTreeMetricsById, setExistingTreeMetricsById] = useState<Record<number, ExistingTreeMetric>>({});
   const [existingTreeMetricsLoading, setExistingTreeMetricsLoading] = useState(false);
   const [deletingTreeId, setDeletingTreeId] = useState<number | null>(null);
+  const [workPasswordModalOpen, setWorkPasswordModalOpen] = useState(false);
+  const [workPasswordModalSaving, setWorkPasswordModalSaving] = useState(false);
+  const [workPasswordModalShow, setWorkPasswordModalShow] = useState(false);
+  const [workPasswordForm, setWorkPasswordForm] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
+  });
   const [deleteProjectModalOpen, setDeleteProjectModalOpen] = useState(false);
   const [deleteProjectConfirmName, setDeleteProjectConfirmName] = useState("");
   const [deletingProject, setDeletingProject] = useState(false);
@@ -4497,18 +4505,43 @@ export default function GreenWork() {
     navigate("/green-work/login", { replace: true });
   };
 
-  const onChangeWorkPassword = async () => {
+  const closeWorkPasswordModal = (force = false) => {
+    if (workPasswordModalSaving && !force) return;
+    setWorkPasswordModalOpen(false);
+    setWorkPasswordModalShow(false);
+    setWorkPasswordForm({
+      current_password: "",
+      new_password: "",
+      confirm_password: "",
+    });
+  };
+
+  const onChangeWorkPassword = () => {
     const authUser = workAuthSession?.user;
     if (!authUser?.id || authUser.id <= 0) {
       toast.error("Password change is not available for this account.");
       return;
     }
-    const currentPassword = window.prompt("Enter your current password");
-    if (currentPassword === null) return;
-    const newPassword = window.prompt("Enter a new password (minimum 6 characters)");
-    if (newPassword === null) return;
-    const confirmPassword = window.prompt("Confirm your new password");
-    if (confirmPassword === null) return;
+    setWorkPasswordModalOpen(true);
+  };
+
+  const submitWorkPasswordChange = async () => {
+    const authUser = workAuthSession?.user;
+    if (!authUser?.id || authUser.id <= 0) {
+      toast.error("Password change is not available for this account.");
+      return;
+    }
+    const currentPassword = String(workPasswordForm.current_password || "");
+    const newPassword = String(workPasswordForm.new_password || "");
+    const confirmPassword = String(workPasswordForm.confirm_password || "");
+    if (!currentPassword) {
+      toast.error("Current password is required.");
+      return;
+    }
+    if (!newPassword) {
+      toast.error("New password is required.");
+      return;
+    }
     if (newPassword !== confirmPassword) {
       toast.error("New password confirmation does not match.");
       return;
@@ -4517,6 +4550,7 @@ export default function GreenWork() {
       toast.error("New password must be at least 6 characters.");
       return;
     }
+    setWorkPasswordModalSaving(true);
     try {
       await api.post("/green/auth/change-password", {
         user_id: authUser.id,
@@ -4525,8 +4559,11 @@ export default function GreenWork() {
         app: "work",
       });
       toast.success("Password updated successfully.");
+      closeWorkPasswordModal(true);
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || "Failed to change password");
+    } finally {
+      setWorkPasswordModalSaving(false);
     }
   };
 
@@ -7803,6 +7840,102 @@ export default function GreenWork() {
               </div>
             </div>
           </aside>
+        </>
+      )}
+
+      {workPasswordModalOpen && (
+        <>
+          <button
+            type="button"
+            className="green-work-delete-overlay"
+            onClick={() => closeWorkPasswordModal()}
+            aria-label="Close password dialog"
+          />
+          <section
+            className="green-work-password-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="green-work-password-title"
+          >
+            <div className="green-work-password-head">
+              <h3 id="green-work-password-title">Change Password</h3>
+              <button
+                type="button"
+                className="green-work-password-close"
+                onClick={() => closeWorkPasswordModal()}
+                disabled={workPasswordModalSaving}
+                aria-label="Close password dialog"
+              >
+                X
+              </button>
+            </div>
+            <p className="green-work-password-note">
+              Update your login password for LandCheck Work and LandCheck Green.
+            </p>
+            <div className="green-work-password-fields">
+              <label>
+                Current Password
+                <input
+                  type={workPasswordModalShow ? "text" : "password"}
+                  value={workPasswordForm.current_password}
+                  onChange={(e) =>
+                    setWorkPasswordForm((prev) => ({ ...prev, current_password: e.target.value }))
+                  }
+                  disabled={workPasswordModalSaving}
+                  autoComplete="current-password"
+                  autoFocus
+                />
+              </label>
+              <label>
+                New Password
+                <input
+                  type={workPasswordModalShow ? "text" : "password"}
+                  value={workPasswordForm.new_password}
+                  onChange={(e) => setWorkPasswordForm((prev) => ({ ...prev, new_password: e.target.value }))}
+                  disabled={workPasswordModalSaving}
+                  autoComplete="new-password"
+                />
+              </label>
+              <label>
+                Confirm New Password
+                <input
+                  type={workPasswordModalShow ? "text" : "password"}
+                  value={workPasswordForm.confirm_password}
+                  onChange={(e) =>
+                    setWorkPasswordForm((prev) => ({ ...prev, confirm_password: e.target.value }))
+                  }
+                  disabled={workPasswordModalSaving}
+                  autoComplete="new-password"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void submitWorkPasswordChange();
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            <div className="work-actions green-work-password-actions">
+              <button
+                type="button"
+                onClick={() => setWorkPasswordModalShow((prev) => !prev)}
+                disabled={workPasswordModalSaving}
+              >
+                {workPasswordModalShow ? "Hide Passwords" : "Show Passwords"}
+              </button>
+              <button type="button" onClick={() => closeWorkPasswordModal()} disabled={workPasswordModalSaving}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => void submitWorkPasswordChange()}
+                disabled={workPasswordModalSaving}
+              >
+                {workPasswordModalSaving ? "Saving..." : "Save Password"}
+              </button>
+            </div>
+          </section>
         </>
       )}
 

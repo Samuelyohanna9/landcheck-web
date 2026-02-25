@@ -1751,6 +1751,111 @@
   to { transform: rotate(360deg); }
 }
 
+/* ── Password Modal ── */
+.green-password-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 96;
+  background: rgba(0, 0, 0, 0.42);
+  display: grid;
+  place-items: center;
+  padding: 0.9rem;
+}
+
+.green-password-modal {
+  width: min(94vw, 460px);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(22, 76, 42, 0.2);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: var(--shadow-xl);
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.green-password-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.green-password-modal-head strong {
+  color: var(--green-900);
+  font-family: "Sora", sans-serif;
+  font-size: 0.96rem;
+}
+
+.green-password-close {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(22, 76, 42, 0.18);
+  background: #ffffff;
+  color: var(--green-800);
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.green-password-close:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.green-password-note {
+  margin: 0;
+  color: var(--card-subtle);
+  font-size: 0.82rem;
+}
+
+.green-password-fields {
+  display: grid;
+  gap: 0.48rem;
+}
+
+.green-password-fields label {
+  display: grid;
+  gap: 0.22rem;
+  color: var(--green-800);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.green-password-fields input {
+  width: 100%;
+  border: 1px solid rgba(22, 76, 42, 0.16);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: var(--green-900);
+  padding: 0.56rem 0.62rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.green-password-fields input:focus {
+  outline: none;
+  border-color: rgba(22, 76, 42, 0.36);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+}
+
+.green-password-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.green-password-actions-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
 /* ── Responsive: Tablet ── */
 @media (max-width: 900px) {
   .green-header-inner {
@@ -1761,6 +1866,15 @@
 
   .green-header-actions {
     width: 100%;
+    justify-content: flex-start;
+  }
+
+  .green-password-actions,
+  .green-password-actions-right {
+    width: 100%;
+  }
+
+  .green-password-actions-right {
     justify-content: flex-start;
   }
 
