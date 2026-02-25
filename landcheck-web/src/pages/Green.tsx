@@ -668,6 +668,38 @@ export default function Green() {
     navigate("/green/login", { replace: true });
   };
 
+  const changeGreenPassword = async () => {
+    if (!greenAuthUser?.id || greenAuthUser.id <= 0) {
+      toast.error("Password change is not available for this account.");
+      return;
+    }
+    const currentPassword = window.prompt("Enter your current password");
+    if (currentPassword === null) return;
+    const newPassword = window.prompt("Enter a new password (minimum 6 characters)");
+    if (newPassword === null) return;
+    const confirmPassword = window.prompt("Confirm your new password");
+    if (confirmPassword === null) return;
+    if (newPassword !== confirmPassword) {
+      toast.error("New password confirmation does not match.");
+      return;
+    }
+    if (String(newPassword).length < 6) {
+      toast.error("New password must be at least 6 characters.");
+      return;
+    }
+    try {
+      await api.post("/green/auth/change-password", {
+        user_id: greenAuthUser.id,
+        current_password: currentPassword,
+        new_password: newPassword,
+        app: "green",
+      });
+      toast.success("Password updated successfully.");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to change password");
+    }
+  };
+
   const requestGreenNotificationPermission = async () => {
     if (!canUseBrowserNotifications()) return;
     try {
@@ -2234,6 +2266,11 @@ export default function Green() {
               <span className="green-profile-chip" title={greenAuthUser.organization_name || undefined}>
                 {greenAuthUser.full_name}
               </span>
+            )}
+            {greenAuthUser?.id && greenAuthUser.id > 0 && (
+              <button className="green-ghost-btn" onClick={changeGreenPassword} type="button">
+                Change Password
+              </button>
             )}
             <button className="green-ghost-btn" onClick={logoutGreen} type="button">
               Logout
