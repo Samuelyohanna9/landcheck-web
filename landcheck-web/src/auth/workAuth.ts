@@ -14,6 +14,8 @@ export type WorkAuthUser = {
   organization_id?: number | null;
   organization_name?: string | null;
   organization_slug?: string | null;
+  organization_status?: string | null;
+  organization_is_active?: boolean;
   organization_logo_url?: string | null;
 };
 
@@ -47,6 +49,14 @@ export const getWorkAuthSession = (): WorkAuthSession | null => {
     }
     const session = parsed as WorkAuthSession;
     if (session.auth_mode === "partner_user" && !Number.isFinite(Number(session.user?.organization_id))) {
+      window.localStorage.removeItem(WORK_AUTH_STORAGE_KEY);
+      return null;
+    }
+    if (
+      session.auth_mode === "partner_user" &&
+      (session.user?.organization_is_active === false ||
+        String(session.user?.organization_status || "").trim().toLowerCase() === "suspended")
+    ) {
       window.localStorage.removeItem(WORK_AUTH_STORAGE_KEY);
       return null;
     }
@@ -108,6 +118,8 @@ export const loginWork = async (params: { username: string; password: string; or
       role_name: "Super Admin",
       allow_work: true,
       allow_green: true,
+      organization_status: null,
+      organization_is_active: true,
     },
   };
   setWorkAuthed(session);

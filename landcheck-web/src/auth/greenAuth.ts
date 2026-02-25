@@ -14,6 +14,8 @@ export type GreenAuthUser = {
   organization_id?: number | null;
   organization_name?: string | null;
   organization_slug?: string | null;
+  organization_status?: string | null;
+  organization_is_active?: boolean;
   organization_logo_url?: string | null;
 };
 
@@ -30,7 +32,18 @@ export const getGreenAuthSession = (): GreenAuthSession | null => {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    if (parsed && parsed.authed && parsed.user) return parsed as GreenAuthSession;
+    if (parsed && parsed.authed && parsed.user) {
+      const session = parsed as GreenAuthSession;
+      if (
+        session.auth_mode === "partner_user" &&
+        (session.user?.organization_is_active === false ||
+          String(session.user?.organization_status || "").trim().toLowerCase() === "suspended")
+      ) {
+        window.localStorage.removeItem(GREEN_AUTH_STORAGE_KEY);
+        return null;
+      }
+      return session;
+    }
   } catch {
     return null;
   }
@@ -74,6 +87,8 @@ export const loginGreen = async (params: { username: string; password: string; o
       role_name: "Super Admin",
       allow_work: true,
       allow_green: true,
+      organization_status: null,
+      organization_is_active: true,
     },
   };
   setGreenAuthed(session);

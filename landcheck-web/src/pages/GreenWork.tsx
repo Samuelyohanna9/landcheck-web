@@ -1199,6 +1199,7 @@ export default function GreenWork() {
   const workAuthSession = getWorkAuthSession();
   const canAccessSuperAdmin = workAuthSession?.auth_mode === "env_admin";
   const isPartnerWorkSession = workAuthSession?.auth_mode === "partner_user";
+  const normalizeOrgLifecycleStatus = (value: unknown) => String(value || "").trim().toLowerCase();
   const workScopedOrganizationId =
     isPartnerWorkSession && Number.isFinite(Number(workAuthSession?.user?.organization_id))
       ? Number(workAuthSession?.user?.organization_id)
@@ -1231,6 +1232,8 @@ export default function GreenWork() {
 
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const mapCardRef = useRef<HTMLDivElement | null>(null);
+  const workPauseNoticeShownRef = useRef(false);
+  const workSuspendNoticeShownRef = useRef(false);
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -4193,6 +4196,16 @@ export default function GreenWork() {
         workAuthSession?.user?.organization_name ||
         "Partner")
     : "Partner";
+  const workSessionOrgStatus = normalizeOrgLifecycleStatus(workAuthSession?.user?.organization_status);
+  const workRuntimeOrgStatus = normalizeOrgLifecycleStatus(
+    activeProjectRecord?.organization_status || projects[0]?.organization_status || ""
+  );
+  const workEffectiveOrgStatus = isPartnerWorkSession ? (workRuntimeOrgStatus || workSessionOrgStatus) : "";
+  const workPartnerOrgInactive = Boolean(isPartnerWorkSession && workAuthSession?.user?.organization_is_active === false);
+  const workPartnerOrgSuspended = Boolean(
+    isPartnerWorkSession && (workPartnerOrgInactive || workEffectiveOrgStatus === "suspended")
+  );
+  const workPartnerOrgPaused = Boolean(isPartnerWorkSession && !workPartnerOrgSuspended && workEffectiveOrgStatus === "paused");
   const deleteProjectNameMatches = useMemo(() => {
     if (!activeProjectRecord) return false;
     return deleteProjectConfirmName.trim() === String(activeProjectRecord.name || "").trim();
@@ -4521,6 +4534,14 @@ export default function GreenWork() {
       setMenuOpen(false);
       return;
     }
+    if (
+      workPartnerOrgPaused &&
+      (form === "create_project" || form === "add_user" || form === "assign_work" || form === "assign_task")
+    ) {
+      toast.error("Organization is paused. Read-only mode is enabled (view and export only).");
+      setMenuOpen(false);
+      return;
+    }
     setActiveForm(form);
     setMenuOpen(false);
     setStaffMenu(null);
@@ -4531,6 +4552,48 @@ export default function GreenWork() {
     clearWorkAuthed();
     navigate("/green-work/login", { replace: true });
   };
+
+  useEffect(() => {
+    if (!workPartnerOrgSuspended) return;
+    if (workSuspendNoticeShownRef.current) return;
+    workSuspendNoticeShownRef.current = true;
+    toast.error("Your organization is suspended. Access is blocked.");
+    clearWorkAuthed();
+    navigate("/green-work/login", { replace: true });
+  }, [workPartnerOrgSuspended, navigate]);
+
+  useEffect(() => {
+    if (!workPartnerOrgPaused) {
+      workPauseNoticeShownRef.current = false;
+      return;
+    }
+    if (workPauseNoticeShownRef.current) return;
+    workPauseNoticeShownRef.current = true;
+    toast("Organization is paused. Read-only mode is enabled (view and export only).", { icon: "!" });
+  }, [workPartnerOrgPaused]);
+
+  useEffect(() => {
+    if (!workPartnerOrgPaused) return;
+    const interceptorId = api.interceptors.request.use((config) => {
+      const method = String(config?.method || "get").trim().toLowerCase();
+      const url = String(config?.url || "");
+      const isReadMethod = method === "get" || method === "head" || method === "options";
+      const isPasswordChange = method === "post" && url.includes("/green/auth/change-password");
+      if (isReadMethod || isPasswordChange) {
+        return config;
+      }
+      return Promise.reject({
+        response: {
+          data: {
+            detail: "Organization is paused. Read-only mode is enabled. Viewing and exports only.",
+          },
+        },
+      });
+    });
+    return () => {
+      api.interceptors.request.eject(interceptorId);
+    };
+  }, [workPartnerOrgPaused]);
 
   const closeWorkPasswordModal = (force = false) => {
     if (workPasswordModalSaving && !force) return;
@@ -4600,7 +4663,20 @@ export default function GreenWork() {
     setActiveForm(activeProjectId ? "overview" : "project_focus");
   }, [activeForm, activeProjectId, canAccessSuperAdmin]);
 
+  useEffect(() => {
+    if (!workPartnerOrgPaused) return;
+    if (!activeForm) return;
+    if (!["create_project", "add_user", "assign_work", "assign_task"].includes(activeForm)) return;
+    setActiveForm(activeProjectId ? "overview" : "project_focus");
+  }, [workPartnerOrgPaused, activeForm, activeProjectId]);
+
   const openAssignWorkForUser = (userName: string) => {
+    if (workPartnerOrgPaused) {
+      toast.error("Organization is paused. Read-only mode is enabled (view and export only).");
+      setStaffMenu(null);
+      setLiveTreeMenu(null);
+      return;
+    }
     if (!activeProjectId) {
       toast("Select an active project first.");
       setStaffMenu(null);
@@ -4615,6 +4691,12 @@ export default function GreenWork() {
   };
 
   const openAssignTaskForUser = (userName: string) => {
+    if (workPartnerOrgPaused) {
+      toast.error("Organization is paused. Read-only mode is enabled (view and export only).");
+      setStaffMenu(null);
+      setLiveTreeMenu(null);
+      return;
+    }
     if (!activeProjectId) {
       toast("Select an active project first.");
       setStaffMenu(null);
@@ -4629,6 +4711,11 @@ export default function GreenWork() {
   };
 
   const openAssignTaskForTree = (treeId: number, preferredTaskType?: string) => {
+    if (workPartnerOrgPaused) {
+      toast.error("Organization is paused. Read-only mode is enabled (view and export only).");
+      setLiveTreeMenu(null);
+      return;
+    }
     if (!activeProjectId) {
       toast("Select an active project first.");
       setLiveTreeMenu(null);
@@ -4702,6 +4789,25 @@ export default function GreenWork() {
           </button>
         </div>
       </div>
+
+      {workPartnerOrgPaused && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            margin: "8px 12px 0",
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: "1px solid #d8c169",
+            background: "#fff7d6",
+            color: "#5f4b00",
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          Organization is paused. Users can view data and export reports only. Create/edit/review actions are disabled.
+        </div>
+      )}
 
       {activeProjectId && (
         <div className="green-work-active-hub-wrap">
