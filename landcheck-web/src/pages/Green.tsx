@@ -3597,7 +3597,7 @@ export default function Green() {
               <button
                 type="button"
                 className="green-password-close"
-                onClick={closeGreenPasswordModal}
+                onClick={() => closeGreenPasswordModal()}
                 disabled={greenPasswordModalSaving}
                 aria-label="Close password dialog"
               >
@@ -3663,7 +3663,7 @@ export default function Green() {
                 <button
                   type="button"
                   className="green-btn-outline"
-                  onClick={closeGreenPasswordModal}
+                  onClick={() => closeGreenPasswordModal()}
                   disabled={greenPasswordModalSaving}
                 >
                   Cancel
