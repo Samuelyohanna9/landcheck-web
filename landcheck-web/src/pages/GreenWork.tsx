@@ -4177,9 +4177,22 @@ export default function GreenWork() {
     if (!activeProjectId) return null;
     return projects.find((p) => Number(p.id) === Number(activeProjectId)) || null;
   }, [projects, activeProjectId]);
-  const partnerLogoUrl =
-    activeProjectRecord?.organization_logo_url || workAuthSession?.user?.organization_logo_url || null;
-  const partnerLogoName = activeProjectRecord?.organization_name || workAuthSession?.user?.organization_name || "Partner";
+  const activeProjectOrgId =
+    activeProjectRecord && Number.isFinite(Number(activeProjectRecord.organization_id))
+      ? Number(activeProjectRecord.organization_id)
+      : null;
+  const activeProjectMatchesWorkSessionOrg =
+    Boolean(isPartnerWorkSession && workScopedOrganizationId && activeProjectOrgId === workScopedOrganizationId);
+  const partnerLogoUrl = isPartnerWorkSession
+    ? ((activeProjectMatchesWorkSessionOrg ? activeProjectRecord?.organization_logo_url || null : null) ||
+        workAuthSession?.user?.organization_logo_url ||
+        null)
+    : null;
+  const partnerLogoName = isPartnerWorkSession
+    ? ((activeProjectMatchesWorkSessionOrg ? activeProjectRecord?.organization_name || null : null) ||
+        workAuthSession?.user?.organization_name ||
+        "Partner")
+    : "Partner";
   const deleteProjectNameMatches = useMemo(() => {
     if (!activeProjectRecord) return false;
     return deleteProjectConfirmName.trim() === String(activeProjectRecord.name || "").trim();
