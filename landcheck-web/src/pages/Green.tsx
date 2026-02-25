@@ -562,6 +562,7 @@ export default function Green() {
   const navigate = useNavigate();
   const greenAuthSession = useMemo(() => getGreenAuthSession(), []);
   const greenAuthUser = greenAuthSession?.user || null;
+  const normalizeOrgLifecycleStatus = (value: unknown) => String(value || "").trim().toLowerCase();
   const greenScopedOrganizationId =
     greenAuthSession?.auth_mode === "partner_user" && Number.isFinite(Number(greenAuthUser?.organization_id))
       ? Number(greenAuthUser?.organization_id)
@@ -677,11 +678,23 @@ export default function Green() {
     isPartnerGreenSession
       ? ((activeProjectMatchesGreenSessionOrg ? activeProject?.organization_name || null : null) || greenSessionPartnerName)
       : null;
+  const greenSessionOrgStatus = normalizeOrgLifecycleStatus(greenAuthUser?.organization_status);
+  const greenRuntimeOrgStatus = normalizeOrgLifecycleStatus(activeProject?.organization_status || projects[0]?.organization_status || "");
+  const greenEffectiveOrgStatus = isPartnerGreenSession ? (greenRuntimeOrgStatus || greenSessionOrgStatus) : "";
+  const greenPartnerOrgInactive = Boolean(isPartnerGreenSession && greenAuthUser?.organization_is_active === false);
+  const greenPartnerOrgSuspended = Boolean(
+    isPartnerGreenSession && (greenPartnerOrgInactive || greenEffectiveOrgStatus === "suspended")
+  );
+  const greenPartnerOrgPaused = Boolean(
+    isPartnerGreenSession && !greenPartnerOrgSuspended && greenEffectiveOrgStatus === "paused"
+  );
   const isLockedGreenUserSession = Boolean(lockedGreenActorName);
   const seenTaskIdsRef = useRef<Set<number>>(new Set());
   const seenOrderIdsRef = useRef<Set<number>>(new Set());
   const taskNotifyPrimedRef = useRef(false);
   const orderNotifyPrimedRef = useRef(false);
+  const greenPauseNoticeShownRef = useRef(false);
+  const greenSuspendNoticeShownRef = useRef(false);
 
   const logoutGreen = () => {
     clearGreenAuthed();
@@ -711,6 +724,59 @@ export default function Green() {
     }
     setGreenPasswordModalOpen(true);
   };
+
+  const ensureGreenWritesAllowed = () => {
+    if (!greenPartnerOrgPaused) return true;
+    toast.error("Organization is paused. Read-only mode is enabled (view and export only).");
+    return false;
+  };
+
+  useEffect(() => {
+    if (!greenPartnerOrgSuspended) return;
+    if (greenSuspendNoticeShownRef.current) return;
+    greenSuspendNoticeShownRef.current = true;
+    toast.error("Your organization is suspended. Access is blocked.");
+    clearGreenAuthed();
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("landcheck_green_active_user");
+      window.localStorage.removeItem("landcheck_green_active_section");
+      window.localStorage.removeItem("landcheck_green_active_project_id");
+    }
+    navigate("/green/login", { replace: true });
+  }, [greenPartnerOrgSuspended, navigate]);
+
+  useEffect(() => {
+    if (!greenPartnerOrgPaused) {
+      greenPauseNoticeShownRef.current = false;
+      return;
+    }
+    if (greenPauseNoticeShownRef.current) return;
+    greenPauseNoticeShownRef.current = true;
+    toast("Organization is paused. Read-only mode is enabled (view and export only).", { icon: "!" });
+  }, [greenPartnerOrgPaused]);
+
+  useEffect(() => {
+    if (!greenPartnerOrgPaused) return;
+    const interceptorId = api.interceptors.request.use((config) => {
+      const method = String(config?.method || "get").trim().toLowerCase();
+      const url = String(config?.url || "");
+      const isReadMethod = method === "get" || method === "head" || method === "options";
+      const isPasswordChange = method === "post" && url.includes("/green/auth/change-password");
+      if (isReadMethod || isPasswordChange) {
+        return config;
+      }
+      return Promise.reject({
+        response: {
+          data: {
+            detail: "Organization is paused. Read-only mode is enabled. Viewing and exports only.",
+          },
+        },
+      });
+    });
+    return () => {
+      api.interceptors.request.eject(interceptorId);
+    };
+  }, [greenPartnerOrgPaused]);
 
   const submitGreenPasswordChange = async () => {
     if (!greenAuthUser?.id || greenAuthUser.id <= 0) {
@@ -1068,8 +1134,11 @@ export default function Green() {
       await cacheProjectsOffline(list).catch(() => {});
     } catch (error) {
       const cached = await getCachedProjectsOffline().catch(() => []);
-      if (cached.length > 0) {
-        setProjects(cached);
+      const scopedCached = greenScopedOrganizationId
+        ? cached.filter((row: any) => Number(row?.organization_id || 0) === Number(greenScopedOrganizationId))
+        : cached;
+      if (scopedCached.length > 0) {
+        setProjects(scopedCached);
         return;
       }
       throw error;
@@ -1086,8 +1155,11 @@ export default function Green() {
       await cacheUsersOffline(list).catch(() => {});
     } catch (error) {
       const cached = await getCachedUsersOffline().catch(() => []);
-      if (cached.length > 0) {
-        setUsers(cached);
+      const scopedCached = greenScopedOrganizationId
+        ? cached.filter((row: any) => Number(row?.organization_id || 0) === Number(greenScopedOrganizationId))
+        : cached;
+      if (scopedCached.length > 0) {
+        setUsers(scopedCached);
         return;
       }
       throw error;
@@ -1485,6 +1557,7 @@ export default function Green() {
   };
 
   const addTree = async () => {
+    if (!ensureGreenWritesAllowed()) return;
     if (!activeProject) return;
     if (addingTree) return;
     if (!activeUser) {
@@ -1638,6 +1711,7 @@ export default function Green() {
   };
 
   const updateTreeHeight = async (treeId: number, rawHeight: string) => {
+    if (!ensureGreenWritesAllowed()) return;
     if (!activeProject) return;
     const parsed = parseTreeHeightInput(rawHeight);
     if (String(rawHeight || "").trim() && parsed === null) {
@@ -1668,6 +1742,7 @@ export default function Green() {
   };
 
   const updateTreeAgeMonths = async (treeId: number, rawAgeMonths: string) => {
+    if (!ensureGreenWritesAllowed()) return;
     const parsed = parseTreeAgeMonthsInput(rawAgeMonths);
     if (String(rawAgeMonths || "").trim() && parsed === null) {
       toast.error("Estimated tree age must be a number between 0 and 2400 months.");
@@ -1779,6 +1854,7 @@ export default function Green() {
   };
 
   const saveTaskUpdate = async (taskId: number) => {
+    if (!ensureGreenWritesAllowed()) return;
     const task = myTasks.find((entry: any) => entry.id === taskId);
     const edit = buildTaskEdit(task, taskEdits[taskId]);
     if (isTaskLockedForField(task)) {
@@ -1810,6 +1886,7 @@ export default function Green() {
   };
 
   const submitTaskForReview = async (taskId: number) => {
+    if (!ensureGreenWritesAllowed()) return;
     const task = myTasks.find((entry: any) => entry.id === taskId);
     if (!task) return;
     if (isTaskLockedForField(task)) {
@@ -1916,6 +1993,15 @@ export default function Green() {
     folder: "trees" | "tasks",
     link?: { treeId?: number; taskId?: number }
   ) => {
+    if (!ensureGreenWritesAllowed()) {
+      throw {
+        response: {
+          data: {
+            detail: "Organization is paused. Read-only mode is enabled. Viewing and exports only.",
+          },
+        },
+      };
+    }
     const formData = new FormData();
     formData.append("file", file);
     formData.append("folder", folder);
@@ -1930,6 +2016,7 @@ export default function Green() {
   };
 
   const onTaskPhotoPicked = async (taskId: number, files: FileList | File[] | null) => {
+    if (!ensureGreenWritesAllowed()) return;
     const pickedFiles = files ? Array.from(files).filter(Boolean) : [];
     if (!pickedFiles.length) return;
     const task = myTasks.find((entry: any) => entry.id === taskId);
@@ -2026,6 +2113,7 @@ export default function Green() {
   };
 
   const updateTreeStatus = async (treeId: number, status: string) => {
+    if (!ensureGreenWritesAllowed()) return;
     try {
       await api.patch(`/green/trees/${treeId}`, { status });
       if (activeProject) {
@@ -2166,6 +2254,7 @@ export default function Green() {
   };
 
   const onInspectedTreePhotoPicked = async (file: File | null) => {
+    if (!ensureGreenWritesAllowed()) return;
     if (!file || !inspectedTree) return;
     const treeId = inspectedTree.id;
     setTreePhotoUploading(true);
@@ -2331,6 +2420,25 @@ export default function Green() {
           </div>
         </div>
       </header>
+
+      {greenPartnerOrgPaused && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            margin: "8px 12px 0",
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: "1px solid #d8c169",
+            background: "#fff7d6",
+            color: "#5f4b00",
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          Organization is paused. You can view project data and export reports only. Tree planting, maintenance updates, and edits are disabled.
+        </div>
+      )}
 
       <main className="green-shell">
         {activeSection === null && introGateOpen && (
