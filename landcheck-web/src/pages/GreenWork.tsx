@@ -2171,6 +2171,10 @@ export default function GreenWork() {
   };
 
   const createCustodian = async () => {
+    if (workPartnerOrgPaused) {
+      toast.error("Organization is paused. Custodian operations are disabled. PDF export only.");
+      return;
+    }
     if (!activeProjectId) return;
     if (!newCustodian.name.trim()) {
       toast.error("Custodian name required");
@@ -2211,6 +2215,10 @@ export default function GreenWork() {
   };
 
   const updateCustodianVerification = async (custodianId: number, nextStatus: string) => {
+    if (workPartnerOrgPaused) {
+      toast.error("Organization is paused. Custodian operations are disabled. PDF export only.");
+      return;
+    }
     if (!activeProjectId) return;
     try {
       await api.patch(`/green/custodians/${custodianId}`, {
@@ -2228,6 +2236,10 @@ export default function GreenWork() {
   };
 
   const createDistributionEvent = async () => {
+    if (workPartnerOrgPaused) {
+      toast.error("Organization is paused. Custodian operations are disabled. PDF export only.");
+      return;
+    }
     if (!activeProjectId) return;
     if (!newDistributionEvent.event_date) {
       toast.error("Distribution date required");
@@ -2262,6 +2274,10 @@ export default function GreenWork() {
   };
 
   const upsertDistributionAllocation = async () => {
+    if (workPartnerOrgPaused) {
+      toast.error("Organization is paused. Custodian operations are disabled. PDF export only.");
+      return;
+    }
     if (!activeProjectId) return;
     const eventId = Number(newAllocation.event_id || 0);
     const custodianId = Number(newAllocation.custodian_id || 0);
@@ -2305,6 +2321,10 @@ export default function GreenWork() {
   };
 
   const openCustodianSupervisionAssign = (custodianId: number) => {
+    if (workPartnerOrgPaused) {
+      toast.error("Organization is paused. Custodian operations are disabled. PDF export only.");
+      return;
+    }
     const allocationRows = distributionAllocations
       .filter((row) => Number(row.custodian_id) === Number(custodianId))
       .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
@@ -2331,6 +2351,10 @@ export default function GreenWork() {
   };
 
   const assignCustodianSupervision = async () => {
+    if (workPartnerOrgPaused) {
+      toast.error("Organization is paused. Custodian operations are disabled. PDF export only.");
+      return;
+    }
     if (!activeProjectId || !custodianAssignDraft) return;
     const allocationId = Number(custodianAssignDraft.allocation_id || 0);
     if (!allocationId) {
@@ -3174,6 +3198,10 @@ export default function GreenWork() {
   };
 
   const exportWorkCsv = () => {
+    if (workPartnerOrgPaused) {
+      toast.error("Organization is paused. Only PDF exports are allowed.");
+      return;
+    }
     if (!activeProjectId) return;
     window.open(`${BACKEND_URL}/green/donor/export/csv?project_id=${activeProjectId}`, "_blank");
   };
@@ -3200,6 +3228,10 @@ export default function GreenWork() {
   };
 
   const exportWorkVerra = () => {
+    if (workPartnerOrgPaused) {
+      toast.error("Organization is paused. Only PDF exports are allowed.");
+      return;
+    }
     if (!activeProjectId) return;
     const quickSeason = verraFilters.season_mode || seasonMode;
     const quickAssignee = verraFilters.assignee_name && verraFilters.assignee_name !== "all"
@@ -3231,6 +3263,10 @@ export default function GreenWork() {
   };
 
   const exportExistingTreesCsv = () => {
+    if (workPartnerOrgPaused) {
+      toast.error("Organization is paused. Only PDF exports are allowed.");
+      return;
+    }
     if (!activeProjectId) return;
     const params = new URLSearchParams({
       _ts: String(Date.now()),
@@ -3251,6 +3287,10 @@ export default function GreenWork() {
     format: VerraExportFormat,
     overrides?: Partial<typeof verraFilters>,
   ) => {
+    if (workPartnerOrgPaused) {
+      toast.error("Organization is paused. Only PDF exports are allowed.");
+      return;
+    }
     if (!activeProjectId) return;
     const merged = {
       ...verraFilters,
@@ -4670,6 +4710,12 @@ export default function GreenWork() {
     setActiveForm(activeProjectId ? "overview" : "project_focus");
   }, [workPartnerOrgPaused, activeForm, activeProjectId]);
 
+  useEffect(() => {
+    if (!workPartnerOrgPaused) return;
+    if (!custodianOptionsExpanded) return;
+    setCustodianOptionsExpanded(false);
+  }, [workPartnerOrgPaused, custodianOptionsExpanded]);
+
   const openAssignWorkForUser = (userName: string) => {
     if (workPartnerOrgPaused) {
       toast.error("Organization is paused. Read-only mode is enabled (view and export only).");
@@ -5347,18 +5393,27 @@ export default function GreenWork() {
                 <p className="green-work-note">
                   One hub for monitoring, custodian registration, distribution events, and custodian PDF export.
                 </p>
+                {workPartnerOrgPaused && (
+                  <p className="green-work-note" style={{ color: "#8a6500", fontWeight: 700 }}>
+                    Organization is paused. Custodian operations are disabled. Only Custodian PDF export is allowed.
+                  </p>
+                )}
                 <div className="work-actions">
                   <button
                     type="button"
                     className="green-work-option-toggle"
                     onClick={() => setCustodianOptionsExpanded((prev) => !prev)}
+                    disabled={workPartnerOrgPaused}
+                    title={workPartnerOrgPaused ? "Paused organizations cannot use custodian setup/actions" : undefined}
                   >
                     {custodianOptionsExpanded ? "Hide Custodian Options" : "Custodian Options"}
                   </button>
                 </div>
                 {!custodianOptionsExpanded && (
                   <p className="green-work-note">
-                    Setup forms are hidden to reduce clutter. Open Custodian Options to add custodians, events, allocations, and export reports.
+                    {workPartnerOrgPaused
+                      ? "Custodian setup/actions are locked while paused. Use the Custodian PDF export only."
+                      : "Setup forms are hidden to reduce clutter. Open Custodian Options to add custodians, events, allocations, and export reports."}
                   </p>
                 )}
               </div>
@@ -5460,10 +5515,18 @@ export default function GreenWork() {
                         </div>
                         {custodian.notes && <div className="staff-row-meta">Notes: {custodian.notes}</div>}
                         <div className="work-actions">
-                          <button type="button" onClick={() => void updateCustodianVerification(custodian.id, "verified")}>
+                          <button
+                            type="button"
+                            onClick={() => void updateCustodianVerification(custodian.id, "verified")}
+                            disabled={workPartnerOrgPaused}
+                          >
                             Mark Verified
                           </button>
-                          <button type="button" onClick={() => void updateCustodianVerification(custodian.id, "pending")}>
+                          <button
+                            type="button"
+                            onClick={() => void updateCustodianVerification(custodian.id, "pending")}
+                            disabled={workPartnerOrgPaused}
+                          >
                             Mark Pending
                           </button>
                         </div>
@@ -6753,9 +6816,13 @@ export default function GreenWork() {
               <div className="green-work-row">
                 <h3>Project Overview</h3>
                 <div className="work-actions">
-                  <button onClick={exportWorkCsv}>Export CSV</button>
+                  <button onClick={exportWorkCsv} disabled={workPartnerOrgPaused} title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}>
+                    Export CSV
+                  </button>
                   <button onClick={exportWorkPdf}>Export PDF</button>
-                  <button onClick={exportWorkVerra}>Export Verra VCS</button>
+                  <button onClick={exportWorkVerra} disabled={workPartnerOrgPaused} title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}>
+                    Export Verra VCS
+                  </button>
                   <label className="green-work-export-photo-toggle">
                     <input
                       type="checkbox"
@@ -7037,13 +7104,28 @@ export default function GreenWork() {
               <div className="green-work-row">
                 <h3>Verra Reports</h3>
                 <div className="work-actions">
-                  <button type="button" onClick={() => exportVerraPackage("zip")}>
+                  <button
+                    type="button"
+                    onClick={() => exportVerraPackage("zip")}
+                    disabled={workPartnerOrgPaused}
+                    title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}
+                  >
                     Export Verra ZIP
                   </button>
-                  <button type="button" onClick={() => exportVerraPackage("json")}>
+                  <button
+                    type="button"
+                    onClick={() => exportVerraPackage("json")}
+                    disabled={workPartnerOrgPaused}
+                    title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}
+                  >
                     Export Verra JSON
                   </button>
-                  <button type="button" onClick={() => exportVerraPackage("docx")}>
+                  <button
+                    type="button"
+                    onClick={() => exportVerraPackage("docx")}
+                    disabled={workPartnerOrgPaused}
+                    title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}
+                  >
                     Export Verra DOCX
                   </button>
                   <button type="button" onClick={() => void loadVerraHistory(activeProjectId)}>
@@ -7413,7 +7495,12 @@ export default function GreenWork() {
               <div className="green-work-row">
                 <h3>Existing Tree Live Table</h3>
                 <div className="work-actions">
-                  <button type="button" onClick={exportExistingTreesCsv}>
+                  <button
+                    type="button"
+                    onClick={exportExistingTreesCsv}
+                    disabled={workPartnerOrgPaused}
+                    title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}
+                  >
                     Export CSV
                   </button>
                   <button type="button" onClick={exportExistingTreesPdf}>
@@ -7566,6 +7653,7 @@ export default function GreenWork() {
                                   type="button"
                                   className="green-work-link-btn"
                                   onClick={() => openCustodianSupervisionAssign(Number(row.custodian.id))}
+                                  disabled={workPartnerOrgPaused}
                                 >
                                   {row.custodian.name || "-"}
                                 </button>
@@ -7588,6 +7676,7 @@ export default function GreenWork() {
                                   type="button"
                                   className="green-row-btn"
                                   onClick={() => openCustodianSupervisionAssign(Number(row.custodian.id))}
+                                  disabled={workPartnerOrgPaused}
                                 >
                                   Assign Supervision
                                 </button>
@@ -7608,6 +7697,7 @@ export default function GreenWork() {
                                               : prev,
                                           )
                                         }
+                                        disabled={workPartnerOrgPaused}
                                       >
                                         {rowAllocations.map((allocation) => (
                                           <option key={`row-allocation-${allocation.id}`} value={allocation.id}>
@@ -7627,6 +7717,7 @@ export default function GreenWork() {
                                             prev ? { ...prev, assignee_name: e.target.value } : prev,
                                           )
                                         }
+                                        disabled={workPartnerOrgPaused}
                                       >
                                         <option value="">Select staff</option>
                                         {users.map((user) => (
@@ -7648,6 +7739,7 @@ export default function GreenWork() {
                                             prev ? { ...prev, visits_to_assign: Number(e.target.value || 1) } : prev,
                                           )
                                         }
+                                        disabled={workPartnerOrgPaused}
                                       />
                                     </label>
                                     <label>
@@ -7660,10 +7752,15 @@ export default function GreenWork() {
                                             prev ? { ...prev, due_date: e.target.value } : prev,
                                           )
                                         }
+                                        disabled={workPartnerOrgPaused}
                                       />
                                     </label>
                                     <div className="work-actions">
-                                      <button type="button" onClick={() => void assignCustodianSupervision()}>
+                                      <button
+                                        type="button"
+                                        onClick={() => void assignCustodianSupervision()}
+                                        disabled={workPartnerOrgPaused}
+                                      >
                                         Assign
                                       </button>
                                       <button type="button" onClick={() => setCustodianAssignDraft(null)}>
