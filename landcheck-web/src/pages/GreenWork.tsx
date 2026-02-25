@@ -2722,8 +2722,22 @@ export default function GreenWork() {
         await api.patch(`/green/admin/organizations/${editingOrganizationId}`, payload);
         toast.success("Organization updated");
       } else {
-        await api.post("/green/admin/organizations", payload);
-        toast.success("Organization created");
+        const res = await api.post("/green/admin/organizations", payload);
+        const created = res?.data || {};
+        const welcomeAttempted = Boolean(created?.welcome_email_attempted);
+        const welcomeSent = Boolean(created?.welcome_email_sent);
+        const welcomeError = String(created?.welcome_email_error || "").trim();
+        if (welcomeAttempted && welcomeSent) {
+          toast.success("Organization created. Welcome email sent.");
+        } else if (welcomeAttempted && welcomeError) {
+          toast.success("Organization created.");
+          toast.error(`Welcome email not sent: ${welcomeError}`);
+        } else if (!String(payload.contact_email || "").trim()) {
+          toast.success("Organization created.");
+          toast("Add a contact email to send the welcome message automatically.");
+        } else {
+          toast.success("Organization created");
+        }
       }
       setEditingOrganizationId(null);
       setNewOrganization({
