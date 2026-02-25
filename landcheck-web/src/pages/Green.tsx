@@ -650,6 +650,14 @@ export default function Green() {
       return "default";
     }
   });
+  const [greenPasswordModalOpen, setGreenPasswordModalOpen] = useState(false);
+  const [greenPasswordModalSaving, setGreenPasswordModalSaving] = useState(false);
+  const [greenPasswordModalShow, setGreenPasswordModalShow] = useState(false);
+  const [greenPasswordForm, setGreenPasswordForm] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
+  });
   const greenSessionPartnerLogo = greenAuthUser?.organization_logo_url || null;
   const greenSessionPartnerName = greenAuthUser?.organization_name || null;
   const isLockedGreenUserSession = Boolean(lockedGreenActorName);
@@ -668,17 +676,41 @@ export default function Green() {
     navigate("/green/login", { replace: true });
   };
 
-  const changeGreenPassword = async () => {
+  const closeGreenPasswordModal = (force = false) => {
+    if (greenPasswordModalSaving && !force) return;
+    setGreenPasswordModalOpen(false);
+    setGreenPasswordModalShow(false);
+    setGreenPasswordForm({
+      current_password: "",
+      new_password: "",
+      confirm_password: "",
+    });
+  };
+
+  const openGreenPasswordModal = () => {
     if (!greenAuthUser?.id || greenAuthUser.id <= 0) {
       toast.error("Password change is not available for this account.");
       return;
     }
-    const currentPassword = window.prompt("Enter your current password");
-    if (currentPassword === null) return;
-    const newPassword = window.prompt("Enter a new password (minimum 6 characters)");
-    if (newPassword === null) return;
-    const confirmPassword = window.prompt("Confirm your new password");
-    if (confirmPassword === null) return;
+    setGreenPasswordModalOpen(true);
+  };
+
+  const submitGreenPasswordChange = async () => {
+    if (!greenAuthUser?.id || greenAuthUser.id <= 0) {
+      toast.error("Password change is not available for this account.");
+      return;
+    }
+    const currentPassword = String(greenPasswordForm.current_password || "");
+    const newPassword = String(greenPasswordForm.new_password || "");
+    const confirmPassword = String(greenPasswordForm.confirm_password || "");
+    if (!currentPassword) {
+      toast.error("Current password is required.");
+      return;
+    }
+    if (!newPassword) {
+      toast.error("New password is required.");
+      return;
+    }
     if (newPassword !== confirmPassword) {
       toast.error("New password confirmation does not match.");
       return;
@@ -687,6 +719,7 @@ export default function Green() {
       toast.error("New password must be at least 6 characters.");
       return;
     }
+    setGreenPasswordModalSaving(true);
     try {
       await api.post("/green/auth/change-password", {
         user_id: greenAuthUser.id,
@@ -695,8 +728,11 @@ export default function Green() {
         app: "green",
       });
       toast.success("Password updated successfully.");
+      closeGreenPasswordModal(true);
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || "Failed to change password");
+    } finally {
+      setGreenPasswordModalSaving(false);
     }
   };
 
@@ -2268,7 +2304,7 @@ export default function Green() {
               </span>
             )}
             {greenAuthUser?.id && greenAuthUser.id > 0 && (
-              <button className="green-ghost-btn" onClick={changeGreenPassword} type="button">
+              <button className="green-ghost-btn" onClick={openGreenPasswordModal} type="button">
                 Change Password
               </button>
             )}
@@ -3549,6 +3585,99 @@ export default function Green() {
                 </button>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {greenPasswordModalOpen && (
+        <div className="green-password-overlay" role="dialog" aria-modal="true" aria-labelledby="green-password-modal-title">
+          <div className="green-password-modal">
+            <div className="green-password-modal-head">
+              <strong id="green-password-modal-title">Change Password</strong>
+              <button
+                type="button"
+                className="green-password-close"
+                onClick={closeGreenPasswordModal}
+                disabled={greenPasswordModalSaving}
+                aria-label="Close password dialog"
+              >
+                X
+              </button>
+            </div>
+            <p className="green-password-note">
+              Update your login password for LandCheck Green and LandCheck Work.
+            </p>
+            <div className="green-password-fields">
+              <label>
+                Current Password
+                <input
+                  type={greenPasswordModalShow ? "text" : "password"}
+                  value={greenPasswordForm.current_password}
+                  onChange={(e) =>
+                    setGreenPasswordForm((prev) => ({ ...prev, current_password: e.target.value }))
+                  }
+                  autoFocus
+                  disabled={greenPasswordModalSaving}
+                  autoComplete="current-password"
+                />
+              </label>
+              <label>
+                New Password
+                <input
+                  type={greenPasswordModalShow ? "text" : "password"}
+                  value={greenPasswordForm.new_password}
+                  onChange={(e) => setGreenPasswordForm((prev) => ({ ...prev, new_password: e.target.value }))}
+                  disabled={greenPasswordModalSaving}
+                  autoComplete="new-password"
+                />
+              </label>
+              <label>
+                Confirm New Password
+                <input
+                  type={greenPasswordModalShow ? "text" : "password"}
+                  value={greenPasswordForm.confirm_password}
+                  onChange={(e) =>
+                    setGreenPasswordForm((prev) => ({ ...prev, confirm_password: e.target.value }))
+                  }
+                  disabled={greenPasswordModalSaving}
+                  autoComplete="new-password"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void submitGreenPasswordChange();
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            <div className="green-password-actions">
+              <button
+                type="button"
+                className="green-btn-outline"
+                onClick={() => setGreenPasswordModalShow((prev) => !prev)}
+                disabled={greenPasswordModalSaving}
+              >
+                {greenPasswordModalShow ? "Hide Passwords" : "Show Passwords"}
+              </button>
+              <div className="green-password-actions-right">
+                <button
+                  type="button"
+                  className="green-btn-outline"
+                  onClick={closeGreenPasswordModal}
+                  disabled={greenPasswordModalSaving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="green-btn-primary"
+                  onClick={() => void submitGreenPasswordChange()}
+                  disabled={greenPasswordModalSaving}
+                >
+                  {greenPasswordModalSaving ? "Saving..." : "Save Password"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
