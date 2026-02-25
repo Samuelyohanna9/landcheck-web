@@ -106,7 +106,9 @@
   width: 42px;
   height: 42px;
   border-radius: 9px;
+  background: #050505;
   border-color: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.32);
 }
 
 .green-work-title {
