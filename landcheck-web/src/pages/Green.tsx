@@ -658,8 +658,25 @@ export default function Green() {
     new_password: "",
     confirm_password: "",
   });
-  const greenSessionPartnerLogo = greenAuthUser?.organization_logo_url || null;
-  const greenSessionPartnerName = greenAuthUser?.organization_name || null;
+  const isPartnerGreenSession = greenAuthSession?.auth_mode === "partner_user";
+  const greenSessionPartnerOrgId =
+    isPartnerGreenSession && Number.isFinite(Number(greenAuthUser?.organization_id))
+      ? Number(greenAuthUser?.organization_id)
+      : null;
+  const greenSessionPartnerLogo = isPartnerGreenSession ? greenAuthUser?.organization_logo_url || null : null;
+  const greenSessionPartnerName = isPartnerGreenSession ? greenAuthUser?.organization_name || null : null;
+  const activeProjectOrgId =
+    activeProject && Number.isFinite(Number(activeProject.organization_id)) ? Number(activeProject.organization_id) : null;
+  const activeProjectMatchesGreenSessionOrg =
+    Boolean(isPartnerGreenSession && greenSessionPartnerOrgId && activeProjectOrgId === greenSessionPartnerOrgId);
+  const greenHeaderPartnerLogo =
+    isPartnerGreenSession
+      ? ((activeProjectMatchesGreenSessionOrg ? activeProject?.organization_logo_url || null : null) || greenSessionPartnerLogo)
+      : null;
+  const greenHeaderPartnerName =
+    isPartnerGreenSession
+      ? ((activeProjectMatchesGreenSessionOrg ? activeProject?.organization_name || null : null) || greenSessionPartnerName)
+      : null;
   const isLockedGreenUserSession = Boolean(lockedGreenActorName);
   const seenTaskIdsRef = useRef<Set<number>>(new Set());
   const seenOrderIdsRef = useRef<Set<number>>(new Set());
@@ -2263,11 +2280,11 @@ export default function Green() {
               <div className="green-brand-logo" aria-hidden="true">
                 <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
               </div>
-              {(activeProject?.organization_logo_url || greenSessionPartnerLogo) ? (
+              {greenHeaderPartnerLogo ? (
                 <div className="green-brand-logo green-brand-logo-partner" aria-hidden="true">
                   <img
-                    src={activeProject?.organization_logo_url || greenSessionPartnerLogo || ""}
-                    alt={`${activeProject?.organization_name || greenSessionPartnerName || "Partner"} logo`}
+                    src={greenHeaderPartnerLogo || ""}
+                    alt={`${greenHeaderPartnerName || "Partner"} logo`}
                   />
                 </div>
               ) : null}
