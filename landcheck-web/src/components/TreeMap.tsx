@@ -188,6 +188,7 @@ const TREE_LAYER_IDS = [TREE_CORE_LAYER_ID, TREE_OUTER_LAYER_ID];
 const ASSIGNMENT_AREA_SOURCE_ID = "assigned-planting-areas";
 const ASSIGNMENT_AREA_FILL_LAYER_ID = "assigned-planting-areas-fill";
 const ASSIGNMENT_AREA_LINE_LAYER_ID = "assigned-planting-areas-line";
+const ASSIGNMENT_AREA_LABEL_LAYER_ID = "assigned-planting-areas-label";
 
 const ACTIVE_TREE_STATUSES = new Set([
   "alive",
@@ -727,6 +728,25 @@ export default function TreeMap({
               "line-color": "#15803d",
               "line-width": 2.4,
               "line-opacity": 0.95,
+            },
+          });
+          map.addLayer({
+            id: ASSIGNMENT_AREA_LABEL_LAYER_ID,
+            type: "symbol",
+            source: ASSIGNMENT_AREA_SOURCE_ID,
+            layout: {
+              "text-field": ["coalesce", ["get", "label"], "Area"],
+              "text-size": 11,
+              "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+              "text-max-width": 14,
+              "text-anchor": "center",
+              "text-justify": "center",
+            },
+            paint: {
+              "text-color": "#064e3b",
+              "text-halo-color": "#ecfdf5",
+              "text-halo-width": 1.2,
+              "text-halo-blur": 0.1,
             },
           });
         }

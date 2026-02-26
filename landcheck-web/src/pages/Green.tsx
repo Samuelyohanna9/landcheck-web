@@ -86,9 +86,13 @@ type Tree = {
   status: string;
   notes: string | null;
   photo_url: string | null;
+  photo_urls?: string[] | null;
   created_by?: string | null;
   tree_height_m?: number | null;
   tree_age_months?: number | null;
+  inventory_tree_count?: number | null;
+  existing_area_geojson?: any;
+  existing_area_sqm?: number | null;
   tree_origin?: "new_planting" | "existing_inventory" | "natural_regeneration";
   attribution_scope?: "full" | "monitor_only";
   count_in_planting_kpis?: boolean;
@@ -195,6 +199,16 @@ const parseTreeAgeMonthsInput = (value: string | number | null | undefined): num
   if (!Number.isFinite(parsed)) return null;
   if (parsed < 0 || parsed > 2400) return null;
   return Number(parsed.toFixed(1));
+};
+const parseInventoryTreeCountInput = (value: string | number | null | undefined): number | null => {
+  if (value === null || value === undefined) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return null;
+  const rounded = Math.round(parsed);
+  if (rounded < 1 || rounded > 1000000) return null;
+  return rounded;
 };
 const formatTreeHeight = (value: number | null | undefined) => {
   const numeric = Number(value);
@@ -419,6 +433,24 @@ const extractAreaPoints = (geometry: { type: "Polygon" | "MultiPolygon"; coordin
   }
   return points;
 };
+const computeAreaCentroid = (geometry: { type: "Polygon" | "MultiPolygon"; coordinates: any } | null) => {
+  const points = extractAreaPoints(geometry);
+  if (!points.length) return null;
+  let minLng = points[0].lng;
+  let maxLng = points[0].lng;
+  let minLat = points[0].lat;
+  let maxLat = points[0].lat;
+  points.forEach((point) => {
+    if (point.lng < minLng) minLng = point.lng;
+    if (point.lng > maxLng) maxLng = point.lng;
+    if (point.lat < minLat) minLat = point.lat;
+    if (point.lat > maxLat) maxLat = point.lat;
+  });
+  return {
+    lng: Number(((minLng + maxLng) / 2).toFixed(6)),
+    lat: Number(((minLat + maxLat) / 2).toFixed(6)),
+  };
+};
 const isClosedWorkOrder = (value: string | null | undefined) => {
   const status = normalizeTaskState(value);
   return status === "done" || status === "completed" || status === "closed" || status === "cancelled";
@@ -617,6 +649,11 @@ export default function Green() {
   const [gpsLoading, setGpsLoading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const [pendingTreePhoto, setPendingTreePhoto] = useState<File | null>(null);
+  const [pendingTreePhotos, setPendingTreePhotos] = useState<File[]>([]);
+  const [treePhotoPreviews, setTreePhotoPreviews] = useState<string[]>([]);
+  const [existingTreeBatchMode, setExistingTreeBatchMode] = useState(false);
+  const [existingTreeBatchAreaGeojson, setExistingTreeBatchAreaGeojson] = useState<any | null>(null);
+  const [existingTreeBatchCount, setExistingTreeBatchCount] = useState<string>("");
   const [addingTree, setAddingTree] = useState(false);
   const [mapDrawMode, setMapDrawMode] = useState(false);
   const [, setMapView] = useState<{
@@ -936,6 +973,31 @@ export default function Green() {
     }
     return trees.filter((t: any) => (t as any).created_by === activeUser);
   }, [activeUser, activeUserDetail, activeUserIsCustodian, trees]);
+  const existingTreeAreaOverlaysForUser = useMemo(() => {
+    return userTrees
+      .map((tree: any) => {
+        const geometry = normalizeOrderAreaGeometry((tree as any).existing_area_geojson);
+        if (!geometry) return null;
+        const count = Number((tree as any).inventory_tree_count || 1);
+        const labelCount = Number.isFinite(count) && count > 1 ? Math.round(count) : 1;
+        const localNo = Number((tree as any).project_tree_no || 0);
+        const treeLabel = `Tree #${localNo > 0 ? localNo : Number(tree.id || 0)}`;
+        return {
+          id: `existing-area-${tree.id}`,
+          label:
+            labelCount > 1
+              ? `${treeLabel} - ${labelCount} trees`
+              : `${treeLabel} - Existing area`,
+          geojson: geometry,
+        };
+      })
+      .filter((item): item is { id: string; label: string; geojson: any } => Boolean(item));
+  }, [userTrees]);
+  const greenMapOverlayAreas = useMemo(
+    () => [...assignedPlantingAreas, ...existingTreeAreaOverlaysForUser],
+    [assignedPlantingAreas, existingTreeAreaOverlaysForUser],
+  );
+  const existingTreeBatchCaptureActive = newTree.tree_origin === "existing_inventory" && existingTreeBatchMode;
   const userPlantingTrees = useMemo(
     () => userTrees.filter((tree) => String(tree.tree_origin || "new_planting").toLowerCase() === "new_planting"),
     [userTrees],
@@ -1543,6 +1605,13 @@ export default function Green() {
       photo_url: "",
       created_by: "",
     });
+    setExistingTreeBatchMode(false);
+    setExistingTreeBatchAreaGeojson(null);
+    setExistingTreeBatchCount("");
+    setPendingTreePhoto(null);
+    setPendingTreePhotos([]);
+    setPhotoPreview("");
+    setTreePhotoPreviews([]);
   };
 
   const primeWorkExistingTreeView = (projectId: number, treeId?: number | null) => {
@@ -1564,7 +1633,24 @@ export default function Green() {
       toast.error("Select a staff or custodian first");
       return;
     }
-    if (!newTree.lng || !newTree.lat) {
+    const isExistingBatchCapture = newTree.tree_origin === "existing_inventory" && existingTreeBatchMode;
+    const batchTreeCountValue = isExistingBatchCapture ? parseInventoryTreeCountInput(existingTreeBatchCount) : null;
+    const batchAreaGeometry = isExistingBatchCapture ? normalizeOrderAreaGeometry(existingTreeBatchAreaGeojson) : null;
+    const batchAreaCentroid = isExistingBatchCapture ? computeAreaCentroid(batchAreaGeometry) : null;
+    if (isExistingBatchCapture) {
+      if (batchTreeCountValue === null || batchTreeCountValue <= 1) {
+        toast.error("Enter the number of existing trees in this area (must be more than 1).");
+        return;
+      }
+      if (!batchAreaGeometry || !batchAreaCentroid) {
+        toast.error("Draw the polygon area for the existing trees on the map.");
+        return;
+      }
+      if (!isOnline) {
+        toast.error("Batch existing-tree area capture currently requires internet (for polygon + multi-photo sync).");
+        return;
+      }
+    } else if (!newTree.lng || !newTree.lat) {
       toast.error("Pick a point on the map");
       return;
     }
@@ -1596,8 +1682,8 @@ export default function Green() {
     }
     const treePayload = {
       project_id: activeProject.id,
-      lng: Number(newTree.lng),
-      lat: Number(newTree.lat),
+      lng: Number((batchAreaCentroid?.lng ?? newTree.lng) || 0),
+      lat: Number((batchAreaCentroid?.lat ?? newTree.lat) || 0),
       species: speciesValue,
       planting_date: newTree.planting_date || null,
       status: newTree.status,
@@ -1608,8 +1694,11 @@ export default function Green() {
       custodian_id: newTree.custodian_id ? Number(newTree.custodian_id) : null,
       tree_height_m: treeHeightValue,
       tree_age_months: newTree.tree_origin === "existing_inventory" ? treeAgeMonthsValue : null,
+      inventory_tree_count: isExistingBatchCapture ? batchTreeCountValue : 1,
+      existing_area_geojson: isExistingBatchCapture ? batchAreaGeometry : null,
       notes: newTree.notes,
       photo_url: "",
+      photo_urls: [],
       created_by: activeUser,
     };
     setAddingTree(true);
@@ -1621,28 +1710,35 @@ export default function Green() {
       const reviewTaskId = Number(createRes.data?.review_task_id || 0);
       let photoLinked = true;
 
-      if (pendingTreePhoto && Number.isFinite(createdTreeId) && createdTreeId > 0) {
+      const pendingFilesForTree = isExistingBatchCapture
+        ? pendingTreePhotos
+        : pendingTreePhoto
+          ? [pendingTreePhoto]
+          : [];
+      if (pendingFilesForTree.length > 0 && Number.isFinite(createdTreeId) && createdTreeId > 0) {
         try {
-          if (Number.isFinite(reviewTaskId) && reviewTaskId > 0) {
-            await uploadGreenPhoto(pendingTreePhoto, "tasks", { taskId: reviewTaskId });
-          } else {
-            await uploadGreenPhoto(pendingTreePhoto, "trees", { treeId: createdTreeId });
+          for (const file of pendingFilesForTree) {
+            if (Number.isFinite(reviewTaskId) && reviewTaskId > 0) {
+              await uploadGreenPhoto(file, "tasks", { taskId: reviewTaskId });
+            } else {
+              await uploadGreenPhoto(file, "trees", { treeId: createdTreeId });
+            }
           }
         } catch (uploadError) {
           photoLinked = false;
           if (isLikelyNetworkError(uploadError) && activeProject) {
             const link = Number.isFinite(reviewTaskId) && reviewTaskId > 0 ? { taskId: reviewTaskId } : { treeId: createdTreeId };
-            await queuePhotoUploadOffline(pendingTreePhoto, Number.isFinite(reviewTaskId) && reviewTaskId > 0 ? "tasks" : "trees", link, {
-              projectId: activeProject.id,
-              assigneeName: activeUser || "",
-            }).catch(() => {});
+            for (const file of pendingFilesForTree.slice(0, isExistingBatchCapture ? 0 : pendingFilesForTree.length)) {
+              await queuePhotoUploadOffline(file, Number.isFinite(reviewTaskId) && reviewTaskId > 0 ? "tasks" : "trees", link, {
+                projectId: activeProject.id,
+                assigneeName: activeUser || "",
+              }).catch(() => {});
+            }
           }
         }
       }
 
       resetNewTreeForm();
-      setPhotoPreview("");
-      setPendingTreePhoto(null);
       await loadProjectDetail(activeProject.id);
       if (treePayload.tree_origin === "existing_inventory") {
         primeWorkExistingTreeView(activeProject.id, createdTreeId);
@@ -1672,7 +1768,7 @@ export default function Green() {
           const queued = await queueCreateTreeOffline(
             treePayload,
             { projectId: activeProject.id, assigneeName: activeUser },
-            pendingTreePhoto
+            isExistingBatchCapture ? null : pendingTreePhoto
           );
           setTrees((prev) =>
             mergeTreesById([
@@ -2264,6 +2360,8 @@ export default function Green() {
       setPhotoPreview("");
       return;
     }
+    setPendingTreePhotos([]);
+    setTreePhotoPreviews([]);
     setPendingTreePhoto(file);
     const reader = new FileReader();
     reader.onload = () => {
@@ -2271,6 +2369,28 @@ export default function Green() {
       setPhotoPreview(dataUrl);
     };
     reader.readAsDataURL(file);
+    setNewTree((prev) => ({ ...prev, photo_url: "" }));
+  };
+
+  const onTreePhotosPicked = (files: FileList | File[] | null | undefined) => {
+    const list = Array.from(files || []).filter(Boolean) as File[];
+    if (list.length === 0) {
+      setPendingTreePhotos([]);
+      setTreePhotoPreviews([]);
+      return;
+    }
+    setPendingTreePhoto(null);
+    setPhotoPreview("");
+    setPendingTreePhotos(list);
+    setTreePhotoPreviews(
+      list.slice(0, 8).map((file) => {
+        try {
+          return URL.createObjectURL(file);
+        } catch {
+          return "";
+        }
+      }).filter(Boolean)
+    );
     setNewTree((prev) => ({ ...prev, photo_url: "" }));
   };
 
@@ -2994,36 +3114,58 @@ export default function Green() {
                     </span>
                   </div>
                 )}
+                {existingTreeBatchCaptureActive && (
+                  <div className="green-map-area-banner">
+                    <strong>Existing trees batch capture</strong>
+                    <span>Zoom to the area and draw one polygon, then enter the number of trees below.</span>
+                  </div>
+                )}
                 <TreeMap
                   trees={treePoints}
-                  draftPoint={newTree.lng && newTree.lat ? { lng: newTree.lng, lat: newTree.lat } : null}
-                  onDraftMove={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
+                  draftPoint={
+                    existingTreeBatchCaptureActive
+                      ? null
+                      : newTree.lng && newTree.lat
+                        ? { lng: newTree.lng, lat: newTree.lat }
+                        : null
+                  }
+                  onDraftMove={
+                    existingTreeBatchCaptureActive
+                      ? undefined
+                      : (lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))
+                  }
                   onAddTree={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
                   drawActive={mapDrawMode}
+                  drawMode={existingTreeBatchCaptureActive ? "polygon" : "point"}
+                  onPolygonChange={existingTreeBatchCaptureActive ? (geometry) => setExistingTreeBatchAreaGeojson(geometry) : undefined}
                   onSelectTree={(id) => loadTreeDetails(id)}
                   onTreeInspect={(detail) => setInspectedTree(detail)}
                   onViewChange={(view) => setMapView(view)}
                   fitBounds={mapFitPoints}
-                  assignmentAreas={assignedPlantingAreas}
+                  assignmentAreas={greenMapOverlayAreas}
                 />
               </div>
             </div>
 
             <div className="tree-form">
-              <div className="tree-form-row">
-                <label>GPS</label>
-                <button className="green-btn-outline" type="button" onClick={useGps} disabled={gpsLoading}>
-                  {gpsLoading ? "Locating..." : "Use GPS Location"}
-                </button>
-              </div>
-              <div className="tree-form-row">
-                <label>Lng</label>
-                <input value={newTree.lng || ""} readOnly />
-              </div>
-              <div className="tree-form-row">
-                <label>Lat</label>
-                <input value={newTree.lat || ""} readOnly />
-              </div>
+              {!existingTreeBatchCaptureActive && (
+                <>
+                  <div className="tree-form-row">
+                    <label>GPS</label>
+                    <button className="green-btn-outline" type="button" onClick={useGps} disabled={gpsLoading}>
+                      {gpsLoading ? "Locating..." : "Use GPS Location"}
+                    </button>
+                  </div>
+                  <div className="tree-form-row">
+                    <label>Lng</label>
+                    <input value={newTree.lng || ""} readOnly />
+                  </div>
+                  <div className="tree-form-row">
+                    <label>Lat</label>
+                    <input value={newTree.lat || ""} readOnly />
+                  </div>
+                </>
+              )}
               <div className="tree-form-row">
                 <label>Species</label>
                 {newTree.tree_origin !== "existing_inventory" && hasSpeciesBasedPlantingAllocation ? (
@@ -3059,6 +3201,13 @@ export default function Green() {
                   value={newTree.tree_origin}
                   onChange={(e) => {
                     const nextOrigin = e.target.value === "existing_inventory" ? "existing_inventory" : "new_planting";
+                    if (nextOrigin !== "existing_inventory") {
+                      setExistingTreeBatchMode(false);
+                      setExistingTreeBatchAreaGeojson(null);
+                      setExistingTreeBatchCount("");
+                      setPendingTreePhotos([]);
+                      setTreePhotoPreviews([]);
+                    }
                     setNewTree((prev) => ({
                       ...prev,
                       tree_origin: nextOrigin,
@@ -3098,6 +3247,58 @@ export default function Green() {
                     Optional. Used for CO2 estimation when planting date is not available for an existing tree.
                   </small>
                 </div>
+              )}
+              {newTree.tree_origin === "existing_inventory" && (
+                <>
+                  <div className="tree-form-row full">
+                    <label className="green-checkbox-row">
+                      <input
+                        type="checkbox"
+                        checked={existingTreeBatchMode}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setExistingTreeBatchMode(checked);
+                          setExistingTreeBatchAreaGeojson(null);
+                          setExistingTreeBatchCount(checked ? (existingTreeBatchCount || "2") : "");
+                          setPendingTreePhoto(null);
+                          setPhotoPreview("");
+                          setPendingTreePhotos([]);
+                          setTreePhotoPreviews([]);
+                        }}
+                      />
+                      <span>Capture multiple existing trees in one mapped area (polygon)</span>
+                    </label>
+                    <small className="tree-form-help">
+                      Use this when recording an existing-tree inventory area. Draw the polygon on the map and enter the number of trees.
+                    </small>
+                  </div>
+                  {existingTreeBatchMode && (
+                    <>
+                      <div className="tree-form-row">
+                        <label>Number of Trees in Area</label>
+                        <input
+                          type="number"
+                          min={2}
+                          max={1000000}
+                          step="1"
+                          placeholder="e.g. 24"
+                          value={existingTreeBatchCount}
+                          onChange={(e) => setExistingTreeBatchCount(e.target.value)}
+                        />
+                      </div>
+                      <div className="tree-form-row full">
+                        <label>Area Polygon</label>
+                        <input
+                          value={existingTreeBatchAreaGeojson ? "Polygon captured on map" : "No polygon drawn yet"}
+                          readOnly
+                        />
+                        <small className="tree-form-help">
+                          Switch map mode to Add Tree, then draw a polygon. One polygon is stored for this existing-tree batch record.
+                        </small>
+                      </div>
+                    </>
+                  )}
+                </>
               )}
               <div className="tree-form-row">
                 <label>Tree Height (m)</label>
@@ -3169,15 +3370,42 @@ export default function Green() {
                 <textarea value={newTree.notes} onChange={(e) => setNewTree({ ...newTree, notes: e.target.value })} />
               </div>
               <div className="tree-form-row full">
-                <label>Tree Photo</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={(e) => onPhotoPicked(e.target.files?.[0] || null)}
-                />
-                <small className="tree-photo-hint">Snapped photo uploads automatically when you tap Add Tree.</small>
-                {photoPreview && <img className="tree-photo-preview" src={photoPreview} alt="Tree preview" />}
+                <label>{existingTreeBatchMode && newTree.tree_origin === "existing_inventory" ? "Tree Photos (Multiple)" : "Tree Photo"}</label>
+                {existingTreeBatchMode && newTree.tree_origin === "existing_inventory" ? (
+                  <>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      multiple
+                      onChange={(e) => onTreePhotosPicked(e.target.files)}
+                    />
+                    <small className="tree-photo-hint">
+                      Upload multiple photos for this existing-tree area record. Photos are attached to the same record.
+                    </small>
+                    {treePhotoPreviews.length > 0 && (
+                      <div className="green-photo-preview-grid">
+                        {treePhotoPreviews.map((src, index) => (
+                          <img key={`tree-preview-${index}`} className="tree-photo-preview" src={src} alt={`Tree preview ${index + 1}`} />
+                        ))}
+                      </div>
+                    )}
+                    {pendingTreePhotos.length > 0 && (
+                      <small className="tree-form-help">{pendingTreePhotos.length} photo(s) selected.</small>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => onPhotoPicked(e.target.files?.[0] || null)}
+                    />
+                    <small className="tree-photo-hint">Snapped photo uploads automatically when you tap Add Tree.</small>
+                    {photoPreview && <img className="tree-photo-preview" src={photoPreview} alt="Tree preview" />}
+                  </>
+                )}
               </div>
               <button className="green-btn-primary" type="button" onClick={addTree} disabled={addingTree}>
                 {addingTree ? "Saving..." : newTree.tree_origin === "existing_inventory" ? "Save Existing Tree" : "Add Tree"}
