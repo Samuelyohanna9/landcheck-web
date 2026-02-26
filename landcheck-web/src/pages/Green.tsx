@@ -1029,6 +1029,13 @@ export default function Green() {
     });
     return Array.from(merged.values()).sort((a, b) => a.species.localeCompare(b.species));
   }, [activePlantingOrders]);
+
+  useEffect(() => {
+    if (!existingTreeBatchCaptureActive) return;
+    if (!mapDrawMode) {
+      setMapDrawMode(true);
+    }
+  }, [existingTreeBatchCaptureActive, mapDrawMode]);
   const hasSpeciesBasedPlantingAllocation = activeOrderSpeciesAllocations.length > 0;
   const plantedSpeciesCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -3134,7 +3141,10 @@ export default function Green() {
                       ? undefined
                       : (lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))
                   }
-                  onAddTree={(lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))}
+                  onAddTree={(lng, lat) => {
+                    if (existingTreeBatchCaptureActive) return;
+                    setNewTree((prev) => ({ ...prev, lng, lat }));
+                  }}
                   drawActive={mapDrawMode}
                   drawMode={existingTreeBatchCaptureActive ? "polygon" : "point"}
                   onPolygonChange={existingTreeBatchCaptureActive ? (geometry) => setExistingTreeBatchAreaGeojson(geometry) : undefined}
@@ -3258,6 +3268,10 @@ export default function Green() {
                         onChange={(e) => {
                           const checked = e.target.checked;
                           setExistingTreeBatchMode(checked);
+                          if (checked) {
+                            setMapDrawMode(true);
+                            setNewTree((prev) => ({ ...prev, lng: 0, lat: 0 }));
+                          }
                           setExistingTreeBatchAreaGeojson(null);
                           setExistingTreeBatchCount(checked ? (existingTreeBatchCount || "2") : "");
                           setPendingTreePhoto(null);
