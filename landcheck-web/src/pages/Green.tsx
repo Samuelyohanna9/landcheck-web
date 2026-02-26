@@ -1772,7 +1772,26 @@ export default function Green() {
   };
 
   const loadTreeDetails = async (treeId: number) => {
+    const allowedTree = userTrees.find((tree: any) => Number(tree.id) === Number(treeId));
+    if (!allowedTree) {
+      setSelectedTreeId(null);
+      setTreeTasks([]);
+      setTreeTimeline(null);
+      toast.error("You can only view records for your own trees.");
+      return;
+    }
     setSelectedTreeId(treeId);
+    const scopeTimelineForActiveUser = (timeline: any) => {
+      if (!timeline) return null;
+      if (!activeUser) return timeline;
+      const scopedVisits = Array.isArray(timeline?.visits)
+        ? timeline.visits.filter((visit: any) => String(visit?.created_by || "") === String(activeUser))
+        : [];
+      return {
+        ...timeline,
+        visits: scopedVisits,
+      };
+    };
     try {
       const [tasksRes, timelineRes] = await Promise.all([
         api.get(`/green/trees/${treeId}/tasks`),
@@ -1780,8 +1799,9 @@ export default function Green() {
       ]);
       const tasks = Array.isArray(tasksRes.data) ? tasksRes.data : [];
       const scopedTasks = tasks.filter((task: any) => !activeUser || task.assignee_name === activeUser);
+      const scopedTimeline = scopeTimelineForActiveUser(timelineRes.data);
       setTreeTasks(scopedTasks);
-      setTreeTimeline(timelineRes.data);
+      setTreeTimeline(scopedTimeline);
       await Promise.all([
         cacheTreeTasksOffline(treeId, tasks).catch(() => {}),
         cacheTreeTimelineOffline(treeId, timelineRes.data).catch(() => {}),
@@ -1792,9 +1812,10 @@ export default function Green() {
         getCachedTreeTimelineOffline(treeId).catch(() => null),
       ]);
       const scopedTasks = (cachedTasks || []).filter((task: any) => !activeUser || task.assignee_name === activeUser);
+      const scopedTimeline = scopeTimelineForActiveUser(cachedTimeline);
       if (scopedTasks.length > 0 || cachedTimeline) {
         setTreeTasks(scopedTasks);
-        setTreeTimeline(cachedTimeline);
+        setTreeTimeline(scopedTimeline);
         return;
       }
       setTreeTasks([]);
@@ -3143,53 +3164,6 @@ export default function Green() {
                   ))}
                 </select>
               </div>
-              {newTree.tree_origin === "existing_inventory" && (
-                <>
-                  <div className="tree-form-row">
-                    <label>Attribution Scope</label>
-                    <select
-                      value={newTree.attribution_scope}
-                      onChange={(e) =>
-                        setNewTree({
-                          ...newTree,
-                          attribution_scope: e.target.value === "full" ? "full" : "monitor_only",
-                        })
-                      }
-                    >
-                      <option value="monitor_only">Monitor only</option>
-                      <option value="full">Full attribution</option>
-                    </select>
-                  </div>
-                  <div className="tree-form-row tree-form-checkbox">
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={newTree.count_in_planting_kpis}
-                        onChange={(e) =>
-                          setNewTree({
-                            ...newTree,
-                            count_in_planting_kpis: e.target.checked,
-                          })
-                        }
-                      />
-                      <span>Count in planting KPIs</span>
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={newTree.count_in_carbon_scope}
-                        onChange={(e) =>
-                          setNewTree({
-                            ...newTree,
-                            count_in_carbon_scope: e.target.checked,
-                          })
-                        }
-                      />
-                      <span>Count in carbon scope</span>
-                    </label>
-                  </div>
-                </>
-              )}
               <div className="tree-form-row full">
                 <label>Notes</label>
                 <textarea value={newTree.notes} onChange={(e) => setNewTree({ ...newTree, notes: e.target.value })} />
