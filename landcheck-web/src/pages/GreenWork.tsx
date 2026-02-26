@@ -3582,13 +3582,28 @@ export default function GreenWork() {
     const key = normalizeName(assigneeFilter);
     return trees.filter((t) => normalizeName(t.created_by) === key);
   }, [trees, assigneeFilter]);
+  const isExistingTreeIntakeRecord = useCallback((tree: any) => {
+    const origin = normalizeName(String(tree?.tree_origin || "").replaceAll(" ", "_"));
+    const scope = normalizeName(String(tree?.attribution_scope || "").replaceAll(" ", "_"));
+    const hasSourceProject = Number(tree?.source_project_id || 0) > 0;
+    if (origin && origin !== "new_planting") return true;
+    if (scope === "monitor_only") return true;
+    if (tree?.count_in_planting_kpis === false) return true;
+    if (hasSourceProject) return true;
+    return false;
+  }, []);
+  const mapViewTrees = useMemo(() => {
+    if (assigneeFilter === "all") return trees;
+    const key = normalizeName(assigneeFilter);
+    return trees.filter((t) => normalizeName(t.created_by) === key || isExistingTreeIntakeRecord(t));
+  }, [trees, assigneeFilter, isExistingTreeIntakeRecord]);
   const projectFitPoints = useMemo(() => {
     const treePoints = trees.map((t) => ({ lng: t.lng, lat: t.lat }));
     return treePoints.length ? treePoints : null;
   }, [trees]);
   const existingTreeMapAreas = useMemo(
     () =>
-      trees
+      mapViewTrees
         .map((tree) => {
           const geometry = normalizeMapAreaGeometry(tree.existing_area_geojson);
           if (!geometry) return null;
@@ -3605,7 +3620,7 @@ export default function GreenWork() {
           };
         })
         .filter((item): item is { id: string; label: string; geojson: any } => Boolean(item)),
-    [trees],
+    [mapViewTrees],
   );
   const projectAreaFitPoints = useMemo(() => {
     const points = existingTreeMapAreas.flatMap((item) => extractMapAreaPoints(normalizeMapAreaGeometry(item.geojson)));
@@ -3617,22 +3632,16 @@ export default function GreenWork() {
   }, [projectFitPoints, projectAreaFitPoints]);
 
   const fitPoints = useMemo(() => {
-    const userTreePoints = (assigneeFilter === "all"
-      ? trees
-      : trees.filter((t) => normalizeName(t.created_by) === normalizeName(assigneeFilter))
-    ).map((t) => ({ lng: t.lng, lat: t.lat }));
-    const userAreaPoints = (assigneeFilter === "all"
-      ? trees
-      : trees.filter((t) => normalizeName(t.created_by) === normalizeName(assigneeFilter))
-    )
+    const userTreePoints = mapViewTrees.map((t) => ({ lng: t.lng, lat: t.lat }));
+    const userAreaPoints = mapViewTrees
       .flatMap((t) => extractMapAreaPoints(normalizeMapAreaGeometry(t.existing_area_geojson)));
     const merged = [...userTreePoints, ...userAreaPoints];
     return merged.length ? merged : null;
-  }, [assigneeFilter, trees]);
+  }, [mapViewTrees]);
   const mapTrees =
     activeProjectId && newOrderAreaEnabled
       ? trees
-      : filteredTrees;
+      : mapViewTrees;
   const mapFitPoints =
     activeProjectId && newOrderAreaEnabled
       ? combinedProjectFitPoints
