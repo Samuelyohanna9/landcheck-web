@@ -154,6 +154,7 @@ type Tree = {
   planting_date?: string | null;
   notes?: string | null;
   photo_url?: string | null;
+  photo_urls?: string[] | null;
   tree_origin?: "new_planting" | "existing_inventory" | "natural_regeneration";
   attribution_scope?: "full" | "monitor_only";
   count_in_planting_kpis?: boolean;
@@ -161,11 +162,19 @@ type Tree = {
   source_project_id?: number | null;
   tree_height_m?: number | null;
   tree_age_months?: number | null;
+  inventory_tree_count?: number | null;
+  existing_area_geojson?: any;
+  existing_area_sqm?: number | null;
   custodian_id?: number | null;
   custodian_name?: string | null;
 };
 type ExistingTreeMetric = {
   tree_id: number;
+  project_tree_no?: number | null;
+  inventory_tree_count?: number | null;
+  existing_area_sqm?: number | null;
+  existing_area_ha?: number | null;
+  photo_count?: number | null;
   tree_age_months?: number | null;
   age_years?: number | null;
   age_source?: string | null;
@@ -475,6 +484,17 @@ const formatExistingTreeCo2Label = (metric?: ExistingTreeMetric | null) => {
   if (kg >= 1000) return `${(kg / 1000).toFixed(2)} t`;
   return `${kg.toFixed(1)} kg`;
 };
+const formatExistingTreeCountLabel = (tree: Pick<Tree, "inventory_tree_count">, metric?: ExistingTreeMetric | null) => {
+  const countValue = Number(metric?.inventory_tree_count ?? tree.inventory_tree_count ?? 1);
+  if (!Number.isFinite(countValue) || countValue < 1) return "1";
+  return String(Math.max(1, Math.round(countValue)));
+};
+const formatExistingTreeAreaLabel = (tree: Pick<Tree, "existing_area_sqm">, metric?: ExistingTreeMetric | null) => {
+  const sqm = Number(metric?.existing_area_sqm ?? tree.existing_area_sqm);
+  if (!Number.isFinite(sqm) || sqm <= 0) return "-";
+  if (sqm >= 10000) return `${(sqm / 10000).toFixed(3)} ha`;
+  return `${sqm.toFixed(1)} m²`;
+};
 const formatTreeOriginLabel = (value: string | null | undefined) => {
   const key = normalizeName(value);
   if (key === "existing_inventory") return "Existing inventory";
@@ -504,6 +524,48 @@ const normalizeSpeciesAllocations = (
     merged.set(key, { species, count: Math.round(count) });
   });
   return Array.from(merged.values());
+};
+const normalizeMapAreaGeometry = (value: any): { type: "Polygon" | "MultiPolygon"; coordinates: any } | null => {
+  if (!value) return null;
+  let raw = value;
+  if (typeof raw === "string") {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+  const geometry = raw?.type === "Feature" ? raw.geometry : raw;
+  if (!geometry || (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon")) return null;
+  if (!Array.isArray(geometry.coordinates) || geometry.coordinates.length === 0) return null;
+  return { type: geometry.type, coordinates: geometry.coordinates };
+};
+const extractMapAreaPoints = (geometry: { type: "Polygon" | "MultiPolygon"; coordinates: any } | null) => {
+  if (!geometry) return [] as { lng: number; lat: number }[];
+  const points: { lng: number; lat: number }[] = [];
+  if (geometry.type === "Polygon") {
+    (geometry.coordinates || []).forEach((ring: any) => {
+      if (!Array.isArray(ring)) return;
+      ring.forEach((point: any) => {
+        const lng = Number(point?.[0]);
+        const lat = Number(point?.[1]);
+        if (Number.isFinite(lng) && Number.isFinite(lat)) points.push({ lng, lat });
+      });
+    });
+  } else {
+    (geometry.coordinates || []).forEach((polygon: any) => {
+      if (!Array.isArray(polygon)) return;
+      polygon.forEach((ring: any) => {
+        if (!Array.isArray(ring)) return;
+        ring.forEach((point: any) => {
+          const lng = Number(point?.[0]);
+          const lat = Number(point?.[1]);
+          if (Number.isFinite(lng) && Number.isFinite(lat)) points.push({ lng, lat });
+        });
+      });
+    });
+  }
+  return points;
 };
 
 const MAINTENANCE_ACTIVITY_ORDER = ["watering", "weeding", "protection", "inspection", "replacement"] as const;
@@ -1626,6 +1688,20 @@ export default function GreenWork() {
         if (!Number.isFinite(treeId) || treeId <= 0) return;
         next[treeId] = {
           tree_id: treeId,
+          project_tree_no: Number.isFinite(Number(row?.project_tree_no)) ? Number(row.project_tree_no) : null,
+          inventory_tree_count:
+            Number.isFinite(Number(row?.inventory_tree_count)) && Number(row?.inventory_tree_count) > 0
+              ? Math.round(Number(row.inventory_tree_count))
+              : 1,
+          existing_area_sqm:
+            Number.isFinite(Number(row?.existing_area_sqm)) && Number(row?.existing_area_sqm) > 0
+              ? Number(row.existing_area_sqm)
+              : null,
+          existing_area_ha:
+            Number.isFinite(Number(row?.existing_area_ha)) && Number(row?.existing_area_ha) > 0
+              ? Number(row.existing_area_ha)
+              : null,
+          photo_count: Number.isFinite(Number(row?.photo_count)) ? Math.max(0, Math.round(Number(row.photo_count))) : 0,
           tree_age_months:
             Number.isFinite(Number(row?.tree_age_months)) && Number(row?.tree_age_months) >= 0
               ? Number(row.tree_age_months)
@@ -3507,16 +3583,51 @@ export default function GreenWork() {
     return trees.filter((t) => normalizeName(t.created_by) === key);
   }, [trees, assigneeFilter]);
   const projectFitPoints = useMemo(() => {
-    const points = trees.map((t) => ({ lng: t.lng, lat: t.lat }));
-    return points.length ? points : null;
+    const treePoints = trees.map((t) => ({ lng: t.lng, lat: t.lat }));
+    return treePoints.length ? treePoints : null;
   }, [trees]);
+  const existingTreeMapAreas = useMemo(
+    () =>
+      trees
+        .map((tree) => {
+          const geometry = normalizeMapAreaGeometry(tree.existing_area_geojson);
+          if (!geometry) return null;
+          const count = Number(tree.inventory_tree_count || 1);
+          const labelCount = Number.isFinite(count) && count > 1 ? Math.round(count) : 1;
+          const localNo = Number(tree.project_tree_no || tree.id || 0);
+          return {
+            id: `existing-tree-area-${tree.id}`,
+            label:
+              labelCount > 1
+                ? `Tree #${localNo} - ${labelCount} trees`
+                : `Tree #${localNo} - Existing area`,
+            geojson: geometry,
+          };
+        })
+        .filter((item): item is { id: string; label: string; geojson: any } => Boolean(item)),
+    [trees],
+  );
+  const projectAreaFitPoints = useMemo(() => {
+    const points = existingTreeMapAreas.flatMap((item) => extractMapAreaPoints(normalizeMapAreaGeometry(item.geojson)));
+    return points.length ? points : null;
+  }, [existingTreeMapAreas]);
+  const combinedProjectFitPoints = useMemo(() => {
+    const merged = [...(projectFitPoints || []), ...(projectAreaFitPoints || [])];
+    return merged.length ? merged : null;
+  }, [projectFitPoints, projectAreaFitPoints]);
 
   const fitPoints = useMemo(() => {
-    const points = (assigneeFilter === "all"
+    const userTreePoints = (assigneeFilter === "all"
       ? trees
       : trees.filter((t) => normalizeName(t.created_by) === normalizeName(assigneeFilter))
     ).map((t) => ({ lng: t.lng, lat: t.lat }));
-    return points.length ? points : null;
+    const userAreaPoints = (assigneeFilter === "all"
+      ? trees
+      : trees.filter((t) => normalizeName(t.created_by) === normalizeName(assigneeFilter))
+    )
+      .flatMap((t) => extractMapAreaPoints(normalizeMapAreaGeometry(t.existing_area_geojson)));
+    const merged = [...userTreePoints, ...userAreaPoints];
+    return merged.length ? merged : null;
   }, [assigneeFilter, trees]);
   const mapTrees =
     activeProjectId && newOrderAreaEnabled
@@ -3524,7 +3635,7 @@ export default function GreenWork() {
       : filteredTrees;
   const mapFitPoints =
     activeProjectId && newOrderAreaEnabled
-      ? projectFitPoints
+      ? combinedProjectFitPoints
       : fitPoints;
 
   const overviewStaffSummary = useMemo(() => {
@@ -7541,6 +7652,8 @@ export default function GreenWork() {
                   <thead>
                     <tr>
                       <th>Tree</th>
+                      <th>Trees</th>
+                      <th>Area</th>
                       <th>Species</th>
                       <th>Date</th>
                       <th>Origin</th>
@@ -7556,7 +7669,7 @@ export default function GreenWork() {
                   <tbody>
                     {existingTreeIntakeRows.length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="green-work-live-empty">
+                        <td colSpan={13} className="green-work-live-empty">
                           No Existing Tree records found in this project yet.
                         </td>
                       </tr>
@@ -7566,6 +7679,8 @@ export default function GreenWork() {
                         return (
                           <tr key={`existing-main-${tree.id}`}>
                             <td>{formatProjectTreeLabelById(tree.id).replace("Tree ", "")}</td>
+                            <td>{formatExistingTreeCountLabel(tree, metric)}</td>
+                            <td>{formatExistingTreeAreaLabel(tree, metric)}</td>
                             <td>{tree.species || "-"}</td>
                             <td>{formatDateLabel(tree.planting_date)}</td>
                             <td>{formatTreeOriginLabel(tree.tree_origin)}</td>
@@ -7829,6 +7944,7 @@ export default function GreenWork() {
                     }}
                     onViewChange={(view) => setMapView(view)}
                     fitBounds={mapFitPoints}
+                    assignmentAreas={existingTreeMapAreas}
                   />
                 </div>
               </div>
