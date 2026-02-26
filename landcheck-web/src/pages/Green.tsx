@@ -1756,7 +1756,9 @@ export default function Green() {
       if (photoLinked) {
         setPlantingFlowMessage(
           treePayload.tree_origin === "existing_inventory"
-            ? "Existing tree saved."
+            ? Number.isFinite(reviewTaskId) && reviewTaskId > 0
+              ? "Existing tree submitted for supervisor review."
+              : "Existing tree saved."
             : Number.isFinite(reviewTaskId) && reviewTaskId > 0
             ? "Tree submitted for supervisor review."
             : "Tree successfully planted!"
@@ -1764,7 +1766,9 @@ export default function Green() {
       } else {
         setPlantingFlowMessage(
           treePayload.tree_origin === "existing_inventory"
-            ? "Existing tree saved. Photo upload failed."
+            ? Number.isFinite(reviewTaskId) && reviewTaskId > 0
+              ? "Existing tree submitted for supervisor review. Photo upload failed."
+              : "Existing tree saved. Photo upload failed."
             : "Tree successfully planted! Photo upload failed."
         );
       }
