@@ -31,6 +31,8 @@ export type TreePoint = {
   count_in_planting_kpis?: boolean;
   count_in_carbon_scope?: boolean;
   custodian_name?: string | null;
+  inventory_tree_count?: number | null;
+  existing_area_geojson?: any;
 };
 
 type Props = {
@@ -342,21 +344,45 @@ const normalizeAreaGeometry = (value: any): { type: "Polygon" | "MultiPolygon"; 
   return { type: geometry.type, coordinates: geometry.coordinates };
 };
 
-const buildAssignmentAreaFeatureCollection = (areas: Array<{ id?: number | string; label?: string | null; geojson: any }>) => {
-  const features = (areas || [])
-    .map((area, index) => {
-      const geometry = normalizeAreaGeometry(area.geojson);
-      if (!geometry) return null;
-      return {
-        type: "Feature",
-        properties: {
-          id: area.id ?? index + 1,
-          label: area.label || `Assigned area ${index + 1}`,
-        },
-        geometry,
-      };
-    })
-    .filter((feature) => feature !== null);
+const buildAssignmentAreaFeatureCollection = (
+  areas: Array<{ id?: number | string; label?: string | null; geojson: any }>,
+  trees: TreePoint[] = [],
+) => {
+  const features: any[] = [];
+  const seenGeometry = new Set<string>();
+
+  const pushFeature = (geometryInput: any, id: number | string, label: string) => {
+    const geometry = normalizeAreaGeometry(geometryInput);
+    if (!geometry) return;
+    const signature = `${geometry.type}:${JSON.stringify(geometry.coordinates)}`;
+    if (seenGeometry.has(signature)) return;
+    seenGeometry.add(signature);
+    features.push({
+      type: "Feature",
+      properties: {
+        id,
+        label,
+      },
+      geometry,
+    });
+  };
+
+  (areas || []).forEach((area, index) => {
+    pushFeature(area?.geojson, area?.id ?? index + 1, area?.label || `Assigned area ${index + 1}`);
+  });
+
+  (trees || []).forEach((tree, index) => {
+    const areaGeojson = (tree as any)?.existing_area_geojson;
+    if (!areaGeojson) return;
+    const count = Number((tree as any)?.inventory_tree_count || 1);
+    const labelCount = Number.isFinite(count) && count > 1 ? Math.round(count) : 1;
+    const localNo = Number((tree as any)?.project_tree_no || tree?.id || 0);
+    const label =
+      labelCount > 1
+        ? `Tree #${localNo} - ${labelCount} trees`
+        : `Tree #${localNo} - Existing area`;
+    pushFeature(areaGeojson, `tree-area-${tree?.id ?? index + 1}`, label);
+  });
 
   return {
     type: "FeatureCollection",
@@ -709,7 +735,7 @@ export default function TreeMap({
         if (!map.getSource(ASSIGNMENT_AREA_SOURCE_ID)) {
           map.addSource(ASSIGNMENT_AREA_SOURCE_ID, {
             type: "geojson",
-            data: buildAssignmentAreaFeatureCollection(assignmentAreas),
+            data: buildAssignmentAreaFeatureCollection(assignmentAreas, trees),
           });
           map.addLayer({
             id: ASSIGNMENT_AREA_FILL_LAYER_ID,
@@ -1031,8 +1057,8 @@ export default function TreeMap({
     if (!map || !mapReady) return;
     const source = map.getSource(ASSIGNMENT_AREA_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
     if (!source) return;
-    source.setData(buildAssignmentAreaFeatureCollection(assignmentAreas));
-  }, [assignmentAreas, mapReady]);
+    source.setData(buildAssignmentAreaFeatureCollection(assignmentAreas, trees));
+  }, [assignmentAreas, trees, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
