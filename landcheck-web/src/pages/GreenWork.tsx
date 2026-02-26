@@ -3577,11 +3577,6 @@ export default function GreenWork() {
     };
   }, [newTask.task_type, newTask.tree_id, newTask.due_mode, tasks, trees, activeProjectMaturityMap]);
 
-  const filteredTrees = useMemo(() => {
-    if (assigneeFilter === "all") return trees;
-    const key = normalizeName(assigneeFilter);
-    return trees.filter((t) => normalizeName(t.created_by) === key);
-  }, [trees, assigneeFilter]);
   const isExistingTreeIntakeRecord = useCallback((tree: any) => {
     const origin = normalizeName(String(tree?.tree_origin || "").replaceAll(" ", "_"));
     const scope = normalizeName(String(tree?.attribution_scope || "").replaceAll(" ", "_"));
