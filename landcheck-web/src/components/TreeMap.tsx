@@ -633,8 +633,8 @@ export default function TreeMap({
         const draw = new MapboxDraw({
           displayControlsDefault: false,
           controls: {
-            point: drawMode === "point",
-            polygon: drawMode === "polygon",
+            point: true,
+            polygon: true,
             trash: true,
           },
         });
