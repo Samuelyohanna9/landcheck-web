@@ -8280,6 +8280,7 @@ export default function GreenWork() {
                         ? (lng, lat) => setTreePositionDraft((prev) => (prev ? { ...prev, lng, lat } : prev))
                         : undefined
                     }
+                    suspendFitBounds={Boolean(treePositionDraft && inspectedTree && Number(treePositionDraft.treeId) === Number(inspectedTree.id))}
                     onAddTree={() => {}}
                     enableDraw={mapAreaDrawMode}
                     drawMode={mapAreaDrawMode ? "polygon" : "point"}

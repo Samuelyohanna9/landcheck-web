@@ -40,6 +40,7 @@ type Props = {
   onAddTree: (lng: number, lat: number) => void;
   draftPoint?: { lng: number; lat: number } | null;
   onDraftMove?: (lng: number, lat: number) => void;
+  suspendFitBounds?: boolean;
   enableDraw?: boolean;
   drawMode?: "point" | "polygon";
   drawActive?: boolean;
@@ -487,6 +488,7 @@ export default function TreeMap({
   onAddTree,
   draftPoint,
   onDraftMove,
+  suspendFitBounds = false,
   enableDraw = true,
   drawMode = "point",
   drawActive = true,
@@ -1026,7 +1028,7 @@ export default function TreeMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !mapReady || !fitBounds || fitBounds.length === 0) return;
+    if (!map || !mapReady || suspendFitBounds || !fitBounds || fitBounds.length === 0) return;
     const signature = fitBounds
       .filter((p) => Number.isFinite(Number(p?.lng)) && Number.isFinite(Number(p?.lat)))
       .map((p) => `${Number(p.lng).toFixed(6)},${Number(p.lat).toFixed(6)}`)
@@ -1038,7 +1040,7 @@ export default function TreeMap({
     fitBounds.forEach((p) => bounds.extend([p.lng, p.lat]));
     map.fitBounds(bounds, { padding: 60, duration: 0, maxZoom: 17 });
     lastAppliedFitSignatureRef.current = signature;
-  }, [fitBounds, mapReady]);
+  }, [fitBounds, mapReady, suspendFitBounds]);
 
   useEffect(() => {
     const map = mapRef.current;
