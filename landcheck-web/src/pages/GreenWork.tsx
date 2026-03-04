@@ -2563,7 +2563,7 @@ export default function GreenWork() {
           ? {
               ...prev,
               tree_height_m: parsedHeight,
-              planting_date: draft.planting_date || null,
+              planting_date: draft.planting_date || "",
               tree_origin: draft.tree_origin,
               attribution_scope: draft.attribution_scope,
               count_in_planting_kpis: draft.count_in_planting_kpis,
@@ -2586,7 +2586,6 @@ export default function GreenWork() {
       return;
     }
     setTreePositionDraft({ treeId: Number(treeId), lng: coords.lng, lat: coords.lat });
-    setFocusPoint([{ lng: coords.lng, lat: coords.lat }]);
     setActiveForm("map_view");
     setMenuOpen(false);
     toast("Drag the marker on the map, then save the new position.");
@@ -2872,6 +2871,7 @@ export default function GreenWork() {
         next[treeId] = {
           tree_height_m:
             tree.tree_height_m === null || tree.tree_height_m === undefined ? "" : String(tree.tree_height_m),
+          planting_date: String(tree.planting_date || ""),
           tree_origin: (tree.tree_origin || "new_planting") as
             | "new_planting"
             | "existing_inventory"
