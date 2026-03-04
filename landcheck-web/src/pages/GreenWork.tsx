@@ -7030,7 +7030,7 @@ export default function GreenWork() {
                     <div className="staff-row-meta">
                       Review: {task.review_state || "none"} | Submitted: {formatDateLabel(task.submitted_at || task.created_at)}
                     </div>
-                    <div className="staff-row-meta">Planting date: {formatDateLabel(task.tree_planting_date)}</div>
+                    <div className="staff-row-meta">Planting / reference date: {formatDateLabel(task.tree_planting_date)}</div>
                     <div className="staff-row-meta">
                       Tree GPS: {formatGpsPair(originalTreeLng, originalTreeLat)}
                     </div>
@@ -8311,6 +8311,11 @@ export default function GreenWork() {
               setTreePositionDraft(null);
             }}
             aria-label="Close tree details"
+            style={
+              treePositionDraft && Number(treePositionDraft.treeId) === Number(inspectedTree.id)
+                ? { pointerEvents: "none", opacity: 0 }
+                : undefined
+            }
           />
           <aside className="green-work-tree-drawer green-work-tree-inspector" style={drawerStyle}>
             <div className="green-work-tree-drawer-head">
