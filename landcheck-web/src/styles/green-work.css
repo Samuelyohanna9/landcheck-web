@@ -2056,6 +2056,31 @@
   pointer-events: none;
 }
 
+.green-work-live-scope-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.green-work-live-scope-tab {
+  border: 1px solid rgba(30, 110, 55, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--green-700);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0.45rem 0.72rem;
+  box-shadow: 0 6px 14px rgba(15, 58, 29, 0.05);
+}
+
+.green-work-live-scope-tab.active {
+  border-color: rgba(26, 133, 61, 0.3);
+  background: linear-gradient(180deg, rgba(31, 154, 73, 0.16), rgba(31, 154, 73, 0.08));
+  color: var(--green-800);
+}
+
 /* ── Season & Maturity Controls ── */
 .green-work-live-season-row {
   display: flex;
