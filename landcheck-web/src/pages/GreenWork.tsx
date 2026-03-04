@@ -3726,10 +3726,13 @@ export default function GreenWork() {
     return false;
   }, []);
   const mapViewTrees = useMemo(() => {
-    if (assigneeFilter === "all") return trees;
-    const key = normalizeName(assigneeFilter);
-    return trees.filter((t) => normalizeName(t.created_by) === key || isExistingTreeIntakeRecord(t));
-  }, [trees, assigneeFilter, isExistingTreeIntakeRecord]);
+    const editingTreeId = Number(treePositionDraft?.treeId || 0);
+    const scopedTrees =
+      assigneeFilter === "all"
+        ? trees
+        : trees.filter((t) => normalizeName(t.created_by) === normalizeName(assigneeFilter) || isExistingTreeIntakeRecord(t));
+    return editingTreeId > 0 ? scopedTrees.filter((tree) => Number(tree.id) !== editingTreeId) : scopedTrees;
+  }, [trees, assigneeFilter, isExistingTreeIntakeRecord, treePositionDraft]);
   const projectFitPoints = useMemo(() => {
     const treePoints = trees.map((t) => ({ lng: t.lng, lat: t.lat }));
     return treePoints.length ? treePoints : null;
