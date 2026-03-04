@@ -135,6 +135,7 @@ type WorkOrder = {
   target_trees: number;
   species_allocations?: Array<{ species: string; count: number }>;
   auto_assign_first_cycle_maintenance?: boolean;
+  allow_existing_tree_area_reuse?: boolean;
   due_date: string | null;
   status: string;
   planted_count: number;
@@ -268,6 +269,7 @@ type WorkTask = {
   tree_lng?: number | null;
   tree_lat?: number | null;
   tree_species?: string | null;
+  tree_planting_date?: string | null;
   custodian_id?: number | null;
   custodian_name?: string | null;
   custodian_type?: string | null;
@@ -296,6 +298,7 @@ type WorkForm =
   | "review_queue"
   | "overview"
   | "live_table"
+  | "existing_tree_live_table"
   | "verra_reports"
   | "custodian_hub"
   | "existing_tree_intake"
@@ -695,6 +698,7 @@ const LIVE_TABLE_SOURCES = [
 type LiveMaintenanceRow = {
   key: string;
   treeId: number;
+  treeOrigin: "new_planting" | "existing_inventory" | "natural_regeneration";
   assignee: string;
   activity: MaintenanceActivity;
   activityLabel: string;
@@ -723,6 +727,20 @@ const liveToneRank = (tone: LiveStatusTone) => {
   if (tone === "info") return 2;
   return 3;
 };
+
+const summarizeLiveRows = (rows: LiveMaintenanceRow[]) =>
+  rows.reduce(
+    (acc, row) => {
+      acc.total += 1;
+      if (row.tone === "danger") acc.danger += 1;
+      if (row.tone === "warning") acc.warning += 1;
+      if (row.tone === "ok") acc.ok += 1;
+      if (row.tone === "info") acc.info += 1;
+      if (row.countdownDays !== null && row.countdownDays <= 7 && row.countdownDays >= 0) acc.dueSoon += 1;
+      return acc;
+    },
+    { total: 0, danger: 0, warning: 0, ok: 0, info: 0, dueSoon: 0 },
+  );
 
 const R2_BUCKET_HINT = "photosgreen";
 
@@ -828,6 +846,13 @@ const renderActionIcon = (form: WorkForm) => {
             strokeWidth="2"
             strokeLinejoin="round"
           />
+        </svg>
+      );
+    case "existing_tree_live_table":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M5 6h14v12H5zM8 10h8M8 14h5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M12 3v3M9 5h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
       );
     case "users":
@@ -1289,6 +1314,7 @@ export default function GreenWork() {
     "review_queue",
     "overview",
     "live_table",
+    "existing_tree_live_table",
     "verra_reports",
   ];
 
@@ -1314,6 +1340,7 @@ export default function GreenWork() {
     work_type: "planting",
     target_trees: 0,
     auto_assign_first_cycle_maintenance: false,
+    allow_existing_tree_area_reuse: false,
     due_date: "",
   });
   const [newOrderSpeciesMode, setNewOrderSpeciesMode] = useState(false);
@@ -1491,6 +1518,7 @@ export default function GreenWork() {
       number,
       {
         tree_height_m: string;
+        planting_date: string;
         tree_origin: "new_planting" | "existing_inventory" | "natural_regeneration";
         attribution_scope: "full" | "monitor_only";
         count_in_planting_kpis: boolean;
@@ -1499,6 +1527,8 @@ export default function GreenWork() {
     >
   >({});
   const [savingTreeMetaId, setSavingTreeMetaId] = useState<number | null>(null);
+  const [treePositionDraft, setTreePositionDraft] = useState<{ treeId: number; lng: number; lat: number } | null>(null);
+  const [savingTreePositionId, setSavingTreePositionId] = useState<number | null>(null);
   const [seasonMode, setSeasonMode] = useState<SeasonMode>(storedSeason === "dry" ? "dry" : "rainy");
   const [newTask, setNewTask] = useState<{
     tree_id: string;
@@ -1581,6 +1611,16 @@ export default function GreenWork() {
     dueSoon: 0,
   });
   const [serverLiveSources, setServerLiveSources] = useState<{ label: string; url: string }[]>(LIVE_TABLE_SOURCES);
+  const [serverExistingLiveRows, setServerExistingLiveRows] = useState<LiveMaintenanceRow[]>([]);
+  const [serverExistingLiveSummary, setServerExistingLiveSummary] = useState<{ total: number; danger: number; warning: number; ok: number; info: number; dueSoon: number }>({
+    total: 0,
+    danger: 0,
+    warning: 0,
+    ok: 0,
+    info: 0,
+    dueSoon: 0,
+  });
+  const [serverExistingLiveSources, setServerExistingLiveSources] = useState<{ label: string; url: string }[]>(LIVE_TABLE_SOURCES);
   const [reviewNoteByTaskId, setReviewNoteByTaskId] = useState<Record<number, string>>({});
   const [kpiCurrent, setKpiCurrent] = useState<Record<string, any> | null>(null);
   const [speciesDailyTrend, setSpeciesDailyTrend] = useState<Record<string, any> | null>(null);
@@ -1997,6 +2037,8 @@ export default function GreenWork() {
     setDistributionEvents([]);
     setDistributionAllocations([]);
     setCustodianAssignDraft(null);
+    setServerLiveRows([]);
+    setServerExistingLiveRows([]);
   };
 
   const loadProjectData = async (projectId: number) => {
@@ -2067,6 +2109,7 @@ export default function GreenWork() {
         target_trees: Number(row?.target_trees || 0),
         planted_count: Number(row?.planted_count || 0),
         auto_assign_first_cycle_maintenance: Boolean(row?.auto_assign_first_cycle_maintenance),
+        allow_existing_tree_area_reuse: Boolean(row?.allow_existing_tree_area_reuse),
         species_allocations: normalizeSpeciesAllocations(row?.species_allocations),
       }));
       setOrders(normalizedOrders);
@@ -2186,23 +2229,39 @@ export default function GreenWork() {
   }, []);
 
   const loadServerLiveMaintenance = useCallback(
-    async (projectId: number, season: SeasonMode, assignee: string) => {
+    async (
+      projectId: number,
+      season: SeasonMode,
+      assignee: string,
+      treeScope: "new_planting" | "existing_inventory" = "new_planting",
+    ) => {
       const query = new URLSearchParams();
       query.set("season_mode", season);
+      query.set("tree_scope", treeScope);
       if (assignee !== "all") {
         query.set("assignee_name", assignee);
       }
       const res = await api.get(`/green/projects/${projectId}/live-maintenance?${query.toString()}`);
-      setServerLiveRows(Array.isArray(res.data?.rows) ? res.data.rows : []);
-      setServerLiveSummary({
+      const rows = Array.isArray(res.data?.rows) ? res.data.rows : [];
+      const summary = {
         total: Number(res.data?.summary?.total || 0),
         danger: Number(res.data?.summary?.danger || 0),
         warning: Number(res.data?.summary?.warning || 0),
         ok: Number(res.data?.summary?.ok || 0),
         info: Number(res.data?.summary?.info || 0),
         dueSoon: Number(res.data?.summary?.dueSoon || 0),
-      });
-      setServerLiveSources(Array.isArray(res.data?.sources) && res.data.sources.length ? res.data.sources : LIVE_TABLE_SOURCES);
+      };
+      const sources =
+        Array.isArray(res.data?.sources) && res.data.sources.length ? res.data.sources : LIVE_TABLE_SOURCES;
+      if (treeScope === "existing_inventory") {
+        setServerExistingLiveRows(rows);
+        setServerExistingLiveSummary(summary);
+        setServerExistingLiveSources(sources);
+        return;
+      }
+      setServerLiveRows(rows);
+      setServerLiveSummary(summary);
+      setServerLiveSources(sources);
     },
     [],
   );
@@ -2478,6 +2537,7 @@ export default function GreenWork() {
     try {
       await api.patch(`/green/trees/${treeId}`, {
         tree_height_m: parsedHeight,
+        planting_date: draft.planting_date || null,
         tree_origin: draft.tree_origin,
         attribution_scope: draft.attribution_scope,
         count_in_planting_kpis: draft.count_in_planting_kpis,
@@ -2489,6 +2549,7 @@ export default function GreenWork() {
             ? {
                 ...tree,
                 tree_height_m: parsedHeight,
+                planting_date: draft.planting_date || null,
                 tree_origin: draft.tree_origin,
                 attribution_scope: draft.attribution_scope,
                 count_in_planting_kpis: draft.count_in_planting_kpis,
@@ -2502,6 +2563,7 @@ export default function GreenWork() {
           ? {
               ...prev,
               tree_height_m: parsedHeight,
+              planting_date: draft.planting_date || null,
               tree_origin: draft.tree_origin,
               attribution_scope: draft.attribution_scope,
               count_in_planting_kpis: draft.count_in_planting_kpis,
@@ -2514,6 +2576,43 @@ export default function GreenWork() {
       toast.error(error?.response?.data?.detail || "Failed to update tree metadata");
     } finally {
       setSavingTreeMetaId(null);
+    }
+  };
+
+  const startAdjustingTreePosition = (treeId: number) => {
+    const coords = treeCoordinatesById.get(Number(treeId));
+    if (!coords) {
+      toast.error("Tree coordinates not available.");
+      return;
+    }
+    setTreePositionDraft({ treeId: Number(treeId), lng: coords.lng, lat: coords.lat });
+    setFocusPoint([{ lng: coords.lng, lat: coords.lat }]);
+    setActiveForm("map_view");
+    setMenuOpen(false);
+    toast("Drag the marker on the map, then save the new position.");
+  };
+
+  const saveTreePosition = async (treeId: number) => {
+    if (!activeProjectId || !treePositionDraft || Number(treePositionDraft.treeId) !== Number(treeId)) return;
+    setSavingTreePositionId(treeId);
+    try {
+      await api.patch(`/green/trees/${treeId}`, {
+        lng: Number(treePositionDraft.lng.toFixed(6)),
+        lat: Number(treePositionDraft.lat.toFixed(6)),
+      });
+      setTrees((prev) =>
+        prev.map((tree) =>
+          Number(tree.id) === Number(treeId)
+            ? { ...tree, lng: Number(treePositionDraft.lng.toFixed(6)), lat: Number(treePositionDraft.lat.toFixed(6)) }
+            : tree,
+        ),
+      );
+      setTreePositionDraft(null);
+      toast.success("Tree position updated");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to update tree position");
+    } finally {
+      setSavingTreePositionId(null);
     }
   };
 
@@ -2695,11 +2794,23 @@ export default function GreenWork() {
 
   useEffect(() => {
     if (!activeProjectId || activeForm !== "live_table") return;
-    void loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter).catch(() => {});
+    void loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, "new_planting").catch(() => {});
     const timer = window.setInterval(() => {
       void Promise.all([
         loadProjectData(activeProjectId),
-        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter),
+        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, "new_planting"),
+      ]).catch(() => {});
+    }, 20000);
+    return () => window.clearInterval(timer);
+  }, [activeProjectId, activeForm, seasonMode, assigneeFilter, loadServerLiveMaintenance]);
+
+  useEffect(() => {
+    if (!activeProjectId || activeForm !== "existing_tree_live_table") return;
+    void loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, "existing_inventory").catch(() => {});
+    const timer = window.setInterval(() => {
+      void Promise.all([
+        loadProjectData(activeProjectId),
+        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, "existing_inventory"),
       ]).catch(() => {});
     }, 20000);
     return () => window.clearInterval(timer);
@@ -2991,12 +3102,14 @@ export default function GreenWork() {
         area_enabled: newOrderAreaEnabled,
         area_label: newOrderAreaEnabled ? (newOrderAreaLabel || "").trim() || null : null,
         area_geojson: newOrderAreaEnabled ? newOrderAreaGeometry : null,
+        allow_existing_tree_area_reuse: newOrderAreaEnabled ? Boolean(newOrder.allow_existing_tree_area_reuse) : false,
       });
       setNewOrder({
         assignee_name: "",
         work_type: "planting",
         target_trees: 0,
         auto_assign_first_cycle_maintenance: false,
+        allow_existing_tree_area_reuse: false,
         due_date: "",
       });
       setNewOrderSpeciesMode(false);
@@ -3172,31 +3285,55 @@ export default function GreenWork() {
     toast.success("Task assigned");
   };
 
-  const reviewSubmittedTask = async (taskId: number, decision: "approve" | "reject") => {
+  const reviewSubmittedTask = async (taskId: number, decision: "approve" | "reject" | "metadata_edit") => {
     if (!activeProjectId) return;
     const reviewNote = (reviewNoteByTaskId[taskId] || "").trim();
-    if (decision === "reject" && !reviewNote) {
-      toast.error("Write a rejection note before rejecting.");
+    if ((decision === "reject" || decision === "metadata_edit") && !reviewNote) {
+      toast.error(
+        decision === "metadata_edit"
+          ? "Write a metadata-edit note before sending it back."
+          : "Write a rejection note before rejecting.",
+      );
       return;
     }
-    const loadingId = toast.loading(decision === "approve" ? "Approving task..." : "Rejecting task...");
+    const loadingId = toast.loading(
+      decision === "approve"
+        ? "Approving task..."
+        : decision === "metadata_edit"
+          ? "Requesting metadata edit..."
+          : "Rejecting task...",
+    );
     try {
       await api.post(`/green/tasks/${taskId}/review`, {
         decision,
         reviewer_name: "supervisor",
-        review_notes: reviewNote || (decision === "approve" ? "Approved by supervisor." : "Rejected. Update evidence and resubmit."),
+        review_notes:
+          reviewNote ||
+          (decision === "approve"
+            ? "Approved by supervisor."
+            : decision === "metadata_edit"
+              ? "Metadata correction requested. Update the form details and resubmit."
+              : "Rejected. Update evidence and resubmit."),
         season_mode: seasonMode,
       });
       await Promise.all([
         loadProjectData(activeProjectId),
-        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter),
+        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, "new_planting"),
+        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, "existing_inventory"),
       ]);
       setReviewNoteByTaskId((prev) => {
         const next = { ...prev };
         delete next[taskId];
         return next;
       });
-      toast.success(decision === "approve" ? "Task approved" : "Task rejected", { id: loadingId });
+      toast.success(
+        decision === "approve"
+          ? "Task approved"
+          : decision === "metadata_edit"
+            ? "Metadata edit requested"
+            : "Task rejected",
+        { id: loadingId },
+      );
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || "Failed to review task", { id: loadingId });
     }
@@ -3212,7 +3349,8 @@ export default function GreenWork() {
       });
       await Promise.all([
         loadProjectData(activeProjectId),
-        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter),
+        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, "new_planting"),
+        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, "existing_inventory"),
       ]);
       toast.success("Task reopened", { id: loadingId });
     } catch (error: any) {
@@ -4100,6 +4238,7 @@ export default function GreenWork() {
         rows.push({
           key: `${tree.id}-${activity}`,
           treeId: tree.id,
+          treeOrigin: (tree.tree_origin || "new_planting") as "new_planting" | "existing_inventory" | "natural_regeneration",
           assignee,
           activity,
           activityLabel: model.label,
@@ -4133,34 +4272,39 @@ export default function GreenWork() {
     });
   }, [assigneeFilter, tasks, trees, seasonMode, activeProjectMaturityMap]);
 
-  const liveMaintenanceSummary = useMemo(() => {
-    return liveMaintenanceRows.reduce(
-      (acc, row) => {
-        acc.total += 1;
-        if (row.tone === "danger") acc.danger += 1;
-        if (row.tone === "warning") acc.warning += 1;
-        if (row.tone === "ok") acc.ok += 1;
-        if (row.tone === "info") acc.info += 1;
-        if (row.countdownDays !== null && row.countdownDays <= 7 && row.countdownDays >= 0) acc.dueSoon += 1;
-        return acc;
-      },
-      { total: 0, danger: 0, warning: 0, ok: 0, info: 0, dueSoon: 0 },
-    );
-  }, [liveMaintenanceRows]);
+  const newPlantingLiveRows = useMemo(
+    () => liveMaintenanceRows.filter((row) => row.treeOrigin === "new_planting"),
+    [liveMaintenanceRows],
+  );
+  const existingTreeLiveRows = useMemo(
+    () => liveMaintenanceRows.filter((row) => row.treeOrigin !== "new_planting"),
+    [liveMaintenanceRows],
+  );
+  const liveMaintenanceSummary = useMemo(() => summarizeLiveRows(newPlantingLiveRows), [newPlantingLiveRows]);
+  const existingTreeLiveSummary = useMemo(() => summarizeLiveRows(existingTreeLiveRows), [existingTreeLiveRows]);
 
   const effectiveLiveRows = useMemo(
-    () => (serverLiveRows.length ? serverLiveRows : liveMaintenanceRows),
-    [serverLiveRows, liveMaintenanceRows],
+    () => (serverLiveRows.length ? serverLiveRows : newPlantingLiveRows),
+    [serverLiveRows, newPlantingLiveRows],
   );
   const effectiveLiveSummary = useMemo(
     () => (serverLiveRows.length ? serverLiveSummary : liveMaintenanceSummary),
     [serverLiveRows.length, serverLiveSummary, liveMaintenanceSummary],
+  );
+  const effectiveExistingLiveRows = useMemo(
+    () => (serverExistingLiveRows.length ? serverExistingLiveRows : existingTreeLiveRows),
+    [serverExistingLiveRows, existingTreeLiveRows],
+  );
+  const effectiveExistingLiveSummary = useMemo(
+    () => (serverExistingLiveRows.length ? serverExistingLiveSummary : existingTreeLiveSummary),
+    [serverExistingLiveRows.length, serverExistingLiveSummary, existingTreeLiveSummary],
   );
 
   const activeProjectActions: Array<{ form: WorkForm; title: string; note: string }> = [
     { form: "overview", title: "Overview", note: "Progress summary" },
     { form: "map_view", title: "Map View", note: "Trees + draw polygons" },
     { form: "live_table", title: "Live Maintenance", note: "Cycle due table + alerts" },
+    { form: "existing_tree_live_table", title: "Existing Tree Maintenance", note: "Age-based live cycles for existing trees" },
     { form: "users", title: "Users", note: "All staff status + roles" },
     { form: "add_user", title: "Add Staff", note: "Create user profile" },
     { form: "assign_work", title: "Planting Orders", note: "Assign planting targets" },
@@ -4375,6 +4519,7 @@ export default function GreenWork() {
           inspectedTree.tree_height_m === null || inspectedTree.tree_height_m === undefined
             ? ""
             : String(inspectedTree.tree_height_m),
+        planting_date: String(inspectedTree.planting_date || ""),
         tree_origin: (inspectedTree.tree_origin || "new_planting") as
           | "new_planting"
           | "existing_inventory"
@@ -4385,6 +4530,15 @@ export default function GreenWork() {
       }
     );
   }, [inspectedTree, treeMetaDraftById]);
+  const inspectedTreeCoords = useMemo(() => {
+    if (!inspectedTree) return null;
+    return treeCoordinatesById.get(Number(inspectedTree.id || 0)) || null;
+  }, [inspectedTree, treeCoordinatesById]);
+  useEffect(() => {
+    if (!treePositionDraft || !inspectedTree) return;
+    if (Number(treePositionDraft.treeId) === Number(inspectedTree.id)) return;
+    setTreePositionDraft(null);
+  }, [inspectedTree, treePositionDraft]);
   const projectModel = projectSettingsDraft.planting_model;
   const isCommunityModel = projectModel === "community_distributed" || projectModel === "mixed";
   const hasCommunityData = custodians.length > 0 || distributionEvents.length > 0 || distributionAllocations.length > 0;
@@ -4614,14 +4768,15 @@ export default function GreenWork() {
     activeForm !== null &&
     activeForm !== "overview" &&
     activeForm !== "live_table" &&
+    activeForm !== "existing_tree_live_table" &&
     activeForm !== "verra_reports" &&
     activeForm !== "map_view";
-  const detailScrollMode = activeForm === "existing_tree_intake";
+  const detailScrollMode = activeForm === "existing_tree_intake" || activeForm === "existing_tree_live_table";
   const custodianHubMode = activeForm === "custodian_hub";
   const overviewMode = Boolean(activeProjectId && activeForm === "overview");
   const mapViewMode = Boolean(activeProjectId && activeForm === "map_view");
   const assignWorkAreaMode = Boolean(activeProjectId && activeForm === "assign_work" && newOrderAreaEnabled);
-  const liveTableMode = Boolean(activeProjectId && activeForm === "live_table");
+  const liveTableMode = Boolean(activeProjectId && (activeForm === "live_table" || activeForm === "existing_tree_live_table"));
   const verraMode = Boolean(activeProjectId && activeForm === "verra_reports");
   const mapAreaDrawMode = Boolean(activeProjectId && newOrderAreaEnabled && (activeForm === "assign_work" || activeForm === "map_view"));
   const activeTreeId = inspectedTree?.id || 0;
@@ -4994,7 +5149,7 @@ export default function GreenWork() {
                   <span className="green-work-action-copy">
                     <span className="green-work-action-title-row">
                       <span>{action.title}</span>
-                      {action.form === "live_table" && (
+                      {(action.form === "live_table" || action.form === "existing_tree_live_table") && (
                         <span className="green-work-live-badge" aria-label="Live monitoring active">
                           <span className="green-work-live-badge-dot" aria-hidden="true" />
                           Live
@@ -5088,6 +5243,13 @@ export default function GreenWork() {
               onClick={() => openForm("live_table")}
             >
               Live Maintenance Table
+            </button>
+            <button
+              className={`green-work-menu-item ${activeForm === "existing_tree_live_table" ? "active" : ""}`}
+              type="button"
+              onClick={() => openForm("existing_tree_live_table")}
+            >
+              Existing Tree Maintenance
             </button>
             <button
               className={`green-work-menu-item ${activeForm === "custodian_hub" ? "active" : ""}`}
@@ -6677,6 +6839,7 @@ export default function GreenWork() {
                     if (!next) {
                       setNewOrderAreaLabel("");
                       setNewOrderAreaGeometry(null);
+                      setNewOrder((prev) => ({ ...prev, allow_existing_tree_area_reuse: false }));
                     }
                   }}
                   disabled={!activeProjectId}
@@ -6701,6 +6864,23 @@ export default function GreenWork() {
                   </p>
                   <p className="green-work-note">
                     {newOrderAreaGeometry ? "Area captured and will be linked to this work order." : "No area polygon captured yet."}
+                  </p>
+                  <label className="green-work-checkbox-row">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(newOrder.allow_existing_tree_area_reuse)}
+                      onChange={(e) =>
+                        setNewOrder((prev) => ({
+                          ...prev,
+                          allow_existing_tree_area_reuse: e.target.checked,
+                        }))
+                      }
+                      disabled={!activeProjectId}
+                    />
+                    <span>Allow this polygon to be reused in Green for existing-tree batch capture</span>
+                  </label>
+                  <p className="green-work-note">
+                    When enabled, the assigned field officer can choose this supervisor polygon for existing-tree capture instead of drawing a new area.
                   </p>
                 </div>
               )}
@@ -6850,6 +7030,7 @@ export default function GreenWork() {
                     <div className="staff-row-meta">
                       Review: {task.review_state || "none"} | Submitted: {formatDateLabel(task.submitted_at || task.created_at)}
                     </div>
+                    <div className="staff-row-meta">Planting date: {formatDateLabel(task.tree_planting_date)}</div>
                     <div className="staff-row-meta">
                       Tree GPS: {formatGpsPair(originalTreeLng, originalTreeLat)}
                     </div>
@@ -6896,7 +7077,7 @@ export default function GreenWork() {
                       </div>
                     )}
                     <textarea
-                      placeholder="Supervisor note (required for reject)"
+                      placeholder="Supervisor note (required for reject or metadata edit)"
                       value={reviewNoteByTaskId[task.id] ?? task.review_notes ?? ""}
                       onChange={(e) =>
                         setReviewNoteByTaskId((prev) => ({
@@ -6908,6 +7089,9 @@ export default function GreenWork() {
                     <div className="work-actions">
                       <button type="button" onClick={() => void reviewSubmittedTask(task.id, "approve")}>
                         Approve
+                      </button>
+                      <button type="button" onClick={() => void reviewSubmittedTask(task.id, "metadata_edit")}>
+                        Metadata Edit
                       </button>
                       <button type="button" onClick={() => void reviewSubmittedTask(task.id, "reject")}>
                         Reject
@@ -7414,7 +7598,7 @@ export default function GreenWork() {
                     onClick={() =>
                       void Promise.all([
                         loadProjectData(activeProjectId),
-                        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter),
+                        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, "new_planting"),
                       ])
                     }
                   >
@@ -7605,10 +7789,160 @@ export default function GreenWork() {
             </div>
           )}
 
+          {activeProjectId && activeForm === "existing_tree_live_table" && (
+            <div className="green-work-card green-work-live-card">
+              <div className="green-work-row">
+                <h3 className="green-work-live-title">
+                  <span className="green-work-live-title-text">Existing Tree Maintenance Table</span>
+                  <span className="green-work-live-title-indicator" aria-label="Live monitoring active">
+                    <span className="green-work-live-title-dot" aria-hidden="true" />
+                    <span className="green-work-live-title-wave" aria-hidden="true" />
+                    Live Monitoring
+                  </span>
+                </h3>
+                <div className="work-actions">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void Promise.all([
+                        loadProjectData(activeProjectId),
+                        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, "existing_inventory"),
+                      ])
+                    }
+                  >
+                    Refresh
+                  </button>
+                  <select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}>
+                    {assignees.map((a) => (
+                      <option key={a} value={a}>
+                        {a === "all" ? "All staff" : a}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <p className="green-work-chart-context">
+                Context: existing-tree maintenance uses planting date when available, and falls back to estimated tree age for age-based scheduling.
+              </p>
+              <div className="green-work-live-season-row">
+                <label htmlFor="green-work-existing-live-season-select">Season Model</label>
+                <select
+                  id="green-work-existing-live-season-select"
+                  value={seasonMode}
+                  onChange={(e) => setSeasonMode(e.target.value as SeasonMode)}
+                >
+                  <option value="rainy">Rainy Season</option>
+                  <option value="dry">Dry Season</option>
+                </select>
+              </div>
+
+              <div className="green-work-live-summary">
+                <span className="green-work-live-pill neutral">Season: {SEASON_LABEL[seasonMode]}</span>
+                <span className="green-work-live-pill danger">Danger: {effectiveExistingLiveSummary.danger}</span>
+                <span className="green-work-live-pill warning">In Progress / Due Soon: {effectiveExistingLiveSummary.warning}</span>
+                <span className="green-work-live-pill ok">On Track: {effectiveExistingLiveSummary.ok}</span>
+                <span className="green-work-live-pill info">Needs Age Data: {effectiveExistingLiveSummary.info}</span>
+                <span className="green-work-live-pill neutral">Rows: {effectiveExistingLiveSummary.total}</span>
+              </div>
+
+              <div className="green-work-live-table-wrap">
+                <table className="green-work-live-table">
+                  <thead>
+                    <tr>
+                      <th>Tree</th>
+                      <th>Staff</th>
+                      <th>Activity</th>
+                      <th>Tree Age</th>
+                      <th>Last Done</th>
+                      <th>Model Due</th>
+                      <th>Assigned Due</th>
+                      <th>Countdown</th>
+                      <th>Status</th>
+                      <th>Indicator</th>
+                      <th>Progress</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {effectiveExistingLiveRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={11} className="green-work-live-empty">
+                          No existing-tree maintenance rows available for this filter.
+                        </td>
+                      </tr>
+                    ) : (
+                      effectiveExistingLiveRows.map((row) => (
+                        <tr key={row.key} className={`tone-${row.tone}`}>
+                          <td>
+                            <button
+                              type="button"
+                              className="green-work-live-tree-link"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setStaffMenu(null);
+                                setLiveTreeMenu({ treeId: row.treeId, x: event.clientX, y: event.clientY, taskType: row.activity });
+                              }}
+                            >
+                              #{row.treeId}
+                            </button>
+                          </td>
+                          <td>{row.assignee}</td>
+                          <td>
+                            <strong>{row.activityLabel}</strong>
+                            <span className="green-work-live-hint">{row.modelRationale}</span>
+                          </td>
+                          <td>{row.treeAgeDays === null ? "-" : `${row.treeAgeDays}d`}</td>
+                          <td>{formatDateLabel(row.lastDoneAt)}</td>
+                          <td>{formatDateLabel(row.modelDueDate)}</td>
+                          <td>{formatDateLabel(row.assignedDueDate)}</td>
+                          <td
+                            className={`green-work-live-countdown ${
+                              row.countdownDays !== null && row.countdownDays < 0 ? "overdue" : ""
+                            }`}
+                          >
+                            {row.countdownDays === null
+                              ? "-"
+                              : row.countdownDays < 0
+                                ? `${Math.abs(row.countdownDays)}d late`
+                                : row.countdownDays === 0
+                                  ? "Due today"
+                                  : `${row.countdownDays}d left`}
+                          </td>
+                          <td>{row.statusText}</td>
+                          <td>
+                            <span className={`green-work-live-indicator ${row.tone}`}>{row.indicator}</span>
+                          </td>
+                          <td>
+                            Done {row.doneCount} | Open {row.pendingCount} | Overdue {row.overdueCount}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="green-work-live-sources">
+                <h4>Schedule Sources</h4>
+                <p>
+                  Existing-tree maintenance follows the same Nigeria-adapted field cadence, but tree age can be derived from known planting date or captured age metadata.
+                </p>
+                <ul>
+                  {serverExistingLiveSources.map((source) => (
+                    <li key={source.url}>
+                      <a href={source.url} target="_blank" rel="noreferrer">
+                        {source.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
           {activeProjectId && activeForm === "existing_tree_intake" && (
             <div className="green-work-card">
               <div className="green-work-row">
-                <h3>Existing Tree Live Table</h3>
+                <h3>Existing Trees Inventory</h3>
                 <div className="work-actions">
                   <button
                     type="button"
@@ -7936,6 +8270,16 @@ export default function GreenWork() {
                 <div className="green-work-map-canvas">
                   <TreeMap
                     trees={mapTrees}
+                    draftPoint={
+                      treePositionDraft && inspectedTree && Number(treePositionDraft.treeId) === Number(inspectedTree.id)
+                        ? { lng: treePositionDraft.lng, lat: treePositionDraft.lat }
+                        : null
+                    }
+                    onDraftMove={
+                      treePositionDraft && inspectedTree && Number(treePositionDraft.treeId) === Number(inspectedTree.id)
+                        ? (lng, lat) => setTreePositionDraft((prev) => (prev ? { ...prev, lng, lat } : prev))
+                        : undefined
+                    }
                     onAddTree={() => {}}
                     enableDraw={mapAreaDrawMode}
                     drawMode={mapAreaDrawMode ? "polygon" : "point"}
@@ -7962,7 +8306,10 @@ export default function GreenWork() {
           <button
             type="button"
             className="green-work-tree-overlay"
-            onClick={() => setInspectedTree(null)}
+            onClick={() => {
+              setInspectedTree(null);
+              setTreePositionDraft(null);
+            }}
             aria-label="Close tree details"
           />
           <aside className="green-work-tree-drawer green-work-tree-inspector" style={drawerStyle}>
@@ -7971,7 +8318,10 @@ export default function GreenWork() {
               <button
                 className="green-work-tree-drawer-close"
                 type="button"
-                onClick={() => setInspectedTree(null)}
+                onClick={() => {
+                  setInspectedTree(null);
+                  setTreePositionDraft(null);
+                }}
                 aria-label="Close tree details"
               >
                 X
@@ -8027,6 +8377,10 @@ export default function GreenWork() {
                   <strong>{formatDateLabel(inspectedTree.planting_date)}</strong>
                 </div>
                 <div>
+                  <span>Current GPS</span>
+                  <strong>{formatGpsPair(inspectedTreeCoords?.lng ?? null, inspectedTreeCoords?.lat ?? null)}</strong>
+                </div>
+                <div>
                   <span>Tree Height</span>
                   <strong>{formatTreeHeight(inspectedTree.tree_height_m)}</strong>
                 </div>
@@ -8052,6 +8406,22 @@ export default function GreenWork() {
               </div>
               {selectedInspectTreeMeta && (
                 <div className="green-work-tree-meta-edit">
+                  <label>
+                    Planting Date
+                    <input
+                      type="date"
+                      value={selectedInspectTreeMeta.planting_date}
+                      onChange={(e) =>
+                        setTreeMetaDraftById((prev) => ({
+                          ...prev,
+                          [inspectedTree.id]: {
+                            ...selectedInspectTreeMeta,
+                            planting_date: e.target.value,
+                          },
+                        }))
+                      }
+                    />
+                  </label>
                   <label>
                     Height (m)
                     <input
@@ -8151,6 +8521,34 @@ export default function GreenWork() {
                   >
                     {savingTreeMetaId === inspectedTree.id ? "Saving..." : "Save Tree Metadata"}
                   </button>
+                  <div className="green-work-tree-position-tools">
+                    <button className="green-btn-outline" type="button" onClick={() => startAdjustingTreePosition(inspectedTree.id)}>
+                      Adjust Position
+                    </button>
+                    {treePositionDraft && Number(treePositionDraft.treeId) === Number(inspectedTree.id) && (
+                      <>
+                        <span className="green-work-note">
+                          Draft GPS: {formatGpsPair(treePositionDraft.lng, treePositionDraft.lat)}
+                        </span>
+                        <button
+                          className="green-btn-primary"
+                          type="button"
+                          disabled={savingTreePositionId === inspectedTree.id}
+                          onClick={() => void saveTreePosition(inspectedTree.id)}
+                        >
+                          {savingTreePositionId === inspectedTree.id ? "Saving Position..." : "Save Position"}
+                        </button>
+                        <button
+                          className="green-btn-outline"
+                          type="button"
+                          disabled={savingTreePositionId === inspectedTree.id}
+                          onClick={() => setTreePositionDraft(null)}
+                        >
+                          Cancel Position Edit
+                        </button>
+                      </>
+                    )}
+                  </div>
                   <div className="work-actions">
                     <button
                       className="green-work-danger-btn"
