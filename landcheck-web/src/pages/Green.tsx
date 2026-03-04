@@ -172,6 +172,12 @@ type TaskEdit = {
   activity_lat: number | null;
   activity_recorded_at: string;
 };
+type TaskTreeMetaEdit = {
+  species: string;
+  planting_date: string;
+  tree_height_m: string;
+  tree_age_months: string;
+};
 type DeferredInstallPrompt = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
@@ -626,6 +632,7 @@ export default function Green() {
   const [activeUser, setActiveUser] = useState<string>(storedActiveUser);
   const [myTasks, setMyTasks] = useState<any[]>([]);
   const [taskEdits, setTaskEdits] = useState<Record<number, TaskEdit>>({});
+  const [taskTreeMetaEdits, setTaskTreeMetaEdits] = useState<Record<number, TaskTreeMetaEdit>>({});
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [taskGpsLoadingId, setTaskGpsLoadingId] = useState<number | null>(null);
   const [loadingTrees, setLoadingTrees] = useState(false);
@@ -977,6 +984,14 @@ export default function Green() {
     }
     return trees.filter((t: any) => (t as any).created_by === activeUser);
   }, [activeUser, activeUserDetail, activeUserIsCustodian, trees]);
+  const userTreeById = useMemo(() => {
+    const map = new Map<number, Tree>();
+    userTrees.forEach((tree) => {
+      const id = Number(tree.id || 0);
+      if (id > 0) map.set(id, tree);
+    });
+    return map;
+  }, [userTrees]);
   const existingTreeAreaOverlaysForUser = useMemo(() => {
     return userTrees
       .map((tree: any) => {
@@ -2037,8 +2052,105 @@ export default function Green() {
       edits[t.id] = buildTaskEdit(t);
     });
     setTaskEdits(edits);
+    setTaskTreeMetaEdits((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      rows.forEach((task: any) => {
+        const taskId = Number(task?.id || 0);
+        if (!taskId || next[taskId]) return;
+        next[taskId] = {
+          species: String(task?.tree_species || ""),
+          planting_date: String(task?.tree_planting_date || ""),
+          tree_height_m: "",
+          tree_age_months: "",
+        };
+        changed = true;
+      });
+      return changed ? next : prev;
+    });
     setEditingTaskId(null);
     setTaskGpsLoadingId(null);
+  };
+
+  const isPlantingMetadataTask = (task: any) => {
+    const taskType = normalizeTaskState(task?.task_type);
+    return taskType === "planting" || taskType === "existing_inventory_intake";
+  };
+
+  const getTaskTreeMetaDraft = (task: any): TaskTreeMetaEdit => {
+    const taskId = Number(task?.id || 0);
+    const treeId = Number(task?.tree_id || 0);
+    const tree = userTreeById.get(treeId);
+    const seeded = taskTreeMetaEdits[taskId];
+    return {
+      species: seeded?.species ?? String(tree?.species || task?.tree_species || ""),
+      planting_date: seeded?.planting_date ?? String(tree?.planting_date || task?.tree_planting_date || ""),
+      tree_height_m:
+        seeded?.tree_height_m ??
+        (tree?.tree_height_m === null || tree?.tree_height_m === undefined ? "" : String(tree.tree_height_m)),
+      tree_age_months:
+        seeded?.tree_age_months ??
+        (tree?.tree_age_months === null || tree?.tree_age_months === undefined ? "" : String(tree.tree_age_months)),
+    };
+  };
+
+  const saveTaskTreeMetadata = async (task: any) => {
+    if (!isPlantingMetadataTask(task)) return;
+    const treeId = Number(task?.tree_id || 0);
+    if (!treeId) return;
+    const tree = userTreeById.get(treeId);
+    if (!tree) return;
+    const draft = getTaskTreeMetaDraft(task);
+    const species = String(draft.species || "").trim();
+    const plantingDate = String(draft.planting_date || "").trim();
+    const treeHeight = parseTreeHeightInput(draft.tree_height_m);
+    const treeAgeMonths = parseTreeAgeMonthsInput(draft.tree_age_months);
+    if (!species) {
+      throw new Error("Species is required for this submission.");
+    }
+    if (!plantingDate) {
+      throw new Error(
+        normalizeTaskState(tree.tree_origin) === "existing_inventory"
+          ? "Reference date is required for existing tree metadata."
+          : "Planting date is required for this submission.",
+      );
+    }
+    if (String(draft.tree_height_m || "").trim() && treeHeight === null) {
+      throw new Error("Tree height must be a number between 0 and 120.");
+    }
+    if (String(draft.tree_age_months || "").trim() && treeAgeMonths === null) {
+      throw new Error("Estimated tree age must be a number between 0 and 2400 months.");
+    }
+    await api.patch(`/green/trees/${treeId}`, {
+      species,
+      planting_date: plantingDate,
+      tree_height_m: treeHeight,
+      tree_age_months: normalizeTaskState(tree.tree_origin) === "existing_inventory" ? treeAgeMonths : null,
+    });
+    setTrees((prev) =>
+      prev.map((row) =>
+        Number(row.id) === treeId
+          ? {
+              ...row,
+              species,
+              planting_date: plantingDate,
+              tree_height_m: treeHeight,
+              tree_age_months: normalizeTaskState(row.tree_origin) === "existing_inventory" ? treeAgeMonths : null,
+            }
+          : row,
+      ),
+    );
+    setInspectedTree((prev) =>
+      prev && Number(prev.id) === treeId
+        ? ({
+            ...prev,
+            species,
+            planting_date: plantingDate,
+            tree_height_m: treeHeight,
+            tree_age_months: normalizeTaskState(tree.tree_origin) === "existing_inventory" ? treeAgeMonths : null,
+          } as any)
+        : prev,
+    );
   };
 
   const saveTaskUpdate = async (taskId: number) => {
@@ -2051,6 +2163,7 @@ export default function Green() {
     }
     const payload = sanitizeTaskEditForApi(edit);
     try {
+      await saveTaskTreeMetadata(task);
       await api.patch(`/green/tasks/${taskId}`, payload);
       await loadMyTasks();
       toast.success("Task updated");
@@ -2069,7 +2182,7 @@ export default function Green() {
           return;
         }
       }
-      toast.error("Failed to update task");
+      toast.error((error as any)?.message || "Failed to update task");
     }
   };
 
@@ -2108,6 +2221,7 @@ export default function Green() {
       submitPayload.activity_recorded_at = (edit.activity_recorded_at || "").trim() || new Date().toISOString();
     }
     try {
+      await saveTaskTreeMetadata(task);
       await api.post(`/green/tasks/${taskId}/submit`, submitPayload);
       setMyTasks((prev) =>
         prev.map((task: any) =>
@@ -2167,7 +2281,7 @@ export default function Green() {
           return;
         }
       }
-      toast.error(error?.response?.data?.detail || "Failed to submit task", { id: loadingId });
+      toast.error(error?.response?.data?.detail || error?.message || "Failed to submit task", { id: loadingId });
     }
   };
 
@@ -2900,6 +3014,8 @@ export default function Green() {
                 </div>
                 {myTasks.map((t) => {
                   const taskEdit = taskEdits[t.id];
+                  const taskTree = userTreeById.get(Number(t.tree_id || 0));
+                  const taskTreeMetaDraft = getTaskTreeMetaDraft(t);
                   const evidencePhotos = getTaskPhotoUrls(t, taskEdit);
                   const activityLng = toFiniteNumber(hasOwn(taskEdit, "activity_lng") ? taskEdit?.activity_lng : t.activity_lng);
                   const activityLat = toFiniteNumber(hasOwn(taskEdit, "activity_lat") ? taskEdit?.activity_lat : t.activity_lat);
@@ -3035,6 +3151,95 @@ export default function Green() {
                     {editingTaskId === t.id && !isTaskLockedForField(t) && (
                       <div className="tree-row task-edit-inline-row">
                         <div className="task-edit-inline-card">
+                          {isPlantingMetadataTask(t) && (
+                            <>
+                              <div className="tree-form-row full">
+                                <label>Species</label>
+                                <input
+                                  value={taskTreeMetaDraft.species}
+                                  onChange={(e) =>
+                                    setTaskTreeMetaEdits((prev) => ({
+                                      ...prev,
+                                      [t.id]: {
+                                        ...(prev[t.id] || taskTreeMetaDraft),
+                                        species: e.target.value,
+                                      },
+                                    }))
+                                  }
+                                />
+                              </div>
+                              <div className="tree-form-row full">
+                                <label>
+                                  {normalizeTaskState(taskTree?.tree_origin) === "existing_inventory"
+                                    ? "Reference Date"
+                                    : "Planting Date"}
+                                </label>
+                                <input
+                                  type="date"
+                                  value={taskTreeMetaDraft.planting_date}
+                                  onChange={(e) =>
+                                    setTaskTreeMetaEdits((prev) => ({
+                                      ...prev,
+                                      [t.id]: {
+                                        ...(prev[t.id] || taskTreeMetaDraft),
+                                        planting_date: e.target.value,
+                                      },
+                                    }))
+                                  }
+                                />
+                                <small className="tree-form-help">
+                                  This date is saved as the planting date on the tree record and is what supervisors will see in Work review.
+                                </small>
+                              </div>
+                              <div className="tree-form-row full">
+                                <label>Tree Height (m)</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={120}
+                                  step="0.01"
+                                  value={taskTreeMetaDraft.tree_height_m}
+                                  onChange={(e) =>
+                                    setTaskTreeMetaEdits((prev) => ({
+                                      ...prev,
+                                      [t.id]: {
+                                        ...(prev[t.id] || taskTreeMetaDraft),
+                                        tree_height_m: e.target.value,
+                                      },
+                                    }))
+                                  }
+                                />
+                              </div>
+                              {normalizeTaskState(taskTree?.tree_origin) === "existing_inventory" && (
+                                <div className="tree-form-row full">
+                                  <label>Estimated Age (months)</label>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={2400}
+                                    step="1"
+                                    value={taskTreeMetaDraft.tree_age_months}
+                                    onChange={(e) =>
+                                      setTaskTreeMetaEdits((prev) => ({
+                                        ...prev,
+                                        [t.id]: {
+                                          ...(prev[t.id] || taskTreeMetaDraft),
+                                          tree_age_months: e.target.value,
+                                        },
+                                      }))
+                                    }
+                                  />
+                                </div>
+                              )}
+                              {isTaskMetadataEditRequested(t) && (
+                                <div className="tree-row">
+                                  <span className="task-cell green-task-review-note" data-label="Metadata edit">
+                                    Supervisor asked for metadata correction only. Update the fields above, then resubmit.
+                                  </span>
+                                </div>
+                              )}
+                            </>
+                          )}
                           <div className="tree-form-row full">
                             <label>Notes</label>
                             <textarea
@@ -3311,6 +3516,11 @@ export default function Green() {
                   value={newTree.planting_date}
                   onChange={(e) => setNewTree({ ...newTree, planting_date: e.target.value })}
                 />
+                {newTree.tree_origin === "existing_inventory" && (
+                  <small className="tree-form-help">
+                    Saved as the tree planting date/reference date and shown to supervisors in Work review.
+                  </small>
+                )}
               </div>
               {newTree.tree_origin === "existing_inventory" && (
                 <div className="tree-form-row">
