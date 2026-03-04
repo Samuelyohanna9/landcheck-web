@@ -122,6 +122,7 @@ type WorkOrder = {
   target_trees: number;
   species_allocations?: Array<{ species: string; count: number }>;
   auto_assign_first_cycle_maintenance?: boolean;
+  allow_existing_tree_area_reuse?: boolean;
   due_date: string | null;
   status: string;
   planted_count: number;
@@ -266,6 +267,7 @@ const isLegacyDoneWithoutReview = (task: any) => {
 };
 const isTaskApproved = (task: any) => normalizeTaskState(task?.review_state) === "approved" || isLegacyDoneWithoutReview(task);
 const isTaskSubmitted = (task: any) => normalizeTaskState(task?.review_state) === "submitted";
+const isTaskMetadataEditRequested = (task: any) => normalizeTaskState(task?.review_state) === "metadata_edit";
 const isTaskRejected = (task: any) => normalizeTaskState(task?.review_state) === "rejected";
 const isTaskLockedForField = (task: any) => isTaskApproved(task) || isTaskSubmitted(task);
 const isTaskDoneForSummary = (task: any) => {
@@ -654,6 +656,8 @@ export default function Green() {
   const [existingTreeBatchMode, setExistingTreeBatchMode] = useState(false);
   const [existingTreeBatchAreaGeojson, setExistingTreeBatchAreaGeojson] = useState<any | null>(null);
   const [existingTreeBatchCount, setExistingTreeBatchCount] = useState<string>("");
+  const [useAssignedExistingTreeArea, setUseAssignedExistingTreeArea] = useState(false);
+  const [selectedExistingTreeAreaOrderId, setSelectedExistingTreeAreaOrderId] = useState<string>("");
   const [addingTree, setAddingTree] = useState(false);
   const [mapDrawMode, setMapDrawMode] = useState(false);
   const [, setMapView] = useState<{
@@ -1009,6 +1013,20 @@ export default function Green() {
         .filter((order) => !isClosedWorkOrder(order.status)),
     [plantingOrders],
   );
+  const reusableExistingTreeAreaOrders = useMemo(
+    () =>
+      activePlantingOrders.filter(
+        (order) => Boolean(order.area_enabled) && Boolean(order.area_geojson) && Boolean(order.allow_existing_tree_area_reuse),
+      ),
+    [activePlantingOrders],
+  );
+  const selectedExistingTreeAreaOrder = useMemo(() => {
+    const selectedId = Number(selectedExistingTreeAreaOrderId || 0);
+    if (selectedId > 0) {
+      return reusableExistingTreeAreaOrders.find((order) => Number(order.id) === selectedId) || null;
+    }
+    return reusableExistingTreeAreaOrders[0] || null;
+  }, [reusableExistingTreeAreaOrders, selectedExistingTreeAreaOrderId]);
   const activeOrderSpeciesAllocations = useMemo(() => {
     const merged = new Map<string, { species: string; count: number }>();
     activePlantingOrders.forEach((order) => {
@@ -1031,11 +1049,39 @@ export default function Green() {
   }, [activePlantingOrders]);
 
   useEffect(() => {
-    if (!existingTreeBatchCaptureActive) return;
+    if (!existingTreeBatchCaptureActive || useAssignedExistingTreeArea) return;
     if (!mapDrawMode) {
       setMapDrawMode(true);
     }
-  }, [existingTreeBatchCaptureActive, mapDrawMode]);
+  }, [existingTreeBatchCaptureActive, useAssignedExistingTreeArea, mapDrawMode]);
+  useEffect(() => {
+    if (!existingTreeBatchCaptureActive || !useAssignedExistingTreeArea) return;
+    if (mapDrawMode) {
+      setMapDrawMode(false);
+    }
+  }, [existingTreeBatchCaptureActive, useAssignedExistingTreeArea, mapDrawMode]);
+  useEffect(() => {
+    if (!existingTreeBatchCaptureActive) {
+      setUseAssignedExistingTreeArea(false);
+      setSelectedExistingTreeAreaOrderId("");
+      return;
+    }
+    if (reusableExistingTreeAreaOrders.length === 0) {
+      setUseAssignedExistingTreeArea(false);
+      setSelectedExistingTreeAreaOrderId("");
+      return;
+    }
+    if (!useAssignedExistingTreeArea) return;
+    const selectedId = Number(selectedExistingTreeAreaOrderId || 0);
+    if (!selectedId || !reusableExistingTreeAreaOrders.some((order) => Number(order.id) === selectedId)) {
+      setSelectedExistingTreeAreaOrderId(String(reusableExistingTreeAreaOrders[0].id));
+    }
+  }, [
+    existingTreeBatchCaptureActive,
+    reusableExistingTreeAreaOrders,
+    useAssignedExistingTreeArea,
+    selectedExistingTreeAreaOrderId,
+  ]);
   const hasSpeciesBasedPlantingAllocation = activeOrderSpeciesAllocations.length > 0;
   const plantedSpeciesCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -1308,6 +1354,7 @@ export default function Green() {
           area_enabled: Boolean(row?.area_enabled) && Boolean(areaGeometry),
           area_geojson: areaGeometry,
           area_label: typeof row?.area_label === "string" ? row.area_label : null,
+          allow_existing_tree_area_reuse: Boolean(row?.allow_existing_tree_area_reuse),
           species_allocations: normalizeSpeciesAllocations(row?.species_allocations),
         } as WorkOrder;
       });
@@ -1348,6 +1395,7 @@ export default function Green() {
             area_enabled: Boolean(row?.area_enabled) && Boolean(areaGeometry),
             area_geojson: areaGeometry,
             area_label: typeof row?.area_label === "string" ? row.area_label : null,
+            allow_existing_tree_area_reuse: Boolean(row?.allow_existing_tree_area_reuse),
             species_allocations: normalizeSpeciesAllocations(row?.species_allocations),
           } as WorkOrder;
         });
@@ -1615,6 +1663,8 @@ export default function Green() {
     setExistingTreeBatchMode(false);
     setExistingTreeBatchAreaGeojson(null);
     setExistingTreeBatchCount("");
+    setUseAssignedExistingTreeArea(false);
+    setSelectedExistingTreeAreaOrderId("");
     setPendingTreePhoto(null);
     setPendingTreePhotos([]);
     setPhotoPreview("");
@@ -1642,7 +1692,13 @@ export default function Green() {
     }
     const isExistingBatchCapture = newTree.tree_origin === "existing_inventory" && existingTreeBatchMode;
     const batchTreeCountValue = isExistingBatchCapture ? parseInventoryTreeCountInput(existingTreeBatchCount) : null;
-    const batchAreaGeometry = isExistingBatchCapture ? normalizeOrderAreaGeometry(existingTreeBatchAreaGeojson) : null;
+    const assignedExistingTreeAreaGeometry =
+      isExistingBatchCapture && useAssignedExistingTreeArea
+        ? normalizeOrderAreaGeometry(selectedExistingTreeAreaOrder?.area_geojson)
+        : null;
+    const batchAreaGeometry = isExistingBatchCapture
+      ? assignedExistingTreeAreaGeometry || normalizeOrderAreaGeometry(existingTreeBatchAreaGeojson)
+      : null;
     const batchAreaCentroid = isExistingBatchCapture ? computeAreaCentroid(batchAreaGeometry) : null;
     if (isExistingBatchCapture) {
       if (batchTreeCountValue === null || batchTreeCountValue <= 1) {
@@ -1650,7 +1706,11 @@ export default function Green() {
         return;
       }
       if (!batchAreaGeometry || !batchAreaCentroid) {
-        toast.error("Draw the polygon area for the existing trees on the map.");
+        toast.error(
+          useAssignedExistingTreeArea
+            ? "Select a reusable supervisor polygon for this existing-tree batch."
+            : "Draw the polygon area for the existing trees on the map.",
+        );
         return;
       }
       if (!isOnline) {
@@ -2952,9 +3012,10 @@ export default function Green() {
                       <span className="task-cell" data-label="Verification">
                         Review: {t.review_state || "none"} | Evidence: {hasTaskEvidence(t, taskEdits[t.id]) ? "complete" : "missing"} | GPS:{" "}
                         {hasTaskGpsCapture(t, taskEdits[t.id]) ? "captured" : "missing"}
+                        {isTaskMetadataEditRequested(t) ? " | Metadata edit requested" : ""}
                       </span>
                     </div>
-                    {isTaskRejected(t) && t.review_notes && (
+                    {(isTaskRejected(t) || isTaskMetadataEditRequested(t)) && t.review_notes && (
                       <div className="tree-row">
                         <span className="task-cell green-task-review-note" data-label="Supervisor note">
                           Supervisor note: {t.review_notes}
@@ -3128,7 +3189,11 @@ export default function Green() {
                 {existingTreeBatchCaptureActive && (
                   <div className="green-map-area-banner">
                     <strong>Existing trees batch capture</strong>
-                    <span>Zoom to the area and draw one polygon, then enter the number of trees below.</span>
+                    <span>
+                      {useAssignedExistingTreeArea && selectedExistingTreeAreaOrder
+                        ? `Using supervisor polygon: ${(selectedExistingTreeAreaOrder.area_label || "").trim() || `Assigned area #${selectedExistingTreeAreaOrder.id}`}.`
+                        : "Zoom to the area and draw one polygon, then enter the number of trees below."}
+                    </span>
                   </div>
                 )}
                 <TreeMap
@@ -3149,7 +3214,7 @@ export default function Green() {
                     if (existingTreeBatchCaptureActive) return;
                     setNewTree((prev) => ({ ...prev, lng, lat }));
                   }}
-                  drawActive={mapDrawMode}
+                  drawActive={existingTreeBatchCaptureActive && useAssignedExistingTreeArea ? false : mapDrawMode}
                   drawMode={existingTreeBatchCaptureActive ? "polygon" : "point"}
                   onPolygonChange={existingTreeBatchCaptureActive ? (geometry) => setExistingTreeBatchAreaGeojson(geometry) : undefined}
                   onSelectTree={(id) => loadTreeDetails(id)}
@@ -3219,6 +3284,8 @@ export default function Green() {
                       setExistingTreeBatchMode(false);
                       setExistingTreeBatchAreaGeojson(null);
                       setExistingTreeBatchCount("");
+                      setUseAssignedExistingTreeArea(false);
+                      setSelectedExistingTreeAreaOrderId("");
                       setPendingTreePhotos([]);
                       setTreePhotoPreviews([]);
                     }
@@ -3278,6 +3345,8 @@ export default function Green() {
                           }
                           setExistingTreeBatchAreaGeojson(null);
                           setExistingTreeBatchCount(checked ? (existingTreeBatchCount || "2") : "");
+                          setUseAssignedExistingTreeArea(false);
+                          setSelectedExistingTreeAreaOrderId("");
                           setPendingTreePhoto(null);
                           setPhotoPreview("");
                           setPendingTreePhotos([]);
@@ -3292,6 +3361,49 @@ export default function Green() {
                   </div>
                   {existingTreeBatchMode && (
                     <>
+                      {reusableExistingTreeAreaOrders.length > 0 && (
+                        <div className="tree-form-row full">
+                          <label className="green-checkbox-row">
+                            <input
+                              type="checkbox"
+                              checked={useAssignedExistingTreeArea}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setUseAssignedExistingTreeArea(checked);
+                                if (checked) {
+                                  setSelectedExistingTreeAreaOrderId(
+                                    String(selectedExistingTreeAreaOrder?.id || reusableExistingTreeAreaOrders[0]?.id || ""),
+                                  );
+                                  setExistingTreeBatchAreaGeojson(null);
+                                  setMapDrawMode(false);
+                                } else {
+                                  setMapDrawMode(true);
+                                }
+                              }}
+                            />
+                            <span>Use supervisor-assigned polygon instead of drawing a new one</span>
+                          </label>
+                          <small className="tree-form-help">
+                            Supervisors enabled reuse on {reusableExistingTreeAreaOrders.length} assigned planting area
+                            {reusableExistingTreeAreaOrders.length === 1 ? "" : "s"}.
+                          </small>
+                        </div>
+                      )}
+                      {useAssignedExistingTreeArea && reusableExistingTreeAreaOrders.length > 1 && (
+                        <div className="tree-form-row full">
+                          <label>Supervisor Polygon</label>
+                          <select
+                            value={selectedExistingTreeAreaOrderId || String(selectedExistingTreeAreaOrder?.id || "")}
+                            onChange={(e) => setSelectedExistingTreeAreaOrderId(e.target.value)}
+                          >
+                            {reusableExistingTreeAreaOrders.map((order) => (
+                              <option key={`existing-area-order-${order.id}`} value={String(order.id)}>
+                                {(order.area_label || "").trim() || `Assigned area #${order.id}`}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                       <div className="tree-form-row">
                         <label>Number of Trees in Area</label>
                         <input
@@ -3307,11 +3419,21 @@ export default function Green() {
                       <div className="tree-form-row full">
                         <label>Area Polygon</label>
                         <input
-                          value={existingTreeBatchAreaGeojson ? "Polygon captured on map" : "No polygon drawn yet"}
+                          value={
+                            useAssignedExistingTreeArea
+                              ? selectedExistingTreeAreaOrder
+                                ? `Using supervisor polygon: ${(selectedExistingTreeAreaOrder.area_label || "").trim() || `Assigned area #${selectedExistingTreeAreaOrder.id}`}`
+                                : "No reusable supervisor polygon selected"
+                              : existingTreeBatchAreaGeojson
+                                ? "Polygon captured on map"
+                                : "No polygon drawn yet"
+                          }
                           readOnly
                         />
                         <small className="tree-form-help">
-                          Switch map mode to Add Tree, then draw a polygon. One polygon is stored for this existing-tree batch record.
+                          {useAssignedExistingTreeArea
+                            ? "The selected supervisor polygon will be stored for this existing-tree batch record."
+                            : "Switch map mode to Add Tree, then draw a polygon. One polygon is stored for this existing-tree batch record."}
                         </small>
                       </div>
                     </>
