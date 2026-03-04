@@ -1106,35 +1106,17 @@ export default function TreeMap({
 
     const source = map.getSource("draft-point") as mapboxgl.GeoJSONSource | undefined;
     if (source) {
-      source.setData({
-        type: "FeatureCollection",
-        features: [
-          {
-            type: "Feature",
-            properties: {},
-            geometry: {
-              type: "Point",
-              coordinates: [draftPoint.lng, draftPoint.lat],
-            },
-          },
-        ],
-      });
+      source.setData({ type: "FeatureCollection", features: [] });
     }
     if (drawRef.current) {
       const existing = drawRef.current.getAll()?.features?.length || 0;
-      suppressNextDrawDeleteRef.current = existing > 0;
-      drawRef.current.deleteAll();
-      drawRef.current.add({
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "Point",
-          coordinates: [draftPoint.lng, draftPoint.lat],
-        },
-      });
-      window.setTimeout(() => {
-        suppressNextDrawDeleteRef.current = false;
-      }, 0);
+      if (existing > 0) {
+        suppressNextDrawDeleteRef.current = true;
+        drawRef.current.deleteAll();
+        window.setTimeout(() => {
+          suppressNextDrawDeleteRef.current = false;
+        }, 0);
+      }
     }
   }, [draftPoint, onDraftMove, mapReady]);
 
