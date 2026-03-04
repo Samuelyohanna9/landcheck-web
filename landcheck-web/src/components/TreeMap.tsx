@@ -503,6 +503,7 @@ export default function TreeMap({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const draftMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const draftMarkerDraggingRef = useRef(false);
   const drawRef = useRef<MapboxDraw | null>(null);
   const onAddTreeRef = useRef(onAddTree);
   const onPolygonChangeRef = useRef(onPolygonChange);
@@ -1094,13 +1095,21 @@ export default function TreeMap({
         .setLngLat([draftPoint.lng, draftPoint.lat])
         .addTo(map);
 
+      marker.on("dragstart", () => {
+        draftMarkerDraggingRef.current = true;
+      });
+      marker.on("drag", () => {
+        const lngLat = marker.getLngLat();
+        onDraftMove?.(lngLat.lng, lngLat.lat);
+      });
       marker.on("dragend", () => {
+        draftMarkerDraggingRef.current = false;
         const lngLat = marker.getLngLat();
         onDraftMove?.(lngLat.lng, lngLat.lat);
       });
 
       draftMarkerRef.current = marker;
-    } else {
+    } else if (!draftMarkerDraggingRef.current) {
       draftMarkerRef.current.setLngLat([draftPoint.lng, draftPoint.lat]);
     }
 
@@ -1125,6 +1134,12 @@ export default function TreeMap({
     if (!map) return;
     map.getCanvas().style.cursor = drawActive ? "crosshair" : "";
   }, [drawActive]);
+
+  useEffect(() => {
+    if (!draftPoint) {
+      draftMarkerDraggingRef.current = false;
+    }
+  }, [draftPoint]);
 
   return (
     <div className="tree-map-wrap">
