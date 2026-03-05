@@ -7093,7 +7093,9 @@ export default function GreenWork() {
                     <div className="staff-row-meta">
                       Review: {task.review_state || "none"} | Submitted: {formatDateLabel(task.submitted_at || task.created_at)}
                     </div>
-                    <div className="staff-row-meta">Planting / reference date: {formatDateLabel(task.tree_planting_date)}</div>
+                    <div className="staff-row-meta">
+                      Planting / reference date: {formatDateLabel(task.tree_planting_date || task.due_date || task.created_at)}
+                    </div>
                     <div className="staff-row-meta">
                       Tree GPS: {formatGpsPair(originalTreeLng, originalTreeLat)}
                     </div>
