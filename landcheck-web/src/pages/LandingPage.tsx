@@ -96,7 +96,7 @@ export default function LandingPage() {
         <div className="lp-hero-tint" />
         <div className="lp-hero-copy">
           <p>LAND INTELLIGENCE SOFTWARE</p>
-          <h1>Survey Plan Production + Flood Risk Intelligence</h1>
+          <h1>Survey Plan Production + Flood Risk Intelligence for Nigeria</h1>
           <span>VERIFIABLE RECORDS, FASTER SURVEYS, CLEARER DECISIONS</span>
           <div className="lp-hero-cta-row">
             <button type="button" className="lp-hero-cta primary" onClick={() => navigate("/survey-plan")}>

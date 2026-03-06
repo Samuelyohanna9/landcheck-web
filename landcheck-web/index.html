@@ -6,14 +6,16 @@
     <link rel="manifest" href="/green/manifest.webmanifest" />
     <meta name="theme-color" content="#22c55e" />
     <link rel="apple-touch-icon" href="/green/icons/icon-192.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="LandCheck Green" />
+    <meta name="application-name" content="LandCheck" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>LandCheck | Land Intelligence and Climate Monitoring</title>
+    <title>LandCheck Nigeria | Survey Plan, Flood Risk, and Tree Monitoring</title>
     <meta
       name="description"
-      content="LandCheck helps teams monitor tree planting, maintenance, survival, and carbon impact with GPS evidence, live workflows, and audit-ready reporting."
+      content="LandCheck is a Nigeria-focused platform for survey plan production, flood risk analysis, and tree monitoring with GPS evidence and audit-ready reports."
     />
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
     <meta name="googlebot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
@@ -22,38 +24,53 @@
 
     <meta property="og:site_name" content="LandCheck" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="LandCheck | Land Intelligence and Climate Monitoring" />
+    <meta property="og:title" content="LandCheck Nigeria | Survey Plan, Flood Risk, and Tree Monitoring" />
     <meta
       property="og:description"
-      content="Track field activities, map trees, monitor maintenance, and generate climate-ready reports."
+      content="Survey plans, flood risk analysis, and field tree monitoring for projects in Nigeria."
     />
     <meta property="og:url" content="https://landcheck.online/" />
     <meta property="og:image" content="https://landcheck.online/green-logo-cropped-820.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="LandCheck | Land Intelligence and Climate Monitoring" />
+    <meta name="twitter:title" content="LandCheck Nigeria | Survey Plan, Flood Risk, and Tree Monitoring" />
     <meta
       name="twitter:description"
-      content="Track field activities, map trees, monitor maintenance, and generate climate-ready reports."
+      content="Survey plans, flood risk analysis, and field tree monitoring for projects in Nigeria."
     />
     <meta name="twitter:image" content="https://landcheck.online/green-logo-cropped-820.png" />
 
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "LandCheck",
-        "url": "https://landcheck.online/",
-        "description": "Land intelligence and climate monitoring platform for tree projects and field operations.",
-        "publisher": {
-          "@type": "Organization",
-          "name": "LandCheck",
-          "url": "https://landcheck.online/",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://landcheck.online/green-logo-cropped-820.png"
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://landcheck.online/#organization",
+            "name": "LandCheck Geospatial Technologies Limited",
+            "alternateName": "LandCheck",
+            "url": "https://landcheck.online/",
+            "identifier": "RC: 9350241",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://landcheck.online/green-logo-cropped-820.png"
+            },
+            "areaServed": {
+              "@type": "Country",
+              "name": "Nigeria"
+            }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://landcheck.online/#website",
+            "name": "LandCheck",
+            "url": "https://landcheck.online/",
+            "description": "Nigeria-focused survey plan, flood risk, and tree monitoring platform.",
+            "publisher": {
+              "@id": "https://landcheck.online/#organization"
+            }
           }
-        }
+        ]
       }
     </script>
   </head>
