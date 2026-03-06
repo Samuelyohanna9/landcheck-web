@@ -13,30 +13,30 @@ const SITE_ORIGIN = "https://landcheck.online";
 
 const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: string }> = {
   "/": {
-    title: "LandCheck | Land Intelligence and Climate Monitoring",
+    title: "LandCheck Nigeria | Survey Plan, Flood Risk, and Tree Monitoring",
     description:
-      "LandCheck helps teams monitor tree planting, maintenance, survival, and carbon impact with GPS evidence and audit-ready reports.",
+      "LandCheck is a Nigeria-focused platform for survey plan production, flood risk analysis, and tree monitoring with GPS evidence and audit-ready reports.",
     canonicalPath: "/",
     ogType: "website",
   },
   "/green-partners": {
-    title: "LandCheck Green Partners | NGO and Program Collaboration",
+    title: "LandCheck Green Partners Nigeria | NGO Tree Monitoring Platform",
     description:
-      "Collaborate with LandCheck Green for transparent field monitoring, project oversight, and report-ready climate impact tracking.",
+      "Collaborate with LandCheck Green for transparent NGO field monitoring, project oversight, and report-ready climate impact tracking in Nigeria.",
     canonicalPath: "/green-partners",
     ogType: "website",
   },
   "/hazard-analysis": {
-    title: "Hazard Analysis | LandCheck",
+    title: "Flood Risk Hazard Analysis Nigeria | LandCheck",
     description:
-      "Analyze land and site risks with map-based hazard tools to improve planning and resilient project execution.",
+      "Analyze land and site flood risks across Nigeria with map-based hazard tools for better planning and resilient project execution.",
     canonicalPath: "/hazard-analysis",
     ogType: "website",
   },
   "/survey-plan": {
-    title: "Survey Planning | LandCheck",
+    title: "Survey Plan Production Nigeria | LandCheck",
     description:
-      "Plan field survey workflows, capture requirements, and prepare operations for accurate and traceable implementation.",
+      "Create professional survey plans for Nigeria from coordinate input with map editing and export-ready outputs.",
     canonicalPath: "/survey-plan",
     ogType: "website",
   },
