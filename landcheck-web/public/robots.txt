@@ -1,9 +1,12 @@
 User-agent: *
 Allow: /
+Allow: /green-partners$
 Allow: /green-partners
 Allow: /green-partners/
 
 # Keep internal operation consoles out of search
+Disallow: /green$
+Disallow: /green-work$
 Disallow: /green/
 Disallow: /green-work/
 Disallow: /dashboard
