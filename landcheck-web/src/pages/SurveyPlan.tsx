@@ -46,7 +46,7 @@ type ManualPoint = {
 
 type PreviewType = "survey" | "orthophoto" | "topomap";
 type TopoSource = "opentopomap" | "userdata";
-type NorthArrowStyle = "stacked_4n" | "classic" | "triangle" | "compass" | "chevron" | "orienteering" | "star";
+type NorthArrowStyle = "one_side_stem" | "stacked_4n" | "classic" | "triangle" | "compass" | "chevron" | "orienteering" | "star";
 type NorthArrowColor = "black" | "blue";
 type BeaconStyle = "circle" | "square" | "triangle" | "diamond" | "cross";
 type RoadWidthOption = "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
@@ -103,7 +103,7 @@ export default function SurveyPlan() {
   const [hasHeightData, setHasHeightData] = useState(false);
   const [previewType, setPreviewType] = useState<PreviewType>("survey");
   const [topoSource, setTopoSource] = useState<TopoSource>("opentopomap");
-  const [northArrowStyle, setNorthArrowStyle] = useState<NorthArrowStyle>("stacked_4n");
+  const [northArrowStyle, setNorthArrowStyle] = useState<NorthArrowStyle>("one_side_stem");
   const [northArrowColor, setNorthArrowColor] = useState<NorthArrowColor>("blue");
   const [beaconStyle, setBeaconStyle] = useState<BeaconStyle>("cross");
   const [roadWidth, setRoadWidth] = useState<RoadWidthOption>("10");
@@ -553,7 +553,7 @@ export default function SurveyPlan() {
     setHasHeightData(false);
     setPreviewType("survey");
     setTopoSource("opentopomap");
-    setNorthArrowStyle("stacked_4n");
+    setNorthArrowStyle("one_side_stem");
     setNorthArrowColor("blue");
     setBeaconStyle("cross");
     setRoadWidth("10");
