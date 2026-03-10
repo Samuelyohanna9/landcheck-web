@@ -79,6 +79,7 @@ export default function SurveyPlan() {
   const [featureType, setFeatureType] = useState<"road" | "building" | "river" | "fence">("road");
   const [featureAction, setFeatureAction] = useState<"add" | "delete" | "update">("add");
   const [roadName, setRoadName] = useState("");
+  const previewRequestId = useRef(0);
   const orthophotoRequestId = useRef(0);
   const topoRequestId = useRef(0);
 
@@ -296,6 +297,7 @@ export default function SurveyPlan() {
   const loadPreview = useCallback(async () => {
     if (!plotId) return;
 
+    const requestId = ++previewRequestId.current;
     setPreviewLoading(true);
     try {
       const payload = {
@@ -320,22 +322,34 @@ export default function SurveyPlan() {
         responseType: "blob",
       });
 
+      if (requestId !== previewRequestId.current) {
+        return;
+      }
+
       const url = URL.createObjectURL(res.data);
-      setPreviewUrl(url);
+      setPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return url;
+      });
     } catch (err) {
       console.error("Preview error:", err);
       toast.error("Failed to load preview");
     } finally {
-      setPreviewLoading(false);
+      if (requestId === previewRequestId.current) {
+        setPreviewLoading(false);
+      }
     }
   }, [plotId, meta, stationNames, coordinateSystem, northArrowStyle, northArrowColor, beaconStyle, roadWidth]);
 
-  // Load preview when step 2 is reached or meta changes
+  // Debounce preview refresh while users type metadata.
   useEffect(() => {
-    if (currentStep === 2 && plotId) {
-      loadPreview();
+    if (currentStep === 2 && plotId && previewType === "survey") {
+      const timer = window.setTimeout(() => {
+        loadPreview();
+      }, 450);
+      return () => window.clearTimeout(timer);
     }
-  }, [currentStep, plotId, loadPreview]);
+  }, [currentStep, plotId, previewType, loadPreview]);
 
   // Load orthophoto preview (satellite imagery)
   const loadOrthophoto = useCallback(async () => {
