@@ -365,6 +365,52 @@
   cursor: pointer;
 }
 
+.template-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.template-btn {
+  padding: 0.625rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(15, 23, 42, 0.55);
+  color: #cbd5e1;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.template-btn:hover {
+  border-color: rgba(16, 185, 129, 0.45);
+  color: #f1f5f9;
+}
+
+.template-btn.active {
+  border-color: rgba(16, 185, 129, 0.65);
+  background: rgba(16, 185, 129, 0.17);
+  color: #10b981;
+}
+
+.template-hint {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.74rem;
+  color: #86efac;
+}
+
+.paper-size-fixed {
+  padding: 0.625rem 0.875rem;
+  border-radius: 8px;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: rgba(16, 185, 129, 0.08);
+  color: #d1fae5;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 /* Features Bar - Horizontal Compact Layout */
 .features-bar {
   display: flex;
