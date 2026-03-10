@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, BACKEND_URL } from "../api/client";
+import { api } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
 import MapViewEnhanced from "../components/MapViewEnhanced";
 import CoordinateInput from "../components/CoordinateInput";
@@ -35,7 +35,6 @@ type NorthArrowColor = "black" | "blue";
 type BeaconStyle = "circle" | "square" | "triangle" | "diamond" | "cross";
 type RoadWidthOption = "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
 
-const BACKEND = BACKEND_URL;
 const DEFAULT_CERTIFICATION_STATEMENT =
   "I hereby certify that this survey plan is a true representation of the survey executed by me and conforms with the regulations of surveying profession.";
 const SCALE_PRESETS = [250, 500, 1000, 2000, 5000];
@@ -77,6 +76,7 @@ export default function SurveyPlan() {
   const [orthophotoLoading, setOrthophotoLoading] = useState(false);
   const [topoMapUrl, setTopoMapUrl] = useState<string | null>(null);
   const [topoMapLoading, setTopoMapLoading] = useState(false);
+  const [downloadLoadingKey, setDownloadLoadingKey] = useState<string | null>(null);
   const [hasHeightData, setHasHeightData] = useState(false);
   const [previewType, setPreviewType] = useState<PreviewType>("survey");
   const [topoSource, setTopoSource] = useState<TopoSource>("opentopomap");
@@ -516,8 +516,28 @@ export default function SurveyPlan() {
     toast("Reset completed");
   };
 
+  const triggerBlobDownload = (blobData: BlobPart, contentType: string | undefined, filename: string) => {
+    const blob = new Blob([blobData], { type: contentType || "application/octet-stream" });
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(downloadUrl);
+  };
+
   // Download function for PDF endpoints that need JSON body
-  const downloadWithJson = async (url: string, filename: string, useTopoMap = false, customTitle?: string) => {
+  const downloadWithJson = async (
+    url: string,
+    filename: string,
+    loadingKey: string,
+    useTopoMap = false,
+    customTitle?: string
+  ) => {
+    if (downloadLoadingKey) return;
+    setDownloadLoadingKey(loadingKey);
     try {
       // Use custom title if provided, otherwise use meta title
       const titleText = customTitle || meta.title_text;
@@ -542,22 +562,29 @@ export default function SurveyPlan() {
       };
 
       const res = await api.post(url, payload, { responseType: "blob" });
-
-      // Create download link
-      const blob = new Blob([res.data], { type: res.headers["content-type"] });
-      const downloadUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(downloadUrl);
+      triggerBlobDownload(res.data, res.headers["content-type"], filename);
 
       toast.success(`Downloaded ${filename}`);
     } catch (err) {
       console.error("Download error:", err);
       toast.error("Failed to download file");
+    } finally {
+      setDownloadLoadingKey((prev) => (prev === loadingKey ? null : prev));
+    }
+  };
+
+  const downloadWithGet = async (url: string, filename: string, loadingKey: string) => {
+    if (downloadLoadingKey) return;
+    setDownloadLoadingKey(loadingKey);
+    try {
+      const res = await api.get(url, { responseType: "blob" });
+      triggerBlobDownload(res.data, res.headers["content-type"], filename);
+      toast.success(`Downloaded ${filename}`);
+    } catch (err) {
+      console.error("Download error:", err);
+      toast.error("Failed to download file");
+    } finally {
+      setDownloadLoadingKey((prev) => (prev === loadingKey ? null : prev));
     }
   };
 
@@ -934,10 +961,28 @@ export default function SurveyPlan() {
                     </div>
                     <button
                       className="download-btn"
-                      onClick={() => downloadWithJson(`/plots/${plotId}/report/pdf`, `plot_${plotId}_survey_plan.pdf`, false, "SURVEY PLAN")}
+                      disabled={Boolean(downloadLoadingKey)}
+                      onClick={() =>
+                        downloadWithJson(
+                          `/plots/${plotId}/report/pdf`,
+                          `plot_${plotId}_survey_plan.pdf`,
+                          "survey_pdf",
+                          false,
+                          "SURVEY PLAN"
+                        )
+                      }
                     >
-                      <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                      <span>Download PDF</span>
+                      {downloadLoadingKey === "survey_pdf" ? (
+                        <>
+                          <span className="spinner download-spinner" />
+                          <span>Downloading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                          <span>Download PDF</span>
+                        </>
+                      )}
                     </button>
                   </div>
 
@@ -956,10 +1001,28 @@ export default function SurveyPlan() {
                     </div>
                     <button
                       className="download-btn"
-                      onClick={() => downloadWithJson(`/plots/${plotId}/orthophoto/pdf`, `plot_${plotId}_orthophoto.pdf`, false, "ORTHOPHOTO")}
+                      disabled={Boolean(downloadLoadingKey)}
+                      onClick={() =>
+                        downloadWithJson(
+                          `/plots/${plotId}/orthophoto/pdf`,
+                          `plot_${plotId}_orthophoto.pdf`,
+                          "orthophoto_pdf",
+                          false,
+                          "ORTHOPHOTO"
+                        )
+                      }
                     >
-                      <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                      <span>Download PDF</span>
+                      {downloadLoadingKey === "orthophoto_pdf" ? (
+                        <>
+                          <span className="spinner download-spinner" />
+                          <span>Downloading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                          <span>Download PDF</span>
+                        </>
+                      )}
                     </button>
                   </div>
 
@@ -976,15 +1039,29 @@ export default function SurveyPlan() {
                       <h4>DWG/DXF File</h4>
                       <p>CAD-compatible survey drawing</p>
                     </div>
-                    <a
-                      href={`${BACKEND}/plots/${plotId}/survey-plan/dwg`}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
                       className="download-btn"
+                      disabled={Boolean(downloadLoadingKey)}
+                      onClick={() =>
+                        downloadWithGet(
+                          `/plots/${plotId}/survey-plan/dwg`,
+                          `plot_${plotId}_survey_plan.dxf`,
+                          "dwg"
+                        )
+                      }
                     >
-                      <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                      <span>Download DWG</span>
-                    </a>
+                      {downloadLoadingKey === "dwg" ? (
+                        <>
+                          <span className="spinner download-spinner" />
+                          <span>Downloading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                          <span>Download DWG</span>
+                        </>
+                      )}
+                    </button>
                   </div>
 
                   {/* Shapefile ZIP */}
@@ -999,15 +1076,29 @@ export default function SurveyPlan() {
                       <h4>Shapefile (ZIP)</h4>
                       <p>GIS boundary export for ArcGIS/QGIS</p>
                     </div>
-                    <a
-                      href={`${BACKEND}/plots/${plotId}/survey-plan/shapefile`}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
                       className="download-btn"
+                      disabled={Boolean(downloadLoadingKey)}
+                      onClick={() =>
+                        downloadWithGet(
+                          `/plots/${plotId}/survey-plan/shapefile`,
+                          `plot_${plotId}_survey_plan_shapefile.zip`,
+                          "shapefile_zip"
+                        )
+                      }
                     >
-                      <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                      <span>Download ZIP</span>
-                    </a>
+                      {downloadLoadingKey === "shapefile_zip" ? (
+                        <>
+                          <span className="spinner download-spinner" />
+                          <span>Downloading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                          <span>Download ZIP</span>
+                        </>
+                      )}
+                    </button>
                   </div>
 
                   {/* Topo Map PDF */}
@@ -1024,10 +1115,28 @@ export default function SurveyPlan() {
                     </div>
                     <button
                       className="download-btn"
-                      onClick={() => downloadWithJson(`/plots/${plotId}/orthophoto/pdf`, `plot_${plotId}_topomap.pdf`, true, "TOPO MAP")}
+                      disabled={Boolean(downloadLoadingKey)}
+                      onClick={() =>
+                        downloadWithJson(
+                          `/plots/${plotId}/orthophoto/pdf`,
+                          `plot_${plotId}_topomap.pdf`,
+                          "topomap_pdf",
+                          true,
+                          "TOPO MAP"
+                        )
+                      }
                     >
-                      <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                      <span>Download PDF</span>
+                      {downloadLoadingKey === "topomap_pdf" ? (
+                        <>
+                          <span className="spinner download-spinner" />
+                          <span>Downloading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                          <span>Download PDF</span>
+                        </>
+                      )}
                     </button>
                   </div>
 
@@ -1048,10 +1157,26 @@ export default function SurveyPlan() {
                     </div>
                     <button
                       className="download-btn"
-                      onClick={() => downloadWithJson(`/plots/${plotId}/back-computation/pdf`, `plot_${plotId}_back_computation.pdf`)}
+                      disabled={Boolean(downloadLoadingKey)}
+                      onClick={() =>
+                        downloadWithJson(
+                          `/plots/${plotId}/back-computation/pdf`,
+                          `plot_${plotId}_back_computation.pdf`,
+                          "back_computation_pdf"
+                        )
+                      }
                     >
-                      <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                      <span>Download PDF</span>
+                      {downloadLoadingKey === "back_computation_pdf" ? (
+                        <>
+                          <span className="spinner download-spinner" />
+                          <span>Downloading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                          <span>Download PDF</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
