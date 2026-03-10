@@ -429,26 +429,23 @@ export default function SurveyPlan() {
     }
   }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size, northArrowStyle, northArrowColor]);
 
-  // Refresh orthophoto/topo previews when active and settings change
+  // Debounce orthophoto/topo refresh to avoid repeated heavy tile fetches.
   useEffect(() => {
     if (!plotId) return;
     if (currentStep !== 2 && currentStep !== 3) return;
 
     if (previewType === "orthophoto") {
-      setOrthophotoUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return null;
-      });
-      loadOrthophoto();
-      return;
+      const timer = window.setTimeout(() => {
+        loadOrthophoto();
+      }, 500);
+      return () => window.clearTimeout(timer);
     }
 
     if (previewType === "topomap") {
-      setTopoMapUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return null;
-      });
-      loadTopoMap(topoSource);
+      const timer = window.setTimeout(() => {
+        loadTopoMap(topoSource);
+      }, 500);
+      return () => window.clearTimeout(timer);
     }
   }, [
     plotId,
