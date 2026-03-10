@@ -38,6 +38,16 @@ type RoadWidthOption = "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
 const BACKEND = BACKEND_URL;
 const DEFAULT_CERTIFICATION_STATEMENT =
   "I hereby certify that this survey plan is a true representation of the survey executed by me and conforms with the regulations of surveying profession.";
+const SCALE_PRESETS = [250, 500, 1000, 2000, 5000];
+const MIN_SCALE_DENOMINATOR = 100;
+const MAX_SCALE_DENOMINATOR = 50000;
+
+const parseScaleDenominator = (scaleText: string): number => {
+  const digits = String(scaleText || "").replace(/[^0-9]/g, "");
+  const parsed = Number.parseInt(digits || "1000", 10);
+  if (!Number.isFinite(parsed)) return 1000;
+  return Math.min(MAX_SCALE_DENOMINATOR, Math.max(MIN_SCALE_DENOMINATOR, parsed));
+};
 
 const STEPS = [
   { id: 1, title: "Enter Coordinates", description: "Input plot boundary points" },
@@ -74,6 +84,7 @@ export default function SurveyPlan() {
   const [northArrowColor, setNorthArrowColor] = useState<NorthArrowColor>("black");
   const [beaconStyle, setBeaconStyle] = useState<BeaconStyle>("circle");
   const [roadWidth, setRoadWidth] = useState<RoadWidthOption>("10");
+  const [scaleDraft, setScaleDraft] = useState<string>("1000");
   const [newRoadWidth, setNewRoadWidth] = useState<RoadWidthOption>("10");
   const [showFeatureEditor, setShowFeatureEditor] = useState(false);
   const [featureType, setFeatureType] = useState<"road" | "building" | "river" | "fence">("road");
@@ -95,6 +106,16 @@ export default function SurveyPlan() {
     scale_text: "1 : 1000",
     paper_size: "A4",
   });
+
+  useEffect(() => {
+    setScaleDraft(String(parseScaleDenominator(meta.scale_text)));
+  }, [meta.scale_text]);
+
+  const commitScaleDraft = useCallback(() => {
+    const parsed = parseScaleDenominator(scaleDraft);
+    setScaleDraft(String(parsed));
+    setMeta((m) => ({ ...m, scale_text: `1 : ${parsed}` }));
+  }, [scaleDraft]);
 
   // Coordinate helpers
   const updatePoint = (index: number, key: keyof ManualPoint, value: string | number) => {
@@ -776,25 +797,37 @@ export default function SurveyPlan() {
                     <div className="scale-input-wrapper">
                       <span className="scale-prefix">1 :</span>
                       <input
-                        type="number"
-                        min="100"
-                        max="50000"
-                        value={meta.scale_text.replace(/[^0-9]/g, "") || "1000"}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={scaleDraft}
                         onChange={(e) => {
                           const val = e.target.value.replace(/[^0-9]/g, "");
-                          setMeta((m) => ({ ...m, scale_text: `1 : ${val}` }));
+                          setScaleDraft(val);
+                        }}
+                        onBlur={commitScaleDraft}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            commitScaleDraft();
+                          }
                         }}
                         className="scale-number-input"
                         placeholder="1000"
+                        aria-label="Scale denominator"
                       />
                     </div>
+                    <span className="scale-helper">Type only the number after `1 :` (example: `1000`).</span>
                     <div className="scale-presets">
-                      {["250", "500", "1000", "2000", "5000"].map((s) => (
+                      {SCALE_PRESETS.map((s) => (
                         <button
                           key={s}
                           type="button"
-                          className={`scale-preset-btn ${meta.scale_text === `1 : ${s}` ? "active" : ""}`}
-                          onClick={() => setMeta((m) => ({ ...m, scale_text: `1 : ${s}` }))}
+                          className={`scale-preset-btn ${parseScaleDenominator(meta.scale_text) === s ? "active" : ""}`}
+                          onClick={() => {
+                            setScaleDraft(String(s));
+                            setMeta((m) => ({ ...m, scale_text: `1 : ${s}` }));
+                          }}
                         >
                           1:{s}
                         </button>
