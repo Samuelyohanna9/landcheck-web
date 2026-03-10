@@ -385,12 +385,12 @@ export default function SurveyPlan() {
         adamawa_northing: "",
         adamawa_easting: "",
         adamawa_elevation: "",
-        adamawa_origin_text: meta.adamawa_origin_text,
+        adamawa_origin_text: "",
         adamawa_topo_sheet_text: meta.adamawa_topo_sheet_text,
         adamawa_computation_no: meta.adamawa_rof_no,
         adamawa_cadastral_sheet_no: meta.adamawa_cadastral_sheet_no,
-        adamawa_plan_no: meta.adamawa_plan_no,
-        adamawa_surveyed_by_text: meta.adamawa_surveyed_by_text,
+        adamawa_plan_no: meta.adamawa_rof_no,
+        adamawa_surveyed_by_text: "",
         adamawa_disclaimer_text: meta.adamawa_disclaimer_text,
       };
 
@@ -639,12 +639,12 @@ export default function SurveyPlan() {
         adamawa_northing: "",
         adamawa_easting: "",
         adamawa_elevation: "",
-        adamawa_origin_text: meta.adamawa_origin_text,
+        adamawa_origin_text: "",
         adamawa_topo_sheet_text: meta.adamawa_topo_sheet_text,
         adamawa_computation_no: meta.adamawa_rof_no,
         adamawa_cadastral_sheet_no: meta.adamawa_cadastral_sheet_no,
-        adamawa_plan_no: meta.adamawa_plan_no,
-        adamawa_surveyed_by_text: meta.adamawa_surveyed_by_text,
+        adamawa_plan_no: meta.adamawa_rof_no,
+        adamawa_surveyed_by_text: "",
         adamawa_disclaimer_text: meta.adamawa_disclaimer_text,
       };
 
@@ -983,6 +983,14 @@ export default function SurveyPlan() {
                           placeholder={DEFAULT_ADAMAWA_AUTHORITY_DATE}
                         />
                       </div>
+                      <div className="form-group">
+                        <label>Surveyor Name</label>
+                        <input
+                          value={meta.surveyor_name}
+                          onChange={(e) => setMeta((m) => ({ ...m, surveyor_name: e.target.value }))}
+                          placeholder="ABEL FRANCIS"
+                        />
+                      </div>
                       <div className="form-group full-width">
                         <label>Control Data Source</label>
                         <input value="Auto from plotted coordinates/stations (read-only)" readOnly />
@@ -995,36 +1003,12 @@ export default function SurveyPlan() {
                           placeholder="07"
                         />
                       </div>
-                      <div className="form-group">
-                        <label>Plan No</label>
-                        <input
-                          value={meta.adamawa_plan_no}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_plan_no: e.target.value }))}
-                          placeholder=""
-                        />
-                      </div>
-                      <div className="form-group full-width">
-                        <label>Origin Text</label>
-                        <input
-                          value={meta.adamawa_origin_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_origin_text: e.target.value }))}
-                          placeholder={DEFAULT_ADAMAWA_ORIGIN_TEXT}
-                        />
-                      </div>
                       <div className="form-group full-width">
                         <label>Topo Sheet Text</label>
                         <input
                           value={meta.adamawa_topo_sheet_text}
                           onChange={(e) => setMeta((m) => ({ ...m, adamawa_topo_sheet_text: e.target.value }))}
                           placeholder={DEFAULT_ADAMAWA_TOPO_SHEET_TEXT}
-                        />
-                      </div>
-                      <div className="form-group full-width">
-                        <label>Surveyed By Text</label>
-                        <input
-                          value={meta.adamawa_surveyed_by_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_surveyed_by_text: e.target.value }))}
-                          placeholder="Surveyed by Surv. ABEL FRANCIS Senior Surveyor February, 2024"
                         />
                       </div>
                       <div className="form-group full-width">
