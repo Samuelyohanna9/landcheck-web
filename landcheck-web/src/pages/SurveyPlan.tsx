@@ -940,7 +940,7 @@ export default function SurveyPlan() {
                         <input
                           value={meta.adamawa_rof_no}
                           onChange={(e) => setMeta((m) => ({ ...m, adamawa_rof_no: e.target.value }))}
-                          placeholder="ADS50530"
+                          placeholder="E.G ADS50530"
                         />
                       </div>
                       <div className="form-group">
@@ -948,7 +948,7 @@ export default function SurveyPlan() {
                         <input
                           value={meta.adamawa_owner_name}
                           onChange={(e) => setMeta((m) => ({ ...m, adamawa_owner_name: e.target.value }))}
-                          placeholder="NASIRU IBRAHIM BORNOMA"
+                          placeholder="LAND OWNER NAME"
                         />
                       </div>
                       <div className="form-group">
@@ -956,7 +956,7 @@ export default function SurveyPlan() {
                         <input
                           value={meta.location_text}
                           onChange={(e) => setMeta((m) => ({ ...m, location_text: e.target.value }))}
-                          placeholder="SANGERE"
+                          placeholder="LOCATION"
                         />
                       </div>
                       <div className="form-group">
@@ -964,7 +964,7 @@ export default function SurveyPlan() {
                         <input
                           value={meta.lga_text}
                           onChange={(e) => setMeta((m) => ({ ...m, lga_text: e.target.value }))}
-                          placeholder="GIREI LOCAL GOVERNMENT"
+                          placeholder="LOCAL GOVERNMENT"
                         />
                       </div>
                       <div className="form-group">
@@ -988,7 +988,7 @@ export default function SurveyPlan() {
                         <input
                           value={meta.surveyor_name}
                           onChange={(e) => setMeta((m) => ({ ...m, surveyor_name: e.target.value }))}
-                          placeholder="ABEL FRANCIS"
+                          placeholder="Survor Name"
                         />
                       </div>
                       <div className="form-group full-width">
