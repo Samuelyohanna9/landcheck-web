@@ -851,22 +851,18 @@ export default function SurveyPlan() {
                 <div className="form-grid">
                   <div className="form-group full-width template-selector-group">
                     <label>Template</label>
-                    <div className="template-selector">
-                      <button
-                        type="button"
-                        className={`template-btn ${meta.template_name === "general" ? "active" : ""}`}
-                        onClick={() => setMeta((m) => ({ ...m, template_name: "general" }))}
-                      >
-                        General
-                      </button>
-                      <button
-                        type="button"
-                        className={`template-btn ${meta.template_name === "adamawa_osg" ? "active" : ""}`}
-                        onClick={() => setMeta((m) => ({ ...m, template_name: "adamawa_osg" }))}
-                      >
-                        Adamawa OSG
-                      </button>
-                    </div>
+                    <select
+                      value={meta.template_name}
+                      onChange={(e) =>
+                        setMeta((m) => ({
+                          ...m,
+                          template_name: e.target.value as PlotMeta["template_name"],
+                        }))
+                      }
+                    >
+                      <option value="general">General</option>
+                      <option value="adamawa_osg">Adamawa OSG</option>
+                    </select>
                     {meta.template_name === "adamawa_osg" && (
                       <span className="template-hint">
                         Adamawa OSG template 
