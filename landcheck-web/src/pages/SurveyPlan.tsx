@@ -19,6 +19,22 @@ type PlotMeta = {
   certification_statement: string;
   scale_text: string;
   paper_size: string;
+  template_name: "general" | "adamawa_osg";
+  adamawa_rof_no: string;
+  adamawa_owner_name: string;
+  adamawa_authority_title: string;
+  adamawa_authority_date_text: string;
+  adamawa_control_point_name: string;
+  adamawa_northing: string;
+  adamawa_easting: string;
+  adamawa_elevation: string;
+  adamawa_origin_text: string;
+  adamawa_topo_sheet_text: string;
+  adamawa_computation_no: string;
+  adamawa_cadastral_sheet_no: string;
+  adamawa_plan_no: string;
+  adamawa_surveyed_by_text: string;
+  adamawa_disclaimer_text: string;
 };
 
 type ManualPoint = {
@@ -40,6 +56,13 @@ const DEFAULT_CERTIFICATION_STATEMENT =
 const SCALE_PRESETS = [250, 500, 1000, 2000, 5000];
 const MIN_SCALE_DENOMINATOR = 100;
 const MAX_SCALE_DENOMINATOR = 50000;
+const DEFAULT_TEMPLATE_NAME: PlotMeta["template_name"] = "general";
+const DEFAULT_ADAMAWA_AUTHORITY_TITLE = "SURVEYOR GENERAL";
+const DEFAULT_ADAMAWA_AUTHORITY_DATE = "November, 2024";
+const DEFAULT_ADAMAWA_ORIGIN_TEXT = "ORIGIN:- WGS 84 UTM ZONE 33N";
+const DEFAULT_ADAMAWA_TOPO_SHEET_TEXT = "BASED ON GIREI TOPO SHEET 197 NE";
+const DEFAULT_ADAMAWA_DISCLAIMER_TEXT =
+  "Detail shewn not the result of accurate survey. All bearing and distances shewn on this plan have been computed from registered Co-ordinates.";
 
 const parseScaleDenominator = (scaleText: string): number => {
   const digits = String(scaleText || "").replace(/[^0-9]/g, "");
@@ -105,6 +128,22 @@ export default function SurveyPlan() {
     certification_statement: DEFAULT_CERTIFICATION_STATEMENT,
     scale_text: "1 : 1000",
     paper_size: "A4",
+    template_name: DEFAULT_TEMPLATE_NAME,
+    adamawa_rof_no: "",
+    adamawa_owner_name: "",
+    adamawa_authority_title: DEFAULT_ADAMAWA_AUTHORITY_TITLE,
+    adamawa_authority_date_text: DEFAULT_ADAMAWA_AUTHORITY_DATE,
+    adamawa_control_point_name: "",
+    adamawa_northing: "",
+    adamawa_easting: "",
+    adamawa_elevation: "",
+    adamawa_origin_text: DEFAULT_ADAMAWA_ORIGIN_TEXT,
+    adamawa_topo_sheet_text: DEFAULT_ADAMAWA_TOPO_SHEET_TEXT,
+    adamawa_computation_no: "",
+    adamawa_cadastral_sheet_no: "",
+    adamawa_plan_no: "",
+    adamawa_surveyed_by_text: "",
+    adamawa_disclaimer_text: DEFAULT_ADAMAWA_DISCLAIMER_TEXT,
   });
 
   useEffect(() => {
@@ -337,6 +376,22 @@ export default function SurveyPlan() {
         north_arrow_color: northArrowColor,
         beacon_style: beaconStyle,
         road_width_m: Number(roadWidth),
+        template_name: meta.template_name,
+        adamawa_rof_no: meta.adamawa_rof_no,
+        adamawa_owner_name: meta.adamawa_owner_name,
+        adamawa_authority_title: meta.adamawa_authority_title,
+        adamawa_authority_date_text: meta.adamawa_authority_date_text,
+        adamawa_control_point_name: meta.adamawa_control_point_name,
+        adamawa_northing: meta.adamawa_northing,
+        adamawa_easting: meta.adamawa_easting,
+        adamawa_elevation: meta.adamawa_elevation,
+        adamawa_origin_text: meta.adamawa_origin_text,
+        adamawa_topo_sheet_text: meta.adamawa_topo_sheet_text,
+        adamawa_computation_no: meta.adamawa_computation_no,
+        adamawa_cadastral_sheet_no: meta.adamawa_cadastral_sheet_no,
+        adamawa_plan_no: meta.adamawa_plan_no,
+        adamawa_surveyed_by_text: meta.adamawa_surveyed_by_text,
+        adamawa_disclaimer_text: meta.adamawa_disclaimer_text,
       };
 
       const res = await api.post(`/plots/${plotId}/report/preview`, payload, {
@@ -512,6 +567,22 @@ export default function SurveyPlan() {
       certification_statement: DEFAULT_CERTIFICATION_STATEMENT,
       scale_text: "1 : 1000",
       paper_size: "A4",
+      template_name: DEFAULT_TEMPLATE_NAME,
+      adamawa_rof_no: "",
+      adamawa_owner_name: "",
+      adamawa_authority_title: DEFAULT_ADAMAWA_AUTHORITY_TITLE,
+      adamawa_authority_date_text: DEFAULT_ADAMAWA_AUTHORITY_DATE,
+      adamawa_control_point_name: "",
+      adamawa_northing: "",
+      adamawa_easting: "",
+      adamawa_elevation: "",
+      adamawa_origin_text: DEFAULT_ADAMAWA_ORIGIN_TEXT,
+      adamawa_topo_sheet_text: DEFAULT_ADAMAWA_TOPO_SHEET_TEXT,
+      adamawa_computation_no: "",
+      adamawa_cadastral_sheet_no: "",
+      adamawa_plan_no: "",
+      adamawa_surveyed_by_text: "",
+      adamawa_disclaimer_text: DEFAULT_ADAMAWA_DISCLAIMER_TEXT,
     });
     toast("Reset completed");
   };
@@ -559,6 +630,22 @@ export default function SurveyPlan() {
         north_arrow_color: northArrowColor,
         beacon_style: beaconStyle,
         road_width_m: Number(roadWidth),
+        template_name: meta.template_name,
+        adamawa_rof_no: meta.adamawa_rof_no,
+        adamawa_owner_name: meta.adamawa_owner_name,
+        adamawa_authority_title: meta.adamawa_authority_title,
+        adamawa_authority_date_text: meta.adamawa_authority_date_text,
+        adamawa_control_point_name: meta.adamawa_control_point_name,
+        adamawa_northing: meta.adamawa_northing,
+        adamawa_easting: meta.adamawa_easting,
+        adamawa_elevation: meta.adamawa_elevation,
+        adamawa_origin_text: meta.adamawa_origin_text,
+        adamawa_topo_sheet_text: meta.adamawa_topo_sheet_text,
+        adamawa_computation_no: meta.adamawa_computation_no,
+        adamawa_cadastral_sheet_no: meta.adamawa_cadastral_sheet_no,
+        adamawa_plan_no: meta.adamawa_plan_no,
+        adamawa_surveyed_by_text: meta.adamawa_surveyed_by_text,
+        adamawa_disclaimer_text: meta.adamawa_disclaimer_text,
       };
 
       const res = await api.post(url, payload, { responseType: "blob" });
@@ -762,63 +849,239 @@ export default function SurveyPlan() {
               <div className="form-section">
                 <h3 className="section-title">Survey Details</h3>
                 <div className="form-grid">
-                  <div className="form-group">
-                    <label>Title</label>
-                    <input
-                      value={meta.title_text}
-                      onChange={(e) => setMeta((m) => ({ ...m, title_text: e.target.value }))}
-                      placeholder="SURVEY PLAN"
-                    />
+                  <div className="form-group full-width template-selector-group">
+                    <label>Template</label>
+                    <div className="template-selector">
+                      <button
+                        type="button"
+                        className={`template-btn ${meta.template_name === "general" ? "active" : ""}`}
+                        onClick={() => setMeta((m) => ({ ...m, template_name: "general" }))}
+                      >
+                        General
+                      </button>
+                      <button
+                        type="button"
+                        className={`template-btn ${meta.template_name === "adamawa_osg" ? "active" : ""}`}
+                        onClick={() => {
+                          setScaleDraft("2500");
+                          setMeta((m) => ({
+                            ...m,
+                            template_name: "adamawa_osg",
+                            paper_size: "A4",
+                            scale_text: "1 : 2500",
+                          }));
+                        }}
+                      >
+                        Adamawa OSG
+                      </button>
+                    </div>
+                    {meta.template_name === "adamawa_osg" && (
+                      <span className="template-hint">
+                        Adamawa OSG layout is locked to the official A4 survey sheet style.
+                      </span>
+                    )}
                   </div>
-                  <div className="form-group">
-                    <label>Location</label>
-                    <input
-                      value={meta.location_text}
-                      onChange={(e) => setMeta((m) => ({ ...m, location_text: e.target.value }))}
-                      placeholder="Enter location"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>LGA</label>
-                    <input
-                      value={meta.lga_text}
-                      onChange={(e) => setMeta((m) => ({ ...m, lga_text: e.target.value }))}
-                      placeholder="Local Government Area"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>State</label>
-                    <input
-                      value={meta.state_text}
-                      onChange={(e) => setMeta((m) => ({ ...m, state_text: e.target.value }))}
-                      placeholder="Enter state"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Surveyor Name</label>
-                    <input
-                      value={meta.surveyor_name}
-                      onChange={(e) => setMeta((m) => ({ ...m, surveyor_name: e.target.value }))}
-                      placeholder="Enter surveyor name"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Rank</label>
-                    <input
-                      value={meta.surveyor_rank}
-                      onChange={(e) => setMeta((m) => ({ ...m, surveyor_rank: e.target.value }))}
-                      placeholder="Surveyor rank"
-                    />
-                  </div>
-                  <div className="form-group full-width">
-                    <label>Certification Statement (Editable)</label>
-                    <textarea
-                      value={meta.certification_statement}
-                      onChange={(e) => setMeta((m) => ({ ...m, certification_statement: e.target.value }))}
-                      placeholder={DEFAULT_CERTIFICATION_STATEMENT}
-                      rows={3}
-                    />
-                  </div>
+                  {meta.template_name === "general" ? (
+                    <>
+                      <div className="form-group">
+                        <label>Title</label>
+                        <input
+                          value={meta.title_text}
+                          onChange={(e) => setMeta((m) => ({ ...m, title_text: e.target.value }))}
+                          placeholder="SURVEY PLAN"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Location</label>
+                        <input
+                          value={meta.location_text}
+                          onChange={(e) => setMeta((m) => ({ ...m, location_text: e.target.value }))}
+                          placeholder="Enter location"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>LGA</label>
+                        <input
+                          value={meta.lga_text}
+                          onChange={(e) => setMeta((m) => ({ ...m, lga_text: e.target.value }))}
+                          placeholder="Local Government Area"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>State</label>
+                        <input
+                          value={meta.state_text}
+                          onChange={(e) => setMeta((m) => ({ ...m, state_text: e.target.value }))}
+                          placeholder="Enter state"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Surveyor Name</label>
+                        <input
+                          value={meta.surveyor_name}
+                          onChange={(e) => setMeta((m) => ({ ...m, surveyor_name: e.target.value }))}
+                          placeholder="Enter surveyor name"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Rank</label>
+                        <input
+                          value={meta.surveyor_rank}
+                          onChange={(e) => setMeta((m) => ({ ...m, surveyor_rank: e.target.value }))}
+                          placeholder="Surveyor rank"
+                        />
+                      </div>
+                      <div className="form-group full-width">
+                        <label>Certification Statement (Editable)</label>
+                        <textarea
+                          value={meta.certification_statement}
+                          onChange={(e) => setMeta((m) => ({ ...m, certification_statement: e.target.value }))}
+                          placeholder={DEFAULT_CERTIFICATION_STATEMENT}
+                          rows={3}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="form-group">
+                        <label>R of O Number</label>
+                        <input
+                          value={meta.adamawa_rof_no}
+                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_rof_no: e.target.value }))}
+                          placeholder="ADS50530"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Owner Name</label>
+                        <input
+                          value={meta.adamawa_owner_name}
+                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_owner_name: e.target.value }))}
+                          placeholder="NASIRU IBRAHIM BORNOMA"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Location (AT)</label>
+                        <input
+                          value={meta.location_text}
+                          onChange={(e) => setMeta((m) => ({ ...m, location_text: e.target.value }))}
+                          placeholder="SANGERE"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Local Government</label>
+                        <input
+                          value={meta.lga_text}
+                          onChange={(e) => setMeta((m) => ({ ...m, lga_text: e.target.value }))}
+                          placeholder="GIREI LOCAL GOVERNMENT"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Authority Title</label>
+                        <input
+                          value={meta.adamawa_authority_title}
+                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_authority_title: e.target.value }))}
+                          placeholder={DEFAULT_ADAMAWA_AUTHORITY_TITLE}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Authority Date</label>
+                        <input
+                          value={meta.adamawa_authority_date_text}
+                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_authority_date_text: e.target.value }))}
+                          placeholder={DEFAULT_ADAMAWA_AUTHORITY_DATE}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Control Point Name</label>
+                        <input
+                          value={meta.adamawa_control_point_name}
+                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_control_point_name: e.target.value }))}
+                          placeholder="SCAD/4163"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Northing</label>
+                        <input
+                          value={meta.adamawa_northing}
+                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_northing: e.target.value }))}
+                          placeholder="1034441.881m"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Easting</label>
+                        <input
+                          value={meta.adamawa_easting}
+                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_easting: e.target.value }))}
+                          placeholder="227835.738m"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Elevation (Z)</label>
+                        <input
+                          value={meta.adamawa_elevation}
+                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_elevation: e.target.value }))}
+                          placeholder="256.100m"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Computation No</label>
+                        <input
+                          value={meta.adamawa_computation_no}
+                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_computation_no: e.target.value }))}
+                          placeholder="ADS50530"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Cadastral Sheet No</label>
+                        <input
+                          value={meta.adamawa_cadastral_sheet_no}
+                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_cadastral_sheet_no: e.target.value }))}
+                          placeholder="07"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Plan No</label>
+                        <input
+                          value={meta.adamawa_plan_no}
+                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_plan_no: e.target.value }))}
+                          placeholder=""
+                        />
+                      </div>
+                      <div className="form-group full-width">
+                        <label>Origin Text</label>
+                        <input
+                          value={meta.adamawa_origin_text}
+                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_origin_text: e.target.value }))}
+                          placeholder={DEFAULT_ADAMAWA_ORIGIN_TEXT}
+                        />
+                      </div>
+                      <div className="form-group full-width">
+                        <label>Topo Sheet Text</label>
+                        <input
+                          value={meta.adamawa_topo_sheet_text}
+                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_topo_sheet_text: e.target.value }))}
+                          placeholder={DEFAULT_ADAMAWA_TOPO_SHEET_TEXT}
+                        />
+                      </div>
+                      <div className="form-group full-width">
+                        <label>Surveyed By Text</label>
+                        <input
+                          value={meta.adamawa_surveyed_by_text}
+                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_surveyed_by_text: e.target.value }))}
+                          placeholder="Surveyed by Surv. ABEL FRANCIS Senior Surveyor February, 2024"
+                        />
+                      </div>
+                      <div className="form-group full-width">
+                        <label>Disclaimer Text</label>
+                        <textarea
+                          value={meta.adamawa_disclaimer_text}
+                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_disclaimer_text: e.target.value }))}
+                          rows={2}
+                          placeholder={DEFAULT_ADAMAWA_DISCLAIMER_TEXT}
+                        />
+                      </div>
+                    </>
+                  )}
                   <div className="form-group scale-group">
                     <label>Scale</label>
                     <div className="scale-input-wrapper">
@@ -861,28 +1124,35 @@ export default function SurveyPlan() {
                       ))}
                     </div>
                   </div>
-                  <div className="form-group paper-size-group">
-                    <label>Paper Size</label>
-                    <div className="paper-size-presets">
-                      {["A4", "A3", "A2", "A1", "A0"].map((size) => (
-                        <button
-                          key={size}
-                          type="button"
-                          className={`paper-size-btn ${meta.paper_size === size ? "active" : ""}`}
-                          onClick={() => setMeta((m) => ({ ...m, paper_size: size }))}
-                        >
-                          {size}
-                        </button>
-                      ))}
+                  {meta.template_name === "adamawa_osg" ? (
+                    <div className="form-group paper-size-group">
+                      <label>Paper Size</label>
+                      <div className="paper-size-fixed">A4 (fixed by Adamawa OSG template)</div>
                     </div>
-                    <span className="paper-size-hint">
-                      {meta.paper_size === "A4" && "Standard (210 x 297 mm)"}
-                      {meta.paper_size === "A3" && "Large (297 x 420 mm)"}
-                      {meta.paper_size === "A2" && "Extra Large (420 x 594 mm)"}
-                      {meta.paper_size === "A1" && "Poster (594 x 841 mm)"}
-                      {meta.paper_size === "A0" && "Maximum (841 x 1189 mm)"}
-                    </span>
-                  </div>
+                  ) : (
+                    <div className="form-group paper-size-group">
+                      <label>Paper Size</label>
+                      <div className="paper-size-presets">
+                        {["A4", "A3", "A2", "A1", "A0"].map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            className={`paper-size-btn ${meta.paper_size === size ? "active" : ""}`}
+                            onClick={() => setMeta((m) => ({ ...m, paper_size: size }))}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                      <span className="paper-size-hint">
+                        {meta.paper_size === "A4" && "Standard (210 x 297 mm)"}
+                        {meta.paper_size === "A3" && "Large (297 x 420 mm)"}
+                        {meta.paper_size === "A2" && "Extra Large (420 x 594 mm)"}
+                        {meta.paper_size === "A1" && "Poster (594 x 841 mm)"}
+                        {meta.paper_size === "A0" && "Maximum (841 x 1189 mm)"}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="edit-feature-bar">
