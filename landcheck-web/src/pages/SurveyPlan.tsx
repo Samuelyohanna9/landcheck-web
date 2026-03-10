@@ -869,7 +869,7 @@ export default function SurveyPlan() {
                     </div>
                     {meta.template_name === "adamawa_osg" && (
                       <span className="template-hint">
-                        Adamawa OSG uses the Adamawa layout, while scale and paper size still follow the normal controls.
+                        Adamawa OSG template 
                       </span>
                     )}
                   </div>
