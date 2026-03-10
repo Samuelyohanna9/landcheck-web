@@ -163,7 +163,7 @@ export default function SurveyPreview({
             value={northArrowStyle}
             onChange={(e) => onNorthArrowStyleChange(e.target.value)}
           >
-            <option value="stacked_4n">One-Side Stem</option>
+            <option value="one_side_stem">One-Side Stem</option>
             <option value="classic">Classic</option>
             <option value="triangle">Triangle</option>
             <option value="compass">Compass</option>
