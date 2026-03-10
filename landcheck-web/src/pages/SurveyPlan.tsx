@@ -381,13 +381,13 @@ export default function SurveyPlan() {
         adamawa_owner_name: meta.adamawa_owner_name,
         adamawa_authority_title: meta.adamawa_authority_title,
         adamawa_authority_date_text: meta.adamawa_authority_date_text,
-        adamawa_control_point_name: meta.adamawa_control_point_name,
-        adamawa_northing: meta.adamawa_northing,
-        adamawa_easting: meta.adamawa_easting,
-        adamawa_elevation: meta.adamawa_elevation,
+        adamawa_control_point_name: "",
+        adamawa_northing: "",
+        adamawa_easting: "",
+        adamawa_elevation: "",
         adamawa_origin_text: meta.adamawa_origin_text,
         adamawa_topo_sheet_text: meta.adamawa_topo_sheet_text,
-        adamawa_computation_no: meta.adamawa_computation_no,
+        adamawa_computation_no: meta.adamawa_rof_no,
         adamawa_cadastral_sheet_no: meta.adamawa_cadastral_sheet_no,
         adamawa_plan_no: meta.adamawa_plan_no,
         adamawa_surveyed_by_text: meta.adamawa_surveyed_by_text,
@@ -635,13 +635,13 @@ export default function SurveyPlan() {
         adamawa_owner_name: meta.adamawa_owner_name,
         adamawa_authority_title: meta.adamawa_authority_title,
         adamawa_authority_date_text: meta.adamawa_authority_date_text,
-        adamawa_control_point_name: meta.adamawa_control_point_name,
-        adamawa_northing: meta.adamawa_northing,
-        adamawa_easting: meta.adamawa_easting,
-        adamawa_elevation: meta.adamawa_elevation,
+        adamawa_control_point_name: "",
+        adamawa_northing: "",
+        adamawa_easting: "",
+        adamawa_elevation: "",
         adamawa_origin_text: meta.adamawa_origin_text,
         adamawa_topo_sheet_text: meta.adamawa_topo_sheet_text,
-        adamawa_computation_no: meta.adamawa_computation_no,
+        adamawa_computation_no: meta.adamawa_rof_no,
         adamawa_cadastral_sheet_no: meta.adamawa_cadastral_sheet_no,
         adamawa_plan_no: meta.adamawa_plan_no,
         adamawa_surveyed_by_text: meta.adamawa_surveyed_by_text,
@@ -983,45 +983,9 @@ export default function SurveyPlan() {
                           placeholder={DEFAULT_ADAMAWA_AUTHORITY_DATE}
                         />
                       </div>
-                      <div className="form-group">
-                        <label>Control Point Name</label>
-                        <input
-                          value={meta.adamawa_control_point_name}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_control_point_name: e.target.value }))}
-                          placeholder="SCAD/4163"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Northing</label>
-                        <input
-                          value={meta.adamawa_northing}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_northing: e.target.value }))}
-                          placeholder="1034441.881m"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Easting</label>
-                        <input
-                          value={meta.adamawa_easting}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_easting: e.target.value }))}
-                          placeholder="227835.738m"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Elevation (Z)</label>
-                        <input
-                          value={meta.adamawa_elevation}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_elevation: e.target.value }))}
-                          placeholder="256.100m"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Computation No</label>
-                        <input
-                          value={meta.adamawa_computation_no}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_computation_no: e.target.value }))}
-                          placeholder="ADS50530"
-                        />
+                      <div className="form-group full-width">
+                        <label>Control Data Source</label>
+                        <input value="Auto from plotted coordinates/stations (read-only)" readOnly />
                       </div>
                       <div className="form-group">
                         <label>Cadastral Sheet No</label>
