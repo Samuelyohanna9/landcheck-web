@@ -401,16 +401,6 @@
   color: #86efac;
 }
 
-.paper-size-fixed {
-  padding: 0.625rem 0.875rem;
-  border-radius: 8px;
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  background: rgba(16, 185, 129, 0.08);
-  color: #d1fae5;
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
 /* Features Bar - Horizontal Compact Layout */
 .features-bar {
   display: flex;

@@ -862,22 +862,14 @@ export default function SurveyPlan() {
                       <button
                         type="button"
                         className={`template-btn ${meta.template_name === "adamawa_osg" ? "active" : ""}`}
-                        onClick={() => {
-                          setScaleDraft("2500");
-                          setMeta((m) => ({
-                            ...m,
-                            template_name: "adamawa_osg",
-                            paper_size: "A4",
-                            scale_text: "1 : 2500",
-                          }));
-                        }}
+                        onClick={() => setMeta((m) => ({ ...m, template_name: "adamawa_osg" }))}
                       >
                         Adamawa OSG
                       </button>
                     </div>
                     {meta.template_name === "adamawa_osg" && (
                       <span className="template-hint">
-                        Adamawa OSG layout is locked to the official A4 survey sheet style.
+                        Adamawa OSG uses the Adamawa layout, while scale and paper size still follow the normal controls.
                       </span>
                     )}
                   </div>
@@ -1124,35 +1116,28 @@ export default function SurveyPlan() {
                       ))}
                     </div>
                   </div>
-                  {meta.template_name === "adamawa_osg" ? (
-                    <div className="form-group paper-size-group">
-                      <label>Paper Size</label>
-                      <div className="paper-size-fixed">A4 (fixed by Adamawa OSG template)</div>
+                  <div className="form-group paper-size-group">
+                    <label>Paper Size</label>
+                    <div className="paper-size-presets">
+                      {["A4", "A3", "A2", "A1", "A0"].map((size) => (
+                        <button
+                          key={size}
+                          type="button"
+                          className={`paper-size-btn ${meta.paper_size === size ? "active" : ""}`}
+                          onClick={() => setMeta((m) => ({ ...m, paper_size: size }))}
+                        >
+                          {size}
+                        </button>
+                      ))}
                     </div>
-                  ) : (
-                    <div className="form-group paper-size-group">
-                      <label>Paper Size</label>
-                      <div className="paper-size-presets">
-                        {["A4", "A3", "A2", "A1", "A0"].map((size) => (
-                          <button
-                            key={size}
-                            type="button"
-                            className={`paper-size-btn ${meta.paper_size === size ? "active" : ""}`}
-                            onClick={() => setMeta((m) => ({ ...m, paper_size: size }))}
-                          >
-                            {size}
-                          </button>
-                        ))}
-                      </div>
-                      <span className="paper-size-hint">
-                        {meta.paper_size === "A4" && "Standard (210 x 297 mm)"}
-                        {meta.paper_size === "A3" && "Large (297 x 420 mm)"}
-                        {meta.paper_size === "A2" && "Extra Large (420 x 594 mm)"}
-                        {meta.paper_size === "A1" && "Poster (594 x 841 mm)"}
-                        {meta.paper_size === "A0" && "Maximum (841 x 1189 mm)"}
-                      </span>
-                    </div>
-                  )}
+                    <span className="paper-size-hint">
+                      {meta.paper_size === "A4" && "Standard (210 x 297 mm)"}
+                      {meta.paper_size === "A3" && "Large (297 x 420 mm)"}
+                      {meta.paper_size === "A2" && "Extra Large (420 x 594 mm)"}
+                      {meta.paper_size === "A1" && "Poster (594 x 841 mm)"}
+                      {meta.paper_size === "A0" && "Maximum (841 x 1189 mm)"}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="edit-feature-bar">
