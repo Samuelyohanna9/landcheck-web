@@ -104,7 +104,7 @@ export default function SurveyPlan() {
   const [previewType, setPreviewType] = useState<PreviewType>("survey");
   const [topoSource, setTopoSource] = useState<TopoSource>("opentopomap");
   const [northArrowStyle, setNorthArrowStyle] = useState<NorthArrowStyle>("stacked_4n");
-  const [northArrowColor, setNorthArrowColor] = useState<NorthArrowColor>("black");
+  const [northArrowColor, setNorthArrowColor] = useState<NorthArrowColor>("blue");
   const [beaconStyle, setBeaconStyle] = useState<BeaconStyle>("cross");
   const [roadWidth, setRoadWidth] = useState<RoadWidthOption>("10");
   const [scaleDraft, setScaleDraft] = useState<string>("1000");
@@ -554,7 +554,7 @@ export default function SurveyPlan() {
     setPreviewType("survey");
     setTopoSource("opentopomap");
     setNorthArrowStyle("stacked_4n");
-    setNorthArrowColor("black");
+    setNorthArrowColor("blue");
     setBeaconStyle("cross");
     setRoadWidth("10");
     setMeta({
