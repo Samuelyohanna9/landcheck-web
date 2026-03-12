@@ -1571,8 +1571,8 @@ export default function SurveyPlan() {
                 {subdivisionPreview && (
                   <div className="subdivision-legend">
                     <span>Resolved lots: <strong>{subdivisionPreview.resolved_count}</strong></span>
-                    <span>Target area: <strong>{(subdivisionPreview.target_area_m2 ?? parsePositiveFloat(subdivisionTargetAreaDraft) ?? 0).toFixed(2)} sqm</strong></span>
-                    <span>Orientation: <strong>{(subdivisionPreview.orientation_deg ?? Number(subdivisionOrientationDraft) || 0).toFixed(1)}°</strong></span>
+                    <span>Target area: <strong>{subdivisionTargetDisplayM2.toFixed(2)} sqm</strong></span>
+                    <span>Orientation: <strong>{subdivisionOrientationDisplayDeg.toFixed(1)} deg</strong></span>
                   </div>
                 )}
               </div>
@@ -2366,4 +2366,5 @@ export default function SurveyPlan() {
     </div>
   );
 }
+
 
