@@ -1155,6 +1155,7 @@ const OverviewMonthlySurvivalCard = ({
 }) => {
   const [hoveredRow, setHoveredRow] = useState<OverviewMonthlySurvivalRow | null>(null);
   const [selectedRow, setSelectedRow] = useState<OverviewMonthlySurvivalRow | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; row: OverviewMonthlySurvivalRow } | null>(null);
   const hasData = rows.some((row) => row.planted > 0);
   const width = 620;
   const height = 242;
@@ -1197,6 +1198,11 @@ const OverviewMonthlySurvivalCard = ({
   const avgRate =
     rows.reduce((sum, row) => sum + row.healthyRate, 0) / Math.max(rows.length, 1);
   const activeRow = hoveredRow || selectedRow || latestWithData;
+  const setTooltipForRow = (row: OverviewMonthlySurvivalRow, rowIndex: number) => {
+    const x = xForIndex(rowIndex);
+    const y = yForValue((row.healthyRate / 100) * yMax);
+    setTooltip({ x, y, row });
+  };
 
   return (
     <div className="green-work-trend-card green-work-overview-monthly-card">
@@ -1208,19 +1214,20 @@ const OverviewMonthlySurvivalCard = ({
         <p className="green-work-note">{emptyMessage}</p>
       ) : (
         <>
-          <svg
-            className="green-work-overview-monthly-svg"
-            viewBox={`0 0 ${width} ${height}`}
-            preserveAspectRatio="none"
-            role="img"
-            aria-label={title}
-          >
+          <div className="green-work-chart-svg-wrap">
+            <svg
+              className="green-work-overview-monthly-svg"
+              viewBox={`0 0 ${width} ${height}`}
+              preserveAspectRatio="none"
+              role="img"
+              aria-label={title}
+            >
             {yTicks.map((tick) => {
               const y = yForValue(tick);
               return (
                 <g key={`overview-monthly-y-${tick}`}>
                   <line x1={left} y1={y} x2={left + chartWidth} y2={y} stroke="#d9e4dd" strokeWidth="1" />
-                  <text x={left - 8} y={y + 3} textAnchor="end" fontSize="10" fill="#5f7c70">
+                  <text x={left - 8} y={y + 3} textAnchor="end" fontSize="10" fill="#2f5545">
                     {tick}
                   </text>
                 </g>
@@ -1254,10 +1261,17 @@ const OverviewMonthlySurvivalCard = ({
                     height={chartHeight}
                     fill="transparent"
                     style={{ cursor: "pointer" }}
-                    onMouseEnter={() => setHoveredRow(row)}
-                    onMouseLeave={() => setHoveredRow(null)}
+                    onMouseEnter={() => {
+                      setHoveredRow(row);
+                      setTooltipForRow(row, index);
+                    }}
+                    onMouseLeave={() => {
+                      setHoveredRow(null);
+                      setTooltip(null);
+                    }}
                     onClick={() =>
                       setSelectedRow((prev) => {
+                        setTooltipForRow(row, index);
                         if (prev?.key === row.key) return null;
                         return row;
                       })
@@ -1284,7 +1298,7 @@ const OverviewMonthlySurvivalCard = ({
                       opacity={isSelected ? 1 : 0.94}
                     />
                   )}
-                  <text x={x} y={height - 16} textAnchor="middle" fontSize="10" fill="#5f7c70">
+                  <text x={x} y={height - 16} textAnchor="middle" fontSize="10" fill="#2f5545">
                     {row.label}
                   </text>
                 </g>
@@ -1304,10 +1318,17 @@ const OverviewMonthlySurvivalCard = ({
                   stroke="#4eac39"
                   strokeWidth={isSelected ? "1.8" : "1.2"}
                   style={{ cursor: "pointer" }}
-                  onMouseEnter={() => setHoveredRow(row)}
-                  onMouseLeave={() => setHoveredRow(null)}
+                  onMouseEnter={() => {
+                    setHoveredRow(row);
+                    setTooltipForRow(row, index);
+                  }}
+                  onMouseLeave={() => {
+                    setHoveredRow(null);
+                    setTooltip(null);
+                  }}
                   onClick={() =>
                     setSelectedRow((prev) => {
+                      setTooltipForRow(row, index);
                       if (prev?.key === row.key) return null;
                       return row;
                     })
@@ -1315,7 +1336,23 @@ const OverviewMonthlySurvivalCard = ({
                 />
               );
             })}
-          </svg>
+            </svg>
+            {tooltip && (
+              <div
+                className="green-work-chart-tooltip"
+                style={{
+                  left: `${(tooltip.x / width) * 100}%`,
+                  top: `${(tooltip.y / height) * 100}%`,
+                }}
+              >
+                <strong>{tooltip.row.label}</strong>
+                <span>
+                  Healthy: {tooltip.row.healthy}/{tooltip.row.planted} ({tooltip.row.healthyRate.toFixed(1)}%)
+                </span>
+                <span>Non-healthy: {tooltip.row.nonHealthy}</span>
+              </div>
+            )}
+          </div>
           <div className="green-work-overview-monthly-legend">
             <span><i className="is-healthy" />Healthy now</span>
             <span><i className="is-total" />Planted cohort</span>
@@ -1359,6 +1396,14 @@ const SpeciesDailySurvivalChart = ({
     trees: number;
     point: SpeciesDailySurvivalPoint;
     color: string;
+  } | null>(null);
+  const [tooltip, setTooltip] = useState<{
+    x: number;
+    y: number;
+    species: string;
+    color: string;
+    point: SpeciesDailySurvivalPoint;
+    trees: number;
   } | null>(null);
   const width = 620;
   const height = 246;
@@ -1417,19 +1462,20 @@ const SpeciesDailySurvivalChart = ({
         <p className="green-work-note">{emptyMessage || "No species with planting dates yet."}</p>
       ) : (
         <>
-          <svg
-            className="green-work-species-svg"
-            viewBox={`0 0 ${width} ${height}`}
-            preserveAspectRatio="none"
-            role="img"
-            aria-label={title}
-          >
+          <div className="green-work-chart-svg-wrap">
+            <svg
+              className="green-work-species-svg"
+              viewBox={`0 0 ${width} ${height}`}
+              preserveAspectRatio="none"
+              role="img"
+              aria-label={title}
+            >
             {yTicks.map((tick) => {
               const y = yForValue(tick);
               return (
                 <g key={`species-y-${tick}`}>
                   <line x1={left} y1={y} x2={left + chartWidth} y2={y} stroke="#d6e2db" strokeWidth="1" />
-                  <text x={left - 8} y={y + 3} textAnchor="end" fontSize="10" fill="#5f7c70">
+                  <text x={left - 8} y={y + 3} textAnchor="end" fontSize="10" fill="#2f5545">
                     {tick}
                   </text>
                 </g>
@@ -1440,7 +1486,7 @@ const SpeciesDailySurvivalChart = ({
               return (
                 <g key={`species-x-${day}`}>
                   <line x1={x} y1={top} x2={x} y2={top + chartHeight} stroke="#e4ede8" strokeWidth="1" />
-                  <text x={x} y={height - 16} textAnchor="middle" fontSize="10" fill="#5f7c70">
+                  <text x={x} y={height - 16} textAnchor="middle" fontSize="10" fill="#2f5545">
                     d{day}
                   </text>
                 </g>
@@ -1489,15 +1535,26 @@ const SpeciesDailySurvivalChart = ({
                         stroke={item.color}
                         strokeWidth="1.6"
                         style={{ cursor: "pointer" }}
-                        onMouseEnter={() =>
+                        onMouseEnter={() => {
                           setHovered({
                             species: item.species,
                             trees: item.trees,
                             point,
                             color: item.color,
-                          })
-                        }
-                        onMouseLeave={() => setHovered(null)}
+                          });
+                          setTooltip({
+                            x,
+                            y,
+                            species: item.species,
+                            color: item.color,
+                            point,
+                            trees: item.trees,
+                          });
+                        }}
+                        onMouseLeave={() => {
+                          setHovered(null);
+                          setTooltip(null);
+                        }}
                         onClick={() =>
                           setSelected((prev) => {
                             if (
@@ -1516,13 +1573,42 @@ const SpeciesDailySurvivalChart = ({
                             };
                           })
                         }
+                        onPointerDown={() =>
+                          setTooltip({
+                            x,
+                            y,
+                            species: item.species,
+                            color: item.color,
+                            point,
+                            trees: item.trees,
+                          })
+                        }
                       />
                     );
                   })}
                 </g>
               );
             })}
-          </svg>
+            </svg>
+            {tooltip && (
+              <div
+                className="green-work-chart-tooltip"
+                style={{
+                  left: `${(tooltip.x / width) * 100}%`,
+                  top: `${(tooltip.y / height) * 100}%`,
+                  borderColor: tooltip.color,
+                }}
+              >
+                <strong style={{ color: tooltip.color }}>{tooltip.species}</strong>
+                <span>
+                  {tooltip.point.label} ({tooltip.point.date}): {tooltip.point.value.toFixed(1)}%
+                </span>
+                <span>
+                  Cohort {tooltip.point.survived}/{tooltip.point.eligible} | Trees {tooltip.trees}
+                </span>
+              </div>
+            )}
+          </div>
           <div className="green-work-species-legend">
             {series.map((item) => (
               <span key={`species-chip-${item.species}`} className="green-work-species-chip">
@@ -7447,7 +7533,7 @@ export default function GreenWork() {
           )}
         </aside>
 
-        <section className={`green-work-main ${overviewMode || liveTableMode || verraMode ? "overview-mode" : "single-mode"}`}>
+        <section className={`green-work-main ${overviewMode || liveTableMode || verraMode ? "overview-mode" : "single-mode"} ${mapViewMode ? "map-view-mode" : ""}`}>
           {activeProjectId && activeForm === "overview" && (
             <div className="green-work-card green-work-overview-card">
               <div className="green-work-row">
