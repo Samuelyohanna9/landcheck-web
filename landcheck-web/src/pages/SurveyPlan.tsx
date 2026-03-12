@@ -608,6 +608,12 @@ export default function SurveyPlan() {
     loadTopoMap,
   ]);
 
+  useEffect(() => {
+    if (workflowMode === "subdivision" && currentStep === 2 && previewType !== "survey") {
+      setPreviewType("survey");
+    }
+  }, [workflowMode, currentStep, previewType]);
+
   // Reset everything
   const resetAll = () => {
     setWorkflowMode(null);
@@ -833,6 +839,13 @@ export default function SurveyPlan() {
     if (subdivisionMethod === "by_area" && (targetArea === null || targetArea <= 0)) {
       toast.error("Set a positive target area in square meters.");
       return;
+    }
+
+    // Persist latest output settings (template/scale/paper/etc.) before generating child plots.
+    try {
+      await loadPreview();
+    } catch {
+      // If preview save fails, apply endpoint will still validate and return proper error.
     }
 
     const orientationDeg = Number.parseFloat(subdivisionOrientationDraft || "0");
@@ -1399,6 +1412,98 @@ export default function SurveyPlan() {
                 </p>
                 <div className="form-grid">
                   <div className="form-group">
+                    <label>Template</label>
+                    <select
+                      value={meta.template_name}
+                      onChange={(e) =>
+                        setMeta((m) => ({
+                          ...m,
+                          template_name: e.target.value as PlotMeta["template_name"],
+                        }))
+                      }
+                    >
+                      <option value="general">General</option>
+                      <option value="adamawa_osg">Adamawa OSG</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Surveyor Name</label>
+                    <input
+                      value={meta.surveyor_name}
+                      onChange={(e) => setMeta((m) => ({ ...m, surveyor_name: e.target.value }))}
+                      placeholder="Enter surveyor name"
+                    />
+                  </div>
+                  <div className="form-group scale-group">
+                    <label>Scale</label>
+                    <div className="scale-input-wrapper">
+                      <span className="scale-prefix">1 :</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={scaleDraft}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, "");
+                          setScaleDraft(val);
+                        }}
+                        onBlur={commitScaleDraft}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            commitScaleDraft();
+                          }
+                        }}
+                        className="scale-number-input"
+                        placeholder="1000"
+                        aria-label="Scale denominator"
+                      />
+                    </div>
+                    <div className="scale-presets">
+                      {SCALE_PRESETS.map((s) => (
+                        <button
+                          key={`sub_scale_${s}`}
+                          type="button"
+                          className={`scale-preset-btn ${parseScaleDenominator(meta.scale_text) === s ? "active" : ""}`}
+                          onClick={() => {
+                            setScaleDraft(String(s));
+                            setMeta((m) => ({ ...m, scale_text: `1 : ${s}` }));
+                          }}
+                        >
+                          1:{s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="form-group paper-size-group">
+                    <label>Paper Size</label>
+                    <div className="paper-size-presets">
+                      {["A4", "A3", "A2", "A1", "A0"].map((size) => (
+                        <button
+                          key={`sub_size_${size}`}
+                          type="button"
+                          className={`paper-size-btn ${meta.paper_size === size ? "active" : ""}`}
+                          onClick={() => setMeta((m) => ({ ...m, paper_size: size }))}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="paper-size-hint">
+                      Used for all generated lot plan PDFs in this batch.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="edit-feature-bar">
+                  <button className="btn-secondary" onClick={loadPreview} disabled={previewLoading}>
+                    {previewLoading ? "Updating preview..." : "Update Parcel Preview"}
+                  </button>
+                </div>
+
+                <hr className="subdivision-divider" />
+                <div className="form-grid">
+                  <div className="form-group">
                     <label>Subdivision Method</label>
                     <select
                       value={subdivisionMethod}
@@ -1913,6 +2018,10 @@ export default function SurveyPlan() {
                 <h3 className="section-title">Subdivision Batch Export</h3>
                 <p className="section-desc">
                   Export generated subdivision plans as one ZIP package. Preview the split before downloading.
+                </p>
+                <p className="section-desc">
+                  Output settings: Template <strong>{meta.template_name === "adamawa_osg" ? "Adamawa OSG" : "General"}</strong>,
+                  Scale <strong>{meta.scale_text}</strong>, Paper <strong>{meta.paper_size}</strong>.
                 </p>
 
                 <div className="export-grid">
