@@ -1153,6 +1153,8 @@ const OverviewMonthlySurvivalCard = ({
   rows: OverviewMonthlySurvivalRow[];
   emptyMessage: string;
 }) => {
+  const [hoveredRow, setHoveredRow] = useState<OverviewMonthlySurvivalRow | null>(null);
+  const [selectedRow, setSelectedRow] = useState<OverviewMonthlySurvivalRow | null>(null);
   const hasData = rows.some((row) => row.planted > 0);
   const width = 620;
   const height = 242;
@@ -1194,6 +1196,7 @@ const OverviewMonthlySurvivalCard = ({
   const latestWithData = [...rows].reverse().find((row) => row.planted > 0) || null;
   const avgRate =
     rows.reduce((sum, row) => sum + row.healthyRate, 0) / Math.max(rows.length, 1);
+  const activeRow = hoveredRow || selectedRow || latestWithData;
 
   return (
     <div className="green-work-trend-card green-work-overview-monthly-card">
@@ -1240,8 +1243,26 @@ const OverviewMonthlySurvivalCard = ({
               const x = xForIndex(index);
               const totalHeight = row.planted > 0 ? Math.max(baselineY - yForValue(row.planted), 1) : 0;
               const healthyHeight = row.healthy > 0 ? Math.max(baselineY - yForValue(row.healthy), 1) : 0;
+              const selectionHitWidth = Math.max(barWidth * 1.4, chartWidth / Math.max(rows.length * 1.35, 1));
+              const isSelected = selectedRow?.key === row.key;
               return (
                 <g key={`overview-monthly-bar-${row.key}`}>
+                  <rect
+                    x={x - selectionHitWidth / 2}
+                    y={top}
+                    width={selectionHitWidth}
+                    height={chartHeight}
+                    fill="transparent"
+                    style={{ cursor: "pointer" }}
+                    onMouseEnter={() => setHoveredRow(row)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    onClick={() =>
+                      setSelectedRow((prev) => {
+                        if (prev?.key === row.key) return null;
+                        return row;
+                      })
+                    }
+                  />
                   {totalHeight > 0 && (
                     <rect
                       x={x - barWidth / 2}
@@ -1260,6 +1281,7 @@ const OverviewMonthlySurvivalCard = ({
                       height={healthyHeight}
                       fill="#71c742"
                       rx="1.6"
+                      opacity={isSelected ? 1 : 0.94}
                     />
                   )}
                   <text x={x} y={height - 16} textAnchor="middle" fontSize="10" fill="#5f7c70">
@@ -1271,15 +1293,25 @@ const OverviewMonthlySurvivalCard = ({
             {rows.map((row, index) => {
               const x = xForIndex(index);
               const y = yForValue((row.healthyRate / 100) * yMax);
+              const isSelected = selectedRow?.key === row.key;
               return (
                 <circle
                   key={`overview-monthly-dot-${row.key}`}
                   cx={x}
                   cy={y}
-                  r="2.3"
+                  r={isSelected ? "3.4" : "2.8"}
                   fill="#ffffff"
                   stroke="#4eac39"
-                  strokeWidth="1.2"
+                  strokeWidth={isSelected ? "1.8" : "1.2"}
+                  style={{ cursor: "pointer" }}
+                  onMouseEnter={() => setHoveredRow(row)}
+                  onMouseLeave={() => setHoveredRow(null)}
+                  onClick={() =>
+                    setSelectedRow((prev) => {
+                      if (prev?.key === row.key) return null;
+                      return row;
+                    })
+                  }
                 />
               );
             })}
@@ -1289,11 +1321,12 @@ const OverviewMonthlySurvivalCard = ({
             <span><i className="is-total" />Planted cohort</span>
             <span><i className="is-share" />Healthy share trend</span>
           </div>
-          {latestWithData && (
+          {activeRow && (
             <div className="green-work-species-hover">
               <span>
-                Latest cohort ({latestWithData.label}): {latestWithData.healthy}/{latestWithData.planted} healthy (
-                {latestWithData.healthyRate.toFixed(1)}%). Average monthly healthy share: {avgRate.toFixed(1)}%.
+                {selectedRow ? "Pinned" : "Point"} {activeRow.label}: {activeRow.healthy}/{activeRow.planted} healthy (
+                {activeRow.healthyRate.toFixed(1)}%) | Non-healthy: {activeRow.nonHealthy}. Average monthly healthy share:{" "}
+                {avgRate.toFixed(1)}%.
               </span>
             </div>
           )}
@@ -1316,6 +1349,12 @@ const SpeciesDailySurvivalChart = ({
   emptyMessage?: string;
 }) => {
   const [hovered, setHovered] = useState<{
+    species: string;
+    trees: number;
+    point: SpeciesDailySurvivalPoint;
+    color: string;
+  } | null>(null);
+  const [selected, setSelected] = useState<{
     species: string;
     trees: number;
     point: SpeciesDailySurvivalPoint;
@@ -1366,6 +1405,7 @@ const SpeciesDailySurvivalChart = ({
     return left + (safeDay / Math.max(dayDomainMax, 1)) * chartWidth;
   };
   const yForValue = (value: number) => top + (1 - value / 100) * chartHeight;
+  const activeDetail = hovered || selected;
 
   return (
     <div className="green-work-trend-card green-work-species-chart-card">
@@ -1444,10 +1484,11 @@ const SpeciesDailySurvivalChart = ({
                         key={`species-dot-${item.species}-${point.day}-${point.date}`}
                         cx={x}
                         cy={y}
-                        r="2.8"
+                        r={selected?.species === item.species && selected?.point.day === point.day ? "3.5" : "2.8"}
                         fill="#ffffff"
                         stroke={item.color}
                         strokeWidth="1.6"
+                        style={{ cursor: "pointer" }}
                         onMouseEnter={() =>
                           setHovered({
                             species: item.species,
@@ -1457,6 +1498,24 @@ const SpeciesDailySurvivalChart = ({
                           })
                         }
                         onMouseLeave={() => setHovered(null)}
+                        onClick={() =>
+                          setSelected((prev) => {
+                            if (
+                              prev &&
+                              prev.species === item.species &&
+                              prev.point.day === point.day &&
+                              prev.point.date === point.date
+                            ) {
+                              return null;
+                            }
+                            return {
+                              species: item.species,
+                              trees: item.trees,
+                              point,
+                              color: item.color,
+                            };
+                          })
+                        }
                       />
                     );
                   })}
@@ -1473,14 +1532,14 @@ const SpeciesDailySurvivalChart = ({
             ))}
           </div>
           <div className="green-work-species-hover">
-            {hovered ? (
+            {activeDetail ? (
               <span>
-                <strong style={{ color: hovered.color }}>{hovered.species}</strong> | {hovered.point.label} (
-                {hovered.point.date}): {hovered.point.value.toFixed(1)}% | Cohort {hovered.point.survived}/
-                {hovered.point.eligible} | Trees {hovered.trees} | {hovered.point.phase}
+                <strong style={{ color: activeDetail.color }}>{activeDetail.species}</strong> | {activeDetail.point.label} (
+                {activeDetail.point.date}): {activeDetail.point.value.toFixed(1)}% | Cohort {activeDetail.point.survived}/
+                {activeDetail.point.eligible} | Trees {activeDetail.trees} | {activeDetail.point.phase}
               </span>
             ) : (
-              <span>Hover a point to view daily species survival details.</span>
+              <span>Hover or click a point to view daily species survival details.</span>
             )}
           </div>
         </>
@@ -7557,18 +7616,20 @@ export default function GreenWork() {
                 </div>
               </div>
 
-              <SpeciesDailySurvivalChart
-                title="Species Survival Trend (Daily from Planting Date)"
-                series={speciesDailySurvivalSeries}
-                emptyMessage={speciesDailySurvivalEmptyMessage}
-                context={speciesDailySurvivalContext}
-              />
-              <OverviewMonthlySurvivalCard
-                title="Monthly Cohort Survival Snapshot"
-                rows={overviewMonthlySurvivalRows}
-                emptyMessage="No planted trees with valid planting dates in the last 12 months."
-                context={`Context: bars show planted cohorts vs currently healthy trees by month for ${overviewScopeLabel}; green area shows monthly healthy share trend.`}
-              />
+              <div className="green-work-overview-trends">
+                <SpeciesDailySurvivalChart
+                  title="Species Survival Trend (Daily from Planting Date)"
+                  series={speciesDailySurvivalSeries}
+                  emptyMessage={speciesDailySurvivalEmptyMessage}
+                  context={speciesDailySurvivalContext}
+                />
+                <OverviewMonthlySurvivalCard
+                  title="Monthly Cohort Survival Snapshot"
+                  rows={overviewMonthlySurvivalRows}
+                  emptyMessage="No planted trees with valid planting dates in the last 12 months."
+                  context={`Context: bars show planted cohorts vs currently healthy trees by month for ${overviewScopeLabel}; green area shows monthly healthy share trend.`}
+                />
+              </div>
 
               {carbonSummary && (
                 <div className="green-work-carbon-panel">
