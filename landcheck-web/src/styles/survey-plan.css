@@ -605,6 +605,131 @@
   font-style: italic;
 }
 
+.subdivision-section {
+  margin-top: 0.5rem;
+}
+
+.subdivision-action-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.subdivision-action-row .btn-primary,
+.subdivision-action-row .btn-secondary {
+  flex: 1;
+}
+
+.subdivision-preview-wrap {
+  margin-top: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 0.8rem;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.subdivision-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.subdivision-kpi {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.48);
+  padding: 0.5rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.subdivision-kpi-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.03em;
+}
+
+.subdivision-kpi strong {
+  font-size: 0.82rem;
+  color: #f1f5f9;
+}
+
+.subdivision-table-wrap {
+  overflow: auto;
+  border-radius: 8px;
+}
+
+.subdivision-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.subdivision-table th,
+.subdivision-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.38rem 0.45rem;
+  text-align: left;
+  color: #dbe5f4;
+}
+
+.subdivision-table th {
+  color: #86efac;
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.subdivision-note {
+  margin-top: 0.4rem;
+  margin-bottom: 0;
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.subdivision-batch-wrap {
+  margin-top: 0.9rem;
+}
+
+.subdivision-batch-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.subdivision-batch-header h4 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #f1f5f9;
+}
+
+.subdivision-batch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.subdivision-batch-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.btn-mini {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.75rem;
+  border-radius: 8px;
+}
+
 /* Preview Container */
 .preview-container {
   display: flex;
@@ -775,6 +900,14 @@
   .step-line {
     width: 30px;
     margin: 0 0.5rem;
+  }
+
+  .subdivision-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .subdivision-action-row {
+    flex-direction: column;
   }
 }
 
