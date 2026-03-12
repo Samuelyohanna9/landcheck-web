@@ -778,6 +778,12 @@
   margin-top: 0.9rem;
 }
 
+.subdivision-divider {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 0.9rem 0 0.8rem;
+}
+
 .subdivision-batch-header {
   display: flex;
   align-items: center;
