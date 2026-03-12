@@ -1936,6 +1936,54 @@
   padding: 0.3rem 0.42rem;
 }
 
+/* Overview monthly cohort summary chart */
+.green-work-overview-monthly-card {
+  margin-top: 0.5rem;
+  min-height: 300px;
+}
+
+.green-work-overview-monthly-svg {
+  width: 100%;
+  height: 206px;
+  display: block;
+}
+
+.green-work-overview-monthly-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.28rem;
+  color: var(--gw-subtext);
+  font-size: 0.63rem;
+  font-weight: 700;
+}
+
+.green-work-overview-monthly-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.24rem;
+}
+
+.green-work-overview-monthly-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.green-work-overview-monthly-legend i.is-healthy {
+  background: #71c742;
+}
+
+.green-work-overview-monthly-legend i.is-total {
+  background: #d3dad4;
+}
+
+.green-work-overview-monthly-legend i.is-share {
+  background: rgba(109, 202, 78, 0.28);
+  border: 1px solid #68ba49;
+}
+
 /* ── Verra Card ── */
 .green-work-verra-card {
   display: flex;
@@ -3046,6 +3094,10 @@
 
   .green-work-species-svg {
     height: 168px;
+  }
+
+  .green-work-overview-monthly-svg {
+    height: 172px;
   }
 
   .green-work-main.overview-mode .green-work-map-card .tree-map {
