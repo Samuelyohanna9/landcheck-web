@@ -44,11 +44,18 @@ type SubdivisionPreviewPlot = {
   lot_no: string;
   area_m2: number;
   area_hectares: number;
+  geometry?: {
+    type: "Polygon";
+    coordinates: number[][][];
+  };
 };
 
 type SubdivisionPreviewData = {
   method: SubdivisionMethod | string;
   resolved_count: number;
+  requested_count?: number | null;
+  target_area_m2?: number | null;
+  orientation_deg?: number;
   total_area_m2: number;
   derived_total_area_m2: number;
   area_imbalance_m2: number;
@@ -117,6 +124,47 @@ const parseScaleDenominator = (scaleText: string): number => {
   const parsed = Number.parseInt(digits || "1000", 10);
   if (!Number.isFinite(parsed)) return 1000;
   return Math.min(MAX_SCALE_DENOMINATOR, Math.max(MIN_SCALE_DENOMINATOR, parsed));
+};
+
+const closeRingIfNeeded = (ring: number[][]): number[][] => {
+  if (ring.length < 3) return ring;
+  const first = ring[0];
+  const last = ring[ring.length - 1];
+  if (first[0] === last[0] && first[1] === last[1]) return ring;
+  return [...ring, first];
+};
+
+const polygonCentroid = (ringRaw: number[][]): [number, number] => {
+  const ring = closeRingIfNeeded(ringRaw);
+  if (ring.length < 4) {
+    const simple = ring.reduce(
+      (acc, point) => [acc[0] + Number(point[0] || 0), acc[1] + Number(point[1] || 0)],
+      [0, 0]
+    );
+    return [simple[0] / Math.max(1, ring.length), simple[1] / Math.max(1, ring.length)];
+  }
+
+  let twiceArea = 0;
+  let cx = 0;
+  let cy = 0;
+  for (let i = 0; i < ring.length - 1; i += 1) {
+    const x0 = Number(ring[i][0] || 0);
+    const y0 = Number(ring[i][1] || 0);
+    const x1 = Number(ring[i + 1][0] || 0);
+    const y1 = Number(ring[i + 1][1] || 0);
+    const cross = x0 * y1 - x1 * y0;
+    twiceArea += cross;
+    cx += (x0 + x1) * cross;
+    cy += (y0 + y1) * cross;
+  }
+  if (Math.abs(twiceArea) < 1e-12) {
+    const simple = ring.reduce(
+      (acc, point) => [acc[0] + Number(point[0] || 0), acc[1] + Number(point[1] || 0)],
+      [0, 0]
+    );
+    return [simple[0] / Math.max(1, ring.length), simple[1] / Math.max(1, ring.length)];
+  }
+  return [cx / (3 * twiceArea), cy / (3 * twiceArea)];
 };
 
 const SURVEY_STEPS = [
@@ -337,6 +385,104 @@ export default function SurveyPlan() {
   const stationNames = useMemo(() => {
     return manualPoints.map((p) => (p.station || "").trim());
   }, [manualPoints]);
+
+  const subdivisionSvgPreview = useMemo(() => {
+    if (!subdivisionPreview?.plots?.length) return null;
+
+    const normalized = subdivisionPreview.plots
+      .map((plot) => {
+        const ringRaw = (plot.geometry?.coordinates?.[0] || [])
+          .map((point) => [Number(point?.[0]), Number(point?.[1])])
+          .filter((point) => Number.isFinite(point[0]) && Number.isFinite(point[1]));
+        if (ringRaw.length < 3) return null;
+        return {
+          ...plot,
+          ring: closeRingIfNeeded(ringRaw),
+          centroid: polygonCentroid(ringRaw),
+        };
+      })
+      .filter(Boolean) as Array<
+      SubdivisionPreviewPlot & {
+        ring: number[][];
+        centroid: [number, number];
+      }
+    >;
+
+    if (!normalized.length) return null;
+
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    normalized.forEach((plot) => {
+      plot.ring.forEach((point) => {
+        minX = Math.min(minX, point[0]);
+        maxX = Math.max(maxX, point[0]);
+        minY = Math.min(minY, point[1]);
+        maxY = Math.max(maxY, point[1]);
+      });
+    });
+
+    if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+      return null;
+    }
+
+    const width = 900;
+    const height = 620;
+    const padding = 42;
+    const dx = Math.max(1e-9, maxX - minX);
+    const dy = Math.max(1e-9, maxY - minY);
+    const scale = Math.min((width - padding * 2) / dx, (height - padding * 2) / dy);
+    const contentWidth = dx * scale;
+    const contentHeight = dy * scale;
+    const offsetX = (width - contentWidth) / 2;
+    const offsetY = (height - contentHeight) / 2;
+
+    const mapPoint = (point: [number, number]) => ({
+      x: offsetX + (point[0] - minX) * scale,
+      y: height - (offsetY + (point[1] - minY) * scale),
+    });
+
+    const palette = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4", "#84cc16", "#f97316", "#6366f1", "#14b8a6"];
+
+    const plots = normalized.map((plot, idx) => {
+      const projected = plot.ring.map((pt) => mapPoint([pt[0], pt[1]]));
+      const path = `${projected
+        .map((pt, i) => `${i === 0 ? "M" : "L"} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`)
+        .join(" ")} Z`;
+      const centroidProjected = mapPoint(plot.centroid);
+      return {
+        lotNo: plot.lot_no,
+        areaM2: plot.area_m2,
+        areaHa: plot.area_hectares,
+        path,
+        stroke: palette[idx % palette.length],
+        labelX: Math.max(26, Math.min(width - 26, centroidProjected.x)),
+        labelY: Math.max(24, Math.min(height - 24, centroidProjected.y)),
+      };
+    });
+
+    return {
+      width,
+      height,
+      plots,
+    };
+  }, [subdivisionPreview]);
+
+  const subdivisionTargetDisplayM2 = useMemo(() => {
+    const fromPreview = Number(subdivisionPreview?.target_area_m2);
+    if (Number.isFinite(fromPreview) && fromPreview > 0) return fromPreview;
+    const fromDraft = parsePositiveFloat(subdivisionTargetAreaDraft);
+    return fromDraft ?? 0;
+  }, [subdivisionPreview?.target_area_m2, subdivisionTargetAreaDraft]);
+
+  const subdivisionOrientationDisplayDeg = useMemo(() => {
+    const fromPreview = Number(subdivisionPreview?.orientation_deg);
+    if (Number.isFinite(fromPreview)) return fromPreview;
+    const fromDraft = Number.parseFloat(subdivisionOrientationDraft || "0");
+    if (Number.isFinite(fromDraft)) return fromDraft;
+    return 0;
+  }, [subdivisionPreview?.orientation_deg, subdivisionOrientationDraft]);
 
   // Check if coordinates are valid
   const hasValidCoords = useMemo(() => {
@@ -1375,28 +1521,61 @@ export default function SurveyPlan() {
               </div>
             </div>
             <div className="panel-right preview-container">
-              <SurveyPreview
-                previewType={previewType}
-                onPreviewTypeChange={setPreviewType}
-                topoSource={topoSource}
-                onTopoSourceChange={setTopoSource}
-                northArrowStyle={northArrowStyle}
-                northArrowColor={northArrowColor}
-                beaconStyle={beaconStyle}
-                roadWidth={roadWidth}
-                onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
-                onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
-                onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
-                onRoadWidthChange={(value) => setRoadWidth(value as RoadWidthOption)}
-                paperSize={meta.paper_size}
-                surveyPreviewUrl={previewUrl}
-                orthophotoPreviewUrl={orthophotoUrl}
-                topoMapPreviewUrl={topoMapUrl}
-                loading={previewLoading}
-                orthophotoLoading={orthophotoLoading}
-                topoMapLoading={topoMapLoading}
-                hasHeightData={hasHeightData}
-              />
+              <div className="subdivision-right-wrap">
+                <div className="subdivision-right-header">
+                  <h4>Subdivision Line Preview</h4>
+                  <span>Each lot boundary + area label</span>
+                </div>
+                {!subdivisionPreview && (
+                  <div className="preview-empty">
+                    <p>Click <strong>Preview Split</strong> to see lot lines and area labels here.</p>
+                  </div>
+                )}
+                {subdivisionSvgPreview && (
+                  <div className="subdivision-svg-wrap">
+                    <svg
+                      viewBox={`0 0 ${subdivisionSvgPreview.width} ${subdivisionSvgPreview.height}`}
+                      className="subdivision-svg"
+                      role="img"
+                      aria-label="Subdivision lot preview"
+                    >
+                      <rect x="0" y="0" width={subdivisionSvgPreview.width} height={subdivisionSvgPreview.height} fill="#0f172a" />
+                      <g>
+                        {subdivisionSvgPreview.plots.map((plot) => (
+                          <path
+                            key={`plot_path_${plot.lotNo}`}
+                            d={plot.path}
+                            fill="rgba(16,185,129,0.08)"
+                            stroke={plot.stroke}
+                            strokeWidth={2.4}
+                          />
+                        ))}
+                      </g>
+                      <g>
+                        {subdivisionSvgPreview.plots.map((plot) => (
+                          <text
+                            key={`plot_label_${plot.lotNo}`}
+                            x={plot.labelX}
+                            y={plot.labelY}
+                            textAnchor="middle"
+                            className="subdivision-svg-label"
+                          >
+                            <tspan x={plot.labelX} dy="0">{plot.lotNo}</tspan>
+                            <tspan x={plot.labelX} dy="12">{plot.areaHa.toFixed(3)} ha</tspan>
+                          </text>
+                        ))}
+                      </g>
+                    </svg>
+                  </div>
+                )}
+                {subdivisionPreview && (
+                  <div className="subdivision-legend">
+                    <span>Resolved lots: <strong>{subdivisionPreview.resolved_count}</strong></span>
+                    <span>Target area: <strong>{(subdivisionPreview.target_area_m2 ?? parsePositiveFloat(subdivisionTargetAreaDraft) ?? 0).toFixed(2)} sqm</strong></span>
+                    <span>Orientation: <strong>{(subdivisionPreview.orientation_deg ?? Number(subdivisionOrientationDraft) || 0).toFixed(1)}°</strong></span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -1594,6 +1773,32 @@ export default function SurveyPlan() {
                       "Generate Batch"
                     )}
                   </button>
+                </div>
+
+                <div className="subdivision-help-card">
+                  <div className="subdivision-help-row">
+                    <strong>Orientation</strong>
+                    <span>
+                      {Number.isFinite(Number(subdivisionOrientationDraft)) ? Number(subdivisionOrientationDraft).toFixed(1) : "0.0"}°
+                      &nbsp;— rotates split-line direction.
+                    </span>
+                  </div>
+                  <div className="subdivision-help-row">
+                    <strong>Target by area</strong>
+                    <span>
+                      {subdivisionMethod === "by_area"
+                        ? `${(parsePositiveFloat(subdivisionTargetAreaDraft) || 0).toLocaleString()} sqm per lot (approx).`
+                        : "Not used in by-count mode; lots are balanced by area."}
+                    </span>
+                  </div>
+                  {subdivisionPreview && (
+                    <div className="subdivision-help-row">
+                      <strong>Computed output</strong>
+                      <span>
+                        {subdivisionPreview.resolved_count} plots, total {subdivisionPreview.derived_total_area_m2.toFixed(2)} sqm.
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {subdivisionPreview && (
