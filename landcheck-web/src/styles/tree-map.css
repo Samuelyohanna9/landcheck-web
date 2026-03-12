@@ -6,6 +6,9 @@
   position: relative;
   border-radius: 16px;
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 .tree-map {
@@ -81,8 +84,8 @@
   justify-content: center;
   color: #2f5a4a;
   background: rgba(240, 248, 241, 0.92);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border-radius: 16px;
   font-size: 0.9rem;
   text-align: center;
