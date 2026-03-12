@@ -23,8 +23,8 @@
   --red-600: #dc2626;
   --red-700: #b91c1c;
 
-  --card-text: #123a2b;
-  --card-subtle: #4f6f61;
+  --card-text: #0f3124;
+  --card-subtle: #35564a;
   --line-soft: rgba(18, 58, 43, 0.1);
 
   --shadow-sm: 0 1px 3px rgba(15, 61, 31, 0.08);
@@ -43,6 +43,9 @@
   overflow-x: clip;
   font-family: "Nunito Sans", sans-serif;
   color: var(--card-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   background: linear-gradient(168deg, #e8f5eb 0%, #d4eeda 40%, #c0e4c8 70%, #a8d8b2 100%);
 }
 
@@ -53,8 +56,8 @@
   z-index: 30;
   border-bottom: 1px solid rgba(16, 45, 28, 0.12);
   background: rgba(22, 110, 52, 0.92);
-  backdrop-filter: blur(16px) saturate(1.6);
-  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset, var(--shadow-lg);
 }
 
@@ -367,9 +370,9 @@
 /* ── Cards ── */
 .green-setup-card,
 .green-detail-card {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border: 1px solid rgba(255, 255, 255, 0.7);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-md);
@@ -1666,9 +1669,9 @@
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.6);
   padding: 0.7rem 0.85rem;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   box-shadow: var(--shadow-xl);
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1748,9 +1751,9 @@
   width: min(92vw, 340px);
   border-radius: var(--radius-lg);
   border: 1px solid rgba(255, 255, 255, 0.6);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   box-shadow: var(--shadow-xl);
   padding: 1.1rem 1rem;
   display: grid;
