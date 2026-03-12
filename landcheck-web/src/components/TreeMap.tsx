@@ -74,6 +74,7 @@ type TreeFeatureProps = {
   core: string;
   ring: string;
   is_alive: number;
+  is_healthy: number;
 };
 
 type TreePopupDetail = {
@@ -202,6 +203,7 @@ const ACTIVE_TREE_STATUSES = new Set([
   "need_watering",
   "need_protection",
 ]);
+const HEALTHY_TREE_STATUSES = new Set(["alive", "healthy"]);
 const normalizeStatus = (status: string | null | undefined) => {
   const raw = (status || "").trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
   if (raw === "deseas" || raw === "diseased") return "disease";
@@ -269,6 +271,7 @@ const getFeatureProps = (feature: mapboxgl.MapboxGeoJSONFeature | undefined): Tr
     core: String(raw.core || markerPalettes.alive.core),
     ring: String(raw.ring || markerPalettes.alive.ring),
     is_alive: Number(raw.is_alive || 0),
+    is_healthy: Number(raw.is_healthy || 0),
   };
 };
 
@@ -311,6 +314,7 @@ const buildTreeFeatureCollection = (items: TreePoint[]) => {
           count_in_carbon_scope: tree.count_in_carbon_scope === false ? 0 : 1,
           custodian_name: tree.custodian_name || "",
           is_alive: ACTIVE_TREE_STATUSES.has(normalizedStatus) ? 1 : 0,
+          is_healthy: HEALTHY_TREE_STATUSES.has(normalizedStatus) ? 1 : 0,
           outer: palette.outer,
           core: palette.core,
           ring: palette.ring,
@@ -521,8 +525,46 @@ export default function TreeMap({
   const detailCacheRef = useRef<Map<number, TreePopupDetail>>(new Map());
   const pendingDetailRef = useRef<Map<number, Promise<TreePopupDetail>>>(new Map());
   const lastAppliedFitSignatureRef = useRef<string>("");
+  const healthyBlinkFrameRef = useRef<number | null>(null);
+  const healthyBlinkActiveRef = useRef(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
+
+  const stopHealthyBlink = () => {
+    healthyBlinkActiveRef.current = false;
+    if (healthyBlinkFrameRef.current !== null) {
+      window.cancelAnimationFrame(healthyBlinkFrameRef.current);
+      healthyBlinkFrameRef.current = null;
+    }
+  };
+
+  const startHealthyBlink = (map: mapboxgl.Map) => {
+    if (healthyBlinkActiveRef.current) return;
+    healthyBlinkActiveRef.current = true;
+    const animate = (ts: number) => {
+      if (!healthyBlinkActiveRef.current) return;
+      if (!map.getLayer(TREE_OUTER_LAYER_ID)) {
+        healthyBlinkActiveRef.current = false;
+        healthyBlinkFrameRef.current = null;
+        return;
+      }
+      const pulse = (Math.sin(ts / 330) + 1) / 2;
+      const radius = 8 + pulse * 8;
+      const fillOpacity = 0.18 + pulse * 0.42;
+      const strokeOpacity = 0.3 + pulse * 0.6;
+      try {
+        map.setPaintProperty(TREE_OUTER_LAYER_ID, "circle-radius", radius);
+        map.setPaintProperty(TREE_OUTER_LAYER_ID, "circle-opacity", fillOpacity);
+        map.setPaintProperty(TREE_OUTER_LAYER_ID, "circle-stroke-opacity", strokeOpacity);
+      } catch {
+        healthyBlinkActiveRef.current = false;
+        healthyBlinkFrameRef.current = null;
+        return;
+      }
+      healthyBlinkFrameRef.current = window.requestAnimationFrame(animate);
+    };
+    healthyBlinkFrameRef.current = window.requestAnimationFrame(animate);
+  };
 
   const getTreeDetail = async (treeId: number): Promise<TreePopupDetail> => {
     const cached = detailCacheRef.current.get(treeId);
@@ -786,17 +828,19 @@ export default function TreeMap({
             data: buildTreeFeatureCollection(trees),
           });
 
-          // Only active (alive) trees keep the outer halo circle.
+          // Healthy/alive trees show a live blinking pulse marker.
           map.addLayer({
             id: TREE_OUTER_LAYER_ID,
             type: "circle",
             source: TREE_SOURCE_ID,
-            filter: ["==", ["get", "is_alive"], 1],
+            filter: ["==", ["get", "is_healthy"], 1],
             paint: {
               "circle-radius": 12,
-              "circle-color": ["coalesce", ["get", "outer"], markerPalettes.alive.outer],
-              "circle-stroke-width": 1,
-              "circle-stroke-color": ["coalesce", ["get", "ring"], markerPalettes.alive.ring],
+              "circle-color": ["coalesce", ["get", "outer"], markerPalettes.healthy.outer],
+              "circle-opacity": 0.32,
+              "circle-stroke-width": 1.2,
+              "circle-stroke-color": ["coalesce", ["get", "ring"], markerPalettes.healthy.ring],
+              "circle-stroke-opacity": 0.55,
             },
           });
           map.addLayer({
@@ -810,6 +854,7 @@ export default function TreeMap({
               "circle-stroke-color": ["coalesce", ["get", "ring"], "#2f7e34"],
             },
           });
+          startHealthyBlink(map);
 
           const supportsHover =
             typeof window !== "undefined" &&
@@ -986,6 +1031,7 @@ export default function TreeMap({
       mapRef.current = map;
       return () => {
         window.clearTimeout(timeout);
+        stopHealthyBlink();
         map.remove();
       };
     };
@@ -999,6 +1045,7 @@ export default function TreeMap({
 
     return () => {
       window.clearInterval(timer);
+      stopHealthyBlink();
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
