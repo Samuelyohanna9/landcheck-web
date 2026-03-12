@@ -37,7 +37,7 @@ type PlotMeta = {
   adamawa_disclaimer_text: string;
 };
 
-type SubdivisionMethod = "by_count" | "by_area";
+type SubdivisionMethod = "by_count" | "by_area" | "by_fraction";
 
 type SubdivisionPreviewPlot = {
   index: number;
@@ -56,6 +56,8 @@ type SubdivisionPreviewData = {
   requested_count?: number | null;
   target_area_m2?: number | null;
   orientation_deg?: number;
+  fraction_weights?: number[] | null;
+  fraction_breaks?: number[] | null;
   total_area_m2: number;
   derived_total_area_m2: number;
   area_imbalance_m2: number;
@@ -117,6 +119,66 @@ const parsePositiveFloat = (value: string): number | null => {
   const parsed = Number.parseFloat(String(value || "").replace(/[^0-9.]/g, ""));
   if (!Number.isFinite(parsed) || parsed <= 0) return null;
   return parsed;
+};
+
+const parseFractionWeights = (value: string): number[] => {
+  const tokens = String(value || "")
+    .split(/[\s,;:|/\\]+/)
+    .map((item) => Number.parseFloat(item))
+    .filter((item) => Number.isFinite(item) && item > 0);
+  return tokens.map((item) => Number(item));
+};
+
+const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+const sanitizeFractionBreaks = (raw: number[]): number[] => {
+  if (!Array.isArray(raw)) return [];
+  const normalized = raw
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item))
+    .map((item) => (item > 1 && item <= 100 ? item / 100 : item))
+    .filter((item) => item > 0 && item < 1)
+    .sort((a, b) => a - b);
+  const deduped: number[] = [];
+  for (const value of normalized) {
+    if (!deduped.length || Math.abs(value - deduped[deduped.length - 1]) > 1e-6) {
+      deduped.push(clamp01(value));
+    }
+  }
+  return deduped;
+};
+
+const weightsToBreaks = (weights: number[]): number[] => {
+  const positive = weights.filter((item) => Number.isFinite(item) && item > 0);
+  if (positive.length < 2) return [];
+  const total = positive.reduce((sum, item) => sum + item, 0);
+  if (total <= 0) return [];
+  const breaks: number[] = [];
+  let cumulative = 0;
+  for (let i = 0; i < positive.length - 1; i += 1) {
+    cumulative += positive[i] / total;
+    breaks.push(clamp01(cumulative));
+  }
+  return sanitizeFractionBreaks(breaks);
+};
+
+const breaksToWeights = (breaks: number[]): number[] => {
+  const safe = sanitizeFractionBreaks(breaks);
+  if (!safe.length) return [];
+  const out: number[] = [];
+  let previous = 0;
+  for (const point of safe) {
+    out.push(Math.max(point - previous, 0));
+    previous = point;
+  }
+  out.push(Math.max(1 - previous, 0));
+  return out.filter((item) => item > 0);
+};
+
+const formatWeightsDraft = (weights: number[]): string => {
+  const positive = weights.filter((item) => Number.isFinite(item) && item > 0);
+  if (!positive.length) return "";
+  return positive.map((item) => Number(item.toFixed(3)).toString()).join(", ");
 };
 
 const parseScaleDenominator = (scaleText: string): number => {
@@ -220,9 +282,12 @@ export default function SurveyPlan() {
   const [subdivisionMethod, setSubdivisionMethod] = useState<SubdivisionMethod>("by_count");
   const [subdivisionCountDraft, setSubdivisionCountDraft] = useState("4");
   const [subdivisionTargetAreaDraft, setSubdivisionTargetAreaDraft] = useState("");
+  const [subdivisionFractionDraft, setSubdivisionFractionDraft] = useState("1, 1");
+  const [subdivisionFractionBreaks, setSubdivisionFractionBreaks] = useState<number[]>([0.5]);
   const [subdivisionOrientationDraft, setSubdivisionOrientationDraft] = useState("0");
   const [subdivisionLotPrefix, setSubdivisionLotPrefix] = useState("LOT");
   const [subdivisionEstateName, setSubdivisionEstateName] = useState("");
+  const [subdivisionLotNamesDraft, setSubdivisionLotNamesDraft] = useState<string[]>([]);
   const [subdivisionPreview, setSubdivisionPreview] = useState<SubdivisionPreviewData | null>(null);
   const [subdivisionPreviewLoading, setSubdivisionPreviewLoading] = useState(false);
   const [subdivisionApplyLoading, setSubdivisionApplyLoading] = useState(false);
@@ -231,6 +296,7 @@ export default function SurveyPlan() {
   const [latestSubdivisionBatchId, setLatestSubdivisionBatchId] = useState<number | null>(null);
   const [subdivisionDownloadBatchId, setSubdivisionDownloadBatchId] = useState<number | null>(null);
   const [subdivisionPreviewPanelTab, setSubdivisionPreviewPanelTab] = useState<"survey_plan" | "subdivision_lines">("subdivision_lines");
+  const subdivisionLivePreviewTimerRef = useRef<number | null>(null);
   const previewRequestId = useRef(0);
   const orthophotoRequestId = useRef(0);
   const topoRequestId = useRef(0);
@@ -387,6 +453,40 @@ export default function SurveyPlan() {
     return manualPoints.map((p) => (p.station || "").trim());
   }, [manualPoints]);
 
+  const displayedSubdivisionLotNames = useMemo(() => {
+    const plots = subdivisionPreview?.plots || [];
+    if (!plots.length) return [];
+    return plots.map((plot, idx) => {
+      const custom = (subdivisionLotNamesDraft[idx] || "").trim();
+      return custom || plot.lot_no;
+    });
+  }, [subdivisionPreview?.plots, subdivisionLotNamesDraft]);
+
+  const subdivisionFractionBreaksEffective = useMemo(() => {
+    if (subdivisionMethod === "by_fraction") {
+      const fromState = sanitizeFractionBreaks(subdivisionFractionBreaks);
+      if (fromState.length) return fromState;
+      const parsedWeights = parseFractionWeights(subdivisionFractionDraft);
+      return weightsToBreaks(parsedWeights);
+    }
+    const fromPreview = sanitizeFractionBreaks((subdivisionPreview?.fraction_breaks || []) as number[]);
+    if (fromPreview.length) return fromPreview;
+    return [];
+  }, [
+    subdivisionMethod,
+    subdivisionFractionBreaks,
+    subdivisionFractionDraft,
+    subdivisionPreview?.fraction_breaks,
+  ]);
+
+  const subdivisionFractionWeightsEffective = useMemo(() => {
+    const fromBreaks = breaksToWeights(subdivisionFractionBreaksEffective);
+    if (fromBreaks.length >= 2) return fromBreaks;
+    const parsed = parseFractionWeights(subdivisionFractionDraft);
+    if (parsed.length >= 2) return parsed;
+    return [];
+  }, [subdivisionFractionBreaksEffective, subdivisionFractionDraft]);
+
   const subdivisionSvgPreview = useMemo(() => {
     if (!subdivisionPreview?.plots?.length) return null;
 
@@ -453,7 +553,8 @@ export default function SurveyPlan() {
         .join(" ")} Z`;
       const centroidProjected = mapPoint(plot.centroid);
       return {
-        lotNo: plot.lot_no,
+        idx,
+        lotNo: displayedSubdivisionLotNames[idx] || plot.lot_no,
         areaM2: plot.area_m2,
         areaHa: plot.area_hectares,
         path,
@@ -468,7 +569,7 @@ export default function SurveyPlan() {
       height,
       plots,
     };
-  }, [subdivisionPreview]);
+  }, [subdivisionPreview, displayedSubdivisionLotNames]);
 
   const subdivisionTargetDisplayM2 = useMemo(() => {
     const fromPreview = Number(subdivisionPreview?.target_area_m2);
@@ -553,6 +654,9 @@ export default function SurveyPlan() {
       const id = res.data.plot_id ?? res.data.id;
       setPlotId(id);
       setSubdivisionPreview(null);
+      setSubdivisionLotNamesDraft([]);
+      setSubdivisionFractionDraft("1, 1");
+      setSubdivisionFractionBreaks([0.5]);
       setSubdivisionBatches([]);
       setLatestSubdivisionBatchId(null);
 
@@ -786,9 +890,12 @@ export default function SurveyPlan() {
     setSubdivisionMethod("by_count");
     setSubdivisionCountDraft("4");
     setSubdivisionTargetAreaDraft("");
+    setSubdivisionFractionDraft("1, 1");
+    setSubdivisionFractionBreaks([0.5]);
     setSubdivisionOrientationDraft("0");
     setSubdivisionLotPrefix("LOT");
     setSubdivisionEstateName("");
+    setSubdivisionLotNamesDraft([]);
     setSubdivisionPreview(null);
     setSubdivisionPreviewLoading(false);
     setSubdivisionApplyLoading(false);
@@ -938,55 +1045,135 @@ export default function SurveyPlan() {
     loadSubdivisionBatches();
   }, [plotId, currentStep, loadSubdivisionBatches]);
 
-  const previewSubdivision = async () => {
-    if (!plotId) return;
-
-    const count = parsePositiveInt(subdivisionCountDraft);
-    const targetArea = parsePositiveFloat(subdivisionTargetAreaDraft);
-    if (subdivisionMethod === "by_count" && (count === null || count < 2)) {
-      toast.error("Set derived plot count to 2 or more.");
-      return;
-    }
-    if (subdivisionMethod === "by_area" && (targetArea === null || targetArea <= 0)) {
-      toast.error("Set a positive target area in square meters.");
-      return;
-    }
-
-    const orientationDeg = Number.parseFloat(subdivisionOrientationDraft || "0");
-    const payload = {
-      method: subdivisionMethod,
-      split_count: subdivisionMethod === "by_count" ? count : null,
-      target_area_m2: subdivisionMethod === "by_area" ? targetArea : null,
-      orientation_deg: Number.isFinite(orientationDeg) ? orientationDeg : 0,
-      lot_prefix: (subdivisionLotPrefix || "LOT").trim() || "LOT",
-      estate_name: subdivisionEstateName.trim(),
+  useEffect(() => {
+    return () => {
+      if (subdivisionLivePreviewTimerRef.current !== null) {
+        window.clearTimeout(subdivisionLivePreviewTimerRef.current);
+      }
     };
+  }, []);
 
-    setSubdivisionPreviewLoading(true);
-    try {
-      const res = await api.post(`/plots/${plotId}/subdivision/preview`, payload);
-      setSubdivisionPreview(res.data as SubdivisionPreviewData);
-      toast.success("Subdivision preview ready.");
-    } catch (err: any) {
-      const detail = err?.response?.data?.detail;
-      toast.error(typeof detail === "string" ? detail : "Failed to preview subdivision.");
-    } finally {
-      setSubdivisionPreviewLoading(false);
+  const applySubdivisionPreviewResponse = useCallback((data: SubdivisionPreviewData) => {
+    setSubdivisionPreview(data);
+
+    const apiBreaks = sanitizeFractionBreaks((data.fraction_breaks || []) as number[]);
+    if (apiBreaks.length) {
+      setSubdivisionFractionBreaks(apiBreaks);
+      const apiWeights =
+        Array.isArray(data.fraction_weights) && data.fraction_weights.length >= 2
+          ? data.fraction_weights.map((value) => Number(value)).filter((value) => Number.isFinite(value) && value > 0)
+          : breaksToWeights(apiBreaks);
+      if (apiWeights.length >= 2) {
+        setSubdivisionFractionDraft(formatWeightsDraft(apiWeights));
+      }
     }
-  };
+
+    if (Array.isArray(data.plots) && data.plots.length) {
+      setSubdivisionLotNamesDraft((prev) =>
+        data.plots.map((plot, idx) => {
+          const existing = (prev[idx] || "").trim();
+          return existing || plot.lot_no;
+        })
+      );
+    }
+  }, []);
+
+  const buildSubdivisionPayload = useCallback(
+    (silent = false) => {
+      const count = parsePositiveInt(subdivisionCountDraft);
+      const targetArea = parsePositiveFloat(subdivisionTargetAreaDraft);
+      const orientationDeg = Number.parseFloat(subdivisionOrientationDraft || "0");
+      const lotPrefix = (subdivisionLotPrefix || "LOT").trim() || "LOT";
+
+      if (subdivisionMethod === "by_count" && (count === null || count < 2)) {
+        if (!silent) toast.error("Set derived plot count to 2 or more.");
+        return null;
+      }
+      if (subdivisionMethod === "by_area" && (targetArea === null || targetArea <= 0)) {
+        if (!silent) toast.error("Set a positive target area in square meters.");
+        return null;
+      }
+
+      const payload: Record<string, any> = {
+        method: subdivisionMethod,
+        split_count: subdivisionMethod === "by_count" ? count : null,
+        target_area_m2: subdivisionMethod === "by_area" ? targetArea : null,
+        orientation_deg: Number.isFinite(orientationDeg) ? orientationDeg : 0,
+        lot_prefix: lotPrefix,
+        estate_name: subdivisionEstateName.trim(),
+      };
+
+      if (subdivisionMethod === "by_fraction") {
+        const effectiveBreaks = sanitizeFractionBreaks(subdivisionFractionBreaksEffective);
+        const effectiveWeights = subdivisionFractionWeightsEffective;
+        if (effectiveWeights.length < 2) {
+          if (!silent) toast.error("Provide at least two fraction values (example: 2, 3, 5).");
+          return null;
+        }
+        payload.fraction_weights = effectiveWeights;
+        payload.fraction_breaks = effectiveBreaks;
+        payload.split_count = effectiveWeights.length;
+      }
+
+      const lotNames = subdivisionLotNamesDraft.map((value) => String(value || "").trim());
+      if (lotNames.some((value) => value.length > 0)) {
+        payload.lot_names = lotNames;
+      }
+
+      return payload;
+    },
+    [
+      subdivisionCountDraft,
+      subdivisionTargetAreaDraft,
+      subdivisionOrientationDraft,
+      subdivisionLotPrefix,
+      subdivisionEstateName,
+      subdivisionMethod,
+      subdivisionFractionBreaksEffective,
+      subdivisionFractionWeightsEffective,
+      subdivisionLotNamesDraft,
+    ]
+  );
+
+  const previewSubdivision = useCallback(
+    async (silent = false) => {
+      if (!plotId) return;
+      const payload = buildSubdivisionPayload(silent);
+      if (!payload) return;
+
+      setSubdivisionPreviewLoading(true);
+      try {
+        const res = await api.post(`/plots/${plotId}/subdivision/preview`, payload);
+        applySubdivisionPreviewResponse(res.data as SubdivisionPreviewData);
+        if (!silent) {
+          toast.success("Subdivision preview ready.");
+        }
+      } catch (err: any) {
+        if (!silent) {
+          const detail = err?.response?.data?.detail;
+          toast.error(typeof detail === "string" ? detail : "Failed to preview subdivision.");
+        }
+      } finally {
+        setSubdivisionPreviewLoading(false);
+      }
+    },
+    [plotId, buildSubdivisionPayload, applySubdivisionPreviewResponse]
+  );
+
+  const scheduleSubdivisionLivePreview = useCallback(() => {
+    if (!plotId || workflowMode !== "subdivision" || currentStep !== 2) return;
+    if (subdivisionLivePreviewTimerRef.current !== null) {
+      window.clearTimeout(subdivisionLivePreviewTimerRef.current);
+    }
+    subdivisionLivePreviewTimerRef.current = window.setTimeout(() => {
+      previewSubdivision(true);
+    }, 450);
+  }, [plotId, workflowMode, currentStep, previewSubdivision]);
 
   const applySubdivision = async () => {
     if (!plotId) return;
-    const count = parsePositiveInt(subdivisionCountDraft);
-    const targetArea = parsePositiveFloat(subdivisionTargetAreaDraft);
-    if (subdivisionMethod === "by_count" && (count === null || count < 2)) {
-      toast.error("Set derived plot count to 2 or more.");
-      return;
-    }
-    if (subdivisionMethod === "by_area" && (targetArea === null || targetArea <= 0)) {
-      toast.error("Set a positive target area in square meters.");
-      return;
-    }
+    const payload = buildSubdivisionPayload(false);
+    if (!payload) return;
 
     // Persist latest output settings (template/scale/paper/etc.) before generating child plots.
     try {
@@ -995,20 +1182,12 @@ export default function SurveyPlan() {
       // If preview save fails, apply endpoint will still validate and return proper error.
     }
 
-    const orientationDeg = Number.parseFloat(subdivisionOrientationDraft || "0");
-    const payload = {
-      method: subdivisionMethod,
-      split_count: subdivisionMethod === "by_count" ? count : null,
-      target_area_m2: subdivisionMethod === "by_area" ? targetArea : null,
-      orientation_deg: Number.isFinite(orientationDeg) ? orientationDeg : 0,
-      lot_prefix: (subdivisionLotPrefix || "LOT").trim() || "LOT",
-      estate_name: subdivisionEstateName.trim(),
-      include_feature_detection: true,
-    };
-
     setSubdivisionApplyLoading(true);
     try {
-      const res = await api.post(`/plots/${plotId}/subdivision/apply`, payload);
+      const res = await api.post(`/plots/${plotId}/subdivision/apply`, {
+        ...payload,
+        include_feature_detection: true,
+      });
       const batchId = Number(res?.data?.batch_id || 0) || null;
       if (batchId) {
         setLatestSubdivisionBatchId(batchId);
@@ -1023,6 +1202,47 @@ export default function SurveyPlan() {
       setSubdivisionApplyLoading(false);
     }
   };
+
+  const updateSubdivisionLotName = useCallback((index: number, value: string) => {
+    setSubdivisionLotNamesDraft((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+  }, []);
+
+  const commitSubdivisionFractionDraft = useCallback(() => {
+    const weights = parseFractionWeights(subdivisionFractionDraft);
+    if (weights.length < 2) {
+      toast.error("Enter at least two fraction values, for example 2, 3, 5.");
+      return;
+    }
+    const breaks = weightsToBreaks(weights);
+    setSubdivisionFractionBreaks(breaks);
+    setSubdivisionFractionDraft(formatWeightsDraft(weights));
+    scheduleSubdivisionLivePreview();
+  }, [subdivisionFractionDraft, scheduleSubdivisionLivePreview]);
+
+  const updateSubdivisionFractionBreak = useCallback(
+    (index: number, nextBreakValue: number) => {
+      setSubdivisionFractionBreaks((prev) => {
+        if (!prev.length || index < 0 || index >= prev.length) return prev;
+        const minGap = 0.02;
+        const lower = index === 0 ? minGap : prev[index - 1] + minGap;
+        const upper = index === prev.length - 1 ? 1 - minGap : prev[index + 1] - minGap;
+        const clamped = Math.max(lower, Math.min(upper, nextBreakValue));
+        const next = [...prev];
+        next[index] = clamp01(clamped);
+        const weights = breaksToWeights(next);
+        if (weights.length >= 2) {
+          setSubdivisionFractionDraft(formatWeightsDraft(weights));
+        }
+        return next;
+      });
+      scheduleSubdivisionLivePreview();
+    },
+    [scheduleSubdivisionLivePreview]
+  );
 
   const downloadSubdivisionBatch = async (batchId: number) => {
     if (subdivisionDownloadBatchId !== null) return;
@@ -1654,10 +1874,26 @@ export default function SurveyPlan() {
                     <label>Subdivision Method</label>
                     <select
                       value={subdivisionMethod}
-                      onChange={(e) => setSubdivisionMethod(e.target.value as SubdivisionMethod)}
+                      onChange={(e) => {
+                        const nextMethod = e.target.value as SubdivisionMethod;
+                        setSubdivisionMethod(nextMethod);
+                        if (nextMethod === "by_fraction") {
+                          let weights = subdivisionFractionWeightsEffective;
+                          if (weights.length < 2) {
+                            const fallbackCount = Math.max(2, Number(subdivisionPreview?.resolved_count || 0) || 2);
+                            weights = Array.from({ length: fallbackCount }, () => 1);
+                          }
+                          const breaks = weightsToBreaks(weights);
+                          if (breaks.length) {
+                            setSubdivisionFractionBreaks(breaks);
+                          }
+                          setSubdivisionFractionDraft(formatWeightsDraft(weights));
+                        }
+                      }}
                     >
                       <option value="by_count">Split by number of plots</option>
                       <option value="by_area">Split by target plot area (sqm)</option>
+                      <option value="by_fraction">Split by fractions</option>
                     </select>
                   </div>
                   {subdivisionMethod === "by_count" ? (
@@ -1672,7 +1908,7 @@ export default function SurveyPlan() {
                         placeholder="e.g. 20"
                       />
                     </div>
-                  ) : (
+                  ) : subdivisionMethod === "by_area" ? (
                     <div className="form-group">
                       <label>Target Plot Area (sqm)</label>
                       <input
@@ -1682,6 +1918,25 @@ export default function SurveyPlan() {
                         onChange={(e) => setSubdivisionTargetAreaDraft(e.target.value)}
                         placeholder="e.g. 450"
                       />
+                    </div>
+                  ) : (
+                    <div className="form-group full-width">
+                      <label>Fractions (comma separated)</label>
+                      <input
+                        value={subdivisionFractionDraft}
+                        onChange={(e) => setSubdivisionFractionDraft(e.target.value)}
+                        onBlur={commitSubdivisionFractionDraft}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            commitSubdivisionFractionDraft();
+                          }
+                        }}
+                        placeholder="e.g. 2, 3, 5"
+                      />
+                      <span className="scale-helper">
+                        Example `2,3,5` means 20%, 30%, 50%. Use sliders below to edit division lines live.
+                      </span>
                     </div>
                   )}
                   <div className="form-group">
@@ -1712,10 +1967,30 @@ export default function SurveyPlan() {
                   </div>
                 </div>
 
+                {subdivisionMethod === "by_fraction" && subdivisionFractionBreaksEffective.length > 0 && (
+                  <div className="subdivision-fraction-lines-wrap">
+                    <h5>Division Lines (Live)</h5>
+                    {subdivisionFractionBreaksEffective.map((value, idx) => (
+                      <div key={`frac_line_${idx}`} className="subdivision-fraction-line-item">
+                        <label>Line {idx + 1} position</label>
+                        <input
+                          type="range"
+                          min={2}
+                          max={98}
+                          step={0.1}
+                          value={Number((value * 100).toFixed(2))}
+                          onChange={(e) => updateSubdivisionFractionBreak(idx, Number.parseFloat(e.target.value) / 100)}
+                        />
+                        <span>{(value * 100).toFixed(1)}%</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="subdivision-action-row">
                   <button
                     className="btn-secondary"
-                    onClick={previewSubdivision}
+                    onClick={() => previewSubdivision(false)}
                     disabled={!plotId || subdivisionPreviewLoading || subdivisionApplyLoading}
                   >
                     {subdivisionPreviewLoading ? (
@@ -1756,6 +2031,8 @@ export default function SurveyPlan() {
                     <span>
                       {subdivisionMethod === "by_area"
                         ? `${(parsePositiveFloat(subdivisionTargetAreaDraft) || 0).toLocaleString()} sqm per lot (approx).`
+                        : subdivisionMethod === "by_fraction"
+                        ? "Uses your fractions and line sliders to control each lot share."
                         : "Not used in by-count mode; lots are balanced by area."}
                     </span>
                   </div>
@@ -1789,15 +2066,22 @@ export default function SurveyPlan() {
                       <table className="subdivision-table">
                         <thead>
                           <tr>
-                            <th>Lot</th>
+                            <th>Lot / Owner Name</th>
                             <th>Area (sqm)</th>
                             <th>Area (ha)</th>
                           </tr>
                         </thead>
                         <tbody>
                           {subdivisionPreview.plots.slice(0, 12).map((item) => (
-                            <tr key={item.lot_no}>
-                              <td>{item.lot_no}</td>
+                            <tr key={`sub_lot_${item.index}`}>
+                              <td>
+                                <input
+                                  className="subdivision-lot-name-input"
+                                  value={subdivisionLotNamesDraft[item.index - 1] ?? item.lot_no}
+                                  onChange={(e) => updateSubdivisionLotName(item.index - 1, e.target.value)}
+                                  placeholder="Lot name / owner"
+                                />
+                              </td>
                               <td>{item.area_m2.toFixed(2)}</td>
                               <td>{item.area_hectares.toFixed(4)}</td>
                             </tr>
@@ -1941,24 +2225,24 @@ export default function SurveyPlan() {
                         >
                           <rect x="0" y="0" width={subdivisionSvgPreview.width} height={subdivisionSvgPreview.height} fill="#0f172a" />
                           <g>
-                            {subdivisionSvgPreview.plots.map((plot) => (
-                              <path
-                                key={`plot_path_${plot.lotNo}`}
-                                d={plot.path}
-                                fill="rgba(16,185,129,0.08)"
-                                stroke={plot.stroke}
-                                strokeWidth={2.4}
-                              />
+                        {subdivisionSvgPreview.plots.map((plot) => (
+                          <path
+                            key={`plot_path_${plot.idx}`}
+                            d={plot.path}
+                            fill="rgba(16,185,129,0.08)"
+                            stroke={plot.stroke}
+                            strokeWidth={2.4}
+                          />
                             ))}
                           </g>
                           <g>
-                            {subdivisionSvgPreview.plots.map((plot) => (
-                              <text
-                                key={`plot_label_${plot.lotNo}`}
-                                x={plot.labelX}
-                                y={plot.labelY}
-                                textAnchor="middle"
-                                className="subdivision-svg-label"
+                        {subdivisionSvgPreview.plots.map((plot) => (
+                          <text
+                            key={`plot_label_${plot.idx}`}
+                            x={plot.labelX}
+                            y={plot.labelY}
+                            textAnchor="middle"
+                            className="subdivision-svg-label"
                               >
                                 <tspan x={plot.labelX} dy="0">{plot.lotNo}</tspan>
                                 <tspan x={plot.labelX} dy="12">{plot.areaHa.toFixed(3)} ha</tspan>
@@ -1971,7 +2255,9 @@ export default function SurveyPlan() {
                     {subdivisionPreview && (
                       <div className="subdivision-legend">
                         <span>Resolved lots: <strong>{subdivisionPreview.resolved_count}</strong></span>
-                        <span>Target area: <strong>{subdivisionTargetDisplayM2.toFixed(2)} sqm</strong></span>
+                        <span>
+                          Target area: <strong>{subdivisionTargetDisplayM2 > 0 ? `${subdivisionTargetDisplayM2.toFixed(2)} sqm` : "n/a"}</strong>
+                        </span>
                         <span>Orientation: <strong>{subdivisionOrientationDisplayDeg.toFixed(1)} deg</strong></span>
                       </div>
                     )}
