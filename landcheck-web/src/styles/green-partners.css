@@ -10,6 +10,9 @@
   background: #eef2f6;
   color: #132f22;
   font-family: "Outfit", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 .gp-nav {

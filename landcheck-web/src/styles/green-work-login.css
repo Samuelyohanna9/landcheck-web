@@ -10,6 +10,9 @@
     radial-gradient(90% 70% at 92% 10%, rgba(59, 152, 90, 0.2) 0%, rgba(59, 152, 90, 0) 58%),
     linear-gradient(168deg, #e8f5eb 0%, #d4eeda 40%, #c0e4c8 70%, #a8d8b2 100%);
   font-family: "Nunito Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 .work-login-card {

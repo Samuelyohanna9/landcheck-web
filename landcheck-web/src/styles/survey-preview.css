@@ -4,6 +4,9 @@
   flex-direction: column;
   height: 100%;
   background: #1e293b;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 .preview-header {
