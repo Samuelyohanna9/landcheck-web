@@ -71,6 +71,8 @@ type SubdivisionBatchRow = {
   updated_at?: string;
 };
 
+type WorkflowMode = "survey" | "subdivision";
+
 type ManualPoint = {
   station: string;
   lng: number;
@@ -117,15 +119,23 @@ const parseScaleDenominator = (scaleText: string): number => {
   return Math.min(MAX_SCALE_DENOMINATOR, Math.max(MIN_SCALE_DENOMINATOR, parsed));
 };
 
-const STEPS = [
+const SURVEY_STEPS = [
   { id: 1, title: "Enter Coordinates", description: "Input plot boundary points" },
   { id: 2, title: "Preview & Details", description: "Review and add survey info" },
   { id: 3, title: "Export", description: "Download your documents" },
 ];
 
+const SUBDIVISION_STEPS = [
+  { id: 1, title: "Mother Parcel", description: "Input boundary points for the mother parcel" },
+  { id: 2, title: "Subdivision Preview", description: "Configure and preview lot split before generation" },
+  { id: 3, title: "Batch Export", description: "Export generated subdivision plans as ZIP" },
+];
+
 export default function SurveyPlan() {
   const navigate = useNavigate();
+  const [workflowMode, setWorkflowMode] = useState<WorkflowMode | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const activeSteps = workflowMode === "subdivision" ? SUBDIVISION_STEPS : SURVEY_STEPS;
 
   // Coordinates state
   const [manualPoints, setManualPoints] = useState<ManualPoint[]>([
@@ -600,6 +610,7 @@ export default function SurveyPlan() {
 
   // Reset everything
   const resetAll = () => {
+    setWorkflowMode(null);
     setManualPoints([
       { station: "A", lng: 0, lat: 0 },
       { station: "B", lng: 0, lat: 0 },
@@ -874,8 +885,6 @@ export default function SurveyPlan() {
     }
   };
 
-  const quickExportBatchId = latestSubdivisionBatchId ?? (subdivisionBatches[0]?.id ?? null);
-
   // Get feature counts from nested response structure
   const getFeatureCount = (type: string) => {
     if (!features) return 0;
@@ -916,7 +925,9 @@ export default function SurveyPlan() {
           </svg>
           Back
         </button>
-        <h1 className="survey-title">Survey Plan Production</h1>
+        <h1 className="survey-title">
+          {workflowMode === "survey" ? "Survey Plan Production" : workflowMode === "subdivision" ? "Plot Subdivision" : "Survey Plan"}
+        </h1>
         <button className="reset-btn" onClick={resetAll}>
           <svg viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
@@ -926,33 +937,73 @@ export default function SurveyPlan() {
       </header>
 
       {/* Progress Stepper */}
-      <div className="stepper">
-        {STEPS.map((step, index) => (
-          <div
-            key={step.id}
-            className={`step ${currentStep >= step.id ? "active" : ""} ${currentStep > step.id ? "completed" : ""}`}
-          >
-            <div className="step-indicator">
-              {currentStep > step.id ? (
-                <svg viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              ) : (
-                step.id
-              )}
+      {workflowMode && (
+        <div className="stepper">
+          {activeSteps.map((step, index) => (
+            <div
+              key={step.id}
+              className={`step ${currentStep >= step.id ? "active" : ""} ${currentStep > step.id ? "completed" : ""}`}
+            >
+              <div className="step-indicator">
+                {currentStep > step.id ? (
+                  <svg viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  step.id
+                )}
+              </div>
+              <div className="step-content">
+                <span className="step-title">{step.title}</span>
+                <span className="step-desc">{step.description}</span>
+              </div>
+              {index < activeSteps.length - 1 && <div className="step-line" />}
             </div>
-            <div className="step-content">
-              <span className="step-title">{step.title}</span>
-              <span className="step-desc">{step.description}</span>
-            </div>
-            {index < STEPS.length - 1 && <div className="step-line" />}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="survey-content">
-        <FeatureOverrideModal
+        {!workflowMode && (
+          <div className="mode-select-shell">
+            <div className="mode-select-head">
+              <h2>Choose Workflow</h2>
+              <p>Select how you want to use Survey Plan in this session.</p>
+            </div>
+            <div className="mode-card-grid">
+              <button
+                type="button"
+                className="mode-card"
+                onClick={() => {
+                  setWorkflowMode("survey");
+                  setCurrentStep(1);
+                }}
+              >
+                <div className="mode-card-icon">SP</div>
+                <h3>Survey Plan Production</h3>
+                <p>Create one parcel plan, preview map layout, and export all standard documents.</p>
+                <span className="mode-card-cta">Use Survey Plan Production</span>
+              </button>
+              <button
+                type="button"
+                className="mode-card"
+                onClick={() => {
+                  setWorkflowMode("subdivision");
+                  setCurrentStep(1);
+                }}
+              >
+                <div className="mode-card-icon">SD</div>
+                <h3>Plot Subdivision</h3>
+                <p>Split a mother parcel into multiple lots, preview lot outputs, then export batch survey plans.</p>
+                <span className="mode-card-cta">Use Plot Subdivision</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {workflowMode === "survey" && (
+          <FeatureOverrideModal
           isOpen={showFeatureEditor}
           onClose={() => setShowFeatureEditor(false)}
           onSave={handleSaveOverride}
@@ -967,8 +1018,9 @@ export default function SurveyPlan() {
           setRoadWidth={setNewRoadWidth}
           plotId={plotId}
         />
+        )}
         {/* Step 1: Coordinate Input */}
-        {currentStep === 1 && (
+        {workflowMode && currentStep === 1 && (
           <div className="step-panel">
             <div className="panel-left">
               <CoordinateInput
@@ -994,7 +1046,7 @@ export default function SurveyPlan() {
                     </>
                   ) : (
                     <>
-                      Create Plot & Continue
+                      {workflowMode === "subdivision" ? "Create Mother Parcel & Continue" : "Create Plot & Continue"}
                       <svg viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
                       </svg>
@@ -1013,8 +1065,8 @@ export default function SurveyPlan() {
           </div>
         )}
 
-        {/* Step 2: Preview & Details */}
-        {currentStep === 2 && (
+        {/* Step 2: Preview & Details (Survey Plan Production) */}
+        {workflowMode === "survey" && currentStep === 2 && (
           <div className="step-panel preview-panel">
             <div className="panel-left">
               {/* Features Summary - Horizontal Compact Layout (moved to top) */}
@@ -1294,11 +1346,56 @@ export default function SurveyPlan() {
                   </button>
                 </div>
               </div>
+              <div className="action-bar">
+                <button className="btn-outline" onClick={() => setCurrentStep(1)}>
+                  <svg viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                  </svg>
+                  Back to Coordinates
+                </button>
+                <button className="btn-primary" onClick={() => setCurrentStep(3)}>
+                  Continue to Export
+                  <svg viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="panel-right preview-container">
+              <SurveyPreview
+                previewType={previewType}
+                onPreviewTypeChange={setPreviewType}
+                topoSource={topoSource}
+                onTopoSourceChange={setTopoSource}
+                northArrowStyle={northArrowStyle}
+                northArrowColor={northArrowColor}
+                beaconStyle={beaconStyle}
+                roadWidth={roadWidth}
+                onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
+                onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
+                onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
+                onRoadWidthChange={(value) => setRoadWidth(value as RoadWidthOption)}
+                paperSize={meta.paper_size}
+                surveyPreviewUrl={previewUrl}
+                orthophotoPreviewUrl={orthophotoUrl}
+                topoMapPreviewUrl={topoMapUrl}
+                loading={previewLoading}
+                orthophotoLoading={orthophotoLoading}
+                topoMapLoading={topoMapLoading}
+                hasHeightData={hasHeightData}
+              />
+            </div>
+          </div>
+        )}
 
+        {/* Step 2: Subdivision Preview */}
+        {workflowMode === "subdivision" && currentStep === 2 && (
+          <div className="step-panel preview-panel">
+            <div className="panel-left">
               <div className="form-section subdivision-section">
-                <h3 className="section-title">Premium: Plot Subdivision & Batch Plans</h3>
+                <h3 className="section-title">Plot Subdivision & Batch Plans</h3>
                 <p className="section-desc">
-                  Split this mother parcel into estate/allocation lots, then export all generated survey plans in one ZIP.
+                  Configure lot split for this mother parcel, preview output, then generate a batch.
                 </p>
                 <div className="form-grid">
                   <div className="form-group">
@@ -1420,7 +1517,7 @@ export default function SurveyPlan() {
                           </tr>
                         </thead>
                         <tbody>
-                          {subdivisionPreview.plots.slice(0, 10).map((item) => (
+                          {subdivisionPreview.plots.slice(0, 12).map((item) => (
                             <tr key={item.lot_no}>
                               <td>{item.lot_no}</td>
                               <td>{item.area_m2.toFixed(2)}</td>
@@ -1430,49 +1527,49 @@ export default function SurveyPlan() {
                         </tbody>
                       </table>
                     </div>
-                    {subdivisionPreview.plots.length > 10 && (
+                    {subdivisionPreview.plots.length > 12 && (
                       <p className="subdivision-note">
-                        Showing first 10 lots in preview. Total generated lots: {subdivisionPreview.plots.length}.
+                        Showing first 12 lots in preview. Total generated lots: {subdivisionPreview.plots.length}.
                       </p>
                     )}
                   </div>
                 )}
+              </div>
 
-                <div className="subdivision-batch-wrap">
-                  <div className="subdivision-batch-header">
-                    <h4>Generated Batches</h4>
-                    <button
-                      className="btn-outline btn-mini"
-                      onClick={loadSubdivisionBatches}
-                      disabled={!plotId || subdivisionBatchLoading}
-                    >
-                      {subdivisionBatchLoading ? "Refreshing..." : "Refresh"}
-                    </button>
-                  </div>
-                  {subdivisionBatches.length === 0 ? (
-                    <p className="subdivision-note">No subdivision batches generated yet for this mother parcel.</p>
-                  ) : (
-                    <div className="subdivision-batch-list">
-                      {subdivisionBatches.slice(0, 6).map((batch) => (
-                        <div key={batch.id} className="subdivision-batch-item">
-                          <div>
-                            <strong>Batch #{batch.id}</strong>
-                            <div className="subdivision-note">
-                              {batch.method} • {batch.generated_count} plots • {batch.total_area_m2?.toFixed?.(2) ?? "0.00"} sqm
-                            </div>
-                          </div>
-                          <button
-                            className="download-btn"
-                            disabled={subdivisionDownloadBatchId !== null}
-                            onClick={() => downloadSubdivisionBatch(batch.id)}
-                          >
-                            {subdivisionDownloadBatchId === batch.id ? "Downloading..." : "Export ZIP"}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+              <div className="subdivision-batch-wrap">
+                <div className="subdivision-batch-header">
+                  <h4>Generated Batches</h4>
+                  <button
+                    className="btn-outline btn-mini"
+                    onClick={loadSubdivisionBatches}
+                    disabled={!plotId || subdivisionBatchLoading}
+                  >
+                    {subdivisionBatchLoading ? "Refreshing..." : "Refresh"}
+                  </button>
                 </div>
+                {subdivisionBatches.length === 0 ? (
+                  <p className="subdivision-note">No subdivision batches generated yet for this mother parcel.</p>
+                ) : (
+                  <div className="subdivision-batch-list">
+                    {subdivisionBatches.slice(0, 6).map((batch) => (
+                      <div key={batch.id} className="subdivision-batch-item">
+                        <div>
+                          <strong>Batch #{batch.id}</strong>
+                          <div className="subdivision-note">
+                            {batch.method} - {batch.generated_count} plots - {(batch.total_area_m2 ?? 0).toFixed(2)} sqm
+                          </div>
+                        </div>
+                        <button
+                          className="download-btn"
+                          disabled={subdivisionDownloadBatchId !== null}
+                          onClick={() => downloadSubdivisionBatch(batch.id)}
+                        >
+                          {subdivisionDownloadBatchId === batch.id ? "Downloading..." : "Export ZIP"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="action-bar">
@@ -1480,10 +1577,14 @@ export default function SurveyPlan() {
                   <svg viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
                   </svg>
-                  Back to Coordinates
+                  Back to Mother Parcel
                 </button>
-                <button className="btn-primary" onClick={() => setCurrentStep(3)}>
-                  Continue to Export
+                <button
+                  className="btn-primary"
+                  onClick={() => setCurrentStep(3)}
+                  disabled={subdivisionBatches.length === 0}
+                >
+                  Continue to Batch Export
                   <svg viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
@@ -1517,8 +1618,8 @@ export default function SurveyPlan() {
           </div>
         )}
 
-        {/* Step 3: Export */}
-        {currentStep === 3 && plotId && (
+        {/* Step 3: Export (Survey Plan Production) */}
+        {workflowMode === "survey" && currentStep === 3 && plotId && (
           <div className="step-panel export-panel">
             <div className="panel-left">
               <div className="export-section">
@@ -1681,38 +1782,6 @@ export default function SurveyPlan() {
                     </button>
                   </div>
 
-                  {quickExportBatchId && (
-                    <div className="export-card">
-                      <div className="export-icon calc">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                          <path d="M4 4h16v4H4zM4 10h16v10H4z" />
-                          <path d="M8 14h8M8 18h5" />
-                        </svg>
-                      </div>
-                      <div className="export-info">
-                        <h4>Subdivision Batch ZIP</h4>
-                        <p>All generated subdivision survey plans in one download</p>
-                      </div>
-                      <button
-                        className="download-btn"
-                        disabled={subdivisionDownloadBatchId !== null}
-                        onClick={() => downloadSubdivisionBatch(quickExportBatchId)}
-                      >
-                        {subdivisionDownloadBatchId === quickExportBatchId ? (
-                          <>
-                            <span className="spinner download-spinner" />
-                            <span>Downloading...</span>
-                          </>
-                        ) : (
-                          <>
-                            <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                            <span>Download ZIP</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
-
                   {/* Topo Map PDF */}
                   <div className="export-card">
                     <div className="export-icon topo">
@@ -1835,7 +1904,152 @@ export default function SurveyPlan() {
             </div>
           </div>
         )}
+
+        {/* Step 3: Batch Export (Subdivision) */}
+        {workflowMode === "subdivision" && currentStep === 3 && plotId && (
+          <div className="step-panel export-panel">
+            <div className="panel-left">
+              <div className="export-section">
+                <h3 className="section-title">Subdivision Batch Export</h3>
+                <p className="section-desc">
+                  Export generated subdivision plans as one ZIP package. Preview the split before downloading.
+                </p>
+
+                <div className="export-grid">
+                  {(latestSubdivisionBatchId ?? subdivisionBatches[0]?.id) && (
+                    <div className="export-card">
+                      <div className="export-icon calc">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path d="M4 4h16v4H4zM4 10h16v10H4z" />
+                          <path d="M8 14h8M8 18h5" />
+                        </svg>
+                      </div>
+                      <div className="export-info">
+                        <h4>Latest Batch ZIP</h4>
+                        <p>Download all generated lots from the latest subdivision batch</p>
+                      </div>
+                      <button
+                        className="download-btn"
+                        disabled={subdivisionDownloadBatchId !== null}
+                        onClick={() => downloadSubdivisionBatch((latestSubdivisionBatchId ?? subdivisionBatches[0]?.id) as number)}
+                      >
+                        {subdivisionDownloadBatchId === (latestSubdivisionBatchId ?? subdivisionBatches[0]?.id) ? (
+                          <>
+                            <span className="spinner download-spinner" />
+                            <span>Downloading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                            <span>Download ZIP</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="form-section subdivision-section">
+                    <div className="subdivision-batch-header">
+                      <h4>All Batches</h4>
+                      <button
+                        className="btn-outline btn-mini"
+                        onClick={loadSubdivisionBatches}
+                        disabled={!plotId || subdivisionBatchLoading}
+                      >
+                        {subdivisionBatchLoading ? "Refreshing..." : "Refresh"}
+                      </button>
+                    </div>
+                    {subdivisionBatches.length === 0 ? (
+                      <p className="subdivision-note">No batch generated yet. Go back and generate subdivision first.</p>
+                    ) : (
+                      <div className="subdivision-batch-list">
+                        {subdivisionBatches.map((batch) => (
+                          <div key={batch.id} className="subdivision-batch-item">
+                            <div>
+                              <strong>Batch #{batch.id}</strong>
+                              <div className="subdivision-note">
+                                {batch.method} - {batch.generated_count} plots - {(batch.total_area_m2 ?? 0).toFixed(2)} sqm
+                              </div>
+                            </div>
+                            <button
+                              className="download-btn"
+                              disabled={subdivisionDownloadBatchId !== null}
+                              onClick={() => downloadSubdivisionBatch(batch.id)}
+                            >
+                              {subdivisionDownloadBatchId === batch.id ? "Downloading..." : "Export ZIP"}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="action-bar">
+                <button className="btn-outline" onClick={() => setCurrentStep(2)}>
+                  <svg viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                  </svg>
+                  Back to Subdivision Preview
+                </button>
+                <button className="btn-primary" onClick={() => navigate("/")}>
+                  <svg viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Complete & Return Home
+                </button>
+              </div>
+            </div>
+            <div className="panel-right preview-container">
+              {subdivisionPreview ? (
+                <div className="subdivision-preview-wrap subdivision-preview-right">
+                  <h4 className="section-title">Subdivision Preview</h4>
+                  <div className="subdivision-kpis">
+                    <div className="subdivision-kpi">
+                      <span className="subdivision-kpi-label">Derived plots</span>
+                      <strong>{subdivisionPreview.resolved_count}</strong>
+                    </div>
+                    <div className="subdivision-kpi">
+                      <span className="subdivision-kpi-label">Mother parcel area</span>
+                      <strong>{subdivisionPreview.total_area_m2.toFixed(2)} sqm</strong>
+                    </div>
+                    <div className="subdivision-kpi">
+                      <span className="subdivision-kpi-label">Area imbalance</span>
+                      <strong>{Math.abs(subdivisionPreview.area_imbalance_m2).toFixed(4)} sqm</strong>
+                    </div>
+                  </div>
+                  <div className="subdivision-table-wrap">
+                    <table className="subdivision-table">
+                      <thead>
+                        <tr>
+                          <th>Lot</th>
+                          <th>Area (sqm)</th>
+                          <th>Area (ha)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {subdivisionPreview.plots.slice(0, 18).map((item) => (
+                          <tr key={item.lot_no}>
+                            <td>{item.lot_no}</td>
+                            <td>{item.area_m2.toFixed(2)}</td>
+                            <td>{item.area_hectares.toFixed(4)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="preview-empty">
+                  <p>No subdivision preview yet. Go back and click Preview Split.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
