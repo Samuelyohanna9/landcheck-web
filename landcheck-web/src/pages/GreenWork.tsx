@@ -994,6 +994,15 @@ type OverviewSpeciesBarRow = {
   color: string;
 };
 
+type OverviewMonthlySurvivalRow = {
+  key: string;
+  label: string;
+  planted: number;
+  healthy: number;
+  nonHealthy: number;
+  healthyRate: number;
+};
+
 const OVERVIEW_SPECIES_COLORS = [
   "#15803d",
   "#0ea5e9",
@@ -1127,6 +1136,168 @@ const OverviewSpeciesBarCard = ({
             );
           })}
         </div>
+      )}
+      <p className="green-work-chart-context">{context}</p>
+    </div>
+  );
+};
+
+const OverviewMonthlySurvivalCard = ({
+  title,
+  context,
+  rows,
+  emptyMessage,
+}: {
+  title: string;
+  context: string;
+  rows: OverviewMonthlySurvivalRow[];
+  emptyMessage: string;
+}) => {
+  const hasData = rows.some((row) => row.planted > 0);
+  const width = 620;
+  const height = 242;
+  const left = 42;
+  const right = 16;
+  const top = 14;
+  const bottom = 42;
+  const chartWidth = width - left - right;
+  const chartHeight = height - top - bottom;
+  const maxPlanted = Math.max(1, ...rows.map((row) => Number(row.planted || 0)));
+  const yMax = maxPlanted <= 5 ? 5 : Math.ceil(maxPlanted / 5) * 5;
+  const tickCount = 4;
+  const yTicks = Array.from({ length: tickCount + 1 }, (_, index) => {
+    if (index === 0) return 0;
+    if (index === tickCount) return yMax;
+    return Math.round((yMax / tickCount) * index);
+  });
+  const xForIndex = (index: number) => {
+    if (rows.length <= 1) return left + chartWidth / 2;
+    return left + (index / Math.max(rows.length - 1, 1)) * chartWidth;
+  };
+  const yForValue = (value: number) => {
+    const clamped = Math.max(0, Math.min(value, yMax));
+    return top + (1 - clamped / Math.max(yMax, 1)) * chartHeight;
+  };
+  const barWidth = Math.max(10, Math.min(26, chartWidth / Math.max(rows.length * 2.2, 1)));
+  const healthyRateAreaPath = rows
+    .map((row, index) => {
+      const x = xForIndex(index);
+      const y = yForValue((row.healthyRate / 100) * yMax);
+      return `${index === 0 ? "M" : "L"}${x},${y}`;
+    })
+    .join(" ");
+  const baselineY = top + chartHeight;
+  const areaPath = hasData && rows.length > 0
+    ? `${healthyRateAreaPath} L${xForIndex(rows.length - 1)},${baselineY} L${xForIndex(0)},${baselineY} Z`
+    : "";
+  const linePath = hasData ? healthyRateAreaPath : "";
+  const latestWithData = [...rows].reverse().find((row) => row.planted > 0) || null;
+  const avgRate =
+    rows.reduce((sum, row) => sum + row.healthyRate, 0) / Math.max(rows.length, 1);
+
+  return (
+    <div className="green-work-trend-card green-work-overview-monthly-card">
+      <div className="green-work-overview-bar-head">
+        <h5>{title}</h5>
+        <span>{rows.length} months</span>
+      </div>
+      {!hasData ? (
+        <p className="green-work-note">{emptyMessage}</p>
+      ) : (
+        <>
+          <svg
+            className="green-work-overview-monthly-svg"
+            viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="none"
+            role="img"
+            aria-label={title}
+          >
+            {yTicks.map((tick) => {
+              const y = yForValue(tick);
+              return (
+                <g key={`overview-monthly-y-${tick}`}>
+                  <line x1={left} y1={y} x2={left + chartWidth} y2={y} stroke="#d9e4dd" strokeWidth="1" />
+                  <text x={left - 8} y={y + 3} textAnchor="end" fontSize="10" fill="#5f7c70">
+                    {tick}
+                  </text>
+                </g>
+              );
+            })}
+            {areaPath && (
+              <path d={areaPath} fill="rgba(109, 202, 78, 0.22)" stroke="none" />
+            )}
+            {linePath && (
+              <path
+                d={linePath}
+                fill="none"
+                stroke="#68ba49"
+                strokeWidth="2"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            )}
+            {rows.map((row, index) => {
+              const x = xForIndex(index);
+              const totalHeight = row.planted > 0 ? Math.max(baselineY - yForValue(row.planted), 1) : 0;
+              const healthyHeight = row.healthy > 0 ? Math.max(baselineY - yForValue(row.healthy), 1) : 0;
+              return (
+                <g key={`overview-monthly-bar-${row.key}`}>
+                  {totalHeight > 0 && (
+                    <rect
+                      x={x - barWidth / 2}
+                      y={baselineY - totalHeight}
+                      width={barWidth}
+                      height={totalHeight}
+                      fill="#d3dad4"
+                      rx="1.6"
+                    />
+                  )}
+                  {healthyHeight > 0 && (
+                    <rect
+                      x={x - barWidth / 2}
+                      y={baselineY - healthyHeight}
+                      width={barWidth}
+                      height={healthyHeight}
+                      fill="#71c742"
+                      rx="1.6"
+                    />
+                  )}
+                  <text x={x} y={height - 16} textAnchor="middle" fontSize="10" fill="#5f7c70">
+                    {row.label}
+                  </text>
+                </g>
+              );
+            })}
+            {rows.map((row, index) => {
+              const x = xForIndex(index);
+              const y = yForValue((row.healthyRate / 100) * yMax);
+              return (
+                <circle
+                  key={`overview-monthly-dot-${row.key}`}
+                  cx={x}
+                  cy={y}
+                  r="2.3"
+                  fill="#ffffff"
+                  stroke="#4eac39"
+                  strokeWidth="1.2"
+                />
+              );
+            })}
+          </svg>
+          <div className="green-work-overview-monthly-legend">
+            <span><i className="is-healthy" />Healthy now</span>
+            <span><i className="is-total" />Planted cohort</span>
+            <span><i className="is-share" />Healthy share trend</span>
+          </div>
+          {latestWithData && (
+            <div className="green-work-species-hover">
+              <span>
+                Latest cohort ({latestWithData.label}): {latestWithData.healthy}/{latestWithData.planted} healthy (
+                {latestWithData.healthyRate.toFixed(1)}%). Average monthly healthy share: {avgRate.toFixed(1)}%.
+              </span>
+            </div>
+          )}
+        </>
       )}
       <p className="green-work-chart-context">{context}</p>
     </div>
@@ -4049,6 +4220,49 @@ export default function GreenWork() {
         ...row,
         color: OVERVIEW_SPECIES_COLORS[index % OVERVIEW_SPECIES_COLORS.length],
       }));
+  }, [scopedOverviewTrees]);
+  const overviewMonthlySurvivalRows = useMemo<OverviewMonthlySurvivalRow[]>(() => {
+    const months: Array<{ key: string; label: string; year: number; month: number }> = [];
+    const monthMap = new Map<string, { planted: number; healthy: number }>();
+    const anchor = new Date();
+    anchor.setDate(1);
+    anchor.setHours(0, 0, 0, 0);
+    for (let step = 11; step >= 0; step -= 1) {
+      const d = new Date(anchor.getFullYear(), anchor.getMonth() - step, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const label = d.toLocaleDateString(undefined, { month: "short" }).slice(0, 1).toUpperCase();
+      months.push({ key, label, year: d.getFullYear(), month: d.getMonth() + 1 });
+      monthMap.set(key, { planted: 0, healthy: 0 });
+    }
+    scopedOverviewTrees.forEach((tree) => {
+      if (tree.count_in_planting_kpis === false) return;
+      const plantedAt = parseDateValue(tree.planting_date);
+      if (!plantedAt) return;
+      const monthKey = `${plantedAt.getFullYear()}-${String(plantedAt.getMonth() + 1).padStart(2, "0")}`;
+      const bucket = monthMap.get(monthKey);
+      if (!bucket) return;
+      const status = normalizeTreeStatus(tree.status || "");
+      if (status === "pending_planting") return;
+      bucket.planted += 1;
+      if (HEALTHY_TREE_STATUSES.has(status)) {
+        bucket.healthy += 1;
+      }
+    });
+    return months.map((month) => {
+      const bucket = monthMap.get(month.key) || { planted: 0, healthy: 0 };
+      const planted = Math.max(0, Number(bucket.planted || 0));
+      const healthy = Math.max(0, Math.min(planted, Number(bucket.healthy || 0)));
+      const nonHealthy = Math.max(planted - healthy, 0);
+      const healthyRate = planted > 0 ? (healthy / planted) * 100 : 0;
+      return {
+        key: month.key,
+        label: month.label,
+        planted,
+        healthy,
+        nonHealthy,
+        healthyRate,
+      };
+    });
   }, [scopedOverviewTrees]);
 
   const liveMaintenanceRows = useMemo<LiveMaintenanceRow[]>(() => {
@@ -7348,6 +7562,12 @@ export default function GreenWork() {
                 series={speciesDailySurvivalSeries}
                 emptyMessage={speciesDailySurvivalEmptyMessage}
                 context={speciesDailySurvivalContext}
+              />
+              <OverviewMonthlySurvivalCard
+                title="Monthly Cohort Survival Snapshot"
+                rows={overviewMonthlySurvivalRows}
+                emptyMessage="No planted trees with valid planting dates in the last 12 months."
+                context={`Context: bars show planted cohorts vs currently healthy trees by month for ${overviewScopeLabel}; green area shows monthly healthy share trend.`}
               />
 
               {carbonSummary && (
