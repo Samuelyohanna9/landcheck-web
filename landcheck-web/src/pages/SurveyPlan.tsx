@@ -230,6 +230,7 @@ export default function SurveyPlan() {
   const [subdivisionBatchLoading, setSubdivisionBatchLoading] = useState(false);
   const [latestSubdivisionBatchId, setLatestSubdivisionBatchId] = useState<number | null>(null);
   const [subdivisionDownloadBatchId, setSubdivisionDownloadBatchId] = useState<number | null>(null);
+  const [subdivisionPreviewPanelTab, setSubdivisionPreviewPanelTab] = useState<"survey_plan" | "subdivision_lines">("subdivision_lines");
   const previewRequestId = useRef(0);
   const orthophotoRequestId = useRef(0);
   const topoRequestId = useRef(0);
@@ -1871,57 +1872,110 @@ export default function SurveyPlan() {
             <div className="panel-right preview-container">
               <div className="subdivision-right-wrap">
                 <div className="subdivision-right-header">
-                  <h4>Subdivision Line Preview</h4>
-                  <span>Each lot boundary + area label</span>
-                </div>
-                {!subdivisionPreview && (
-                  <div className="preview-empty">
-                    <p>Click <strong>Preview Split</strong> to see lot lines and area labels here.</p>
-                  </div>
-                )}
-                {subdivisionSvgPreview && (
-                  <div className="subdivision-svg-wrap">
-                    <svg
-                      viewBox={`0 0 ${subdivisionSvgPreview.width} ${subdivisionSvgPreview.height}`}
-                      className="subdivision-svg"
-                      role="img"
-                      aria-label="Subdivision lot preview"
+                  <h4>{subdivisionPreviewPanelTab === "survey_plan" ? "Survey Plan Preview" : "Subdivision Line Preview"}</h4>
+                  <span>
+                    {subdivisionPreviewPanelTab === "survey_plan"
+                      ? "Review the rendered survey plan before exporting."
+                      : "Each lot boundary + area label"}
+                  </span>
+                  <div className="subdivision-right-tabs" role="tablist" aria-label="Subdivision preview tabs">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={subdivisionPreviewPanelTab === "survey_plan"}
+                      className={`subdivision-right-tab ${subdivisionPreviewPanelTab === "survey_plan" ? "active" : ""}`}
+                      onClick={() => setSubdivisionPreviewPanelTab("survey_plan")}
                     >
-                      <rect x="0" y="0" width={subdivisionSvgPreview.width} height={subdivisionSvgPreview.height} fill="#0f172a" />
-                      <g>
-                        {subdivisionSvgPreview.plots.map((plot) => (
-                          <path
-                            key={`plot_path_${plot.lotNo}`}
-                            d={plot.path}
-                            fill="rgba(16,185,129,0.08)"
-                            stroke={plot.stroke}
-                            strokeWidth={2.4}
-                          />
-                        ))}
-                      </g>
-                      <g>
-                        {subdivisionSvgPreview.plots.map((plot) => (
-                          <text
-                            key={`plot_label_${plot.lotNo}`}
-                            x={plot.labelX}
-                            y={plot.labelY}
-                            textAnchor="middle"
-                            className="subdivision-svg-label"
-                          >
-                            <tspan x={plot.labelX} dy="0">{plot.lotNo}</tspan>
-                            <tspan x={plot.labelX} dy="12">{plot.areaHa.toFixed(3)} ha</tspan>
-                          </text>
-                        ))}
-                      </g>
-                    </svg>
+                      Survey Plan Preview
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={subdivisionPreviewPanelTab === "subdivision_lines"}
+                      className={`subdivision-right-tab ${subdivisionPreviewPanelTab === "subdivision_lines" ? "active" : ""}`}
+                      onClick={() => setSubdivisionPreviewPanelTab("subdivision_lines")}
+                    >
+                      Subdivision Line Preview
+                    </button>
                   </div>
-                )}
-                {subdivisionPreview && (
-                  <div className="subdivision-legend">
-                    <span>Resolved lots: <strong>{subdivisionPreview.resolved_count}</strong></span>
-                    <span>Target area: <strong>{subdivisionTargetDisplayM2.toFixed(2)} sqm</strong></span>
-                    <span>Orientation: <strong>{subdivisionOrientationDisplayDeg.toFixed(1)} deg</strong></span>
+                </div>
+                {subdivisionPreviewPanelTab === "survey_plan" ? (
+                  <div className="subdivision-survey-wrap">
+                    <SurveyPreview
+                      previewType={previewType}
+                      onPreviewTypeChange={setPreviewType}
+                      topoSource={topoSource}
+                      onTopoSourceChange={setTopoSource}
+                      northArrowStyle={northArrowStyle}
+                      northArrowColor={northArrowColor}
+                      beaconStyle={beaconStyle}
+                      roadWidth={roadWidth}
+                      onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
+                      onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
+                      onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
+                      onRoadWidthChange={(value) => setRoadWidth(value as RoadWidthOption)}
+                      paperSize={meta.paper_size}
+                      surveyPreviewUrl={previewUrl}
+                      orthophotoPreviewUrl={orthophotoUrl}
+                      topoMapPreviewUrl={topoMapUrl}
+                      loading={previewLoading}
+                      orthophotoLoading={orthophotoLoading}
+                      topoMapLoading={topoMapLoading}
+                      hasHeightData={hasHeightData}
+                    />
                   </div>
+                ) : (
+                  <>
+                    {!subdivisionPreview && (
+                      <div className="preview-empty">
+                        <p>Click <strong>Preview Split</strong> to see lot lines and area labels here.</p>
+                      </div>
+                    )}
+                    {subdivisionSvgPreview && (
+                      <div className="subdivision-svg-wrap">
+                        <svg
+                          viewBox={`0 0 ${subdivisionSvgPreview.width} ${subdivisionSvgPreview.height}`}
+                          className="subdivision-svg"
+                          role="img"
+                          aria-label="Subdivision lot preview"
+                        >
+                          <rect x="0" y="0" width={subdivisionSvgPreview.width} height={subdivisionSvgPreview.height} fill="#0f172a" />
+                          <g>
+                            {subdivisionSvgPreview.plots.map((plot) => (
+                              <path
+                                key={`plot_path_${plot.lotNo}`}
+                                d={plot.path}
+                                fill="rgba(16,185,129,0.08)"
+                                stroke={plot.stroke}
+                                strokeWidth={2.4}
+                              />
+                            ))}
+                          </g>
+                          <g>
+                            {subdivisionSvgPreview.plots.map((plot) => (
+                              <text
+                                key={`plot_label_${plot.lotNo}`}
+                                x={plot.labelX}
+                                y={plot.labelY}
+                                textAnchor="middle"
+                                className="subdivision-svg-label"
+                              >
+                                <tspan x={plot.labelX} dy="0">{plot.lotNo}</tspan>
+                                <tspan x={plot.labelX} dy="12">{plot.areaHa.toFixed(3)} ha</tspan>
+                              </text>
+                            ))}
+                          </g>
+                        </svg>
+                      </div>
+                    )}
+                    {subdivisionPreview && (
+                      <div className="subdivision-legend">
+                        <span>Resolved lots: <strong>{subdivisionPreview.resolved_count}</strong></span>
+                        <span>Target area: <strong>{subdivisionTargetDisplayM2.toFixed(2)} sqm</strong></span>
+                        <span>Orientation: <strong>{subdivisionOrientationDisplayDeg.toFixed(1)} deg</strong></span>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
