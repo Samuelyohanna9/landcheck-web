@@ -37,6 +37,40 @@ type PlotMeta = {
   adamawa_disclaimer_text: string;
 };
 
+type SubdivisionMethod = "by_count" | "by_area";
+
+type SubdivisionPreviewPlot = {
+  index: number;
+  lot_no: string;
+  area_m2: number;
+  area_hectares: number;
+};
+
+type SubdivisionPreviewData = {
+  method: SubdivisionMethod | string;
+  resolved_count: number;
+  total_area_m2: number;
+  derived_total_area_m2: number;
+  area_imbalance_m2: number;
+  plots: SubdivisionPreviewPlot[];
+};
+
+type SubdivisionBatchRow = {
+  id: number;
+  parent_plot_id: number;
+  estate_name: string;
+  method: string;
+  requested_count: number | null;
+  target_area_m2: number | null;
+  orientation_deg: number | null;
+  generated_count: number;
+  total_area_m2: number;
+  status: string;
+  item_count: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
 type ManualPoint = {
   station: string;
   lng: number;
@@ -63,6 +97,18 @@ const DEFAULT_ADAMAWA_ORIGIN_TEXT = "ORIGIN:- WGS 84 UTM ZONE 33N";
 const DEFAULT_ADAMAWA_TOPO_SHEET_TEXT = "BASED ON GIREI TOPO SHEET 197 NE";
 const DEFAULT_ADAMAWA_DISCLAIMER_TEXT =
   "Detail shewn not the result of accurate survey. All bearing and distances shewn on this plan have been computed from registered Co-ordinates.";
+
+const parsePositiveInt = (value: string): number | null => {
+  const parsed = Number.parseInt(String(value || "").replace(/[^0-9]/g, ""), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed;
+};
+
+const parsePositiveFloat = (value: string): number | null => {
+  const parsed = Number.parseFloat(String(value || "").replace(/[^0-9.]/g, ""));
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed;
+};
 
 const parseScaleDenominator = (scaleText: string): number => {
   const digits = String(scaleText || "").replace(/[^0-9]/g, "");
@@ -113,6 +159,19 @@ export default function SurveyPlan() {
   const [featureType, setFeatureType] = useState<"road" | "building" | "river" | "fence">("road");
   const [featureAction, setFeatureAction] = useState<"add" | "delete" | "update">("add");
   const [roadName, setRoadName] = useState("");
+  const [subdivisionMethod, setSubdivisionMethod] = useState<SubdivisionMethod>("by_count");
+  const [subdivisionCountDraft, setSubdivisionCountDraft] = useState("4");
+  const [subdivisionTargetAreaDraft, setSubdivisionTargetAreaDraft] = useState("");
+  const [subdivisionOrientationDraft, setSubdivisionOrientationDraft] = useState("0");
+  const [subdivisionLotPrefix, setSubdivisionLotPrefix] = useState("LOT");
+  const [subdivisionEstateName, setSubdivisionEstateName] = useState("");
+  const [subdivisionPreview, setSubdivisionPreview] = useState<SubdivisionPreviewData | null>(null);
+  const [subdivisionPreviewLoading, setSubdivisionPreviewLoading] = useState(false);
+  const [subdivisionApplyLoading, setSubdivisionApplyLoading] = useState(false);
+  const [subdivisionBatches, setSubdivisionBatches] = useState<SubdivisionBatchRow[]>([]);
+  const [subdivisionBatchLoading, setSubdivisionBatchLoading] = useState(false);
+  const [latestSubdivisionBatchId, setLatestSubdivisionBatchId] = useState<number | null>(null);
+  const [subdivisionDownloadBatchId, setSubdivisionDownloadBatchId] = useState<number | null>(null);
   const previewRequestId = useRef(0);
   const orthophotoRequestId = useRef(0);
   const topoRequestId = useRef(0);
@@ -336,6 +395,9 @@ export default function SurveyPlan() {
       });
       const id = res.data.plot_id ?? res.data.id;
       setPlotId(id);
+      setSubdivisionPreview(null);
+      setSubdivisionBatches([]);
+      setLatestSubdivisionBatchId(null);
 
       // Save to localStorage for dashboard
       savePlotToStorage(id);
@@ -557,6 +619,19 @@ export default function SurveyPlan() {
     setNorthArrowColor("blue");
     setBeaconStyle("cross");
     setRoadWidth("10");
+    setSubdivisionMethod("by_count");
+    setSubdivisionCountDraft("4");
+    setSubdivisionTargetAreaDraft("");
+    setSubdivisionOrientationDraft("0");
+    setSubdivisionLotPrefix("LOT");
+    setSubdivisionEstateName("");
+    setSubdivisionPreview(null);
+    setSubdivisionPreviewLoading(false);
+    setSubdivisionApplyLoading(false);
+    setSubdivisionBatches([]);
+    setSubdivisionBatchLoading(false);
+    setLatestSubdivisionBatchId(null);
+    setSubdivisionDownloadBatchId(null);
     setMeta({
       title_text: "SURVEY PLAN",
       location_text: "",
@@ -674,6 +749,132 @@ export default function SurveyPlan() {
       setDownloadLoadingKey((prev) => (prev === loadingKey ? null : prev));
     }
   };
+
+  const loadSubdivisionBatches = useCallback(async () => {
+    if (!plotId) return;
+    setSubdivisionBatchLoading(true);
+    try {
+      const res = await api.get(`/plots/${plotId}/subdivision/batches`);
+      const rows = Array.isArray(res.data) ? (res.data as SubdivisionBatchRow[]) : [];
+      setSubdivisionBatches(rows);
+      setLatestSubdivisionBatchId((prev) => prev ?? (rows[0]?.id ?? null));
+    } catch (err) {
+      console.error("Failed to load subdivision batches:", err);
+    } finally {
+      setSubdivisionBatchLoading(false);
+    }
+  }, [plotId]);
+
+  useEffect(() => {
+    if (!plotId) {
+      setSubdivisionBatches([]);
+      return;
+    }
+    if (currentStep < 2) return;
+    loadSubdivisionBatches();
+  }, [plotId, currentStep, loadSubdivisionBatches]);
+
+  const previewSubdivision = async () => {
+    if (!plotId) return;
+
+    const count = parsePositiveInt(subdivisionCountDraft);
+    const targetArea = parsePositiveFloat(subdivisionTargetAreaDraft);
+    if (subdivisionMethod === "by_count" && (count === null || count < 2)) {
+      toast.error("Set derived plot count to 2 or more.");
+      return;
+    }
+    if (subdivisionMethod === "by_area" && (targetArea === null || targetArea <= 0)) {
+      toast.error("Set a positive target area in square meters.");
+      return;
+    }
+
+    const orientationDeg = Number.parseFloat(subdivisionOrientationDraft || "0");
+    const payload = {
+      method: subdivisionMethod,
+      split_count: subdivisionMethod === "by_count" ? count : null,
+      target_area_m2: subdivisionMethod === "by_area" ? targetArea : null,
+      orientation_deg: Number.isFinite(orientationDeg) ? orientationDeg : 0,
+      lot_prefix: (subdivisionLotPrefix || "LOT").trim() || "LOT",
+      estate_name: subdivisionEstateName.trim(),
+    };
+
+    setSubdivisionPreviewLoading(true);
+    try {
+      const res = await api.post(`/plots/${plotId}/subdivision/preview`, payload);
+      setSubdivisionPreview(res.data as SubdivisionPreviewData);
+      toast.success("Subdivision preview ready.");
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      toast.error(typeof detail === "string" ? detail : "Failed to preview subdivision.");
+    } finally {
+      setSubdivisionPreviewLoading(false);
+    }
+  };
+
+  const applySubdivision = async () => {
+    if (!plotId) return;
+    const count = parsePositiveInt(subdivisionCountDraft);
+    const targetArea = parsePositiveFloat(subdivisionTargetAreaDraft);
+    if (subdivisionMethod === "by_count" && (count === null || count < 2)) {
+      toast.error("Set derived plot count to 2 or more.");
+      return;
+    }
+    if (subdivisionMethod === "by_area" && (targetArea === null || targetArea <= 0)) {
+      toast.error("Set a positive target area in square meters.");
+      return;
+    }
+
+    const orientationDeg = Number.parseFloat(subdivisionOrientationDraft || "0");
+    const payload = {
+      method: subdivisionMethod,
+      split_count: subdivisionMethod === "by_count" ? count : null,
+      target_area_m2: subdivisionMethod === "by_area" ? targetArea : null,
+      orientation_deg: Number.isFinite(orientationDeg) ? orientationDeg : 0,
+      lot_prefix: (subdivisionLotPrefix || "LOT").trim() || "LOT",
+      estate_name: subdivisionEstateName.trim(),
+      include_feature_detection: true,
+    };
+
+    setSubdivisionApplyLoading(true);
+    try {
+      const res = await api.post(`/plots/${plotId}/subdivision/apply`, payload);
+      const batchId = Number(res?.data?.batch_id || 0) || null;
+      if (batchId) {
+        setLatestSubdivisionBatchId(batchId);
+      }
+      await loadSubdivisionBatches();
+      const generated = Number(res?.data?.generated_count || 0);
+      toast.success(`Subdivision generated (${generated} plots).`);
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      toast.error(typeof detail === "string" ? detail : "Failed to generate subdivision batch.");
+    } finally {
+      setSubdivisionApplyLoading(false);
+    }
+  };
+
+  const downloadSubdivisionBatch = async (batchId: number) => {
+    if (subdivisionDownloadBatchId !== null) return;
+    setSubdivisionDownloadBatchId(batchId);
+    try {
+      const res = await api.get(`/plots/subdivision/batches/${batchId}/export/survey-plans.zip`, {
+        responseType: "blob",
+      });
+      triggerBlobDownload(
+        res.data,
+        res.headers["content-type"],
+        `subdivision_batch_${batchId}_survey_plans.zip`
+      );
+      toast.success("Batch survey plans ZIP downloaded.");
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      toast.error(typeof detail === "string" ? detail : "Failed to download subdivision batch.");
+    } finally {
+      setSubdivisionDownloadBatchId(null);
+    }
+  };
+
+  const quickExportBatchId = latestSubdivisionBatchId ?? (subdivisionBatches[0]?.id ?? null);
 
   // Get feature counts from nested response structure
   const getFeatureCount = (type: string) => {
@@ -1094,6 +1295,186 @@ export default function SurveyPlan() {
                 </div>
               </div>
 
+              <div className="form-section subdivision-section">
+                <h3 className="section-title">Premium: Plot Subdivision & Batch Plans</h3>
+                <p className="section-desc">
+                  Split this mother parcel into estate/allocation lots, then export all generated survey plans in one ZIP.
+                </p>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Subdivision Method</label>
+                    <select
+                      value={subdivisionMethod}
+                      onChange={(e) => setSubdivisionMethod(e.target.value as SubdivisionMethod)}
+                    >
+                      <option value="by_count">Split by number of plots</option>
+                      <option value="by_area">Split by target plot area (sqm)</option>
+                    </select>
+                  </div>
+                  {subdivisionMethod === "by_count" ? (
+                    <div className="form-group">
+                      <label>Derived Plot Count</label>
+                      <input
+                        type="number"
+                        min={2}
+                        max={500}
+                        value={subdivisionCountDraft}
+                        onChange={(e) => setSubdivisionCountDraft(e.target.value)}
+                        placeholder="e.g. 20"
+                      />
+                    </div>
+                  ) : (
+                    <div className="form-group">
+                      <label>Target Plot Area (sqm)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={subdivisionTargetAreaDraft}
+                        onChange={(e) => setSubdivisionTargetAreaDraft(e.target.value)}
+                        placeholder="e.g. 450"
+                      />
+                    </div>
+                  )}
+                  <div className="form-group">
+                    <label>Orientation (degrees)</label>
+                    <input
+                      type="number"
+                      value={subdivisionOrientationDraft}
+                      onChange={(e) => setSubdivisionOrientationDraft(e.target.value)}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Lot Prefix</label>
+                    <input
+                      value={subdivisionLotPrefix}
+                      onChange={(e) => setSubdivisionLotPrefix(e.target.value.toUpperCase())}
+                      placeholder="LOT"
+                      maxLength={16}
+                    />
+                  </div>
+                  <div className="form-group full-width">
+                    <label>Estate / Layout Name (Optional)</label>
+                    <input
+                      value={subdivisionEstateName}
+                      onChange={(e) => setSubdivisionEstateName(e.target.value)}
+                      placeholder="e.g. Think Green Estate Phase 1"
+                    />
+                  </div>
+                </div>
+
+                <div className="subdivision-action-row">
+                  <button
+                    className="btn-secondary"
+                    onClick={previewSubdivision}
+                    disabled={!plotId || subdivisionPreviewLoading || subdivisionApplyLoading}
+                  >
+                    {subdivisionPreviewLoading ? (
+                      <>
+                        <span className="spinner" />
+                        Computing...
+                      </>
+                    ) : (
+                      "Preview Split"
+                    )}
+                  </button>
+                  <button
+                    className="btn-primary"
+                    onClick={applySubdivision}
+                    disabled={!plotId || subdivisionApplyLoading || subdivisionPreviewLoading}
+                  >
+                    {subdivisionApplyLoading ? (
+                      <>
+                        <span className="spinner" />
+                        Generating...
+                      </>
+                    ) : (
+                      "Generate Batch"
+                    )}
+                  </button>
+                </div>
+
+                {subdivisionPreview && (
+                  <div className="subdivision-preview-wrap">
+                    <div className="subdivision-kpis">
+                      <div className="subdivision-kpi">
+                        <span className="subdivision-kpi-label">Derived plots</span>
+                        <strong>{subdivisionPreview.resolved_count}</strong>
+                      </div>
+                      <div className="subdivision-kpi">
+                        <span className="subdivision-kpi-label">Mother parcel area</span>
+                        <strong>{subdivisionPreview.total_area_m2.toFixed(2)} sqm</strong>
+                      </div>
+                      <div className="subdivision-kpi">
+                        <span className="subdivision-kpi-label">Area imbalance</span>
+                        <strong>{Math.abs(subdivisionPreview.area_imbalance_m2).toFixed(4)} sqm</strong>
+                      </div>
+                    </div>
+                    <div className="subdivision-table-wrap">
+                      <table className="subdivision-table">
+                        <thead>
+                          <tr>
+                            <th>Lot</th>
+                            <th>Area (sqm)</th>
+                            <th>Area (ha)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {subdivisionPreview.plots.slice(0, 10).map((item) => (
+                            <tr key={item.lot_no}>
+                              <td>{item.lot_no}</td>
+                              <td>{item.area_m2.toFixed(2)}</td>
+                              <td>{item.area_hectares.toFixed(4)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {subdivisionPreview.plots.length > 10 && (
+                      <p className="subdivision-note">
+                        Showing first 10 lots in preview. Total generated lots: {subdivisionPreview.plots.length}.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="subdivision-batch-wrap">
+                  <div className="subdivision-batch-header">
+                    <h4>Generated Batches</h4>
+                    <button
+                      className="btn-outline btn-mini"
+                      onClick={loadSubdivisionBatches}
+                      disabled={!plotId || subdivisionBatchLoading}
+                    >
+                      {subdivisionBatchLoading ? "Refreshing..." : "Refresh"}
+                    </button>
+                  </div>
+                  {subdivisionBatches.length === 0 ? (
+                    <p className="subdivision-note">No subdivision batches generated yet for this mother parcel.</p>
+                  ) : (
+                    <div className="subdivision-batch-list">
+                      {subdivisionBatches.slice(0, 6).map((batch) => (
+                        <div key={batch.id} className="subdivision-batch-item">
+                          <div>
+                            <strong>Batch #{batch.id}</strong>
+                            <div className="subdivision-note">
+                              {batch.method} • {batch.generated_count} plots • {batch.total_area_m2?.toFixed?.(2) ?? "0.00"} sqm
+                            </div>
+                          </div>
+                          <button
+                            className="download-btn"
+                            disabled={subdivisionDownloadBatchId !== null}
+                            onClick={() => downloadSubdivisionBatch(batch.id)}
+                          >
+                            {subdivisionDownloadBatchId === batch.id ? "Downloading..." : "Export ZIP"}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="action-bar">
                 <button className="btn-outline" onClick={() => setCurrentStep(1)}>
                   <svg viewBox="0 0 20 20" fill="currentColor">
@@ -1299,6 +1680,38 @@ export default function SurveyPlan() {
                       )}
                     </button>
                   </div>
+
+                  {quickExportBatchId && (
+                    <div className="export-card">
+                      <div className="export-icon calc">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path d="M4 4h16v4H4zM4 10h16v10H4z" />
+                          <path d="M8 14h8M8 18h5" />
+                        </svg>
+                      </div>
+                      <div className="export-info">
+                        <h4>Subdivision Batch ZIP</h4>
+                        <p>All generated subdivision survey plans in one download</p>
+                      </div>
+                      <button
+                        className="download-btn"
+                        disabled={subdivisionDownloadBatchId !== null}
+                        onClick={() => downloadSubdivisionBatch(quickExportBatchId)}
+                      >
+                        {subdivisionDownloadBatchId === quickExportBatchId ? (
+                          <>
+                            <span className="spinner download-spinner" />
+                            <span>Downloading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                            <span>Download ZIP</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
 
                   {/* Topo Map PDF */}
                   <div className="export-card">
