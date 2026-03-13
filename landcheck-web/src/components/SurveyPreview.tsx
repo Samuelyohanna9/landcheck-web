@@ -25,6 +25,7 @@ type Props = {
   orthophotoLoading: boolean;
   topoMapLoading: boolean;
   hasHeightData?: boolean;
+  allowedPreviewTypes?: PreviewType[];
 };
 
 export default function SurveyPreview({
@@ -48,6 +49,7 @@ export default function SurveyPreview({
   orthophotoLoading,
   topoMapLoading,
   hasHeightData = false,
+  allowedPreviewTypes = ["survey", "orthophoto", "topomap"],
 }: Props) {
   const [zoom, setZoom] = useState(100);
   const [isDragging, setIsDragging] = useState(false);
@@ -87,6 +89,7 @@ export default function SurveyPreview({
 
   const currentUrl = getCurrentUrl();
   const isLoading = getCurrentLoading();
+  const onlySurveyMode = allowedPreviewTypes.length === 1 && allowedPreviewTypes[0] === "survey";
 
   // Reset position when changing preview type or paper size
   useEffect(() => {
@@ -219,35 +222,43 @@ export default function SurveyPreview({
       </div>
       <div className="preview-header">
         {/* Preview Type Toggle - 3 Tabs */}
-        <div className="preview-toggle three-tabs">
-          <button
-            className={`toggle-btn ${previewType === "survey" ? "active" : ""}`}
-            onClick={() => onPreviewTypeChange("survey")}
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
-            </svg>
-            Survey Plan
-          </button>
-          <button
-            className={`toggle-btn ${previewType === "orthophoto" ? "active" : ""}`}
-            onClick={() => onPreviewTypeChange("orthophoto")}
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-            </svg>
-            Orthophoto
-          </button>
-          <button
-            className={`toggle-btn ${previewType === "topomap" ? "active" : ""}`}
-            onClick={() => onPreviewTypeChange("topomap")}
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-            </svg>
-            Topo Map
-          </button>
-        </div>
+        {!onlySurveyMode && (
+          <div className="preview-toggle three-tabs">
+            {allowedPreviewTypes.includes("survey") && (
+              <button
+                className={`toggle-btn ${previewType === "survey" ? "active" : ""}`}
+                onClick={() => onPreviewTypeChange("survey")}
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                </svg>
+                Survey Plan
+              </button>
+            )}
+            {allowedPreviewTypes.includes("orthophoto") && (
+              <button
+                className={`toggle-btn ${previewType === "orthophoto" ? "active" : ""}`}
+                onClick={() => onPreviewTypeChange("orthophoto")}
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                </svg>
+                Orthophoto
+              </button>
+            )}
+            {allowedPreviewTypes.includes("topomap") && (
+              <button
+                className={`toggle-btn ${previewType === "topomap" ? "active" : ""}`}
+                onClick={() => onPreviewTypeChange("topomap")}
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                </svg>
+                Topo Map
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Zoom Controls */}
         <div className="zoom-controls">
@@ -271,7 +282,7 @@ export default function SurveyPreview({
       </div>
 
       {/* Topo Source Toggle - only show on Topo Map tab */}
-      {previewType === "topomap" && (
+      {previewType === "topomap" && allowedPreviewTypes.includes("topomap") && (
         <div className="topo-source-bar">
           <span className="topo-source-label">Data Source:</span>
           <div className="topo-source-toggle">

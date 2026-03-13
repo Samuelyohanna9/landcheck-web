@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import mapboxgl from "mapbox-gl";
 import { api } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
 import MapViewEnhanced from "../components/MapViewEnhanced";
@@ -109,6 +110,10 @@ const DEFAULT_ADAMAWA_ORIGIN_TEXT = "ORIGIN:- WGS 84 UTM ZONE 33N";
 const DEFAULT_ADAMAWA_TOPO_SHEET_TEXT = "BASED ON GIREI TOPO SHEET 197 NE";
 const DEFAULT_ADAMAWA_DISCLAIMER_TEXT =
   "Detail shewn not the result of accurate survey. All bearing and distances shewn on this plan have been computed from registered Co-ordinates.";
+const MAPBOX_TOKEN = String(import.meta.env.VITE_MAPBOX_TOKEN || "");
+if (MAPBOX_TOKEN) {
+  mapboxgl.accessToken = MAPBOX_TOKEN;
+}
 
 const parsePositiveInt = (value: string): number | null => {
   const parsed = Number.parseInt(String(value || "").replace(/[^0-9]/g, ""), 10);
@@ -302,7 +307,10 @@ export default function SurveyPlan() {
   const [subdivisionPreviewPanelTab, setSubdivisionPreviewPanelTab] = useState<"survey_plan" | "subdivision_lines">("survey_plan");
   const [subdivisionDraggingBreakIndex, setSubdivisionDraggingBreakIndex] = useState<number | null>(null);
   const subdivisionLivePreviewTimerRef = useRef<number | null>(null);
-  const subdivisionSvgRef = useRef<SVGSVGElement | null>(null);
+  const subdivisionLineCanvasRef = useRef<HTMLElement | null>(null);
+  const subdivisionMapContainerRef = useRef<HTMLDivElement | null>(null);
+  const subdivisionMapRef = useRef<mapboxgl.Map | null>(null);
+  const subdivisionMapReadyRef = useRef(false);
   const previewRequestId = useRef(0);
   const orthophotoRequestId = useRef(0);
   const topoRequestId = useRef(0);
@@ -596,6 +604,189 @@ export default function SurveyPlan() {
       plots,
     };
   }, [subdivisionPreview, displayedSubdivisionLotNames]);
+
+  const subdivisionMapPreviewData = useMemo(() => {
+    if (!subdivisionPreview?.plots?.length) return null;
+
+    const polygons: any[] = [];
+    const labels: any[] = [];
+
+    subdivisionPreview.plots.forEach((plot, idx) => {
+      const ring = (plot.geometry?.coordinates?.[0] || [])
+        .map((point) => [Number(point?.[0]), Number(point?.[1])])
+        .filter((point) => Number.isFinite(point[0]) && Number.isFinite(point[1]));
+      if (ring.length < 3) return;
+      const cleanRing = closeRingIfNeeded(ring as number[][]);
+      const centroid = polygonCentroid(cleanRing);
+      const lotNo = displayedSubdivisionLotNames[idx] || plot.lot_no;
+
+      polygons.push({
+        type: "Feature",
+        properties: {
+          lotNo,
+          areaHa: Number(plot.area_hectares || 0),
+        },
+        geometry: {
+          type: "Polygon",
+          coordinates: [cleanRing],
+        },
+      });
+
+      labels.push({
+        type: "Feature",
+        properties: {
+          label: `${lotNo}\n${Number(plot.area_hectares || 0).toFixed(3)} ha`,
+        },
+        geometry: {
+          type: "Point",
+          coordinates: [Number(centroid[0]), Number(centroid[1])],
+        },
+      });
+    });
+
+    if (!polygons.length) return null;
+    return {
+      polygons: {
+        type: "FeatureCollection",
+        features: polygons,
+      },
+      labels: {
+        type: "FeatureCollection",
+        features: labels,
+      },
+    };
+  }, [subdivisionPreview, displayedSubdivisionLotNames]);
+
+  const fitSubdivisionMapToData = useCallback((map: mapboxgl.Map, fc: any) => {
+    if (!fc?.features?.length) return;
+    const bounds = new mapboxgl.LngLatBounds();
+    let hasCoords = false;
+    fc.features.forEach((feature: any) => {
+      const rings = feature?.geometry?.coordinates || [];
+      rings.forEach((ring: any[]) => {
+        ring.forEach((coord: any[]) => {
+          const lng = Number(coord?.[0]);
+          const lat = Number(coord?.[1]);
+          if (Number.isFinite(lng) && Number.isFinite(lat)) {
+            bounds.extend([lng, lat]);
+            hasCoords = true;
+          }
+        });
+      });
+    });
+    if (!hasCoords) return;
+    map.fitBounds(bounds, { padding: 64, maxZoom: 19, duration: 0 });
+  }, []);
+
+  useEffect(() => {
+    if (workflowMode !== "subdivision" || currentStep !== 2 || subdivisionPreviewPanelTab !== "subdivision_lines") return;
+    if (!subdivisionMapContainerRef.current) return;
+    if (!MAPBOX_TOKEN) return;
+    if (subdivisionMapRef.current) {
+      subdivisionMapRef.current.resize();
+      return;
+    }
+
+    const map = new mapboxgl.Map({
+      container: subdivisionMapContainerRef.current,
+      style: "mapbox://styles/mapbox/satellite-streets-v12",
+      center: [7.5, 9.0],
+      zoom: 6,
+    });
+    map.addControl(new mapboxgl.NavigationControl(), "top-right");
+    map.on("load", () => {
+      subdivisionMapReadyRef.current = true;
+
+      map.addSource("subdivision-lots-src", {
+        type: "geojson",
+        data: (subdivisionMapPreviewData?.polygons || { type: "FeatureCollection", features: [] }) as any,
+      });
+      map.addLayer({
+        id: "subdivision-lots-fill",
+        type: "fill",
+        source: "subdivision-lots-src",
+        paint: {
+          "fill-color": "#22c55e",
+          "fill-opacity": 0.18,
+        },
+      });
+      map.addLayer({
+        id: "subdivision-lots-line",
+        type: "line",
+        source: "subdivision-lots-src",
+        paint: {
+          "line-color": "#22c55e",
+          "line-width": 2.4,
+        },
+      });
+
+      map.addSource("subdivision-lots-labels-src", {
+        type: "geojson",
+        data: (subdivisionMapPreviewData?.labels || { type: "FeatureCollection", features: [] }) as any,
+      });
+      map.addLayer({
+        id: "subdivision-lots-labels",
+        type: "symbol",
+        source: "subdivision-lots-labels-src",
+        layout: {
+          "text-field": ["get", "label"],
+          "text-size": 11,
+          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+          "text-allow-overlap": true,
+          "text-anchor": "center",
+        },
+        paint: {
+          "text-color": "#ecfdf5",
+          "text-halo-color": "#0f172a",
+          "text-halo-width": 1.3,
+        },
+      });
+
+      if (subdivisionMapPreviewData?.polygons) {
+        fitSubdivisionMapToData(map, subdivisionMapPreviewData.polygons);
+      }
+    });
+
+    subdivisionMapRef.current = map;
+  }, [
+    workflowMode,
+    currentStep,
+    subdivisionPreviewPanelTab,
+    subdivisionMapPreviewData,
+    fitSubdivisionMapToData,
+  ]);
+
+  useEffect(() => {
+    const map = subdivisionMapRef.current;
+    if (!map || !subdivisionMapReadyRef.current) return;
+    const polySource = map.getSource("subdivision-lots-src") as mapboxgl.GeoJSONSource | undefined;
+    const labelSource = map.getSource("subdivision-lots-labels-src") as mapboxgl.GeoJSONSource | undefined;
+    if (polySource && subdivisionMapPreviewData?.polygons) {
+      polySource.setData(subdivisionMapPreviewData.polygons as any);
+      fitSubdivisionMapToData(map, subdivisionMapPreviewData.polygons);
+    }
+    if (labelSource && subdivisionMapPreviewData?.labels) {
+      labelSource.setData(subdivisionMapPreviewData.labels as any);
+    }
+  }, [subdivisionMapPreviewData, fitSubdivisionMapToData]);
+
+  useEffect(() => {
+    if (subdivisionPreviewPanelTab !== "subdivision_lines") return;
+    if (!subdivisionMapRef.current) return;
+    window.setTimeout(() => {
+      subdivisionMapRef.current?.resize();
+    }, 0);
+  }, [subdivisionPreviewPanelTab]);
+
+  useEffect(() => {
+    return () => {
+      if (subdivisionMapRef.current) {
+        subdivisionMapRef.current.remove();
+        subdivisionMapRef.current = null;
+      }
+      subdivisionMapReadyRef.current = false;
+    };
+  }, []);
 
   const subdivisionTargetDisplayM2 = useMemo(() => {
     const fromPreview = Number(subdivisionPreview?.target_area_m2);
@@ -1138,13 +1329,13 @@ export default function SurveyPlan() {
 
   const getSubdivisionBreakValueFromClientX = useCallback(
     (clientX: number): number | null => {
-      const svg = subdivisionSvgRef.current;
-      if (!svg || !subdivisionSvgPreview) return null;
-      const rect = svg.getBoundingClientRect();
+      const canvas = subdivisionLineCanvasRef.current;
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
       if (!Number.isFinite(rect.width) || rect.width <= 0) return null;
       return clamp01((clientX - rect.left) / rect.width);
     },
-    [subdivisionSvgPreview]
+    []
   );
 
   const stopSubdivisionBreakDrag = useCallback(() => {
@@ -1544,6 +1735,7 @@ export default function SurveyPlan() {
                 className="mode-card"
                 onClick={() => {
                   setWorkflowMode("survey");
+                  setPreviewType("survey");
                   setCurrentStep(1);
                 }}
               >
@@ -1563,6 +1755,7 @@ export default function SurveyPlan() {
                 className="mode-card"
                 onClick={() => {
                   setWorkflowMode("subdivision");
+                  setPreviewType("survey");
                   setSubdivisionPreviewPanelTab("survey_plan");
                   setCurrentStep(1);
                 }}
@@ -2648,6 +2841,7 @@ export default function SurveyPlan() {
                       orthophotoLoading={orthophotoLoading}
                       topoMapLoading={topoMapLoading}
                       hasHeightData={hasHeightData}
+                      allowedPreviewTypes={["survey"]}
                     />
                   </div>
                 ) : (
@@ -2657,89 +2851,91 @@ export default function SurveyPlan() {
                         <p>Click <strong>Preview Split</strong> to see lot lines and area labels here.</p>
                       </div>
                     )}
-                    {subdivisionSvgPreview && (
-                      <div className="subdivision-svg-wrap">
-                        <svg
-                          ref={subdivisionSvgRef}
-                          viewBox={`0 0 ${subdivisionSvgPreview.width} ${subdivisionSvgPreview.height}`}
-                          className="subdivision-svg"
-                          role="img"
-                          aria-label="Subdivision lot preview"
-                          onPointerUp={stopSubdivisionBreakDrag}
-                          onPointerCancel={stopSubdivisionBreakDrag}
-                        >
-                          <rect x="0" y="0" width={subdivisionSvgPreview.width} height={subdivisionSvgPreview.height} fill="#0f172a" />
-                          <g>
-                        {subdivisionSvgPreview.plots.map((plot) => (
-                          <path
-                            key={`plot_path_${plot.idx}`}
-                            d={plot.path}
-                            fill="rgba(16,185,129,0.08)"
-                            stroke={plot.stroke}
-                            strokeWidth={2.4}
-                          />
-                            ))}
-                          </g>
-                          {subdivisionMethod === "by_fraction" && subdivisionFractionBreaksEffective.length > 0 && (
-                            <g>
-                              {subdivisionFractionBreaksEffective.map((value, idx) => {
-                                const x = Math.max(18, Math.min(subdivisionSvgPreview.width - 18, value * subdivisionSvgPreview.width));
-                                const isActive = subdivisionDraggingBreakIndex === idx;
-                                return (
-                                  <g key={`subdiv_guide_${idx}`} className={`subdivision-break-guide${isActive ? " active" : ""}`}>
-                                    <line
-                                      x1={x}
-                                      y1={12}
-                                      x2={x}
-                                      y2={subdivisionSvgPreview.height - 12}
-                                      className="subdivision-break-hitline"
-                                      onPointerDown={(event) => {
-                                        event.preventDefault();
-                                        event.stopPropagation();
-                                        startSubdivisionBreakDrag(idx, event.clientX);
-                                      }}
-                                    />
-                                    <line
-                                      x1={x}
-                                      y1={12}
-                                      x2={x}
-                                      y2={subdivisionSvgPreview.height - 12}
-                                      className="subdivision-break-line"
-                                    />
-                                    <circle
-                                      cx={x}
-                                      cy={20}
-                                      r={isActive ? 7 : 6}
-                                      className="subdivision-break-handle"
-                                      onPointerDown={(event) => {
-                                        event.preventDefault();
-                                        event.stopPropagation();
-                                        startSubdivisionBreakDrag(idx, event.clientX);
-                                      }}
-                                    />
-                                    <text x={x} y={36} textAnchor="middle" className="subdivision-break-value">
-                                      {(value * 100).toFixed(1)}%
-                                    </text>
-                                  </g>
-                                );
-                              })}
-                            </g>
-                          )}
-                          <g>
-                        {subdivisionSvgPreview.plots.map((plot) => (
-                          <text
-                            key={`plot_label_${plot.idx}`}
-                            x={plot.labelX}
-                            y={plot.labelY}
-                            textAnchor="middle"
-                            className="subdivision-svg-label"
+                    {(subdivisionMapPreviewData || subdivisionSvgPreview) && (
+                      <div
+                        ref={(node) => {
+                          subdivisionLineCanvasRef.current = node;
+                        }}
+                        className="subdivision-map-wrap"
+                        onPointerUp={stopSubdivisionBreakDrag}
+                        onPointerCancel={stopSubdivisionBreakDrag}
+                      >
+                        {subdivisionMapPreviewData && MAPBOX_TOKEN ? (
+                          <div ref={subdivisionMapContainerRef} className="subdivision-map-canvas" />
+                        ) : (
+                          <div className="subdivision-svg-wrap">
+                            {subdivisionSvgPreview && (
+                              <svg
+                                viewBox={`0 0 ${subdivisionSvgPreview.width} ${subdivisionSvgPreview.height}`}
+                                className="subdivision-svg"
+                                role="img"
+                                aria-label="Subdivision lot preview"
                               >
-                                <tspan x={plot.labelX} dy="0">{plot.lotNo}</tspan>
-                                <tspan x={plot.labelX} dy="12">{plot.areaHa.toFixed(3)} ha</tspan>
-                              </text>
-                            ))}
-                          </g>
-                        </svg>
+                                <rect x="0" y="0" width={subdivisionSvgPreview.width} height={subdivisionSvgPreview.height} fill="#0f172a" />
+                                <g>
+                              {subdivisionSvgPreview.plots.map((plot) => (
+                                <path
+                                  key={`plot_path_${plot.idx}`}
+                                  d={plot.path}
+                                  fill="rgba(16,185,129,0.08)"
+                                  stroke={plot.stroke}
+                                  strokeWidth={2.4}
+                                />
+                                  ))}
+                                </g>
+                                <g>
+                              {subdivisionSvgPreview.plots.map((plot) => (
+                                <text
+                                  key={`plot_label_${plot.idx}`}
+                                  x={plot.labelX}
+                                  y={plot.labelY}
+                                  textAnchor="middle"
+                                  className="subdivision-svg-label"
+                                    >
+                                      <tspan x={plot.labelX} dy="0">{plot.lotNo}</tspan>
+                                      <tspan x={plot.labelX} dy="12">{plot.areaHa.toFixed(3)} ha</tspan>
+                                    </text>
+                                  ))}
+                                </g>
+                              </svg>
+                            )}
+                          </div>
+                        )}
+
+                        {subdivisionMethod === "by_fraction" && subdivisionFractionBreaksEffective.length > 0 && (
+                          <div className="subdivision-break-overlay">
+                            {subdivisionFractionBreaksEffective.map((value, idx) => {
+                              const isActive = subdivisionDraggingBreakIndex === idx;
+                              return (
+                                <div
+                                  key={`subdiv_guide_${idx}`}
+                                  className={`subdivision-break-guide-dom${isActive ? " active" : ""}`}
+                                  style={{ left: `${Math.max(2, Math.min(98, value * 100))}%` }}
+                                >
+                                  <div
+                                    className="subdivision-break-hitline-dom"
+                                    onPointerDown={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      startSubdivisionBreakDrag(idx, event.clientX);
+                                    }}
+                                  />
+                                  <div className="subdivision-break-line-dom" />
+                                  <button
+                                    type="button"
+                                    className="subdivision-break-handle-dom"
+                                    onPointerDown={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      startSubdivisionBreakDrag(idx, event.clientX);
+                                    }}
+                                  />
+                                  <span className="subdivision-break-value-dom">{(value * 100).toFixed(1)}%</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
                     {subdivisionPreview && (
