@@ -1945,12 +1945,20 @@
 
   .survey-container.has-workflow .preview-panel .panel-right,
   .survey-container.has-workflow .export-panel .panel-right {
-    order: 1;
+    order: 2;
     min-height: 46vh;
   }
 
   .survey-container.has-workflow .preview-panel .panel-left,
   .survey-container.has-workflow .export-panel .panel-left {
+    order: 1;
+  }
+
+  .survey-container.has-workflow .step-panel .panel-left {
+    order: 1;
+  }
+
+  .survey-container.has-workflow .step-panel .panel-right {
     order: 2;
   }
 
