@@ -679,12 +679,30 @@ export default function SurveyPlan() {
   }, []);
 
   useEffect(() => {
-    if (workflowMode !== "subdivision" || currentStep !== 2 || subdivisionPreviewPanelTab !== "subdivision_lines") return;
+    const shouldShowSubdivisionMap =
+      workflowMode === "subdivision" && currentStep === 2 && subdivisionPreviewPanelTab === "subdivision_lines";
+
+    if (!shouldShowSubdivisionMap) {
+      if (subdivisionMapRef.current) {
+        subdivisionMapRef.current.remove();
+        subdivisionMapRef.current = null;
+      }
+      subdivisionMapReadyRef.current = false;
+      return;
+    }
+
     if (!subdivisionMapContainerRef.current) return;
     if (!MAPBOX_TOKEN) return;
+
     if (subdivisionMapRef.current) {
-      subdivisionMapRef.current.resize();
-      return;
+      const existingContainer = subdivisionMapRef.current.getContainer();
+      if (existingContainer === subdivisionMapContainerRef.current) {
+        subdivisionMapRef.current.resize();
+        return;
+      }
+      subdivisionMapRef.current.remove();
+      subdivisionMapRef.current = null;
+      subdivisionMapReadyRef.current = false;
     }
 
     const map = new mapboxgl.Map({
@@ -3327,7 +3345,13 @@ export default function SurveyPlan() {
               </div>
 
               <div className="action-bar">
-                <button className="btn-outline" onClick={() => setCurrentStep(2)}>
+                <button
+                  className="btn-outline"
+                  onClick={() => {
+                    setSubdivisionPreviewPanelTab("subdivision_lines");
+                    setCurrentStep(2);
+                  }}
+                >
                   <svg viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
                   </svg>
