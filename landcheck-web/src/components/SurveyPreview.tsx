@@ -262,26 +262,6 @@ export default function SurveyPreview({
             )}
           </div>
         )}
-
-        {/* Zoom Controls */}
-        <div className="zoom-controls">
-          <button className="zoom-btn" onClick={handleZoomOut} title="Zoom Out">
-            <svg viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-            </svg>
-          </button>
-          <span className="zoom-level">{displayZoom}%</span>
-          <button className="zoom-btn" onClick={handleZoomIn} title="Zoom In">
-            <svg viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-          </button>
-          <button className="zoom-btn reset" onClick={handleResetZoom} title="Reset">
-            <svg viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-            </svg>
-          </button>
-        </div>
       </div>
 
       {/* Topo Source Toggle - only show on Topo Map tab */}
@@ -331,6 +311,25 @@ export default function SurveyPreview({
         onMouseLeave={handleMouseUp}
         onWheel={handleWheel}
       >
+        <div className="preview-zoom-overlay">
+          <button className="zoom-btn" onClick={handleZoomOut} title="Zoom Out">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <span className="zoom-level">{displayZoom}%</span>
+          <button className="zoom-btn" onClick={handleZoomIn} title="Zoom In">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <button className="zoom-btn reset" onClick={handleResetZoom} title="Reset">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+
         {isLoading && (
           <div className="preview-loading">
             <div className="loading-spinner" />

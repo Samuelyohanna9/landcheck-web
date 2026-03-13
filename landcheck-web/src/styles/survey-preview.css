@@ -13,7 +13,7 @@
 .preview-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 0.25rem 0.4rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   gap: 0.36rem;
@@ -194,6 +194,21 @@
   );
   overflow: hidden;
   position: relative;
+}
+
+.preview-zoom-overlay {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(15, 23, 42, 0.74);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 7px;
+  padding: 0.12rem 0.16rem;
+  backdrop-filter: blur(2px);
 }
 
 .preview-paper.zoomable {
