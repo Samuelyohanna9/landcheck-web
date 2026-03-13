@@ -290,7 +290,7 @@
 }
 
 .survey-container.is-preview-step .preview-panel {
-  grid-template-columns: clamp(300px, 23vw, 340px) minmax(0, 1fr);
+  grid-template-columns: clamp(340px, 25vw, 400px) minmax(0, 1fr);
   gap: 0.7rem;
   height: calc(100dvh - 12px);
 }
@@ -315,7 +315,12 @@
   overflow-y: auto;
   overflow-x: hidden;
   max-height: 100%;
-  padding-right: 0;
+  padding-right: 0.38rem;
+  scrollbar-gutter: stable;
+}
+
+.survey-container.is-preview-step .preview-panel .panel-left > * {
+  min-width: 0;
 }
 
 .panel-left {
@@ -555,6 +560,7 @@
 }
 
 .survey-container.is-preview-step .form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem;
 }
 
@@ -566,6 +572,7 @@
 
 .survey-container.is-preview-step .form-group {
   gap: 0.2rem;
+  min-width: 0;
 }
 
 .form-group.full-width {
@@ -600,6 +607,8 @@
 .survey-container.is-preview-step .form-group input,
 .survey-container.is-preview-step .form-group select,
 .survey-container.is-preview-step .form-group textarea {
+  width: 100%;
+  box-sizing: border-box;
   padding: 0.42rem 0.62rem;
   border-radius: 7px;
   font-size: 0.78rem;
@@ -1458,6 +1467,21 @@
   margin-top: 0.28rem;
 }
 
+.survey-container.is-preview-step .preview-panel .panel-left::-webkit-scrollbar {
+  width: 9px;
+}
+
+.survey-container.is-preview-step .preview-panel .panel-left::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.35);
+  border-radius: 999px;
+}
+
+.survey-container.is-preview-step .preview-panel .panel-left::-webkit-scrollbar-thumb {
+  background: rgba(52, 211, 153, 0.45);
+  border-radius: 999px;
+  border: 2px solid rgba(15, 23, 42, 0.45);
+}
+
 /* Export Section */
 .export-section {
   background: rgba(30, 41, 59, 0.5);
@@ -1596,6 +1620,20 @@
   border-width: 2px;
   border-color: rgba(148, 163, 184, 0.35);
   border-top-color: #e2e8f0;
+}
+
+@media (max-width: 1500px) {
+  .survey-container.is-preview-step .preview-panel {
+    grid-template-columns: clamp(320px, 28vw, 370px) minmax(0, 1fr);
+  }
+
+  .survey-container.is-preview-step .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .survey-container.is-preview-step .form-group.full-width {
+    grid-column: 1 / -1;
+  }
 }
 
 /* Responsive */
