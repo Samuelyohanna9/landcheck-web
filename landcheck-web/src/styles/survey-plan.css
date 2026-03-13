@@ -562,10 +562,26 @@
 
 .workflow-inline-steps--stack {
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  overflow-x: hidden;
-  overflow-y: visible;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 0.24rem;
+  overflow: hidden;
+  padding-bottom: 0.08rem;
+}
+
+.workflow-inline-steps--stack .workflow-inline-step {
+  width: auto;
+  min-width: 0;
+  flex: 1 1 0;
+  padding: 0.2rem 0.34rem;
+}
+
+.workflow-inline-steps--stack .workflow-inline-step-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .workflow-inline-step {
@@ -2017,8 +2033,21 @@
   }
 
   .workflow-inline-step-label {
-    white-space: normal;
-    line-height: 1.1;
+    white-space: nowrap;
+    line-height: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .workflow-inline-steps--stack {
+    overflow-x: auto;
+    overflow-y: hidden;
+    justify-content: flex-start;
+  }
+
+  .workflow-inline-steps--stack .workflow-inline-step {
+    flex: 0 0 auto;
+    min-width: 120px;
   }
 
   .survey-container.has-workflow .form-section {
