@@ -215,10 +215,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 0.76rem;
   color: #022c22;
   background: linear-gradient(135deg, #34d399, #10b981);
+  line-height: 0;
+}
+
+.mode-card-icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .mode-card-cta {
