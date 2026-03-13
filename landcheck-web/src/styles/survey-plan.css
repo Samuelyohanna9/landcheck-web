@@ -1907,14 +1907,26 @@
 
 /* Responsive */
 @media (max-width: 1024px) {
+  .survey-container.is-preview-step {
+    overflow: auto;
+    min-height: 100dvh;
+  }
+
+  .survey-container.is-preview-step .survey-content {
+    overflow: auto;
+    padding: 0.5rem 0.6rem 0.75rem;
+  }
+
   .step-panel {
     grid-template-columns: 1fr;
     height: auto;
+    gap: 0.6rem;
   }
 
   .preview-panel,
   .export-panel {
     height: auto;
+    gap: 0.6rem;
   }
 
   .preview-panel .panel-left,
@@ -1925,10 +1937,16 @@
     overflow: visible;
   }
 
+  .panel-left,
+  .panel-right {
+    min-width: 0;
+    width: 100%;
+  }
+
   .survey-container.has-workflow .preview-panel .panel-right,
   .survey-container.has-workflow .export-panel .panel-right {
     order: 1;
-    min-height: 52vh;
+    min-height: 46vh;
   }
 
   .survey-container.has-workflow .preview-panel .panel-left,
@@ -1963,7 +1981,7 @@
 
 @media (max-width: 640px) {
   .survey-content {
-    padding: 0.6rem;
+    padding: 0.45rem;
   }
 
   .survey-header {
@@ -1994,6 +2012,36 @@
     grid-template-columns: 1fr;
   }
 
+  .mode-select-shell {
+    margin: 0.45rem auto;
+    padding: 0.72rem;
+  }
+
+  .mode-card {
+    border-radius: 16px;
+    padding: 0.9rem 0.75rem 0.72rem;
+  }
+
+  .mode-card h3 {
+    font-size: 1rem;
+    margin: 0.14rem 0 0.26rem;
+  }
+
+  .mode-card p {
+    font-size: 0.76rem;
+  }
+
+  .mode-card-icon-float {
+    width: 78px;
+    height: 78px;
+    border-radius: 16px;
+  }
+
+  .mode-svg {
+    width: 60px;
+    height: 60px;
+  }
+
   .action-bar {
     flex-direction: column;
   }
@@ -2007,51 +2055,70 @@
   }
 
   .preview-panel .panel-right {
-    min-height: 46vh;
+    min-height: 50dvh;
+  }
+
+  .subdivision-map-wrap {
+    margin: 0.45rem;
+  }
+
+  .subdivision-map-canvas,
+  .subdivision-svg {
+    min-height: 260px;
   }
 
   .workflow-inline-card {
-    padding: 0.3rem 0.38rem 0.34rem;
+    padding: 0.32rem 0.36rem;
   }
 
   .workflow-inline-title {
-    font-size: 0.68rem;
-    margin-bottom: 0.18rem;
+    font-size: 0.66rem;
+    margin-bottom: 0.14rem;
   }
 
   .workflow-inline-step {
-    padding: 0.18rem 0.28rem;
-    gap: 0.28rem;
-    font-size: 0.6rem;
+    padding: 0.2rem 0.2rem;
+    gap: 0.22rem;
+    font-size: 0.58rem;
   }
 
   .workflow-inline-step-no {
-    width: 14px;
-    height: 14px;
-    flex-basis: 14px;
-    font-size: 0.54rem;
+    width: 13px;
+    height: 13px;
+    flex-basis: 13px;
+    font-size: 0.5rem;
   }
 
   .workflow-inline-step-label {
-    white-space: nowrap;
-    line-height: 1;
+    white-space: normal;
+    line-height: 1.05;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-align: center;
   }
 
   .workflow-inline-steps--stack {
-    overflow-x: auto;
-    overflow-y: hidden;
-    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.2rem;
+    overflow: hidden;
+    justify-content: stretch;
   }
 
   .workflow-inline-steps--stack .workflow-inline-step {
-    flex: 0 0 auto;
-    min-width: 120px;
+    min-width: 0;
+    width: 100%;
+    flex: 1 1 auto;
+    justify-content: center;
   }
 
   .survey-container.has-workflow .form-section {
     padding: 0.56rem 0.58rem;
+  }
+
+  .survey-container.has-workflow .panel-left {
+    gap: 0.6rem;
+    padding-right: 0;
   }
 
   .survey-container.has-workflow .section-title {
@@ -2099,6 +2166,22 @@
 
   .survey-container.has-workflow .coord-table td {
     padding: 0.34rem 0.45rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .workflow-inline-steps--stack .workflow-inline-step {
+    padding: 0.18rem 0.12rem;
+    gap: 0.18rem;
+  }
+
+  .workflow-inline-step-label {
+    font-size: 0.54rem;
+  }
+
+  .panel-right,
+  .preview-panel .panel-right {
+    min-height: 46dvh;
   }
 }
 
