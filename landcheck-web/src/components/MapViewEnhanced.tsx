@@ -259,6 +259,37 @@ export default function MapViewEnhanced({
     ctrl.style.opacity = disabled ? "0.5" : "1";
   }, [disabled]);
 
+  // Keep map canvas resized when layout changes (mobile stacking/scroll scenarios)
+  useEffect(() => {
+    const map = mapRef.current;
+    const el = containerRef.current;
+    if (!map || !el) return;
+
+    const resizeNow = () => {
+      try {
+        map.resize();
+      } catch {
+        // no-op: map may be mid-dispose during route changes
+      }
+    };
+
+    const observer = new ResizeObserver(() => resizeNow());
+    observer.observe(el);
+
+    const onWindowResize = () => resizeNow();
+    window.addEventListener("resize", onWindowResize);
+
+    const t1 = window.setTimeout(resizeNow, 0);
+    const t2 = window.setTimeout(resizeNow, 180);
+
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.removeEventListener("resize", onWindowResize);
+      observer.disconnect();
+    };
+  }, []);
+
   // Update polygon and markers when coordinates change (from manual input)
   useEffect(() => {
     const map = mapRef.current;
