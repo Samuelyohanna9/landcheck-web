@@ -344,11 +344,12 @@
 .survey-container.is-preview-step .preview-panel {
   grid-template-columns: clamp(340px, 25vw, 400px) minmax(0, 1fr);
   gap: 0.7rem;
-  height: calc(100dvh - 12px);
+  height: calc(100dvh - 86px);
 }
 
 .export-panel {
-  grid-template-columns: 450px 1fr;
+  grid-template-columns: clamp(340px, 25vw, 400px) minmax(0, 1fr);
+  gap: 0.7rem;
 }
 
 .preview-panel .panel-right {
@@ -380,6 +381,13 @@
   flex-direction: column;
   gap: 1rem;
   overflow-y: auto;
+}
+
+.export-panel .panel-left {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.35rem;
+  scrollbar-gutter: stable;
 }
 
 .panel-right {
@@ -1538,8 +1546,8 @@
 .export-section {
   background: rgba(30, 41, 59, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 1.5rem;
+  border-radius: 10px;
+  padding: 0.8rem 0.8rem 0.7rem;
 }
 
 .section-desc {
@@ -1558,10 +1566,11 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1rem;
+  padding: 0.75rem;
   background: rgba(15, 23, 42, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
+  border-radius: 9px;
+  min-width: 0;
 }
 
 .export-icon {
@@ -1606,18 +1615,19 @@
 
 .export-info {
   flex: 1;
+  min-width: 0;
 }
 
 .export-info h4 {
-  margin: 0 0 0.25rem;
-  font-size: 0.9375rem;
+  margin: 0 0 0.2rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #f1f5f9;
 }
 
 .export-info p {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   color: #94a3b8;
 }
 
@@ -1629,12 +1639,12 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.625rem 1rem;
+  padding: 0.52rem 0.85rem;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   color: #e2e8f0;
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1672,6 +1682,21 @@
   border-width: 2px;
   border-color: rgba(148, 163, 184, 0.35);
   border-top-color: #e2e8f0;
+}
+
+.export-panel .panel-left::-webkit-scrollbar {
+  width: 9px;
+}
+
+.export-panel .panel-left::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.35);
+  border-radius: 999px;
+}
+
+.export-panel .panel-left::-webkit-scrollbar-thumb {
+  background: rgba(52, 211, 153, 0.45);
+  border-radius: 999px;
+  border: 2px solid rgba(15, 23, 42, 0.45);
 }
 
 @media (max-width: 1500px) {
