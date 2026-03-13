@@ -870,6 +870,41 @@
   box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
 }
 
+.subdivision-custom-areas-wrap {
+  margin-top: 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.32);
+  padding: 0.6rem 0.65rem;
+}
+
+.subdivision-custom-areas-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.55rem;
+  margin-bottom: 0.5rem;
+}
+
+.subdivision-custom-areas-head h5 {
+  margin: 0;
+  font-size: 0.79rem;
+  color: #dcfce7;
+  font-weight: 700;
+}
+
+.subdivision-custom-areas-head span {
+  font-size: 0.73rem;
+  color: #cbd5e1;
+}
+
+.subdivision-validation-error {
+  margin: 0.45rem 0 0;
+  color: #fecaca;
+  font-size: 0.74rem;
+}
+
 .subdivision-right-wrap {
   display: flex;
   flex-direction: column;
