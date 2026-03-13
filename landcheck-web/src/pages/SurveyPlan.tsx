@@ -300,7 +300,9 @@ export default function SurveyPlan() {
   const [latestSubdivisionBatchId, setLatestSubdivisionBatchId] = useState<number | null>(null);
   const [subdivisionDownloadBatchId, setSubdivisionDownloadBatchId] = useState<number | null>(null);
   const [subdivisionPreviewPanelTab, setSubdivisionPreviewPanelTab] = useState<"survey_plan" | "subdivision_lines">("subdivision_lines");
+  const [subdivisionDraggingBreakIndex, setSubdivisionDraggingBreakIndex] = useState<number | null>(null);
   const subdivisionLivePreviewTimerRef = useRef<number | null>(null);
+  const subdivisionSvgRef = useRef<SVGSVGElement | null>(null);
   const previewRequestId = useRef(0);
   const orthophotoRequestId = useRef(0);
   const topoRequestId = useRef(0);
@@ -1125,6 +1127,21 @@ export default function SurveyPlan() {
     };
   }, []);
 
+  const getSubdivisionBreakValueFromClientX = useCallback(
+    (clientX: number): number | null => {
+      const svg = subdivisionSvgRef.current;
+      if (!svg || !subdivisionSvgPreview) return null;
+      const rect = svg.getBoundingClientRect();
+      if (!Number.isFinite(rect.width) || rect.width <= 0) return null;
+      return clamp01((clientX - rect.left) / rect.width);
+    },
+    [subdivisionSvgPreview]
+  );
+
+  const stopSubdivisionBreakDrag = useCallback(() => {
+    setSubdivisionDraggingBreakIndex(null);
+  }, []);
+
   const applySubdivisionPreviewResponse = useCallback((data: SubdivisionPreviewData) => {
     setSubdivisionPreview(data);
 
@@ -1358,6 +1375,51 @@ export default function SurveyPlan() {
     },
     [scheduleSubdivisionLivePreview]
   );
+
+  const startSubdivisionBreakDrag = useCallback(
+    (index: number, clientX: number) => {
+      if (subdivisionMethod !== "by_fraction") return;
+      setSubdivisionDraggingBreakIndex(index);
+      const nextBreak = getSubdivisionBreakValueFromClientX(clientX);
+      if (nextBreak !== null) {
+        updateSubdivisionFractionBreak(index, nextBreak);
+      }
+    },
+    [subdivisionMethod, getSubdivisionBreakValueFromClientX, updateSubdivisionFractionBreak]
+  );
+
+  useEffect(() => {
+    if (subdivisionDraggingBreakIndex === null) return;
+    if (subdivisionMethod !== "by_fraction") {
+      setSubdivisionDraggingBreakIndex(null);
+      return;
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const nextBreak = getSubdivisionBreakValueFromClientX(event.clientX);
+      if (nextBreak === null) return;
+      updateSubdivisionFractionBreak(subdivisionDraggingBreakIndex, nextBreak);
+    };
+
+    const handlePointerEnd = () => {
+      setSubdivisionDraggingBreakIndex(null);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
+    };
+  }, [
+    subdivisionDraggingBreakIndex,
+    subdivisionMethod,
+    getSubdivisionBreakValueFromClientX,
+    updateSubdivisionFractionBreak,
+  ]);
 
   const downloadSubdivisionBatch = async (batchId: number) => {
     if (subdivisionDownloadBatchId !== null) return;
@@ -2058,7 +2120,7 @@ export default function SurveyPlan() {
                         placeholder="e.g. 2, 3, 5"
                       />
                       <span className="scale-helper">
-                        Example `2,3,5` means 20%, 30%, 50%. Use sliders below to edit division lines live.
+                        Example `2,3,5` means 20%, 30%, 50%. Drag division lines directly in Subdivision Line Preview.
                       </span>
                     </div>
                   ) : (
@@ -2122,24 +2184,10 @@ export default function SurveyPlan() {
                   </div>
                 </div>
 
-                {subdivisionMethod === "by_fraction" && subdivisionFractionBreaksEffective.length > 0 && (
-                  <div className="subdivision-fraction-lines-wrap">
-                    <h5>Division Lines (Live)</h5>
-                    {subdivisionFractionBreaksEffective.map((value, idx) => (
-                      <div key={`frac_line_${idx}`} className="subdivision-fraction-line-item">
-                        <label>Line {idx + 1} position</label>
-                        <input
-                          type="range"
-                          min={2}
-                          max={98}
-                          step={0.1}
-                          value={Number((value * 100).toFixed(2))}
-                          onChange={(e) => updateSubdivisionFractionBreak(idx, Number.parseFloat(e.target.value) / 100)}
-                        />
-                        <span>{(value * 100).toFixed(1)}%</span>
-                      </div>
-                    ))}
-                  </div>
+                {subdivisionMethod === "by_fraction" && (
+                  <p className="subdivision-note subdivision-break-hint">
+                    Division-line editing is now on-canvas: open <strong>Subdivision Line Preview</strong> and drag the vertical guides.
+                  </p>
                 )}
 
                 {subdivisionMethod === "by_custom_area" && subdivisionCustomLotCount >= 2 && (
@@ -2204,7 +2252,10 @@ export default function SurveyPlan() {
                 <div className="subdivision-action-row">
                   <button
                     className="btn-secondary"
-                    onClick={() => previewSubdivision(false)}
+                    onClick={() => {
+                      setSubdivisionPreviewPanelTab("subdivision_lines");
+                      previewSubdivision(false);
+                    }}
                     disabled={!plotId || subdivisionPreviewLoading || subdivisionApplyLoading}
                   >
                     {subdivisionPreviewLoading ? (
@@ -2214,20 +2265,6 @@ export default function SurveyPlan() {
                       </>
                     ) : (
                       "Preview Split"
-                    )}
-                  </button>
-                  <button
-                    className="btn-primary"
-                    onClick={applySubdivision}
-                    disabled={!plotId || subdivisionApplyLoading || subdivisionPreviewLoading}
-                  >
-                    {subdivisionApplyLoading ? (
-                      <>
-                        <span className="spinner" />
-                        Generating...
-                      </>
-                    ) : (
-                      "Generate Batch"
                     )}
                   </button>
                 </div>
@@ -2246,7 +2283,7 @@ export default function SurveyPlan() {
                       {subdivisionMethod === "by_area"
                         ? `${(parsePositiveFloat(subdivisionTargetAreaDraft) || 0).toLocaleString()} sqm per lot (approx).`
                         : subdivisionMethod === "by_fraction"
-                        ? "Uses your fractions and line sliders to control each lot share."
+                        ? "Uses your fractions and draggable preview guides to control each lot share."
                         : subdivisionMethod === "by_custom_area"
                         ? "Uses exact per-lot areas you enter. Total must match mother parcel area."
                         : "Not used in by-count mode; lots are balanced by area."}
@@ -2358,6 +2395,20 @@ export default function SurveyPlan() {
                   Back to Mother Parcel
                 </button>
                 <button
+                  className="btn-secondary"
+                  onClick={applySubdivision}
+                  disabled={!plotId || subdivisionApplyLoading || subdivisionPreviewLoading}
+                >
+                  {subdivisionApplyLoading ? (
+                    <>
+                      <span className="spinner" />
+                      Generating...
+                    </>
+                  ) : (
+                    "Generate Batch"
+                  )}
+                </button>
+                <button
                   className="btn-primary"
                   onClick={() => setCurrentStep(3)}
                   disabled={subdivisionBatches.length === 0}
@@ -2376,6 +2427,8 @@ export default function SurveyPlan() {
                   <span>
                     {subdivisionPreviewPanelTab === "survey_plan"
                       ? "Review the rendered survey plan before exporting."
+                      : subdivisionMethod === "by_fraction"
+                      ? "Drag vertical guides to adjust lot fractions live."
                       : "Each lot boundary + area label"}
                   </span>
                   <div className="subdivision-right-tabs" role="tablist" aria-label="Subdivision preview tabs">
@@ -2434,10 +2487,13 @@ export default function SurveyPlan() {
                     {subdivisionSvgPreview && (
                       <div className="subdivision-svg-wrap">
                         <svg
+                          ref={subdivisionSvgRef}
                           viewBox={`0 0 ${subdivisionSvgPreview.width} ${subdivisionSvgPreview.height}`}
                           className="subdivision-svg"
                           role="img"
                           aria-label="Subdivision lot preview"
+                          onPointerUp={stopSubdivisionBreakDrag}
+                          onPointerCancel={stopSubdivisionBreakDrag}
                         >
                           <rect x="0" y="0" width={subdivisionSvgPreview.width} height={subdivisionSvgPreview.height} fill="#0f172a" />
                           <g>
@@ -2451,6 +2507,51 @@ export default function SurveyPlan() {
                           />
                             ))}
                           </g>
+                          {subdivisionMethod === "by_fraction" && subdivisionFractionBreaksEffective.length > 0 && (
+                            <g>
+                              {subdivisionFractionBreaksEffective.map((value, idx) => {
+                                const x = Math.max(18, Math.min(subdivisionSvgPreview.width - 18, value * subdivisionSvgPreview.width));
+                                const isActive = subdivisionDraggingBreakIndex === idx;
+                                return (
+                                  <g key={`subdiv_guide_${idx}`} className={`subdivision-break-guide${isActive ? " active" : ""}`}>
+                                    <line
+                                      x1={x}
+                                      y1={12}
+                                      x2={x}
+                                      y2={subdivisionSvgPreview.height - 12}
+                                      className="subdivision-break-hitline"
+                                      onPointerDown={(event) => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        startSubdivisionBreakDrag(idx, event.clientX);
+                                      }}
+                                    />
+                                    <line
+                                      x1={x}
+                                      y1={12}
+                                      x2={x}
+                                      y2={subdivisionSvgPreview.height - 12}
+                                      className="subdivision-break-line"
+                                    />
+                                    <circle
+                                      cx={x}
+                                      cy={20}
+                                      r={isActive ? 7 : 6}
+                                      className="subdivision-break-handle"
+                                      onPointerDown={(event) => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        startSubdivisionBreakDrag(idx, event.clientX);
+                                      }}
+                                    />
+                                    <text x={x} y={36} textAnchor="middle" className="subdivision-break-value">
+                                      {(value * 100).toFixed(1)}%
+                                    </text>
+                                  </g>
+                                );
+                              })}
+                            </g>
+                          )}
                           <g>
                         {subdivisionSvgPreview.plots.map((plot) => (
                           <text

@@ -774,6 +774,10 @@
   font-size: 0.75rem;
 }
 
+.subdivision-break-hint {
+  margin-top: 0.65rem;
+}
+
 .subdivision-batch-wrap {
   margin-top: 0.9rem;
 }
@@ -996,6 +1000,46 @@
   stroke: rgba(2, 6, 23, 0.9);
   stroke-width: 2px;
   stroke-linejoin: round;
+}
+
+.subdivision-break-hitline {
+  stroke: transparent;
+  stroke-width: 14px;
+  cursor: ew-resize;
+}
+
+.subdivision-break-line {
+  stroke: rgba(52, 211, 153, 0.55);
+  stroke-width: 1.8px;
+  stroke-dasharray: 6 4;
+  pointer-events: none;
+}
+
+.subdivision-break-handle {
+  fill: #34d399;
+  stroke: #0f172a;
+  stroke-width: 2px;
+  cursor: ew-resize;
+}
+
+.subdivision-break-value {
+  fill: #86efac;
+  font-size: 10px;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: rgba(2, 6, 23, 0.92);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.subdivision-break-guide.active .subdivision-break-line {
+  stroke: #6ee7b7;
+  stroke-width: 2.2px;
+}
+
+.subdivision-break-guide.active .subdivision-break-handle {
+  fill: #6ee7b7;
 }
 
 .subdivision-legend {
