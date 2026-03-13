@@ -1917,14 +1917,13 @@
     padding: 0.5rem 0.6rem 0.75rem;
   }
 
-  .step-panel {
-    grid-template-columns: 1fr;
-    height: auto;
-    gap: 0.6rem;
-  }
-
+  .step-panel,
   .preview-panel,
   .export-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    grid-template-columns: 1fr !important;
     height: auto;
     gap: 0.6rem;
   }
@@ -1944,22 +1943,16 @@
   }
 
   .survey-container.has-workflow .preview-panel .panel-right,
-  .survey-container.has-workflow .export-panel .panel-right {
+  .survey-container.has-workflow .export-panel .panel-right,
+  .survey-container.has-workflow .step-panel .panel-right {
     order: 2;
     min-height: 46vh;
   }
 
   .survey-container.has-workflow .preview-panel .panel-left,
-  .survey-container.has-workflow .export-panel .panel-left {
-    order: 1;
-  }
-
+  .survey-container.has-workflow .export-panel .panel-left,
   .survey-container.has-workflow .step-panel .panel-left {
     order: 1;
-  }
-
-  .survey-container.has-workflow .step-panel .panel-right {
-    order: 2;
   }
 
   .panel-right {
@@ -1990,6 +1983,7 @@
 @media (max-width: 640px) {
   .survey-content {
     padding: 0.45rem;
+    overflow-x: hidden;
   }
 
   .survey-header {
