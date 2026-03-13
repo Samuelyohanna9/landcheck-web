@@ -155,8 +155,7 @@
 }
 
 .survey-container.is-preview-step .survey-header {
-  padding: 0.36rem 0.78rem;
-  min-height: 44px;
+  display: none;
 }
 
 .survey-container.is-preview-step .survey-title {
@@ -293,7 +292,7 @@
 .survey-container.is-preview-step .preview-panel {
   grid-template-columns: clamp(300px, 23vw, 340px) minmax(0, 1fr);
   gap: 0.7rem;
-  height: calc(100dvh - 62px);
+  height: calc(100dvh - 12px);
 }
 
 .export-panel {
@@ -313,7 +312,9 @@
 }
 
 .survey-container.is-preview-step .preview-panel .panel-left {
-  overflow: visible;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 100%;
   padding-right: 0;
 }
 
