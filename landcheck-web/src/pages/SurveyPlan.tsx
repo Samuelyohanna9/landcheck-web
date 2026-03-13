@@ -1820,16 +1820,23 @@ export default function SurveyPlan() {
                   setCurrentStep(1);
                 }}
               >
-                <div className="mode-card-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 5h10a2 2 0 0 1 2 2v12H6a2 2 0 0 0-2 2z" />
-                    <path d="M16 7h4v12a2 2 0 0 1-2 2h-8" />
-                    <path d="M8 10h6M8 13h6M8 16h4" />
-                  </svg>
+                <div className="mode-card-icon-wrap" aria-hidden="true">
+                  <div className="mode-card-icon-float">
+                    <svg className="mode-svg survey" viewBox="0 0 120 120" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="22" y="16" width="76" height="88" rx="10" strokeWidth="4" />
+                      <path d="M80 16v22h18" strokeWidth="4" />
+                      <path d="M36 56l14-8 11 6 16-9" strokeWidth="4" />
+                      <path d="M36 70h48" strokeWidth="3.5" />
+                      <path d="M36 82h36" strokeWidth="3.5" />
+                      <circle cx="50" cy="48" r="3.6" fill="currentColor" stroke="none" />
+                      <circle cx="61" cy="54" r="3.6" fill="currentColor" stroke="none" />
+                      <circle cx="77" cy="45" r="3.6" fill="currentColor" stroke="none" />
+                    </svg>
+                  </div>
                 </div>
                 <h3>Survey Plan Production</h3>
                 <p>Create one parcel plan, preview map layout, and export all standard documents.</p>
-                <span className="mode-card-cta">Use Survey Plan Production</span>
+                <span className="mode-card-cta">Open Workflow</span>
               </button>
               <button
                 type="button"
@@ -1841,16 +1848,20 @@ export default function SurveyPlan() {
                   setCurrentStep(1);
                 }}
               >
-                <div className="mode-card-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 3h18v18H3z" />
-                    <path d="M3 12h18M12 3v18" />
-                    <path d="M3 8h9M12 16h9" />
-                  </svg>
+                <div className="mode-card-icon-wrap" aria-hidden="true">
+                  <div className="mode-card-icon-float">
+                    <svg className="mode-svg subdivision" viewBox="0 0 120 120" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 30l24-14 44 8 14 30-12 38-42 16-30-20z" strokeWidth="4" />
+                      <path d="M44 16v76" strokeWidth="3.5" />
+                      <path d="M72 22v80" strokeWidth="3.5" />
+                      <path d="M20 60h82" strokeWidth="3.5" />
+                      <path d="M32 42h16M56 42h16M32 78h16M56 78h16" strokeWidth="3" />
+                    </svg>
+                  </div>
                 </div>
                 <h3>Plot Subdivision</h3>
                 <p>Split a mother parcel into multiple lots, preview lot outputs, then export batch survey plans.</p>
-                <span className="mode-card-cta">Use Plot Subdivision</span>
+                <span className="mode-card-cta">Open Workflow</span>
               </button>
             </div>
           </div>
