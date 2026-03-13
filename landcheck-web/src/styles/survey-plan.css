@@ -155,11 +155,12 @@
 }
 
 .survey-container.is-preview-step .survey-header {
-  padding: 0.5rem 0.95rem;
+  padding: 0.36rem 0.78rem;
+  min-height: 44px;
 }
 
 .survey-container.is-preview-step .survey-title {
-  font-size: 1.02rem;
+  display: none;
 }
 
 .survey-container.is-preview-step .back-btn,
@@ -188,7 +189,7 @@
 }
 
 .survey-container.is-preview-step .survey-content {
-  padding: 0.72rem 0.9rem 0.85rem;
+  padding: 0.48rem 0.72rem 0.62rem;
   overflow: hidden;
 }
 
@@ -292,7 +293,7 @@
 .survey-container.is-preview-step .preview-panel {
   grid-template-columns: clamp(300px, 23vw, 340px) minmax(0, 1fr);
   gap: 0.7rem;
-  height: calc(100dvh - 120px);
+  height: calc(100dvh - 62px);
 }
 
 .export-panel {
@@ -312,7 +313,7 @@
 }
 
 .survey-container.is-preview-step .preview-panel .panel-left {
-  overflow: hidden;
+  overflow: visible;
   padding-right: 0;
 }
 
@@ -458,6 +459,71 @@
   border-radius: 10px;
 }
 
+.workflow-inline-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.45);
+  border-radius: 10px;
+  padding: 0.45rem 0.55rem;
+}
+
+.workflow-inline-title {
+  margin: 0 0 0.32rem;
+  color: #d1fae5;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.workflow-inline-steps {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.3rem;
+  overflow-x: auto;
+  padding-bottom: 0.05rem;
+}
+
+.workflow-inline-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  flex: 0 0 auto;
+  padding: 0.18rem 0.36rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(15, 23, 42, 0.45);
+  color: #94a3b8;
+  font-size: 0.66rem;
+  line-height: 1;
+}
+
+.workflow-inline-step.active {
+  border-color: rgba(16, 185, 129, 0.55);
+  color: #d1fae5;
+}
+
+.workflow-inline-step.completed {
+  border-color: rgba(52, 211, 153, 0.55);
+  color: #6ee7b7;
+}
+
+.workflow-inline-step-no {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 41, 59, 0.75);
+  color: inherit;
+  font-size: 0.58rem;
+  font-weight: 700;
+}
+
+.workflow-inline-step-label {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
 .section-title {
   font-size: 1rem;
   font-weight: 600;
@@ -473,6 +539,12 @@
 .survey-container.is-preview-step .section-desc {
   margin: 0 0 0.52rem;
   font-size: 0.74rem;
+}
+
+.survey-container.is-preview-step .subdivision-section .section-desc,
+.survey-container.is-preview-step .scale-helper,
+.survey-container.is-preview-step .paper-size-hint {
+  display: none;
 }
 
 .form-grid {
@@ -551,7 +623,7 @@
 }
 
 .survey-container.is-preview-step .form-group textarea {
-  min-height: 56px;
+  min-height: 44px;
   line-height: 1.26;
 }
 
@@ -1381,8 +1453,8 @@
 
 .survey-container.is-preview-step .action-bar {
   gap: 0.48rem;
-  padding-top: 0.42rem;
-  margin-top: 0.42rem;
+  padding-top: 0.26rem;
+  margin-top: 0.28rem;
 }
 
 /* Export Section */
