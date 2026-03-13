@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import "../styles/survey-preview.css";
 
 type PreviewType = "survey" | "orthophoto" | "topomap";
@@ -56,6 +56,11 @@ export default function SurveyPreview({
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const pendingAutoFitRef = useRef(true);
+
+  const MIN_ZOOM = 25;
+  const MAX_ZOOM = 800;
 
   const zoomScale = zoom / 100;
   const displayZoom = Math.round(zoomScale * 100);
@@ -91,23 +96,42 @@ export default function SurveyPreview({
   const isLoading = getCurrentLoading();
   const onlySurveyMode = allowedPreviewTypes.length === 1 && allowedPreviewTypes[0] === "survey";
 
-  // Reset position when changing preview type or paper size
+  const applyAutoFitZoom = useCallback(() => {
+    const container = containerRef.current;
+    const img = imageRef.current;
+    if (!container || !img) return;
+    const containerWidth = Math.max(1, container.clientWidth - 16);
+    const containerHeight = Math.max(1, container.clientHeight - 16);
+    const naturalWidth = img.naturalWidth || img.clientWidth;
+    const naturalHeight = img.naturalHeight || img.clientHeight;
+    if (!naturalWidth || !naturalHeight) return;
+
+    const fitScale = Math.min(containerWidth / naturalWidth, containerHeight / naturalHeight);
+    const fitPercent = Math.round(Math.max(1, fitScale) * 100);
+    const clamped = Math.max(100, Math.min(fitPercent, MAX_ZOOM));
+    setZoom(clamped);
+    setPosition({ x: 0, y: 0 });
+  }, []);
+
+  // Reset position + trigger auto-fit when changing preview type / paper / source
   useEffect(() => {
     setPosition({ x: 0, y: 0 });
-    setZoom(100);
-  }, [previewType, paperSize]);
+    pendingAutoFitRef.current = true;
+  }, [previewType, paperSize, currentUrl]);
 
   const handleZoomIn = () => {
-    setZoom((prev) => Math.min(prev + 25, 300));
+    pendingAutoFitRef.current = false;
+    setZoom((prev) => Math.min(prev + 25, MAX_ZOOM));
   };
 
   const handleZoomOut = () => {
-    setZoom((prev) => Math.max(prev - 25, 50));
+    pendingAutoFitRef.current = false;
+    setZoom((prev) => Math.max(prev - 25, MIN_ZOOM));
   };
 
   const handleResetZoom = () => {
-    setZoom(100);
-    setPosition({ x: 0, y: 0 });
+    pendingAutoFitRef.current = false;
+    applyAutoFitZoom();
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -132,11 +156,18 @@ export default function SurveyPreview({
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
+    pendingAutoFitRef.current = false;
     if (e.deltaY < 0) {
-      setZoom((prev) => Math.min(prev + 10, 300));
+      setZoom((prev) => Math.min(prev + 10, MAX_ZOOM));
     } else {
-      setZoom((prev) => Math.max(prev - 10, 50));
+      setZoom((prev) => Math.max(prev - 10, MIN_ZOOM));
     }
+  };
+
+  const handlePreviewImageLoad = () => {
+    if (!pendingAutoFitRef.current) return;
+    applyAutoFitZoom();
+    pendingAutoFitRef.current = false;
   };
 
   const getPreviewLabel = () => {
@@ -352,12 +383,14 @@ export default function SurveyPreview({
             }}
           >
             <img
+              ref={imageRef}
               src={currentUrl}
               alt={`${getPreviewLabel()} Preview`}
               className="preview-image"
               style={{
                 transform: `scale(${zoomScale})`,
               }}
+              onLoad={handlePreviewImageLoad}
               draggable={false}
             />
           </div>
