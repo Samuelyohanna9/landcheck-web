@@ -485,14 +485,21 @@
   .preview-ribbon {
     gap: 0.2rem;
     padding: 0.14rem 0.2rem;
+    flex-wrap: wrap;
+    overflow-x: hidden;
   }
 
   .ribbon-group {
-    flex: 0 0 auto;
-    min-width: auto;
-    justify-content: flex-start;
+    flex: 1 1 160px;
+    min-width: 0;
+    justify-content: space-between;
     gap: 0.2rem;
     padding: 0.12rem 0.18rem;
+  }
+
+  .ribbon-select {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .preview-toggle {
