@@ -610,6 +610,7 @@ export default function SurveyPlan() {
 
     const polygons: any[] = [];
     const labels: any[] = [];
+    const stations: any[] = [];
 
     subdivisionPreview.plots.forEach((plot, idx) => {
       const ring = (plot.geometry?.coordinates?.[0] || [])
@@ -642,6 +643,20 @@ export default function SurveyPlan() {
           coordinates: [Number(centroid[0]), Number(centroid[1])],
         },
       });
+
+      cleanRing.slice(0, -1).forEach((coord, stationIdx) => {
+        stations.push({
+          type: "Feature",
+          properties: {
+            station: getStationName(stationIdx),
+            lotNo,
+          },
+          geometry: {
+            type: "Point",
+            coordinates: [Number(coord[0]), Number(coord[1])],
+          },
+        });
+      });
     });
 
     if (!polygons.length) return null;
@@ -653,6 +668,10 @@ export default function SurveyPlan() {
       labels: {
         type: "FeatureCollection",
         features: labels,
+      },
+      stations: {
+        type: "FeatureCollection",
+        features: stations,
       },
     };
   }, [subdivisionPreview, displayedSubdivisionLotNames]);
@@ -760,6 +779,40 @@ export default function SurveyPlan() {
         },
       });
 
+      map.addSource("subdivision-stations-src", {
+        type: "geojson",
+        data: (subdivisionMapPreviewData?.stations || { type: "FeatureCollection", features: [] }) as any,
+      });
+      map.addLayer({
+        id: "subdivision-stations-circle",
+        type: "circle",
+        source: "subdivision-stations-src",
+        paint: {
+          "circle-radius": 3.2,
+          "circle-color": "#ffffff",
+          "circle-stroke-color": "#0f172a",
+          "circle-stroke-width": 1.0,
+        },
+      });
+      map.addLayer({
+        id: "subdivision-stations-label",
+        type: "symbol",
+        source: "subdivision-stations-src",
+        layout: {
+          "text-field": ["get", "station"],
+          "text-size": 10,
+          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+          "text-offset": [0, -1.1],
+          "text-anchor": "bottom",
+          "text-allow-overlap": true,
+        },
+        paint: {
+          "text-color": "#f8fafc",
+          "text-halo-color": "#0f172a",
+          "text-halo-width": 1.0,
+        },
+      });
+
       if (subdivisionMapPreviewData?.polygons) {
         fitSubdivisionMapToData(map, subdivisionMapPreviewData.polygons);
       }
@@ -779,12 +832,16 @@ export default function SurveyPlan() {
     if (!map || !subdivisionMapReadyRef.current) return;
     const polySource = map.getSource("subdivision-lots-src") as mapboxgl.GeoJSONSource | undefined;
     const labelSource = map.getSource("subdivision-lots-labels-src") as mapboxgl.GeoJSONSource | undefined;
+    const stationSource = map.getSource("subdivision-stations-src") as mapboxgl.GeoJSONSource | undefined;
     if (polySource && subdivisionMapPreviewData?.polygons) {
       polySource.setData(subdivisionMapPreviewData.polygons as any);
       fitSubdivisionMapToData(map, subdivisionMapPreviewData.polygons);
     }
     if (labelSource && subdivisionMapPreviewData?.labels) {
       labelSource.setData(subdivisionMapPreviewData.labels as any);
+    }
+    if (stationSource && subdivisionMapPreviewData?.stations) {
+      stationSource.setData(subdivisionMapPreviewData.stations as any);
     }
   }, [subdivisionMapPreviewData, fitSubdivisionMapToData]);
 
