@@ -37,7 +37,7 @@ type PlotMeta = {
   adamawa_disclaimer_text: string;
 };
 
-type SubdivisionMethod = "by_count" | "by_area" | "by_fraction";
+type SubdivisionMethod = "by_count" | "by_area" | "by_fraction" | "by_custom_area";
 
 type SubdivisionPreviewPlot = {
   index: number;
@@ -58,6 +58,7 @@ type SubdivisionPreviewData = {
   orientation_deg?: number;
   fraction_weights?: number[] | null;
   fraction_breaks?: number[] | null;
+  custom_areas_m2?: number[] | null;
   total_area_m2: number;
   derived_total_area_m2: number;
   area_imbalance_m2: number;
@@ -284,6 +285,9 @@ export default function SurveyPlan() {
   const [subdivisionTargetAreaDraft, setSubdivisionTargetAreaDraft] = useState("");
   const [subdivisionFractionDraft, setSubdivisionFractionDraft] = useState("1, 1");
   const [subdivisionFractionBreaks, setSubdivisionFractionBreaks] = useState<number[]>([0.5]);
+  const [subdivisionCustomAreaDrafts, setSubdivisionCustomAreaDrafts] = useState<string[]>([]);
+  const [subdivisionParentAreaM2, setSubdivisionParentAreaM2] = useState<number | null>(null);
+  const [subdivisionParentAreaLoading, setSubdivisionParentAreaLoading] = useState(false);
   const [subdivisionOrientationDraft, setSubdivisionOrientationDraft] = useState("0");
   const [subdivisionLotPrefix, setSubdivisionLotPrefix] = useState("LOT");
   const [subdivisionEstateName, setSubdivisionEstateName] = useState("");
@@ -487,6 +491,26 @@ export default function SurveyPlan() {
     return [];
   }, [subdivisionFractionBreaksEffective, subdivisionFractionDraft]);
 
+  const subdivisionCustomLotCount = useMemo(
+    () => parsePositiveInt(subdivisionCountDraft) ?? 0,
+    [subdivisionCountDraft]
+  );
+
+  const subdivisionCustomAreasParsed = useMemo(
+    () => subdivisionCustomAreaDrafts.map((item) => parsePositiveFloat(item) ?? 0),
+    [subdivisionCustomAreaDrafts]
+  );
+
+  const subdivisionCustomAllocatedM2 = useMemo(
+    () => subdivisionCustomAreasParsed.reduce((sum, value) => sum + value, 0),
+    [subdivisionCustomAreasParsed]
+  );
+
+  const subdivisionCustomRemainingM2 = useMemo(() => {
+    if (!Number.isFinite(Number(subdivisionParentAreaM2))) return null;
+    return Number(subdivisionParentAreaM2) - subdivisionCustomAllocatedM2;
+  }, [subdivisionParentAreaM2, subdivisionCustomAllocatedM2]);
+
   const subdivisionSvgPreview = useMemo(() => {
     if (!subdivisionPreview?.plots?.length) return null;
 
@@ -657,6 +681,8 @@ export default function SurveyPlan() {
       setSubdivisionLotNamesDraft([]);
       setSubdivisionFractionDraft("1, 1");
       setSubdivisionFractionBreaks([0.5]);
+      setSubdivisionCustomAreaDrafts([]);
+      setSubdivisionParentAreaM2(null);
       setSubdivisionBatches([]);
       setLatestSubdivisionBatchId(null);
 
@@ -892,6 +918,9 @@ export default function SurveyPlan() {
     setSubdivisionTargetAreaDraft("");
     setSubdivisionFractionDraft("1, 1");
     setSubdivisionFractionBreaks([0.5]);
+    setSubdivisionCustomAreaDrafts([]);
+    setSubdivisionParentAreaM2(null);
+    setSubdivisionParentAreaLoading(false);
     setSubdivisionOrientationDraft("0");
     setSubdivisionLotPrefix("LOT");
     setSubdivisionEstateName("");
@@ -1046,6 +1075,49 @@ export default function SurveyPlan() {
   }, [plotId, currentStep, loadSubdivisionBatches]);
 
   useEffect(() => {
+    if (!plotId || workflowMode !== "subdivision" || currentStep < 2) return;
+    let cancelled = false;
+    setSubdivisionParentAreaLoading(true);
+    api
+      .get(`/plots/${plotId}/report`)
+      .then((res) => {
+        if (cancelled) return;
+        const area = Number(res?.data?.area_m2);
+        setSubdivisionParentAreaM2(Number.isFinite(area) && area > 0 ? area : null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSubdivisionParentAreaM2(null);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setSubdivisionParentAreaLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [plotId, workflowMode, currentStep]);
+
+  useEffect(() => {
+    if (subdivisionMethod !== "by_custom_area") return;
+    const count = parsePositiveInt(subdivisionCountDraft) ?? 0;
+    if (count < 2) return;
+
+    setSubdivisionCustomAreaDrafts((prev) =>
+      Array.from({ length: count }, (_, idx) => prev[idx] ?? "")
+    );
+    setSubdivisionLotNamesDraft((prev) =>
+      Array.from({ length: count }, (_, idx) => {
+        const existing = (prev[idx] || "").trim();
+        if (existing) return existing;
+        const prefix = (subdivisionLotPrefix || "LOT").trim().toUpperCase() || "LOT";
+        return `${prefix}-${String(idx + 1).padStart(3, "0")}`;
+      })
+    );
+  }, [subdivisionMethod, subdivisionCountDraft, subdivisionLotPrefix]);
+
+  useEffect(() => {
     return () => {
       if (subdivisionLivePreviewTimerRef.current !== null) {
         window.clearTimeout(subdivisionLivePreviewTimerRef.current);
@@ -1066,6 +1138,11 @@ export default function SurveyPlan() {
       if (apiWeights.length >= 2) {
         setSubdivisionFractionDraft(formatWeightsDraft(apiWeights));
       }
+    }
+
+    if (Array.isArray(data.custom_areas_m2) && data.custom_areas_m2.length >= 2) {
+      setSubdivisionCustomAreaDrafts(data.custom_areas_m2.map((value) => Number(value).toFixed(2)));
+      setSubdivisionCountDraft(String(data.custom_areas_m2.length));
     }
 
     if (Array.isArray(data.plots) && data.plots.length) {
@@ -1115,6 +1192,34 @@ export default function SurveyPlan() {
         payload.split_count = effectiveWeights.length;
       }
 
+      if (subdivisionMethod === "by_custom_area") {
+        if (count === null || count < 2) {
+          if (!silent) toast.error("Set number of lots to 2 or more.");
+          return null;
+        }
+        const customAreas = Array.from({ length: count }, (_, idx) => parsePositiveFloat(subdivisionCustomAreaDrafts[idx] || ""));
+        if (customAreas.some((value) => value === null || (value as number) <= 0)) {
+          if (!silent) toast.error("Enter a valid positive area for each lot.");
+          return null;
+        }
+        const areaValues = customAreas as number[];
+        const allocated = areaValues.reduce((sum, value) => sum + value, 0);
+        if (Number.isFinite(Number(subdivisionParentAreaM2)) && Number(subdivisionParentAreaM2) > 0) {
+          const parentArea = Number(subdivisionParentAreaM2);
+          const tolerance = 0.01;
+          if (allocated > parentArea + tolerance) {
+            if (!silent) toast.error(`Custom areas exceed mother parcel by ${(allocated - parentArea).toFixed(2)} sqm.`);
+            return null;
+          }
+          if (allocated < parentArea - tolerance) {
+            if (!silent) toast.error(`Custom areas are short by ${(parentArea - allocated).toFixed(2)} sqm. Allocate full area.`);
+            return null;
+          }
+        }
+        payload.custom_areas_m2 = areaValues;
+        payload.split_count = count;
+      }
+
       const lotNames = subdivisionLotNamesDraft.map((value) => String(value || "").trim());
       if (lotNames.some((value) => value.length > 0)) {
         payload.lot_names = lotNames;
@@ -1131,6 +1236,8 @@ export default function SurveyPlan() {
       subdivisionMethod,
       subdivisionFractionBreaksEffective,
       subdivisionFractionWeightsEffective,
+      subdivisionCustomAreaDrafts,
+      subdivisionParentAreaM2,
       subdivisionLotNamesDraft,
     ]
   );
@@ -1205,6 +1312,14 @@ export default function SurveyPlan() {
 
   const updateSubdivisionLotName = useCallback((index: number, value: string) => {
     setSubdivisionLotNamesDraft((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+  }, []);
+
+  const updateSubdivisionCustomAreaDraft = useCallback((index: number, value: string) => {
+    setSubdivisionCustomAreaDrafts((prev) => {
       const next = [...prev];
       next[index] = value;
       return next;
@@ -1889,11 +2004,19 @@ export default function SurveyPlan() {
                           }
                           setSubdivisionFractionDraft(formatWeightsDraft(weights));
                         }
+                        if (nextMethod === "by_custom_area") {
+                          const fallbackCount = Math.max(2, parsePositiveInt(subdivisionCountDraft) ?? subdivisionPreview?.resolved_count ?? 2);
+                          setSubdivisionCountDraft(String(fallbackCount));
+                          setSubdivisionCustomAreaDrafts((prev) =>
+                            Array.from({ length: fallbackCount }, (_, idx) => prev[idx] ?? "")
+                          );
+                        }
                       }}
                     >
                       <option value="by_count">Split by number of plots</option>
                       <option value="by_area">Split by target plot area (sqm)</option>
                       <option value="by_fraction">Split by fractions</option>
+                      <option value="by_custom_area">Split by custom lot areas</option>
                     </select>
                   </div>
                   {subdivisionMethod === "by_count" ? (
@@ -1919,7 +2042,7 @@ export default function SurveyPlan() {
                         placeholder="e.g. 450"
                       />
                     </div>
-                  ) : (
+                  ) : subdivisionMethod === "by_fraction" ? (
                     <div className="form-group full-width">
                       <label>Fractions (comma separated)</label>
                       <input
@@ -1938,6 +2061,38 @@ export default function SurveyPlan() {
                         Example `2,3,5` means 20%, 30%, 50%. Use sliders below to edit division lines live.
                       </span>
                     </div>
+                  ) : (
+                    <>
+                      <div className="form-group">
+                        <label>Number of Lots</label>
+                        <input
+                          type="number"
+                          min={2}
+                          max={500}
+                          value={subdivisionCountDraft}
+                          onChange={(e) => setSubdivisionCountDraft(e.target.value)}
+                          placeholder="e.g. 5"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Mother Parcel Area (sqm)</label>
+                        <input
+                          readOnly
+                          value={
+                            subdivisionParentAreaLoading
+                              ? "Loading area..."
+                              : subdivisionParentAreaM2
+                              ? subdivisionParentAreaM2.toFixed(2)
+                              : "Area unavailable"
+                          }
+                        />
+                      </div>
+                      <div className="form-group full-width">
+                        <span className="scale-helper">
+                          Allocate area for each lot below. Total allocated area must not exceed the mother parcel area.
+                        </span>
+                      </div>
+                    </>
                   )}
                   <div className="form-group">
                     <label>Orientation (degrees)</label>
@@ -1987,6 +2142,65 @@ export default function SurveyPlan() {
                   </div>
                 )}
 
+                {subdivisionMethod === "by_custom_area" && subdivisionCustomLotCount >= 2 && (
+                  <div className="subdivision-custom-areas-wrap">
+                    <div className="subdivision-custom-areas-head">
+                      <h5>Custom Lot Area Allocation</h5>
+                      <span>
+                        Allocated: {subdivisionCustomAllocatedM2.toFixed(2)} sqm
+                        {subdivisionCustomRemainingM2 !== null && (
+                          <> | Remaining: {subdivisionCustomRemainingM2.toFixed(2)} sqm</>
+                        )}
+                      </span>
+                    </div>
+                    <div className="subdivision-table-wrap">
+                      <table className="subdivision-table">
+                        <thead>
+                          <tr>
+                            <th>Lot / Owner Name</th>
+                            <th>Custom Area (sqm)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Array.from({ length: subdivisionCustomLotCount }).map((_, idx) => (
+                            <tr key={`custom_area_row_${idx}`}>
+                              <td>
+                                <input
+                                  className="subdivision-lot-name-input"
+                                  value={subdivisionLotNamesDraft[idx] ?? ""}
+                                  onChange={(e) => updateSubdivisionLotName(idx, e.target.value)}
+                                  placeholder={`Lot ${idx + 1} name`}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  className="subdivision-lot-name-input"
+                                  type="number"
+                                  min={0}
+                                  step="0.01"
+                                  value={subdivisionCustomAreaDrafts[idx] ?? ""}
+                                  onChange={(e) => updateSubdivisionCustomAreaDraft(idx, e.target.value)}
+                                  placeholder="0.00"
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {subdivisionCustomRemainingM2 !== null && subdivisionCustomRemainingM2 < -0.01 && (
+                      <p className="subdivision-validation-error">
+                        Allocated area exceeds mother parcel by {Math.abs(subdivisionCustomRemainingM2).toFixed(2)} sqm.
+                      </p>
+                    )}
+                    {subdivisionCustomRemainingM2 !== null && subdivisionCustomRemainingM2 > 0.01 && (
+                      <p className="subdivision-note">
+                        Remaining unallocated area: {subdivisionCustomRemainingM2.toFixed(2)} sqm. Allocate full area before preview.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div className="subdivision-action-row">
                   <button
                     className="btn-secondary"
@@ -2033,6 +2247,8 @@ export default function SurveyPlan() {
                         ? `${(parsePositiveFloat(subdivisionTargetAreaDraft) || 0).toLocaleString()} sqm per lot (approx).`
                         : subdivisionMethod === "by_fraction"
                         ? "Uses your fractions and line sliders to control each lot share."
+                        : subdivisionMethod === "by_custom_area"
+                        ? "Uses exact per-lot areas you enter. Total must match mother parcel area."
                         : "Not used in by-count mode; lots are balanced by area."}
                     </span>
                   </div>
