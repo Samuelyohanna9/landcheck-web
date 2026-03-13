@@ -988,6 +988,91 @@
   min-height: 0;
 }
 
+.subdivision-map-wrap {
+  position: relative;
+  margin: 0.75rem;
+  flex: 1;
+  min-height: 0;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.subdivision-map-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 380px;
+}
+
+.subdivision-break-overlay {
+  position: absolute;
+  inset: 8px 8px 8px 8px;
+  pointer-events: none;
+}
+
+.subdivision-break-guide-dom {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 0;
+  pointer-events: auto;
+}
+
+.subdivision-break-hitline-dom {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -10px;
+  width: 20px;
+  cursor: ew-resize;
+}
+
+.subdivision-break-line-dom {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, rgba(52, 211, 153, 0.86), rgba(52, 211, 153, 0.6));
+  border-radius: 2px;
+}
+
+.subdivision-break-handle-dom {
+  position: absolute;
+  top: 8px;
+  left: -6px;
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 0 2px #0f172a;
+  cursor: ew-resize;
+  padding: 0;
+}
+
+.subdivision-break-value-dom {
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 700;
+  color: #86efac;
+  text-shadow: 0 1px 2px rgba(2, 6, 23, 0.95);
+}
+
+.subdivision-break-guide-dom.active .subdivision-break-line-dom {
+  background: linear-gradient(to bottom, #6ee7b7, #34d399);
+}
+
+.subdivision-break-guide-dom.active .subdivision-break-handle-dom {
+  background: #6ee7b7;
+}
+
 .subdivision-svg {
   width: 100%;
   height: 100%;
