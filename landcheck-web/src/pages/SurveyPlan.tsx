@@ -1747,7 +1747,13 @@ export default function SurveyPlan() {
   };
 
   return (
-    <div className="survey-container">
+    <div
+      className={`survey-container${workflowMode ? " has-workflow" : ""}${
+        workflowMode && currentStep === 2 ? " is-preview-step" : ""
+      }${workflowMode === "subdivision" ? " is-subdivision-flow" : ""}${
+        workflowMode === "survey" ? " is-survey-flow" : ""
+      }`}
+    >
       <Toaster position="top-right" />
 
       {/* Header */}
