@@ -537,7 +537,7 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(15, 23, 42, 0.45);
   border-radius: 10px;
-  padding: 0.45rem 0.55rem 0.5rem;
+  padding: 0.34rem 0.46rem 0.38rem;
 }
 
 .workflow-inline-card--sidebar {
@@ -545,9 +545,9 @@
 }
 
 .workflow-inline-title {
-  margin: 0 0 0.32rem;
+  margin: 0 0 0.24rem;
   color: #d1fae5;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -563,7 +563,7 @@
 .workflow-inline-steps--stack {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.2rem;
   overflow-x: hidden;
   overflow-y: visible;
 }
@@ -572,15 +572,15 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 0.42rem;
+  gap: 0.34rem;
   width: 100%;
   min-width: 0;
-  padding: 0.3rem 0.42rem;
-  border-radius: 8px;
+  padding: 0.2rem 0.34rem;
+  border-radius: 7px;
   border: 1px solid rgba(148, 163, 184, 0.28);
   background: rgba(15, 23, 42, 0.45);
   color: #94a3b8;
-  font-size: 0.69rem;
+  font-size: 0.64rem;
   line-height: 1;
 }
 
@@ -595,22 +595,22 @@
 }
 
 .workflow-inline-step-no {
-  width: 17px;
-  height: 17px;
-  flex: 0 0 17px;
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: rgba(30, 41, 59, 0.75);
   color: inherit;
-  font-size: 0.62rem;
+  font-size: 0.56rem;
   font-weight: 700;
 }
 
 .workflow-inline-step-no svg {
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
 }
 
 .workflow-inline-step-label {
@@ -1896,31 +1896,32 @@
     height: auto;
   }
 
-  .preview-panel {
+  .preview-panel,
+  .export-panel {
     height: auto;
   }
 
-  .preview-panel .panel-left {
+  .preview-panel .panel-left,
+  .export-panel .panel-left,
+  .step-panel .panel-left {
     padding-right: 0;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .survey-container.has-workflow .preview-panel .panel-right,
+  .survey-container.has-workflow .export-panel .panel-right {
+    order: 1;
+    min-height: 52vh;
+  }
+
+  .survey-container.has-workflow .preview-panel .panel-left,
+  .survey-container.has-workflow .export-panel .panel-left {
+    order: 2;
   }
 
   .panel-right {
     min-height: 400px;
-  }
-
-  .stepper {
-    overflow-x: auto;
-    justify-content: flex-start;
-    padding: 1rem;
-  }
-
-  .step-desc {
-    display: none;
-  }
-
-  .step-line {
-    width: 30px;
-    margin: 0 0.5rem;
   }
 
   .mode-card-grid {
@@ -1946,23 +1947,27 @@
 
 @media (max-width: 640px) {
   .survey-content {
-    padding: 1rem;
-  }
-
-  .stepper {
-    padding: 0.75rem;
+    padding: 0.6rem;
   }
 
   .survey-header {
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.35rem;
+    padding: 0.45rem 0.6rem;
   }
 
   .survey-title {
     order: -1;
     width: 100%;
     text-align: center;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.35rem;
+    font-size: 0.98rem;
+  }
+
+  .back-btn,
+  .reset-btn {
+    padding: 0.34rem 0.58rem;
+    font-size: 0.74rem;
   }
 
   .form-grid {
@@ -1982,11 +1987,89 @@
   }
 
   .panel-right {
-    min-height: 320px;
+    min-height: 46vh;
   }
 
   .preview-panel .panel-right {
-    min-height: 52vh;
+    min-height: 46vh;
+  }
+
+  .workflow-inline-card {
+    padding: 0.3rem 0.38rem 0.34rem;
+  }
+
+  .workflow-inline-title {
+    font-size: 0.68rem;
+    margin-bottom: 0.18rem;
+  }
+
+  .workflow-inline-step {
+    padding: 0.18rem 0.28rem;
+    gap: 0.28rem;
+    font-size: 0.6rem;
+  }
+
+  .workflow-inline-step-no {
+    width: 14px;
+    height: 14px;
+    flex-basis: 14px;
+    font-size: 0.54rem;
+  }
+
+  .workflow-inline-step-label {
+    white-space: normal;
+    line-height: 1.1;
+  }
+
+  .survey-container.has-workflow .form-section {
+    padding: 0.56rem 0.58rem;
+  }
+
+  .survey-container.has-workflow .section-title {
+    font-size: 0.8rem;
+  }
+
+  .survey-container.has-workflow .form-group label {
+    font-size: 0.6rem;
+  }
+
+  .survey-container.has-workflow .form-group input,
+  .survey-container.has-workflow .form-group select,
+  .survey-container.has-workflow .form-group textarea {
+    font-size: 0.74rem;
+    padding: 0.34rem 0.48rem;
+  }
+
+  .survey-container.has-workflow .coord-header {
+    padding: 0.56rem 0.58rem;
+  }
+
+  .survey-container.has-workflow .coord-title {
+    font-size: 0.8rem;
+  }
+
+  .survey-container.has-workflow .coord-subtitle {
+    font-size: 0.68rem;
+  }
+
+  .survey-container.has-workflow .coord-system-selector,
+  .survey-container.has-workflow .coord-upload-section,
+  .survey-container.has-workflow .coord-footer {
+    padding-left: 0.58rem;
+    padding-right: 0.58rem;
+  }
+
+  .survey-container.has-workflow .coord-table-wrapper {
+    max-height: 230px;
+  }
+
+  .survey-container.has-workflow .coord-table th {
+    font-size: 0.58rem;
+    padding: 0.45rem;
+  }
+
+  .survey-container.has-workflow .coord-table td {
+    padding: 0.34rem 0.45rem;
   }
 }
 
