@@ -1776,7 +1776,7 @@ export default function SurveyPlan() {
       </header>
 
       {/* Progress Stepper */}
-      {workflowMode && currentStep !== 2 && (
+      {workflowMode && (
         <div className="stepper">
           {activeSteps.map((step, index) => (
             <div
@@ -1934,22 +1934,6 @@ export default function SurveyPlan() {
         {workflowMode === "survey" && currentStep === 2 && (
           <div className="step-panel preview-panel">
             <div className="panel-left">
-              <div className="workflow-inline-card">
-                <div className="workflow-inline-title">Survey Plan Production</div>
-                <div className="workflow-inline-steps">
-                  {activeSteps.map((step) => (
-                    <div
-                      key={`inline_survey_step_${step.id}`}
-                      className={`workflow-inline-step ${currentStep >= step.id ? "active" : ""} ${
-                        currentStep > step.id ? "completed" : ""
-                      }`}
-                    >
-                      <span className="workflow-inline-step-no">{step.id}</span>
-                      <span className="workflow-inline-step-label">{step.title}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
               {/* Features Summary - Horizontal Compact Layout (moved to top) */}
               {features && (
                 <div className="features-bar">
@@ -2273,22 +2257,6 @@ export default function SurveyPlan() {
         {workflowMode === "subdivision" && currentStep === 2 && (
           <div className="step-panel preview-panel">
             <div className="panel-left">
-              <div className="workflow-inline-card">
-                <div className="workflow-inline-title">Plot Subdivision</div>
-                <div className="workflow-inline-steps">
-                  {activeSteps.map((step) => (
-                    <div
-                      key={`inline_subdivision_step_${step.id}`}
-                      className={`workflow-inline-step ${currentStep >= step.id ? "active" : ""} ${
-                        currentStep > step.id ? "completed" : ""
-                      }`}
-                    >
-                      <span className="workflow-inline-step-no">{step.id}</span>
-                      <span className="workflow-inline-step-label">{step.title}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
               <div className="form-section subdivision-section">
                 <h3 className="section-title">Plot Subdivision & Batch Plans</h3>
                 <p className="section-desc">
