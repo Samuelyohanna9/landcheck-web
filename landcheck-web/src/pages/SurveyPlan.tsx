@@ -1746,6 +1746,37 @@ export default function SurveyPlan() {
     }
   };
 
+  const renderSidebarStepsCard = () => (
+    <div className="workflow-inline-card workflow-inline-card--sidebar">
+      <div className="workflow-inline-title">
+        {workflowMode === "survey" ? "Survey Plan Production" : "Plot Subdivision"}
+      </div>
+      <div className="workflow-inline-steps workflow-inline-steps--stack">
+        {activeSteps.map((step) => {
+          const completed = currentStep > step.id;
+          const active = currentStep === step.id;
+          return (
+            <div
+              key={`sidebar_step_${step.id}`}
+              className={`workflow-inline-step${active ? " active" : ""}${completed ? " completed" : ""}`}
+            >
+              <span className="workflow-inline-step-no">
+                {completed ? (
+                  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  step.id
+                )}
+              </span>
+              <span className="workflow-inline-step-label">{step.title}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
     <div
       className={`survey-container${workflowMode ? " has-workflow" : ""}${
@@ -1774,33 +1805,6 @@ export default function SurveyPlan() {
           Reset
         </button>
       </header>
-
-      {/* Progress Stepper */}
-      {workflowMode && (
-        <div className="stepper">
-          {activeSteps.map((step, index) => (
-            <div
-              key={step.id}
-              className={`step ${currentStep >= step.id ? "active" : ""} ${currentStep > step.id ? "completed" : ""}`}
-            >
-              <div className="step-indicator">
-                {currentStep > step.id ? (
-                  <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                ) : (
-                  step.id
-                )}
-              </div>
-              <div className="step-content">
-                <span className="step-title">{step.title}</span>
-                <span className="step-desc">{step.description}</span>
-              </div>
-              {index < activeSteps.length - 1 && <div className="step-line" />}
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Main Content */}
       <div className="survey-content">
@@ -1888,6 +1892,7 @@ export default function SurveyPlan() {
         {workflowMode && currentStep === 1 && (
           <div className="step-panel">
             <div className="panel-left">
+              {renderSidebarStepsCard()}
               <CoordinateInput
                 points={manualPoints}
                 onUpdatePoint={updatePoint}
@@ -1934,6 +1939,7 @@ export default function SurveyPlan() {
         {workflowMode === "survey" && currentStep === 2 && (
           <div className="step-panel preview-panel">
             <div className="panel-left">
+              {renderSidebarStepsCard()}
               {/* Features Summary - Horizontal Compact Layout (moved to top) */}
               {features && (
                 <div className="features-bar">
@@ -2257,6 +2263,7 @@ export default function SurveyPlan() {
         {workflowMode === "subdivision" && currentStep === 2 && (
           <div className="step-panel preview-panel">
             <div className="panel-left">
+              {renderSidebarStepsCard()}
               <div className="form-section subdivision-section">
                 <h3 className="section-title">Plot Subdivision & Batch Plans</h3>
                 <p className="section-desc">
@@ -3050,6 +3057,7 @@ export default function SurveyPlan() {
         {workflowMode === "survey" && currentStep === 3 && plotId && (
           <div className="step-panel export-panel">
             <div className="panel-left">
+              {renderSidebarStepsCard()}
               <div className="export-section">
                 <h3 className="section-title">Download Documents</h3>
                 <p className="section-desc">Your survey documents are ready. Choose the formats you need:</p>
@@ -3337,6 +3345,7 @@ export default function SurveyPlan() {
         {workflowMode === "subdivision" && currentStep === 3 && plotId && (
           <div className="step-panel export-panel">
             <div className="panel-left">
+              {renderSidebarStepsCard()}
               <div className="export-section">
                 <h3 className="section-title">Subdivision Batch Export</h3>
                 <p className="section-desc">

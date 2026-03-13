@@ -330,15 +330,15 @@
 
 .step-panel {
   display: grid;
-  grid-template-columns: 400px 1fr;
-  gap: 1.5rem;
-  height: calc(100vh - 180px);
+  grid-template-columns: clamp(340px, 25vw, 400px) minmax(0, 1fr);
+  gap: 0.7rem;
+  height: calc(100dvh - 112px);
 }
 
 .preview-panel {
-  grid-template-columns: clamp(360px, 30vw, 460px) minmax(0, 1fr);
-  gap: 1rem;
-  height: calc(100vh - 165px);
+  grid-template-columns: clamp(340px, 25vw, 400px) minmax(0, 1fr);
+  gap: 0.7rem;
+  height: calc(100dvh - 112px);
 }
 
 .survey-container.is-preview-step .preview-panel {
@@ -381,6 +381,9 @@
   flex-direction: column;
   gap: 1rem;
   overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.35rem;
+  scrollbar-gutter: stable;
 }
 
 .export-panel .panel-left {
@@ -525,11 +528,20 @@
   border-radius: 10px;
 }
 
+.survey-container.has-workflow .form-section {
+  padding: 0.7rem 0.75rem;
+  border-radius: 10px;
+}
+
 .workflow-inline-card {
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(15, 23, 42, 0.45);
   border-radius: 10px;
-  padding: 0.45rem 0.55rem;
+  padding: 0.45rem 0.55rem 0.5rem;
+}
+
+.workflow-inline-card--sidebar {
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.12);
 }
 
 .workflow-inline-title {
@@ -548,17 +560,27 @@
   padding-bottom: 0.05rem;
 }
 
+.workflow-inline-steps--stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
 .workflow-inline-step {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.22rem;
-  flex: 0 0 auto;
-  padding: 0.18rem 0.36rem;
-  border-radius: 999px;
+  justify-content: flex-start;
+  gap: 0.42rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.3rem 0.42rem;
+  border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.28);
   background: rgba(15, 23, 42, 0.45);
   color: #94a3b8;
-  font-size: 0.66rem;
+  font-size: 0.69rem;
   line-height: 1;
 }
 
@@ -573,21 +595,29 @@
 }
 
 .workflow-inline-step-no {
-  width: 14px;
-  height: 14px;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: rgba(30, 41, 59, 0.75);
   color: inherit;
-  font-size: 0.58rem;
+  font-size: 0.62rem;
   font-weight: 700;
+}
+
+.workflow-inline-step-no svg {
+  width: 11px;
+  height: 11px;
 }
 
 .workflow-inline-step-label {
   white-space: nowrap;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .section-title {
@@ -602,7 +632,17 @@
   margin-bottom: 0.5rem;
 }
 
+.survey-container.has-workflow .section-title {
+  font-size: 0.88rem;
+  margin-bottom: 0.5rem;
+}
+
 .survey-container.is-preview-step .section-desc {
+  margin: 0 0 0.52rem;
+  font-size: 0.74rem;
+}
+
+.survey-container.has-workflow .section-desc {
   margin: 0 0 0.52rem;
   font-size: 0.74rem;
 }
@@ -624,6 +664,11 @@
   gap: 0.5rem;
 }
 
+.survey-container.has-workflow .form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
@@ -631,6 +676,11 @@
 }
 
 .survey-container.is-preview-step .form-group {
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.survey-container.has-workflow .form-group {
   gap: 0.2rem;
   min-width: 0;
 }
@@ -648,6 +698,11 @@
 }
 
 .survey-container.is-preview-step .form-group label {
+  font-size: 0.65rem;
+  letter-spacing: 0.035em;
+}
+
+.survey-container.has-workflow .form-group label {
   font-size: 0.65rem;
   letter-spacing: 0.035em;
 }
@@ -674,6 +729,16 @@
   font-size: 0.78rem;
 }
 
+.survey-container.has-workflow .form-group input,
+.survey-container.has-workflow .form-group select,
+.survey-container.has-workflow .form-group textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.42rem 0.62rem;
+  border-radius: 7px;
+  font-size: 0.78rem;
+}
+
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
@@ -693,6 +758,11 @@
 }
 
 .survey-container.is-preview-step .form-group textarea {
+  min-height: 44px;
+  line-height: 1.26;
+}
+
+.survey-container.has-workflow .form-group textarea {
   min-height: 44px;
   line-height: 1.26;
 }
@@ -742,6 +812,11 @@
 }
 
 .survey-container.is-preview-step .template-hint {
+  margin-top: 0.22rem;
+  font-size: 0.64rem;
+}
+
+.survey-container.has-workflow .template-hint {
   margin-top: 0.22rem;
   font-size: 0.64rem;
 }
@@ -1699,16 +1774,117 @@
   border: 2px solid rgba(15, 23, 42, 0.45);
 }
 
+/* Step sidebar consistency for Coordinate Input (Step 1) */
+.survey-container.has-workflow .coord-input-container {
+  border-radius: 10px;
+}
+
+.survey-container.has-workflow .coord-header {
+  padding: 0.7rem 0.75rem;
+}
+
+.survey-container.has-workflow .coord-title {
+  font-size: 0.88rem;
+  margin-bottom: 0.16rem;
+}
+
+.survey-container.has-workflow .coord-subtitle {
+  font-size: 0.74rem;
+}
+
+.survey-container.has-workflow .coord-system-selector {
+  gap: 0.45rem;
+  padding: 0.55rem 0.75rem;
+}
+
+.survey-container.has-workflow .coord-system-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.survey-container.has-workflow .coord-system-select {
+  font-size: 0.78rem;
+  padding: 0.4rem 1.8rem 0.4rem 0.6rem;
+  border-radius: 7px;
+}
+
+.survey-container.has-workflow .coord-system-desc {
+  font-size: 0.67rem;
+}
+
+.survey-container.has-workflow .coord-upload-section {
+  gap: 0.45rem;
+  padding: 0.52rem 0.75rem;
+}
+
+.survey-container.has-workflow .upload-btn {
+  padding: 0.38rem 0.7rem;
+  border-radius: 7px;
+  font-size: 0.74rem;
+}
+
+.survey-container.has-workflow .upload-hint {
+  font-size: 0.64rem;
+}
+
+.survey-container.has-workflow .coord-table-wrapper {
+  max-height: 280px;
+}
+
+.survey-container.has-workflow .coord-table th {
+  font-size: 0.64rem;
+  padding: 0.56rem 0.6rem;
+}
+
+.survey-container.has-workflow .coord-table td {
+  padding: 0.4rem 0.6rem;
+}
+
+.survey-container.has-workflow .row-number {
+  width: 20px;
+  height: 20px;
+  font-size: 0.66rem;
+}
+
+.survey-container.has-workflow .station-input,
+.survey-container.has-workflow .coord-input {
+  font-size: 0.78rem;
+  padding: 0.38rem 0.5rem;
+  border-radius: 7px;
+}
+
+.survey-container.has-workflow .remove-btn {
+  width: 28px;
+  height: 28px;
+}
+
+.survey-container.has-workflow .coord-footer {
+  padding: 0.62rem 0.75rem;
+}
+
+.survey-container.has-workflow .add-point-btn {
+  padding: 0.38rem 0.72rem;
+  border-radius: 7px;
+  font-size: 0.74rem;
+}
+
+.survey-container.has-workflow .coord-tip {
+  font-size: 0.66rem;
+}
+
 @media (max-width: 1500px) {
-  .survey-container.is-preview-step .preview-panel {
+  .survey-container.has-workflow .preview-panel,
+  .survey-container.has-workflow .export-panel,
+  .survey-container.has-workflow .step-panel {
     grid-template-columns: clamp(320px, 28vw, 370px) minmax(0, 1fr);
   }
 
-  .survey-container.is-preview-step .form-grid {
+  .survey-container.has-workflow .form-grid {
     grid-template-columns: 1fr;
   }
 
-  .survey-container.is-preview-step .form-group.full-width {
+  .survey-container.has-workflow .form-group.full-width {
     grid-column: 1 / -1;
   }
 }
