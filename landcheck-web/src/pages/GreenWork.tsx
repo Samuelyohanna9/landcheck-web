@@ -819,14 +819,33 @@ const encodeObjectKeyForProxy = (value: string) =>
     .map((part) => encodeURIComponent(safeDecode(part)))
     .join("/");
 
-const toDisplayPhotoUrl = (url: string | null | undefined) => {
+type PhotoRenderOptions = {
+  w?: number;
+  h?: number;
+  q?: number;
+  fm?: "webp" | "jpeg" | "png";
+};
+
+const appendPhotoRenderParams = (baseUrl: string, opts?: PhotoRenderOptions) => {
+  if (!opts) return baseUrl;
+  const params = new URLSearchParams();
+  if (Number.isFinite(Number(opts.w)) && Number(opts.w) > 0) params.set("w", String(Math.round(Number(opts.w))));
+  if (Number.isFinite(Number(opts.h)) && Number(opts.h) > 0) params.set("h", String(Math.round(Number(opts.h))));
+  if (Number.isFinite(Number(opts.q)) && Number(opts.q) > 0) params.set("q", String(Math.round(Number(opts.q))));
+  if (opts.fm) params.set("fm", opts.fm);
+  const query = params.toString();
+  if (!query) return baseUrl;
+  return `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}${query}`;
+};
+
+const toDisplayPhotoUrl = (url: string | null | undefined, opts?: PhotoRenderOptions) => {
   const raw = String(url || "").trim();
   if (!raw) return "";
-  if (raw.includes("/green/uploads/object/")) return raw;
+  if (raw.includes("/green/uploads/object/")) return appendPhotoRenderParams(raw, opts);
 
   const toProxy = (key: string) => {
     const encoded = encodeObjectKeyForProxy(key);
-    return encoded ? `${BACKEND_URL}/green/uploads/object/${encoded}` : "";
+    return encoded ? appendPhotoRenderParams(`${BACKEND_URL}/green/uploads/object/${encoded}`, opts) : "";
   };
 
   if (!/^https?:\/\//i.test(raw)) {
@@ -839,9 +858,9 @@ const toDisplayPhotoUrl = (url: string | null | undefined) => {
     if (!parts.length) return raw;
     const maybeBucket = parts[0]?.toLowerCase() === R2_BUCKET_HINT;
     const key = (maybeBucket ? parts.slice(1) : parts).join("/");
-    return toProxy(key) || raw;
+    return toProxy(key) || appendPhotoRenderParams(raw, opts);
   } catch {
-    return raw;
+    return appendPhotoRenderParams(raw, opts);
   }
 };
 
@@ -7494,8 +7513,12 @@ export default function GreenWork() {
                         {evidencePhotos.map((photoUrl, photoIndex) => (
                           <img
                             key={`review-task-${task.id}-photo-${photoIndex}`}
-                            src={toDisplayPhotoUrl(photoUrl)}
+                            src={toDisplayPhotoUrl(photoUrl, { w: 640, h: 480, q: 68, fm: "webp" })}
                             alt={`Task ${task.id} evidence ${photoIndex + 1}`}
+                            loading={photoIndex === 0 ? "eager" : "lazy"}
+                            decoding="async"
+                            width={640}
+                            height={480}
                           />
                         ))}
                       </div>
