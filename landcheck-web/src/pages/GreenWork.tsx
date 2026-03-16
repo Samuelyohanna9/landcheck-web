@@ -826,6 +826,31 @@ type PhotoRenderOptions = {
   fm?: "webp" | "jpeg" | "png";
 };
 
+type NetworkInfoLike = {
+  effectiveType?: string;
+  saveData?: boolean;
+  downlink?: number;
+};
+
+const getReviewPhotoRenderOptions = (): PhotoRenderOptions => {
+  const baseline: PhotoRenderOptions = { w: 560, h: 420, q: 64, fm: "webp" };
+  if (typeof navigator === "undefined") return baseline;
+  const nav = navigator as Navigator & { connection?: NetworkInfoLike };
+  const conn = nav.connection;
+  const effectiveType = String(conn?.effectiveType || "").toLowerCase();
+  const saveData = Boolean(conn?.saveData);
+  const downlink = Number(conn?.downlink || 0);
+
+  // Nigeria field conditions: aggressively optimize for constrained links.
+  if (saveData || effectiveType === "slow-2g" || effectiveType === "2g" || (downlink > 0 && downlink < 1.2)) {
+    return { w: 320, h: 240, q: 52, fm: "webp" };
+  }
+  if (effectiveType === "3g" || (downlink > 0 && downlink < 2.5)) {
+    return { w: 420, h: 315, q: 58, fm: "webp" };
+  }
+  return baseline;
+};
+
 const appendPhotoRenderParams = (baseUrl: string, opts?: PhotoRenderOptions) => {
   if (!opts) return baseUrl;
   const params = new URLSearchParams();
@@ -7444,6 +7469,7 @@ export default function GreenWork() {
                   const originalTreeLat = toFiniteCoord(task.tree_lat) ?? toFiniteCoord(fallbackTreeCoords?.lat);
                   const maintenanceLng = toFiniteCoord(task.activity_lng);
                   const maintenanceLat = toFiniteCoord(task.activity_lat);
+                  const reviewPhotoRenderOptions = getReviewPhotoRenderOptions();
                   const evidencePhotos = getTaskPhotoUrls(task);
                   const distanceFromTreeMeters = computeDistanceMeters(
                     originalTreeLng,
@@ -7513,12 +7539,12 @@ export default function GreenWork() {
                         {evidencePhotos.map((photoUrl, photoIndex) => (
                           <img
                             key={`review-task-${task.id}-photo-${photoIndex}`}
-                            src={toDisplayPhotoUrl(photoUrl, { w: 640, h: 480, q: 68, fm: "webp" })}
+                            src={toDisplayPhotoUrl(photoUrl, reviewPhotoRenderOptions)}
                             alt={`Task ${task.id} evidence ${photoIndex + 1}`}
                             loading={photoIndex === 0 ? "eager" : "lazy"}
                             decoding="async"
-                            width={640}
-                            height={480}
+                            width={reviewPhotoRenderOptions.w || 560}
+                            height={reviewPhotoRenderOptions.h || 420}
                           />
                         ))}
                       </div>
