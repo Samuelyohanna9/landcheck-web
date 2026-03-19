@@ -2021,7 +2021,7 @@ export default function SurveyPlan() {
           </div>
         )}
 
-        {workflowMode === "survey" && (
+        {workflowMode && (
           <FeatureOverrideModal
           isOpen={showFeatureEditor}
           onClose={() => setShowFeatureEditor(false)}
@@ -2657,6 +2657,9 @@ export default function SurveyPlan() {
                 <div className="edit-feature-bar">
                   <button className="btn-secondary" onClick={loadPreview} disabled={previewLoading}>
                     {previewLoading ? "Updating preview..." : "Update Parcel Preview"}
+                  </button>
+                  <button className="btn-outline" onClick={() => setShowFeatureEditor(true)} disabled={!plotId}>
+                    Edit Features
                   </button>
                 </div>
 
