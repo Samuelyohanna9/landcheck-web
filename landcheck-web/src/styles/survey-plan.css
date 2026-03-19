@@ -1664,6 +1664,10 @@
   min-width: 0;
 }
 
+.export-card--clean-copy {
+  align-items: flex-start;
+}
+
 .export-icon {
   width: 48px;
   height: 48px;
@@ -1720,6 +1724,84 @@
   margin: 0;
   font-size: 0.78rem;
   color: #94a3b8;
+}
+
+.subdivision-clean-copy-controls {
+  margin-top: 0.65rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.subdivision-clean-copy-row {
+  display: grid;
+  grid-template-columns: 126px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.subdivision-clean-copy-row label {
+  font-size: 0.73rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.subdivision-clean-copy-row input,
+.subdivision-clean-copy-row select {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(2, 6, 23, 0.45);
+  color: #e2e8f0;
+  padding: 0.42rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.subdivision-clean-copy-row input:focus,
+.subdivision-clean-copy-row select:focus {
+  outline: none;
+  border-color: rgba(34, 197, 94, 0.75);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
+
+.subdivision-clean-copy-areas {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.3);
+  padding: 0.55rem;
+}
+
+.subdivision-clean-copy-areas-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.subdivision-clean-copy-areas-head strong {
+  font-size: 0.76rem;
+  color: #dcfce7;
+}
+
+.subdivision-clean-copy-areas-head span {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.subdivision-clean-copy-table-wrap {
+  max-height: 210px;
+  overflow: auto;
+}
+
+.subdivision-clean-copy-table th,
+.subdivision-clean-copy-table td {
+  font-size: 0.73rem;
+}
+
+.subdivision-clean-copy-download {
+  margin-top: 0.6rem;
 }
 
 .download-form {
@@ -1978,6 +2060,11 @@
   .subdivision-svg {
     min-height: 280px;
   }
+
+  .subdivision-clean-copy-row {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
 }
 
 @media (max-width: 640px) {
@@ -2067,6 +2154,10 @@
   .subdivision-map-canvas,
   .subdivision-svg {
     min-height: 260px;
+  }
+
+  .subdivision-clean-copy-table-wrap {
+    max-height: 180px;
   }
 
   .workflow-inline-card {

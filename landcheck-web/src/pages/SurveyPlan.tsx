@@ -82,6 +82,20 @@ type SubdivisionBatchRow = {
   updated_at?: string;
 };
 
+type SubdivisionBatchItem = {
+  id: number;
+  batch_id: number;
+  child_plot_id: number;
+  lot_no: string;
+  area_m2: number;
+  created_at?: string;
+};
+
+type SubdivisionBatchDetailResponse = {
+  batch: SubdivisionBatchRow;
+  items: SubdivisionBatchItem[];
+};
+
 type WorkflowMode = "survey" | "subdivision";
 
 type ManualPoint = {
@@ -304,6 +318,12 @@ export default function SurveyPlan() {
   const [subdivisionBatchLoading, setSubdivisionBatchLoading] = useState(false);
   const [latestSubdivisionBatchId, setLatestSubdivisionBatchId] = useState<number | null>(null);
   const [subdivisionDownloadBatchId, setSubdivisionDownloadBatchId] = useState<number | null>(null);
+  const [subdivisionCleanCopyBatchId, setSubdivisionCleanCopyBatchId] = useState<number | null>(null);
+  const [subdivisionCleanCopyTitle, setSubdivisionCleanCopyTitle] = useState("");
+  const [subdivisionCleanCopyItems, setSubdivisionCleanCopyItems] = useState<SubdivisionBatchItem[]>([]);
+  const [subdivisionCleanCopyAreaDrafts, setSubdivisionCleanCopyAreaDrafts] = useState<Record<string, string>>({});
+  const [subdivisionCleanCopyLoadingBatchId, setSubdivisionCleanCopyLoadingBatchId] = useState<number | null>(null);
+  const [subdivisionCleanCopyDownloadBatchId, setSubdivisionCleanCopyDownloadBatchId] = useState<number | null>(null);
   const [subdivisionPreviewPanelTab, setSubdivisionPreviewPanelTab] = useState<"survey_plan" | "subdivision_lines">("survey_plan");
   const [subdivisionDraggingBreakIndex, setSubdivisionDraggingBreakIndex] = useState<number | null>(null);
   const subdivisionLivePreviewTimerRef = useRef<number | null>(null);
@@ -1209,6 +1229,12 @@ export default function SurveyPlan() {
     setSubdivisionBatchLoading(false);
     setLatestSubdivisionBatchId(null);
     setSubdivisionDownloadBatchId(null);
+    setSubdivisionCleanCopyBatchId(null);
+    setSubdivisionCleanCopyTitle("");
+    setSubdivisionCleanCopyItems([]);
+    setSubdivisionCleanCopyAreaDrafts({});
+    setSubdivisionCleanCopyLoadingBatchId(null);
+    setSubdivisionCleanCopyDownloadBatchId(null);
     setMeta({
       title_text: "SURVEY PLAN",
       location_text: "",
@@ -1250,6 +1276,34 @@ export default function SurveyPlan() {
     document.body.removeChild(link);
     URL.revokeObjectURL(downloadUrl);
   };
+
+  const subdivisionAreaDraftKey = useCallback((item: Pick<SubdivisionBatchItem, "child_plot_id" | "lot_no">) => {
+    return `${Number(item.child_plot_id || 0)}::${String(item.lot_no || "").trim().toLowerCase()}`;
+  }, []);
+
+  const defaultSubdivisionAreaLabel = useCallback((areaM2: number) => {
+    const safe = Number.isFinite(Number(areaM2)) ? Number(areaM2) : 0;
+    return `${(safe / 10000).toFixed(4)} Hectares`;
+  }, []);
+
+  const getSubdivisionCleanCopyAreaDraftValue = useCallback(
+    (item: Pick<SubdivisionBatchItem, "child_plot_id" | "lot_no" | "area_m2">) => {
+      const key = subdivisionAreaDraftKey(item);
+      if (Object.prototype.hasOwnProperty.call(subdivisionCleanCopyAreaDrafts, key)) {
+        return subdivisionCleanCopyAreaDrafts[key];
+      }
+      return defaultSubdivisionAreaLabel(Number(item.area_m2 || 0));
+    },
+    [defaultSubdivisionAreaLabel, subdivisionAreaDraftKey, subdivisionCleanCopyAreaDrafts]
+  );
+
+  const updateSubdivisionCleanCopyAreaDraft = useCallback(
+    (item: Pick<SubdivisionBatchItem, "child_plot_id" | "lot_no">, value: string) => {
+      const key = subdivisionAreaDraftKey(item);
+      setSubdivisionCleanCopyAreaDrafts((prev) => ({ ...prev, [key]: value }));
+    },
+    [subdivisionAreaDraftKey]
+  );
 
   // Download function for PDF endpoints that need JSON body
   const downloadWithJson = async (
@@ -1342,14 +1396,64 @@ export default function SurveyPlan() {
     }
   }, [plotId]);
 
+  const loadSubdivisionCleanCopyBatchDetails = useCallback(
+    async (batchId: number) => {
+      if (!Number.isFinite(batchId) || batchId <= 0) return;
+      setSubdivisionCleanCopyLoadingBatchId(batchId);
+      try {
+        const res = await api.get(`/plots/subdivision/batches/${batchId}`);
+        const payload = (res?.data || {}) as SubdivisionBatchDetailResponse;
+        const items = Array.isArray(payload.items) ? payload.items : [];
+        setSubdivisionCleanCopyItems(items);
+        setSubdivisionCleanCopyAreaDrafts((prev) => {
+          const next: Record<string, string> = {};
+          items.forEach((item) => {
+            const key = subdivisionAreaDraftKey(item);
+            const previous = String(prev[key] || "").trim();
+            next[key] = previous || defaultSubdivisionAreaLabel(Number(item.area_m2 || 0));
+          });
+          return next;
+        });
+        setSubdivisionCleanCopyTitle((prev) => {
+          if (String(prev || "").trim()) return prev;
+          const estate = String(payload?.batch?.estate_name || "").trim();
+          if (estate) return `${estate} CLEAN COPY PLAN`;
+          return `${meta.title_text || "SURVEY PLAN"} CLEAN COPY PLAN`;
+        });
+      } catch (err) {
+        console.error("Failed to load subdivision batch details:", err);
+        setSubdivisionCleanCopyItems([]);
+      } finally {
+        setSubdivisionCleanCopyLoadingBatchId((prev) => (prev === batchId ? null : prev));
+      }
+    },
+    [defaultSubdivisionAreaLabel, meta.title_text, subdivisionAreaDraftKey]
+  );
+
   useEffect(() => {
     if (!plotId) {
       setSubdivisionBatches([]);
+      setSubdivisionCleanCopyBatchId(null);
+      setSubdivisionCleanCopyItems([]);
+      setSubdivisionCleanCopyAreaDrafts({});
       return;
     }
     if (currentStep < 2) return;
     loadSubdivisionBatches();
   }, [plotId, currentStep, loadSubdivisionBatches]);
+
+  useEffect(() => {
+    if (workflowMode !== "subdivision" || currentStep !== 3) return;
+    const fallbackBatchId = latestSubdivisionBatchId ?? subdivisionBatches[0]?.id ?? null;
+    if (!fallbackBatchId) return;
+    setSubdivisionCleanCopyBatchId((prev) => prev ?? fallbackBatchId);
+  }, [workflowMode, currentStep, latestSubdivisionBatchId, subdivisionBatches]);
+
+  useEffect(() => {
+    if (workflowMode !== "subdivision" || currentStep !== 3) return;
+    if (!subdivisionCleanCopyBatchId) return;
+    loadSubdivisionCleanCopyBatchDetails(subdivisionCleanCopyBatchId);
+  }, [workflowMode, currentStep, subdivisionCleanCopyBatchId, loadSubdivisionCleanCopyBatchDetails]);
 
   useEffect(() => {
     if (!plotId || workflowMode !== "subdivision" || currentStep < 2) return;
@@ -1715,6 +1819,45 @@ export default function SurveyPlan() {
       toast.error(typeof detail === "string" ? detail : "Failed to download subdivision batch.");
     } finally {
       setSubdivisionDownloadBatchId(null);
+    }
+  };
+
+  const downloadSubdivisionCleanCopyPdf = async () => {
+    const batchId = Number(subdivisionCleanCopyBatchId || 0);
+    if (!batchId) {
+      toast.error("Select a subdivision batch first.");
+      return;
+    }
+    if (subdivisionCleanCopyDownloadBatchId !== null) return;
+
+    setSubdivisionCleanCopyDownloadBatchId(batchId);
+    try {
+      const payload = {
+        title_text: String(subdivisionCleanCopyTitle || "").trim(),
+        paper_size: meta.paper_size,
+        area_labels: subdivisionCleanCopyItems.map((item) => {
+          const key = subdivisionAreaDraftKey(item);
+          return {
+            lot_no: item.lot_no,
+            child_plot_id: item.child_plot_id,
+            label: String(subdivisionCleanCopyAreaDrafts[key] || "").trim(),
+          };
+        }),
+      };
+      const res = await api.post(`/plots/subdivision/batches/${batchId}/export/clean-copy.pdf`, payload, {
+        responseType: "blob",
+      });
+      triggerBlobDownload(
+        res.data,
+        res.headers["content-type"],
+        `subdivision_clean_copy_batch_${batchId}.pdf`
+      );
+      toast.success("Clean copy PDF downloaded.");
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      toast.error(typeof detail === "string" ? detail : "Failed to download clean copy PDF.");
+    } finally {
+      setSubdivisionCleanCopyDownloadBatchId(null);
     }
   };
 
@@ -3388,6 +3531,124 @@ export default function SurveyPlan() {
                       </button>
                     </div>
                   )}
+
+                  <div className="export-card export-card--clean-copy">
+                    <div className="export-icon pdf">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M6 2h9l5 5v15H6z" />
+                        <path d="M15 2v5h5M9 13h6M9 17h6" />
+                      </svg>
+                    </div>
+                    <div className="export-info">
+                      <h4>Clean Copy Plan PDF</h4>
+                      <p>Single-sheet clean copy of all split lots on one plot with editable displayed area labels.</p>
+                      <div className="subdivision-clean-copy-controls">
+                        <div className="subdivision-clean-copy-row">
+                          <label>Batch</label>
+                          <select
+                            value={subdivisionCleanCopyBatchId ?? ""}
+                            onChange={(event) => {
+                              const nextBatchId = Number(event.target.value || 0) || null;
+                              setSubdivisionCleanCopyBatchId(nextBatchId);
+                              if (nextBatchId) {
+                                loadSubdivisionCleanCopyBatchDetails(nextBatchId);
+                              } else {
+                                setSubdivisionCleanCopyItems([]);
+                              }
+                            }}
+                          >
+                            <option value="">Select batch</option>
+                            {subdivisionBatches.map((batch) => (
+                              <option key={`clean_copy_batch_${batch.id}`} value={batch.id}>
+                                Batch #{batch.id} - {batch.generated_count} lots
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="subdivision-clean-copy-row">
+                          <label>Plan title</label>
+                          <input
+                            type="text"
+                            value={subdivisionCleanCopyTitle}
+                            onChange={(event) => setSubdivisionCleanCopyTitle(event.target.value)}
+                            placeholder="Enter clean copy title"
+                          />
+                        </div>
+
+                        <div className="subdivision-clean-copy-areas">
+                          <div className="subdivision-clean-copy-areas-head">
+                            <strong>Displayed area labels (editable)</strong>
+                            <span>
+                              {subdivisionCleanCopyLoadingBatchId
+                                ? "Loading lots..."
+                                : `${subdivisionCleanCopyItems.length} lots`}
+                            </span>
+                          </div>
+                          {subdivisionCleanCopyItems.length === 0 ? (
+                            <p className="subdivision-note">
+                              Select a batch to edit displayed area text for each lot.
+                            </p>
+                          ) : (
+                            <div className="subdivision-clean-copy-table-wrap">
+                              <table className="subdivision-table subdivision-clean-copy-table">
+                                <thead>
+                                  <tr>
+                                    <th>Lot</th>
+                                    <th>Computed area</th>
+                                    <th>Displayed on plan</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {subdivisionCleanCopyItems.map((item) => (
+                                    <tr key={`clean_copy_item_${item.id}_${item.child_plot_id}`}>
+                                      <td>{item.lot_no}</td>
+                                      <td>{Number(item.area_m2 || 0).toFixed(2)} sqm</td>
+                                      <td>
+                                        <input
+                                          className="subdivision-lot-name-input"
+                                          value={getSubdivisionCleanCopyAreaDraftValue(item)}
+                                          onChange={(event) => updateSubdivisionCleanCopyAreaDraft(item, event.target.value)}
+                                          placeholder="e.g. 0.125 Hectares"
+                                        />
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        className="download-btn subdivision-clean-copy-download"
+                        disabled={
+                          subdivisionCleanCopyDownloadBatchId !== null ||
+                          !subdivisionCleanCopyBatchId ||
+                          subdivisionCleanCopyLoadingBatchId !== null
+                        }
+                        onClick={downloadSubdivisionCleanCopyPdf}
+                      >
+                        {subdivisionCleanCopyDownloadBatchId ? (
+                          <>
+                            <span className="spinner download-spinner" />
+                            <span>Downloading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg viewBox="0 0 20 20" fill="currentColor">
+                              <path
+                                fillRule="evenodd"
+                                d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            <span>Download Clean Copy PDF</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
 
                   <div className="form-section subdivision-section">
                     <div className="subdivision-batch-header">
