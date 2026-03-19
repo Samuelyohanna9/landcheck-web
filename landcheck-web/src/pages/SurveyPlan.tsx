@@ -1835,6 +1835,13 @@ export default function SurveyPlan() {
       const payload = {
         title_text: String(subdivisionCleanCopyTitle || "").trim(),
         paper_size: meta.paper_size,
+        scale_text: meta.scale_text,
+        coordinate_system: coordinateSystem,
+        station_names: stationNames,
+        north_arrow_style: northArrowStyle,
+        north_arrow_color: northArrowColor,
+        beacon_style: beaconStyle,
+        road_width_m: Number(roadWidth),
         area_labels: subdivisionCleanCopyItems.map((item) => {
           const key = subdivisionAreaDraftKey(item);
           return {
