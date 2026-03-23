@@ -53,6 +53,12 @@ export default function GreenWorkLogin() {
           <h1>LandCheck Work</h1>
         </div>
         <p className="work-login-subtitle">Operations dashboard login</p>
+        <p className="privacy-inline-note">
+          By using LandCheck Work, you agree to process operational and contact records only when authorized.
+          <a className="privacy-inline-link" href="/privacy">
+            Privacy policy
+          </a>
+        </p>
         <form className="work-login-form" onSubmit={onSubmit}>
           <label htmlFor="work-login-username">Username</label>
           <input

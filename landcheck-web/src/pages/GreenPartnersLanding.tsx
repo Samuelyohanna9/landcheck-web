@@ -165,6 +165,9 @@ export default function GreenPartnersLanding() {
           <a className="gp-suite-cta" href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Pilot%20Request">
             Partner: landchecktech@gmail.com
           </a>
+          <a className="privacy-inline-link" href="/privacy">
+            Privacy Policy
+          </a>
         </section>
       </main>
     </div>

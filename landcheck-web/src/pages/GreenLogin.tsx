@@ -53,6 +53,12 @@ export default function GreenLogin() {
           <h1>LandCheck Green</h1>
         </div>
         <p className="work-login-subtitle">Field monitoring app login</p>
+        <p className="privacy-inline-note">
+          By using LandCheck Green, you agree to handle GPS, photo, and field records only when authorized.
+          <a className="privacy-inline-link" href="/privacy">
+            Privacy policy
+          </a>
+        </p>
         <form className="work-login-form" onSubmit={onSubmit}>
           <label htmlFor="green-login-username">Username</label>
           <input

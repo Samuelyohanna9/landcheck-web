@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { api, BACKEND_URL } from "../api/client";
@@ -38,6 +38,7 @@ import {
   syncGreenQueueOffline,
   precacheMapTilesForArea,
 } from "../offline/greenOffline";
+import { usePrivacyConsentGate } from "../privacy/usePrivacyConsentGate";
 import "../styles/green.css";
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
@@ -718,6 +719,29 @@ export default function Green() {
     activeProject && Number.isFinite(Number(activeProject.organization_id)) ? Number(activeProject.organization_id) : null;
   const activeProjectMatchesGreenSessionOrg =
     Boolean(isPartnerGreenSession && greenSessionPartnerOrgId && activeProjectOrgId === greenSessionPartnerOrgId);
+  const { ensureConsent: ensureGreenPrivacyConsent, privacyConsentModal } = usePrivacyConsentGate("green");
+  const ensureGreenFieldPrivacyConsent = useCallback(
+    async (action: string, metadata: Record<string, unknown> = {}) => {
+      const accepted = await ensureGreenPrivacyConsent("green_field_data_capture", {
+        title: "Consent required before field capture",
+        detail:
+          "LandCheck Green records GPS location, photos, notes, tree metadata, task evidence, and review history for project monitoring and reporting. Continue only if you are authorized to capture and submit this field data.",
+        actionLabel: "I Consent and Continue",
+        metadata: {
+          action,
+          project_id: activeProject?.id ?? null,
+          actor_name: activeUser || greenAuthUser?.full_name || "",
+          ...metadata,
+        },
+      });
+      if (!accepted) {
+        toast.error("Consent is required before capturing or submitting field data.");
+        return false;
+      }
+      return true;
+    },
+    [activeProject?.id, activeUser, ensureGreenPrivacyConsent, greenAuthUser?.full_name],
+  );
   const greenHeaderPartnerLogo =
     isPartnerGreenSession
       ? ((activeProjectMatchesGreenSessionOrg ? activeProject?.organization_logo_url || null : null) || greenSessionPartnerLogo)
@@ -1777,6 +1801,16 @@ export default function Green() {
       toast.error("For Existing Tree, provide a reference date or estimated age (months) for accurate CO2.");
       return;
     }
+    if (
+      !(await ensureGreenFieldPrivacyConsent("tree_create", {
+        tree_origin: newTree.tree_origin,
+        existing_tree_batch_mode: isExistingBatchCapture,
+        has_photo: pendingTreePhotos.length > 0 || Boolean(pendingTreePhoto),
+        has_manual_point: !isExistingBatchCapture,
+      }))
+    ) {
+      return;
+    }
     const treePayload = {
       project_id: activeProject.id,
       lng: Number((batchAreaCentroid?.lng ?? newTree.lng) || 0),
@@ -2177,6 +2211,9 @@ export default function Green() {
       return;
     }
     const payload = sanitizeTaskEditForApi(edit);
+    if (!(await ensureGreenFieldPrivacyConsent("task_update", { task_id: taskId, task_type: task?.task_type || "" }))) {
+      return;
+    }
     try {
       await saveTaskTreeMetadata(task);
       await api.patch(`/green/tasks/${taskId}`, payload);
@@ -2234,6 +2271,17 @@ export default function Green() {
       submitPayload.activity_lng = Number(edit.activity_lng.toFixed(6));
       submitPayload.activity_lat = Number(edit.activity_lat.toFixed(6));
       submitPayload.activity_recorded_at = (edit.activity_recorded_at || "").trim() || new Date().toISOString();
+    }
+    if (
+      !(await ensureGreenFieldPrivacyConsent("task_submit_for_review", {
+        task_id: taskId,
+        task_type: task?.task_type || "",
+        has_photo: optimisticPhotoUrls.length > 0 || Boolean(edit.photo_url),
+        has_gps: edit.activity_lng !== null && edit.activity_lat !== null,
+      }))
+    ) {
+      toast.dismiss(loadingId);
+      return;
     }
     try {
       await saveTaskTreeMetadata(task);
@@ -2479,7 +2527,10 @@ export default function Green() {
     window.open(`${BACKEND_URL}/green/projects/${activeProject.id}/donor-report/pdf?${params.toString()}`, "_blank");
   };
 
-  const useGps = () => {
+  const useGps = async () => {
+    if (!(await ensureGreenFieldPrivacyConsent("tree_gps_capture"))) {
+      return;
+    }
     if (!navigator.geolocation) {
       toast.error("Geolocation not supported on this device");
       return;
@@ -2505,7 +2556,7 @@ export default function Green() {
     );
   };
 
-  const captureTaskGps = (taskId: number) => {
+  const captureTaskGps = async (taskId: number) => {
     if (!navigator.geolocation) {
       toast.error("Geolocation not supported on this device");
       return;
@@ -2513,6 +2564,9 @@ export default function Green() {
     const task = myTasks.find((entry: any) => entry.id === taskId);
     if (!task || isTaskLockedForField(task)) {
       toast.error("Task is locked for review");
+      return;
+    }
+    if (!(await ensureGreenFieldPrivacyConsent("task_gps_capture", { task_id: taskId, task_type: task?.task_type || "" }))) {
       return;
     }
     setTaskGpsLoadingId(taskId);
@@ -2554,10 +2608,13 @@ export default function Green() {
     );
   };
 
-  const onPhotoPicked = (file: File | null) => {
+  const onPhotoPicked = async (file: File | null) => {
     if (!file) {
       setPendingTreePhoto(null);
       setPhotoPreview("");
+      return;
+    }
+    if (!(await ensureGreenFieldPrivacyConsent("tree_photo_capture", { file_count: 1 }))) {
       return;
     }
     setPendingTreePhotos([]);
@@ -2572,11 +2629,14 @@ export default function Green() {
     setNewTree((prev) => ({ ...prev, photo_url: "" }));
   };
 
-  const onTreePhotosPicked = (files: FileList | File[] | null | undefined) => {
+  const onTreePhotosPicked = async (files: FileList | File[] | null | undefined) => {
     const list = Array.from(files || []).filter(Boolean) as File[];
     if (list.length === 0) {
       setPendingTreePhotos([]);
       setTreePhotoPreviews([]);
+      return;
+    }
+    if (!(await ensureGreenFieldPrivacyConsent("existing_tree_batch_photo_capture", { file_count: list.length }))) {
       return;
     }
     setPendingTreePhoto(null);
@@ -2597,6 +2657,9 @@ export default function Green() {
   const onInspectedTreePhotoPicked = async (file: File | null) => {
     if (!ensureGreenWritesAllowed()) return;
     if (!file || !inspectedTree) return;
+    if (!(await ensureGreenFieldPrivacyConsent("tree_photo_upload", { tree_id: inspectedTree.id }))) {
+      return;
+    }
     const treeId = inspectedTree.id;
     setTreePhotoUploading(true);
     const loadingId = toast.loading("Uploading tree photo...");
@@ -2704,6 +2767,7 @@ export default function Green() {
   return (
     <div className={`green-container ${activeSection === null ? "green-home-mode" : "green-detail-mode"}`}>
       <Toaster position="top-right" />
+      {privacyConsentModal}
       <header className="green-header">
         <div className="green-header-inner">
             <div className="green-header-brand">
@@ -3316,7 +3380,7 @@ export default function Green() {
                               <button
                                 className="green-btn-outline"
                                 type="button"
-                                onClick={() => captureTaskGps(t.id)}
+                                onClick={() => void captureTaskGps(t.id)}
                                 disabled={taskGpsLoadingId === t.id}
                               >
                                 {taskGpsLoadingId === t.id ? "Locating..." : "Use Current GPS"}
@@ -3343,7 +3407,7 @@ export default function Green() {
                             </p>
                           </div>
                           <div className="task-edit-inline-actions">
-                            <button className="green-btn-primary" type="button" onClick={() => saveTaskUpdate(t.id)}>
+                            <button className="green-btn-primary" type="button" onClick={() => void saveTaskUpdate(t.id)}>
                               Save Task Update
                             </button>
                             <button
@@ -3451,7 +3515,7 @@ export default function Green() {
                 <>
                   <div className="tree-form-row">
                     <label>GPS</label>
-                    <button className="green-btn-outline" type="button" onClick={useGps} disabled={gpsLoading}>
+                    <button className="green-btn-outline" type="button" onClick={() => void useGps()} disabled={gpsLoading}>
                       {gpsLoading ? "Locating..." : "Use GPS Location"}
                     </button>
                   </div>
@@ -3743,7 +3807,7 @@ export default function Green() {
                       accept="image/*"
                       capture="environment"
                       multiple
-                      onChange={(e) => onTreePhotosPicked(e.target.files)}
+                      onChange={(e) => void onTreePhotosPicked(e.target.files)}
                     />
                     <small className="tree-photo-hint">
                       Upload multiple photos for this existing-tree area record. Photos are attached to the same record.
@@ -3765,7 +3829,7 @@ export default function Green() {
                       type="file"
                       accept="image/*"
                       capture="environment"
-                      onChange={(e) => onPhotoPicked(e.target.files?.[0] || null)}
+                      onChange={(e) => void onPhotoPicked(e.target.files?.[0] || null)}
                     />
                     <small className="tree-photo-hint">Snapped photo uploads automatically when you tap Add Tree.</small>
                     {photoPreview && <img className="tree-photo-preview" src={photoPreview} alt="Tree preview" />}
