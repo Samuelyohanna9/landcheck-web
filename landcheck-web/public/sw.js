@@ -1,5 +1,5 @@
 var CACHE_NAME = "green-shell-v8";
-var MAP_CACHE_NAME = "green-map-v3";
+var MAP_CACHE_NAME = "green-map-v4";
 var SYNC_TAG = "green-sync-queue";
 
 /* ── Precache list ─────────────────────────────────────────────── */
@@ -159,6 +159,52 @@ self.addEventListener("message", function (event) {
     );
     return;
   }
+
+  if (data.type === "PRECACHE_PMTILES_ARCHIVE") {
+    var pmtilesUrl = String(data.url || "");
+    if (!pmtilesUrl) return;
+    event.waitUntil(
+      caches.open(MAP_CACHE_NAME).then(function (cache) {
+        return cache.match(pmtilesUrl).then(function (existing) {
+          if (existing) {
+            if (event.source) {
+              event.source.postMessage({
+                type: "PRECACHE_PMTILES_DONE",
+                url: pmtilesUrl,
+                cached: true,
+              });
+            }
+            return;
+          }
+          return fetch(pmtilesUrl, { cache: "reload" })
+            .then(function (resp) {
+              if (resp && resp.ok) {
+                return cache.put(pmtilesUrl, resp.clone()).then(function () {
+                  if (event.source) {
+                    event.source.postMessage({
+                      type: "PRECACHE_PMTILES_DONE",
+                      url: pmtilesUrl,
+                      cached: true,
+                    });
+                  }
+                });
+              }
+              throw new Error("Failed to cache PMTiles archive");
+            })
+            .catch(function () {
+              if (event.source) {
+                event.source.postMessage({
+                  type: "PRECACHE_PMTILES_DONE",
+                  url: pmtilesUrl,
+                  cached: false,
+                });
+              }
+            });
+        });
+      })
+    );
+    return;
+  }
 });
 
 /* ── Helpers ───────────────────────────────────────────────────── */
@@ -174,6 +220,49 @@ function isMapboxRequest(url) {
     path.includes("/raster/v1/") ||
     path.includes("/v4/")
   );
+}
+
+function isPmtilesRequest(url) {
+  return String(url.pathname || "").toLowerCase().endsWith(".pmtiles");
+}
+
+function parseRangeHeader(value, size) {
+  if (!value) return null;
+  var match = /bytes=(\d*)-(\d*)/.exec(String(value));
+  if (!match) return null;
+  var start = match[1] ? parseInt(match[1], 10) : 0;
+  var end = match[2] ? parseInt(match[2], 10) : size - 1;
+  if (!isFinite(start) || start < 0) start = 0;
+  if (!isFinite(end) || end >= size) end = size - 1;
+  if (start > end || start >= size) return null;
+  return { start: start, end: end };
+}
+
+function responseWithRange(fullResponse, rangeHeader) {
+  return fullResponse.arrayBuffer().then(function (buffer) {
+    var size = buffer.byteLength || 0;
+    var parsed = parseRangeHeader(rangeHeader, size);
+    if (!parsed) {
+      return new Response(buffer, {
+        status: 200,
+        headers: {
+          "Content-Type": fullResponse.headers.get("Content-Type") || "application/octet-stream",
+          "Content-Length": String(size),
+          "Accept-Ranges": "bytes",
+        },
+      });
+    }
+    var chunk = buffer.slice(parsed.start, parsed.end + 1);
+    return new Response(chunk, {
+      status: 206,
+      headers: {
+        "Content-Type": fullResponse.headers.get("Content-Type") || "application/octet-stream",
+        "Content-Length": String(chunk.byteLength || 0),
+        "Content-Range": "bytes " + parsed.start + "-" + parsed.end + "/" + size,
+        "Accept-Ranges": "bytes",
+      },
+    });
+  });
 }
 
 function isGreenRoute(pathname) {
@@ -236,6 +325,40 @@ self.addEventListener("fetch", function (event) {
 
   // Skip API calls – let them go straight to network
   if (isSameOrigin && url.pathname.startsWith("/api/")) return;
+
+  if (isPmtilesRequest(url)) {
+    event.respondWith(
+      caches.open(MAP_CACHE_NAME).then(function (mapCache) {
+        return mapCache.match(url.href).then(function (cachedArchive) {
+          if (cachedArchive) {
+            var rangeHeader = req.headers.get("Range");
+            if (rangeHeader) {
+              return responseWithRange(cachedArchive.clone(), rangeHeader);
+            }
+            return cachedArchive;
+          }
+
+          return fetch(req)
+            .then(function (resp) {
+              if (!resp || !resp.ok) {
+                return resp;
+              }
+              if (!req.headers.get("Range")) {
+                event.waitUntil(mapCache.put(url.href, resp.clone()));
+              }
+              return resp;
+            })
+            .catch(function () {
+              return new Response("Offline PMTiles archive unavailable", {
+                status: 503,
+                statusText: "Offline",
+              });
+            });
+        });
+      })
+    );
+    return;
+  }
 
   /* ── Mapbox tile / style / font caching (stale-while-revalidate) ── */
   if (isMapboxRequest(url)) {
