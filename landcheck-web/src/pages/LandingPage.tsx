@@ -276,6 +276,9 @@ export default function LandingPage() {
           <button type="button" onClick={() => navigate("/feedback")}>
             Give Feedback
           </button>
+          <button type="button" onClick={() => navigate("/privacy")}>
+            Privacy Policy
+          </button>
         </div>
       </footer>
     </div>

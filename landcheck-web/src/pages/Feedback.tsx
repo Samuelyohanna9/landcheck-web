@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
+import { acceptPrivacyConsent } from "../privacy/privacyConsent";
 import "../styles/feedback.css";
 
 type FeedbackData = {
@@ -43,6 +44,7 @@ export default function Feedback() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [formData, setFormData] = useState<FeedbackData>({
     profession: "",
     experience: "",
@@ -75,9 +77,19 @@ export default function Feedback() {
       toast.error("Please rate your satisfaction");
       return;
     }
+    if (!privacyAccepted) {
+      toast.error("Please confirm the privacy notice before submitting feedback.");
+      return;
+    }
 
     setLoading(true);
     try {
+      await acceptPrivacyConsent("feedback_contact_submission", "feedback", {
+        metadata: {
+          has_email: Boolean(formData.email.trim()),
+          profession: formData.profession,
+        },
+      });
       await api.post("/feedback", formData);
       setSubmitted(true);
       toast.success("Thank you for your feedback!");
@@ -267,6 +279,21 @@ export default function Feedback() {
               placeholder="your@email.com"
             />
             <span className="input-hint">We'll only contact you about your feedback</span>
+          </div>
+
+          <div className="privacy-checkbox-row">
+            <input
+              id="feedback-privacy-consent"
+              type="checkbox"
+              checked={privacyAccepted}
+              onChange={(e) => setPrivacyAccepted(e.target.checked)}
+            />
+            <label htmlFor="feedback-privacy-consent">
+              <span>I agree that LandCheck may store this feedback, my optional email address, and related product notes for follow-up and service improvement.</span>
+              <a className="privacy-inline-link" href="/privacy">
+                Review privacy policy
+              </a>
+            </label>
           </div>
 
           {/* Submit */}

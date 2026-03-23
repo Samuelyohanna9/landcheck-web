@@ -11,7 +11,9 @@ import GreenLogin from "./pages/GreenLogin";
 import GreenWork from "./pages/GreenWork";
 import GreenWorkLogin from "./pages/GreenWorkLogin";
 import GreenPartnersLanding from "./pages/GreenPartnersLanding";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import SeoRouteMeta from "./components/SeoRouteMeta";
+import PrivacyNoticeBanner from "./components/PrivacyNoticeBanner";
 import { isGreenAuthed } from "./auth/greenAuth";
 import { isWorkAuthed } from "./auth/workAuth";
 
@@ -27,10 +29,12 @@ export default function App() {
   return (
     <BrowserRouter>
       <SeoRouteMeta />
+      <PrivacyNoticeBanner />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/survey-plan" element={<SurveyPlan />} />
         <Route path="/hazard-analysis" element={<HazardAnalysis />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/green/login" element={<GreenLogin />} />
         <Route path="/green" element={<GreenProtectedRoute element={<Green />} />} />
         <Route path="/green-work/login" element={<GreenWorkLogin />} />

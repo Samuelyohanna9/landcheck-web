@@ -4,6 +4,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { api, BACKEND_URL } from "../api/client";
 import TreeMap, { type TreeInspectData } from "../components/TreeMap";
 import { clearWorkAuthed, getWorkAuthSession } from "../auth/workAuth";
+import { usePrivacyConsentGate } from "../privacy/usePrivacyConsentGate";
 import {
   cacheProjectsOffline,
   cacheUsersOffline,
@@ -2047,6 +2048,31 @@ export default function GreenWork() {
     assignee_name: "all",
   });
   const [verraHistory, setVerraHistory] = useState<VerraExportHistoryItem[]>([]);
+  const { ensureConsent: ensureWorkPrivacyConsent, privacyConsentModal } = usePrivacyConsentGate("work");
+
+  const ensureWorkOperationalConsent = useCallback(
+    async (action: string, metadata: Record<string, unknown> = {}) => {
+      const accepted = await ensureWorkPrivacyConsent("work_operational_data_processing", {
+        title: "Consent required before processing Work data",
+        detail:
+          "LandCheck Work processes organization, staff, custodian, review, photo, and workflow records. Continue only if you are authorized to enter, edit, or export this data for the organization or project.",
+        actionLabel: "I Consent and Continue",
+        metadata: {
+          action,
+          project_id: activeProjectId ?? null,
+          organization_id: workScopedOrganizationId ?? null,
+          actor_name: workAuthSession?.user?.full_name || "",
+          ...metadata,
+        },
+      });
+      if (!accepted) {
+        toast.error("Consent is required before processing operational data in LandCheck Work.");
+        return false;
+      }
+      return true;
+    },
+    [activeProjectId, ensureWorkPrivacyConsent, workAuthSession?.user?.full_name, workScopedOrganizationId],
+  );
 
   const loadProjects = async () => {
     if (isPartnerWorkSession && !workScopedOrganizationId) {
@@ -2344,6 +2370,16 @@ export default function GreenWork() {
     const isEditing = Boolean(editingAdminUserId);
     if (!isEditing && loginEnabled && !adminUserDraft.email.trim()) {
       toast.error("Email is required so the new user can receive login credentials.");
+      return;
+    }
+    if (
+      !(await ensureWorkOperationalConsent("admin_user_save", {
+        editing: isEditing,
+        target_email: adminUserDraft.email.trim() || null,
+        allow_green: adminUserDraft.allow_green,
+        allow_work: adminUserDraft.allow_work,
+      }))
+    ) {
       return;
     }
     const roleIdNum = Number(adminUserDraft.role_id || 0);
@@ -2720,6 +2756,14 @@ export default function GreenWork() {
       toast.error("Custodian name required");
       return;
     }
+    if (
+      !(await ensureWorkOperationalConsent("custodian_create", {
+        has_phone: Boolean(newCustodian.phone.trim()),
+        has_email: Boolean(newCustodian.email.trim()),
+      }))
+    ) {
+      return;
+    }
     try {
       await api.post(`/green/projects/${activeProjectId}/custodians`, {
         custodian_type: newCustodian.custodian_type,
@@ -2789,6 +2833,14 @@ export default function GreenWork() {
       toast.error("Quantity must be greater than 0");
       return;
     }
+    if (
+      !(await ensureWorkOperationalConsent("distribution_event_create", {
+        quantity: Number(newDistributionEvent.quantity || 0),
+        distributed_by: newDistributionEvent.distributed_by || null,
+      }))
+    ) {
+      return;
+    }
     try {
       await api.post(`/green/projects/${activeProjectId}/distribution-events`, {
         event_date: newDistributionEvent.event_date,
@@ -2831,6 +2883,15 @@ export default function GreenWork() {
     }
     if (Number(newAllocation.supervision_target || 0) < 0) {
       toast.error("Supervision target cannot be negative");
+      return;
+    }
+    if (
+      !(await ensureWorkOperationalConsent("distribution_allocation_save", {
+        event_id: eventId,
+        custodian_id: custodianId,
+        quantity_allocated: Number(newAllocation.quantity_allocated || 0),
+      }))
+    ) {
       return;
     }
     try {
@@ -3312,6 +3373,14 @@ export default function GreenWork() {
       ...newProject,
       organization_id: Number.isFinite(orgId) && orgId > 0 ? orgId : null,
     };
+    if (
+      !(await ensureWorkOperationalConsent("project_create", {
+        project_name: payload.name,
+        organization_id: payload.organization_id,
+      }))
+    ) {
+      return;
+    }
     const res = await api.post("/green/projects", payload);
     setProjects((prev) => [res.data, ...prev]);
     setNewProject({
@@ -3335,6 +3404,15 @@ export default function GreenWork() {
       ...newOrganization,
       status: (newOrganization.status || "pilot").trim().toLowerCase() || "pilot",
     };
+    if (
+      !(await ensureWorkOperationalConsent("organization_save", {
+        editing: Boolean(editingOrganizationId),
+        contact_email: payload.contact_email || null,
+        contact_phone: payload.contact_phone || null,
+      }))
+    ) {
+      return;
+    }
     try {
       if (editingOrganizationId) {
         await api.patch(`/green/admin/organizations/${editingOrganizationId}`, payload);
@@ -3496,6 +3574,15 @@ export default function GreenWork() {
       return;
     }
     const targetTrees = newOrderSpeciesMode ? newOrderSpeciesTargetTotal : Number(newOrder.target_trees || 0);
+    if (
+      !(await ensureWorkOperationalConsent("work_order_create", {
+        assignee_name: newOrder.assignee_name,
+        target_trees: targetTrees,
+        area_enabled: newOrderAreaEnabled,
+      }))
+    ) {
+      return;
+    }
     try {
       await api.post("/green/work-orders", {
         project_id: activeProjectId,
@@ -3660,6 +3747,15 @@ export default function GreenWork() {
       }
       dueDateToSubmit = newTask.due_date;
     }
+    if (
+      !(await ensureWorkOperationalConsent("maintenance_task_assign", {
+        tree_id: newTask.tree_id,
+        assignee_name: newTask.assignee_name,
+        task_type: activity,
+      }))
+    ) {
+      return;
+    }
 
     const modelSeason =
       newTask.due_mode === "model_dry"
@@ -3705,8 +3801,17 @@ export default function GreenWork() {
         ? "Approving task..."
         : decision === "metadata_edit"
           ? "Requesting metadata edit..."
-          : "Rejecting task...",
+        : "Rejecting task...",
     );
+    if (
+      !(await ensureWorkOperationalConsent("task_review", {
+        task_id: taskId,
+        decision,
+      }))
+    ) {
+      toast.dismiss(loadingId);
+      return;
+    }
     try {
       await api.post(`/green/tasks/${taskId}/review`, {
         decision,
@@ -3782,6 +3887,9 @@ export default function GreenWork() {
 
   const onOrganizationLogoPicked = async (file: File | null) => {
     if (!file) return;
+    if (!(await ensureWorkOperationalConsent("organization_logo_upload", { has_file: true }))) {
+      return;
+    }
     setOrgLogoUploading(true);
     const loadingId = toast.loading("Uploading organization logo...");
     try {
@@ -3798,6 +3906,9 @@ export default function GreenWork() {
 
   const onInspectedTreePhotoPicked = async (file: File | null) => {
     if (!file || !inspectedTree) return;
+    if (!(await ensureWorkOperationalConsent("work_tree_photo_upload", { tree_id: inspectedTree.id }))) {
+      return;
+    }
     const treeId = inspectedTree.id;
     setTreePhotoUploading(true);
     const loadingId = toast.loading("Uploading tree photo...");
@@ -5533,6 +5644,7 @@ export default function GreenWork() {
   return (
     <div className="green-work-container">
       <Toaster position="top-right" />
+      {privacyConsentModal}
       <header className="green-work-header">
         <div className="green-work-header-inner">
           <div className="green-work-brand">
