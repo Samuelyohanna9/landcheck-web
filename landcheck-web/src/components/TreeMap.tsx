@@ -7,12 +7,51 @@ import {
   cacheTreeTimelineOffline,
   getCachedTreeTasksOffline,
   getCachedTreeTimelineOffline,
+  precacheMapTilesForBounds,
 } from "../offline/greenOffline";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "../styles/tree-map.css";
 
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
+const MAPBOX_TOKEN = String(import.meta.env.VITE_MAPBOX_TOKEN || "").trim();
+const LIVE_MAP_STYLE = "mapbox://styles/mapbox/satellite-streets-v12";
 
+mapboxgl.accessToken = MAPBOX_TOKEN;
+
+const buildOfflineMapStyle = (): any => ({
+  version: 8 as const,
+  name: "LandCheck Green Offline",
+  glyphs: `https://api.mapbox.com/fonts/v1/mapbox/{fontstack}/{range}.pbf?access_token=${MAPBOX_TOKEN}`,
+  sources: {
+    "green-offline-raster": {
+      type: "raster",
+      tiles: [
+        `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=${MAPBOX_TOKEN}`,
+      ],
+      tileSize: 256,
+      minzoom: 0,
+      maxzoom: 18,
+    },
+  },
+  layers: [
+    {
+      id: "green-offline-background",
+      type: "background",
+      paint: {
+        "background-color": "#dbe7da",
+      },
+    },
+    {
+      id: "green-offline-raster-layer",
+      type: "raster",
+      source: "green-offline-raster",
+      minzoom: 0,
+      maxzoom: 18,
+      paint: {
+        "raster-opacity": 1,
+      },
+    },
+  ],
+});
 export type TreePoint = {
   id: number;
   project_tree_no?: number | null;
@@ -238,7 +277,7 @@ const formatHeight = (value: number | null | undefined) => {
   return `${numeric.toFixed(2)} m`;
 };
 
-const getFeatureProps = (feature: mapboxgl.MapboxGeoJSONFeature | undefined): TreeFeatureProps | null => {
+const getFeatureProps = (feature: any): TreeFeatureProps | null => {
   if (!feature) return null;
   const raw = feature.properties || {};
   const id = Number(raw.id);
@@ -504,6 +543,7 @@ export default function TreeMap({
   assignmentAreas = [],
   minHeight = 420,
 }: Props) {
+  const hasMapboxToken = Boolean(MAPBOX_TOKEN);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const draftMarkerRef = useRef<mapboxgl.Marker | null>(null);
@@ -525,10 +565,39 @@ export default function TreeMap({
   const detailCacheRef = useRef<Map<number, TreePopupDetail>>(new Map());
   const pendingDetailRef = useRef<Map<number, Promise<TreePopupDetail>>>(new Map());
   const lastAppliedFitSignatureRef = useRef<string>("");
+  const lastViewportCacheSignatureRef = useRef<string>("");
   const healthyBlinkFrameRef = useRef<number | null>(null);
   const healthyBlinkActiveRef = useRef(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
+
+  const precacheViewportTiles = (map: mapboxgl.Map) => {
+    if (typeof navigator === "undefined" || !navigator.onLine) return;
+    const zoom = Number(map.getZoom());
+    if (!Number.isFinite(zoom) || zoom < 11) return;
+    const bounds = map.getBounds();
+    if (!bounds) return;
+    const west = Number(bounds.getWest());
+    const south = Number(bounds.getSouth());
+    const east = Number(bounds.getEast());
+    const north = Number(bounds.getNorth());
+    if (![west, south, east, north].every((value) => Number.isFinite(value))) return;
+
+    const roundedZoom = Math.max(11, Math.min(18, Math.round(zoom)));
+    const zooms = Array.from(
+      new Set([Math.max(11, roundedZoom - 1), roundedZoom, Math.min(18, roundedZoom + 1)]),
+    ).sort((a, b) => a - b);
+    const signature = [
+      west.toFixed(4),
+      south.toFixed(4),
+      east.toFixed(4),
+      north.toFixed(4),
+      zooms.join(","),
+    ].join("|");
+    if (lastViewportCacheSignatureRef.current === signature) return;
+    lastViewportCacheSignatureRef.current = signature;
+    void precacheMapTilesForBounds({ west, south, east, north }, undefined, zooms).catch(() => {});
+  };
 
   const stopHealthyBlink = () => {
     healthyBlinkActiveRef.current = false;
@@ -677,7 +746,7 @@ export default function TreeMap({
   useEffect(() => {
     if (mapRef.current) return;
 
-    if (!mapboxgl.accessToken) {
+    if (!hasMapboxToken) {
       setMapError("Missing Mapbox token (VITE_MAPBOX_TOKEN).");
       return;
     }
@@ -689,7 +758,7 @@ export default function TreeMap({
 
       const map = new mapboxgl.Map({
         container: containerRef.current,
-        style: "mapbox://styles/mapbox/satellite-streets-v12",
+        style: navigator.onLine ? LIVE_MAP_STYLE : buildOfflineMapStyle(),
         center: [7.5, 9.0],
         zoom: 6,
       });
@@ -715,13 +784,13 @@ export default function TreeMap({
 
       map.on("error", (e) => {
         // eslint-disable-next-line no-console
-        console.warn("Mapbox error:", e?.error || e);
+        console.warn("Map error:", e?.error || e);
         // Only show fatal error if the map never managed to load at all.
-        // Tile/style loading errors when offline are expected and non-fatal —
-        // the map still renders with cached tiles and blank areas for uncached ones.
+        // Tile/style loading errors when offline are expected and non-fatal.
+        // Cached tiles or PMTiles basemap data can still render the map.
         if (!mapReadyRef.current) {
           const msg = !navigator.onLine
-            ? "Offline — map using cached tiles. Some areas may appear blank."
+            ? "Offline map running from cache. Uncached areas may appear blank."
             : (e?.error?.message || "Map failed to load");
           setMapError(msg);
           mapErrorRef.current = msg;
@@ -732,8 +801,8 @@ export default function TreeMap({
         if (!mapReadyRef.current && !mapErrorRef.current) {
           setMapError(
             navigator.onLine
-              ? "Map load timed out. Check network/token or domain restrictions."
-              : "Offline — map loading from cache. Some tiles may be unavailable."
+              ? "Map load timed out. Check PMTiles URL, Mapbox token, or network access."
+              : "Offline map loading from cache. Some tiles may be unavailable."
           );
         }
       }, navigator.onLine ? 12000 : 20000);
@@ -743,6 +812,7 @@ export default function TreeMap({
         setMapReady(true);
         mapReadyRef.current = true;
         map.resize();
+        precacheViewportTiles(map);
 
         if (!map.getSource("draft-point")) {
           map.addSource("draft-point", {
@@ -916,7 +986,7 @@ export default function TreeMap({
             });
           }
 
-          const onTreePress = (event: mapboxgl.MapLayerMouseEvent | mapboxgl.MapTouchEvent) => {
+          const onTreePress = (event: any) => {
             const props = getFeatureProps(event.features?.[0]);
             if (!props) return;
             onSelectTreeRef.current?.(props.id);
@@ -971,15 +1041,17 @@ export default function TreeMap({
       });
 
       map.on("moveend", () => {
-        if (!onViewChange) return;
-        const center = map.getCenter();
-        onViewChange({
-          lng: Number(center.lng.toFixed(6)),
-          lat: Number(center.lat.toFixed(6)),
-          zoom: Number(map.getZoom().toFixed(2)),
-          bearing: Number(map.getBearing().toFixed(2)),
-          pitch: Number(map.getPitch().toFixed(2)),
-        });
+        if (onViewChange) {
+          const center = map.getCenter();
+          onViewChange({
+            lng: Number(center.lng.toFixed(6)),
+            lat: Number(center.lat.toFixed(6)),
+            zoom: Number(map.getZoom().toFixed(2)),
+            bearing: Number(map.getBearing().toFixed(2)),
+            pitch: Number(map.getPitch().toFixed(2)),
+          });
+        }
+        precacheViewportTiles(map);
       });
 
       if (enableDraw) {
@@ -1066,7 +1138,20 @@ export default function TreeMap({
         drawRef.current = null;
       }
     };
-  }, [enableDraw]);
+  }, [enableDraw, hasMapboxToken]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      const map = mapRef.current;
+      if (map) {
+        precacheViewportTiles(map);
+      }
+    };
+    window.addEventListener("online", handleOnline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+    };
+  }, []);
 
   useEffect(() => {
     if (mapReady) {
@@ -1093,7 +1178,7 @@ export default function TreeMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    const source = map.getSource(TREE_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+    const source = map.getSource(TREE_SOURCE_ID) as any;
     if (!source) return;
     // Tree photo/status can change after uploads or updates; clear detail cache
     // so sidebar/popup always reads the latest server state on next click.
@@ -1105,7 +1190,7 @@ export default function TreeMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    const source = map.getSource(ASSIGNMENT_AREA_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+    const source = map.getSource(ASSIGNMENT_AREA_SOURCE_ID) as any;
     if (!source) return;
     source.setData(buildAssignmentAreaFeatureCollection(assignmentAreas, trees));
   }, [assignmentAreas, trees, mapReady]);
@@ -1119,7 +1204,7 @@ export default function TreeMap({
         draftMarkerRef.current.remove();
         draftMarkerRef.current = null;
       }
-      const source = map.getSource("draft-point") as mapboxgl.GeoJSONSource | undefined;
+      const source = map.getSource("draft-point") as any;
       if (source) {
         source.setData({ type: "FeatureCollection", features: [] });
       }
@@ -1160,7 +1245,7 @@ export default function TreeMap({
       draftMarkerRef.current.setLngLat([draftPoint.lng, draftPoint.lat]);
     }
 
-    const source = map.getSource("draft-point") as mapboxgl.GeoJSONSource | undefined;
+    const source = map.getSource("draft-point") as any;
     if (source) {
       source.setData({ type: "FeatureCollection", features: [] });
     }
@@ -1218,9 +1303,10 @@ export default function TreeMap({
         <div className="tree-map-overlay">
           <strong>Map error</strong>
           <span>{mapError}</span>
-          {!mapboxgl.accessToken && <span>Missing Mapbox token.</span>}
+          {!hasMapboxToken && <span>Add `VITE_MAPBOX_TOKEN`.</span>}
         </div>
       )}
     </div>
   );
 }
+

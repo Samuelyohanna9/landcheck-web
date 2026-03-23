@@ -1328,9 +1328,18 @@ export default function Green() {
         cacheProjectCustodiansOffline(id, custodians).catch(() => {}),
         cacheProjectAllocationsOffline(id, allocations).catch(() => {}),
       ]);
-      // Pre-cache map tiles for the project area so the map works offline
-      if (normalized.length > 0 && navigator.onLine) {
-        precacheMapTilesForArea(normalized).catch(() => {});
+      // Pre-cache map tiles for the project area so the map remains usable offline.
+      if (navigator.onLine) {
+        const projectMapSeedPoints = normalized.flatMap((tree: any) => {
+          const areaPoints = extractAreaPoints(normalizeOrderAreaGeometry(tree?.existing_area_geojson));
+          if (areaPoints.length > 0) return areaPoints;
+          const lng = Number(tree?.lng);
+          const lat = Number(tree?.lat);
+          return Number.isFinite(lng) && Number.isFinite(lat) ? [{ lng, lat }] : [];
+        });
+        if (projectMapSeedPoints.length > 0) {
+          precacheMapTilesForArea(projectMapSeedPoints).catch(() => {});
+        }
       }
     } catch (error) {
       const [cachedProject, cachedTrees, pendingDrafts, cachedCustodians, cachedAllocations] = await Promise.all([
@@ -1400,6 +1409,12 @@ export default function Green() {
       orderNotifyPrimedRef.current = true;
       setPlantingOrders(rows);
       await cacheWorkOrdersOffline(projectId, assigneeName, rows).catch(() => {});
+      if (navigator.onLine) {
+        const orderAreaPoints = rows.flatMap((row: any) => extractAreaPoints(normalizeOrderAreaGeometry(row?.area_geojson)));
+        if (orderAreaPoints.length > 0) {
+          precacheMapTilesForArea(orderAreaPoints).catch(() => {});
+        }
+      }
     } catch (error) {
       const cached = await getCachedWorkOrdersOffline(projectId, assigneeName).catch(() => []);
       if (cached.length > 0) {

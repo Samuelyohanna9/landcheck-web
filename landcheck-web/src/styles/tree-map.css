@@ -21,20 +21,24 @@
   touch-action: pan-x pan-y;
 }
 
-/* Ensure Mapbox controls are above overlays */
+/* Ensure map controls are above overlays */
 .tree-map .mapboxgl-ctrl-top-right,
-.tree-map .mapboxgl-ctrl-top-left {
+.tree-map .mapboxgl-ctrl-top-left,
+.tree-map .maplibregl-ctrl-top-right,
+.tree-map .maplibregl-ctrl-top-left {
   z-index: 2;
 }
 
-.tree-map .mapboxgl-ctrl-group {
+.tree-map .mapboxgl-ctrl-group,
+.tree-map .maplibregl-ctrl-group {
   border-radius: 10px !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
   border: none !important;
   overflow: hidden;
 }
 
-.tree-map .mapboxgl-ctrl-group button {
+.tree-map .mapboxgl-ctrl-group button,
+.tree-map .maplibregl-ctrl-group button {
   width: 36px !important;
   height: 36px !important;
 }
@@ -145,7 +149,8 @@
 }
 
 /* ── Popup ────────────────────────────────────────────────── */
-.tree-detail-popup .mapboxgl-popup-content {
+.tree-detail-popup .mapboxgl-popup-content,
+.tree-detail-popup .maplibregl-popup-content {
   border-radius: 14px;
   border: 1px solid rgba(34, 90, 58, 0.12);
   padding: 0.65rem 0.7rem;
@@ -153,7 +158,8 @@
   background: #ffffff;
 }
 
-.tree-detail-popup .mapboxgl-popup-close-button {
+.tree-detail-popup .mapboxgl-popup-close-button,
+.tree-detail-popup .maplibregl-popup-close-button {
   font-size: 1.1rem;
   color: #6b8f7b;
   padding: 4px 8px;
@@ -209,7 +215,8 @@
     border-radius: 14px;
   }
 
-  .tree-map .mapboxgl-ctrl-group button {
+  .tree-map .mapboxgl-ctrl-group button,
+  .tree-map .maplibregl-ctrl-group button {
     width: 40px !important;
     height: 40px !important;
   }
