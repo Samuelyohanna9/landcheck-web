@@ -667,7 +667,7 @@ export default function Green() {
   const [useAssignedExistingTreeArea, setUseAssignedExistingTreeArea] = useState(false);
   const [selectedExistingTreeAreaOrderId, setSelectedExistingTreeAreaOrderId] = useState<string>("");
   const [addingTree, setAddingTree] = useState(false);
-  const [mapDrawMode, setMapDrawMode] = useState(false);
+  const [mapDrawMode, setMapDrawMode] = useState(true);
   const [, setMapView] = useState<{
     lng: number;
     lat: number;
@@ -1719,6 +1719,7 @@ export default function Green() {
     setExistingTreeBatchCount("");
     setUseAssignedExistingTreeArea(false);
     setSelectedExistingTreeAreaOrderId("");
+    setMapDrawMode(true);
     setPendingTreePhoto(null);
     setPendingTreePhotos([]);
     setPhotoPreview("");
@@ -2703,6 +2704,9 @@ export default function Green() {
   const openSection = (section: Section) => {
     setActiveSection(section);
     setEditingTaskId(null);
+    if (section === "map") {
+      setMapDrawMode(true);
+    }
   };
 
   const goHome = () => {
@@ -2976,19 +2980,6 @@ export default function Green() {
                   <span className="green-carbon-subvalue">{carbonAnnualPerTreeValue} average annual per tree</span>
                 </div>
               </div>
-              {(activeProject.carbon.current_co2_tonnes <= 0 || activeProject.carbon.projected_lifetime_co2_tonnes <= 0) && (
-                <p className="green-carbon-warning">
-                  CO2 is low/zero. Check tree planting dates and review status.
-                  {(activeProject.carbon.trees_missing_age_data || 0) > 0 &&
-                    ` Missing age data: ${activeProject.carbon.trees_missing_age_data}.`}
-                  {(activeProject.carbon.trees_pending_review || 0) > 0 &&
-                    ` Pending review: ${activeProject.carbon.trees_pending_review}.`}
-                </p>
-              )}
-              <p className="green-carbon-explain">
-                Annual is based on trees&apos; current ages; 40-year value is cumulative modeled stock by year 40.
-              </p>
-              <p className="green-carbon-method">IPCC Tier 1 + Chave et al. (2014)</p>
             </div>
           )}
         </section>
@@ -3442,24 +3433,6 @@ export default function Green() {
               </span>
             </div>
             {!activeUser && <p className="green-empty">Select a staff member or custodian to view only their trees.</p>}
-            <div className="green-map-mode-toggle">
-              <button
-                type="button"
-                className={`green-map-mode-btn ${!mapDrawMode ? "active" : ""}`}
-                onClick={() => setMapDrawMode(false)}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 11l2-2m0 0l7-7 7 7M5 9v10a2 2 0 002 2h10a2 2 0 002-2V9" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
-                Navigate
-              </button>
-              <button
-                type="button"
-                className={`green-map-mode-btn ${mapDrawMode ? "active" : ""}`}
-                onClick={() => setMapDrawMode(true)}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M12 2v4m0 12v4m-10-10h4m12 0h4" /></svg>
-                Add Tree
-              </button>
-            </div>
             <div className="green-map-layout">
               <div className="green-map-canvas">
                 {assignedPlantingAreas.length > 0 && (
@@ -3573,6 +3546,7 @@ export default function Green() {
                       setPendingTreePhotos([]);
                       setTreePhotoPreviews([]);
                     }
+                    setMapDrawMode(true);
                     setNewTree((prev) => ({
                       ...prev,
                       tree_origin: nextOrigin,
