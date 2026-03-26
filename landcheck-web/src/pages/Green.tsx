@@ -1802,11 +1802,24 @@ export default function Green() {
       toast.error("For Existing Tree, provide a reference date or estimated age (months) for accurate CO2.");
       return;
     }
+    const pendingFilesForTree = isExistingBatchCapture
+      ? pendingTreePhotos
+      : pendingTreePhoto
+        ? [pendingTreePhoto]
+        : [];
+    if (pendingFilesForTree.length === 0) {
+      toast.error(
+        isExistingBatchCapture
+          ? "Add at least one tree photo before saving this existing-tree area."
+          : "Take or choose a tree photo before adding this tree.",
+      );
+      return;
+    }
     if (
       !(await ensureGreenFieldPrivacyConsent("tree_create", {
         tree_origin: newTree.tree_origin,
         existing_tree_batch_mode: isExistingBatchCapture,
-        has_photo: pendingTreePhotos.length > 0 || Boolean(pendingTreePhoto),
+        has_photo: true,
         has_manual_point: !isExistingBatchCapture,
       }))
     ) {
@@ -1841,12 +1854,6 @@ export default function Green() {
       const createdTreeId = Number(createRes.data?.id || 0);
       const reviewTaskId = Number(createRes.data?.review_task_id || 0);
       let photoLinked = true;
-
-      const pendingFilesForTree = isExistingBatchCapture
-        ? pendingTreePhotos
-        : pendingTreePhoto
-          ? [pendingTreePhoto]
-          : [];
       if (pendingFilesForTree.length > 0 && Number.isFinite(createdTreeId) && createdTreeId > 0) {
         try {
           for (const file of pendingFilesForTree) {
@@ -3768,7 +3775,7 @@ export default function Green() {
                 <textarea value={newTree.notes} onChange={(e) => setNewTree({ ...newTree, notes: e.target.value })} />
               </div>
               <div className="tree-form-row full">
-                <label>{existingTreeBatchMode && newTree.tree_origin === "existing_inventory" ? "Tree Photos (Multiple)" : "Tree Photo"}</label>
+                <label>{existingTreeBatchMode && newTree.tree_origin === "existing_inventory" ? "Tree Photos (Multiple) *" : "Tree Photo *"}</label>
                 {existingTreeBatchMode && newTree.tree_origin === "existing_inventory" ? (
                   <>
                     <input
@@ -3778,9 +3785,7 @@ export default function Green() {
                       multiple
                       onChange={(e) => void onTreePhotosPicked(e.target.files)}
                     />
-                    <small className="tree-photo-hint">
-                      Upload multiple photos for this existing-tree area record. Photos are attached to the same record.
-                    </small>
+                    <small className="tree-photo-hint">Upload one or more photos for this existing-tree area record. At least one photo is required.</small>
                     {treePhotoPreviews.length > 0 && (
                       <div className="green-photo-preview-grid">
                         {treePhotoPreviews.map((src, index) => (
@@ -3800,7 +3805,7 @@ export default function Green() {
                       capture="environment"
                       onChange={(e) => void onPhotoPicked(e.target.files?.[0] || null)}
                     />
-                    <small className="tree-photo-hint">Snapped photo uploads automatically when you tap Add Tree.</small>
+                    <small className="tree-photo-hint">Take or choose one tree photo. A photo is required before you can add this tree.</small>
                     {photoPreview && <img className="tree-photo-preview" src={photoPreview} alt="Tree preview" />}
                   </>
                 )}
