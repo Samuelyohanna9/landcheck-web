@@ -2896,26 +2896,21 @@ export default function Green() {
                 ))}
               </select>
 
-              <select
-                value={activeUser}
-                onChange={(e) => setActiveUser(e.target.value)}
-                disabled={isLockedGreenUserSession}
-                title={isLockedGreenUserSession ? "Logged in user is fixed for this session." : undefined}
-              >
-                <option value="">Select staff or custodian</option>
-                {activeActorOptions.map((option) => (
-                  <option key={`${option.actorType}-${option.id}`} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              {!isLockedGreenUserSession && (
+                <select
+                  value={activeUser}
+                  onChange={(e) => setActiveUser(e.target.value)}
+                >
+                  <option value="">Select staff or custodian</option>
+                  {activeActorOptions.map((option) => (
+                    <option key={`${option.actorType}-${option.id}`} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
-          {isLockedGreenUserSession && (
-            <p className="green-empty">
-              Logged in as {lockedGreenActorName}. Project list is limited to your organization.
-            </p>
-          )}
 
           <div className={`green-project-status ${activeProject ? "selected" : "empty"}`}>
             {activeProject ? (
