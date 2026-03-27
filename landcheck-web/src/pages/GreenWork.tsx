@@ -1953,7 +1953,6 @@ export default function GreenWork() {
     priority: "normal",
     notes: "",
   });
-  const [mapView, setMapView] = useState<{ lng: number; lat: number; zoom: number; bearing: number; pitch: number } | null>(null);
   const [inspectedTree, setInspectedTree] = useState<TreeInspectData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeForm, setActiveForm] = useState<WorkForm | null>(
@@ -3945,13 +3944,6 @@ export default function GreenWork() {
     }
     if (assigneeFilter !== "all") {
       params.set("assignee_name", assigneeFilter);
-    }
-    if (mapView) {
-      params.set("lng", String(mapView.lng));
-      params.set("lat", String(mapView.lat));
-      params.set("zoom", String(mapView.zoom));
-      params.set("bearing", String(mapView.bearing));
-      params.set("pitch", String(mapView.pitch));
     }
     window.open(`${BACKEND_URL}/green/work-report/pdf?${params.toString()}`, "_blank");
   };
@@ -8778,7 +8770,6 @@ export default function GreenWork() {
                       setInspectedTree(detail);
                       if (detail) setMenuOpen(false);
                     }}
-                    onViewChange={(view) => setMapView(view)}
                     fitBounds={mapFitPoints}
                     assignmentAreas={existingTreeMapAreas}
                   />
