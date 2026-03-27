@@ -314,6 +314,14 @@ const hasTaskGpsCapture = (task: any, edit?: { activity_lng?: number | null; act
   const latSource = hasOwn(edit, "activity_lat") ? edit?.activity_lat : task?.activity_lat;
   return toFiniteNumber(lngSource) !== null && toFiniteNumber(latSource) !== null;
 };
+const taskSortStamp = (task: any) => {
+  const candidates = [task?.due_date, task?.created_at, task?.activity_recorded_at];
+  for (const value of candidates) {
+    const stamp = value ? new Date(value).getTime() : NaN;
+    if (Number.isFinite(stamp)) return stamp;
+  }
+  return Number(task?.id || 0);
+};
 const formatDateTimeLabel = (value: string | null | undefined) => {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -2103,6 +2111,7 @@ export default function Green() {
     }
     seenTaskIdsRef.current = nextTaskIds;
     taskNotifyPrimedRef.current = true;
+    rows.sort((a: any, b: any) => taskSortStamp(b) - taskSortStamp(a));
     setMyTasks(rows);
     const edits: Record<number, TaskEdit> = {};
     rows.forEach((t: any) => {
