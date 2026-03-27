@@ -2966,7 +2966,11 @@ export default function Green() {
 
           <div className="green-stats-bottom">
             <span>Survival Rate</span>
-            <strong>{survivalRate}%</strong>
+            <div className="green-survival-gauge" style={{ background: `conic-gradient(#34a853 ${survivalRate}%, #e8ece8 ${survivalRate}% 100%)` }}>
+              <div className="green-survival-gauge-inner">
+                <strong>{survivalRate}%</strong>
+              </div>
+            </div>
           </div>
 
           {activeProject?.carbon && (
