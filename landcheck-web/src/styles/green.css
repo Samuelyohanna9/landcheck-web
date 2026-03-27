@@ -500,10 +500,13 @@
 
 .green-stats-bottom {
   padding-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .green-stats-bottom span {
-  display: block;
   color: var(--card-subtle);
   font-size: 0.68rem;
   font-weight: 700;
@@ -511,7 +514,24 @@
   text-transform: uppercase;
 }
 
-.green-stats-bottom strong {
+.green-survival-gauge {
+  width: 96px;
+  height: 96px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+}
+
+.green-survival-gauge-inner {
+  width: 76px;
+  height: 76px;
+  border-radius: 999px;
+  background: #ffffff;
+  display: grid;
+  place-items: center;
+}
+
+.green-survival-gauge-inner strong {
   font-size: 1.55rem;
   letter-spacing: -0.03em;
   line-height: 1;
@@ -2024,13 +2044,24 @@
 
   .green-container.green-home-mode .green-stats-bottom {
     padding-top: 0.25rem;
+    gap: 0.3rem;
   }
 
   .green-container.green-home-mode .green-stats-bottom span {
     font-size: 0.6rem;
   }
 
-  .green-container.green-home-mode .green-stats-bottom strong {
+  .green-container.green-home-mode .green-survival-gauge {
+    width: 74px;
+    height: 74px;
+  }
+
+  .green-container.green-home-mode .green-survival-gauge-inner {
+    width: 58px;
+    height: 58px;
+  }
+
+  .green-container.green-home-mode .green-survival-gauge-inner strong {
     font-size: 0.9rem;
   }
 
