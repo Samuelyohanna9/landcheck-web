@@ -861,8 +861,23 @@
   grid-template-rows: minmax(0, 1fr);
 }
 
+.green-work-content.with-sidebar.sidebar-primary-mode {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
 .green-work-content.no-sidebar .green-work-sidebar {
   display: none;
+}
+
+.green-work-content.with-sidebar.sidebar-primary-mode .green-work-main {
+  display: none;
+}
+
+.green-work-content.with-sidebar.sidebar-primary-mode .green-work-sidebar {
+  height: 100%;
+  max-width: none;
+  overflow: auto;
 }
 
 .green-work-sidebar,
