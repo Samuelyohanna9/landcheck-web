@@ -1444,9 +1444,9 @@
   display: block;
   width: 100%;
   aspect-ratio: 4 / 3;
-  max-height: 180px;
-  min-height: 120px;
-  object-fit: cover;
+  max-height: 320px;
+  min-height: 220px;
+  object-fit: contain;
   background: linear-gradient(180deg, rgba(236, 244, 236, 0.9), rgba(223, 236, 223, 0.9));
   border-radius: 8px;
   border: 1px solid rgba(14, 110, 57, 0.14);
