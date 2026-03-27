@@ -927,65 +927,6 @@ export default function Green() {
     }
   };
 
-  const treePoints = useMemo(() => {
-    if (!activeUser) return [];
-    return trees
-      .filter((t: any) => (t as any).created_by === activeUser)
-      .map((t) => ({
-        id: t.id,
-        project_tree_no:
-          Number.isFinite(Number((t as any).project_tree_no)) && Number((t as any).project_tree_no) > 0
-            ? Number((t as any).project_tree_no)
-            : null,
-        lng: Number(t.lng),
-        lat: Number(t.lat),
-        status: t.status,
-        species: t.species,
-        planting_date: t.planting_date,
-        notes: t.notes,
-        photo_url: t.photo_url,
-        created_by: t.created_by || "",
-        tree_height_m: t.tree_height_m ?? null,
-        tree_age_months:
-          Number.isFinite(Number((t as any).tree_age_months)) && Number((t as any).tree_age_months) >= 0
-            ? Number((t as any).tree_age_months)
-            : null,
-        tree_origin: t.tree_origin || "new_planting",
-        attribution_scope: t.attribution_scope || "full",
-        count_in_planting_kpis: t.count_in_planting_kpis !== false,
-        count_in_carbon_scope: t.count_in_carbon_scope !== false,
-        custodian_name: t.custodian_name || "",
-      }))
-      .filter((t) => Number.isFinite(t.lng) && Number.isFinite(t.lat));
-  }, [trees, activeUser]);
-
-  const activeUserPoints = useMemo(() => {
-    if (!activeUser) return null;
-    const points = treePoints.map((t) => ({ lng: t.lng, lat: t.lat }));
-    return points.length ? points : null;
-  }, [activeUser, treePoints]);
-  const assignedPlantingAreas = useMemo(() => {
-    if (!activeUser) return [] as Array<{ id: number; label: string; geojson: any }>;
-    return plantingOrders
-      .filter((order) => order.work_type === "planting")
-      .filter((order) => !isClosedWorkOrder(order.status))
-      .filter((order) => Boolean(order.area_enabled) && Boolean(order.area_geojson))
-      .map((order) => ({
-        id: order.id,
-        label: (order.area_label || "").trim() || `Assigned area #${order.id}`,
-        geojson: order.area_geojson,
-      }));
-  }, [activeUser, plantingOrders]);
-  const assignedPlantingAreaPoints = useMemo(() => {
-    const points = assignedPlantingAreas.flatMap((area) => extractAreaPoints(normalizeOrderAreaGeometry(area.geojson)));
-    return points.length ? points : null;
-  }, [assignedPlantingAreas]);
-  const mapFitPoints = useMemo(() => {
-    if (focusPoint && focusPoint.length) return focusPoint;
-    if (assignedPlantingAreaPoints && assignedPlantingAreaPoints.length) return assignedPlantingAreaPoints;
-    return activeUserPoints;
-  }, [focusPoint, assignedPlantingAreaPoints, activeUserPoints]);
-
   const activeUserDetail = useMemo(() => {
     if (!activeUser) return null;
     const staff = users.find((u) => u.full_name === activeUser);
@@ -1015,6 +956,61 @@ export default function Green() {
     }
     return trees.filter((t: any) => (t as any).created_by === activeUser);
   }, [activeUser, activeUserDetail, activeUserIsCustodian, trees]);
+  const treePoints = useMemo(() => {
+    return userTrees
+      .map((t) => ({
+        id: t.id,
+        project_tree_no:
+          Number.isFinite(Number((t as any).project_tree_no)) && Number((t as any).project_tree_no) > 0
+            ? Number((t as any).project_tree_no)
+            : null,
+        lng: Number(t.lng),
+        lat: Number(t.lat),
+        status: t.status,
+        species: t.species,
+        planting_date: t.planting_date,
+        notes: t.notes,
+        photo_url: t.photo_url,
+        created_by: t.created_by || "",
+        tree_height_m: t.tree_height_m ?? null,
+        tree_age_months:
+          Number.isFinite(Number((t as any).tree_age_months)) && Number((t as any).tree_age_months) >= 0
+            ? Number((t as any).tree_age_months)
+            : null,
+        tree_origin: t.tree_origin || "new_planting",
+        attribution_scope: t.attribution_scope || "full",
+        count_in_planting_kpis: t.count_in_planting_kpis !== false,
+        count_in_carbon_scope: t.count_in_carbon_scope !== false,
+        custodian_name: t.custodian_name || "",
+      }))
+      .filter((t) => Number.isFinite(t.lng) && Number.isFinite(t.lat));
+  }, [userTrees]);
+  const activeUserPoints = useMemo(() => {
+    if (!activeUser) return null;
+    const points = treePoints.map((t) => ({ lng: t.lng, lat: t.lat }));
+    return points.length ? points : null;
+  }, [activeUser, treePoints]);
+  const assignedPlantingAreas = useMemo(() => {
+    if (!activeUser) return [] as Array<{ id: number; label: string; geojson: any }>;
+    return plantingOrders
+      .filter((order) => order.work_type === "planting")
+      .filter((order) => !isClosedWorkOrder(order.status))
+      .filter((order) => Boolean(order.area_enabled) && Boolean(order.area_geojson))
+      .map((order) => ({
+        id: order.id,
+        label: (order.area_label || "").trim() || `Assigned area #${order.id}`,
+        geojson: order.area_geojson,
+      }));
+  }, [activeUser, plantingOrders]);
+  const assignedPlantingAreaPoints = useMemo(() => {
+    const points = assignedPlantingAreas.flatMap((area) => extractAreaPoints(normalizeOrderAreaGeometry(area.geojson)));
+    return points.length ? points : null;
+  }, [assignedPlantingAreas]);
+  const mapFitPoints = useMemo(() => {
+    if (focusPoint && focusPoint.length) return focusPoint;
+    if (assignedPlantingAreaPoints && assignedPlantingAreaPoints.length) return assignedPlantingAreaPoints;
+    return activeUserPoints;
+  }, [focusPoint, assignedPlantingAreaPoints, activeUserPoints]);
   const userTreeById = useMemo(() => {
     const map = new Map<number, Tree>();
     userTrees.forEach((tree) => {
@@ -1287,9 +1283,10 @@ export default function Green() {
 
   const loadProjects = async () => {
     try {
-      const res = await api.get(
-        greenScopedOrganizationId ? `/green/projects?organization_id=${greenScopedOrganizationId}` : "/green/projects"
-      );
+      const params = new URLSearchParams();
+      if (greenScopedOrganizationId) params.set("organization_id", String(greenScopedOrganizationId));
+      if (activeUser) params.set("assignee_name", activeUser);
+      const res = await api.get(`/green/projects${params.toString() ? `?${params.toString()}` : ""}`);
       const list = Array.isArray(res.data) ? res.data : [];
       setProjects(list);
       await cacheProjectsOffline(list).catch(() => {});
@@ -1329,9 +1326,13 @@ export default function Green() {
 
   const loadProjectDetail = async (id: number) => {
     try {
+      const scopedParams = new URLSearchParams();
+      if (activeUser) scopedParams.set("assignee_name", activeUser);
+      scopedParams.set("_ts", String(Date.now()));
+      const scopedQuery = scopedParams.toString() ? `?${scopedParams.toString()}` : "";
       const [projectRes, treesRes, custodiansRes, allocationsRes] = await Promise.allSettled([
-        api.get(`/green/projects/${id}`),
-        api.get(`/green/projects/${id}/trees`),
+        api.get(`/green/projects/${id}${scopedQuery}`),
+        api.get(`/green/projects/${id}/trees${scopedQuery}`),
         api.get(`/green/projects/${id}/custodians`),
         api.get(`/green/projects/${id}/distribution-allocations`),
       ]);
@@ -1469,8 +1470,27 @@ export default function Green() {
 
   useEffect(() => {
     loadProjects().catch(() => toast.error("Failed to load projects"));
+  }, [activeUser, greenScopedOrganizationId]);
+
+  useEffect(() => {
     loadUsers().catch(() => toast.error("Failed to load users"));
-  }, []);
+  }, [greenScopedOrganizationId]);
+
+  useEffect(() => {
+    if (!activeProject) return;
+    if (projects.some((item) => Number(item.id) === Number(activeProject.id))) return;
+    setActiveProject(null);
+    setTrees([]);
+    setProjectCustodians([]);
+    setProjectAllocations([]);
+    setPlantingOrders([]);
+    setMyTasks([]);
+    setTaskEdits({});
+    setSelectedTreeId(null);
+    setInspectedTree(null);
+    setTreeTasks([]);
+    setTreeTimeline(null);
+  }, [activeProject, projects]);
 
   useEffect(() => {
     if (!projects.length || !pendingRestoreProjectId || activeProject) return;
