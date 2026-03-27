@@ -5362,6 +5362,15 @@ export default function GreenWork() {
   const assignWorkAreaMode = Boolean(activeProjectId && activeForm === "assign_work" && newOrderAreaEnabled);
   const liveTableMode = Boolean(activeProjectId && activeForm === "live_table");
   const verraMode = Boolean(activeProjectId && activeForm === "verra_reports");
+  const hasDedicatedMainContent =
+    overviewMode ||
+    mapViewMode ||
+    liveTableMode ||
+    verraMode ||
+    activeForm === "existing_tree_intake" ||
+    activeForm === "custodian_hub" ||
+    assignWorkAreaMode;
+  const sidebarPrimaryMode = Boolean(showSidebar && !hasDedicatedMainContent);
   const mapAreaDrawMode = Boolean(activeProjectId && newOrderAreaEnabled && (activeForm === "assign_work" || activeForm === "map_view"));
   const activeTreeId = inspectedTree?.id || 0;
 
@@ -5894,7 +5903,7 @@ export default function GreenWork() {
       <div
         className={`green-work-content ${showSidebar ? "with-sidebar" : "no-sidebar"} ${
           detailScrollMode ? "detail-scroll-mode" : ""
-        } ${custodianHubMode ? "custodian-hub-mode" : ""}`}
+        } ${custodianHubMode ? "custodian-hub-mode" : ""} ${sidebarPrimaryMode ? "sidebar-primary-mode" : ""}`}
       >
         <aside className="green-work-sidebar">
           {activeForm === "project_focus" && (
