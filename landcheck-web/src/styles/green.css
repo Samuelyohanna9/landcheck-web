@@ -1550,7 +1550,7 @@
   line-height: 1.32;
 }
 
-.green-profile-species {
+.green-species-distribution {
   margin-bottom: 0.7rem;
   padding: 0.52rem;
   border-radius: var(--radius-sm);
@@ -1558,36 +1558,51 @@
   background: rgba(255, 255, 255, 0.8);
 }
 
-.green-profile-species h4 {
+.green-species-distribution h4 {
   margin: 0 0 0.45rem;
   font-size: 0.86rem;
   color: var(--green-900);
 }
 
-.green-profile-species-list {
+.green-species-distribution-list {
   display: grid;
-  gap: 0.3rem;
+  gap: 0.48rem;
 }
 
-.green-profile-species-row {
+.green-species-distribution-row {
+  display: grid;
+  gap: 0.34rem;
+}
+
+.green-species-distribution-text {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.45rem;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.9);
-  padding: 0.34rem 0.44rem;
 }
 
-.green-profile-species-row span {
+.green-species-distribution-text span {
   color: var(--card-text);
   font-size: 0.82rem;
+  font-weight: 700;
 }
 
-.green-profile-species-row strong {
-  color: var(--green-800);
-  font-size: 0.86rem;
+.green-species-distribution-text strong {
+  color: var(--card-subtle);
+  font-size: 0.76rem;
+}
+
+.green-species-distribution-track {
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(226, 237, 229, 0.95);
+  overflow: hidden;
+}
+
+.green-species-distribution-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--green-500), var(--green-700));
 }
 
 /* ── Profile Grid ── */

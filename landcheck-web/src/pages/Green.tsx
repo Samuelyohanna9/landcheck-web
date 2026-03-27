@@ -33,7 +33,6 @@ import {
   queuePhotoUploadOffline,
   queueTaskSubmitOffline,
   queueTaskUpdateOffline,
-  queueTreeStatusOffline,
   registerGreenBackgroundSync,
   syncGreenQueueOffline,
   precacheMapTilesForArea,
@@ -1154,9 +1153,9 @@ export default function Green() {
       }),
     [activeOrderSpeciesAllocations, plantedSpeciesCounts],
   );
-  const plantedBySpeciesSummary = useMemo(() => {
+  const treeRecordSpeciesSummary = useMemo(() => {
     const map = new Map<string, { species: string; count: number }>();
-    userPlantingTrees.forEach((tree) => {
+    userTrees.forEach((tree) => {
       const label = String(tree.species || "").trim() || "Unspecified";
       const key = normalizeSpeciesKey(label);
       const existing = map.get(key);
@@ -1167,7 +1166,7 @@ export default function Green() {
       map.set(key, { species: label, count: 1 });
     });
     return Array.from(map.values()).sort((a, b) => b.count - a.count || a.species.localeCompare(b.species));
-  }, [userPlantingTrees]);
+  }, [userTrees]);
 
   const myTaskCounts = useMemo(() => {
     const total = myTasks.length;
@@ -2491,37 +2490,6 @@ export default function Green() {
       }
     } catch {
       toast.error("Failed to upload task photo", { id: loadingId });
-    }
-  };
-
-  const updateTreeStatus = async (treeId: number, status: string) => {
-    if (!ensureGreenWritesAllowed()) return;
-    try {
-      await api.patch(`/green/trees/${treeId}`, { status });
-      if (activeProject) {
-        await loadProjectDetail(activeProject.id);
-      }
-    } catch (error) {
-      if (isLikelyNetworkError(error) && activeProject) {
-        try {
-          await queueTreeStatusOffline(treeId, status, {
-            projectId: activeProject.id,
-            assigneeName: activeUser || "",
-          });
-          setTrees((prev) => prev.map((tree) => (tree.id === treeId ? { ...tree, status } : tree)));
-          setInspectedTree((prev) =>
-            prev && Number(prev.id) === Number(treeId)
-              ? { ...prev, status, status_label: formatTreeConditionLabel(status) }
-              : prev
-          );
-          await showOfflineQueuedToast("Tree status saved offline.");
-          return;
-        } catch {
-          toast.error("Failed to queue tree status offline");
-          return;
-        }
-      }
-      toast.error("Failed to update tree status");
     }
   };
 
@@ -3894,21 +3862,6 @@ export default function Green() {
                     <strong>{pendingPlanting}</strong>
                   </div>
                 </div>
-                <div className="green-profile-species">
-                  <h4>Trees Planted By Species</h4>
-                  {plantedBySpeciesSummary.length === 0 ? (
-                    <p className="green-empty">No planted trees recorded yet for this user.</p>
-                  ) : (
-                    <div className="green-profile-species-list">
-                      {plantedBySpeciesSummary.map((item) => (
-                        <div key={`profile-species-${item.species}`} className="green-profile-species-row">
-                          <span>{item.species}</span>
-                          <strong>{item.count}</strong>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
                 <div className="green-profile-export">
                   <h4>My Report Export</h4>
                   <p>Export PDF includes only this selected user&apos;s work in the selected project.</p>
@@ -3974,86 +3927,34 @@ export default function Green() {
               <p className="green-empty">Select a staff member or custodian to view their tree records.</p>
             ) : loadingTrees ? (
               <p className="green-empty">Loading trees...</p>
+            ) : treeRecordSpeciesSummary.length === 0 ? (
+              <p className="green-empty">No tree records are available for this user yet.</p>
             ) : (
-              <div className="tree-table">
-                <div className="tree-row tree-header">
-                  <span>ID</span>
-                  <span>Species</span>
-                  <span>Height</span>
-                  <span>Status</span>
-                  <span>Actions</span>
-                </div>
-                {userTrees.map((t) => (
-                  <div key={t.id} className="tree-row record-row">
-                    <span>#{t.id}</span>
-                    <span>{t.species || "-"}</span>
-                    <span>
-                      <div className="green-tree-height-edit">
-                        <input
-                          type="number"
-                          min={0}
-                          max={120}
-                          step="0.01"
-                          value={
-                            treeHeightDraftById[t.id] !== undefined
-                              ? treeHeightDraftById[t.id]
-                              : t.tree_height_m === null || t.tree_height_m === undefined
-                              ? ""
-                              : String(t.tree_height_m)
-                          }
-                          onChange={(e) =>
-                            setTreeHeightDraftById((prev) => ({
-                              ...prev,
-                              [t.id]: e.target.value,
-                            }))
-                          }
-                          placeholder="m"
-                        />
-                        <button
-                          className="green-row-btn"
-                          type="button"
-                          disabled={savingTreeHeightId === t.id}
-                          onClick={() => {
-                            const value =
-                              treeHeightDraftById[t.id] !== undefined
-                                ? treeHeightDraftById[t.id]
-                                : t.tree_height_m === null || t.tree_height_m === undefined
-                                ? ""
-                                : String(t.tree_height_m);
-                            void updateTreeHeight(t.id, value);
-                          }}
-                        >
-                          {savingTreeHeightId === t.id ? "Saving..." : "Save"}
-                        </button>
+              <div className="green-species-distribution">
+                <h4>Species Distribution</h4>
+                <div className="green-species-distribution-list">
+                  {treeRecordSpeciesSummary.map((item) => (
+                    <div key={`tree-record-species-${item.species}`} className="green-species-distribution-row">
+                      <div className="green-species-distribution-text">
+                        <span>{item.species}</span>
+                        <strong>
+                          {item.count} tree{item.count === 1 ? "" : "s"}
+                        </strong>
                       </div>
-                    </span>
-                    <span>{t.status}</span>
-                    <div className="tree-actions">
-                      <button className="green-row-btn" type="button" onClick={() => updateTreeStatus(t.id, "healthy")}>
-                        Healthy
-                      </button>
-                      <button
-                        className="green-row-btn"
-                        type="button"
-                        onClick={() => updateTreeStatus(t.id, "pest")}
-                      >
-                        Pest
-                      </button>
-                      <button className="green-row-btn" type="button" onClick={() => updateTreeStatus(t.id, "disease")}>
-                        Disease
-                      </button>
-                      <button className="green-row-btn" type="button" onClick={() => updateTreeStatus(t.id, "need_replacement")}>
-                        Need replacement
-                      </button>
-                      <button className="green-row-btn" type="button" onClick={() => updateTreeStatus(t.id, "damaged")}>
-                        Damaged
-                      </button>
-                      <button className="green-row-btn" type="button" onClick={() => updateTreeStatus(t.id, "removed")}>
-                        Removed
-                      </button>
+                      <div className="green-species-distribution-track">
+                        <div
+                          className="green-species-distribution-fill"
+                          style={{
+                            width: `${Math.max(
+                              10,
+                              Math.round((item.count / Math.max(treeRecordSpeciesSummary[0]?.count || 1, 1)) * 100),
+                            )}%`,
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </section>
