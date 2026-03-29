@@ -376,6 +376,7 @@ type RemoteMonitoringTreeAnalysis = {
   local_vegetated_area_sqm?: number | null;
   local_clear_area_sqm?: number | null;
   local_vegetation_cover_pct?: number | null;
+  tree_cover_threshold_ndvi?: number | null;
   satellite_health?: string | null;
   satellite_health_label?: string | null;
   satellite_health_note?: string | null;
@@ -384,6 +385,7 @@ type RemoteMonitoringTreeAnalysis = {
 type RemoteMonitoringHealthScale = {
   metric?: string | null;
   buffer_meters?: number | null;
+  cover_threshold_ndvi?: number | null;
   note?: string | null;
   bands?: {
     key: string;
@@ -2111,6 +2113,7 @@ export default function GreenWork() {
   const [remoteMonitoringProgressPct, setRemoteMonitoringProgressPct] = useState(0);
   const [remoteMonitoringDrawActive, setRemoteMonitoringDrawActive] = useState(false);
   const [remoteMonitoringFocusedTreeId, setRemoteMonitoringFocusedTreeId] = useState<number | null>(null);
+  const [remoteMonitoringActionTreeId, setRemoteMonitoringActionTreeId] = useState<number | null>(null);
   const remoteMonitoringProgressTimerRef = useRef<number | null>(null);
   const [remoteMonitoringDraftGeometry, setRemoteMonitoringDraftGeometry] = useState<{
     type: "Polygon" | "MultiPolygon";
@@ -2868,6 +2871,7 @@ export default function GreenWork() {
       setRemoteMonitoringProgressStep(REMOTE_MONITORING_PROGRESS_STEPS.length - 1);
       setRemoteMonitoringProgressPct(100);
       setRemoteMonitoringFocusedTreeId(null);
+      setRemoteMonitoringActionTreeId(null);
       setRemoteMonitoringReport(res.data || null);
     } catch (error: any) {
       stopRemoteMonitoringProgress();
@@ -2973,6 +2977,7 @@ export default function GreenWork() {
       if (!treeId) return;
       setRemoteMonitoringDrawActive(false);
       setRemoteMonitoringFocusedTreeId(treeId);
+      setRemoteMonitoringActionTreeId(null);
       mapCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       void hydrateRemoteMonitoringTreeInspect(treeId, tree);
     },
@@ -3406,6 +3411,7 @@ export default function GreenWork() {
     setRemoteMonitoringDraftGeometry(sourceArea?.geojson || null);
     setRemoteMonitoringDrawActive(false);
     setRemoteMonitoringFocusedTreeId(null);
+    setRemoteMonitoringActionTreeId(null);
     setRemoteMonitoringReport(null);
   };
 
@@ -9292,6 +9298,7 @@ export default function GreenWork() {
                             setRemoteMonitoringDraft((prev) => ({ ...prev, source_order_id: "" }));
                             setRemoteMonitoringDrawActive(false);
                             setRemoteMonitoringFocusedTreeId(null);
+                            setRemoteMonitoringActionTreeId(null);
                             setRemoteMonitoringReport(null);
                           }}
                         >
@@ -9360,12 +9367,14 @@ export default function GreenWork() {
                         onPolygonChange={remoteMonitoringDrawActive ? (geometry) => {
                           setRemoteMonitoringDraftGeometry(geometry);
                           setRemoteMonitoringFocusedTreeId(null);
+                          setRemoteMonitoringActionTreeId(null);
                           setRemoteMonitoringReport(null);
                         } : undefined}
                         minHeight={560}
                         onTreeInspect={(detail) => {
                           setInspectedTree(detail);
                           setRemoteMonitoringFocusedTreeId(detail ? Number(detail.id || 0) : null);
+                          setRemoteMonitoringActionTreeId(null);
                           if (detail) setMenuOpen(false);
                         }}
                         fitBounds={remoteMonitoringFitPoints}
@@ -9471,6 +9480,7 @@ export default function GreenWork() {
                           {remoteMonitoringSortedTrees.map((tree) => {
                             const treeId = Number(tree.tree_id || 0);
                             const isFocused = Number(remoteMonitoringFocusedTreeId || 0) === treeId;
+                            const actionsOpen = Number(remoteMonitoringActionTreeId || 0) === treeId;
                             return (
                               <div
                                 key={`remote-tree-${tree.tree_id}`}
@@ -9512,13 +9522,37 @@ export default function GreenWork() {
                                     <strong>{typeof tree.local_vegetated_area_sqm === "number" ? `${tree.local_vegetated_area_sqm.toFixed(2)} sqm` : "-"}</strong>
                                   </div>
                                 </div>
-                                <div className="work-actions green-work-remote-tree-actions">
-                                  <button type="button" onClick={() => focusRemoteMonitoringTree(tree)}>
-                                    View On Map
+                                {typeof tree.tree_cover_threshold_ndvi === "number" ? (
+                                  <p className="green-work-remote-tree-card-footnote">
+                                    Cover counts satellite pixels in the tree buffer with NDVI at or above {tree.tree_cover_threshold_ndvi.toFixed(2)}.
+                                  </p>
+                                ) : null}
+                                <div className="green-work-remote-tree-actions-menu">
+                                  <button
+                                    type="button"
+                                    className="green-work-remote-tree-actions-toggle"
+                                    onClick={() =>
+                                      setRemoteMonitoringActionTreeId((prev) => (Number(prev || 0) === treeId ? null : treeId))
+                                    }
+                                  >
+                                    {actionsOpen ? "Hide Actions" : "Tree Actions"}
                                   </button>
-                                  <button type="button" onClick={() => openAssignTaskForTree(treeId, "inspection")}>
-                                    Assign Maintenance
-                                  </button>
+                                  {actionsOpen ? (
+                                    <div className="green-work-context-menu green-work-remote-inline-menu">
+                                      <button type="button" onClick={() => focusRemoteMonitoringTree(tree)}>
+                                        View On Map
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setRemoteMonitoringActionTreeId(null);
+                                          openAssignTaskForTree(treeId, "inspection");
+                                        }}
+                                      >
+                                        Assign Maintenance
+                                      </button>
+                                    </div>
+                                  ) : null}
                                 </div>
                               </div>
                             );
