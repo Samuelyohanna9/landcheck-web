@@ -2792,7 +2792,7 @@ export default function GreenWork() {
 
   const loadRemoteMonitoringAreas = useCallback(async (projectId: number) => {
     try {
-      const res = await api.get("/green/remote-monitoring/areas", {
+      const res = await api.get("/green/vegetation-areas", {
         params: { project_id: projectId, _ts: Date.now() },
       });
       const rows = Array.isArray(res.data) ? res.data : [];
@@ -2822,7 +2822,7 @@ export default function GreenWork() {
   const loadRemoteMonitoringAnalysis = useCallback(async (areaId: number) => {
     setRemoteMonitoringLoading(true);
     try {
-      const res = await api.get(`/green/remote-monitoring/areas/${areaId}/analysis`, {
+      const res = await api.get(`/green/vegetation-areas/${areaId}/analysis`, {
         params: { _ts: Date.now() },
       });
       setRemoteMonitoringReport(res.data || null);
@@ -3281,7 +3281,7 @@ export default function GreenWork() {
     }
     setRemoteMonitoringSaving(true);
     try {
-      const res = await api.post("/green/remote-monitoring/areas", {
+      const res = await api.post("/green/vegetation-areas", {
         project_id: activeProjectId,
         name,
         area_geojson: geometry,
@@ -3317,7 +3317,7 @@ export default function GreenWork() {
     if (!confirmed) return;
     setRemoteMonitoringDeletingId(areaId);
     try {
-      await api.delete(`/green/remote-monitoring/areas/${areaId}`, {
+      await api.delete(`/green/vegetation-areas/${areaId}`, {
         params: { project_id: activeProjectId },
       });
       await loadRemoteMonitoringAreas(activeProjectId);
