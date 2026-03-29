@@ -4609,6 +4609,46 @@ export default function GreenWork() {
       },
     );
   }, [trees, remoteMonitoringDraftGeometry]);
+  const remoteMonitoringSortedTrees = useMemo(() => {
+    const severityRank: Record<string, number> = {
+      critical: 0,
+      stressed: 1,
+      fair: 2,
+      healthy: 3,
+      vigorous: 4,
+      no_data: 5,
+    };
+    const rows = [...(remoteMonitoringReport?.trees || [])];
+    rows.sort((a, b) => {
+      const severityDiff =
+        (severityRank[normalizeName(a.satellite_health)] ?? 99) - (severityRank[normalizeName(b.satellite_health)] ?? 99);
+      if (severityDiff !== 0) return severityDiff;
+      const ndviA = typeof a.local_mean_ndvi === "number" ? a.local_mean_ndvi : 999;
+      const ndviB = typeof b.local_mean_ndvi === "number" ? b.local_mean_ndvi : 999;
+      if (ndviA !== ndviB) return ndviA - ndviB;
+      return Number(a.project_tree_no || a.tree_id || 0) - Number(b.project_tree_no || b.tree_id || 0);
+    });
+    return rows;
+  }, [remoteMonitoringReport]);
+  const remoteMonitoringHealthCounts = useMemo(() => {
+    const counts = new Map<string, { label: string; count: number }>();
+    remoteMonitoringSortedTrees.forEach((tree) => {
+      const key = normalizeName(tree.satellite_health || "no_data") || "no_data";
+      const current = counts.get(key) || {
+        label: tree.satellite_health_label || "No data",
+        count: 0,
+      };
+      current.count += Math.max(1, Number(tree.inventory_tree_count || 1));
+      counts.set(key, current);
+    });
+    return Array.from(counts.entries())
+      .map(([key, value]) => ({ key, ...value }))
+      .sort((a, b) => b.count - a.count);
+  }, [remoteMonitoringSortedTrees]);
+  const remoteMonitoringTopRiskTrees = useMemo(
+    () => remoteMonitoringSortedTrees.filter((tree) => ["critical", "stressed", "fair"].includes(normalizeName(tree.satellite_health))).slice(0, 6),
+    [remoteMonitoringSortedTrees],
+  );
   const remoteMonitoringMapAreas = useMemo(() => {
     const plantingAreas = monitoringSourceAreas.map((area) => ({
       id: `work-order-${area.id}`,
@@ -9268,6 +9308,81 @@ export default function GreenWork() {
                     <p className="green-work-note green-work-remote-summary-note">
                       {remoteMonitoringReport.summary.signal_message}
                     </p>
+                    {remoteMonitoringHealthCounts.length ? (
+                      <div className="green-work-remote-health-counts">
+                        {remoteMonitoringHealthCounts.map((item) => (
+                          <div key={`remote-health-count-${item.key}`} className={`green-work-remote-health-chip is-${normalizeName(item.key)}`}>
+                            <strong>{item.count}</strong>
+                            <span>{item.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                    {remoteMonitoringTopRiskTrees.length ? (
+                      <div className="green-work-remote-risk-strip">
+                        <strong>Priority trees</strong>
+                        <div className="green-work-remote-risk-list">
+                          {remoteMonitoringTopRiskTrees.map((tree) => (
+                            <div key={`remote-risk-${tree.tree_id}`} className={`green-work-remote-risk-card is-${normalizeName(tree.satellite_health || "")}`}>
+                              <span>{tree.tree_label || formatProjectTreeLabelById(tree.tree_id)}</span>
+                              <strong>{tree.satellite_health_label || "No data"}</strong>
+                              <small>{typeof tree.local_mean_ndvi === "number" ? `NDVI ${tree.local_mean_ndvi.toFixed(3)}` : "No NDVI"}</small>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="green-work-remote-tree-table-wrap is-priority">
+                      <div className="green-work-remote-tree-table-head">
+                        <strong>Trees in polygon</strong>
+                        <span>{remoteMonitoringSortedTrees.length || 0} row(s)</span>
+                      </div>
+                      <table className="green-work-live-table green-work-remote-tree-table">
+                        <thead>
+                          <tr>
+                            <th>Tree</th>
+                            <th>Species</th>
+                            <th>Stored Status</th>
+                            <th>Satellite NDVI</th>
+                            <th>Vegetation Cover</th>
+                            <th>Vegetated Area</th>
+                            <th>Satellite Health</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {remoteMonitoringSortedTrees.length ? (
+                            remoteMonitoringSortedTrees.map((tree) => (
+                              <tr key={`remote-tree-${tree.tree_id}`}>
+                                <td>
+                                  <strong>{tree.tree_label || formatProjectTreeLabelById(tree.tree_id)}</strong>
+                                  {tree.inventory_tree_count && tree.inventory_tree_count > 1 ? (
+                                    <div className="staff-row-meta">Inventory count: {tree.inventory_tree_count}</div>
+                                  ) : null}
+                                </td>
+                                <td>{tree.species || "-"}</td>
+                                <td>{treeStatusLabel(tree.status)}</td>
+                                <td>{typeof tree.local_mean_ndvi === "number" ? tree.local_mean_ndvi.toFixed(3) : "-"}</td>
+                                <td>{typeof tree.local_vegetation_cover_pct === "number" ? `${tree.local_vegetation_cover_pct.toFixed(1)}%` : "-"}</td>
+                                <td>{typeof tree.local_vegetated_area_sqm === "number" ? `${tree.local_vegetated_area_sqm.toFixed(2)} sqm` : "-"}</td>
+                                <td>
+                                  <span className={`green-work-remote-tree-health is-${normalizeName(tree.satellite_health || "")}`}>
+                                    {tree.satellite_health_label || "No data"}
+                                  </span>
+                                  {tree.satellite_health_note ? (
+                                    <div className="staff-row-meta">{tree.satellite_health_note}</div>
+                                  ) : null}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={7} className="green-work-live-empty">No stored trees were found inside this polygon.</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                     <div className="green-work-remote-summary-grid">
                       <div className="green-work-remote-metric">
                         <span>Trees In Polygon</span>
@@ -9323,57 +9438,6 @@ export default function GreenWork() {
                         ) : null}
                       </div>
                     ) : null}
-
-                    <div className="green-work-remote-tree-table-wrap">
-                      <div className="green-work-remote-tree-table-head">
-                        <strong>Trees in polygon</strong>
-                        <span>{remoteMonitoringReport.trees?.length || 0} row(s)</span>
-                      </div>
-                      <table className="green-work-live-table green-work-remote-tree-table">
-                        <thead>
-                          <tr>
-                            <th>Tree</th>
-                            <th>Species</th>
-                            <th>Stored Status</th>
-                            <th>Satellite NDVI</th>
-                            <th>Vegetation Cover</th>
-                            <th>Vegetated Area</th>
-                            <th>Satellite Health</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {remoteMonitoringReport.trees?.length ? (
-                            remoteMonitoringReport.trees.map((tree) => (
-                              <tr key={`remote-tree-${tree.tree_id}`}>
-                                <td>
-                                  <strong>{tree.tree_label || formatProjectTreeLabelById(tree.tree_id)}</strong>
-                                  {tree.inventory_tree_count && tree.inventory_tree_count > 1 ? (
-                                    <div className="staff-row-meta">Inventory count: {tree.inventory_tree_count}</div>
-                                  ) : null}
-                                </td>
-                                <td>{tree.species || "-"}</td>
-                                <td>{treeStatusLabel(tree.status)}</td>
-                                <td>{typeof tree.local_mean_ndvi === "number" ? tree.local_mean_ndvi.toFixed(3) : "-"}</td>
-                                <td>{typeof tree.local_vegetation_cover_pct === "number" ? `${tree.local_vegetation_cover_pct.toFixed(1)}%` : "-"}</td>
-                                <td>{typeof tree.local_vegetated_area_sqm === "number" ? `${tree.local_vegetated_area_sqm.toFixed(2)} sqm` : "-"}</td>
-                                <td>
-                                  <span className={`green-work-remote-tree-health is-${normalizeName(tree.satellite_health || "")}`}>
-                                    {tree.satellite_health_label || "No data"}
-                                  </span>
-                                  {tree.satellite_health_note ? (
-                                    <div className="staff-row-meta">{tree.satellite_health_note}</div>
-                                  ) : null}
-                                </td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan={7} className="green-work-live-empty">No stored trees were found inside this polygon.</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
 
                     <div className="green-work-remote-series-table-wrap">
                       <table className="green-work-live-table green-work-remote-series-table">
