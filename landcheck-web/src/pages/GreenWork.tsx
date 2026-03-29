@@ -19,6 +19,14 @@ import {
 import "../styles/green-work.css";
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
+const REMOTE_MONITORING_PROGRESS_STEPS = [
+  "Validating selected monitoring area",
+  "Counting stored trees inside polygon",
+  "Fetching satellite imagery window",
+  "Filtering cloud-free vegetation pixels",
+  "Calculating NDVI and vegetated area",
+  "Preparing vegetation summary",
+];
 
 type Project = {
   id: number;
@@ -2066,9 +2074,12 @@ export default function GreenWork() {
   const [remoteMonitoringSelectedAreaId, setRemoteMonitoringSelectedAreaId] = useState<number | null>(null);
   const [remoteMonitoringReport, setRemoteMonitoringReport] = useState<RemoteMonitoringReport | null>(null);
   const [remoteMonitoringLoading, setRemoteMonitoringLoading] = useState(false);
+  const [remoteMonitoringProgressStep, setRemoteMonitoringProgressStep] = useState(0);
+  const [remoteMonitoringProgressPct, setRemoteMonitoringProgressPct] = useState(0);
   const [remoteMonitoringSaving, setRemoteMonitoringSaving] = useState(false);
   const [remoteMonitoringDeletingId, setRemoteMonitoringDeletingId] = useState<number | null>(null);
   const [remoteMonitoringDrawActive, setRemoteMonitoringDrawActive] = useState(false);
+  const remoteMonitoringProgressTimerRef = useRef<number | null>(null);
   const [remoteMonitoringDraftGeometry, setRemoteMonitoringDraftGeometry] = useState<{
     type: "Polygon" | "MultiPolygon";
     coordinates: any;
@@ -2819,20 +2830,47 @@ export default function GreenWork() {
     }
   }, []);
 
+  const stopRemoteMonitoringProgress = useCallback(() => {
+    if (remoteMonitoringProgressTimerRef.current) {
+      window.clearInterval(remoteMonitoringProgressTimerRef.current);
+      remoteMonitoringProgressTimerRef.current = null;
+    }
+  }, []);
+
+  const startRemoteMonitoringProgress = useCallback(() => {
+    stopRemoteMonitoringProgress();
+    setRemoteMonitoringProgressStep(0);
+    setRemoteMonitoringProgressPct(10);
+    let nextStep = 0;
+    remoteMonitoringProgressTimerRef.current = window.setInterval(() => {
+      nextStep = Math.min(nextStep + 1, REMOTE_MONITORING_PROGRESS_STEPS.length - 1);
+      setRemoteMonitoringProgressStep(nextStep);
+      setRemoteMonitoringProgressPct(Math.min(96, 10 + nextStep * 18));
+      if (nextStep >= REMOTE_MONITORING_PROGRESS_STEPS.length - 1) {
+        stopRemoteMonitoringProgress();
+      }
+    }, 900);
+  }, [stopRemoteMonitoringProgress]);
+
   const loadRemoteMonitoringAnalysis = useCallback(async (areaId: number) => {
     setRemoteMonitoringLoading(true);
+    startRemoteMonitoringProgress();
     try {
       const res = await api.get(`/green/vegetation-areas/${areaId}/analysis`, {
         params: { _ts: Date.now() },
       });
+      stopRemoteMonitoringProgress();
+      setRemoteMonitoringProgressStep(REMOTE_MONITORING_PROGRESS_STEPS.length - 1);
+      setRemoteMonitoringProgressPct(100);
       setRemoteMonitoringReport(res.data || null);
     } catch (error: any) {
+      stopRemoteMonitoringProgress();
       setRemoteMonitoringReport(null);
       toast.error(error?.response?.data?.detail || "Failed to load remote monitoring");
     } finally {
       setRemoteMonitoringLoading(false);
     }
-  }, []);
+  }, [startRemoteMonitoringProgress, stopRemoteMonitoringProgress]);
 
   const loadVerraHistory = useCallback(async (projectId: number) => {
     const res = await api.get(`/green/projects/${projectId}/verra/exports?limit=100`);
@@ -3561,6 +3599,15 @@ export default function GreenWork() {
     }
     void loadRemoteMonitoringAnalysis(remoteMonitoringSelectedAreaId);
   }, [activeForm, remoteMonitoringSelectedAreaId, loadRemoteMonitoringAnalysis]);
+
+  useEffect(() => {
+    return () => {
+      if (remoteMonitoringProgressTimerRef.current) {
+        window.clearInterval(remoteMonitoringProgressTimerRef.current);
+        remoteMonitoringProgressTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!activeProjectId || activeForm !== "verra_reports") return;
@@ -9120,7 +9167,8 @@ export default function GreenWork() {
 
           {activeProjectId && activeForm === "remote_monitoring" && (
             <>
-              <div className="green-work-card green-work-remote-card">
+              <div className="green-work-remote-workspace">
+                <div className="green-work-card green-work-remote-card">
                 <div className="green-work-row">
                   <h3>Remote Monitoring</h3>
                   <div className="work-actions">
@@ -9250,6 +9298,61 @@ export default function GreenWork() {
                     )}
                   </div>
                 </div>
+                  {remoteMonitoringLoading && (
+                    <div className="green-work-remote-progress-panel">
+                      <div className="green-work-remote-progress-head">
+                        <strong>Vegetation calculation in progress</strong>
+                        <span>{Math.max(8, Math.min(100, Math.round(remoteMonitoringProgressPct || 0)))}%</span>
+                      </div>
+                      <div className="green-work-remote-progress-bar" aria-hidden="true">
+                        <span style={{ width: `${Math.max(8, Math.min(100, remoteMonitoringProgressPct || 0))}%` }} />
+                      </div>
+                      <div className="green-work-remote-progress-steps">
+                        {REMOTE_MONITORING_PROGRESS_STEPS.map((label, index) => {
+                          const isDone = index < remoteMonitoringProgressStep;
+                          const isActive = index === remoteMonitoringProgressStep;
+                          return (
+                            <div
+                              key={`remote-progress-step-${label}`}
+                              className={`green-work-remote-progress-step ${isDone ? "is-done" : ""} ${isActive ? "is-active" : ""}`}
+                            >
+                              <span>{index + 1}</span>
+                              <strong>{label}</strong>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div ref={mapCardRef} className="green-work-card green-work-map-card green-work-remote-map-card">
+                  <h3>{remoteMonitoringDrawActive ? "Remote Monitoring Map (Polygon Draw Enabled)" : "Remote Monitoring Map"}</h3>
+                  <p className="green-work-note">
+                    {remoteMonitoringDrawActive
+                      ? "Draw one polygon for the monitoring block. When draw is off, you can inspect trees on the map."
+                      : "Inspect trees, planting polygons, and saved monitoring blocks."}
+                  </p>
+                  <div className="green-work-map-layout">
+                    <div className="green-work-map-canvas">
+                      <TreeMap
+                        trees={trees}
+                        onAddTree={() => {}}
+                        enableDraw={remoteMonitoringDrawActive}
+                        drawMode="polygon"
+                        drawActive={remoteMonitoringDrawActive}
+                        onPolygonChange={remoteMonitoringDrawActive ? (geometry) => setRemoteMonitoringDraftGeometry(geometry) : undefined}
+                        minHeight={560}
+                        onTreeInspect={(detail) => {
+                          setInspectedTree(detail);
+                          if (detail) setMenuOpen(false);
+                        }}
+                        fitBounds={remoteMonitoringFitPoints}
+                        assignmentAreas={remoteMonitoringMapAreas}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="green-work-card green-work-remote-report-card">
@@ -9273,9 +9376,29 @@ export default function GreenWork() {
                     <p>Select a saved polygon to load satellite vegetation metrics, or save the polygon you just drew.</p>
                   </div>
                 ) : remoteMonitoringLoading ? (
-                  <div className="green-work-remote-empty-state is-loading">
-                    <strong>Loading vegetation summary</strong>
-                    <p>Fetching satellite imagery and calculating vegetation signal for the selected block.</p>
+                  <div className="green-work-remote-progress-panel is-report-panel">
+                    <div className="green-work-remote-progress-head">
+                      <strong>Calculating vegetation summary</strong>
+                      <span>{Math.max(8, Math.min(100, Math.round(remoteMonitoringProgressPct || 0)))}%</span>
+                    </div>
+                    <div className="green-work-remote-progress-bar" aria-hidden="true">
+                      <span style={{ width: `${Math.max(8, Math.min(100, remoteMonitoringProgressPct || 0))}%` }} />
+                    </div>
+                    <div className="green-work-remote-progress-steps">
+                      {REMOTE_MONITORING_PROGRESS_STEPS.map((label, index) => {
+                        const isDone = index < remoteMonitoringProgressStep;
+                        const isActive = index === remoteMonitoringProgressStep;
+                        return (
+                          <div
+                            key={`remote-report-progress-step-${label}`}
+                            className={`green-work-remote-progress-step ${isDone ? "is-done" : ""} ${isActive ? "is-active" : ""}`}
+                          >
+                            <span>{index + 1}</span>
+                            <strong>{label}</strong>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : !remoteMonitoringReport ? (
                   <div className="green-work-remote-empty-state">
@@ -9356,33 +9479,6 @@ export default function GreenWork() {
                 )}
               </div>
 
-              <div ref={mapCardRef} className="green-work-card green-work-map-card">
-                <h3>{remoteMonitoringDrawActive ? "Remote Monitoring Map (Polygon Draw Enabled)" : "Remote Monitoring Map"}</h3>
-                <p className="green-work-note">
-                  {remoteMonitoringDrawActive
-                    ? "Draw one polygon for the monitoring block. When draw is off, you can inspect trees on the map."
-                    : "Inspect trees, planting polygons, and saved monitoring blocks."}
-                </p>
-                <div className="green-work-map-layout">
-                  <div className="green-work-map-canvas">
-                    <TreeMap
-                      trees={trees}
-                      onAddTree={() => {}}
-                      enableDraw={remoteMonitoringDrawActive}
-                      drawMode="polygon"
-                      drawActive={remoteMonitoringDrawActive}
-                      onPolygonChange={remoteMonitoringDrawActive ? (geometry) => setRemoteMonitoringDraftGeometry(geometry) : undefined}
-                      minHeight={520}
-                      onTreeInspect={(detail) => {
-                        setInspectedTree(detail);
-                        if (detail) setMenuOpen(false);
-                      }}
-                      fitBounds={remoteMonitoringFitPoints}
-                      assignmentAreas={remoteMonitoringMapAreas}
-                    />
-                  </div>
-                </div>
-              </div>
             </>
           )}
 
