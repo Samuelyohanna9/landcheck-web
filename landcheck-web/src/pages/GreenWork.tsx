@@ -549,7 +549,7 @@ const formatExistingTreeAreaLabel = (tree: Pick<Tree, "existing_area_sqm">, metr
   const sqm = Number(metric?.existing_area_sqm ?? tree.existing_area_sqm);
   if (!Number.isFinite(sqm) || sqm <= 0) return "-";
   if (sqm >= 10000) return `${(sqm / 10000).toFixed(3)} ha`;
-  return `${sqm.toFixed(1)} mÂ²`;
+  return `${sqm.toFixed(1)} m²`;
 };
 const formatTreeOriginLabel = (value: string | null | undefined) => {
   const key = normalizeName(value);
@@ -9252,37 +9252,15 @@ export default function GreenWork() {
                 </div>
               </div>
 
-              <div ref={mapCardRef} className="green-work-card green-work-map-card">
-                <h3>{remoteMonitoringDrawActive ? "Remote Monitoring Map (Polygon Draw Enabled)" : "Remote Monitoring Map"}</h3>
-                <p className="green-work-note">
-                  {remoteMonitoringDrawActive
-                    ? "Draw one polygon for the monitoring block. When draw is off, you can inspect trees on the map."
-                    : "Inspect trees, planting polygons, and saved monitoring blocks."}
-                </p>
-                <div className="green-work-map-layout">
-                  <div className="green-work-map-canvas">
-                    <TreeMap
-                      trees={trees}
-                      onAddTree={() => {}}
-                      enableDraw={remoteMonitoringDrawActive}
-                      drawMode="polygon"
-                      drawActive={remoteMonitoringDrawActive}
-                      onPolygonChange={remoteMonitoringDrawActive ? (geometry) => setRemoteMonitoringDraftGeometry(geometry) : undefined}
-                      minHeight={520}
-                      onTreeInspect={(detail) => {
-                        setInspectedTree(detail);
-                        if (detail) setMenuOpen(false);
-                      }}
-                      fitBounds={remoteMonitoringFitPoints}
-                      assignmentAreas={remoteMonitoringMapAreas}
-                    />
-                  </div>
-                </div>
-              </div>
-
               <div className="green-work-card green-work-remote-report-card">
-                <div className="green-work-row">
-                  <h3>{remoteMonitoringReport?.area?.name || "Vegetation Summary"}</h3>
+                <div className="green-work-remote-report-head">
+                  <div className="green-work-remote-report-copy">
+                    <p className="green-work-remote-kicker">Vegetation Summary</p>
+                    <h3>{remoteMonitoringReport?.area?.name || "Remote Monitoring Block"}</h3>
+                    <p className="green-work-remote-subtitle">
+                      Satellite vegetation signal for the selected planting polygon, normalized by stored tree count.
+                    </p>
+                  </div>
                   {remoteMonitoringReport?.summary?.signal && (
                     <span className={`green-work-remote-signal is-${normalizeName(remoteMonitoringReport.summary.signal)}`}>
                       {formatMonitoringSignalLabel(remoteMonitoringReport.summary.signal)}
@@ -9308,12 +9286,12 @@ export default function GreenWork() {
                       </div>
                       <div className="green-work-remote-metric">
                         <span>Vegetated Area</span>
-                        <strong>{remoteMonitoringReport.summary.vegetation_area_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_sqm || 0} mÂ²</strong>
+                        <strong>{remoteMonitoringReport.summary.vegetation_area_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_sqm || 0} m²</strong>
                         <small>{remoteMonitoringReport.summary.vegetation_coverage_pct ?? 0}% of polygon</small>
                       </div>
                       <div className="green-work-remote-metric">
                         <span>Vegetation Per Tree</span>
-                        <strong>{remoteMonitoringReport.summary.vegetation_area_per_tree_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_per_tree_sqm || 0} mÂ²</strong>
+                        <strong>{remoteMonitoringReport.summary.vegetation_area_per_tree_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_per_tree_sqm || 0} m²</strong>
                         <small>Uses stored trees inside polygon as denominator</small>
                       </div>
                       <div className="green-work-remote-metric">
@@ -9342,7 +9320,7 @@ export default function GreenWork() {
                             <th>Mean NDVI</th>
                             <th>Vegetated Area</th>
                             <th>Cover %</th>
-                            <th>mÂ² / Tree</th>
+                            <th>m² / Tree</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -9367,6 +9345,34 @@ export default function GreenWork() {
                     </div>
                   </>
                 )}
+              </div>
+
+              <div ref={mapCardRef} className="green-work-card green-work-map-card">
+                <h3>{remoteMonitoringDrawActive ? "Remote Monitoring Map (Polygon Draw Enabled)" : "Remote Monitoring Map"}</h3>
+                <p className="green-work-note">
+                  {remoteMonitoringDrawActive
+                    ? "Draw one polygon for the monitoring block. When draw is off, you can inspect trees on the map."
+                    : "Inspect trees, planting polygons, and saved monitoring blocks."}
+                </p>
+                <div className="green-work-map-layout">
+                  <div className="green-work-map-canvas">
+                    <TreeMap
+                      trees={trees}
+                      onAddTree={() => {}}
+                      enableDraw={remoteMonitoringDrawActive}
+                      drawMode="polygon"
+                      drawActive={remoteMonitoringDrawActive}
+                      onPolygonChange={remoteMonitoringDrawActive ? (geometry) => setRemoteMonitoringDraftGeometry(geometry) : undefined}
+                      minHeight={520}
+                      onTreeInspect={(detail) => {
+                        setInspectedTree(detail);
+                        if (detail) setMenuOpen(false);
+                      }}
+                      fitBounds={remoteMonitoringFitPoints}
+                      assignmentAreas={remoteMonitoringMapAreas}
+                    />
+                  </div>
+                </div>
               </div>
             </>
           )}
@@ -9902,3 +9908,4 @@ export default function GreenWork() {
     </div>
   );
 }
+
