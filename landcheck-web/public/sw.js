@@ -1,5 +1,5 @@
-var CACHE_NAME = "green-shell-v8";
-var MAP_CACHE_NAME = "green-map-v4";
+var CACHE_NAME = "green-shell-v9";
+var MAP_CACHE_NAME = "green-map-v5";
 var SYNC_TAG = "green-sync-queue";
 
 /* ── Precache list ─────────────────────────────────────────────── */
@@ -226,6 +226,25 @@ function isPmtilesRequest(url) {
   return String(url.pathname || "").toLowerCase().endsWith(".pmtiles");
 }
 
+function isLikelyGreenApiRequest(req, url) {
+  if (String(url.origin || "") !== String(self.location.origin || "")) return false;
+  var pathname = String(url.pathname || "");
+  if (!pathname.startsWith("/green/")) return false;
+  if (
+    pathname === "/green/" ||
+    pathname === "/green/manifest.webmanifest" ||
+    pathname.startsWith("/green/icons/")
+  ) {
+    return false;
+  }
+  var accept = String(req.headers.get("accept") || "").toLowerCase();
+  if (accept.includes("application/json")) return true;
+  if (accept.includes("application/pdf")) return true;
+  if (accept.includes("application/octet-stream")) return true;
+  if (accept.includes("text/csv")) return true;
+  return false;
+}
+
 function parseRangeHeader(value, size) {
   if (!value) return null;
   var match = /bytes=(\d*)-(\d*)/.exec(String(value));
@@ -322,6 +341,9 @@ self.addEventListener("fetch", function (event) {
 
   // Only handle GET requests
   if (req.method !== "GET") return;
+
+  // Never intercept same-origin Green API/data requests. Let them go straight to the network.
+  if (isLikelyGreenApiRequest(req, url)) return;
 
   // Skip API calls – let them go straight to network
   if (isSameOrigin && url.pathname.startsWith("/api/")) return;

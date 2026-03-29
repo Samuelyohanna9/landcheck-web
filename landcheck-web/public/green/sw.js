@@ -1,5 +1,5 @@
-self.CACHE_NAME = "green-shell-v7";
-self.MAP_CACHE_NAME = "green-map-v2";
+self.CACHE_NAME = "green-shell-v8";
+self.MAP_CACHE_NAME = "green-map-v3";
 self.SYNC_TAG = "green-sync-queue";
 
 /* ── Precache list ─────────────────────────────────────────────── */
@@ -104,6 +104,25 @@ function isGreenAsset(pathname) {
   );
 }
 
+function isLikelyGreenApiRequest(req, url) {
+  if (String(url.origin || "") !== String(self.location.origin || "")) return false;
+  var pathname = String(url.pathname || "");
+  if (!pathname.startsWith("/green/")) return false;
+  if (
+    pathname === "/green/" ||
+    pathname === "/green/manifest.webmanifest" ||
+    pathname.startsWith("/green/icons/")
+  ) {
+    return false;
+  }
+  var accept = String(req.headers.get("accept") || "").toLowerCase();
+  if (accept.includes("application/json")) return true;
+  if (accept.includes("application/pdf")) return true;
+  if (accept.includes("application/octet-stream")) return true;
+  if (accept.includes("text/csv")) return true;
+  return false;
+}
+
 /**
  * Try to find the SPA shell HTML in the cache.
  * iOS Safari may cache it under different keys depending on how the page was first loaded,
@@ -133,6 +152,9 @@ self.addEventListener("fetch", (event) => {
 
   // Only handle GET requests
   if (req.method !== "GET") return;
+
+  // Never intercept same-origin Green API/data requests. Let them go straight to the network.
+  if (isLikelyGreenApiRequest(req, url)) return;
 
   // Skip API calls – let them go straight to network
   if (isSameOrigin && url.pathname.startsWith("/api/")) return;
