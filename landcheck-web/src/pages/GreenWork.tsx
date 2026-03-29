@@ -2110,6 +2110,7 @@ export default function GreenWork() {
   const [remoteMonitoringProgressStep, setRemoteMonitoringProgressStep] = useState(0);
   const [remoteMonitoringProgressPct, setRemoteMonitoringProgressPct] = useState(0);
   const [remoteMonitoringDrawActive, setRemoteMonitoringDrawActive] = useState(false);
+  const [remoteMonitoringFocusedTreeId, setRemoteMonitoringFocusedTreeId] = useState<number | null>(null);
   const remoteMonitoringProgressTimerRef = useRef<number | null>(null);
   const [remoteMonitoringDraftGeometry, setRemoteMonitoringDraftGeometry] = useState<{
     type: "Polygon" | "MultiPolygon";
@@ -2866,6 +2867,7 @@ export default function GreenWork() {
       stopRemoteMonitoringProgress();
       setRemoteMonitoringProgressStep(REMOTE_MONITORING_PROGRESS_STEPS.length - 1);
       setRemoteMonitoringProgressPct(100);
+      setRemoteMonitoringFocusedTreeId(null);
       setRemoteMonitoringReport(res.data || null);
     } catch (error: any) {
       stopRemoteMonitoringProgress();
@@ -2875,6 +2877,107 @@ export default function GreenWork() {
       setRemoteMonitoringLoading(false);
     }
   }, [activeProjectId, remoteMonitoringDraftGeometry, startRemoteMonitoringProgress, stopRemoteMonitoringProgress]);
+
+  const buildRemoteMonitoringInspectSeed = useCallback(
+    (treeId: number, remoteTree?: RemoteMonitoringTreeAnalysis | null, loading = true): TreeInspectData | null => {
+      const baseTree = trees.find((entry) => Number(entry.id) === Number(treeId));
+      if (!baseTree && !remoteTree) return null;
+      const status = String(remoteTree?.status || baseTree?.status || "unknown");
+      const photoCandidates = [
+        baseTree?.photo_url,
+        ...(Array.isArray(baseTree?.photo_urls) ? baseTree?.photo_urls : []),
+      ];
+      const photoUrl = photoCandidates.find((value) => String(value || "").trim()) || "";
+      return {
+        id: treeId,
+        project_tree_no: remoteTree?.project_tree_no ?? baseTree?.project_tree_no ?? null,
+        status,
+        status_label: treeStatusLabel(status),
+        species: String(remoteTree?.species || baseTree?.species || "-"),
+        planting_date: String(remoteTree?.planting_date || baseTree?.planting_date || ""),
+        notes: String(baseTree?.notes || ""),
+        created_by: String(baseTree?.created_by || "-"),
+        photo_url: String(photoUrl || ""),
+        tree_height_m: Number.isFinite(Number(baseTree?.tree_height_m)) ? Number(baseTree?.tree_height_m) : null,
+        tree_age_months: Number.isFinite(Number(baseTree?.tree_age_months)) ? Number(baseTree?.tree_age_months) : null,
+        tree_origin: String(remoteTree?.tree_origin || baseTree?.tree_origin || "new_planting"),
+        attribution_scope: String(baseTree?.attribution_scope || "full"),
+        count_in_planting_kpis: baseTree?.count_in_planting_kpis !== false,
+        count_in_carbon_scope: baseTree?.count_in_carbon_scope !== false,
+        custodian_name: String(baseTree?.custodian_name || ""),
+        maintenance: { total: 0, done: 0, pending: 0, overdue: 0 },
+        tasks: [],
+        visits: [],
+        loading,
+      };
+    },
+    [trees],
+  );
+
+  const hydrateRemoteMonitoringTreeInspect = useCallback(
+    async (treeId: number, remoteTree?: RemoteMonitoringTreeAnalysis | null) => {
+      const seed = buildRemoteMonitoringInspectSeed(treeId, remoteTree, true);
+      if (seed) setInspectedTree(seed);
+      try {
+        const [tasksRes, timelineRes] = await Promise.allSettled([
+          api.get(`/green/trees/${treeId}/tasks`),
+          api.get(`/green/trees/${treeId}/timeline`),
+        ]);
+        const tasks = tasksRes.status === "fulfilled" && Array.isArray(tasksRes.value.data) ? tasksRes.value.data : [];
+        const timeline = timelineRes.status === "fulfilled" ? timelineRes.value.data : null;
+        const visits = Array.isArray(timeline?.visits) ? timeline.visits : [];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const isTaskDone = (task: any) => normalizeName(task?.status) === "done";
+        const isTaskOverdue = (task: any) => {
+          if (isTaskDone(task)) return false;
+          const dueAt = task?.due_date ? new Date(task.due_date) : null;
+          if (!dueAt || Number.isNaN(dueAt.getTime())) return false;
+          dueAt.setHours(0, 0, 0, 0);
+          return dueAt.getTime() < today.getTime();
+        };
+        const maintenance = {
+          total: tasks.length,
+          done: tasks.filter((task: any) => isTaskDone(task)).length,
+          pending: tasks.filter((task: any) => !isTaskDone(task)).length,
+          overdue: tasks.filter((task: any) => isTaskOverdue(task)).length,
+        };
+        const taskPhoto = tasks.find((task: any) => String(task?.photo_url || "").trim())?.photo_url || "";
+        const visitPhoto = visits.find((visit: any) => String(visit?.photo_url || "").trim())?.photo_url || "";
+        setInspectedTree((prev) => {
+          if (prev && Number(prev.id) !== Number(treeId)) return prev;
+          const base = buildRemoteMonitoringInspectSeed(treeId, remoteTree, false) || prev || seed;
+          if (!base) return prev;
+          return {
+            ...base,
+            photo_url: String(base.photo_url || taskPhoto || visitPhoto || ""),
+            maintenance,
+            tasks,
+            visits,
+            loading: false,
+          };
+        });
+      } catch {
+        setInspectedTree((prev) => {
+          if (!prev || Number(prev.id) !== Number(treeId)) return prev;
+          return { ...prev, loading: false };
+        });
+      }
+    },
+    [buildRemoteMonitoringInspectSeed],
+  );
+
+  const focusRemoteMonitoringTree = useCallback(
+    (tree: RemoteMonitoringTreeAnalysis) => {
+      const treeId = Number(tree.tree_id || 0);
+      if (!treeId) return;
+      setRemoteMonitoringDrawActive(false);
+      setRemoteMonitoringFocusedTreeId(treeId);
+      mapCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      void hydrateRemoteMonitoringTreeInspect(treeId, tree);
+    },
+    [hydrateRemoteMonitoringTreeInspect],
+  );
 
   const loadVerraHistory = useCallback(async (projectId: number) => {
     const res = await api.get(`/green/projects/${projectId}/verra/exports?limit=100`);
@@ -3302,6 +3405,7 @@ export default function GreenWork() {
     }));
     setRemoteMonitoringDraftGeometry(sourceArea?.geojson || null);
     setRemoteMonitoringDrawActive(false);
+    setRemoteMonitoringFocusedTreeId(null);
     setRemoteMonitoringReport(null);
   };
 
@@ -4657,13 +4761,28 @@ export default function GreenWork() {
     }));
     return plantingAreas;
   }, [monitoringSourceAreas]);
+  const remoteMonitoringFocusPoints = useMemo(() => {
+    if (!remoteMonitoringFocusedTreeId) return null;
+    const sourceTree = trees.find((entry) => Number(entry.id) === Number(remoteMonitoringFocusedTreeId));
+    const coords =
+      sourceTree && Number.isFinite(Number(sourceTree.lng)) && Number.isFinite(Number(sourceTree.lat))
+        ? { lng: Number(sourceTree.lng), lat: Number(sourceTree.lat) }
+        : null;
+    if (!coords) return null;
+    const delta = 0.0016;
+    return [
+      { lng: coords.lng - delta, lat: coords.lat - delta },
+      { lng: coords.lng + delta, lat: coords.lat + delta },
+    ];
+  }, [remoteMonitoringFocusedTreeId, trees]);
   const remoteMonitoringFitPoints = useMemo(() => {
+    if (remoteMonitoringFocusPoints?.length) return remoteMonitoringFocusPoints;
     const areaPoints = remoteMonitoringMapAreas.flatMap((item) => extractMapAreaPoints(normalizeMapAreaGeometry(item.geojson)));
     const draftPoints = extractMapAreaPoints(normalizeMapAreaGeometry(remoteMonitoringDraftGeometry));
     if (draftPoints.length) return draftPoints;
     if (areaPoints.length) return areaPoints;
     return combinedProjectFitPoints;
-  }, [remoteMonitoringMapAreas, remoteMonitoringDraftGeometry, combinedProjectFitPoints]);
+  }, [remoteMonitoringFocusPoints, remoteMonitoringMapAreas, remoteMonitoringDraftGeometry, combinedProjectFitPoints]);
 
   const fitPoints = useMemo(() => {
     const userTreePoints = mapViewTrees.map((t) => ({ lng: t.lng, lat: t.lat }));
@@ -9172,6 +9291,7 @@ export default function GreenWork() {
                             setRemoteMonitoringDraftGeometry(null);
                             setRemoteMonitoringDraft((prev) => ({ ...prev, source_order_id: "" }));
                             setRemoteMonitoringDrawActive(false);
+                            setRemoteMonitoringFocusedTreeId(null);
                             setRemoteMonitoringReport(null);
                           }}
                         >
@@ -9239,11 +9359,13 @@ export default function GreenWork() {
                         drawActive={remoteMonitoringDrawActive}
                         onPolygonChange={remoteMonitoringDrawActive ? (geometry) => {
                           setRemoteMonitoringDraftGeometry(geometry);
+                          setRemoteMonitoringFocusedTreeId(null);
                           setRemoteMonitoringReport(null);
                         } : undefined}
                         minHeight={560}
                         onTreeInspect={(detail) => {
                           setInspectedTree(detail);
+                          setRemoteMonitoringFocusedTreeId(detail ? Number(detail.id || 0) : null);
                           if (detail) setMenuOpen(false);
                         }}
                         fitBounds={remoteMonitoringFitPoints}
@@ -9324,65 +9446,90 @@ export default function GreenWork() {
                         <strong>Priority trees</strong>
                         <div className="green-work-remote-risk-list">
                           {remoteMonitoringTopRiskTrees.map((tree) => (
-                            <div key={`remote-risk-${tree.tree_id}`} className={`green-work-remote-risk-card is-${normalizeName(tree.satellite_health || "")}`}>
+                            <button
+                              key={`remote-risk-${tree.tree_id}`}
+                              type="button"
+                              className={`green-work-remote-risk-card is-${normalizeName(tree.satellite_health || "")}`}
+                              onClick={() => focusRemoteMonitoringTree(tree)}
+                            >
                               <span>{tree.tree_label || formatProjectTreeLabelById(tree.tree_id)}</span>
                               <strong>{tree.satellite_health_label || "No data"}</strong>
                               <small>{typeof tree.local_mean_ndvi === "number" ? `NDVI ${tree.local_mean_ndvi.toFixed(3)}` : "No NDVI"}</small>
-                            </div>
+                            </button>
                           ))}
                         </div>
                       </div>
                     ) : null}
 
-                    <div className="green-work-remote-tree-table-wrap is-priority">
+                    <div className="green-work-remote-tree-detail-wrap">
                       <div className="green-work-remote-tree-table-head">
-                        <strong>Trees in polygon</strong>
-                        <span>{remoteMonitoringSortedTrees.length || 0} row(s)</span>
+                        <strong>Tree vegetation detail</strong>
+                        <span>{remoteMonitoringSortedTrees.length || 0} tree row(s)</span>
                       </div>
-                      <table className="green-work-live-table green-work-remote-tree-table">
-                        <thead>
-                          <tr>
-                            <th>Tree</th>
-                            <th>Species</th>
-                            <th>Stored Status</th>
-                            <th>Satellite NDVI</th>
-                            <th>Vegetation Cover</th>
-                            <th>Vegetated Area</th>
-                            <th>Satellite Health</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {remoteMonitoringSortedTrees.length ? (
-                            remoteMonitoringSortedTrees.map((tree) => (
-                              <tr key={`remote-tree-${tree.tree_id}`}>
-                                <td>
-                                  <strong>{tree.tree_label || formatProjectTreeLabelById(tree.tree_id)}</strong>
-                                  {tree.inventory_tree_count && tree.inventory_tree_count > 1 ? (
-                                    <div className="staff-row-meta">Inventory count: {tree.inventory_tree_count}</div>
-                                  ) : null}
-                                </td>
-                                <td>{tree.species || "-"}</td>
-                                <td>{treeStatusLabel(tree.status)}</td>
-                                <td>{typeof tree.local_mean_ndvi === "number" ? tree.local_mean_ndvi.toFixed(3) : "-"}</td>
-                                <td>{typeof tree.local_vegetation_cover_pct === "number" ? `${tree.local_vegetation_cover_pct.toFixed(1)}%` : "-"}</td>
-                                <td>{typeof tree.local_vegetated_area_sqm === "number" ? `${tree.local_vegetated_area_sqm.toFixed(2)} sqm` : "-"}</td>
-                                <td>
+                      {remoteMonitoringSortedTrees.length ? (
+                        <div className="green-work-remote-tree-detail-list">
+                          {remoteMonitoringSortedTrees.map((tree) => {
+                            const treeId = Number(tree.tree_id || 0);
+                            const isFocused = Number(remoteMonitoringFocusedTreeId || 0) === treeId;
+                            return (
+                              <div
+                                key={`remote-tree-${tree.tree_id}`}
+                                className={`green-work-remote-tree-card ${isFocused ? "is-focused" : ""}`}
+                              >
+                                <div className="green-work-remote-tree-card-head">
+                                  <button
+                                    type="button"
+                                    className="green-work-remote-tree-link"
+                                    onClick={() => focusRemoteMonitoringTree(tree)}
+                                  >
+                                    {tree.tree_label || formatProjectTreeLabelById(tree.tree_id)}
+                                  </button>
                                   <span className={`green-work-remote-tree-health is-${normalizeName(tree.satellite_health || "")}`}>
                                     {tree.satellite_health_label || "No data"}
                                   </span>
-                                  {tree.satellite_health_note ? (
-                                    <div className="staff-row-meta">{tree.satellite_health_note}</div>
+                                </div>
+                                <div className="green-work-remote-tree-card-meta">
+                                  <span>{tree.species || "-"}</span>
+                                  <span>{treeStatusLabel(tree.status)}</span>
+                                  {tree.inventory_tree_count && tree.inventory_tree_count > 1 ? (
+                                    <span>{tree.inventory_tree_count} trees</span>
                                   ) : null}
-                                </td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan={7} className="green-work-live-empty">No stored trees were found inside this polygon.</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
+                                </div>
+                                <p className="green-work-remote-tree-card-note">
+                                  {tree.satellite_health_note || "Satellite vegetation proxy not available for this tree yet."}
+                                </p>
+                                <div className="green-work-remote-tree-card-metrics">
+                                  <div>
+                                    <span>NDVI</span>
+                                    <strong>{typeof tree.local_mean_ndvi === "number" ? tree.local_mean_ndvi.toFixed(3) : "-"}</strong>
+                                  </div>
+                                  <div>
+                                    <span>Cover</span>
+                                    <strong>{typeof tree.local_vegetation_cover_pct === "number" ? `${tree.local_vegetation_cover_pct.toFixed(1)}%` : "-"}</strong>
+                                  </div>
+                                  <div>
+                                    <span>Vegetated Area</span>
+                                    <strong>{typeof tree.local_vegetated_area_sqm === "number" ? `${tree.local_vegetated_area_sqm.toFixed(2)} sqm` : "-"}</strong>
+                                  </div>
+                                </div>
+                                <div className="work-actions green-work-remote-tree-actions">
+                                  <button type="button" onClick={() => focusRemoteMonitoringTree(tree)}>
+                                    View On Map
+                                  </button>
+                                  <button type="button" onClick={() => openAssignTaskForTree(treeId, "inspection")}>
+                                    Assign Maintenance
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="green-work-remote-empty-state">
+                          <strong>No stored trees inside this polygon</strong>
+                          <p>Choose another polygon or adjust the block so LandCheck trees fall inside it.</p>
+                        </div>
+                      )}
                     </div>
                     <div className="green-work-remote-summary-grid">
                       <div className="green-work-remote-metric">
