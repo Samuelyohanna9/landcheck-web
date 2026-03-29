@@ -1004,6 +1004,155 @@
   padding: 0.22rem 0.45rem;
 }
 
+.green-work-remote-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.15fr) minmax(260px, 0.95fr);
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.green-work-remote-builder,
+.green-work-remote-areas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.green-work-remote-draft-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.34rem;
+}
+
+.green-work-remote-area-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.green-work-remote-area-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.4rem;
+  align-items: center;
+  border: 1px solid rgba(23, 83, 45, 0.16);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.84);
+  padding: 0.45rem;
+}
+
+.green-work-remote-area-row.active {
+  border-color: rgba(42, 168, 82, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(42, 168, 82, 0.16);
+}
+
+.green-work-remote-area-button {
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.green-work-remote-area-button strong {
+  font-size: 0.84rem;
+  color: var(--green-900);
+}
+
+.green-work-remote-area-button span {
+  font-size: 0.72rem;
+  color: var(--gw-subtext);
+}
+
+.green-work-remote-report-card {
+  overflow: hidden;
+}
+
+.green-work-remote-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin-top: 0.75rem;
+}
+
+.green-work-remote-metric {
+  border: 1px solid rgba(23, 83, 45, 0.14);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.88);
+  padding: 0.7rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.green-work-remote-metric span {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--green-600);
+}
+
+.green-work-remote-metric strong {
+  font-family: "Sora", sans-serif;
+  font-size: 1rem;
+  color: var(--green-900);
+}
+
+.green-work-remote-metric small {
+  font-size: 0.72rem;
+  color: var(--gw-subtext);
+}
+
+.green-work-remote-signal {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  padding: 0.28rem 0.62rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  border: 1px solid transparent;
+}
+
+.green-work-remote-signal.is-stable {
+  background: rgba(42, 168, 82, 0.12);
+  color: var(--green-700);
+  border-color: rgba(42, 168, 82, 0.24);
+}
+
+.green-work-remote-signal.is-improving {
+  background: rgba(14, 165, 233, 0.12);
+  color: #0f6f8d;
+  border-color: rgba(14, 165, 233, 0.24);
+}
+
+.green-work-remote-signal.is-watch {
+  background: rgba(245, 158, 11, 0.14);
+  color: var(--amber-700);
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.green-work-remote-signal.is-no_data {
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569;
+  border-color: rgba(100, 116, 139, 0.24);
+}
+
+.green-work-remote-series-table-wrap {
+  margin-top: 0.85rem;
+  overflow: auto;
+}
+
+.green-work-remote-series-table th,
+.green-work-remote-series-table td {
+  white-space: nowrap;
+}
+
 /* ── Task Summary ── */
 .green-work-task-summary {
   margin-top: 0.6rem;
@@ -2939,6 +3088,14 @@
   .project-controls-row {
     grid-template-columns: 1fr;
   }
+
+  .green-work-remote-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .green-work-remote-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* ── Responsive: Mobile ── */
@@ -3177,6 +3334,10 @@
 
   .green-work-carbon-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .green-work-remote-summary-grid {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -297,6 +297,7 @@ type WorkForm =
   | "add_user"
   | "users"
   | "map_view"
+  | "remote_monitoring"
   | "assign_work"
   | "assign_task"
   | "review_queue"
@@ -329,6 +330,55 @@ type VerraExportHistoryItem = {
   created_at: string;
 };
 type VerraExportFormat = "zip" | "json" | "docx";
+type RemoteMonitoringArea = {
+  id: number;
+  project_id: number;
+  name: string;
+  area_geojson: any;
+  area_sqm?: number | null;
+  baseline_date?: string | null;
+  notes?: string | null;
+  created_by?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  tree_count?: number;
+  tree_record_count?: number;
+  new_planting_tree_count?: number;
+  existing_inventory_tree_count?: number;
+  other_tree_count?: number;
+};
+type RemoteMonitoringSeriesPoint = {
+  label: string;
+  start_date: string;
+  end_date: string;
+  image_count?: number | null;
+  latest_image_date?: string | null;
+  mean_ndvi?: number | null;
+  vegetation_area_sqm?: number | null;
+  vegetation_coverage_pct?: number | null;
+  vegetation_area_per_tree_sqm?: number | null;
+  clear_area_sqm?: number | null;
+  clear_coverage_pct?: number | null;
+};
+type RemoteMonitoringReport = {
+  area: RemoteMonitoringArea;
+  summary: {
+    image_count?: number | null;
+    latest_image_date?: string | null;
+    mean_ndvi?: number | null;
+    vegetation_area_sqm?: number | null;
+    vegetation_coverage_pct?: number | null;
+    vegetation_area_per_tree_sqm?: number | null;
+    clear_area_sqm?: number | null;
+    clear_coverage_pct?: number | null;
+    signal?: string | null;
+    signal_message?: string | null;
+    summary_window_start?: string | null;
+    summary_window_end?: string | null;
+    vegetation_threshold_ndvi?: number | null;
+  };
+  series: RemoteMonitoringSeriesPoint[];
+};
 
 const normalizeName = (value: string | null | undefined) => (value || "").trim().toLowerCase();
 const generateUiUniqueId = (prefix: string) =>
@@ -572,6 +622,47 @@ const extractMapAreaPoints = (geometry: { type: "Polygon" | "MultiPolygon"; coor
     });
   }
   return points;
+};
+const pointInRing = (lng: number, lat: number, ring: any) => {
+  if (!Array.isArray(ring) || ring.length < 4) return false;
+  let inside = false;
+  let j = ring.length - 1;
+  for (let i = 0; i < ring.length; i += 1) {
+    const xi = Number(ring[i]?.[0]);
+    const yi = Number(ring[i]?.[1]);
+    const xj = Number(ring[j]?.[0]);
+    const yj = Number(ring[j]?.[1]);
+    if (![xi, yi, xj, yj].every((value) => Number.isFinite(value))) {
+      j = i;
+      continue;
+    }
+    const intersects = yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / ((yj - yi) || 1e-12) + xi;
+    if (intersects) inside = !inside;
+    j = i;
+  }
+  return inside;
+};
+const pointInMapGeometry = (
+  lng: number,
+  lat: number,
+  geometry: { type: "Polygon" | "MultiPolygon"; coordinates: any } | null,
+) => {
+  if (!geometry) return false;
+  const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : Array.isArray(geometry.coordinates) ? geometry.coordinates : [];
+  return polygons.some((polygon) => {
+    if (!Array.isArray(polygon) || polygon.length === 0) return false;
+    const [outer, ...holes] = polygon;
+    if (!pointInRing(lng, lat, outer)) return false;
+    if (holes.some((hole) => pointInRing(lng, lat, hole))) return false;
+    return true;
+  });
+};
+const formatMonitoringSignalLabel = (value: string | null | undefined) => {
+  const normalized = normalizeName(value);
+  if (normalized === "watch") return "Watch";
+  if (normalized === "improving") return "Improving";
+  if (normalized === "no_data") return "No Data";
+  return "Stable";
 };
 
 const MAINTENANCE_ACTIVITY_ORDER = ["watering", "weeding", "protection", "inspection", "replacement"] as const;
@@ -957,6 +1048,13 @@ const renderActionIcon = (form: WorkForm) => {
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path d="M4 6l5-2 6 2 5-2v14l-5 2-6-2-5 2z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
           <path d="M9 4v14M15 6v14" fill="none" stroke="currentColor" strokeWidth="2" />
+        </svg>
+      );
+    case "remote_monitoring":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 16l4-4 3 2 5-6 4 3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M5 19h14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
       );
     case "assign_work":
@@ -1713,6 +1811,7 @@ export default function GreenWork() {
     "add_user",
     "users",
     "map_view",
+    "remote_monitoring",
     "assign_work",
     "assign_task",
     "review_queue",
@@ -1963,6 +2062,28 @@ export default function GreenWork() {
       ? "super_admin"
       : null
   );
+  const [remoteMonitoringAreas, setRemoteMonitoringAreas] = useState<RemoteMonitoringArea[]>([]);
+  const [remoteMonitoringSelectedAreaId, setRemoteMonitoringSelectedAreaId] = useState<number | null>(null);
+  const [remoteMonitoringReport, setRemoteMonitoringReport] = useState<RemoteMonitoringReport | null>(null);
+  const [remoteMonitoringLoading, setRemoteMonitoringLoading] = useState(false);
+  const [remoteMonitoringSaving, setRemoteMonitoringSaving] = useState(false);
+  const [remoteMonitoringDeletingId, setRemoteMonitoringDeletingId] = useState<number | null>(null);
+  const [remoteMonitoringDrawActive, setRemoteMonitoringDrawActive] = useState(false);
+  const [remoteMonitoringDraftGeometry, setRemoteMonitoringDraftGeometry] = useState<{
+    type: "Polygon" | "MultiPolygon";
+    coordinates: any;
+  } | null>(null);
+  const [remoteMonitoringDraft, setRemoteMonitoringDraft] = useState<{
+    name: string;
+    baseline_date: string;
+    notes: string;
+    source_order_id: string;
+  }>({
+    name: "",
+    baseline_date: "",
+    notes: "",
+    source_order_id: "",
+  });
   const [staffMenu, setStaffMenu] = useState<StaffMenuState>(null);
   const [liveTreeMenu, setLiveTreeMenu] = useState<LiveTreeMenuState>(null);
   const [carbonSummary, setCarbonSummary] = useState<{
@@ -2479,6 +2600,12 @@ export default function GreenWork() {
     setCustodianAssignDraft(null);
     setServerLiveRows([]);
     setServerExistingLiveRows([]);
+    setRemoteMonitoringAreas([]);
+    setRemoteMonitoringSelectedAreaId(null);
+    setRemoteMonitoringReport(null);
+    setRemoteMonitoringDrawActive(false);
+    setRemoteMonitoringDraftGeometry(null);
+    setRemoteMonitoringDraft({ name: "", baseline_date: "", notes: "", source_order_id: "" });
   };
 
   const loadProjectData = async (projectId: number) => {
@@ -2662,6 +2789,33 @@ export default function GreenWork() {
       setSpeciesDailyTrend(null);
     }
   };
+
+  const loadRemoteMonitoringAreas = useCallback(async (projectId: number) => {
+    const res = await api.get("/green/remote-monitoring/areas", {
+      params: { project_id: projectId, _ts: Date.now() },
+    });
+    const rows = Array.isArray(res.data) ? res.data : [];
+    setRemoteMonitoringAreas(rows);
+    setRemoteMonitoringSelectedAreaId((prev) => {
+      if (prev && rows.some((item: any) => Number(item.id) === Number(prev))) return prev;
+      return rows.length ? Number(rows[0].id) : null;
+    });
+  }, []);
+
+  const loadRemoteMonitoringAnalysis = useCallback(async (areaId: number) => {
+    setRemoteMonitoringLoading(true);
+    try {
+      const res = await api.get(`/green/remote-monitoring/areas/${areaId}/analysis`, {
+        params: { _ts: Date.now() },
+      });
+      setRemoteMonitoringReport(res.data || null);
+    } catch (error: any) {
+      setRemoteMonitoringReport(null);
+      toast.error(error?.response?.data?.detail || "Failed to load remote monitoring");
+    } finally {
+      setRemoteMonitoringLoading(false);
+    }
+  }, []);
 
   const loadVerraHistory = useCallback(async (projectId: number) => {
     const res = await api.get(`/green/projects/${projectId}/verra/exports?limit=100`);
@@ -3080,6 +3234,85 @@ export default function GreenWork() {
     }
   };
 
+  const applyMonitoringSourceArea = (value: string) => {
+    const orderId = Number(value || 0);
+    const sourceArea = monitoringSourceAreas.find((item) => Number(item.id) === orderId) || null;
+    setRemoteMonitoringDraft((prev) => ({
+      ...prev,
+      source_order_id: value,
+      name: prev.name || sourceArea?.label || "",
+    }));
+    setRemoteMonitoringDraftGeometry(sourceArea?.geojson || null);
+    setRemoteMonitoringDrawActive(false);
+  };
+
+  const saveRemoteMonitoringArea = async () => {
+    if (workPartnerOrgPaused) {
+      toast.error("Organization is paused. Remote monitoring is read-only.");
+      return;
+    }
+    if (!activeProjectId) return;
+    const geometry = normalizeMapAreaGeometry(remoteMonitoringDraftGeometry);
+    const name = String(remoteMonitoringDraft.name || "").trim();
+    if (!geometry) {
+      toast.error("Draw a monitoring polygon or load one from planting areas.");
+      return;
+    }
+    if (!name) {
+      toast.error("Monitoring area name is required.");
+      return;
+    }
+    setRemoteMonitoringSaving(true);
+    try {
+      const res = await api.post("/green/remote-monitoring/areas", {
+        project_id: activeProjectId,
+        name,
+        area_geojson: geometry,
+        baseline_date: remoteMonitoringDraft.baseline_date || null,
+        notes: remoteMonitoringDraft.notes || null,
+        created_by: workAuthSession?.user?.full_name || null,
+      });
+      const createdId = Number(res?.data?.id || 0);
+      await loadRemoteMonitoringAreas(activeProjectId);
+      setRemoteMonitoringSelectedAreaId(createdId > 0 ? createdId : null);
+      setRemoteMonitoringDraft({ name: "", baseline_date: "", notes: "", source_order_id: "" });
+      setRemoteMonitoringDraftGeometry(null);
+      setRemoteMonitoringDrawActive(false);
+      toast.success("Remote monitoring area saved.");
+      if (createdId > 0) {
+        void loadRemoteMonitoringAnalysis(createdId);
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to save monitoring area");
+    } finally {
+      setRemoteMonitoringSaving(false);
+    }
+  };
+
+  const deleteRemoteMonitoringArea = async (areaId: number) => {
+    if (workPartnerOrgPaused) {
+      toast.error("Organization is paused. Remote monitoring is read-only.");
+      return;
+    }
+    if (!activeProjectId || remoteMonitoringDeletingId !== null) return;
+    const area = remoteMonitoringAreas.find((item) => Number(item.id) === Number(areaId));
+    const confirmed = window.confirm(`Delete monitoring area "${area?.name || `#${areaId}`}"?`);
+    if (!confirmed) return;
+    setRemoteMonitoringDeletingId(areaId);
+    try {
+      await api.delete(`/green/remote-monitoring/areas/${areaId}`, {
+        params: { project_id: activeProjectId },
+      });
+      await loadRemoteMonitoringAreas(activeProjectId);
+      setRemoteMonitoringReport((prev) => (Number(prev?.area?.id || 0) === Number(areaId) ? null : prev));
+      toast.success("Monitoring area deleted.");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to delete monitoring area");
+    } finally {
+      setRemoteMonitoringDeletingId(null);
+    }
+  };
+
   const deleteTreeFromWork = async (treeId: number) => {
     if (!activeProjectId || deletingTreeId !== null) return;
     const confirmValue = window.prompt(
@@ -3152,6 +3385,15 @@ export default function GreenWork() {
   }, [activeProjectId]);
 
   useEffect(() => {
+    setRemoteMonitoringAreas([]);
+    setRemoteMonitoringSelectedAreaId(null);
+    setRemoteMonitoringReport(null);
+    setRemoteMonitoringDrawActive(false);
+    setRemoteMonitoringDraftGeometry(null);
+    setRemoteMonitoringDraft({ name: "", baseline_date: "", notes: "", source_order_id: "" });
+  }, [activeProjectId]);
+
+  useEffect(() => {
     localStorage.setItem("landcheck_work_active_form", activeForm || "");
   }, [activeForm]);
 
@@ -3193,6 +3435,7 @@ export default function GreenWork() {
         "add_user",
         "users",
         "map_view",
+        "remote_monitoring",
         "assign_work",
         "assign_task",
         "review_queue",
@@ -3286,6 +3529,21 @@ export default function GreenWork() {
     }, 12000);
     return () => window.clearInterval(timer);
   }, [activeProjectId, activeForm]);
+
+  useEffect(() => {
+    if (!activeProjectId || activeForm !== "remote_monitoring") return;
+    void loadRemoteMonitoringAreas(activeProjectId).catch(() => {
+      toast.error("Failed to load remote monitoring areas");
+    });
+  }, [activeProjectId, activeForm, loadRemoteMonitoringAreas]);
+
+  useEffect(() => {
+    if (activeForm !== "remote_monitoring" || !remoteMonitoringSelectedAreaId) {
+      if (activeForm !== "remote_monitoring") setRemoteMonitoringReport(null);
+      return;
+    }
+    void loadRemoteMonitoringAnalysis(remoteMonitoringSelectedAreaId);
+  }, [activeForm, remoteMonitoringSelectedAreaId, loadRemoteMonitoringAnalysis]);
 
   useEffect(() => {
     if (!activeProjectId || activeForm !== "verra_reports") return;
@@ -3934,14 +4192,47 @@ export default function GreenWork() {
     window.open(`${BACKEND_URL}/green/donor/export/csv?project_id=${activeProjectId}`, "_blank");
   };
 
-  const exportWorkPdf = () => {
+  const exportWorkPdf = async () => {
     if (!activeProjectId) return;
+    if (includePhotosInWorkPdf) {
+      const loadingId = toast.loading("Preparing report with photos. This can take a few minutes...");
+      try {
+        const requestBody = {
+          project_id: activeProjectId,
+          assignee_name: assigneeFilter !== "all" ? assigneeFilter : null,
+          include_photos: true,
+          requested_by: workAuthSession?.user?.full_name || "work-user",
+        };
+        const created = await api.post("/green/work-report/export-jobs", requestBody);
+        const jobId = String(created?.data?.id || "");
+        if (!jobId) {
+          throw new Error("Export job was not created");
+        }
+        const startedAt = Date.now();
+        const timeoutMs = 1000 * 60 * 20;
+        while (Date.now() - startedAt < timeoutMs) {
+          await new Promise((resolve) => window.setTimeout(resolve, 3000));
+          const statusRes = await api.get(`/green/export-jobs/${jobId}`);
+          const job = statusRes?.data || {};
+          const status = String(job.status || "").toLowerCase();
+          if (status === "completed" && job.download_url) {
+            toast.success("Report is ready. Download started.", { id: loadingId });
+            window.open(String(job.download_url), "_blank");
+            return;
+          }
+          if (status === "failed") {
+            throw new Error(String(job.error_text || "Report export failed"));
+          }
+        }
+        toast.error("Report is still preparing. Try again in a moment.", { id: loadingId });
+      } catch (error: any) {
+        toast.error(error?.response?.data?.detail || error?.message || "Failed to prepare report", { id: loadingId });
+      }
+      return;
+    }
     const params = new URLSearchParams({
       project_id: String(activeProjectId),
     });
-    if (includePhotosInWorkPdf) {
-      params.set("include_photos", "true");
-    }
     if (assigneeFilter !== "all") {
       params.set("assignee_name", assigneeFilter);
     }
@@ -4273,6 +4564,83 @@ export default function GreenWork() {
     const merged = [...(projectFitPoints || []), ...(projectAreaFitPoints || [])];
     return merged.length ? merged : null;
   }, [projectFitPoints, projectAreaFitPoints]);
+  const monitoringSourceAreas = useMemo(
+    () =>
+      orders
+        .filter((order) => Boolean(order.area_enabled) && Boolean(order.area_geojson))
+        .map((order) => {
+          const geometry = normalizeMapAreaGeometry(order.area_geojson);
+          if (!geometry) return null;
+          const areaLabel = String(order.area_label || "").trim() || `Planting area #${order.id}`;
+          return {
+            id: Number(order.id),
+            label: areaLabel,
+            geojson: geometry,
+            assignee_name: order.assignee_name,
+            target_trees: Number(order.target_trees || 0),
+          };
+        })
+        .filter((item): item is { id: number; label: string; geojson: any; assignee_name: string; target_trees: number } => Boolean(item)),
+    [orders],
+  );
+  const remoteMonitoringSelectedArea = useMemo(
+    () => remoteMonitoringAreas.find((item) => Number(item.id) === Number(remoteMonitoringSelectedAreaId || 0)) || null,
+    [remoteMonitoringAreas, remoteMonitoringSelectedAreaId],
+  );
+  const remoteMonitoringDraftTreeSummary = useMemo(() => {
+    const geometry = normalizeMapAreaGeometry(remoteMonitoringDraftGeometry);
+    if (!geometry) {
+      return {
+        tree_count: 0,
+        tree_record_count: 0,
+        new_planting_tree_count: 0,
+        existing_inventory_tree_count: 0,
+        other_tree_count: 0,
+      };
+    }
+    return trees.reduce(
+      (acc, tree) => {
+        if (!pointInMapGeometry(Number(tree.lng), Number(tree.lat), geometry)) return acc;
+        const count = Math.max(1, Math.round(Number(tree.inventory_tree_count || 1) || 1));
+        const origin = normalizeName(tree.tree_origin || "new_planting");
+        acc.tree_record_count += 1;
+        acc.tree_count += count;
+        if (origin === "new_planting") acc.new_planting_tree_count += count;
+        else if (origin === "existing_inventory") acc.existing_inventory_tree_count += count;
+        else acc.other_tree_count += count;
+        return acc;
+      },
+      {
+        tree_count: 0,
+        tree_record_count: 0,
+        new_planting_tree_count: 0,
+        existing_inventory_tree_count: 0,
+        other_tree_count: 0,
+      },
+    );
+  }, [trees, remoteMonitoringDraftGeometry]);
+  const remoteMonitoringMapAreas = useMemo(() => {
+    const savedAreas = remoteMonitoringAreas.map((area) => ({
+      id: `remote-area-${area.id}`,
+      label: `Remote: ${area.name}`,
+      geojson: area.area_geojson,
+    }));
+    const plantingAreas = monitoringSourceAreas.map((area) => ({
+      id: `work-order-${area.id}`,
+      label: area.label,
+      geojson: area.geojson,
+    }));
+    return [...savedAreas, ...plantingAreas];
+  }, [remoteMonitoringAreas, monitoringSourceAreas]);
+  const remoteMonitoringFitPoints = useMemo(() => {
+    const areaPoints = remoteMonitoringMapAreas.flatMap((item) => extractMapAreaPoints(normalizeMapAreaGeometry(item.geojson)));
+    const draftPoints = extractMapAreaPoints(normalizeMapAreaGeometry(remoteMonitoringDraftGeometry));
+    const selectedPoints = extractMapAreaPoints(normalizeMapAreaGeometry(remoteMonitoringSelectedArea?.area_geojson));
+    if (draftPoints.length) return draftPoints;
+    if (selectedPoints.length) return selectedPoints;
+    if (areaPoints.length) return areaPoints;
+    return combinedProjectFitPoints;
+  }, [remoteMonitoringMapAreas, remoteMonitoringDraftGeometry, remoteMonitoringSelectedArea, combinedProjectFitPoints]);
 
   const fitPoints = useMemo(() => {
     const userTreePoints = mapViewTrees.map((t) => ({ lng: t.lng, lat: t.lat }));
@@ -4881,6 +5249,7 @@ export default function GreenWork() {
   const activeProjectActions: Array<{ form: WorkForm; title: string; note: string }> = [
     { form: "overview", title: "Overview", note: "Progress summary" },
     { form: "map_view", title: "Map View", note: "Trees + draw polygons" },
+    { form: "remote_monitoring", title: "Remote Monitoring", note: "Polygon vegetation tracking" },
     { form: "live_table", title: "Live Maintenance", note: "New planting + existing tree cycles" },
     { form: "users", title: "Users", note: "All staff status + roles" },
     { form: "add_user", title: "Add Staff", note: "Create user profile" },
@@ -5346,17 +5715,20 @@ export default function GreenWork() {
     activeForm !== "overview" &&
     activeForm !== "live_table" &&
     activeForm !== "verra_reports" &&
-    activeForm !== "map_view";
+    activeForm !== "map_view" &&
+    activeForm !== "remote_monitoring";
   const detailScrollMode = activeForm === "existing_tree_intake";
   const custodianHubMode = activeForm === "custodian_hub";
   const overviewMode = Boolean(activeProjectId && activeForm === "overview");
   const mapViewMode = Boolean(activeProjectId && activeForm === "map_view");
+  const remoteMonitoringMode = Boolean(activeProjectId && activeForm === "remote_monitoring");
   const assignWorkAreaMode = Boolean(activeProjectId && activeForm === "assign_work" && newOrderAreaEnabled);
   const liveTableMode = Boolean(activeProjectId && activeForm === "live_table");
   const verraMode = Boolean(activeProjectId && activeForm === "verra_reports");
   const hasDedicatedMainContent =
     overviewMode ||
     mapViewMode ||
+    remoteMonitoringMode ||
     liveTableMode ||
     verraMode ||
     activeForm === "existing_tree_intake" ||
@@ -5822,6 +6194,13 @@ export default function GreenWork() {
               onClick={() => openForm("map_view")}
             >
               Map View
+            </button>
+            <button
+              className={`green-work-menu-item ${activeForm === "remote_monitoring" ? "active" : ""}`}
+              type="button"
+              onClick={() => openForm("remote_monitoring")}
+            >
+              Remote Monitoring
             </button>
             <button
               className={`green-work-menu-item ${activeForm === "live_table" ? "active" : ""}`}
@@ -7695,7 +8074,7 @@ export default function GreenWork() {
           )}
         </aside>
 
-        <section className={`green-work-main ${overviewMode || liveTableMode || verraMode ? "overview-mode" : "single-mode"} ${mapViewMode ? "map-view-mode" : ""}`}>
+        <section className={`green-work-main ${overviewMode || liveTableMode || verraMode || remoteMonitoringMode ? "overview-mode" : "single-mode"} ${mapViewMode ? "map-view-mode" : ""}`}>
           {activeProjectId && activeForm === "overview" && (
             <div className="green-work-card green-work-overview-card">
               <div className="green-work-row">
@@ -8720,6 +9099,259 @@ export default function GreenWork() {
                 </table>
               </div>
             </div>
+          )}
+
+          {activeProjectId && activeForm === "remote_monitoring" && (
+            <>
+              <div className="green-work-card green-work-remote-card">
+                <div className="green-work-row">
+                  <h3>Remote Monitoring</h3>
+                  <div className="work-actions">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!activeProjectId) return;
+                        void loadRemoteMonitoringAreas(activeProjectId);
+                      }}
+                    >
+                      Refresh Areas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => remoteMonitoringSelectedAreaId && void loadRemoteMonitoringAnalysis(remoteMonitoringSelectedAreaId)}
+                      disabled={!remoteMonitoringSelectedAreaId || remoteMonitoringLoading}
+                    >
+                      {remoteMonitoringLoading ? "Refreshing..." : "Refresh Vegetation"}
+                    </button>
+                  </div>
+                </div>
+                <p className="green-work-note">
+                  Tree count comes from LandCheck tree records inside the polygon. NDVI is only used for vegetation signal, not for counting trees.
+                </p>
+
+                <div className="green-work-remote-layout">
+                  <div className="green-work-remote-builder">
+                    <label>
+                      Use existing planting area
+                      <select
+                        value={remoteMonitoringDraft.source_order_id}
+                        onChange={(e) => applyMonitoringSourceArea(e.target.value)}
+                      >
+                        <option value="">Draw new polygon instead</option>
+                        {monitoringSourceAreas.map((area) => (
+                          <option key={`remote-source-${area.id}`} value={area.id}>
+                            {area.label} | {area.assignee_name || "Unassigned"} | target {area.target_trees}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Monitoring area name
+                      <input
+                        value={remoteMonitoringDraft.name}
+                        onChange={(e) => setRemoteMonitoringDraft((prev) => ({ ...prev, name: e.target.value }))}
+                        placeholder="North block / Village cluster A"
+                      />
+                    </label>
+                    <label>
+                      Baseline / planting date
+                      <input
+                        type="date"
+                        value={remoteMonitoringDraft.baseline_date}
+                        onChange={(e) => setRemoteMonitoringDraft((prev) => ({ ...prev, baseline_date: e.target.value }))}
+                      />
+                    </label>
+                    <label>
+                      Notes
+                      <textarea
+                        value={remoteMonitoringDraft.notes}
+                        onChange={(e) => setRemoteMonitoringDraft((prev) => ({ ...prev, notes: e.target.value }))}
+                        placeholder="Use for remote vegetation tracking after planting."
+                      />
+                    </label>
+                    <div className="work-actions">
+                      <button type="button" onClick={() => setRemoteMonitoringDrawActive((prev) => !prev)}>
+                        {remoteMonitoringDrawActive ? "Stop Polygon Draw" : "Draw Polygon On Map"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRemoteMonitoringDraftGeometry(null);
+                          setRemoteMonitoringDraft((prev) => ({ ...prev, source_order_id: "" }));
+                          setRemoteMonitoringDrawActive(false);
+                        }}
+                      >
+                        Clear Polygon
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={() => void saveRemoteMonitoringArea()}
+                        disabled={remoteMonitoringSaving || workPartnerOrgPaused}
+                      >
+                        {remoteMonitoringSaving ? "Saving..." : "Save Monitoring Area"}
+                      </button>
+                    </div>
+                    <div className="green-work-remote-draft-summary">
+                      <span className="green-work-flow-pill">Tree rows: {remoteMonitoringDraftTreeSummary.tree_record_count}</span>
+                      <span className="green-work-flow-pill">Trees in polygon: {remoteMonitoringDraftTreeSummary.tree_count}</span>
+                      <span className="green-work-flow-pill">New planting: {remoteMonitoringDraftTreeSummary.new_planting_tree_count}</span>
+                      <span className="green-work-flow-pill">Existing inventory: {remoteMonitoringDraftTreeSummary.existing_inventory_tree_count}</span>
+                    </div>
+                  </div>
+
+                  <div className="green-work-remote-areas">
+                    <h4>Saved Monitoring Areas</h4>
+                    {remoteMonitoringAreas.length === 0 ? (
+                      <p className="green-work-note">No monitoring polygons saved yet.</p>
+                    ) : (
+                      <div className="green-work-remote-area-list">
+                        {remoteMonitoringAreas.map((area) => {
+                          const isActive = Number(area.id) === Number(remoteMonitoringSelectedAreaId || 0);
+                          return (
+                            <div key={`remote-area-row-${area.id}`} className={`green-work-remote-area-row ${isActive ? "active" : ""}`}>
+                              <button
+                                type="button"
+                                className="green-work-remote-area-button"
+                                onClick={() => setRemoteMonitoringSelectedAreaId(Number(area.id))}
+                              >
+                                <strong>{area.name}</strong>
+                                <span>{area.baseline_date ? `Baseline ${formatDateLabel(area.baseline_date)}` : "No baseline date"}</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="green-work-danger-btn"
+                                disabled={remoteMonitoringDeletingId === area.id || workPartnerOrgPaused}
+                                onClick={() => void deleteRemoteMonitoringArea(area.id)}
+                              >
+                                {remoteMonitoringDeletingId === area.id ? "Deleting..." : "Delete"}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div ref={mapCardRef} className="green-work-card green-work-map-card">
+                <h3>{remoteMonitoringDrawActive ? "Remote Monitoring Map (Polygon Draw Enabled)" : "Remote Monitoring Map"}</h3>
+                <p className="green-work-note">
+                  {remoteMonitoringDrawActive
+                    ? "Draw one polygon for the monitoring block. When draw is off, you can inspect trees on the map."
+                    : "Inspect trees, planting polygons, and saved monitoring blocks."}
+                </p>
+                <div className="green-work-map-layout">
+                  <div className="green-work-map-canvas">
+                    <TreeMap
+                      trees={trees}
+                      onAddTree={() => {}}
+                      enableDraw={remoteMonitoringDrawActive}
+                      drawMode="polygon"
+                      drawActive={remoteMonitoringDrawActive}
+                      onPolygonChange={remoteMonitoringDrawActive ? (geometry) => setRemoteMonitoringDraftGeometry(geometry) : undefined}
+                      minHeight={520}
+                      onTreeInspect={(detail) => {
+                        setInspectedTree(detail);
+                        if (detail) setMenuOpen(false);
+                      }}
+                      fitBounds={remoteMonitoringFitPoints}
+                      assignmentAreas={remoteMonitoringMapAreas}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="green-work-card green-work-remote-report-card">
+                <div className="green-work-row">
+                  <h3>{remoteMonitoringReport?.area?.name || "Vegetation Summary"}</h3>
+                  {remoteMonitoringReport?.summary?.signal && (
+                    <span className={`green-work-remote-signal is-${normalizeName(remoteMonitoringReport.summary.signal)}`}>
+                      {formatMonitoringSignalLabel(remoteMonitoringReport.summary.signal)}
+                    </span>
+                  )}
+                </div>
+                {!remoteMonitoringSelectedAreaId ? (
+                  <p className="green-work-note">Select a saved monitoring area to load vegetation metrics.</p>
+                ) : remoteMonitoringLoading ? (
+                  <p className="green-work-note">Loading vegetation signal from satellite imagery...</p>
+                ) : !remoteMonitoringReport ? (
+                  <p className="green-work-note">No monitoring result yet for this polygon.</p>
+                ) : (
+                  <>
+                    <p className="green-work-note">
+                      {remoteMonitoringReport.summary.signal_message}
+                    </p>
+                    <div className="green-work-remote-summary-grid">
+                      <div className="green-work-remote-metric">
+                        <span>Trees In Polygon</span>
+                        <strong>{remoteMonitoringReport.area.tree_count || 0}</strong>
+                        <small>{remoteMonitoringReport.area.tree_record_count || 0} tree rows stored</small>
+                      </div>
+                      <div className="green-work-remote-metric">
+                        <span>Vegetated Area</span>
+                        <strong>{remoteMonitoringReport.summary.vegetation_area_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_sqm || 0} m²</strong>
+                        <small>{remoteMonitoringReport.summary.vegetation_coverage_pct ?? 0}% of polygon</small>
+                      </div>
+                      <div className="green-work-remote-metric">
+                        <span>Vegetation Per Tree</span>
+                        <strong>{remoteMonitoringReport.summary.vegetation_area_per_tree_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_per_tree_sqm || 0} m²</strong>
+                        <small>Uses stored trees inside polygon as denominator</small>
+                      </div>
+                      <div className="green-work-remote-metric">
+                        <span>Mean NDVI</span>
+                        <strong>{remoteMonitoringReport.summary.mean_ndvi?.toFixed?.(3) || remoteMonitoringReport.summary.mean_ndvi || "-"}</strong>
+                        <small>Latest composite window</small>
+                      </div>
+                      <div className="green-work-remote-metric">
+                        <span>Latest Image</span>
+                        <strong>{formatDateLabel(remoteMonitoringReport.summary.latest_image_date || null)}</strong>
+                        <small>{remoteMonitoringReport.summary.image_count || 0} image(s) used</small>
+                      </div>
+                      <div className="green-work-remote-metric">
+                        <span>Inventory Mix</span>
+                        <strong>{remoteMonitoringReport.area.new_planting_tree_count || 0} planted</strong>
+                        <small>{remoteMonitoringReport.area.existing_inventory_tree_count || 0} existing inventory</small>
+                      </div>
+                    </div>
+
+                    <div className="green-work-remote-series-table-wrap">
+                      <table className="green-work-live-table green-work-remote-series-table">
+                        <thead>
+                          <tr>
+                            <th>Period</th>
+                            <th>Latest Image</th>
+                            <th>Mean NDVI</th>
+                            <th>Vegetated Area</th>
+                            <th>Cover %</th>
+                            <th>m² / Tree</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {remoteMonitoringReport.series.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="green-work-live-empty">No monthly monitoring rows available yet.</td>
+                            </tr>
+                          ) : (
+                            remoteMonitoringReport.series.map((row) => (
+                              <tr key={`remote-series-${row.label}`}>
+                                <td>{row.label}</td>
+                                <td>{formatDateLabel(row.latest_image_date || null)}</td>
+                                <td>{row.mean_ndvi?.toFixed?.(3) || row.mean_ndvi || "-"}</td>
+                                <td>{row.vegetation_area_sqm?.toFixed?.(2) || row.vegetation_area_sqm || "-"}</td>
+                                <td>{row.vegetation_coverage_pct?.toFixed?.(1) || row.vegetation_coverage_pct || "-"}</td>
+                                <td>{row.vegetation_area_per_tree_sqm?.toFixed?.(2) || row.vegetation_area_per_tree_sqm || "-"}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
           )}
 
           {activeProjectId && (activeForm === "map_view" || assignWorkAreaMode) && (
