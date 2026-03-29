@@ -2791,15 +2791,26 @@ export default function GreenWork() {
   };
 
   const loadRemoteMonitoringAreas = useCallback(async (projectId: number) => {
-    const res = await api.get("/green/remote-monitoring/areas", {
-      params: { project_id: projectId, _ts: Date.now() },
-    });
-    const rows = Array.isArray(res.data) ? res.data : [];
-    setRemoteMonitoringAreas(rows);
-    setRemoteMonitoringSelectedAreaId((prev) => {
-      if (prev && rows.some((item: any) => Number(item.id) === Number(prev))) return prev;
-      return rows.length ? Number(rows[0].id) : null;
-    });
+    try {
+      const res = await api.get("/green/remote-monitoring/areas", {
+        params: { project_id: projectId, _ts: Date.now() },
+      });
+      const rows = Array.isArray(res.data) ? res.data : [];
+      setRemoteMonitoringAreas(rows);
+      setRemoteMonitoringSelectedAreaId((prev) => {
+        if (prev && rows.some((item: any) => Number(item.id) === Number(prev))) return prev;
+        return rows.length ? Number(rows[0].id) : null;
+      });
+    } catch (error: any) {
+      setRemoteMonitoringAreas([]);
+      setRemoteMonitoringSelectedAreaId(null);
+      const status = Number(error?.response?.status || 0);
+      const detail = String(error?.response?.data?.detail || "").trim();
+      if (status === 404) {
+        throw new Error("Remote monitoring API is not deployed on the backend yet.");
+      }
+      throw new Error(detail || "Failed to load remote monitoring areas");
+    }
   }, []);
 
   const loadRemoteMonitoringAnalysis = useCallback(async (areaId: number) => {
@@ -3532,8 +3543,8 @@ export default function GreenWork() {
 
   useEffect(() => {
     if (!activeProjectId || activeForm !== "remote_monitoring") return;
-    void loadRemoteMonitoringAreas(activeProjectId).catch(() => {
-      toast.error("Failed to load remote monitoring areas");
+    void loadRemoteMonitoringAreas(activeProjectId).catch((error: any) => {
+      toast.error(String(error?.message || "Failed to load remote monitoring areas"));
     });
   }, [activeProjectId, activeForm, loadRemoteMonitoringAreas]);
 
