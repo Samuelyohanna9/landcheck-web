@@ -1282,6 +1282,117 @@
   line-height: 1.5;
 }
 
+.green-work-remote-health-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.green-work-remote-health-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.48rem 0.74rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(23, 83, 45, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.green-work-remote-health-chip strong {
+  font-family: "Sora", sans-serif;
+  font-size: 0.96rem;
+  color: var(--green-950);
+}
+
+.green-work-remote-health-chip span {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--green-800);
+}
+
+.green-work-remote-health-chip.is-critical {
+  background: rgba(254, 226, 226, 0.98);
+  border-color: rgba(239, 68, 68, 0.24);
+}
+
+.green-work-remote-health-chip.is-stressed {
+  background: rgba(254, 243, 199, 0.98);
+  border-color: rgba(245, 158, 11, 0.24);
+}
+
+.green-work-remote-health-chip.is-fair {
+  background: rgba(254, 249, 195, 0.98);
+  border-color: rgba(234, 179, 8, 0.24);
+}
+
+.green-work-remote-health-chip.is-healthy,
+.green-work-remote-health-chip.is-vigorous {
+  background: rgba(220, 252, 231, 0.98);
+  border-color: rgba(34, 197, 94, 0.22);
+}
+
+.green-work-remote-health-chip.is-no_data {
+  background: rgba(241, 245, 249, 0.98);
+  border-color: rgba(148, 163, 184, 0.24);
+}
+
+.green-work-remote-risk-strip {
+  margin-top: 0.9rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.green-work-remote-risk-strip > strong {
+  font-size: 0.9rem;
+  color: var(--green-950);
+}
+
+.green-work-remote-risk-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.65rem;
+}
+
+.green-work-remote-risk-card {
+  border: 1px solid rgba(23, 83, 45, 0.12);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 0.72rem 0.8rem;
+  display: grid;
+  gap: 0.16rem;
+}
+
+.green-work-remote-risk-card span {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--green-950);
+}
+
+.green-work-remote-risk-card strong {
+  font-size: 0.86rem;
+}
+
+.green-work-remote-risk-card small {
+  font-size: 0.72rem;
+  color: var(--gw-subtext);
+}
+
+.green-work-remote-risk-card.is-critical {
+  background: rgba(254, 242, 242, 0.98);
+  border-color: rgba(239, 68, 68, 0.24);
+}
+
+.green-work-remote-risk-card.is-stressed {
+  background: rgba(255, 251, 235, 0.98);
+  border-color: rgba(245, 158, 11, 0.24);
+}
+
+.green-work-remote-risk-card.is-fair {
+  background: rgba(254, 252, 232, 0.98);
+  border-color: rgba(234, 179, 8, 0.24);
+}
+
 .green-work-remote-summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1454,6 +1565,10 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
+.green-work-remote-tree-table-wrap.is-priority {
+  max-height: 420px;
+}
+
 .green-work-remote-tree-table-head {
   display: flex;
   align-items: center;
@@ -1478,6 +1593,13 @@
 .green-work-remote-series-table th,
 .green-work-remote-series-table td {
   white-space: nowrap;
+}
+
+.green-work-remote-tree-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(245, 251, 246, 0.98);
 }
 
 .green-work-remote-tree-health {
