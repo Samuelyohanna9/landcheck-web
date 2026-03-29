@@ -2805,11 +2805,17 @@ export default function GreenWork() {
       setRemoteMonitoringAreas([]);
       setRemoteMonitoringSelectedAreaId(null);
       const status = Number(error?.response?.status || 0);
-      const detail = String(error?.response?.data?.detail || "").trim();
+      const rawData = error?.response?.data;
+      const detail =
+        String(
+          (rawData && typeof rawData === "object" ? rawData.detail : rawData) ||
+            error?.message ||
+            "",
+        ).trim();
       if (status === 404) {
         throw new Error("Remote monitoring API is not deployed on the backend yet.");
       }
-      throw new Error(detail || "Failed to load remote monitoring areas");
+      throw new Error(detail || `Failed to load remote monitoring areas${status ? ` (${status})` : ""}`);
     }
   }, []);
 
