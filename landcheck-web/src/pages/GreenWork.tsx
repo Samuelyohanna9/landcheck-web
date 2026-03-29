@@ -9513,20 +9513,7 @@ export default function GreenWork() {
                                     <span>NDVI</span>
                                     <strong>{typeof tree.local_mean_ndvi === "number" ? tree.local_mean_ndvi.toFixed(3) : "-"}</strong>
                                   </div>
-                                  <div>
-                                    <span>Cover</span>
-                                    <strong>{typeof tree.local_vegetation_cover_pct === "number" ? `${tree.local_vegetation_cover_pct.toFixed(1)}%` : "-"}</strong>
-                                  </div>
-                                  <div>
-                                    <span>Vegetated Area</span>
-                                    <strong>{typeof tree.local_vegetated_area_sqm === "number" ? `${tree.local_vegetated_area_sqm.toFixed(2)} sqm` : "-"}</strong>
-                                  </div>
                                 </div>
-                                {typeof tree.tree_cover_threshold_ndvi === "number" ? (
-                                  <p className="green-work-remote-tree-card-footnote">
-                                    Cover counts satellite pixels in the tree buffer with NDVI at or above {tree.tree_cover_threshold_ndvi.toFixed(2)}.
-                                  </p>
-                                ) : null}
                                 <div className="green-work-remote-tree-actions-menu">
                                   <button
                                     type="button"
@@ -9572,12 +9559,12 @@ export default function GreenWork() {
                         <small>{remoteMonitoringReport.area.tree_record_count || 0} tree rows stored</small>
                       </div>
                       <div className="green-work-remote-metric">
-                        <span>Vegetated Area</span>
+                        <span>Vegetation Signal Area</span>
                         <strong>{remoteMonitoringReport.summary.vegetation_area_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_sqm || 0} sqm</strong>
                         <small>{remoteMonitoringReport.summary.vegetation_coverage_pct ?? 0}% of polygon</small>
                       </div>
                       <div className="green-work-remote-metric">
-                        <span>Vegetation Per Tree</span>
+                        <span>Signal Per Tree</span>
                         <strong>{remoteMonitoringReport.summary.vegetation_area_per_tree_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_per_tree_sqm || 0} sqm</strong>
                         <small>Uses stored trees inside polygon as denominator</small>
                       </div>
@@ -9628,9 +9615,9 @@ export default function GreenWork() {
                             <th>Period</th>
                             <th>Latest Image</th>
                             <th>Mean NDVI</th>
-                            <th>Vegetated Area</th>
+                            <th>Signal Area</th>
                             <th>Cover %</th>
-                            <th>sqm / Tree</th>
+                            <th>Signal sqm / Tree</th>
                           </tr>
                         </thead>
                         <tbody>
