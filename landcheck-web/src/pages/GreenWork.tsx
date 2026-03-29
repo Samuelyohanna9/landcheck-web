@@ -9126,6 +9126,7 @@ export default function GreenWork() {
 
           {activeProjectId && activeForm === "remote_monitoring" && (
             <>
+              <div className="green-work-remote-shell">
               <div className="green-work-remote-workspace">
                 <div className="green-work-card green-work-remote-card">
                   <div className="green-work-row">
@@ -9473,6 +9474,7 @@ export default function GreenWork() {
                     </div>
                   </>
                 )}
+              </div>
               </div>
 
             </>
