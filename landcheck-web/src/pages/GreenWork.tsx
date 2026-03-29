@@ -549,7 +549,7 @@ const formatExistingTreeAreaLabel = (tree: Pick<Tree, "existing_area_sqm">, metr
   const sqm = Number(metric?.existing_area_sqm ?? tree.existing_area_sqm);
   if (!Number.isFinite(sqm) || sqm <= 0) return "-";
   if (sqm >= 10000) return `${(sqm / 10000).toFixed(3)} ha`;
-  return `${sqm.toFixed(1)} m²`;
+  return `${sqm.toFixed(1)} mÂ²`;
 };
 const formatTreeOriginLabel = (value: string | null | undefined) => {
   const key = normalizeName(value);
@@ -6151,7 +6151,7 @@ export default function GreenWork() {
 
       <aside className={`green-work-menu-drawer ${menuOpen ? "open" : ""}`} style={drawerStyle}>
         <div className="green-work-menu-head">
-          <strong>Forms Menu</strong>
+          <strong>Forsqm</strong>
           <button className="green-work-menu-close" type="button" onClick={() => setMenuOpen(false)} aria-label="Close menu">
             X
           </button>
@@ -9268,14 +9268,23 @@ export default function GreenWork() {
                   )}
                 </div>
                 {!remoteMonitoringSelectedAreaId ? (
-                  <p className="green-work-note">Select a saved monitoring area to load vegetation metrics.</p>
+                  <div className="green-work-remote-empty-state">
+                    <strong>No monitoring area selected yet</strong>
+                    <p>Select a saved polygon to load satellite vegetation metrics, or save the polygon you just drew.</p>
+                  </div>
                 ) : remoteMonitoringLoading ? (
-                  <p className="green-work-note">Loading vegetation signal from satellite imagery...</p>
+                  <div className="green-work-remote-empty-state is-loading">
+                    <strong>Loading vegetation summary</strong>
+                    <p>Fetching satellite imagery and calculating vegetation signal for the selected block.</p>
+                  </div>
                 ) : !remoteMonitoringReport ? (
-                  <p className="green-work-note">No monitoring result yet for this polygon.</p>
+                  <div className="green-work-remote-empty-state">
+                    <strong>No monitoring result yet</strong>
+                    <p>This polygon is saved, but there is no vegetation summary available yet.</p>
+                  </div>
                 ) : (
                   <>
-                    <p className="green-work-note">
+                    <p className="green-work-note green-work-remote-summary-note">
                       {remoteMonitoringReport.summary.signal_message}
                     </p>
                     <div className="green-work-remote-summary-grid">
@@ -9286,12 +9295,12 @@ export default function GreenWork() {
                       </div>
                       <div className="green-work-remote-metric">
                         <span>Vegetated Area</span>
-                        <strong>{remoteMonitoringReport.summary.vegetation_area_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_sqm || 0} m²</strong>
+                        <strong>{remoteMonitoringReport.summary.vegetation_area_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_sqm || 0} sqm</strong>
                         <small>{remoteMonitoringReport.summary.vegetation_coverage_pct ?? 0}% of polygon</small>
                       </div>
                       <div className="green-work-remote-metric">
                         <span>Vegetation Per Tree</span>
-                        <strong>{remoteMonitoringReport.summary.vegetation_area_per_tree_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_per_tree_sqm || 0} m²</strong>
+                        <strong>{remoteMonitoringReport.summary.vegetation_area_per_tree_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_per_tree_sqm || 0} sqm</strong>
                         <small>Uses stored trees inside polygon as denominator</small>
                       </div>
                       <div className="green-work-remote-metric">
@@ -9320,7 +9329,7 @@ export default function GreenWork() {
                             <th>Mean NDVI</th>
                             <th>Vegetated Area</th>
                             <th>Cover %</th>
-                            <th>m² / Tree</th>
+                            <th>sqm / Tree</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -9540,7 +9549,7 @@ export default function GreenWork() {
                 </div>
                 <div>
                   <span>Custodian</span>
-                  <strong>{inspectedTree.custodian_name || "-"}</strong>
+                  <strong>{inspectedTree.custodian_name}</strong>
                 </div>
               </div>
               {selectedInspectTreeMeta && (
