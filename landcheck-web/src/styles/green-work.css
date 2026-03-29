@@ -1487,6 +1487,13 @@
   color: var(--gw-subtext);
 }
 
+.green-work-remote-tree-card-footnote {
+  margin: -0.1rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--green-700);
+}
+
 .green-work-remote-tree-card-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1515,12 +1522,32 @@
   color: var(--green-950);
 }
 
-.green-work-remote-tree-actions {
+.green-work-remote-tree-actions-menu {
+  position: relative;
   margin-top: 0.08rem;
 }
 
-.green-work-remote-tree-actions button {
-  flex: 1 1 160px;
+.green-work-remote-tree-actions-toggle {
+  width: 100%;
+  border: 1px solid rgba(23, 83, 45, 0.12);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, var(--green-500), var(--green-700));
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.84rem;
+  padding: 0.44rem 0.7rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+
+.green-work-remote-inline-menu {
+  position: static;
+  z-index: auto;
+  min-width: 0;
+  max-width: none;
+  margin-top: 0.45rem;
+  border-color: rgba(23, 83, 45, 0.12);
+  box-shadow: 0 12px 24px rgba(14, 74, 39, 0.08);
 }
 
 .green-work-remote-summary-grid {
