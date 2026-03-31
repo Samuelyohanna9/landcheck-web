@@ -294,6 +294,27 @@ const EMPTY_EDITOR_STYLE: mapboxgl.Style = {
   ],
 };
 
+const SATELLITE_EDITOR_STYLE: mapboxgl.Style = {
+  version: 8,
+  name: "landcheck-cad-editor-satellite",
+  sources: {
+    "mapbox-satellite": {
+      type: "raster",
+      url: "mapbox://mapbox.satellite",
+      tileSize: 256,
+    } as any,
+  },
+  layers: [
+    {
+      id: "satellite-raster",
+      type: "raster",
+      source: "mapbox-satellite",
+      minzoom: 0,
+      maxzoom: 22,
+    },
+  ],
+};
+
 export default function FeatureOverrideModal({
   isOpen,
   onClose,
@@ -339,10 +360,6 @@ export default function FeatureOverrideModal({
     if (!isStyleReady(map)) return;
     const plotting = mode === "plotting";
 
-    if (map.getLayer("satellite-base")) {
-      map.setLayoutProperty("satellite-base", "visibility", plotting ? "none" : "visible");
-    }
-
     if (map.getLayer("cad-mask-fill")) {
       map.setPaintProperty("cad-mask-fill", "fill-opacity", 0);
     }
@@ -386,25 +403,6 @@ export default function FeatureOverrideModal({
       .getStyle()
       ?.layers?.find((layer) => String(layer.id || "").startsWith("gl-draw"))?.id;
     const overlay = buildCadOverlayData(plotCoords);
-
-    if (mapboxgl.accessToken && !map.getSource("satellite-base-src")) {
-      map.addSource("satellite-base-src", {
-        type: "raster",
-        tiles: [
-          `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg90?access_token=${mapboxgl.accessToken}`,
-        ],
-        tileSize: 256,
-      });
-      map.addLayer({
-        id: "satellite-base",
-        type: "raster",
-        source: "satellite-base-src",
-        paint: {
-          "raster-opacity": 1,
-          "raster-fade-duration": 0,
-        },
-      }, beforeId);
-    }
 
     if (!map.getSource("cad-mask-src")) {
       map.addSource("cad-mask-src", { type: "geojson", data: overlay.mask as any });
@@ -517,7 +515,7 @@ export default function FeatureOverrideModal({
 
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: EMPTY_EDITOR_STYLE,
+      style: basemapMode === "satellite" ? SATELLITE_EDITOR_STYLE : EMPTY_EDITOR_STYLE,
       center: [7.5, 9.0],
       zoom: 12,
       pitchWithRotate: false,
@@ -1005,7 +1003,7 @@ export default function FeatureOverrideModal({
             </section>
           </aside>
 
-          <div className="cad-editor-canvas">
+          <div className={`cad-editor-canvas cad-editor-canvas--${basemapMode}`}>
             <div className="cad-canvas-head">
               <div>
                 <strong>Drafting Canvas</strong>
@@ -1021,7 +1019,11 @@ export default function FeatureOverrideModal({
                 <span className="cad-badge cad-badge--ghost">{action}</span>
               </div>
             </div>
-            <div className="feature-override-map cad-drafting-map" ref={containerRef} />
+            <div
+              key={basemapMode}
+              className={`feature-override-map cad-drafting-map cad-drafting-map--${basemapMode}`}
+              ref={containerRef}
+            />
             <div className="cad-status-bar">
               <span>
                 Cursor:{" "}
