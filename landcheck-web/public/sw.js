@@ -447,15 +447,17 @@ self.addEventListener("fetch", function (event) {
         .then(function (resp) {
           if (resp.ok) {
             var copy = resp.clone();
+            var greenShellCopy =
+              url.pathname === "/green" ||
+              url.pathname === "/green/" ||
+              url.pathname === "/"
+                ? resp.clone()
+                : null;
             caches.open(CACHE_NAME).then(function (cache) {
               cache.put(req, copy);
               // Also store under /green key so offline fallback always works
-              if (
-                url.pathname === "/green" ||
-                url.pathname === "/green/" ||
-                url.pathname === "/"
-              ) {
-                cache.put("/green", resp.clone());
+              if (greenShellCopy) {
+                cache.put("/green", greenShellCopy);
               }
             });
           }
