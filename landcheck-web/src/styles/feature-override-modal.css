@@ -306,6 +306,16 @@
     #000;
 }
 
+.cad-editor-canvas--satellite {
+  background: #0f172a;
+}
+
+.cad-editor-canvas--plotting {
+  background:
+    linear-gradient(0deg, rgba(2, 6, 23, 0.24), rgba(2, 6, 23, 0.24)),
+    #000;
+}
+
 .cad-canvas-head {
   display: flex;
   align-items: center;
@@ -358,6 +368,14 @@
 
 .cad-drafting-map {
   position: relative;
+}
+
+.cad-drafting-map--satellite {
+  background: #0f172a;
+}
+
+.cad-drafting-map--plotting {
+  background: #000;
 }
 
 .cad-drafting-map .mapboxgl-canvas {
