@@ -508,7 +508,9 @@ const encodeObjectKeyForProxy = (value: string) =>
 const toDisplayPhotoUrl = (url: string | null | undefined) => {
   const raw = String(url || "").trim();
   if (!raw) return "";
-  if (raw.includes("/green/uploads/object/")) return raw;
+  if (raw.includes("/green/uploads/object/")) {
+    return /^https?:\/\//i.test(raw) ? raw : `${BACKEND_URL}${raw.startsWith("/") ? raw : `/${raw}`}`;
+  }
 
   const toProxy = (key: string) => {
     const encoded = encodeObjectKeyForProxy(key);
@@ -753,6 +755,7 @@ export default function Green() {
     isPartnerGreenSession
       ? ((activeProjectMatchesGreenSessionOrg ? activeProject?.organization_logo_url || null : null) || greenSessionPartnerLogo)
       : null;
+  const greenHeaderPartnerLogoUrl = greenHeaderPartnerLogo ? toDisplayPhotoUrl(greenHeaderPartnerLogo) : "";
   const greenHeaderPartnerName =
     isPartnerGreenSession
       ? ((activeProjectMatchesGreenSessionOrg ? activeProject?.organization_name || null : null) || greenSessionPartnerName)
@@ -1048,6 +1051,10 @@ export default function Green() {
     () => userTrees.filter((tree) => String(tree.tree_origin || "new_planting").toLowerCase() === "new_planting"),
     [userTrees],
   );
+  const approvedPlantingTrees = useMemo(
+    () => userPlantingTrees.filter((tree) => normalizeTreeStatus(tree.status) !== "pending_planting"),
+    [userPlantingTrees],
+  );
   const activePlantingOrders = useMemo(
     () =>
       plantingOrders
@@ -1127,13 +1134,13 @@ export default function Green() {
   const hasSpeciesBasedPlantingAllocation = activeOrderSpeciesAllocations.length > 0;
   const plantedSpeciesCounts = useMemo(() => {
     const counts = new Map<string, number>();
-    userPlantingTrees.forEach((tree) => {
+    approvedPlantingTrees.forEach((tree) => {
       const key = normalizeSpeciesKey(tree.species);
       if (!key) return;
       counts.set(key, (counts.get(key) || 0) + 1);
     });
     return counts;
-  }, [userPlantingTrees]);
+  }, [approvedPlantingTrees]);
   const speciesAllocationOptions = useMemo(
     () =>
       activeOrderSpeciesAllocations.map((allocation) => {
@@ -1241,6 +1248,7 @@ export default function Green() {
       const planted = trees.filter((tree) => {
         const origin = String(tree.tree_origin || "new_planting").toLowerCase();
         if (origin !== "new_planting") return false;
+        if (normalizeTreeStatus(tree.status) === "pending_planting") return false;
         const linkedCustodian = Number(tree.custodian_id || 0) === custodianId;
         const plantedByCustodian = normalizeName(tree.created_by) === normalizeName(activeUser);
         return linkedCustodian || plantedByCustodian;
@@ -1249,15 +1257,15 @@ export default function Green() {
     }
     const orders = plantingOrders.filter((o) => o.work_type === "planting");
     const totalTarget = orders.reduce((sum: number, o: any) => sum + (o.target_trees || 0), 0);
-    const planted = userPlantingTrees.length;
+    const planted = approvedPlantingTrees.length;
     return Math.max(totalTarget - planted, 0);
-  }, [activeUser, activeUserDetail, activeUserIsCustodian, plantingOrders, projectAllocations, trees, userPlantingTrees]);
+  }, [activeUser, activeUserDetail, activeUserIsCustodian, approvedPlantingTrees.length, plantingOrders, projectAllocations, trees]);
 
   const plantingReviewCounts = useMemo(() => {
     const submitted = userPlantingTrees.filter((t) => normalizeTreeStatus(t.status) === "pending_planting").length;
-    const approved = Math.max(userPlantingTrees.length - submitted, 0);
+    const approved = approvedPlantingTrees.length;
     return { submitted, approved };
-  }, [userPlantingTrees]);
+  }, [approvedPlantingTrees.length, userPlantingTrees]);
 
   const refreshSyncStatus = async () => {
     let pending = 0;
@@ -2782,10 +2790,10 @@ export default function Green() {
               <div className="green-brand-logo" aria-hidden="true">
                 <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
               </div>
-              {greenHeaderPartnerLogo ? (
+              {greenHeaderPartnerLogoUrl ? (
                 <div className="green-brand-logo green-brand-logo-partner" aria-hidden="true">
                   <img
-                    src={greenHeaderPartnerLogo || ""}
+                    src={greenHeaderPartnerLogoUrl}
                     alt={`${greenHeaderPartnerName || "Partner"} logo`}
                   />
                 </div>
@@ -3523,7 +3531,7 @@ export default function Green() {
                     <small className="green-species-allocation-hint">
                       Assigned:{" "}
                       {speciesAllocationOptions
-                        .map((item) => `${item.species} (${item.remaining} remaining)`)
+                        .map((item) => `${item.species} (${item.remaining} remaining after approvals)`)
                         .join(", ")}
                     </small>
                   </>
