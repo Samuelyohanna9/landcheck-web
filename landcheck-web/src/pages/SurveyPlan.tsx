@@ -2363,7 +2363,7 @@ export default function SurveyPlan() {
                     {previewLoading ? "Updating..." : "Update Preview"}
                   </button>
                   <button className="btn-outline" onClick={() => setShowFeatureEditor(true)} disabled={!plotId}>
-                    Edit Features
+                    Open Feature CAD Editor
                   </button>
                 </div>
               </div>
@@ -2659,7 +2659,7 @@ export default function SurveyPlan() {
                     {previewLoading ? "Updating preview..." : "Update Parcel Preview"}
                   </button>
                   <button className="btn-outline" onClick={() => setShowFeatureEditor(true)} disabled={!plotId}>
-                    Edit Features
+                    Open Feature CAD Editor
                   </button>
                 </div>
 
