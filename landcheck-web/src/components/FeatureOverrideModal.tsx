@@ -278,7 +278,21 @@ const layerIds: Record<FeatureType | "boundary", string[]> = {
   boundary: ["plot-boundary-line"],
 };
 
-const STATIC_CAD_LAYER_IDS = ["cad-background", "cad-grid-minor", "cad-grid-major", "cad-mask-fill"];
+const EMPTY_EDITOR_STYLE: mapboxgl.Style = {
+  version: 8,
+  name: "landcheck-cad-editor",
+  sources: {},
+  layers: [
+    {
+      id: "cad-background",
+      type: "background",
+      paint: {
+        "background-color": "#030712",
+        "background-opacity": 1,
+      },
+    },
+  ],
+};
 
 export default function FeatureOverrideModal({
   isOpen,
@@ -299,7 +313,6 @@ export default function FeatureOverrideModal({
   const drawRef = useRef<MapboxDraw | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const activeDrawFeatureId = useRef<string | null>(null);
-  const originalBaseLayerVisibility = useRef<Record<string, "visible" | "none">>({});
 
   const [menu, setMenu] = useState<{ x: number; y: number; visible: boolean }>({ x: 0, y: 0, visible: false });
   const [selectedGeometry, setSelectedGeometry] = useState<any>(null);
@@ -312,13 +325,6 @@ export default function FeatureOverrideModal({
   const [featureInventory, setFeatureInventory] = useState<FeatureInventory>(DEFAULT_INVENTORY);
 
   const activeMetrics = useMemo(() => draftMetrics || selectedMetrics, [draftMetrics, selectedMetrics]);
-
-  const isCustomEditorLayer = useCallback((layerId: string) => {
-    if (STATIC_CAD_LAYER_IDS.includes(layerId)) return true;
-    if (layerId === "selected-feature-line") return true;
-    if (layerId.startsWith("gl-draw")) return true;
-    return (Object.values(layerIds) as string[][]).some((ids) => ids.includes(layerId));
-  }, []);
 
   const isStyleReady = useCallback((map: mapboxgl.Map | null) => {
     if (!map) return false;
@@ -333,16 +339,8 @@ export default function FeatureOverrideModal({
     if (!isStyleReady(map)) return;
     const plotting = mode === "plotting";
 
-    const styleLayers = map.getStyle()?.layers || [];
-    styleLayers.forEach((layer) => {
-      const layerId = String(layer.id || "");
-      if (!layerId || isCustomEditorLayer(layerId)) return;
-      const fallbackVisibility = originalBaseLayerVisibility.current[layerId] || "visible";
-      map.setLayoutProperty(layerId, "visibility", plotting ? "none" : fallbackVisibility);
-    });
-
-    if (map.getLayer("cad-background")) {
-      map.setLayoutProperty("cad-background", "visibility", plotting ? "visible" : "none");
+    if (map.getLayer("satellite-base")) {
+      map.setLayoutProperty("satellite-base", "visibility", plotting ? "none" : "visible");
     }
 
     if (map.getLayer("cad-mask-fill")) {
@@ -380,7 +378,7 @@ export default function FeatureOverrideModal({
       map.setPaintProperty("fences-line", "line-color", plotting ? "#fda4af" : "#fca5a5");
       map.setPaintProperty("fences-line", "line-width", plotting ? 1.8 : 2);
     }
-  }, [isCustomEditorLayer, isStyleReady]);
+  }, [isStyleReady]);
 
   const ensureCadOverlay = useCallback((map: mapboxgl.Map) => {
     if (!isStyleReady(map)) return;
@@ -389,16 +387,23 @@ export default function FeatureOverrideModal({
       ?.layers?.find((layer) => String(layer.id || "").startsWith("gl-draw"))?.id;
     const overlay = buildCadOverlayData(plotCoords);
 
-    if (!map.getLayer("cad-background")) {
-      map.addLayer({
-        id: "cad-background",
-        type: "background",
-        layout: { visibility: "none" },
-        paint: {
-          "background-color": "#030712",
-          "background-opacity": 1,
-        },
+    if (mapboxgl.accessToken && !map.getSource("satellite-base-src")) {
+      map.addSource("satellite-base-src", {
+        type: "raster",
+        tiles: [
+          `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg90?access_token=${mapboxgl.accessToken}`,
+        ],
+        tileSize: 256,
       });
+      map.addLayer({
+        id: "satellite-base",
+        type: "raster",
+        source: "satellite-base-src",
+        paint: {
+          "raster-opacity": 1,
+          "raster-fade-duration": 0,
+        },
+      }, beforeId);
     }
 
     if (!map.getSource("cad-mask-src")) {
@@ -512,7 +517,7 @@ export default function FeatureOverrideModal({
 
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: "mapbox://styles/mapbox/satellite-streets-v12",
+      style: EMPTY_EDITOR_STYLE,
       center: [7.5, 9.0],
       zoom: 12,
       pitchWithRotate: false,
@@ -665,14 +670,6 @@ export default function FeatureOverrideModal({
     };
 
     map.on("load", () => {
-      const baseVisibility: Record<string, "visible" | "none"> = {};
-      (map.getStyle()?.layers || []).forEach((layer) => {
-        const layerId = String(layer.id || "");
-        if (!layerId) return;
-        baseVisibility[layerId] = ((layer.layout as any)?.visibility || "visible") as "visible" | "none";
-      });
-      originalBaseLayerVisibility.current = baseVisibility;
-
       ensureCadOverlay(map);
       if (plotCoords && plotCoords.length >= 3) {
         const plotFeature = {
