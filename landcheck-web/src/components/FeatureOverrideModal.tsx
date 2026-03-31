@@ -8,6 +8,7 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 type FeatureType = "road" | "building" | "river" | "fence";
 type FeatureAction = "add" | "delete" | "update";
 type EditorTool = "select" | "draw_line_string" | "draw_polygon";
+type BasemapMode = "satellite" | "plotting";
 type LayerVisibility = Record<FeatureType | "boundary", boolean>;
 type FeatureInventory = Record<FeatureType, number>;
 
@@ -167,6 +168,106 @@ const formatArea = (sqm: number) => {
   return `${sqm.toFixed(2)} sqm`;
 };
 
+const getBoundsBox = (coords: number[][] | null) => {
+  if (!coords?.length) {
+    return { minLng: 7.45, maxLng: 7.55, minLat: 8.95, maxLat: 9.05 };
+  }
+  let minLng = Number.POSITIVE_INFINITY;
+  let maxLng = Number.NEGATIVE_INFINITY;
+  let minLat = Number.POSITIVE_INFINITY;
+  let maxLat = Number.NEGATIVE_INFINITY;
+  coords.forEach(([lng, lat]) => {
+    minLng = Math.min(minLng, Number(lng || 0));
+    maxLng = Math.max(maxLng, Number(lng || 0));
+    minLat = Math.min(minLat, Number(lat || 0));
+    maxLat = Math.max(maxLat, Number(lat || 0));
+  });
+  return { minLng, maxLng, minLat, maxLat };
+};
+
+const expandBoundsBox = (
+  bounds: { minLng: number; maxLng: number; minLat: number; maxLat: number },
+  factor = 0.22
+) => {
+  const width = Math.max(bounds.maxLng - bounds.minLng, 0.0025);
+  const height = Math.max(bounds.maxLat - bounds.minLat, 0.0025);
+  return {
+    minLng: bounds.minLng - width * factor,
+    maxLng: bounds.maxLng + width * factor,
+    minLat: bounds.minLat - height * factor,
+    maxLat: bounds.maxLat + height * factor,
+  };
+};
+
+const chooseGridStep = (span: number) => {
+  const candidates = [0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05];
+  const safeSpan = Math.max(span, 0.001);
+  return candidates.find((step) => safeSpan / step <= 12) || candidates[candidates.length - 1];
+};
+
+const buildCadOverlayData = (coords: number[][] | null) => {
+  const plotBounds = expandBoundsBox(getBoundsBox(coords), 0.28);
+  const lngStep = chooseGridStep(plotBounds.maxLng - plotBounds.minLng);
+  const latStep = chooseGridStep(plotBounds.maxLat - plotBounds.minLat);
+  const majorEvery = 4;
+
+  const lineFeatures: any[] = [];
+  let index = 0;
+
+  const startLng = Math.floor(plotBounds.minLng / lngStep) * lngStep;
+  for (let lng = startLng; lng <= plotBounds.maxLng + lngStep; lng += lngStep) {
+    lineFeatures.push({
+      type: "Feature",
+      properties: { kind: index % majorEvery === 0 ? "major" : "minor" },
+      geometry: {
+        type: "LineString",
+        coordinates: [
+          [Number(lng.toFixed(6)), plotBounds.minLat],
+          [Number(lng.toFixed(6)), plotBounds.maxLat],
+        ],
+      },
+    });
+    index += 1;
+  }
+
+  index = 0;
+  const startLat = Math.floor(plotBounds.minLat / latStep) * latStep;
+  for (let lat = startLat; lat <= plotBounds.maxLat + latStep; lat += latStep) {
+    lineFeatures.push({
+      type: "Feature",
+      properties: { kind: index % majorEvery === 0 ? "major" : "minor" },
+      geometry: {
+        type: "LineString",
+        coordinates: [
+          [plotBounds.minLng, Number(lat.toFixed(6))],
+          [plotBounds.maxLng, Number(lat.toFixed(6))],
+        ],
+      },
+    });
+    index += 1;
+  }
+
+  const maskFeature = {
+    type: "Feature",
+    properties: {},
+    geometry: {
+      type: "Polygon",
+      coordinates: [[
+        [plotBounds.minLng, plotBounds.minLat],
+        [plotBounds.maxLng, plotBounds.minLat],
+        [plotBounds.maxLng, plotBounds.maxLat],
+        [plotBounds.minLng, plotBounds.maxLat],
+        [plotBounds.minLng, plotBounds.minLat],
+      ]],
+    },
+  };
+
+  return {
+    mask: { type: "FeatureCollection", features: [maskFeature] },
+    grid: { type: "FeatureCollection", features: lineFeatures },
+  };
+};
+
 const toolForFeatureType = (type: FeatureType): EditorTool => (type === "building" ? "draw_polygon" : "draw_line_string");
 
 const layerIds: Record<FeatureType | "boundary", string[]> = {
@@ -203,10 +304,112 @@ export default function FeatureOverrideModal({
   const [draftMetrics, setDraftMetrics] = useState<GeometryMetrics | null>(null);
   const [cursor, setCursor] = useState<{ lng: number; lat: number } | null>(null);
   const [activeTool, setActiveTool] = useState<EditorTool>("select");
+  const [basemapMode, setBasemapMode] = useState<BasemapMode>("satellite");
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>(DEFAULT_LAYER_VISIBILITY);
   const [featureInventory, setFeatureInventory] = useState<FeatureInventory>(DEFAULT_INVENTORY);
 
   const activeMetrics = useMemo(() => draftMetrics || selectedMetrics, [draftMetrics, selectedMetrics]);
+
+  const applyBasemapMode = useCallback((map: mapboxgl.Map, mode: BasemapMode) => {
+    const plotting = mode === "plotting";
+
+    if (map.getLayer("cad-mask-fill")) {
+      map.setPaintProperty("cad-mask-fill", "fill-opacity", plotting ? 0.96 : 0);
+    }
+    if (map.getLayer("cad-grid-major")) {
+      map.setLayoutProperty("cad-grid-major", "visibility", plotting ? "visible" : "none");
+    }
+    if (map.getLayer("cad-grid-minor")) {
+      map.setLayoutProperty("cad-grid-minor", "visibility", plotting ? "visible" : "none");
+    }
+    if (map.getLayer("plot-boundary-line")) {
+      map.setPaintProperty("plot-boundary-line", "line-color", plotting ? "#f8fafc" : "#f97316");
+      map.setPaintProperty("plot-boundary-line", "line-width", plotting ? 2.6 : 2.2);
+      map.setPaintProperty("plot-boundary-line", "line-dasharray", plotting ? [0.8, 0.6] : [1.4, 1.2]);
+    }
+    if (map.getLayer("roads-line")) {
+      map.setPaintProperty("roads-line", "line-color", plotting ? "#7dd3fc" : "#fde047");
+      map.setPaintProperty("roads-line", "line-width", plotting ? 2.4 : 3);
+      map.setPaintProperty("roads-line", "line-opacity", plotting ? 1 : 0.95);
+    }
+    if (map.getLayer("buildings-fill")) {
+      map.setPaintProperty("buildings-fill", "fill-color", plotting ? "#38bdf8" : "#38bdf8");
+      map.setPaintProperty("buildings-fill", "fill-opacity", plotting ? 0.08 : 0.2);
+    }
+    if (map.getLayer("buildings-line")) {
+      map.setPaintProperty("buildings-line", "line-color", plotting ? "#e0f2fe" : "#bae6fd");
+      map.setPaintProperty("buildings-line", "line-width", plotting ? 1.8 : 2);
+    }
+    if (map.getLayer("rivers-line")) {
+      map.setPaintProperty("rivers-line", "line-color", plotting ? "#38bdf8" : "#60a5fa");
+      map.setPaintProperty("rivers-line", "line-width", plotting ? 2.2 : 2.5);
+    }
+    if (map.getLayer("fences-line")) {
+      map.setPaintProperty("fences-line", "line-color", plotting ? "#fda4af" : "#fca5a5");
+      map.setPaintProperty("fences-line", "line-width", plotting ? 1.8 : 2);
+    }
+  }, []);
+
+  const ensureCadOverlay = useCallback((map: mapboxgl.Map) => {
+    const beforeId = map
+      .getStyle()
+      ?.layers?.find((layer) => String(layer.id || "").startsWith("gl-draw"))?.id;
+    const overlay = buildCadOverlayData(plotCoords);
+
+    if (!map.getSource("cad-mask-src")) {
+      map.addSource("cad-mask-src", { type: "geojson", data: overlay.mask as any });
+      map.addLayer(
+        {
+          id: "cad-mask-fill",
+          type: "fill",
+          source: "cad-mask-src",
+          paint: {
+            "fill-color": "#040811",
+            "fill-opacity": 0,
+          },
+        },
+        beforeId
+      );
+    } else {
+      (map.getSource("cad-mask-src") as mapboxgl.GeoJSONSource).setData(overlay.mask as any);
+    }
+
+    if (!map.getSource("cad-grid-src")) {
+      map.addSource("cad-grid-src", { type: "geojson", data: overlay.grid as any });
+      map.addLayer(
+        {
+          id: "cad-grid-minor",
+          type: "line",
+          source: "cad-grid-src",
+          filter: ["==", ["get", "kind"], "minor"],
+          layout: { visibility: "none" },
+          paint: {
+            "line-color": "#1e293b",
+            "line-width": 1,
+            "line-opacity": 0.8,
+          },
+        },
+        beforeId
+      );
+      map.addLayer(
+        {
+          id: "cad-grid-major",
+          type: "line",
+          source: "cad-grid-src",
+          filter: ["==", ["get", "kind"], "major"],
+          layout: { visibility: "none" },
+          paint: {
+            "line-color": "#334155",
+            "line-width": 1.3,
+            "line-opacity": 0.96,
+          },
+        },
+        beforeId
+      );
+    } else {
+      (map.getSource("cad-grid-src") as mapboxgl.GeoJSONSource).setData(overlay.grid as any);
+    }
+  }, [plotCoords]);
 
   const applyLayerVisibility = useCallback((map: mapboxgl.Map, state: LayerVisibility) => {
     (Object.keys(layerIds) as Array<keyof typeof layerIds>).forEach((key) => {
@@ -358,6 +561,7 @@ export default function FeatureOverrideModal({
         }
 
         applyLayerVisibility(map, layerVisibility);
+        applyBasemapMode(map, basemapMode);
       } catch {
         // keep modal usable even if feature overlay fetch fails
       }
@@ -415,6 +619,7 @@ export default function FeatureOverrideModal({
     };
 
     map.on("load", () => {
+      ensureCadOverlay(map);
       if (plotCoords && plotCoords.length >= 3) {
         const plotFeature = {
           type: "Feature",
@@ -444,6 +649,7 @@ export default function FeatureOverrideModal({
       }
 
       loadFeatures();
+      applyBasemapMode(map, basemapMode);
     });
 
     map.on("draw.create", syncDraftFromDraw);
@@ -499,7 +705,7 @@ export default function FeatureOverrideModal({
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [action, applyLayerVisibility, fitPlotBoundary, isOpen, layerVisibility, plotCoords, plotId, setAction, setFeatureType, setRoadName, setRoadWidth, syncDraftFromDraw]);
+  }, [action, applyBasemapMode, applyLayerVisibility, basemapMode, ensureCadOverlay, fitPlotBoundary, isOpen, layerVisibility, plotCoords, plotId, setAction, setFeatureType, setRoadName, setRoadWidth, syncDraftFromDraw]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -507,6 +713,14 @@ export default function FeatureOverrideModal({
     if (!map) return;
     applyLayerVisibility(map, layerVisibility);
   }, [applyLayerVisibility, isOpen, layerVisibility]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const map = mapRef.current;
+    if (!map) return;
+    ensureCadOverlay(map);
+    applyBasemapMode(map, basemapMode);
+  }, [applyBasemapMode, basemapMode, ensureCadOverlay, isOpen]);
 
   const handleSave = () => {
     const draw = drawRef.current;
@@ -585,6 +799,24 @@ export default function FeatureOverrideModal({
             </button>
             <button type="button" className="cad-tool-btn" onClick={clearWorkingSelection}>
               Clear Draft
+            </button>
+          </div>
+
+          <div className="cad-toolbar-group">
+            <span className="cad-toolbar-label">Basemap</span>
+            <button
+              type="button"
+              className={`cad-tool-btn ${basemapMode === "satellite" ? "active" : ""}`}
+              onClick={() => setBasemapMode("satellite")}
+            >
+              Satellite
+            </button>
+            <button
+              type="button"
+              className={`cad-tool-btn ${basemapMode === "plotting" ? "active" : ""}`}
+              onClick={() => setBasemapMode("plotting")}
+            >
+              Plotting
             </button>
           </div>
 
@@ -726,9 +958,14 @@ export default function FeatureOverrideModal({
             <div className="cad-canvas-head">
               <div>
                 <strong>Drafting Canvas</strong>
-                <span>Satellite context with editable feature geometry</span>
+                <span>
+                  {basemapMode === "plotting"
+                    ? "Dark plotting view with CAD grid and parcel drafting overlays"
+                    : "Satellite context with editable feature geometry"}
+                </span>
               </div>
               <div className="cad-canvas-badges">
+                <span className="cad-badge cad-badge--ghost">{basemapMode}</span>
                 <span className="cad-badge">{featureType}</span>
                 <span className="cad-badge cad-badge--ghost">{action}</span>
               </div>
@@ -739,6 +976,7 @@ export default function FeatureOverrideModal({
                 Cursor:{" "}
                 {cursor ? `${cursor.lng.toFixed(6)}, ${cursor.lat.toFixed(6)}` : "--"}
               </span>
+              <span>Basemap: {basemapMode === "plotting" ? "Plotting" : "Satellite"}</span>
               <span>Tool: {activeTool === "select" ? "Select" : activeTool === "draw_polygon" ? "Polygon" : "Line"}</span>
               <span>
                 Geometry:{" "}
