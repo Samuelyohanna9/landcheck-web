@@ -378,6 +378,112 @@
   background: #000;
 }
 
+.cad-plotting-stage {
+  position: relative;
+  flex: 1;
+  min-height: 420px;
+  background:
+    radial-gradient(circle at top left, rgba(8, 47, 73, 0.32), transparent 22%),
+    linear-gradient(180deg, #020617 0%, #040b16 100%);
+  overflow: hidden;
+}
+
+.cad-plotting-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+}
+
+.cad-plot-bg {
+  fill: #010611;
+}
+
+.cad-grid-line {
+  stroke-linecap: square;
+}
+
+.cad-grid-line--minor {
+  stroke: rgba(51, 65, 85, 0.55);
+  stroke-width: 1;
+}
+
+.cad-grid-line--major {
+  stroke: rgba(71, 85, 105, 0.9);
+  stroke-width: 1.4;
+}
+
+.cad-svg-boundary {
+  fill: rgba(15, 23, 42, 0.1);
+  stroke: #f8fafc;
+  stroke-width: 2.2;
+  stroke-dasharray: 7 6;
+}
+
+.cad-svg-feature {
+  fill: none;
+  cursor: pointer;
+}
+
+.cad-svg-feature--road {
+  stroke: #fde047;
+  stroke-width: 3;
+}
+
+.cad-svg-feature--river {
+  stroke: #38bdf8;
+  stroke-width: 2.5;
+}
+
+.cad-svg-feature--fence {
+  stroke: #fda4af;
+  stroke-width: 2;
+  stroke-dasharray: 8 6;
+}
+
+.cad-svg-feature--building {
+  fill: rgba(56, 189, 248, 0.12);
+  stroke: #bae6fd;
+  stroke-width: 1.8;
+}
+
+.cad-svg-selected {
+  fill: rgba(34, 197, 94, 0.08);
+  stroke: #4ade80;
+  stroke-width: 3;
+}
+
+.cad-svg-draft {
+  fill: none;
+  stroke: #f97316;
+  stroke-width: 2.8;
+  stroke-dasharray: 10 7;
+}
+
+.cad-svg-draft--polygon {
+  fill: rgba(249, 115, 22, 0.08);
+}
+
+.cad-svg-vertex {
+  fill: #67e8f9;
+  stroke: #0f172a;
+  stroke-width: 1.5;
+}
+
+.cad-svg-label,
+.cad-axis-label {
+  fill: #cbd5e1;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  user-select: none;
+}
+
+.cad-axis-line {
+  stroke: #94a3b8;
+  stroke-width: 2;
+}
+
 .cad-drafting-map .mapboxgl-canvas {
   cursor: crosshair;
 }
