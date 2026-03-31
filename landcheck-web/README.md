@@ -1,1 +1,1 @@
-Frontend for LandCheck i 
+Frontend for LandCheck 
