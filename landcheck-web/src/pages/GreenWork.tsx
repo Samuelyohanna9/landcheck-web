@@ -1003,7 +1003,10 @@ const appendPhotoRenderParams = (baseUrl: string, opts?: PhotoRenderOptions) => 
 const toDisplayPhotoUrl = (url: string | null | undefined, opts?: PhotoRenderOptions) => {
   const raw = String(url || "").trim();
   if (!raw) return "";
-  if (raw.includes("/green/uploads/object/")) return appendPhotoRenderParams(raw, opts);
+  if (raw.includes("/green/uploads/object/")) {
+    const absolute = /^https?:\/\//i.test(raw) ? raw : `${BACKEND_URL}${raw.startsWith("/") ? raw : `/${raw}`}`;
+    return appendPhotoRenderParams(absolute, opts);
+  }
 
   const toProxy = (key: string) => {
     const encoded = encodeObjectKeyForProxy(key);
@@ -5584,6 +5587,7 @@ export default function GreenWork() {
         workAuthSession?.user?.organization_logo_url ||
         null)
     : null;
+  const partnerLogoDisplayUrl = partnerLogoUrl ? toDisplayPhotoUrl(partnerLogoUrl) : "";
   const partnerLogoName = isPartnerWorkSession
     ? ((activeProjectMatchesWorkSessionOrg ? activeProjectRecord?.organization_name || null : null) ||
         workAuthSession?.user?.organization_name ||
@@ -6170,8 +6174,8 @@ export default function GreenWork() {
         <div className="green-work-header-inner">
           <div className="green-work-brand">
             <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
-            {partnerLogoUrl ? (
-              <img className="green-work-partner-logo" src={partnerLogoUrl} alt={`${partnerLogoName} logo`} />
+            {partnerLogoDisplayUrl ? (
+              <img className="green-work-partner-logo" src={partnerLogoDisplayUrl} alt={`${partnerLogoName} logo`} />
             ) : null}
           </div>
           <div className="green-work-title">
@@ -7180,7 +7184,7 @@ export default function GreenWork() {
                 <h3>{editingOrganizationId ? "Edit Organization" : "Add Organization"}</h3>
                 {newOrganization.logo_url ? (
                   <div className="green-work-brand-preview">
-                    <img src={newOrganization.logo_url} alt="Organization logo preview" />
+                    <img src={toDisplayPhotoUrl(newOrganization.logo_url)} alt="Organization logo preview" />
                     <span>Organization logo preview</span>
                   </div>
                 ) : null}
@@ -7617,7 +7621,7 @@ export default function GreenWork() {
                         </div>
                         {org.logo_url ? (
                           <div className="green-work-brand-preview compact">
-                            <img src={org.logo_url} alt={`${org.name} logo`} />
+                            <img src={toDisplayPhotoUrl(org.logo_url)} alt={`${org.name} logo`} />
                             <span>Logo attached</span>
                           </div>
                         ) : null}
