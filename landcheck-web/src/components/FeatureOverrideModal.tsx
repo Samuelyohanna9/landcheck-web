@@ -310,7 +310,17 @@ export default function FeatureOverrideModal({
 
   const activeMetrics = useMemo(() => draftMetrics || selectedMetrics, [draftMetrics, selectedMetrics]);
 
+  const isStyleReady = useCallback((map: mapboxgl.Map | null) => {
+    if (!map) return false;
+    try {
+      return map.isStyleLoaded();
+    } catch {
+      return false;
+    }
+  }, []);
+
   const applyBasemapMode = useCallback((map: mapboxgl.Map, mode: BasemapMode) => {
+    if (!isStyleReady(map)) return;
     const plotting = mode === "plotting";
 
     if (map.getLayer("cad-mask-fill")) {
@@ -348,9 +358,10 @@ export default function FeatureOverrideModal({
       map.setPaintProperty("fences-line", "line-color", plotting ? "#fda4af" : "#fca5a5");
       map.setPaintProperty("fences-line", "line-width", plotting ? 1.8 : 2);
     }
-  }, []);
+  }, [isStyleReady]);
 
   const ensureCadOverlay = useCallback((map: mapboxgl.Map) => {
+    if (!isStyleReady(map)) return;
     const beforeId = map
       .getStyle()
       ?.layers?.find((layer) => String(layer.id || "").startsWith("gl-draw"))?.id;
@@ -409,9 +420,10 @@ export default function FeatureOverrideModal({
     } else {
       (map.getSource("cad-grid-src") as mapboxgl.GeoJSONSource).setData(overlay.grid as any);
     }
-  }, [plotCoords]);
+  }, [isStyleReady, plotCoords]);
 
   const applyLayerVisibility = useCallback((map: mapboxgl.Map, state: LayerVisibility) => {
+    if (!isStyleReady(map)) return;
     (Object.keys(layerIds) as Array<keyof typeof layerIds>).forEach((key) => {
       const visible = state[key];
       layerIds[key].forEach((id) => {
@@ -420,7 +432,7 @@ export default function FeatureOverrideModal({
         }
       });
     });
-  }, []);
+  }, [isStyleReady]);
 
   const fitPlotBoundary = useCallback(() => {
     const map = mapRef.current;
