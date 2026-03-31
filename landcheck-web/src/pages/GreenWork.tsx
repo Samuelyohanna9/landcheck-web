@@ -3773,7 +3773,7 @@ export default function GreenWork() {
     try {
       if (editingOrganizationId) {
         await api.patch(`/green/admin/organizations/${editingOrganizationId}`, payload);
-        toast.success("Organization updated");
+        toast.success("Organization updated. No email sent.");
       } else {
         const res = await api.post("/green/admin/organizations", payload);
         const created = res?.data || {};
@@ -7184,6 +7184,16 @@ export default function GreenWork() {
                     <span>Organization logo preview</span>
                   </div>
                 ) : null}
+                {editingOrganizationId ? (
+                  <p className="green-work-note">
+                    Updating organization details or logo does not send a welcome email. SVG logos are recommended for the
+                    native dual-logo header.
+                  </p>
+                ) : (
+                  <p className="green-work-note">
+                    Creating a new organization can send the normal welcome email if a contact email is provided.
+                  </p>
+                )}
                 <input
                   placeholder="Organization name"
                   value={newOrganization.name}
@@ -7209,7 +7219,7 @@ export default function GreenWork() {
                     {orgLogoUploading ? "Uploading..." : "Upload Logo"}
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,.svg,image/svg+xml"
                       disabled={orgLogoUploading}
                       onChange={(e) => {
                         const file = e.target.files?.[0] || null;
