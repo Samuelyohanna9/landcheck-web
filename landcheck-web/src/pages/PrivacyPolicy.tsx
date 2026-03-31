@@ -13,6 +13,15 @@ const policySections = [
     ],
   },
   {
+    title: "Mobile App Permissions and Device Data",
+    points: [
+      "Location permission is used to capture tree, maintenance, and project coordinates while the user is actively recording field work.",
+      "Camera and photo-library access are used only so users can attach evidence photos to tree and maintenance records.",
+      "Notifications may be used for operational prompts or field follow-up messages where enabled on the device.",
+      "The mobile app may temporarily cache records, photos, and queued sync actions locally on the device so field work can continue offline and sync when connectivity returns.",
+    ],
+  },
+  {
     title: "Why the Data Is Processed",
     points: [
       "To operate LandCheck Green and LandCheck Work for project monitoring, assignment, reporting, and evidence review.",
@@ -29,6 +38,15 @@ const policySections = [
     ],
   },
   {
+    title: "Storage, Hosting, and Sharing",
+    points: [
+      "Operational records are processed through LandCheck application services and supporting cloud infrastructure used for hosting, storage, map delivery, and report generation.",
+      "Evidence photos, generated reports, and uploaded assets may be stored in managed object storage used by LandCheck for platform operations.",
+      "LandCheck does not sell user data. Data is shared only where necessary to operate the platform for the organization using it, to provide infrastructure services, or to comply with law.",
+      "Organization administrators and authorized reviewers may access records created by users working in their organization or project scope.",
+    ],
+  },
+  {
     title: "Legal and Compliance Position",
     points: [
       "LandCheck is implementing privacy controls aligned with consent-based processing expectations under GDPR-style principles and the Nigeria Data Protection Act (NDPA).",
@@ -41,7 +59,8 @@ const policySections = [
     points: [
       "Operational records, review history, and exports may be retained as long as needed for project administration, reporting, or audit accountability.",
       "Organizations should review user access regularly and deactivate users who no longer require access.",
-      "If you need correction, access, or deletion support for data controlled through LandCheck, contact LandCheck using the details below.",
+      "If you need correction, access, export, or deletion support for data controlled through LandCheck, contact LandCheck using the details below.",
+      "Where an account is provisioned by an organization administrator, account closure or deletion requests may also need to be coordinated through that organization.",
     ],
   },
 ];
@@ -67,6 +86,10 @@ export default function PrivacyPolicy() {
           <p>
             This notice explains how LandCheck handles public-site, survey, Green, and Work data. It is written for
             users, partner organizations, and field teams using the platform in Nigeria and similar jurisdictions.
+          </p>
+          <p>
+            It applies to the LandCheck website, LandCheck Green mobile and PWA experiences, and LandCheck Work
+            administration workflows.
           </p>
         </section>
 

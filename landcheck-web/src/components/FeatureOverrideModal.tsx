@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "../styles/feature-override-modal.css";
@@ -7,6 +7,17 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 type FeatureType = "road" | "building" | "river" | "fence";
 type FeatureAction = "add" | "delete" | "update";
+type EditorTool = "select" | "draw_line_string" | "draw_polygon";
+type LayerVisibility = Record<FeatureType | "boundary", boolean>;
+type FeatureInventory = Record<FeatureType, number>;
+
+type GeometryMetrics = {
+  geometryType: string;
+  vertices: number;
+  lengthM: number;
+  perimeterM: number;
+  areaSqm: number;
+};
 
 type Props = {
   isOpen: boolean;
@@ -22,6 +33,148 @@ type Props = {
   roadWidth: "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
   setRoadWidth: (v: "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30") => void;
   plotId: number | null;
+};
+
+const DEFAULT_LAYER_VISIBILITY: LayerVisibility = {
+  road: true,
+  building: true,
+  river: true,
+  fence: true,
+  boundary: true,
+};
+
+const DEFAULT_INVENTORY: FeatureInventory = {
+  road: 0,
+  building: 0,
+  river: 0,
+  fence: 0,
+};
+
+const EARTH_RADIUS_M = 6371008.8;
+
+const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+
+const haversineDistanceMeters = (start: number[], end: number[]) => {
+  const [lng1, lat1] = start;
+  const [lng2, lat2] = end;
+  const dLat = toRadians(lat2 - lat1);
+  const dLng = toRadians(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(a)));
+};
+
+const lineLengthMeters = (coords: number[][]) => {
+  if (!Array.isArray(coords) || coords.length < 2) return 0;
+  let total = 0;
+  for (let index = 1; index < coords.length; index += 1) {
+    total += haversineDistanceMeters(coords[index - 1], coords[index]);
+  }
+  return total;
+};
+
+const closeRing = (ring: number[][]) => {
+  if (!Array.isArray(ring) || ring.length < 3) return ring;
+  const first = ring[0];
+  const last = ring[ring.length - 1];
+  if (first?.[0] === last?.[0] && first?.[1] === last?.[1]) return ring;
+  return [...ring, first];
+};
+
+const polygonRingAreaSqm = (ringRaw: number[][]) => {
+  const ring = closeRing(ringRaw);
+  if (ring.length < 4) return 0;
+  const origin = ring[0];
+  const originLng = Number(origin?.[0] || 0);
+  const originLat = Number(origin?.[1] || 0);
+  const cosLat = Math.cos(toRadians(originLat));
+  const projected = ring.map((point) => {
+    const lng = Number(point?.[0] || 0);
+    const lat = Number(point?.[1] || 0);
+    return [
+      (toRadians(lng - originLng) * EARTH_RADIUS_M * cosLat),
+      (toRadians(lat - originLat) * EARTH_RADIUS_M),
+    ];
+  });
+  let area = 0;
+  for (let index = 0; index < projected.length - 1; index += 1) {
+    const [x0, y0] = projected[index];
+    const [x1, y1] = projected[index + 1];
+    area += x0 * y1 - x1 * y0;
+  }
+  return Math.abs(area) / 2;
+};
+
+const polygonAreaSqm = (rings: number[][][]) => {
+  if (!Array.isArray(rings) || !rings.length) return 0;
+  const [outer, ...holes] = rings;
+  const holeArea = holes.reduce((sum, ring) => sum + polygonRingAreaSqm(ring), 0);
+  return Math.max(polygonRingAreaSqm(outer) - holeArea, 0);
+};
+
+const polygonPerimeterMeters = (rings: number[][][]) => {
+  if (!Array.isArray(rings) || !rings.length) return 0;
+  return rings.reduce((sum, ring) => sum + lineLengthMeters(closeRing(ring)), 0);
+};
+
+const countVertices = (geometry: any) => {
+  if (!geometry) return 0;
+  if (geometry.type === "LineString") return Array.isArray(geometry.coordinates) ? geometry.coordinates.length : 0;
+  if (geometry.type === "Polygon") {
+    const rings = Array.isArray(geometry.coordinates) ? geometry.coordinates : [];
+    return rings.reduce((sum: number, ring: number[][]) => {
+      const safe = closeRing(ring);
+      return sum + Math.max(safe.length - 1, 0);
+    }, 0);
+  }
+  return 0;
+};
+
+const getGeometryMetrics = (geometry: any): GeometryMetrics | null => {
+  if (!geometry?.type) return null;
+  if (geometry.type === "LineString") {
+    return {
+      geometryType: "Line",
+      vertices: countVertices(geometry),
+      lengthM: lineLengthMeters(Array.isArray(geometry.coordinates) ? geometry.coordinates : []),
+      perimeterM: 0,
+      areaSqm: 0,
+    };
+  }
+  if (geometry.type === "Polygon") {
+    const rings = Array.isArray(geometry.coordinates) ? geometry.coordinates : [];
+    return {
+      geometryType: "Polygon",
+      vertices: countVertices(geometry),
+      lengthM: 0,
+      perimeterM: polygonPerimeterMeters(rings),
+      areaSqm: polygonAreaSqm(rings),
+    };
+  }
+  return null;
+};
+
+const formatLength = (meters: number) => {
+  if (!Number.isFinite(meters) || meters <= 0) return "0 m";
+  if (meters >= 1000) return `${(meters / 1000).toFixed(2)} km`;
+  return `${meters.toFixed(1)} m`;
+};
+
+const formatArea = (sqm: number) => {
+  if (!Number.isFinite(sqm) || sqm <= 0) return "0 sqm";
+  if (sqm >= 10000) return `${(sqm / 10000).toFixed(3)} ha`;
+  return `${sqm.toFixed(2)} sqm`;
+};
+
+const toolForFeatureType = (type: FeatureType): EditorTool => (type === "building" ? "draw_polygon" : "draw_line_string");
+
+const layerIds: Record<FeatureType | "boundary", string[]> = {
+  road: ["roads-line"],
+  building: ["buildings-fill", "buildings-line"],
+  river: ["rivers-line"],
+  fence: ["fences-line"],
+  boundary: ["plot-boundary-line"],
 };
 
 export default function FeatureOverrideModal({
@@ -42,8 +195,68 @@ export default function FeatureOverrideModal({
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const activeDrawFeatureId = useRef<string | null>(null);
+
   const [menu, setMenu] = useState<{ x: number; y: number; visible: boolean }>({ x: 0, y: 0, visible: false });
   const [selectedGeometry, setSelectedGeometry] = useState<any>(null);
+  const [selectedMetrics, setSelectedMetrics] = useState<GeometryMetrics | null>(null);
+  const [draftMetrics, setDraftMetrics] = useState<GeometryMetrics | null>(null);
+  const [cursor, setCursor] = useState<{ lng: number; lat: number } | null>(null);
+  const [activeTool, setActiveTool] = useState<EditorTool>("select");
+  const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>(DEFAULT_LAYER_VISIBILITY);
+  const [featureInventory, setFeatureInventory] = useState<FeatureInventory>(DEFAULT_INVENTORY);
+
+  const activeMetrics = useMemo(() => draftMetrics || selectedMetrics, [draftMetrics, selectedMetrics]);
+
+  const applyLayerVisibility = useCallback((map: mapboxgl.Map, state: LayerVisibility) => {
+    (Object.keys(layerIds) as Array<keyof typeof layerIds>).forEach((key) => {
+      const visible = state[key];
+      layerIds[key].forEach((id) => {
+        if (map.getLayer(id)) {
+          map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+        }
+      });
+    });
+  }, []);
+
+  const fitPlotBoundary = useCallback(() => {
+    const map = mapRef.current;
+    if (!map || !plotCoords?.length) return;
+    const bounds = new mapboxgl.LngLatBounds();
+    plotCoords.forEach(([lng, lat]) => bounds.extend([lng, lat]));
+    map.fitBounds(bounds, { padding: 48, duration: 300 });
+  }, [plotCoords]);
+
+  const syncDraftFromDraw = useCallback(() => {
+    const draw = drawRef.current;
+    if (!draw) return;
+    const data = draw.getAll();
+    const feature = data.features[data.features.length - 1];
+    const geometry = feature?.geometry || null;
+    setDraftMetrics(getGeometryMetrics(geometry));
+    activeDrawFeatureId.current = feature?.id ? String(feature.id) : null;
+  }, []);
+
+  const setEditorTool = useCallback((tool: EditorTool) => {
+    const draw = drawRef.current;
+    if (!draw) return;
+    if (tool === "select") {
+      draw.changeMode("simple_select");
+    } else {
+      draw.changeMode(tool as any);
+    }
+    setActiveTool(tool);
+  }, []);
+
+  const clearWorkingSelection = useCallback(() => {
+    drawRef.current?.deleteAll();
+    activeDrawFeatureId.current = null;
+    setDraftMetrics(null);
+    setSelectedGeometry(null);
+    setSelectedMetrics(null);
+    setActiveTool("select");
+    drawRef.current?.changeMode("simple_select");
+  }, []);
 
   useEffect(() => {
     if (!isOpen || mapRef.current || !containerRef.current) return;
@@ -53,19 +266,19 @@ export default function FeatureOverrideModal({
       style: "mapbox://styles/mapbox/satellite-streets-v12",
       center: [7.5, 9.0],
       zoom: 12,
+      pitchWithRotate: false,
+      dragRotate: false,
     });
-    map.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: false }), "top-right");
+    map.addControl(new mapboxgl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-left");
 
     const draw = new MapboxDraw({
       displayControlsDefault: false,
-      controls: {
-        point: false,
-        line_string: true,
-        polygon: true,
-        trash: true,
-      },
+      controls: {},
+      defaultMode: "simple_select",
     });
-    map.addControl(draw, "top-left");
+    map.addControl(draw);
 
     const loadFeatures = async () => {
       if (!plotId) return;
@@ -79,16 +292,21 @@ export default function FeatureOverrideModal({
         const riversData = data.rivers || { type: "FeatureCollection", features: [] };
         const fencesData = data.fences || { type: "FeatureCollection", features: [] };
 
+        setFeatureInventory({
+          road: Array.isArray(roadsData.features) ? roadsData.features.length : 0,
+          building: Array.isArray(buildingsData.features) ? buildingsData.features.length : 0,
+          river: Array.isArray(riversData.features) ? riversData.features.length : 0,
+          fence: Array.isArray(fencesData.features) ? fencesData.features.length : 0,
+        });
+
         if (!map.getSource("roads-src")) {
           map.addSource("roads-src", { type: "geojson", data: roadsData });
           map.addLayer({
             id: "roads-line",
             type: "line",
             source: "roads-src",
-            paint: { "line-color": "#0f172a", "line-width": 2 },
+            paint: { "line-color": "#fde047", "line-width": 3, "line-opacity": 0.95 },
           });
-          map.on("mouseenter", "roads-line", () => (map.getCanvas().style.cursor = "pointer"));
-          map.on("mouseleave", "roads-line", () => (map.getCanvas().style.cursor = ""));
         } else {
           (map.getSource("roads-src") as mapboxgl.GeoJSONSource).setData(roadsData as any);
         }
@@ -96,13 +314,17 @@ export default function FeatureOverrideModal({
         if (!map.getSource("buildings-src")) {
           map.addSource("buildings-src", { type: "geojson", data: buildingsData });
           map.addLayer({
+            id: "buildings-fill",
+            type: "fill",
+            source: "buildings-src",
+            paint: { "fill-color": "#38bdf8", "fill-opacity": 0.2 },
+          });
+          map.addLayer({
             id: "buildings-line",
             type: "line",
             source: "buildings-src",
-            paint: { "line-color": "#1f2937", "line-width": 1.5 },
+            paint: { "line-color": "#bae6fd", "line-width": 2 },
           });
-          map.on("mouseenter", "buildings-line", () => (map.getCanvas().style.cursor = "pointer"));
-          map.on("mouseleave", "buildings-line", () => (map.getCanvas().style.cursor = ""));
         } else {
           (map.getSource("buildings-src") as mapboxgl.GeoJSONSource).setData(buildingsData as any);
         }
@@ -113,10 +335,8 @@ export default function FeatureOverrideModal({
             id: "rivers-line",
             type: "line",
             source: "rivers-src",
-            paint: { "line-color": "#2563eb", "line-width": 1.5 },
+            paint: { "line-color": "#60a5fa", "line-width": 2.5, "line-opacity": 0.95 },
           });
-          map.on("mouseenter", "rivers-line", () => (map.getCanvas().style.cursor = "pointer"));
-          map.on("mouseleave", "rivers-line", () => (map.getCanvas().style.cursor = ""));
         } else {
           (map.getSource("rivers-src") as mapboxgl.GeoJSONSource).setData(riversData as any);
         }
@@ -128,19 +348,70 @@ export default function FeatureOverrideModal({
             type: "line",
             source: "fences-src",
             paint: {
-              "line-color": "#111827",
-              "line-width": 1.5,
-              "line-dasharray": [1.5, 1.5],
+              "line-color": "#fca5a5",
+              "line-width": 2,
+              "line-dasharray": [2, 1.4],
             },
           });
-          map.on("mouseenter", "fences-line", () => (map.getCanvas().style.cursor = "pointer"));
-          map.on("mouseleave", "fences-line", () => (map.getCanvas().style.cursor = ""));
         } else {
           (map.getSource("fences-src") as mapboxgl.GeoJSONSource).setData(fencesData as any);
         }
+
+        applyLayerVisibility(map, layerVisibility);
       } catch {
-        // ignore
+        // keep modal usable even if feature overlay fetch fails
       }
+    };
+
+    const selectFeature = (nextFeatureType: FeatureType) => (event: mapboxgl.MapLayerMouseEvent) => {
+      if (!drawRef.current || !event.features?.length) return;
+      const sourceFeature = event.features[0];
+      if (!sourceFeature.geometry) return;
+
+      drawRef.current.deleteAll();
+      const drawFeature = {
+        type: "Feature" as const,
+        properties: {
+          imported_from_detection: true,
+        },
+        geometry: sourceFeature.geometry as any,
+      };
+      const added = drawRef.current.add(drawFeature as any);
+      const nextId = Array.isArray(added) ? added[0] : added;
+      activeDrawFeatureId.current = nextId ? String(nextId) : null;
+      if (nextId) {
+        try {
+          drawRef.current.changeMode("direct_select", { featureId: String(nextId) } as any);
+        } catch {
+          drawRef.current.changeMode("simple_select");
+        }
+      }
+
+      setActiveTool("select");
+      setSelectedGeometry(sourceFeature.geometry);
+      setSelectedMetrics(getGeometryMetrics(sourceFeature.geometry));
+      setDraftMetrics(getGeometryMetrics(sourceFeature.geometry));
+      setFeatureType(nextFeatureType);
+
+      if (nextFeatureType === "road") {
+        const nextName = typeof (sourceFeature.properties as any)?.name === "string" ? String((sourceFeature.properties as any).name) : "";
+        const nextWidth = String((sourceFeature.properties as any)?.width_m || "");
+        setRoadName(nextName);
+        if (nextWidth && ["2", "4", "6", "8", "10", "12", "15", "20", "30"].includes(nextWidth)) {
+          setRoadWidth(nextWidth as Props["roadWidth"]);
+        }
+      }
+
+      if (action === "add") {
+        setAction("update");
+      }
+    };
+
+    const contextMenu = (nextFeatureType: FeatureType) => (event: mapboxgl.MapLayerMouseEvent) => {
+      event.preventDefault();
+      if (!event.features?.length) return;
+      selectFeature(nextFeatureType)(event);
+      setMenu({ x: event.originalEvent.clientX, y: event.originalEvent.clientY, visible: true });
     };
 
     map.on("load", () => {
@@ -163,91 +434,79 @@ export default function FeatureOverrideModal({
             type: "line",
             source: "plot-boundary",
             paint: {
-              "line-color": "#ef4444",
-              "line-width": 2,
+              "line-color": "#f97316",
+              "line-width": 2.2,
+              "line-dasharray": [1.4, 1.2],
             },
           });
         }
-        const bounds = new mapboxgl.LngLatBounds();
-        plotCoords.forEach(([lng, lat]) => bounds.extend([lng, lat]));
-        map.fitBounds(bounds, { padding: 40, duration: 0 });
+        fitPlotBoundary();
       }
+
       loadFeatures();
     });
 
-  const selectFeature = (featureType: FeatureType) => (e: mapboxgl.MapLayerMouseEvent) => {
-      if (!drawRef.current || !e.features?.length) return;
-      const feat = e.features[0];
-      if (!feat.geometry) return;
-      drawRef.current.deleteAll();
-      drawRef.current.add({
-        type: "Feature",
-        properties: {},
-        geometry: feat.geometry as any,
-      });
-      setSelectedGeometry(feat.geometry);
-      if (map.getSource("selected-feature")) {
-        (map.getSource("selected-feature") as mapboxgl.GeoJSONSource).setData({
-          type: "Feature",
-          geometry: feat.geometry,
-          properties: {},
-        } as any);
+    map.on("draw.create", syncDraftFromDraw);
+    map.on("draw.update", syncDraftFromDraw);
+    map.on("draw.delete", () => {
+      activeDrawFeatureId.current = null;
+      setDraftMetrics(null);
+      if (action === "add") {
+        setSelectedGeometry(null);
+        setSelectedMetrics(null);
+      }
+    });
+    map.on("draw.selectionchange", syncDraftFromDraw);
+    map.on("draw.modechange", (event: any) => {
+      const nextMode = String(event?.mode || "simple_select");
+      if (nextMode === "draw_line_string" || nextMode === "draw_polygon") {
+        setActiveTool(nextMode);
       } else {
-        map.addSource("selected-feature", {
-          type: "geojson",
-          data: {
-            type: "Feature",
-            geometry: feat.geometry,
-            properties: {},
-          } as any,
-        });
-        map.addLayer({
-          id: "selected-feature-line",
-          type: "line",
-          source: "selected-feature",
-          paint: { "line-color": "#f59e0b", "line-width": 3 },
-        });
+        setActiveTool("select");
       }
-      setFeatureType(featureType);
-      if (featureType === "road") {
-        const nm = (feat.properties as any)?.name;
-        setRoadName(nm || "");
-        const w = (feat.properties as any)?.width_m;
-        if (w) setRoadWidth(String(w) as Props["roadWidth"]);
-      }
-      if (action === "add") setAction("update");
-    };
+    });
 
-    const contextMenu = (featureType: FeatureType) => (e: mapboxgl.MapLayerMouseEvent) => {
-      e.preventDefault();
-      if (!e.features?.length) return;
-      const feat = e.features[0];
-      if (!feat.geometry) return;
-      selectFeature(featureType)(e);
-      setSelectedGeometry(feat.geometry);
-      setMenu({ x: e.originalEvent.clientX, y: e.originalEvent.clientY, visible: true });
-      setFeatureType(featureType);
-    };
+    map.on("mousemove", (event) => {
+      setCursor({ lng: event.lngLat.lng, lat: event.lngLat.lat });
+    });
+    map.on("mouseleave", () => setCursor(null));
 
-    map.on("click", "roads-line", selectFeature("road"));
-    map.on("click", "buildings-line", selectFeature("building"));
-    map.on("click", "rivers-line", selectFeature("river"));
-    map.on("click", "fences-line", selectFeature("fence"));
+    const interactiveBindings: Array<[string, FeatureType]> = [
+      ["roads-line", "road"],
+      ["buildings-fill", "building"],
+      ["buildings-line", "building"],
+      ["rivers-line", "river"],
+      ["fences-line", "fence"],
+    ];
 
-    map.on("contextmenu", "roads-line", contextMenu("road"));
-    map.on("contextmenu", "buildings-line", contextMenu("building"));
-    map.on("contextmenu", "rivers-line", contextMenu("river"));
-    map.on("contextmenu", "fences-line", contextMenu("fence"));
+    interactiveBindings.forEach(([layerId, nextFeatureType]) => {
+      map.on("click", layerId, selectFeature(nextFeatureType));
+      map.on("contextmenu", layerId, contextMenu(nextFeatureType));
+      map.on("mouseenter", layerId, () => {
+        map.getCanvas().style.cursor = "crosshair";
+      });
+      map.on("mouseleave", layerId, () => {
+        map.getCanvas().style.cursor = "";
+      });
+    });
 
     mapRef.current = map;
     drawRef.current = draw;
 
     return () => {
+      activeDrawFeatureId.current = null;
       drawRef.current = null;
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [isOpen, plotCoords]);
+  }, [action, applyLayerVisibility, fitPlotBoundary, isOpen, layerVisibility, plotCoords, plotId, setAction, setFeatureType, setRoadName, setRoadWidth, syncDraftFromDraw]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const map = mapRef.current;
+    if (!map) return;
+    applyLayerVisibility(map, layerVisibility);
+  }, [applyLayerVisibility, isOpen, layerVisibility]);
 
   const handleSave = () => {
     const draw = drawRef.current;
@@ -271,81 +530,246 @@ export default function FeatureOverrideModal({
     });
   };
 
+  const suggestedTool = toolForFeatureType(featureType);
+  const suggestedToolLabel = suggestedTool === "draw_polygon" ? "Polygon tool" : "Line tool";
+
   if (!isOpen) return null;
 
   return (
     <div className="feature-override-modal">
-      <div className="feature-override-card">
-        <div className="feature-override-header">
+      <div className="feature-override-card cad-editor-card">
+        <div className="feature-override-header cad-editor-header">
           <div>
-            <h3>Edit Features</h3>
-            <p>Draw on the map to add, update, or remove features.</p>
+            <p className="feature-override-kicker">Survey Plan Drafting Workspace</p>
+            <h3>Feature CAD Editor</h3>
+            <p>Use the drafting tools to add, update, or remove detected roads, buildings, rivers, and fences.</p>
           </div>
-          <button className="feature-override-close" onClick={onClose}>✕</button>
+          <button className="feature-override-close" onClick={onClose}>
+            Close
+          </button>
         </div>
 
-        <div className="feature-override-controls">
-          <div className="field">
-            <label>Feature Type</label>
-            <select value={featureType} onChange={(e) => setFeatureType(e.target.value as FeatureType)}>
-              <option value="road">Road</option>
-              <option value="building">Building</option>
-              <option value="river">River</option>
-              <option value="fence">Fence</option>
-            </select>
+        <div className="cad-editor-toolbar">
+          <div className="cad-toolbar-group">
+            <span className="cad-toolbar-label">Tools</span>
+            <button
+              type="button"
+              className={`cad-tool-btn ${activeTool === "select" ? "active" : ""}`}
+              onClick={() => setEditorTool("select")}
+            >
+              Select
+            </button>
+            <button
+              type="button"
+              className={`cad-tool-btn ${activeTool === "draw_line_string" ? "active" : ""}`}
+              onClick={() => setEditorTool("draw_line_string")}
+            >
+              Line
+            </button>
+            <button
+              type="button"
+              className={`cad-tool-btn ${activeTool === "draw_polygon" ? "active" : ""}`}
+              onClick={() => setEditorTool("draw_polygon")}
+            >
+              Polygon
+            </button>
+            <button type="button" className="cad-tool-btn" onClick={() => setEditorTool(suggestedTool)}>
+              Match {suggestedToolLabel}
+            </button>
           </div>
-          <div className="field">
-            <label>Action</label>
-            <select value={action} onChange={(e) => setAction(e.target.value as FeatureAction)}>
-              <option value="add">Add</option>
-              <option value="update">Update</option>
-              <option value="delete">Delete</option>
-            </select>
+
+          <div className="cad-toolbar-group">
+            <span className="cad-toolbar-label">View</span>
+            <button type="button" className="cad-tool-btn" onClick={fitPlotBoundary}>
+              Fit Plot
+            </button>
+            <button type="button" className="cad-tool-btn" onClick={clearWorkingSelection}>
+              Clear Draft
+            </button>
           </div>
-          {featureType === "road" && action !== "delete" && (
-            <div className="field wide">
-              <label>Road Name (optional)</label>
-              <input value={roadName} onChange={(e) => setRoadName(e.target.value)} placeholder="e.g., Abuja Road" />
-            </div>
-          )}
-          {featureType === "road" && action === "add" && (
-            <div className="field">
-              <label>New Road Width</label>
-              <select value={roadWidth} onChange={(e) => setRoadWidth(e.target.value as Props["roadWidth"])}>
-                <option value="2">2</option>
-                <option value="4">4</option>
-                <option value="6">6</option>
-                <option value="8">8</option>
-                <option value="10">10</option>
-                <option value="12">12</option>
-                <option value="15">15</option>
-                <option value="20">20</option>
-                <option value="30">30</option>
-              </select>
-            </div>
-          )}
-          <div className="hint">
-            Tip: Use line tool for roads, rivers, and fences; polygon tool for buildings. Delete draws a mask to remove detected features.
+
+          <div className="cad-toolbar-group cad-toolbar-group--hint">
+            <span className="cad-toolbar-prompt">
+              Active operation: <strong>{action}</strong> on <strong>{featureType}</strong>
+            </span>
           </div>
         </div>
 
-        <div className="feature-override-map" ref={containerRef} />
+        <div className="cad-editor-body">
+          <aside className="cad-editor-sidebar">
+            <section className="cad-panel">
+              <div className="cad-panel-head">
+                <strong>Feature Setup</strong>
+                <span>Choose what you are editing</span>
+              </div>
+              <div className="feature-override-controls cad-form-grid">
+                <div className="field">
+                  <label>Feature Type</label>
+                  <select value={featureType} onChange={(event) => setFeatureType(event.target.value as FeatureType)}>
+                    <option value="road">Road</option>
+                    <option value="building">Building</option>
+                    <option value="river">River</option>
+                    <option value="fence">Fence</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Action</label>
+                  <select value={action} onChange={(event) => setAction(event.target.value as FeatureAction)}>
+                    <option value="add">Add</option>
+                    <option value="update">Update</option>
+                    <option value="delete">Delete</option>
+                  </select>
+                </div>
+                {featureType === "road" && action !== "delete" && (
+                  <div className="field wide">
+                    <label>Road Name</label>
+                    <input value={roadName} onChange={(event) => setRoadName(event.target.value)} placeholder="e.g. Access Road A" />
+                  </div>
+                )}
+                {featureType === "road" && action === "add" && (
+                  <div className="field">
+                    <label>Road Width (m)</label>
+                    <select value={roadWidth} onChange={(event) => setRoadWidth(event.target.value as Props["roadWidth"])}>
+                      <option value="2">2</option>
+                      <option value="4">4</option>
+                      <option value="6">6</option>
+                      <option value="8">8</option>
+                      <option value="10">10</option>
+                      <option value="12">12</option>
+                      <option value="15">15</option>
+                      <option value="20">20</option>
+                      <option value="30">30</option>
+                    </select>
+                  </div>
+                )}
+                <div className="hint">
+                  Roads, rivers, and fences use line drafting. Buildings use polygon drafting. Right-click detected features to switch directly into update/delete flow.
+                </div>
+              </div>
+            </section>
 
-        <div className="feature-override-actions">
-          <button className="btn-outline" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" onClick={handleSave}>Save Changes</button>
+            <section className="cad-panel">
+              <div className="cad-panel-head">
+                <strong>Layers</strong>
+                <span>Toggle drafting references</span>
+              </div>
+              <div className="cad-layer-list">
+                {([
+                  ["boundary", "Plot boundary", null],
+                  ["road", "Roads", featureInventory.road],
+                  ["building", "Buildings", featureInventory.building],
+                  ["river", "Rivers", featureInventory.river],
+                  ["fence", "Fences", featureInventory.fence],
+                ] as Array<[keyof LayerVisibility, string, number | null]>).map(([key, label, count]) => (
+                  <label key={key} className="cad-layer-toggle">
+                    <input
+                      type="checkbox"
+                      checked={layerVisibility[key]}
+                      onChange={(event) =>
+                        setLayerVisibility((previous) => ({
+                          ...previous,
+                          [key]: event.target.checked,
+                        }))
+                      }
+                    />
+                    <span>{label}</span>
+                    {typeof count === "number" ? <em>{count}</em> : <em>ref</em>}
+                  </label>
+                ))}
+              </div>
+            </section>
+
+            <section className="cad-panel">
+              <div className="cad-panel-head">
+                <strong>Selected Geometry</strong>
+                <span>Live drafting measurements</span>
+              </div>
+              {activeMetrics ? (
+                <div className="cad-metrics-grid">
+                  <div className="cad-metric">
+                    <span>Type</span>
+                    <strong>{activeMetrics.geometryType}</strong>
+                  </div>
+                  <div className="cad-metric">
+                    <span>Vertices</span>
+                    <strong>{activeMetrics.vertices}</strong>
+                  </div>
+                  <div className="cad-metric">
+                    <span>Length</span>
+                    <strong>{formatLength(activeMetrics.lengthM || activeMetrics.perimeterM)}</strong>
+                  </div>
+                  <div className="cad-metric">
+                    <span>Area</span>
+                    <strong>{formatArea(activeMetrics.areaSqm)}</strong>
+                  </div>
+                </div>
+              ) : (
+                <p className="cad-empty-state">Select a detected feature or start drawing to see live geometry measurements.</p>
+              )}
+            </section>
+
+            <section className="cad-panel">
+              <div className="cad-panel-head">
+                <strong>Drafting Notes</strong>
+                <span>Practical workflow</span>
+              </div>
+              <ul className="cad-note-list">
+                <li>Use <strong>Match {suggestedToolLabel}</strong> to jump to the correct geometry tool for the current feature type.</li>
+                <li>Click a detected feature to import it into the editor for update.</li>
+                <li>Use line drafting for delete masks on roads, rivers, and fences; use polygon drafting for building deletes.</li>
+                <li>Save commits the current geometry back into your existing feature override endpoint.</li>
+              </ul>
+            </section>
+          </aside>
+
+          <div className="cad-editor-canvas">
+            <div className="cad-canvas-head">
+              <div>
+                <strong>Drafting Canvas</strong>
+                <span>Satellite context with editable feature geometry</span>
+              </div>
+              <div className="cad-canvas-badges">
+                <span className="cad-badge">{featureType}</span>
+                <span className="cad-badge cad-badge--ghost">{action}</span>
+              </div>
+            </div>
+            <div className="feature-override-map cad-drafting-map" ref={containerRef} />
+            <div className="cad-status-bar">
+              <span>
+                Cursor:{" "}
+                {cursor ? `${cursor.lng.toFixed(6)}, ${cursor.lat.toFixed(6)}` : "--"}
+              </span>
+              <span>Tool: {activeTool === "select" ? "Select" : activeTool === "draw_polygon" ? "Polygon" : "Line"}</span>
+              <span>
+                Geometry:{" "}
+                {activeMetrics
+                  ? `${activeMetrics.geometryType} | ${activeMetrics.vertices} pts | ${formatLength(activeMetrics.lengthM || activeMetrics.perimeterM)}`
+                  : "None"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="feature-override-actions cad-editor-actions">
+          <button className="btn-outline" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="btn-primary" onClick={handleSave}>
+            Save Feature Changes
+          </button>
         </div>
       </div>
+
       {menu.visible && (
         <div
           className="feature-context-menu"
           style={{ left: menu.x, top: menu.y }}
-          onMouseLeave={() => setMenu({ ...menu, visible: false })}
+          onMouseLeave={() => setMenu((current) => ({ ...current, visible: false }))}
         >
           <button
             onClick={() => {
               setAction("update");
-              setMenu({ ...menu, visible: false });
+              setMenu((current) => ({ ...current, visible: false }));
             }}
           >
             Set Update
@@ -359,18 +783,16 @@ export default function FeatureOverrideModal({
                   action: "delete",
                   geojson: selectedGeometry,
                 });
-                setMenu({ ...menu, visible: false });
-                return;
               }
-              setMenu({ ...menu, visible: false });
+              setMenu((current) => ({ ...current, visible: false }));
             }}
           >
             Set Delete
           </button>
           <button
             onClick={() => {
-              setSelectedGeometry(null);
-              setMenu({ ...menu, visible: false });
+              clearWorkingSelection();
+              setMenu((current) => ({ ...current, visible: false }));
             }}
           >
             Clear Selection
