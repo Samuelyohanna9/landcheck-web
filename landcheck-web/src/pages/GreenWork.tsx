@@ -5,6 +5,13 @@ import { api, BACKEND_URL } from "../api/client";
 import TreeMap, { type TreeInspectData } from "../components/TreeMap";
 import { clearWorkAuthed, getWorkAuthSession } from "../auth/workAuth";
 import { usePrivacyConsentGate } from "../privacy/usePrivacyConsentGate";
+import mapViewDashboardCardSrc from "../assets/dashboard_svgs/map-view.svg";
+import remoteMonitoringDashboardCardSrc from "../assets/dashboard_svgs/remote-monitoring.svg";
+import usersDashboardCardSrc from "../assets/dashboard_svgs/users-all-staff.svg";
+import addStaffDashboardCardSrc from "../assets/dashboard_svgs/add-staff-profile.svg";
+import plantingOrdersDashboardCardSrc from "../assets/dashboard_svgs/planting-orders.svg";
+import maintenanceDashboardCardSrc from "../assets/dashboard_svgs/maintenance.svg";
+import custodianHubDashboardCardSrc from "../assets/dashboard_svgs/custodian-hub.svg";
 import {
   cacheProjectsOffline,
   cacheUsersOffline,
@@ -315,6 +322,17 @@ type WorkForm =
   | "custodian_hub"
   | "existing_tree_intake"
   ;
+
+const DASHBOARD_TAB_CARD_ASSETS: Partial<Record<WorkForm, string>> = {
+  map_view: mapViewDashboardCardSrc,
+  remote_monitoring: remoteMonitoringDashboardCardSrc,
+  users: usersDashboardCardSrc,
+  add_user: addStaffDashboardCardSrc,
+  assign_work: plantingOrdersDashboardCardSrc,
+  assign_task: maintenanceDashboardCardSrc,
+  custodian_hub: custodianHubDashboardCardSrc,
+};
+
 type StaffMenuState = { user: GreenUser; x: number; y: number } | null;
 type DrawerFrame = { top: number; left: number; width: number; height: number };
 type VerraExportHistoryItem = {
@@ -6282,43 +6300,55 @@ export default function GreenWork() {
         <div className="green-work-active-hub-wrap">
           <div className="green-work-active-hub">
             <div className="green-work-action-grid">
-              {activeProjectActions.map((action) => (
-                <button
-                  key={action.form}
-                  type="button"
-                  className={`green-work-action-card ${activeForm === action.form ? "active" : ""} ${action.form === "map_view" ? "green-work-action-card--map-view" : ""} ${action.form === "remote_monitoring" ? "green-work-action-card--remote-monitoring" : ""}`}
-                  onClick={() => openForm(action.form)}
-                  title={`${action.title} - ${action.note}`}
-                  aria-label={action.title}
-                >
-                  <span className={`green-work-action-icon ${action.form === "map_view" ? "green-work-action-icon--map-view" : ""} ${action.form === "remote_monitoring" ? "green-work-action-icon--remote-monitoring" : ""}`} aria-hidden="true">
-                    {renderActionIcon(action.form)}
-                  </span>
-                  <span className="green-work-action-copy">
-                    <span className="green-work-action-title-row">
-                      <span>{action.title}</span>
-                      {action.isNew && (
-                        <span className="green-work-feature-badge" aria-label={`${action.title} is a new feature`}>
-                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path
-                              d="M12.1 3.5c.9 2.1.4 3.8-.6 5.2-.8 1.2-.8 2.2-.1 3 .8-.4 1.5-1.1 2-2.1 1.9 1.4 3.1 3.3 3.1 5.7 0 3.1-2.3 5.3-5.6 5.3-3.2 0-5.4-2.2-5.4-5.1 0-2.2 1.1-4 3-5.5.3 1 .8 1.8 1.6 2.4.7-.9.7-2 .1-3.1-1-1.5-1.5-3.3-.4-5.8.8.3 1.6 1 2.3 2z"
-                              fill="currentColor"
-                            />
-                          </svg>
-                          New
-                        </span>
-                      )}
-                      {action.form === "live_table" && (
-                        <span className="green-work-live-badge" aria-label="Live monitoring active">
-                          <span className="green-work-live-badge-dot" aria-hidden="true" />
-                          Live
-                        </span>
-                      )}
+              {activeProjectActions.map((action) => {
+                const dashboardCardSrc = DASHBOARD_TAB_CARD_ASSETS[action.form];
+                return (
+                  <button
+                    key={action.form}
+                    type="button"
+                    className={`green-work-action-card ${activeForm === action.form ? "active" : ""} ${action.form === "map_view" ? "green-work-action-card--map-view" : ""} ${action.form === "remote_monitoring" ? "green-work-action-card--remote-monitoring" : ""} ${dashboardCardSrc ? "green-work-action-card--dashboard-svg" : ""}`}
+                    onClick={() => openForm(action.form)}
+                    title={`${action.title} - ${action.note}`}
+                    aria-label={action.title}
+                  >
+                    {dashboardCardSrc ? (
+                      <img
+                        className="green-work-action-dashboard-art"
+                        src={dashboardCardSrc}
+                        alt=""
+                        aria-hidden="true"
+                        loading="lazy"
+                      />
+                    ) : null}
+                    <span className={`green-work-action-icon ${action.form === "map_view" ? "green-work-action-icon--map-view" : ""} ${action.form === "remote_monitoring" ? "green-work-action-icon--remote-monitoring" : ""}`} aria-hidden="true">
+                      {renderActionIcon(action.form)}
                     </span>
-                    <small>{action.note}</small>
-                  </span>
-                </button>
-              ))}
+                    <span className="green-work-action-copy">
+                      <span className="green-work-action-title-row">
+                        <span>{action.title}</span>
+                        {action.isNew && (
+                          <span className="green-work-feature-badge" aria-label={`${action.title} is a new feature`}>
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                              <path
+                                d="M12.1 3.5c.9 2.1.4 3.8-.6 5.2-.8 1.2-.8 2.2-.1 3 .8-.4 1.5-1.1 2-2.1 1.9 1.4 3.1 3.3 3.1 5.7 0 3.1-2.3 5.3-5.6 5.3-3.2 0-5.4-2.2-5.4-5.1 0-2.2 1.1-4 3-5.5.3 1 .8 1.8 1.6 2.4.7-.9.7-2 .1-3.1-1-1.5-1.5-3.3-.4-5.8.8.3 1.6 1 2.3 2z"
+                                fill="currentColor"
+                              />
+                            </svg>
+                            New
+                          </span>
+                        )}
+                        {action.form === "live_table" && (
+                          <span className="green-work-live-badge" aria-label="Live monitoring active">
+                            <span className="green-work-live-badge-dot" aria-hidden="true" />
+                            Live
+                          </span>
+                        )}
+                      </span>
+                      <small>{action.note}</small>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
