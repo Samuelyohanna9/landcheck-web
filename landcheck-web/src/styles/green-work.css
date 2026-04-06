@@ -373,6 +373,60 @@
   stroke-linejoin: round;
 }
 
+.green-work-action-dashboard-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 18px;
+  box-shadow: 0 4px 14px rgba(15, 61, 31, 0.1);
+  pointer-events: none;
+  user-select: none;
+}
+
+.green-work-action-card--dashboard-svg {
+  padding: 0;
+  gap: 0;
+  min-height: 0;
+  height: auto;
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.green-work-action-card--dashboard-svg .green-work-action-icon,
+.green-work-action-card--dashboard-svg .green-work-action-copy {
+  display: none;
+}
+
+.green-work-action-card--dashboard-svg:hover {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.green-work-action-card--dashboard-svg:hover .green-work-action-dashboard-art {
+  box-shadow: 0 10px 22px rgba(15, 61, 31, 0.16);
+}
+
+.green-work-action-card--dashboard-svg.active {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--green-800);
+}
+
+.green-work-action-card--dashboard-svg.active .green-work-action-dashboard-art {
+  box-shadow: 0 0 0 2px rgba(34, 154, 76, 0.55), 0 12px 24px rgba(17, 84, 40, 0.2);
+}
+
+.green-work-action-card--dashboard-svg .green-work-feature-badge,
+.green-work-action-card--dashboard-svg .green-work-live-badge {
+  top: 0.34rem;
+  right: 0.38rem;
+}
+
 .green-work-action-icon--map-view {
   width: 32px;
   height: 32px;
@@ -4013,6 +4067,32 @@
     justify-items: center;
     align-content: center;
     gap: 0.16rem;
+  }
+
+  .green-work-action-card--dashboard-svg {
+    min-height: 48px;
+    height: auto;
+    align-self: auto;
+    padding: 0.2rem;
+    border: 1px solid rgba(22, 76, 42, 0.2);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(239, 249, 243, 0.95) 100%);
+    box-shadow: 0 2px 8px rgba(15, 61, 31, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    overflow: hidden;
+  }
+
+  .green-work-action-card--dashboard-svg.active {
+    border-color: rgba(15, 61, 31, 0.25);
+    background: linear-gradient(180deg, #2cb056 0%, #1b7f3d 100%);
+    box-shadow: 0 10px 20px rgba(17, 84, 40, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+  }
+
+  .green-work-action-card--dashboard-svg .green-work-action-dashboard-art {
+    display: none;
+  }
+
+  .green-work-action-card--dashboard-svg .green-work-action-icon {
+    display: grid;
   }
 
   .green-work-action-icon {
