@@ -181,7 +181,7 @@
 .green-work-active-hub-wrap {
   width: min(1880px, calc(100% - 24px));
   margin: 0 auto;
-  padding-top: 0.45rem;
+  padding-top: 0.32rem;
   flex: none;
 }
 
@@ -189,13 +189,13 @@
   display: grid;
   grid-template-columns: minmax(118px, 152px) minmax(0, 1fr);
   align-items: stretch;
-  gap: 0.36rem;
+  gap: 0.28rem;
   background: linear-gradient(148deg, rgba(255, 255, 255, 0.9) 0%, rgba(240, 249, 243, 0.84) 100%);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   border: 1px solid rgba(23, 83, 45, 0.18);
   border-radius: var(--radius-md);
-  padding: 0.32rem;
+  padding: 0.24rem;
   box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
@@ -203,8 +203,8 @@
   background: linear-gradient(180deg, #f6fff8 0%, #eaf7ef 100%);
   border: 1px solid rgba(23, 83, 45, 0.16);
   border-radius: var(--radius-sm);
-  padding: 0.28rem 0.34rem;
-  min-height: 58px;
+  padding: 0.24rem 0.3rem;
+  min-height: 48px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -213,7 +213,7 @@
 
 .green-work-active-hub-kicker {
   display: inline-block;
-  font-size: 0.58rem;
+  font-size: 0.54rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--green-600);
@@ -224,13 +224,13 @@
   display: block;
   margin-top: 0.1rem;
   font-family: "Sora", sans-serif;
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   color: var(--green-900);
 }
 
 .green-work-active-hub-head p {
-  margin: 0.1rem 0 0;
-  font-size: 0.62rem;
+  margin: 0.08rem 0 0;
+  font-size: 0.56rem;
   color: var(--gw-subtext);
 }
 
@@ -251,8 +251,8 @@
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(239, 249, 243, 0.95) 100%);
   color: var(--green-800);
   border-radius: 18px;
-  min-height: 168px;
-  padding: 0.62rem 0.62rem 0.58rem;
+  min-height: 144px;
+  padding: 0.5rem 0.52rem 0.48rem;
   font-weight: 700;
   font-size: 0.74rem;
   line-height: 1.2;
@@ -263,7 +263,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  gap: 0.4rem;
+  gap: 0.28rem;
   height: 100%;
   position: relative;
   -webkit-tap-highlight-color: transparent;
@@ -297,8 +297,8 @@
 
 .green-work-action-card .green-work-action-copy > small {
   display: block;
-  margin-top: 0.12rem;
-  font-size: 0.42rem;
+  margin-top: 0.08rem;
+  font-size: 0.38rem;
   color: var(--gw-subtext);
   font-weight: 700;
   white-space: normal;
@@ -306,7 +306,7 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  line-height: 1.08;
+  line-height: 1.04;
   text-align: center;
 }
 
@@ -324,10 +324,10 @@
   overflow: hidden;
   text-overflow: clip;
   white-space: normal;
-  line-height: 0.98;
+  line-height: 0.94;
   text-align: center;
   font-family: "Sora", sans-serif;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: -0.02em;
 }
@@ -349,8 +349,8 @@
   padding: 0.1rem 0.26rem 0.09rem;
   white-space: nowrap;
   position: absolute;
-  top: 0.48rem;
-  right: 0.48rem;
+  top: 0.4rem;
+  right: 0.4rem;
   z-index: 1;
 }
 
@@ -370,8 +370,8 @@
   padding: 0.1rem 0.26rem 0.09rem;
   white-space: nowrap;
   position: absolute;
-  top: 0.48rem;
-  right: 0.48rem;
+  top: 0.4rem;
+  right: 0.4rem;
   z-index: 1;
 }
 
@@ -391,8 +391,8 @@
 }
 
 .green-work-action-icon {
-  width: 58px;
-  height: 58px;
+  width: 46px;
+  height: 46px;
   border-radius: 0;
   border: none;
   background: transparent;
@@ -400,12 +400,12 @@
   display: grid;
   place-items: center;
   box-shadow: none;
-  margin-top: 0.04rem;
+  margin-top: 0;
 }
 
 .green-work-action-icon svg {
-  width: 54px;
-  height: 54px;
+  width: 42px;
+  height: 42px;
   display: block;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -3771,9 +3771,9 @@
     flex: 0 0 136px;
     width: 136px;
     min-width: 136px;
-    min-height: 160px;
-    padding: 0.58rem 0.56rem 0.52rem;
-    gap: 0.38rem;
+    min-height: 138px;
+    padding: 0.46rem 0.46rem 0.42rem;
+    gap: 0.26rem;
     scroll-snap-align: start;
   }
 }
@@ -3807,19 +3807,19 @@
     flex: 0 0 152px;
     width: 152px;
     min-width: 152px;
-    min-height: 154px;
-    padding: 0.56rem 0.54rem 0.5rem;
-    gap: 0.36rem;
+    min-height: 136px;
+    padding: 0.42rem 0.44rem 0.4rem;
+    gap: 0.24rem;
   }
 
   .green-work-action-icon {
-    width: 54px;
-    height: 54px;
+    width: 44px;
+    height: 44px;
   }
 
   .green-work-action-icon svg {
-    width: 50px;
-    height: 50px;
+    width: 40px;
+    height: 40px;
   }
 
   .green-work-action-copy {
@@ -3827,11 +3827,11 @@
   }
 
   .green-work-action-title-row > span:first-child {
-    font-size: 0.76rem;
+    font-size: 0.7rem;
   }
 
   .green-work-action-card .green-work-action-copy > small {
-    font-size: 0.4rem;
+    font-size: 0.36rem;
   }
 
   .green-work-project-chip {
@@ -3895,27 +3895,27 @@
     flex: 0 0 138px;
     width: 138px;
     min-width: 138px;
-    min-height: 148px;
-    padding: 0.54rem 0.5rem 0.48rem;
-    gap: 0.34rem;
+    min-height: 132px;
+    padding: 0.4rem 0.4rem 0.38rem;
+    gap: 0.22rem;
   }
 
   .green-work-action-icon {
-    width: 50px;
-    height: 50px;
+    width: 40px;
+    height: 40px;
   }
 
   .green-work-action-icon svg {
-    width: 46px;
-    height: 46px;
+    width: 36px;
+    height: 36px;
   }
 
   .green-work-action-title-row > span:first-child {
-    font-size: 0.72rem;
+    font-size: 0.66rem;
   }
 
   .green-work-action-card .green-work-action-copy > small {
-    font-size: 0.38rem;
+    font-size: 0.34rem;
   }
 
   .project-controls-row {
