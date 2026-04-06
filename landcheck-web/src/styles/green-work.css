@@ -383,6 +383,16 @@
   height: 29px;
 }
 
+.green-work-action-icon--remote-monitoring {
+  width: 32px;
+  height: 32px;
+}
+
+.green-work-action-icon--remote-monitoring svg {
+  width: 29px;
+  height: 29px;
+}
+
 /* ── Action Card Active ── */
 .green-work-action-card.active {
   border-color: rgba(15, 61, 31, 0.25);
@@ -3794,6 +3804,16 @@
     height: 30px;
   }
 
+  .green-work-action-icon--remote-monitoring {
+    width: 34px;
+    height: 34px;
+  }
+
+  .green-work-action-icon--remote-monitoring svg {
+    width: 30px;
+    height: 30px;
+  }
+
   .green-work-action-copy {
     display: block;
   }
@@ -3888,6 +3908,16 @@
   }
 
   .green-work-action-icon--map-view svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .green-work-action-icon--remote-monitoring {
+    width: 30px;
+    height: 30px;
+  }
+
+  .green-work-action-icon--remote-monitoring svg {
     width: 26px;
     height: 26px;
   }
