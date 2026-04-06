@@ -373,6 +373,16 @@
   stroke-linejoin: round;
 }
 
+.green-work-action-icon--map-view {
+  width: 32px;
+  height: 32px;
+}
+
+.green-work-action-icon--map-view svg {
+  width: 29px;
+  height: 29px;
+}
+
 /* ── Action Card Active ── */
 .green-work-action-card.active {
   border-color: rgba(15, 61, 31, 0.25);
@@ -3774,6 +3784,16 @@
     height: 22px;
   }
 
+  .green-work-action-icon--map-view {
+    width: 34px;
+    height: 34px;
+  }
+
+  .green-work-action-icon--map-view svg {
+    width: 30px;
+    height: 30px;
+  }
+
   .green-work-action-copy {
     display: block;
   }
@@ -3860,6 +3880,16 @@
   .green-work-action-icon svg {
     width: 20px;
     height: 20px;
+  }
+
+  .green-work-action-icon--map-view {
+    width: 30px;
+    height: 30px;
+  }
+
+  .green-work-action-icon--map-view svg {
+    width: 26px;
+    height: 26px;
   }
 
   .green-work-action-title-row > span:first-child {
