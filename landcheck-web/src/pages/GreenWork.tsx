@@ -6281,11 +6281,6 @@ export default function GreenWork() {
       {activeProjectId && (
         <div className="green-work-active-hub-wrap">
           <div className="green-work-active-hub">
-            <div className="green-work-active-hub-head">
-              <span className="green-work-active-hub-kicker">Active Project</span>
-              <strong>{activeProjectName}</strong>
-              <p>Select an action to continue.</p>
-            </div>
             <div className="green-work-action-grid">
               {activeProjectActions.map((action) => (
                 <button
