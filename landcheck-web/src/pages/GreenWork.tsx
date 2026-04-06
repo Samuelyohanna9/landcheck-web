@@ -1121,25 +1121,25 @@ const renderActionIcon = (form: WorkForm) => {
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path
-            d="M10.6 9.7l2.5-2.5 3.3 3.3-2.5 2.5zM8.8 7.9l1.7 1.7-2.1 2.1-1.7-1.7zM14.5 13.6l1.7 1.7-2.1 2.1-1.7-1.7z"
+            d="M10.4 10.1 13.1 7.4 16.6 10.9 13.9 13.6zM8.2 7.9l2 2-3.1 3.1-2-2zM13.8 13.5l2 2-3.1 3.1-2-2z"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.25"
+            strokeWidth="1.2"
             strokeLinejoin="round"
             strokeLinecap="round"
           />
           <path
-            d="M11.3 12.7l-4.2 4.2M12.7 11.3l4.2-4.2M17.8 6.2l1-1M5.2 18.8l1-1"
+            d="M11.2 12.8 6.1 17.9M12.8 11.2 17.9 6.1M18.9 5.1l.9-.9M4.2 19.8l.9-.9"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.25"
+            strokeWidth="1.2"
             strokeLinecap="round"
           />
           <path
-            d="M6.9 16.2c1 .1 1.9.5 2.6 1.2.7.7 1.1 1.6 1.2 2.6M5.1 18c1.4.2 2.7.8 3.7 1.8s1.6 2.2 1.8 3.7"
+            d="M6.8 16.1c1 .1 1.9.5 2.6 1.2.7.7 1.1 1.6 1.2 2.6M5 17.9c1.5.2 2.8.8 3.9 1.9 1.1 1.1 1.7 2.4 1.9 3.9"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.25"
+            strokeWidth="1.2"
             strokeLinecap="round"
           />
         </svg>
@@ -6286,12 +6286,12 @@ export default function GreenWork() {
                 <button
                   key={action.form}
                   type="button"
-                  className={`green-work-action-card ${activeForm === action.form ? "active" : ""} ${action.form === "map_view" ? "green-work-action-card--map-view" : ""}`}
+                  className={`green-work-action-card ${activeForm === action.form ? "active" : ""} ${action.form === "map_view" ? "green-work-action-card--map-view" : ""} ${action.form === "remote_monitoring" ? "green-work-action-card--remote-monitoring" : ""}`}
                   onClick={() => openForm(action.form)}
                   title={`${action.title} - ${action.note}`}
                   aria-label={action.title}
                 >
-                  <span className={`green-work-action-icon ${action.form === "map_view" ? "green-work-action-icon--map-view" : ""}`} aria-hidden="true">
+                  <span className={`green-work-action-icon ${action.form === "map_view" ? "green-work-action-icon--map-view" : ""} ${action.form === "remote_monitoring" ? "green-work-action-icon--remote-monitoring" : ""}`} aria-hidden="true">
                     {renderActionIcon(action.form)}
                   </span>
                   <span className="green-work-action-copy">
