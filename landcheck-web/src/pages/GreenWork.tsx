@@ -5397,10 +5397,10 @@ export default function GreenWork() {
   const displayedLiveSummary = liveTableIsExistingScope ? effectiveExistingLiveSummary : effectiveLiveSummary;
   const displayedLiveSources = liveTableIsExistingScope ? serverExistingLiveSources : serverLiveSources;
 
-  const activeProjectActions: Array<{ form: WorkForm; title: string; note: string }> = [
+  const activeProjectActions: Array<{ form: WorkForm; title: string; note: string; isNew?: boolean }> = [
     { form: "overview", title: "Overview", note: "Progress summary" },
     { form: "map_view", title: "Map View", note: "Trees + draw polygons" },
-    { form: "remote_monitoring", title: "Remote Monitoring", note: "Polygon vegetation tracking" },
+    { form: "remote_monitoring", title: "Remote Monitoring", note: "Polygon vegetation tracking", isNew: true },
     { form: "live_table", title: "Live Maintenance", note: "New planting + existing tree cycles" },
     { form: "users", title: "Users", note: "All staff status + roles" },
     { form: "add_user", title: "Add Staff", note: "Create user profile" },
@@ -6259,6 +6259,17 @@ export default function GreenWork() {
                   <span className="green-work-action-copy">
                     <span className="green-work-action-title-row">
                       <span>{action.title}</span>
+                      {action.isNew && (
+                        <span className="green-work-feature-badge" aria-label={`${action.title} is a new feature`}>
+                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path
+                              d="M12.1 3.5c.9 2.1.4 3.8-.6 5.2-.8 1.2-.8 2.2-.1 3 .8-.4 1.5-1.1 2-2.1 1.9 1.4 3.1 3.3 3.1 5.7 0 3.1-2.3 5.3-5.6 5.3-3.2 0-5.4-2.2-5.4-5.1 0-2.2 1.1-4 3-5.5.3 1 .8 1.8 1.6 2.4.7-.9.7-2 .1-3.1-1-1.5-1.5-3.3-.4-5.8.8.3 1.6 1 2.3 2z"
+                              fill="currentColor"
+                            />
+                          </svg>
+                          New
+                        </span>
+                      )}
                       {action.form === "live_table" && (
                         <span className="green-work-live-badge" aria-label="Live monitoring active">
                           <span className="green-work-live-badge-dot" aria-hidden="true" />

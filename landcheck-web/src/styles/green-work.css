@@ -338,6 +338,29 @@
   white-space: nowrap;
 }
 
+.green-work-feature-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(220, 38, 38, 0.28);
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--red-700);
+  font-size: 0.52rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0.12rem 0.32rem 0.11rem;
+  white-space: nowrap;
+}
+
+.green-work-feature-badge svg {
+  width: 9px;
+  height: 9px;
+  display: block;
+}
+
 .green-work-live-badge-dot {
   width: 6px;
   height: 6px;
@@ -387,6 +410,12 @@
   border-color: rgba(255, 255, 255, 0.25);
   background: rgba(0, 0, 0, 0.15);
   color: #e0ffe4;
+}
+
+.green-work-action-card.active .green-work-feature-badge {
+  border-color: rgba(255, 217, 217, 0.36);
+  background: rgba(111, 14, 14, 0.28);
+  color: #ffd7d7;
 }
 
 .green-work-action-card.active .green-work-live-badge-dot {
