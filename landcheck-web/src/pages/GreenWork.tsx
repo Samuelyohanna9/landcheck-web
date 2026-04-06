@@ -1095,46 +1095,47 @@ const renderActionIcon = (form: WorkForm) => {
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path
-            d="M4 6.5l5.2-2.2 5.4 2 5.4-2.2v13.4l-5.4 2.2-5.4-2-5.2 2.2z"
+            d="M4.2 6.6l5-2.1 5.3 2 5.3-2.1v13l-5.3 2.1-5.3-2-5 2.1z"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.8"
+            strokeWidth="1.45"
             strokeLinejoin="round"
             strokeLinecap="round"
           />
-          <path d="M9.2 4.4v13.3M14.6 6.3v13.3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M9.2 4.5v13M14.5 6.4v13" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" />
           <path
-            d="M16.7 5.8c-2.2 0-3.9 1.7-3.9 3.8 0 2.8 3.9 6.5 3.9 6.5s3.9-3.7 3.9-6.5c0-2.1-1.7-3.8-3.9-3.8z"
+            d="M16.6 5.9c-2.05 0-3.55 1.54-3.55 3.46 0 2.54 3.55 5.97 3.55 5.97s3.55-3.43 3.55-5.97c0-1.92-1.5-3.46-3.55-3.46z"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.8"
+            strokeWidth="1.45"
             strokeLinejoin="round"
           />
-          <circle cx="16.7" cy="9.6" r="1.3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <circle cx="16.6" cy="9.35" r="1.1" fill="none" stroke="currentColor" strokeWidth="1.45" />
         </svg>
       );
     case "remote_monitoring":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path
-            d="M9.2 9.4l2.4-2.4 4.8 4.8-2.4 2.4zM7.1 7.3l2.6 2.6-2.8 2.8-2.6-2.6zM14.4 14.6l2.6 2.6-2.8 2.8-2.6-2.6z"
+            d="M10.4 9.7l3-3 4 4-3 3zM8.2 7.5l2.1 2.1-2.5 2.5-2.1-2.1zM14.7 14l2.1 2.1-2.5 2.5-2.1-2.1z"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.8"
+            strokeWidth="1.45"
             strokeLinejoin="round"
-          />
-          <path
-            d="M10.9 13.1l-4 4M13.1 10.9l4-4M16.9 7.1l1.9-1.9M5.2 18.8l1.9-1.9"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
             strokeLinecap="round"
           />
           <path
-            d="M7.1 16.2a3.9 3.9 0 0 0 3.9 3.9M5.2 18.1A6.5 6.5 0 0 0 11.7 24"
+            d="M11.2 12.8l-4.5 4.5M12.8 11.2l4.5-4.5M17.9 6.1l1.3-1.3M4.8 19.2l1.3-1.3"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.8"
+            strokeWidth="1.45"
+            strokeLinecap="round"
+          />
+          <path
+            d="M6.9 16.3a4.1 4.1 0 0 0 4.1 4.1M5 18.2a6.9 6.9 0 0 0 6.9 6.9"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.45"
             strokeLinecap="round"
           />
         </svg>
@@ -1142,14 +1143,18 @@ const renderActionIcon = (form: WorkForm) => {
     case "assign_work":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M4 19h16M6 16l3-6 3 3 4-7 2 3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M5.5 9.2 12 5.7l6.5 3.5-6.5 3.5zM5.5 9.2v6.4L12 19l6.5-3.4V9.2" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" />
+          <path d="M12 12.7V19" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" />
+          <path d="M12 8.6c0-1.4 1-2.6 2.4-2.8-.2 1.5-.8 2.7-1.8 3.7-.9.9-2.1 1.5-3.5 1.7.3-1.5 1-2.8 2.1-3.8.2-.2.5-.4.8-.6z" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" strokeLinecap="round" />
+          <path d="M12 10.4c-.7-1.5-1.9-2.4-3.6-2.8.2 1.3.7 2.4 1.6 3.2.6.6 1.3 1 2 1.3" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" strokeLinecap="round" />
         </svg>
       );
     case "assign_task":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M6 4h12v16H6zM9 8h6M9 12h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-          <path d="M8 17l2 2 4-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M8.2 14.8 5.4 17.6M9.7 13.3 15.7 7.3a1.9 1.9 0 1 1 2.7 2.7l-6 6-4.2 1.5z" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" strokeLinecap="round" />
+          <path d="M12.5 6.2c.4-.8 1.1-1.5 2-1.9-.1 1.4-.6 2.6-1.5 3.5-.8.8-1.8 1.3-3.1 1.5.2-1.4.8-2.5 1.8-3.4.3-.3.5-.5.8-.7z" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" strokeLinecap="round" />
+          <path d="M17.9 14.7a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4zm0-1.7v1M17.9 19.1v1M15.6 16.9h1M19.2 16.9h1M16.3 15.3l.7.7M18.8 18l.7.7M19.5 15.3l-.7.7M17 18l-.7.7" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       );
     case "review_queue":
@@ -1168,16 +1173,16 @@ const renderActionIcon = (form: WorkForm) => {
     case "custodian_hub":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" strokeWidth="2" />
-          <path d="M3.5 19c1-2.7 3.2-4.2 6.5-4.2s5.5 1.5 6.5 4.2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M16 8h5M18.5 5.5v5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M12 4.6c2.5 2.1 4.9 3.2 7.2 3.5 0 5.7-2.3 9.6-7.2 11.8-4.9-2.2-7.2-6.1-7.2-11.8 2.3-.3 4.7-1.4 7.2-3.5z" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" />
+          <path d="M12.2 15.6c1.7-1 2.7-2.5 3.1-4.5-1.7.2-3 .8-4 1.8-.8.8-1.3 1.8-1.5 3 .9-.1 1.7-.3 2.4-.8z" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" strokeLinecap="round" />
+          <path d="M11.4 12c-.5-1.1-1.4-1.9-2.7-2.3.2 1.2.7 2.1 1.4 2.8.4.4.9.7 1.4.9" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" strokeLinecap="round" />
         </svg>
       );
     case "existing_tree_intake":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M12 4l4 5h-3v8h-2V9H8l4-5z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-          <path d="M4 20h16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M6.2 14.2c-1.2-.5-2.1-1.6-2.1-3 0-1.9 1.5-3.4 3.5-3.4.4 0 .8.1 1.1.2.9-2.1 3-3.5 5.4-3.5 3.1 0 5.7 2.4 5.9 5.5 1.4.4 2.4 1.7 2.4 3.2 0 1.9-1.5 3.4-3.5 3.4H6.2z" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" strokeLinecap="round" />
+          <path d="M12 10.2v7.3M12 10.2c-.8 2-2.1 3.3-4 3.9M12 10.2c.8 2 2.1 3.3 4 3.9M8.8 17.5h6.4" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       );
     default:
@@ -5439,9 +5444,9 @@ export default function GreenWork() {
     { form: "users", title: "Users", note: "All staff status + roles" },
     { form: "add_user", title: "Add Staff", note: "Create user profile" },
     { form: "assign_work", title: "Planting Orders", note: "Assign planting targets" },
-    { form: "assign_task", title: "Maintenance", note: "Assign maintenance tasks" },
-    { form: "custodian_hub", title: "Custodian Hub", note: "Overview + custodians + events + report" },
-    { form: "existing_tree_intake", title: "Existing Trees", note: "Existing tree detail records" },
+    { form: "assign_task", title: "Maintenance", note: "Assign maintenance" },
+    { form: "custodian_hub", title: "Custodian Hub", note: "Overview + custodians +" },
+    { form: "existing_tree_intake", title: "Existing Trees", note: "Existing tree records" },
     { form: "verra_reports", title: "Verra Reports", note: "VCS package + history" },
     { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
   ];
