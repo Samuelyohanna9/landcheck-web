@@ -5400,8 +5400,8 @@ export default function GreenWork() {
   const activeProjectActions: Array<{ form: WorkForm; title: string; note: string; isNew?: boolean }> = [
     { form: "overview", title: "Overview", note: "Progress summary" },
     { form: "map_view", title: "Map View", note: "Trees + draw polygons" },
-    { form: "remote_monitoring", title: "Remote Monitoring", note: "Polygon vegetation tracking", isNew: true },
-    { form: "live_table", title: "Live Maintenance", note: "New planting + existing tree cycles" },
+    { form: "remote_monitoring", title: "Remote Monitoring", note: "Satellite monitoring +", isNew: true },
+    { form: "live_table", title: "Live Maintenance", note: "New planting + existing tree" },
     { form: "users", title: "Users", note: "All staff status + roles" },
     { form: "add_user", title: "Add Staff", note: "Create user profile" },
     { form: "assign_work", title: "Planting Orders", note: "Assign planting targets" },
