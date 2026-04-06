@@ -1068,12 +1068,16 @@ const renderActionIcon = (form: WorkForm) => {
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path
-            d="M4 6h16v12H4zM4 10h16M9 10v8M15 10v8"
+            d="M6.4 16.8c1-2.4 2.6-3.8 4.9-4.1 1.3-.2 2.4-.9 3-2.1.5 1.1 1.3 1.8 2.6 2.1 1.1.2 2.2.2 3.1.1"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="1.45"
+            strokeLinecap="round"
             strokeLinejoin="round"
           />
+          <path d="M4.7 12.7h3.1l1.4-2.4 1.8 4.8 1.5-3h2.1l1.1-1.9 1.2 2.5H20" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M17.5 6c-1.8.2-3.2 1-4.2 2.3 1.5.2 2.8-.1 4-.9 1.2-.8 1.9-2 2.2-3.5-1 .2-1.7.5-2 .7z" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" strokeLinecap="round" />
+          <path d="M13.8 8.6c-.5-1.1-1.4-1.8-2.8-2.2.2 1.2.6 2 1.4 2.7.4.4.9.7 1.4.9" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" strokeLinecap="round" />
         </svg>
       );
     case "users":
@@ -1117,25 +1121,25 @@ const renderActionIcon = (form: WorkForm) => {
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path
-            d="M10.4 9.7l3-3 4 4-3 3zM8.2 7.5l2.1 2.1-2.5 2.5-2.1-2.1zM14.7 14l2.1 2.1-2.5 2.5-2.1-2.1z"
+            d="M10.6 9.7l2.5-2.5 3.3 3.3-2.5 2.5zM8.8 7.9l1.7 1.7-2.1 2.1-1.7-1.7zM14.5 13.6l1.7 1.7-2.1 2.1-1.7-1.7z"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.45"
+            strokeWidth="1.25"
             strokeLinejoin="round"
             strokeLinecap="round"
           />
           <path
-            d="M11.2 12.8l-4.5 4.5M12.8 11.2l4.5-4.5M17.9 6.1l1.3-1.3M4.8 19.2l1.3-1.3"
+            d="M11.3 12.7l-4.2 4.2M12.7 11.3l4.2-4.2M17.8 6.2l1-1M5.2 18.8l1-1"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.45"
+            strokeWidth="1.25"
             strokeLinecap="round"
           />
           <path
-            d="M6.9 16.3a4.1 4.1 0 0 0 4.1 4.1M5 18.2a6.9 6.9 0 0 0 6.9 6.9"
+            d="M6.9 16.2c1 .1 1.9.5 2.6 1.2.7.7 1.1 1.6 1.2 2.6M5.1 18c1.4.2 2.7.8 3.7 1.8s1.6 2.2 1.8 3.7"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.45"
+            strokeWidth="1.25"
             strokeLinecap="round"
           />
         </svg>
