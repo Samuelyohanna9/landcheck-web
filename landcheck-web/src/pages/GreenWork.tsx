@@ -1094,15 +1094,49 @@ const renderActionIcon = (form: WorkForm) => {
     case "map_view":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M4 6l5-2 6 2 5-2v14l-5 2-6-2-5 2z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-          <path d="M9 4v14M15 6v14" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path
+            d="M4 6.5l5.2-2.2 5.4 2 5.4-2.2v13.4l-5.4 2.2-5.4-2-5.2 2.2z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+          <path d="M9.2 4.4v13.3M14.6 6.3v13.3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path
+            d="M16.7 5.8c-2.2 0-3.9 1.7-3.9 3.8 0 2.8 3.9 6.5 3.9 6.5s3.9-3.7 3.9-6.5c0-2.1-1.7-3.8-3.9-3.8z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+          <circle cx="16.7" cy="9.6" r="1.3" fill="none" stroke="currentColor" strokeWidth="1.8" />
         </svg>
       );
     case "remote_monitoring":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M4 16l4-4 3 2 5-6 4 3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M5 19h14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path
+            d="M9.2 9.4l2.4-2.4 4.8 4.8-2.4 2.4zM7.1 7.3l2.6 2.6-2.8 2.8-2.6-2.6zM14.4 14.6l2.6 2.6-2.8 2.8-2.6-2.6z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M10.9 13.1l-4 4M13.1 10.9l4-4M16.9 7.1l1.9-1.9M5.2 18.8l1.9-1.9"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+          <path
+            d="M7.1 16.2a3.9 3.9 0 0 0 3.9 3.9M5.2 18.1A6.5 6.5 0 0 0 11.7 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
         </svg>
       );
     case "assign_work":
@@ -5400,7 +5434,7 @@ export default function GreenWork() {
   const activeProjectActions: Array<{ form: WorkForm; title: string; note: string; isNew?: boolean }> = [
     { form: "overview", title: "Overview", note: "Progress summary" },
     { form: "map_view", title: "Map View", note: "Trees + draw polygons" },
-    { form: "remote_monitoring", title: "Remote Monitoring", note: "Satellite monitoring +", isNew: true },
+    { form: "remote_monitoring", title: "Remote Monitoring", note: "Satellite Monitoring +", isNew: true },
     { form: "live_table", title: "Live Maintenance", note: "New planting + existing tree" },
     { form: "users", title: "Users", note: "All staff status + roles" },
     { form: "add_user", title: "Add Staff", note: "Create user profile" },
