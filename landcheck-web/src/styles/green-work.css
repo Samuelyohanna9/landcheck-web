@@ -260,7 +260,7 @@
 .green-work-action-card .green-work-action-copy > small {
   display: block;
   margin-top: 0.03rem;
-  font-size: 0.42rem;
+  font-size: 0.48rem;
   color: var(--gw-subtext);
   font-weight: 700;
   white-space: normal;
@@ -3783,7 +3783,7 @@
   }
 
   .green-work-action-card .green-work-action-copy > small {
-    font-size: 0.39rem;
+    font-size: 0.45rem;
   }
 
   .green-work-project-chip {
@@ -3867,7 +3867,7 @@
   }
 
   .green-work-action-card .green-work-action-copy > small {
-    font-size: 0.37rem;
+    font-size: 0.42rem;
   }
 
   .project-controls-row {
