@@ -1,8 +1,8 @@
-self.CACHE_NAME = "green-shell-v8";
-self.MAP_CACHE_NAME = "green-map-v3";
+self.CACHE_NAME = "green-shell-v9";
+self.MAP_CACHE_NAME = "green-map-v4";
 self.SYNC_TAG = "green-sync-queue";
 
-/* ── Precache list ─────────────────────────────────────────────── */
+/* -- Precache list ----------------------------------------------- */
 self.PRECACHE_URLS = [
   "/green",
   "/green/manifest.webmanifest",
@@ -11,7 +11,7 @@ self.PRECACHE_URLS = [
   "/green/icons/icon-512-maskable.png",
 ];
 
-/* ── Install ───────────────────────────────────────────────────── */
+/* -- Install ----------------------------------------------------- */
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(self.CACHE_NAME).then((cache) =>
@@ -27,7 +27,7 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-/* ── Activate ──────────────────────────────────────────────────── */
+/* -- Activate ---------------------------------------------------- */
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
@@ -49,7 +49,7 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-/* ── Background Sync ───────────────────────────────────────────── */
+/* -- Background Sync --------------------------------------------- */
 self.addEventListener("sync", (event) => {
   if (event.tag !== self.SYNC_TAG) return;
   event.waitUntil(
@@ -65,7 +65,7 @@ self.addEventListener("sync", (event) => {
   );
 });
 
-/* ── Helpers ───────────────────────────────────────────────────── */
+/* -- Helpers ----------------------------------------------------- */
 function isMapboxRequest(url) {
   var host = String(url.hostname || "").toLowerCase();
   if (!host.endsWith(".mapbox.com") && host !== "mapbox.com") return false;
@@ -144,7 +144,7 @@ function findCachedShell() {
   });
 }
 
-/* ── Fetch handler ─────────────────────────────────────────────── */
+/* -- Fetch handler ----------------------------------------------- */
 self.addEventListener("fetch", (event) => {
   var req = event.request;
   var url = new URL(req.url);
@@ -156,42 +156,35 @@ self.addEventListener("fetch", (event) => {
   // Never intercept same-origin Green API/data requests. Let them go straight to the network.
   if (isLikelyGreenApiRequest(req, url)) return;
 
-  // Skip API calls – let them go straight to network
+  // Skip API calls � let them go straight to network
   if (isSameOrigin && url.pathname.startsWith("/api/")) return;
 
-  /* ── Mapbox tile / style / font caching (stale-while-revalidate) ── */
+  /* Mapbox tile / style / font caching (network-first, cache fallback) */
   if (isMapboxRequest(url)) {
     event.respondWith(
       caches.open(self.MAP_CACHE_NAME).then(function (mapCache) {
-        return mapCache.match(req).then(function (cached) {
-          var networkFetch = fetch(req)
-            .then(function (resp) {
-              if (resp && resp.ok) {
-                mapCache.put(req, resp.clone());
-              }
-              return resp;
-            })
-            .catch(function () {
+        return fetch(req)
+          .then(function (resp) {
+            if (resp && resp.ok) {
+              event.waitUntil(mapCache.put(req, resp.clone()));
+            }
+            return resp;
+          })
+          .catch(function () {
+            return mapCache.match(req).then(function (cached) {
               if (cached) return cached;
               return new Response("Offline map resource unavailable", {
                 status: 503,
                 statusText: "Offline",
               });
             });
-
-          if (cached) {
-            event.waitUntil(networkFetch.catch(function () {}));
-            return cached;
-          }
-
-          return networkFetch;
-        });
+          });
       })
     );
     return;
   }
 
-  /* ── SPA navigation (network-first → cache → shell fallback) ────── */
+  /* -- SPA navigation (network-first ? cache ? shell fallback) ------ */
   var isAppNavigation = req.mode === "navigate" && isSameOrigin;
 
   if (isAppNavigation) {
@@ -242,10 +235,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  /* ── Non-same-origin: pass through ── */
+  /* -- Non-same-origin: pass through -- */
   if (!isSameOrigin) return;
 
-  /* ── Static assets (cache-first) ── */
+  /* -- Static assets (cache-first) -- */
   var isBuildAsset = url.pathname.startsWith("/assets/");
   var isCacheableStatic = isGreenAsset(url.pathname) || isBuildAsset;
   if (!isCacheableStatic) return;
