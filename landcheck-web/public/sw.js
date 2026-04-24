@@ -1,5 +1,5 @@
-var CACHE_NAME = "green-shell-v9";
-var MAP_CACHE_NAME = "green-map-v5";
+var CACHE_NAME = "green-shell-v10";
+var MAP_CACHE_NAME = "green-map-v6";
 var SYNC_TAG = "green-sync-queue";
 
 /* ── Precache list ─────────────────────────────────────────────── */
@@ -382,19 +382,19 @@ self.addEventListener("fetch", function (event) {
     return;
   }
 
-  /* ── Mapbox tile / style / font caching (stale-while-revalidate) ── */
+  /* Mapbox tile / style / font caching (network-first, cache fallback) */
   if (isMapboxRequest(url)) {
     event.respondWith(
       caches.open(MAP_CACHE_NAME).then(function (mapCache) {
-        return mapCache.match(req).then(function (cached) {
-          var networkFetch = fetch(req)
-            .then(function (resp) {
-              if (resp && resp.ok) {
-                mapCache.put(req, resp.clone());
-              }
-              return resp;
-            })
-            .catch(function () {
+        return fetch(req)
+          .then(function (resp) {
+            if (resp && resp.ok) {
+              event.waitUntil(mapCache.put(req, resp.clone()));
+            }
+            return resp;
+          })
+          .catch(function () {
+            return mapCache.match(req).then(function (cached) {
               if (cached) return cached;
               // Return transparent 1x1 PNG for missing raster tiles instead of error
               if (
@@ -424,15 +424,7 @@ self.addEventListener("fetch", function (event) {
                 statusText: "Offline",
               });
             });
-
-          if (cached) {
-            // Serve cached tile immediately; update in background
-            event.waitUntil(networkFetch.catch(function () {}));
-            return cached;
-          }
-
-          return networkFetch;
-        });
+          });
       })
     );
     return;
