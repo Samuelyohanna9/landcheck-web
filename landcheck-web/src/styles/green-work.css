@@ -2434,9 +2434,8 @@
 }
 
 .green-work-multi-assign-item {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
+  display: grid;
+  gap: 0.38rem;
   padding: 0.42rem 0.48rem;
   border: 1px solid rgba(22, 76, 42, 0.1);
   border-radius: 10px;
@@ -2446,6 +2445,12 @@
   font-weight: 600;
 }
 
+.green-work-multi-assign-item-main {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 .green-work-multi-assign-item input[type="checkbox"] {
   width: 15px;
   height: 15px;
@@ -2453,35 +2458,11 @@
   accent-color: var(--green-600);
 }
 
-.green-work-multi-assign-config {
+.green-work-multi-assign-item-inline {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 180px));
   gap: 0.42rem;
-  margin-bottom: 0.55rem;
-  padding: 0.55rem 0.65rem;
-  border: 1px solid rgba(22, 76, 42, 0.12);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.78);
-}
-
-.green-work-multi-assign-config-list {
-  display: grid;
-  gap: 0.4rem;
-}
-
-.green-work-multi-assign-config-row {
-  display: grid;
-  grid-template-columns: minmax(140px, 1fr) repeat(2, minmax(0, 180px));
-  gap: 0.42rem;
-  align-items: center;
-  padding: 0.42rem 0.48rem;
-  border: 1px solid rgba(22, 76, 42, 0.1);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.92);
-}
-
-.green-work-multi-assign-config-row strong {
-  font-size: 0.8rem;
-  color: var(--green-900);
+  padding-left: 1.5rem;
 }
 
 .green-work-species-allocation {
@@ -4203,8 +4184,9 @@
     grid-template-columns: 1fr;
   }
 
-  .green-work-multi-assign-config-row {
+  .green-work-multi-assign-item-inline {
     grid-template-columns: 1fr;
+    padding-left: 0;
   }
 
   .green-work-live-season-row {
