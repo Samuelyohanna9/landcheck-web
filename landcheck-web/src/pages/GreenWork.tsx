@@ -1944,6 +1944,9 @@ export default function GreenWork() {
   const [newOrderAreaEnabled, setNewOrderAreaEnabled] = useState(false);
   const [newOrderAreaLabel, setNewOrderAreaLabel] = useState("");
   const [newOrderAreaGeometry, setNewOrderAreaGeometry] = useState<{ type: "Polygon" | "MultiPolygon"; coordinates: any } | null>(null);
+  const [newOrderMultiAssignEnabled, setNewOrderMultiAssignEnabled] = useState(false);
+  const [newOrderSelectedAssignees, setNewOrderSelectedAssignees] = useState<string[]>([]);
+  const [assigningWorkOrder, setAssigningWorkOrder] = useState(false);
   const [newUser, setNewUser] = useState({ full_name: "", role: "field_officer" });
   const [newProject, setNewProject] = useState({
     name: "",
@@ -2144,6 +2147,9 @@ export default function GreenWork() {
     priority: "normal",
     notes: "",
   });
+  const [newTaskMultiAssignEnabled, setNewTaskMultiAssignEnabled] = useState(false);
+  const [newTaskSelectedAssignees, setNewTaskSelectedAssignees] = useState<string[]>([]);
+  const [assigningMaintenanceTask, setAssigningMaintenanceTask] = useState(false);
   const [inspectedTree, setInspectedTree] = useState<TreeInspectData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeForm, setActiveForm] = useState<WorkForm | null>(
@@ -2692,6 +2698,33 @@ export default function GreenWork() {
     setRemoteMonitoringDraftGeometry(null);
     setRemoteMonitoringDraft({ source_order_id: "" });
   };
+
+  const toggleNamedSelection = (
+    current: string[],
+    nextName: string,
+  ) => {
+    const cleanName = String(nextName || "").trim();
+    if (!cleanName) return current;
+    return current.includes(cleanName)
+      ? current.filter((item) => item !== cleanName)
+      : [...current, cleanName];
+  };
+
+  const currentWorkOrderAssignees = useMemo(() => {
+    if (newOrderMultiAssignEnabled) {
+      return Array.from(new Set(newOrderSelectedAssignees.map((item) => String(item || "").trim()).filter(Boolean)));
+    }
+    const single = String(newOrder.assignee_name || "").trim();
+    return single ? [single] : [];
+  }, [newOrder.assignee_name, newOrderMultiAssignEnabled, newOrderSelectedAssignees]);
+
+  const currentTaskAssignees = useMemo(() => {
+    if (newTaskMultiAssignEnabled) {
+      return Array.from(new Set(newTaskSelectedAssignees.map((item) => String(item || "").trim()).filter(Boolean)));
+    }
+    const single = String(newTask.assignee_name || "").trim();
+    return single ? [single] : [];
+  }, [newTask.assignee_name, newTaskMultiAssignEnabled, newTaskSelectedAssignees]);
 
   const loadProjectData = async (projectId: number) => {
     const stamp = Date.now();
@@ -3957,8 +3990,9 @@ export default function GreenWork() {
 
   const createWorkOrder = async () => {
     if (!activeProjectId) return;
-    if (!newOrder.assignee_name.trim()) {
-      toast.error("Assignee name required");
+    const assignees = currentWorkOrderAssignees;
+    if (!assignees.length) {
+      toast.error(newOrderMultiAssignEnabled ? "Select at least one assignee" : "Assignee name required");
       return;
     }
     if (newOrderSpeciesMode && normalizedNewOrderSpeciesAllocations.length === 0) {
@@ -3980,15 +4014,19 @@ export default function GreenWork() {
     const targetTrees = newOrderSpeciesMode ? newOrderSpeciesTargetTotal : Number(newOrder.target_trees || 0);
     if (
       !(await ensureWorkOperationalConsent("work_order_create", {
-        assignee_name: newOrder.assignee_name,
+        assignee_name: assignees.length === 1 ? assignees[0] : `${assignees.length} staff`,
         target_trees: targetTrees,
         area_enabled: newOrderAreaEnabled,
       }))
     ) {
       return;
     }
+    const loadingId = toast.loading(
+      assignees.length > 1 ? `Assigning planting orders to ${assignees.length} staff...` : "Assigning planting order...",
+    );
+    setAssigningWorkOrder(true);
     try {
-      await api.post("/green/work-orders", {
+      const payloadBase = {
         project_id: activeProjectId,
         ...newOrder,
         work_type: "planting",
@@ -3998,24 +4036,61 @@ export default function GreenWork() {
         area_label: newOrderAreaEnabled ? (newOrderAreaLabel || "").trim() || null : null,
         area_geojson: newOrderAreaEnabled ? newOrderAreaGeometry : null,
         allow_existing_tree_area_reuse: newOrderAreaEnabled ? Boolean(newOrder.allow_existing_tree_area_reuse) : false,
-      });
-      setNewOrder({
-        assignee_name: "",
-        work_type: "planting",
-        target_trees: 0,
-        auto_assign_first_cycle_maintenance: false,
-        allow_existing_tree_area_reuse: false,
-        due_date: "",
-      });
-      setNewOrderSpeciesMode(false);
-      setNewOrderSpeciesAllocations([{ species: "", count: 0 }]);
-      setNewOrderAreaEnabled(false);
-      setNewOrderAreaLabel("");
-      setNewOrderAreaGeometry(null);
+      };
+      const results = await Promise.allSettled(
+        assignees.map((assignee) =>
+          api.post("/green/work-orders", {
+            ...payloadBase,
+            assignee_name: assignee,
+          }),
+        ),
+      );
+      const successCount = results.filter((item) => item.status === "fulfilled").length;
+      const failedAssignees = results
+        .map((item, index) => ({ item, assignee: assignees[index] }))
+        .filter((entry): entry is { item: PromiseRejectedResult; assignee: string } => entry.item.status === "rejected")
+        .map((entry) => entry.assignee);
+      if (successCount > 0) {
+        setNewOrder({
+          assignee_name: "",
+          work_type: "planting",
+          target_trees: 0,
+          auto_assign_first_cycle_maintenance: false,
+          allow_existing_tree_area_reuse: false,
+          due_date: "",
+        });
+        setNewOrderSpeciesMode(false);
+        setNewOrderSpeciesAllocations([{ species: "", count: 0 }]);
+        setNewOrderAreaEnabled(false);
+        setNewOrderAreaLabel("");
+        setNewOrderAreaGeometry(null);
+        setNewOrderMultiAssignEnabled(false);
+        setNewOrderSelectedAssignees([]);
+      } else if (newOrderMultiAssignEnabled) {
+        setNewOrderSelectedAssignees(failedAssignees);
+      } else if (failedAssignees[0]) {
+        setNewOrder((prev) => ({
+          ...prev,
+          assignee_name: failedAssignees[0],
+        }));
+      }
       await loadProjectData(activeProjectId);
-      toast.success("Planting order assigned");
+      toast.dismiss(loadingId);
+      if (failedAssignees.length === 0) {
+        toast.success(
+          successCount === 1 ? "Planting order assigned" : `Planting orders assigned to ${successCount} staff`,
+        );
+      } else if (successCount > 0) {
+        toast.success(`Assigned planting orders to ${successCount} staff`);
+        toast.error(`Failed for: ${failedAssignees.join(", ")}`);
+      } else {
+        toast.error(`Failed to assign planting order${assignees.length > 1 ? "s" : ""}`);
+      }
     } catch (error: any) {
+      toast.dismiss(loadingId);
       toast.error(error?.response?.data?.detail || "Failed to assign planting order");
+    } finally {
+      setAssigningWorkOrder(false);
     }
   };
 
@@ -4119,8 +4194,9 @@ export default function GreenWork() {
       toast.error("Select a tree");
       return;
     }
-    if (!newTask.assignee_name) {
-      toast.error("Assign a user");
+    const assignees = currentTaskAssignees;
+    if (!assignees.length) {
+      toast.error(newTaskMultiAssignEnabled ? "Select at least one user" : "Assign a user");
       return;
     }
     const activity = asMaintenanceActivity(newTask.task_type);
@@ -4154,7 +4230,7 @@ export default function GreenWork() {
     if (
       !(await ensureWorkOperationalConsent("maintenance_task_assign", {
         tree_id: newTask.tree_id,
-        assignee_name: newTask.assignee_name,
+        assignee_name: assignees.length === 1 ? assignees[0] : `${assignees.length} staff`,
         task_type: activity,
       }))
     ) {
@@ -4168,25 +4244,67 @@ export default function GreenWork() {
           ? "rainy"
           : seasonMode;
 
-    await api.post(`/green/trees/${newTask.tree_id}/tasks`, {
-      task_type: activity,
-      assignee_name: newTask.assignee_name,
-      due_date: dueDateToSubmit,
-      priority: newTask.priority,
-      notes: newTask.notes,
-      model_season: modelSeason,
-    });
-    setNewTask({
-      tree_id: "",
-      task_type: "watering",
-      assignee_name: "",
-      due_mode: "model_rainy",
-      due_date: "",
-      priority: "normal",
-      notes: "",
-    });
-    await loadProjectData(activeProjectId);
-    toast.success("Task assigned");
+    const loadingId = toast.loading(
+      assignees.length > 1 ? `Assigning maintenance tasks to ${assignees.length} staff...` : "Assigning maintenance task...",
+    );
+    setAssigningMaintenanceTask(true);
+    try {
+      const payloadBase = {
+        task_type: activity,
+        due_date: dueDateToSubmit,
+        priority: newTask.priority,
+        notes: newTask.notes,
+        model_season: modelSeason,
+      };
+      const results = await Promise.allSettled(
+        assignees.map((assignee) =>
+          api.post(`/green/trees/${newTask.tree_id}/tasks`, {
+            ...payloadBase,
+            assignee_name: assignee,
+          }),
+        ),
+      );
+      const successCount = results.filter((item) => item.status === "fulfilled").length;
+      const failedAssignees = results
+        .map((item, index) => ({ item, assignee: assignees[index] }))
+        .filter((entry): entry is { item: PromiseRejectedResult; assignee: string } => entry.item.status === "rejected")
+        .map((entry) => entry.assignee);
+      if (successCount > 0) {
+        setNewTask({
+          tree_id: "",
+          task_type: "watering",
+          assignee_name: "",
+          due_mode: "model_rainy",
+          due_date: "",
+          priority: "normal",
+          notes: "",
+        });
+        setNewTaskMultiAssignEnabled(false);
+        setNewTaskSelectedAssignees([]);
+      } else if (newTaskMultiAssignEnabled) {
+        setNewTaskSelectedAssignees(failedAssignees);
+      } else if (failedAssignees[0]) {
+        setNewTask((prev) => ({
+          ...prev,
+          assignee_name: failedAssignees[0],
+        }));
+      }
+      await loadProjectData(activeProjectId);
+      toast.dismiss(loadingId);
+      if (failedAssignees.length === 0) {
+        toast.success(successCount === 1 ? "Task assigned" : `Tasks assigned to ${successCount} staff`);
+      } else if (successCount > 0) {
+        toast.success(`Assigned tasks to ${successCount} staff`);
+        toast.error(`Failed for: ${failedAssignees.join(", ")}`);
+      } else {
+        toast.error(`Failed to assign task${assignees.length > 1 ? "s" : ""}`);
+      }
+    } catch (error: any) {
+      toast.dismiss(loadingId);
+      toast.error(error?.response?.data?.detail || "Failed to assign task");
+    } finally {
+      setAssigningMaintenanceTask(false);
+    }
   };
 
   const reviewSubmittedTask = async (taskId: number, decision: "approve" | "reject" | "metadata_edit") => {
@@ -7880,25 +7998,73 @@ export default function GreenWork() {
             <div className="green-work-card">
               <h3>Assign Tree Planting</h3>
               {!activeProjectId && <p className="green-work-note">Select project first from Project Focus.</p>}
-              <select
-                value={newOrder.assignee_name}
-                onChange={(e) => setNewOrder({ ...newOrder, assignee_name: e.target.value })}
-                disabled={!activeProjectId}
-              >
-                <option value="">Select assignee</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.full_name}>
-                    {u.full_name}
-                  </option>
-                ))}
-              </select>
+              <label className="green-work-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={newOrderMultiAssignEnabled}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setNewOrderMultiAssignEnabled(enabled);
+                    if (enabled) {
+                      setNewOrderSelectedAssignees((prev) =>
+                        prev.length ? prev : (newOrder.assignee_name.trim() ? [newOrder.assignee_name.trim()] : []),
+                      );
+                    } else if (newOrderSelectedAssignees.length) {
+                      setNewOrder((prev) => ({ ...prev, assignee_name: newOrderSelectedAssignees[0] || "" }));
+                    }
+                  }}
+                  disabled={!activeProjectId || assigningWorkOrder}
+                />
+                <span>Assign to multiple staff</span>
+              </label>
+              {!newOrderMultiAssignEnabled ? (
+                <select
+                  value={newOrder.assignee_name}
+                  onChange={(e) => setNewOrder({ ...newOrder, assignee_name: e.target.value })}
+                  disabled={!activeProjectId || assigningWorkOrder}
+                >
+                  <option value="">Select assignee</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.full_name}>
+                      {u.full_name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="green-work-multi-assign-panel">
+                  <div className="green-work-multi-assign-header">
+                    <span>{currentWorkOrderAssignees.length} selected</span>
+                    <div className="work-actions">
+                      <button type="button" onClick={() => setNewOrderSelectedAssignees(users.map((u) => u.full_name))} disabled={!users.length || assigningWorkOrder}>
+                        Select all
+                      </button>
+                      <button type="button" onClick={() => setNewOrderSelectedAssignees([])} disabled={!currentWorkOrderAssignees.length || assigningWorkOrder}>
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  <div className="green-work-multi-assign-list">
+                    {users.map((u) => (
+                      <label key={u.id} className="green-work-multi-assign-item">
+                        <input
+                          type="checkbox"
+                          checked={newOrderSelectedAssignees.includes(u.full_name)}
+                          onChange={() => setNewOrderSelectedAssignees((prev) => toggleNamedSelection(prev, u.full_name))}
+                          disabled={assigningWorkOrder}
+                        />
+                        <span>{u.full_name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
               <input
                 type="number"
                 placeholder="Target trees"
                 value={newOrderSpeciesMode ? newOrderSpeciesTargetTotal : newOrder.target_trees}
                 onChange={(e) => setNewOrder({ ...newOrder, target_trees: Number(e.target.value) })}
                 readOnly={newOrderSpeciesMode}
-                disabled={!activeProjectId}
+                disabled={!activeProjectId || assigningWorkOrder}
               />
               <label className="green-work-checkbox-row">
                 <input
@@ -7911,7 +8077,7 @@ export default function GreenWork() {
                       setNewOrderSpeciesAllocations([{ species: "", count: 0 }]);
                     }
                   }}
-                  disabled={!activeProjectId}
+                  disabled={!activeProjectId || assigningWorkOrder}
                 />
                 <span>Enable species-based allocation (optional)</span>
               </label>
@@ -7932,7 +8098,7 @@ export default function GreenWork() {
                             ),
                           )
                         }
-                        disabled={!activeProjectId}
+                        disabled={!activeProjectId || assigningWorkOrder}
                       />
                       <input
                         type="number"
@@ -7947,7 +8113,7 @@ export default function GreenWork() {
                             ),
                           )
                         }
-                        disabled={!activeProjectId}
+                        disabled={!activeProjectId || assigningWorkOrder}
                       />
                       <button
                         type="button"
@@ -7956,7 +8122,7 @@ export default function GreenWork() {
                             prev.length <= 1 ? [{ species: "", count: 0 }] : prev.filter((_, itemIndex) => itemIndex !== index),
                           )
                         }
-                        disabled={!activeProjectId}
+                        disabled={!activeProjectId || assigningWorkOrder}
                       >
                         Remove
                       </button>
@@ -7968,7 +8134,7 @@ export default function GreenWork() {
                       onClick={() =>
                         setNewOrderSpeciesAllocations((prev) => [...prev, { species: "", count: 0 }])
                       }
-                      disabled={!activeProjectId}
+                      disabled={!activeProjectId || assigningWorkOrder}
                     >
                       Add Species Row
                     </button>
@@ -7982,7 +8148,7 @@ export default function GreenWork() {
                 type="date"
                 value={newOrder.due_date}
                 onChange={(e) => setNewOrder({ ...newOrder, due_date: e.target.value })}
-                disabled={!activeProjectId}
+                disabled={!activeProjectId || assigningWorkOrder}
               />
               <label className="green-work-checkbox-row">
                 <input
@@ -7991,7 +8157,7 @@ export default function GreenWork() {
                   onChange={(e) =>
                     setNewOrder({ ...newOrder, auto_assign_first_cycle_maintenance: e.target.checked })
                   }
-                  disabled={!activeProjectId}
+                  disabled={!activeProjectId || assigningWorkOrder}
                 />
                 <span>
                   New planting order: auto-assign first-cycle maintenance to the same field officer (optional)
@@ -8014,7 +8180,7 @@ export default function GreenWork() {
                       setNewOrder((prev) => ({ ...prev, allow_existing_tree_area_reuse: false }));
                     }
                   }}
-                  disabled={!activeProjectId}
+                  disabled={!activeProjectId || assigningWorkOrder}
                 />
                 <span>Enable planting area (optional)</span>
               </label>
@@ -8029,7 +8195,7 @@ export default function GreenWork() {
                     placeholder="Optional (e.g. Block A - East plot)"
                     value={newOrderAreaLabel}
                     onChange={(e) => setNewOrderAreaLabel(e.target.value)}
-                    disabled={!activeProjectId}
+                    disabled={!activeProjectId || assigningWorkOrder}
                   />
                   <p className="green-work-note">
                     When enabled, polygon map appears on the right side of this tab. Use map trash icon to clear and redraw.
@@ -8047,8 +8213,8 @@ export default function GreenWork() {
                           allow_existing_tree_area_reuse: e.target.checked,
                         }))
                       }
-                      disabled={!activeProjectId}
-                    />
+                    disabled={!activeProjectId || assigningWorkOrder}
+                  />
                     <span>Allow this polygon to be reused in Green for existing-tree batch capture</span>
                   </label>
                   <p className="green-work-note">
@@ -8056,8 +8222,8 @@ export default function GreenWork() {
                   </p>
                 </div>
               )}
-              <button className="btn-primary" onClick={createWorkOrder} disabled={!activeProjectId}>
-                Assign Work
+              <button className="btn-primary" onClick={createWorkOrder} disabled={!activeProjectId || assigningWorkOrder}>
+                {assigningWorkOrder ? "Assigning..." : "Assign Work"}
               </button>
             </div>
           )}
@@ -8089,22 +8255,70 @@ export default function GreenWork() {
                 <option value="inspection">Inspection</option>
                 <option value="replacement">Replacement</option>
               </select>
-              <select
-                value={newTask.assignee_name}
-                onChange={(e) => setNewTask({ ...newTask, assignee_name: e.target.value })}
-                disabled={!activeProjectId}
-              >
-                <option value="">Assign to</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.full_name}>
-                    {u.full_name}
-                  </option>
-                ))}
-              </select>
+              <label className="green-work-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={newTaskMultiAssignEnabled}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setNewTaskMultiAssignEnabled(enabled);
+                    if (enabled) {
+                      setNewTaskSelectedAssignees((prev) =>
+                        prev.length ? prev : (newTask.assignee_name.trim() ? [newTask.assignee_name.trim()] : []),
+                      );
+                    } else if (newTaskSelectedAssignees.length) {
+                      setNewTask((prev) => ({ ...prev, assignee_name: newTaskSelectedAssignees[0] || "" }));
+                    }
+                  }}
+                  disabled={!activeProjectId || assigningMaintenanceTask}
+                />
+                <span>Assign to multiple staff</span>
+              </label>
+              {!newTaskMultiAssignEnabled ? (
+                <select
+                  value={newTask.assignee_name}
+                  onChange={(e) => setNewTask({ ...newTask, assignee_name: e.target.value })}
+                  disabled={!activeProjectId || assigningMaintenanceTask}
+                >
+                  <option value="">Assign to</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.full_name}>
+                      {u.full_name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="green-work-multi-assign-panel">
+                  <div className="green-work-multi-assign-header">
+                    <span>{currentTaskAssignees.length} selected</span>
+                    <div className="work-actions">
+                      <button type="button" onClick={() => setNewTaskSelectedAssignees(users.map((u) => u.full_name))} disabled={!users.length || assigningMaintenanceTask}>
+                        Select all
+                      </button>
+                      <button type="button" onClick={() => setNewTaskSelectedAssignees([])} disabled={!currentTaskAssignees.length || assigningMaintenanceTask}>
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  <div className="green-work-multi-assign-list">
+                    {users.map((u) => (
+                      <label key={u.id} className="green-work-multi-assign-item">
+                        <input
+                          type="checkbox"
+                          checked={newTaskSelectedAssignees.includes(u.full_name)}
+                          onChange={() => setNewTaskSelectedAssignees((prev) => toggleNamedSelection(prev, u.full_name))}
+                          disabled={assigningMaintenanceTask}
+                        />
+                        <span>{u.full_name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
               <select
                 value={newTask.priority}
                 onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-                disabled={!activeProjectId}
+                disabled={!activeProjectId || assigningMaintenanceTask}
               >
                 <option value="low">Low</option>
                 <option value="normal">Normal</option>
@@ -8113,7 +8327,7 @@ export default function GreenWork() {
               <select
                 value={newTask.due_mode}
                 onChange={(e) => setNewTask({ ...newTask, due_mode: e.target.value as TaskDueMode })}
-                disabled={!activeProjectId}
+                disabled={!activeProjectId || assigningMaintenanceTask}
               >
                 <option value="model_rainy">Date Based On Model (Rainy Season)</option>
                 <option value="model_dry">Date Based On Model (Dry Season)</option>
@@ -8139,17 +8353,17 @@ export default function GreenWork() {
                   type="date"
                   value={newTask.due_date}
                   onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
-                  disabled={!activeProjectId}
+                  disabled={!activeProjectId || assigningMaintenanceTask}
                 />
               )}
               <textarea
                 placeholder="Notes"
                 value={newTask.notes}
                 onChange={(e) => setNewTask({ ...newTask, notes: e.target.value })}
-                disabled={!activeProjectId}
+                disabled={!activeProjectId || assigningMaintenanceTask}
               />
-              <button className="btn-primary" onClick={assignTask} disabled={!activeProjectId}>
-                Assign Task
+              <button className="btn-primary" onClick={assignTask} disabled={!activeProjectId || assigningMaintenanceTask}>
+                {assigningMaintenanceTask ? "Assigning..." : "Assign Task"}
               </button>
             </div>
           )}
