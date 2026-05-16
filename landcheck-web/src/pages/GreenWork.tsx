@@ -905,6 +905,8 @@ type LiveMaintenanceRow = {
   modelRationale: string;
 };
 
+type MaintenanceBulkAssignMode = "single_staff" | "distribute_evenly";
+
 type LiveTreeMenuState = { treeId: number; x: number; y: number; taskType?: string } | null;
 
 const liveToneRank = (tone: LiveStatusTone) => {
@@ -2156,6 +2158,8 @@ export default function GreenWork() {
   });
   const [newTaskMultiAssignEnabled, setNewTaskMultiAssignEnabled] = useState(false);
   const [newTaskSelectedAssignees, setNewTaskSelectedAssignees] = useState<string[]>([]);
+  const [selectedMaintenanceRowKeys, setSelectedMaintenanceRowKeys] = useState<string[]>([]);
+  const [maintenanceBulkAssignMode, setMaintenanceBulkAssignMode] = useState<MaintenanceBulkAssignMode>("single_staff");
   const [assigningMaintenanceTask, setAssigningMaintenanceTask] = useState(false);
   const [inspectedTree, setInspectedTree] = useState<TreeInspectData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -2770,6 +2774,14 @@ export default function GreenWork() {
     const single = String(newTask.assignee_name || "").trim();
     return single ? [single] : [];
   }, [newTask.assignee_name, newTaskMultiAssignEnabled, newTaskSelectedAssignees]);
+
+  const toggleMaintenanceRowSelection = useCallback((rowKey: string) => {
+    const cleanKey = String(rowKey || "").trim();
+    if (!cleanKey) return;
+    setSelectedMaintenanceRowKeys((prev) =>
+      prev.includes(cleanKey) ? prev.filter((item) => item !== cleanKey) : [...prev, cleanKey],
+    );
+  }, []);
 
   const workOrderUsesCustomTargets = newOrderMultiAssignEnabled && !newOrderSpeciesMode && newOrderMultiAssignTargetMode === "custom";
   const workOrderUsesCustomDueDates = newOrderMultiAssignEnabled && newOrderMultiAssignDueMode === "custom";
@@ -3792,6 +3804,11 @@ export default function GreenWork() {
   }, [activeProjectId]);
 
   useEffect(() => {
+    setSelectedMaintenanceRowKeys([]);
+    setMaintenanceBulkAssignMode("single_staff");
+  }, [activeProjectId]);
+
+  useEffect(() => {
     if (!activeProjectId) {
       setCustodians([]);
       setDistributionEvents([]);
@@ -4258,48 +4275,66 @@ export default function GreenWork() {
 
   const assignTask = async () => {
     if (!activeProjectId) return;
-    if (!newTask.tree_id) {
+    const bulkRows = selectedMaintenanceRows;
+    const isBulkMaintenanceAssign = bulkRows.length > 0;
+    const singleActivity = asMaintenanceActivity(newTask.task_type);
+    if (!isBulkMaintenanceAssign && !newTask.tree_id) {
       toast.error("Select a tree");
       return;
     }
-    const assignees = currentTaskAssignees;
-    if (!assignees.length) {
-      toast.error(newTaskMultiAssignEnabled ? "Select at least one user" : "Assign a user");
-      return;
-    }
-    const activity = asMaintenanceActivity(newTask.task_type);
-    if (!activity) {
+    if (!isBulkMaintenanceAssign && !singleActivity) {
       toast.error("Select a valid maintenance type");
       return;
     }
+    const candidates = isBulkMaintenanceAssign
+      ? bulkRows.map((row) => ({
+          key: row.key,
+          treeId: row.treeId,
+          activity: row.activity,
+          label: `${formatProjectTreeLabelById(row.treeId)} | ${row.activityLabel}`,
+        }))
+      : [
+          {
+            key: `single-${newTask.tree_id}-${singleActivity}`,
+            treeId: Number(newTask.tree_id || 0),
+            activity: singleActivity as MaintenanceActivity,
+            label: `${formatProjectTreeLabelById(newTask.tree_id)} | ${formatTaskTypeLabel(singleActivity)}`,
+          },
+        ];
 
-    let dueDateToSubmit: string | null = null;
-    if (newTask.due_mode === "model_rainy" || newTask.due_mode === "model_dry") {
-      if (assignTaskModelPreview.blocked) {
-        toast.error(assignTaskModelPreview.detail);
-        return;
-      }
-      if (assignTaskModelPreview.isPastDue) {
-        toast.error("Model date has passed. Choose Other Date (Custom).");
-        return;
-      }
-      if (!assignTaskModelPreview.dueDateInput) {
-        toast.error("Model due date unavailable. Choose custom date or set planting date.");
-        return;
-      }
-      dueDateToSubmit = assignTaskModelPreview.dueDateInput;
-    } else {
-      if (!newTask.due_date) {
-        toast.error("Select custom due date");
-        return;
-      }
-      dueDateToSubmit = newTask.due_date;
+    const distributeAcrossStaff = isBulkMaintenanceAssign && bulkRows.length > 1 && maintenanceBulkAssignMode === "distribute_evenly";
+    const assignees = distributeAcrossStaff ? currentTaskAssignees : [String(newTask.assignee_name || "").trim()].filter(Boolean);
+    if (!assignees.length) {
+      toast.error(distributeAcrossStaff ? "Select staff for distribution" : "Assign a user");
+      return;
+    }
+    if (distributeAcrossStaff && assignees.length < 2) {
+      toast.error("Select at least two staff to distribute selected maintenance across.");
+      return;
+    }
+
+    const duePlans = candidates.map((candidate) => ({
+      candidate,
+      due: resolveTaskDueDateForCandidate(candidate.treeId, candidate.activity),
+    }));
+    const blockedDuePlan = duePlans.find((item) => item.due.blocked);
+    if (blockedDuePlan) {
+      toast.error(`${blockedDuePlan.candidate.label}: ${blockedDuePlan.due.detail}`);
+      return;
+    }
+    const pastDuePlan = duePlans.find((item) => item.due.isPastDue);
+    if (pastDuePlan) {
+      toast.error(`${pastDuePlan.candidate.label}: model date has passed. Choose Other Date (Custom).`);
+      return;
     }
     if (
       !(await ensureWorkOperationalConsent("maintenance_task_assign", {
-        tree_id: newTask.tree_id,
+        tree_id: isBulkMaintenanceAssign ? null : newTask.tree_id,
         assignee_name: assignees.length === 1 ? assignees[0] : `${assignees.length} staff`,
-        task_type: activity,
+        task_type:
+          isBulkMaintenanceAssign && bulkRows.length > 1
+            ? `${bulkRows.length} maintenance rows`
+            : formatTaskTypeLabel(candidates[0]?.activity || singleActivity),
       }))
     ) {
       return;
@@ -4313,31 +4348,53 @@ export default function GreenWork() {
           : seasonMode;
 
     const loadingId = toast.loading(
-      assignees.length > 1 ? `Assigning maintenance tasks to ${assignees.length} staff...` : "Assigning maintenance task...",
+      isBulkMaintenanceAssign
+        ? distributeAcrossStaff
+          ? `Distributing ${bulkRows.length} maintenance rows across ${assignees.length} staff...`
+          : `Assigning ${bulkRows.length} maintenance rows...`
+        : assignees.length > 1
+          ? `Assigning maintenance tasks to ${assignees.length} staff...`
+          : "Assigning maintenance task...",
     );
     setAssigningMaintenanceTask(true);
     try {
-      const payloadBase = {
-        task_type: activity,
-        due_date: dueDateToSubmit,
-        priority: newTask.priority,
-        notes: newTask.notes,
-        model_season: modelSeason,
-      };
-      const results = await Promise.allSettled(
-        assignees.map((assignee) =>
-          api.post(`/green/trees/${newTask.tree_id}/tasks`, {
-            ...payloadBase,
-            assignee_name: assignee,
-          }),
-        ),
-      );
+      const requests = isBulkMaintenanceAssign
+        ? duePlans.map(({ candidate, due }, index) =>
+            api.post(`/green/trees/${candidate.treeId}/tasks`, {
+              task_type: candidate.activity,
+              due_date: due.dueDateInput,
+              priority: newTask.priority,
+              notes: newTask.notes,
+              model_season: modelSeason,
+              assignee_name: distributeAcrossStaff ? assignees[index % assignees.length] : assignees[0],
+            }),
+          )
+        : assignees.map((assignee) =>
+            api.post(`/green/trees/${newTask.tree_id}/tasks`, {
+              task_type: singleActivity,
+              due_date: duePlans[0]?.due.dueDateInput,
+              priority: newTask.priority,
+              notes: newTask.notes,
+              model_season: modelSeason,
+              assignee_name: assignee,
+            }),
+          );
+      const results = await Promise.allSettled(requests);
       const successCount = results.filter((item) => item.status === "fulfilled").length;
-      const failedAssignees = results
-        .map((item, index) => ({ item, assignee: assignees[index] }))
-        .filter((entry): entry is { item: PromiseRejectedResult; assignee: string } => entry.item.status === "rejected")
-        .map((entry) => entry.assignee);
-      if (successCount > 0) {
+      const failedEntries = results
+        .map((item, index) => ({
+          item,
+          label: isBulkMaintenanceAssign
+            ? duePlans[index]?.candidate.label || `Row ${index + 1}`
+            : assignees[index] || `Assignee ${index + 1}`,
+          key: isBulkMaintenanceAssign ? duePlans[index]?.candidate.key || "" : "",
+        }))
+        .filter(
+          (entry): entry is { item: PromiseRejectedResult; label: string; key: string } =>
+            entry.item.status === "rejected",
+        );
+      const failedLabels = failedEntries.map((entry) => entry.label);
+      if (successCount > 0 && failedEntries.length === 0) {
         setNewTask({
           tree_id: "",
           task_type: "watering",
@@ -4349,23 +4406,43 @@ export default function GreenWork() {
         });
         setNewTaskMultiAssignEnabled(false);
         setNewTaskSelectedAssignees([]);
+        setSelectedMaintenanceRowKeys([]);
+        setMaintenanceBulkAssignMode("single_staff");
+      } else if (isBulkMaintenanceAssign && failedEntries.length > 0) {
+        setSelectedMaintenanceRowKeys(failedEntries.map((entry) => entry.key).filter(Boolean));
       } else if (newTaskMultiAssignEnabled) {
-        setNewTaskSelectedAssignees(failedAssignees);
-      } else if (failedAssignees[0]) {
+        setNewTaskSelectedAssignees(failedLabels);
+      } else if (failedLabels[0]) {
         setNewTask((prev) => ({
           ...prev,
-          assignee_name: failedAssignees[0],
+          assignee_name: failedLabels[0],
         }));
       }
       await loadProjectData(activeProjectId);
       toast.dismiss(loadingId);
-      if (failedAssignees.length === 0) {
-        toast.success(successCount === 1 ? "Task assigned" : `Tasks assigned to ${successCount} staff`);
+      if (failedEntries.length === 0) {
+        toast.success(
+          isBulkMaintenanceAssign
+            ? successCount === 1
+              ? "Maintenance row assigned"
+              : `${successCount} maintenance rows assigned`
+            : successCount === 1
+              ? "Task assigned"
+              : `Tasks assigned to ${successCount} staff`,
+        );
       } else if (successCount > 0) {
-        toast.success(`Assigned tasks to ${successCount} staff`);
-        toast.error(`Failed for: ${failedAssignees.join(", ")}`);
+        toast.success(
+          isBulkMaintenanceAssign
+            ? `Assigned ${successCount} maintenance row${successCount === 1 ? "" : "s"}`
+            : `Assigned tasks to ${successCount} staff`,
+        );
+        toast.error(`Failed for: ${failedLabels.join(", ")}`);
       } else {
-        toast.error(`Failed to assign task${assignees.length > 1 ? "s" : ""}`);
+        toast.error(
+          isBulkMaintenanceAssign
+            ? `Failed to assign ${bulkRows.length} selected maintenance row${bulkRows.length === 1 ? "" : "s"}`
+            : `Failed to assign task${assignees.length > 1 ? "s" : ""}`,
+        );
       }
     } catch (error: any) {
       toast.dismiss(loadingId);
@@ -4845,6 +4922,52 @@ export default function GreenWork() {
       blocked: model.blocked,
     };
   }, [newTask.task_type, newTask.tree_id, newTask.due_mode, tasks, trees, activeProjectMaturityMap]);
+
+  const resolveTaskDueDateForCandidate = useCallback(
+    (treeId: number, activity: MaintenanceActivity) => {
+      if (newTask.due_mode === "manual") {
+        const dueDateInput = String(newTask.due_date || "").trim();
+        if (!dueDateInput) {
+          return {
+            dueDateInput: "",
+            detail: "Select custom due date",
+            blocked: true,
+            isPastDue: false,
+            daysPastDue: 0,
+          };
+        }
+        return {
+          dueDateInput,
+          detail: "Custom date selected.",
+          blocked: false,
+          isPastDue: false,
+          daysPastDue: 0,
+        };
+      }
+      const modelSeason = dueModeToSeason(newTask.due_mode);
+      if (!modelSeason) {
+        return {
+          dueDateInput: "",
+          detail: "Select a valid due mode.",
+          blocked: true,
+          isPastDue: false,
+          daysPastDue: 0,
+        };
+      }
+      const model = getModelDueForTreeActivity(treeId, activity, modelSeason, activeProjectMaturityMap);
+      const today = startOfDay(new Date());
+      const countdown = model.dueDate ? dayDiff(model.dueDate, today) : null;
+      const isPastDue = countdown !== null && countdown < 0;
+      return {
+        dueDateInput: toDateInput(model.dueDate),
+        detail: model.detail,
+        blocked: model.blocked || !model.dueDate,
+        isPastDue,
+        daysPastDue: isPastDue ? Math.abs(countdown || 0) : 0,
+      };
+    },
+    [activeProjectMaturityMap, newTask.due_date, newTask.due_mode, tasks, trees],
+  );
 
   const isExistingTreeIntakeRecord = useCallback((tree: any) => {
     const origin = normalizeName(String(tree?.tree_origin || "").replaceAll(" ", "_"));
@@ -5622,10 +5745,41 @@ export default function GreenWork() {
     () => (serverExistingLiveRows.length ? serverExistingLiveSummary : existingTreeLiveSummary),
     [serverExistingLiveRows.length, serverExistingLiveSummary, existingTreeLiveSummary],
   );
+  const allMaintenanceAssignRows = useMemo(
+    () => [...effectiveLiveRows, ...effectiveExistingLiveRows],
+    [effectiveExistingLiveRows, effectiveLiveRows],
+  );
   const liveTableIsExistingScope = liveTreeScopeTab === "existing_inventory";
   const displayedLiveRows = liveTableIsExistingScope ? effectiveExistingLiveRows : effectiveLiveRows;
   const displayedLiveSummary = liveTableIsExistingScope ? effectiveExistingLiveSummary : effectiveLiveSummary;
   const displayedLiveSources = liveTableIsExistingScope ? serverExistingLiveSources : serverLiveSources;
+  const selectedMaintenanceRows = useMemo(() => {
+    if (!selectedMaintenanceRowKeys.length) return [];
+    const rowMap = new Map(allMaintenanceAssignRows.map((row) => [row.key, row]));
+    return selectedMaintenanceRowKeys
+      .map((key) => rowMap.get(key))
+      .filter((row): row is LiveMaintenanceRow => Boolean(row));
+  }, [allMaintenanceAssignRows, selectedMaintenanceRowKeys]);
+  const bulkMaintenanceDuePreview = useMemo(() => {
+    if (!selectedMaintenanceRows.length) return null;
+    if (newTask.due_mode === "manual") {
+      return {
+        detail: "Custom due date will be applied to all selected maintenance rows.",
+        blockedCount: 0,
+        pastDueCount: 0,
+      };
+    }
+    const evaluations = selectedMaintenanceRows.map((row) => resolveTaskDueDateForCandidate(row.treeId, row.activity));
+    return {
+      detail: "Model due dates will be calculated separately for each selected tree and activity.",
+      blockedCount: evaluations.filter((item) => item.blocked).length,
+      pastDueCount: evaluations.filter((item) => item.isPastDue).length,
+    };
+  }, [newTask.due_mode, resolveTaskDueDateForCandidate, selectedMaintenanceRows]);
+  const displayedMaintenanceSelectionCount = useMemo(
+    () => displayedLiveRows.filter((row) => selectedMaintenanceRowKeys.includes(row.key)).length,
+    [displayedLiveRows, selectedMaintenanceRowKeys],
+  );
 
   const activeProjectActions: Array<{ form: WorkForm; title: string; note: string; isNew?: boolean }> = [
     { form: "overview", title: "Overview", note: "Progress summary" },
@@ -5911,6 +6065,28 @@ export default function GreenWork() {
     },
     [trees],
   );
+  const maintenanceTreeOptions = useMemo(() => {
+    const rowByTree = new Map<number, LiveMaintenanceRow>();
+    allMaintenanceAssignRows.forEach((row) => {
+      const current = rowByTree.get(row.treeId);
+      if (!current || liveToneRank(row.tone) < liveToneRank(current.tone)) {
+        rowByTree.set(row.treeId, row);
+      }
+    });
+    return trees
+      .map((tree) => {
+        const treeId = Number(tree.id || 0);
+        const liveRow = rowByTree.get(treeId);
+        const species = String(tree.species || "").trim();
+        const status = treeStatusLabel(tree.status);
+        const indicator = liveRow?.indicator ? liveRow.indicator : "No live maintenance alert";
+        return {
+          id: treeId,
+          label: `${formatProjectTreeLabelById(treeId)} | ${species || "Species -"} | ${status} | ${indicator}`,
+        };
+      })
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [allMaintenanceAssignRows, formatProjectTreeLabelById, trees]);
   const custodianLiveRows = useMemo(() => {
     const allocationMap = new Map<
       number,
@@ -6365,6 +6541,47 @@ export default function GreenWork() {
     setLiveTreeMenu(null);
   };
 
+  const openAssignTaskForSelectedRows = (rowsOverride?: LiveMaintenanceRow[]) => {
+    const rows = rowsOverride && rowsOverride.length ? rowsOverride : selectedMaintenanceRows;
+    if (workPartnerOrgPaused) {
+      toast.error("Organization is paused. Read-only mode is enabled (view and export only).");
+      return;
+    }
+    if (!activeProjectId) {
+      toast("Select an active project first.");
+      return;
+    }
+    if (!rows.length) {
+      toast.error("Select at least one maintenance row first.");
+      return;
+    }
+    const firstRow = rows[0];
+    const singleActivity =
+      rows.length > 0 &&
+      rows.every((row) => row.activity === firstRow.activity)
+        ? firstRow.activity
+        : "";
+    setSelectedMaintenanceRowKeys(rows.map((row) => row.key));
+    setNewTask((prev) => ({
+      ...prev,
+      tree_id: rows.length === 1 ? String(firstRow.treeId) : "",
+      task_type: singleActivity || prev.task_type,
+      assignee_name: "",
+    }));
+    setNewTaskMultiAssignEnabled(false);
+    setNewTaskSelectedAssignees([]);
+    setMaintenanceBulkAssignMode("single_staff");
+    setActiveForm("assign_task");
+    setMenuOpen(false);
+    setStaffMenu(null);
+    setLiveTreeMenu(null);
+    toast.success(
+      rows.length === 1
+        ? `${formatProjectTreeLabelById(firstRow.treeId)} ready for assignment.`
+        : `${rows.length} maintenance rows ready for bulk assignment.`,
+    );
+  };
+
   const openAssignTaskForTree = (treeId: number, preferredTaskType?: string) => {
     if (workPartnerOrgPaused) {
       toast.error("Organization is paused. Read-only mode is enabled (view and export only).");
@@ -6383,6 +6600,19 @@ export default function GreenWork() {
       : false;
     const treeStatus = normalizeTreeStatus(tree?.status || "healthy");
     const replacementRequired = isReplacementTriggerStatus(treeStatus);
+    const preferredActivity = replacementRequired ? "replacement" : (preferredTaskType || "");
+    const matchingRow =
+      preferredActivity
+        ? allMaintenanceAssignRows.find(
+            (row) => Number(row.treeId) === Number(treeId) && normalizeName(row.activity) === normalizeName(preferredActivity),
+          )
+        : allMaintenanceAssignRows.find((row) => Number(row.treeId) === Number(treeId));
+    if (matchingRow) {
+      setSelectedMaintenanceRowKeys([matchingRow.key]);
+      setMaintenanceBulkAssignMode("single_staff");
+    } else {
+      setSelectedMaintenanceRowKeys([]);
+    }
     setNewTask((prev) => ({
       ...prev,
       tree_id: String(treeId),
@@ -8134,8 +8364,8 @@ export default function GreenWork() {
                     </div>
                     <div className="green-work-multi-assign-list">
                       {users.map((u) => (
-                        <div key={u.id} className="green-work-multi-assign-item">
-                          <label className="green-work-multi-assign-item-main">
+                        <div key={u.id} className="green-work-multi-assign-item-row">
+                          <label className="green-work-multi-assign-item">
                             <input
                               type="checkbox"
                               checked={newOrderSelectedAssignees.includes(u.full_name)}
@@ -8170,12 +8400,12 @@ export default function GreenWork() {
                                     value={(newOrderMultiAssignOverrides[u.full_name] || makeDefaultWorkOrderOverride()).due_date}
                                     onChange={(e) =>
                                       updateWorkOrderMultiAssignOverride(u.full_name, { due_date: e.target.value })
-                                    }
-                                    disabled={assigningWorkOrder}
-                                  />
-                                )}
-                              </div>
-                            )}
+                                  }
+                                  disabled={assigningWorkOrder}
+                                />
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -8375,34 +8605,91 @@ export default function GreenWork() {
             <div className="green-work-card">
               <h3>Assign Maintenance Task</h3>
               {!activeProjectId && <p className="green-work-note">Select project first from Project Focus.</p>}
-              <select
-                value={newTask.tree_id}
-                onChange={(e) => setNewTask({ ...newTask, tree_id: e.target.value })}
-                disabled={!activeProjectId}
-              >
-                <option value="">Select tree</option>
-                {trees.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {formatProjectTreeLabelById(t.id)}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={newTask.task_type}
-                onChange={(e) => setNewTask({ ...newTask, task_type: e.target.value })}
-                disabled={!activeProjectId}
-              >
-                <option value="watering">Watering</option>
-                <option value="weeding">Weeding</option>
-                <option value="protection">Protection</option>
-                <option value="inspection">Inspection</option>
-                <option value="replacement">Replacement</option>
-              </select>
+              {selectedMaintenanceRows.length > 0 ? (
+                <div className="green-work-task-selection-card">
+                  <div className="green-work-task-selection-head">
+                    <strong>{selectedMaintenanceRows.length} live maintenance row{selectedMaintenanceRows.length === 1 ? "" : "s"} selected</strong>
+                    <button type="button" onClick={() => setSelectedMaintenanceRowKeys([])}>
+                      Clear selection
+                    </button>
+                  </div>
+                  <p className="green-work-note">
+                    These rows come from Live Maintenance, so dispatchers can assign work from urgency and tree context instead of raw tree numbers.
+                  </p>
+                  <div className="green-work-task-selection-list">
+                    {selectedMaintenanceRows.slice(0, 8).map((row) => (
+                      <div key={`selected-maintenance-${row.key}`} className="green-work-task-selection-item">
+                        <strong>{formatProjectTreeLabelById(row.treeId)}</strong>
+                        <span>{row.activityLabel}</span>
+                        <span>{row.indicator}</span>
+                      </div>
+                    ))}
+                    {selectedMaintenanceRows.length > 8 && (
+                      <span className="green-work-note">+ {selectedMaintenanceRows.length - 8} more selected rows</span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <select
+                    value={newTask.tree_id}
+                    onChange={(e) => setNewTask({ ...newTask, tree_id: e.target.value })}
+                    disabled={!activeProjectId}
+                  >
+                    <option value="">Select tree</option>
+                    {maintenanceTreeOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={newTask.task_type}
+                    onChange={(e) => setNewTask({ ...newTask, task_type: e.target.value })}
+                    disabled={!activeProjectId}
+                  >
+                    <option value="watering">Watering</option>
+                    <option value="weeding">Weeding</option>
+                    <option value="protection">Protection</option>
+                    <option value="inspection">Inspection</option>
+                    <option value="replacement">Replacement</option>
+                  </select>
+                </>
+              )}
+              {selectedMaintenanceRows.length > 1 && (
+                <>
+                  <label className="green-work-field-label">Bulk assignment mode</label>
+                  <select
+                    value={maintenanceBulkAssignMode}
+                    onChange={(e) =>
+                      setMaintenanceBulkAssignMode(
+                        e.target.value === "distribute_evenly" ? "distribute_evenly" : "single_staff",
+                      )
+                    }
+                    disabled={!activeProjectId || assigningMaintenanceTask}
+                  >
+                    <option value="single_staff">Assign all selected rows to one staff</option>
+                    <option value="distribute_evenly">Distribute selected rows evenly across selected staff</option>
+                  </select>
+                </>
+              )}
               <label className="green-work-checkbox-row">
                 <input
                   type="checkbox"
-                  checked={newTaskMultiAssignEnabled}
+                  checked={
+                    selectedMaintenanceRows.length > 1
+                      ? maintenanceBulkAssignMode === "distribute_evenly"
+                      : newTaskMultiAssignEnabled
+                  }
                   onChange={(e) => {
+                    if (selectedMaintenanceRows.length > 1) {
+                      const enabled = e.target.checked;
+                      setMaintenanceBulkAssignMode(enabled ? "distribute_evenly" : "single_staff");
+                      if (!enabled && newTaskSelectedAssignees.length) {
+                        setNewTask((prev) => ({ ...prev, assignee_name: newTaskSelectedAssignees[0] || "" }));
+                      }
+                      return;
+                    }
                     const enabled = e.target.checked;
                     setNewTaskMultiAssignEnabled(enabled);
                     if (enabled) {
@@ -8415,9 +8702,24 @@ export default function GreenWork() {
                   }}
                   disabled={!activeProjectId || assigningMaintenanceTask}
                 />
-                <span>Assign to multiple staff</span>
+                <span>
+                  {selectedMaintenanceRows.length > 1 ? "Distribute selected maintenance across multiple staff" : "Assign to multiple staff"}
+                </span>
               </label>
-              {!newTaskMultiAssignEnabled ? (
+              {selectedMaintenanceRows.length > 1 && maintenanceBulkAssignMode === "single_staff" ? (
+                <select
+                  value={newTask.assignee_name}
+                  onChange={(e) => setNewTask({ ...newTask, assignee_name: e.target.value })}
+                  disabled={!activeProjectId || assigningMaintenanceTask}
+                >
+                  <option value="">Assign to</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.full_name}>
+                      {u.full_name}
+                    </option>
+                  ))}
+                </select>
+              ) : !newTaskMultiAssignEnabled ? (
                 <select
                   value={newTask.assignee_name}
                   onChange={(e) => setNewTask({ ...newTask, assignee_name: e.target.value })}
@@ -8476,7 +8778,37 @@ export default function GreenWork() {
                 <option value="model_dry">Date Based On Model (Dry Season)</option>
                 <option value="manual">Other Date (Custom)</option>
               </select>
-              {newTask.due_mode !== "manual" ? (
+              {selectedMaintenanceRows.length > 0 && bulkMaintenanceDuePreview ? (
+                <>
+                  {newTask.due_mode === "manual" ? (
+                    <input
+                      type="date"
+                      value={newTask.due_date}
+                      onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+                      disabled={!activeProjectId || assigningMaintenanceTask}
+                    />
+                  ) : (
+                    <>
+                      <input type="text" value="Per-tree model due dates" readOnly disabled />
+                      <p className="green-work-note">{bulkMaintenanceDuePreview.detail}</p>
+                      {bulkMaintenanceDuePreview.blockedCount > 0 && (
+                        <p className="green-work-note danger">
+                          {bulkMaintenanceDuePreview.blockedCount} selected row
+                          {bulkMaintenanceDuePreview.blockedCount === 1 ? "" : "s"} cannot be auto-scheduled by the model.
+                          Choose Other Date (Custom) or reduce the selection.
+                        </p>
+                      )}
+                      {bulkMaintenanceDuePreview.pastDueCount > 0 && (
+                        <p className="green-work-note danger">
+                          {bulkMaintenanceDuePreview.pastDueCount} selected row
+                          {bulkMaintenanceDuePreview.pastDueCount === 1 ? "" : "s"} already fall past the model due date.
+                          Choose Other Date (Custom) if you want to proceed.
+                        </p>
+                      )}
+                    </>
+                  )}
+                </>
+              ) : newTask.due_mode !== "manual" ? (
                 <>
                   <input type="date" value={assignTaskModelPreview.dueDateInput} readOnly disabled />
                   <p className="green-work-note">{assignTaskModelPreview.detail}</p>
@@ -9270,10 +9602,33 @@ export default function GreenWork() {
                 <span className="green-work-live-pill neutral">Rows: {displayedLiveSummary.total}</span>
               </div>
 
+              <div className="green-work-live-bulk-bar">
+                <div className="green-work-live-bulk-copy">
+                  <strong>{displayedMaintenanceSelectionCount} selected</strong>
+                  <span>Select rows to assign one tree, many trees, or distribute work across staff.</span>
+                </div>
+                <div className="work-actions">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMaintenanceRowKeys((prev) => Array.from(new Set([...prev, ...displayedLiveRows.map((row) => row.key)])))}
+                    disabled={!displayedLiveRows.length}
+                  >
+                    Select visible
+                  </button>
+                  <button type="button" onClick={() => setSelectedMaintenanceRowKeys([])} disabled={!selectedMaintenanceRowKeys.length}>
+                    Clear
+                  </button>
+                  <button type="button" className="btn-primary" onClick={() => openAssignTaskForSelectedRows()} disabled={!selectedMaintenanceRowKeys.length}>
+                    Assign selected
+                  </button>
+                </div>
+              </div>
+
               <div className="green-work-live-table-wrap">
                 <table className="green-work-live-table">
                   <thead>
                     <tr>
+                      <th>Select</th>
                       <th>Tree</th>
                       <th>Staff</th>
                       <th>Activity</th>
@@ -9290,27 +9645,50 @@ export default function GreenWork() {
                   <tbody>
                     {displayedLiveRows.length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="green-work-live-empty">
+                        <td colSpan={12} className="green-work-live-empty">
                           {liveTableIsExistingScope
                             ? "No existing-tree maintenance rows available for this filter."
                             : "No tree maintenance rows available for this filter."}
                         </td>
                       </tr>
                     ) : (
-                      displayedLiveRows.map((row) => (
-                        <tr key={row.key} className={`tone-${row.tone}`}>
+                      displayedLiveRows.map((row) => {
+                        const rowTree = trees.find((tree) => Number(tree.id) === Number(row.treeId));
+                        const isSelected = selectedMaintenanceRowKeys.includes(row.key);
+                        return (
+                        <tr key={row.key} className={`tone-${row.tone} ${isSelected ? "is-selected" : ""}`}>
                           <td>
-                            <button
-                              type="button"
-                              className="green-work-live-tree-link"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setStaffMenu(null);
-                                setLiveTreeMenu({ treeId: row.treeId, x: event.clientX, y: event.clientY, taskType: row.activity });
-                              }}
-                            >
-                              #{row.treeId}
-                            </button>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleMaintenanceRowSelection(row.key)}
+                              aria-label={`Select ${formatProjectTreeLabelById(row.treeId)} ${row.activityLabel}`}
+                            />
+                          </td>
+                          <td>
+                            <div className="green-work-live-tree-cell">
+                              <button
+                                type="button"
+                                className="green-work-live-tree-link"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setStaffMenu(null);
+                                  setLiveTreeMenu({ treeId: row.treeId, x: event.clientX, y: event.clientY, taskType: row.activity });
+                                }}
+                              >
+                                {formatProjectTreeLabelById(row.treeId)}
+                              </button>
+                              <span className="green-work-live-hint">
+                                {(rowTree?.species || "Species -")} | {treeStatusLabel(rowTree?.status)} | {formatTreeOriginLabel(row.treeOrigin)}
+                              </span>
+                              <button
+                                type="button"
+                                className="green-work-live-assign-link"
+                                onClick={() => openAssignTaskForSelectedRows([row])}
+                              >
+                                Assign this
+                              </button>
+                            </div>
                           </td>
                           <td>{row.assignee}</td>
                           <td>
@@ -9342,7 +9720,7 @@ export default function GreenWork() {
                             Done {row.doneCount} | Open {row.pendingCount} | Overdue {row.overdueCount}
                           </td>
                         </tr>
-                      ))
+                      )})
                     )}
                   </tbody>
                 </table>
