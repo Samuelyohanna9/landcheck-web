@@ -318,6 +318,10 @@ type WorkForm =
 
 type StaffMenuState = { user: GreenUser; x: number; y: number } | null;
 type DrawerFrame = { top: number; left: number; width: number; height: number };
+type WorkOrderMultiAssignOverride = {
+  target_trees: string;
+  due_date: string;
+};
 type VerraExportHistoryItem = {
   id: number;
   season_mode: string;
@@ -1946,6 +1950,9 @@ export default function GreenWork() {
   const [newOrderAreaGeometry, setNewOrderAreaGeometry] = useState<{ type: "Polygon" | "MultiPolygon"; coordinates: any } | null>(null);
   const [newOrderMultiAssignEnabled, setNewOrderMultiAssignEnabled] = useState(false);
   const [newOrderSelectedAssignees, setNewOrderSelectedAssignees] = useState<string[]>([]);
+  const [newOrderMultiAssignTargetMode, setNewOrderMultiAssignTargetMode] = useState<"uniform" | "custom">("uniform");
+  const [newOrderMultiAssignDueMode, setNewOrderMultiAssignDueMode] = useState<"uniform" | "custom">("uniform");
+  const [newOrderMultiAssignOverrides, setNewOrderMultiAssignOverrides] = useState<Record<string, WorkOrderMultiAssignOverride>>({});
   const [assigningWorkOrder, setAssigningWorkOrder] = useState(false);
   const [newUser, setNewUser] = useState({ full_name: "", role: "field_officer" });
   const [newProject, setNewProject] = useState({
@@ -2710,6 +2717,44 @@ export default function GreenWork() {
       : [...current, cleanName];
   };
 
+  const makeDefaultWorkOrderOverride = useCallback(
+    (): WorkOrderMultiAssignOverride => ({
+      target_trees: Number(newOrder.target_trees || 0) > 0 ? String(newOrder.target_trees) : "",
+      due_date: String(newOrder.due_date || ""),
+    }),
+    [newOrder.due_date, newOrder.target_trees],
+  );
+
+  const setWorkOrderSelectedAssigneesWithOverrides = useCallback(
+    (nextAssignees: string[]) => {
+      const normalized = Array.from(new Set(nextAssignees.map((item) => String(item || "").trim()).filter(Boolean)));
+      setNewOrderSelectedAssignees(normalized);
+      setNewOrderMultiAssignOverrides((prev) => {
+        const next: Record<string, WorkOrderMultiAssignOverride> = {};
+        normalized.forEach((assignee) => {
+          next[assignee] = prev[assignee] || makeDefaultWorkOrderOverride();
+        });
+        return next;
+      });
+    },
+    [makeDefaultWorkOrderOverride],
+  );
+
+  const updateWorkOrderMultiAssignOverride = useCallback(
+    (assignee: string, patch: Partial<WorkOrderMultiAssignOverride>) => {
+      const cleanAssignee = String(assignee || "").trim();
+      if (!cleanAssignee) return;
+      setNewOrderMultiAssignOverrides((prev) => ({
+        ...prev,
+        [cleanAssignee]: {
+          ...(prev[cleanAssignee] || makeDefaultWorkOrderOverride()),
+          ...patch,
+        },
+      }));
+    },
+    [makeDefaultWorkOrderOverride],
+  );
+
   const currentWorkOrderAssignees = useMemo(() => {
     if (newOrderMultiAssignEnabled) {
       return Array.from(new Set(newOrderSelectedAssignees.map((item) => String(item || "").trim()).filter(Boolean)));
@@ -2725,6 +2770,9 @@ export default function GreenWork() {
     const single = String(newTask.assignee_name || "").trim();
     return single ? [single] : [];
   }, [newTask.assignee_name, newTaskMultiAssignEnabled, newTaskSelectedAssignees]);
+
+  const workOrderUsesCustomTargets = newOrderMultiAssignEnabled && !newOrderSpeciesMode && newOrderMultiAssignTargetMode === "custom";
+  const workOrderUsesCustomDueDates = newOrderMultiAssignEnabled && newOrderMultiAssignDueMode === "custom";
 
   const loadProjectData = async (projectId: number) => {
     const stamp = Date.now();
@@ -4012,10 +4060,20 @@ export default function GreenWork() {
       return;
     }
     const targetTrees = newOrderSpeciesMode ? newOrderSpeciesTargetTotal : Number(newOrder.target_trees || 0);
+    if (workOrderUsesCustomTargets) {
+      const invalidAssignees = assignees.filter((assignee) => Number(newOrderMultiAssignOverrides[assignee]?.target_trees || 0) <= 0);
+      if (invalidAssignees.length) {
+        toast.error(`Set tree targets for: ${invalidAssignees.join(", ")}`);
+        return;
+      }
+    }
+    const totalTargetTreesForConsent = workOrderUsesCustomTargets
+      ? assignees.reduce((sum, assignee) => sum + Number(newOrderMultiAssignOverrides[assignee]?.target_trees || 0), 0)
+      : targetTrees;
     if (
       !(await ensureWorkOperationalConsent("work_order_create", {
         assignee_name: assignees.length === 1 ? assignees[0] : `${assignees.length} staff`,
-        target_trees: targetTrees,
+        target_trees: totalTargetTreesForConsent,
         area_enabled: newOrderAreaEnabled,
       }))
     ) {
@@ -4030,7 +4088,6 @@ export default function GreenWork() {
         project_id: activeProjectId,
         ...newOrder,
         work_type: "planting",
-        target_trees: targetTrees,
         species_allocations: newOrderSpeciesMode ? normalizedNewOrderSpeciesAllocations : null,
         area_enabled: newOrderAreaEnabled,
         area_label: newOrderAreaEnabled ? (newOrderAreaLabel || "").trim() || null : null,
@@ -4038,19 +4095,28 @@ export default function GreenWork() {
         allow_existing_tree_area_reuse: newOrderAreaEnabled ? Boolean(newOrder.allow_existing_tree_area_reuse) : false,
       };
       const results = await Promise.allSettled(
-        assignees.map((assignee) =>
-          api.post("/green/work-orders", {
+        assignees.map((assignee) => {
+          const override = newOrderMultiAssignOverrides[assignee];
+          const assigneeTargetTrees = workOrderUsesCustomTargets
+            ? Number(override?.target_trees || 0)
+            : targetTrees;
+          const assigneeDueDate = workOrderUsesCustomDueDates
+            ? String(override?.due_date || "").trim() || null
+            : String(newOrder.due_date || "").trim() || null;
+          return api.post("/green/work-orders", {
             ...payloadBase,
             assignee_name: assignee,
-          }),
-        ),
+            target_trees: assigneeTargetTrees,
+            due_date: assigneeDueDate,
+          });
+        }),
       );
       const successCount = results.filter((item) => item.status === "fulfilled").length;
       const failedAssignees = results
         .map((item, index) => ({ item, assignee: assignees[index] }))
         .filter((entry): entry is { item: PromiseRejectedResult; assignee: string } => entry.item.status === "rejected")
         .map((entry) => entry.assignee);
-      if (successCount > 0) {
+      if (successCount > 0 && failedAssignees.length === 0) {
         setNewOrder({
           assignee_name: "",
           work_type: "planting",
@@ -4065,9 +4131,11 @@ export default function GreenWork() {
         setNewOrderAreaLabel("");
         setNewOrderAreaGeometry(null);
         setNewOrderMultiAssignEnabled(false);
-        setNewOrderSelectedAssignees([]);
-      } else if (newOrderMultiAssignEnabled) {
-        setNewOrderSelectedAssignees(failedAssignees);
+        setNewOrderMultiAssignTargetMode("uniform");
+        setNewOrderMultiAssignDueMode("uniform");
+        setWorkOrderSelectedAssigneesWithOverrides([]);
+      } else if (failedAssignees.length > 0 && newOrderMultiAssignEnabled) {
+        setWorkOrderSelectedAssigneesWithOverrides(failedAssignees);
       } else if (failedAssignees[0]) {
         setNewOrder((prev) => ({
           ...prev,
@@ -8006,11 +8074,17 @@ export default function GreenWork() {
                     const enabled = e.target.checked;
                     setNewOrderMultiAssignEnabled(enabled);
                     if (enabled) {
-                      setNewOrderSelectedAssignees((prev) =>
-                        prev.length ? prev : (newOrder.assignee_name.trim() ? [newOrder.assignee_name.trim()] : []),
+                      setWorkOrderSelectedAssigneesWithOverrides(
+                        newOrderSelectedAssignees.length
+                          ? newOrderSelectedAssignees
+                          : (newOrder.assignee_name.trim() ? [newOrder.assignee_name.trim()] : []),
                       );
                     } else if (newOrderSelectedAssignees.length) {
                       setNewOrder((prev) => ({ ...prev, assignee_name: newOrderSelectedAssignees[0] || "" }));
+                    }
+                    if (!enabled) {
+                      setNewOrderMultiAssignTargetMode("uniform");
+                      setNewOrderMultiAssignDueMode("uniform");
                     }
                   }}
                   disabled={!activeProjectId || assigningWorkOrder}
@@ -8035,10 +8109,10 @@ export default function GreenWork() {
                   <div className="green-work-multi-assign-header">
                     <span>{currentWorkOrderAssignees.length} selected</span>
                     <div className="work-actions">
-                      <button type="button" onClick={() => setNewOrderSelectedAssignees(users.map((u) => u.full_name))} disabled={!users.length || assigningWorkOrder}>
+                      <button type="button" onClick={() => setWorkOrderSelectedAssigneesWithOverrides(users.map((u) => u.full_name))} disabled={!users.length || assigningWorkOrder}>
                         Select all
                       </button>
-                      <button type="button" onClick={() => setNewOrderSelectedAssignees([])} disabled={!currentWorkOrderAssignees.length || assigningWorkOrder}>
+                      <button type="button" onClick={() => setWorkOrderSelectedAssigneesWithOverrides([])} disabled={!currentWorkOrderAssignees.length || assigningWorkOrder}>
                         Clear
                       </button>
                     </div>
@@ -8049,7 +8123,11 @@ export default function GreenWork() {
                         <input
                           type="checkbox"
                           checked={newOrderSelectedAssignees.includes(u.full_name)}
-                          onChange={() => setNewOrderSelectedAssignees((prev) => toggleNamedSelection(prev, u.full_name))}
+                          onChange={() =>
+                            setWorkOrderSelectedAssigneesWithOverrides(
+                              toggleNamedSelection(newOrderSelectedAssignees, u.full_name),
+                            )
+                          }
                           disabled={assigningWorkOrder}
                         />
                         <span>{u.full_name}</span>
@@ -8058,14 +8136,34 @@ export default function GreenWork() {
                   </div>
                 </div>
               )}
-              <input
-                type="number"
-                placeholder="Target trees"
-                value={newOrderSpeciesMode ? newOrderSpeciesTargetTotal : newOrder.target_trees}
-                onChange={(e) => setNewOrder({ ...newOrder, target_trees: Number(e.target.value) })}
-                readOnly={newOrderSpeciesMode}
-                disabled={!activeProjectId || assigningWorkOrder}
-              />
+              {newOrderMultiAssignEnabled && (
+                <>
+                  <label className="green-work-field-label">Tree target mode</label>
+                  <select
+                    value={newOrderSpeciesMode ? "uniform" : newOrderMultiAssignTargetMode}
+                    onChange={(e) => setNewOrderMultiAssignTargetMode(e.target.value === "custom" ? "custom" : "uniform")}
+                    disabled={!activeProjectId || assigningWorkOrder || newOrderSpeciesMode}
+                  >
+                    <option value="uniform">Uniform tree target for all selected staff</option>
+                    <option value="custom">Custom tree target per staff</option>
+                  </select>
+                  {newOrderSpeciesMode && (
+                    <p className="green-work-note">
+                      Species-based allocation uses one shared target per order, so custom tree counts per staff are disabled.
+                    </p>
+                  )}
+                </>
+              )}
+              {(!newOrderMultiAssignEnabled || !workOrderUsesCustomTargets) && (
+                <input
+                  type="number"
+                  placeholder="Target trees"
+                  value={newOrderSpeciesMode ? newOrderSpeciesTargetTotal : newOrder.target_trees}
+                  onChange={(e) => setNewOrder({ ...newOrder, target_trees: Number(e.target.value) })}
+                  readOnly={newOrderSpeciesMode}
+                  disabled={!activeProjectId || assigningWorkOrder}
+                />
+              )}
               <label className="green-work-checkbox-row">
                 <input
                   type="checkbox"
@@ -8075,6 +8173,8 @@ export default function GreenWork() {
                     setNewOrderSpeciesMode(next);
                     if (!next) {
                       setNewOrderSpeciesAllocations([{ species: "", count: 0 }]);
+                    } else {
+                      setNewOrderMultiAssignTargetMode("uniform");
                     }
                   }}
                   disabled={!activeProjectId || assigningWorkOrder}
@@ -8144,12 +8244,61 @@ export default function GreenWork() {
                   </p>
                 </div>
               )}
-              <input
-                type="date"
-                value={newOrder.due_date}
-                onChange={(e) => setNewOrder({ ...newOrder, due_date: e.target.value })}
-                disabled={!activeProjectId || assigningWorkOrder}
-              />
+              {newOrderMultiAssignEnabled && (
+                <>
+                  <label className="green-work-field-label">Due date mode</label>
+                  <select
+                    value={newOrderMultiAssignDueMode}
+                    onChange={(e) => setNewOrderMultiAssignDueMode(e.target.value === "custom" ? "custom" : "uniform")}
+                    disabled={!activeProjectId || assigningWorkOrder}
+                  >
+                    <option value="uniform">Uniform due date for all selected staff</option>
+                    <option value="custom">Custom due date per staff</option>
+                  </select>
+                </>
+              )}
+              {(!newOrderMultiAssignEnabled || !workOrderUsesCustomDueDates) && (
+                <input
+                  type="date"
+                  value={newOrder.due_date}
+                  onChange={(e) => setNewOrder({ ...newOrder, due_date: e.target.value })}
+                  disabled={!activeProjectId || assigningWorkOrder}
+                />
+              )}
+              {newOrderMultiAssignEnabled && (workOrderUsesCustomTargets || workOrderUsesCustomDueDates) && (
+                <div className="green-work-multi-assign-config">
+                  <label className="green-work-field-label">Per-staff assignment details</label>
+                  <div className="green-work-multi-assign-config-list">
+                    {currentWorkOrderAssignees.map((assignee) => {
+                      const override = newOrderMultiAssignOverrides[assignee] || makeDefaultWorkOrderOverride();
+                      return (
+                        <div key={`work-order-config-${assignee}`} className="green-work-multi-assign-config-row">
+                          <strong>{assignee}</strong>
+                          {workOrderUsesCustomTargets && (
+                            <input
+                              type="number"
+                              min={1}
+                              step={1}
+                              placeholder="Trees"
+                              value={override.target_trees}
+                              onChange={(e) => updateWorkOrderMultiAssignOverride(assignee, { target_trees: e.target.value })}
+                              disabled={assigningWorkOrder}
+                            />
+                          )}
+                          {workOrderUsesCustomDueDates && (
+                            <input
+                              type="date"
+                              value={override.due_date}
+                              onChange={(e) => updateWorkOrderMultiAssignOverride(assignee, { due_date: e.target.value })}
+                              disabled={assigningWorkOrder}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <label className="green-work-checkbox-row">
                 <input
                   type="checkbox"
