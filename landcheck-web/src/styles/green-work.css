@@ -3276,6 +3276,27 @@
   color: var(--gw-subtext);
 }
 
+.green-work-live-filter-row {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 320px) minmax(220px, 1fr);
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0.45rem 0 0.65rem;
+}
+
+.green-work-live-filter-row label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--green-900);
+}
+
+.green-work-live-filter-row span {
+  font-size: 0.72rem;
+  color: var(--gw-subtext);
+  line-height: 1.35;
+}
+
+
 /* ── Live Table ── */
 .green-work-live-table-wrap {
   border: 1px solid var(--gw-border);
@@ -3432,6 +3453,35 @@
   font-size: 0.7rem;
   color: var(--gw-subtext);
 }
+
+.green-work-task-selection-groups {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.green-work-task-selection-groups strong {
+  font-size: 0.76rem;
+  color: var(--green-900);
+}
+
+.green-work-task-selection-group-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.green-work-task-selection-group-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.24rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(22, 76, 42, 0.14);
+  background: rgba(240, 253, 244, 0.92);
+  color: var(--green-800);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
 
 /* ── Live Indicator ── */
 .green-work-live-indicator {
@@ -4299,6 +4349,11 @@
     gap: 0.2rem;
   }
 
+  .green-work-live-filter-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
   .green-work-live-season-row select {
     width: 100%;
   }
@@ -4505,3 +4560,6 @@
     justify-items: flex-start;
   }
 }
+
+
+
