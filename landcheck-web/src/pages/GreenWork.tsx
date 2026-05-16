@@ -8105,68 +8105,6 @@ export default function GreenWork() {
                   ))}
                 </select>
               ) : (
-                <div className="green-work-multi-assign-panel">
-                  <div className="green-work-multi-assign-header">
-                    <span>{currentWorkOrderAssignees.length} selected</span>
-                    <div className="work-actions">
-                      <button type="button" onClick={() => setWorkOrderSelectedAssigneesWithOverrides(users.map((u) => u.full_name))} disabled={!users.length || assigningWorkOrder}>
-                        Select all
-                      </button>
-                      <button type="button" onClick={() => setWorkOrderSelectedAssigneesWithOverrides([])} disabled={!currentWorkOrderAssignees.length || assigningWorkOrder}>
-                        Clear
-                      </button>
-                    </div>
-                  </div>
-                  <div className="green-work-multi-assign-list">
-                    {users.map((u) => (
-                      <div key={u.id} className="green-work-multi-assign-item">
-                        <label className="green-work-multi-assign-item-main">
-                          <input
-                            type="checkbox"
-                            checked={newOrderSelectedAssignees.includes(u.full_name)}
-                            onChange={() =>
-                              setWorkOrderSelectedAssigneesWithOverrides(
-                                toggleNamedSelection(newOrderSelectedAssignees, u.full_name),
-                              )
-                            }
-                            disabled={assigningWorkOrder}
-                          />
-                          <span>{u.full_name}</span>
-                        </label>
-                        {newOrderSelectedAssignees.includes(u.full_name) &&
-                          (workOrderUsesCustomTargets || workOrderUsesCustomDueDates) && (
-                            <div className="green-work-multi-assign-item-inline">
-                              {workOrderUsesCustomTargets && (
-                                <input
-                                  type="number"
-                                  min={1}
-                                  step={1}
-                                  placeholder="Trees"
-                                  value={(newOrderMultiAssignOverrides[u.full_name] || makeDefaultWorkOrderOverride()).target_trees}
-                                  onChange={(e) =>
-                                    updateWorkOrderMultiAssignOverride(u.full_name, { target_trees: e.target.value })
-                                  }
-                                  disabled={assigningWorkOrder}
-                                />
-                              )}
-                              {workOrderUsesCustomDueDates && (
-                                <input
-                                  type="date"
-                                  value={(newOrderMultiAssignOverrides[u.full_name] || makeDefaultWorkOrderOverride()).due_date}
-                                  onChange={(e) =>
-                                    updateWorkOrderMultiAssignOverride(u.full_name, { due_date: e.target.value })
-                                  }
-                                  disabled={assigningWorkOrder}
-                                />
-                              )}
-                            </div>
-                          )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {newOrderMultiAssignEnabled && (
                 <>
                   <label className="green-work-field-label">Tree target mode</label>
                   <select
@@ -8182,6 +8120,66 @@ export default function GreenWork() {
                       Species-based allocation uses one shared target per order, so custom tree counts per staff are disabled.
                     </p>
                   )}
+                  <div className="green-work-multi-assign-panel">
+                    <div className="green-work-multi-assign-header">
+                      <span>{currentWorkOrderAssignees.length} selected</span>
+                      <div className="work-actions">
+                        <button type="button" onClick={() => setWorkOrderSelectedAssigneesWithOverrides(users.map((u) => u.full_name))} disabled={!users.length || assigningWorkOrder}>
+                          Select all
+                        </button>
+                        <button type="button" onClick={() => setWorkOrderSelectedAssigneesWithOverrides([])} disabled={!currentWorkOrderAssignees.length || assigningWorkOrder}>
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                    <div className="green-work-multi-assign-list">
+                      {users.map((u) => (
+                        <div key={u.id} className="green-work-multi-assign-item">
+                          <label className="green-work-multi-assign-item-main">
+                            <input
+                              type="checkbox"
+                              checked={newOrderSelectedAssignees.includes(u.full_name)}
+                              onChange={() =>
+                                setWorkOrderSelectedAssigneesWithOverrides(
+                                  toggleNamedSelection(newOrderSelectedAssignees, u.full_name),
+                                )
+                              }
+                              disabled={assigningWorkOrder}
+                            />
+                            <span>{u.full_name}</span>
+                          </label>
+                          {newOrderSelectedAssignees.includes(u.full_name) &&
+                            (workOrderUsesCustomTargets || workOrderUsesCustomDueDates) && (
+                              <div className="green-work-multi-assign-item-inline">
+                                {workOrderUsesCustomTargets && (
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    step={1}
+                                    placeholder="Trees"
+                                    value={(newOrderMultiAssignOverrides[u.full_name] || makeDefaultWorkOrderOverride()).target_trees}
+                                    onChange={(e) =>
+                                      updateWorkOrderMultiAssignOverride(u.full_name, { target_trees: e.target.value })
+                                    }
+                                    disabled={assigningWorkOrder}
+                                  />
+                                )}
+                                {workOrderUsesCustomDueDates && (
+                                  <input
+                                    type="date"
+                                    value={(newOrderMultiAssignOverrides[u.full_name] || makeDefaultWorkOrderOverride()).due_date}
+                                    onChange={(e) =>
+                                      updateWorkOrderMultiAssignOverride(u.full_name, { due_date: e.target.value })
+                                    }
+                                    disabled={assigningWorkOrder}
+                                  />
+                                )}
+                              </div>
+                            )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </>
               )}
               {(!newOrderMultiAssignEnabled || !workOrderUsesCustomTargets) && (
