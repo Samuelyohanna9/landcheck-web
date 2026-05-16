@@ -905,7 +905,15 @@ type LiveMaintenanceRow = {
   modelRationale: string;
 };
 
-type MaintenanceBulkAssignMode = "single_staff" | "distribute_evenly";
+type MaintenanceBulkAssignMode = "single_staff" | "distribute_evenly" | "group_by_route";
+type MaintenanceAttentionFilter =
+  | "all"
+  | "needs_action"
+  | "no_open_task"
+  | "overdue"
+  | "due_soon"
+  | "replacement_required"
+  | "inspection_flags";
 
 type LiveTreeMenuState = { treeId: number; x: number; y: number; taskType?: string } | null;
 
@@ -2160,6 +2168,8 @@ export default function GreenWork() {
   const [newTaskSelectedAssignees, setNewTaskSelectedAssignees] = useState<string[]>([]);
   const [selectedMaintenanceRowKeys, setSelectedMaintenanceRowKeys] = useState<string[]>([]);
   const [maintenanceBulkAssignMode, setMaintenanceBulkAssignMode] = useState<MaintenanceBulkAssignMode>("single_staff");
+  const [maintenanceAttentionFilter, setMaintenanceAttentionFilter] = useState<MaintenanceAttentionFilter>("all");
+  const [maintenanceMapFocusEnabled, setMaintenanceMapFocusEnabled] = useState(false);
   const [assigningMaintenanceTask, setAssigningMaintenanceTask] = useState(false);
   const [inspectedTree, setInspectedTree] = useState<TreeInspectData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -2232,24 +2242,8 @@ export default function GreenWork() {
   });
   const [alertsList, setAlertsList] = useState<any[]>([]);
   const [serverLiveRows, setServerLiveRows] = useState<LiveMaintenanceRow[]>([]);
-  const [serverLiveSummary, setServerLiveSummary] = useState<{ total: number; danger: number; warning: number; ok: number; info: number; dueSoon: number }>({
-    total: 0,
-    danger: 0,
-    warning: 0,
-    ok: 0,
-    info: 0,
-    dueSoon: 0,
-  });
   const [serverLiveSources, setServerLiveSources] = useState<{ label: string; url: string }[]>(LIVE_TABLE_SOURCES);
   const [serverExistingLiveRows, setServerExistingLiveRows] = useState<LiveMaintenanceRow[]>([]);
-  const [serverExistingLiveSummary, setServerExistingLiveSummary] = useState<{ total: number; danger: number; warning: number; ok: number; info: number; dueSoon: number }>({
-    total: 0,
-    danger: 0,
-    warning: 0,
-    ok: 0,
-    info: 0,
-    dueSoon: 0,
-  });
   const [serverExistingLiveSources, setServerExistingLiveSources] = useState<{ label: string; url: string }[]>(LIVE_TABLE_SOURCES);
   const [reviewNoteByTaskId, setReviewNoteByTaskId] = useState<Record<number, string>>({});
   const [kpiCurrent, setKpiCurrent] = useState<Record<string, any> | null>(null);
@@ -2768,12 +2762,19 @@ export default function GreenWork() {
   }, [newOrder.assignee_name, newOrderMultiAssignEnabled, newOrderSelectedAssignees]);
 
   const currentTaskAssignees = useMemo(() => {
-    if (newTaskMultiAssignEnabled) {
+    if ((selectedMaintenanceRowKeys.length > 1 && maintenanceBulkAssignMode !== "single_staff") || newTaskMultiAssignEnabled) {
       return Array.from(new Set(newTaskSelectedAssignees.map((item) => String(item || "").trim()).filter(Boolean)));
     }
     const single = String(newTask.assignee_name || "").trim();
     return single ? [single] : [];
-  }, [newTask.assignee_name, newTaskMultiAssignEnabled, newTaskSelectedAssignees]);
+  }, [
+    maintenanceBulkAssignMode,
+    newTask.assignee_name,
+    newTaskMultiAssignEnabled,
+    newTaskSelectedAssignees,
+    selectedMaintenanceRowKeys.length,
+  ]);
+  const treeById = useMemo(() => new Map(trees.map((tree) => [Number(tree.id), tree])), [trees]);
 
   const toggleMaintenanceRowSelection = useCallback((rowKey: string) => {
     const cleanKey = String(rowKey || "").trim();
@@ -2782,6 +2783,67 @@ export default function GreenWork() {
       prev.includes(cleanKey) ? prev.filter((item) => item !== cleanKey) : [...prev, cleanKey],
     );
   }, []);
+  const describeMaintenanceRouteGroup = useCallback(
+    (row: Pick<LiveMaintenanceRow, "treeId" | "assignee" | "treeOrigin">) => {
+      const sourceTree = treeById.get(Number(row.treeId));
+      const custodianName = String(sourceTree?.custodian_name || "").trim();
+      if (custodianName) {
+        return {
+          key: `custodian:${normalizeName(custodianName)}`,
+          label: `Custodian route: ${custodianName}`,
+        };
+      }
+      const routeOwner = String(row.assignee || sourceTree?.created_by || "").trim();
+      if (routeOwner && routeOwner !== "-") {
+        return {
+          key: `staff:${normalizeName(routeOwner)}`,
+          label: `Field route: ${routeOwner}`,
+        };
+      }
+      if (row.treeOrigin === "existing_inventory") {
+        return {
+          key: "origin:existing_inventory",
+          label: "Existing inventory route",
+        };
+      }
+      return {
+        key: "origin:new_planting",
+        label: "New planting route",
+      };
+    },
+    [treeById],
+  );
+  const maintenanceMatchesAttentionFilter = useCallback(
+    (row: LiveMaintenanceRow) => {
+      if (maintenanceAttentionFilter === "all") return true;
+      const sourceTree = treeById.get(Number(row.treeId));
+      const treeStatus = normalizeTreeStatus(sourceTree?.status || "");
+      const hasOpenTask = Number(row.openTaskId || 0) > 0 || row.pendingCount > 0;
+      const isOverdue = row.countdownDays !== null && row.countdownDays < 0;
+      const isDueSoon = row.countdownDays !== null && row.countdownDays >= 0 && row.countdownDays <= 7;
+      const needsReplacement = row.activity === "replacement" || isReplacementTriggerStatus(treeStatus);
+      const hasInspectionFlag =
+        row.activity === "inspection" ||
+        (!HEALTHY_TREE_STATUSES.has(treeStatus) && !isReplacementTriggerStatus(treeStatus));
+      switch (maintenanceAttentionFilter) {
+        case "needs_action":
+          return row.tone !== "ok";
+        case "no_open_task":
+          return !hasOpenTask;
+        case "overdue":
+          return isOverdue || row.overdueCount > 0;
+        case "due_soon":
+          return row.tone === "warning" || isDueSoon;
+        case "replacement_required":
+          return needsReplacement;
+        case "inspection_flags":
+          return hasInspectionFlag;
+        default:
+          return true;
+      }
+    },
+    [maintenanceAttentionFilter, treeById],
+  );
 
   const workOrderUsesCustomTargets = newOrderMultiAssignEnabled && !newOrderSpeciesMode && newOrderMultiAssignTargetMode === "custom";
   const workOrderUsesCustomDueDates = newOrderMultiAssignEnabled && newOrderMultiAssignDueMode === "custom";
@@ -3144,24 +3206,14 @@ export default function GreenWork() {
       }
       const res = await api.get(`/green/projects/${projectId}/live-maintenance?${query.toString()}`);
       const rows = Array.isArray(res.data?.rows) ? res.data.rows : [];
-      const summary = {
-        total: Number(res.data?.summary?.total || 0),
-        danger: Number(res.data?.summary?.danger || 0),
-        warning: Number(res.data?.summary?.warning || 0),
-        ok: Number(res.data?.summary?.ok || 0),
-        info: Number(res.data?.summary?.info || 0),
-        dueSoon: Number(res.data?.summary?.dueSoon || 0),
-      };
       const sources =
         Array.isArray(res.data?.sources) && res.data.sources.length ? res.data.sources : LIVE_TABLE_SOURCES;
       if (treeScope === "existing_inventory") {
         setServerExistingLiveRows(rows);
-        setServerExistingLiveSummary(summary);
         setServerExistingLiveSources(sources);
         return;
       }
       setServerLiveRows(rows);
-      setServerLiveSummary(summary);
       setServerLiveSources(sources);
     },
     [],
@@ -4302,13 +4354,14 @@ export default function GreenWork() {
           },
         ];
 
-    const distributeAcrossStaff = isBulkMaintenanceAssign && bulkRows.length > 1 && maintenanceBulkAssignMode === "distribute_evenly";
-    const assignees = distributeAcrossStaff ? currentTaskAssignees : [String(newTask.assignee_name || "").trim()].filter(Boolean);
+    const bulkUsesMultipleStaff =
+      isBulkMaintenanceAssign && bulkRows.length > 1 && maintenanceBulkAssignMode !== "single_staff";
+    const assignees = bulkUsesMultipleStaff ? currentTaskAssignees : [String(newTask.assignee_name || "").trim()].filter(Boolean);
     if (!assignees.length) {
-      toast.error(distributeAcrossStaff ? "Select staff for distribution" : "Assign a user");
+      toast.error(bulkUsesMultipleStaff ? "Select staff for distribution" : "Assign a user");
       return;
     }
-    if (distributeAcrossStaff && assignees.length < 2) {
+    if (bulkUsesMultipleStaff && assignees.length < 2) {
       toast.error("Select at least two staff to distribute selected maintenance across.");
       return;
     }
@@ -4349,24 +4402,72 @@ export default function GreenWork() {
 
     const loadingId = toast.loading(
       isBulkMaintenanceAssign
-        ? distributeAcrossStaff
-          ? `Distributing ${bulkRows.length} maintenance rows across ${assignees.length} staff...`
-          : `Assigning ${bulkRows.length} maintenance rows...`
+        ? maintenanceBulkAssignMode === "group_by_route"
+          ? `Grouping ${bulkRows.length} maintenance rows across ${assignees.length} staff...`
+          : bulkUsesMultipleStaff
+            ? `Distributing ${bulkRows.length} maintenance rows across ${assignees.length} staff...`
+            : `Assigning ${bulkRows.length} maintenance rows...`
         : assignees.length > 1
           ? `Assigning maintenance tasks to ${assignees.length} staff...`
           : "Assigning maintenance task...",
     );
     setAssigningMaintenanceTask(true);
     try {
+      const bulkRowByKey = new Map(bulkRows.map((row) => [row.key, row]));
+      const bulkAssignmentPlan = isBulkMaintenanceAssign
+        ? duePlans.map((plan, index) => {
+            if (maintenanceBulkAssignMode === "single_staff") {
+              return { ...plan, assignee_name: assignees[0] };
+            }
+            if (maintenanceBulkAssignMode === "group_by_route") {
+              return { ...plan, assignee_name: "" };
+            }
+            return { ...plan, assignee_name: assignees[index % assignees.length] };
+          })
+        : duePlans.map((plan) => ({ ...plan, assignee_name: assignees[0] }));
+      if (isBulkMaintenanceAssign && maintenanceBulkAssignMode === "group_by_route") {
+        const groupedCandidates = new Map<
+          string,
+          {
+            key: string;
+            label: string;
+            rows: Array<(typeof bulkAssignmentPlan)[number]>;
+          }
+        >();
+        bulkAssignmentPlan.forEach((plan) => {
+          const sourceRow = bulkRowByKey.get(plan.candidate.key);
+          const group = sourceRow
+            ? describeMaintenanceRouteGroup(sourceRow)
+            : { key: plan.candidate.key, label: plan.candidate.label };
+          const current = groupedCandidates.get(group.key) || {
+            key: group.key,
+            label: group.label,
+            rows: [],
+          };
+          current.rows.push(plan);
+          groupedCandidates.set(group.key, current);
+        });
+        Array.from(groupedCandidates.values())
+          .sort((a, b) => {
+            if (a.rows.length !== b.rows.length) return b.rows.length - a.rows.length;
+            return a.label.localeCompare(b.label);
+          })
+          .forEach((group, index) => {
+            const assigneeName = assignees[index % assignees.length] || assignees[0];
+            group.rows.forEach((plan) => {
+              plan.assignee_name = assigneeName;
+            });
+          });
+      }
       const requests = isBulkMaintenanceAssign
-        ? duePlans.map(({ candidate, due }, index) =>
+        ? bulkAssignmentPlan.map(({ candidate, due, assignee_name }) =>
             api.post(`/green/trees/${candidate.treeId}/tasks`, {
               task_type: candidate.activity,
               due_date: due.dueDateInput,
               priority: newTask.priority,
               notes: newTask.notes,
               model_season: modelSeason,
-              assignee_name: distributeAcrossStaff ? assignees[index % assignees.length] : assignees[0],
+              assignee_name,
             }),
           )
         : assignees.map((assignee) =>
@@ -5153,14 +5254,6 @@ export default function GreenWork() {
     const merged = [...userTreePoints, ...userAreaPoints];
     return merged.length ? merged : null;
   }, [mapViewTrees]);
-  const mapTrees =
-    activeProjectId && newOrderAreaEnabled
-      ? trees
-      : mapViewTrees;
-  const mapFitPoints =
-    activeProjectId && newOrderAreaEnabled
-      ? combinedProjectFitPoints
-      : fitPoints;
 
   const overviewStaffSummary = useMemo(() => {
     const userByKey = new Map(users.map((user) => [normalizeName(user.full_name), user]));
@@ -5726,32 +5819,25 @@ export default function GreenWork() {
     () => liveMaintenanceRows.filter((row) => row.treeOrigin === "existing_inventory"),
     [liveMaintenanceRows],
   );
-  const liveMaintenanceSummary = useMemo(() => summarizeLiveRows(newPlantingLiveRows), [newPlantingLiveRows]);
-  const existingTreeLiveSummary = useMemo(() => summarizeLiveRows(existingTreeLiveRows), [existingTreeLiveRows]);
-
   const effectiveLiveRows = useMemo(
     () => (serverLiveRows.length ? serverLiveRows : newPlantingLiveRows),
     [serverLiveRows, newPlantingLiveRows],
   );
-  const effectiveLiveSummary = useMemo(
-    () => (serverLiveRows.length ? serverLiveSummary : liveMaintenanceSummary),
-    [serverLiveRows.length, serverLiveSummary, liveMaintenanceSummary],
-  );
   const effectiveExistingLiveRows = useMemo(
     () => (serverExistingLiveRows.length ? serverExistingLiveRows : existingTreeLiveRows),
     [serverExistingLiveRows, existingTreeLiveRows],
-  );
-  const effectiveExistingLiveSummary = useMemo(
-    () => (serverExistingLiveRows.length ? serverExistingLiveSummary : existingTreeLiveSummary),
-    [serverExistingLiveRows.length, serverExistingLiveSummary, existingTreeLiveSummary],
   );
   const allMaintenanceAssignRows = useMemo(
     () => [...effectiveLiveRows, ...effectiveExistingLiveRows],
     [effectiveExistingLiveRows, effectiveLiveRows],
   );
   const liveTableIsExistingScope = liveTreeScopeTab === "existing_inventory";
-  const displayedLiveRows = liveTableIsExistingScope ? effectiveExistingLiveRows : effectiveLiveRows;
-  const displayedLiveSummary = liveTableIsExistingScope ? effectiveExistingLiveSummary : effectiveLiveSummary;
+  const displayedLiveRowsBase = liveTableIsExistingScope ? effectiveExistingLiveRows : effectiveLiveRows;
+  const displayedLiveRows = useMemo(
+    () => displayedLiveRowsBase.filter((row) => maintenanceMatchesAttentionFilter(row)),
+    [displayedLiveRowsBase, maintenanceMatchesAttentionFilter],
+  );
+  const displayedLiveSummary = useMemo(() => summarizeLiveRows(displayedLiveRows), [displayedLiveRows]);
   const displayedLiveSources = liveTableIsExistingScope ? serverExistingLiveSources : serverLiveSources;
   const selectedMaintenanceRows = useMemo(() => {
     if (!selectedMaintenanceRowKeys.length) return [];
@@ -5780,6 +5866,76 @@ export default function GreenWork() {
     () => displayedLiveRows.filter((row) => selectedMaintenanceRowKeys.includes(row.key)).length,
     [displayedLiveRows, selectedMaintenanceRowKeys],
   );
+  const hiddenMaintenanceSelectionCount = useMemo(
+    () => Math.max(selectedMaintenanceRows.length - displayedMaintenanceSelectionCount, 0),
+    [displayedMaintenanceSelectionCount, selectedMaintenanceRows.length],
+  );
+  const maintenanceRouteGroups = useMemo(() => {
+    if (!selectedMaintenanceRows.length) return [];
+    const groups = new Map<string, { key: string; label: string; count: number }>();
+    selectedMaintenanceRows.forEach((row) => {
+      const group = describeMaintenanceRouteGroup(row);
+      const current = groups.get(group.key) || { ...group, count: 0 };
+      current.count += 1;
+      groups.set(group.key, current);
+    });
+    return Array.from(groups.values()).sort((a, b) => {
+      if (a.count !== b.count) return b.count - a.count;
+      return a.label.localeCompare(b.label);
+    });
+  }, [describeMaintenanceRouteGroup, selectedMaintenanceRows]);
+  const maintenanceFocusedTreeIds = useMemo(() => {
+    if (!maintenanceMapFocusEnabled) return [];
+    return Array.from(
+      new Set(
+        selectedMaintenanceRows
+          .map((row) => Number(row.treeId || 0))
+          .filter((treeId) => treeId > 0),
+      ),
+    );
+  }, [maintenanceMapFocusEnabled, selectedMaintenanceRows]);
+  const maintenanceMapFocusActive = activeForm === "map_view" && maintenanceFocusedTreeIds.length > 0;
+  const maintenanceMapTrees = useMemo(() => {
+    if (!maintenanceFocusedTreeIds.length) return mapViewTrees;
+    const focusedIds = new Set(maintenanceFocusedTreeIds);
+    return mapViewTrees.filter((tree) => focusedIds.has(Number(tree.id)));
+  }, [maintenanceFocusedTreeIds, mapViewTrees]);
+  const maintenanceMapFitPoints = useMemo(() => {
+    if (!maintenanceFocusedTreeIds.length) return null;
+    const focusedPoints = maintenanceMapTrees.flatMap((tree) => {
+      const treePoint =
+        Number.isFinite(Number(tree.lng)) && Number.isFinite(Number(tree.lat))
+          ? [{ lng: Number(tree.lng), lat: Number(tree.lat) }]
+          : [];
+      const areaPoints = extractMapAreaPoints(normalizeMapAreaGeometry(tree.existing_area_geojson));
+      return [...treePoint, ...areaPoints];
+    });
+    if (focusedPoints.length === 1) {
+      const [point] = focusedPoints;
+      const delta = 0.0016;
+      return [
+        { lng: point.lng - delta, lat: point.lat - delta },
+        { lng: point.lng + delta, lat: point.lat + delta },
+      ];
+    }
+    return focusedPoints.length ? focusedPoints : null;
+  }, [maintenanceFocusedTreeIds, maintenanceMapTrees]);
+  const mapTrees = maintenanceMapFocusActive
+    ? maintenanceMapTrees
+    : activeProjectId && newOrderAreaEnabled
+      ? trees
+      : mapViewTrees;
+  const mapFitPoints = maintenanceMapFocusActive
+    ? maintenanceMapFitPoints
+    : activeProjectId && newOrderAreaEnabled
+      ? combinedProjectFitPoints
+      : fitPoints;
+
+  useEffect(() => {
+    if (!selectedMaintenanceRows.length && maintenanceMapFocusEnabled) {
+      setMaintenanceMapFocusEnabled(false);
+    }
+  }, [maintenanceMapFocusEnabled, selectedMaintenanceRows.length]);
 
   const activeProjectActions: Array<{ form: WorkForm; title: string; note: string; isNew?: boolean }> = [
     { form: "overview", title: "Overview", note: "Progress summary" },
@@ -8628,6 +8784,21 @@ export default function GreenWork() {
                       <span className="green-work-note">+ {selectedMaintenanceRows.length - 8} more selected rows</span>
                     )}
                   </div>
+                  {selectedMaintenanceRows.length > 1 && maintenanceBulkAssignMode === "group_by_route" && maintenanceRouteGroups.length > 0 && (
+                    <div className="green-work-task-selection-groups">
+                      <strong>{maintenanceRouteGroups.length} custodian / route group{maintenanceRouteGroups.length === 1 ? "" : "s"} will stay together</strong>
+                      <div className="green-work-task-selection-group-list">
+                        {maintenanceRouteGroups.slice(0, 6).map((group) => (
+                          <span key={`maintenance-route-group-${group.key}`} className="green-work-task-selection-group-chip">
+                            {group.label} · {group.count}
+                          </span>
+                        ))}
+                        {maintenanceRouteGroups.length > 6 && (
+                          <span className="green-work-note">+ {maintenanceRouteGroups.length - 6} more groups</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <>
@@ -8661,15 +8832,26 @@ export default function GreenWork() {
                   <label className="green-work-field-label">Bulk assignment mode</label>
                   <select
                     value={maintenanceBulkAssignMode}
-                    onChange={(e) =>
-                      setMaintenanceBulkAssignMode(
-                        e.target.value === "distribute_evenly" ? "distribute_evenly" : "single_staff",
-                      )
-                    }
+                    onChange={(e) => {
+                      const nextMode =
+                        e.target.value === "distribute_evenly"
+                          ? "distribute_evenly"
+                          : e.target.value === "group_by_route"
+                            ? "group_by_route"
+                            : "single_staff";
+                      setMaintenanceBulkAssignMode(nextMode);
+                      if (nextMode === "single_staff" && newTaskSelectedAssignees.length) {
+                        setNewTask((prev) => ({ ...prev, assignee_name: newTaskSelectedAssignees[0] || prev.assignee_name }));
+                      }
+                      if (nextMode !== "single_staff" && !newTaskSelectedAssignees.length && String(newTask.assignee_name || "").trim()) {
+                        setNewTaskSelectedAssignees([String(newTask.assignee_name || "").trim()]);
+                      }
+                    }}
                     disabled={!activeProjectId || assigningMaintenanceTask}
                   >
                     <option value="single_staff">Assign all selected rows to one staff</option>
                     <option value="distribute_evenly">Distribute selected rows evenly across selected staff</option>
+                    <option value="group_by_route">Keep custodian / route groups together across selected staff</option>
                   </select>
                 </>
               )}
@@ -8678,13 +8860,16 @@ export default function GreenWork() {
                   type="checkbox"
                   checked={
                     selectedMaintenanceRows.length > 1
-                      ? maintenanceBulkAssignMode === "distribute_evenly"
+                      ? maintenanceBulkAssignMode !== "single_staff"
                       : newTaskMultiAssignEnabled
                   }
                   onChange={(e) => {
                     if (selectedMaintenanceRows.length > 1) {
                       const enabled = e.target.checked;
-                      setMaintenanceBulkAssignMode(enabled ? "distribute_evenly" : "single_staff");
+                      if (enabled && !newTaskSelectedAssignees.length && String(newTask.assignee_name || "").trim()) {
+                        setNewTaskSelectedAssignees([String(newTask.assignee_name || "").trim()]);
+                      }
+                      setMaintenanceBulkAssignMode(enabled ? "group_by_route" : "single_staff");
                       if (!enabled && newTaskSelectedAssignees.length) {
                         setNewTask((prev) => ({ ...prev, assignee_name: newTaskSelectedAssignees[0] || "" }));
                       }
@@ -8703,7 +8888,7 @@ export default function GreenWork() {
                   disabled={!activeProjectId || assigningMaintenanceTask}
                 />
                 <span>
-                  {selectedMaintenanceRows.length > 1 ? "Distribute selected maintenance across multiple staff" : "Assign to multiple staff"}
+                  {selectedMaintenanceRows.length > 1 ? "Use multiple staff for selected maintenance" : "Assign to multiple staff"}
                 </span>
               </label>
               {selectedMaintenanceRows.length > 1 && maintenanceBulkAssignMode === "single_staff" ? (
@@ -8719,6 +8904,41 @@ export default function GreenWork() {
                     </option>
                   ))}
                 </select>
+              ) : selectedMaintenanceRows.length > 1 && maintenanceBulkAssignMode !== "single_staff" ? (
+                <div className="green-work-multi-assign-panel">
+                  <div className="green-work-multi-assign-header">
+                    <span>{currentTaskAssignees.length} selected</span>
+                    <div className="work-actions">
+                      <button
+                        type="button"
+                        onClick={() => setNewTaskSelectedAssignees(users.map((u) => u.full_name))}
+                        disabled={!users.length || assigningMaintenanceTask}
+                      >
+                        Select all
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewTaskSelectedAssignees([])}
+                        disabled={!currentTaskAssignees.length || assigningMaintenanceTask}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  <div className="green-work-multi-assign-list">
+                    {users.map((u) => (
+                      <label key={u.id} className="green-work-multi-assign-item">
+                        <input
+                          type="checkbox"
+                          checked={newTaskSelectedAssignees.includes(u.full_name)}
+                          onChange={() => setNewTaskSelectedAssignees((prev) => toggleNamedSelection(prev, u.full_name))}
+                          disabled={assigningMaintenanceTask}
+                        />
+                        <span>{u.full_name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               ) : !newTaskMultiAssignEnabled ? (
                 <select
                   value={newTask.assignee_name}
@@ -9601,11 +9821,37 @@ export default function GreenWork() {
                 </span>
                 <span className="green-work-live-pill neutral">Rows: {displayedLiveSummary.total}</span>
               </div>
+              <div className="green-work-live-filter-row">
+                <label htmlFor="green-work-live-attention-filter">Queue filter</label>
+                <select
+                  id="green-work-live-attention-filter"
+                  value={maintenanceAttentionFilter}
+                  onChange={(e) => setMaintenanceAttentionFilter(e.target.value as MaintenanceAttentionFilter)}
+                >
+                  <option value="all">All maintenance rows</option>
+                  <option value="needs_action">Needs attention now</option>
+                  <option value="no_open_task">No open task assigned</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="due_soon">Due soon</option>
+                  <option value="replacement_required">Replacement required</option>
+                  <option value="inspection_flags">Inspection / condition flags</option>
+                </select>
+                <span>Filter the queue before selecting rows for dispatch.</span>
+              </div>
 
               <div className="green-work-live-bulk-bar">
                 <div className="green-work-live-bulk-copy">
-                  <strong>{displayedMaintenanceSelectionCount} selected</strong>
-                  <span>Select rows to assign one tree, many trees, or distribute work across staff.</span>
+                  <strong>
+                    {selectedMaintenanceRows.length} selected
+                    {hiddenMaintenanceSelectionCount > 0
+                      ? ` (${displayedMaintenanceSelectionCount} visible in this queue)`
+                      : ""}
+                  </strong>
+                  <span>
+                    {hiddenMaintenanceSelectionCount > 0
+                      ? `${hiddenMaintenanceSelectionCount} selected row${hiddenMaintenanceSelectionCount === 1 ? "" : "s"} are hidden by the current scope or queue filter.`
+                      : "Select rows to assign one tree, many trees, or distribute work across staff."}
+                  </span>
                 </div>
                 <div className="work-actions">
                   <button
@@ -9615,10 +9861,23 @@ export default function GreenWork() {
                   >
                     Select visible
                   </button>
-                  <button type="button" onClick={() => setSelectedMaintenanceRowKeys([])} disabled={!selectedMaintenanceRowKeys.length}>
+                  <button type="button" onClick={() => setSelectedMaintenanceRowKeys([])} disabled={!selectedMaintenanceRows.length}>
                     Clear
                   </button>
-                  <button type="button" className="btn-primary" onClick={() => openAssignTaskForSelectedRows()} disabled={!selectedMaintenanceRowKeys.length}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMaintenanceMapFocusEnabled(true);
+                      setActiveForm("map_view");
+                      setMenuOpen(false);
+                      setStaffMenu(null);
+                      setLiveTreeMenu(null);
+                    }}
+                    disabled={!selectedMaintenanceRows.length}
+                  >
+                    View selected on map
+                  </button>
+                  <button type="button" className="btn-primary" onClick={() => openAssignTaskForSelectedRows()} disabled={!selectedMaintenanceRows.length}>
                     Assign selected
                   </button>
                 </div>
@@ -10463,13 +10722,22 @@ export default function GreenWork() {
                   ? "Draw one polygon for this planting order in this tab, then click Assign Work."
                   : mapAreaDrawMode
                     ? "Planting-area draw is enabled from Assign Tree Planting. Draw polygon here, then return to assign work."
-                    : "Project tree map view. Inspect trees and monitor field positions."}
+                    : maintenanceMapFocusActive
+                      ? `Showing ${maintenanceFocusedTreeIds.length} selected maintenance tree${maintenanceFocusedTreeIds.length === 1 ? "" : "s"} from the queue. Clear focus to return to the full project map.`
+                     : "Project tree map view. Inspect trees and monitor field positions."}
               </p>
-              {mapAreaDrawMode && !assignWorkAreaMode && (
+              {(maintenanceMapFocusActive || (mapAreaDrawMode && !assignWorkAreaMode)) && (
                 <div className="work-actions">
-                  <button type="button" onClick={() => openForm("assign_work")}>
-                    Back To Assign Tree Planting
-                  </button>
+                  {maintenanceMapFocusActive && (
+                    <button type="button" onClick={() => setMaintenanceMapFocusEnabled(false)}>
+                      Clear Maintenance Focus
+                    </button>
+                  )}
+                  {mapAreaDrawMode && !assignWorkAreaMode && (
+                    <button type="button" onClick={() => openForm("assign_work")}>
+                      Back To Assign Tree Planting
+                    </button>
+                  )}
                 </div>
               )}
               <div className="green-work-map-layout">
