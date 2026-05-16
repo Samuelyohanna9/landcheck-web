@@ -5884,6 +5884,100 @@ export default function GreenWork() {
       return a.label.localeCompare(b.label);
     });
   }, [describeMaintenanceRouteGroup, selectedMaintenanceRows]);
+  const maintenanceAssignmentPreview = useMemo(() => {
+    type MaintenanceAssignmentPreviewRow = {
+      key: string;
+      label: string;
+      activityLabel: string;
+      indicator: string;
+      species: string;
+      group: { key: string; label: string };
+    };
+    type MaintenanceAssignmentPreviewEntry = {
+      assignee: string;
+      rows: MaintenanceAssignmentPreviewRow[];
+      groups: { label: string; count: number }[];
+    };
+    if (selectedMaintenanceRows.length <= 1) return [];
+    if (maintenanceBulkAssignMode === "single_staff") return [];
+    if (!currentTaskAssignees.length) return [];
+
+    const makeRowPreview = (row: LiveMaintenanceRow): MaintenanceAssignmentPreviewRow => {
+      const sourceTree = treeById.get(Number(row.treeId));
+      return {
+        key: row.key,
+        label: formatProjectTreeLabelById(row.treeId),
+        activityLabel: row.activityLabel,
+        indicator: row.indicator,
+        species: String(sourceTree?.species || "").trim(),
+        group: describeMaintenanceRouteGroup(row),
+      };
+    };
+
+    if (maintenanceBulkAssignMode === "distribute_evenly") {
+      return currentTaskAssignees
+        .map(
+          (assignee, index): MaintenanceAssignmentPreviewEntry => ({
+          assignee,
+          rows: selectedMaintenanceRows
+            .filter((_, rowIndex) => rowIndex % currentTaskAssignees.length === index)
+            .map(makeRowPreview),
+            groups: [],
+          }),
+        )
+        .filter((entry) => entry.rows.length > 0);
+    }
+
+    const grouped = new Map<
+      string,
+      {
+        key: string;
+        label: string;
+        rows: ReturnType<typeof makeRowPreview>[];
+      }
+    >();
+    selectedMaintenanceRows.forEach((row) => {
+      const previewRow = makeRowPreview(row);
+      const current = grouped.get(previewRow.group.key) || {
+        key: previewRow.group.key,
+        label: previewRow.group.label,
+        rows: [],
+      };
+      current.rows.push(previewRow);
+      grouped.set(previewRow.group.key, current);
+    });
+    const sortedGroups = Array.from(grouped.values()).sort((a, b) => {
+      if (a.rows.length !== b.rows.length) return b.rows.length - a.rows.length;
+      return a.label.localeCompare(b.label);
+    });
+    const previewByAssignee = new Map<
+      string,
+      MaintenanceAssignmentPreviewEntry
+    >(
+      currentTaskAssignees.map((assignee) => [
+        assignee,
+        {
+          assignee,
+          rows: [],
+          groups: [],
+        },
+      ]),
+    );
+    sortedGroups.forEach((group, index) => {
+      const assignee = currentTaskAssignees[index % currentTaskAssignees.length] || currentTaskAssignees[0];
+      const current = previewByAssignee.get(assignee);
+      if (!current) return;
+      current.rows.push(...group.rows);
+      current.groups.push({ label: group.label, count: group.rows.length });
+    });
+    return Array.from(previewByAssignee.values()).filter((entry) => entry.rows.length > 0);
+  }, [
+    currentTaskAssignees,
+    describeMaintenanceRouteGroup,
+    maintenanceBulkAssignMode,
+    selectedMaintenanceRows,
+    treeById,
+  ]);
   const maintenanceFocusedTreeIds = useMemo(() => {
     if (!maintenanceMapFocusEnabled) return [];
     return Array.from(
@@ -8790,7 +8884,7 @@ export default function GreenWork() {
                       <div className="green-work-task-selection-group-list">
                         {maintenanceRouteGroups.slice(0, 6).map((group) => (
                           <span key={`maintenance-route-group-${group.key}`} className="green-work-task-selection-group-chip">
-                            {group.label} · {group.count}
+                            {group.label} | {group.count}
                           </span>
                         ))}
                         {maintenanceRouteGroups.length > 6 && (
@@ -8979,6 +9073,61 @@ export default function GreenWork() {
                     ))}
                   </div>
                 </div>
+              )}
+              {selectedMaintenanceRows.length > 1 && maintenanceBulkAssignMode !== "single_staff" && (
+                maintenanceAssignmentPreview.length > 0 ? (
+                  <div className="green-work-assignment-preview">
+                    <div className="green-work-assignment-preview-head">
+                      <strong>Assignment preview</strong>
+                      <span>
+                        {maintenanceBulkAssignMode === "group_by_route"
+                          ? "Each staff member gets complete custodian / route groups."
+                          : "Each staff member gets the rows shown below before you submit."}
+                      </span>
+                    </div>
+                    <div className="green-work-assignment-preview-grid">
+                      {maintenanceAssignmentPreview.map((entry) => (
+                        <div key={`maintenance-preview-${entry.assignee}`} className="green-work-assignment-preview-card">
+                          <div className="green-work-assignment-preview-card-head">
+                            <strong>{entry.assignee}</strong>
+                            <span>{entry.rows.length} tree task{entry.rows.length === 1 ? "" : "s"}</span>
+                          </div>
+                          {maintenanceBulkAssignMode === "group_by_route" && entry.groups?.length ? (
+                            <div className="green-work-assignment-preview-groups">
+                              {entry.groups.map((group) => (
+                                <span
+                                  key={`maintenance-preview-group-${entry.assignee}-${group.label}`}
+                                  className="green-work-assignment-preview-group-chip"
+                                >
+                                  {group.label} | {group.count}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                          <div className="green-work-assignment-preview-list">
+                            {entry.rows.slice(0, 6).map((row) => (
+                              <div key={`maintenance-preview-row-${row.key}`} className="green-work-assignment-preview-item">
+                                <strong>{row.label}</strong>
+                                <span>
+                                  {row.activityLabel}
+                                  {row.species ? ` | ${row.species}` : ""}
+                                </span>
+                                <small>{row.indicator}</small>
+                              </div>
+                            ))}
+                            {entry.rows.length > 6 && (
+                              <span className="green-work-note">+ {entry.rows.length - 6} more rows for {entry.assignee}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="green-work-note">
+                    Select at least two staff to preview how the selected trees will be assigned.
+                  </p>
+                )
               )}
               <select
                 value={newTask.priority}

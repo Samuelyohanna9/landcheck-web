@@ -3482,6 +3482,105 @@
   font-weight: 700;
 }
 
+.green-work-assignment-preview {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(22, 76, 42, 0.14);
+  border-radius: 12px;
+  background: rgba(248, 252, 248, 0.92);
+}
+
+.green-work-assignment-preview-head {
+  display: grid;
+  gap: 0.16rem;
+}
+
+.green-work-assignment-preview-head strong {
+  font-size: 0.84rem;
+  color: var(--green-900);
+}
+
+.green-work-assignment-preview-head span {
+  font-size: 0.72rem;
+  color: var(--gw-subtext);
+}
+
+.green-work-assignment-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.55rem;
+}
+
+.green-work-assignment-preview-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid rgba(22, 76, 42, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.green-work-assignment-preview-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.green-work-assignment-preview-card-head strong {
+  font-size: 0.78rem;
+  color: var(--green-900);
+}
+
+.green-work-assignment-preview-card-head span,
+.green-work-assignment-preview-item span,
+.green-work-assignment-preview-item small {
+  font-size: 0.7rem;
+  color: var(--gw-subtext);
+}
+
+.green-work-assignment-preview-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.green-work-assignment-preview-group-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  background: var(--green-100);
+  color: var(--green-800);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.green-work-assignment-preview-list {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.green-work-assignment-preview-item {
+  display: grid;
+  gap: 0.08rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px dashed rgba(22, 76, 42, 0.12);
+}
+
+.green-work-assignment-preview-item:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.green-work-assignment-preview-item strong {
+  font-size: 0.76rem;
+  color: var(--green-900);
+}
+
+
 
 /* ── Live Indicator ── */
 .green-work-live-indicator {
