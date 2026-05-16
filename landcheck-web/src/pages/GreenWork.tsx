@@ -4361,11 +4361,6 @@ export default function GreenWork() {
       toast.error(bulkUsesMultipleStaff ? "Select staff for distribution" : "Assign a user");
       return;
     }
-    if (bulkUsesMultipleStaff && assignees.length < 2) {
-      toast.error("Select at least two staff to distribute selected maintenance across.");
-      return;
-    }
-
     const duePlans = candidates.map((candidate) => ({
       candidate,
       due: resolveTaskDueDateForCandidate(candidate.treeId, candidate.activity),
@@ -5913,6 +5908,19 @@ export default function GreenWork() {
         group: describeMaintenanceRouteGroup(row),
       };
     };
+
+    if (currentTaskAssignees.length === 1) {
+      return [
+        {
+          assignee: currentTaskAssignees[0],
+          rows: selectedMaintenanceRows.map(makeRowPreview),
+          groups:
+            maintenanceBulkAssignMode === "group_by_route"
+              ? maintenanceRouteGroups.map((group) => ({ label: group.label, count: group.count }))
+              : [],
+        },
+      ];
+    }
 
     if (maintenanceBulkAssignMode === "distribute_evenly") {
       return currentTaskAssignees
@@ -9085,6 +9093,12 @@ export default function GreenWork() {
                           : "Each staff member gets the rows shown below before you submit."}
                       </span>
                     </div>
+                    {currentTaskAssignees.length === 1 && (
+                      <p className="green-work-note">
+                        Only one staff is selected, so all selected maintenance rows will go to <strong>{currentTaskAssignees[0]}</strong>.
+                        Select more staff if you want the rows split automatically.
+                      </p>
+                    )}
                     <div className="green-work-assignment-preview-grid">
                       {maintenanceAssignmentPreview.map((entry) => (
                         <div key={`maintenance-preview-${entry.assignee}`} className="green-work-assignment-preview-card">
