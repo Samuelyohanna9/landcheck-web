@@ -22,6 +22,12 @@ type GeometryMetrics = {
   areaSqm: number;
 };
 
+type PlottingCamera = {
+  zoom: number;
+  offsetX: number;
+  offsetY: number;
+};
+
 type Props = {
   isOpen: boolean;
   onClose: () => void;
@@ -65,6 +71,11 @@ const DEFAULT_FEATURE_COLLECTIONS: FeatureCollectionState = {
 const PLOTTING_VIEWPORT_WIDTH = 1280;
 const PLOTTING_VIEWPORT_HEIGHT = 820;
 const PLOTTING_VIEWPORT_PADDING = 84;
+const DEFAULT_PLOTTING_CAMERA: PlottingCamera = {
+  zoom: 1,
+  offsetX: 0,
+  offsetY: 0,
+};
 
 const EARTH_RADIUS_M = 6371008.8;
 
@@ -491,6 +502,12 @@ export default function FeatureOverrideModal({
   const containerRef = useRef<HTMLDivElement>(null);
   const plottingStageRef = useRef<HTMLDivElement>(null);
   const activeDrawFeatureId = useRef<string | null>(null);
+  const plottingPanRef = useRef<{ active: boolean; lastX: number; lastY: number; moved: boolean }>({
+    active: false,
+    lastX: 0,
+    lastY: 0,
+    moved: false,
+  });
 
   const [menu, setMenu] = useState<{ x: number; y: number; visible: boolean }>({ x: 0, y: 0, visible: false });
   const [selectedGeometry, setSelectedGeometry] = useState<any>(null);
@@ -504,6 +521,8 @@ export default function FeatureOverrideModal({
   const [featureCollections, setFeatureCollections] = useState<FeatureCollectionState>(DEFAULT_FEATURE_COLLECTIONS);
   const [plottingPoints, setPlottingPoints] = useState<number[][]>([]);
   const [deleteConfirmArmed, setDeleteConfirmArmed] = useState(false);
+  const [plottingCamera, setPlottingCamera] = useState<PlottingCamera>(DEFAULT_PLOTTING_CAMERA);
+  const [plottingPanActive, setPlottingPanActive] = useState(false);
 
   const activeMetrics = useMemo(() => draftMetrics || selectedMetrics, [draftMetrics, selectedMetrics]);
   const plottingDraftGeometry = useMemo(
@@ -520,6 +539,7 @@ export default function FeatureOverrideModal({
     }),
     [featureCollections, plotCoords, plottingDraftGeometry, selectedGeometry]
   );
+  const plottingZoomPercent = useMemo(() => `${Math.round(plottingCamera.zoom * 100)}%`, [plottingCamera.zoom]);
   const hasSelectedGeometry = Boolean(selectedGeometry);
   const hasDraftGeometry =
     Boolean(plottingDraftGeometry) ||
@@ -775,8 +795,11 @@ export default function FeatureOverrideModal({
   );
 
   const fitPlotBoundary = useCallback(() => {
+    if (basemapMode === "plotting") {
+      setPlottingCamera(DEFAULT_PLOTTING_CAMERA);
+      return;
+    }
     const map = mapRef.current;
-    if (basemapMode === "plotting") return;
     if (!map || !plotCoords?.length) return;
     const bounds = new mapboxgl.LngLatBounds();
     plotCoords.forEach(([lng, lat]) => bounds.extend([lng, lat]));
@@ -1090,6 +1113,11 @@ export default function FeatureOverrideModal({
   }, [basemapMode, isOpen, plottingDraftGeometry]);
 
   useEffect(() => {
+    if (!isOpen || basemapMode !== "plotting") return;
+    setPlottingCamera(DEFAULT_PLOTTING_CAMERA);
+  }, [basemapMode, isOpen]);
+
+  useEffect(() => {
     if (!isOpen || basemapMode !== "satellite") return;
     if (!plottingDraftGeometry || !drawRef.current) return;
     drawRef.current.deleteAll();
@@ -1104,36 +1132,65 @@ export default function FeatureOverrideModal({
   }, [basemapMode, isOpen, plottingDraftGeometry]);
 
   const getPlottingPointer = useCallback(
-    (event: ReactMouseEvent<SVGSVGElement>) => {
-      const target = event.currentTarget;
+    (target: SVGSVGElement, clientX: number, clientY: number) => {
       const rect = target.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / Math.max(rect.width, 1)) * plottingViewport.width;
-      const y = ((event.clientY - rect.top) / Math.max(rect.height, 1)) * plottingViewport.height;
+      const x = ((clientX - rect.left) / Math.max(rect.width, 1)) * plottingViewport.width;
+      const y = ((clientY - rect.top) / Math.max(rect.height, 1)) * plottingViewport.height;
       return { x, y };
     },
     [plottingViewport.height, plottingViewport.width]
   );
 
+  const plottingScreenToCanvasPoint = useCallback(
+    (point: { x: number; y: number }) => ({
+      x: (point.x - plottingCamera.offsetX) / plottingCamera.zoom,
+      y: (point.y - plottingCamera.offsetY) / plottingCamera.zoom,
+    }),
+    [plottingCamera.offsetX, plottingCamera.offsetY, plottingCamera.zoom]
+  );
+
   const handlePlottingMouseMove = useCallback(
     (event: ReactMouseEvent<SVGSVGElement>) => {
       if (basemapMode !== "plotting") return;
-      const pointer = getPlottingPointer(event);
+      const rawPointer = getPlottingPointer(event.currentTarget, event.clientX, event.clientY);
+      if (plottingPanRef.current.active) {
+        const deltaX = rawPointer.x - plottingPanRef.current.lastX;
+        const deltaY = rawPointer.y - plottingPanRef.current.lastY;
+        plottingPanRef.current.lastX = rawPointer.x;
+        plottingPanRef.current.lastY = rawPointer.y;
+        if (Math.abs(deltaX) > 0 || Math.abs(deltaY) > 0) {
+          plottingPanRef.current.moved = true;
+          setPlottingCamera((previous) => ({
+            ...previous,
+            offsetX: previous.offsetX + deltaX,
+            offsetY: previous.offsetY + deltaY,
+          }));
+        }
+        return;
+      }
+      const pointer = plottingScreenToCanvasPoint(rawPointer);
       const [lng, lat] = plottingViewport.unproject(pointer);
       setCursor({ lng, lat });
     },
-    [basemapMode, getPlottingPointer, plottingViewport]
+    [basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport]
   );
 
   const handlePlottingCanvasClick = useCallback(
     (event: ReactMouseEvent<SVGSVGElement>) => {
       if (basemapMode !== "plotting") return;
       if (activeTool === "select") return;
+      if (plottingPanRef.current.moved) {
+        plottingPanRef.current.moved = false;
+        return;
+      }
       event.preventDefault();
-      const pointer = getPlottingPointer(event);
+      const pointer = plottingScreenToCanvasPoint(
+        getPlottingPointer(event.currentTarget, event.clientX, event.clientY)
+      );
       const [lng, lat] = plottingViewport.unproject(pointer);
       setPlottingPoints((previous) => [...previous, [lng, lat]]);
     },
-    [activeTool, basemapMode, getPlottingPointer, plottingViewport]
+    [activeTool, basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport]
   );
 
   const handlePlottingCanvasDoubleClick = useCallback(
@@ -1158,6 +1215,73 @@ export default function FeatureOverrideModal({
     },
     [importGeometryIntoEditor]
   );
+
+  const handlePlottingMouseDown = useCallback(
+    (event: ReactMouseEvent<SVGSVGElement>) => {
+      if (basemapMode !== "plotting") return;
+      if (event.button !== 1) return;
+      event.preventDefault();
+      const pointer = getPlottingPointer(event.currentTarget, event.clientX, event.clientY);
+      plottingPanRef.current = {
+        active: true,
+        lastX: pointer.x,
+        lastY: pointer.y,
+        moved: false,
+      };
+      setPlottingPanActive(true);
+    },
+    [basemapMode, getPlottingPointer]
+  );
+
+  const handlePlottingMouseUp = useCallback(() => {
+    if (!plottingPanRef.current.active) return;
+    plottingPanRef.current.active = false;
+    setPlottingPanActive(false);
+  }, []);
+
+  const handlePlottingWheel = useCallback(
+    (event: React.WheelEvent<SVGSVGElement>) => {
+      if (basemapMode !== "plotting") return;
+      event.preventDefault();
+      const rawPointer = getPlottingPointer(event.currentTarget, event.clientX, event.clientY);
+      setPlottingCamera((previous) => {
+        const nextZoom = Math.min(4, Math.max(0.55, previous.zoom * (event.deltaY > 0 ? 0.92 : 1.08)));
+        if (Math.abs(nextZoom - previous.zoom) < 0.0001) return previous;
+        const worldX = (rawPointer.x - previous.offsetX) / previous.zoom;
+        const worldY = (rawPointer.y - previous.offsetY) / previous.zoom;
+        return {
+          zoom: nextZoom,
+          offsetX: rawPointer.x - worldX * nextZoom,
+          offsetY: rawPointer.y - worldY * nextZoom,
+        };
+      });
+    },
+    [basemapMode, getPlottingPointer]
+  );
+
+  const handlePlottingMouseLeave = useCallback(() => {
+    plottingPanRef.current.active = false;
+    plottingPanRef.current.moved = false;
+    setPlottingPanActive(false);
+    setCursor(null);
+  }, []);
+
+  const zoomPlottingCamera = useCallback((direction: "in" | "out") => {
+    setPlottingCamera((previous) => {
+      const factor = direction === "in" ? 1.12 : 0.9;
+      const nextZoom = Math.min(4, Math.max(0.55, previous.zoom * factor));
+      if (Math.abs(nextZoom - previous.zoom) < 0.0001) return previous;
+      const anchorX = plottingViewport.width / 2;
+      const anchorY = plottingViewport.height / 2;
+      const worldX = (anchorX - previous.offsetX) / previous.zoom;
+      const worldY = (anchorY - previous.offsetY) / previous.zoom;
+      return {
+        zoom: nextZoom,
+        offsetX: anchorX - worldX * nextZoom,
+        offsetY: anchorY - worldY * nextZoom,
+      };
+    });
+  }, [plottingViewport.height, plottingViewport.width]);
 
   const plottingGridLines = useMemo(() => {
     const lines: Array<{ key: string; x1: number; y1: number; x2: number; y2: number; major: boolean }> = [];
@@ -1300,6 +1424,16 @@ export default function FeatureOverrideModal({
             <button type="button" className="cad-tool-btn" onClick={fitPlotBoundary}>
               Fit Plot
             </button>
+            {basemapMode === "plotting" ? (
+              <>
+                <button type="button" className="cad-tool-btn" onClick={() => zoomPlottingCamera("in")}>
+                  Zoom In
+                </button>
+                <button type="button" className="cad-tool-btn" onClick={() => zoomPlottingCamera("out")}>
+                  Zoom Out
+                </button>
+              </>
+            ) : null}
             <button type="button" className="cad-tool-btn" onClick={clearWorkingSelection}>
               Clear Draft
             </button>
@@ -1508,124 +1642,131 @@ export default function FeatureOverrideModal({
             </div>
             {basemapMode === "plotting" ? (
               <div className="feature-override-map cad-plotting-stage" ref={plottingStageRef}>
+                <div className="cad-plotting-help">Wheel to zoom. Hold middle mouse and drag to pan.</div>
                 <svg
-                  className="cad-plotting-svg"
+                  className={`cad-plotting-svg${plottingPanActive ? " is-panning" : ""}`}
                   viewBox={`0 0 ${plottingViewport.width} ${plottingViewport.height}`}
                   onMouseMove={handlePlottingMouseMove}
-                  onMouseLeave={() => setCursor(null)}
+                  onMouseDown={handlePlottingMouseDown}
+                  onMouseUp={handlePlottingMouseUp}
+                  onMouseLeave={handlePlottingMouseLeave}
+                  onWheel={handlePlottingWheel}
                   onClick={handlePlottingCanvasClick}
                   onDoubleClick={handlePlottingCanvasDoubleClick}
+                  onAuxClick={(event) => event.preventDefault()}
                 >
                   <rect x="0" y="0" width={plottingViewport.width} height={plottingViewport.height} className="cad-plot-bg" />
-                  {plottingGridLines.map((line) => (
-                    <line
-                      key={line.key}
-                      x1={line.x1}
-                      y1={line.y1}
-                      x2={line.x2}
-                      y2={line.y2}
-                      className={line.major ? "cad-grid-line cad-grid-line--major" : "cad-grid-line cad-grid-line--minor"}
-                    />
-                  ))}
-                  {layerVisibility.boundary && plotCoords?.length ? (
-                    <polygon
-                      points={pointsToSvg(closeRing(plotCoords), plottingViewport.project)}
-                      className="cad-svg-boundary"
-                    />
-                  ) : null}
-                  {layerVisibility.road &&
-                    featureCollections.road.features.map((feature, index) => {
-                      const geometry = feature?.geometry;
-                      if (geometry?.type !== "LineString") return null;
-                      const labelPoint = getFeatureLabelPoint(geometry, plottingViewport.project);
-                      return (
-                        <g key={`road-${index}`} onClick={() => handlePlottingFeatureSelect("road", feature)}>
+                  <g transform={`translate(${plottingCamera.offsetX.toFixed(2)} ${plottingCamera.offsetY.toFixed(2)}) scale(${plottingCamera.zoom.toFixed(3)})`}>
+                    {plottingGridLines.map((line) => (
+                      <line
+                        key={line.key}
+                        x1={line.x1}
+                        y1={line.y1}
+                        x2={line.x2}
+                        y2={line.y2}
+                        className={line.major ? "cad-grid-line cad-grid-line--major" : "cad-grid-line cad-grid-line--minor"}
+                      />
+                    ))}
+                    {layerVisibility.boundary && plotCoords?.length ? (
+                      <polygon
+                        points={pointsToSvg(closeRing(plotCoords), plottingViewport.project)}
+                        className="cad-svg-boundary"
+                      />
+                    ) : null}
+                    {layerVisibility.road &&
+                      featureCollections.road.features.map((feature, index) => {
+                        const geometry = feature?.geometry;
+                        if (geometry?.type !== "LineString") return null;
+                        const labelPoint = getFeatureLabelPoint(geometry, plottingViewport.project);
+                        return (
+                          <g key={`road-${index}`} onClick={() => handlePlottingFeatureSelect("road", feature)}>
+                            <polyline
+                              points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
+                              className="cad-svg-feature cad-svg-feature--road"
+                            />
+                            {labelPoint ? (
+                              <text x={labelPoint.x + 8} y={labelPoint.y - 8} className="cad-svg-label">
+                                {feature?.properties?.name || `Road ${index + 1}`}
+                              </text>
+                            ) : null}
+                          </g>
+                        );
+                      })}
+                    {layerVisibility.river &&
+                      featureCollections.river.features.map((feature, index) => {
+                        const geometry = feature?.geometry;
+                        if (geometry?.type !== "LineString") return null;
+                        return (
                           <polyline
+                            key={`river-${index}`}
                             points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
-                            className="cad-svg-feature cad-svg-feature--road"
+                            className="cad-svg-feature cad-svg-feature--river"
+                            onClick={() => handlePlottingFeatureSelect("river", feature)}
                           />
-                          {labelPoint ? (
-                            <text x={labelPoint.x + 8} y={labelPoint.y - 8} className="cad-svg-label">
-                              {feature?.properties?.name || `Road ${index + 1}`}
-                            </text>
-                          ) : null}
-                        </g>
-                      );
-                    })}
-                  {layerVisibility.river &&
-                    featureCollections.river.features.map((feature, index) => {
-                      const geometry = feature?.geometry;
-                      if (geometry?.type !== "LineString") return null;
-                      return (
-                        <polyline
-                          key={`river-${index}`}
-                          points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
-                          className="cad-svg-feature cad-svg-feature--river"
-                          onClick={() => handlePlottingFeatureSelect("river", feature)}
-                        />
-                      );
-                    })}
-                  {layerVisibility.fence &&
-                    featureCollections.fence.features.map((feature, index) => {
-                      const geometry = feature?.geometry;
-                      if (geometry?.type !== "LineString") return null;
-                      return (
-                        <polyline
-                          key={`fence-${index}`}
-                          points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
-                          className="cad-svg-feature cad-svg-feature--fence"
-                          onClick={() => handlePlottingFeatureSelect("fence", feature)}
-                        />
-                      );
-                    })}
-                  {layerVisibility.building &&
-                    featureCollections.building.features.map((feature, index) => {
-                      const geometry = feature?.geometry;
-                      const ring = Array.isArray(geometry?.coordinates?.[0]) ? geometry.coordinates[0] : null;
-                      if (!ring) return null;
-                      const labelPoint = getFeatureLabelPoint(geometry, plottingViewport.project);
-                      return (
-                        <g key={`building-${index}`} onClick={() => handlePlottingFeatureSelect("building", feature)}>
-                          <polygon
-                            points={pointsToSvg(ring, plottingViewport.project)}
-                            className="cad-svg-feature cad-svg-feature--building"
+                        );
+                      })}
+                    {layerVisibility.fence &&
+                      featureCollections.fence.features.map((feature, index) => {
+                        const geometry = feature?.geometry;
+                        if (geometry?.type !== "LineString") return null;
+                        return (
+                          <polyline
+                            key={`fence-${index}`}
+                            points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
+                            className="cad-svg-feature cad-svg-feature--fence"
+                            onClick={() => handlePlottingFeatureSelect("fence", feature)}
                           />
-                          {labelPoint ? (
-                            <text x={labelPoint.x + 8} y={labelPoint.y - 8} className="cad-svg-label">
-                              BLD-{index + 1}
-                            </text>
-                          ) : null}
-                        </g>
-                      );
+                        );
+                      })}
+                    {layerVisibility.building &&
+                      featureCollections.building.features.map((feature, index) => {
+                        const geometry = feature?.geometry;
+                        const ring = Array.isArray(geometry?.coordinates?.[0]) ? geometry.coordinates[0] : null;
+                        if (!ring) return null;
+                        const labelPoint = getFeatureLabelPoint(geometry, plottingViewport.project);
+                        return (
+                          <g key={`building-${index}`} onClick={() => handlePlottingFeatureSelect("building", feature)}>
+                            <polygon
+                              points={pointsToSvg(ring, plottingViewport.project)}
+                              className="cad-svg-feature cad-svg-feature--building"
+                            />
+                            {labelPoint ? (
+                              <text x={labelPoint.x + 8} y={labelPoint.y - 8} className="cad-svg-label">
+                                BLD-{index + 1}
+                              </text>
+                            ) : null}
+                          </g>
+                        );
+                      })}
+                    {selectedGeometry?.type === "LineString" ? (
+                      <polyline
+                        points={pointsToSvg(selectedGeometry.coordinates || [], plottingViewport.project)}
+                        className="cad-svg-selected"
+                      />
+                    ) : null}
+                    {selectedGeometry?.type === "Polygon" && Array.isArray(selectedGeometry.coordinates?.[0]) ? (
+                      <polygon
+                        points={pointsToSvg(selectedGeometry.coordinates[0], plottingViewport.project)}
+                        className="cad-svg-selected"
+                      />
+                    ) : null}
+                    {plottingDraftGeometry?.type === "LineString" ? (
+                      <polyline
+                        points={pointsToSvg((plottingDraftGeometry.coordinates || []) as number[][], plottingViewport.project)}
+                        className="cad-svg-draft"
+                      />
+                    ) : null}
+                    {plottingDraftGeometry?.type === "Polygon" && Array.isArray(plottingDraftGeometry.coordinates?.[0]) ? (
+                      <polygon
+                        points={pointsToSvg(plottingDraftGeometry.coordinates[0] as number[][], plottingViewport.project)}
+                        className="cad-svg-draft cad-svg-draft--polygon"
+                      />
+                    ) : null}
+                    {plottingPoints.map((point, index) => {
+                      const projected = plottingViewport.project(point);
+                      return <circle key={`pt-${index}`} cx={projected.x} cy={projected.y} r="4.5" className="cad-svg-vertex" />;
                     })}
-                  {selectedGeometry?.type === "LineString" ? (
-                    <polyline
-                      points={pointsToSvg(selectedGeometry.coordinates || [], plottingViewport.project)}
-                      className="cad-svg-selected"
-                    />
-                  ) : null}
-                  {selectedGeometry?.type === "Polygon" && Array.isArray(selectedGeometry.coordinates?.[0]) ? (
-                    <polygon
-                      points={pointsToSvg(selectedGeometry.coordinates[0], plottingViewport.project)}
-                      className="cad-svg-selected"
-                    />
-                  ) : null}
-                  {plottingDraftGeometry?.type === "LineString" ? (
-                    <polyline
-                      points={pointsToSvg((plottingDraftGeometry.coordinates || []) as number[][], plottingViewport.project)}
-                      className="cad-svg-draft"
-                    />
-                  ) : null}
-                  {plottingDraftGeometry?.type === "Polygon" && Array.isArray(plottingDraftGeometry.coordinates?.[0]) ? (
-                    <polygon
-                      points={pointsToSvg(plottingDraftGeometry.coordinates[0] as number[][], plottingViewport.project)}
-                      className="cad-svg-draft cad-svg-draft--polygon"
-                    />
-                  ) : null}
-                  {plottingPoints.map((point, index) => {
-                    const projected = plottingViewport.project(point);
-                    return <circle key={`pt-${index}`} cx={projected.x} cy={projected.y} r="4.5" className="cad-svg-vertex" />;
-                  })}
+                  </g>
                   <line
                     x1={PLOTTING_VIEWPORT_PADDING / 2}
                     y1={plottingViewport.height - PLOTTING_VIEWPORT_PADDING / 2}
@@ -1662,6 +1803,9 @@ export default function FeatureOverrideModal({
               </span>
               <span>Basemap: {basemapMode === "plotting" ? "Plotting" : "Satellite"}</span>
               <span>Tool: {activeTool === "select" ? "Select" : activeTool === "draw_polygon" ? "Polygon" : "Line"}</span>
+              {basemapMode === "plotting" ? <span>Zoom: {plottingZoomPercent}</span> : null}
+              {basemapMode === "plotting" ? <span>Grid: On</span> : null}
+              {basemapMode === "plotting" ? <span>Pan: Middle mouse drag</span> : null}
               <span>
                 Geometry:{" "}
                 {activeMetrics
