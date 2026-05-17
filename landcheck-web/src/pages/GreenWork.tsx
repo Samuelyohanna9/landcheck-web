@@ -5899,9 +5899,11 @@ export default function GreenWork() {
 
     const makeRowPreview = (row: LiveMaintenanceRow): MaintenanceAssignmentPreviewRow => {
       const sourceTree = treeById.get(Number(row.treeId));
+      const numericTreeId = Number(row.treeId || 0);
+      const projectTreeNo = Number((sourceTree as any)?.project_tree_no || 0);
       return {
         key: row.key,
-        label: formatProjectTreeLabelById(row.treeId),
+        label: `Tree #${projectTreeNo > 0 ? projectTreeNo : numericTreeId}`,
         activityLabel: row.activityLabel,
         indicator: row.indicator,
         species: String(sourceTree?.species || "").trim(),
