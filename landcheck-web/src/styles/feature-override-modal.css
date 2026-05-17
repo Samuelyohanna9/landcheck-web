@@ -416,6 +416,30 @@
   padding: 0.95rem;
 }
 
+.cad-osnap-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0.95rem;
+}
+
+.cad-osnap-chip {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.68);
+  color: #cbd5e1;
+  padding: 0.45rem 0.78rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cad-osnap-chip.active {
+  border-color: rgba(34, 197, 94, 0.34);
+  background: rgba(20, 83, 45, 0.52);
+  color: #dcfce7;
+}
+
 .cad-property-row,
 .cad-coordinate-row {
   display: grid;
@@ -660,6 +684,14 @@
   stroke-width: 3;
 }
 
+.cad-svg-multiselect {
+  fill: rgba(56, 189, 248, 0.04);
+  stroke: #67e8f9;
+  stroke-width: 2.2;
+  stroke-dasharray: 8 6;
+  pointer-events: none;
+}
+
 .cad-svg-draft {
   fill: none;
   stroke: #f97316;
@@ -776,6 +808,66 @@
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.05em;
+}
+
+.cad-selection-box {
+  fill: rgba(56, 189, 248, 0.1);
+  stroke: #67e8f9;
+  stroke-width: 1.5;
+  stroke-dasharray: 8 6;
+}
+
+.cad-selection-lasso {
+  fill: none;
+  stroke: #67e8f9;
+  stroke-width: 1.6;
+  stroke-dasharray: 8 5;
+}
+
+.cad-command-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(6, 10, 18, 0.98);
+}
+
+.cad-command-log {
+  flex: 1 1 320px;
+  color: #cbd5e1;
+  font-size: 0.79rem;
+  line-height: 1.45;
+}
+
+.cad-command-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex: 1 1 420px;
+}
+
+.cad-command-prompt {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #67e8f9;
+}
+
+.cad-command-entry input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.82);
+  color: #f8fafc;
+  padding: 0.62rem 0.72rem;
+  font-size: 0.84rem;
 }
 
 .cad-editor-actions {
