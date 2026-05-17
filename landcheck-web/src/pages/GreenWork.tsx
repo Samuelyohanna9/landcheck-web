@@ -917,6 +917,102 @@ type MaintenanceAttentionFilter =
 
 type LiveTreeMenuState = { treeId: number; x: number; y: number; taskType?: string } | null;
 
+type MaintenanceAssignmentPreviewRow = {
+  key: string;
+  label: string;
+  activityLabel: string;
+  indicator: string;
+  species: string;
+  group: { key: string; label: string };
+};
+
+type MaintenanceAssignmentPreviewEntry = {
+  assignee: string;
+  rows: MaintenanceAssignmentPreviewRow[];
+  groups: { label: string; count: number }[];
+};
+
+const buildMaintenanceAssignmentPreview = ({
+  rows,
+  assignees,
+  mode,
+  treeById,
+  describeGroup,
+}: {
+  rows: LiveMaintenanceRow[];
+  assignees: string[];
+  mode: MaintenanceBulkAssignMode;
+  treeById: Map<number, Tree>;
+  describeGroup: (row: Pick<LiveMaintenanceRow, "treeId" | "assignee" | "treeOrigin">) => { key: string; label: string };
+}): MaintenanceAssignmentPreviewEntry[] => {
+  if (rows.length <= 1) return [];
+  if (mode === "single_staff") return [];
+  if (assignees.length <= 1) return [];
+
+  const makeRowPreview = (row: LiveMaintenanceRow): MaintenanceAssignmentPreviewRow => {
+    const sourceTree = treeById.get(Number(row.treeId));
+    const numericTreeId = Number(row.treeId || 0);
+    const projectTreeNo = Number((sourceTree as any)?.project_tree_no || 0);
+    return {
+      key: row.key,
+      label: `Tree #${projectTreeNo > 0 ? projectTreeNo : numericTreeId}`,
+      activityLabel: row.activityLabel,
+      indicator: row.indicator,
+      species: String(sourceTree?.species || "").trim(),
+      group: describeGroup(row),
+    };
+  };
+
+  if (mode === "distribute_evenly") {
+    return assignees
+      .map((assignee, index) => ({
+        assignee,
+        rows: rows.filter((_, rowIndex) => rowIndex % assignees.length === index).map(makeRowPreview),
+        groups: [],
+      }))
+      .filter((entry) => entry.rows.length > 0);
+  }
+
+  const grouped = new Map<string, { key: string; label: string; rows: MaintenanceAssignmentPreviewRow[] }>();
+  rows.forEach((row) => {
+    const previewRow = makeRowPreview(row);
+    const existing = grouped.get(previewRow.group.key);
+    if (existing) {
+      existing.rows.push(previewRow);
+      return;
+    }
+    grouped.set(previewRow.group.key, {
+      key: previewRow.group.key,
+      label: previewRow.group.label,
+      rows: [previewRow],
+    });
+  });
+
+  const sortedGroups = Array.from(grouped.values()).sort((a, b) => {
+    if (a.rows.length !== b.rows.length) return b.rows.length - a.rows.length;
+    return a.label.localeCompare(b.label);
+  });
+
+  const previewByAssignee = new Map<string, MaintenanceAssignmentPreviewEntry>();
+  assignees.forEach((assignee) => {
+    previewByAssignee.set(assignee, {
+      assignee,
+      rows: [],
+      groups: [],
+    });
+  });
+
+  sortedGroups.forEach((group, index) => {
+    const assignee = assignees[index % assignees.length] || assignees[0];
+    const entry = previewByAssignee.get(assignee);
+    if (!entry) return;
+    entry.rows.push(...group.rows);
+    entry.groups.push({ label: group.label, count: group.rows.length });
+  });
+
+  return Array.from(previewByAssignee.values()).filter((entry) => entry.rows.length > 0);
+};
+
 const liveToneRank = (tone: LiveStatusTone) => {
   if (tone === "danger") return 0;
   if (tone === "warning") return 1;
@@ -5880,94 +5976,13 @@ export default function GreenWork() {
     });
   }, [describeMaintenanceRouteGroup, selectedMaintenanceRows]);
   const maintenanceAssignmentPreview = useMemo(() => {
-    type MaintenanceAssignmentPreviewRow = {
-      key: string;
-      label: string;
-      activityLabel: string;
-      indicator: string;
-      species: string;
-      group: { key: string; label: string };
-    };
-    type MaintenanceAssignmentPreviewEntry = {
-      assignee: string;
-      rows: MaintenanceAssignmentPreviewRow[];
-      groups: { label: string; count: number }[];
-    };
-    if (selectedMaintenanceRows.length <= 1) return [];
-    if (maintenanceBulkAssignMode === "single_staff") return [];
-    if (currentTaskAssignees.length <= 1) return [];
-
-    const makeRowPreview = (row: LiveMaintenanceRow): MaintenanceAssignmentPreviewRow => {
-      const sourceTree = treeById.get(Number(row.treeId));
-      const numericTreeId = Number(row.treeId || 0);
-      const projectTreeNo = Number((sourceTree as any)?.project_tree_no || 0);
-      return {
-        key: row.key,
-        label: `Tree #${projectTreeNo > 0 ? projectTreeNo : numericTreeId}`,
-        activityLabel: row.activityLabel,
-        indicator: row.indicator,
-        species: String(sourceTree?.species || "").trim(),
-        group: describeMaintenanceRouteGroup(row),
-      };
-    };
-
-    if (maintenanceBulkAssignMode === "distribute_evenly") {
-      return currentTaskAssignees
-        .map(
-          (assignee, index): MaintenanceAssignmentPreviewEntry => ({
-          assignee,
-          rows: selectedMaintenanceRows
-            .filter((_, rowIndex) => rowIndex % currentTaskAssignees.length === index)
-            .map(makeRowPreview),
-            groups: [],
-          }),
-        )
-        .filter((entry) => entry.rows.length > 0);
-    }
-
-    const grouped = new Map<
-      string,
-      {
-        key: string;
-        label: string;
-        rows: ReturnType<typeof makeRowPreview>[];
-      }
-    >();
-    selectedMaintenanceRows.forEach((row) => {
-      const previewRow = makeRowPreview(row);
-      const current = grouped.get(previewRow.group.key) || {
-        key: previewRow.group.key,
-        label: previewRow.group.label,
-        rows: [],
-      };
-      current.rows.push(previewRow);
-      grouped.set(previewRow.group.key, current);
+    return buildMaintenanceAssignmentPreview({
+      rows: selectedMaintenanceRows,
+      assignees: currentTaskAssignees,
+      mode: maintenanceBulkAssignMode,
+      treeById,
+      describeGroup: describeMaintenanceRouteGroup,
     });
-    const sortedGroups = Array.from(grouped.values()).sort((a, b) => {
-      if (a.rows.length !== b.rows.length) return b.rows.length - a.rows.length;
-      return a.label.localeCompare(b.label);
-    });
-    const previewByAssignee = new Map<
-      string,
-      MaintenanceAssignmentPreviewEntry
-    >(
-      currentTaskAssignees.map((assignee) => [
-        assignee,
-        {
-          assignee,
-          rows: [],
-          groups: [],
-        },
-      ]),
-    );
-    sortedGroups.forEach((group, index) => {
-      const assignee = currentTaskAssignees[index % currentTaskAssignees.length] || currentTaskAssignees[0];
-      const current = previewByAssignee.get(assignee);
-      if (!current) return;
-      current.rows.push(...group.rows);
-      current.groups.push({ label: group.label, count: group.rows.length });
-    });
-    return Array.from(previewByAssignee.values()).filter((entry) => entry.rows.length > 0);
   }, [
     currentTaskAssignees,
     describeMaintenanceRouteGroup,
