@@ -1,4 +1,4 @@
-var CACHE_NAME = "green-shell-v10";
+var CACHE_NAME = "green-shell-v11";
 var MAP_CACHE_NAME = "green-map-v6";
 var SYNC_TAG = "green-sync-queue";
 
