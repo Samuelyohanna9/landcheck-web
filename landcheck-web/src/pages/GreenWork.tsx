@@ -5895,7 +5895,7 @@ export default function GreenWork() {
     };
     if (selectedMaintenanceRows.length <= 1) return [];
     if (maintenanceBulkAssignMode === "single_staff") return [];
-    if (!currentTaskAssignees.length) return [];
+    if (currentTaskAssignees.length <= 1) return [];
 
     const makeRowPreview = (row: LiveMaintenanceRow): MaintenanceAssignmentPreviewRow => {
       const sourceTree = treeById.get(Number(row.treeId));
@@ -5908,19 +5908,6 @@ export default function GreenWork() {
         group: describeMaintenanceRouteGroup(row),
       };
     };
-
-    if (currentTaskAssignees.length === 1) {
-      return [
-        {
-          assignee: currentTaskAssignees[0],
-          rows: selectedMaintenanceRows.map(makeRowPreview),
-          groups:
-            maintenanceBulkAssignMode === "group_by_route"
-              ? maintenanceRouteGroups.map((group) => ({ label: group.label, count: group.count }))
-              : [],
-        },
-      ];
-    }
 
     if (maintenanceBulkAssignMode === "distribute_evenly") {
       return currentTaskAssignees
@@ -9083,7 +9070,18 @@ export default function GreenWork() {
                 </div>
               )}
               {selectedMaintenanceRows.length > 1 && maintenanceBulkAssignMode !== "single_staff" && (
-                maintenanceAssignmentPreview.length > 0 ? (
+                currentTaskAssignees.length === 1 ? (
+                  <div className="green-work-assignment-preview">
+                    <div className="green-work-assignment-preview-head">
+                      <strong>Assignment preview</strong>
+                      <span>All selected maintenance rows will go to the single selected staff member.</span>
+                    </div>
+                    <p className="green-work-note">
+                      Only one staff is selected, so all selected maintenance rows will go to <strong>{currentTaskAssignees[0]}</strong>.
+                      Select more staff if you want the rows split automatically.
+                    </p>
+                  </div>
+                ) : maintenanceAssignmentPreview.length > 0 ? (
                   <div className="green-work-assignment-preview">
                     <div className="green-work-assignment-preview-head">
                       <strong>Assignment preview</strong>
@@ -9093,12 +9091,6 @@ export default function GreenWork() {
                           : "Each staff member gets the rows shown below before you submit."}
                       </span>
                     </div>
-                    {currentTaskAssignees.length === 1 && (
-                      <p className="green-work-note">
-                        Only one staff is selected, so all selected maintenance rows will go to <strong>{currentTaskAssignees[0]}</strong>.
-                        Select more staff if you want the rows split automatically.
-                      </p>
-                    )}
                     <div className="green-work-assignment-preview-grid">
                       {maintenanceAssignmentPreview.map((entry) => (
                         <div key={`maintenance-preview-${entry.assignee}`} className="green-work-assignment-preview-card">
