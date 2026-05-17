@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import toast from "react-hot-toast";
@@ -43,6 +43,26 @@ type DraftingAssistState = {
   ortho: boolean;
   measure: boolean;
 };
+
+type OsnapModes = {
+  endpoint: boolean;
+  midpoint: boolean;
+  intersection: boolean;
+};
+
+type SelectionMode = "box" | "lasso" | null;
+
+type SelectionDrag =
+  | {
+      mode: "box";
+      start: { x: number; y: number };
+      current: { x: number; y: number };
+    }
+  | {
+      mode: "lasso";
+      points: Array<{ x: number; y: number }>;
+    }
+  | null;
 
 type Props = {
   isOpen: boolean;
@@ -97,6 +117,12 @@ const DEFAULT_DRAFTING_ASSIST: DraftingAssistState = {
   snap: true,
   ortho: false,
   measure: true,
+};
+
+const DEFAULT_OSNAP_MODES: OsnapModes = {
+  endpoint: true,
+  midpoint: true,
+  intersection: true,
 };
 
 const EARTH_RADIUS_M = 6371008.8;
@@ -465,6 +491,84 @@ const geometryToCoordinateList = (geometry: any) => {
 
 const formatCoordinateValue = (value: number) => Number.isFinite(value) ? value.toFixed(6) : "--";
 
+const midpointCoordinate = (start: number[], end: number[]) => [
+  (Number(start?.[0] || 0) + Number(end?.[0] || 0)) / 2,
+  (Number(start?.[1] || 0) + Number(end?.[1] || 0)) / 2,
+] as [number, number];
+
+const getGeometrySegments = (geometry: any) => {
+  const segments: Array<{ start: number[]; end: number[] }> = [];
+  if (!geometry?.type) return segments;
+  if (geometry.type === "LineString" && Array.isArray(geometry.coordinates)) {
+    for (let index = 1; index < geometry.coordinates.length; index += 1) {
+      const start = geometry.coordinates[index - 1];
+      const end = geometry.coordinates[index];
+      if (Array.isArray(start) && Array.isArray(end)) {
+        segments.push({ start, end });
+      }
+    }
+    return segments;
+  }
+  if (geometry.type === "Polygon" && Array.isArray(geometry.coordinates)) {
+    geometry.coordinates.forEach((ring: number[][]) => {
+      const closed = closeRing(ring);
+      for (let index = 1; index < closed.length; index += 1) {
+        const start = closed[index - 1];
+        const end = closed[index];
+        if (Array.isArray(start) && Array.isArray(end)) {
+          segments.push({ start, end });
+        }
+      }
+    });
+  }
+  return segments;
+};
+
+const getSegmentIntersection = (a1: number[], a2: number[], b1: number[], b2: number[]) => {
+  const x1 = Number(a1?.[0] || 0);
+  const y1 = Number(a1?.[1] || 0);
+  const x2 = Number(a2?.[0] || 0);
+  const y2 = Number(a2?.[1] || 0);
+  const x3 = Number(b1?.[0] || 0);
+  const y3 = Number(b1?.[1] || 0);
+  const x4 = Number(b2?.[0] || 0);
+  const y4 = Number(b2?.[1] || 0);
+
+  const denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+  if (Math.abs(denominator) < 1e-12) return null;
+
+  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denominator;
+  const u = ((x1 - x3) * (y1 - y2) - (y1 - y3) * (x1 - x2)) / denominator;
+
+  if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+
+  return [x1 + t * (x2 - x1), y1 + t * (y2 - y1)] as [number, number];
+};
+
+const normalizeSelectionRect = (start: { x: number; y: number }, current: { x: number; y: number }) => ({
+  left: Math.min(start.x, current.x),
+  top: Math.min(start.y, current.y),
+  right: Math.max(start.x, current.x),
+  bottom: Math.max(start.y, current.y),
+});
+
+const pointInSelectionRect = (point: { x: number; y: number }, rect: ReturnType<typeof normalizeSelectionRect>) =>
+  point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+
+const pointInPolygon2D = (point: { x: number; y: number }, polygon: Array<{ x: number; y: number }>) => {
+  if (polygon.length < 3) return false;
+  let inside = false;
+  for (let index = 0, prev = polygon.length - 1; index < polygon.length; prev = index, index += 1) {
+    const a = polygon[index];
+    const b = polygon[prev];
+    const intersects =
+      (a.y > point.y) !== (b.y > point.y) &&
+      point.x < ((b.x - a.x) * (point.y - a.y)) / Math.max(b.y - a.y, Number.EPSILON) + a.x;
+    if (intersects) inside = !inside;
+  }
+  return inside;
+};
+
 const buildFeatureLabel = (type: FeatureType, properties?: Record<string, any>, index?: number) => {
   if (type === "road") return String(properties?.name || `Road ${typeof index === "number" ? index + 1 : ""}`).trim();
   if (type === "building") return `Building ${typeof index === "number" ? index + 1 : ""}`.trim();
@@ -564,6 +668,14 @@ export default function FeatureOverrideModal({
   const [draftingAssist, setDraftingAssist] = useState<DraftingAssistState>(DEFAULT_DRAFTING_ASSIST);
   const [plottingHoverPoint, setPlottingHoverPoint] = useState<number[] | null>(null);
   const [plottingSnapLabel, setPlottingSnapLabel] = useState<string | null>(null);
+  const [osnapModes, setOsnapModes] = useState<OsnapModes>(DEFAULT_OSNAP_MODES);
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>(null);
+  const [selectionDrag, setSelectionDrag] = useState<SelectionDrag>(null);
+  const [multiSelectedKeys, setMultiSelectedKeys] = useState<string[]>([]);
+  const [commandInput, setCommandInput] = useState("");
+  const [commandMessages, setCommandMessages] = useState<string[]>([
+    "Type HELP for editor commands. Use BOX or LASSO to multi-select in plotting view.",
+  ]);
 
   const activeMetrics = useMemo(() => draftMetrics || selectedMetrics, [draftMetrics, selectedMetrics]);
   const plottingDraftGeometry = useMemo(
@@ -620,6 +732,11 @@ export default function FeatureOverrideModal({
     () => geometryToCoordinateList(selectedGeometry).slice(0, 8),
     [selectedGeometry]
   );
+  const multiSelectedRecords = useMemo(
+    () => objectRecords.filter((record) => multiSelectedKeys.includes(record.key)),
+    [multiSelectedKeys, objectRecords]
+  );
+  const selectedObjectCount = multiSelectedKeys.length;
   const snapCandidates = useMemo(() => {
     const seen = new Set<string>();
     const candidates: Array<{ coord: number[]; label: string }> = [];
@@ -630,12 +747,53 @@ export default function FeatureOverrideModal({
       seen.add(key);
       candidates.push({ coord: [Number(coord[0]), Number(coord[1])], label });
     };
-    plotCoords?.forEach((coord, index) => pushCandidate(coord, `Boundary ${index + 1}`));
-    objectRecords.forEach((record) => {
-      record.coordinates.forEach((coord, index) => pushCandidate(coord, `${record.label} · pt ${index + 1}`));
+    const visibleRecords = objectRecords.filter((record) => layerVisibility[record.type]);
+    const segmentSets: Array<{ label: string; segments: Array<{ start: number[]; end: number[] }> }> = [];
+    if (osnapModes.endpoint && plotCoords?.length) {
+      plotCoords.forEach((coord, index) => pushCandidate(coord, `Boundary ${index + 1}`));
+    }
+    if (osnapModes.endpoint && plotCoords?.length) {
+      segmentSets.push({
+        label: "Boundary",
+        segments: getGeometrySegments({ type: "Polygon", coordinates: [plotCoords] }),
+      });
+    }
+    visibleRecords.forEach((record) => {
+      const segments = getGeometrySegments(record.geometry);
+      segmentSets.push({ label: record.label, segments });
+      if (osnapModes.endpoint) {
+        record.coordinates.forEach((coord, index) => pushCandidate(coord, `${record.label} · end ${index + 1}`));
+      }
+      if (osnapModes.midpoint) {
+        segments.forEach((segment, index) => {
+          pushCandidate(midpointCoordinate(segment.start, segment.end), `${record.label} · mid ${index + 1}`);
+        });
+      }
     });
+    if (osnapModes.midpoint && plotCoords?.length) {
+      getGeometrySegments({ type: "Polygon", coordinates: [plotCoords] }).forEach((segment, index) => {
+        pushCandidate(midpointCoordinate(segment.start, segment.end), `Boundary · mid ${index + 1}`);
+      });
+    }
+    if (osnapModes.intersection) {
+      const allSegments = segmentSets.flatMap((set) =>
+        set.segments.map((segment) => ({ ...segment, label: set.label }))
+      );
+      for (let index = 0; index < allSegments.length; index += 1) {
+        for (let next = index + 1; next < allSegments.length; next += 1) {
+          const intersection = getSegmentIntersection(
+            allSegments[index].start,
+            allSegments[index].end,
+            allSegments[next].start,
+            allSegments[next].end
+          );
+          if (!intersection) continue;
+          pushCandidate(intersection, `${allSegments[index].label} x ${allSegments[next].label}`);
+        }
+      }
+    }
     return candidates;
-  }, [objectRecords, plotCoords]);
+  }, [layerVisibility, objectRecords, osnapModes.endpoint, osnapModes.intersection, osnapModes.midpoint, plotCoords]);
   const plottingMeasureSummary = useMemo(() => {
     if (!draftingAssist.measure || activeTool === "select" || !plottingHoverPoint || !plottingPoints.length) return null;
     const segment = lineLengthMeters([plottingPoints[plottingPoints.length - 1], plottingHoverPoint]);
@@ -693,6 +851,7 @@ export default function FeatureOverrideModal({
               coordinates: geometryToCoordinateList(geometry),
             }
       );
+      setMultiSelectedKeys(descriptor?.key ? [descriptor.key] : []);
       setPlottingHoverPoint(null);
       setPlottingSnapLabel(null);
 
@@ -979,6 +1138,8 @@ export default function FeatureOverrideModal({
     setDraftMetrics(null);
     setSelectedGeometry(null);
     setSelectedFeatureRecord(null);
+    setMultiSelectedKeys([]);
+    setSelectionDrag(null);
     setSelectedMetrics(null);
     setDeleteConfirmArmed(false);
     setActiveTool("select");
@@ -992,6 +1153,7 @@ export default function FeatureOverrideModal({
     activeDrawFeatureId.current = null;
     setSelectedGeometry(null);
     setSelectedFeatureRecord(null);
+    setMultiSelectedKeys([]);
     setSelectedMetrics(null);
     setDraftMetrics(null);
     setPlottingPoints([]);
@@ -1357,6 +1519,21 @@ export default function FeatureOverrideModal({
         }
         return;
       }
+      if (selectionDrag?.mode === "box") {
+        setSelectionDrag({ ...selectionDrag, current: rawPointer });
+        return;
+      }
+      if (selectionDrag?.mode === "lasso") {
+        const points = selectionDrag.points;
+        const last = points[points.length - 1];
+        if (!last || Math.hypot(rawPointer.x - last.x, rawPointer.y - last.y) >= 8) {
+          setSelectionDrag({
+            mode: "lasso",
+            points: [...points, rawPointer],
+          });
+        }
+        return;
+      }
       const { point: pointer, label } = resolvePlottingCanvasPoint(plottingScreenToCanvasPoint(rawPointer));
       const [lng, lat] = plottingViewport.unproject(pointer);
       setCursor({ lng, lat });
@@ -1365,7 +1542,7 @@ export default function FeatureOverrideModal({
         setPlottingHoverPoint([lng, lat]);
       }
     },
-    [activeTool, basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport, resolvePlottingCanvasPoint]
+    [activeTool, basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport, resolvePlottingCanvasPoint, selectionDrag]
   );
 
   const handlePlottingCanvasClick = useCallback(
@@ -1376,6 +1553,7 @@ export default function FeatureOverrideModal({
         plottingPanRef.current.moved = false;
         return;
       }
+      if (selectionMode) return;
       event.preventDefault();
       const { point: pointer, label } = resolvePlottingCanvasPoint(
         getPlottingPointer(event.currentTarget, event.clientX, event.clientY)
@@ -1385,7 +1563,7 @@ export default function FeatureOverrideModal({
       setPlottingHoverPoint([lng, lat]);
       setPlottingSnapLabel(label);
     },
-    [activeTool, basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport, resolvePlottingCanvasPoint]
+    [activeTool, basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport, resolvePlottingCanvasPoint, selectionMode]
   );
 
   const handlePlottingCanvasDoubleClick = useCallback(
@@ -1419,32 +1597,117 @@ export default function FeatureOverrideModal({
     [importGeometryIntoEditor]
   );
 
+  const handleObjectRecordClick = useCallback(
+    (event: ReactMouseEvent<HTMLButtonElement>, record: FeatureRecord) => {
+      if (event.ctrlKey || event.metaKey) {
+        setMultiSelectedKeys((previous) =>
+          previous.includes(record.key)
+            ? previous.filter((key) => key !== record.key)
+            : [...previous, record.key]
+        );
+        if (!selectedFeatureRecord) {
+          importGeometryIntoEditor(record.geometry, record.type, record.properties, record);
+        }
+        return;
+      }
+      handleObjectRecordSelect(record);
+    },
+    [handleObjectRecordSelect, importGeometryIntoEditor, selectedFeatureRecord]
+  );
+
   const toggleDraftingAssist = useCallback((key: keyof DraftingAssistState) => {
     setDraftingAssist((previous) => ({ ...previous, [key]: !previous[key] }));
   }, []);
 
+  const toggleOsnapMode = useCallback((key: keyof OsnapModes) => {
+    setOsnapModes((previous) => ({ ...previous, [key]: !previous[key] }));
+  }, []);
+
+  const activateSelectionMode = useCallback((mode: SelectionMode) => {
+    setSelectionMode((previous) => (previous === mode ? null : mode));
+    setActiveTool("select");
+    setPlottingPoints([]);
+    setPlottingHoverPoint(null);
+    setSelectionDrag(null);
+  }, []);
+
+  const resolveSelectionKeysFromShape = useCallback(
+    (shape: SelectionDrag) => {
+      if (!shape) return [];
+      return visibleObjectRecords
+        .filter((record) => {
+          const projectedPoints = record.coordinates.map((coord) => plottingViewport.project(coord));
+          if (shape.mode === "box") {
+            const rect = normalizeSelectionRect(shape.start, shape.current);
+            return projectedPoints.some((point) => pointInSelectionRect(point, rect));
+          }
+          return projectedPoints.some((point) => pointInPolygon2D(point, shape.points));
+        })
+        .map((record) => record.key);
+    },
+    [plottingViewport, visibleObjectRecords]
+  );
+
   const handlePlottingMouseDown = useCallback(
     (event: ReactMouseEvent<SVGSVGElement>) => {
       if (basemapMode !== "plotting") return;
-      if (event.button !== 1) return;
-      event.preventDefault();
       const pointer = getPlottingPointer(event.currentTarget, event.clientX, event.clientY);
-      plottingPanRef.current = {
-        active: true,
-        lastX: pointer.x,
-        lastY: pointer.y,
-        moved: false,
-      };
-      setPlottingPanActive(true);
+      if (event.button === 1) {
+        event.preventDefault();
+        plottingPanRef.current = {
+          active: true,
+          lastX: pointer.x,
+          lastY: pointer.y,
+          moved: false,
+        };
+        setPlottingPanActive(true);
+        return;
+      }
+      if (event.button !== 0) return;
+      if (selectionMode) {
+        event.preventDefault();
+        setSelectionDrag(
+          selectionMode === "box"
+            ? { mode: "box", start: pointer, current: pointer }
+            : { mode: "lasso", points: [pointer] }
+        );
+      }
     },
-    [basemapMode, getPlottingPointer]
+    [basemapMode, getPlottingPointer, selectionMode]
   );
 
-  const handlePlottingMouseUp = useCallback(() => {
-    if (!plottingPanRef.current.active) return;
-    plottingPanRef.current.active = false;
-    setPlottingPanActive(false);
-  }, []);
+  const handlePlottingMouseUp = useCallback(
+    (event?: ReactMouseEvent<SVGSVGElement>) => {
+      if (selectionDrag) {
+        const nextKeys = resolveSelectionKeysFromShape(selectionDrag);
+        setMultiSelectedKeys(nextKeys);
+        if (nextKeys.length === 1) {
+          const record = objectRecords.find((item) => item.key === nextKeys[0]);
+          if (record) {
+            importGeometryIntoEditor(record.geometry, record.type, record.properties, record);
+          }
+        } else if (nextKeys.length > 1) {
+          const primaryRecord = objectRecords.find((item) => item.key === nextKeys[0]);
+          if (primaryRecord) {
+            importGeometryIntoEditor(primaryRecord.geometry, primaryRecord.type, primaryRecord.properties, primaryRecord);
+            setMultiSelectedKeys(nextKeys);
+          }
+        }
+        setSelectionDrag(null);
+        if (event) {
+          event.preventDefault();
+        }
+        return;
+      }
+      if (!plottingPanRef.current.active) return;
+      plottingPanRef.current.active = false;
+      setPlottingPanActive(false);
+      if (event) {
+        event.preventDefault();
+      }
+    },
+    [importGeometryIntoEditor, objectRecords, resolveSelectionKeysFromShape, selectionDrag]
+  );
 
   const handlePlottingWheel = useCallback(
     (event: React.WheelEvent<SVGSVGElement>) => {
@@ -1473,6 +1736,7 @@ export default function FeatureOverrideModal({
     setCursor(null);
     setPlottingHoverPoint(null);
     setPlottingSnapLabel(null);
+    setSelectionDrag(null);
   }, []);
 
   const zoomPlottingCamera = useCallback((direction: "in" | "out") => {
@@ -1491,6 +1755,157 @@ export default function FeatureOverrideModal({
       };
     });
   }, [plottingViewport.height, plottingViewport.width]);
+
+  const pushCommandMessage = useCallback((message: string) => {
+    setCommandMessages((previous) => [...previous.slice(-7), message]);
+  }, []);
+
+  const runCadCommand = useCallback(
+    (rawInput: string) => {
+      const normalized = rawInput.trim().toLowerCase();
+      if (!normalized) return;
+      const compact = normalized.replace(/\s+/g, " ");
+
+      if (compact === "help") {
+        pushCommandMessage("Commands: SELECT, LINE, POLYGON, BOX, LASSO, ROAD, BUILDING, RIVER, FENCE, ADD, MODIFY, DELETE, FIT, ZOOM IN, ZOOM OUT, SNAP ON/OFF, ORTHO ON/OFF, MEASURE ON/OFF, OSNAP ENDPOINT/MIDPOINT/INTERSECTION, SATELLITE, PLOTTING, CLEAR.");
+        return;
+      }
+      if (compact === "select") {
+        setActiveTool("select");
+        setSelectionMode(null);
+        pushCommandMessage("Select tool active.");
+        return;
+      }
+      if (compact === "line") {
+        setEditorTool("draw_line_string");
+        setSelectionMode(null);
+        pushCommandMessage("Line tool active.");
+        return;
+      }
+      if (compact === "polygon") {
+        setEditorTool("draw_polygon");
+        setSelectionMode(null);
+        pushCommandMessage("Polygon tool active.");
+        return;
+      }
+      if (compact === "box") {
+        activateSelectionMode("box");
+        pushCommandMessage("Box selection armed.");
+        return;
+      }
+      if (compact === "lasso") {
+        activateSelectionMode("lasso");
+        pushCommandMessage("Lasso selection armed.");
+        return;
+      }
+      if (compact === "add") {
+        startAddFlow();
+        pushCommandMessage("Add command active.");
+        return;
+      }
+      if (compact === "modify") {
+        startUpdateFlow();
+        pushCommandMessage("Modify command active.");
+        return;
+      }
+      if (compact === "delete") {
+        startDeleteFlow();
+        pushCommandMessage("Delete command active.");
+        return;
+      }
+      if (compact === "road" || compact === "building" || compact === "river" || compact === "fence") {
+        setFeatureType(compact as FeatureType);
+        pushCommandMessage(`Feature type set to ${compact}.`);
+        return;
+      }
+      if (compact === "fit") {
+        fitPlotBoundary();
+        pushCommandMessage("View fit to plot.");
+        return;
+      }
+      if (compact === "zoom in") {
+        zoomPlottingCamera("in");
+        pushCommandMessage("Plotting zoom increased.");
+        return;
+      }
+      if (compact === "zoom out") {
+        zoomPlottingCamera("out");
+        pushCommandMessage("Plotting zoom reduced.");
+        return;
+      }
+      if (compact === "satellite" || compact === "plotting") {
+        setBasemapMode(compact as BasemapMode);
+        pushCommandMessage(`Basemap switched to ${compact}.`);
+        return;
+      }
+      if (compact === "clear") {
+        clearWorkingSelection();
+        pushCommandMessage("Working selection cleared.");
+        return;
+      }
+      if (compact.startsWith("snap ")) {
+        const value = compact.split(" ")[1];
+        if (value === "on" || value === "off") {
+          setDraftingAssist((previous) => ({ ...previous, snap: value === "on" }));
+          pushCommandMessage(`Snap ${value}.`);
+          return;
+        }
+      }
+      if (compact.startsWith("ortho ")) {
+        const value = compact.split(" ")[1];
+        if (value === "on" || value === "off") {
+          setDraftingAssist((previous) => ({ ...previous, ortho: value === "on" }));
+          pushCommandMessage(`Ortho ${value}.`);
+          return;
+        }
+      }
+      if (compact.startsWith("measure ")) {
+        const value = compact.split(" ")[1];
+        if (value === "on" || value === "off") {
+          setDraftingAssist((previous) => ({ ...previous, measure: value === "on" }));
+          pushCommandMessage(`Measure ${value}.`);
+          return;
+        }
+      }
+      if (compact.startsWith("osnap ")) {
+        const mode = compact.split(" ")[1];
+        if (mode === "endpoint" || mode === "midpoint" || mode === "intersection") {
+          toggleOsnapMode(mode as keyof OsnapModes);
+          pushCommandMessage(`OSNAP ${mode} toggled.`);
+          return;
+        }
+      }
+      pushCommandMessage(`Unknown command: ${rawInput.trim()}`);
+    },
+    [
+      activateSelectionMode,
+      clearWorkingSelection,
+      fitPlotBoundary,
+      pushCommandMessage,
+      setEditorTool,
+      startAddFlow,
+      startDeleteFlow,
+      startUpdateFlow,
+      toggleOsnapMode,
+      zoomPlottingCamera,
+    ]
+  );
+
+  const handleCommandSubmit = useCallback(() => {
+    const next = commandInput.trim();
+    if (!next) return;
+    runCadCommand(next);
+    setCommandInput("");
+  }, [commandInput, runCadCommand]);
+
+  const handleCommandKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLInputElement>) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      handleCommandSubmit();
+    },
+    [handleCommandSubmit]
+  );
 
   const plottingGridLines = useMemo(() => {
     const lines: Array<{ key: string; x1: number; y1: number; x2: number; y2: number; major: boolean }> = [];
@@ -1605,25 +2020,55 @@ export default function FeatureOverrideModal({
             <button
               type="button"
               className={`cad-tool-btn ${activeTool === "select" ? "active" : ""}`}
-              onClick={() => setEditorTool("select")}
+              onClick={() => {
+                setEditorTool("select");
+                setSelectionMode(null);
+              }}
             >
               Select
             </button>
             <button
               type="button"
+              className={`cad-tool-btn ${selectionMode === "box" ? "active" : ""}`}
+              onClick={() => activateSelectionMode("box")}
+            >
+              Box
+            </button>
+            <button
+              type="button"
+              className={`cad-tool-btn ${selectionMode === "lasso" ? "active" : ""}`}
+              onClick={() => activateSelectionMode("lasso")}
+            >
+              Lasso
+            </button>
+            <button
+              type="button"
               className={`cad-tool-btn ${activeTool === "draw_line_string" ? "active" : ""}`}
-              onClick={() => setEditorTool("draw_line_string")}
+              onClick={() => {
+                setSelectionMode(null);
+                setEditorTool("draw_line_string");
+              }}
             >
               Line
             </button>
             <button
               type="button"
               className={`cad-tool-btn ${activeTool === "draw_polygon" ? "active" : ""}`}
-              onClick={() => setEditorTool("draw_polygon")}
+              onClick={() => {
+                setSelectionMode(null);
+                setEditorTool("draw_polygon");
+              }}
             >
               Polygon
             </button>
-            <button type="button" className="cad-tool-btn" onClick={() => setEditorTool(suggestedTool)}>
+            <button
+              type="button"
+              className="cad-tool-btn"
+              onClick={() => {
+                setSelectionMode(null);
+                setEditorTool(suggestedTool);
+              }}
+            >
               Match {suggestedToolLabel}
             </button>
           </div>
@@ -1754,8 +2199,8 @@ export default function FeatureOverrideModal({
                     <button
                       type="button"
                       key={record.key}
-                      className={`cad-object-item${selectedFeatureRecord?.key === record.key ? " active" : ""}`}
-                      onClick={() => handleObjectRecordSelect(record)}
+                      className={`cad-object-item${multiSelectedKeys.includes(record.key) || selectedFeatureRecord?.key === record.key ? " active" : ""}`}
+                      onClick={(event) => handleObjectRecordClick(event, record)}
                     >
                       <span className="cad-object-item-main">
                         <strong>{record.label}</strong>
@@ -1829,11 +2274,15 @@ export default function FeatureOverrideModal({
                 <span className="cad-badge cad-badge--ghost">{basemapMode}</span>
                 <span className="cad-badge">{featureType}</span>
                 <span className="cad-badge cad-badge--ghost">{action}</span>
+                {selectionMode ? <span className="cad-badge cad-badge--ghost">{selectionMode} select</span> : null}
               </div>
             </div>
             {basemapMode === "plotting" ? (
               <div className="feature-override-map cad-plotting-stage" ref={plottingStageRef}>
-                <div className="cad-plotting-help">Wheel to zoom. Hold middle mouse and drag to pan.</div>
+                <div className="cad-plotting-help">
+                  Wheel to zoom. Hold middle mouse and drag to pan.
+                  {selectionMode ? ` ${selectionMode === "box" ? "Drag a window to select multiple objects." : "Trace a lasso to select multiple objects."}` : ""}
+                </div>
                 <svg
                   className={`cad-plotting-svg${plottingPanActive ? " is-panning" : ""}`}
                   viewBox={`0 0 ${plottingViewport.width} ${plottingViewport.height}`}
@@ -1870,12 +2319,19 @@ export default function FeatureOverrideModal({
                         if (geometry?.type !== "LineString") return null;
                         const labelPoint = getFeatureLabelPoint(geometry, plottingViewport.project);
                         const descriptor = objectRecords.find((record) => record.key === `road-${index}`);
+                        const isMultiSelected = descriptor ? multiSelectedKeys.includes(descriptor.key) : false;
                         return (
                           <g key={`road-${index}`} onClick={() => handlePlottingFeatureSelect("road", feature, descriptor || undefined)}>
                             <polyline
                               points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
                               className="cad-svg-feature cad-svg-feature--road"
                             />
+                            {isMultiSelected ? (
+                              <polyline
+                                points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
+                                className="cad-svg-multiselect"
+                              />
+                            ) : null}
                             {labelPoint ? (
                               <text x={labelPoint.x + 8} y={labelPoint.y - 8} className="cad-svg-label">
                                 {feature?.properties?.name || `Road ${index + 1}`}
@@ -1889,13 +2345,20 @@ export default function FeatureOverrideModal({
                         const geometry = feature?.geometry;
                         if (geometry?.type !== "LineString") return null;
                         const descriptor = objectRecords.find((record) => record.key === `river-${index}`);
+                        const isMultiSelected = descriptor ? multiSelectedKeys.includes(descriptor.key) : false;
                         return (
-                          <polyline
-                            key={`river-${index}`}
-                            points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
-                            className="cad-svg-feature cad-svg-feature--river"
-                            onClick={() => handlePlottingFeatureSelect("river", feature, descriptor || undefined)}
-                          />
+                          <g key={`river-${index}`} onClick={() => handlePlottingFeatureSelect("river", feature, descriptor || undefined)}>
+                            <polyline
+                              points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
+                              className="cad-svg-feature cad-svg-feature--river"
+                            />
+                            {isMultiSelected ? (
+                              <polyline
+                                points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
+                                className="cad-svg-multiselect"
+                              />
+                            ) : null}
+                          </g>
                         );
                       })}
                     {layerVisibility.fence &&
@@ -1903,13 +2366,20 @@ export default function FeatureOverrideModal({
                         const geometry = feature?.geometry;
                         if (geometry?.type !== "LineString") return null;
                         const descriptor = objectRecords.find((record) => record.key === `fence-${index}`);
+                        const isMultiSelected = descriptor ? multiSelectedKeys.includes(descriptor.key) : false;
                         return (
-                          <polyline
-                            key={`fence-${index}`}
-                            points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
-                            className="cad-svg-feature cad-svg-feature--fence"
-                            onClick={() => handlePlottingFeatureSelect("fence", feature, descriptor || undefined)}
-                          />
+                          <g key={`fence-${index}`} onClick={() => handlePlottingFeatureSelect("fence", feature, descriptor || undefined)}>
+                            <polyline
+                              points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
+                              className="cad-svg-feature cad-svg-feature--fence"
+                            />
+                            {isMultiSelected ? (
+                              <polyline
+                                points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
+                                className="cad-svg-multiselect"
+                              />
+                            ) : null}
+                          </g>
                         );
                       })}
                     {layerVisibility.building &&
@@ -1919,12 +2389,19 @@ export default function FeatureOverrideModal({
                         if (!ring) return null;
                         const labelPoint = getFeatureLabelPoint(geometry, plottingViewport.project);
                         const descriptor = objectRecords.find((record) => record.key === `building-${index}`);
+                        const isMultiSelected = descriptor ? multiSelectedKeys.includes(descriptor.key) : false;
                         return (
                           <g key={`building-${index}`} onClick={() => handlePlottingFeatureSelect("building", feature, descriptor || undefined)}>
                             <polygon
                               points={pointsToSvg(ring, plottingViewport.project)}
                               className="cad-svg-feature cad-svg-feature--building"
                             />
+                            {isMultiSelected ? (
+                              <polygon
+                                points={pointsToSvg(ring, plottingViewport.project)}
+                                className="cad-svg-multiselect"
+                              />
+                            ) : null}
                             {labelPoint ? (
                               <text x={labelPoint.x + 8} y={labelPoint.y - 8} className="cad-svg-label">
                                 BLD-{index + 1}
@@ -1989,6 +2466,21 @@ export default function FeatureOverrideModal({
                       </g>
                     ) : null}
                   </g>
+                  {selectionDrag?.mode === "box" ? (
+                    <rect
+                      x={normalizeSelectionRect(selectionDrag.start, selectionDrag.current).left}
+                      y={normalizeSelectionRect(selectionDrag.start, selectionDrag.current).top}
+                      width={normalizeSelectionRect(selectionDrag.start, selectionDrag.current).right - normalizeSelectionRect(selectionDrag.start, selectionDrag.current).left}
+                      height={normalizeSelectionRect(selectionDrag.start, selectionDrag.current).bottom - normalizeSelectionRect(selectionDrag.start, selectionDrag.current).top}
+                      className="cad-selection-box"
+                    />
+                  ) : null}
+                  {selectionDrag?.mode === "lasso" && selectionDrag.points.length > 1 ? (
+                    <polyline
+                      points={selectionDrag.points.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ")}
+                      className="cad-selection-lasso"
+                    />
+                  ) : null}
                   <line
                     x1={PLOTTING_VIEWPORT_PADDING / 2}
                     y1={plottingViewport.height - PLOTTING_VIEWPORT_PADDING / 2}
@@ -2037,6 +2529,7 @@ export default function FeatureOverrideModal({
                 Measure {draftingAssist.measure ? "On" : "Off"}
               </button>
               {basemapMode === "plotting" && plottingSnapLabel ? <span>Snap Target: {plottingSnapLabel}</span> : null}
+              {basemapMode === "plotting" ? <span>OSNAP: {`${osnapModes.endpoint ? "End " : ""}${osnapModes.midpoint ? "Mid " : ""}${osnapModes.intersection ? "Int" : ""}`.trim() || "Off"}</span> : null}
               {basemapMode === "plotting" ? <span>Pan: Middle mouse drag</span> : null}
               {basemapMode === "plotting" && plottingMeasureSummary ? (
                 <span>Segment: {formatLength(plottingMeasureSummary.segment)}</span>
@@ -2054,8 +2547,22 @@ export default function FeatureOverrideModal({
             <section className="cad-panel">
               <div className="cad-panel-head">
                 <strong>Properties</strong>
-                <span>{selectedFeatureRecord ? "Selected feature metadata" : "No selected feature"}</span>
+                <span>
+                  {selectedObjectCount > 1
+                    ? `${selectedObjectCount} objects selected`
+                    : selectedFeatureRecord
+                      ? "Selected feature metadata"
+                      : "No selected feature"}
+                </span>
               </div>
+              {selectedObjectCount > 1 ? (
+                <div className="cad-selection-summary">
+                  <strong>Multi-selection active</strong>
+                  <span>
+                    {selectedObjectCount} objects are selected. Modify and delete still act on the active target only.
+                  </span>
+                </div>
+              ) : null}
               {selectedFeatureRecord ? (
                 <div className="cad-property-list">
                   <div className="cad-property-row">
@@ -2125,6 +2632,15 @@ export default function FeatureOverrideModal({
                   <span>{featureType} selected. Use Modify Selected to adjust it or Delete Selected to remove it.</span>
                 </div>
               ) : null}
+              {selectedObjectCount > 1 ? (
+                <div className="cad-selection-summary">
+                  <strong>Selection set</strong>
+                  <span>
+                    {multiSelectedRecords.slice(0, 4).map((record) => record.label).join(", ")}
+                    {selectedObjectCount > 4 ? ` +${selectedObjectCount - 4} more` : ""}
+                  </span>
+                </div>
+              ) : null}
               {action === "delete" ? (
                 <div className={`cad-warning${deleteConfirmArmed ? " armed" : ""}`}>
                   <strong>{deleteConfirmArmed ? "Delete confirmation required" : "Delete mode"}</strong>
@@ -2156,7 +2672,43 @@ export default function FeatureOverrideModal({
                 <p className="cad-empty-state">The selected geometry coordinates will appear here.</p>
               )}
             </section>
+
+            <section className="cad-panel">
+              <div className="cad-panel-head">
+                <strong>Object Snap</strong>
+                <span>Endpoint, midpoint, and intersection controls</span>
+              </div>
+              <div className="cad-osnap-list">
+                <button type="button" className={`cad-osnap-chip${osnapModes.endpoint ? " active" : ""}`} onClick={() => toggleOsnapMode("endpoint")}>
+                  Endpoint
+                </button>
+                <button type="button" className={`cad-osnap-chip${osnapModes.midpoint ? " active" : ""}`} onClick={() => toggleOsnapMode("midpoint")}>
+                  Midpoint
+                </button>
+                <button type="button" className={`cad-osnap-chip${osnapModes.intersection ? " active" : ""}`} onClick={() => toggleOsnapMode("intersection")}>
+                  Intersection
+                </button>
+              </div>
+            </section>
           </aside>
+        </div>
+
+        <div className="cad-command-strip">
+          <div className="cad-command-log">
+            {commandMessages[commandMessages.length - 1] || "Ready."}
+          </div>
+          <div className="cad-command-entry">
+            <span className="cad-command-prompt">Command</span>
+            <input
+              value={commandInput}
+              onChange={(event) => setCommandInput(event.target.value)}
+              onKeyDown={handleCommandKeyDown}
+              placeholder="Type HELP, BOX, LASSO, LINE, POLYGON, FIT..."
+            />
+            <button type="button" className="cad-tool-btn" onClick={handleCommandSubmit}>
+              Run
+            </button>
+          </div>
         </div>
 
         <div className="feature-override-actions cad-editor-actions">
