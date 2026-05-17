@@ -340,11 +340,9 @@ export default function SurveyPlan() {
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === "undefined" ? true : navigator.onLine
   );
-  const [lastLocalSaveAt, setLastLocalSaveAt] = useState<string | null>(null);
   const [lastServerSyncAt, setLastServerSyncAt] = useState<string | null>(null);
   const [hasUnsyncedServerChanges, setHasUnsyncedServerChanges] = useState(false);
   const [serverSyncing, setServerSyncing] = useState(false);
-  const [serverSyncMessage, setServerSyncMessage] = useState("Syncing draft...");
   const pendingDraftWriteRef = useRef<number | null>(null);
   const skipDirtyEffectRef = useRef(true);
 
@@ -457,7 +455,6 @@ export default function SurveyPlan() {
         if (typeof saved.subdivisionLotPrefix === "string") setSubdivisionLotPrefix(saved.subdivisionLotPrefix);
         if (typeof saved.subdivisionEstateName === "string") setSubdivisionEstateName(saved.subdivisionEstateName);
         if (Array.isArray(saved.subdivisionLotNamesDraft)) setSubdivisionLotNamesDraft(saved.subdivisionLotNamesDraft);
-        setLastLocalSaveAt(record.updatedAt || null);
         setLastServerSyncAt(saved.lastServerSyncAt || null);
         setHasUnsyncedServerChanges(Boolean(saved.hasUnsyncedServerChanges));
         toast.success("Local survey draft restored.");
@@ -634,9 +631,7 @@ export default function SurveyPlan() {
       window.clearTimeout(pendingDraftWriteRef.current);
     }
     pendingDraftWriteRef.current = window.setTimeout(() => {
-      saveSurveyPlanDraft(ACTIVE_SURVEY_DRAFT_ID, draftState)
-        .then((savedAt) => setLastLocalSaveAt(savedAt))
-        .catch(() => {});
+      saveSurveyPlanDraft(ACTIVE_SURVEY_DRAFT_ID, draftState).catch(() => {});
       pendingDraftWriteRef.current = null;
     }, 180);
 
@@ -1188,7 +1183,7 @@ export default function SurveyPlan() {
   }, []);
 
   const ensureServerPlot = useCallback(
-    async (reason: string, options?: { fetchFeatures?: boolean }) => {
+    async (_reason: string, options?: { fetchFeatures?: boolean }) => {
       if (!finalCoords) {
         throw new Error("Enter at least 3 valid coordinate points");
       }
@@ -1197,7 +1192,6 @@ export default function SurveyPlan() {
       }
 
       setServerSyncing(true);
-      setServerSyncMessage(reason);
 
       try {
         let activePlotId = plotId;
@@ -1443,13 +1437,6 @@ export default function SurveyPlan() {
     }
   }, [workflowMode, currentStep, previewType]);
 
-  const formatStatusTime = useCallback((value: string | null) => {
-    if (!value) return "Not yet";
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return "Not yet";
-    return parsed.toLocaleString();
-  }, []);
-
   const previewActionLabel =
     previewType === "orthophoto"
       ? "Render Orthophoto"
@@ -1458,14 +1445,6 @@ export default function SurveyPlan() {
         : workflowMode === "subdivision"
           ? "Render Parcel Preview"
           : "Render Official Preview";
-
-  const serverStatusLabel = !isOnline
-    ? "Offline. Editing remains local on this device."
-    : !plotId
-      ? "Local draft only. Server plot will be created only when you request preview, feature editing, subdivision, or export."
-      : hasUnsyncedServerChanges
-        ? "Changes pending sync. Official preview/export will refresh from the current draft when requested."
-        : "Server plot is in sync with the latest saved draft.";
 
   // Reset everything
   const resetAll = () => {
@@ -1512,11 +1491,9 @@ export default function SurveyPlan() {
     setSubdivisionCleanCopyLoadingBatchId(null);
     setSubdivisionCleanCopyDownloadBatchId(null);
     setMeta(buildDefaultPlotMeta());
-    setLastLocalSaveAt(null);
     setLastServerSyncAt(null);
     setHasUnsyncedServerChanges(false);
     setServerSyncing(false);
-    setServerSyncMessage("Syncing draft...");
     skipDirtyEffectRef.current = true;
     toast("Reset completed");
   };
@@ -2310,17 +2287,6 @@ export default function SurveyPlan() {
         )}
 
         {workflowMode && (
-          <div className={`survey-sync-banner${serverSyncing ? " syncing" : ""}${!isOnline ? " offline" : ""}`}>
-            <strong>{serverSyncing ? serverSyncMessage : isOnline ? "Local-first mode active" : "Offline mode active"}</strong>
-            <span>
-              {serverSyncing
-                ? "Applying the current local draft on the server."
-                : serverStatusLabel}
-            </span>
-          </div>
-        )}
-
-        {workflowMode && (
           <FeatureOverrideModal
           isOpen={showFeatureEditor}
           onClose={() => setShowFeatureEditor(false)}
@@ -2657,21 +2623,6 @@ export default function SurveyPlan() {
                   </div>
                 </div>
 
-                <div className="draft-status-card">
-                  <div className="draft-status-row">
-                    <strong>Draft mode</strong>
-                    <span>{serverStatusLabel}</span>
-                  </div>
-                  <div className="draft-status-row">
-                    <strong>Local autosave</strong>
-                    <span>{formatStatusTime(lastLocalSaveAt)}</span>
-                  </div>
-                  <div className="draft-status-row">
-                    <strong>Last server sync</strong>
-                    <span>{formatStatusTime(lastServerSyncAt)}</span>
-                  </div>
-                </div>
-
                 <div className="edit-feature-bar">
                   <button className="btn-secondary" onClick={refreshCurrentPreview} disabled={previewLoading || orthophotoLoading || topoMapLoading || serverSyncing}>
                     {previewLoading || orthophotoLoading || topoMapLoading || serverSyncing ? "Rendering..." : previewActionLabel}
@@ -2965,21 +2916,6 @@ export default function SurveyPlan() {
                       {meta.paper_size === "A1" && "Poster (594 x 841 mm)"}
                       {meta.paper_size === "A0" && "Maximum (841 x 1189 mm)"}
                     </span>
-                  </div>
-                </div>
-
-                <div className="draft-status-card">
-                  <div className="draft-status-row">
-                    <strong>Draft mode</strong>
-                    <span>{serverStatusLabel}</span>
-                  </div>
-                  <div className="draft-status-row">
-                    <strong>Local autosave</strong>
-                    <span>{formatStatusTime(lastLocalSaveAt)}</span>
-                  </div>
-                  <div className="draft-status-row">
-                    <strong>Last server sync</strong>
-                    <span>{formatStatusTime(lastServerSyncAt)}</span>
                   </div>
                 </div>
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import toast from "react-hot-toast";
 import "../styles/feature-override-modal.css";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -502,6 +503,7 @@ export default function FeatureOverrideModal({
   const [featureInventory, setFeatureInventory] = useState<FeatureInventory>(DEFAULT_INVENTORY);
   const [featureCollections, setFeatureCollections] = useState<FeatureCollectionState>(DEFAULT_FEATURE_COLLECTIONS);
   const [plottingPoints, setPlottingPoints] = useState<number[][]>([]);
+  const [deleteConfirmArmed, setDeleteConfirmArmed] = useState(false);
 
   const activeMetrics = useMemo(() => draftMetrics || selectedMetrics, [draftMetrics, selectedMetrics]);
   const plottingDraftGeometry = useMemo(
@@ -515,9 +517,13 @@ export default function FeatureOverrideModal({
         featureCollections,
         selectedGeometry,
         draftGeometry: plottingDraftGeometry,
-      }),
+    }),
     [featureCollections, plotCoords, plottingDraftGeometry, selectedGeometry]
   );
+  const hasSelectedGeometry = Boolean(selectedGeometry);
+  const hasDraftGeometry =
+    Boolean(plottingDraftGeometry) ||
+    Boolean(drawRef.current?.getAll()?.features?.length);
 
   const isStyleReady = useCallback((map: mapboxgl.Map | null) => {
     if (!map) return false;
@@ -815,9 +821,82 @@ export default function FeatureOverrideModal({
     setDraftMetrics(null);
     setSelectedGeometry(null);
     setSelectedMetrics(null);
+    setDeleteConfirmArmed(false);
     setActiveTool("select");
     drawRef.current?.changeMode("simple_select");
   }, []);
+
+  const startAddFlow = useCallback(() => {
+    setDeleteConfirmArmed(false);
+    setAction("add");
+    drawRef.current?.deleteAll();
+    activeDrawFeatureId.current = null;
+    setSelectedGeometry(null);
+    setSelectedMetrics(null);
+    setDraftMetrics(null);
+    setPlottingPoints([]);
+    setEditorTool(toolForFeatureType(featureType));
+  }, [featureType, setAction, setEditorTool]);
+
+  const startUpdateFlow = useCallback(() => {
+    setDeleteConfirmArmed(false);
+    if (!selectedGeometry) {
+      toast("Select a detected feature first, then modify it.");
+      return;
+    }
+    setAction("update");
+    setEditorTool("select");
+  }, [selectedGeometry, setAction, setEditorTool]);
+
+  const startDeleteFlow = useCallback(() => {
+    setDeleteConfirmArmed(false);
+    if (!selectedGeometry) {
+      toast("Select the feature you want to remove first.");
+      return;
+    }
+    setAction("delete");
+    setEditorTool("select");
+  }, [selectedGeometry, setAction, setEditorTool]);
+
+  const activeCommandLabel =
+    action === "delete"
+      ? "Delete selected feature"
+      : action === "update"
+        ? "Modify selected feature"
+        : "Add new feature";
+
+  const editorPrompt =
+    action === "delete"
+      ? hasSelectedGeometry
+        ? deleteConfirmArmed
+          ? "Delete is armed. Review the selected feature, then confirm delete."
+          : "Delete mode is ready. Review the selected feature, then confirm delete."
+        : "Select an existing feature to remove."
+      : action === "update"
+        ? hasSelectedGeometry
+          ? "Selected feature is ready for editing. Adjust geometry, then apply changes."
+          : "Select an existing feature to modify."
+        : `Choose the ${toolForFeatureType(featureType) === "draw_polygon" ? "polygon" : "line"} tool and draw a new ${featureType}.`;
+
+  const primaryActionLabel =
+    action === "delete"
+      ? deleteConfirmArmed
+        ? "Confirm Delete"
+        : "Delete Selected Feature"
+      : action === "update"
+        ? "Apply Changes"
+        : "Add Feature";
+
+  const canSave =
+    action === "delete"
+      ? hasSelectedGeometry
+      : action === "update"
+        ? hasSelectedGeometry
+        : hasDraftGeometry || hasSelectedGeometry;
+
+  useEffect(() => {
+    setDeleteConfirmArmed(false);
+  }, [action, selectedGeometry, featureType]);
 
   useEffect(() => {
     if (!isOpen || !plotId) return;
@@ -1115,6 +1194,29 @@ export default function FeatureOverrideModal({
   }, [plottingViewport]);
 
   const handleSave = () => {
+    if (action === "delete") {
+      if (!selectedGeometry) {
+        toast.error("Select the feature you want to remove first.");
+        return;
+      }
+      if (!deleteConfirmArmed) {
+        setDeleteConfirmArmed(true);
+        toast("Delete armed. Click confirm again to remove the selected feature.");
+        return;
+      }
+      onSave({
+        feature_type: featureType,
+        action: "delete",
+        geojson: selectedGeometry,
+      });
+      return;
+    }
+
+    if (action === "update" && !selectedGeometry) {
+      toast.error("Select a feature first, then apply the update.");
+      return;
+    }
+
     const draw = drawRef.current;
     const data = draw?.getAll();
     let feature = data?.features?.[data.features.length - 1];
@@ -1132,7 +1234,10 @@ export default function FeatureOverrideModal({
         geometry: selectedGeometry,
       } as any;
     }
-    if (!feature) return;
+    if (!feature) {
+      toast.error(action === "add" ? "Draw the new feature first." : "No geometry is ready to save.");
+      return;
+    }
     onSave({
       feature_type: featureType,
       action,
@@ -1201,6 +1306,31 @@ export default function FeatureOverrideModal({
           </div>
 
           <div className="cad-toolbar-group">
+            <span className="cad-toolbar-label">Command</span>
+            <button
+              type="button"
+              className={`cad-tool-btn ${action === "add" ? "active" : ""}`}
+              onClick={startAddFlow}
+            >
+              Add New
+            </button>
+            <button
+              type="button"
+              className={`cad-tool-btn ${action === "update" ? "active" : ""}`}
+              onClick={startUpdateFlow}
+            >
+              Modify Selected
+            </button>
+            <button
+              type="button"
+              className={`cad-tool-btn danger ${action === "delete" ? "active" : ""}`}
+              onClick={startDeleteFlow}
+            >
+              Delete Selected
+            </button>
+          </div>
+
+          <div className="cad-toolbar-group">
             <span className="cad-toolbar-label">Basemap</span>
             <button
               type="button"
@@ -1220,7 +1350,7 @@ export default function FeatureOverrideModal({
 
           <div className="cad-toolbar-group cad-toolbar-group--hint">
             <span className="cad-toolbar-prompt">
-              Active operation: <strong>{action}</strong> on <strong>{featureType}</strong>
+              {activeCommandLabel}: <strong>{featureType}</strong>. {editorPrompt}
             </span>
           </div>
         </div>
@@ -1230,7 +1360,7 @@ export default function FeatureOverrideModal({
             <section className="cad-panel">
               <div className="cad-panel-head">
                 <strong>Feature Setup</strong>
-                <span>Choose what you are editing</span>
+                <span>Type and properties for the active command</span>
               </div>
               <div className="feature-override-controls cad-form-grid">
                 <div className="field">
@@ -1242,21 +1372,13 @@ export default function FeatureOverrideModal({
                     <option value="fence">Fence</option>
                   </select>
                 </div>
-                <div className="field">
-                  <label>Action</label>
-                  <select value={action} onChange={(event) => setAction(event.target.value as FeatureAction)}>
-                    <option value="add">Add</option>
-                    <option value="update">Update</option>
-                    <option value="delete">Delete</option>
-                  </select>
-                </div>
                 {featureType === "road" && action !== "delete" && (
                   <div className="field wide">
                     <label>Road Name</label>
                     <input value={roadName} onChange={(event) => setRoadName(event.target.value)} placeholder="e.g. Access Road A" />
                   </div>
                 )}
-                {featureType === "road" && action === "add" && (
+                {featureType === "road" && action !== "delete" && (
                   <div className="field">
                     <label>Road Width (m)</label>
                     <select value={roadWidth} onChange={(event) => setRoadWidth(event.target.value as Props["roadWidth"])}>
@@ -1273,7 +1395,7 @@ export default function FeatureOverrideModal({
                   </div>
                 )}
                 <div className="hint">
-                  Roads, rivers, and fences use line drafting. Buildings use polygon drafting. Right-click detected features to switch directly into update/delete flow.
+                  Roads, rivers, and fences use line drafting. Buildings use polygon drafting. Select existing features first for modify or delete. Right-click only changes command state; it does not delete immediately.
                 </div>
               </div>
             </section>
@@ -1312,7 +1434,7 @@ export default function FeatureOverrideModal({
             <section className="cad-panel">
               <div className="cad-panel-head">
                 <strong>Selected Geometry</strong>
-                <span>Live drafting measurements</span>
+                <span>{hasSelectedGeometry ? "Selection ready for command execution" : "Live drafting measurements"}</span>
               </div>
               {activeMetrics ? (
                 <div className="cad-metrics-grid">
@@ -1336,6 +1458,22 @@ export default function FeatureOverrideModal({
               ) : (
                 <p className="cad-empty-state">Select a detected feature or start drawing to see live geometry measurements.</p>
               )}
+              {hasSelectedGeometry ? (
+                <div className="cad-selection-summary">
+                  <strong>Selected target</strong>
+                  <span>{featureType} selected. Use Modify Selected to adjust it or Delete Selected to remove it.</span>
+                </div>
+              ) : null}
+              {action === "delete" ? (
+                <div className={`cad-warning${deleteConfirmArmed ? " armed" : ""}`}>
+                  <strong>{deleteConfirmArmed ? "Delete confirmation required" : "Delete mode"}</strong>
+                  <span>
+                    {deleteConfirmArmed
+                      ? "Confirm delete in the footer to commit removal of the selected feature."
+                      : "Delete does not happen immediately. The selected feature must be confirmed before it is removed."}
+                  </span>
+                </div>
+              ) : null}
             </section>
 
             <section className="cad-panel">
@@ -1535,12 +1673,30 @@ export default function FeatureOverrideModal({
         </div>
 
         <div className="feature-override-actions cad-editor-actions">
-          <button className="btn-outline" onClick={onClose}>
-            Cancel
-          </button>
-          <button className="btn-primary" onClick={handleSave}>
-            Save Feature Changes
-          </button>
+          <div className="cad-editor-actions-left">
+            {action === "delete"
+              ? deleteConfirmArmed
+                ? "Delete is armed. Confirm to remove the selected feature."
+                : "Delete requires an explicit confirmation before anything is removed."
+              : action === "update"
+                ? "Modify the selected feature, then apply the change."
+                : "Draw a new feature, then apply it."}
+          </div>
+          <div className="cad-editor-actions-right">
+            <button className="btn-outline" onClick={clearWorkingSelection}>
+              Clear
+            </button>
+            <button className="btn-outline" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              className={`btn-primary${action === "delete" ? " danger" : ""}`}
+              onClick={handleSave}
+              disabled={!canSave}
+            >
+              {primaryActionLabel}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1552,26 +1708,19 @@ export default function FeatureOverrideModal({
         >
           <button
             onClick={() => {
-              setAction("update");
+              startUpdateFlow();
               setMenu((current) => ({ ...current, visible: false }));
             }}
           >
-            Set Update
+            Modify Selected
           </button>
           <button
             onClick={() => {
-              setAction("delete");
-              if (selectedGeometry) {
-                onSave({
-                  feature_type: featureType,
-                  action: "delete",
-                  geojson: selectedGeometry,
-                });
-              }
+              startDeleteFlow();
               setMenu((current) => ({ ...current, visible: false }));
             }}
           >
-            Set Delete
+            Mark for Delete
           </button>
           <button
             onClick={() => {
