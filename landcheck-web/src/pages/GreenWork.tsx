@@ -906,6 +906,7 @@ type LiveMaintenanceRow = {
 };
 
 type MaintenanceBulkAssignMode = "single_staff" | "distribute_evenly" | "group_by_route";
+type MaintenanceAssigneeStrategy = "manual" | "tree_planter";
 type MaintenanceAttentionFilter =
   | "all"
   | "needs_action"
@@ -2264,6 +2265,8 @@ export default function GreenWork() {
   const [newTaskSelectedAssignees, setNewTaskSelectedAssignees] = useState<string[]>([]);
   const [selectedMaintenanceRowKeys, setSelectedMaintenanceRowKeys] = useState<string[]>([]);
   const [maintenanceBulkAssignMode, setMaintenanceBulkAssignMode] = useState<MaintenanceBulkAssignMode>("single_staff");
+  const [maintenanceAssigneeStrategy, setMaintenanceAssigneeStrategy] = useState<MaintenanceAssigneeStrategy>("manual");
+  const [maintenancePlanterFallbackAssignee, setMaintenancePlanterFallbackAssignee] = useState("");
   const [maintenanceAttentionFilter, setMaintenanceAttentionFilter] = useState<MaintenanceAttentionFilter>("all");
   const [maintenanceMapFocusEnabled, setMaintenanceMapFocusEnabled] = useState(false);
   const [assigningMaintenanceTask, setAssigningMaintenanceTask] = useState(false);
@@ -2871,6 +2874,25 @@ export default function GreenWork() {
     selectedMaintenanceRowKeys.length,
   ]);
   const treeById = useMemo(() => new Map(trees.map((tree) => [Number(tree.id), tree])), [trees]);
+  const userNameByKnownAlias = useMemo(() => {
+    const aliases = new Map<string, string>();
+    users.forEach((user) => {
+      [user.full_name, user.work_username, user.user_uid, user.email].forEach((value) => {
+        const key = normalizeName(String(value || ""));
+        if (key && !aliases.has(key)) {
+          aliases.set(key, user.full_name);
+        }
+      });
+    });
+    return aliases;
+  }, [users]);
+  const resolveKnownUserName = useCallback(
+    (value: string | null | undefined) => {
+      const key = normalizeName(String(value || ""));
+      return key ? userNameByKnownAlias.get(key) || "" : "";
+    },
+    [userNameByKnownAlias],
+  );
 
   const toggleMaintenanceRowSelection = useCallback((rowKey: string) => {
     const cleanKey = String(rowKey || "").trim();
@@ -4425,6 +4447,7 @@ export default function GreenWork() {
     if (!activeProjectId) return;
     const bulkRows = selectedMaintenanceRows;
     const isBulkMaintenanceAssign = bulkRows.length > 0;
+    const usePlanterStrategy = maintenanceAssigneeStrategy === "tree_planter";
     const singleActivity = asMaintenanceActivity(newTask.task_type);
     if (!isBulkMaintenanceAssign && !newTask.tree_id) {
       toast.error("Select a tree");
@@ -4451,10 +4474,44 @@ export default function GreenWork() {
         ];
 
     const bulkUsesMultipleStaff =
-      isBulkMaintenanceAssign && bulkRows.length > 1 && maintenanceBulkAssignMode !== "single_staff";
-    const assignees = bulkUsesMultipleStaff ? currentTaskAssignees : [String(newTask.assignee_name || "").trim()].filter(Boolean);
+      !usePlanterStrategy && isBulkMaintenanceAssign && bulkRows.length > 1 && maintenanceBulkAssignMode !== "single_staff";
+    const planterAssignmentPlan = usePlanterStrategy
+      ? candidates.map((candidate) => {
+          const tree = treeById.get(Number(candidate.treeId || 0));
+          const planterName = String(tree?.created_by || "").trim();
+          const matchedAssignee = resolveKnownUserName(planterName);
+          const fallbackAssignee = matchedAssignee ? "" : String(maintenancePlanterFallbackAssignee || "").trim();
+          return {
+            candidate,
+            planterName,
+            assignee_name: matchedAssignee || fallbackAssignee,
+          };
+        })
+      : [];
+    const assignees = usePlanterStrategy
+      ? Array.from(new Set(planterAssignmentPlan.map((item) => item.assignee_name).filter(Boolean)))
+      : bulkUsesMultipleStaff
+        ? currentTaskAssignees
+        : [String(newTask.assignee_name || "").trim()].filter(Boolean);
+    if (usePlanterStrategy) {
+      const unresolvedPlanterRows = planterAssignmentPlan.filter((item) => !item.assignee_name);
+      if (unresolvedPlanterRows.length) {
+        toast.error(
+          unresolvedPlanterRows.length === 1
+            ? `${unresolvedPlanterRows[0].candidate.label}: choose a fallback assignee because the original planter does not match an active staff account.`
+            : `${unresolvedPlanterRows.length} selected trees do not match an active planter account. Choose a fallback assignee.`,
+        );
+        return;
+      }
+    }
     if (!assignees.length) {
-      toast.error(bulkUsesMultipleStaff ? "Select staff for distribution" : "Assign a user");
+      toast.error(
+        usePlanterStrategy
+          ? "No original planter match found. Choose a fallback assignee."
+          : bulkUsesMultipleStaff
+            ? "Select staff for distribution"
+            : "Assign a user",
+      );
       return;
     }
     const duePlans = candidates.map((candidate) => ({
@@ -4474,7 +4531,13 @@ export default function GreenWork() {
     if (
       !(await ensureWorkOperationalConsent("maintenance_task_assign", {
         tree_id: isBulkMaintenanceAssign ? null : newTask.tree_id,
-        assignee_name: assignees.length === 1 ? assignees[0] : `${assignees.length} staff`,
+        assignee_name: usePlanterStrategy
+          ? assignees.length === 1
+            ? assignees[0]
+            : `original planter routing (${assignees.length} staff)`
+          : assignees.length === 1
+            ? assignees[0]
+            : `${assignees.length} staff`,
         task_type:
           isBulkMaintenanceAssign && bulkRows.length > 1
             ? `${bulkRows.length} maintenance rows`
@@ -4492,21 +4555,30 @@ export default function GreenWork() {
           : seasonMode;
 
     const loadingId = toast.loading(
-      isBulkMaintenanceAssign
-        ? maintenanceBulkAssignMode === "group_by_route"
-          ? `Grouping ${bulkRows.length} maintenance rows across ${assignees.length} staff...`
-          : bulkUsesMultipleStaff
-            ? `Distributing ${bulkRows.length} maintenance rows across ${assignees.length} staff...`
-            : `Assigning ${bulkRows.length} maintenance rows...`
-        : assignees.length > 1
-          ? `Assigning maintenance tasks to ${assignees.length} staff...`
-          : "Assigning maintenance task...",
+      usePlanterStrategy
+        ? isBulkMaintenanceAssign
+          ? `Assigning ${bulkRows.length} maintenance rows back to original planter(s)...`
+          : "Assigning maintenance task back to original planter..."
+        : isBulkMaintenanceAssign
+          ? maintenanceBulkAssignMode === "group_by_route"
+            ? `Grouping ${bulkRows.length} maintenance rows across ${assignees.length} staff...`
+            : bulkUsesMultipleStaff
+              ? `Distributing ${bulkRows.length} maintenance rows across ${assignees.length} staff...`
+              : `Assigning ${bulkRows.length} maintenance rows...`
+          : assignees.length > 1
+            ? `Assigning maintenance tasks to ${assignees.length} staff...`
+            : "Assigning maintenance task...",
     );
     setAssigningMaintenanceTask(true);
     try {
       const bulkRowByKey = new Map(bulkRows.map((row) => [row.key, row]));
       const bulkAssignmentPlan = isBulkMaintenanceAssign
         ? duePlans.map((plan, index) => {
+            if (usePlanterStrategy) {
+              const planterAssignment =
+                planterAssignmentPlan.find((item) => item.candidate.key === plan.candidate.key)?.assignee_name || "";
+              return { ...plan, assignee_name: planterAssignment };
+            }
             if (maintenanceBulkAssignMode === "single_staff") {
               return { ...plan, assignee_name: assignees[0] };
             }
@@ -4515,8 +4587,13 @@ export default function GreenWork() {
             }
             return { ...plan, assignee_name: assignees[index % assignees.length] };
           })
-        : duePlans.map((plan) => ({ ...plan, assignee_name: assignees[0] }));
-      if (isBulkMaintenanceAssign && maintenanceBulkAssignMode === "group_by_route") {
+        : duePlans.map((plan) => ({
+            ...plan,
+            assignee_name: usePlanterStrategy
+              ? planterAssignmentPlan.find((item) => item.candidate.key === plan.candidate.key)?.assignee_name || ""
+              : assignees[0],
+          }));
+      if (isBulkMaintenanceAssign && !usePlanterStrategy && maintenanceBulkAssignMode === "group_by_route") {
         const groupedCandidates = new Map<
           string,
           {
@@ -4600,6 +4677,8 @@ export default function GreenWork() {
         setNewTaskSelectedAssignees([]);
         setSelectedMaintenanceRowKeys([]);
         setMaintenanceBulkAssignMode("single_staff");
+        setMaintenanceAssigneeStrategy("manual");
+        setMaintenancePlanterFallbackAssignee("");
       } else if (isBulkMaintenanceAssign && failedEntries.length > 0) {
         setSelectedMaintenanceRowKeys(failedEntries.map((entry) => entry.key).filter(Boolean));
       } else if (newTaskMultiAssignEnabled) {
@@ -4616,10 +4695,16 @@ export default function GreenWork() {
         toast.success(
           isBulkMaintenanceAssign
             ? successCount === 1
-              ? "Maintenance row assigned"
-              : `${successCount} maintenance rows assigned`
+              ? usePlanterStrategy
+                ? "Maintenance row assigned to original planter"
+                : "Maintenance row assigned"
+              : usePlanterStrategy
+                ? `${successCount} maintenance rows assigned to original planter(s)`
+                : `${successCount} maintenance rows assigned`
             : successCount === 1
-              ? "Task assigned"
+              ? usePlanterStrategy
+                ? "Task assigned to original planter"
+                : "Task assigned"
               : `Tasks assigned to ${successCount} staff`,
         );
       } else if (successCount > 0) {
@@ -5975,6 +6060,93 @@ export default function GreenWork() {
       return a.label.localeCompare(b.label);
     });
   }, [describeMaintenanceRouteGroup, selectedMaintenanceRows]);
+  const maintenancePlanterAssignmentPreview = useMemo(() => {
+    if (maintenanceAssigneeStrategy !== "tree_planter") {
+      return {
+        candidateCount: 0,
+        entries: [] as MaintenanceAssignmentPreviewEntry[],
+        unmatchedRows: [] as MaintenanceAssignmentPreviewRow[],
+      };
+    }
+
+    const selectedRows =
+      selectedMaintenanceRows.length > 0
+        ? selectedMaintenanceRows.map((row) => ({
+            key: row.key,
+            treeId: Number(row.treeId || 0),
+            activityLabel: row.activityLabel,
+            sourceIndicator: row.indicator,
+          }))
+        : Number(newTask.tree_id || 0) > 0
+          ? [
+              {
+                key: `single-${newTask.tree_id}-${newTask.task_type || "maintenance"}`,
+                treeId: Number(newTask.tree_id || 0),
+                activityLabel: formatTaskTypeLabel(newTask.task_type || "maintenance"),
+                sourceIndicator: "Will be assigned to the original planter if a matching staff account exists.",
+              },
+            ]
+          : [];
+
+    const entries = new Map<string, MaintenanceAssignmentPreviewEntry>();
+    const unmatchedRows: MaintenanceAssignmentPreviewRow[] = [];
+
+    selectedRows.forEach((item) => {
+      const tree = treeById.get(item.treeId);
+      const planterName = String(tree?.created_by || "").trim();
+      const matchedAssignee = resolveKnownUserName(planterName);
+      const resolvedAssignee = matchedAssignee || String(maintenancePlanterFallbackAssignee || "").trim();
+      const numericTreeId = Number(item.treeId || 0);
+      const projectTreeNo = Number((tree as any)?.project_tree_no || 0);
+      const previewRow: MaintenanceAssignmentPreviewRow = {
+        key: item.key,
+        label: `Tree #${projectTreeNo > 0 ? projectTreeNo : numericTreeId}`,
+        activityLabel: item.activityLabel,
+        indicator: [
+          planterName ? `Original planter: ${planterName}` : "No original planter recorded",
+          !matchedAssignee
+            ? resolvedAssignee
+              ? `Fallback assignee: ${resolvedAssignee}`
+              : "Needs fallback assignee"
+            : item.sourceIndicator,
+        ]
+          .filter(Boolean)
+          .join(" | "),
+        species: String(tree?.species || "").trim(),
+        group: {
+          key: planterName ? `planter:${normalizeName(planterName)}` : `unmatched:${item.key}`,
+          label: planterName ? `Original planter: ${planterName}` : "Needs fallback assignee",
+        },
+      };
+
+      if (!resolvedAssignee) {
+        unmatchedRows.push(previewRow);
+        return;
+      }
+
+      const current = entries.get(resolvedAssignee) || {
+        assignee: resolvedAssignee,
+        rows: [],
+        groups: [],
+      };
+      current.rows.push(previewRow);
+      entries.set(resolvedAssignee, current);
+    });
+
+    return {
+      candidateCount: selectedRows.length,
+      entries: Array.from(entries.values()).sort((a, b) => a.assignee.localeCompare(b.assignee)),
+      unmatchedRows,
+    };
+  }, [
+    maintenanceAssigneeStrategy,
+    maintenancePlanterFallbackAssignee,
+    newTask.task_type,
+    newTask.tree_id,
+    resolveKnownUserName,
+    selectedMaintenanceRows,
+    treeById,
+  ]);
   const maintenanceAssignmentPreview = useMemo(() => {
     return buildMaintenanceAssignmentPreview({
       rows: selectedMaintenanceRows,
@@ -6833,6 +7005,8 @@ export default function GreenWork() {
     setNewTaskMultiAssignEnabled(false);
     setNewTaskSelectedAssignees([]);
     setMaintenanceBulkAssignMode("single_staff");
+    setMaintenanceAssigneeStrategy("manual");
+    setMaintenancePlanterFallbackAssignee("");
     setActiveForm("assign_task");
     setMenuOpen(false);
     setStaffMenu(null);
@@ -6857,9 +7031,7 @@ export default function GreenWork() {
     }
     const tree = trees.find((entry) => Number(entry.id) === Number(treeId));
     const owner = tree?.created_by || "";
-    const ownerExists = owner
-      ? users.some((u) => normalizeName(u.full_name) === normalizeName(owner))
-      : false;
+    const matchedOwner = resolveKnownUserName(owner);
     const treeStatus = normalizeTreeStatus(tree?.status || "healthy");
     const replacementRequired = isReplacementTriggerStatus(treeStatus);
     const preferredActivity = replacementRequired ? "replacement" : (preferredTaskType || "");
@@ -6878,9 +7050,11 @@ export default function GreenWork() {
     setNewTask((prev) => ({
       ...prev,
       tree_id: String(treeId),
-      assignee_name: ownerExists ? owner : prev.assignee_name,
+      assignee_name: matchedOwner || prev.assignee_name,
       task_type: replacementRequired ? "replacement" : (preferredTaskType || prev.task_type),
     }));
+    setMaintenanceAssigneeStrategy("manual");
+    setMaintenancePlanterFallbackAssignee("");
     setActiveForm("assign_task");
     setMenuOpen(false);
     setLiveTreeMenu(null);
@@ -8890,7 +9064,7 @@ export default function GreenWork() {
                       <span className="green-work-note">+ {selectedMaintenanceRows.length - 8} more selected rows</span>
                     )}
                   </div>
-                  {selectedMaintenanceRows.length > 1 && maintenanceBulkAssignMode === "group_by_route" && maintenanceRouteGroups.length > 0 && (
+                  {maintenanceAssigneeStrategy === "manual" && selectedMaintenanceRows.length > 1 && maintenanceBulkAssignMode === "group_by_route" && maintenanceRouteGroups.length > 0 && (
                     <div className="green-work-task-selection-groups">
                       <strong>{maintenanceRouteGroups.length} custodian / route group{maintenanceRouteGroups.length === 1 ? "" : "s"} will stay together</strong>
                       <div className="green-work-task-selection-group-list">
@@ -8933,7 +9107,7 @@ export default function GreenWork() {
                   </select>
                 </>
               )}
-              {selectedMaintenanceRows.length > 1 && (
+              {maintenanceAssigneeStrategy === "manual" && selectedMaintenanceRows.length > 1 && (
                 <>
                   <label className="green-work-field-label">Bulk assignment mode</label>
                   <select
@@ -8944,7 +9118,7 @@ export default function GreenWork() {
                           ? "distribute_evenly"
                           : e.target.value === "group_by_route"
                             ? "group_by_route"
-                            : "single_staff";
+                          : "single_staff";
                       setMaintenanceBulkAssignMode(nextMode);
                       if (nextMode === "single_staff" && newTaskSelectedAssignees.length) {
                         setNewTask((prev) => ({ ...prev, assignee_name: newTaskSelectedAssignees[0] || prev.assignee_name }));
@@ -8961,6 +9135,112 @@ export default function GreenWork() {
                   </select>
                 </>
               )}
+              <label className="green-work-field-label">Assignment source</label>
+              <select
+                value={maintenanceAssigneeStrategy}
+                onChange={(e) => {
+                  const nextStrategy =
+                    e.target.value === "tree_planter" ? "tree_planter" : "manual";
+                  setMaintenanceAssigneeStrategy(nextStrategy);
+                  if (nextStrategy === "manual") {
+                    setMaintenancePlanterFallbackAssignee("");
+                  }
+                }}
+                disabled={!activeProjectId || assigningMaintenanceTask}
+              >
+                <option value="manual">Choose staff manually</option>
+                <option value="tree_planter">Assign to original planter(s)</option>
+              </select>
+              <p className="green-work-note">
+                Original planter uses the tree&apos;s recorded planting/capture owner and matches it to an active staff account in this project.
+              </p>
+              {maintenanceAssigneeStrategy === "tree_planter" ? (
+                <div className="green-work-assignment-preview">
+                  <div className="green-work-assignment-preview-head">
+                    <strong>Original planter routing</strong>
+                    <span>
+                      {maintenancePlanterAssignmentPreview.candidateCount > 1
+                        ? "Each selected maintenance row will go back to the staff member who originally planted or captured that tree."
+                        : "This task will go back to the staff member who originally planted or captured the tree."}
+                    </span>
+                  </div>
+                  {maintenancePlanterAssignmentPreview.candidateCount === 0 ? (
+                    <p className="green-work-note">Select a tree or maintenance row first to preview original-planter routing.</p>
+                  ) : (
+                    <>
+                      {maintenancePlanterAssignmentPreview.unmatchedRows.length > 0 ? (
+                        <>
+                          <p className="green-work-note danger">
+                            {maintenancePlanterAssignmentPreview.unmatchedRows.length} selected tree
+                            {maintenancePlanterAssignmentPreview.unmatchedRows.length === 1 ? "" : "s"} do not match an active staff account. Choose a fallback assignee for those trees.
+                          </p>
+                          <select
+                            value={maintenancePlanterFallbackAssignee}
+                            onChange={(e) => setMaintenancePlanterFallbackAssignee(e.target.value)}
+                            disabled={!activeProjectId || assigningMaintenanceTask}
+                          >
+                            <option value="">Fallback assignee for unmatched trees</option>
+                            {users.map((u) => (
+                              <option key={`maintenance-planter-fallback-${u.id}`} value={u.full_name}>
+                                {u.full_name}
+                              </option>
+                            ))}
+                          </select>
+                        </>
+                      ) : (
+                        <p className="green-work-note">All selected trees have matching planter accounts.</p>
+                      )}
+                      {maintenancePlanterAssignmentPreview.entries.length > 0 ? (
+                        <div className="green-work-assignment-preview-grid">
+                          {maintenancePlanterAssignmentPreview.entries.map((entry) => (
+                            <div key={`maintenance-planter-preview-${entry.assignee}`} className="green-work-assignment-preview-card">
+                              <div className="green-work-assignment-preview-card-head">
+                                <strong>{entry.assignee}</strong>
+                                <span>{entry.rows.length} tree task{entry.rows.length === 1 ? "" : "s"}</span>
+                              </div>
+                              <div className="green-work-assignment-preview-list">
+                                {entry.rows.slice(0, 6).map((row) => (
+                                  <div key={`maintenance-planter-preview-row-${row.key}`} className="green-work-assignment-preview-item">
+                                    <strong>{row.label}</strong>
+                                    <span>
+                                      {row.activityLabel}
+                                      {row.species ? ` | ${row.species}` : ""}
+                                    </span>
+                                    <small>{row.indicator}</small>
+                                  </div>
+                                ))}
+                                {entry.rows.length > 6 && (
+                                  <span className="green-work-note">+ {entry.rows.length - 6} more rows for {entry.assignee}</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                      {maintenancePlanterAssignmentPreview.unmatchedRows.length > 0 ? (
+                        <div className="green-work-task-selection-groups">
+                          <strong>Rows needing fallback assignment</strong>
+                          <div className="green-work-task-selection-list">
+                            {maintenancePlanterAssignmentPreview.unmatchedRows.slice(0, 6).map((row) => (
+                              <div key={`maintenance-planter-unmatched-${row.key}`} className="green-work-task-selection-item">
+                                <strong>{row.label}</strong>
+                                <span>{row.activityLabel}</span>
+                                <span>{row.indicator}</span>
+                              </div>
+                            ))}
+                            {maintenancePlanterAssignmentPreview.unmatchedRows.length > 6 && (
+                              <span className="green-work-note">
+                                + {maintenancePlanterAssignmentPreview.unmatchedRows.length - 6} more unmatched rows
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              ) : (
+                <>
               <label className="green-work-checkbox-row">
                 <input
                   type="checkbox"
@@ -9151,6 +9431,8 @@ export default function GreenWork() {
                     Select at least two staff to preview how the selected trees will be assigned.
                   </p>
                 )
+              )}
+                </>
               )}
               <select
                 value={newTask.priority}
