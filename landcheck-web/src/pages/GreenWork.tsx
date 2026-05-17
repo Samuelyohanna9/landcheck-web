@@ -6221,7 +6221,6 @@ export default function GreenWork() {
     { form: "remote_monitoring", title: "Remote Monitoring", note: "Satellite Monitoring +", isNew: true },
     { form: "live_table", title: "Live Maintenance", note: "New planting + existing tree" },
     { form: "users", title: "Users", note: "All staff status + roles" },
-    { form: "add_user", title: "Add Staff", note: "Create user profile" },
     { form: "assign_work", title: "Planting Orders", note: "Assign planting targets" },
     { form: "assign_task", title: "Maintenance", note: "Assign maintenance" },
     { form: "custodian_hub", title: "Custodian Hub", note: "Overview + custodians +" },
