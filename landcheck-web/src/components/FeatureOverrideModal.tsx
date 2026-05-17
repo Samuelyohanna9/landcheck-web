@@ -28,6 +28,22 @@ type PlottingCamera = {
   offsetY: number;
 };
 
+type FeatureRecord = {
+  key: string;
+  type: FeatureType;
+  label: string;
+  properties: Record<string, any>;
+  geometry: any;
+  metrics: GeometryMetrics | null;
+  coordinates: number[][];
+};
+
+type DraftingAssistState = {
+  snap: boolean;
+  ortho: boolean;
+  measure: boolean;
+};
+
 type Props = {
   isOpen: boolean;
   onClose: () => void;
@@ -75,6 +91,12 @@ const DEFAULT_PLOTTING_CAMERA: PlottingCamera = {
   zoom: 1,
   offsetX: 0,
   offsetY: 0,
+};
+
+const DEFAULT_DRAFTING_ASSIST: DraftingAssistState = {
+  snap: true,
+  ortho: false,
+  measure: true,
 };
 
 const EARTH_RADIUS_M = 6371008.8;
@@ -435,6 +457,21 @@ const getFeatureLabelPoint = (geometry: any, project: (coord: number[]) => { x: 
   return project([avg.lng / coords.length, avg.lat / coords.length]);
 };
 
+const geometryToCoordinateList = (geometry: any) => {
+  const coordinates: number[][] = [];
+  collectGeometryCoordinates(geometry, coordinates);
+  return coordinates;
+};
+
+const formatCoordinateValue = (value: number) => Number.isFinite(value) ? value.toFixed(6) : "--";
+
+const buildFeatureLabel = (type: FeatureType, properties?: Record<string, any>, index?: number) => {
+  if (type === "road") return String(properties?.name || `Road ${typeof index === "number" ? index + 1 : ""}`).trim();
+  if (type === "building") return `Building ${typeof index === "number" ? index + 1 : ""}`.trim();
+  if (type === "river") return `River ${typeof index === "number" ? index + 1 : ""}`.trim();
+  return `Fence ${typeof index === "number" ? index + 1 : ""}`.trim();
+};
+
 const toolForFeatureType = (type: FeatureType): EditorTool => (type === "building" ? "draw_polygon" : "draw_line_string");
 
 const layerIds: Record<FeatureType | "boundary", string[]> = {
@@ -523,6 +560,10 @@ export default function FeatureOverrideModal({
   const [deleteConfirmArmed, setDeleteConfirmArmed] = useState(false);
   const [plottingCamera, setPlottingCamera] = useState<PlottingCamera>(DEFAULT_PLOTTING_CAMERA);
   const [plottingPanActive, setPlottingPanActive] = useState(false);
+  const [selectedFeatureRecord, setSelectedFeatureRecord] = useState<FeatureRecord | null>(null);
+  const [draftingAssist, setDraftingAssist] = useState<DraftingAssistState>(DEFAULT_DRAFTING_ASSIST);
+  const [plottingHoverPoint, setPlottingHoverPoint] = useState<number[] | null>(null);
+  const [plottingSnapLabel, setPlottingSnapLabel] = useState<string | null>(null);
 
   const activeMetrics = useMemo(() => draftMetrics || selectedMetrics, [draftMetrics, selectedMetrics]);
   const plottingDraftGeometry = useMemo(
@@ -540,10 +581,79 @@ export default function FeatureOverrideModal({
     [featureCollections, plotCoords, plottingDraftGeometry, selectedGeometry]
   );
   const plottingZoomPercent = useMemo(() => `${Math.round(plottingCamera.zoom * 100)}%`, [plottingCamera.zoom]);
+  const plottingPreviewPoints = useMemo(() => {
+    if (basemapMode !== "plotting" || activeTool === "select" || !plottingHoverPoint) return plottingPoints;
+    return [...plottingPoints, plottingHoverPoint];
+  }, [activeTool, basemapMode, plottingHoverPoint, plottingPoints]);
+  const plottingPreviewGeometry = useMemo(
+    () => (plottingPreviewPoints.length > plottingPoints.length ? buildGeometryFromPoints(plottingPreviewPoints, activeTool) : null),
+    [activeTool, plottingPoints.length, plottingPreviewPoints]
+  );
   const hasSelectedGeometry = Boolean(selectedGeometry);
   const hasDraftGeometry =
     Boolean(plottingDraftGeometry) ||
     Boolean(drawRef.current?.getAll()?.features?.length);
+  const objectRecords = useMemo<FeatureRecord[]>(() => {
+    const records: FeatureRecord[] = [];
+    (Object.entries(featureCollections) as Array<[FeatureType, FeatureCollectionState[FeatureType]]>).forEach(([type, collection]) => {
+      collection?.features?.forEach((feature: any, index: number) => {
+        const properties = (feature?.properties || {}) as Record<string, any>;
+        const geometry = feature?.geometry;
+        records.push({
+          key: `${type}-${index}`,
+          type,
+          label: buildFeatureLabel(type, properties, index),
+          properties,
+          geometry,
+          metrics: getGeometryMetrics(geometry),
+          coordinates: geometryToCoordinateList(geometry),
+        });
+      });
+    });
+    return records;
+  }, [featureCollections]);
+  const visibleObjectRecords = useMemo(
+    () => objectRecords.filter((record) => layerVisibility[record.type]),
+    [layerVisibility, objectRecords]
+  );
+  const selectedCoordinateRows = useMemo(
+    () => geometryToCoordinateList(selectedGeometry).slice(0, 8),
+    [selectedGeometry]
+  );
+  const snapCandidates = useMemo(() => {
+    const seen = new Set<string>();
+    const candidates: Array<{ coord: number[]; label: string }> = [];
+    const pushCandidate = (coord: number[] | null | undefined, label: string) => {
+      if (!Array.isArray(coord) || coord.length < 2) return;
+      const key = `${Number(coord[0]).toFixed(7)}:${Number(coord[1]).toFixed(7)}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      candidates.push({ coord: [Number(coord[0]), Number(coord[1])], label });
+    };
+    plotCoords?.forEach((coord, index) => pushCandidate(coord, `Boundary ${index + 1}`));
+    objectRecords.forEach((record) => {
+      record.coordinates.forEach((coord, index) => pushCandidate(coord, `${record.label} · pt ${index + 1}`));
+    });
+    return candidates;
+  }, [objectRecords, plotCoords]);
+  const plottingMeasureSummary = useMemo(() => {
+    if (!draftingAssist.measure || activeTool === "select" || !plottingHoverPoint || !plottingPoints.length) return null;
+    const segment = lineLengthMeters([plottingPoints[plottingPoints.length - 1], plottingHoverPoint]);
+    const totalLine = lineLengthMeters(plottingPreviewPoints);
+    const totalArea =
+      activeTool === "draw_polygon" && plottingPreviewPoints.length >= 3
+        ? polygonAreaSqm([closeRing(plottingPreviewPoints)])
+        : 0;
+    const last = plottingViewport.project(plottingPoints[plottingPoints.length - 1]);
+    const hover = plottingViewport.project(plottingHoverPoint);
+    return {
+      segment,
+      totalLine,
+      totalArea,
+      labelX: (last.x + hover.x) / 2,
+      labelY: (last.y + hover.y) / 2 - 12,
+    };
+  }, [activeTool, draftingAssist.measure, plottingHoverPoint, plottingPoints, plottingPreviewPoints, plottingViewport]);
 
   const isStyleReady = useCallback((map: mapboxgl.Map | null) => {
     if (!map) return false;
@@ -555,13 +665,36 @@ export default function FeatureOverrideModal({
   }, []);
 
   const importGeometryIntoEditor = useCallback(
-    (geometry: any, nextFeatureType: FeatureType, properties?: Record<string, any>) => {
+    (geometry: any, nextFeatureType: FeatureType, properties?: Record<string, any>, descriptor?: Partial<FeatureRecord>) => {
       if (!geometry) return;
 
       setSelectedGeometry(geometry);
       setSelectedMetrics(getGeometryMetrics(geometry));
       setDraftMetrics(getGeometryMetrics(geometry));
       setFeatureType(nextFeatureType);
+      setSelectedFeatureRecord(
+        descriptor?.key || descriptor?.label
+          ? {
+              key: descriptor.key || `${nextFeatureType}-selection`,
+              type: nextFeatureType,
+              label: descriptor.label || buildFeatureLabel(nextFeatureType, properties),
+              properties: properties || {},
+              geometry,
+              metrics: getGeometryMetrics(geometry),
+              coordinates: geometryToCoordinateList(geometry),
+            }
+          : {
+              key: `${nextFeatureType}-selection`,
+              type: nextFeatureType,
+              label: buildFeatureLabel(nextFeatureType, properties),
+              properties: properties || {},
+              geometry,
+              metrics: getGeometryMetrics(geometry),
+              coordinates: geometryToCoordinateList(geometry),
+            }
+      );
+      setPlottingHoverPoint(null);
+      setPlottingSnapLabel(null);
 
       if (nextFeatureType === "road") {
         const nextName = typeof properties?.name === "string" ? String(properties.name) : "";
@@ -841,8 +974,11 @@ export default function FeatureOverrideModal({
     drawRef.current?.deleteAll();
     activeDrawFeatureId.current = null;
     setPlottingPoints([]);
+    setPlottingHoverPoint(null);
+    setPlottingSnapLabel(null);
     setDraftMetrics(null);
     setSelectedGeometry(null);
+    setSelectedFeatureRecord(null);
     setSelectedMetrics(null);
     setDeleteConfirmArmed(false);
     setActiveTool("select");
@@ -855,9 +991,12 @@ export default function FeatureOverrideModal({
     drawRef.current?.deleteAll();
     activeDrawFeatureId.current = null;
     setSelectedGeometry(null);
+    setSelectedFeatureRecord(null);
     setSelectedMetrics(null);
     setDraftMetrics(null);
     setPlottingPoints([]);
+    setPlottingHoverPoint(null);
+    setPlottingSnapLabel(null);
     setEditorTool(toolForFeatureType(featureType));
   }, [featureType, setAction, setEditorTool]);
 
@@ -1118,6 +1257,13 @@ export default function FeatureOverrideModal({
   }, [basemapMode, isOpen]);
 
   useEffect(() => {
+    if (activeTool === "select" || basemapMode !== "plotting") {
+      setPlottingHoverPoint(null);
+      setPlottingSnapLabel(null);
+    }
+  }, [activeTool, basemapMode]);
+
+  useEffect(() => {
     if (!isOpen || basemapMode !== "satellite") return;
     if (!plottingDraftGeometry || !drawRef.current) return;
     drawRef.current.deleteAll();
@@ -1149,6 +1295,49 @@ export default function FeatureOverrideModal({
     [plottingCamera.offsetX, plottingCamera.offsetY, plottingCamera.zoom]
   );
 
+  const applyOrthoConstraint = useCallback(
+    (canvasPoint: { x: number; y: number }) => {
+      if (!draftingAssist.ortho || activeTool === "select" || !plottingPoints.length) return canvasPoint;
+      const anchor = plottingViewport.project(plottingPoints[plottingPoints.length - 1]);
+      const deltaX = canvasPoint.x - anchor.x;
+      const deltaY = canvasPoint.y - anchor.y;
+      if (Math.abs(deltaX) >= Math.abs(deltaY)) {
+        return { x: canvasPoint.x, y: anchor.y };
+      }
+      return { x: anchor.x, y: canvasPoint.y };
+    },
+    [activeTool, draftingAssist.ortho, plottingPoints, plottingViewport]
+  );
+
+  const applySnapConstraint = useCallback(
+    (canvasPoint: { x: number; y: number }): { point: { x: number; y: number }; label: string | null } => {
+      if (!draftingAssist.snap) return { point: canvasPoint, label: null as string | null };
+      let nearestDistance = Number.POSITIVE_INFINITY;
+      let snappedPoint = canvasPoint;
+      let snappedLabel: string | null = null;
+      snapCandidates.forEach((candidate) => {
+        const projected = plottingViewport.project(candidate.coord);
+        const distance = Math.hypot(projected.x - canvasPoint.x, projected.y - canvasPoint.y);
+        if (distance > 14) return;
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          snappedPoint = projected;
+          snappedLabel = candidate.label;
+        }
+      });
+      return { point: snappedPoint, label: snappedLabel };
+    },
+    [draftingAssist.snap, plottingViewport, snapCandidates]
+  );
+
+  const resolvePlottingCanvasPoint = useCallback(
+    (rawCanvasPoint: { x: number; y: number }) => {
+      const orthoPoint = applyOrthoConstraint(rawCanvasPoint);
+      return applySnapConstraint(orthoPoint);
+    },
+    [applyOrthoConstraint, applySnapConstraint]
+  );
+
   const handlePlottingMouseMove = useCallback(
     (event: ReactMouseEvent<SVGSVGElement>) => {
       if (basemapMode !== "plotting") return;
@@ -1168,11 +1357,15 @@ export default function FeatureOverrideModal({
         }
         return;
       }
-      const pointer = plottingScreenToCanvasPoint(rawPointer);
+      const { point: pointer, label } = resolvePlottingCanvasPoint(plottingScreenToCanvasPoint(rawPointer));
       const [lng, lat] = plottingViewport.unproject(pointer);
       setCursor({ lng, lat });
+      setPlottingSnapLabel(label);
+      if (activeTool !== "select") {
+        setPlottingHoverPoint([lng, lat]);
+      }
     },
-    [basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport]
+    [activeTool, basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport, resolvePlottingCanvasPoint]
   );
 
   const handlePlottingCanvasClick = useCallback(
@@ -1184,13 +1377,15 @@ export default function FeatureOverrideModal({
         return;
       }
       event.preventDefault();
-      const pointer = plottingScreenToCanvasPoint(
+      const { point: pointer, label } = resolvePlottingCanvasPoint(
         getPlottingPointer(event.currentTarget, event.clientX, event.clientY)
       );
       const [lng, lat] = plottingViewport.unproject(pointer);
       setPlottingPoints((previous) => [...previous, [lng, lat]]);
+      setPlottingHoverPoint([lng, lat]);
+      setPlottingSnapLabel(label);
     },
-    [activeTool, basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport]
+    [activeTool, basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport, resolvePlottingCanvasPoint]
   );
 
   const handlePlottingCanvasDoubleClick = useCallback(
@@ -1209,12 +1404,24 @@ export default function FeatureOverrideModal({
   );
 
   const handlePlottingFeatureSelect = useCallback(
-    (nextFeatureType: FeatureType, feature: any) => {
-      importGeometryIntoEditor(feature?.geometry, nextFeatureType, feature?.properties || {});
+    (nextFeatureType: FeatureType, feature: any, descriptor?: Partial<FeatureRecord>) => {
+      importGeometryIntoEditor(feature?.geometry, nextFeatureType, feature?.properties || {}, descriptor);
       setActiveTool("select");
     },
     [importGeometryIntoEditor]
   );
+
+  const handleObjectRecordSelect = useCallback(
+    (record: FeatureRecord) => {
+      importGeometryIntoEditor(record.geometry, record.type, record.properties, record);
+      setActiveTool("select");
+    },
+    [importGeometryIntoEditor]
+  );
+
+  const toggleDraftingAssist = useCallback((key: keyof DraftingAssistState) => {
+    setDraftingAssist((previous) => ({ ...previous, [key]: !previous[key] }));
+  }, []);
 
   const handlePlottingMouseDown = useCallback(
     (event: ReactMouseEvent<SVGSVGElement>) => {
@@ -1264,6 +1471,8 @@ export default function FeatureOverrideModal({
     plottingPanRef.current.moved = false;
     setPlottingPanActive(false);
     setCursor(null);
+    setPlottingHoverPoint(null);
+    setPlottingSnapLabel(null);
   }, []);
 
   const zoomPlottingCamera = useCallback((direction: "in" | "out") => {
@@ -1536,6 +1745,33 @@ export default function FeatureOverrideModal({
 
             <section className="cad-panel">
               <div className="cad-panel-head">
+                <strong>Objects</strong>
+                <span>Click an item to highlight and edit it on the canvas</span>
+              </div>
+              <div className="cad-object-list">
+                {visibleObjectRecords.length ? (
+                  visibleObjectRecords.map((record) => (
+                    <button
+                      type="button"
+                      key={record.key}
+                      className={`cad-object-item${selectedFeatureRecord?.key === record.key ? " active" : ""}`}
+                      onClick={() => handleObjectRecordSelect(record)}
+                    >
+                      <span className="cad-object-item-main">
+                        <strong>{record.label}</strong>
+                        <small>{record.metrics ? `${record.metrics.geometryType} · ${record.metrics.vertices} pts` : record.type}</small>
+                      </span>
+                      <span className={`cad-object-type cad-object-type--${record.type}`}>{record.type}</span>
+                    </button>
+                  ))
+                ) : (
+                  <p className="cad-empty-state">No visible detected objects in the current layer filter.</p>
+                )}
+              </div>
+            </section>
+
+            <section className="cad-panel">
+              <div className="cad-panel-head">
                 <strong>Layers</strong>
                 <span>Toggle drafting references</span>
               </div>
@@ -1563,51 +1799,6 @@ export default function FeatureOverrideModal({
                   </label>
                 ))}
               </div>
-            </section>
-
-            <section className="cad-panel">
-              <div className="cad-panel-head">
-                <strong>Selected Geometry</strong>
-                <span>{hasSelectedGeometry ? "Selection ready for command execution" : "Live drafting measurements"}</span>
-              </div>
-              {activeMetrics ? (
-                <div className="cad-metrics-grid">
-                  <div className="cad-metric">
-                    <span>Type</span>
-                    <strong>{activeMetrics.geometryType}</strong>
-                  </div>
-                  <div className="cad-metric">
-                    <span>Vertices</span>
-                    <strong>{activeMetrics.vertices}</strong>
-                  </div>
-                  <div className="cad-metric">
-                    <span>Length</span>
-                    <strong>{formatLength(activeMetrics.lengthM || activeMetrics.perimeterM)}</strong>
-                  </div>
-                  <div className="cad-metric">
-                    <span>Area</span>
-                    <strong>{formatArea(activeMetrics.areaSqm)}</strong>
-                  </div>
-                </div>
-              ) : (
-                <p className="cad-empty-state">Select a detected feature or start drawing to see live geometry measurements.</p>
-              )}
-              {hasSelectedGeometry ? (
-                <div className="cad-selection-summary">
-                  <strong>Selected target</strong>
-                  <span>{featureType} selected. Use Modify Selected to adjust it or Delete Selected to remove it.</span>
-                </div>
-              ) : null}
-              {action === "delete" ? (
-                <div className={`cad-warning${deleteConfirmArmed ? " armed" : ""}`}>
-                  <strong>{deleteConfirmArmed ? "Delete confirmation required" : "Delete mode"}</strong>
-                  <span>
-                    {deleteConfirmArmed
-                      ? "Confirm delete in the footer to commit removal of the selected feature."
-                      : "Delete does not happen immediately. The selected feature must be confirmed before it is removed."}
-                  </span>
-                </div>
-              ) : null}
             </section>
 
             <section className="cad-panel">
@@ -1678,8 +1869,9 @@ export default function FeatureOverrideModal({
                         const geometry = feature?.geometry;
                         if (geometry?.type !== "LineString") return null;
                         const labelPoint = getFeatureLabelPoint(geometry, plottingViewport.project);
+                        const descriptor = objectRecords.find((record) => record.key === `road-${index}`);
                         return (
-                          <g key={`road-${index}`} onClick={() => handlePlottingFeatureSelect("road", feature)}>
+                          <g key={`road-${index}`} onClick={() => handlePlottingFeatureSelect("road", feature, descriptor || undefined)}>
                             <polyline
                               points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
                               className="cad-svg-feature cad-svg-feature--road"
@@ -1696,12 +1888,13 @@ export default function FeatureOverrideModal({
                       featureCollections.river.features.map((feature, index) => {
                         const geometry = feature?.geometry;
                         if (geometry?.type !== "LineString") return null;
+                        const descriptor = objectRecords.find((record) => record.key === `river-${index}`);
                         return (
                           <polyline
                             key={`river-${index}`}
                             points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
                             className="cad-svg-feature cad-svg-feature--river"
-                            onClick={() => handlePlottingFeatureSelect("river", feature)}
+                            onClick={() => handlePlottingFeatureSelect("river", feature, descriptor || undefined)}
                           />
                         );
                       })}
@@ -1709,12 +1902,13 @@ export default function FeatureOverrideModal({
                       featureCollections.fence.features.map((feature, index) => {
                         const geometry = feature?.geometry;
                         if (geometry?.type !== "LineString") return null;
+                        const descriptor = objectRecords.find((record) => record.key === `fence-${index}`);
                         return (
                           <polyline
                             key={`fence-${index}`}
                             points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
                             className="cad-svg-feature cad-svg-feature--fence"
-                            onClick={() => handlePlottingFeatureSelect("fence", feature)}
+                            onClick={() => handlePlottingFeatureSelect("fence", feature, descriptor || undefined)}
                           />
                         );
                       })}
@@ -1724,8 +1918,9 @@ export default function FeatureOverrideModal({
                         const ring = Array.isArray(geometry?.coordinates?.[0]) ? geometry.coordinates[0] : null;
                         if (!ring) return null;
                         const labelPoint = getFeatureLabelPoint(geometry, plottingViewport.project);
+                        const descriptor = objectRecords.find((record) => record.key === `building-${index}`);
                         return (
-                          <g key={`building-${index}`} onClick={() => handlePlottingFeatureSelect("building", feature)}>
+                          <g key={`building-${index}`} onClick={() => handlePlottingFeatureSelect("building", feature, descriptor || undefined)}>
                             <polygon
                               points={pointsToSvg(ring, plottingViewport.project)}
                               className="cad-svg-feature cad-svg-feature--building"
@@ -1766,6 +1961,33 @@ export default function FeatureOverrideModal({
                       const projected = plottingViewport.project(point);
                       return <circle key={`pt-${index}`} cx={projected.x} cy={projected.y} r="4.5" className="cad-svg-vertex" />;
                     })}
+                    {plottingPreviewGeometry?.type === "LineString" && draftingAssist.measure ? (
+                      <polyline
+                        points={pointsToSvg((plottingPreviewGeometry.coordinates || []) as number[][], plottingViewport.project)}
+                        className="cad-svg-preview"
+                      />
+                    ) : null}
+                    {plottingPreviewGeometry?.type === "Polygon" && Array.isArray(plottingPreviewGeometry.coordinates?.[0]) && draftingAssist.measure ? (
+                      <polygon
+                        points={pointsToSvg(plottingPreviewGeometry.coordinates[0] as number[][], plottingViewport.project)}
+                        className="cad-svg-preview cad-svg-preview--polygon"
+                      />
+                    ) : null}
+                    {plottingMeasureSummary && draftingAssist.measure ? (
+                      <g className="cad-measure-callout">
+                        <rect
+                          x={plottingMeasureSummary.labelX - 58}
+                          y={plottingMeasureSummary.labelY - 18}
+                          width="116"
+                          height="24"
+                          rx="12"
+                          className="cad-measure-box"
+                        />
+                        <text x={plottingMeasureSummary.labelX} y={plottingMeasureSummary.labelY - 2} textAnchor="middle" className="cad-measure-label">
+                          {formatLength(plottingMeasureSummary.segment)}
+                        </text>
+                      </g>
+                    ) : null}
                   </g>
                   <line
                     x1={PLOTTING_VIEWPORT_PADDING / 2}
@@ -1805,7 +2027,20 @@ export default function FeatureOverrideModal({
               <span>Tool: {activeTool === "select" ? "Select" : activeTool === "draw_polygon" ? "Polygon" : "Line"}</span>
               {basemapMode === "plotting" ? <span>Zoom: {plottingZoomPercent}</span> : null}
               {basemapMode === "plotting" ? <span>Grid: On</span> : null}
+              <button type="button" className={`cad-status-toggle${draftingAssist.snap ? " active" : ""}`} onClick={() => toggleDraftingAssist("snap")}>
+                Snap {draftingAssist.snap ? "On" : "Off"}
+              </button>
+              <button type="button" className={`cad-status-toggle${draftingAssist.ortho ? " active" : ""}`} onClick={() => toggleDraftingAssist("ortho")}>
+                Ortho {draftingAssist.ortho ? "On" : "Off"}
+              </button>
+              <button type="button" className={`cad-status-toggle${draftingAssist.measure ? " active" : ""}`} onClick={() => toggleDraftingAssist("measure")}>
+                Measure {draftingAssist.measure ? "On" : "Off"}
+              </button>
+              {basemapMode === "plotting" && plottingSnapLabel ? <span>Snap Target: {plottingSnapLabel}</span> : null}
               {basemapMode === "plotting" ? <span>Pan: Middle mouse drag</span> : null}
+              {basemapMode === "plotting" && plottingMeasureSummary ? (
+                <span>Segment: {formatLength(plottingMeasureSummary.segment)}</span>
+              ) : null}
               <span>
                 Geometry:{" "}
                 {activeMetrics
@@ -1814,6 +2049,114 @@ export default function FeatureOverrideModal({
               </span>
             </div>
           </div>
+
+          <aside className="cad-editor-inspector">
+            <section className="cad-panel">
+              <div className="cad-panel-head">
+                <strong>Properties</strong>
+                <span>{selectedFeatureRecord ? "Selected feature metadata" : "No selected feature"}</span>
+              </div>
+              {selectedFeatureRecord ? (
+                <div className="cad-property-list">
+                  <div className="cad-property-row">
+                    <span>Label</span>
+                    <strong>{selectedFeatureRecord.label}</strong>
+                  </div>
+                  <div className="cad-property-row">
+                    <span>Feature</span>
+                    <strong>{selectedFeatureRecord.type}</strong>
+                  </div>
+                  <div className="cad-property-row">
+                    <span>Command</span>
+                    <strong>{activeCommandLabel}</strong>
+                  </div>
+                  <div className="cad-property-row">
+                    <span>Geometry</span>
+                    <strong>{selectedFeatureRecord.metrics?.geometryType || "--"}</strong>
+                  </div>
+                  {selectedFeatureRecord.type === "road" ? (
+                    <>
+                      <div className="cad-property-row">
+                        <span>Road name</span>
+                        <strong>{roadName || "--"}</strong>
+                      </div>
+                      <div className="cad-property-row">
+                        <span>Width</span>
+                        <strong>{roadWidth} m</strong>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="cad-empty-state">Select an object from the list or canvas to inspect its properties.</p>
+              )}
+            </section>
+
+            <section className="cad-panel">
+              <div className="cad-panel-head">
+                <strong>Selected Geometry</strong>
+                <span>{hasSelectedGeometry ? "Selection ready for command execution" : "Live drafting measurements"}</span>
+              </div>
+              {activeMetrics ? (
+                <div className="cad-metrics-grid">
+                  <div className="cad-metric">
+                    <span>Type</span>
+                    <strong>{activeMetrics.geometryType}</strong>
+                  </div>
+                  <div className="cad-metric">
+                    <span>Vertices</span>
+                    <strong>{activeMetrics.vertices}</strong>
+                  </div>
+                  <div className="cad-metric">
+                    <span>Length</span>
+                    <strong>{formatLength(activeMetrics.lengthM || activeMetrics.perimeterM)}</strong>
+                  </div>
+                  <div className="cad-metric">
+                    <span>Area</span>
+                    <strong>{formatArea(activeMetrics.areaSqm)}</strong>
+                  </div>
+                </div>
+              ) : (
+                <p className="cad-empty-state">Select a detected feature or start drawing to see live geometry measurements.</p>
+              )}
+              {hasSelectedGeometry ? (
+                <div className="cad-selection-summary">
+                  <strong>Selected target</strong>
+                  <span>{featureType} selected. Use Modify Selected to adjust it or Delete Selected to remove it.</span>
+                </div>
+              ) : null}
+              {action === "delete" ? (
+                <div className={`cad-warning${deleteConfirmArmed ? " armed" : ""}`}>
+                  <strong>{deleteConfirmArmed ? "Delete confirmation required" : "Delete mode"}</strong>
+                  <span>
+                    {deleteConfirmArmed
+                      ? "Confirm delete in the footer to commit removal of the selected feature."
+                      : "Delete does not happen immediately. The selected feature must be confirmed before it is removed."}
+                  </span>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="cad-panel">
+              <div className="cad-panel-head">
+                <strong>Coordinates</strong>
+                <span>Active vertex list</span>
+              </div>
+              {selectedCoordinateRows.length ? (
+                <div className="cad-coordinate-list">
+                  {selectedCoordinateRows.map((coord, index) => (
+                    <div className="cad-coordinate-row" key={`${coord[0]}-${coord[1]}-${index}`}>
+                      <span>P{index + 1}</span>
+                      <strong>{formatCoordinateValue(coord[0])}</strong>
+                      <strong>{formatCoordinateValue(coord[1])}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="cad-empty-state">The selected geometry coordinates will appear here.</p>
+              )}
+            </section>
+          </aside>
         </div>
 
         <div className="feature-override-actions cad-editor-actions">
