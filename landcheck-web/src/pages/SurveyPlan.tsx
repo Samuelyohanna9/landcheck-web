@@ -8,6 +8,11 @@ import CoordinateInput from "../components/CoordinateInput";
 import SurveyPreview from "../components/SurveyPreview";
 import FeatureOverrideModal from "../components/FeatureOverrideModal";
 import { fromWGS84, toWGS84 } from "../utils/coordinateConverter";
+import {
+  clearSurveyPlanDraft,
+  loadSurveyPlanDraft,
+  saveSurveyPlanDraft,
+} from "../offline/surveyPlanDraft";
 import "../styles/survey-plan.css";
 
 type PlotMeta = {
@@ -112,6 +117,35 @@ type NorthArrowColor = "black" | "blue";
 type BeaconStyle = "circle" | "square" | "triangle" | "diamond" | "cross";
 type RoadWidthOption = "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
 
+type SurveyPlanDraftState = {
+  workflowMode: WorkflowMode | null;
+  currentStep: number;
+  manualPoints: ManualPoint[];
+  coordinateSystem: string;
+  plotId: number | null;
+  hasHeightData: boolean;
+  previewType: PreviewType;
+  topoSource: TopoSource;
+  northArrowStyle: NorthArrowStyle;
+  northArrowColor: NorthArrowColor;
+  beaconStyle: BeaconStyle;
+  roadWidth: RoadWidthOption;
+  meta: PlotMeta;
+  subdivisionMethod: SubdivisionMethod;
+  subdivisionCountDraft: string;
+  subdivisionTargetAreaDraft: string;
+  subdivisionFractionDraft: string;
+  subdivisionFractionBreaks: number[];
+  subdivisionCustomAreaDrafts: string[];
+  subdivisionParentAreaM2: number | null;
+  subdivisionOrientationDraft: string;
+  subdivisionLotPrefix: string;
+  subdivisionEstateName: string;
+  subdivisionLotNamesDraft: string[];
+  lastServerSyncAt: string | null;
+  hasUnsyncedServerChanges: boolean;
+};
+
 const DEFAULT_CERTIFICATION_STATEMENT =
   "I hereby certify that this survey plan is a true representation of the survey executed by me and conforms with the regulations of surveying profession.";
 const SCALE_PRESETS = [250, 500, 1000, 2000, 5000];
@@ -128,6 +162,42 @@ const MAPBOX_TOKEN = String(import.meta.env.VITE_MAPBOX_TOKEN || "");
 if (MAPBOX_TOKEN) {
   mapboxgl.accessToken = MAPBOX_TOKEN;
 }
+
+const ACTIVE_SURVEY_DRAFT_ID = "active";
+
+const buildDefaultManualPoints = (): ManualPoint[] => [
+  { station: "A", lng: 0, lat: 0 },
+  { station: "B", lng: 0, lat: 0 },
+  { station: "C", lng: 0, lat: 0 },
+];
+
+const buildDefaultPlotMeta = (): PlotMeta => ({
+  title_text: "SURVEY PLAN",
+  location_text: "",
+  lga_text: "",
+  state_text: "",
+  surveyor_name: "",
+  surveyor_rank: "",
+  certification_statement: DEFAULT_CERTIFICATION_STATEMENT,
+  scale_text: "1 : 1000",
+  paper_size: "A4",
+  template_name: DEFAULT_TEMPLATE_NAME,
+  adamawa_rof_no: "",
+  adamawa_owner_name: "",
+  adamawa_authority_title: DEFAULT_ADAMAWA_AUTHORITY_TITLE,
+  adamawa_authority_date_text: DEFAULT_ADAMAWA_AUTHORITY_DATE,
+  adamawa_control_point_name: "",
+  adamawa_northing: "",
+  adamawa_easting: "",
+  adamawa_elevation: "",
+  adamawa_origin_text: DEFAULT_ADAMAWA_ORIGIN_TEXT,
+  adamawa_topo_sheet_text: DEFAULT_ADAMAWA_TOPO_SHEET_TEXT,
+  adamawa_computation_no: "",
+  adamawa_cadastral_sheet_no: "",
+  adamawa_plan_no: "",
+  adamawa_surveyed_by_text: "",
+  adamawa_disclaimer_text: DEFAULT_ADAMAWA_DISCLAIMER_TEXT,
+});
 
 const parsePositiveInt = (value: string): number | null => {
   const parsed = Number.parseInt(String(value || "").replace(/[^0-9]/g, ""), 10);
@@ -266,17 +336,24 @@ export default function SurveyPlan() {
   const [workflowMode, setWorkflowMode] = useState<WorkflowMode | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const activeSteps = workflowMode === "subdivision" ? SUBDIVISION_STEPS : SURVEY_STEPS;
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine
+  );
+  const [lastLocalSaveAt, setLastLocalSaveAt] = useState<string | null>(null);
+  const [lastServerSyncAt, setLastServerSyncAt] = useState<string | null>(null);
+  const [hasUnsyncedServerChanges, setHasUnsyncedServerChanges] = useState(false);
+  const [serverSyncing, setServerSyncing] = useState(false);
+  const [serverSyncMessage, setServerSyncMessage] = useState("Syncing draft...");
+  const pendingDraftWriteRef = useRef<number | null>(null);
+  const skipDirtyEffectRef = useRef(true);
 
   // Coordinates state
-  const [manualPoints, setManualPoints] = useState<ManualPoint[]>([
-    { station: "A", lng: 0, lat: 0 },
-    { station: "B", lng: 0, lat: 0 },
-    { station: "C", lng: 0, lat: 0 },
-  ]);
+  const [manualPoints, setManualPoints] = useState<ManualPoint[]>(buildDefaultManualPoints);
   const [coordinateSystem, setCoordinateSystem] = useState("wgs84");
 
   // Plot state
-  const [loading, setLoading] = useState(false);
+  const loading = false;
   const [plotId, setPlotId] = useState<number | null>(null);
   const [features, setFeatures] = useState<any>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -336,33 +413,7 @@ export default function SurveyPlan() {
   const topoRequestId = useRef(0);
 
   // Survey metadata
-  const [meta, setMeta] = useState<PlotMeta>({
-    title_text: "SURVEY PLAN",
-    location_text: "",
-    lga_text: "",
-    state_text: "",
-    surveyor_name: "",
-    surveyor_rank: "",
-    certification_statement: DEFAULT_CERTIFICATION_STATEMENT,
-    scale_text: "1 : 1000",
-    paper_size: "A4",
-    template_name: DEFAULT_TEMPLATE_NAME,
-    adamawa_rof_no: "",
-    adamawa_owner_name: "",
-    adamawa_authority_title: DEFAULT_ADAMAWA_AUTHORITY_TITLE,
-    adamawa_authority_date_text: DEFAULT_ADAMAWA_AUTHORITY_DATE,
-    adamawa_control_point_name: "",
-    adamawa_northing: "",
-    adamawa_easting: "",
-    adamawa_elevation: "",
-    adamawa_origin_text: DEFAULT_ADAMAWA_ORIGIN_TEXT,
-    adamawa_topo_sheet_text: DEFAULT_ADAMAWA_TOPO_SHEET_TEXT,
-    adamawa_computation_no: "",
-    adamawa_cadastral_sheet_no: "",
-    adamawa_plan_no: "",
-    adamawa_surveyed_by_text: "",
-    adamawa_disclaimer_text: DEFAULT_ADAMAWA_DISCLAIMER_TEXT,
-  });
+  const [meta, setMeta] = useState<PlotMeta>(buildDefaultPlotMeta);
 
   useEffect(() => {
     setScaleDraft(String(parseScaleDenominator(meta.scale_text)));
@@ -373,6 +424,67 @@ export default function SurveyPlan() {
     setScaleDraft(String(parsed));
     setMeta((m) => ({ ...m, scale_text: `1 : ${parsed}` }));
   }, [scaleDraft]);
+
+  useEffect(() => {
+    let active = true;
+    loadSurveyPlanDraft<SurveyPlanDraftState>(ACTIVE_SURVEY_DRAFT_ID)
+      .then((record) => {
+        if (!active || !record?.state) return;
+        const saved = record.state;
+        if (saved.workflowMode) setWorkflowMode(saved.workflowMode);
+        if (Number.isFinite(Number(saved.currentStep))) setCurrentStep(Math.max(1, Number(saved.currentStep || 1)));
+        if (Array.isArray(saved.manualPoints) && saved.manualPoints.length >= 3) setManualPoints(saved.manualPoints);
+        if (saved.coordinateSystem) setCoordinateSystem(saved.coordinateSystem);
+        if (typeof saved.plotId === "number") setPlotId(saved.plotId);
+        setHasHeightData(Boolean(saved.hasHeightData));
+        if (saved.previewType) setPreviewType(saved.previewType);
+        if (saved.topoSource) setTopoSource(saved.topoSource);
+        if (saved.northArrowStyle) setNorthArrowStyle(saved.northArrowStyle);
+        if (saved.northArrowColor) setNorthArrowColor(saved.northArrowColor);
+        if (saved.beaconStyle) setBeaconStyle(saved.beaconStyle);
+        if (saved.roadWidth) setRoadWidth(saved.roadWidth);
+        if (saved.meta) setMeta({ ...buildDefaultPlotMeta(), ...saved.meta });
+        if (saved.subdivisionMethod) setSubdivisionMethod(saved.subdivisionMethod);
+        if (typeof saved.subdivisionCountDraft === "string") setSubdivisionCountDraft(saved.subdivisionCountDraft);
+        if (typeof saved.subdivisionTargetAreaDraft === "string") setSubdivisionTargetAreaDraft(saved.subdivisionTargetAreaDraft);
+        if (typeof saved.subdivisionFractionDraft === "string") setSubdivisionFractionDraft(saved.subdivisionFractionDraft);
+        if (Array.isArray(saved.subdivisionFractionBreaks) && saved.subdivisionFractionBreaks.length) {
+          setSubdivisionFractionBreaks(saved.subdivisionFractionBreaks);
+        }
+        if (Array.isArray(saved.subdivisionCustomAreaDrafts)) setSubdivisionCustomAreaDrafts(saved.subdivisionCustomAreaDrafts);
+        if (saved.subdivisionParentAreaM2 !== undefined) setSubdivisionParentAreaM2(saved.subdivisionParentAreaM2);
+        if (typeof saved.subdivisionOrientationDraft === "string") setSubdivisionOrientationDraft(saved.subdivisionOrientationDraft);
+        if (typeof saved.subdivisionLotPrefix === "string") setSubdivisionLotPrefix(saved.subdivisionLotPrefix);
+        if (typeof saved.subdivisionEstateName === "string") setSubdivisionEstateName(saved.subdivisionEstateName);
+        if (Array.isArray(saved.subdivisionLotNamesDraft)) setSubdivisionLotNamesDraft(saved.subdivisionLotNamesDraft);
+        setLastLocalSaveAt(record.updatedAt || null);
+        setLastServerSyncAt(saved.lastServerSyncAt || null);
+        setHasUnsyncedServerChanges(Boolean(saved.hasUnsyncedServerChanges));
+        toast.success("Local survey draft restored.");
+      })
+      .finally(() => {
+        if (active) {
+          skipDirtyEffectRef.current = true;
+          setDraftHydrated(true);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
 
   // Coordinate helpers
   const updatePoint = (index: number, key: keyof ManualPoint, value: string | number) => {
@@ -486,6 +598,114 @@ export default function SurveyPlan() {
   const stationNames = useMemo(() => {
     return manualPoints.map((p) => (p.station || "").trim());
   }, [manualPoints]);
+
+  useEffect(() => {
+    if (!draftHydrated) return;
+    const draftState: SurveyPlanDraftState = {
+      workflowMode,
+      currentStep,
+      manualPoints,
+      coordinateSystem,
+      plotId,
+      hasHeightData,
+      previewType,
+      topoSource,
+      northArrowStyle,
+      northArrowColor,
+      beaconStyle,
+      roadWidth,
+      meta,
+      subdivisionMethod,
+      subdivisionCountDraft,
+      subdivisionTargetAreaDraft,
+      subdivisionFractionDraft,
+      subdivisionFractionBreaks,
+      subdivisionCustomAreaDrafts,
+      subdivisionParentAreaM2,
+      subdivisionOrientationDraft,
+      subdivisionLotPrefix,
+      subdivisionEstateName,
+      subdivisionLotNamesDraft,
+      lastServerSyncAt,
+      hasUnsyncedServerChanges,
+    };
+
+    if (pendingDraftWriteRef.current !== null) {
+      window.clearTimeout(pendingDraftWriteRef.current);
+    }
+    pendingDraftWriteRef.current = window.setTimeout(() => {
+      saveSurveyPlanDraft(ACTIVE_SURVEY_DRAFT_ID, draftState)
+        .then((savedAt) => setLastLocalSaveAt(savedAt))
+        .catch(() => {});
+      pendingDraftWriteRef.current = null;
+    }, 180);
+
+    return () => {
+      if (pendingDraftWriteRef.current !== null) {
+        window.clearTimeout(pendingDraftWriteRef.current);
+        pendingDraftWriteRef.current = null;
+      }
+    };
+  }, [
+    draftHydrated,
+    workflowMode,
+    currentStep,
+    manualPoints,
+    coordinateSystem,
+    plotId,
+    hasHeightData,
+    previewType,
+    topoSource,
+    northArrowStyle,
+    northArrowColor,
+    beaconStyle,
+    roadWidth,
+    meta,
+    subdivisionMethod,
+    subdivisionCountDraft,
+    subdivisionTargetAreaDraft,
+    subdivisionFractionDraft,
+    subdivisionFractionBreaks,
+    subdivisionCustomAreaDrafts,
+    subdivisionParentAreaM2,
+    subdivisionOrientationDraft,
+    subdivisionLotPrefix,
+    subdivisionEstateName,
+    subdivisionLotNamesDraft,
+    lastServerSyncAt,
+    hasUnsyncedServerChanges,
+  ]);
+
+  useEffect(() => {
+    if (!draftHydrated) return;
+    if (skipDirtyEffectRef.current) {
+      skipDirtyEffectRef.current = false;
+      return;
+    }
+    if (!plotId) return;
+    setHasUnsyncedServerChanges(true);
+  }, [
+    draftHydrated,
+    plotId,
+    workflowMode,
+    manualPoints,
+    coordinateSystem,
+    meta,
+    northArrowStyle,
+    northArrowColor,
+    beaconStyle,
+    roadWidth,
+    subdivisionMethod,
+    subdivisionCountDraft,
+    subdivisionTargetAreaDraft,
+    subdivisionFractionDraft,
+    subdivisionFractionBreaks,
+    subdivisionCustomAreaDrafts,
+    subdivisionOrientationDraft,
+    subdivisionLotPrefix,
+    subdivisionEstateName,
+    subdivisionLotNamesDraft,
+  ]);
 
   const displayedSubdivisionLotNames = useMemo(() => {
     const plots = subdivisionPreview?.plots || [];
@@ -951,49 +1171,82 @@ export default function SurveyPlan() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(plots));
   };
 
-  // Create plot on backend
-  const createPlot = async () => {
-    if (!finalCoords) {
+  const fetchPlotFeatures = useCallback(async (id: number) => {
+    const featureRes = await api.get(`/plots/${id}/features`);
+    setFeatures(featureRes.data);
+  }, []);
+
+  useEffect(() => {
+    if (!plotId || !isOnline || features) return;
+    fetchPlotFeatures(plotId).catch(() => {});
+  }, [fetchPlotFeatures, features, isOnline, plotId]);
+
+  const markServerSynced = useCallback(() => {
+    const now = new Date().toISOString();
+    setLastServerSyncAt(now);
+    setHasUnsyncedServerChanges(false);
+  }, []);
+
+  const ensureServerPlot = useCallback(
+    async (reason: string, options?: { fetchFeatures?: boolean }) => {
+      if (!finalCoords) {
+        throw new Error("Enter at least 3 valid coordinate points");
+      }
+      if (!isOnline) {
+        throw new Error("You are offline. Keep editing locally and reconnect before requesting official preview or export.");
+      }
+
+      setServerSyncing(true);
+      setServerSyncMessage(reason);
+
+      try {
+        let activePlotId = plotId;
+        if (!activePlotId) {
+          const res = await api.post("/plots", {
+            coordinates: finalCoords,
+            meta: buildPlotMetaPayload(),
+          });
+          activePlotId = Number(res.data.plot_id ?? res.data.id);
+          await api.post(`/plots/${activePlotId}/meta`, buildPlotMetaPayload());
+          setPlotId(activePlotId);
+          savePlotToStorage(activePlotId);
+          setSubdivisionPreview(null);
+          setSubdivisionBatches([]);
+          setLatestSubdivisionBatchId(null);
+          toast.success("Server plot created from local draft.");
+        } else {
+          await api.post(`/plots/${activePlotId}/geometry`, {
+            coordinates: finalCoords,
+          });
+          await api.post(`/plots/${activePlotId}/meta`, buildPlotMetaPayload());
+        }
+
+        if (options?.fetchFeatures) {
+          await fetchPlotFeatures(activePlotId);
+        }
+
+        markServerSynced();
+        return activePlotId;
+      } finally {
+        setServerSyncing(false);
+      }
+    },
+    [fetchPlotFeatures, finalCoords, isOnline, markServerSynced, plotId, meta, coordinateSystem]
+  );
+
+  const continueWithLocalDraft = () => {
+    if (!hasValidCoords) {
       toast.error("Enter at least 3 valid coordinate points");
       return;
     }
-
-    try {
-      setLoading(true);
-      const res = await api.post("/plots", {
-        coordinates: finalCoords,
-      });
-      const id = res.data.plot_id ?? res.data.id;
-      setPlotId(id);
-      setSubdivisionPreview(null);
-      setSubdivisionLotNamesDraft([]);
-      setSubdivisionFractionDraft("1, 1");
-      setSubdivisionFractionBreaks([0.5]);
-      setSubdivisionCustomAreaDrafts([]);
-      setSubdivisionParentAreaM2(null);
-      setSubdivisionBatches([]);
-      setLatestSubdivisionBatchId(null);
-
-      // Save to localStorage for dashboard
-      savePlotToStorage(id);
-
-      const featureRes = await api.get(`/plots/${id}/features`);
-      setFeatures(featureRes.data);
-
-      toast.success("Plot created successfully!");
-      if (workflowMode === "subdivision") {
-        setSubdivisionPreviewPanelTab("survey_plan");
-      }
-      setCurrentStep(2);
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to create plot");
-    } finally {
-      setLoading(false);
+    if (workflowMode === "subdivision") {
+      setSubdivisionPreviewPanelTab("survey_plan");
     }
+    setCurrentStep(2);
+    toast.success("Draft saved locally. Official preview/export will sync only when you request it.");
   };
 
-  const buildPlotMetaPayload = useCallback(() => {
+  function buildPlotMetaPayload() {
     return {
       title_text: meta.title_text,
       location_text: meta.location_text,
@@ -1022,15 +1275,16 @@ export default function SurveyPlan() {
       adamawa_surveyed_by_text: "",
       adamawa_disclaimer_text: meta.adamawa_disclaimer_text,
     };
-  }, [meta, coordinateSystem]);
+  }
 
   // Load preview image
   const loadPreview = useCallback(async () => {
-    if (!plotId) return;
-
     const requestId = ++previewRequestId.current;
     setPreviewLoading(true);
     try {
+      const activePlotId = await ensureServerPlot("Syncing draft for official survey preview...", {
+        fetchFeatures: true,
+      });
       const payload = {
         ...buildPlotMetaPayload(),
         station_names: stationNames,
@@ -1040,7 +1294,7 @@ export default function SurveyPlan() {
         road_width_m: Number(roadWidth),
       };
 
-      const res = await api.post(`/plots/${plotId}/report/preview`, payload, {
+      const res = await api.post(`/plots/${activePlotId}/report/preview`, payload, {
         responseType: "blob",
       });
 
@@ -1053,34 +1307,33 @@ export default function SurveyPlan() {
         if (prev) URL.revokeObjectURL(prev);
         return url;
       });
+      markServerSynced();
     } catch (err) {
       console.error("Preview error:", err);
-      toast.error("Failed to load preview");
+      const message = err instanceof Error ? err.message : "Failed to load preview";
+      toast.error(message);
     } finally {
       if (requestId === previewRequestId.current) {
         setPreviewLoading(false);
       }
     }
-  }, [plotId, stationNames, northArrowStyle, northArrowColor, beaconStyle, roadWidth, buildPlotMetaPayload]);
-
-  // Debounce preview refresh while users type metadata.
-  useEffect(() => {
-    if (currentStep === 2 && plotId && previewType === "survey") {
-      const timer = window.setTimeout(() => {
-        loadPreview();
-      }, 450);
-      return () => window.clearTimeout(timer);
-    }
-  }, [currentStep, plotId, previewType, loadPreview]);
+  }, [
+    stationNames,
+    northArrowStyle,
+    northArrowColor,
+    beaconStyle,
+    roadWidth,
+    ensureServerPlot,
+    markServerSynced,
+  ]);
 
   // Load orthophoto preview (satellite imagery)
   const loadOrthophoto = useCallback(async () => {
-    if (!plotId) return;
-
     const requestId = ++orthophotoRequestId.current;
     setOrthophotoLoading(true);
     try {
-      const res = await api.post(`/plots/${plotId}/orthophoto/preview`, {
+      const activePlotId = await ensureServerPlot("Syncing draft for official orthophoto preview...");
+      const res = await api.post(`/plots/${activePlotId}/orthophoto/preview`, {
         scale_text: meta.scale_text,
         station_names: stationNames,
         coordinate_system: coordinateSystem,
@@ -1101,25 +1354,35 @@ export default function SurveyPlan() {
         if (prev) URL.revokeObjectURL(prev);
         return url;
       });
+      markServerSynced();
     } catch (err) {
       console.error("Orthophoto preview error:", err);
-      toast.error("Failed to load orthophoto preview");
+      const message = err instanceof Error ? err.message : "Failed to load orthophoto preview";
+      toast.error(message);
     } finally {
       if (requestId === orthophotoRequestId.current) {
         setOrthophotoLoading(false);
       }
     }
-  }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size, northArrowStyle, northArrowColor]);
+  }, [
+    meta.scale_text,
+    stationNames,
+    coordinateSystem,
+    meta.paper_size,
+    northArrowStyle,
+    northArrowColor,
+    ensureServerPlot,
+    markServerSynced,
+  ]);
 
   // Load topo map preview (OpenTopoMap tiles or user height data)
   const loadTopoMap = useCallback(async (source: "opentopomap" | "userdata" = "opentopomap") => {
-    if (!plotId) return;
-
     const requestId = ++topoRequestId.current;
     setTopoMapLoading(true);
 
     try {
-      const res = await api.post(`/plots/${plotId}/orthophoto/preview`, {
+      const activePlotId = await ensureServerPlot("Syncing draft for official topo map preview...");
+      const res = await api.post(`/plots/${activePlotId}/orthophoto/preview`, {
         scale_text: meta.scale_text,
         station_names: stationNames,
         coordinate_system: coordinateSystem,
@@ -1141,46 +1404,38 @@ export default function SurveyPlan() {
         if (prev) URL.revokeObjectURL(prev);
         return url;
       });
+      markServerSynced();
     } catch (err) {
       console.error("Topo map preview error:", err);
-      toast.error("Failed to load topo map preview");
+      const message = err instanceof Error ? err.message : "Failed to load topo map preview";
+      toast.error(message);
     } finally {
       if (requestId === topoRequestId.current) {
         setTopoMapLoading(false);
       }
     }
-  }, [plotId, meta.scale_text, stationNames, coordinateSystem, meta.paper_size, northArrowStyle, northArrowColor]);
-
-  // Debounce orthophoto/topo refresh to avoid repeated heavy tile fetches.
-  useEffect(() => {
-    if (!plotId) return;
-    if (currentStep !== 2 && currentStep !== 3) return;
-
-    if (previewType === "orthophoto") {
-      const timer = window.setTimeout(() => {
-        loadOrthophoto();
-      }, 500);
-      return () => window.clearTimeout(timer);
-    }
-
-    if (previewType === "topomap") {
-      const timer = window.setTimeout(() => {
-        loadTopoMap(topoSource);
-      }, 500);
-      return () => window.clearTimeout(timer);
-    }
   }, [
-    plotId,
-    currentStep,
-    previewType,
-    topoSource,
     meta.scale_text,
+    stationNames,
+    coordinateSystem,
     meta.paper_size,
     northArrowStyle,
     northArrowColor,
-    loadOrthophoto,
-    loadTopoMap,
+    ensureServerPlot,
+    markServerSynced,
   ]);
+
+  const refreshCurrentPreview = useCallback(async () => {
+    if (previewType === "orthophoto") {
+      await loadOrthophoto();
+      return;
+    }
+    if (previewType === "topomap") {
+      await loadTopoMap(topoSource);
+      return;
+    }
+    await loadPreview();
+  }, [loadOrthophoto, loadPreview, loadTopoMap, previewType, topoSource]);
 
   useEffect(() => {
     if (workflowMode === "subdivision" && currentStep === 2 && previewType !== "survey") {
@@ -1188,14 +1443,35 @@ export default function SurveyPlan() {
     }
   }, [workflowMode, currentStep, previewType]);
 
+  const formatStatusTime = useCallback((value: string | null) => {
+    if (!value) return "Not yet";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return "Not yet";
+    return parsed.toLocaleString();
+  }, []);
+
+  const previewActionLabel =
+    previewType === "orthophoto"
+      ? "Render Orthophoto"
+      : previewType === "topomap"
+        ? "Render Topo Map"
+        : workflowMode === "subdivision"
+          ? "Render Parcel Preview"
+          : "Render Official Preview";
+
+  const serverStatusLabel = !isOnline
+    ? "Offline. Editing remains local on this device."
+    : !plotId
+      ? "Local draft only. Server plot will be created only when you request preview, feature editing, subdivision, or export."
+      : hasUnsyncedServerChanges
+        ? "Changes pending sync. Official preview/export will refresh from the current draft when requested."
+        : "Server plot is in sync with the latest saved draft.";
+
   // Reset everything
   const resetAll = () => {
+    clearSurveyPlanDraft(ACTIVE_SURVEY_DRAFT_ID).catch(() => {});
     setWorkflowMode(null);
-    setManualPoints([
-      { station: "A", lng: 0, lat: 0 },
-      { station: "B", lng: 0, lat: 0 },
-      { station: "C", lng: 0, lat: 0 },
-    ]);
+    setManualPoints(buildDefaultManualPoints());
     setCoordinateSystem("wgs84");
     setPlotId(null);
     setFeatures(null);
@@ -1235,33 +1511,13 @@ export default function SurveyPlan() {
     setSubdivisionCleanCopyAreaDrafts({});
     setSubdivisionCleanCopyLoadingBatchId(null);
     setSubdivisionCleanCopyDownloadBatchId(null);
-    setMeta({
-      title_text: "SURVEY PLAN",
-      location_text: "",
-      lga_text: "",
-      state_text: "",
-      surveyor_name: "",
-      surveyor_rank: "",
-      certification_statement: DEFAULT_CERTIFICATION_STATEMENT,
-      scale_text: "1 : 1000",
-      paper_size: "A4",
-      template_name: DEFAULT_TEMPLATE_NAME,
-      adamawa_rof_no: "",
-      adamawa_owner_name: "",
-      adamawa_authority_title: DEFAULT_ADAMAWA_AUTHORITY_TITLE,
-      adamawa_authority_date_text: DEFAULT_ADAMAWA_AUTHORITY_DATE,
-      adamawa_control_point_name: "",
-      adamawa_northing: "",
-      adamawa_easting: "",
-      adamawa_elevation: "",
-      adamawa_origin_text: DEFAULT_ADAMAWA_ORIGIN_TEXT,
-      adamawa_topo_sheet_text: DEFAULT_ADAMAWA_TOPO_SHEET_TEXT,
-      adamawa_computation_no: "",
-      adamawa_cadastral_sheet_no: "",
-      adamawa_plan_no: "",
-      adamawa_surveyed_by_text: "",
-      adamawa_disclaimer_text: DEFAULT_ADAMAWA_DISCLAIMER_TEXT,
-    });
+    setMeta(buildDefaultPlotMeta());
+    setLastLocalSaveAt(null);
+    setLastServerSyncAt(null);
+    setHasUnsyncedServerChanges(false);
+    setServerSyncing(false);
+    setServerSyncMessage("Syncing draft...");
+    skipDirtyEffectRef.current = true;
     toast("Reset completed");
   };
 
@@ -1305,6 +1561,14 @@ export default function SurveyPlan() {
     [subdivisionAreaDraftKey]
   );
 
+  const resolvePlotResourcePath = useCallback((path: string, activePlotId: number) => {
+    return path.replace(/\/plots\/[^/]+(?=\/)/, `/plots/${activePlotId}`);
+  }, []);
+
+  const resolvePlotFilename = useCallback((filename: string, activePlotId: number) => {
+    return filename.replace(/plot_[^_]+/, `plot_${activePlotId}`);
+  }, []);
+
   // Download function for PDF endpoints that need JSON body
   const downloadWithJson = async (
     url: string,
@@ -1316,6 +1580,7 @@ export default function SurveyPlan() {
     if (downloadLoadingKey) return;
     setDownloadLoadingKey(loadingKey);
     try {
+      const activePlotId = await ensureServerPlot("Syncing draft before export...");
       // Use custom title if provided, otherwise use meta title
       const titleText = customTitle || meta.title_text;
 
@@ -1354,13 +1619,17 @@ export default function SurveyPlan() {
         adamawa_disclaimer_text: meta.adamawa_disclaimer_text,
       };
 
-      const res = await api.post(url, payload, { responseType: "blob" });
-      triggerBlobDownload(res.data, res.headers["content-type"], filename);
+      const resolvedUrl = resolvePlotResourcePath(url, activePlotId);
+      const resolvedFilename = resolvePlotFilename(filename, activePlotId);
+      const res = await api.post(resolvedUrl, payload, { responseType: "blob" });
+      triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
 
-      toast.success(`Downloaded ${filename}`);
+      markServerSynced();
+      toast.success(`Downloaded ${resolvedFilename}`);
     } catch (err) {
       console.error("Download error:", err);
-      toast.error("Failed to download file");
+      const message = err instanceof Error ? err.message : "Failed to download file";
+      toast.error(message);
     } finally {
       setDownloadLoadingKey((prev) => (prev === loadingKey ? null : prev));
     }
@@ -1370,22 +1639,28 @@ export default function SurveyPlan() {
     if (downloadLoadingKey) return;
     setDownloadLoadingKey(loadingKey);
     try {
-      const res = await api.get(url, { responseType: "blob" });
-      triggerBlobDownload(res.data, res.headers["content-type"], filename);
-      toast.success(`Downloaded ${filename}`);
+      const activePlotId = await ensureServerPlot("Syncing draft before export...");
+      const resolvedUrl = resolvePlotResourcePath(url, activePlotId);
+      const resolvedFilename = resolvePlotFilename(filename, activePlotId);
+      const res = await api.get(resolvedUrl, { responseType: "blob" });
+      triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
+      markServerSynced();
+      toast.success(`Downloaded ${resolvedFilename}`);
     } catch (err) {
       console.error("Download error:", err);
-      toast.error("Failed to download file");
+      const message = err instanceof Error ? err.message : "Failed to download file";
+      toast.error(message);
     } finally {
       setDownloadLoadingKey((prev) => (prev === loadingKey ? null : prev));
     }
   };
 
-  const loadSubdivisionBatches = useCallback(async () => {
-    if (!plotId) return;
+  const loadSubdivisionBatches = useCallback(async (targetPlotId?: number | null) => {
+    const activePlotId = Number((targetPlotId ?? plotId) || 0) || null;
+    if (!activePlotId) return;
     setSubdivisionBatchLoading(true);
     try {
-      const res = await api.get(`/plots/${plotId}/subdivision/batches`);
+      const res = await api.get(`/plots/${activePlotId}/subdivision/batches`);
       const rows = Array.isArray(res.data) ? (res.data as SubdivisionBatchRow[]) : [];
       setSubdivisionBatches(rows);
       setLatestSubdivisionBatchId((prev) => prev ?? (rows[0]?.id ?? null));
@@ -1640,19 +1915,24 @@ export default function SurveyPlan() {
 
   const previewSubdivision = useCallback(
     async (silent = false) => {
-      if (!plotId) return;
       const payload = buildSubdivisionPayload(silent);
       if (!payload) return;
 
       setSubdivisionPreviewLoading(true);
       try {
-        const res = await api.post(`/plots/${plotId}/subdivision/preview`, payload);
+        const activePlotId = await ensureServerPlot("Syncing draft for subdivision preview...");
+        const res = await api.post(`/plots/${activePlotId}/subdivision/preview`, payload);
         applySubdivisionPreviewResponse(res.data as SubdivisionPreviewData);
+        markServerSynced();
         if (!silent) {
           toast.success("Subdivision preview ready.");
         }
       } catch (err: any) {
         if (!silent) {
+          if (err instanceof Error) {
+            toast.error(err.message);
+            return;
+          }
           const detail = err?.response?.data?.detail;
           toast.error(typeof detail === "string" ? detail : "Failed to preview subdivision.");
         }
@@ -1660,35 +1940,24 @@ export default function SurveyPlan() {
         setSubdivisionPreviewLoading(false);
       }
     },
-    [plotId, buildSubdivisionPayload, applySubdivisionPreviewResponse]
+    [buildSubdivisionPayload, applySubdivisionPreviewResponse, ensureServerPlot, markServerSynced]
   );
 
   const scheduleSubdivisionLivePreview = useCallback(() => {
-    if (!plotId || workflowMode !== "subdivision" || currentStep !== 2) return;
     if (subdivisionLivePreviewTimerRef.current !== null) {
       window.clearTimeout(subdivisionLivePreviewTimerRef.current);
+      subdivisionLivePreviewTimerRef.current = null;
     }
-    subdivisionLivePreviewTimerRef.current = window.setTimeout(() => {
-      previewSubdivision(true);
-    }, 450);
-  }, [plotId, workflowMode, currentStep, previewSubdivision]);
+  }, []);
 
   const applySubdivision = async () => {
-    if (!plotId) return;
     const payload = buildSubdivisionPayload(false);
     if (!payload) return;
 
-    // Persist latest metadata quickly (without rendering preview) before generating child plots.
     try {
-      await api.post(`/plots/${plotId}/meta`, buildPlotMetaPayload());
-    } catch {
-      toast.error("Could not save latest survey details before batch generation.");
-      return;
-    }
-
-    setSubdivisionApplyLoading(true);
-    try {
-      const res = await api.post(`/plots/${plotId}/subdivision/apply`, {
+      const activePlotId = await ensureServerPlot("Syncing draft before subdivision batch generation...");
+      setSubdivisionApplyLoading(true);
+      const res = await api.post(`/plots/${activePlotId}/subdivision/apply`, {
         ...payload,
         include_feature_detection: false,
       });
@@ -1696,10 +1965,15 @@ export default function SurveyPlan() {
       if (batchId) {
         setLatestSubdivisionBatchId(batchId);
       }
-      await loadSubdivisionBatches();
+      await loadSubdivisionBatches(activePlotId);
       const generated = Number(res?.data?.generated_count || 0);
+      markServerSynced();
       toast.success(`Subdivision generated (${generated} plots).`);
     } catch (err: any) {
+      if (err instanceof Error) {
+        toast.error(err.message);
+        return;
+      }
       const detail = err?.response?.data?.detail;
       toast.error(typeof detail === "string" ? detail : "Failed to generate subdivision batch.");
     } finally {
@@ -1876,8 +2150,24 @@ export default function SurveyPlan() {
     return insideCount + bufferCount;
   };
 
+  const openFeatureCadEditor = useCallback(async () => {
+    try {
+      await ensureServerPlot("Syncing draft before opening Feature CAD Editor...", {
+        fetchFeatures: true,
+      });
+      markServerSynced();
+      setShowFeatureEditor(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not open Feature CAD Editor.";
+      toast.error(message);
+    }
+  }, [ensureServerPlot, markServerSynced]);
+
   const handleSaveOverride = async (payload: { feature_type: "road" | "building" | "river" | "fence"; action: "add" | "delete" | "update"; name?: string; width_m?: number; geojson: any }) => {
-    if (!plotId) return;
+    if (!plotId) {
+      toast.error("Sync the draft to the server before saving feature edits.");
+      return;
+    }
     try {
       await api.post(`/plots/${plotId}/feature-overrides`, payload);
       toast.success("Feature saved");
@@ -1886,9 +2176,7 @@ export default function SurveyPlan() {
       setOrthophotoUrl(null);
       setTopoMapUrl(null);
       setTimeout(() => {
-        loadPreview();
-        if (previewType === "orthophoto") loadOrthophoto();
-        if (previewType === "topomap") loadTopoMap(topoSource);
+        refreshCurrentPreview();
       }, 250);
     } catch (err) {
       console.error(err);
@@ -2022,6 +2310,17 @@ export default function SurveyPlan() {
         )}
 
         {workflowMode && (
+          <div className={`survey-sync-banner${serverSyncing ? " syncing" : ""}${!isOnline ? " offline" : ""}`}>
+            <strong>{serverSyncing ? serverSyncMessage : isOnline ? "Local-first mode active" : "Offline mode active"}</strong>
+            <span>
+              {serverSyncing
+                ? "Applying the current local draft on the server."
+                : serverStatusLabel}
+            </span>
+          </div>
+        )}
+
+        {workflowMode && (
           <FeatureOverrideModal
           isOpen={showFeatureEditor}
           onClose={() => setShowFeatureEditor(false)}
@@ -2057,16 +2356,16 @@ export default function SurveyPlan() {
                 <button
                   className="btn-primary"
                   disabled={!hasValidCoords || loading}
-                  onClick={createPlot}
+                  onClick={continueWithLocalDraft}
                 >
                   {loading ? (
                     <>
                       <span className="spinner" />
-                      Creating Plot...
+                      Preparing Draft...
                     </>
                   ) : (
                     <>
-                      {workflowMode === "subdivision" ? "Create Mother Parcel & Continue" : "Create Plot & Continue"}
+                      {workflowMode === "subdivision" ? "Continue with Local Mother Parcel Draft" : "Continue with Local Draft"}
                       <svg viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
                       </svg>
@@ -2358,11 +2657,26 @@ export default function SurveyPlan() {
                   </div>
                 </div>
 
+                <div className="draft-status-card">
+                  <div className="draft-status-row">
+                    <strong>Draft mode</strong>
+                    <span>{serverStatusLabel}</span>
+                  </div>
+                  <div className="draft-status-row">
+                    <strong>Local autosave</strong>
+                    <span>{formatStatusTime(lastLocalSaveAt)}</span>
+                  </div>
+                  <div className="draft-status-row">
+                    <strong>Last server sync</strong>
+                    <span>{formatStatusTime(lastServerSyncAt)}</span>
+                  </div>
+                </div>
+
                 <div className="edit-feature-bar">
-                  <button className="btn-secondary" onClick={loadPreview} disabled={previewLoading}>
-                    {previewLoading ? "Updating..." : "Update Preview"}
+                  <button className="btn-secondary" onClick={refreshCurrentPreview} disabled={previewLoading || orthophotoLoading || topoMapLoading || serverSyncing}>
+                    {previewLoading || orthophotoLoading || topoMapLoading || serverSyncing ? "Rendering..." : previewActionLabel}
                   </button>
-                  <button className="btn-outline" onClick={() => setShowFeatureEditor(true)} disabled={!plotId}>
+                  <button className="btn-outline" onClick={openFeatureCadEditor} disabled={serverSyncing || !isOnline}>
                     Open Feature CAD Editor
                   </button>
                 </div>
@@ -2654,11 +2968,26 @@ export default function SurveyPlan() {
                   </div>
                 </div>
 
+                <div className="draft-status-card">
+                  <div className="draft-status-row">
+                    <strong>Draft mode</strong>
+                    <span>{serverStatusLabel}</span>
+                  </div>
+                  <div className="draft-status-row">
+                    <strong>Local autosave</strong>
+                    <span>{formatStatusTime(lastLocalSaveAt)}</span>
+                  </div>
+                  <div className="draft-status-row">
+                    <strong>Last server sync</strong>
+                    <span>{formatStatusTime(lastServerSyncAt)}</span>
+                  </div>
+                </div>
+
                 <div className="edit-feature-bar">
-                  <button className="btn-secondary" onClick={loadPreview} disabled={previewLoading}>
-                    {previewLoading ? "Updating preview..." : "Update Parcel Preview"}
+                  <button className="btn-secondary" onClick={refreshCurrentPreview} disabled={previewLoading || orthophotoLoading || topoMapLoading || serverSyncing}>
+                    {previewLoading || orthophotoLoading || topoMapLoading || serverSyncing ? "Rendering..." : previewActionLabel}
                   </button>
-                  <button className="btn-outline" onClick={() => setShowFeatureEditor(true)} disabled={!plotId}>
+                  <button className="btn-outline" onClick={openFeatureCadEditor} disabled={serverSyncing || !isOnline}>
                     Open Feature CAD Editor
                   </button>
                 </div>
@@ -2974,7 +3303,7 @@ export default function SurveyPlan() {
                   <h4>Generated Batches</h4>
                   <button
                     className="btn-outline btn-mini"
-                    onClick={loadSubdivisionBatches}
+                    onClick={() => loadSubdivisionBatches()}
                     disabled={!plotId || subdivisionBatchLoading}
                   >
                     {subdivisionBatchLoading ? "Refreshing..." : "Refresh"}
@@ -3207,7 +3536,7 @@ export default function SurveyPlan() {
         )}
 
         {/* Step 3: Export (Survey Plan Production) */}
-        {workflowMode === "survey" && currentStep === 3 && plotId && (
+        {workflowMode === "survey" && currentStep === 3 && (
           <div className="step-panel export-panel">
             <div className="panel-left">
               {renderSidebarStepsCard()}
@@ -3495,7 +3824,7 @@ export default function SurveyPlan() {
         )}
 
         {/* Step 3: Batch Export (Subdivision) */}
-        {workflowMode === "subdivision" && currentStep === 3 && plotId && (
+        {workflowMode === "subdivision" && currentStep === 3 && (
           <div className="step-panel export-panel">
             <div className="panel-left">
               {renderSidebarStepsCard()}
@@ -3665,7 +3994,7 @@ export default function SurveyPlan() {
                       <h4>All Batches</h4>
                       <button
                         className="btn-outline btn-mini"
-                        onClick={loadSubdivisionBatches}
+                        onClick={() => loadSubdivisionBatches()}
                         disabled={!plotId || subdivisionBatchLoading}
                       >
                         {subdivisionBatchLoading ? "Refreshing..." : "Refresh"}

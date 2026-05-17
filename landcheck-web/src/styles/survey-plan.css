@@ -150,6 +150,83 @@
   overflow: auto;
 }
 
+.survey-sync-banner {
+  max-width: 1400px;
+  margin: 0 auto 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(16, 185, 129, 0.24);
+  background: rgba(15, 23, 42, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #dbeafe;
+}
+
+.survey-sync-banner strong {
+  color: #f8fafc;
+  font-size: 0.92rem;
+}
+
+.survey-sync-banner span {
+  color: #bfdbfe;
+  font-size: 0.86rem;
+}
+
+.survey-sync-banner.syncing {
+  border-color: rgba(59, 130, 246, 0.35);
+  background: rgba(15, 23, 42, 0.88);
+}
+
+.survey-sync-banner.offline {
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.draft-status-card {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.54);
+  display: grid;
+  gap: 0.65rem;
+}
+
+.draft-status-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.draft-status-row strong {
+  font-size: 0.83rem;
+  color: #e2e8f0;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.draft-status-row span {
+  flex: 1;
+  text-align: right;
+  font-size: 0.9rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  .survey-sync-banner,
+  .draft-status-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .draft-status-row span {
+    text-align: left;
+  }
+}
+
 .survey-container.is-preview-step {
   overflow: hidden;
 }
