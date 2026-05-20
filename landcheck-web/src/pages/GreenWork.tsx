@@ -282,6 +282,9 @@ type WorkTask = {
   tree_lat?: number | null;
   tree_species?: string | null;
   tree_planting_date?: string | null;
+  tree_origin?: string | null;
+  tree_height_m?: number | null;
+  tree_age_months?: number | null;
   custodian_id?: number | null;
   custodian_name?: string | null;
   custodian_type?: string | null;
@@ -9567,6 +9570,15 @@ export default function GreenWork() {
                     </div>
                     <div className="staff-row-meta">
                       Planting / reference date: {formatDateLabel(task.tree_planting_date || task.due_date || task.created_at)}
+                    </div>
+                    <div className="staff-row-meta">
+                      Tree metadata: Species: {task.tree_species || "-"} | Origin: {formatTreeOriginLabel(task.tree_origin)}
+                      {Number.isFinite(Number(task.tree_height_m)) ? ` | Height: ${formatTreeHeight(task.tree_height_m)}` : ""}
+                      {normalizeName(task.tree_origin) === "existing_inventory" &&
+                      Number.isFinite(Number(task.tree_age_months)) &&
+                      Number(task.tree_age_months) >= 0
+                        ? ` | Estimated age: ${Math.round(Number(task.tree_age_months))}m`
+                        : ""}
                     </div>
                     <div className="staff-row-meta">
                       Tree GPS: {formatGpsPair(originalTreeLng, originalTreeLat)}
