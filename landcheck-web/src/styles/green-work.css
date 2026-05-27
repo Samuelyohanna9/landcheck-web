@@ -2332,6 +2332,92 @@
   margin-top: 0;
 }
 
+.green-work-hub-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.green-work-hub-tab {
+  border: 1px solid rgba(16, 92, 48, 0.18);
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--green-800);
+  border-radius: 999px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.green-work-hub-tab.is-active {
+  background: linear-gradient(135deg, rgba(20, 122, 59, 0.98), rgba(30, 145, 74, 0.94));
+  color: #fff;
+  border-color: rgba(20, 122, 59, 0.98);
+  box-shadow: 0 10px 20px rgba(15, 84, 42, 0.14);
+}
+
+.green-work-registry-card {
+  gap: 0.9rem;
+}
+
+.green-work-registry-form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.green-work-form-section {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(19, 91, 48, 0.12);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 251, 246, 0.94));
+}
+
+.green-work-form-section-head {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.green-work-form-section-head strong {
+  color: var(--green-900);
+  font-size: 0.88rem;
+}
+
+.green-work-form-section-head span {
+  color: var(--gw-subtext);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.green-work-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.72rem;
+}
+
+.green-work-stacked-field {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.green-work-stacked-field > span {
+  color: var(--green-900);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.green-work-stacked-field-wide {
+  grid-column: 1 / -1;
+}
+
+.green-work-checkbox-stack {
+  display: grid;
+  gap: 0.4rem;
+  align-content: start;
+  padding-top: 0.2rem;
+}
+
 .staff-row-status {
   margin-top: 0.22rem;
   font-size: 0.78rem;

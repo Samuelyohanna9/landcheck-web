@@ -225,6 +225,9 @@ type Tree = {
     estimated_yield_kg?: number | null;
     boundary_capture_method?: string | null;
     area_hectares?: number | null;
+    support_placeholder?: boolean | null;
+    hidden_from_records?: boolean | null;
+    placeholder_reason?: string | null;
   } | null;
   custodian_id?: number | null;
   custodian_name?: string | null;
@@ -730,6 +733,12 @@ const formatPlotAreaLabel = (tree: Tree, metric?: ExistingTreeMetric | null) => 
   const hectares = Number(tree.record_profile_data?.area_hectares);
   if (Number.isFinite(hectares) && hectares > 0) return `${hectares.toFixed(4)} ha`;
   return formatExistingTreeAreaLabel(tree, metric);
+};
+const isHiddenSupportPlaceholderTree = (tree?: Pick<Tree, "record_profile_data"> | null) => {
+  if (!tree?.record_profile_data) return false;
+  if (tree.record_profile_data.hidden_from_records === true) return true;
+  if (tree.record_profile_data.support_placeholder === true) return true;
+  return normalizeName(tree.record_profile_data.placeholder_reason) === "support_visit_before_plot_capture";
 };
 const normalizeSpeciesAllocations = (
   value: unknown,
@@ -2390,6 +2399,9 @@ export default function GreenWork() {
   } | null>(null);
   const [projectSetupExpanded, setProjectSetupExpanded] = useState(false);
   const [custodianOptionsExpanded, setCustodianOptionsExpanded] = useState(false);
+  const [agricCustodianHubTab, setAgricCustodianHubTab] = useState<"farmer_form" | "farmer_live" | "support_setup">(
+    "farmer_form",
+  );
   const [treeMetaDraftById, setTreeMetaDraftById] = useState<
     Record<
       number,
@@ -3788,7 +3800,11 @@ export default function GreenWork() {
       .filter((row) => Number(row.custodian_id) === Number(custodianId))
       .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
     if (allocationRows.length === 0) {
-      toast.error("No allocation found for this custodian yet.");
+      toast.error(
+        activeWorkflowProfile === "agric"
+          ? "No support allocation found for this farmer yet."
+          : "No allocation found for this custodian yet.",
+      );
       return;
     }
     const preferred =
@@ -3821,7 +3837,7 @@ export default function GreenWork() {
       return;
     }
     if (!String(custodianAssignDraft.assignee_name || "").trim()) {
-      toast.error("Select a supervision assignee.");
+      toast.error(activeWorkflowProfile === "agric" ? "Select a support visit assignee." : "Select a supervision assignee.");
       return;
     }
     if (Number(custodianAssignDraft.visits_to_assign || 0) <= 0) {
@@ -3838,13 +3854,22 @@ export default function GreenWork() {
       });
       await Promise.all([loadProjectData(activeProjectId), loadCommunityData(activeProjectId)]);
       const createdCount = Number(res?.data?.created_count || 0);
+      const assignmentMode = String(res?.data?.assignment_mode || "");
       toast.success(
-        createdCount > 0
-          ? `Assigned ${createdCount} supervision visit${createdCount === 1 ? "" : "s"}.`
-          : "No new supervision tasks assigned.",
+        assignmentMode === "field_capture"
+          ? createdCount > 0
+            ? `Assigned ${createdCount} first field capture task${createdCount === 1 ? "" : "s"}.`
+            : "No new field capture tasks assigned."
+          : createdCount > 0
+            ? activeWorkflowProfile === "agric"
+              ? `Assigned ${createdCount} support visit${createdCount === 1 ? "" : "s"}.`
+              : `Assigned ${createdCount} supervision visit${createdCount === 1 ? "" : "s"}.`
+            : activeWorkflowProfile === "agric"
+              ? "No new support visits assigned."
+              : "No new supervision tasks assigned.",
       );
     } catch (error: any) {
-      toast.error(error?.response?.data?.detail || "Failed to assign supervision");
+      toast.error(error?.response?.data?.detail || (activeWorkflowProfile === "agric" ? "Failed to assign support visit" : "Failed to assign supervision"));
     }
   };
 
@@ -5498,18 +5523,23 @@ export default function GreenWork() {
     if (hasSourceProject) return true;
     return false;
   }, []);
+  const visibleProjectTrees = useMemo(
+    () => trees.filter((tree) => !isHiddenSupportPlaceholderTree(tree)),
+    [trees],
+  );
   const mapViewTrees = useMemo(() => {
     const editingTreeId = Number(treePositionDraft?.treeId || 0);
     const scopedTrees =
       assigneeFilter === "all"
-        ? trees
-        : trees.filter((t) => normalizeName(t.created_by) === normalizeName(assigneeFilter) || isExistingTreeIntakeRecord(t));
+        ? visibleProjectTrees
+        : visibleProjectTrees.filter((t) => normalizeName(t.created_by) === normalizeName(assigneeFilter) || isExistingTreeIntakeRecord(t));
     return editingTreeId > 0 ? scopedTrees.filter((tree) => Number(tree.id) !== editingTreeId) : scopedTrees;
-  }, [trees, assigneeFilter, isExistingTreeIntakeRecord, treePositionDraft]);
+  }, [visibleProjectTrees, assigneeFilter, isExistingTreeIntakeRecord, treePositionDraft]);
   const projectFitPoints = useMemo(() => {
-    const treePoints = trees.map((t) => ({ lng: t.lng, lat: t.lat }));
+    const treePoints = visibleProjectTrees.map((t) => ({ lng: t.lng, lat: t.lat }));
     return treePoints.length ? treePoints : null;
-  }, [trees]);
+  }, [visibleProjectTrees]);
+  const mapWorkflowProfile = normalizeWorkflowProfile(projectSettingsDraft.workflow_profile);
   const existingTreeMapAreas = useMemo(
     () =>
       mapViewTrees
@@ -5519,17 +5549,26 @@ export default function GreenWork() {
           const count = Number(tree.inventory_tree_count || 1);
           const labelCount = Number.isFinite(count) && count > 1 ? Math.round(count) : 1;
           const localNo = Number(tree.project_tree_no || tree.id || 0);
-          return {
-            id: `existing-tree-area-${tree.id}`,
-            label:
-              labelCount > 1
-                ? `Tree #${localNo} - ${labelCount} trees`
-                : `Tree #${localNo} - Existing area`,
+          const agricLabel = [
+            String(tree.custodian_name || "").trim() || formatPlotRecordLabel(tree),
+            [getPlotCommodityLabel(tree), formatPlotAreaLabel(tree)].filter((value) => value && value !== "-").join(" | "),
+          ]
+            .filter(Boolean)
+            .join("\n");
+            return {
+              id: `existing-tree-area-${tree.id}`,
+              label:
+              mapWorkflowProfile === "agric"
+                ? agricLabel
+                : labelCount > 1
+                  ? `Tree #${localNo} - ${labelCount} trees`
+                  : `Tree #${localNo} - Existing area`,
+            treeId: tree.id,
             geojson: geometry,
           };
         })
-        .filter((item): item is { id: string; label: string; geojson: any } => Boolean(item)),
-    [mapViewTrees],
+        .filter((item): item is { id: string; label: string; treeId: number; geojson: any } => Boolean(item)),
+    [mapViewTrees, mapWorkflowProfile],
   );
   const projectAreaFitPoints = useMemo(() => {
     const points = existingTreeMapAreas.flatMap((item) => extractMapAreaPoints(normalizeMapAreaGeometry(item.geojson)));
@@ -5683,7 +5722,7 @@ export default function GreenWork() {
         const linkedUser = userByKey.get(key);
         const userOrders = orders.filter((order) => normalizeName(order.assignee_name) === key);
         const userTasks = tasks.filter((task) => normalizeName(task.assignee_name) === key);
-        const plantedTrees = trees.filter((tree) => normalizeName(tree.created_by) === key).length;
+        const plantedTrees = visibleProjectTrees.filter((tree) => normalizeName(tree.created_by) === key).length;
 
         const targetTrees = userOrders.reduce((sum, order) => sum + Number(order.target_trees || 0), 0);
         const pendingOrders = userOrders.filter((order) => !isCompleteStatus(order.status)).length;
@@ -5838,13 +5877,13 @@ export default function GreenWork() {
         taskOverdue: 0,
       },
     );
-  }, [filteredOverviewSummary]);
+  }, [filteredOverviewSummary, visibleProjectTrees]);
 
   const scopedOverviewTrees = useMemo(() => {
-    if (assigneeFilter === "all") return trees;
+    if (assigneeFilter === "all") return visibleProjectTrees;
     const scopedKey = normalizeName(assigneeFilter);
-    return trees.filter((tree) => normalizeName(tree.created_by) === scopedKey);
-  }, [assigneeFilter, trees]);
+    return visibleProjectTrees.filter((tree) => normalizeName(tree.created_by) === scopedKey);
+  }, [assigneeFilter, visibleProjectTrees]);
   const treeHealthMixSegments = useMemo<OverviewDonutSegment[]>(() => {
     const totals = {
       healthy: 0,
@@ -6710,6 +6749,19 @@ export default function GreenWork() {
     if (!inspectedTree) return null;
     return treeCoordinatesById.get(Number(inspectedTree.id || 0)) || null;
   }, [inspectedTree, treeCoordinatesById]);
+  const inspectedTreeRecord = useMemo(() => {
+    if (!inspectedTree) return null;
+    return visibleProjectTrees.find((tree) => Number(tree.id) === Number(inspectedTree.id)) || null;
+  }, [inspectedTree, visibleProjectTrees]);
+  const inspectedPlotAreaLabel = useMemo(() => {
+    if (!inspectedTree) return "-";
+    if (inspectedTreeRecord) return formatPlotAreaLabel(inspectedTreeRecord);
+    const hectares = Number(inspectedTree.record_profile_data?.area_hectares);
+    if (Number.isFinite(hectares) && hectares > 0) return `${hectares.toFixed(4)} ha`;
+    const sqm = Number(inspectedTree.existing_area_sqm);
+    if (Number.isFinite(sqm) && sqm > 0) return sqm >= 10000 ? `${(sqm / 10000).toFixed(4)} ha` : `${sqm.toFixed(1)} m2`;
+    return "-";
+  }, [inspectedTree, inspectedTreeRecord]);
   useEffect(() => {
     if (!treePositionDraft || !inspectedTree) return;
     if (Number(treePositionDraft.treeId) === Number(inspectedTree.id)) return;
@@ -6736,7 +6788,7 @@ export default function GreenWork() {
   ]);
   const existingTreeIntakeRows = useMemo(
     () =>
-      trees
+      visibleProjectTrees
         .filter((tree) => {
           const origin = normalizeName(String(tree.tree_origin || "").replaceAll(" ", "_"));
           const scope = normalizeName(String(tree.attribution_scope || "").replaceAll(" ", "_"));
@@ -6748,7 +6800,7 @@ export default function GreenWork() {
           return false;
         })
         .sort((a, b) => Number(b.id || 0) - Number(a.id || 0)),
-    [trees],
+    [visibleProjectTrees],
   );
   const existingTreeIntakeAgricSummary = useMemo(
     () =>
@@ -6845,7 +6897,7 @@ export default function GreenWork() {
     });
 
     const treeMap = new Map<number, { total: number; existing: number; healthy: number }>();
-    trees.forEach((tree) => {
+    visibleProjectTrees.forEach((tree) => {
       const custodianId = Number(tree.custodian_id || 0);
       if (!custodianId) return;
       const existing = treeMap.get(custodianId) || { total: 0, existing: 0, healthy: 0 };
@@ -6902,7 +6954,7 @@ export default function GreenWork() {
         if (b.treeTotal !== a.treeTotal) return b.treeTotal - a.treeTotal;
         return String(a.custodian.name || "").localeCompare(String(b.custodian.name || ""));
       });
-  }, [custodians, distributionAllocations, trees]);
+  }, [custodians, distributionAllocations, visibleProjectTrees]);
   const custodianSummary = useMemo(() => {
     const totalAllocated = distributionAllocations.reduce(
       (sum, row) => sum + Number(row.quantity_allocated || 0),
@@ -7226,6 +7278,12 @@ export default function GreenWork() {
     if (!custodianOptionsExpanded) return;
     setCustodianOptionsExpanded(false);
   }, [workPartnerOrgPaused, custodianOptionsExpanded]);
+
+  useEffect(() => {
+    if (activeWorkflowProfile !== "agric") {
+      setAgricCustodianHubTab("farmer_form");
+    }
+  }, [activeWorkflowProfile]);
 
   useEffect(() => {
     if (activeWorkflowProfile !== "agric") return;
@@ -8085,11 +8143,11 @@ export default function GreenWork() {
                   <span className="green-work-flow-pill">Verified: {custodianSummary.verifiedCustodians}</span>
                   <span className="green-work-flow-pill">Events: {custodianSummary.totalEvents}</span>
                   <span className="green-work-flow-pill">Allocations: {custodianSummary.totalAllocations}</span>
-                  <span className="green-work-flow-pill">Seedlings: {custodianSummary.allocatedSeedlings}</span>
+                  <span className="green-work-flow-pill">{activeWorkflowProfile === "agric" ? "Units" : "Seedlings"}: {custodianSummary.allocatedSeedlings}</span>
                   <span className="green-work-flow-pill">
-                    Supervision: {custodianSummary.supervisionDone}/{custodianSummary.supervisionTarget} done
+                    {activeWorkflowProfile === "agric" ? "Field Visits" : "Supervision"}: {custodianSummary.supervisionDone}/{custodianSummary.supervisionTarget} done
                   </span>
-                  <span className="green-work-flow-pill">Supervision Live: {custodianSummary.supervisionLive}</span>
+                  <span className="green-work-flow-pill">{activeWorkflowProfile === "agric" ? "Field Visits Live" : "Supervision Live"}: {custodianSummary.supervisionLive}</span>
                   <span className="green-work-flow-pill">{activeWorkflowLabels.entityPlural}: {custodianSummary.existingTrees}</span>
                 </div>
                 <p className="green-work-note">
@@ -8099,7 +8157,7 @@ export default function GreenWork() {
                 </p>
                 {workPartnerOrgPaused && (
                   <p className="green-work-note" style={{ color: "#8a6500", fontWeight: 700 }}>
-                    Organization is paused. Custodian operations are disabled. Only Custodian PDF export is allowed.
+                    Organization is paused. {activeWorkflowProfile === "agric" ? "Farmer operations are disabled. Only farmer PDF export is allowed." : "Custodian operations are disabled. Only Custodian PDF export is allowed."}
                   </p>
                 )}
                 <div className="work-actions">
@@ -8124,254 +8182,302 @@ export default function GreenWork() {
 
               {custodianOptionsExpanded && (
                 <>
-              <div className="green-work-card">
-                <h3>Add {activeWorkflowLabels.ownerSingular}</h3>
-                {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
-                <p className="green-work-note">
-                  {activeWorkflowProfile === "agric"
-                    ? "Farmer registry records stay separate from staff users and support extension operations, targeting, and compliance."
-                    : "Custodian records are separate from staff users and do not change Live Maintenance rows."}
-                </p>
-                <select
-                  value={newCustodian.custodian_type}
-                  onChange={(e) =>
-                    setNewCustodian((prev) => ({ ...prev, custodian_type: e.target.value as CustodianType }))
-                  }
-                  disabled={!activeProjectId}
-                >
-                  <option value="household">Household</option>
-                  <option value="school">School</option>
-                  <option value="community_group">Community Group</option>
-                </select>
-                <input
-                  placeholder={`${activeWorkflowLabels.ownerSingular} name`}
-                  value={newCustodian.name}
-                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, name: e.target.value }))}
-                  disabled={!activeProjectId}
-                />
-                <input
-                  placeholder="Contact person"
-                  value={newCustodian.contact_person}
-                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, contact_person: e.target.value }))}
-                  disabled={!activeProjectId}
-                />
-                <input
-                  placeholder="Primary phone"
-                  value={newCustodian.phone}
-                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, phone: e.target.value }))}
-                  disabled={!activeProjectId}
-                />
-                <input
-                  placeholder="Alternate phone"
-                  value={newCustodian.alt_phone}
-                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, alt_phone: e.target.value }))}
-                  disabled={!activeProjectId}
-                />
-                <input
-                  placeholder="Email"
-                  value={newCustodian.email}
-                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, email: e.target.value }))}
-                  disabled={!activeProjectId}
-                />
-                <input
-                  placeholder={activeWorkflowProfile === "agric" ? "Community / settlement" : "Community / School name"}
-                  value={newCustodian.community_name}
-                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, community_name: e.target.value }))}
-                  disabled={!activeProjectId}
-                />
-                <input
-                  placeholder="Local government area"
-                  value={newCustodian.local_government}
-                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, local_government: e.target.value }))}
-                  disabled={!activeProjectId}
-                />
-                {activeWorkflowProfile === "agric" ? (
-                  <>
-                    <input
-                      placeholder="Farmer code"
-                      value={newCustodian.farmer_code}
-                      onChange={(e) => setNewCustodian((prev) => ({ ...prev, farmer_code: e.target.value }))}
-                      disabled={!activeProjectId}
-                    />
-                    <input
-                      placeholder="National ID / NIN"
-                      value={newCustodian.national_id}
-                      onChange={(e) => setNewCustodian((prev) => ({ ...prev, national_id: e.target.value }))}
-                      disabled={!activeProjectId}
-                    />
-                    <input
-                      placeholder="State"
-                      value={newCustodian.state_name}
-                      onChange={(e) => setNewCustodian((prev) => ({ ...prev, state_name: e.target.value }))}
-                      disabled={!activeProjectId}
-                    />
-                    <input
-                      placeholder="Ward"
-                      value={newCustodian.ward_name}
-                      onChange={(e) => setNewCustodian((prev) => ({ ...prev, ward_name: e.target.value }))}
-                      disabled={!activeProjectId}
-                    />
-                    <input
-                      placeholder="Farmer group / cooperative"
-                      value={newCustodian.farmer_group}
-                      onChange={(e) => setNewCustodian((prev) => ({ ...prev, farmer_group: e.target.value }))}
-                      disabled={!activeProjectId}
-                    />
-                    <input
-                      placeholder="Primary crop"
-                      value={newCustodian.primary_crop}
-                      onChange={(e) => setNewCustodian((prev) => ({ ...prev, primary_crop: e.target.value }))}
-                      disabled={!activeProjectId}
-                    />
-                    <input
-                      placeholder="Secondary crops"
-                      value={newCustodian.secondary_crops}
-                      onChange={(e) => setNewCustodian((prev) => ({ ...prev, secondary_crops: e.target.value }))}
-                      disabled={!activeProjectId}
-                    />
-                    <div className="work-actions">
-                      <select
-                        value={newCustodian.gender}
-                        onChange={(e) => setNewCustodian((prev) => ({ ...prev, gender: e.target.value }))}
-                        disabled={!activeProjectId}
+                  {activeWorkflowProfile === "agric" && (
+                    <div className="green-work-hub-tabs" role="tablist" aria-label="Farmer registry views">
+                      <button
+                        type="button"
+                        className={`green-work-hub-tab ${agricCustodianHubTab === "farmer_form" ? "is-active" : ""}`}
+                        onClick={() => setAgricCustodianHubTab("farmer_form")}
                       >
-                        <option value="">Gender</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                      </select>
-                      <input
-                        type="date"
-                        value={newCustodian.date_of_birth}
-                        onChange={(e) => setNewCustodian((prev) => ({ ...prev, date_of_birth: e.target.value }))}
-                        disabled={!activeProjectId}
-                      />
+                        Farmer Form
+                      </button>
+                      <button
+                        type="button"
+                        className={`green-work-hub-tab ${agricCustodianHubTab === "farmer_live" ? "is-active" : ""}`}
+                        onClick={() => setAgricCustodianHubTab("farmer_live")}
+                      >
+                        Farmer Live Table
+                      </button>
+                      <button
+                        type="button"
+                        className={`green-work-hub-tab ${agricCustodianHubTab === "support_setup" ? "is-active" : ""}`}
+                        onClick={() => setAgricCustodianHubTab("support_setup")}
+                      >
+                        Support Setup
+                      </button>
                     </div>
-                    <div className="work-actions">
-                      <input
-                        placeholder="Household size"
-                        value={newCustodian.household_size}
-                        onChange={(e) => setNewCustodian((prev) => ({ ...prev, household_size: e.target.value }))}
-                        disabled={!activeProjectId}
-                      />
-                      <select
-                        value={newCustodian.land_tenure}
-                        onChange={(e) => setNewCustodian((prev) => ({ ...prev, land_tenure: e.target.value }))}
-                        disabled={!activeProjectId}
-                      >
-                        <option value="">Land tenure</option>
-                        <option value="owned">Owned</option>
-                        <option value="family_owned">Family owned</option>
-                        <option value="leased">Leased</option>
-                        <option value="shared">Shared</option>
-                        <option value="communal">Communal</option>
-                        <option value="other">Other</option>
-                      </select>
-                      <select
-                        value={newCustodian.irrigation_access}
-                        onChange={(e) => setNewCustodian((prev) => ({ ...prev, irrigation_access: e.target.value }))}
-                        disabled={!activeProjectId}
-                      >
-                        <option value="">Irrigation access</option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                        <option value="seasonal">Seasonal</option>
-                        <option value="unknown">Unknown</option>
-                      </select>
-                    </div>
-                  </>
-                ) : null}
-                <input
-                  placeholder="Address"
-                  value={newCustodian.address_text}
-                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, address_text: e.target.value }))}
-                  disabled={!activeProjectId}
-                />
-                {activeWorkflowProfile === "agric" ? (
-                  <div className="work-actions">
-                    <label className="green-work-checkbox-row">
-                      <input
-                        type="checkbox"
-                        checked={newCustodian.finance_access}
-                        onChange={(e) => setNewCustodian((prev) => ({ ...prev, finance_access: e.target.checked }))}
-                        disabled={!activeProjectId}
-                      />
-                      <span>Access to finance</span>
-                    </label>
-                    <label className="green-work-checkbox-row">
-                      <input
-                        type="checkbox"
-                        checked={newCustodian.insurance_access}
-                        onChange={(e) => setNewCustodian((prev) => ({ ...prev, insurance_access: e.target.checked }))}
-                        disabled={!activeProjectId}
-                      />
-                      <span>Insurance enrolled</span>
-                    </label>
-                  </div>
-                ) : null}
-                <textarea
-                  placeholder={activeWorkflowProfile === "agric" ? "Notes or support needs" : "Notes"}
-                  value={newCustodian.notes}
-                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, notes: e.target.value }))}
-                  disabled={!activeProjectId}
-                />
-                {activeWorkflowProfile === "agric" ? (
-                  <textarea
-                    placeholder="Input support needs"
-                    value={newCustodian.input_support_needs}
-                    onChange={(e) => setNewCustodian((prev) => ({ ...prev, input_support_needs: e.target.value }))}
-                    disabled={!activeProjectId}
-                  />
-                ) : null}
-                <button className="btn-primary" type="button" onClick={() => void createCustodian()} disabled={!activeProjectId}>
-                  Add {activeWorkflowLabels.ownerSingular}
-                </button>
-                <div className="staff-list">
-                  {custodians.length === 0 ? (
-                    <p className="green-work-note">No {activeWorkflowLabels.ownerPlural.toLowerCase()} yet in this project.</p>
-                  ) : (
-                    custodians.map((custodian) => (
-                      <div key={`custodian-tab-${custodian.id}`} className="staff-row">
-                        <div className="staff-row-head">
-                          <strong>{custodian.name}</strong>
-                          <span>{formatTaskTypeLabel(custodian.custodian_type)}</span>
-                        </div>
-                        <div className="staff-row-meta">
-                          Contact: {custodian.contact_person || "-"} | {custodian.phone || "-"} | {custodian.email || "-"}
-                        </div>
-                        <div className="staff-row-meta">
-                          Community: {custodian.community_name || "-"} | LGA: {custodian.local_government || "-"}
-                        </div>
-                        {activeWorkflowProfile === "agric" ? (
-                          <div className="staff-row-meta">
-                            Farmer code: {custodian.profile_data?.farmer_code || "-"} | Crop: {custodian.profile_data?.primary_crop || "-"} | Group: {custodian.profile_data?.farmer_group || "-"}
-                          </div>
-                        ) : null}
-                        <div className="staff-row-meta">
-                          Verification: {custodian.verification_status || "pending"}
-                        </div>
-                        {custodian.notes && <div className="staff-row-meta">Notes: {custodian.notes}</div>}
-                        <div className="work-actions">
-                          <button
-                            type="button"
-                            onClick={() => void updateCustodianVerification(custodian.id, "verified")}
-                            disabled={workPartnerOrgPaused}
-                          >
-                            Mark Verified
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void updateCustodianVerification(custodian.id, "pending")}
-                            disabled={workPartnerOrgPaused}
-                          >
-                            Mark Pending
-                          </button>
-                        </div>
-                      </div>
-                    ))
                   )}
-                </div>
-              </div>
 
+                  {(activeWorkflowProfile !== "agric" || agricCustodianHubTab === "farmer_form") && (
+                    <div className="green-work-card green-work-registry-card">
+                      <h3>{activeWorkflowProfile === "agric" ? "Register Farmer" : `Add ${activeWorkflowLabels.ownerSingular}`}</h3>
+                      {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
+                      <p className="green-work-note">
+                        {activeWorkflowProfile === "agric"
+                          ? "Use clear registry sections so field teams can onboard farmers quickly and organizations can export support-ready records later."
+                          : "Custodian records are separate from staff users and do not change Live Maintenance rows."}
+                      </p>
+
+                      {activeWorkflowProfile === "agric" ? (
+                        <div className="green-work-registry-form">
+                          <section className="green-work-form-section">
+                            <div className="green-work-form-section-head">
+                              <strong>Identity</strong>
+                              <span>Core farmer identity, contacts, and programme references.</span>
+                            </div>
+                            <div className="green-work-form-grid">
+                              <label className="green-work-stacked-field">
+                                <span>Farmer type</span>
+                                <select
+                                  value={newCustodian.custodian_type}
+                                  onChange={(e) =>
+                                    setNewCustodian((prev) => ({ ...prev, custodian_type: e.target.value as CustodianType }))
+                                  }
+                                  disabled={!activeProjectId}
+                                >
+                                  <option value="household">Household</option>
+                                  <option value="school">School</option>
+                                  <option value="community_group">Community Group</option>
+                                </select>
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Farmer name</span>
+                                <input value={newCustodian.name} onChange={(e) => setNewCustodian((prev) => ({ ...prev, name: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Farmer code</span>
+                                <input value={newCustodian.farmer_code} onChange={(e) => setNewCustodian((prev) => ({ ...prev, farmer_code: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>National ID / NIN</span>
+                                <input value={newCustodian.national_id} onChange={(e) => setNewCustodian((prev) => ({ ...prev, national_id: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Contact person</span>
+                                <input value={newCustodian.contact_person} onChange={(e) => setNewCustodian((prev) => ({ ...prev, contact_person: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Primary phone</span>
+                                <input value={newCustodian.phone} onChange={(e) => setNewCustodian((prev) => ({ ...prev, phone: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Alternate phone</span>
+                                <input value={newCustodian.alt_phone} onChange={(e) => setNewCustodian((prev) => ({ ...prev, alt_phone: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Email</span>
+                                <input value={newCustodian.email} onChange={(e) => setNewCustodian((prev) => ({ ...prev, email: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Gender</span>
+                                <select value={newCustodian.gender} onChange={(e) => setNewCustodian((prev) => ({ ...prev, gender: e.target.value }))} disabled={!activeProjectId}>
+                                  <option value="">Select gender</option>
+                                  <option value="male">Male</option>
+                                  <option value="female">Female</option>
+                                </select>
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Date of birth</span>
+                                <input type="date" value={newCustodian.date_of_birth} onChange={(e) => setNewCustodian((prev) => ({ ...prev, date_of_birth: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                            </div>
+                          </section>
+
+                          <section className="green-work-form-section">
+                            <div className="green-work-form-section-head">
+                              <strong>Location</strong>
+                              <span>Community and administrative geography used by support programmes.</span>
+                            </div>
+                            <div className="green-work-form-grid">
+                              <label className="green-work-stacked-field">
+                                <span>Community / settlement</span>
+                                <input value={newCustodian.community_name} onChange={(e) => setNewCustodian((prev) => ({ ...prev, community_name: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Local government area</span>
+                                <input value={newCustodian.local_government} onChange={(e) => setNewCustodian((prev) => ({ ...prev, local_government: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>State</span>
+                                <input value={newCustodian.state_name} onChange={(e) => setNewCustodian((prev) => ({ ...prev, state_name: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Ward</span>
+                                <input value={newCustodian.ward_name} onChange={(e) => setNewCustodian((prev) => ({ ...prev, ward_name: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field green-work-stacked-field-wide">
+                                <span>Address</span>
+                                <input value={newCustodian.address_text} onChange={(e) => setNewCustodian((prev) => ({ ...prev, address_text: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                            </div>
+                          </section>
+
+                          <section className="green-work-form-section">
+                            <div className="green-work-form-section-head">
+                              <strong>Production Profile</strong>
+                              <span>Crop, cooperative, and land-use details most programmes expect during farmer intake.</span>
+                            </div>
+                            <div className="green-work-form-grid">
+                              <label className="green-work-stacked-field">
+                                <span>Farmer group / cooperative</span>
+                                <input value={newCustodian.farmer_group} onChange={(e) => setNewCustodian((prev) => ({ ...prev, farmer_group: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Primary crop</span>
+                                <input value={newCustodian.primary_crop} onChange={(e) => setNewCustodian((prev) => ({ ...prev, primary_crop: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Secondary crops</span>
+                                <input value={newCustodian.secondary_crops} onChange={(e) => setNewCustodian((prev) => ({ ...prev, secondary_crops: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Household size</span>
+                                <input value={newCustodian.household_size} onChange={(e) => setNewCustodian((prev) => ({ ...prev, household_size: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Land tenure</span>
+                                <select value={newCustodian.land_tenure} onChange={(e) => setNewCustodian((prev) => ({ ...prev, land_tenure: e.target.value }))} disabled={!activeProjectId}>
+                                  <option value="">Select tenure</option>
+                                  <option value="owned">Owned</option>
+                                  <option value="family_owned">Family owned</option>
+                                  <option value="leased">Leased</option>
+                                  <option value="shared">Shared</option>
+                                  <option value="communal">Communal</option>
+                                  <option value="other">Other</option>
+                                </select>
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Irrigation access</span>
+                                <select value={newCustodian.irrigation_access} onChange={(e) => setNewCustodian((prev) => ({ ...prev, irrigation_access: e.target.value }))} disabled={!activeProjectId}>
+                                  <option value="">Select irrigation access</option>
+                                  <option value="yes">Yes</option>
+                                  <option value="no">No</option>
+                                  <option value="seasonal">Seasonal</option>
+                                  <option value="unknown">Unknown</option>
+                                </select>
+                              </label>
+                            </div>
+                          </section>
+
+                          <section className="green-work-form-section">
+                            <div className="green-work-form-section-head">
+                              <strong>Services & Follow-up</strong>
+                              <span>Finance, insurance, and support-needs fields used for programme targeting.</span>
+                            </div>
+                            <div className="green-work-form-grid">
+                              <div className="green-work-checkbox-stack">
+                                <label className="green-work-checkbox-row">
+                                  <input
+                                    type="checkbox"
+                                    checked={newCustodian.finance_access}
+                                    onChange={(e) => setNewCustodian((prev) => ({ ...prev, finance_access: e.target.checked }))}
+                                    disabled={!activeProjectId}
+                                  />
+                                  <span>Access to finance</span>
+                                </label>
+                                <label className="green-work-checkbox-row">
+                                  <input
+                                    type="checkbox"
+                                    checked={newCustodian.insurance_access}
+                                    onChange={(e) => setNewCustodian((prev) => ({ ...prev, insurance_access: e.target.checked }))}
+                                    disabled={!activeProjectId}
+                                  />
+                                  <span>Insurance enrolled</span>
+                                </label>
+                              </div>
+                              <label className="green-work-stacked-field green-work-stacked-field-wide">
+                                <span>Notes or support needs</span>
+                                <textarea value={newCustodian.notes} onChange={(e) => setNewCustodian((prev) => ({ ...prev, notes: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field green-work-stacked-field-wide">
+                                <span>Input support needs</span>
+                                <textarea value={newCustodian.input_support_needs} onChange={(e) => setNewCustodian((prev) => ({ ...prev, input_support_needs: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                            </div>
+                          </section>
+                        </div>
+                      ) : (
+                        <>
+                          <select
+                            value={newCustodian.custodian_type}
+                            onChange={(e) =>
+                              setNewCustodian((prev) => ({ ...prev, custodian_type: e.target.value as CustodianType }))
+                            }
+                            disabled={!activeProjectId}
+                          >
+                            <option value="household">Household</option>
+                            <option value="school">School</option>
+                            <option value="community_group">Community Group</option>
+                          </select>
+                          <input placeholder={`${activeWorkflowLabels.ownerSingular} name`} value={newCustodian.name} onChange={(e) => setNewCustodian((prev) => ({ ...prev, name: e.target.value }))} disabled={!activeProjectId} />
+                          <input placeholder="Contact person" value={newCustodian.contact_person} onChange={(e) => setNewCustodian((prev) => ({ ...prev, contact_person: e.target.value }))} disabled={!activeProjectId} />
+                          <input placeholder="Primary phone" value={newCustodian.phone} onChange={(e) => setNewCustodian((prev) => ({ ...prev, phone: e.target.value }))} disabled={!activeProjectId} />
+                          <input placeholder="Alternate phone" value={newCustodian.alt_phone} onChange={(e) => setNewCustodian((prev) => ({ ...prev, alt_phone: e.target.value }))} disabled={!activeProjectId} />
+                          <input placeholder="Email" value={newCustodian.email} onChange={(e) => setNewCustodian((prev) => ({ ...prev, email: e.target.value }))} disabled={!activeProjectId} />
+                          <input placeholder="Community / School name" value={newCustodian.community_name} onChange={(e) => setNewCustodian((prev) => ({ ...prev, community_name: e.target.value }))} disabled={!activeProjectId} />
+                          <input placeholder="Local government area" value={newCustodian.local_government} onChange={(e) => setNewCustodian((prev) => ({ ...prev, local_government: e.target.value }))} disabled={!activeProjectId} />
+                          <input placeholder="Address" value={newCustodian.address_text} onChange={(e) => setNewCustodian((prev) => ({ ...prev, address_text: e.target.value }))} disabled={!activeProjectId} />
+                          <textarea placeholder="Notes" value={newCustodian.notes} onChange={(e) => setNewCustodian((prev) => ({ ...prev, notes: e.target.value }))} disabled={!activeProjectId} />
+                        </>
+                      )}
+
+                      <div className="work-actions">
+                        <button className="btn-primary" type="button" onClick={() => void createCustodian()} disabled={!activeProjectId}>
+                          {activeWorkflowProfile === "agric" ? "Register Farmer" : `Add ${activeWorkflowLabels.ownerSingular}`}
+                        </button>
+                      </div>
+
+                      <div className="staff-list">
+                        <h4>{activeWorkflowProfile === "agric" ? "Recent Farmer Records" : `${activeWorkflowLabels.ownerPlural} in this project`}</h4>
+                        {custodians.length === 0 ? (
+                          <p className="green-work-note">No {activeWorkflowLabels.ownerPlural.toLowerCase()} yet in this project.</p>
+                        ) : (
+                          custodians.map((custodian) => (
+                            <div key={`custodian-tab-${custodian.id}`} className="staff-row">
+                              <div className="staff-row-head">
+                                <strong>{custodian.name}</strong>
+                                <span>{formatTaskTypeLabel(custodian.custodian_type)}</span>
+                              </div>
+                              <div className="staff-row-meta">
+                                Contact: {custodian.contact_person || "-"} | {custodian.phone || "-"} | {custodian.email || "-"}
+                              </div>
+                              <div className="staff-row-meta">
+                                Community: {custodian.community_name || "-"} | LGA: {custodian.local_government || "-"}
+                              </div>
+                              {activeWorkflowProfile === "agric" ? (
+                                <div className="staff-row-meta">
+                                  Farmer code: {custodian.profile_data?.farmer_code || "-"} | Crop: {custodian.profile_data?.primary_crop || "-"} | Group: {custodian.profile_data?.farmer_group || "-"}
+                                </div>
+                              ) : null}
+                              <div className="staff-row-meta">
+                                Verification: {custodian.verification_status || "pending"}
+                              </div>
+                              {custodian.notes && <div className="staff-row-meta">Notes: {custodian.notes}</div>}
+                              <div className="work-actions">
+                                <button
+                                  type="button"
+                                  onClick={() => void updateCustodianVerification(custodian.id, "verified")}
+                                  disabled={workPartnerOrgPaused}
+                                >
+                                  Mark Verified
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => void updateCustodianVerification(custodian.id, "pending")}
+                                  disabled={workPartnerOrgPaused}
+                                >
+                                  Mark Pending
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {(activeWorkflowProfile !== "agric" || agricCustodianHubTab === "support_setup") && (
+                    <>
               <div className="green-work-card">
                 <h3>{activeWorkflowProfile === "agric" ? "Support Events" : "Distributed Events"}</h3>
                 {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
@@ -8567,10 +8673,12 @@ export default function GreenWork() {
               </div>
 
                   <div className="green-work-card">
-                    <h3>Custodian Report</h3>
+                    <h3>{activeWorkflowProfile === "agric" ? "Farmer Registry Report" : "Custodian Report"}</h3>
                     {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
                     <p className="green-work-note">
-                      Export includes custodians, distribution history, and supervision tracking. Photo appendix is optional.
+                      {activeWorkflowProfile === "agric"
+                        ? "Export includes farmer registry, support history, mapped plots, and follow-up tracking. Photo appendix is optional."
+                        : "Export includes custodians, distribution history, and supervision tracking. Photo appendix is optional."}
                     </p>
                     <div className="work-actions">
                       <label className="green-work-export-photo-toggle">
@@ -8582,10 +8690,12 @@ export default function GreenWork() {
                         Include photos
                       </label>
                       <button type="button" onClick={exportCustodianPdf} disabled={!activeProjectId}>
-                        Export Custodian PDF
+                        {activeWorkflowProfile === "agric" ? "Export Farmer PDF" : "Export Custodian PDF"}
                       </button>
                   </div>
-                </div>
+                  </div>
+                    </>
+                  )}
                 </>
               )}
                 </>
@@ -11248,7 +11358,7 @@ export default function GreenWork() {
             </div>
           )}
 
-          {activeProjectId && activeForm === "custodian_hub" && (
+          {activeProjectId && activeForm === "custodian_hub" && (activeWorkflowProfile !== "agric" || agricCustodianHubTab === "farmer_live") && (
             <div className="green-work-card">
               <div className="green-work-row">
                 <h3>{activeWorkflowProfile === "agric" ? "Farmer Live Results Table" : "Custodian Live Results Table"}</h3>
@@ -11306,6 +11416,7 @@ export default function GreenWork() {
                           .filter((item) => Number(item.custodian_id) === Number(row.custodian.id))
                           .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
                         const isAssignOpen = Number(custodianAssignDraft?.custodian_id || 0) === Number(row.custodian.id);
+                        const requiresFirstFieldCapture = activeWorkflowProfile === "agric" && Number(row.treeTotal || 0) <= 0;
                         const selectedAllocation = rowAllocations.find(
                           (item) => Number(item.id) === Number(custodianAssignDraft?.allocation_id || 0),
                         );
@@ -11338,11 +11449,15 @@ export default function GreenWork() {
                               <td>
                                 <button
                                   type="button"
-                                  className="green-row-btn"
-                                  onClick={() => openCustodianSupervisionAssign(Number(row.custodian.id))}
-                                  disabled={workPartnerOrgPaused}
-                                >
-                                  {activeWorkflowProfile === "agric" ? "Assign Support Visit" : "Assign Supervision"}
+                                className="green-row-btn"
+                                onClick={() => openCustodianSupervisionAssign(Number(row.custodian.id))}
+                                disabled={workPartnerOrgPaused}
+                              >
+                                  {activeWorkflowProfile === "agric"
+                                    ? requiresFirstFieldCapture
+                                      ? "Assign First Field Capture"
+                                      : "Assign Support Visit"
+                                    : "Assign Supervision"}
                                 </button>
                               </td>
                             </tr>
@@ -11392,7 +11507,7 @@ export default function GreenWork() {
                                       </select>
                                     </label>
                                     <label>
-                                      Visits To Assign
+                                      {requiresFirstFieldCapture ? "Field Capture Tasks" : "Visits To Assign"}
                                       <input
                                         type="number"
                                         min={1}
@@ -11403,7 +11518,7 @@ export default function GreenWork() {
                                             prev ? { ...prev, visits_to_assign: Number(e.target.value || 1) } : prev,
                                           )
                                         }
-                                        disabled={workPartnerOrgPaused}
+                                        disabled={workPartnerOrgPaused || requiresFirstFieldCapture}
                                       />
                                     </label>
                                     <label>
@@ -11425,15 +11540,20 @@ export default function GreenWork() {
                                         onClick={() => void assignCustodianSupervision()}
                                         disabled={workPartnerOrgPaused}
                                       >
-                                        Assign
+                                        {requiresFirstFieldCapture ? "Assign Field Capture" : "Assign"}
                                       </button>
                                       <button type="button" onClick={() => setCustodianAssignDraft(null)}>
                                         Cancel
                                       </button>
                                     </div>
+                                    {requiresFirstFieldCapture && (
+                                      <p className="green-work-note">
+                                        This creates the farmer&apos;s first field capture task. It opens in <strong>Map &amp; Add Plot</strong> in the mobile app so the officer can walk or draw the farm boundary before the first field visit cycle starts.
+                                      </p>
+                                    )}
                                     {selectedAllocation && (
                                       <p className="green-work-note">
-                                        Allocation #{selectedAllocation.id}: supervision target{" "}
+                                        Allocation #{selectedAllocation.id}: {requiresFirstFieldCapture ? "field capture / visit target" : "supervision target"}{" "}
                                         {Number(selectedAllocation.supervision_target || 0)}, live{" "}
                                         {Number(selectedAllocation.supervision_live || 0)}, done{" "}
                                         {Number(selectedAllocation.supervision_done || 0)}, remaining{" "}
@@ -11869,7 +11989,9 @@ export default function GreenWork() {
                     ? "Planting-area draw is enabled from Assign Tree Planting. Draw polygon here, then return to assign work."
                     : maintenanceMapFocusActive
                       ? `Showing ${maintenanceFocusedTreeIds.length} selected maintenance tree${maintenanceFocusedTreeIds.length === 1 ? "" : "s"} from the queue. Clear focus to return to the full project map.`
-                     : "Project tree map view. Inspect trees and monitor field positions."}
+                      : activeWorkflowProfile === "agric"
+                        ? "Project farm map view. Inspect mapped farm boundaries and open farmer-linked plot details."
+                        : "Project tree map view. Inspect trees and monitor field positions."}
               </p>
               {(maintenanceMapFocusActive || (mapAreaDrawMode && !assignWorkAreaMode)) && (
                 <div className="work-actions">
@@ -11912,6 +12034,7 @@ export default function GreenWork() {
                     }}
                     fitBounds={mapFitPoints}
                     assignmentAreas={existingTreeMapAreas}
+                    workflowMode={activeWorkflowProfile}
                   />
                 </div>
               </div>
@@ -11938,7 +12061,7 @@ export default function GreenWork() {
           />
           <aside className="green-work-tree-drawer green-work-tree-inspector" style={drawerStyle}>
             <div className="green-work-tree-drawer-head">
-              <strong>Tree Details</strong>
+              <strong>{activeWorkflowProfile === "agric" ? "Farm Details" : "Tree Details"}</strong>
               <button
                 className="green-work-tree-drawer-close"
                 type="button"
@@ -11957,15 +12080,17 @@ export default function GreenWork() {
                   <img
                     className="green-work-tree-inspector-photo"
                     src={toDisplayPhotoUrl(inspectedTree.photo_url)}
-                    alt={`Tree ${inspectedTree.id}`}
+                    alt={activeWorkflowProfile === "agric" ? `Farm ${inspectedTree.id}` : `Tree ${inspectedTree.id}`}
                   />
                 ) : (
-                  <div className="green-work-tree-inspector-photo empty">No tree photo</div>
+                  <div className="green-work-tree-inspector-photo empty">
+                    {activeWorkflowProfile === "agric" ? "No farm photo" : "No tree photo"}
+                  </div>
                 )}
               </div>
               <div className="green-work-tree-photo-upload-row">
                 <label className={`green-work-tree-photo-upload-btn ${treePhotoUploading ? "is-loading" : ""}`}>
-                  {treePhotoUploading ? "Uploading..." : "Upload Tree Photo"}
+                  {treePhotoUploading ? "Uploading..." : activeWorkflowProfile === "agric" ? "Upload Farm Photo" : "Upload Tree Photo"}
                   <input
                     type="file"
                     accept="image/*"
@@ -11979,56 +12104,117 @@ export default function GreenWork() {
                 </label>
               </div>
               <p className="green-work-tree-maintenance-count">
-                Maintenance Records: {inspectedTree.maintenance.total}
+                {activeWorkflowProfile === "agric" ? "Field Visit Records" : "Maintenance Records"}: {inspectedTree.maintenance.total}
               </p>
-              <h4>{formatProjectTreeLabelById(inspectedTree.id)}</h4>
+              <h4>
+                {activeWorkflowProfile === "agric"
+                  ? inspectedTreeRecord
+                    ? formatPlotRecordLabel(inspectedTreeRecord)
+                    : `Plot #${inspectedTree.project_tree_no || inspectedTree.id}`
+                  : formatProjectTreeLabelById(inspectedTree.id)}
+              </h4>
               {inspectedTree.loading && <p className="green-work-note">Loading latest records...</p>}
               <div className="green-work-tree-inspector-grid">
-                <div>
-                  <span>Status</span>
-                  <strong>{inspectedTree.status_label}</strong>
-                </div>
-                <div>
-                  <span>Species</span>
-                  <strong>{inspectedTree.species}</strong>
-                </div>
-                <div>
-                  <span>Planted By</span>
-                  <strong>{inspectedTree.created_by}</strong>
-                </div>
-                <div>
-                  <span>Planting Date</span>
-                  <strong>{formatDateLabel(inspectedTree.planting_date)}</strong>
-                </div>
-                <div>
-                  <span>Current GPS</span>
-                  <strong>{formatGpsPair(inspectedTreeCoords?.lng ?? null, inspectedTreeCoords?.lat ?? null)}</strong>
-                </div>
-                <div>
-                  <span>Tree Height</span>
-                  <strong>{formatTreeHeight(inspectedTree.tree_height_m)}</strong>
-                </div>
-                <div>
-                  <span>Tree Origin</span>
-                  <strong>{formatTreeOriginLabel(inspectedTree.tree_origin)}</strong>
-                </div>
-                <div>
-                  <span>Attribution</span>
-                  <strong>{formatAttributionScopeLabel(inspectedTree.attribution_scope)}</strong>
-                </div>
-                <div>
-                  <span>Scope Flags</span>
-                  <strong>
-                    {inspectedTree.count_in_planting_kpis ? "Planting KPI" : "No KPI"} /{" "}
-                    {inspectedTree.count_in_carbon_scope ? "Carbon" : "No Carbon"}
-                  </strong>
-                </div>
-                <div>
-                  <span>Custodian</span>
-                  <strong>{inspectedTree.custodian_name}</strong>
-                </div>
+                {activeWorkflowProfile === "agric" ? (
+                  <>
+                    <div>
+                      <span>Farmer</span>
+                      <strong>{inspectedTree.custodian_name || "-"}</strong>
+                    </div>
+                    <div>
+                      <span>Crop</span>
+                      <strong>
+                        {inspectedTreeRecord ? getPlotCommodityLabel(inspectedTreeRecord) : String(inspectedTree.record_profile_data?.commodity || inspectedTree.species || "-")}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Plot Area</span>
+                      <strong>{inspectedPlotAreaLabel}</strong>
+                    </div>
+                    <div>
+                      <span>Season</span>
+                      <strong>
+                        {inspectedTreeRecord
+                          ? formatPlotSeasonLabel(inspectedTreeRecord)
+                          : [inspectedTree.record_profile_data?.season_name, inspectedTree.record_profile_data?.season_year]
+                              .filter(Boolean)
+                              .join(" ") || "-"}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Current GPS</span>
+                      <strong>{formatGpsPair(inspectedTreeCoords?.lng ?? null, inspectedTreeCoords?.lat ?? null)}</strong>
+                    </div>
+                    <div>
+                      <span>Boundary Capture</span>
+                      <strong>{formatBoundaryCaptureMethodLabel(inspectedTree.record_profile_data?.boundary_capture_method)}</strong>
+                    </div>
+                    <div>
+                      <span>Irrigation</span>
+                      <strong>{inspectedTree.record_profile_data?.irrigation_type ? formatTaskTypeLabel(inspectedTree.record_profile_data.irrigation_type) : "-"}</strong>
+                    </div>
+                    <div>
+                      <span>Production Stage</span>
+                      <strong>{inspectedTree.record_profile_data?.production_stage ? formatTaskTypeLabel(inspectedTree.record_profile_data.production_stage) : "-"}</strong>
+                    </div>
+                    <div>
+                      <span>Recorded By</span>
+                      <strong>{inspectedTree.created_by}</strong>
+                    </div>
+                    <div>
+                      <span>Observation Date</span>
+                      <strong>{formatDateLabel(inspectedTree.planting_date)}</strong>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <span>Status</span>
+                      <strong>{inspectedTree.status_label}</strong>
+                    </div>
+                    <div>
+                      <span>Species</span>
+                      <strong>{inspectedTree.species}</strong>
+                    </div>
+                    <div>
+                      <span>Planted By</span>
+                      <strong>{inspectedTree.created_by}</strong>
+                    </div>
+                    <div>
+                      <span>Planting Date</span>
+                      <strong>{formatDateLabel(inspectedTree.planting_date)}</strong>
+                    </div>
+                    <div>
+                      <span>Current GPS</span>
+                      <strong>{formatGpsPair(inspectedTreeCoords?.lng ?? null, inspectedTreeCoords?.lat ?? null)}</strong>
+                    </div>
+                    <div>
+                      <span>Tree Height</span>
+                      <strong>{formatTreeHeight(inspectedTree.tree_height_m)}</strong>
+                    </div>
+                    <div>
+                      <span>Tree Origin</span>
+                      <strong>{formatTreeOriginLabel(inspectedTree.tree_origin)}</strong>
+                    </div>
+                    <div>
+                      <span>Attribution</span>
+                      <strong>{formatAttributionScopeLabel(inspectedTree.attribution_scope)}</strong>
+                    </div>
+                    <div>
+                      <span>Scope Flags</span>
+                      <strong>
+                        {inspectedTree.count_in_planting_kpis ? "Planting KPI" : "No KPI"} /{" "}
+                        {inspectedTree.count_in_carbon_scope ? "Carbon" : "No Carbon"}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Custodian</span>
+                      <strong>{inspectedTree.custodian_name}</strong>
+                    </div>
+                  </>
+                )}
               </div>
-              {selectedInspectTreeMeta && (
+              {activeWorkflowProfile !== "agric" && selectedInspectTreeMeta && (
                 <div className="green-work-tree-meta-edit">
                   <label>
                     Planting Date
@@ -12196,15 +12382,15 @@ export default function GreenWork() {
                 <span>Overdue: {inspectedTree.maintenance.overdue}</span>
               </div>
               <div className="green-work-tree-inspector-tasks">
-                <h5>Recent Maintenance</h5>
+                <h5>{activeWorkflowProfile === "agric" ? "Recent Field Visits" : "Recent Maintenance"}</h5>
                 {inspectedTree.tasks.length === 0 ? (
-                  <p>No maintenance records yet.</p>
+                  <p>{activeWorkflowProfile === "agric" ? "No field visits yet." : "No maintenance records yet."}</p>
                 ) : (
                   inspectedTree.tasks.slice(0, 5).map((task: any) => (
                     <div key={task.id} className="green-work-tree-inspector-task">
-                      <strong>{task.task_type || "Task"}</strong>
+                      <strong>{formatTaskTypeLabel(task.task_type || "task")}</strong>
                       <span>{task.assignee_name || "-"}</span>
-                      <span>{task.status || "-"}</span>
+                      <span>{formatTaskTypeLabel(task.status || "-")}</span>
                       <span>{formatDateLabel(task.due_date)}</span>
                     </div>
                   ))

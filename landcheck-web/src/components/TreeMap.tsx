@@ -72,6 +72,20 @@ export type TreePoint = {
   custodian_name?: string | null;
   inventory_tree_count?: number | null;
   existing_area_geojson?: any;
+  existing_area_sqm?: number | null;
+  record_profile_data?: {
+    plot_code?: string | null;
+    plot_name?: string | null;
+    commodity?: string | null;
+    variety?: string | null;
+    season_name?: string | null;
+    season_year?: number | null;
+    irrigation_type?: string | null;
+    production_stage?: string | null;
+    estimated_yield_kg?: number | null;
+    boundary_capture_method?: string | null;
+    area_hectares?: number | null;
+  } | null;
 };
 
 type Props = {
@@ -88,7 +102,8 @@ type Props = {
   onTreeInspect?: (detail: TreeInspectData | null) => void;
   onViewChange?: (view: { lng: number; lat: number; zoom: number; bearing: number; pitch: number }) => void;
   fitBounds?: { lng: number; lat: number }[] | null;
-  assignmentAreas?: Array<{ id?: number | string; label?: string | null; geojson: any }>;
+  assignmentAreas?: Array<{ id?: number | string; label?: string | null; treeId?: number | null; geojson: any }>;
+  workflowMode?: "green" | "agric";
   minHeight?: number;
 };
 
@@ -114,6 +129,9 @@ type TreeFeatureProps = {
   ring: string;
   is_alive: number;
   is_healthy: number;
+  has_area: number;
+  existing_area_sqm: number | null;
+  record_profile_data: TreePoint["record_profile_data"] | null;
 };
 
 type TreePopupDetail = {
@@ -154,6 +172,8 @@ export type TreeInspectData = {
   tasks: any[];
   visits: any[];
   loading: boolean;
+  existing_area_sqm?: number | null;
+  record_profile_data?: TreePoint["record_profile_data"] | null;
 };
 
 const markerPalettes: Record<string, { outer: string; core: string; ring: string }> = {
@@ -277,6 +297,54 @@ const formatHeight = (value: number | null | undefined) => {
   return `${numeric.toFixed(2)} m`;
 };
 
+const formatArea = (areaSqm: number | null | undefined, areaHectares?: number | null) => {
+  const hectares = Number(areaHectares);
+  if (Number.isFinite(hectares) && hectares > 0) return `${hectares.toFixed(4)} ha`;
+  const sqm = Number(areaSqm);
+  if (!Number.isFinite(sqm) || sqm <= 0) return "-";
+  if (sqm >= 10000) return `${(sqm / 10000).toFixed(4)} ha`;
+  return `${sqm.toFixed(1)} m2`;
+};
+
+const buildTreeFeatureProps = (tree: TreePoint): TreeFeatureProps | null => {
+  const lng = Number(tree.lng);
+  const lat = Number(tree.lat);
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+
+  const normalizedStatus = normalizeStatus(tree.status) || "alive";
+  const palette = markerPalettes[normalizedStatus] || markerPalettes.alive;
+  return {
+    id: tree.id,
+    project_tree_no:
+      Number.isFinite(Number(tree.project_tree_no)) && Number(tree.project_tree_no) > 0 ? Number(tree.project_tree_no) : null,
+    status: normalizedStatus,
+    status_label: statusLabel(normalizedStatus),
+    species: tree.species || "-",
+    planting_date: tree.planting_date || "",
+    notes: tree.notes || "",
+    created_by: tree.created_by || "-",
+    photo_url: tree.photo_url || "",
+    tree_height_m:
+      Number.isFinite(Number(tree.tree_height_m)) && Number(tree.tree_height_m) >= 0 ? Number(tree.tree_height_m) : null,
+    tree_age_months:
+      Number.isFinite(Number(tree.tree_age_months)) && Number(tree.tree_age_months) >= 0 ? Number(tree.tree_age_months) : null,
+    tree_origin: String(tree.tree_origin || "new_planting"),
+    attribution_scope: String(tree.attribution_scope || "full"),
+    count_in_planting_kpis: tree.count_in_planting_kpis === false ? 0 : 1,
+    count_in_carbon_scope: tree.count_in_carbon_scope === false ? 0 : 1,
+    custodian_name: tree.custodian_name || "",
+    outer: palette.outer,
+    core: palette.core,
+    ring: palette.ring,
+    is_alive: ACTIVE_TREE_STATUSES.has(normalizedStatus) ? 1 : 0,
+    is_healthy: HEALTHY_TREE_STATUSES.has(normalizedStatus) ? 1 : 0,
+    has_area: tree.existing_area_geojson ? 1 : 0,
+    existing_area_sqm:
+      Number.isFinite(Number(tree.existing_area_sqm)) && Number(tree.existing_area_sqm) > 0 ? Number(tree.existing_area_sqm) : null,
+    record_profile_data: tree.record_profile_data || null,
+  };
+};
+
 const getFeatureProps = (feature: any): TreeFeatureProps | null => {
   if (!feature) return null;
   const raw = feature.properties || {};
@@ -311,56 +379,27 @@ const getFeatureProps = (feature: any): TreeFeatureProps | null => {
     ring: String(raw.ring || markerPalettes.alive.ring),
     is_alive: Number(raw.is_alive || 0),
     is_healthy: Number(raw.is_healthy || 0),
+    has_area: Number(raw.has_area || 0),
+    existing_area_sqm:
+      Number.isFinite(Number(raw.existing_area_sqm)) && Number(raw.existing_area_sqm) > 0
+        ? Number(raw.existing_area_sqm)
+        : null,
+    record_profile_data: raw.record_profile_data && typeof raw.record_profile_data === "object" ? raw.record_profile_data : null,
   };
 };
 
-const buildTreeFeatureCollection = (items: TreePoint[]) => {
+const buildTreeFeatureCollection = (items: TreePoint[], workflowMode: "green" | "agric" = "green") => {
   const features = items
     .map((tree) => {
-      const lng = Number(tree.lng);
-      const lat = Number(tree.lat);
-      if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
-
-      const normalizedStatus = normalizeStatus(tree.status) || "alive";
-      const palette = markerPalettes[normalizedStatus] || markerPalettes.alive;
-
+      if (workflowMode === "agric" && tree.existing_area_geojson) return null;
+      const props = buildTreeFeatureProps(tree);
+      if (!props) return null;
       return {
         type: "Feature",
-        properties: {
-          id: tree.id,
-          project_tree_no:
-            Number.isFinite(Number((tree as any).project_tree_no)) && Number((tree as any).project_tree_no) > 0
-              ? Number((tree as any).project_tree_no)
-              : null,
-          status: normalizedStatus,
-          status_label: statusLabel(normalizedStatus),
-          species: tree.species || "-",
-          planting_date: tree.planting_date || "",
-          notes: tree.notes || "",
-          created_by: tree.created_by || "-",
-          photo_url: tree.photo_url || "",
-          tree_height_m:
-            Number.isFinite(Number(tree.tree_height_m)) && Number(tree.tree_height_m) >= 0
-              ? Number(tree.tree_height_m)
-              : null,
-          tree_age_months:
-            Number.isFinite(Number(tree.tree_age_months)) && Number(tree.tree_age_months) >= 0
-              ? Number(tree.tree_age_months)
-              : null,
-          tree_origin: String(tree.tree_origin || "new_planting"),
-          attribution_scope: String(tree.attribution_scope || "full"),
-          count_in_planting_kpis: tree.count_in_planting_kpis === false ? 0 : 1,
-          count_in_carbon_scope: tree.count_in_carbon_scope === false ? 0 : 1,
-          custodian_name: tree.custodian_name || "",
-          is_alive: ACTIVE_TREE_STATUSES.has(normalizedStatus) ? 1 : 0,
-          is_healthy: HEALTHY_TREE_STATUSES.has(normalizedStatus) ? 1 : 0,
-          outer: palette.outer,
-          core: palette.core,
-          ring: palette.ring,
-        },
+        properties: props,
         geometry: {
           type: "Point",
-          coordinates: [lng, lat],
+          coordinates: [Number(tree.lng), Number(tree.lat)],
         },
       };
     })
@@ -389,13 +428,14 @@ const normalizeAreaGeometry = (value: any): { type: "Polygon" | "MultiPolygon"; 
 };
 
 const buildAssignmentAreaFeatureCollection = (
-  areas: Array<{ id?: number | string; label?: string | null; geojson: any }>,
+  areas: Array<{ id?: number | string; label?: string | null; treeId?: number | null; geojson: any }>,
   trees: TreePoint[] = [],
+  workflowMode: "green" | "agric" = "green",
 ) => {
   const features: any[] = [];
   const seenGeometry = new Set<string>();
 
-  const pushFeature = (geometryInput: any, id: number | string, label: string) => {
+  const pushFeature = (geometryInput: any, id: number | string, label: string, treeId?: number | null) => {
     const geometry = normalizeAreaGeometry(geometryInput);
     if (!geometry) return;
     const signature = `${geometry.type}:${JSON.stringify(geometry.coordinates)}`;
@@ -406,13 +446,14 @@ const buildAssignmentAreaFeatureCollection = (
       properties: {
         id,
         label,
+        tree_id: Number.isFinite(Number(treeId)) && Number(treeId) > 0 ? Number(treeId) : null,
       },
       geometry,
     });
   };
 
   (areas || []).forEach((area, index) => {
-    pushFeature(area?.geojson, area?.id ?? index + 1, area?.label || `Assigned area ${index + 1}`);
+    pushFeature(area?.geojson, area?.id ?? index + 1, area?.label || `Assigned area ${index + 1}`, area?.treeId);
   });
 
   (trees || []).forEach((tree, index) => {
@@ -422,10 +463,19 @@ const buildAssignmentAreaFeatureCollection = (
     const labelCount = Number.isFinite(count) && count > 1 ? Math.round(count) : 1;
     const localNo = Number((tree as any)?.project_tree_no || tree?.id || 0);
     const label =
-      labelCount > 1
-        ? `Tree #${localNo} - ${labelCount} trees`
-        : `Tree #${localNo} - Existing area`;
-    pushFeature(areaGeojson, `tree-area-${tree?.id ?? index + 1}`, label);
+      workflowMode === "agric"
+        ? [
+            String(tree.custodian_name || "").trim() || `Farmer #${tree?.id ?? index + 1}`,
+            [String(tree.record_profile_data?.commodity || tree.species || "").trim(), formatArea(tree.existing_area_sqm, tree.record_profile_data?.area_hectares)]
+              .filter((value) => value && value !== "-")
+              .join(" | "),
+          ]
+            .filter(Boolean)
+            .join("\n")
+        : labelCount > 1
+          ? `Tree #${localNo} - ${labelCount} trees`
+          : `Tree #${localNo} - Existing area`;
+    pushFeature(areaGeojson, `tree-area-${tree?.id ?? index + 1}`, label, tree?.id ?? null);
   });
 
   return {
@@ -523,6 +573,14 @@ const buildInspectData = (base: TreeFeatureProps, detail?: TreePopupDetail | nul
     tasks: detail?.tasks || [],
     visits: detail?.visits || [],
     loading,
+    existing_area_sqm:
+      Number.isFinite(Number(tree.existing_area_sqm)) && Number(tree.existing_area_sqm) > 0
+        ? Number(tree.existing_area_sqm)
+        : base.existing_area_sqm,
+    record_profile_data:
+      tree.record_profile_data && typeof tree.record_profile_data === "object"
+        ? tree.record_profile_data
+        : base.record_profile_data || null,
   };
 };
 
@@ -541,6 +599,7 @@ export default function TreeMap({
   onViewChange,
   fitBounds,
   assignmentAreas = [],
+  workflowMode = "green",
   minHeight = 420,
 }: Props) {
   const hasMapboxToken = Boolean(MAPBOX_TOKEN);
@@ -553,6 +612,8 @@ export default function TreeMap({
   const onPolygonChangeRef = useRef(onPolygonChange);
   const onSelectTreeRef = useRef(onSelectTree);
   const onTreeInspectRef = useRef(onTreeInspect);
+  const treesRef = useRef(trees);
+  const workflowModeRef = useRef<"green" | "agric">(workflowMode);
   const mapReadyRef = useRef(false);
   const mapErrorRef = useRef<string | null>(null);
   const hoverPopupRef = useRef<mapboxgl.Popup | null>(null);
@@ -570,6 +631,14 @@ export default function TreeMap({
   const healthyBlinkActiveRef = useRef(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
+
+  useEffect(() => {
+    treesRef.current = trees;
+  }, [trees]);
+
+  useEffect(() => {
+    workflowModeRef.current = workflowMode;
+  }, [workflowMode]);
 
   const precacheViewportTiles = (map: mapboxgl.Map) => {
     if (typeof navigator === "undefined" || !navigator.onLine) return;
@@ -850,15 +919,15 @@ export default function TreeMap({
         if (!map.getSource(ASSIGNMENT_AREA_SOURCE_ID)) {
           map.addSource(ASSIGNMENT_AREA_SOURCE_ID, {
             type: "geojson",
-            data: buildAssignmentAreaFeatureCollection(assignmentAreas, trees),
+            data: buildAssignmentAreaFeatureCollection(assignmentAreas, trees, workflowMode),
           });
           map.addLayer({
             id: ASSIGNMENT_AREA_FILL_LAYER_ID,
             type: "fill",
             source: ASSIGNMENT_AREA_SOURCE_ID,
             paint: {
-              "fill-color": "#22c55e",
-              "fill-opacity": 0.14,
+              "fill-color": workflowMode === "agric" ? "#dc2626" : "#22c55e",
+              "fill-opacity": workflowMode === "agric" ? 0.08 : 0.14,
             },
           });
           map.addLayer({
@@ -866,8 +935,8 @@ export default function TreeMap({
             type: "line",
             source: ASSIGNMENT_AREA_SOURCE_ID,
             paint: {
-              "line-color": "#15803d",
-              "line-width": 2.4,
+              "line-color": workflowMode === "agric" ? "#b91c1c" : "#15803d",
+              "line-width": workflowMode === "agric" ? 2.8 : 2.4,
               "line-opacity": 0.95,
             },
           });
@@ -884,8 +953,8 @@ export default function TreeMap({
               "text-justify": "center",
             },
             paint: {
-              "text-color": "#064e3b",
-              "text-halo-color": "#ecfdf5",
+              "text-color": workflowMode === "agric" ? "#7f1d1d" : "#064e3b",
+              "text-halo-color": workflowMode === "agric" ? "#fff7f7" : "#ecfdf5",
               "text-halo-width": 1.2,
               "text-halo-blur": 0.1,
             },
@@ -895,7 +964,7 @@ export default function TreeMap({
         if (!map.getSource(TREE_SOURCE_ID)) {
           map.addSource(TREE_SOURCE_ID, {
             type: "geojson",
-            data: buildTreeFeatureCollection(trees),
+            data: buildTreeFeatureCollection(trees, workflowMode),
           });
 
           // Healthy/alive trees show a live blinking pulse marker.
@@ -924,7 +993,7 @@ export default function TreeMap({
               "circle-stroke-color": ["coalesce", ["get", "ring"], "#2f7e34"],
             },
           });
-          startHealthyBlink(map);
+          if (workflowMode !== "agric") startHealthyBlink(map);
 
           const supportsHover =
             typeof window !== "undefined" &&
@@ -966,8 +1035,33 @@ export default function TreeMap({
               });
           };
 
+          const inspectTreeFromProps = (props: TreeFeatureProps, lngLat: mapboxgl.LngLatLike) => {
+            onSelectTreeRef.current?.(props.id);
+            const cachedDetail = detailCacheRef.current.get(props.id);
+            if (onTreeInspectRef.current) {
+              onTreeInspectRef.current(buildInspectData(props, cachedDetail, !cachedDetail));
+              getTreeDetail(props.id)
+                .then((loadedDetail) => {
+                  onTreeInspectRef.current?.(buildInspectData(props, loadedDetail, false));
+                })
+                .catch(() => {
+                  onTreeInspectRef.current?.(buildInspectData(props, null, false));
+                });
+              return;
+            }
+            openDetailPopup(props, lngLat, "click");
+          };
+
           if (supportsHover) {
             map.on("mousemove", (event) => {
+              if (workflowModeRef.current === "agric") {
+                hoverTreeIdRef.current = null;
+                if (hoverPopupRef.current) {
+                  hoverPopupRef.current.remove();
+                  hoverPopupRef.current = null;
+                }
+                return;
+              }
               const feature = map.queryRenderedFeatures(event.point, { layers: TREE_LAYER_IDS })[0];
               const props = getFeatureProps(feature);
               if (!props) {
@@ -989,31 +1083,48 @@ export default function TreeMap({
           const onTreePress = (event: any) => {
             const props = getFeatureProps(event.features?.[0]);
             if (!props) return;
-            onSelectTreeRef.current?.(props.id);
-
-            const cachedDetail = detailCacheRef.current.get(props.id);
-            if (onTreeInspectRef.current) {
-              onTreeInspectRef.current(buildInspectData(props, cachedDetail, !cachedDetail));
-              getTreeDetail(props.id)
-                .then((loadedDetail) => {
-                  onTreeInspectRef.current?.(buildInspectData(props, loadedDetail, false));
-                })
-                .catch(() => {
-                  onTreeInspectRef.current?.(buildInspectData(props, null, false));
-                });
-              return;
-            }
-
-            openDetailPopup(props, event.lngLat, "click");
+            inspectTreeFromProps(props, event.lngLat);
           };
 
           map.on("click", TREE_CORE_LAYER_ID, onTreePress);
           map.on("click", TREE_OUTER_LAYER_ID, onTreePress);
+          map.on("click", ASSIGNMENT_AREA_FILL_LAYER_ID, (event: any) => {
+            const areaFeature = event.features?.[0];
+            const treeId = Number(areaFeature?.properties?.tree_id || 0);
+            if (!Number.isFinite(treeId) || treeId <= 0) return;
+            const tree = treesRef.current.find((item) => Number(item.id) === treeId);
+            const props = tree ? buildTreeFeatureProps(tree) : null;
+            if (!props) return;
+            inspectTreeFromProps(props, event.lngLat);
+          });
+          map.on("click", ASSIGNMENT_AREA_LINE_LAYER_ID, (event: any) => {
+            const areaFeature = event.features?.[0];
+            const treeId = Number(areaFeature?.properties?.tree_id || 0);
+            if (!Number.isFinite(treeId) || treeId <= 0) return;
+            const tree = treesRef.current.find((item) => Number(item.id) === treeId);
+            const props = tree ? buildTreeFeatureProps(tree) : null;
+            if (!props) return;
+            inspectTreeFromProps(props, event.lngLat);
+          });
+          map.on("click", ASSIGNMENT_AREA_LABEL_LAYER_ID, (event: any) => {
+            const areaFeature = event.features?.[0];
+            const treeId = Number(areaFeature?.properties?.tree_id || 0);
+            if (!Number.isFinite(treeId) || treeId <= 0) return;
+            const tree = treesRef.current.find((item) => Number(item.id) === treeId);
+            const props = tree ? buildTreeFeatureProps(tree) : null;
+            if (!props) return;
+            inspectTreeFromProps(props, event.lngLat);
+          });
           // On touch devices, use click (which fires on tap) instead of touchstart
           // to avoid interfering with map pan/zoom gestures
 
           map.on("click", (event) => {
-            const feature = map.queryRenderedFeatures(event.point, { layers: TREE_LAYER_IDS })[0];
+            const feature = map.queryRenderedFeatures(event.point, {
+              layers:
+                workflowModeRef.current === "agric"
+                  ? [...TREE_LAYER_IDS, ASSIGNMENT_AREA_FILL_LAYER_ID, ASSIGNMENT_AREA_LINE_LAYER_ID, ASSIGNMENT_AREA_LABEL_LAYER_ID]
+                  : TREE_LAYER_IDS,
+            })[0];
             if (feature) return;
             clickTreeIdRef.current = null;
             if (clickPopupRef.current) {
@@ -1184,16 +1295,38 @@ export default function TreeMap({
     // so sidebar/popup always reads the latest server state on next click.
     detailCacheRef.current.clear();
     pendingDetailRef.current.clear();
-    source.setData(buildTreeFeatureCollection(trees));
-  }, [trees, mapReady]);
+    source.setData(buildTreeFeatureCollection(trees, workflowMode));
+  }, [trees, workflowMode, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const source = map.getSource(ASSIGNMENT_AREA_SOURCE_ID) as any;
     if (!source) return;
-    source.setData(buildAssignmentAreaFeatureCollection(assignmentAreas, trees));
-  }, [assignmentAreas, trees, mapReady]);
+    source.setData(buildAssignmentAreaFeatureCollection(assignmentAreas, trees, workflowMode));
+  }, [assignmentAreas, trees, workflowMode, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    if (map.getLayer(ASSIGNMENT_AREA_FILL_LAYER_ID)) {
+      map.setPaintProperty(ASSIGNMENT_AREA_FILL_LAYER_ID, "fill-color", workflowMode === "agric" ? "#dc2626" : "#22c55e");
+      map.setPaintProperty(ASSIGNMENT_AREA_FILL_LAYER_ID, "fill-opacity", workflowMode === "agric" ? 0.08 : 0.14);
+    }
+    if (map.getLayer(ASSIGNMENT_AREA_LINE_LAYER_ID)) {
+      map.setPaintProperty(ASSIGNMENT_AREA_LINE_LAYER_ID, "line-color", workflowMode === "agric" ? "#b91c1c" : "#15803d");
+      map.setPaintProperty(ASSIGNMENT_AREA_LINE_LAYER_ID, "line-width", workflowMode === "agric" ? 2.8 : 2.4);
+    }
+    if (map.getLayer(ASSIGNMENT_AREA_LABEL_LAYER_ID)) {
+      map.setPaintProperty(ASSIGNMENT_AREA_LABEL_LAYER_ID, "text-color", workflowMode === "agric" ? "#7f1d1d" : "#064e3b");
+      map.setPaintProperty(ASSIGNMENT_AREA_LABEL_LAYER_ID, "text-halo-color", workflowMode === "agric" ? "#fff7f7" : "#ecfdf5");
+    }
+    if (workflowMode === "agric") {
+      stopHealthyBlink();
+    } else {
+      startHealthyBlink(map);
+    }
+  }, [workflowMode, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
