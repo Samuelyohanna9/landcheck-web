@@ -387,6 +387,15 @@ type WorkForm =
   | "existing_tree_intake"
   ;
 
+const AGRIC_HIDDEN_PROJECT_FORMS: WorkForm[] = [
+  "overview",
+  "remote_monitoring",
+  "live_table",
+  "assign_work",
+  "assign_task",
+  "verra_reports",
+];
+
 type StaffMenuState = { user: GreenUser; x: number; y: number } | null;
 type DrawerFrame = { top: number; left: number; width: number; height: number };
 type WorkOrderMultiAssignOverride = {
@@ -6450,19 +6459,28 @@ export default function GreenWork() {
   const actionWorkflowProfile = normalizeWorkflowProfile(projectSettingsDraft.workflow_profile);
   const actionWorkflowLabels = getWorkflowLabels(actionWorkflowProfile);
 
-  const activeProjectActions: Array<{ form: WorkForm; title: string; note: string; isNew?: boolean }> = [
-    { form: "overview", title: "Overview", note: "Progress summary" },
-    { form: "map_view", title: "Map View", note: `${actionWorkflowLabels.entityPlural} + draw polygons` },
-    { form: "remote_monitoring", title: "Remote Monitoring", note: "Satellite Monitoring +", isNew: true },
-    { form: "live_table", title: "Live Maintenance", note: actionWorkflowProfile === "agric" ? "Plot visits + field follow-up" : "New planting + existing tree" },
-    { form: "users", title: "Users", note: "All staff status + roles" },
-    { form: "assign_work", title: "Planting Orders", note: "Assign planting targets" },
-    { form: "assign_task", title: "Maintenance", note: "Assign maintenance" },
-    { form: "custodian_hub", title: actionWorkflowLabels.registryTitle, note: actionWorkflowProfile === "agric" ? "Registry + support profile +" : "Overview + custodians +" },
-    { form: "existing_tree_intake", title: actionWorkflowProfile === "agric" ? "Plot Records" : "Existing Trees", note: actionWorkflowProfile === "agric" ? "Mapped plot records" : "Existing tree records" },
-    { form: "verra_reports", title: "Verra Reports", note: "VCS package + history" },
-    { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
-  ];
+  const activeProjectActions: Array<{ form: WorkForm; title: string; note: string; isNew?: boolean }> =
+    actionWorkflowProfile === "agric"
+      ? [
+          { form: "custodian_hub", title: actionWorkflowLabels.registryTitle, note: "Farmer onboarding + support profile" },
+          { form: "existing_tree_intake", title: "Plot Records", note: "Mapped plots + farm data" },
+          { form: "map_view", title: "Map View", note: "Plots + boundaries" },
+          { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
+          { form: "users", title: "Users", note: "All staff status + roles" },
+        ]
+      : [
+          { form: "overview", title: "Overview", note: "Progress summary" },
+          { form: "map_view", title: "Map View", note: `${actionWorkflowLabels.entityPlural} + draw polygons` },
+          { form: "remote_monitoring", title: "Remote Monitoring", note: "Satellite Monitoring +", isNew: true },
+          { form: "live_table", title: "Live Maintenance", note: "New planting + existing tree" },
+          { form: "users", title: "Users", note: "All staff status + roles" },
+          { form: "assign_work", title: "Planting Orders", note: "Assign planting targets" },
+          { form: "assign_task", title: "Maintenance", note: "Assign maintenance" },
+          { form: "custodian_hub", title: actionWorkflowLabels.registryTitle, note: "Overview + custodians +" },
+          { form: "existing_tree_intake", title: "Existing Trees", note: "Existing tree records" },
+          { form: "verra_reports", title: "Verra Reports", note: "VCS package + history" },
+          { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
+        ];
 
   const userWorkSummary = useMemo(() => {
     return users
@@ -6632,6 +6650,10 @@ export default function GreenWork() {
     activeProjectRecord?.settings?.workflow_profile || activeProjectRecord?.workflow_profile || projectSettingsDraft.workflow_profile,
   );
   const activeWorkflowLabels = getWorkflowLabels(activeWorkflowProfile);
+  const defaultProjectForm: WorkForm = activeWorkflowProfile === "agric" ? "custodian_hub" : "overview";
+  const isHiddenInAgricProject = (form: WorkForm) =>
+    Boolean(activeProjectId && activeWorkflowProfile === "agric" && AGRIC_HIDDEN_PROJECT_FORMS.includes(form));
+  const activeFormHiddenInAgric = activeForm ? isHiddenInAgricProject(activeForm) : false;
   const activeProjectOrgId =
     activeProjectRecord && Number.isFinite(Number(activeProjectRecord.organization_id))
       ? Number(activeProjectRecord.organization_id)
@@ -7050,6 +7072,13 @@ export default function GreenWork() {
       setMenuOpen(false);
       return;
     }
+    if (isHiddenInAgricProject(form)) {
+      setActiveForm(defaultProjectForm);
+      setMenuOpen(false);
+      setStaffMenu(null);
+      setLiveTreeMenu(null);
+      return;
+    }
     if (
       workPartnerOrgPaused &&
       (form === "create_project" || form === "add_user" || form === "assign_work" || form === "assign_task")
@@ -7176,15 +7205,21 @@ export default function GreenWork() {
   useEffect(() => {
     if (canAccessSuperAdmin) return;
     if (activeForm !== "super_admin") return;
-    setActiveForm(activeProjectId ? "overview" : "project_focus");
-  }, [activeForm, activeProjectId, canAccessSuperAdmin]);
+    setActiveForm(activeProjectId ? defaultProjectForm : "project_focus");
+  }, [activeForm, activeProjectId, canAccessSuperAdmin, defaultProjectForm]);
+
+  useEffect(() => {
+    if (!activeProjectId) return;
+    if (!activeFormHiddenInAgric) return;
+    setActiveForm(defaultProjectForm);
+  }, [activeFormHiddenInAgric, activeProjectId, defaultProjectForm]);
 
   useEffect(() => {
     if (!workPartnerOrgPaused) return;
     if (!activeForm) return;
     if (!["create_project", "add_user", "assign_work", "assign_task"].includes(activeForm)) return;
-    setActiveForm(activeProjectId ? "overview" : "project_focus");
-  }, [workPartnerOrgPaused, activeForm, activeProjectId]);
+    setActiveForm(activeProjectId ? defaultProjectForm : "project_focus");
+  }, [workPartnerOrgPaused, activeForm, activeProjectId, defaultProjectForm]);
 
   useEffect(() => {
     if (!workPartnerOrgPaused) return;
@@ -7192,7 +7227,18 @@ export default function GreenWork() {
     setCustodianOptionsExpanded(false);
   }, [workPartnerOrgPaused, custodianOptionsExpanded]);
 
+  useEffect(() => {
+    if (activeWorkflowProfile !== "agric") return;
+    if (staffMenu) setStaffMenu(null);
+    if (liveTreeMenu) setLiveTreeMenu(null);
+  }, [activeWorkflowProfile, staffMenu, liveTreeMenu]);
+
   const openAssignWorkForUser = (userName: string) => {
+    if (activeWorkflowProfile === "agric") {
+      setStaffMenu(null);
+      setLiveTreeMenu(null);
+      return;
+    }
     if (workPartnerOrgPaused) {
       toast.error("Organization is paused. Read-only mode is enabled (view and export only).");
       setStaffMenu(null);
@@ -7213,6 +7259,11 @@ export default function GreenWork() {
   };
 
   const openAssignTaskForUser = (userName: string) => {
+    if (activeWorkflowProfile === "agric") {
+      setStaffMenu(null);
+      setLiveTreeMenu(null);
+      return;
+    }
     if (workPartnerOrgPaused) {
       toast.error("Organization is paused. Read-only mode is enabled (view and export only).");
       setStaffMenu(null);
@@ -7276,6 +7327,10 @@ export default function GreenWork() {
   };
 
   const openAssignTaskForTree = (treeId: number, preferredTaskType?: string) => {
+    if (activeWorkflowProfile === "agric") {
+      setLiveTreeMenu(null);
+      return;
+    }
     if (workPartnerOrgPaused) {
       toast.error("Organization is paused. Read-only mode is enabled (view and export only).");
       setLiveTreeMenu(null);
@@ -7494,13 +7549,15 @@ export default function GreenWork() {
           <div className="green-work-menu-group">
             <p className="green-work-menu-subhead">Active Project Actions</p>
             <p className="green-work-menu-subproject">{activeProjectName}</p>
-            <button
-              className={`green-work-menu-item ${activeForm === "overview" ? "active" : ""}`}
-              type="button"
-              onClick={() => openForm("overview")}
-            >
-              Overview
-            </button>
+            {activeWorkflowProfile !== "agric" ? (
+              <button
+                className={`green-work-menu-item ${activeForm === "overview" ? "active" : ""}`}
+                type="button"
+                onClick={() => openForm("overview")}
+              >
+                Overview
+              </button>
+            ) : null}
             <button
               className={`green-work-menu-item ${activeForm === "map_view" ? "active" : ""}`}
               type="button"
@@ -7508,41 +7565,47 @@ export default function GreenWork() {
             >
               Map View
             </button>
-            <button
-              className={`green-work-menu-item ${activeForm === "remote_monitoring" ? "active" : ""}`}
-              type="button"
-              onClick={() => openForm("remote_monitoring")}
-            >
-              Remote Monitoring
-            </button>
-            <button
-              className={`green-work-menu-item ${activeForm === "live_table" ? "active" : ""}`}
-              type="button"
-              onClick={() => openForm("live_table")}
-            >
-              Live Maintenance Table
-            </button>
+            {activeWorkflowProfile !== "agric" ? (
+              <>
+                <button
+                  className={`green-work-menu-item ${activeForm === "remote_monitoring" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => openForm("remote_monitoring")}
+                >
+                  Remote Monitoring
+                </button>
+                <button
+                  className={`green-work-menu-item ${activeForm === "live_table" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => openForm("live_table")}
+                >
+                  Live Maintenance Table
+                </button>
+              </>
+            ) : null}
             <button
               className={`green-work-menu-item ${activeForm === "custodian_hub" ? "active" : ""}`}
               type="button"
               onClick={() => openForm("custodian_hub")}
             >
-              Custodian Hub
+              {activeWorkflowLabels.registryTitle}
             </button>
             <button
               className={`green-work-menu-item ${activeForm === "existing_tree_intake" ? "active" : ""}`}
               type="button"
               onClick={() => openForm("existing_tree_intake")}
             >
-              Existing Trees
+              {activeWorkflowProfile === "agric" ? "Plot Records" : "Existing Trees"}
             </button>
-            <button
-              className={`green-work-menu-item ${activeForm === "verra_reports" ? "active" : ""}`}
-              type="button"
-              onClick={() => openForm("verra_reports")}
-            >
-              Verra Reports
-            </button>
+            {activeWorkflowProfile !== "agric" ? (
+              <button
+                className={`green-work-menu-item ${activeForm === "verra_reports" ? "active" : ""}`}
+                type="button"
+                onClick={() => openForm("verra_reports")}
+              >
+                Verra Reports
+              </button>
+            ) : null}
             <button
               className={`green-work-menu-item ${activeForm === "review_queue" ? "active" : ""}`}
               type="button"
@@ -7564,20 +7627,24 @@ export default function GreenWork() {
             >
               Add User
             </button>
-            <button
-              className={`green-work-menu-item ${activeForm === "assign_work" ? "active" : ""}`}
-              type="button"
-              onClick={() => openForm("assign_work")}
-            >
-              Assign Tree Planting
-            </button>
-            <button
-              className={`green-work-menu-item ${activeForm === "assign_task" ? "active" : ""}`}
-              type="button"
-              onClick={() => openForm("assign_task")}
-            >
-              Assign Maintenance Task
-            </button>
+            {activeWorkflowProfile !== "agric" ? (
+              <>
+                <button
+                  className={`green-work-menu-item ${activeForm === "assign_work" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => openForm("assign_work")}
+                >
+                  Assign Tree Planting
+                </button>
+                <button
+                  className={`green-work-menu-item ${activeForm === "assign_task" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => openForm("assign_task")}
+                >
+                  Assign Maintenance Task
+                </button>
+              </>
+            ) : null}
           </div>
         ) : (
           <p className="green-work-menu-note">Select active project in Project Focus to enable assignment actions.</p>
@@ -12287,7 +12354,7 @@ export default function GreenWork() {
         </>
       )}
 
-      {staffMenu && (
+      {staffMenu && activeWorkflowProfile !== "agric" && (
         <>
           <button
             type="button"
@@ -12307,7 +12374,7 @@ export default function GreenWork() {
         </>
       )}
 
-      {liveTreeMenu && (
+      {liveTreeMenu && activeWorkflowProfile !== "agric" && (
         <>
           <button
             type="button"
