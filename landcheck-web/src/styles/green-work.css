@@ -2358,6 +2358,8 @@
 
 .green-work-registry-card {
   gap: 0.9rem;
+  width: min(100%, 1120px);
+  margin-inline: auto;
 }
 
 .green-work-registry-form {
