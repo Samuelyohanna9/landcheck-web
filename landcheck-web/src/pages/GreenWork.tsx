@@ -5299,6 +5299,47 @@ export default function GreenWork() {
 
   const exportCustodianPdf = () => {
     if (!activeProjectId) return;
+    if (activeWorkflowProfile === "agric") {
+      if (includePhotosInCustodianPdf) {
+        const loadingId = toast.loading("Preparing Agric programme report with plot photos...");
+        void (async () => {
+          try {
+            const created = await api.post("/green/work-report/export-jobs", {
+              project_id: activeProjectId,
+              assignee_name: null,
+              include_photos: true,
+              requested_by: workAuthSession?.user?.full_name || "work-user",
+            });
+            const jobId = String(created?.data?.id || "");
+            if (!jobId) {
+              throw new Error("Export job was not created");
+            }
+            const startedAt = Date.now();
+            const timeoutMs = 1000 * 60 * 20;
+            while (Date.now() - startedAt < timeoutMs) {
+              await new Promise((resolve) => window.setTimeout(resolve, 3000));
+              const statusRes = await api.get(`/green/export-jobs/${jobId}`);
+              const job = statusRes?.data || {};
+              const status = String(job.status || "").toLowerCase();
+              if (status === "completed" && job.download_url) {
+                toast.success("Agric programme report is ready. Download started.", { id: loadingId });
+                window.open(String(job.download_url), "_blank");
+                return;
+              }
+              if (status === "failed") {
+                throw new Error(String(job.error_text || "Agric programme report export failed"));
+              }
+            }
+            toast.error("Agric programme report is still preparing. Try again shortly.", { id: loadingId });
+          } catch (error: any) {
+            toast.error(error?.response?.data?.detail || error?.message || "Failed to prepare Agric programme report", { id: loadingId });
+          }
+        })();
+        return;
+      }
+      window.open(`${BACKEND_URL}/green/work-report/pdf?project_id=${activeProjectId}`, "_blank");
+      return;
+    }
     const params = new URLSearchParams({
       _ts: String(Date.now()),
       include_photos: includePhotosInCustodianPdf ? "true" : "false",
@@ -9004,7 +9045,7 @@ export default function GreenWork() {
                     {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
                     <p className="green-work-note">
                       {activeWorkflowProfile === "agric"
-                        ? "Export includes farmer registry, support history, mapped plots, and follow-up tracking. Photo appendix is optional."
+                        ? "Export includes farmer registry, support delivery, plot-by-plot evidence pages, and compliance-ready mapped boundaries. Plot photos are optional."
                         : "Export includes custodians, distribution history, and supervision tracking. Photo appendix is optional."}
                     </p>
                     <div className="work-actions">
@@ -9014,10 +9055,10 @@ export default function GreenWork() {
                           checked={includePhotosInCustodianPdf}
                           onChange={(e) => setIncludePhotosInCustodianPdf(e.target.checked)}
                         />
-                        Include photos
+                        {activeWorkflowProfile === "agric" ? "Include plot photos" : "Include photos"}
                       </label>
                       <button type="button" onClick={exportCustodianPdf} disabled={!activeProjectId}>
-                        {activeWorkflowProfile === "agric" ? "Export Farmer PDF" : "Export Custodian PDF"}
+                        {activeWorkflowProfile === "agric" ? "Export Agric Programme PDF" : "Export Custodian PDF"}
                       </button>
                   </div>
                   </div>
