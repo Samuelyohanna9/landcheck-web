@@ -395,7 +395,6 @@ type WorkForm =
 
 const AGRIC_HIDDEN_PROJECT_FORMS: WorkForm[] = [
   "overview",
-  "remote_monitoring",
   "live_table",
   "assign_work",
   "assign_task",
@@ -613,6 +612,20 @@ const formatTaskTypeLabel = (value: string | null | undefined) =>
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ") || "Task";
+const formatWorkflowTaskTypeLabel = (
+  value: string | null | undefined,
+  workflowProfile: "green" | "agric" = "green",
+) => {
+  const key = normalizeName(value);
+  if (workflowProfile === "agric") {
+    if (key === "existing_inventory_intake") return "Plot Intake";
+    if (key === "field_capture") return "Field Capture";
+    if (key === "supervision") return "Support Visit";
+    if (key === "inspection") return "Field Inspection";
+  }
+  if (key === "supervision") return "Supervision Visit";
+  return formatTaskTypeLabel(value);
+};
 const taskSortStamp = (task: WorkTask) => {
   const raw = task.completed_at || task.due_date || task.created_at || "";
   const stamp = raw ? new Date(raw).getTime() : 0;
@@ -2321,6 +2334,7 @@ export default function GreenWork() {
     allow_existing_tree_link: false,
     default_existing_tree_scope: "exclude_from_planting_kpi",
   });
+  const draftWorkflowProfile = normalizeWorkflowProfile(projectSettingsDraft.workflow_profile);
   const [custodians, setCustodians] = useState<Custodian[]>([]);
   const [newCustodian, setNewCustodian] = useState<{
     custodian_type: CustodianType;
@@ -3394,7 +3408,11 @@ export default function GreenWork() {
     if (!activeProjectId) return;
     const geometry = normalizeMapAreaGeometry(remoteMonitoringDraftGeometry);
     if (!geometry) {
-      toast.error("Draw a polygon or choose an existing planting polygon first.");
+      toast.error(
+        draftWorkflowProfile === "agric"
+          ? "Draw a farm block or choose a mapped farm boundary first."
+          : "Draw a polygon or choose an existing planting polygon first.",
+      );
       return;
     }
     setRemoteMonitoringLoading(true);
@@ -3416,11 +3434,14 @@ export default function GreenWork() {
     } catch (error: any) {
       stopRemoteMonitoringProgress();
       setRemoteMonitoringReport(null);
-      toast.error(error?.response?.data?.detail || "Failed to load remote monitoring");
+      toast.error(
+        error?.response?.data?.detail ||
+          (draftWorkflowProfile === "agric" ? "Failed to load farm health monitoring" : "Failed to load remote monitoring"),
+      );
     } finally {
       setRemoteMonitoringLoading(false);
     }
-  }, [activeProjectId, remoteMonitoringDraftGeometry, startRemoteMonitoringProgress, stopRemoteMonitoringProgress]);
+  }, [activeProjectId, draftWorkflowProfile, remoteMonitoringDraftGeometry, startRemoteMonitoringProgress, stopRemoteMonitoringProgress]);
 
   const buildRemoteMonitoringInspectSeed = useCallback(
     (treeId: number, remoteTree?: RemoteMonitoringTreeAnalysis | null, loading = true): TreeInspectData | null => {
@@ -5596,7 +5617,7 @@ export default function GreenWork() {
     const treePoints = visibleProjectTrees.map((t) => ({ lng: t.lng, lat: t.lat }));
     return treePoints.length ? treePoints : null;
   }, [visibleProjectTrees]);
-  const mapWorkflowProfile = normalizeWorkflowProfile(projectSettingsDraft.workflow_profile);
+  const mapWorkflowProfile = draftWorkflowProfile;
   const existingTreeMapAreas = useMemo(
     () =>
       mapViewTrees
@@ -5637,27 +5658,49 @@ export default function GreenWork() {
   }, [projectFitPoints, projectAreaFitPoints]);
   const monitoringSourceAreas = useMemo(
     () =>
-      orders
-        .filter((order) => Boolean(order.area_enabled) && Boolean(order.area_geojson))
-        .map((order) => {
-          const geometry = normalizeMapAreaGeometry(order.area_geojson);
-          if (!geometry) return null;
-          const areaLabel = String(order.area_label || "").trim() || `Planting area #${order.id}`;
-          return {
-            id: Number(order.id),
-            label: areaLabel,
-            geojson: geometry,
-            assignee_name: order.assignee_name,
-            target_trees: Number(order.target_trees || 0),
-          };
-        })
-        .filter((item): item is { id: number; label: string; geojson: any; assignee_name: string; target_trees: number } => Boolean(item)),
-    [orders],
+      mapWorkflowProfile === "agric"
+        ? visibleProjectTrees
+            .map((tree) => {
+              const geometry = normalizeMapAreaGeometry(tree.existing_area_geojson);
+              if (!geometry) return null;
+              const plotLabel = formatPlotRecordLabel(tree);
+              const farmerName = String(tree.custodian_name || "").trim() || "Farmer not linked";
+              const cropLabel = getPlotCommodityLabel(tree);
+              const areaLabel = formatPlotAreaLabel(tree);
+              return {
+                id: Number(tree.id),
+                label: [plotLabel, farmerName, cropLabel, areaLabel].filter((value) => value && value !== "-").join(" | "),
+                geojson: geometry,
+                assignee_name: farmerName,
+                target_trees: 1,
+                crop_label: cropLabel,
+                area_label: areaLabel,
+              };
+            })
+            .filter((item): item is { id: number; label: string; geojson: any; assignee_name: string; target_trees: number; crop_label: string; area_label: string } => Boolean(item))
+        : orders
+            .filter((order) => Boolean(order.area_enabled) && Boolean(order.area_geojson))
+            .map((order) => {
+              const geometry = normalizeMapAreaGeometry(order.area_geojson);
+              if (!geometry) return null;
+              const areaLabel = String(order.area_label || "").trim() || `Planting area #${order.id}`;
+              return {
+                id: Number(order.id),
+                label: areaLabel,
+                geojson: geometry,
+                assignee_name: order.assignee_name,
+                target_trees: Number(order.target_trees || 0),
+                crop_label: "",
+                area_label: areaLabel,
+              };
+            })
+            .filter((item): item is { id: number; label: string; geojson: any; assignee_name: string; target_trees: number; crop_label: string; area_label: string } => Boolean(item)),
+    [mapWorkflowProfile, orders, visibleProjectTrees],
   );
   const remoteMonitoringAnalysisLabel = useMemo(() => {
     const sourceArea = monitoringSourceAreas.find((item) => Number(item.id) === Number(remoteMonitoringDraft.source_order_id || 0)) || null;
-    return sourceArea?.label || "Drawn Polygon Analysis";
-  }, [monitoringSourceAreas, remoteMonitoringDraft.source_order_id]);
+    return sourceArea?.label || (mapWorkflowProfile === "agric" ? "Drawn Farm Block Analysis" : "Drawn Polygon Analysis");
+  }, [mapWorkflowProfile, monitoringSourceAreas, remoteMonitoringDraft.source_order_id]);
   const remoteMonitoringDraftTreeSummary = useMemo(() => {
     const geometry = normalizeMapAreaGeometry(remoteMonitoringDraftGeometry);
     if (!geometry) {
@@ -5669,7 +5712,7 @@ export default function GreenWork() {
         other_tree_count: 0,
       };
     }
-    return trees.reduce(
+    return visibleProjectTrees.reduce(
       (acc, tree) => {
         if (!pointInMapGeometry(Number(tree.lng), Number(tree.lat), geometry)) return acc;
         const count = Math.max(1, Math.round(Number(tree.inventory_tree_count || 1) || 1));
@@ -5689,7 +5732,7 @@ export default function GreenWork() {
         other_tree_count: 0,
       },
     );
-  }, [trees, remoteMonitoringDraftGeometry]);
+  }, [remoteMonitoringDraftGeometry, visibleProjectTrees]);
   const remoteMonitoringSortedTrees = useMemo(() => {
     const severityRank: Record<string, number> = {
       critical: 0,
@@ -5730,6 +5773,90 @@ export default function GreenWork() {
     () => remoteMonitoringSortedTrees.filter((tree) => ["critical", "stressed", "fair"].includes(normalizeName(tree.satellite_health))).slice(0, 6),
     [remoteMonitoringSortedTrees],
   );
+  const remoteMonitoringAgricInsights = useMemo(() => {
+    if (mapWorkflowProfile !== "agric" || !remoteMonitoringReport) return [] as Array<{ title: string; value: string; note: string; tone: "healthy" | "warning" | "danger" | "info" }>;
+    const summary = remoteMonitoringReport.summary || {};
+    const meanNdvi = typeof summary.mean_ndvi === "number" ? summary.mean_ndvi : null;
+    const vegetationCoverage = typeof summary.vegetation_coverage_pct === "number" ? summary.vegetation_coverage_pct : null;
+    const clearCoverage = typeof summary.clear_coverage_pct === "number" ? summary.clear_coverage_pct : null;
+    const stressedPlotCount = remoteMonitoringSortedTrees.filter((tree) =>
+      ["critical", "stressed", "fair"].includes(normalizeName(tree.satellite_health)),
+    ).length;
+    const ndviSeries = (remoteMonitoringReport.series || [])
+      .map((row) => (typeof row.mean_ndvi === "number" ? row.mean_ndvi : null))
+      .filter((value): value is number => value !== null);
+    const latestNdvi = ndviSeries.length ? ndviSeries[ndviSeries.length - 1] : meanNdvi;
+    const baselineNdvi =
+      ndviSeries.length > 1 ? ndviSeries.slice(0, -1).reduce((sum, value) => sum + value, 0) / (ndviSeries.length - 1) : null;
+    const ndviDelta =
+      latestNdvi !== null && baselineNdvi !== null ? Number((latestNdvi - baselineNdvi).toFixed(3)) : null;
+    const droughtRiskValue =
+      normalizeName(summary.signal) === "watch"
+        ? clearCoverage !== null && clearCoverage >= 55
+          ? "High watch"
+          : "Watch"
+        : clearCoverage !== null && clearCoverage >= 55
+          ? "Watch"
+          : "Low";
+    const droughtRiskTone: "healthy" | "warning" | "danger" | "info" =
+      droughtRiskValue === "High watch" ? "danger" : droughtRiskValue === "Watch" ? "warning" : "info";
+    const vigorTrendValue =
+      ndviDelta === null
+        ? "Collecting trend"
+        : ndviDelta <= -0.04
+          ? "Declining"
+          : ndviDelta >= 0.04
+            ? "Improving"
+            : "Stable";
+    const vigorTrendTone: "healthy" | "warning" | "danger" | "info" =
+      vigorTrendValue === "Declining" ? "danger" : vigorTrendValue === "Improving" ? "healthy" : "info";
+    return [
+      {
+        title: "Healthy Vegetation",
+        value:
+          vegetationCoverage !== null
+            ? `${vegetationCoverage.toFixed(1)}% cover`
+            : meanNdvi !== null
+              ? `NDVI ${meanNdvi.toFixed(3)}`
+              : "No data",
+        note: meanNdvi !== null ? `Mean NDVI ${meanNdvi.toFixed(3)} in the latest composite window.` : "No cloud-free signal yet.",
+        tone:
+          meanNdvi !== null && meanNdvi >= 0.5 ? "healthy" : meanNdvi !== null && meanNdvi < 0.25 ? "danger" : "info",
+      },
+      {
+        title: "Stressed Areas",
+        value:
+          stressedPlotCount > 0
+            ? `${stressedPlotCount} flagged ${stressedPlotCount === 1 ? "plot" : "plots"}`
+            : clearCoverage !== null
+              ? `${clearCoverage.toFixed(1)}% clear`
+              : "No major stress",
+        note:
+          stressedPlotCount > 0
+            ? "Critical, stressed, and fair plots are prioritized for supervisor follow-up."
+            : "No mapped plot is currently flagged as stressed from the latest satellite proxy.",
+        tone: stressedPlotCount > 0 ? (stressedPlotCount >= 3 ? "danger" : "warning") : "healthy",
+      },
+      {
+        title: "Possible Drought Impact",
+        value: droughtRiskValue,
+        note:
+          clearCoverage !== null
+            ? `${clearCoverage.toFixed(1)}% of the selected farm block is currently classed as clear or low-vegetation signal.`
+            : "Waiting for enough cloud-free imagery to estimate drought watch reliably.",
+        tone: droughtRiskTone,
+      },
+      {
+        title: "Crop Vigor Trend",
+        value: vigorTrendValue,
+        note:
+          ndviDelta !== null
+            ? `Latest NDVI moved ${ndviDelta >= 0 ? "+" : ""}${ndviDelta.toFixed(3)} against the recent baseline.`
+            : "Trend will appear once more than one monthly NDVI window is available.",
+        tone: vigorTrendTone,
+      },
+    ];
+  }, [mapWorkflowProfile, remoteMonitoringReport, remoteMonitoringSortedTrees]);
   const remoteMonitoringMapAreas = useMemo(() => {
     const plantingAreas = monitoringSourceAreas.map((area) => ({
       id: `work-order-${area.id}`,
@@ -5740,7 +5867,7 @@ export default function GreenWork() {
   }, [monitoringSourceAreas]);
   const remoteMonitoringFocusPoints = useMemo(() => {
     if (!remoteMonitoringFocusedTreeId) return null;
-    const sourceTree = trees.find((entry) => Number(entry.id) === Number(remoteMonitoringFocusedTreeId));
+    const sourceTree = visibleProjectTrees.find((entry) => Number(entry.id) === Number(remoteMonitoringFocusedTreeId));
     const coords =
       sourceTree && Number.isFinite(Number(sourceTree.lng)) && Number.isFinite(Number(sourceTree.lat))
         ? { lng: Number(sourceTree.lng), lat: Number(sourceTree.lat) }
@@ -5751,7 +5878,7 @@ export default function GreenWork() {
       { lng: coords.lng - delta, lat: coords.lat - delta },
       { lng: coords.lng + delta, lat: coords.lat + delta },
     ];
-  }, [remoteMonitoringFocusedTreeId, trees]);
+  }, [remoteMonitoringFocusedTreeId, visibleProjectTrees]);
   const remoteMonitoringFitPoints = useMemo(() => {
     if (remoteMonitoringFocusPoints?.length) return remoteMonitoringFocusPoints;
     const areaPoints = remoteMonitoringMapAreas.flatMap((item) => extractMapAreaPoints(normalizeMapAreaGeometry(item.geojson)));
@@ -6564,6 +6691,7 @@ export default function GreenWork() {
           { form: "support_visit_assign", title: "Support Visits", note: "Assign follow-up field visits" },
           { form: "existing_tree_intake", title: "Plot Records", note: "Mapped plots + farm data" },
           { form: "map_view", title: "Map View", note: "Plots + boundaries" },
+          { form: "remote_monitoring", title: "Farm Health", note: "NDVI + vigor + drought watch", isNew: true },
           { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
           { form: "users", title: "Users", note: "All staff status + roles" },
         ]
@@ -7191,7 +7319,6 @@ export default function GreenWork() {
     activeForm !== "farmer_live" &&
     activeForm !== "field_capture_assign" &&
     activeForm !== "support_visit_assign" &&
-    !(activeWorkflowProfile === "agric" && activeForm === "custodian_hub") &&
     activeForm !== "verra_reports" &&
     activeForm !== "map_view" &&
     activeForm !== "remote_monitoring";
@@ -7203,6 +7330,7 @@ export default function GreenWork() {
   const assignWorkAreaMode = Boolean(activeProjectId && activeForm === "assign_work" && newOrderAreaEnabled);
   const liveTableMode = Boolean(activeProjectId && activeForm === "live_table");
   const verraMode = Boolean(activeProjectId && activeForm === "verra_reports");
+  const agricRegistryMode = Boolean(activeProjectId && activeWorkflowProfile === "agric" && activeForm === "custodian_hub");
   const hasDedicatedMainContent =
     overviewMode ||
     mapViewMode ||
@@ -7837,6 +7965,13 @@ export default function GreenWork() {
                 >
                   Support Visits
                 </button>
+                <button
+                  className={`green-work-menu-item ${activeForm === "remote_monitoring" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => openForm("remote_monitoring")}
+                >
+                  Farm Health
+                </button>
               </>
             ) : (
               <button
@@ -7911,7 +8046,7 @@ export default function GreenWork() {
       <div
         className={`green-work-content ${showSidebar ? "with-sidebar" : "no-sidebar"} ${
           detailScrollMode ? "detail-scroll-mode" : ""
-        } ${custodianHubMode ? "custodian-hub-mode" : ""} ${sidebarPrimaryMode ? "sidebar-primary-mode" : ""}`}
+        } ${custodianHubMode ? "custodian-hub-mode" : ""} ${agricRegistryMode ? "agric-registry-mode" : ""} ${sidebarPrimaryMode ? "sidebar-primary-mode" : ""}`}
       >
         <aside className="green-work-sidebar">
           {activeForm === "project_focus" && (
@@ -10464,6 +10599,7 @@ export default function GreenWork() {
               {activeProjectId && reviewQueue.length === 0 && <p className="green-work-note">No submitted tasks awaiting review.</p>}
               <div className="staff-list">
                 {reviewQueue.map((task) => {
+                  const reviewTreeRecord = treeById.get(Number(task.tree_id)) || null;
                   const fallbackTreeCoords = treeCoordinatesById.get(Number(task.tree_id));
                   const originalTreeLng = toFiniteCoord(task.tree_lng) ?? toFiniteCoord(fallbackTreeCoords?.lng);
                   const originalTreeLat = toFiniteCoord(task.tree_lat) ?? toFiniteCoord(fallbackTreeCoords?.lat);
@@ -10483,45 +10619,87 @@ export default function GreenWork() {
                     else if (distanceFromTreeMeters <= 30) distanceToneClass = "is-near";
                     else distanceToneClass = "is-far";
                   }
+                  const reviewWorkflowProfile = activeWorkflowProfile === "agric" ? "agric" : "green";
+                  const reviewTaskLabel = formatWorkflowTaskTypeLabel(task.task_type, reviewWorkflowProfile);
+                  const reviewEntityLabel = activeWorkflowProfile === "agric"
+                    ? reviewTreeRecord
+                      ? formatPlotRecordLabel(reviewTreeRecord)
+                      : formatProjectTreeLabelById(task.tree_id)
+                    : formatProjectTreeLabelById(task.tree_id);
+                  const reviewCropLabel = reviewTreeRecord ? getPlotCommodityLabel(reviewTreeRecord) : task.tree_species || "-";
+                  const reviewPlotAreaLabel = reviewTreeRecord ? formatPlotAreaLabel(reviewTreeRecord) : "-";
+                  const reviewSeasonLabel = reviewTreeRecord ? formatPlotSeasonLabel(reviewTreeRecord) : "-";
+                  const reviewBoundaryLabel = formatBoundaryCaptureMethodLabel(
+                    reviewTreeRecord?.record_profile_data?.boundary_capture_method,
+                  );
+                  const reviewIrrigationLabel = reviewTreeRecord?.record_profile_data?.irrigation_type
+                    ? formatTaskTypeLabel(reviewTreeRecord.record_profile_data.irrigation_type)
+                    : "-";
+                  const reviewStageLabel = reviewTreeRecord?.record_profile_data?.production_stage
+                    ? formatTaskTypeLabel(reviewTreeRecord.record_profile_data.production_stage)
+                    : "-";
                   return (
                   <div key={task.id} className="staff-row">
                     <div className="staff-row-head">
                       <strong>
-                        Task #{task.id} - {formatTaskTypeLabel(task.task_type)}
+                        Task #{task.id} - {reviewTaskLabel}
                       </strong>
                       <span>{task.assignee_name || "-"}</span>
                     </div>
                     <div className="staff-row-meta">
-                      {formatProjectTreeLabelById(task.tree_id)} | Due: {formatDateLabel(task.due_date)} | Priority: {task.priority || "normal"}
+                      {reviewEntityLabel} | Due: {formatDateLabel(task.due_date)} | Priority: {task.priority || "normal"}
                     </div>
                     <div className="staff-row-meta">
                       Review: {task.review_state || "none"} | Submitted: {formatDateLabel(task.submitted_at || task.created_at)}
                     </div>
                     <div className="staff-row-meta">
-                      Planting / reference date: {formatDateLabel(task.tree_planting_date || task.due_date || task.created_at)}
+                      {activeWorkflowProfile === "agric" ? "Observed / reference date" : "Planting / reference date"}: {formatDateLabel(task.tree_planting_date || task.due_date || task.created_at)}
                     </div>
-                    <div className="staff-row-meta">
-                      Tree metadata: Species: {task.tree_species || "-"} | Origin: {formatTreeOriginLabel(task.tree_origin)}
-                      {Number.isFinite(Number(task.tree_height_m)) ? ` | Height: ${formatTreeHeight(task.tree_height_m)}` : ""}
-                      {normalizeName(task.tree_origin) === "existing_inventory" &&
-                      Number.isFinite(Number(task.tree_age_months)) &&
-                      Number(task.tree_age_months) >= 0
-                        ? ` | Estimated age: ${Math.round(Number(task.tree_age_months))}m`
-                        : ""}
-                    </div>
-                    <div className="staff-row-meta">
-                      Tree GPS: {formatGpsPair(originalTreeLng, originalTreeLat)}
-                    </div>
-                    <div className="staff-row-meta">
-                      Maintenance GPS: {formatGpsPair(maintenanceLng, maintenanceLat)}
-                      {task.activity_recorded_at ? ` | Captured: ${formatDateTimeLabel(task.activity_recorded_at)}` : ""}
-                    </div>
-                    <div className={`staff-row-meta green-work-review-distance ${distanceToneClass}`}>
-                      Distance from tree: {formatDistanceMeters(distanceFromTreeMeters)}
-                    </div>
+                    {activeWorkflowProfile === "agric" ? (
+                      <>
+                        <div className="staff-row-meta">
+                          Farm details: Crop: {reviewCropLabel} | Area: {reviewPlotAreaLabel} | Boundary: {reviewBoundaryLabel} | Season: {reviewSeasonLabel}
+                        </div>
+                        <div className="staff-row-meta">
+                          Farm profile: Irrigation: {reviewIrrigationLabel} | Stage: {reviewStageLabel} | Status: {treeStatusLabel(task.tree_status)}
+                        </div>
+                        <div className="staff-row-meta">
+                          Farm GPS: {formatGpsPair(originalTreeLng, originalTreeLat)}
+                        </div>
+                        <div className="staff-row-meta">
+                          Field GPS: {formatGpsPair(maintenanceLng, maintenanceLat)}
+                          {task.activity_recorded_at ? ` | Captured: ${formatDateTimeLabel(task.activity_recorded_at)}` : ""}
+                        </div>
+                        <div className={`staff-row-meta green-work-review-distance ${distanceToneClass}`}>
+                          Distance from farm anchor: {formatDistanceMeters(distanceFromTreeMeters)}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="staff-row-meta">
+                          Tree metadata: Species: {task.tree_species || "-"} | Origin: {formatTreeOriginLabel(task.tree_origin)}
+                          {Number.isFinite(Number(task.tree_height_m)) ? ` | Height: ${formatTreeHeight(task.tree_height_m)}` : ""}
+                          {normalizeName(task.tree_origin) === "existing_inventory" &&
+                          Number.isFinite(Number(task.tree_age_months)) &&
+                          Number(task.tree_age_months) >= 0
+                            ? ` | Estimated age: ${Math.round(Number(task.tree_age_months))}m`
+                            : ""}
+                        </div>
+                        <div className="staff-row-meta">
+                          Tree GPS: {formatGpsPair(originalTreeLng, originalTreeLat)}
+                        </div>
+                        <div className="staff-row-meta">
+                          Maintenance GPS: {formatGpsPair(maintenanceLng, maintenanceLat)}
+                          {task.activity_recorded_at ? ` | Captured: ${formatDateTimeLabel(task.activity_recorded_at)}` : ""}
+                        </div>
+                        <div className={`staff-row-meta green-work-review-distance ${distanceToneClass}`}>
+                          Distance from tree: {formatDistanceMeters(distanceFromTreeMeters)}
+                        </div>
+                      </>
+                    )}
                     {task.reported_tree_status && (
                       <div className="staff-row-meta">
-                        Reported condition: {formatTaskTypeLabel(task.reported_tree_status)}
+                        {activeWorkflowProfile === "agric" ? "Reported field condition" : "Reported condition"}: {formatTaskTypeLabel(task.reported_tree_status)}
                       </div>
                     )}
                     {task.review_notes && (
@@ -10529,13 +10707,13 @@ export default function GreenWork() {
                     )}
                     {(task.custodian_name || normalizeName(task.task_type) === "supervision") && (
                       <div className="staff-row-meta">
-                        Custodian: {task.custodian_name || "-"} | Community: {task.custodian_community_name || "-"} | Contact:{" "}
+                        {activeWorkflowProfile === "agric" ? "Farmer" : "Custodian"}: {task.custodian_name || "-"} | Community: {task.custodian_community_name || "-"} | Contact:{" "}
                         {task.custodian_phone || task.custodian_email || task.custodian_contact_person || "-"}
                       </div>
                     )}
                     {normalizeName(task.task_type) === "supervision" && (
                       <div className="staff-row-meta">
-                        Supervision visit: {Number(task.supervision_visit_no || 0) || "-"} /{" "}
+                        {activeWorkflowProfile === "agric" ? "Support visit" : "Supervision visit"}: {Number(task.supervision_visit_no || 0) || "-"} /{" "}
                         {Number(task.supervision_total_visits || 0) || "-"}
                       </div>
                     )}
@@ -11852,7 +12030,7 @@ export default function GreenWork() {
               <div className="green-work-remote-workspace">
                 <div className="green-work-card green-work-remote-card">
                   <div className="green-work-row">
-                    <h3>Remote Monitoring</h3>
+                    <h3>{activeWorkflowProfile === "agric" ? "Farm Health Monitoring" : "Remote Monitoring"}</h3>
                     <div className="work-actions">
                       <button
                         type="button"
@@ -11860,33 +12038,37 @@ export default function GreenWork() {
                         onClick={() => void loadRemoteMonitoringAnalysis()}
                         disabled={!normalizeMapAreaGeometry(remoteMonitoringDraftGeometry) || remoteMonitoringLoading}
                       >
-                        {remoteMonitoringLoading ? "Analyzing..." : "Analyze Vegetation"}
+                        {remoteMonitoringLoading ? "Analyzing..." : activeWorkflowProfile === "agric" ? "Analyze Farm Health" : "Analyze Vegetation"}
                       </button>
                     </div>
                   </div>
                   <p className="green-work-note">
-                    Choose an existing planting polygon or draw one on the map. Tree count comes from LandCheck tree records inside the polygon. NDVI is only used as a satellite vegetation proxy.
+                    {activeWorkflowProfile === "agric"
+                      ? "Choose an existing mapped farm boundary or draw a farm block on the map. NDVI, vegetation cover, stressed areas, drought watch, and crop-vigor trend are generated from recent satellite imagery."
+                      : "Choose an existing planting polygon or draw one on the map. Tree count comes from LandCheck tree records inside the polygon. NDVI is only used as a satellite vegetation proxy."}
                   </p>
 
                   <div className="green-work-remote-layout">
                     <div className="green-work-remote-builder">
                       <label>
-                        Use existing planting area
+                        {activeWorkflowProfile === "agric" ? "Use mapped farm boundary" : "Use existing planting area"}
                         <select
                           value={remoteMonitoringDraft.source_order_id}
                           onChange={(e) => applyMonitoringSourceArea(e.target.value)}
                         >
-                          <option value="">Draw a new polygon instead</option>
+                          <option value="">{activeWorkflowProfile === "agric" ? "Draw a new farm block instead" : "Draw a new polygon instead"}</option>
                           {monitoringSourceAreas.map((area) => (
                             <option key={`remote-source-${area.id}`} value={area.id}>
-                              {area.label} | {area.assignee_name || "Unassigned"} | target {area.target_trees}
+                              {activeWorkflowProfile === "agric"
+                                ? area.label
+                                : `${area.label} | ${area.assignee_name || "Unassigned"} | target ${area.target_trees}`}
                             </option>
                           ))}
                         </select>
                       </label>
                       <div className="work-actions">
                         <button type="button" onClick={() => setRemoteMonitoringDrawActive((prev) => !prev)}>
-                          {remoteMonitoringDrawActive ? "Stop Polygon Draw" : "Draw Polygon On Map"}
+                          {remoteMonitoringDrawActive ? "Stop Polygon Draw" : activeWorkflowProfile === "agric" ? "Draw Farm Block On Map" : "Draw Polygon On Map"}
                         </button>
                         <button
                           type="button"
@@ -11907,21 +12089,29 @@ export default function GreenWork() {
                           onClick={() => void loadRemoteMonitoringAnalysis()}
                           disabled={!normalizeMapAreaGeometry(remoteMonitoringDraftGeometry) || remoteMonitoringLoading}
                         >
-                          {remoteMonitoringLoading ? "Analyzing..." : "Analyze Vegetation"}
+                          {remoteMonitoringLoading ? "Analyzing..." : activeWorkflowProfile === "agric" ? "Analyze Farm Health" : "Analyze Vegetation"}
                         </button>
                       </div>
                       <div className="green-work-remote-draft-summary">
-                        <span className="green-work-flow-pill">Tree rows: {remoteMonitoringDraftTreeSummary.tree_record_count}</span>
-                        <span className="green-work-flow-pill">Trees in polygon: {remoteMonitoringDraftTreeSummary.tree_count}</span>
-                        <span className="green-work-flow-pill">New planting: {remoteMonitoringDraftTreeSummary.new_planting_tree_count}</span>
-                        <span className="green-work-flow-pill">Existing inventory: {remoteMonitoringDraftTreeSummary.existing_inventory_tree_count}</span>
+                        <span className="green-work-flow-pill">
+                          {activeWorkflowProfile === "agric" ? "Plot rows" : "Tree rows"}: {remoteMonitoringDraftTreeSummary.tree_record_count}
+                        </span>
+                        <span className="green-work-flow-pill">
+                          {activeWorkflowProfile === "agric" ? "Plots in area" : "Trees in polygon"}: {remoteMonitoringDraftTreeSummary.tree_count}
+                        </span>
+                        <span className="green-work-flow-pill">
+                          {activeWorkflowProfile === "agric" ? "Mapped plots" : "New planting"}: {remoteMonitoringDraftTreeSummary.new_planting_tree_count}
+                        </span>
+                        <span className="green-work-flow-pill">
+                          {activeWorkflowProfile === "agric" ? "Existing plot batches" : "Existing inventory"}: {remoteMonitoringDraftTreeSummary.existing_inventory_tree_count}
+                        </span>
                       </div>
                     </div>
                   </div>
                   {remoteMonitoringLoading && (
                     <div className="green-work-remote-progress-panel">
                       <div className="green-work-remote-progress-head">
-                        <strong>Vegetation calculation in progress</strong>
+                        <strong>{activeWorkflowProfile === "agric" ? "Farm-health calculation in progress" : "Vegetation calculation in progress"}</strong>
                         <span>{Math.max(8, Math.min(100, Math.round(remoteMonitoringProgressPct || 0)))}%</span>
                       </div>
                       <div className="green-work-remote-progress-bar" aria-hidden="true">
@@ -11947,16 +12137,28 @@ export default function GreenWork() {
                 </div>
 
                 <div ref={mapCardRef} className="green-work-card green-work-map-card green-work-remote-map-card">
-                  <h3>{remoteMonitoringDrawActive ? "Remote Monitoring Map (Polygon Draw Enabled)" : "Remote Monitoring Map"}</h3>
+                  <h3>
+                    {remoteMonitoringDrawActive
+                      ? activeWorkflowProfile === "agric"
+                        ? "Farm Health Map (Polygon Draw Enabled)"
+                        : "Remote Monitoring Map (Polygon Draw Enabled)"
+                      : activeWorkflowProfile === "agric"
+                        ? "Farm Health Map"
+                        : "Remote Monitoring Map"}
+                  </h3>
                   <p className="green-work-note">
                     {remoteMonitoringDrawActive
-                      ? "Draw one polygon for the monitoring block. When draw is off, you can inspect trees on the map."
-                      : "Inspect trees and planting polygons, then run satellite analysis for the selected polygon."}
+                      ? activeWorkflowProfile === "agric"
+                        ? "Draw one polygon for the farm block. When draw is off, you can inspect mapped farm boundaries on the map."
+                        : "Draw one polygon for the monitoring block. When draw is off, you can inspect trees on the map."
+                      : activeWorkflowProfile === "agric"
+                        ? "Inspect mapped farm boundaries, select a farm block, and run NDVI-based health analysis."
+                        : "Inspect trees and planting polygons, then run satellite analysis for the selected polygon."}
                   </p>
                   <div className="green-work-map-layout">
                     <div className="green-work-map-canvas">
                       <TreeMap
-                        trees={trees}
+                        trees={visibleProjectTrees}
                         onAddTree={() => {}}
                         enableDraw={remoteMonitoringDrawActive}
                         drawMode="polygon"
@@ -11976,6 +12178,7 @@ export default function GreenWork() {
                         }}
                         fitBounds={remoteMonitoringFitPoints}
                         assignmentAreas={remoteMonitoringMapAreas}
+                        workflowMode={activeWorkflowProfile}
                       />
                     </div>
                   </div>
@@ -11985,10 +12188,12 @@ export default function GreenWork() {
               <div className="green-work-card green-work-remote-report-card">
                 <div className="green-work-remote-report-head">
                   <div className="green-work-remote-report-copy">
-                    <p className="green-work-remote-kicker">Vegetation Summary</p>
+                    <p className="green-work-remote-kicker">{activeWorkflowProfile === "agric" ? "Farm Health Summary" : "Vegetation Summary"}</p>
                     <h3>{remoteMonitoringAnalysisLabel}</h3>
                     <p className="green-work-remote-subtitle">
-                      Satellite vegetation signal for the current polygon, normalized by stored tree count and broken down by tree buffer.
+                      {activeWorkflowProfile === "agric"
+                        ? "Satellite NDVI, vegetation cover, stressed farm areas, drought-watch cues, and crop-vigor trend for the selected farm block."
+                        : "Satellite vegetation signal for the current polygon, normalized by stored tree count and broken down by tree buffer."}
                     </p>
                   </div>
                   {remoteMonitoringReport?.summary?.signal && (
@@ -12000,12 +12205,12 @@ export default function GreenWork() {
                 {!normalizeMapAreaGeometry(remoteMonitoringDraftGeometry) ? (
                   <div className="green-work-remote-empty-state">
                     <strong>No polygon selected yet</strong>
-                    <p>Choose an existing planting polygon or draw one on the map, then run analysis.</p>
+                    <p>{activeWorkflowProfile === "agric" ? "Choose a mapped farm boundary or draw a farm block on the map, then run analysis." : "Choose an existing planting polygon or draw one on the map, then run analysis."}</p>
                   </div>
                 ) : remoteMonitoringLoading ? (
                   <div className="green-work-remote-progress-panel is-report-panel">
                     <div className="green-work-remote-progress-head">
-                      <strong>Calculating vegetation summary</strong>
+                      <strong>{activeWorkflowProfile === "agric" ? "Calculating farm-health summary" : "Calculating vegetation summary"}</strong>
                       <span>{Math.max(8, Math.min(100, Math.round(remoteMonitoringProgressPct || 0)))}%</span>
                     </div>
                     <div className="green-work-remote-progress-bar" aria-hidden="true">
@@ -12029,14 +12234,25 @@ export default function GreenWork() {
                   </div>
                 ) : !remoteMonitoringReport ? (
                   <div className="green-work-remote-empty-state">
-                    <strong>No monitoring result yet</strong>
-                    <p>Run vegetation analysis to load polygon metrics and per-tree satellite proxy values.</p>
+                    <strong>{activeWorkflowProfile === "agric" ? "No farm-health result yet" : "No monitoring result yet"}</strong>
+                    <p>{activeWorkflowProfile === "agric" ? "Run farm-health analysis to load NDVI, vegetation cover, drought watch, and per-plot proxy values." : "Run vegetation analysis to load polygon metrics and per-tree satellite proxy values."}</p>
                   </div>
                 ) : (
                   <>
                     <p className="green-work-note green-work-remote-summary-note">
                       {remoteMonitoringReport.summary.signal_message}
                     </p>
+                    {activeWorkflowProfile === "agric" && remoteMonitoringAgricInsights.length ? (
+                      <div className="green-work-remote-insight-grid">
+                        {remoteMonitoringAgricInsights.map((item) => (
+                          <div key={`remote-insight-${item.title}`} className={`green-work-remote-insight-card is-${item.tone}`}>
+                            <span>{item.title}</span>
+                            <strong>{item.value}</strong>
+                            <small>{item.note}</small>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                     {remoteMonitoringHealthCounts.length ? (
                       <div className="green-work-remote-health-counts">
                         {remoteMonitoringHealthCounts.map((item) => (
@@ -12049,7 +12265,7 @@ export default function GreenWork() {
                     ) : null}
                     {remoteMonitoringTopRiskTrees.length ? (
                       <div className="green-work-remote-risk-strip">
-                        <strong>Priority trees</strong>
+                        <strong>{activeWorkflowProfile === "agric" ? "Priority farms" : "Priority trees"}</strong>
                         <div className="green-work-remote-risk-list">
                           {remoteMonitoringTopRiskTrees.map((tree) => (
                             <button
@@ -12069,8 +12285,8 @@ export default function GreenWork() {
 
                     <div className="green-work-remote-tree-detail-wrap">
                       <div className="green-work-remote-tree-table-head">
-                        <strong>Tree vegetation detail</strong>
-                        <span>{remoteMonitoringSortedTrees.length || 0} tree row(s)</span>
+                        <strong>{activeWorkflowProfile === "agric" ? "Farm health detail" : "Tree vegetation detail"}</strong>
+                        <span>{remoteMonitoringSortedTrees.length || 0} {activeWorkflowProfile === "agric" ? "plot row(s)" : "tree row(s)"}</span>
                       </div>
                       {remoteMonitoringSortedTrees.length ? (
                         <div className="green-work-remote-tree-detail-list">
@@ -12096,14 +12312,16 @@ export default function GreenWork() {
                                   </span>
                                 </div>
                                 <div className="green-work-remote-tree-card-meta">
-                                  <span>{tree.species || "-"}</span>
+                                  <span>{activeWorkflowProfile === "agric" ? getPlotCommodityLabel(treeById.get(Number(tree.tree_id || 0)) || ({ species: tree.species } as Tree)) : tree.species || "-"}</span>
                                   <span>{treeStatusLabel(tree.status)}</span>
                                   {tree.inventory_tree_count && tree.inventory_tree_count > 1 ? (
-                                    <span>{tree.inventory_tree_count} trees</span>
+                                    <span>{tree.inventory_tree_count} {activeWorkflowProfile === "agric" ? "plots" : "trees"}</span>
                                   ) : null}
                                 </div>
                                 <p className="green-work-remote-tree-card-note">
-                                  {tree.satellite_health_note || "Satellite vegetation proxy not available for this tree yet."}
+                                  {tree.satellite_health_note || (activeWorkflowProfile === "agric"
+                                    ? "Satellite farm-health signal is not available for this plot yet."
+                                    : "Satellite vegetation proxy not available for this tree yet.")}
                                 </p>
                                 <div className="green-work-remote-tree-card-metrics">
                                   <div>
@@ -12119,7 +12337,7 @@ export default function GreenWork() {
                                       setRemoteMonitoringActionTreeId((prev) => (Number(prev || 0) === treeId ? null : treeId))
                                     }
                                   >
-                                    {actionsOpen ? "Hide Actions" : "Tree Actions"}
+                                    {actionsOpen ? "Hide Actions" : activeWorkflowProfile === "agric" ? "Farm Actions" : "Tree Actions"}
                                   </button>
                                   {actionsOpen ? (
                                     <div className="green-work-context-menu green-work-remote-inline-menu">
@@ -12130,10 +12348,15 @@ export default function GreenWork() {
                                         type="button"
                                         onClick={() => {
                                           setRemoteMonitoringActionTreeId(null);
+                                          if (activeWorkflowProfile === "agric") {
+                                            openForm("support_visit_assign");
+                                            openCustodianSupervisionAssign(Number(treeById.get(treeId)?.custodian_id || 0), "support_visit");
+                                            return;
+                                          }
                                           openAssignTaskForTree(treeId, "inspection");
                                         }}
                                       >
-                                        Assign Maintenance
+                                        {activeWorkflowProfile === "agric" ? "Assign Support Visit" : "Assign Maintenance"}
                                       </button>
                                     </div>
                                   ) : null}
@@ -12144,29 +12367,29 @@ export default function GreenWork() {
                         </div>
                       ) : (
                         <div className="green-work-remote-empty-state">
-                          <strong>No stored trees inside this polygon</strong>
-                          <p>Choose another polygon or adjust the block so LandCheck trees fall inside it.</p>
+                          <strong>{activeWorkflowProfile === "agric" ? "No mapped plots inside this block" : "No stored trees inside this polygon"}</strong>
+                          <p>{activeWorkflowProfile === "agric" ? "Choose another polygon or adjust the block so mapped farm anchors fall inside it." : "Choose another polygon or adjust the block so LandCheck trees fall inside it."}</p>
                         </div>
                       )}
                     </div>
                     <div className="green-work-remote-summary-grid">
                       <div className="green-work-remote-metric">
-                        <span>Trees In Polygon</span>
+                        <span>{activeWorkflowProfile === "agric" ? "Plots In Block" : "Trees In Polygon"}</span>
                         <strong>{remoteMonitoringReport.area.tree_count || 0}</strong>
-                        <small>{remoteMonitoringReport.area.tree_record_count || 0} tree rows stored</small>
+                        <small>{remoteMonitoringReport.area.tree_record_count || 0} {activeWorkflowProfile === "agric" ? "plot rows" : "tree rows"} stored</small>
                       </div>
                       <div className="green-work-remote-metric">
-                        <span>Vegetation Signal Area</span>
+                        <span>{activeWorkflowProfile === "agric" ? "Healthy Vegetation Area" : "Vegetation Signal Area"}</span>
                         <strong>{remoteMonitoringReport.summary.vegetation_area_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_sqm || 0} sqm</strong>
                         <small>{remoteMonitoringReport.summary.vegetation_coverage_pct ?? 0}% of polygon</small>
                       </div>
                       <div className="green-work-remote-metric">
-                        <span>Signal Per Tree</span>
+                        <span>{activeWorkflowProfile === "agric" ? "Vegetation sqm / Plot" : "Signal Per Tree"}</span>
                         <strong>{remoteMonitoringReport.summary.vegetation_area_per_tree_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_per_tree_sqm || 0} sqm</strong>
-                        <small>Uses stored trees inside polygon as denominator</small>
+                        <small>{activeWorkflowProfile === "agric" ? "Uses mapped plots inside the selected block as denominator" : "Uses stored trees inside polygon as denominator"}</small>
                       </div>
                       <div className="green-work-remote-metric">
-                        <span>Mean NDVI</span>
+                        <span>{activeWorkflowProfile === "agric" ? "Crop Vigor (NDVI)" : "Mean NDVI"}</span>
                         <strong>{remoteMonitoringReport.summary.mean_ndvi?.toFixed?.(3) || remoteMonitoringReport.summary.mean_ndvi || "-"}</strong>
                         <small>Latest composite window across the polygon</small>
                       </div>
@@ -12176,18 +12399,20 @@ export default function GreenWork() {
                         <small>{remoteMonitoringReport.summary.image_count || 0} image(s) used</small>
                       </div>
                       <div className="green-work-remote-metric">
-                        <span>Inventory Mix</span>
-                        <strong>{remoteMonitoringReport.area.new_planting_tree_count || 0} planted</strong>
-                        <small>{remoteMonitoringReport.area.existing_inventory_tree_count || 0} existing inventory</small>
+                        <span>{activeWorkflowProfile === "agric" ? "Block Mix" : "Inventory Mix"}</span>
+                        <strong>{remoteMonitoringReport.area.new_planting_tree_count || 0} {activeWorkflowProfile === "agric" ? "new plots" : "planted"}</strong>
+                        <small>{remoteMonitoringReport.area.existing_inventory_tree_count || 0} {activeWorkflowProfile === "agric" ? "existing plot records" : "existing inventory"}</small>
                       </div>
                     </div>
 
                     {remoteMonitoringReport.health_scale?.bands?.length ? (
                       <div className="green-work-remote-health-scale">
                         <div className="green-work-remote-health-scale-head">
-                          <strong>Satellite health bands</strong>
+                          <strong>{activeWorkflowProfile === "agric" ? "Farm-health signal bands" : "Satellite health bands"}</strong>
                           {remoteMonitoringReport.health_scale?.buffer_meters ? (
-                            <span>{remoteMonitoringReport.health_scale.buffer_meters}m tree buffer</span>
+                            <span>
+                              {remoteMonitoringReport.health_scale.buffer_meters}m {activeWorkflowProfile === "agric" ? "plot-anchor buffer" : "tree buffer"}
+                            </span>
                           ) : null}
                         </div>
                         <div className="green-work-remote-health-scale-list">
@@ -12212,15 +12437,15 @@ export default function GreenWork() {
                             <th>Period</th>
                             <th>Latest Image</th>
                             <th>Mean NDVI</th>
-                            <th>Signal Area</th>
+                            <th>{activeWorkflowProfile === "agric" ? "Healthy Area" : "Signal Area"}</th>
                             <th>Cover %</th>
-                            <th>Signal sqm / Tree</th>
+                            <th>{activeWorkflowProfile === "agric" ? "Vigor sqm / Plot" : "Signal sqm / Tree"}</th>
                           </tr>
                         </thead>
                         <tbody>
                           {remoteMonitoringReport.series.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="green-work-live-empty">No monthly monitoring rows available yet.</td>
+                              <td colSpan={6} className="green-work-live-empty">{activeWorkflowProfile === "agric" ? "No monthly farm-health rows available yet." : "No monthly monitoring rows available yet."}</td>
                             </tr>
                           ) : (
                             remoteMonitoringReport.series.map((row) => (
