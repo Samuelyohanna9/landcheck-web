@@ -484,7 +484,7 @@ const buildAssignmentAreaFeatureCollection = (
   } as any;
 };
 
-const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null, loading = false) => {
+const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null, loading = false, workflowMode: "green" | "agric" = "green") => {
   const tree = detail?.tree || {};
   const status = String(tree.status || base.status || "unknown");
   const species = String(tree.species || base.species || "-");
@@ -503,16 +503,61 @@ const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null,
   const taskPhoto = (detail?.tasks || []).find((task: any) => String(task?.photo_url || "").trim())?.photo_url;
   const visitPhoto = (detail?.visits || []).find((visit: any) => String(visit?.photo_url || "").trim())?.photo_url;
   const hasPhoto = Boolean(tree.photo_url || base.photo_url || taskPhoto || visitPhoto);
+  const plotCode = String(tree.record_profile_data?.plot_code || base.record_profile_data?.plot_code || "").trim();
+  const plotName = String(tree.record_profile_data?.plot_name || base.record_profile_data?.plot_name || "").trim();
+  const plotLabel = plotCode || plotName || `Plot #${base.project_tree_no || base.id}`;
+  const cropLabel = String(tree.record_profile_data?.commodity || base.record_profile_data?.commodity || tree.species || base.species || "-");
+  const plotArea = formatArea(
+    Number.isFinite(Number(tree.existing_area_sqm)) ? Number(tree.existing_area_sqm) : base.existing_area_sqm,
+    Number.isFinite(Number(tree.record_profile_data?.area_hectares))
+      ? Number(tree.record_profile_data?.area_hectares)
+      : Number.isFinite(Number(base.record_profile_data?.area_hectares))
+        ? Number(base.record_profile_data?.area_hectares)
+        : null,
+  );
+  const seasonLabel = [tree.record_profile_data?.season_name || base.record_profile_data?.season_name, tree.record_profile_data?.season_year || base.record_profile_data?.season_year]
+    .filter(Boolean)
+    .join(" ");
+  const irrigationLabel = String(tree.record_profile_data?.irrigation_type || base.record_profile_data?.irrigation_type || "-");
+  const stageLabel = String(tree.record_profile_data?.production_stage || base.record_profile_data?.production_stage || "-");
+  const boundaryLabel = String(tree.record_profile_data?.boundary_capture_method || base.record_profile_data?.boundary_capture_method || (base.has_area ? "polygon_map" : "point"));
 
   const recentTasks = (detail?.tasks || [])
     .slice(0, 3)
     .map((task: any) => {
-      const taskType = escapeHtml(task.task_type || "task");
+      const taskType = escapeHtml(statusLabel(task.task_type || "task"));
       const taskStatus = escapeHtml(statusLabel(task.status || "pending"));
       const assignee = escapeHtml(task.assignee_name || "-");
       return `<li>${taskType} (${taskStatus}) - ${assignee}</li>`;
     })
     .join("");
+
+  if (workflowMode === "agric") {
+    return `
+      <div class="tree-popup-card">
+        <h4>${escapeHtml(plotLabel)}</h4>
+        <p><strong>Farmer:</strong> ${escapeHtml(custodianName || "-")}</p>
+        <p><strong>Crop:</strong> ${escapeHtml(cropLabel)}</p>
+        <p><strong>Area:</strong> ${escapeHtml(plotArea)}</p>
+        <p><strong>Status:</strong> ${escapeHtml(statusLabel(status))}</p>
+        <p><strong>Boundary:</strong> ${escapeHtml(statusLabel(boundaryLabel))}</p>
+        <p><strong>Season:</strong> ${escapeHtml(seasonLabel || "-")}</p>
+        <p><strong>Irrigation:</strong> ${escapeHtml(statusLabel(irrigationLabel))}</p>
+        <p><strong>Stage:</strong> ${escapeHtml(statusLabel(stageLabel))}</p>
+        <p><strong>Observed:</strong> ${escapeHtml(formatDate(plantedDate))}</p>
+        <p><strong>Recorded by:</strong> ${escapeHtml(plantedBy)}</p>
+        ${notes ? `<p><strong>Notes:</strong> ${escapeHtml(notes)}</p>` : ""}
+        <p><strong>Photo:</strong> ${hasPhoto ? "Available" : "None"}</p>
+        ${
+          loading
+            ? `<p class="tree-popup-muted">Loading field activity...</p>`
+            : `<p><strong>Field activity:</strong> ${maintenance.total} total, ${maintenance.done} done, ${maintenance.pending} pending, ${maintenance.overdue} overdue</p>
+               <p><strong>Linked visits:</strong> ${visitsCount}</p>
+               ${recentTasks ? `<ul>${recentTasks}</ul>` : `<p class="tree-popup-muted">No field activity records yet.</p>`}`
+        }
+      </div>
+    `;
+  }
 
   return `
     <div class="tree-popup-card">
@@ -1021,17 +1066,17 @@ export default function TreeMap({
 
             popupRef.current
               .setLngLat(lngLat)
-              .setHTML(buildPopupHtml(props, detail, !detail))
+              .setHTML(buildPopupHtml(props, detail, !detail, workflowModeRef.current))
               .addTo(map);
 
             getTreeDetail(props.id)
               .then((loadedDetail) => {
                 if (currentTreeRef.current !== props.id || !popupRef.current) return;
-                popupRef.current.setHTML(buildPopupHtml(props, loadedDetail, false));
+                popupRef.current.setHTML(buildPopupHtml(props, loadedDetail, false, workflowModeRef.current));
               })
               .catch(() => {
                 if (currentTreeRef.current !== props.id || !popupRef.current) return;
-                popupRef.current.setHTML(buildPopupHtml(props, null, false));
+                popupRef.current.setHTML(buildPopupHtml(props, null, false, workflowModeRef.current));
               });
           };
 
