@@ -387,6 +387,9 @@ type WorkForm =
   | "live_table"
   | "verra_reports"
   | "custodian_hub"
+  | "farmer_live"
+  | "field_capture_assign"
+  | "support_visit_assign"
   | "existing_tree_intake"
   ;
 
@@ -401,6 +404,7 @@ const AGRIC_HIDDEN_PROJECT_FORMS: WorkForm[] = [
 
 type StaffMenuState = { user: GreenUser; x: number; y: number } | null;
 type DrawerFrame = { top: number; left: number; width: number; height: number };
+type AgricVisitAssignmentMode = "field_capture" | "support_visit";
 type WorkOrderMultiAssignOverride = {
   target_trees: string;
   due_date: string;
@@ -738,7 +742,9 @@ const isHiddenSupportPlaceholderTree = (tree?: Pick<Tree, "record_profile_data">
   if (!tree?.record_profile_data) return false;
   if (tree.record_profile_data.hidden_from_records === true) return true;
   if (tree.record_profile_data.support_placeholder === true) return true;
-  return normalizeName(tree.record_profile_data.placeholder_reason) === "support_visit_before_plot_capture";
+  return ["support_visit_before_plot_capture", "field_capture_before_plot_capture"].includes(
+    normalizeName(tree.record_profile_data.placeholder_reason),
+  );
 };
 const normalizeSpeciesAllocations = (
   value: unknown,
@@ -1422,6 +1428,24 @@ const renderActionIcon = (form: WorkForm) => {
           <path d="M12 4.6c2.5 2.1 4.9 3.2 7.2 3.5 0 5.7-2.3 9.6-7.2 11.8-4.9-2.2-7.2-6.1-7.2-11.8 2.3-.3 4.7-1.4 7.2-3.5z" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" />
           <path d="M12.2 15.6c1.7-1 2.7-2.5 3.1-4.5-1.7.2-3 .8-4 1.8-.8.8-1.3 1.8-1.5 3 .9-.1 1.7-.3 2.4-.8z" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" strokeLinecap="round" />
           <path d="M11.4 12c-.5-1.1-1.4-1.9-2.7-2.3.2 1.2.7 2.1 1.4 2.8.4.4.9.7 1.4.9" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" strokeLinecap="round" />
+        </svg>
+      );
+    case "farmer_live":
+      return renderActionIcon("live_table");
+    case "field_capture_assign":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M6 4.5h12v15H6z" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" />
+          <path d="M9 9h6M9 12.5h6M12 16.5v-4" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" />
+          <path d="M10.2 14.7 12 16.5l1.8-1.8" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case "support_visit_assign":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="9" cy="8" r="2.8" fill="none" stroke="currentColor" strokeWidth="1.45" />
+          <path d="M4.2 18c.9-2.4 2.8-3.7 5.8-3.7S14.9 15.6 15.8 18" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" />
+          <path d="M16.2 7.4h4.3M18.35 5.25v4.3" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" />
         </svg>
       );
     case "existing_tree_intake":
@@ -2396,6 +2420,7 @@ export default function GreenWork() {
     visits_to_assign: number;
     due_date: string;
     priority: string;
+    assignment_mode: AgricVisitAssignmentMode | null;
   } | null>(null);
   const [projectSetupExpanded, setProjectSetupExpanded] = useState(false);
   const [custodianOptionsExpanded, setCustodianOptionsExpanded] = useState(false);
@@ -3791,15 +3816,22 @@ export default function GreenWork() {
     }
   };
 
-  const openCustodianSupervisionAssign = (custodianId: number) => {
+  const openCustodianSupervisionAssign = (
+    custodianId: number,
+    preferredMode: AgricVisitAssignmentMode | null = null,
+  ) => {
     if (workPartnerOrgPaused) {
       toast.error("Organization is paused. Custodian operations are disabled. PDF export only.");
       return;
     }
+    const hasMappedPlots = visibleProjectTrees.some((tree) => Number(tree.custodian_id || 0) === Number(custodianId));
+    const assignmentMode =
+      preferredMode ||
+      (activeWorkflowProfile === "agric" && !hasMappedPlots ? "field_capture" : "support_visit");
     const allocationRows = distributionAllocations
       .filter((row) => Number(row.custodian_id) === Number(custodianId))
       .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
-    if (allocationRows.length === 0) {
+    if (assignmentMode === "support_visit" && allocationRows.length === 0) {
       toast.error(
         activeWorkflowProfile === "agric"
           ? "No support allocation found for this farmer yet."
@@ -3810,18 +3842,20 @@ export default function GreenWork() {
     const preferred =
       allocationRows.find((row) => Number(row.supervision_remaining || 0) > 0) ||
       allocationRows.find((row) => Number(row.supervision_target || 0) > 0) ||
-      allocationRows[0];
+      allocationRows[0] ||
+      null;
     const suggestedAssignee =
       users.find((user) => normalizeName(user.role) === "field_officer") ||
       users.find((user) => normalizeName(user.role) === "supervisor") ||
       users[0];
     setCustodianAssignDraft({
       custodian_id: Number(custodianId),
-      allocation_id: Number(preferred.id || 0),
+      allocation_id: Number(preferred?.id || 0),
       assignee_name: suggestedAssignee?.full_name || "",
       visits_to_assign: 1,
       due_date: "",
       priority: "normal",
+      assignment_mode: assignmentMode,
     });
   };
 
@@ -3831,13 +3865,20 @@ export default function GreenWork() {
       return;
     }
     if (!activeProjectId || !custodianAssignDraft) return;
+    const assignmentMode = custodianAssignDraft.assignment_mode || "support_visit";
     const allocationId = Number(custodianAssignDraft.allocation_id || 0);
-    if (!allocationId) {
+    if (assignmentMode === "support_visit" && !allocationId) {
       toast.error("Choose an allocation first.");
       return;
     }
     if (!String(custodianAssignDraft.assignee_name || "").trim()) {
-      toast.error(activeWorkflowProfile === "agric" ? "Select a support visit assignee." : "Select a supervision assignee.");
+      toast.error(
+        assignmentMode === "field_capture"
+          ? "Select a field capture assignee."
+          : activeWorkflowProfile === "agric"
+            ? "Select a support visit assignee."
+            : "Select a supervision assignee.",
+      );
       return;
     }
     if (Number(custodianAssignDraft.visits_to_assign || 0) <= 0) {
@@ -3845,18 +3886,26 @@ export default function GreenWork() {
       return;
     }
     try {
-      const res = await api.post(`/green/distribution-allocations/${allocationId}/assign-supervision`, {
-        assignee_name: custodianAssignDraft.assignee_name,
-        visits_to_assign: Number(custodianAssignDraft.visits_to_assign || 1),
-        due_date: custodianAssignDraft.due_date || null,
-        priority: custodianAssignDraft.priority || "normal",
-        actor_name: "supervisor",
-      });
+      const res =
+        assignmentMode === "field_capture"
+          ? await api.post(`/green/projects/${activeProjectId}/custodians/${custodianAssignDraft.custodian_id}/assign-field-capture`, {
+              assignee_name: custodianAssignDraft.assignee_name,
+              due_date: custodianAssignDraft.due_date || null,
+              priority: custodianAssignDraft.priority || "normal",
+              actor_name: "supervisor",
+            })
+          : await api.post(`/green/distribution-allocations/${allocationId}/assign-supervision`, {
+              assignee_name: custodianAssignDraft.assignee_name,
+              visits_to_assign: Number(custodianAssignDraft.visits_to_assign || 1),
+              due_date: custodianAssignDraft.due_date || null,
+              priority: custodianAssignDraft.priority || "normal",
+              actor_name: "supervisor",
+            });
       await Promise.all([loadProjectData(activeProjectId), loadCommunityData(activeProjectId)]);
       const createdCount = Number(res?.data?.created_count || 0);
-      const assignmentMode = String(res?.data?.assignment_mode || "");
+      const responseAssignmentMode = String(res?.data?.assignment_mode || "");
       toast.success(
-        assignmentMode === "field_capture"
+        responseAssignmentMode === "field_capture"
           ? createdCount > 0
             ? `Assigned ${createdCount} first field capture task${createdCount === 1 ? "" : "s"}.`
             : "No new field capture tasks assigned."
@@ -3868,8 +3917,16 @@ export default function GreenWork() {
               ? "No new support visits assigned."
               : "No new supervision tasks assigned.",
       );
+      setCustodianAssignDraft(null);
     } catch (error: any) {
-      toast.error(error?.response?.data?.detail || (activeWorkflowProfile === "agric" ? "Failed to assign support visit" : "Failed to assign supervision"));
+      toast.error(
+        error?.response?.data?.detail ||
+          (assignmentMode === "field_capture"
+            ? "Failed to assign field capture."
+            : activeWorkflowProfile === "agric"
+              ? "Failed to assign support visit"
+              : "Failed to assign supervision"),
+      );
     }
   };
 
@@ -6501,7 +6558,10 @@ export default function GreenWork() {
   const activeProjectActions: Array<{ form: WorkForm; title: string; note: string; isNew?: boolean }> =
     actionWorkflowProfile === "agric"
       ? [
-          { form: "custodian_hub", title: actionWorkflowLabels.registryTitle, note: "Farmer onboarding + support profile" },
+          { form: "farmer_live", title: "Farmer Live Table", note: "Live farmer activity + results" },
+          { form: "custodian_hub", title: actionWorkflowLabels.registryTitle, note: "Farmer onboarding + support setup" },
+          { form: "field_capture_assign", title: "Field Capture", note: "Assign first plot capture to staff" },
+          { form: "support_visit_assign", title: "Support Visits", note: "Assign follow-up field visits" },
           { form: "existing_tree_intake", title: "Plot Records", note: "Mapped plots + farm data" },
           { form: "map_view", title: "Map View", note: "Plots + boundaries" },
           { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
@@ -6855,6 +6915,9 @@ export default function GreenWork() {
       })
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [allMaintenanceAssignRows, formatProjectTreeLabelById, trees]);
+  const agricFarmerLiveMode = Boolean(activeProjectId && activeWorkflowProfile === "agric" && activeForm === "farmer_live");
+  const agricFieldCaptureMode = Boolean(activeProjectId && activeWorkflowProfile === "agric" && activeForm === "field_capture_assign");
+  const agricSupportVisitMode = Boolean(activeProjectId && activeWorkflowProfile === "agric" && activeForm === "support_visit_assign");
   const custodianLiveRows = useMemo(() => {
     const allocationMap = new Map<
       number,
@@ -6868,6 +6931,14 @@ export default function GreenWork() {
         supervisionDone: number;
         supervisionLive: number;
         supervisionRemaining: number;
+      }
+    >();
+    const fieldCaptureMap = new Map<
+      number,
+      {
+        assigned: number;
+        done: number;
+        live: number;
       }
     >();
     distributionAllocations.forEach((row) => {
@@ -6898,6 +6969,20 @@ export default function GreenWork() {
       }
       allocationMap.set(custodianId, existing);
     });
+    tasks.forEach((task) => {
+      if (normalizeName(task.task_type) !== "field_capture") return;
+      const custodianId = Number(task.custodian_id || 0);
+      if (!custodianId) return;
+      const existing = fieldCaptureMap.get(custodianId) || {
+        assigned: 0,
+        done: 0,
+        live: 0,
+      };
+      existing.assigned += 1;
+      if (isCompleteStatus(task.status, task.review_state)) existing.done += 1;
+      else existing.live += 1;
+      fieldCaptureMap.set(custodianId, existing);
+    });
 
     const treeMap = new Map<number, { total: number; existing: number; healthy: number }>();
     visibleProjectTrees.forEach((tree) => {
@@ -6925,6 +7010,11 @@ export default function GreenWork() {
           supervisionLive: 0,
           supervisionRemaining: 0,
         };
+        const fieldCapture = fieldCaptureMap.get(Number(custodian.id)) || {
+          assigned: 0,
+          done: 0,
+          live: 0,
+        };
         const tree = treeMap.get(Number(custodian.id)) || { total: 0, existing: 0, healthy: 0 };
         const healthyRate = tree.total > 0 ? (tree.healthy / tree.total) * 100 : null;
         const defaultAllocation = distributionAllocations
@@ -6949,6 +7039,10 @@ export default function GreenWork() {
           supervisionDone: alloc.supervisionDone,
           supervisionLive: alloc.supervisionLive,
           supervisionRemaining: alloc.supervisionRemaining,
+          fieldCaptureAssigned: fieldCapture.assigned,
+          fieldCaptureDone: fieldCapture.done,
+          fieldCaptureLive: fieldCapture.live,
+          hasOpenFieldCapture: fieldCapture.live > 0,
           defaultAllocationId: defaultAllocation ? Number(defaultAllocation.id || 0) : null,
         };
       })
@@ -6957,7 +7051,61 @@ export default function GreenWork() {
         if (b.treeTotal !== a.treeTotal) return b.treeTotal - a.treeTotal;
         return String(a.custodian.name || "").localeCompare(String(b.custodian.name || ""));
       });
-  }, [custodians, distributionAllocations, visibleProjectTrees]);
+  }, [custodians, distributionAllocations, tasks, visibleProjectTrees]);
+  const activeAgricAssignmentMode: AgricVisitAssignmentMode | null = agricFieldCaptureMode
+    ? "field_capture"
+    : agricSupportVisitMode
+      ? "support_visit"
+      : null;
+  const displayedCustodianLiveRows = useMemo(() => {
+    if (activeWorkflowProfile !== "agric") return custodianLiveRows;
+    if (agricFieldCaptureMode) {
+      return custodianLiveRows.filter((row) => Number(row.treeTotal || 0) <= 0);
+    }
+    if (agricSupportVisitMode) {
+      return custodianLiveRows.filter(
+        (row) =>
+          Number(row.treeTotal || 0) > 0 &&
+          (Number(row.allocations || 0) > 0 || Number(row.supervisionTarget || 0) > 0),
+      );
+    }
+    return custodianLiveRows;
+  }, [activeWorkflowProfile, agricFieldCaptureMode, agricSupportVisitMode, custodianLiveRows]);
+  const displayedCustodianLiveSummary = useMemo(() => {
+    const totalRows = displayedCustodianLiveRows.length;
+    const verified = displayedCustodianLiveRows.filter(
+      (row) => normalizeName(row.custodian.verification_status) === "verified",
+    ).length;
+    const units = displayedCustodianLiveRows.reduce((sum, row) => sum + Number(row.seedlings || 0), 0);
+    if (activeWorkflowProfile !== "agric") {
+      return {
+        totalRows,
+        verified,
+        units,
+        visitDone: displayedCustodianLiveRows.reduce((sum, row) => sum + Number(row.supervisionDone || 0), 0),
+        visitTarget: displayedCustodianLiveRows.reduce((sum, row) => sum + Number(row.supervisionTarget || 0), 0),
+        visitLive: displayedCustodianLiveRows.reduce((sum, row) => sum + Number(row.supervisionLive || 0), 0),
+      };
+    }
+    if (agricFieldCaptureMode) {
+      return {
+        totalRows,
+        verified,
+        units,
+        visitDone: displayedCustodianLiveRows.reduce((sum, row) => sum + Number(row.fieldCaptureDone || 0), 0),
+        visitTarget: displayedCustodianLiveRows.length,
+        visitLive: displayedCustodianLiveRows.reduce((sum, row) => sum + Number(row.fieldCaptureLive || 0), 0),
+      };
+    }
+    return {
+      totalRows,
+      verified,
+      units,
+      visitDone: displayedCustodianLiveRows.reduce((sum, row) => sum + Number(row.supervisionDone || 0), 0),
+      visitTarget: displayedCustodianLiveRows.reduce((sum, row) => sum + Number(row.supervisionTarget || 0), 0),
+      visitLive: displayedCustodianLiveRows.reduce((sum, row) => sum + Number(row.supervisionLive || 0), 0),
+    };
+  }, [activeWorkflowProfile, agricFieldCaptureMode, displayedCustodianLiveRows]);
   const custodianSummary = useMemo(() => {
     const totalAllocated = distributionAllocations.reduce(
       (sum, row) => sum + Number(row.quantity_allocated || 0),
@@ -7040,6 +7188,10 @@ export default function GreenWork() {
     activeForm !== null &&
     activeForm !== "overview" &&
     activeForm !== "live_table" &&
+    activeForm !== "farmer_live" &&
+    activeForm !== "field_capture_assign" &&
+    activeForm !== "support_visit_assign" &&
+    !(activeWorkflowProfile === "agric" && activeForm === "custodian_hub") &&
     activeForm !== "verra_reports" &&
     activeForm !== "map_view" &&
     activeForm !== "remote_monitoring";
@@ -7056,6 +7208,9 @@ export default function GreenWork() {
     mapViewMode ||
     remoteMonitoringMode ||
     liveTableMode ||
+    agricFarmerLiveMode ||
+    agricFieldCaptureMode ||
+    agricSupportVisitMode ||
     verraMode ||
     activeForm === "existing_tree_intake" ||
     activeForm === "custodian_hub" ||
@@ -7287,6 +7442,14 @@ export default function GreenWork() {
       setAgricCustodianHubTab("farmer_form");
     }
   }, [activeWorkflowProfile]);
+
+  useEffect(() => {
+    if (activeWorkflowProfile !== "agric") return;
+    if (activeForm !== "custodian_hub") return;
+    if (agricCustodianHubTab === "farmer_live") {
+      setAgricCustodianHubTab("farmer_form");
+    }
+  }, [activeForm, activeWorkflowProfile, agricCustodianHubTab]);
 
   useEffect(() => {
     if (activeWorkflowProfile !== "agric") return;
@@ -7644,13 +7807,46 @@ export default function GreenWork() {
                 </button>
               </>
             ) : null}
-            <button
-              className={`green-work-menu-item ${activeForm === "custodian_hub" ? "active" : ""}`}
-              type="button"
-              onClick={() => openForm("custodian_hub")}
-            >
-              {activeWorkflowLabels.registryTitle}
-            </button>
+            {activeWorkflowProfile === "agric" ? (
+              <>
+                <button
+                  className={`green-work-menu-item ${activeForm === "farmer_live" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => openForm("farmer_live")}
+                >
+                  Farmer Live Table
+                </button>
+                <button
+                  className={`green-work-menu-item ${activeForm === "custodian_hub" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => openForm("custodian_hub")}
+                >
+                  {activeWorkflowLabels.registryTitle}
+                </button>
+                <button
+                  className={`green-work-menu-item ${activeForm === "field_capture_assign" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => openForm("field_capture_assign")}
+                >
+                  Field Capture
+                </button>
+                <button
+                  className={`green-work-menu-item ${activeForm === "support_visit_assign" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => openForm("support_visit_assign")}
+                >
+                  Support Visits
+                </button>
+              </>
+            ) : (
+              <button
+                className={`green-work-menu-item ${activeForm === "custodian_hub" ? "active" : ""}`}
+                type="button"
+                onClick={() => openForm("custodian_hub")}
+              >
+                {activeWorkflowLabels.registryTitle}
+              </button>
+            )}
             <button
               className={`green-work-menu-item ${activeForm === "existing_tree_intake" ? "active" : ""}`}
               type="button"
@@ -8193,13 +8389,6 @@ export default function GreenWork() {
                         onClick={() => setAgricCustodianHubTab("farmer_form")}
                       >
                         Farmer Form
-                      </button>
-                      <button
-                        type="button"
-                        className={`green-work-hub-tab ${agricCustodianHubTab === "farmer_live" ? "is-active" : ""}`}
-                        onClick={() => setAgricCustodianHubTab("farmer_live")}
-                      >
-                        Farmer Live Table
                       </button>
                       <button
                         type="button"
@@ -10402,7 +10591,7 @@ export default function GreenWork() {
           )}
         </aside>
 
-        <section className={`green-work-main ${overviewMode || liveTableMode || verraMode || remoteMonitoringMode ? "overview-mode" : "single-mode"} ${mapViewMode ? "map-view-mode" : ""}`}>
+        <section className={`green-work-main ${overviewMode || liveTableMode || verraMode || remoteMonitoringMode || agricFarmerLiveMode || agricFieldCaptureMode || agricSupportVisitMode ? "overview-mode" : "single-mode"} ${mapViewMode ? "map-view-mode" : ""}`}>
           {activeProjectId && activeForm === "overview" && (
             <div className="green-work-card green-work-overview-card">
               <div className="green-work-row">
@@ -11361,10 +11550,23 @@ export default function GreenWork() {
             </div>
           )}
 
-          {activeProjectId && activeForm === "custodian_hub" && (activeWorkflowProfile !== "agric" || agricCustodianHubTab === "farmer_live") && (
+          {activeProjectId &&
+            (activeForm === "live_table" ||
+              (activeWorkflowProfile !== "agric" && activeForm === "custodian_hub") ||
+              agricFarmerLiveMode ||
+              agricFieldCaptureMode ||
+              agricSupportVisitMode) && (
             <div className="green-work-card">
               <div className="green-work-row">
-                <h3>{activeWorkflowProfile === "agric" ? "Farmer Live Results Table" : "Custodian Live Results Table"}</h3>
+                <h3>
+                  {activeWorkflowProfile === "agric"
+                    ? agricFieldCaptureMode
+                      ? "Field Capture Assignment Table"
+                      : agricSupportVisitMode
+                        ? "Support Visit Assignment Table"
+                        : "Farmer Live Results Table"
+                    : "Custodian Live Results Table"}
+                </h3>
                 <div className="work-actions">
                   <button type="button" onClick={() => void Promise.all([loadProjectData(activeProjectId), loadCommunityData(activeProjectId)])}>
                     Refresh
@@ -11373,17 +11575,35 @@ export default function GreenWork() {
               </div>
               <p className="green-work-chart-context">
                 {activeWorkflowProfile === "agric"
-                  ? "Context: live roll-up by farmer using support allocations, mapped plots, and field follow-up activity in this project."
+                  ? agricFieldCaptureMode
+                    ? "Context: assign first field capture to farmers with no mapped plots yet. These tasks open in Map & Add Plot in the mobile app."
+                    : agricSupportVisitMode
+                      ? "Context: assign follow-up support visits only after plots have been captured and a support allocation exists."
+                      : "Context: live roll-up by farmer using support allocations, mapped plots, and field follow-up activity in this project."
                   : "Context: live roll-up by custodian using allocations + tracked tree statuses in this project."}
               </p>
               <div className="green-work-live-summary">
-                <span className="green-work-live-pill neutral">{activeWorkflowProfile === "agric" ? "Farmers" : "Custodians"}: {custodianLiveRows.length}</span>
-                <span className="green-work-live-pill ok">Verified: {custodianSummary.verifiedCustodians}</span>
-                <span className="green-work-live-pill neutral">{activeWorkflowProfile === "agric" ? "Units Allocated" : "Seedlings Allocated"}: {custodianSummary.allocatedSeedlings}</span>
                 <span className="green-work-live-pill neutral">
-                  {activeWorkflowProfile === "agric" ? "Visits" : "Supervision"}: {custodianSummary.supervisionDone}/{custodianSummary.supervisionTarget} done
+                  {activeWorkflowProfile === "agric" ? "Farmers" : "Custodians"}: {displayedCustodianLiveSummary.totalRows}
                 </span>
-                <span className="green-work-live-pill warning">{activeWorkflowProfile === "agric" ? "Visit Live" : "Supervision Live"}: {custodianSummary.supervisionLive}</span>
+                <span className="green-work-live-pill ok">Verified: {displayedCustodianLiveSummary.verified}</span>
+                <span className="green-work-live-pill neutral">
+                  {activeWorkflowProfile === "agric" ? "Units Allocated" : "Seedlings Allocated"}: {displayedCustodianLiveSummary.units}
+                </span>
+                <span className="green-work-live-pill neutral">
+                  {activeWorkflowProfile === "agric"
+                    ? agricFieldCaptureMode
+                      ? "Field Capture"
+                      : "Visits"
+                    : "Supervision"}: {displayedCustodianLiveSummary.visitDone}/{displayedCustodianLiveSummary.visitTarget} done
+                </span>
+                <span className="green-work-live-pill warning">
+                  {activeWorkflowProfile === "agric"
+                    ? agricFieldCaptureMode
+                      ? "Capture Live"
+                      : "Visit Live"
+                    : "Supervision Live"}: {displayedCustodianLiveSummary.visitLive}
+                </span>
               </div>
               <div className="green-work-live-table-wrap">
                 <table className="green-work-live-table">
@@ -11399,27 +11619,55 @@ export default function GreenWork() {
                       <th>{activeWorkflowProfile === "agric" ? "Plots" : "Trees Tracked"}</th>
                       <th>{activeWorkflowProfile === "agric" ? "Mapped Plots" : "Existing Trees"}</th>
                       <th>{activeWorkflowProfile === "agric" ? "Good %" : "Healthy %"}</th>
-                      <th>{activeWorkflowProfile === "agric" ? "Visit Target" : "Sup Target"}</th>
-                      <th>{activeWorkflowProfile === "agric" ? "Visit Live" : "Sup Live"}</th>
-                      <th>{activeWorkflowProfile === "agric" ? "Visit Done" : "Sup Done"}</th>
+                      <th>
+                        {activeWorkflowProfile === "agric"
+                          ? agricFieldCaptureMode
+                            ? "Capture Target"
+                            : "Visit Target"
+                          : "Sup Target"}
+                      </th>
+                      <th>
+                        {activeWorkflowProfile === "agric"
+                          ? agricFieldCaptureMode
+                            ? "Capture Live"
+                            : "Visit Live"
+                          : "Sup Live"}
+                      </th>
+                      <th>
+                        {activeWorkflowProfile === "agric"
+                          ? agricFieldCaptureMode
+                            ? "Capture Done"
+                            : "Visit Done"
+                          : "Sup Done"}
+                      </th>
                       <th>Last Event</th>
                       <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {custodianLiveRows.length === 0 ? (
+                    {displayedCustodianLiveRows.length === 0 ? (
                       <tr>
                         <td colSpan={15} className="green-work-live-empty">
-                          {activeWorkflowProfile === "agric" ? "No farmer activity records yet." : "No custodian activity records yet."}
+                          {activeWorkflowProfile === "agric"
+                            ? agricFieldCaptureMode
+                              ? "No farmers are waiting for first field capture right now."
+                              : agricSupportVisitMode
+                                ? "No farmers are ready for support-visit assignment yet."
+                                : "No farmer activity records yet."
+                            : "No custodian activity records yet."}
                         </td>
                       </tr>
                     ) : (
-                      custodianLiveRows.map((row) => {
+                      displayedCustodianLiveRows.map((row) => {
                         const rowAllocations = distributionAllocations
                           .filter((item) => Number(item.custodian_id) === Number(row.custodian.id))
                           .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
                         const isAssignOpen = Number(custodianAssignDraft?.custodian_id || 0) === Number(row.custodian.id);
                         const requiresFirstFieldCapture = activeWorkflowProfile === "agric" && Number(row.treeTotal || 0) <= 0;
+                        const hasOpenFieldCapture = Boolean(row.hasOpenFieldCapture);
+                        const targetCount = agricFieldCaptureMode ? 1 : row.supervisionTarget;
+                        const liveCount = agricFieldCaptureMode ? row.fieldCaptureLive : row.supervisionLive;
+                        const doneCount = agricFieldCaptureMode ? row.fieldCaptureDone : row.supervisionDone;
                         const selectedAllocation = rowAllocations.find(
                           (item) => Number(item.id) === Number(custodianAssignDraft?.allocation_id || 0),
                         );
@@ -11430,8 +11678,13 @@ export default function GreenWork() {
                                 <button
                                   type="button"
                                   className="green-work-link-btn"
-                                  onClick={() => openCustodianSupervisionAssign(Number(row.custodian.id))}
-                                  disabled={workPartnerOrgPaused}
+                                  onClick={() =>
+                                    openCustodianSupervisionAssign(
+                                      Number(row.custodian.id),
+                                      activeAgricAssignmentMode || (requiresFirstFieldCapture ? "field_capture" : "support_visit"),
+                                    )
+                                  }
+                                  disabled={workPartnerOrgPaused || (agricFieldCaptureMode && hasOpenFieldCapture)}
                                 >
                                   {row.custodian.name || "-"}
                                 </button>
@@ -11445,51 +11698,67 @@ export default function GreenWork() {
                               <td>{row.treeTotal}</td>
                               <td>{row.existingTreeTotal}</td>
                               <td>{row.healthyRate === null ? "-" : `${row.healthyRate.toFixed(1)}%`}</td>
-                              <td>{row.supervisionTarget}</td>
-                              <td>{row.supervisionLive}</td>
-                              <td>{row.supervisionDone}</td>
+                              <td>{targetCount}</td>
+                              <td>{liveCount}</td>
+                              <td>{doneCount}</td>
                               <td>{formatDateLabel(row.lastEventDate)}</td>
                               <td>
                                 <button
                                   type="button"
-                                className="green-row-btn"
-                                onClick={() => openCustodianSupervisionAssign(Number(row.custodian.id))}
-                                disabled={workPartnerOrgPaused}
-                              >
+                                  className="green-row-btn"
+                                  onClick={() => {
+                                    if (activeWorkflowProfile === "agric" && agricFarmerLiveMode) {
+                                      openForm(requiresFirstFieldCapture ? "field_capture_assign" : "support_visit_assign");
+                                    }
+                                    openCustodianSupervisionAssign(
+                                      Number(row.custodian.id),
+                                      activeAgricAssignmentMode || (requiresFirstFieldCapture ? "field_capture" : "support_visit"),
+                                    );
+                                  }}
+                                  disabled={workPartnerOrgPaused || (agricFieldCaptureMode && hasOpenFieldCapture)}
+                                >
                                   {activeWorkflowProfile === "agric"
-                                    ? requiresFirstFieldCapture
-                                      ? "Assign First Field Capture"
-                                      : "Assign Support Visit"
+                                    ? agricFarmerLiveMode
+                                      ? requiresFirstFieldCapture
+                                        ? "Open Field Capture"
+                                        : "Open Support Visit"
+                                      : agricFieldCaptureMode && hasOpenFieldCapture
+                                        ? "Field Capture Assigned"
+                                      : requiresFirstFieldCapture
+                                        ? "Assign First Field Capture"
+                                        : "Assign Support Visit"
                                     : "Assign Supervision"}
                                 </button>
                               </td>
                             </tr>
-                            {isAssignOpen && (
+                            {isAssignOpen && !agricFarmerLiveMode && (
                               <tr key={`custodian-live-assign-${row.custodian.id}`} className="green-work-live-subrow">
                                 <td colSpan={15}>
                                   <div className="green-work-inline-form">
-                                    <label>
-                                      Allocation
-                                      <select
-                                        value={custodianAssignDraft?.allocation_id || ""}
-                                        onChange={(e) =>
-                                          setCustodianAssignDraft((prev) =>
-                                            prev
-                                              ? { ...prev, allocation_id: Number(e.target.value || 0) }
-                                              : prev,
-                                          )
-                                        }
-                                        disabled={workPartnerOrgPaused}
-                                      >
-                                        {rowAllocations.map((allocation) => (
-                                          <option key={`row-allocation-${allocation.id}`} value={allocation.id}>
-                                            #{allocation.id} | {allocation.event_date || "-"} | {allocation.species || "Mixed"} |
-                                            target {Number(allocation.supervision_target || 0)} | live{" "}
-                                            {Number(allocation.supervision_live || 0)} | done {Number(allocation.supervision_done || 0)}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </label>
+                                    {custodianAssignDraft?.assignment_mode !== "field_capture" ? (
+                                      <label>
+                                        Allocation
+                                        <select
+                                          value={custodianAssignDraft?.allocation_id || ""}
+                                          onChange={(e) =>
+                                            setCustodianAssignDraft((prev) =>
+                                              prev
+                                                ? { ...prev, allocation_id: Number(e.target.value || 0) }
+                                                : prev,
+                                            )
+                                          }
+                                          disabled={workPartnerOrgPaused}
+                                        >
+                                          {rowAllocations.map((allocation) => (
+                                            <option key={`row-allocation-${allocation.id}`} value={allocation.id}>
+                                              #{allocation.id} | {allocation.event_date || "-"} | {allocation.species || "Mixed"} |
+                                              target {Number(allocation.supervision_target || 0)} | live{" "}
+                                              {Number(allocation.supervision_live || 0)} | done {Number(allocation.supervision_done || 0)}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </label>
+                                    ) : null}
                                     <label>
                                       Assign To
                                       <select
@@ -11510,7 +11779,7 @@ export default function GreenWork() {
                                       </select>
                                     </label>
                                     <label>
-                                      {requiresFirstFieldCapture ? "Field Capture Tasks" : "Visits To Assign"}
+                                      {custodianAssignDraft?.assignment_mode === "field_capture" ? "Field Capture Tasks" : "Visits To Assign"}
                                       <input
                                         type="number"
                                         min={1}
@@ -11521,7 +11790,7 @@ export default function GreenWork() {
                                             prev ? { ...prev, visits_to_assign: Number(e.target.value || 1) } : prev,
                                           )
                                         }
-                                        disabled={workPartnerOrgPaused || requiresFirstFieldCapture}
+                                        disabled={workPartnerOrgPaused || custodianAssignDraft?.assignment_mode === "field_capture"}
                                       />
                                     </label>
                                     <label>
@@ -11543,20 +11812,20 @@ export default function GreenWork() {
                                         onClick={() => void assignCustodianSupervision()}
                                         disabled={workPartnerOrgPaused}
                                       >
-                                        {requiresFirstFieldCapture ? "Assign Field Capture" : "Assign"}
+                                        {custodianAssignDraft?.assignment_mode === "field_capture" ? "Assign Field Capture" : "Assign"}
                                       </button>
                                       <button type="button" onClick={() => setCustodianAssignDraft(null)}>
                                         Cancel
                                       </button>
                                     </div>
-                                    {requiresFirstFieldCapture && (
+                                    {custodianAssignDraft?.assignment_mode === "field_capture" && (
                                       <p className="green-work-note">
                                         This creates the farmer&apos;s first field capture task. It opens in <strong>Map &amp; Add Plot</strong> in the mobile app so the officer can walk or draw the farm boundary before the first field visit cycle starts.
                                       </p>
                                     )}
-                                    {selectedAllocation && (
+                                    {selectedAllocation && custodianAssignDraft?.assignment_mode !== "field_capture" && (
                                       <p className="green-work-note">
-                                        Allocation #{selectedAllocation.id}: {requiresFirstFieldCapture ? "field capture / visit target" : "supervision target"}{" "}
+                                        Allocation #{selectedAllocation.id}: support-visit target{" "}
                                         {Number(selectedAllocation.supervision_target || 0)}, live{" "}
                                         {Number(selectedAllocation.supervision_live || 0)}, done{" "}
                                         {Number(selectedAllocation.supervision_done || 0)}, remaining{" "}
