@@ -6825,10 +6825,13 @@ export default function GreenWork() {
     (treeId: number | string | null | undefined) => {
       const numericId = Number(treeId || 0);
       const treeRow = trees.find((tree) => Number(tree.id) === numericId);
+      if (activeWorkflowProfile === "agric") {
+        return treeRow ? formatPlotRecordLabel(treeRow) : `Plot #${numericId}`;
+      }
       const localNo = Number((treeRow as any)?.project_tree_no || 0);
       return `Tree #${localNo > 0 ? localNo : numericId}`;
     },
-    [trees],
+    [activeWorkflowProfile, trees],
   );
   const maintenanceTreeOptions = useMemo(() => {
     const rowByTree = new Map<number, LiveMaintenanceRow>();
