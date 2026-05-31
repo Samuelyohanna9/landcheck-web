@@ -85,6 +85,20 @@ export type TreePoint = {
     estimated_yield_kg?: number | null;
     boundary_capture_method?: string | null;
     area_hectares?: number | null;
+    asset_code?: string | null;
+    asset_name?: string | null;
+    asset_type?: string | null;
+    damage_level?: string | null;
+    occupancy_status?: string | null;
+    tenure_status?: string | null;
+    response_pathway?: string | null;
+    relief_boundary_capture_method?: string | null;
+    floor_area_sqm?: number | null;
+    rooms_count?: number | null;
+    estimated_repair_cost?: number | null;
+    population_served?: number | null;
+    support_package?: string | null;
+    reported_need?: string | null;
   } | null;
 };
 
@@ -103,7 +117,7 @@ type Props = {
   onViewChange?: (view: { lng: number; lat: number; zoom: number; bearing: number; pitch: number }) => void;
   fitBounds?: { lng: number; lat: number }[] | null;
   assignmentAreas?: Array<{ id?: number | string; label?: string | null; treeId?: number | null; geojson: any }>;
-  workflowMode?: "green" | "agric";
+  workflowMode?: "green" | "agric" | "relief_recovery";
   minHeight?: number;
 };
 
@@ -388,10 +402,10 @@ const getFeatureProps = (feature: any): TreeFeatureProps | null => {
   };
 };
 
-const buildTreeFeatureCollection = (items: TreePoint[], workflowMode: "green" | "agric" = "green") => {
+const buildTreeFeatureCollection = (items: TreePoint[], workflowMode: "green" | "agric" | "relief_recovery" = "green") => {
   const features = items
     .map((tree) => {
-      if (workflowMode === "agric" && tree.existing_area_geojson) return null;
+      if (workflowMode !== "green" && tree.existing_area_geojson) return null;
       const props = buildTreeFeatureProps(tree);
       if (!props) return null;
       return {
@@ -430,7 +444,7 @@ const normalizeAreaGeometry = (value: any): { type: "Polygon" | "MultiPolygon"; 
 const buildAssignmentAreaFeatureCollection = (
   areas: Array<{ id?: number | string; label?: string | null; treeId?: number | null; geojson: any }>,
   trees: TreePoint[] = [],
-  workflowMode: "green" | "agric" = "green",
+  workflowMode: "green" | "agric" | "relief_recovery" = "green",
 ) => {
   const features: any[] = [];
   const seenGeometry = new Set<string>();
@@ -472,6 +486,15 @@ const buildAssignmentAreaFeatureCollection = (
           ]
             .filter(Boolean)
             .join("\n")
+        : workflowMode === "relief_recovery"
+          ? [
+              String(tree.custodian_name || "").trim() || `Beneficiary #${tree?.id ?? index + 1}`,
+              [String(tree.record_profile_data?.asset_type || tree.species || "").trim(), formatArea(tree.existing_area_sqm, tree.record_profile_data?.area_hectares)]
+                .filter((value) => value && value !== "-")
+                .join(" | "),
+            ]
+              .filter(Boolean)
+              .join("\n")
         : labelCount > 1
           ? `Tree #${localNo} - ${labelCount} trees`
           : `Tree #${localNo} - Existing area`;
@@ -484,7 +507,7 @@ const buildAssignmentAreaFeatureCollection = (
   } as any;
 };
 
-const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null, loading = false, workflowMode: "green" | "agric" = "green") => {
+const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null, loading = false, workflowMode: "green" | "agric" | "relief_recovery" = "green") => {
   const tree = detail?.tree || {};
   const status = String(tree.status || base.status || "unknown");
   const species = String(tree.species || base.species || "-");
@@ -521,6 +544,24 @@ const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null,
   const irrigationLabel = String(tree.record_profile_data?.irrigation_type || base.record_profile_data?.irrigation_type || "-");
   const stageLabel = String(tree.record_profile_data?.production_stage || base.record_profile_data?.production_stage || "-");
   const boundaryLabel = String(tree.record_profile_data?.boundary_capture_method || base.record_profile_data?.boundary_capture_method || (base.has_area ? "polygon_map" : "point"));
+  const siteCode = String(tree.record_profile_data?.asset_code || base.record_profile_data?.asset_code || "").trim();
+  const siteName = String(tree.record_profile_data?.asset_name || base.record_profile_data?.asset_name || "").trim();
+  const siteLabel = siteCode || siteName || `Site #${base.project_tree_no || base.id}`;
+  const assetLabel = String(tree.record_profile_data?.asset_type || base.record_profile_data?.asset_type || tree.species || base.species || "-");
+  const damageLabel = String(tree.record_profile_data?.damage_level || base.record_profile_data?.damage_level || "-");
+  const responseLabel = String(tree.record_profile_data?.response_pathway || base.record_profile_data?.response_pathway || "-");
+  const occupancyLabel = String(tree.record_profile_data?.occupancy_status || base.record_profile_data?.occupancy_status || "-");
+  const tenureLabel = String(tree.record_profile_data?.tenure_status || base.record_profile_data?.tenure_status || "-");
+  const populationServed = Number.isFinite(Number(tree.record_profile_data?.population_served))
+    ? Number(tree.record_profile_data?.population_served)
+    : Number.isFinite(Number(base.record_profile_data?.population_served))
+      ? Number(base.record_profile_data?.population_served)
+      : null;
+  const repairCost = Number.isFinite(Number(tree.record_profile_data?.estimated_repair_cost))
+    ? Number(tree.record_profile_data?.estimated_repair_cost)
+    : Number.isFinite(Number(base.record_profile_data?.estimated_repair_cost))
+      ? Number(base.record_profile_data?.estimated_repair_cost)
+      : null;
 
   const recentTasks = (detail?.tasks || [])
     .slice(0, 3)
@@ -554,6 +595,34 @@ const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null,
             : `<p><strong>Field activity:</strong> ${maintenance.total} total, ${maintenance.done} done, ${maintenance.pending} pending, ${maintenance.overdue} overdue</p>
                <p><strong>Linked visits:</strong> ${visitsCount}</p>
                ${recentTasks ? `<ul>${recentTasks}</ul>` : `<p class="tree-popup-muted">No field activity records yet.</p>`}`
+        }
+      </div>
+    `;
+  }
+
+  if (workflowMode === "relief_recovery") {
+    return `
+      <div class="tree-popup-card">
+        <h4>${escapeHtml(siteLabel)}</h4>
+        <p><strong>Beneficiary:</strong> ${escapeHtml(custodianName || "-")}</p>
+        <p><strong>Asset:</strong> ${escapeHtml(statusLabel(assetLabel))}</p>
+        <p><strong>Damage:</strong> ${escapeHtml(statusLabel(damageLabel))}</p>
+        <p><strong>Response:</strong> ${escapeHtml(statusLabel(responseLabel))}</p>
+        <p><strong>Area:</strong> ${escapeHtml(plotArea)}</p>
+        <p><strong>Status:</strong> ${escapeHtml(statusLabel(status))}</p>
+        <p><strong>Occupancy / Tenure:</strong> ${escapeHtml(statusLabel(occupancyLabel))} / ${escapeHtml(statusLabel(tenureLabel))}</p>
+        <p><strong>Population Served:</strong> ${populationServed !== null ? escapeHtml(String(populationServed)) : "-"}</p>
+        <p><strong>Estimated Repair Cost:</strong> ${repairCost !== null && repairCost > 0 ? escapeHtml(`NGN ${repairCost.toLocaleString()}`) : "-"}</p>
+        <p><strong>Observed:</strong> ${escapeHtml(formatDate(plantedDate))}</p>
+        <p><strong>Recorded by:</strong> ${escapeHtml(plantedBy)}</p>
+        ${notes ? `<p><strong>Notes:</strong> ${escapeHtml(notes)}</p>` : ""}
+        <p><strong>Photo:</strong> ${hasPhoto ? "Available" : "None"}</p>
+        ${
+          loading
+            ? `<p class="tree-popup-muted">Loading relief activity...</p>`
+            : `<p><strong>Relief activity:</strong> ${maintenance.total} total, ${maintenance.done} done, ${maintenance.pending} pending, ${maintenance.overdue} overdue</p>
+               <p><strong>Linked visits:</strong> ${visitsCount}</p>
+               ${recentTasks ? `<ul>${recentTasks}</ul>` : `<p class="tree-popup-muted">No relief activity records yet.</p>`}`
         }
       </div>
     `;
@@ -658,7 +727,7 @@ export default function TreeMap({
   const onSelectTreeRef = useRef(onSelectTree);
   const onTreeInspectRef = useRef(onTreeInspect);
   const treesRef = useRef(trees);
-  const workflowModeRef = useRef<"green" | "agric">(workflowMode);
+  const workflowModeRef = useRef<"green" | "agric" | "relief_recovery">(workflowMode);
   const mapReadyRef = useRef(false);
   const mapErrorRef = useRef<string | null>(null);
   const hoverPopupRef = useRef<mapboxgl.Popup | null>(null);
@@ -971,8 +1040,8 @@ export default function TreeMap({
             type: "fill",
             source: ASSIGNMENT_AREA_SOURCE_ID,
             paint: {
-              "fill-color": workflowMode === "agric" ? "#dc2626" : "#22c55e",
-              "fill-opacity": workflowMode === "agric" ? 0.08 : 0.14,
+              "fill-color": workflowMode !== "green" ? "#dc2626" : "#22c55e",
+              "fill-opacity": workflowMode !== "green" ? 0.08 : 0.14,
             },
           });
           map.addLayer({
@@ -980,8 +1049,8 @@ export default function TreeMap({
             type: "line",
             source: ASSIGNMENT_AREA_SOURCE_ID,
             paint: {
-              "line-color": workflowMode === "agric" ? "#b91c1c" : "#15803d",
-              "line-width": workflowMode === "agric" ? 2.8 : 2.4,
+              "line-color": workflowMode !== "green" ? "#b91c1c" : "#15803d",
+              "line-width": workflowMode !== "green" ? 2.8 : 2.4,
               "line-opacity": 0.95,
             },
           });
@@ -998,8 +1067,8 @@ export default function TreeMap({
               "text-justify": "center",
             },
             paint: {
-              "text-color": workflowMode === "agric" ? "#7f1d1d" : "#064e3b",
-              "text-halo-color": workflowMode === "agric" ? "#fff7f7" : "#ecfdf5",
+              "text-color": workflowMode !== "green" ? "#7f1d1d" : "#064e3b",
+              "text-halo-color": workflowMode !== "green" ? "#fff7f7" : "#ecfdf5",
               "text-halo-width": 1.2,
               "text-halo-blur": 0.1,
             },
@@ -1038,7 +1107,7 @@ export default function TreeMap({
               "circle-stroke-color": ["coalesce", ["get", "ring"], "#2f7e34"],
             },
           });
-          if (workflowMode !== "agric") startHealthyBlink(map);
+          if (workflowMode === "green") startHealthyBlink(map);
 
           const supportsHover =
             typeof window !== "undefined" &&
@@ -1099,7 +1168,7 @@ export default function TreeMap({
 
           if (supportsHover) {
             map.on("mousemove", (event) => {
-              if (workflowModeRef.current === "agric") {
+              if (workflowModeRef.current !== "green") {
                 hoverTreeIdRef.current = null;
                 if (hoverPopupRef.current) {
                   hoverPopupRef.current.remove();
@@ -1166,7 +1235,7 @@ export default function TreeMap({
           map.on("click", (event) => {
             const feature = map.queryRenderedFeatures(event.point, {
               layers:
-                workflowModeRef.current === "agric"
+                workflowModeRef.current !== "green"
                   ? [...TREE_LAYER_IDS, ASSIGNMENT_AREA_FILL_LAYER_ID, ASSIGNMENT_AREA_LINE_LAYER_ID, ASSIGNMENT_AREA_LABEL_LAYER_ID]
                   : TREE_LAYER_IDS,
             })[0];
@@ -1355,18 +1424,18 @@ export default function TreeMap({
     const map = mapRef.current;
     if (!map || !mapReady) return;
     if (map.getLayer(ASSIGNMENT_AREA_FILL_LAYER_ID)) {
-      map.setPaintProperty(ASSIGNMENT_AREA_FILL_LAYER_ID, "fill-color", workflowMode === "agric" ? "#dc2626" : "#22c55e");
-      map.setPaintProperty(ASSIGNMENT_AREA_FILL_LAYER_ID, "fill-opacity", workflowMode === "agric" ? 0.08 : 0.14);
+      map.setPaintProperty(ASSIGNMENT_AREA_FILL_LAYER_ID, "fill-color", workflowMode !== "green" ? "#dc2626" : "#22c55e");
+      map.setPaintProperty(ASSIGNMENT_AREA_FILL_LAYER_ID, "fill-opacity", workflowMode !== "green" ? 0.08 : 0.14);
     }
     if (map.getLayer(ASSIGNMENT_AREA_LINE_LAYER_ID)) {
-      map.setPaintProperty(ASSIGNMENT_AREA_LINE_LAYER_ID, "line-color", workflowMode === "agric" ? "#b91c1c" : "#15803d");
-      map.setPaintProperty(ASSIGNMENT_AREA_LINE_LAYER_ID, "line-width", workflowMode === "agric" ? 2.8 : 2.4);
+      map.setPaintProperty(ASSIGNMENT_AREA_LINE_LAYER_ID, "line-color", workflowMode !== "green" ? "#b91c1c" : "#15803d");
+      map.setPaintProperty(ASSIGNMENT_AREA_LINE_LAYER_ID, "line-width", workflowMode !== "green" ? 2.8 : 2.4);
     }
     if (map.getLayer(ASSIGNMENT_AREA_LABEL_LAYER_ID)) {
-      map.setPaintProperty(ASSIGNMENT_AREA_LABEL_LAYER_ID, "text-color", workflowMode === "agric" ? "#7f1d1d" : "#064e3b");
-      map.setPaintProperty(ASSIGNMENT_AREA_LABEL_LAYER_ID, "text-halo-color", workflowMode === "agric" ? "#fff7f7" : "#ecfdf5");
+      map.setPaintProperty(ASSIGNMENT_AREA_LABEL_LAYER_ID, "text-color", workflowMode !== "green" ? "#7f1d1d" : "#064e3b");
+      map.setPaintProperty(ASSIGNMENT_AREA_LABEL_LAYER_ID, "text-halo-color", workflowMode !== "green" ? "#fff7f7" : "#ecfdf5");
     }
-    if (workflowMode === "agric") {
+    if (workflowMode !== "green") {
       stopHealthyBlink();
     } else {
       startHealthyBlink(map);

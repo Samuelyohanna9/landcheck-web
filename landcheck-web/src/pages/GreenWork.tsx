@@ -28,7 +28,27 @@ const REMOTE_MONITORING_PROGRESS_STEPS = [
   "Preparing vegetation summary",
 ];
 
-const normalizeWorkflowProfile = (value?: string | null) => (String(value || "").trim().toLowerCase() === "agric" ? "agric" : "green");
+type WorkflowProfile = "green" | "agric" | "relief_recovery";
+type AgricConfig = {
+  program_type?: string | null;
+  focus_commodities?: string | null;
+  support_packages?: string | null;
+  season_label?: string | null;
+};
+type ReliefConfig = {
+  program_type?: string | null;
+  intervention_focus?: string | null;
+  package_types?: string | null;
+  target_zone?: string | null;
+};
+
+const normalizeWorkflowProfile = (value?: string | null): WorkflowProfile => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "agric") return "agric";
+  if (normalized === "relief_recovery") return "relief_recovery";
+  return "green";
+};
+const isFieldWorkflowProfile = (value?: string | null) => normalizeWorkflowProfile(value) !== "green";
 
 const getWorkflowLabels = (profile?: string | null) =>
   normalizeWorkflowProfile(profile) === "agric"
@@ -40,7 +60,25 @@ const getWorkflowLabels = (profile?: string | null) =>
         entityPlural: "Plots",
         actionTitle: "Map & Add Plots",
         registryTitle: "Farmer Registry",
+        liveTableTitle: "Farmer Live Table",
+        fieldCaptureTitle: "Field Capture",
+        supportVisitTitle: "Support Visits",
+        recordTitle: "Plot Records",
       }
+    : normalizeWorkflowProfile(profile) === "relief_recovery"
+      ? {
+          modeLabel: "Relief & Recovery",
+          ownerSingular: "Beneficiary",
+          ownerPlural: "Beneficiaries",
+          entitySingular: "Site",
+          entityPlural: "Sites",
+          actionTitle: "Map & Assess Sites",
+          registryTitle: "Beneficiary Registry",
+          liveTableTitle: "Beneficiary Live Table",
+          fieldCaptureTitle: "Site Capture",
+          supportVisitTitle: "Relief Visits",
+          recordTitle: "Site Records",
+        }
     : {
         modeLabel: "Green",
         ownerSingular: "Custodian",
@@ -49,6 +87,10 @@ const getWorkflowLabels = (profile?: string | null) =>
         entityPlural: "Trees",
         actionTitle: "Map & Add Trees",
         registryTitle: "Custodian Hub",
+        liveTableTitle: "Live Table",
+        fieldCaptureTitle: "Field Capture",
+        supportVisitTitle: "Support Visits",
+        recordTitle: "Existing Trees",
       };
 
 type Project = {
@@ -61,24 +103,16 @@ type Project = {
   name: string;
   location_text: string;
   sponsor?: string | null;
-  workflow_profile?: "green" | "agric";
-  agric_config?: {
-    program_type?: string | null;
-    focus_commodities?: string | null;
-    support_packages?: string | null;
-    season_label?: string | null;
-  } | null;
+  workflow_profile?: WorkflowProfile;
+  agric_config?: AgricConfig | null;
+  relief_config?: ReliefConfig | null;
   planting_model?: "direct" | "community_distributed" | "mixed";
   allow_existing_tree_link?: boolean;
   default_existing_tree_scope?: "exclude_from_planting_kpi" | "include_in_planting_kpi";
   settings?: {
-    workflow_profile?: "green" | "agric";
-    agric_config?: {
-      program_type?: string | null;
-      focus_commodities?: string | null;
-      support_packages?: string | null;
-      season_label?: string | null;
-    } | null;
+    workflow_profile?: WorkflowProfile;
+    agric_config?: AgricConfig | null;
+    relief_config?: ReliefConfig | null;
     planting_model?: "direct" | "community_distributed" | "mixed";
     allow_existing_tree_link?: boolean;
     default_existing_tree_scope?: "exclude_from_planting_kpi" | "include_in_planting_kpi";
@@ -228,6 +262,20 @@ type Tree = {
     support_placeholder?: boolean | null;
     hidden_from_records?: boolean | null;
     placeholder_reason?: string | null;
+    asset_code?: string | null;
+    asset_name?: string | null;
+    asset_type?: string | null;
+    damage_level?: string | null;
+    occupancy_status?: string | null;
+    tenure_status?: string | null;
+    response_pathway?: string | null;
+    floor_area_sqm?: number | null;
+    rooms_count?: number | null;
+    estimated_repair_cost?: number | null;
+    population_served?: number | null;
+    support_package?: string | null;
+    safety_risks?: string | null;
+    reported_need?: string | null;
   } | null;
   custodian_id?: number | null;
   custodian_name?: string | null;
@@ -284,6 +332,21 @@ type Custodian = {
     finance_access?: boolean | null;
     insurance_access?: boolean | null;
     input_support_needs?: string | null;
+    beneficiary_code?: string | null;
+    government_id?: string | null;
+    displacement_status?: string | null;
+    origin_location?: string | null;
+    current_settlement?: string | null;
+    support_category?: string | null;
+    priority_needs?: string | null;
+    livelihood_type?: string | null;
+    vulnerability_flags?: string | null;
+    relief_gender?: string | null;
+    shelter_status?: string | null;
+    women_count?: number | null;
+    children_under_five?: number | null;
+    elderly_count?: number | null;
+    disability_count?: number | null;
   } | null;
   created_by?: string | null;
   created_at?: string;
@@ -614,7 +677,7 @@ const formatTaskTypeLabel = (value: string | null | undefined) =>
     .join(" ") || "Task";
 const formatWorkflowTaskTypeLabel = (
   value: string | null | undefined,
-  workflowProfile: "green" | "agric" = "green",
+  workflowProfile: WorkflowProfile = "green",
 ) => {
   const key = normalizeName(value);
   if (workflowProfile === "agric") {
@@ -622,6 +685,12 @@ const formatWorkflowTaskTypeLabel = (
     if (key === "field_capture") return "Field Capture";
     if (key === "supervision") return "Support Visit";
     if (key === "inspection") return "Field Inspection";
+  }
+  if (workflowProfile === "relief_recovery") {
+    if (key === "existing_inventory_intake") return "Site Assessment";
+    if (key === "field_capture") return "Initial Site Capture";
+    if (key === "supervision") return "Relief Visit";
+    if (key === "inspection") return "Recovery Inspection";
   }
   if (key === "supervision") return "Supervision Visit";
   return formatTaskTypeLabel(value);
@@ -719,6 +788,16 @@ const formatAgricProgramTypeLabel = (value: string | null | undefined) => {
   if (key === "mixed") return "Mixed";
   return value ? formatTaskTypeLabel(value) : "-";
 };
+const formatReliefProgramTypeLabel = (value: string | null | undefined) => {
+  const key = normalizeName(value);
+  if (key === "emergency_relief") return "Emergency relief";
+  if (key === "shelter_recovery") return "Shelter recovery";
+  if (key === "construction_materials") return "Construction materials";
+  if (key === "infrastructure_rehab") return "Infrastructure rehabilitation";
+  if (key === "cash_voucher") return "Cash and voucher";
+  if (key === "mixed") return "Mixed";
+  return value ? formatTaskTypeLabel(value) : "-";
+};
 const formatBoundaryCaptureMethodLabel = (value: string | null | undefined) => {
   const key = normalizeName(value);
   if (key === "polygon_gps_walk") return "GPS walk";
@@ -737,6 +816,20 @@ const formatPlotRecordLabel = (tree: Tree) => {
 const getPlotCommodityLabel = (tree: Tree) => {
   const commodity = String(tree.record_profile_data?.commodity || tree.species || "").trim();
   return commodity || "-";
+};
+const formatReliefSiteLabel = (tree: Tree) => {
+  const assetCode = String((tree.record_profile_data as Record<string, unknown> | undefined)?.asset_code || "").trim();
+  if (assetCode) return assetCode;
+  const assetName = String((tree.record_profile_data as Record<string, unknown> | undefined)?.asset_name || tree.species || "").trim();
+  if (assetName) return assetName;
+  const localNo = Number(tree.project_tree_no || 0);
+  return `Site #${localNo > 0 ? localNo : tree.id}`;
+};
+const formatReliefDamageLevelLabel = (value: string | null | undefined) => {
+  const key = normalizeName(value);
+  if (key === "habitable_with_repair") return "Habitable with repair";
+  if (key === "not_habitable") return "Not habitable";
+  return value ? formatTaskTypeLabel(value) : "-";
 };
 const formatPlotSeasonLabel = (tree: Tree) => {
   const seasonName = String(tree.record_profile_data?.season_name || "").trim();
@@ -2239,6 +2332,10 @@ export default function GreenWork() {
     agric_focus_commodities: "",
     agric_support_packages: "",
     agric_season_label: "",
+    relief_program_type: "emergency_relief",
+    relief_intervention_focus: "",
+    relief_package_types: "",
+    relief_target_zone: "",
   });
   const [newOrganization, setNewOrganization] = useState({
     name: "",
@@ -2316,11 +2413,15 @@ export default function GreenWork() {
   const [adminCredentialOrgId, setAdminCredentialOrgId] = useState<string>("");
   const [adminCredentialIncludeInactive, setAdminCredentialIncludeInactive] = useState(true);
   const [projectSettingsDraft, setProjectSettingsDraft] = useState<{
-    workflow_profile: "green" | "agric";
+    workflow_profile: WorkflowProfile;
     agric_program_type: string;
     agric_focus_commodities: string;
     agric_support_packages: string;
     agric_season_label: string;
+    relief_program_type: string;
+    relief_intervention_focus: string;
+    relief_package_types: string;
+    relief_target_zone: string;
     planting_model: PlantingModel;
     allow_existing_tree_link: boolean;
     default_existing_tree_scope: ExistingScopeValue;
@@ -2330,6 +2431,10 @@ export default function GreenWork() {
     agric_focus_commodities: "",
     agric_support_packages: "",
     agric_season_label: "",
+    relief_program_type: "emergency_relief",
+    relief_intervention_focus: "",
+    relief_package_types: "",
+    relief_target_zone: "",
     planting_model: "direct",
     allow_existing_tree_link: false,
     default_existing_tree_scope: "exclude_from_planting_kpi",
@@ -2363,6 +2468,21 @@ export default function GreenWork() {
     finance_access: boolean;
     insurance_access: boolean;
     input_support_needs: string;
+    beneficiary_code: string;
+    government_id: string;
+    displacement_status: string;
+    origin_location: string;
+    current_settlement: string;
+    support_category: string;
+    priority_needs: string;
+    livelihood_type: string;
+    vulnerability_flags: string;
+    relief_gender: string;
+    shelter_status: string;
+    women_count: string;
+    children_under_five: string;
+    elderly_count: string;
+    disability_count: string;
   }>({
     custodian_type: "household",
     name: "",
@@ -2390,6 +2510,21 @@ export default function GreenWork() {
     finance_access: false,
     insurance_access: false,
     input_support_needs: "",
+    beneficiary_code: "",
+    government_id: "",
+    displacement_status: "",
+    origin_location: "",
+    current_settlement: "",
+    support_category: "",
+    priority_needs: "",
+    livelihood_type: "",
+    vulnerability_flags: "",
+    relief_gender: "",
+    shelter_status: "",
+    women_count: "",
+    children_under_five: "",
+    elderly_count: "",
+    disability_count: "",
   });
   const [distributionEvents, setDistributionEvents] = useState<DistributionEvent[]>([]);
   const [distributionAllocations, setDistributionAllocations] = useState<DistributionAllocation[]>([]);
@@ -3020,6 +3155,10 @@ export default function GreenWork() {
       agric_focus_commodities: "",
       agric_support_packages: "",
       agric_season_label: "",
+      relief_program_type: "emergency_relief",
+      relief_intervention_focus: "",
+      relief_package_types: "",
+      relief_target_zone: "",
       planting_model: "direct",
       allow_existing_tree_link: false,
       default_existing_tree_scope: "exclude_from_planting_kpi",
@@ -3247,6 +3386,10 @@ export default function GreenWork() {
         agric_focus_commodities: String(settingsPayload?.agric_config?.focus_commodities || ""),
         agric_support_packages: String(settingsPayload?.agric_config?.support_packages || ""),
         agric_season_label: String(settingsPayload?.agric_config?.season_label || ""),
+        relief_program_type: String(settingsPayload?.relief_config?.program_type || "emergency_relief"),
+        relief_intervention_focus: String(settingsPayload?.relief_config?.intervention_focus || ""),
+        relief_package_types: String(settingsPayload?.relief_config?.package_types || ""),
+        relief_target_zone: String(settingsPayload?.relief_config?.target_zone || ""),
         planting_model:
           plantingModel === "community_distributed" || plantingModel === "mixed" || plantingModel === "direct"
             ? plantingModel
@@ -3615,6 +3758,15 @@ export default function GreenWork() {
                 season_label: projectSettingsDraft.agric_season_label || null,
               }
             : {},
+        relief_config:
+          projectSettingsDraft.workflow_profile === "relief_recovery"
+            ? {
+                program_type: projectSettingsDraft.relief_program_type || "emergency_relief",
+                intervention_focus: projectSettingsDraft.relief_intervention_focus || null,
+                package_types: projectSettingsDraft.relief_package_types || null,
+                target_zone: projectSettingsDraft.relief_target_zone || null,
+              }
+            : {},
         planting_model: projectSettingsDraft.planting_model,
       });
       setProjects((prev) =>
@@ -3677,6 +3829,25 @@ export default function GreenWork() {
                 insurance_access: newCustodian.insurance_access,
                 input_support_needs: newCustodian.input_support_needs || null,
               }
+            : activeWorkflowProfile === "relief_recovery"
+              ? {
+                  beneficiary_code: newCustodian.beneficiary_code || null,
+                  government_id: newCustodian.government_id || null,
+                  displacement_status: newCustodian.displacement_status || null,
+                  origin_location: newCustodian.origin_location || null,
+                  current_settlement: newCustodian.current_settlement || null,
+                  support_category: newCustodian.support_category || null,
+                  priority_needs: newCustodian.priority_needs || null,
+                  livelihood_type: newCustodian.livelihood_type || null,
+                  vulnerability_flags: newCustodian.vulnerability_flags || null,
+                  relief_gender: newCustodian.relief_gender || null,
+                  shelter_status: newCustodian.shelter_status || null,
+                  household_size: newCustodian.household_size ? Number(newCustodian.household_size) : null,
+                  women_count: newCustodian.women_count ? Number(newCustodian.women_count) : null,
+                  children_under_five: newCustodian.children_under_five ? Number(newCustodian.children_under_five) : null,
+                  elderly_count: newCustodian.elderly_count ? Number(newCustodian.elderly_count) : null,
+                  disability_count: newCustodian.disability_count ? Number(newCustodian.disability_count) : null,
+                }
             : {},
       });
       setNewCustodian({
@@ -3706,6 +3877,21 @@ export default function GreenWork() {
         finance_access: false,
         insurance_access: false,
         input_support_needs: "",
+        beneficiary_code: "",
+        government_id: "",
+        displacement_status: "",
+        origin_location: "",
+        current_settlement: "",
+        support_category: "",
+        priority_needs: "",
+        livelihood_type: "",
+        vulnerability_flags: "",
+        relief_gender: "",
+        shelter_status: "",
+        women_count: "",
+        children_under_five: "",
+        elderly_count: "",
+        disability_count: "",
       });
       await loadCommunityData(activeProjectId);
       toast.success(`${activeWorkflowLabels.ownerSingular} added`);
@@ -3848,14 +4034,14 @@ export default function GreenWork() {
     const hasMappedPlots = visibleProjectTrees.some((tree) => Number(tree.custodian_id || 0) === Number(custodianId));
     const assignmentMode =
       preferredMode ||
-      (activeWorkflowProfile === "agric" && !hasMappedPlots ? "field_capture" : "support_visit");
+      (fieldWorkflowMode && !hasMappedPlots ? "field_capture" : "support_visit");
     const allocationRows = distributionAllocations
       .filter((row) => Number(row.custodian_id) === Number(custodianId))
       .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
     if (assignmentMode === "support_visit" && allocationRows.length === 0) {
       toast.error(
-        activeWorkflowProfile === "agric"
-          ? "No support allocation found for this farmer yet."
+        fieldWorkflowMode
+          ? `No support allocation found for this ${activeWorkflowLabels.ownerSingular.toLowerCase()} yet.`
           : "No allocation found for this custodian yet.",
       );
       return;
@@ -3896,8 +4082,8 @@ export default function GreenWork() {
       toast.error(
         assignmentMode === "field_capture"
           ? "Select a field capture assignee."
-          : activeWorkflowProfile === "agric"
-            ? "Select a support visit assignee."
+          : fieldWorkflowMode
+            ? `Select a ${activeWorkflowLabels.supportVisitTitle.toLowerCase().replace(/s$/, "")} assignee.`
             : "Select a supervision assignee.",
       );
       return;
@@ -3931,11 +4117,11 @@ export default function GreenWork() {
             ? `Assigned ${createdCount} first field capture task${createdCount === 1 ? "" : "s"}.`
             : "No new field capture tasks assigned."
           : createdCount > 0
-            ? activeWorkflowProfile === "agric"
-              ? `Assigned ${createdCount} support visit${createdCount === 1 ? "" : "s"}.`
+            ? fieldWorkflowMode
+              ? `Assigned ${createdCount} ${activeWorkflowLabels.supportVisitTitle.toLowerCase().replace(/s$/, "")}${createdCount === 1 ? "" : "s"}.`
               : `Assigned ${createdCount} supervision visit${createdCount === 1 ? "" : "s"}.`
-            : activeWorkflowProfile === "agric"
-              ? "No new support visits assigned."
+            : fieldWorkflowMode
+              ? `No new ${activeWorkflowLabels.supportVisitTitle.toLowerCase()} assigned.`
               : "No new supervision tasks assigned.",
       );
       setCustodianAssignDraft(null);
@@ -3944,8 +4130,8 @@ export default function GreenWork() {
         error?.response?.data?.detail ||
           (assignmentMode === "field_capture"
             ? "Failed to assign field capture."
-            : activeWorkflowProfile === "agric"
-              ? "Failed to assign support visit"
+            : fieldWorkflowMode
+              ? `Failed to assign ${activeWorkflowLabels.supportVisitTitle.toLowerCase().replace(/s$/, "")}`
               : "Failed to assign supervision"),
       );
     }
@@ -4384,6 +4570,15 @@ export default function GreenWork() {
               season_label: newProject.agric_season_label || null,
             }
           : {},
+      relief_config:
+        newProject.workflow_profile === "relief_recovery"
+          ? {
+              program_type: newProject.relief_program_type || "emergency_relief",
+              intervention_focus: newProject.relief_intervention_focus || null,
+              package_types: newProject.relief_package_types || null,
+              target_zone: newProject.relief_target_zone || null,
+            }
+          : {},
     };
     if (
       !(await ensureWorkOperationalConsent("project_create", {
@@ -4405,6 +4600,10 @@ export default function GreenWork() {
       agric_focus_commodities: "",
       agric_support_packages: "",
       agric_season_label: "",
+      relief_program_type: "emergency_relief",
+      relief_intervention_focus: "",
+      relief_package_types: "",
+      relief_target_zone: "",
     });
     if (canAccessSuperAdmin) {
       void loadAdminOverview().catch(() => {});
@@ -5299,9 +5498,11 @@ export default function GreenWork() {
 
   const exportCustodianPdf = () => {
     if (!activeProjectId) return;
-    if (activeWorkflowProfile === "agric") {
+    if (fieldWorkflowMode) {
+      const reportLabel = activeWorkflowProfile === "relief_recovery" ? "Relief & Recovery programme report" : "Agric programme report";
+      const entityPluralLabel = activeWorkflowProfile === "relief_recovery" ? "site" : "plot";
       if (includePhotosInCustodianPdf) {
-        const loadingId = toast.loading("Preparing Agric programme report with plot photos...");
+        const loadingId = toast.loading(`Preparing ${reportLabel} with ${entityPluralLabel} photos...`);
         void (async () => {
           try {
             const created = await api.post("/green/work-report/export-jobs", {
@@ -5322,17 +5523,17 @@ export default function GreenWork() {
               const job = statusRes?.data || {};
               const status = String(job.status || "").toLowerCase();
               if (status === "completed" && job.download_url) {
-                toast.success("Agric programme report is ready. Download started.", { id: loadingId });
+                toast.success(`${reportLabel} is ready. Download started.`, { id: loadingId });
                 window.open(String(job.download_url), "_blank");
                 return;
               }
               if (status === "failed") {
-                throw new Error(String(job.error_text || "Agric programme report export failed"));
+                throw new Error(String(job.error_text || `${reportLabel} export failed`));
               }
             }
-            toast.error("Agric programme report is still preparing. Try again shortly.", { id: loadingId });
+            toast.error(`${reportLabel} is still preparing. Try again shortly.`, { id: loadingId });
           } catch (error: any) {
-            toast.error(error?.response?.data?.detail || error?.message || "Failed to prepare Agric programme report", { id: loadingId });
+            toast.error(error?.response?.data?.detail || error?.message || `Failed to prepare ${reportLabel}`, { id: loadingId });
           }
         })();
         return;
@@ -6736,6 +6937,17 @@ export default function GreenWork() {
           { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
           { form: "users", title: "Users", note: "All staff status + roles" },
         ]
+      : actionWorkflowProfile === "relief_recovery"
+        ? [
+            { form: "farmer_live", title: "Beneficiary Live Table", note: "Live beneficiary activity + delivery results" },
+            { form: "custodian_hub", title: actionWorkflowLabels.registryTitle, note: "Beneficiary onboarding + relief setup" },
+            { form: "field_capture_assign", title: "Site Capture", note: "Assign first site assessment to staff" },
+            { form: "support_visit_assign", title: "Relief Visits", note: "Assign follow-up relief or recovery visits" },
+            { form: "existing_tree_intake", title: "Site Records", note: "Mapped sites + damage and recovery data" },
+            { form: "map_view", title: "Map View", note: "Sites + boundaries" },
+            { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
+            { form: "users", title: "Users", note: "All staff status + roles" },
+          ]
       : [
           { form: "overview", title: "Overview", note: "Progress summary" },
           { form: "map_view", title: "Map View", note: `${actionWorkflowLabels.entityPlural} + draw polygons` },
@@ -6918,10 +7130,13 @@ export default function GreenWork() {
     activeProjectRecord?.settings?.workflow_profile || activeProjectRecord?.workflow_profile || projectSettingsDraft.workflow_profile,
   );
   const activeWorkflowLabels = getWorkflowLabels(activeWorkflowProfile);
-  const defaultProjectForm: WorkForm = activeWorkflowProfile === "agric" ? "custodian_hub" : "overview";
-  const isHiddenInAgricProject = (form: WorkForm) =>
-    Boolean(activeProjectId && activeWorkflowProfile === "agric" && AGRIC_HIDDEN_PROJECT_FORMS.includes(form));
-  const activeFormHiddenInAgric = activeForm ? isHiddenInAgricProject(activeForm) : false;
+  const fieldWorkflowMode = isFieldWorkflowProfile(activeWorkflowProfile);
+  const agricWorkflowMode = activeWorkflowProfile === "agric";
+  const reliefWorkflowMode = activeWorkflowProfile === "relief_recovery";
+  const defaultProjectForm: WorkForm = fieldWorkflowMode ? "custodian_hub" : "overview";
+  const isHiddenInFieldProject = (form: WorkForm) =>
+    Boolean(activeProjectId && fieldWorkflowMode && AGRIC_HIDDEN_PROJECT_FORMS.includes(form));
+  const activeFormHiddenInAgric = activeForm ? isHiddenInFieldProject(activeForm) : false;
   const activeProjectOrgId =
     activeProjectRecord && Number.isFinite(Number(activeProjectRecord.organization_id))
       ? Number(activeProjectRecord.organization_id)
@@ -7057,6 +7272,9 @@ export default function GreenWork() {
       if (activeWorkflowProfile === "agric") {
         return treeRow ? formatPlotRecordLabel(treeRow) : `Plot #${numericId}`;
       }
+      if (activeWorkflowProfile === "relief_recovery") {
+        return treeRow ? formatReliefSiteLabel(treeRow) : `Site #${numericId}`;
+      }
       const localNo = Number((treeRow as any)?.project_tree_no || 0);
       return `Tree #${localNo > 0 ? localNo : numericId}`;
     },
@@ -7084,9 +7302,9 @@ export default function GreenWork() {
       })
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [allMaintenanceAssignRows, formatProjectTreeLabelById, trees]);
-  const agricFarmerLiveMode = Boolean(activeProjectId && activeWorkflowProfile === "agric" && activeForm === "farmer_live");
-  const agricFieldCaptureMode = Boolean(activeProjectId && activeWorkflowProfile === "agric" && activeForm === "field_capture_assign");
-  const agricSupportVisitMode = Boolean(activeProjectId && activeWorkflowProfile === "agric" && activeForm === "support_visit_assign");
+  const agricFarmerLiveMode = Boolean(activeProjectId && fieldWorkflowMode && activeForm === "farmer_live");
+  const agricFieldCaptureMode = Boolean(activeProjectId && fieldWorkflowMode && activeForm === "field_capture_assign");
+  const agricSupportVisitMode = Boolean(activeProjectId && fieldWorkflowMode && activeForm === "support_visit_assign");
   const custodianLiveRows = useMemo(() => {
     const allocationMap = new Map<
       number,
@@ -7227,7 +7445,7 @@ export default function GreenWork() {
       ? "support_visit"
       : null;
   const displayedCustodianLiveRows = useMemo(() => {
-    if (activeWorkflowProfile !== "agric") return custodianLiveRows;
+    if (!fieldWorkflowMode) return custodianLiveRows;
     if (agricFieldCaptureMode) {
       return custodianLiveRows.filter((row) => Number(row.treeTotal || 0) <= 0);
     }
@@ -7239,14 +7457,14 @@ export default function GreenWork() {
       );
     }
     return custodianLiveRows;
-  }, [activeWorkflowProfile, agricFieldCaptureMode, agricSupportVisitMode, custodianLiveRows]);
+  }, [fieldWorkflowMode, agricFieldCaptureMode, agricSupportVisitMode, custodianLiveRows]);
   const displayedCustodianLiveSummary = useMemo(() => {
     const totalRows = displayedCustodianLiveRows.length;
     const verified = displayedCustodianLiveRows.filter(
       (row) => normalizeName(row.custodian.verification_status) === "verified",
     ).length;
     const units = displayedCustodianLiveRows.reduce((sum, row) => sum + Number(row.seedlings || 0), 0);
-    if (activeWorkflowProfile !== "agric") {
+    if (!fieldWorkflowMode) {
       return {
         totalRows,
         verified,
@@ -7274,7 +7492,7 @@ export default function GreenWork() {
       visitTarget: displayedCustodianLiveRows.reduce((sum, row) => sum + Number(row.supervisionTarget || 0), 0),
       visitLive: displayedCustodianLiveRows.reduce((sum, row) => sum + Number(row.supervisionLive || 0), 0),
     };
-  }, [activeWorkflowProfile, agricFieldCaptureMode, displayedCustodianLiveRows]);
+  }, [fieldWorkflowMode, agricFieldCaptureMode, displayedCustodianLiveRows]);
   const custodianSummary = useMemo(() => {
     const totalAllocated = distributionAllocations.reduce(
       (sum, row) => sum + Number(row.quantity_allocated || 0),
@@ -7371,7 +7589,7 @@ export default function GreenWork() {
   const assignWorkAreaMode = Boolean(activeProjectId && activeForm === "assign_work" && newOrderAreaEnabled);
   const liveTableMode = Boolean(activeProjectId && activeForm === "live_table");
   const verraMode = Boolean(activeProjectId && activeForm === "verra_reports");
-  const agricRegistryMode = Boolean(activeProjectId && activeWorkflowProfile === "agric" && activeForm === "custodian_hub");
+  const agricRegistryMode = Boolean(activeProjectId && fieldWorkflowMode && activeForm === "custodian_hub");
   const hasDedicatedMainContent =
     overviewMode ||
     mapViewMode ||
@@ -7451,7 +7669,7 @@ export default function GreenWork() {
       setMenuOpen(false);
       return;
     }
-    if (isHiddenInAgricProject(form)) {
+    if (isHiddenInFieldProject(form)) {
       setActiveForm(defaultProjectForm);
       setMenuOpen(false);
       setStaffMenu(null);
@@ -7627,7 +7845,7 @@ export default function GreenWork() {
   }, [activeWorkflowProfile, staffMenu, liveTreeMenu]);
 
   const openAssignWorkForUser = (userName: string) => {
-    if (activeWorkflowProfile === "agric") {
+    if (fieldWorkflowMode) {
       setStaffMenu(null);
       setLiveTreeMenu(null);
       return;
@@ -7652,7 +7870,7 @@ export default function GreenWork() {
   };
 
   const openAssignTaskForUser = (userName: string) => {
-    if (activeWorkflowProfile === "agric") {
+    if (fieldWorkflowMode) {
       setStaffMenu(null);
       setLiveTreeMenu(null);
       return;
@@ -7942,7 +8160,7 @@ export default function GreenWork() {
           <div className="green-work-menu-group">
             <p className="green-work-menu-subhead">Active Project Actions</p>
             <p className="green-work-menu-subproject">{activeProjectName}</p>
-            {activeWorkflowProfile !== "agric" ? (
+            {!fieldWorkflowMode ? (
               <button
                 className={`green-work-menu-item ${activeForm === "overview" ? "active" : ""}`}
                 type="button"
@@ -7958,7 +8176,7 @@ export default function GreenWork() {
             >
               Map View
             </button>
-            {activeWorkflowProfile !== "agric" ? (
+            {!fieldWorkflowMode ? (
               <>
                 <button
                   className={`green-work-menu-item ${activeForm === "remote_monitoring" ? "active" : ""}`}
@@ -7976,14 +8194,14 @@ export default function GreenWork() {
                 </button>
               </>
             ) : null}
-            {activeWorkflowProfile === "agric" ? (
+            {fieldWorkflowMode ? (
               <>
                 <button
                   className={`green-work-menu-item ${activeForm === "farmer_live" ? "active" : ""}`}
                   type="button"
                   onClick={() => openForm("farmer_live")}
                 >
-                  Farmer Live Table
+                  {activeWorkflowLabels.liveTableTitle}
                 </button>
                 <button
                   className={`green-work-menu-item ${activeForm === "custodian_hub" ? "active" : ""}`}
@@ -7997,22 +8215,24 @@ export default function GreenWork() {
                   type="button"
                   onClick={() => openForm("field_capture_assign")}
                 >
-                  Field Capture
+                  {activeWorkflowLabels.fieldCaptureTitle}
                 </button>
                 <button
                   className={`green-work-menu-item ${activeForm === "support_visit_assign" ? "active" : ""}`}
                   type="button"
                   onClick={() => openForm("support_visit_assign")}
                 >
-                  Support Visits
+                  {activeWorkflowLabels.supportVisitTitle}
                 </button>
-                <button
-                  className={`green-work-menu-item ${activeForm === "remote_monitoring" ? "active" : ""}`}
-                  type="button"
-                  onClick={() => openForm("remote_monitoring")}
-                >
-                  Farm Health
-                </button>
+                {agricWorkflowMode ? (
+                  <button
+                    className={`green-work-menu-item ${activeForm === "remote_monitoring" ? "active" : ""}`}
+                    type="button"
+                    onClick={() => openForm("remote_monitoring")}
+                  >
+                    Farm Health
+                  </button>
+                ) : null}
               </>
             ) : (
               <button
@@ -8028,9 +8248,9 @@ export default function GreenWork() {
               type="button"
               onClick={() => openForm("existing_tree_intake")}
             >
-              {activeWorkflowProfile === "agric" ? "Plot Records" : "Existing Trees"}
+              {fieldWorkflowMode ? activeWorkflowLabels.recordTitle : "Existing Trees"}
             </button>
-            {activeWorkflowProfile !== "agric" ? (
+            {!fieldWorkflowMode ? (
               <button
                 className={`green-work-menu-item ${activeForm === "verra_reports" ? "active" : ""}`}
                 type="button"
@@ -8060,7 +8280,7 @@ export default function GreenWork() {
             >
               Add User
             </button>
-            {activeWorkflowProfile !== "agric" ? (
+            {!fieldWorkflowMode ? (
               <>
                 <button
                   className={`green-work-menu-item ${activeForm === "assign_work" ? "active" : ""}`}
@@ -8159,7 +8379,7 @@ export default function GreenWork() {
                       <span className="green-work-flow-pill">Allocations: {workflowReadySummary.allocations}</span>
                       <span className="green-work-flow-pill">{activeWorkflowLabels.entityPlural}: {existingTreeIntakeRows.length}</span>
                     </div>
-                    {activeWorkflowProfile === "agric" ? (
+                    {agricWorkflowMode ? (
                       <p className="green-work-note">
                         Programme: {formatAgricProgramTypeLabel(activeProjectRecord?.settings?.agric_config?.program_type || projectSettingsDraft.agric_program_type)}
                         {String(activeProjectRecord?.settings?.agric_config?.focus_commodities || projectSettingsDraft.agric_focus_commodities || "").trim()
@@ -8170,6 +8390,19 @@ export default function GreenWork() {
                           : ""}
                         {String(activeProjectRecord?.settings?.agric_config?.season_label || projectSettingsDraft.agric_season_label || "").trim()
                           ? ` | Season: ${String(activeProjectRecord?.settings?.agric_config?.season_label || projectSettingsDraft.agric_season_label).trim()}`
+                          : ""}
+                      </p>
+                    ) : reliefWorkflowMode ? (
+                      <p className="green-work-note">
+                        Programme: {formatReliefProgramTypeLabel(activeProjectRecord?.settings?.relief_config?.program_type || projectSettingsDraft.relief_program_type)}
+                        {String(activeProjectRecord?.settings?.relief_config?.intervention_focus || projectSettingsDraft.relief_intervention_focus || "").trim()
+                          ? ` | Focus: ${String(activeProjectRecord?.settings?.relief_config?.intervention_focus || projectSettingsDraft.relief_intervention_focus).trim()}`
+                          : ""}
+                        {String(activeProjectRecord?.settings?.relief_config?.package_types || projectSettingsDraft.relief_package_types || "").trim()
+                          ? ` | Packages: ${String(activeProjectRecord?.settings?.relief_config?.package_types || projectSettingsDraft.relief_package_types).trim()}`
+                          : ""}
+                        {String(activeProjectRecord?.settings?.relief_config?.target_zone || projectSettingsDraft.relief_target_zone || "").trim()
+                          ? ` | Target Zone: ${String(activeProjectRecord?.settings?.relief_config?.target_zone || projectSettingsDraft.relief_target_zone).trim()}`
                           : ""}
                       </p>
                     ) : null}
@@ -8195,12 +8428,13 @@ export default function GreenWork() {
                         onChange={(e) =>
                           setProjectSettingsDraft((prev) => ({
                             ...prev,
-                            workflow_profile: normalizeWorkflowProfile(e.target.value) as "green" | "agric",
+                            workflow_profile: normalizeWorkflowProfile(e.target.value) as WorkflowProfile,
                           }))
                         }
                       >
                         <option value="green">Green</option>
                         <option value="agric">Agric</option>
+                        <option value="relief_recovery">Relief &amp; Recovery</option>
                       </select>
                     </label>
                     <label>
@@ -8266,6 +8500,58 @@ export default function GreenWork() {
                             setProjectSettingsDraft((prev) => ({
                               ...prev,
                               agric_season_label: e.target.value,
+                            }))
+                          }
+                        />
+                      </>
+                    ) : projectSettingsDraft.workflow_profile === "relief_recovery" ? (
+                      <>
+                        <label>
+                          Relief program type
+                          <select
+                            value={projectSettingsDraft.relief_program_type}
+                            onChange={(e) =>
+                              setProjectSettingsDraft((prev) => ({
+                                ...prev,
+                                relief_program_type: e.target.value,
+                              }))
+                            }
+                          >
+                            <option value="emergency_relief">Emergency relief</option>
+                            <option value="shelter_recovery">Shelter recovery</option>
+                            <option value="construction_materials">Construction materials</option>
+                            <option value="infrastructure_rehab">Infrastructure rehabilitation</option>
+                            <option value="cash_voucher">Cash & voucher</option>
+                            <option value="mixed">Mixed</option>
+                          </select>
+                        </label>
+                        <input
+                          placeholder="Intervention focus"
+                          value={projectSettingsDraft.relief_intervention_focus}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              relief_intervention_focus: e.target.value,
+                            }))
+                          }
+                        />
+                        <input
+                          placeholder="Package types"
+                          value={projectSettingsDraft.relief_package_types}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              relief_package_types: e.target.value,
+                            }))
+                          }
+                        />
+                        <input
+                          placeholder="Target zone / LGA cluster"
+                          value={projectSettingsDraft.relief_target_zone}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              relief_target_zone: e.target.value,
                             }))
                           }
                         />
@@ -8511,28 +8797,30 @@ export default function GreenWork() {
           {activeForm === "custodian_hub" && (
             <>
               <div className="green-work-card">
-                <h3>{activeWorkflowProfile === "agric" ? "Farmer Live Overview" : "Custodian Live Overview"}</h3>
+                <h3>{fieldWorkflowMode ? `${activeWorkflowLabels.ownerSingular} Live Overview` : "Custodian Live Overview"}</h3>
                 {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
                 <div className="green-work-flow-summary">
                   <span className="green-work-flow-pill">{activeWorkflowLabels.ownerPlural}: {custodianSummary.totalCustodians}</span>
                   <span className="green-work-flow-pill">Verified: {custodianSummary.verifiedCustodians}</span>
                   <span className="green-work-flow-pill">Events: {custodianSummary.totalEvents}</span>
                   <span className="green-work-flow-pill">Allocations: {custodianSummary.totalAllocations}</span>
-                  <span className="green-work-flow-pill">{activeWorkflowProfile === "agric" ? "Units" : "Seedlings"}: {custodianSummary.allocatedSeedlings}</span>
+                  <span className="green-work-flow-pill">{fieldWorkflowMode ? "Units" : "Seedlings"}: {custodianSummary.allocatedSeedlings}</span>
                   <span className="green-work-flow-pill">
-                    {activeWorkflowProfile === "agric" ? "Field Visits" : "Supervision"}: {custodianSummary.supervisionDone}/{custodianSummary.supervisionTarget} done
+                    {fieldWorkflowMode ? activeWorkflowLabels.supportVisitTitle : "Supervision"}: {custodianSummary.supervisionDone}/{custodianSummary.supervisionTarget} done
                   </span>
-                  <span className="green-work-flow-pill">{activeWorkflowProfile === "agric" ? "Field Visits Live" : "Supervision Live"}: {custodianSummary.supervisionLive}</span>
+                  <span className="green-work-flow-pill">{fieldWorkflowMode ? `${activeWorkflowLabels.supportVisitTitle} Live` : "Supervision Live"}: {custodianSummary.supervisionLive}</span>
                   <span className="green-work-flow-pill">{activeWorkflowLabels.entityPlural}: {custodianSummary.existingTrees}</span>
                 </div>
                 <p className="green-work-note">
-                  {activeWorkflowProfile === "agric"
+                  {agricWorkflowMode
                     ? "One hub for farmer registry, support allocations, mapped plots, and exportable programme evidence."
+                    : reliefWorkflowMode
+                      ? "One hub for beneficiary registry, relief allocations, mapped sites, and exportable recovery evidence."
                     : "One hub for monitoring, custodian registration, distribution events, and custodian PDF export."}
                 </p>
                 {workPartnerOrgPaused && (
                   <p className="green-work-note" style={{ color: "#8a6500", fontWeight: 700 }}>
-                    Organization is paused. {activeWorkflowProfile === "agric" ? "Farmer operations are disabled. Only farmer PDF export is allowed." : "Custodian operations are disabled. Only Custodian PDF export is allowed."}
+                    Organization is paused. {fieldWorkflowMode ? `${activeWorkflowLabels.ownerSingular} operations are disabled. Only programme PDF export is allowed.` : "Custodian operations are disabled. Only Custodian PDF export is allowed."}
                   </p>
                 )}
                 <div className="work-actions">
@@ -8557,36 +8845,38 @@ export default function GreenWork() {
 
               {custodianOptionsExpanded && (
                 <>
-                  {activeWorkflowProfile === "agric" && (
-                    <div className="green-work-hub-tabs" role="tablist" aria-label="Farmer registry views">
+                  {fieldWorkflowMode && (
+                    <div className="green-work-hub-tabs" role="tablist" aria-label={`${activeWorkflowLabels.ownerSingular} registry views`}>
                       <button
                         type="button"
                         className={`green-work-hub-tab ${agricCustodianHubTab === "farmer_form" ? "is-active" : ""}`}
                         onClick={() => setAgricCustodianHubTab("farmer_form")}
                       >
-                        Farmer Form
+                        {activeWorkflowLabels.ownerSingular} Form
                       </button>
                       <button
                         type="button"
                         className={`green-work-hub-tab ${agricCustodianHubTab === "support_setup" ? "is-active" : ""}`}
                         onClick={() => setAgricCustodianHubTab("support_setup")}
                       >
-                        Support Setup
+                        {reliefWorkflowMode ? "Relief Setup" : "Support Setup"}
                       </button>
                     </div>
                   )}
 
-                  {(activeWorkflowProfile !== "agric" || agricCustodianHubTab === "farmer_form") && (
+                  {(!fieldWorkflowMode || agricCustodianHubTab === "farmer_form") && (
                     <div className="green-work-card green-work-registry-card">
-                      <h3>{activeWorkflowProfile === "agric" ? "Register Farmer" : `Add ${activeWorkflowLabels.ownerSingular}`}</h3>
+                      <h3>{fieldWorkflowMode ? `Register ${activeWorkflowLabels.ownerSingular}` : `Add ${activeWorkflowLabels.ownerSingular}`}</h3>
                       {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
                       <p className="green-work-note">
-                        {activeWorkflowProfile === "agric"
+                        {agricWorkflowMode
                           ? "Use clear registry sections so field teams can onboard farmers quickly and organizations can export support-ready records later."
+                          : reliefWorkflowMode
+                            ? "Use clear registry sections so teams can onboard beneficiary households, institutions, and affected groups quickly before site capture and relief follow-up."
                           : "Custodian records are separate from staff users and do not change Live Maintenance rows."}
                       </p>
 
-                      {activeWorkflowProfile === "agric" ? (
+                      {agricWorkflowMode ? (
                         <div className="green-work-registry-form">
                           <section className="green-work-form-section">
                             <div className="green-work-form-section-head">
@@ -8764,6 +9054,167 @@ export default function GreenWork() {
                             </div>
                           </section>
                         </div>
+                      ) : reliefWorkflowMode ? (
+                        <div className="green-work-registry-form">
+                          <section className="green-work-form-section">
+                            <div className="green-work-form-section-head">
+                              <strong>Identity</strong>
+                              <span>Core beneficiary identity, verification, and programme references.</span>
+                            </div>
+                            <div className="green-work-form-grid">
+                              <label className="green-work-stacked-field">
+                                <span>Beneficiary type</span>
+                                <select
+                                  value={newCustodian.custodian_type}
+                                  onChange={(e) => setNewCustodian((prev) => ({ ...prev, custodian_type: e.target.value as CustodianType }))}
+                                  disabled={!activeProjectId}
+                                >
+                                  <option value="household">Household</option>
+                                  <option value="school">School</option>
+                                  <option value="community_group">Community Group</option>
+                                  <option value="small_business">Small Business</option>
+                                  <option value="health_facility">Health Facility</option>
+                                  <option value="community_asset">Community Asset</option>
+                                </select>
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Beneficiary name</span>
+                                <input value={newCustodian.name} onChange={(e) => setNewCustodian((prev) => ({ ...prev, name: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Beneficiary code</span>
+                                <input value={newCustodian.beneficiary_code} onChange={(e) => setNewCustodian((prev) => ({ ...prev, beneficiary_code: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Government / registration ID</span>
+                                <input value={newCustodian.government_id} onChange={(e) => setNewCustodian((prev) => ({ ...prev, government_id: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Contact person</span>
+                                <input value={newCustodian.contact_person} onChange={(e) => setNewCustodian((prev) => ({ ...prev, contact_person: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Primary phone</span>
+                                <input value={newCustodian.phone} onChange={(e) => setNewCustodian((prev) => ({ ...prev, phone: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Email</span>
+                                <input value={newCustodian.email} onChange={(e) => setNewCustodian((prev) => ({ ...prev, email: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Displacement status</span>
+                                <select value={newCustodian.displacement_status} onChange={(e) => setNewCustodian((prev) => ({ ...prev, displacement_status: e.target.value }))} disabled={!activeProjectId}>
+                                  <option value="">Select status</option>
+                                  <option value="idp">IDP</option>
+                                  <option value="returnee">Returnee</option>
+                                  <option value="host">Host</option>
+                                  <option value="resident">Resident</option>
+                                  <option value="relocated">Relocated</option>
+                                  <option value="other">Other</option>
+                                </select>
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Gender</span>
+                                <select value={newCustodian.relief_gender} onChange={(e) => setNewCustodian((prev) => ({ ...prev, relief_gender: e.target.value }))} disabled={!activeProjectId}>
+                                  <option value="">Select gender</option>
+                                  <option value="male">Male</option>
+                                  <option value="female">Female</option>
+                                </select>
+                              </label>
+                            </div>
+                          </section>
+
+                          <section className="green-work-form-section">
+                            <div className="green-work-form-section-head">
+                              <strong>Location & Household</strong>
+                              <span>Settlement, origin, and vulnerability snapshot needed for relief targeting.</span>
+                            </div>
+                            <div className="green-work-form-grid">
+                              <label className="green-work-stacked-field">
+                                <span>Current settlement</span>
+                                <input value={newCustodian.current_settlement} onChange={(e) => setNewCustodian((prev) => ({ ...prev, current_settlement: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Origin location</span>
+                                <input value={newCustodian.origin_location} onChange={(e) => setNewCustodian((prev) => ({ ...prev, origin_location: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Community / ward</span>
+                                <input value={newCustodian.community_name} onChange={(e) => setNewCustodian((prev) => ({ ...prev, community_name: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Local government area</span>
+                                <input value={newCustodian.local_government} onChange={(e) => setNewCustodian((prev) => ({ ...prev, local_government: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Household size</span>
+                                <input value={newCustodian.household_size} onChange={(e) => setNewCustodian((prev) => ({ ...prev, household_size: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Women count</span>
+                                <input value={newCustodian.women_count} onChange={(e) => setNewCustodian((prev) => ({ ...prev, women_count: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Children under five</span>
+                                <input value={newCustodian.children_under_five} onChange={(e) => setNewCustodian((prev) => ({ ...prev, children_under_five: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Elderly count</span>
+                                <input value={newCustodian.elderly_count} onChange={(e) => setNewCustodian((prev) => ({ ...prev, elderly_count: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Persons with disability</span>
+                                <input value={newCustodian.disability_count} onChange={(e) => setNewCustodian((prev) => ({ ...prev, disability_count: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Shelter status</span>
+                                <select value={newCustodian.shelter_status} onChange={(e) => setNewCustodian((prev) => ({ ...prev, shelter_status: e.target.value }))} disabled={!activeProjectId}>
+                                  <option value="">Select status</option>
+                                  <option value="displaced">Displaced</option>
+                                  <option value="hosted">Hosted</option>
+                                  <option value="damaged_home">Damaged home</option>
+                                  <option value="destroyed_home">Destroyed home</option>
+                                  <option value="temporary_shelter">Temporary shelter</option>
+                                  <option value="resettled">Resettled</option>
+                                  <option value="other">Other</option>
+                                </select>
+                              </label>
+                              <label className="green-work-stacked-field green-work-stacked-field-wide">
+                                <span>Address</span>
+                                <input value={newCustodian.address_text} onChange={(e) => setNewCustodian((prev) => ({ ...prev, address_text: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                            </div>
+                          </section>
+
+                          <section className="green-work-form-section">
+                            <div className="green-work-form-section-head">
+                              <strong>Support & Vulnerability</strong>
+                              <span>Priority support categories used for relief delivery, reconstruction, and follow-up.</span>
+                            </div>
+                            <div className="green-work-form-grid">
+                              <label className="green-work-stacked-field">
+                                <span>Support category</span>
+                                <input value={newCustodian.support_category} onChange={(e) => setNewCustodian((prev) => ({ ...prev, support_category: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field">
+                                <span>Livelihood type</span>
+                                <input value={newCustodian.livelihood_type} onChange={(e) => setNewCustodian((prev) => ({ ...prev, livelihood_type: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field green-work-stacked-field-wide">
+                                <span>Vulnerability flags</span>
+                                <textarea value={newCustodian.vulnerability_flags} onChange={(e) => setNewCustodian((prev) => ({ ...prev, vulnerability_flags: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field green-work-stacked-field-wide">
+                                <span>Priority needs</span>
+                                <textarea value={newCustodian.priority_needs} onChange={(e) => setNewCustodian((prev) => ({ ...prev, priority_needs: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                              <label className="green-work-stacked-field green-work-stacked-field-wide">
+                                <span>Notes</span>
+                                <textarea value={newCustodian.notes} onChange={(e) => setNewCustodian((prev) => ({ ...prev, notes: e.target.value }))} disabled={!activeProjectId} />
+                              </label>
+                            </div>
+                          </section>
+                        </div>
                       ) : (
                         <>
                           <select
@@ -8791,12 +9242,12 @@ export default function GreenWork() {
 
                       <div className="work-actions">
                         <button className="btn-primary" type="button" onClick={() => void createCustodian()} disabled={!activeProjectId}>
-                          {activeWorkflowProfile === "agric" ? "Register Farmer" : `Add ${activeWorkflowLabels.ownerSingular}`}
+                          {fieldWorkflowMode ? `Register ${activeWorkflowLabels.ownerSingular}` : `Add ${activeWorkflowLabels.ownerSingular}`}
                         </button>
                       </div>
 
                       <div className="staff-list">
-                        <h4>{activeWorkflowProfile === "agric" ? "Recent Farmer Records" : `${activeWorkflowLabels.ownerPlural} in this project`}</h4>
+                        <h4>{fieldWorkflowMode ? `Recent ${activeWorkflowLabels.ownerSingular} Records` : `${activeWorkflowLabels.ownerPlural} in this project`}</h4>
                         {custodians.length === 0 ? (
                           <p className="green-work-note">No {activeWorkflowLabels.ownerPlural.toLowerCase()} yet in this project.</p>
                         ) : (
@@ -8812,9 +9263,13 @@ export default function GreenWork() {
                               <div className="staff-row-meta">
                                 Community: {custodian.community_name || "-"} | LGA: {custodian.local_government || "-"}
                               </div>
-                              {activeWorkflowProfile === "agric" ? (
+                              {agricWorkflowMode ? (
                                 <div className="staff-row-meta">
                                   Farmer code: {custodian.profile_data?.farmer_code || "-"} | Crop: {custodian.profile_data?.primary_crop || "-"} | Group: {custodian.profile_data?.farmer_group || "-"}
+                                </div>
+                              ) : reliefWorkflowMode ? (
+                                <div className="staff-row-meta">
+                                  Beneficiary code: {custodian.profile_data?.beneficiary_code || "-"} | Status: {custodian.profile_data?.displacement_status || "-"} | Support: {custodian.profile_data?.support_category || "-"}
                                 </div>
                               ) : null}
                               <div className="staff-row-meta">
@@ -8844,14 +9299,16 @@ export default function GreenWork() {
                     </div>
                   )}
 
-                  {(activeWorkflowProfile !== "agric" || agricCustodianHubTab === "support_setup") && (
+                  {(!fieldWorkflowMode || agricCustodianHubTab === "support_setup") && (
                     <>
               <div className="green-work-card">
-                <h3>{activeWorkflowProfile === "agric" ? "Support Events" : "Distributed Events"}</h3>
+                <h3>{fieldWorkflowMode ? "Support Events" : "Distributed Events"}</h3>
                 {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
                 <p className="green-work-note">
-                  {activeWorkflowProfile === "agric"
+                  {agricWorkflowMode
                     ? "Support-event tracking is kept separate so supervisor monitoring, targeting, and audit history stay clear."
+                    : reliefWorkflowMode
+                      ? "Relief-event tracking is kept separate so delivery history, reconstruction follow-up, and audit trails stay clear."
                     : "Distribution tracking is kept separate so supervisor monitoring stays clear."}
                 </p>
                 <input
@@ -8861,18 +9318,18 @@ export default function GreenWork() {
                   disabled={!activeProjectId}
                 />
                 <p className="green-work-field-tip">
-                  {activeWorkflowProfile === "agric"
+                  {fieldWorkflowMode
                     ? "Tip: use the actual day the support package or service was delivered."
                     : "Tip: use the actual day seedlings were handed out."}
                 </p>
                 <input
-                  placeholder={activeWorkflowProfile === "agric" ? "Support item / package (optional)" : "Species (optional)"}
+                  placeholder={fieldWorkflowMode ? "Support item / package (optional)" : "Species (optional)"}
                   value={newDistributionEvent.species}
                   onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, species: e.target.value }))}
                   disabled={!activeProjectId}
                 />
                 <p className="green-work-field-tip">
-                  {activeWorkflowProfile === "agric"
+                  {fieldWorkflowMode
                     ? "Tip: enter one package or support item only if this event delivered a single item type."
                     : "Tip: enter a species only if this event was single-species."}
                 </p>
@@ -8887,7 +9344,7 @@ export default function GreenWork() {
                   disabled={!activeProjectId}
                 />
                 <p className="green-work-field-tip">
-                  {activeWorkflowProfile === "agric"
+                  {fieldWorkflowMode
                     ? "Tip: total units dispatched in this event."
                     : "Tip: total seedlings dispatched in this event."}
                 </p>
@@ -8905,22 +9362,22 @@ export default function GreenWork() {
                   disabled={!activeProjectId}
                 />
                 <p className="green-work-field-tip">
-                  {activeWorkflowProfile === "agric"
+                  {fieldWorkflowMode
                     ? "Tip: enter the supervisor or staff member responsible for the support event."
                     : "Tip: enter supervisor/staff name responsible for handout."}
                 </p>
                 <textarea
-                  placeholder={activeWorkflowProfile === "agric" ? "Support event notes" : "Distribution notes"}
+                  placeholder={fieldWorkflowMode ? "Support event notes" : "Distribution notes"}
                   value={newDistributionEvent.notes}
                   onChange={(e) => setNewDistributionEvent((prev) => ({ ...prev, notes: e.target.value }))}
                   disabled={!activeProjectId}
                 />
                 <p className="green-work-field-tip">Tip: add location, partner, or any exception notes for audit.</p>
                 <button className="btn-primary" type="button" onClick={() => void createDistributionEvent()} disabled={!activeProjectId}>
-                  {activeWorkflowProfile === "agric" ? "Create Support Event" : "Create Distribution Event"}
+                  {fieldWorkflowMode ? "Create Support Event" : "Create Distribution Event"}
                 </button>
 
-                <h4>{activeWorkflowProfile === "agric" ? "Allocate Support" : "Allocate Seedlings"}</h4>
+                <h4>{fieldWorkflowMode ? "Allocate Support" : "Allocate Seedlings"}</h4>
                 <select
                   value={newAllocation.event_id}
                   onChange={(e) => setNewAllocation((prev) => ({ ...prev, event_id: e.target.value }))}
@@ -8934,7 +9391,7 @@ export default function GreenWork() {
                   ))}
                 </select>
                 <p className="green-work-field-tip">
-                  {activeWorkflowProfile === "agric"
+                  {fieldWorkflowMode
                     ? "Tip: choose the support event this allocation belongs to."
                     : "Tip: choose the distribution event this allocation belongs to."}
                 </p>
@@ -8943,7 +9400,7 @@ export default function GreenWork() {
                   onChange={(e) => setNewAllocation((prev) => ({ ...prev, custodian_id: e.target.value }))}
                   disabled={!activeProjectId || custodians.length === 0}
                 >
-                  <option value="">{activeWorkflowProfile === "agric" ? "Select farmer" : "Select custodian"}</option>
+                  <option value="">{fieldWorkflowMode ? `Select ${activeWorkflowLabels.ownerSingular.toLowerCase()}` : "Select custodian"}</option>
                   {custodians.map((custodian) => (
                     <option key={`dist-custodian-${custodian.id}`} value={custodian.id}>
                       {custodian.name} ({formatTaskTypeLabel(custodian.custodian_type)})
@@ -8951,8 +9408,10 @@ export default function GreenWork() {
                   ))}
                 </select>
                 <p className="green-work-field-tip">
-                  {activeWorkflowProfile === "agric"
+                  {agricWorkflowMode
                     ? "Tip: select the receiving farmer or producer record."
+                    : reliefWorkflowMode
+                      ? "Tip: select the beneficiary or institution receiving this support package."
                     : "Tip: select the receiving custodian (household/school/group)."}
                 </p>
                 <input
@@ -8966,14 +9425,16 @@ export default function GreenWork() {
                   disabled={!activeProjectId}
                 />
                 <p className="green-work-field-tip">
-                  {activeWorkflowProfile === "agric"
+                  {agricWorkflowMode
                     ? "Tip: number of units assigned to this farmer."
+                    : reliefWorkflowMode
+                      ? "Tip: number of relief units, kits, or materials assigned to this beneficiary."
                     : "Tip: number of seedlings assigned to this custodian."}
                 </p>
                 <input
                   type="number"
                   min={0}
-                  placeholder={activeWorkflowProfile === "agric" ? "Follow-up target (visits)" : "Supervision target (visits)"}
+                  placeholder={fieldWorkflowMode ? "Follow-up target (visits)" : "Supervision target (visits)"}
                   value={newAllocation.supervision_target}
                   onChange={(e) =>
                     setNewAllocation((prev) => ({ ...prev, supervision_target: Number(e.target.value || 0) }))
@@ -8981,8 +9442,8 @@ export default function GreenWork() {
                   disabled={!activeProjectId}
                 />
                 <p className="green-work-field-tip">
-                  {activeWorkflowProfile === "agric"
-                    ? "Tip: number of follow-up visits planned for this farmer support allocation."
+                  {fieldWorkflowMode
+                    ? `Tip: number of follow-up visits planned for this ${activeWorkflowLabels.ownerSingular.toLowerCase()} support allocation.`
                     : "Tip: number of supervisor follow-up visits planned for this allocation."}
                 </p>
                 <input
@@ -8992,7 +9453,7 @@ export default function GreenWork() {
                   disabled={!activeProjectId}
                 />
                 <p className="green-work-field-tip">
-                  {activeWorkflowProfile === "agric"
+                  {fieldWorkflowMode
                     ? "Tip: planned support start date for field follow-up."
                     : "Tip: planned planting start date for field follow-up."}
                 </p>
@@ -9003,7 +9464,7 @@ export default function GreenWork() {
                   disabled={!activeProjectId}
                 />
                 <p className="green-work-field-tip">
-                  {activeWorkflowProfile === "agric"
+                  {fieldWorkflowMode
                     ? "Tip: target completion date for this support cycle."
                     : "Tip: target completion date for planting this allocation."}
                 </p>
@@ -9018,12 +9479,12 @@ export default function GreenWork() {
                   disabled={!activeProjectId}
                 />
                 <p className="green-work-field-tip">
-                  {activeWorkflowProfile === "agric"
-                    ? "Tip: how often, in days, field staff should revisit this farmer."
+                  {fieldWorkflowMode
+                    ? `Tip: how often, in days, field staff should revisit this ${activeWorkflowLabels.ownerSingular.toLowerCase()}.`
                     : "Tip: how often (in days) supervisors should revisit this custodian."}
                 </p>
                 <textarea
-                  placeholder={activeWorkflowProfile === "agric" ? "Support allocation notes" : "Allocation notes"}
+                  placeholder={fieldWorkflowMode ? "Support allocation notes" : "Allocation notes"}
                   value={newAllocation.notes}
                   onChange={(e) => setNewAllocation((prev) => ({ ...prev, notes: e.target.value }))}
                   disabled={!activeProjectId}
@@ -9041,11 +9502,13 @@ export default function GreenWork() {
               </div>
 
                   <div className="green-work-card">
-                    <h3>{activeWorkflowProfile === "agric" ? "Farmer Registry Report" : "Custodian Report"}</h3>
+                    <h3>{fieldWorkflowMode ? `${activeWorkflowLabels.ownerSingular} Registry Report` : "Custodian Report"}</h3>
                     {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
                     <p className="green-work-note">
-                      {activeWorkflowProfile === "agric"
+                      {agricWorkflowMode
                         ? "Export includes farmer registry, support delivery, plot-by-plot evidence pages, and compliance-ready mapped boundaries. Plot photos are optional."
+                        : reliefWorkflowMode
+                          ? "Export includes beneficiary registry, support delivery, site-by-site evidence pages, and mapped boundaries. Site photos are optional."
                         : "Export includes custodians, distribution history, and supervision tracking. Photo appendix is optional."}
                     </p>
                     <div className="work-actions">
@@ -9055,10 +9518,10 @@ export default function GreenWork() {
                           checked={includePhotosInCustodianPdf}
                           onChange={(e) => setIncludePhotosInCustodianPdf(e.target.checked)}
                         />
-                        {activeWorkflowProfile === "agric" ? "Include plot photos" : "Include photos"}
+                        {fieldWorkflowMode ? `Include ${activeWorkflowLabels.entitySingular.toLowerCase()} photos` : "Include photos"}
                       </label>
                       <button type="button" onClick={exportCustodianPdf} disabled={!activeProjectId}>
-                        {activeWorkflowProfile === "agric" ? "Export Agric Programme PDF" : "Export Custodian PDF"}
+                        {agricWorkflowMode ? "Export Agric Programme PDF" : reliefWorkflowMode ? "Export Relief Programme PDF" : "Export Custodian PDF"}
                       </button>
                   </div>
                   </div>
@@ -9071,7 +9534,7 @@ export default function GreenWork() {
 
           {activeForm === "existing_tree_intake" && (
             <div className="green-work-card">
-              <h3>{activeWorkflowProfile === "agric" ? "Plot Records" : "Existing Trees"}</h3>
+              <h3>{fieldWorkflowMode ? activeWorkflowLabels.recordTitle : "Existing Trees"}</h3>
               {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
               <p className="green-work-note">
                 {activeWorkflowProfile === "agric"
@@ -9724,6 +10187,7 @@ export default function GreenWork() {
               >
                 <option value="green">Green workflow</option>
                 <option value="agric">Agric workflow</option>
+                <option value="relief_recovery">Relief &amp; Recovery workflow</option>
               </select>
               <input
                 placeholder="Location"
@@ -9761,6 +10225,35 @@ export default function GreenWork() {
                     placeholder="Season label"
                     value={newProject.agric_season_label}
                     onChange={(e) => setNewProject({ ...newProject, agric_season_label: e.target.value })}
+                  />
+                </>
+              ) : newProject.workflow_profile === "relief_recovery" ? (
+                <>
+                  <select
+                    value={newProject.relief_program_type}
+                    onChange={(e) => setNewProject({ ...newProject, relief_program_type: e.target.value })}
+                  >
+                    <option value="emergency_relief">Emergency relief</option>
+                    <option value="shelter_recovery">Shelter recovery</option>
+                    <option value="construction_materials">Construction materials</option>
+                    <option value="infrastructure_rehab">Infrastructure rehabilitation</option>
+                    <option value="cash_voucher">Cash & voucher</option>
+                    <option value="mixed">Mixed</option>
+                  </select>
+                  <input
+                    placeholder="Intervention focus"
+                    value={newProject.relief_intervention_focus}
+                    onChange={(e) => setNewProject({ ...newProject, relief_intervention_focus: e.target.value })}
+                  />
+                  <input
+                    placeholder="Package types"
+                    value={newProject.relief_package_types}
+                    onChange={(e) => setNewProject({ ...newProject, relief_package_types: e.target.value })}
+                  />
+                  <input
+                    placeholder="Target zone / LGA cluster"
+                    value={newProject.relief_target_zone}
+                    onChange={(e) => setNewProject({ ...newProject, relief_target_zone: e.target.value })}
                   />
                 </>
               ) : null}
@@ -10660,12 +11153,16 @@ export default function GreenWork() {
                     else if (distanceFromTreeMeters <= 30) distanceToneClass = "is-near";
                     else distanceToneClass = "is-far";
                   }
-                  const reviewWorkflowProfile = activeWorkflowProfile === "agric" ? "agric" : "green";
+                  const reviewWorkflowProfile = fieldWorkflowMode ? activeWorkflowProfile : "green";
                   const reviewTaskLabel = formatWorkflowTaskTypeLabel(task.task_type, reviewWorkflowProfile);
-                  const reviewEntityLabel = activeWorkflowProfile === "agric"
+                  const reviewEntityLabel = agricWorkflowMode
                     ? reviewTreeRecord
                       ? formatPlotRecordLabel(reviewTreeRecord)
                       : formatProjectTreeLabelById(task.tree_id)
+                    : reliefWorkflowMode
+                      ? reviewTreeRecord
+                        ? formatReliefSiteLabel(reviewTreeRecord)
+                        : formatProjectTreeLabelById(task.tree_id)
                     : formatProjectTreeLabelById(task.tree_id);
                   const reviewCropLabel = reviewTreeRecord ? getPlotCommodityLabel(reviewTreeRecord) : task.tree_species || "-";
                   const reviewPlotAreaLabel = reviewTreeRecord ? formatPlotAreaLabel(reviewTreeRecord) : "-";
@@ -10673,6 +11170,15 @@ export default function GreenWork() {
                   const reviewBoundaryLabel = formatBoundaryCaptureMethodLabel(
                     reviewTreeRecord?.record_profile_data?.boundary_capture_method,
                   );
+                  const reviewReliefAssetType = reviewTreeRecord?.record_profile_data?.asset_type
+                    ? formatTaskTypeLabel(reviewTreeRecord.record_profile_data.asset_type)
+                    : "-";
+                  const reviewReliefDamageLevel = reviewTreeRecord?.record_profile_data?.damage_level
+                    ? formatReliefDamageLevelLabel(reviewTreeRecord.record_profile_data.damage_level)
+                    : "-";
+                  const reviewReliefResponsePathway = reviewTreeRecord?.record_profile_data?.response_pathway
+                    ? formatTaskTypeLabel(reviewTreeRecord.record_profile_data.response_pathway)
+                    : "-";
                   const reviewIrrigationLabel = reviewTreeRecord?.record_profile_data?.irrigation_type
                     ? formatTaskTypeLabel(reviewTreeRecord.record_profile_data.irrigation_type)
                     : "-";
@@ -10694,9 +11200,9 @@ export default function GreenWork() {
                       Review: {task.review_state || "none"} | Submitted: {formatDateLabel(task.submitted_at || task.created_at)}
                     </div>
                     <div className="staff-row-meta">
-                      {activeWorkflowProfile === "agric" ? "Observed / reference date" : "Planting / reference date"}: {formatDateLabel(task.tree_planting_date || task.due_date || task.created_at)}
+                      {fieldWorkflowMode ? "Observed / reference date" : "Planting / reference date"}: {formatDateLabel(task.tree_planting_date || task.due_date || task.created_at)}
                     </div>
-                    {activeWorkflowProfile === "agric" ? (
+                    {agricWorkflowMode ? (
                       <>
                         <div className="staff-row-meta">
                           Farm details: Crop: {reviewCropLabel} | Area: {reviewPlotAreaLabel} | Boundary: {reviewBoundaryLabel} | Season: {reviewSeasonLabel}
@@ -10713,6 +11219,25 @@ export default function GreenWork() {
                         </div>
                         <div className={`staff-row-meta green-work-review-distance ${distanceToneClass}`}>
                           Distance from farm anchor: {formatDistanceMeters(distanceFromTreeMeters)}
+                        </div>
+                      </>
+                    ) : reliefWorkflowMode ? (
+                      <>
+                        <div className="staff-row-meta">
+                          Site details: Type: {reviewReliefAssetType} | Damage: {reviewReliefDamageLevel} | Area: {reviewPlotAreaLabel} | Boundary: {reviewBoundaryLabel}
+                        </div>
+                        <div className="staff-row-meta">
+                          Recovery profile: Response path: {reviewReliefResponsePathway} | Occupancy: {reviewTreeRecord?.record_profile_data?.occupancy_status || "-"} | Status: {treeStatusLabel(task.tree_status)}
+                        </div>
+                        <div className="staff-row-meta">
+                          Site GPS: {formatGpsPair(originalTreeLng, originalTreeLat)}
+                        </div>
+                        <div className="staff-row-meta">
+                          Visit GPS: {formatGpsPair(maintenanceLng, maintenanceLat)}
+                          {task.activity_recorded_at ? ` | Captured: ${formatDateTimeLabel(task.activity_recorded_at)}` : ""}
+                        </div>
+                        <div className={`staff-row-meta green-work-review-distance ${distanceToneClass}`}>
+                          Distance from site anchor: {formatDistanceMeters(distanceFromTreeMeters)}
                         </div>
                       </>
                     ) : (
@@ -10740,7 +11265,7 @@ export default function GreenWork() {
                     )}
                     {task.reported_tree_status && (
                       <div className="staff-row-meta">
-                        {activeWorkflowProfile === "agric" ? "Reported field condition" : "Reported condition"}: {formatTaskTypeLabel(task.reported_tree_status)}
+                        {fieldWorkflowMode ? "Reported field condition" : "Reported condition"}: {formatTaskTypeLabel(task.reported_tree_status)}
                       </div>
                     )}
                     {task.review_notes && (
@@ -10748,13 +11273,13 @@ export default function GreenWork() {
                     )}
                     {(task.custodian_name || normalizeName(task.task_type) === "supervision") && (
                       <div className="staff-row-meta">
-                        {activeWorkflowProfile === "agric" ? "Farmer" : "Custodian"}: {task.custodian_name || "-"} | Community: {task.custodian_community_name || "-"} | Contact:{" "}
+                        {fieldWorkflowMode ? activeWorkflowLabels.ownerSingular : "Custodian"}: {task.custodian_name || "-"} | Community: {task.custodian_community_name || "-"} | Contact:{" "}
                         {task.custodian_phone || task.custodian_email || task.custodian_contact_person || "-"}
                       </div>
                     )}
                     {normalizeName(task.task_type) === "supervision" && (
                       <div className="staff-row-meta">
-                        {activeWorkflowProfile === "agric" ? "Support visit" : "Supervision visit"}: {Number(task.supervision_visit_no || 0) || "-"} /{" "}
+                        {fieldWorkflowMode ? activeWorkflowLabels.supportVisitTitle.replace(/s$/, "") : "Supervision visit"}: {Number(task.supervision_visit_no || 0) || "-"} /{" "}
                         {Number(task.supervision_total_visits || 0) || "-"}
                       </div>
                     )}
@@ -11621,7 +12146,7 @@ export default function GreenWork() {
           {activeProjectId && activeForm === "existing_tree_intake" && (
             <div className="green-work-card">
               <div className="green-work-row">
-                <h3>{activeWorkflowProfile === "agric" ? "Plot Records Inventory" : "Existing Trees Inventory"}</h3>
+                <h3>{agricWorkflowMode ? "Plot Records Inventory" : reliefWorkflowMode ? "Site Records Inventory" : "Existing Trees Inventory"}</h3>
                 <div className="work-actions">
                   <button
                     type="button"
@@ -11629,10 +12154,10 @@ export default function GreenWork() {
                     disabled={workPartnerOrgPaused}
                     title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}
                   >
-                    {activeWorkflowProfile === "agric" ? "Export Plot CSV" : "Export CSV"}
+                    {agricWorkflowMode ? "Export Plot CSV" : reliefWorkflowMode ? "Export Site CSV" : "Export CSV"}
                   </button>
                   <button type="button" onClick={exportExistingTreesPdf}>
-                    {activeWorkflowProfile === "agric" ? "Export Plot PDF" : "Export PDF"}
+                    {agricWorkflowMode ? "Export Plot PDF" : reliefWorkflowMode ? "Export Site PDF" : "Export PDF"}
                   </button>
                   <label className="green-work-export-photo-toggle">
                     <input
@@ -11656,20 +12181,24 @@ export default function GreenWork() {
                 </div>
               </div>
               <p className="green-work-chart-context">
-                {activeWorkflowProfile === "agric"
+                {agricWorkflowMode
                   ? "Context: mapped plot records captured in the Agric mobile workflow, including area, crop, season, and support-ready field metadata."
+                  : reliefWorkflowMode
+                    ? "Context: mapped site records captured in the Relief mobile workflow, including damage level, response pathway, boundary area, and field evidence."
                   : "Context: trees tagged as Existing using origin, attribution scope, KPI scope, or source-project linkage."}
               </p>
               <div className="green-work-live-summary">
                 <span className="green-work-live-pill neutral">Rows: {existingTreeIntakeRows.length}</span>
-                {activeWorkflowProfile === "agric" ? (
+                {fieldWorkflowMode ? (
                   <>
                     <span className="green-work-live-pill ok">
                       Mapped Area: {existingTreeIntakeAgricSummary.totalAreaHectares.toFixed(2)} ha
                     </span>
-                    <span className="green-work-live-pill neutral">
-                      Est. Yield: {existingTreeIntakeAgricSummary.totalEstimatedYieldKg.toFixed(0)} kg
-                    </span>
+                    {agricWorkflowMode ? (
+                      <span className="green-work-live-pill neutral">
+                        Est. Yield: {existingTreeIntakeAgricSummary.totalEstimatedYieldKg.toFixed(0)} kg
+                      </span>
+                    ) : null}
                   </>
                 ) : (
                   <span className={`green-work-live-pill ${existingTreeMetricsLoading ? "warning" : "ok"}`}>
@@ -11680,7 +12209,7 @@ export default function GreenWork() {
               <div className="green-work-live-table-wrap">
                 <table className="green-work-live-table">
                   <thead>
-                    {activeWorkflowProfile === "agric" ? (
+                    {agricWorkflowMode ? (
                       <tr>
                         <th>Plot</th>
                         <th>Farmer</th>
@@ -11692,6 +12221,20 @@ export default function GreenWork() {
                         <th>Est. Yield</th>
                         <th>Status</th>
                         <th>Boundary</th>
+                        <th>Observed</th>
+                        <th>Captured By</th>
+                      </tr>
+                    ) : reliefWorkflowMode ? (
+                      <tr>
+                        <th>Site</th>
+                        <th>Beneficiary</th>
+                        <th>Asset Type</th>
+                        <th>Damage</th>
+                        <th>Area</th>
+                        <th>Response Path</th>
+                        <th>Occupancy</th>
+                        <th>Population Served</th>
+                        <th>Status</th>
                         <th>Observed</th>
                         <th>Captured By</th>
                       </tr>
@@ -11716,16 +12259,18 @@ export default function GreenWork() {
                   <tbody>
                     {existingTreeIntakeRows.length === 0 ? (
                       <tr>
-                        <td colSpan={activeWorkflowProfile === "agric" ? 12 : 13} className="green-work-live-empty">
-                          {activeWorkflowProfile === "agric"
+                        <td colSpan={agricWorkflowMode ? 12 : reliefWorkflowMode ? 11 : 13} className="green-work-live-empty">
+                          {agricWorkflowMode
                             ? "No plot records found in this project yet."
+                            : reliefWorkflowMode
+                              ? "No site records found in this project yet."
                             : "No Existing Tree records found in this project yet."}
                         </td>
                       </tr>
                     ) : (
                       existingTreeIntakeRows.slice(0, 500).map((tree) => {
                         const metric = existingTreeMetricsById[Number(tree.id)];
-                        return activeWorkflowProfile === "agric" ? (
+                        return agricWorkflowMode ? (
                           <tr key={`existing-main-${tree.id}`}>
                             <td>{formatPlotRecordLabel(tree)}</td>
                             <td>{tree.custodian_name || "-"}</td>
@@ -11741,6 +12286,20 @@ export default function GreenWork() {
                             </td>
                             <td>{formatTaskTypeLabel(tree.status)}</td>
                             <td>{formatBoundaryCaptureMethodLabel(tree.record_profile_data?.boundary_capture_method)}</td>
+                            <td>{formatDateLabel(tree.planting_date)}</td>
+                            <td>{tree.created_by || "-"}</td>
+                          </tr>
+                        ) : reliefWorkflowMode ? (
+                          <tr key={`existing-main-${tree.id}`}>
+                            <td>{formatReliefSiteLabel(tree)}</td>
+                            <td>{tree.custodian_name || "-"}</td>
+                            <td>{tree.record_profile_data?.asset_type ? formatTaskTypeLabel(tree.record_profile_data.asset_type) : "-"}</td>
+                            <td>{formatReliefDamageLevelLabel(tree.record_profile_data?.damage_level)}</td>
+                            <td>{formatPlotAreaLabel(tree, metric)}</td>
+                            <td>{tree.record_profile_data?.response_pathway ? formatTaskTypeLabel(tree.record_profile_data.response_pathway) : "-"}</td>
+                            <td>{tree.record_profile_data?.occupancy_status ? formatTaskTypeLabel(tree.record_profile_data.occupancy_status) : "-"}</td>
+                            <td>{Number.isFinite(Number(tree.record_profile_data?.population_served)) ? Number(tree.record_profile_data?.population_served) : "-"}</td>
+                            <td>{formatTaskTypeLabel(tree.status)}</td>
                             <td>{formatDateLabel(tree.planting_date)}</td>
                             <td>{tree.created_by || "-"}</td>
                           </tr>
@@ -11771,19 +12330,23 @@ export default function GreenWork() {
 
           {activeProjectId &&
             (activeForm === "live_table" ||
-              (activeWorkflowProfile !== "agric" && activeForm === "custodian_hub") ||
+              (!fieldWorkflowMode && activeForm === "custodian_hub") ||
               agricFarmerLiveMode ||
               agricFieldCaptureMode ||
               agricSupportVisitMode) && (
             <div className="green-work-card">
               <div className="green-work-row">
                 <h3>
-                  {activeWorkflowProfile === "agric"
+                  {fieldWorkflowMode
                     ? agricFieldCaptureMode
                       ? "Field Capture Assignment Table"
                       : agricSupportVisitMode
-                        ? "Support Visit Assignment Table"
-                        : "Farmer Live Results Table"
+                        ? activeWorkflowProfile === "relief_recovery"
+                          ? "Relief Visit Assignment Table"
+                          : "Support Visit Assignment Table"
+                        : activeWorkflowProfile === "relief_recovery"
+                          ? "Beneficiary Live Results Table"
+                          : "Farmer Live Results Table"
                     : "Custodian Live Results Table"}
                 </h3>
                 <div className="work-actions">
@@ -11793,34 +12356,44 @@ export default function GreenWork() {
                 </div>
               </div>
               <p className="green-work-chart-context">
-                {activeWorkflowProfile === "agric"
+                {fieldWorkflowMode
                   ? agricFieldCaptureMode
-                    ? "Context: assign first field capture to farmers with no mapped plots yet. These tasks open in Map & Add Plot in the mobile app."
+                    ? activeWorkflowProfile === "relief_recovery"
+                      ? "Context: assign first site capture to beneficiaries with no mapped sites yet. These tasks open in Map & Assess Sites in the mobile app."
+                      : "Context: assign first field capture to farmers with no mapped plots yet. These tasks open in Map & Add Plot in the mobile app."
                     : agricSupportVisitMode
-                      ? "Context: assign follow-up support visits only after plots have been captured and a support allocation exists."
-                      : "Context: live roll-up by farmer using support allocations, mapped plots, and field follow-up activity in this project."
+                      ? activeWorkflowProfile === "relief_recovery"
+                        ? "Context: assign follow-up relief or recovery visits after sites have been captured and support allocation exists."
+                        : "Context: assign follow-up support visits only after plots have been captured and a support allocation exists."
+                      : activeWorkflowProfile === "relief_recovery"
+                        ? "Context: live roll-up by beneficiary using support allocations, mapped sites, and relief follow-up activity in this project."
+                        : "Context: live roll-up by farmer using support allocations, mapped plots, and field follow-up activity in this project."
                   : "Context: live roll-up by custodian using allocations + tracked tree statuses in this project."}
               </p>
               <div className="green-work-live-summary">
                 <span className="green-work-live-pill neutral">
-                  {activeWorkflowProfile === "agric" ? "Farmers" : "Custodians"}: {displayedCustodianLiveSummary.totalRows}
+                  {fieldWorkflowMode ? activeWorkflowLabels.ownerPlural : "Custodians"}: {displayedCustodianLiveSummary.totalRows}
                 </span>
                 <span className="green-work-live-pill ok">Verified: {displayedCustodianLiveSummary.verified}</span>
                 <span className="green-work-live-pill neutral">
-                  {activeWorkflowProfile === "agric" ? "Units Allocated" : "Seedlings Allocated"}: {displayedCustodianLiveSummary.units}
+                  {fieldWorkflowMode ? "Units Allocated" : "Seedlings Allocated"}: {displayedCustodianLiveSummary.units}
                 </span>
                 <span className="green-work-live-pill neutral">
-                  {activeWorkflowProfile === "agric"
+                  {fieldWorkflowMode
                     ? agricFieldCaptureMode
                       ? "Field Capture"
-                      : "Visits"
+                      : activeWorkflowProfile === "relief_recovery"
+                        ? "Relief Visits"
+                        : "Visits"
                     : "Supervision"}: {displayedCustodianLiveSummary.visitDone}/{displayedCustodianLiveSummary.visitTarget} done
                 </span>
                 <span className="green-work-live-pill warning">
-                  {activeWorkflowProfile === "agric"
+                  {fieldWorkflowMode
                     ? agricFieldCaptureMode
                       ? "Capture Live"
-                      : "Visit Live"
+                      : activeWorkflowProfile === "relief_recovery"
+                        ? "Relief Live"
+                        : "Visit Live"
                     : "Supervision Live"}: {displayedCustodianLiveSummary.visitLive}
                 </span>
               </div>
@@ -11828,35 +12401,41 @@ export default function GreenWork() {
                 <table className="green-work-live-table">
                   <thead>
                     <tr>
-                      <th>{activeWorkflowProfile === "agric" ? "Farmer" : "Custodian"}</th>
+                      <th>{fieldWorkflowMode ? activeWorkflowLabels.ownerSingular : "Custodian"}</th>
                       <th>Type</th>
                       <th>Verification</th>
                       <th>Contact</th>
-                      <th>{activeWorkflowProfile === "agric" ? "Support Allocations" : "Allocations"}</th>
-                      <th>{activeWorkflowProfile === "agric" ? "Units" : "Seedlings"}</th>
+                      <th>{fieldWorkflowMode ? "Support Allocations" : "Allocations"}</th>
+                      <th>{fieldWorkflowMode ? "Units" : "Seedlings"}</th>
                       <th>Events</th>
-                      <th>{activeWorkflowProfile === "agric" ? "Plots" : "Trees Tracked"}</th>
-                      <th>{activeWorkflowProfile === "agric" ? "Mapped Plots" : "Existing Trees"}</th>
-                      <th>{activeWorkflowProfile === "agric" ? "Good %" : "Healthy %"}</th>
+                      <th>{fieldWorkflowMode ? activeWorkflowProfile === "relief_recovery" ? "Sites" : "Plots" : "Trees Tracked"}</th>
+                      <th>{fieldWorkflowMode ? activeWorkflowProfile === "relief_recovery" ? "Mapped Sites" : "Mapped Plots" : "Existing Trees"}</th>
+                      <th>{fieldWorkflowMode ? activeWorkflowProfile === "relief_recovery" ? "Ready %" : "Good %" : "Healthy %"}</th>
                       <th>
-                        {activeWorkflowProfile === "agric"
+                        {fieldWorkflowMode
                           ? agricFieldCaptureMode
                             ? "Capture Target"
-                            : "Visit Target"
+                            : activeWorkflowProfile === "relief_recovery"
+                              ? "Relief Target"
+                              : "Visit Target"
                           : "Sup Target"}
                       </th>
                       <th>
-                        {activeWorkflowProfile === "agric"
+                        {fieldWorkflowMode
                           ? agricFieldCaptureMode
                             ? "Capture Live"
-                            : "Visit Live"
+                            : activeWorkflowProfile === "relief_recovery"
+                              ? "Relief Live"
+                              : "Visit Live"
                           : "Sup Live"}
                       </th>
                       <th>
-                        {activeWorkflowProfile === "agric"
+                        {fieldWorkflowMode
                           ? agricFieldCaptureMode
                             ? "Capture Done"
-                            : "Visit Done"
+                            : activeWorkflowProfile === "relief_recovery"
+                              ? "Relief Done"
+                              : "Visit Done"
                           : "Sup Done"}
                       </th>
                       <th>Last Event</th>
@@ -11867,12 +12446,18 @@ export default function GreenWork() {
                     {displayedCustodianLiveRows.length === 0 ? (
                       <tr>
                         <td colSpan={15} className="green-work-live-empty">
-                          {activeWorkflowProfile === "agric"
+                          {fieldWorkflowMode
                             ? agricFieldCaptureMode
-                              ? "No farmers are waiting for first field capture right now."
+                              ? activeWorkflowProfile === "relief_recovery"
+                                ? "No beneficiaries are waiting for first site capture right now."
+                                : "No farmers are waiting for first field capture right now."
                               : agricSupportVisitMode
-                                ? "No farmers are ready for support-visit assignment yet."
-                                : "No farmer activity records yet."
+                                ? activeWorkflowProfile === "relief_recovery"
+                                  ? "No beneficiaries are ready for relief-visit assignment yet."
+                                  : "No farmers are ready for support-visit assignment yet."
+                                : activeWorkflowProfile === "relief_recovery"
+                                  ? "No beneficiary activity records yet."
+                                  : "No farmer activity records yet."
                             : "No custodian activity records yet."}
                         </td>
                       </tr>
@@ -11882,7 +12467,7 @@ export default function GreenWork() {
                           .filter((item) => Number(item.custodian_id) === Number(row.custodian.id))
                           .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
                         const isAssignOpen = Number(custodianAssignDraft?.custodian_id || 0) === Number(row.custodian.id);
-                        const requiresFirstFieldCapture = activeWorkflowProfile === "agric" && Number(row.treeTotal || 0) <= 0;
+                        const requiresFirstFieldCapture = fieldWorkflowMode && Number(row.treeTotal || 0) <= 0;
                         const hasOpenFieldCapture = Boolean(row.hasOpenFieldCapture);
                         const targetCount = agricFieldCaptureMode ? 1 : row.supervisionTarget;
                         const liveCount = agricFieldCaptureMode ? row.fieldCaptureLive : row.supervisionLive;
@@ -11926,7 +12511,7 @@ export default function GreenWork() {
                                   type="button"
                                   className="green-row-btn"
                                   onClick={() => {
-                                    if (activeWorkflowProfile === "agric" && agricFarmerLiveMode) {
+                                    if (fieldWorkflowMode && agricFarmerLiveMode) {
                                       openForm(requiresFirstFieldCapture ? "field_capture_assign" : "support_visit_assign");
                                     }
                                     openCustodianSupervisionAssign(
@@ -11936,16 +12521,20 @@ export default function GreenWork() {
                                   }}
                                   disabled={workPartnerOrgPaused || (agricFieldCaptureMode && hasOpenFieldCapture)}
                                 >
-                                  {activeWorkflowProfile === "agric"
+                                  {fieldWorkflowMode
                                     ? agricFarmerLiveMode
                                       ? requiresFirstFieldCapture
                                         ? "Open Field Capture"
-                                        : "Open Support Visit"
+                                        : activeWorkflowProfile === "relief_recovery"
+                                          ? "Open Relief Visit"
+                                          : "Open Support Visit"
                                       : agricFieldCaptureMode && hasOpenFieldCapture
                                         ? "Field Capture Assigned"
                                       : requiresFirstFieldCapture
                                         ? "Assign First Field Capture"
-                                        : "Assign Support Visit"
+                                        : activeWorkflowProfile === "relief_recovery"
+                                          ? "Assign Relief Visit"
+                                          : "Assign Support Visit"
                                     : "Assign Supervision"}
                                 </button>
                               </td>
