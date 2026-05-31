@@ -121,6 +121,11 @@ type Props = {
   minHeight?: number;
 };
 
+type MapAreaGeometry = {
+  type: "Point" | "LineString" | "MultiLineString" | "Polygon" | "MultiPolygon";
+  coordinates: any;
+};
+
 type TreeFeatureProps = {
   id: number;
   project_tree_no: number | null;
@@ -265,6 +270,7 @@ const TREE_LAYER_IDS = [TREE_CORE_LAYER_ID, TREE_OUTER_LAYER_ID];
 const ASSIGNMENT_AREA_SOURCE_ID = "assigned-planting-areas";
 const ASSIGNMENT_AREA_FILL_LAYER_ID = "assigned-planting-areas-fill";
 const ASSIGNMENT_AREA_LINE_LAYER_ID = "assigned-planting-areas-line";
+const ASSIGNMENT_AREA_POINT_LAYER_ID = "assigned-planting-areas-point";
 const ASSIGNMENT_AREA_LABEL_LAYER_ID = "assigned-planting-areas-label";
 
 const ACTIVE_TREE_STATUSES = new Set([
@@ -425,7 +431,7 @@ const buildTreeFeatureCollection = (items: TreePoint[], workflowMode: "green" | 
   } as any;
 };
 
-const normalizeAreaGeometry = (value: any): { type: "Polygon" | "MultiPolygon"; coordinates: any } | null => {
+const normalizeAreaGeometry = (value: any): MapAreaGeometry | null => {
   if (!value) return null;
   let raw = value;
   if (typeof raw === "string") {
@@ -436,9 +442,22 @@ const normalizeAreaGeometry = (value: any): { type: "Polygon" | "MultiPolygon"; 
     }
   }
   const geometry = raw?.type === "Feature" ? raw?.geometry : raw;
-  if (!geometry || (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon")) return null;
+  if (
+    !geometry ||
+    !["Point", "LineString", "MultiLineString", "Polygon", "MultiPolygon"].includes(String(geometry.type || ""))
+  ) {
+    return null;
+  }
   if (!Array.isArray(geometry.coordinates) || geometry.coordinates.length === 0) return null;
   return { type: geometry.type, coordinates: geometry.coordinates };
+};
+
+const formatReliefGeometryLabel = (geometryInput: any, tree: TreePoint) => {
+  const geometry = normalizeAreaGeometry(geometryInput);
+  if (!geometry) return "";
+  if (geometry.type === "Point") return "Point site";
+  if (geometry.type === "LineString" || geometry.type === "MultiLineString") return "Linear asset";
+  return formatArea(tree.existing_area_sqm, tree.record_profile_data?.area_hectares);
 };
 
 const buildAssignmentAreaFeatureCollection = (
@@ -489,7 +508,7 @@ const buildAssignmentAreaFeatureCollection = (
         : workflowMode === "relief_recovery"
           ? [
               String(tree.custodian_name || "").trim() || `Beneficiary #${tree?.id ?? index + 1}`,
-              [String(tree.record_profile_data?.asset_type || tree.species || "").trim(), formatArea(tree.existing_area_sqm, tree.record_profile_data?.area_hectares)]
+              [String(tree.record_profile_data?.asset_type || tree.species || "").trim(), formatReliefGeometryLabel(areaGeojson, tree)]
                 .filter((value) => value && value !== "-")
                 .join(" | "),
             ]
@@ -562,6 +581,17 @@ const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null,
     : Number.isFinite(Number(base.record_profile_data?.estimated_repair_cost))
       ? Number(base.record_profile_data?.estimated_repair_cost)
       : null;
+  const reliefBoundaryMethod = String(
+    tree.record_profile_data?.relief_boundary_capture_method || base.record_profile_data?.relief_boundary_capture_method || "",
+  ).trim();
+  const siteGeometryLabel =
+    plotArea !== "-"
+      ? plotArea
+      : reliefBoundaryMethod.startsWith("line")
+        ? "Linear asset"
+        : reliefBoundaryMethod === "point"
+          ? "Point site"
+          : "Recorded site";
 
   const recentTasks = (detail?.tasks || [])
     .slice(0, 3)
@@ -608,7 +638,7 @@ const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null,
         <p><strong>Asset:</strong> ${escapeHtml(statusLabel(assetLabel))}</p>
         <p><strong>Damage:</strong> ${escapeHtml(statusLabel(damageLabel))}</p>
         <p><strong>Response:</strong> ${escapeHtml(statusLabel(responseLabel))}</p>
-        <p><strong>Area:</strong> ${escapeHtml(plotArea)}</p>
+        <p><strong>Mapped as:</strong> ${escapeHtml(siteGeometryLabel)}</p>
         <p><strong>Status:</strong> ${escapeHtml(statusLabel(status))}</p>
         <p><strong>Occupancy / Tenure:</strong> ${escapeHtml(statusLabel(occupancyLabel))} / ${escapeHtml(statusLabel(tenureLabel))}</p>
         <p><strong>Population Served:</strong> ${populationServed !== null ? escapeHtml(String(populationServed)) : "-"}</p>
@@ -1055,6 +1085,18 @@ export default function TreeMap({
             },
           });
           map.addLayer({
+            id: ASSIGNMENT_AREA_POINT_LAYER_ID,
+            type: "circle",
+            source: ASSIGNMENT_AREA_SOURCE_ID,
+            paint: {
+              "circle-color": workflowMode !== "green" ? "#b91c1c" : "#15803d",
+              "circle-radius": workflowMode !== "green" ? 5.5 : 4.5,
+              "circle-stroke-color": "#fff8f8",
+              "circle-stroke-width": 1.2,
+              "circle-opacity": 0.96,
+            },
+          });
+          map.addLayer({
             id: ASSIGNMENT_AREA_LABEL_LAYER_ID,
             type: "symbol",
             source: ASSIGNMENT_AREA_SOURCE_ID,
@@ -1220,6 +1262,15 @@ export default function TreeMap({
             if (!props) return;
             inspectTreeFromProps(props, event.lngLat);
           });
+          map.on("click", ASSIGNMENT_AREA_POINT_LAYER_ID, (event: any) => {
+            const areaFeature = event.features?.[0];
+            const treeId = Number(areaFeature?.properties?.tree_id || 0);
+            if (!Number.isFinite(treeId) || treeId <= 0) return;
+            const tree = treesRef.current.find((item) => Number(item.id) === treeId);
+            const props = tree ? buildTreeFeatureProps(tree) : null;
+            if (!props) return;
+            inspectTreeFromProps(props, event.lngLat);
+          });
           map.on("click", ASSIGNMENT_AREA_LABEL_LAYER_ID, (event: any) => {
             const areaFeature = event.features?.[0];
             const treeId = Number(areaFeature?.properties?.tree_id || 0);
@@ -1236,7 +1287,7 @@ export default function TreeMap({
             const feature = map.queryRenderedFeatures(event.point, {
               layers:
                 workflowModeRef.current !== "green"
-                  ? [...TREE_LAYER_IDS, ASSIGNMENT_AREA_FILL_LAYER_ID, ASSIGNMENT_AREA_LINE_LAYER_ID, ASSIGNMENT_AREA_LABEL_LAYER_ID]
+                  ? [...TREE_LAYER_IDS, ASSIGNMENT_AREA_FILL_LAYER_ID, ASSIGNMENT_AREA_LINE_LAYER_ID, ASSIGNMENT_AREA_POINT_LAYER_ID, ASSIGNMENT_AREA_LABEL_LAYER_ID]
                   : TREE_LAYER_IDS,
             })[0];
             if (feature) return;
@@ -1288,7 +1339,8 @@ export default function TreeMap({
           const isPolygonMode = drawModeRef.current === "polygon";
           if (isPolygonMode) {
             const geometry = normalizeAreaGeometry(feature.geometry);
-            if (!geometry) return;
+            if (!geometry || (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon")) return;
+            const polygonGeometry = geometry as { type: "Polygon" | "MultiPolygon"; coordinates: any };
             const draw = drawRef.current;
             const currentId = String(feature.id || "");
             if (draw && currentId) {
@@ -1300,7 +1352,7 @@ export default function TreeMap({
                 }
               });
             }
-            onPolygonChangeRef.current?.(geometry);
+            onPolygonChangeRef.current?.(polygonGeometry);
             return;
           }
 
@@ -1430,6 +1482,10 @@ export default function TreeMap({
     if (map.getLayer(ASSIGNMENT_AREA_LINE_LAYER_ID)) {
       map.setPaintProperty(ASSIGNMENT_AREA_LINE_LAYER_ID, "line-color", workflowMode !== "green" ? "#b91c1c" : "#15803d");
       map.setPaintProperty(ASSIGNMENT_AREA_LINE_LAYER_ID, "line-width", workflowMode !== "green" ? 2.8 : 2.4);
+    }
+    if (map.getLayer(ASSIGNMENT_AREA_POINT_LAYER_ID)) {
+      map.setPaintProperty(ASSIGNMENT_AREA_POINT_LAYER_ID, "circle-color", workflowMode !== "green" ? "#b91c1c" : "#15803d");
+      map.setPaintProperty(ASSIGNMENT_AREA_POINT_LAYER_ID, "circle-radius", workflowMode !== "green" ? 5.5 : 4.5);
     }
     if (map.getLayer(ASSIGNMENT_AREA_LABEL_LAYER_ID)) {
       map.setPaintProperty(ASSIGNMENT_AREA_LABEL_LAYER_ID, "text-color", workflowMode !== "green" ? "#7f1d1d" : "#064e3b");
