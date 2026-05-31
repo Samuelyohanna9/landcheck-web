@@ -873,7 +873,9 @@ const normalizeSpeciesAllocations = (
   });
   return Array.from(merged.values());
 };
-const normalizeMapAreaGeometry = (value: any): { type: "Polygon" | "MultiPolygon"; coordinates: any } | null => {
+const normalizeMapAreaGeometry = (
+  value: any,
+): { type: "Point" | "LineString" | "MultiLineString" | "Polygon" | "MultiPolygon"; coordinates: any } | null => {
   if (!value) return null;
   let raw = value;
   if (typeof raw === "string") {
@@ -884,14 +886,37 @@ const normalizeMapAreaGeometry = (value: any): { type: "Polygon" | "MultiPolygon
     }
   }
   const geometry = raw?.type === "Feature" ? raw.geometry : raw;
-  if (!geometry || (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon")) return null;
+  if (!geometry || !["Point", "LineString", "MultiLineString", "Polygon", "MultiPolygon"].includes(String(geometry.type || ""))) {
+    return null;
+  }
   if (!Array.isArray(geometry.coordinates) || geometry.coordinates.length === 0) return null;
   return { type: geometry.type, coordinates: geometry.coordinates };
 };
-const extractMapAreaPoints = (geometry: { type: "Polygon" | "MultiPolygon"; coordinates: any } | null) => {
+const extractMapAreaPoints = (
+  geometry: { type: "Point" | "LineString" | "MultiLineString" | "Polygon" | "MultiPolygon"; coordinates: any } | null,
+) => {
   if (!geometry) return [] as { lng: number; lat: number }[];
   const points: { lng: number; lat: number }[] = [];
-  if (geometry.type === "Polygon") {
+  if (geometry.type === "Point") {
+    const lng = Number(geometry.coordinates?.[0]);
+    const lat = Number(geometry.coordinates?.[1]);
+    if (Number.isFinite(lng) && Number.isFinite(lat)) points.push({ lng, lat });
+  } else if (geometry.type === "LineString") {
+    (geometry.coordinates || []).forEach((point: any) => {
+      const lng = Number(point?.[0]);
+      const lat = Number(point?.[1]);
+      if (Number.isFinite(lng) && Number.isFinite(lat)) points.push({ lng, lat });
+    });
+  } else if (geometry.type === "MultiLineString") {
+    (geometry.coordinates || []).forEach((line: any) => {
+      if (!Array.isArray(line)) return;
+      line.forEach((point: any) => {
+        const lng = Number(point?.[0]);
+        const lat = Number(point?.[1]);
+        if (Number.isFinite(lng) && Number.isFinite(lat)) points.push({ lng, lat });
+      });
+    });
+  } else if (geometry.type === "Polygon") {
     (geometry.coordinates || []).forEach((ring: any) => {
       if (!Array.isArray(ring)) return;
       ring.forEach((point: any) => {
@@ -937,9 +962,9 @@ const pointInRing = (lng: number, lat: number, ring: any) => {
 const pointInMapGeometry = (
   lng: number,
   lat: number,
-  geometry: { type: "Polygon" | "MultiPolygon"; coordinates: any } | null,
+  geometry: { type: "Point" | "LineString" | "MultiLineString" | "Polygon" | "MultiPolygon"; coordinates: any } | null,
 ) => {
-  if (!geometry) return false;
+  if (!geometry || (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon")) return false;
   const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : Array.isArray(geometry.coordinates) ? geometry.coordinates : [];
   return polygons.some((polygon) => {
     if (!Array.isArray(polygon) || polygon.length === 0) return false;
@@ -12363,7 +12388,7 @@ export default function GreenWork() {
                       : "Context: assign first field capture to farmers with no mapped plots yet. These tasks open in Map & Add Plot in the mobile app."
                     : agricSupportVisitMode
                       ? activeWorkflowProfile === "relief_recovery"
-                        ? "Context: assign follow-up relief or recovery visits after sites have been captured and support allocation exists."
+                        ? "Context: assign follow-up relief or recovery visits after sites have been captured and a relief allocation exists."
                         : "Context: assign follow-up support visits only after plots have been captured and a support allocation exists."
                       : activeWorkflowProfile === "relief_recovery"
                         ? "Context: live roll-up by beneficiary using support allocations, mapped sites, and relief follow-up activity in this project."
@@ -12628,7 +12653,9 @@ export default function GreenWork() {
                                     </div>
                                     {custodianAssignDraft?.assignment_mode === "field_capture" && (
                                       <p className="green-work-note">
-                                        This creates the farmer&apos;s first field capture task. It opens in <strong>Map &amp; Add Plot</strong> in the mobile app so the officer can walk or draw the farm boundary before the first field visit cycle starts.
+                                        {activeWorkflowProfile === "relief_recovery"
+                                          ? <>This creates the beneficiary&apos;s first site-capture task. It opens in <strong>Map &amp; Assess Sites</strong> in the mobile app so the officer can pin, trace, or draw the site geometry before relief follow-up starts.</>
+                                          : <>This creates the farmer&apos;s first field-capture task. It opens in <strong>Map &amp; Add Plot</strong> in the mobile app so the officer can walk or draw the farm boundary before the first field-visit cycle starts.</>}
                                       </p>
                                     )}
                                     {selectedAllocation && custodianAssignDraft?.assignment_mode !== "field_capture" && (
