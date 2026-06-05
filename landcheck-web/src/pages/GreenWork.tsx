@@ -3633,10 +3633,15 @@ export default function GreenWork() {
         return next;
       });
       cacheProjectDetailOffline(projectId, projectDetail).catch(() => {});
+      if (Array.isArray(projectDetail?.sponsor_accounts) && projectDetail.sponsor_accounts.length > 0) {
+        setFallbackSponsorAccounts(projectDetail.sponsor_accounts.map((row: any) => normalizeSponsorAccountSummary(row)));
+      }
       if (Array.isArray(projectDetail?.sponsorship_orders) && projectDetail.sponsorship_orders.length > 0) {
         setSponsorshipOrders(projectDetail.sponsorship_orders.map((row: any) => normalizeSponsorshipOrderRecord(row)));
         setSponsorshipOrdersError(null);
-        setSponsorshipOrdersScopeNote(null);
+        setSponsorshipOrdersScopeNote(
+          projectDetail?.sponsorship_scope_note ? String(projectDetail.sponsorship_scope_note) : null,
+        );
       }
       const settingsPayload = projectDetail?.settings || projectDetail || {};
       const plantingModel = String(settingsPayload?.planting_model || "direct").trim().toLowerCase() as PlantingModel;
