@@ -230,6 +230,17 @@ type SponsorshipOrderRecord = {
   awaiting_payment_units?: number | null;
 };
 
+type SponsorAccountSummary = {
+  id: number;
+  full_name: string;
+  organization_name: string | null;
+  email: string | null;
+  account_type: string | null;
+  orders_count: number;
+  amount_total: number;
+  linked_units: number;
+};
+
 type AdminOverview = {
   totals: {
     organizations: number;
@@ -1507,6 +1518,17 @@ const normalizeSponsorshipOrderRecord = (row: any): SponsorshipOrderRecord => ({
   payment_proof_urls: normalizePhotoList(row?.payment_proof_urls),
 });
 
+const normalizeSponsorAccountSummary = (row: any): SponsorAccountSummary => ({
+  id: Number(row?.id || 0),
+  full_name: String(row?.full_name || "").trim() || `Sponsor #${Number(row?.id || 0)}`,
+  organization_name: row?.organization_name ? String(row.organization_name).trim() || null : null,
+  email: row?.email ? String(row.email).trim() || null : null,
+  account_type: row?.account_type ? String(row.account_type).trim() || null : null,
+  orders_count: Number(row?.orders_count || 0),
+  amount_total: Number(row?.amount_total || 0),
+  linked_units: Number(row?.linked_units || row?.linked_trees || 0),
+});
+
 const formatCurrencyAmount = (amount: number | null | undefined, currency?: string | null) => {
   const safeAmount = Number(amount || 0);
   const safeCurrency = normalizeSponsorCurrencyCode(currency);
@@ -2660,6 +2682,7 @@ export default function GreenWork() {
   const [sponsorshipOrdersLoading, setSponsorshipOrdersLoading] = useState(false);
   const [sponsorshipOrdersError, setSponsorshipOrdersError] = useState<string | null>(null);
   const [sponsorshipOrdersScopeNote, setSponsorshipOrdersScopeNote] = useState<string | null>(null);
+  const [fallbackSponsorAccounts, setFallbackSponsorAccounts] = useState<SponsorAccountSummary[]>([]);
   const [custodians, setCustodians] = useState<Custodian[]>([]);
   const [newCustodian, setNewCustodian] = useState<{
     custodian_type: CustodianType;
@@ -3610,7 +3633,7 @@ export default function GreenWork() {
         return next;
       });
       cacheProjectDetailOffline(projectId, projectDetail).catch(() => {});
-      if (Array.isArray(projectDetail?.sponsorship_orders)) {
+      if (Array.isArray(projectDetail?.sponsorship_orders) && projectDetail.sponsorship_orders.length > 0) {
         setSponsorshipOrders(projectDetail.sponsorship_orders.map((row: any) => normalizeSponsorshipOrderRecord(row)));
         setSponsorshipOrdersError(null);
         setSponsorshipOrdersScopeNote(null);
@@ -4510,14 +4533,15 @@ export default function GreenWork() {
     if (!silent) setSponsorshipOrdersLoading(true);
     setSponsorshipOrdersError(null);
     setSponsorshipOrdersScopeNote(null);
+    const ts = Date.now();
     try {
-      const res = await api.get(`/green/admin/sponsorship-orders?project_id=${projectId}`);
+      const res = await api.get(`/green/admin/sponsorship-orders?project_id=${projectId}&_ts=${ts}`);
       const rows = Array.isArray(res.data) ? res.data : [];
       if (rows.length > 0) {
         setSponsorshipOrders(rows.map((row: any) => normalizeSponsorshipOrderRecord(row)));
         return;
       }
-      const fallbackRes = await api.get("/green/admin/sponsorship-orders");
+      const fallbackRes = await api.get(`/green/admin/sponsorship-orders?_ts=${ts}`);
       const fallbackRows = Array.isArray(fallbackRes.data) ? fallbackRes.data : [];
       if (fallbackRows.length > 0) {
         setSponsorshipOrders(fallbackRows.map((row: any) => normalizeSponsorshipOrderRecord(row)));
@@ -4528,9 +4552,33 @@ export default function GreenWork() {
       }
       setSponsorshipOrders([]);
     } catch (error: any) {
+      try {
+        const fallbackRes = await api.get(`/green/admin/sponsorship-orders?_ts=${Date.now()}`);
+        const fallbackRows = Array.isArray(fallbackRes.data) ? fallbackRes.data : [];
+        if (fallbackRows.length > 0) {
+          setSponsorshipOrders(fallbackRows.map((row: any) => normalizeSponsorshipOrderRecord(row)));
+          setSponsorshipOrdersScopeNote(
+            "Project-specific sponsorship lookup failed. Showing all public sponsorship payments across projects so paid sponsors are still visible.",
+          );
+          setSponsorshipOrdersError(null);
+          return;
+        }
+      } catch {
+        // keep original error below
+      }
       setSponsorshipOrdersError(error?.response?.data?.detail || error?.message || "Failed to load sponsorship records");
     } finally {
       if (!silent) setSponsorshipOrdersLoading(false);
+    }
+  }, []);
+
+  const loadSponsorAccounts = useCallback(async () => {
+    try {
+      const res = await api.get(`/green/admin/sponsors?_ts=${Date.now()}`);
+      const rows = Array.isArray(res.data) ? res.data : [];
+      setFallbackSponsorAccounts(rows.map((row: any) => normalizeSponsorAccountSummary(row)));
+    } catch {
+      setFallbackSponsorAccounts([]);
     }
   }, []);
 
@@ -4888,15 +4936,18 @@ export default function GreenWork() {
       setSponsorshipOrders([]);
       setSponsorshipOrdersError(null);
       setSponsorshipOrdersScopeNote(null);
+      setFallbackSponsorAccounts([]);
       return;
     }
     if (!["sponsors", "sponsorship_orders", "project_focus"].includes(String(activeForm || ""))) return;
     void loadSponsorshipOrders(activeProjectId);
+    void loadSponsorAccounts();
     const timer = window.setInterval(() => {
       void loadSponsorshipOrders(activeProjectId, { silent: true });
+      void loadSponsorAccounts();
     }, 15000);
     return () => window.clearInterval(timer);
-  }, [activeProjectId, activeForm, loadSponsorshipOrders, publicSponsorshipProject]);
+  }, [activeProjectId, activeForm, loadSponsorAccounts, loadSponsorshipOrders, publicSponsorshipProject]);
 
   useEffect(() => {
     if (activeForm !== "remote_monitoring") {
@@ -7612,7 +7663,7 @@ export default function GreenWork() {
   }, [speciesDailyTrend]);
 
   const sponsorAccounts = useMemo(() => {
-    const byId = new Map<number, { id: number; full_name: string; organization_name: string | null; email: string | null; account_type: string | null; orders_count: number; amount_total: number; linked_units: number }>();
+    const byId = new Map<number, SponsorAccountSummary>();
     sponsorshipOrders.forEach((order) => {
       const sponsorId = Number(order.sponsor_account_id || 0);
       if (!(sponsorId > 0)) return;
@@ -7634,8 +7685,10 @@ export default function GreenWork() {
         linked_units: Number(order.linked_units || 0),
       });
     });
-    return Array.from(byId.values()).sort((a, b) => a.full_name.localeCompare(b.full_name));
-  }, [sponsorshipOrders]);
+    const derived = Array.from(byId.values()).sort((a, b) => a.full_name.localeCompare(b.full_name));
+    if (derived.length > 0) return derived;
+    return fallbackSponsorAccounts.slice().sort((a, b) => a.full_name.localeCompare(b.full_name));
+  }, [fallbackSponsorAccounts, sponsorshipOrders]);
   const deleteProjectNameMatches = useMemo(() => {
     if (!activeProjectRecord) return false;
     return deleteProjectConfirmName.trim() === String(activeProjectRecord.name || "").trim();
@@ -11051,6 +11104,7 @@ export default function GreenWork() {
                     <button
                       type="button"
                       onClick={() => {
+                        void loadSponsorAccounts();
                         if (activeProjectId) void loadSponsorshipOrders(activeProjectId);
                       }}
                     >
@@ -11105,6 +11159,7 @@ export default function GreenWork() {
                     <button
                       type="button"
                       onClick={() => {
+                        void loadSponsorAccounts();
                         if (activeProjectId) void loadSponsorshipOrders(activeProjectId);
                       }}
                     >
