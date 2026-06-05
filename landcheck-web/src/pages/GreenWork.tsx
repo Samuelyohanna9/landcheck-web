@@ -1484,7 +1484,7 @@ const normalizePhotoList = (value: unknown): string[] => {
 
 const formatCurrencyAmount = (amount: number | null | undefined, currency?: string | null) => {
   const safeAmount = Number(amount || 0);
-  const safeCurrency = String(currency || "NGN").trim() || "NGN";
+  const safeCurrency = normalizeSponsorCurrencyCode(currency);
   try {
     return new Intl.NumberFormat(undefined, {
       style: "currency",
@@ -1494,6 +1494,14 @@ const formatCurrencyAmount = (amount: number | null | undefined, currency?: stri
   } catch {
     return `${safeCurrency} ${safeAmount.toLocaleString()}`;
   }
+};
+
+const normalizeSponsorCurrencyCode = (value?: string | null) => {
+  const lettersOnly = String(value || "")
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "")
+    .slice(0, 3);
+  return lettersOnly.length === 3 ? lettersOnly : "NGN";
 };
 
 const getTaskPhotoUrls = (task: Partial<WorkTask> | null | undefined): string[] => {
@@ -4036,8 +4044,8 @@ export default function GreenWork() {
         sponsor_currency:
           nextAccessModel === "public_sponsorship"
             ? canAccessSuperAdmin
-              ? (projectSettingsDraft.sponsor_currency || "NGN").trim() || "NGN"
-              : existingSponsorCurrency || "NGN"
+              ? normalizeSponsorCurrencyCode(projectSettingsDraft.sponsor_currency)
+              : normalizeSponsorCurrencyCode(existingSponsorCurrency)
             : "NGN",
         sponsor_capacity:
           nextAccessModel === "public_sponsorship"
@@ -4971,7 +4979,7 @@ export default function GreenWork() {
         nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_price_per_tree || 0) > 0
           ? Number(newProject.sponsor_price_per_tree)
           : null,
-      sponsor_currency: nextAccessModel === "public_sponsorship" ? (newProject.sponsor_currency || "NGN").trim() || "NGN" : "NGN",
+      sponsor_currency: nextAccessModel === "public_sponsorship" ? normalizeSponsorCurrencyCode(newProject.sponsor_currency) : "NGN",
       sponsor_capacity:
         nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_capacity || 0) > 0
           ? Number(newProject.sponsor_capacity)
@@ -8968,12 +8976,12 @@ export default function GreenWork() {
                           }
                         />
                         <input
-                          placeholder="Currency code"
+                          placeholder="Currency code (NGN)"
                           value={projectSettingsDraft.sponsor_currency}
                           onChange={(e) =>
                             setProjectSettingsDraft((prev) => ({
                               ...prev,
-                              sponsor_currency: e.target.value.toUpperCase(),
+                              sponsor_currency: normalizeSponsorCurrencyCode(e.target.value),
                             }))
                           }
                         />
@@ -10820,9 +10828,11 @@ export default function GreenWork() {
                     onChange={(e) => setNewProject({ ...newProject, sponsor_price_per_tree: e.target.value })}
                   />
                   <input
-                    placeholder="Currency code"
+                    placeholder="Currency code (NGN)"
                     value={newProject.sponsor_currency}
-                    onChange={(e) => setNewProject({ ...newProject, sponsor_currency: e.target.value.toUpperCase() })}
+                    onChange={(e) =>
+                      setNewProject({ ...newProject, sponsor_currency: normalizeSponsorCurrencyCode(e.target.value) })
+                    }
                   />
                   <input
                     placeholder="Total sponsor capacity"
