@@ -3983,9 +3983,6 @@ export default function GreenWork() {
       toast.error("Public sponsorship projects currently run on the Green workflow only.");
       return;
     }
-    const existingPublicSponsorEnabled = Boolean(
-      activeProjectRecord?.settings?.public_sponsor_enabled ?? activeProjectRecord?.public_sponsor_enabled,
-    );
     const existingPublicSponsorTitle = String(
       activeProjectRecord?.settings?.public_sponsor_title ?? activeProjectRecord?.public_sponsor_title ?? "",
     ).trim();
@@ -4013,11 +4010,7 @@ export default function GreenWork() {
         workflow_profile: projectSettingsDraft.workflow_profile,
         access_model: nextAccessModel,
         public_sponsor_enabled:
-          nextAccessModel === "public_sponsorship"
-            ? canAccessSuperAdmin
-              ? Boolean(projectSettingsDraft.public_sponsor_enabled)
-              : existingPublicSponsorEnabled
-            : false,
+          nextAccessModel === "public_sponsorship" ? true : false,
         public_sponsor_title:
           nextAccessModel === "public_sponsorship"
             ? canAccessSuperAdmin
@@ -4970,7 +4963,7 @@ export default function GreenWork() {
       ...newProject,
       organization_id: Number.isFinite(orgId) && orgId > 0 ? orgId : null,
       access_model: nextAccessModel,
-      public_sponsor_enabled: nextAccessModel === "public_sponsorship" ? Boolean(newProject.public_sponsor_enabled) : false,
+      public_sponsor_enabled: nextAccessModel === "public_sponsorship" ? true : false,
       public_sponsor_title: nextAccessModel === "public_sponsorship" ? newProject.public_sponsor_title.trim() || null : null,
       public_sponsor_description:
         nextAccessModel === "public_sponsorship" ? newProject.public_sponsor_description.trim() || null : null,
@@ -8901,6 +8894,7 @@ export default function GreenWork() {
                             setProjectSettingsDraft((prev) => ({
                               ...prev,
                               access_model: normalizeProjectAccessModel(e.target.value),
+                              public_sponsor_enabled: normalizeProjectAccessModel(e.target.value) === "public_sponsorship",
                             }))
                           }
                         >
@@ -8936,19 +8930,9 @@ export default function GreenWork() {
                     </label>
                     {projectSettingsDraft.access_model === "public_sponsorship" && canAccessSuperAdmin ? (
                       <>
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={projectSettingsDraft.public_sponsor_enabled}
-                            onChange={(e) =>
-                              setProjectSettingsDraft((prev) => ({
-                                ...prev,
-                                public_sponsor_enabled: e.target.checked,
-                              }))
-                            }
-                          />
-                          Public sponsorship published
-                        </label>
+                        <p className="green-work-note">
+                          Public sponsor projects appear automatically in the sponsor app once this route is saved.
+                        </p>
                         <input
                           placeholder="Public sponsor title"
                           value={projectSettingsDraft.public_sponsor_title}
@@ -10787,7 +10771,13 @@ export default function GreenWork() {
               </select>
               <select
                 value={newProject.access_model}
-                onChange={(e) => setNewProject({ ...newProject, access_model: normalizeProjectAccessModel(e.target.value) })}
+                onChange={(e) =>
+                  setNewProject({
+                    ...newProject,
+                    access_model: normalizeProjectAccessModel(e.target.value),
+                    public_sponsor_enabled: normalizeProjectAccessModel(e.target.value) === "public_sponsorship",
+                  })
+                }
               >
                 <option value="partner_org">Partner organization route</option>
                 {canAccessSuperAdmin ? <option value="public_sponsorship">Public sponsorship route</option> : null}
@@ -10807,14 +10797,9 @@ export default function GreenWork() {
               />
               {newProject.access_model === "public_sponsorship" && canAccessSuperAdmin ? (
                 <>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={newProject.public_sponsor_enabled}
-                      onChange={(e) => setNewProject({ ...newProject, public_sponsor_enabled: e.target.checked })}
-                    />
-                    Public sponsorship published
-                  </label>
+                  <p className="green-work-note">
+                    Public sponsor projects appear automatically in the sponsor app once they are created.
+                  </p>
                   <input
                     placeholder="Public sponsor title"
                     value={newProject.public_sponsor_title}
