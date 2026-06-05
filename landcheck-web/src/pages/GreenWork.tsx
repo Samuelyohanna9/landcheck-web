@@ -1488,6 +1488,25 @@ const normalizePhotoList = (value: unknown): string[] => {
   return rows;
 };
 
+const normalizeSponsorshipOrderRecord = (row: any): SponsorshipOrderRecord => ({
+  ...row,
+  id: Number(row?.id || 0),
+  project_id: Number(row?.project_id || 0),
+  quantity: Number(row?.quantity || 0),
+  amount_per_tree: Number(row?.amount_per_tree || 0),
+  amount_total: Number(row?.amount_total || 0),
+  payment_gateway_transaction_id:
+    row?.payment_gateway_transaction_id === null || row?.payment_gateway_transaction_id === undefined
+      ? null
+      : Number(row.payment_gateway_transaction_id || 0),
+  total_units: Number(row?.total_units || 0),
+  linked_units: Number(row?.linked_units || 0),
+  awaiting_tree_units: Number(row?.awaiting_tree_units || 0),
+  awaiting_payment_units: Number(row?.awaiting_payment_units || 0),
+  sponsor_account_id: row?.sponsor_account_id ? Number(row.sponsor_account_id) : null,
+  payment_proof_urls: normalizePhotoList(row?.payment_proof_urls),
+});
+
 const formatCurrencyAmount = (amount: number | null | undefined, currency?: string | null) => {
   const safeAmount = Number(amount || 0);
   const safeCurrency = normalizeSponsorCurrencyCode(currency);
@@ -3590,6 +3609,10 @@ export default function GreenWork() {
         return next;
       });
       cacheProjectDetailOffline(projectId, projectDetail).catch(() => {});
+      if (Array.isArray(projectDetail?.sponsorship_orders)) {
+        setSponsorshipOrders(projectDetail.sponsorship_orders.map((row: any) => normalizeSponsorshipOrderRecord(row)));
+        setSponsorshipOrdersError(null);
+      }
       const settingsPayload = projectDetail?.settings || projectDetail || {};
       const plantingModel = String(settingsPayload?.planting_model || "direct").trim().toLowerCase() as PlantingModel;
       setProjectSettingsDraft({
@@ -4486,24 +4509,7 @@ export default function GreenWork() {
     try {
       const res = await api.get(`/green/admin/sponsorship-orders?project_id=${projectId}`);
       const rows = Array.isArray(res.data) ? res.data : [];
-      setSponsorshipOrders(
-        rows.map((row: any) => ({
-          ...row,
-          quantity: Number(row?.quantity || 0),
-          amount_per_tree: Number(row?.amount_per_tree || 0),
-          amount_total: Number(row?.amount_total || 0),
-          payment_gateway_transaction_id:
-            row?.payment_gateway_transaction_id === null || row?.payment_gateway_transaction_id === undefined
-              ? null
-              : Number(row.payment_gateway_transaction_id || 0),
-          total_units: Number(row?.total_units || 0),
-          linked_units: Number(row?.linked_units || 0),
-          awaiting_tree_units: Number(row?.awaiting_tree_units || 0),
-          awaiting_payment_units: Number(row?.awaiting_payment_units || 0),
-          sponsor_account_id: row?.sponsor_account_id ? Number(row.sponsor_account_id) : null,
-          payment_proof_urls: normalizePhotoList(row?.payment_proof_urls),
-        })),
-      );
+      setSponsorshipOrders(rows.map((row: any) => normalizeSponsorshipOrderRecord(row)));
     } catch (error: any) {
       setSponsorshipOrdersError(error?.response?.data?.detail || error?.message || "Failed to load sponsorship records");
     } finally {
