@@ -1,7 +1,12 @@
 import axios from "axios";
 
-// Use environment variable for API URL, fallback to localhost for development
-const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/+$/, "");
+const browserHost = typeof window !== "undefined" ? String(window.location.hostname || "").trim().toLowerCase() : "";
+const defaultApiUrl =
+  browserHost === "localhost" || browserHost === "127.0.0.1" || browserHost === "0.0.0.0"
+    ? "http://localhost:8000"
+    : "https://api.landcheck.online";
+
+const API_URL = (import.meta.env.VITE_API_URL || defaultApiUrl).replace(/\/+$/, "");
 
 export const api = axios.create({
   baseURL: API_URL,
