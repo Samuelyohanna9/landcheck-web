@@ -8114,8 +8114,6 @@ export default function GreenWork() {
     activeForm !== "farmer_live" &&
     activeForm !== "field_capture_assign" &&
     activeForm !== "support_visit_assign" &&
-    activeForm !== "sponsors" &&
-    activeForm !== "sponsorship_orders" &&
     activeForm !== "verra_reports" &&
     activeForm !== "map_view" &&
     activeForm !== "remote_monitoring";
@@ -8136,8 +8134,6 @@ export default function GreenWork() {
     agricFarmerLiveMode ||
     agricFieldCaptureMode ||
     agricSupportVisitMode ||
-    activeForm === "sponsors" ||
-    activeForm === "sponsorship_orders" ||
     verraMode ||
     activeForm === "existing_tree_intake" ||
     activeForm === "custodian_hub" ||
@@ -14652,4 +14648,3 @@ export default function GreenWork() {
     </div>
   );
 }
-
