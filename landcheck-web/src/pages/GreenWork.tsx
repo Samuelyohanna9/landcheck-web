@@ -4527,8 +4527,9 @@ export default function GreenWork() {
     }
   };
 
-  const loadSponsorshipOrders = useCallback(async (projectId: number, options?: { silent?: boolean }) => {
+  const loadSponsorshipOrders = useCallback(async (projectId: number, options?: { silent?: boolean; forceSync?: boolean }) => {
     const silent = Boolean(options?.silent);
+    const forceSync = Boolean(options?.forceSync);
     if (!projectId) {
       setSponsorshipOrders([]);
       setSponsorshipOrdersError(null);
@@ -4540,13 +4541,14 @@ export default function GreenWork() {
     setSponsorshipOrdersScopeNote(null);
     const ts = Date.now();
     try {
-      const res = await api.get(`/green/admin/sponsorship-orders?project_id=${projectId}&sync=1&_ts=${ts}`);
+      const syncQs = forceSync ? "&sync=1" : "";
+      const res = await api.get(`/green/admin/sponsorship-orders?project_id=${projectId}${syncQs}&_ts=${ts}`);
       const rows = Array.isArray(res.data) ? res.data : [];
       if (rows.length > 0) {
         setSponsorshipOrders(rows.map((row: any) => normalizeSponsorshipOrderRecord(row)));
         return;
       }
-      const fallbackRes = await api.get(`/green/admin/sponsorship-orders?sync=1&_ts=${ts}`);
+      const fallbackRes = await api.get(`/green/admin/sponsorship-orders?${syncQs ? `sync=1&` : ""}_ts=${ts}`);
       const fallbackRows = Array.isArray(fallbackRes.data) ? fallbackRes.data : [];
       if (fallbackRows.length > 0) {
         setSponsorshipOrders(fallbackRows.map((row: any) => normalizeSponsorshipOrderRecord(row)));
@@ -11114,7 +11116,7 @@ export default function GreenWork() {
                       type="button"
                       onClick={() => {
                         void loadSponsorAccounts();
-                        if (activeProjectId) void loadSponsorshipOrders(activeProjectId);
+                        if (activeProjectId) void loadSponsorshipOrders(activeProjectId, { forceSync: true });
                       }}
                     >
                       Refresh Sponsors
