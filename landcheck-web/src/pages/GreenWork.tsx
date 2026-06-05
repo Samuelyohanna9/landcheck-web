@@ -29,6 +29,7 @@ const REMOTE_MONITORING_PROGRESS_STEPS = [
 ];
 
 type WorkflowProfile = "green" | "agric" | "relief_recovery";
+type ProjectAccessModel = "partner_org" | "public_sponsorship";
 type AgricConfig = {
   program_type?: string | null;
   focus_commodities?: string | null;
@@ -49,6 +50,8 @@ const normalizeWorkflowProfile = (value?: string | null): WorkflowProfile => {
   return "green";
 };
 const isFieldWorkflowProfile = (value?: string | null) => normalizeWorkflowProfile(value) !== "green";
+const normalizeProjectAccessModel = (value?: string | null): ProjectAccessModel =>
+  String(value || "").trim().toLowerCase() === "public_sponsorship" ? "public_sponsorship" : "partner_org";
 
 const getWorkflowLabels = (profile?: string | null) =>
   normalizeWorkflowProfile(profile) === "agric"
@@ -104,6 +107,16 @@ type Project = {
   location_text: string;
   sponsor?: string | null;
   workflow_profile?: WorkflowProfile;
+  access_model?: ProjectAccessModel | string | null;
+  public_sponsor_enabled?: boolean | null;
+  public_sponsor_title?: string | null;
+  public_sponsor_description?: string | null;
+  sponsor_price_per_tree?: number | null;
+  sponsor_currency?: string | null;
+  sponsor_capacity?: number | null;
+  sponsor_max_per_order?: number | null;
+  sponsor_dedication_enabled?: boolean | null;
+  sponsor_payment_instructions?: string | null;
   agric_config?: AgricConfig | null;
   relief_config?: ReliefConfig | null;
   planting_model?: "direct" | "community_distributed" | "mixed";
@@ -111,6 +124,16 @@ type Project = {
   default_existing_tree_scope?: "exclude_from_planting_kpi" | "include_in_planting_kpi";
   settings?: {
     workflow_profile?: WorkflowProfile;
+    access_model?: ProjectAccessModel | string | null;
+    public_sponsor_enabled?: boolean | null;
+    public_sponsor_title?: string | null;
+    public_sponsor_description?: string | null;
+    sponsor_price_per_tree?: number | null;
+    sponsor_currency?: string | null;
+    sponsor_capacity?: number | null;
+    sponsor_max_per_order?: number | null;
+    sponsor_dedication_enabled?: boolean | null;
+    sponsor_payment_instructions?: string | null;
     agric_config?: AgricConfig | null;
     relief_config?: ReliefConfig | null;
     planting_model?: "direct" | "community_distributed" | "mixed";
@@ -163,6 +186,42 @@ type Organization = {
   pending_review_count?: number;
   open_alert_count?: number;
   last_activity_at?: string | null;
+};
+
+type SponsorshipOrderRecord = {
+  id: number;
+  order_uid?: string | null;
+  project_id: number;
+  quantity?: number | null;
+  amount_per_tree?: number | null;
+  amount_total?: number | null;
+  currency?: string | null;
+  payment_method?: string | null;
+  payment_reference?: string | null;
+  payment_status?: string | null;
+  order_status?: string | null;
+  payment_proof_url?: string | null;
+  payment_proof_urls?: string[] | null;
+  dedication_type?: string | null;
+  dedication_name?: string | null;
+  dedication_message?: string | null;
+  purchaser_note?: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  review_notes?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  sponsor_account_id?: number | null;
+  sponsor_name?: string | null;
+  sponsor_organization_name?: string | null;
+  sponsor_email?: string | null;
+  sponsor_account_type?: string | null;
+  project_name?: string | null;
+  location_text?: string | null;
+  total_units?: number | null;
+  linked_units?: number | null;
+  awaiting_tree_units?: number | null;
+  awaiting_payment_units?: number | null;
 };
 
 type AdminOverview = {
@@ -454,6 +513,8 @@ type WorkForm =
   | "field_capture_assign"
   | "support_visit_assign"
   | "existing_tree_intake"
+  | "sponsors"
+  | "sponsorship_orders"
   ;
 
 const AGRIC_HIDDEN_PROJECT_FORMS: WorkForm[] = [
@@ -1421,6 +1482,20 @@ const normalizePhotoList = (value: unknown): string[] => {
   return rows;
 };
 
+const formatCurrencyAmount = (amount: number | null | undefined, currency?: string | null) => {
+  const safeAmount = Number(amount || 0);
+  const safeCurrency = String(currency || "NGN").trim() || "NGN";
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: safeCurrency,
+      maximumFractionDigits: 0,
+    }).format(safeAmount);
+  } catch {
+    return `${safeCurrency} ${safeAmount.toLocaleString()}`;
+  }
+};
+
 const getTaskPhotoUrls = (task: Partial<WorkTask> | null | undefined): string[] => {
   const urls = normalizePhotoList((task as any)?.photo_urls);
   const primary = String((task as any)?.photo_url || "").trim();
@@ -1586,6 +1661,10 @@ const renderActionIcon = (form: WorkForm) => {
           <path d="M12 10.2v7.3M12 10.2c-.8 2-2.1 3.3-4 3.9M12 10.2c.8 2 2.1 3.3 4 3.9M8.8 17.5h6.4" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       );
+    case "sponsors":
+      return renderActionIcon("users");
+    case "sponsorship_orders":
+      return renderActionIcon("review_queue");
     default:
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -2306,6 +2385,8 @@ export default function GreenWork() {
     "overview",
     "live_table",
     "verra_reports",
+    "sponsors",
+    "sponsorship_orders",
   ];
 
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -2353,6 +2434,16 @@ export default function GreenWork() {
     sponsor: "",
     organization_id: workScopedOrganizationId ? String(workScopedOrganizationId) : "",
     workflow_profile: "green",
+    access_model: "partner_org" as ProjectAccessModel,
+    public_sponsor_enabled: false,
+    public_sponsor_title: "",
+    public_sponsor_description: "",
+    sponsor_price_per_tree: "",
+    sponsor_currency: "NGN",
+    sponsor_capacity: "",
+    sponsor_max_per_order: "",
+    sponsor_dedication_enabled: true,
+    sponsor_payment_instructions: "",
     agric_program_type: "extension_support",
     agric_focus_commodities: "",
     agric_support_packages: "",
@@ -2439,6 +2530,16 @@ export default function GreenWork() {
   const [adminCredentialIncludeInactive, setAdminCredentialIncludeInactive] = useState(true);
   const [projectSettingsDraft, setProjectSettingsDraft] = useState<{
     workflow_profile: WorkflowProfile;
+    access_model: ProjectAccessModel;
+    public_sponsor_enabled: boolean;
+    public_sponsor_title: string;
+    public_sponsor_description: string;
+    sponsor_price_per_tree: string;
+    sponsor_currency: string;
+    sponsor_capacity: string;
+    sponsor_max_per_order: string;
+    sponsor_dedication_enabled: boolean;
+    sponsor_payment_instructions: string;
     agric_program_type: string;
     agric_focus_commodities: string;
     agric_support_packages: string;
@@ -2452,6 +2553,16 @@ export default function GreenWork() {
     default_existing_tree_scope: ExistingScopeValue;
   }>({
     workflow_profile: "green",
+    access_model: "partner_org",
+    public_sponsor_enabled: false,
+    public_sponsor_title: "",
+    public_sponsor_description: "",
+    sponsor_price_per_tree: "",
+    sponsor_currency: "NGN",
+    sponsor_capacity: "",
+    sponsor_max_per_order: "",
+    sponsor_dedication_enabled: true,
+    sponsor_payment_instructions: "",
     agric_program_type: "extension_support",
     agric_focus_commodities: "",
     agric_support_packages: "",
@@ -2465,6 +2576,55 @@ export default function GreenWork() {
     default_existing_tree_scope: "exclude_from_planting_kpi",
   });
   const draftWorkflowProfile = normalizeWorkflowProfile(projectSettingsDraft.workflow_profile);
+  const activeProjectRecord = useMemo(() => {
+    if (!activeProjectId) return null;
+    return projects.find((p) => Number(p.id) === Number(activeProjectId)) || null;
+  }, [projects, activeProjectId]);
+  const activeWorkflowProfile = normalizeWorkflowProfile(
+    activeProjectRecord?.settings?.workflow_profile || activeProjectRecord?.workflow_profile || projectSettingsDraft.workflow_profile,
+  );
+  const activeProjectAccessModel = normalizeProjectAccessModel(
+    activeProjectRecord?.settings?.access_model || activeProjectRecord?.access_model || projectSettingsDraft.access_model,
+  );
+  const activeWorkflowLabels = getWorkflowLabels(activeWorkflowProfile);
+  const fieldWorkflowMode = isFieldWorkflowProfile(activeWorkflowProfile);
+  const agricWorkflowMode = activeWorkflowProfile === "agric";
+  const reliefWorkflowMode = activeWorkflowProfile === "relief_recovery";
+  const publicSponsorshipProject = Boolean(
+    activeProjectId && activeWorkflowProfile === "green" && activeProjectAccessModel === "public_sponsorship",
+  );
+  const defaultProjectForm: WorkForm = fieldWorkflowMode ? "custodian_hub" : "overview";
+  const isHiddenInFieldProject = (form: WorkForm) =>
+    Boolean(activeProjectId && fieldWorkflowMode && AGRIC_HIDDEN_PROJECT_FORMS.includes(form));
+  const activeProjectOrgId =
+    activeProjectRecord && Number.isFinite(Number(activeProjectRecord.organization_id))
+      ? Number(activeProjectRecord.organization_id)
+      : null;
+  const activeProjectMatchesWorkSessionOrg =
+    Boolean(isPartnerWorkSession && workScopedOrganizationId && activeProjectOrgId === workScopedOrganizationId);
+  const partnerLogoUrl = isPartnerWorkSession
+    ? ((activeProjectMatchesWorkSessionOrg ? activeProjectRecord?.organization_logo_url || null : null) ||
+        workAuthSession?.user?.organization_logo_url ||
+        null)
+    : null;
+  const partnerLogoDisplayUrl = partnerLogoUrl ? toDisplayPhotoUrl(partnerLogoUrl) : "";
+  const partnerLogoName = isPartnerWorkSession
+    ? ((activeProjectMatchesWorkSessionOrg ? activeProjectRecord?.organization_name || null : null) ||
+        workAuthSession?.user?.organization_name ||
+        "Partner")
+    : "Partner";
+  const workSessionOrgStatus = normalizeOrgLifecycleStatus(workAuthSession?.user?.organization_status);
+  const workRuntimeOrgStatus = normalizeOrgLifecycleStatus(
+    activeProjectRecord?.organization_status || projects[0]?.organization_status || ""
+  );
+  const workEffectiveOrgStatus = isPartnerWorkSession ? (workRuntimeOrgStatus || workSessionOrgStatus) : "";
+  const workPartnerOrgInactive = Boolean(isPartnerWorkSession && workAuthSession?.user?.organization_is_active === false);
+  const workPartnerOrgSuspended = Boolean(
+    isPartnerWorkSession && (workPartnerOrgInactive || workEffectiveOrgStatus === "suspended")
+  );
+  const workPartnerOrgPaused = Boolean(isPartnerWorkSession && !workPartnerOrgSuspended && workEffectiveOrgStatus === "paused");
+  const [sponsorshipOrders, setSponsorshipOrders] = useState<SponsorshipOrderRecord[]>([]);
+  const [sponsorshipOrdersLoading, setSponsorshipOrdersLoading] = useState(false);
   const [custodians, setCustodians] = useState<Custodian[]>([]);
   const [newCustodian, setNewCustodian] = useState<{
     custodian_type: CustodianType;
@@ -2657,6 +2817,7 @@ export default function GreenWork() {
       ? "super_admin"
       : null
   );
+  const activeFormHiddenInAgric = activeForm ? isHiddenInFieldProject(activeForm) : false;
   const [remoteMonitoringReport, setRemoteMonitoringReport] = useState<RemoteMonitoringReport | null>(null);
   const [remoteMonitoringLoading, setRemoteMonitoringLoading] = useState(false);
   const [remoteMonitoringProgressStep, setRemoteMonitoringProgressStep] = useState(0);
@@ -3176,6 +3337,16 @@ export default function GreenWork() {
     setServerExistingLiveRows([]);
     setProjectSettingsDraft({
       workflow_profile: "green",
+      access_model: "partner_org",
+      public_sponsor_enabled: false,
+      public_sponsor_title: "",
+      public_sponsor_description: "",
+      sponsor_price_per_tree: "",
+      sponsor_currency: "NGN",
+      sponsor_capacity: "",
+      sponsor_max_per_order: "",
+      sponsor_dedication_enabled: true,
+      sponsor_payment_instructions: "",
       agric_program_type: "extension_support",
       agric_focus_commodities: "",
       agric_support_packages: "",
@@ -3192,6 +3363,7 @@ export default function GreenWork() {
     setRemoteMonitoringDrawActive(false);
     setRemoteMonitoringDraftGeometry(null);
     setRemoteMonitoringDraft({ source_order_id: "" });
+    setSponsorshipOrders([]);
   };
 
   const toggleNamedSelection = (
@@ -3407,6 +3579,29 @@ export default function GreenWork() {
       const plantingModel = String(settingsPayload?.planting_model || "direct").trim().toLowerCase() as PlantingModel;
       setProjectSettingsDraft({
         workflow_profile: normalizeWorkflowProfile(settingsPayload?.workflow_profile),
+        access_model: normalizeProjectAccessModel(settingsPayload?.access_model || projectDetail?.access_model),
+        public_sponsor_enabled: Boolean(settingsPayload?.public_sponsor_enabled ?? projectDetail?.public_sponsor_enabled),
+        public_sponsor_title: String(settingsPayload?.public_sponsor_title || projectDetail?.public_sponsor_title || ""),
+        public_sponsor_description: String(settingsPayload?.public_sponsor_description || projectDetail?.public_sponsor_description || ""),
+        sponsor_price_per_tree:
+          settingsPayload?.sponsor_price_per_tree === null || settingsPayload?.sponsor_price_per_tree === undefined
+            ? String(projectDetail?.sponsor_price_per_tree ?? "")
+            : String(settingsPayload?.sponsor_price_per_tree ?? ""),
+        sponsor_currency: String(settingsPayload?.sponsor_currency || projectDetail?.sponsor_currency || "NGN"),
+        sponsor_capacity:
+          settingsPayload?.sponsor_capacity === null || settingsPayload?.sponsor_capacity === undefined
+            ? String(projectDetail?.sponsor_capacity ?? "")
+            : String(settingsPayload?.sponsor_capacity ?? ""),
+        sponsor_max_per_order:
+          settingsPayload?.sponsor_max_per_order === null || settingsPayload?.sponsor_max_per_order === undefined
+            ? String(projectDetail?.sponsor_max_per_order ?? "")
+            : String(settingsPayload?.sponsor_max_per_order ?? ""),
+        sponsor_dedication_enabled: Boolean(
+          settingsPayload?.sponsor_dedication_enabled ?? projectDetail?.sponsor_dedication_enabled ?? true
+        ),
+        sponsor_payment_instructions: String(
+          settingsPayload?.sponsor_payment_instructions || projectDetail?.sponsor_payment_instructions || ""
+        ),
         agric_program_type: String(settingsPayload?.agric_config?.program_type || "extension_support"),
         agric_focus_commodities: String(settingsPayload?.agric_config?.focus_commodities || ""),
         agric_support_packages: String(settingsPayload?.agric_config?.support_packages || ""),
@@ -3771,9 +3966,118 @@ export default function GreenWork() {
 
   const saveProjectSettings = async () => {
     if (!activeProjectId) return;
+    const existingAccessModel = normalizeProjectAccessModel(
+      activeProjectRecord?.settings?.access_model || activeProjectRecord?.access_model || projectSettingsDraft.access_model,
+    );
+    const nextAccessModel = canAccessSuperAdmin
+      ? normalizeProjectAccessModel(projectSettingsDraft.access_model)
+      : existingAccessModel;
+    if (
+      !canAccessSuperAdmin &&
+      normalizeProjectAccessModel(projectSettingsDraft.access_model) !== existingAccessModel
+    ) {
+      toast.error("Only super admin can change the public sponsorship route.");
+      return;
+    }
+    if (nextAccessModel === "public_sponsorship" && projectSettingsDraft.workflow_profile !== "green") {
+      toast.error("Public sponsorship projects currently run on the Green workflow only.");
+      return;
+    }
+    const existingPublicSponsorEnabled = Boolean(
+      activeProjectRecord?.settings?.public_sponsor_enabled ?? activeProjectRecord?.public_sponsor_enabled,
+    );
+    const existingPublicSponsorTitle = String(
+      activeProjectRecord?.settings?.public_sponsor_title ?? activeProjectRecord?.public_sponsor_title ?? "",
+    ).trim();
+    const existingPublicSponsorDescription = String(
+      activeProjectRecord?.settings?.public_sponsor_description ?? activeProjectRecord?.public_sponsor_description ?? "",
+    ).trim();
+    const existingSponsorPricePerTree =
+      activeProjectRecord?.settings?.sponsor_price_per_tree ?? activeProjectRecord?.sponsor_price_per_tree;
+    const existingSponsorCurrency = String(
+      activeProjectRecord?.settings?.sponsor_currency ?? activeProjectRecord?.sponsor_currency ?? "NGN",
+    ).trim();
+    const existingSponsorCapacity = activeProjectRecord?.settings?.sponsor_capacity ?? activeProjectRecord?.sponsor_capacity;
+    const existingSponsorMaxPerOrder =
+      activeProjectRecord?.settings?.sponsor_max_per_order ?? activeProjectRecord?.sponsor_max_per_order;
+    const existingSponsorDedicationEnabled = Boolean(
+      activeProjectRecord?.settings?.sponsor_dedication_enabled ?? activeProjectRecord?.sponsor_dedication_enabled,
+    );
+    const existingSponsorPaymentInstructions = String(
+      activeProjectRecord?.settings?.sponsor_payment_instructions ??
+        activeProjectRecord?.sponsor_payment_instructions ??
+        "",
+    ).trim();
     try {
       const res = await api.patch(`/green/projects/${activeProjectId}/settings`, {
         workflow_profile: projectSettingsDraft.workflow_profile,
+        access_model: nextAccessModel,
+        public_sponsor_enabled:
+          nextAccessModel === "public_sponsorship"
+            ? canAccessSuperAdmin
+              ? Boolean(projectSettingsDraft.public_sponsor_enabled)
+              : existingPublicSponsorEnabled
+            : false,
+        public_sponsor_title:
+          nextAccessModel === "public_sponsorship"
+            ? canAccessSuperAdmin
+              ? projectSettingsDraft.public_sponsor_title.trim() || null
+              : existingPublicSponsorTitle || null
+            : null,
+        public_sponsor_description:
+          nextAccessModel === "public_sponsorship"
+            ? canAccessSuperAdmin
+              ? projectSettingsDraft.public_sponsor_description.trim() || null
+              : existingPublicSponsorDescription || null
+            : null,
+        sponsor_price_per_tree:
+          nextAccessModel === "public_sponsorship"
+            ? canAccessSuperAdmin
+              ? Number(projectSettingsDraft.sponsor_price_per_tree || 0) > 0
+                ? Number(projectSettingsDraft.sponsor_price_per_tree)
+                : null
+              : existingSponsorPricePerTree === null || existingSponsorPricePerTree === undefined
+                ? null
+                : Number(existingSponsorPricePerTree)
+            : null,
+        sponsor_currency:
+          nextAccessModel === "public_sponsorship"
+            ? canAccessSuperAdmin
+              ? (projectSettingsDraft.sponsor_currency || "NGN").trim() || "NGN"
+              : existingSponsorCurrency || "NGN"
+            : "NGN",
+        sponsor_capacity:
+          nextAccessModel === "public_sponsorship"
+            ? canAccessSuperAdmin
+              ? Number(projectSettingsDraft.sponsor_capacity || 0) > 0
+                ? Number(projectSettingsDraft.sponsor_capacity)
+                : null
+              : existingSponsorCapacity === null || existingSponsorCapacity === undefined
+                ? null
+                : Number(existingSponsorCapacity)
+            : null,
+        sponsor_max_per_order:
+          nextAccessModel === "public_sponsorship"
+            ? canAccessSuperAdmin
+              ? Number(projectSettingsDraft.sponsor_max_per_order || 0) > 0
+                ? Number(projectSettingsDraft.sponsor_max_per_order)
+                : null
+              : existingSponsorMaxPerOrder === null || existingSponsorMaxPerOrder === undefined
+                ? null
+                : Number(existingSponsorMaxPerOrder)
+            : null,
+        sponsor_dedication_enabled:
+          nextAccessModel === "public_sponsorship"
+            ? canAccessSuperAdmin
+              ? Boolean(projectSettingsDraft.sponsor_dedication_enabled)
+              : existingSponsorDedicationEnabled
+            : false,
+        sponsor_payment_instructions:
+          nextAccessModel === "public_sponsorship"
+            ? canAccessSuperAdmin
+              ? projectSettingsDraft.sponsor_payment_instructions.trim() || null
+              : existingSponsorPaymentInstructions || null
+            : null,
         agric_config:
           projectSettingsDraft.workflow_profile === "agric"
             ? {
@@ -4162,6 +4466,65 @@ export default function GreenWork() {
     }
   };
 
+  const loadSponsorshipOrders = useCallback(async (projectId: number) => {
+    if (!projectId) {
+      setSponsorshipOrders([]);
+      return;
+    }
+    setSponsorshipOrdersLoading(true);
+    try {
+      const res = await api.get(`/green/admin/sponsorship-orders?project_id=${projectId}`);
+      const rows = Array.isArray(res.data) ? res.data : [];
+      setSponsorshipOrders(
+        rows.map((row: any) => ({
+          ...row,
+          quantity: Number(row?.quantity || 0),
+          amount_per_tree: Number(row?.amount_per_tree || 0),
+          amount_total: Number(row?.amount_total || 0),
+          total_units: Number(row?.total_units || 0),
+          linked_units: Number(row?.linked_units || 0),
+          awaiting_tree_units: Number(row?.awaiting_tree_units || 0),
+          awaiting_payment_units: Number(row?.awaiting_payment_units || 0),
+          sponsor_account_id: row?.sponsor_account_id ? Number(row.sponsor_account_id) : null,
+          payment_proof_urls: normalizePhotoList(row?.payment_proof_urls),
+        })),
+      );
+    } catch {
+      setSponsorshipOrders([]);
+    } finally {
+      setSponsorshipOrdersLoading(false);
+    }
+  }, []);
+
+  const reviewSponsorshipPayment = async (
+    orderId: number,
+    paymentStatus: "verified" | "rejected" | "proof_submitted",
+  ) => {
+    const reviewNotes =
+      paymentStatus === "rejected"
+        ? window.prompt("Enter a short reason for rejecting this payment proof.", "") || ""
+        : window.prompt("Optional review note for this sponsorship order.", "") || "";
+    try {
+      await api.patch(`/green/admin/sponsorship-orders/${orderId}/payment`, {
+        payment_status: paymentStatus,
+        reviewed_by: workAuthSession?.user?.full_name || "work_admin",
+        review_notes: reviewNotes.trim() || null,
+      });
+      if (publicSponsorshipProject && activeProjectId) {
+        await loadSponsorshipOrders(activeProjectId);
+      }
+      toast.success(
+        paymentStatus === "verified"
+          ? "Sponsorship payment verified"
+          : paymentStatus === "rejected"
+            ? "Sponsorship payment rejected"
+            : "Sponsorship order returned to payment review",
+      );
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to review sponsorship payment");
+    }
+  };
+
   const saveTreeMeta = async (treeId: number) => {
     if (!activeProjectId) return;
     const draft = treeMetaDraftById[treeId];
@@ -4483,6 +4846,15 @@ export default function GreenWork() {
   }, [activeProjectId, activeForm]);
 
   useEffect(() => {
+    if (!activeProjectId || !publicSponsorshipProject) {
+      setSponsorshipOrders([]);
+      return;
+    }
+    if (!["sponsors", "sponsorship_orders", "project_focus"].includes(String(activeForm || ""))) return;
+    void loadSponsorshipOrders(activeProjectId);
+  }, [activeProjectId, activeForm, loadSponsorshipOrders, publicSponsorshipProject]);
+
+  useEffect(() => {
     if (activeForm !== "remote_monitoring") {
       setRemoteMonitoringReport(null);
     }
@@ -4577,6 +4949,17 @@ export default function GreenWork() {
       toast.error("Project name required");
       return;
     }
+    const nextAccessModel = canAccessSuperAdmin
+      ? normalizeProjectAccessModel(newProject.access_model)
+      : "partner_org";
+    if (!canAccessSuperAdmin && normalizeProjectAccessModel(newProject.access_model) === "public_sponsorship") {
+      toast.error("Only super admin can create public sponsorship projects.");
+      return;
+    }
+    if (nextAccessModel === "public_sponsorship" && normalizeWorkflowProfile(newProject.workflow_profile) !== "green") {
+      toast.error("Public sponsorship projects currently run on the Green workflow only.");
+      return;
+    }
     if (isPartnerWorkSession && !workScopedOrganizationId) {
       toast.error("Your user account is not linked to an organization.");
       return;
@@ -4586,6 +4969,27 @@ export default function GreenWork() {
     const payload = {
       ...newProject,
       organization_id: Number.isFinite(orgId) && orgId > 0 ? orgId : null,
+      access_model: nextAccessModel,
+      public_sponsor_enabled: nextAccessModel === "public_sponsorship" ? Boolean(newProject.public_sponsor_enabled) : false,
+      public_sponsor_title: nextAccessModel === "public_sponsorship" ? newProject.public_sponsor_title.trim() || null : null,
+      public_sponsor_description:
+        nextAccessModel === "public_sponsorship" ? newProject.public_sponsor_description.trim() || null : null,
+      sponsor_price_per_tree:
+        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_price_per_tree || 0) > 0
+          ? Number(newProject.sponsor_price_per_tree)
+          : null,
+      sponsor_currency: nextAccessModel === "public_sponsorship" ? (newProject.sponsor_currency || "NGN").trim() || "NGN" : "NGN",
+      sponsor_capacity:
+        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_capacity || 0) > 0
+          ? Number(newProject.sponsor_capacity)
+          : null,
+      sponsor_max_per_order:
+        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_max_per_order || 0) > 0
+          ? Number(newProject.sponsor_max_per_order)
+          : null,
+      sponsor_dedication_enabled: nextAccessModel === "public_sponsorship" ? Boolean(newProject.sponsor_dedication_enabled) : false,
+      sponsor_payment_instructions:
+        nextAccessModel === "public_sponsorship" ? newProject.sponsor_payment_instructions.trim() || null : null,
       agric_config:
         newProject.workflow_profile === "agric"
           ? {
@@ -4621,6 +5025,16 @@ export default function GreenWork() {
       sponsor: "",
       organization_id: forcedOrgId ? String(forcedOrgId) : "",
       workflow_profile: "green",
+      access_model: "partner_org",
+      public_sponsor_enabled: false,
+      public_sponsor_title: "",
+      public_sponsor_description: "",
+      sponsor_price_per_tree: "",
+      sponsor_currency: "NGN",
+      sponsor_capacity: "",
+      sponsor_max_per_order: "",
+      sponsor_dedication_enabled: true,
+      sponsor_payment_instructions: "",
       agric_program_type: "extension_support",
       agric_focus_commodities: "",
       agric_support_packages: "",
@@ -6978,6 +7392,12 @@ export default function GreenWork() {
           { form: "map_view", title: "Map View", note: `${actionWorkflowLabels.entityPlural} + draw polygons` },
           { form: "remote_monitoring", title: "Remote Monitoring", note: "Satellite Monitoring +", isNew: true },
           { form: "live_table", title: "Live Maintenance", note: "New planting + existing tree" },
+          ...(publicSponsorshipProject
+            ? [
+                { form: "sponsors" as WorkForm, title: "Sponsors", note: "Sponsor accounts + linked trees" },
+                { form: "sponsorship_orders" as WorkForm, title: "Payments", note: "Orders + payment review" },
+              ]
+            : []),
           { form: "users", title: "Users", note: "All staff status + roles" },
           { form: "assign_work", title: "Planting Orders", note: "Assign planting targets" },
           { form: "assign_task", title: "Maintenance", note: "Assign maintenance" },
@@ -7147,48 +7567,31 @@ export default function GreenWork() {
     return `Context: each line is one species, tracked daily from planting date (${startLabel} start). Status updates come from maintenance/task-review tree status logs; after day 30, the phase is marked as past 30 days and continues forward.`;
   }, [speciesDailyTrend]);
 
-  const activeProjectRecord = useMemo(() => {
-    if (!activeProjectId) return null;
-    return projects.find((p) => Number(p.id) === Number(activeProjectId)) || null;
-  }, [projects, activeProjectId]);
-  const activeWorkflowProfile = normalizeWorkflowProfile(
-    activeProjectRecord?.settings?.workflow_profile || activeProjectRecord?.workflow_profile || projectSettingsDraft.workflow_profile,
-  );
-  const activeWorkflowLabels = getWorkflowLabels(activeWorkflowProfile);
-  const fieldWorkflowMode = isFieldWorkflowProfile(activeWorkflowProfile);
-  const agricWorkflowMode = activeWorkflowProfile === "agric";
-  const reliefWorkflowMode = activeWorkflowProfile === "relief_recovery";
-  const defaultProjectForm: WorkForm = fieldWorkflowMode ? "custodian_hub" : "overview";
-  const isHiddenInFieldProject = (form: WorkForm) =>
-    Boolean(activeProjectId && fieldWorkflowMode && AGRIC_HIDDEN_PROJECT_FORMS.includes(form));
-  const activeFormHiddenInAgric = activeForm ? isHiddenInFieldProject(activeForm) : false;
-  const activeProjectOrgId =
-    activeProjectRecord && Number.isFinite(Number(activeProjectRecord.organization_id))
-      ? Number(activeProjectRecord.organization_id)
-      : null;
-  const activeProjectMatchesWorkSessionOrg =
-    Boolean(isPartnerWorkSession && workScopedOrganizationId && activeProjectOrgId === workScopedOrganizationId);
-  const partnerLogoUrl = isPartnerWorkSession
-    ? ((activeProjectMatchesWorkSessionOrg ? activeProjectRecord?.organization_logo_url || null : null) ||
-        workAuthSession?.user?.organization_logo_url ||
-        null)
-    : null;
-  const partnerLogoDisplayUrl = partnerLogoUrl ? toDisplayPhotoUrl(partnerLogoUrl) : "";
-  const partnerLogoName = isPartnerWorkSession
-    ? ((activeProjectMatchesWorkSessionOrg ? activeProjectRecord?.organization_name || null : null) ||
-        workAuthSession?.user?.organization_name ||
-        "Partner")
-    : "Partner";
-  const workSessionOrgStatus = normalizeOrgLifecycleStatus(workAuthSession?.user?.organization_status);
-  const workRuntimeOrgStatus = normalizeOrgLifecycleStatus(
-    activeProjectRecord?.organization_status || projects[0]?.organization_status || ""
-  );
-  const workEffectiveOrgStatus = isPartnerWorkSession ? (workRuntimeOrgStatus || workSessionOrgStatus) : "";
-  const workPartnerOrgInactive = Boolean(isPartnerWorkSession && workAuthSession?.user?.organization_is_active === false);
-  const workPartnerOrgSuspended = Boolean(
-    isPartnerWorkSession && (workPartnerOrgInactive || workEffectiveOrgStatus === "suspended")
-  );
-  const workPartnerOrgPaused = Boolean(isPartnerWorkSession && !workPartnerOrgSuspended && workEffectiveOrgStatus === "paused");
+  const sponsorAccounts = useMemo(() => {
+    const byId = new Map<number, { id: number; full_name: string; organization_name: string | null; email: string | null; account_type: string | null; orders_count: number; amount_total: number; linked_units: number }>();
+    sponsorshipOrders.forEach((order) => {
+      const sponsorId = Number(order.sponsor_account_id || 0);
+      if (!(sponsorId > 0)) return;
+      const current = byId.get(sponsorId);
+      if (current) {
+        current.orders_count += 1;
+        current.amount_total += Number(order.amount_total || 0);
+        current.linked_units += Number(order.linked_units || 0);
+        return;
+      }
+      byId.set(sponsorId, {
+        id: sponsorId,
+        full_name: String(order.sponsor_name || "").trim() || `Sponsor #${sponsorId}`,
+        organization_name: String(order.sponsor_organization_name || "").trim() || null,
+        email: String(order.sponsor_email || "").trim() || null,
+        account_type: String(order.sponsor_account_type || "").trim() || null,
+        orders_count: 1,
+        amount_total: Number(order.amount_total || 0),
+        linked_units: Number(order.linked_units || 0),
+      });
+    });
+    return Array.from(byId.values()).sort((a, b) => a.full_name.localeCompare(b.full_name));
+  }, [sponsorshipOrders]);
   const deleteProjectNameMatches = useMemo(() => {
     if (!activeProjectRecord) return false;
     return deleteProjectConfirmName.trim() === String(activeProjectRecord.name || "").trim();
@@ -7603,6 +8006,8 @@ export default function GreenWork() {
     activeForm !== "farmer_live" &&
     activeForm !== "field_capture_assign" &&
     activeForm !== "support_visit_assign" &&
+    activeForm !== "sponsors" &&
+    activeForm !== "sponsorship_orders" &&
     activeForm !== "verra_reports" &&
     activeForm !== "map_view" &&
     activeForm !== "remote_monitoring";
@@ -7623,6 +8028,8 @@ export default function GreenWork() {
     agricFarmerLiveMode ||
     agricFieldCaptureMode ||
     agricSupportVisitMode ||
+    activeForm === "sponsors" ||
+    activeForm === "sponsorship_orders" ||
     verraMode ||
     activeForm === "existing_tree_intake" ||
     activeForm === "custodian_hub" ||
@@ -8217,6 +8624,24 @@ export default function GreenWork() {
                 >
                   Live Maintenance Table
                 </button>
+                {publicSponsorshipProject ? (
+                  <>
+                    <button
+                      className={`green-work-menu-item ${activeForm === "sponsors" ? "active" : ""}`}
+                      type="button"
+                      onClick={() => openForm("sponsors")}
+                    >
+                      Sponsors
+                    </button>
+                    <button
+                      className={`green-work-menu-item ${activeForm === "sponsorship_orders" ? "active" : ""}`}
+                      type="button"
+                      onClick={() => openForm("sponsorship_orders")}
+                    >
+                      Sponsorship Payments
+                    </button>
+                  </>
+                ) : null}
               </>
             ) : null}
             {fieldWorkflowMode ? (
@@ -8371,6 +8796,11 @@ export default function GreenWork() {
                 )}
                 {activeProjectRecord && (
                   <p className="green-work-note">
+                    Access route: {activeProjectAccessModel === "public_sponsorship" ? "Public sponsorship" : "Partner organization"}
+                  </p>
+                )}
+                {activeProjectRecord && (
+                  <p className="green-work-note">
                     Active model: {formatTaskTypeLabel(activeProjectRecord.planting_model || "direct")}
                   </p>
                 )}
@@ -8460,7 +8890,33 @@ export default function GreenWork() {
                         <option value="green">Green</option>
                         <option value="agric">Agric</option>
                         <option value="relief_recovery">Relief &amp; Recovery</option>
-                      </select>
+                        </select>
+                    </label>
+                    <label>
+                      Access route
+                      {canAccessSuperAdmin ? (
+                        <select
+                          value={projectSettingsDraft.access_model}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              access_model: normalizeProjectAccessModel(e.target.value),
+                            }))
+                          }
+                        >
+                          <option value="partner_org">Partner organization route</option>
+                          <option value="public_sponsorship">Public sponsorship route</option>
+                        </select>
+                      ) : (
+                        <>
+                          <div className="green-work-note">
+                            {activeProjectAccessModel === "public_sponsorship"
+                              ? "Public sponsorship route"
+                              : "Partner organization route"}
+                          </div>
+                          <p className="green-work-note">Public sponsorship route changes are restricted to super admin.</p>
+                        </>
+                      )}
                     </label>
                     <label>
                       Planting model
@@ -8476,8 +8932,123 @@ export default function GreenWork() {
                         <option value="direct">Direct planting</option>
                         <option value="community_distributed">Community distributed</option>
                         <option value="mixed">Mixed model</option>
-                      </select>
+                        </select>
                     </label>
+                    {projectSettingsDraft.access_model === "public_sponsorship" && canAccessSuperAdmin ? (
+                      <>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={projectSettingsDraft.public_sponsor_enabled}
+                            onChange={(e) =>
+                              setProjectSettingsDraft((prev) => ({
+                                ...prev,
+                                public_sponsor_enabled: e.target.checked,
+                              }))
+                            }
+                          />
+                          Public sponsorship published
+                        </label>
+                        <input
+                          placeholder="Public sponsor title"
+                          value={projectSettingsDraft.public_sponsor_title}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              public_sponsor_title: e.target.value,
+                            }))
+                          }
+                        />
+                        <textarea
+                          placeholder="Public sponsor description"
+                          value={projectSettingsDraft.public_sponsor_description}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              public_sponsor_description: e.target.value,
+                            }))
+                          }
+                          rows={4}
+                        />
+                        <input
+                          placeholder="Price per tree"
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={projectSettingsDraft.sponsor_price_per_tree}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              sponsor_price_per_tree: e.target.value,
+                            }))
+                          }
+                        />
+                        <input
+                          placeholder="Currency code"
+                          value={projectSettingsDraft.sponsor_currency}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              sponsor_currency: e.target.value.toUpperCase(),
+                            }))
+                          }
+                        />
+                        <input
+                          placeholder="Total sponsor capacity"
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={projectSettingsDraft.sponsor_capacity}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              sponsor_capacity: e.target.value,
+                            }))
+                          }
+                        />
+                        <input
+                          placeholder="Max trees per order"
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={projectSettingsDraft.sponsor_max_per_order}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              sponsor_max_per_order: e.target.value,
+                            }))
+                          }
+                        />
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={projectSettingsDraft.sponsor_dedication_enabled}
+                            onChange={(e) =>
+                              setProjectSettingsDraft((prev) => ({
+                                ...prev,
+                                sponsor_dedication_enabled: e.target.checked,
+                              }))
+                            }
+                          />
+                          Allow dedication / memorial messages
+                        </label>
+                        <textarea
+                          placeholder="Payment instructions shown to sponsors"
+                          value={projectSettingsDraft.sponsor_payment_instructions}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              sponsor_payment_instructions: e.target.value,
+                            }))
+                          }
+                          rows={4}
+                        />
+                      </>
+                    ) : projectSettingsDraft.access_model === "public_sponsorship" ? (
+                      <p className="green-work-note">
+                        Public sponsorship publishing, pricing, and sponsor payment settings are managed by super admin.
+                      </p>
+                    ) : null}
                     {projectSettingsDraft.workflow_profile === "agric" ? (
                       <>
                         <label>
@@ -10214,6 +10785,16 @@ export default function GreenWork() {
                 <option value="agric">Agric workflow</option>
                 <option value="relief_recovery">Relief &amp; Recovery workflow</option>
               </select>
+              <select
+                value={newProject.access_model}
+                onChange={(e) => setNewProject({ ...newProject, access_model: normalizeProjectAccessModel(e.target.value) })}
+              >
+                <option value="partner_org">Partner organization route</option>
+                {canAccessSuperAdmin ? <option value="public_sponsorship">Public sponsorship route</option> : null}
+              </select>
+              {!canAccessSuperAdmin ? (
+                <p className="green-work-note">Only super admin can create a public sponsorship project.</p>
+              ) : null}
               <input
                 placeholder="Location"
                 value={newProject.location_text}
@@ -10224,6 +10805,72 @@ export default function GreenWork() {
                 value={newProject.sponsor}
                 onChange={(e) => setNewProject({ ...newProject, sponsor: e.target.value })}
               />
+              {newProject.access_model === "public_sponsorship" && canAccessSuperAdmin ? (
+                <>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={newProject.public_sponsor_enabled}
+                      onChange={(e) => setNewProject({ ...newProject, public_sponsor_enabled: e.target.checked })}
+                    />
+                    Public sponsorship published
+                  </label>
+                  <input
+                    placeholder="Public sponsor title"
+                    value={newProject.public_sponsor_title}
+                    onChange={(e) => setNewProject({ ...newProject, public_sponsor_title: e.target.value })}
+                  />
+                  <textarea
+                    placeholder="Public sponsor description"
+                    value={newProject.public_sponsor_description}
+                    onChange={(e) => setNewProject({ ...newProject, public_sponsor_description: e.target.value })}
+                    rows={4}
+                  />
+                  <input
+                    placeholder="Price per tree (NGN)"
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={newProject.sponsor_price_per_tree}
+                    onChange={(e) => setNewProject({ ...newProject, sponsor_price_per_tree: e.target.value })}
+                  />
+                  <input
+                    placeholder="Currency code"
+                    value={newProject.sponsor_currency}
+                    onChange={(e) => setNewProject({ ...newProject, sponsor_currency: e.target.value.toUpperCase() })}
+                  />
+                  <input
+                    placeholder="Total sponsor capacity"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={newProject.sponsor_capacity}
+                    onChange={(e) => setNewProject({ ...newProject, sponsor_capacity: e.target.value })}
+                  />
+                  <input
+                    placeholder="Max trees per order"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={newProject.sponsor_max_per_order}
+                    onChange={(e) => setNewProject({ ...newProject, sponsor_max_per_order: e.target.value })}
+                  />
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={newProject.sponsor_dedication_enabled}
+                      onChange={(e) => setNewProject({ ...newProject, sponsor_dedication_enabled: e.target.checked })}
+                    />
+                    Allow dedication / memorial messages
+                  </label>
+                  <textarea
+                    placeholder="Payment instructions shown to public sponsors"
+                    value={newProject.sponsor_payment_instructions}
+                    onChange={(e) => setNewProject({ ...newProject, sponsor_payment_instructions: e.target.value })}
+                    rows={4}
+                  />
+                </>
+              ) : null}
               {newProject.workflow_profile === "agric" ? (
                 <>
                   <select
@@ -10350,6 +10997,109 @@ export default function GreenWork() {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {activeForm === "sponsors" && (
+            <div className="green-work-card">
+              <h3>Public Sponsors</h3>
+              {!publicSponsorshipProject ? (
+                <p className="green-work-note">Switch this project to the Public Sponsorship access route first.</p>
+              ) : sponsorshipOrdersLoading ? (
+                <p className="green-work-note">Loading sponsor accounts...</p>
+              ) : (
+                <>
+                  <p className="green-work-note">
+                    Sponsor route summary: {sponsorAccounts.length} sponsor account{sponsorAccounts.length === 1 ? "" : "s"} with{" "}
+                    {sponsorshipOrders.length} order{sponsorshipOrders.length === 1 ? "" : "s"} in this project.
+                  </p>
+                  {sponsorAccounts.length === 0 ? (
+                    <p className="green-work-note">No sponsors have submitted orders for this project yet.</p>
+                  ) : (
+                    <div className="staff-list">
+                      {sponsorAccounts.map((sponsor) => (
+                        <div key={`sponsor-${sponsor.id}`} className="staff-row">
+                          <div className="staff-row-head">
+                            <strong>{sponsor.full_name}</strong>
+                            <span>{formatTaskTypeLabel(sponsor.account_type || "individual")}</span>
+                          </div>
+                          <div className="staff-row-meta">
+                            Organization: {sponsor.organization_name || "-"} | Email: {sponsor.email || "-"}
+                          </div>
+                          <div className="staff-row-meta">
+                            Orders: {sponsor.orders_count} | Linked trees: {sponsor.linked_units} | Spend:{" "}
+                            {formatCurrencyAmount(sponsor.amount_total, activeProjectRecord?.sponsor_currency || "NGN")}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {activeForm === "sponsorship_orders" && (
+            <div className="green-work-card">
+              <h3>Sponsorship Payments</h3>
+              {!publicSponsorshipProject ? (
+                <p className="green-work-note">Switch this project to the Public Sponsorship access route first.</p>
+              ) : sponsorshipOrdersLoading ? (
+                <p className="green-work-note">Loading sponsorship orders...</p>
+              ) : sponsorshipOrders.length === 0 ? (
+                <p className="green-work-note">No sponsorship orders found for this project yet.</p>
+              ) : (
+                <div className="staff-list">
+                  {sponsorshipOrders.map((order) => (
+                    <div key={`sponsor-order-${order.id}`} className="staff-row">
+                      <div className="staff-row-head">
+                        <strong>{order.sponsor_name || `Sponsor #${order.sponsor_account_id || order.id}`}</strong>
+                        <span>
+                          {order.order_uid || `Order #${order.id}`} | {formatCurrencyAmount(order.amount_total, order.currency)}
+                        </span>
+                      </div>
+                      <div className="staff-row-meta">
+                        Trees: {Number(order.quantity || 0)} | Linked: {Number(order.linked_units || 0)} | Awaiting tree:{" "}
+                        {Number(order.awaiting_tree_units || 0)}
+                      </div>
+                      <div className="staff-row-meta">
+                        Payment: {formatTaskTypeLabel(order.payment_status || "pending")} | Order: {formatTaskTypeLabel(order.order_status || "pending")}
+                        {order.payment_reference ? ` | Ref: ${order.payment_reference}` : ""}
+                      </div>
+                      <div className="staff-row-meta">
+                        Sponsor email: {order.sponsor_email || "-"}
+                        {order.dedication_name ? ` | Dedication: ${order.dedication_name}` : ""}
+                      </div>
+                      {order.review_notes ? <div className="staff-row-meta">Latest review note: {order.review_notes}</div> : null}
+                      {order.payment_proof_url ? (
+                        <div className="work-actions">
+                          <button type="button" onClick={() => window.open(toDisplayPhotoUrl(order.payment_proof_url || ""), "_blank")}>
+                            View Payment Proof
+                          </button>
+                          <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "verified")}>
+                            Verify Payment
+                          </button>
+                          <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "rejected")}>
+                            Reject
+                          </button>
+                          <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "proof_submitted")}>
+                            Return To Review
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="work-actions">
+                          <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "verified")}>
+                            Verify Payment
+                          </button>
+                          <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "rejected")}>
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
