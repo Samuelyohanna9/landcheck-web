@@ -117,6 +117,7 @@ type Project = {
   sponsor_max_per_order?: number | null;
   sponsor_dedication_enabled?: boolean | null;
   sponsor_payment_instructions?: string | null;
+  public_sponsor_agent_user_ids?: number[] | null;
   agric_config?: AgricConfig | null;
   relief_config?: ReliefConfig | null;
   planting_model?: "direct" | "community_distributed" | "mixed";
@@ -134,6 +135,7 @@ type Project = {
     sponsor_max_per_order?: number | null;
     sponsor_dedication_enabled?: boolean | null;
     sponsor_payment_instructions?: string | null;
+    public_sponsor_agent_user_ids?: number[] | null;
     agric_config?: AgricConfig | null;
     relief_config?: ReliefConfig | null;
     planting_model?: "direct" | "community_distributed" | "mixed";
@@ -1508,6 +1510,19 @@ const normalizePhotoList = (value: unknown): string[] => {
   return rows;
 };
 
+const normalizePositiveIntList = (value: unknown): number[] => {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<number>();
+  const rows: number[] = [];
+  value.forEach((item) => {
+    const numeric = Number(item || 0);
+    if (!Number.isInteger(numeric) || numeric <= 0 || seen.has(numeric)) return;
+    seen.add(numeric);
+    rows.push(numeric);
+  });
+  return rows;
+};
+
 const normalizeSponsorshipOrderRecord = (row: any): SponsorshipOrderRecord => ({
   ...row,
   id: Number(row?.id || 0),
@@ -1526,6 +1541,18 @@ const normalizeSponsorshipOrderRecord = (row: any): SponsorshipOrderRecord => ({
   sponsor_account_id: row?.sponsor_account_id ? Number(row.sponsor_account_id) : null,
   payment_proof_urls: normalizePhotoList(row?.payment_proof_urls),
 });
+
+const normalizeSponsorshipOrderRecords = (rows: any[]): SponsorshipOrderRecord[] => {
+  const seen = new Set<number>();
+  return (Array.isArray(rows) ? rows : [])
+    .map((row) => normalizeSponsorshipOrderRecord(row))
+    .filter((row) => {
+      const orderId = Number(row.id || 0);
+      if (!(orderId > 0) || seen.has(orderId)) return false;
+      seen.add(orderId);
+      return true;
+    });
+};
 
 const normalizeSponsorAccountSummary = (row: any): SponsorAccountSummary => ({
   id: Number(row?.id || 0),
@@ -2615,6 +2642,7 @@ export default function GreenWork() {
     sponsor_max_per_order: string;
     sponsor_dedication_enabled: boolean;
     sponsor_payment_instructions: string;
+    public_sponsor_agent_user_ids: number[];
     agric_program_type: string;
     agric_focus_commodities: string;
     agric_support_packages: string;
@@ -2638,6 +2666,7 @@ export default function GreenWork() {
     sponsor_max_per_order: "",
     sponsor_dedication_enabled: true,
     sponsor_payment_instructions: "",
+    public_sponsor_agent_user_ids: [],
     agric_program_type: "extension_support",
     agric_focus_commodities: "",
     agric_support_packages: "",
@@ -2668,6 +2697,29 @@ export default function GreenWork() {
   const publicSponsorshipProject = Boolean(
     activeProjectId && activeWorkflowProfile === "green" && activeProjectAccessModel === "public_sponsorship",
   );
+  const publicSponsorAgentUserIds = useMemo(
+    () =>
+      normalizePositiveIntList(
+        activeProjectRecord?.settings?.public_sponsor_agent_user_ids ??
+          activeProjectRecord?.public_sponsor_agent_user_ids ??
+          projectSettingsDraft.public_sponsor_agent_user_ids,
+      ),
+    [activeProjectRecord, projectSettingsDraft.public_sponsor_agent_user_ids],
+  );
+  const projectScopedUsers = useMemo(() => {
+    const organizationId = Number(activeProjectRecord?.organization_id || 0);
+    if (!(organizationId > 0)) return users;
+    return users.filter((user) => Number(user.organization_id || 0) === organizationId);
+  }, [activeProjectRecord?.organization_id, users]);
+  const eligiblePublicSponsorUsers = useMemo(
+    () => projectScopedUsers.filter((user) => user.allow_green !== false && user.is_active !== false),
+    [projectScopedUsers],
+  );
+  const assignmentUsers = useMemo(() => {
+    if (!publicSponsorshipProject) return projectScopedUsers;
+    const allowed = new Set(publicSponsorAgentUserIds);
+    return eligiblePublicSponsorUsers.filter((user) => allowed.has(Number(user.id || 0)));
+  }, [eligiblePublicSponsorUsers, projectScopedUsers, publicSponsorAgentUserIds, publicSponsorshipProject]);
   const defaultProjectForm: WorkForm = fieldWorkflowMode ? "custodian_hub" : "overview";
   const isHiddenInFieldProject = (form: WorkForm) =>
     Boolean(activeProjectId && fieldWorkflowMode && AGRIC_HIDDEN_PROJECT_FORMS.includes(form));
@@ -2702,6 +2754,7 @@ export default function GreenWork() {
   const [sponsorshipOrdersLoading, setSponsorshipOrdersLoading] = useState(false);
   const [sponsorshipOrdersError, setSponsorshipOrdersError] = useState<string | null>(null);
   const [sponsorshipOrdersScopeNote, setSponsorshipOrdersScopeNote] = useState<string | null>(null);
+  const [savingPublicSponsorAgents, setSavingPublicSponsorAgents] = useState(false);
   const [fallbackSponsorAccounts, setFallbackSponsorAccounts] = useState<SponsorAccountSummary[]>([]);
   const [custodians, setCustodians] = useState<Custodian[]>([]);
   const [newCustodian, setNewCustodian] = useState<{
@@ -3425,6 +3478,7 @@ export default function GreenWork() {
       sponsor_max_per_order: "",
       sponsor_dedication_enabled: true,
       sponsor_payment_instructions: "",
+      public_sponsor_agent_user_ids: [],
       agric_program_type: "extension_support",
       agric_focus_commodities: "",
       agric_support_packages: "",
@@ -3517,7 +3571,7 @@ export default function GreenWork() {
   const treeById = useMemo(() => new Map(trees.map((tree) => [Number(tree.id), tree])), [trees]);
   const userNameByKnownAlias = useMemo(() => {
     const aliases = new Map<string, string>();
-    users.forEach((user) => {
+    assignmentUsers.forEach((user) => {
       [user.full_name, user.work_username, user.user_uid, user.email].forEach((value) => {
         const key = normalizeName(String(value || ""));
         if (key && !aliases.has(key)) {
@@ -3526,7 +3580,7 @@ export default function GreenWork() {
       });
     });
     return aliases;
-  }, [users]);
+  }, [assignmentUsers]);
   const resolveKnownUserName = useCallback(
     (value: string | null | undefined) => {
       const key = normalizeName(String(value || ""));
@@ -3657,7 +3711,7 @@ export default function GreenWork() {
         setFallbackSponsorAccounts(projectDetail.sponsor_accounts.map((row: any) => normalizeSponsorAccountSummary(row)));
       }
       if (Array.isArray(projectDetail?.sponsorship_orders) && projectDetail.sponsorship_orders.length > 0) {
-        setSponsorshipOrders(projectDetail.sponsorship_orders.map((row: any) => normalizeSponsorshipOrderRecord(row)));
+        setSponsorshipOrders(normalizeSponsorshipOrderRecords(projectDetail.sponsorship_orders));
         setSponsorshipOrdersError(null);
         setSponsorshipOrdersScopeNote(
           projectDetail?.sponsorship_scope_note ? String(projectDetail.sponsorship_scope_note) : null,
@@ -3689,6 +3743,9 @@ export default function GreenWork() {
         ),
         sponsor_payment_instructions: String(
           settingsPayload?.sponsor_payment_instructions || projectDetail?.sponsor_payment_instructions || ""
+        ),
+        public_sponsor_agent_user_ids: normalizePositiveIntList(
+          settingsPayload?.public_sponsor_agent_user_ids ?? projectDetail?.public_sponsor_agent_user_ids,
         ),
         agric_program_type: String(settingsPayload?.agric_config?.program_type || "extension_support"),
         agric_focus_commodities: String(settingsPayload?.agric_config?.focus_commodities || ""),
@@ -4164,6 +4221,8 @@ export default function GreenWork() {
               ? projectSettingsDraft.sponsor_payment_instructions.trim() || null
               : existingSponsorPaymentInstructions || null
             : null,
+        public_sponsor_agent_user_ids:
+          nextAccessModel === "public_sponsorship" ? projectSettingsDraft.public_sponsor_agent_user_ids : [],
         agric_config:
           projectSettingsDraft.workflow_profile === "agric"
             ? {
@@ -4191,6 +4250,28 @@ export default function GreenWork() {
       toast.success("Project settings updated");
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || "Failed to update project settings");
+    }
+  };
+
+  const savePublicSponsorAgents = async () => {
+    if (!activeProjectId || !publicSponsorshipProject || !canAccessSuperAdmin) return;
+    try {
+      setSavingPublicSponsorAgents(true);
+      const res = await api.patch(`/green/projects/${activeProjectId}/settings`, {
+        public_sponsor_agent_user_ids: projectSettingsDraft.public_sponsor_agent_user_ids,
+      });
+      setProjects((prev) =>
+        prev.map((item) => (Number(item.id) === Number(activeProjectId) ? { ...item, ...res.data } : item))
+      );
+      setProjectSettingsDraft((prev) => ({
+        ...prev,
+        public_sponsor_agent_user_ids: normalizePositiveIntList(res.data?.public_sponsor_agent_user_ids),
+      }));
+      toast.success("Public sponsor agents updated");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to update public sponsor agents");
+    } finally {
+      setSavingPublicSponsorAgents(false);
     }
   };
 
@@ -4570,13 +4651,13 @@ export default function GreenWork() {
       const res = await api.get(`/green/admin/sponsorship-orders?project_id=${projectId}${syncQs}&_ts=${ts}`);
       const rows = Array.isArray(res.data) ? res.data : [];
       if (rows.length > 0) {
-        setSponsorshipOrders(rows.map((row: any) => normalizeSponsorshipOrderRecord(row)));
+        setSponsorshipOrders(normalizeSponsorshipOrderRecords(rows));
         return;
       }
       const fallbackRes = await api.get(`/green/admin/sponsorship-orders?${syncQs ? `sync=1&` : ""}_ts=${ts}`);
       const fallbackRows = Array.isArray(fallbackRes.data) ? fallbackRes.data : [];
       if (fallbackRows.length > 0) {
-        setSponsorshipOrders(fallbackRows.map((row: any) => normalizeSponsorshipOrderRecord(row)));
+        setSponsorshipOrders(normalizeSponsorshipOrderRecords(fallbackRows));
         setSponsorshipOrdersScopeNote(
           "No sponsorship orders matched this project yet. Showing all public sponsorship payments across projects so paid sponsors are still visible.",
         );
@@ -4589,7 +4670,7 @@ export default function GreenWork() {
         const fallbackRes = await api.get(`/green/admin/sponsorship-orders?_ts=${Date.now()}`);
         const fallbackRows = Array.isArray(fallbackRes.data) ? fallbackRes.data : [];
         if (fallbackRows.length > 0) {
-          setSponsorshipOrders(fallbackRows.map((row: any) => normalizeSponsorshipOrderRecord(row)));
+          setSponsorshipOrders(normalizeSponsorshipOrderRecords(fallbackRows));
           setSponsorshipOrdersScopeNote(
             "Project-specific sponsorship lookup failed. Showing all public sponsorship payments across projects so paid sponsors are still visible.",
           );
@@ -5340,6 +5421,11 @@ export default function GreenWork() {
   const createWorkOrder = async () => {
     if (!activeProjectId) return;
     const assignees = currentWorkOrderAssignees;
+    const allowedAssigneeNames = new Set(assignmentUsers.map((user) => normalizeName(user.full_name)));
+    if (publicSponsorshipProject && assignees.some((assignee) => !allowedAssigneeNames.has(normalizeName(assignee)))) {
+      toast.error("Only saved public sponsor agents can receive sponsor-funded planting work.");
+      return;
+    }
     if (!assignees.length) {
       toast.error(newOrderMultiAssignEnabled ? "Select at least one assignee" : "Assignee name required");
       return;
@@ -5607,6 +5693,15 @@ export default function GreenWork() {
       : bulkUsesMultipleStaff
         ? currentTaskAssignees
         : [String(newTask.assignee_name || "").trim()].filter(Boolean);
+    const allowedAssigneeNames = new Set(assignmentUsers.map((user) => normalizeName(user.full_name)));
+    if (
+      publicSponsorshipProject &&
+      !usePlanterStrategy &&
+      assignees.some((assignee) => !allowedAssigneeNames.has(normalizeName(assignee)))
+    ) {
+      toast.error("Only saved public sponsor agents can receive sponsor-funded maintenance work.");
+      return;
+    }
     if (usePlanterStrategy) {
       const unresolvedPlanterRows = planterAssignmentPlan.filter((item) => !item.assignee_name);
       if (unresolvedPlanterRows.length) {
@@ -6709,7 +6804,7 @@ export default function GreenWork() {
   }, [mapViewTrees]);
 
   const overviewStaffSummary = useMemo(() => {
-    const userByKey = new Map(users.map((user) => [normalizeName(user.full_name), user]));
+    const userByKey = new Map(assignmentUsers.map((user) => [normalizeName(user.full_name), user]));
     const staffNames = assignees.filter((name) => name !== "all");
 
     return staffNames
@@ -6804,7 +6899,7 @@ export default function GreenWork() {
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [assignees, users, orders, tasks, trees]);
+  }, [assignmentUsers, assignees, orders, tasks, trees]);
 
   const filteredOverviewTasks = useMemo(() => {
     if (assigneeFilter === "all") return tasks;
@@ -7576,6 +7671,11 @@ export default function GreenWork() {
       })
       .sort((a, b) => a.user.full_name.localeCompare(b.user.full_name));
   }, [users, orders, tasks, trees]);
+  const visibleUserWorkSummary = useMemo(() => {
+    if (!publicSponsorshipProject) return userWorkSummary;
+    const allowed = new Set(publicSponsorAgentUserIds);
+    return userWorkSummary.filter((item) => allowed.has(Number(item.user.id || 0)));
+  }, [publicSponsorshipProject, publicSponsorAgentUserIds, userWorkSummary]);
 
   const calcProgress = (value: number, target: number) => {
     if (!target || target <= 0) return 0;
@@ -7765,6 +7865,41 @@ export default function GreenWork() {
     }),
     [sponsorshipOrderBuckets],
   );
+  const sponsorshipAccountingSummary = useMemo(() => {
+    const safeCurrency = activeProjectRecord?.sponsor_currency || "NGN";
+    const totals = {
+      currency: safeCurrency,
+      totalOrders: sponsorshipOrders.length,
+      successfulAmount: 0,
+      awaitingAmount: 0,
+      issueAmount: 0,
+      successfulTrees: 0,
+      awaitingTrees: 0,
+      issueTrees: 0,
+      uniqueSponsorsPaid: 0,
+      latestSuccessfulAt: "" as string,
+    };
+    const paidSponsorIds = new Set<number>();
+    sponsorshipOrderBuckets.successful.forEach((order) => {
+      totals.successfulAmount += Number(order.amount_total || 0);
+      totals.successfulTrees += Number(order.quantity || 0);
+      if (Number(order.sponsor_account_id || 0) > 0) paidSponsorIds.add(Number(order.sponsor_account_id || 0));
+      const stamp = String(order.payment_verified_at || order.updated_at || order.created_at || "");
+      if (stamp && (!totals.latestSuccessfulAt || stamp > totals.latestSuccessfulAt)) {
+        totals.latestSuccessfulAt = stamp;
+      }
+    });
+    sponsorshipOrderBuckets.awaiting.forEach((order) => {
+      totals.awaitingAmount += Number(order.amount_total || 0);
+      totals.awaitingTrees += Number(order.quantity || 0);
+    });
+    sponsorshipOrderBuckets.issue.forEach((order) => {
+      totals.issueAmount += Number(order.amount_total || 0);
+      totals.issueTrees += Number(order.quantity || 0);
+    });
+    totals.uniqueSponsorsPaid = paidSponsorIds.size;
+    return totals;
+  }, [activeProjectRecord?.sponsor_currency, sponsorshipOrderBuckets, sponsorshipOrders.length]);
   const sponsoredBacklogOrders = useMemo(
     () =>
       sponsorshipOrderBuckets.successful.filter((order) => Number(order.awaiting_tree_units || 0) > 0),
@@ -11158,9 +11293,93 @@ export default function GreenWork() {
               <h3>Users & Staff</h3>
               {!activeProjectId && <p className="green-work-note">Select project focus to load full assignment status.</p>}
               <p className="green-work-note">Right-click a staff row to assign tree planting or maintenance.</p>
-              {userWorkSummary.length === 0 && <p className="green-work-note">No users found.</p>}
+              {publicSponsorshipProject && canAccessSuperAdmin ? (
+                <div className="green-work-card" style={{ marginBottom: 14 }}>
+                  <h3>Public Sponsor Agents</h3>
+                  <p className="green-work-note">
+                    Choose which staff can receive sponsor-funded planting and maintenance work in this public sponsor project.
+                    Only active Green-enabled users can be selected, and only selected agents will appear in assignment lists.
+                  </p>
+                  <div className="work-actions" style={{ marginBottom: 12, flexWrap: "wrap" }}>
+                    <span className="green-work-live-pill neutral">Available staff: {eligiblePublicSponsorUsers.length}</span>
+                    <span className="green-work-live-pill ok">Selected agents: {projectSettingsDraft.public_sponsor_agent_user_ids.length}</span>
+                  </div>
+                  <div className="work-actions" style={{ marginBottom: 10 }}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setProjectSettingsDraft((prev) => ({
+                          ...prev,
+                          public_sponsor_agent_user_ids: eligiblePublicSponsorUsers.map((user) => Number(user.id || 0)).filter((id) => id > 0),
+                        }))
+                      }
+                      disabled={!eligiblePublicSponsorUsers.length || savingPublicSponsorAgents}
+                    >
+                      Select All Project Staff
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setProjectSettingsDraft((prev) => ({ ...prev, public_sponsor_agent_user_ids: [] }))
+                      }
+                      disabled={!projectSettingsDraft.public_sponsor_agent_user_ids.length || savingPublicSponsorAgents}
+                    >
+                      Clear Agents
+                    </button>
+                    <button type="button" onClick={() => void savePublicSponsorAgents()} disabled={savingPublicSponsorAgents}>
+                      {savingPublicSponsorAgents ? "Saving..." : "Save Agent List"}
+                    </button>
+                  </div>
+                  {eligiblePublicSponsorUsers.length === 0 ? (
+                    <p className="green-work-note">No active Green-enabled project staff found for this organization yet.</p>
+                  ) : (
+                    <div className="staff-list">
+                      {eligiblePublicSponsorUsers.map((user) => {
+                        const selected = projectSettingsDraft.public_sponsor_agent_user_ids.includes(Number(user.id || 0));
+                        return (
+                          <div key={`public-sponsor-agent-${user.id}`} className="staff-row">
+                            <div className="staff-row-head">
+                              <strong>{user.full_name}</strong>
+                              <span>{formatRoleLabel(user.role)}</span>
+                            </div>
+                            <div className="staff-row-meta">
+                              Org: {user.organization_name || "Unassigned"} | Login: {user.work_username || "-"}
+                            </div>
+                            <div className="staff-row-meta">
+                              Access: {user.allow_green !== false ? "Green" : "-"}{user.allow_work ? " / Work" : ""}
+                            </div>
+                            <label className="green-work-checkbox-row" style={{ marginTop: 8 }}>
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                onChange={() =>
+                                  setProjectSettingsDraft((prev) => ({
+                                    ...prev,
+                                    public_sponsor_agent_user_ids: selected
+                                      ? prev.public_sponsor_agent_user_ids.filter((id) => id !== Number(user.id || 0))
+                                      : [...prev.public_sponsor_agent_user_ids, Number(user.id || 0)],
+                                  }))
+                                }
+                                disabled={savingPublicSponsorAgents}
+                              />
+                              <span>{selected ? "Assigned as sponsor agent" : "Select as sponsor agent"}</span>
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+              {visibleUserWorkSummary.length === 0 && (
+                <p className="green-work-note">
+                  {publicSponsorshipProject
+                    ? "No public sponsor agents selected yet."
+                    : "No users found."}
+                </p>
+              )}
               <div className="staff-list">
-                {userWorkSummary.map((item) => (
+                {visibleUserWorkSummary.map((item) => (
                   <button
                     key={item.user.id}
                     type="button"
@@ -11307,134 +11526,182 @@ export default function GreenWork() {
                   </div>
                   {sponsorshipOrdersScopeNote ? <p className="green-work-note">{sponsorshipOrdersScopeNote}</p> : null}
                   {sponsorshipOrdersError ? <p className="green-work-note danger">{sponsorshipOrdersError}</p> : null}
-                  {([
-                    {
-                      key: "successful",
-                      title: "Successful Payments",
-                      tone: "ok",
-                      rows: sponsorshipOrderBuckets.successful,
-                    },
-                    {
-                      key: "awaiting",
-                      title: "Awaiting / Pending Payments",
-                      tone: "warning",
-                      rows: sponsorshipOrderBuckets.awaiting,
-                    },
-                    {
-                      key: "issue",
-                      title: "Flagged / Unsuccessful Payments",
-                      tone: "danger",
-                      rows: sponsorshipOrderBuckets.issue,
-                    },
-                  ] as Array<{
-                    key: string;
-                    title: string;
-                    tone: "ok" | "warning" | "danger";
-                    rows: SponsorshipOrderRecord[];
-                  }>)
-                    .filter((section) => section.rows.length > 0)
-                    .map((section) => (
-                      <div key={`sponsor-payment-section-${section.key}`} style={{ marginBottom: 18 }}>
-                        <div className="work-actions" style={{ marginBottom: 10, flexWrap: "wrap" }}>
-                          <span className={`green-work-live-pill ${section.tone}`}>{section.title}</span>
-                          <span className="green-work-live-pill neutral">
-                            {section.rows.length} order{section.rows.length === 1 ? "" : "s"}
-                          </span>
+                  <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.8fr) minmax(280px, 0.9fr)", gap: 16, alignItems: "start" }}>
+                    <div>
+                      {([
+                        {
+                          key: "successful",
+                          title: "Successful Payments",
+                          tone: "ok",
+                          rows: sponsorshipOrderBuckets.successful,
+                        },
+                        {
+                          key: "awaiting",
+                          title: "Awaiting / Pending Payments",
+                          tone: "warning",
+                          rows: sponsorshipOrderBuckets.awaiting,
+                        },
+                        {
+                          key: "issue",
+                          title: "Flagged / Unsuccessful Payments",
+                          tone: "danger",
+                          rows: sponsorshipOrderBuckets.issue,
+                        },
+                      ] as Array<{
+                        key: string;
+                        title: string;
+                        tone: "ok" | "warning" | "danger";
+                        rows: SponsorshipOrderRecord[];
+                      }>)
+                        .filter((section) => section.rows.length > 0)
+                        .map((section) => (
+                          <div key={`sponsor-payment-section-${section.key}`} style={{ marginBottom: 18 }}>
+                            <div className="work-actions" style={{ marginBottom: 10, flexWrap: "wrap" }}>
+                              <span className={`green-work-live-pill ${section.tone}`}>{section.title}</span>
+                              <span className="green-work-live-pill neutral">
+                                {section.rows.length} order{section.rows.length === 1 ? "" : "s"}
+                              </span>
+                            </div>
+                            <div className="staff-list">
+                              {section.rows.map((order) => {
+                                const gatewayManaged = String(order.payment_method || "").trim().toLowerCase() === "flutterwave_standard";
+                                const gatewayVerified = String(order.payment_status || "").trim().toLowerCase() === "verified";
+                                return (
+                                  <div key={`sponsor-order-${section.key}-${order.id}`} className="staff-row">
+                                    <div className="staff-row-head">
+                                      <strong>{order.sponsor_name || `Sponsor #${order.sponsor_account_id || order.id}`}</strong>
+                                      <span>
+                                        {order.order_uid || `Order #${order.id}`} | {formatCurrencyAmount(order.amount_total, order.currency)}
+                                      </span>
+                                    </div>
+                                    <div className="work-actions" style={{ margin: "8px 0 6px", flexWrap: "wrap" }}>
+                                      <span className={`green-work-live-pill ${section.tone}`}>{section.title.replace(" Payments", "")}</span>
+                                      <span className={`green-work-live-pill ${gatewayVerified ? "ok" : section.tone}`}>
+                                        Payment: {formatTaskTypeLabel(order.payment_status || "pending")}
+                                      </span>
+                                      <span className="green-work-live-pill neutral">
+                                        Order: {formatTaskTypeLabel(order.order_status || "pending")}
+                                      </span>
+                                    </div>
+                                    <div className="staff-row-meta">
+                                      Trees: {Number(order.quantity || 0)} | Linked: {Number(order.linked_units || 0)} | Awaiting tree:{" "}
+                                      {Number(order.awaiting_tree_units || 0)}
+                                    </div>
+                                    <div className="staff-row-meta">
+                                      {order.payment_reference ? `Ref: ${order.payment_reference} | ` : ""}
+                                      Method: {gatewayManaged ? "Flutterwave secure checkout" : formatTaskTypeLabel(order.payment_method || "manual_transfer")}
+                                      {order.payment_gateway_status ? ` | Gateway: ${formatTaskTypeLabel(order.payment_gateway_status)}` : ""}
+                                      {order.payment_gateway_reference ? ` | Tx Ref: ${order.payment_gateway_reference}` : ""}
+                                    </div>
+                                    <div className="staff-row-meta">
+                                      Sponsor email: {order.sponsor_email || "-"}
+                                      {order.dedication_name ? ` | Dedication: ${order.dedication_name}` : ""}
+                                    </div>
+                                    {order.project_name ? (
+                                      <div className="staff-row-meta">
+                                        Project: {order.project_name}
+                                        {order.location_text ? ` | ${order.location_text}` : ""}
+                                      </div>
+                                    ) : null}
+                                    {gatewayManaged ? (
+                                      <div className="staff-row-meta">
+                                        Flutterwave orders are expected to verify automatically. Use manual review only if support intervention is required.
+                                      </div>
+                                    ) : null}
+                                    {order.review_notes ? <div className="staff-row-meta">Latest review note: {order.review_notes}</div> : null}
+                                    {gatewayManaged ? (
+                                      <div className="work-actions">
+                                        {order.payment_link ? (
+                                          <button type="button" onClick={() => window.open(order.payment_link || "", "_blank")}>
+                                            Open Checkout
+                                          </button>
+                                        ) : null}
+                                        {!gatewayVerified ? (
+                                          <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "verified")}>
+                                            Manual Verify
+                                          </button>
+                                        ) : null}
+                                        <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "rejected")}>
+                                          {gatewayVerified ? "Flag Issue" : "Mark Unpaid"}
+                                        </button>
+                                      </div>
+                                    ) : order.payment_proof_url ? (
+                                      <div className="work-actions">
+                                        <button type="button" onClick={() => window.open(toDisplayPhotoUrl(order.payment_proof_url || ""), "_blank")}>
+                                          View Payment Proof
+                                        </button>
+                                        <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "verified")}>
+                                          Verify Payment
+                                        </button>
+                                        <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "rejected")}>
+                                          Reject
+                                        </button>
+                                        <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "proof_submitted")}>
+                                          Return To Review
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div className="work-actions">
+                                        <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "verified")}>
+                                          Verify Payment
+                                        </button>
+                                        <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "rejected")}>
+                                          Reject
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                    <div className="green-work-card" style={{ position: "sticky", top: 16 }}>
+                      <h3>Accounting</h3>
+                      <p className="green-work-note">This updates automatically from the live sponsorship order feed.</p>
+                      <div className="work-actions" style={{ marginBottom: 12, flexWrap: "wrap" }}>
+                        <span className="green-work-live-pill neutral">Orders: {sponsorshipAccountingSummary.totalOrders}</span>
+                        <span className="green-work-live-pill ok">Paid sponsors: {sponsorshipAccountingSummary.uniqueSponsorsPaid}</span>
+                      </div>
+                      <div className="staff-list">
+                        <div className="staff-row">
+                          <div className="staff-row-head">
+                            <strong>Verified Revenue</strong>
+                            <span>{formatCurrencyAmount(sponsorshipAccountingSummary.successfulAmount, sponsorshipAccountingSummary.currency)}</span>
+                          </div>
+                          <div className="staff-row-meta">Successful payments: {sponsorshipOrderSummary.successful}</div>
+                          <div className="staff-row-meta">Trees paid for: {sponsorshipAccountingSummary.successfulTrees}</div>
                         </div>
-                        <div className="staff-list">
-                          {section.rows.map((order) => {
-                            const gatewayManaged = String(order.payment_method || "").trim().toLowerCase() === "flutterwave_standard";
-                            const gatewayVerified = String(order.payment_status || "").trim().toLowerCase() === "verified";
-                            return (
-                              <div key={`sponsor-order-${section.key}-${order.id}`} className="staff-row">
-                                <div className="staff-row-head">
-                                  <strong>{order.sponsor_name || `Sponsor #${order.sponsor_account_id || order.id}`}</strong>
-                                  <span>
-                                    {order.order_uid || `Order #${order.id}`} | {formatCurrencyAmount(order.amount_total, order.currency)}
-                                  </span>
-                                </div>
-                                <div className="work-actions" style={{ margin: "8px 0 6px", flexWrap: "wrap" }}>
-                                  <span className={`green-work-live-pill ${section.tone}`}>{section.title.replace(" Payments", "")}</span>
-                                  <span className={`green-work-live-pill ${gatewayVerified ? "ok" : section.tone}`}>
-                                    Payment: {formatTaskTypeLabel(order.payment_status || "pending")}
-                                  </span>
-                                  <span className="green-work-live-pill neutral">
-                                    Order: {formatTaskTypeLabel(order.order_status || "pending")}
-                                  </span>
-                                </div>
-                                <div className="staff-row-meta">
-                                  Trees: {Number(order.quantity || 0)} | Linked: {Number(order.linked_units || 0)} | Awaiting tree:{" "}
-                                  {Number(order.awaiting_tree_units || 0)}
-                                </div>
-                                <div className="staff-row-meta">
-                                  {order.payment_reference ? `Ref: ${order.payment_reference} | ` : ""}
-                                  Method: {gatewayManaged ? "Flutterwave secure checkout" : formatTaskTypeLabel(order.payment_method || "manual_transfer")}
-                                  {order.payment_gateway_status ? ` | Gateway: ${formatTaskTypeLabel(order.payment_gateway_status)}` : ""}
-                                  {order.payment_gateway_reference ? ` | Tx Ref: ${order.payment_gateway_reference}` : ""}
-                                </div>
-                                <div className="staff-row-meta">
-                                  Sponsor email: {order.sponsor_email || "-"}
-                                  {order.dedication_name ? ` | Dedication: ${order.dedication_name}` : ""}
-                                </div>
-                                {order.project_name ? (
-                                  <div className="staff-row-meta">
-                                    Project: {order.project_name}
-                                    {order.location_text ? ` | ${order.location_text}` : ""}
-                                  </div>
-                                ) : null}
-                                {gatewayManaged ? (
-                                  <div className="staff-row-meta">
-                                    Flutterwave orders are expected to verify automatically. Use manual review only if support intervention is required.
-                                  </div>
-                                ) : null}
-                                {order.review_notes ? <div className="staff-row-meta">Latest review note: {order.review_notes}</div> : null}
-                                {gatewayManaged ? (
-                                  <div className="work-actions">
-                                    {order.payment_link ? (
-                                      <button type="button" onClick={() => window.open(order.payment_link || "", "_blank")}>
-                                        Open Checkout
-                                      </button>
-                                    ) : null}
-                                    {!gatewayVerified ? (
-                                      <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "verified")}>
-                                        Manual Verify
-                                      </button>
-                                    ) : null}
-                                    <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "rejected")}>
-                                      {gatewayVerified ? "Flag Issue" : "Mark Unpaid"}
-                                    </button>
-                                  </div>
-                                ) : order.payment_proof_url ? (
-                                  <div className="work-actions">
-                                    <button type="button" onClick={() => window.open(toDisplayPhotoUrl(order.payment_proof_url || ""), "_blank")}>
-                                      View Payment Proof
-                                    </button>
-                                    <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "verified")}>
-                                      Verify Payment
-                                    </button>
-                                    <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "rejected")}>
-                                      Reject
-                                    </button>
-                                    <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "proof_submitted")}>
-                                      Return To Review
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="work-actions">
-                                    <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "verified")}>
-                                      Verify Payment
-                                    </button>
-                                    <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "rejected")}>
-                                      Reject
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
+                        <div className="staff-row">
+                          <div className="staff-row-head">
+                            <strong>Awaiting Revenue</strong>
+                            <span>{formatCurrencyAmount(sponsorshipAccountingSummary.awaitingAmount, sponsorshipAccountingSummary.currency)}</span>
+                          </div>
+                          <div className="staff-row-meta">Awaiting payments: {sponsorshipOrderSummary.awaiting}</div>
+                          <div className="staff-row-meta">Trees in pending checkout: {sponsorshipAccountingSummary.awaitingTrees}</div>
+                        </div>
+                        <div className="staff-row">
+                          <div className="staff-row-head">
+                            <strong>Flagged Revenue</strong>
+                            <span>{formatCurrencyAmount(sponsorshipAccountingSummary.issueAmount, sponsorshipAccountingSummary.currency)}</span>
+                          </div>
+                          <div className="staff-row-meta">Flagged payments: {sponsorshipOrderSummary.issue}</div>
+                          <div className="staff-row-meta">Trees in flagged orders: {sponsorshipAccountingSummary.issueTrees}</div>
+                        </div>
+                        <div className="staff-row">
+                          <div className="staff-row-head">
+                            <strong>Operational Backlog</strong>
+                            <span>{sponsorshipOrderSummary.awaitingTreeUnits} awaiting tree</span>
+                          </div>
+                          <div className="staff-row-meta">Linked sponsor trees: {sponsorshipOrderSummary.linkedUnits}</div>
+                          <div className="staff-row-meta">
+                            Latest verified payment: {sponsorshipAccountingSummary.latestSuccessfulAt ? formatDateLabel(sponsorshipAccountingSummary.latestSuccessfulAt) : "-"}
+                          </div>
                         </div>
                       </div>
-                    ))}
+                    </div>
+                  </div>
                 </>
               )}
             </div>
@@ -11479,6 +11746,11 @@ export default function GreenWork() {
                   )}
                 </>
               )}
+              {publicSponsorshipProject && assignmentUsers.length === 0 ? (
+                <p className="green-work-note danger">
+                  No public sponsor agents are selected for this project yet. Open Users and save at least one sponsor agent first.
+                </p>
+              ) : null}
               <label className="green-work-checkbox-row">
                 <input
                   type="checkbox"
@@ -11511,7 +11783,7 @@ export default function GreenWork() {
                   disabled={!activeProjectId || assigningWorkOrder}
                 >
                   <option value="">Select assignee</option>
-                  {users.map((u) => (
+                  {assignmentUsers.map((u) => (
                     <option key={u.id} value={u.full_name}>
                       {u.full_name}
                     </option>
@@ -11537,7 +11809,7 @@ export default function GreenWork() {
                     <div className="green-work-multi-assign-header">
                       <span>{currentWorkOrderAssignees.length} selected</span>
                       <div className="work-actions">
-                        <button type="button" onClick={() => setWorkOrderSelectedAssigneesWithOverrides(users.map((u) => u.full_name))} disabled={!users.length || assigningWorkOrder}>
+                        <button type="button" onClick={() => setWorkOrderSelectedAssigneesWithOverrides(assignmentUsers.map((u) => u.full_name))} disabled={!assignmentUsers.length || assigningWorkOrder}>
                           Select all
                         </button>
                         <button type="button" onClick={() => setWorkOrderSelectedAssigneesWithOverrides([])} disabled={!currentWorkOrderAssignees.length || assigningWorkOrder}>
@@ -11546,7 +11818,7 @@ export default function GreenWork() {
                       </div>
                     </div>
                     <div className="green-work-multi-assign-list">
-                      {users.map((u) => (
+                      {assignmentUsers.map((u) => (
                         <div key={u.id} className="green-work-multi-assign-item-row">
                           <label className="green-work-multi-assign-item">
                             <input
@@ -11778,7 +12050,11 @@ export default function GreenWork() {
                   </p>
                 </div>
               )}
-              <button className="btn-primary" onClick={createWorkOrder} disabled={!activeProjectId || assigningWorkOrder}>
+              <button
+                className="btn-primary"
+                onClick={createWorkOrder}
+                disabled={!activeProjectId || assigningWorkOrder || (publicSponsorshipProject && assignmentUsers.length === 0)}
+              >
                 {assigningWorkOrder ? "Assigning..." : "Assign Work"}
               </button>
             </div>
@@ -11802,6 +12078,11 @@ export default function GreenWork() {
                   </p>
                 </>
               )}
+              {publicSponsorshipProject && assignmentUsers.length === 0 ? (
+                <p className="green-work-note danger">
+                  No public sponsor agents are selected for this project yet. Open Users and save at least one sponsor agent first.
+                </p>
+              ) : null}
               {selectedMaintenanceRows.length > 0 ? (
                 <div className="green-work-task-selection-card">
                   <div className="green-work-task-selection-head">
@@ -11949,7 +12230,7 @@ export default function GreenWork() {
                             disabled={!activeProjectId || assigningMaintenanceTask}
                           >
                             <option value="">Fallback assignee for unmatched trees</option>
-                            {users.map((u) => (
+                            {assignmentUsers.map((u) => (
                               <option key={`maintenance-planter-fallback-${u.id}`} value={u.full_name}>
                                 {u.full_name}
                               </option>
@@ -12053,7 +12334,7 @@ export default function GreenWork() {
                   disabled={!activeProjectId || assigningMaintenanceTask}
                 >
                   <option value="">Assign to</option>
-                  {users.map((u) => (
+                  {assignmentUsers.map((u) => (
                     <option key={u.id} value={u.full_name}>
                       {u.full_name}
                     </option>
@@ -12066,8 +12347,8 @@ export default function GreenWork() {
                     <div className="work-actions">
                       <button
                         type="button"
-                        onClick={() => setNewTaskSelectedAssignees(users.map((u) => u.full_name))}
-                        disabled={!users.length || assigningMaintenanceTask}
+                        onClick={() => setNewTaskSelectedAssignees(assignmentUsers.map((u) => u.full_name))}
+                        disabled={!assignmentUsers.length || assigningMaintenanceTask}
                       >
                         Select all
                       </button>
@@ -12081,7 +12362,7 @@ export default function GreenWork() {
                     </div>
                   </div>
                   <div className="green-work-multi-assign-list">
-                    {users.map((u) => (
+                    {assignmentUsers.map((u) => (
                       <label key={u.id} className="green-work-multi-assign-item">
                         <input
                           type="checkbox"
@@ -12101,7 +12382,7 @@ export default function GreenWork() {
                   disabled={!activeProjectId || assigningMaintenanceTask}
                 >
                   <option value="">Assign to</option>
-                  {users.map((u) => (
+                  {assignmentUsers.map((u) => (
                     <option key={u.id} value={u.full_name}>
                       {u.full_name}
                     </option>
@@ -12112,7 +12393,7 @@ export default function GreenWork() {
                   <div className="green-work-multi-assign-header">
                     <span>{currentTaskAssignees.length} selected</span>
                     <div className="work-actions">
-                      <button type="button" onClick={() => setNewTaskSelectedAssignees(users.map((u) => u.full_name))} disabled={!users.length || assigningMaintenanceTask}>
+                      <button type="button" onClick={() => setNewTaskSelectedAssignees(assignmentUsers.map((u) => u.full_name))} disabled={!assignmentUsers.length || assigningMaintenanceTask}>
                         Select all
                       </button>
                       <button type="button" onClick={() => setNewTaskSelectedAssignees([])} disabled={!currentTaskAssignees.length || assigningMaintenanceTask}>
@@ -12121,7 +12402,7 @@ export default function GreenWork() {
                     </div>
                   </div>
                   <div className="green-work-multi-assign-list">
-                    {users.map((u) => (
+                    {assignmentUsers.map((u) => (
                       <label key={u.id} className="green-work-multi-assign-item">
                         <input
                           type="checkbox"
@@ -12280,7 +12561,11 @@ export default function GreenWork() {
                 onChange={(e) => setNewTask({ ...newTask, notes: e.target.value })}
                 disabled={!activeProjectId || assigningMaintenanceTask}
               />
-              <button className="btn-primary" onClick={assignTask} disabled={!activeProjectId || assigningMaintenanceTask}>
+              <button
+                className="btn-primary"
+                onClick={assignTask}
+                disabled={!activeProjectId || assigningMaintenanceTask || (publicSponsorshipProject && assignmentUsers.length === 0)}
+              >
                 {assigningMaintenanceTask ? "Assigning..." : "Assign Task"}
               </button>
             </div>
