@@ -200,6 +200,12 @@ type SponsorshipOrderRecord = {
   payment_reference?: string | null;
   payment_status?: string | null;
   order_status?: string | null;
+  payment_provider?: string | null;
+  payment_link?: string | null;
+  payment_gateway_reference?: string | null;
+  payment_gateway_transaction_id?: number | null;
+  payment_gateway_status?: string | null;
+  payment_verified_at?: string | null;
   payment_proof_url?: string | null;
   payment_proof_urls?: string[] | null;
   dedication_type?: string | null;
@@ -4482,6 +4488,10 @@ export default function GreenWork() {
           quantity: Number(row?.quantity || 0),
           amount_per_tree: Number(row?.amount_per_tree || 0),
           amount_total: Number(row?.amount_total || 0),
+          payment_gateway_transaction_id:
+            row?.payment_gateway_transaction_id === null || row?.payment_gateway_transaction_id === undefined
+              ? null
+              : Number(row.payment_gateway_transaction_id || 0),
           total_units: Number(row?.total_units || 0),
           linked_units: Number(row?.linked_units || 0),
           awaiting_tree_units: Number(row?.awaiting_tree_units || 0),
@@ -11046,52 +11056,84 @@ export default function GreenWork() {
               ) : (
                 <div className="staff-list">
                   {sponsorshipOrders.map((order) => (
-                    <div key={`sponsor-order-${order.id}`} className="staff-row">
-                      <div className="staff-row-head">
-                        <strong>{order.sponsor_name || `Sponsor #${order.sponsor_account_id || order.id}`}</strong>
-                        <span>
-                          {order.order_uid || `Order #${order.id}`} | {formatCurrencyAmount(order.amount_total, order.currency)}
-                        </span>
-                      </div>
-                      <div className="staff-row-meta">
-                        Trees: {Number(order.quantity || 0)} | Linked: {Number(order.linked_units || 0)} | Awaiting tree:{" "}
-                        {Number(order.awaiting_tree_units || 0)}
-                      </div>
-                      <div className="staff-row-meta">
-                        Payment: {formatTaskTypeLabel(order.payment_status || "pending")} | Order: {formatTaskTypeLabel(order.order_status || "pending")}
-                        {order.payment_reference ? ` | Ref: ${order.payment_reference}` : ""}
-                      </div>
-                      <div className="staff-row-meta">
-                        Sponsor email: {order.sponsor_email || "-"}
-                        {order.dedication_name ? ` | Dedication: ${order.dedication_name}` : ""}
-                      </div>
-                      {order.review_notes ? <div className="staff-row-meta">Latest review note: {order.review_notes}</div> : null}
-                      {order.payment_proof_url ? (
-                        <div className="work-actions">
-                          <button type="button" onClick={() => window.open(toDisplayPhotoUrl(order.payment_proof_url || ""), "_blank")}>
-                            View Payment Proof
-                          </button>
-                          <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "verified")}>
-                            Verify Payment
-                          </button>
-                          <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "rejected")}>
-                            Reject
-                          </button>
-                          <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "proof_submitted")}>
-                            Return To Review
-                          </button>
+                    (() => {
+                      const gatewayManaged = String(order.payment_method || "").trim().toLowerCase() === "flutterwave_standard";
+                      const gatewayVerified = String(order.payment_status || "").trim().toLowerCase() === "verified";
+                      return (
+                        <div key={`sponsor-order-${order.id}`} className="staff-row">
+                          <div className="staff-row-head">
+                            <strong>{order.sponsor_name || `Sponsor #${order.sponsor_account_id || order.id}`}</strong>
+                            <span>
+                              {order.order_uid || `Order #${order.id}`} | {formatCurrencyAmount(order.amount_total, order.currency)}
+                            </span>
+                          </div>
+                          <div className="staff-row-meta">
+                            Trees: {Number(order.quantity || 0)} | Linked: {Number(order.linked_units || 0)} | Awaiting tree:{" "}
+                            {Number(order.awaiting_tree_units || 0)}
+                          </div>
+                          <div className="staff-row-meta">
+                            Payment: {formatTaskTypeLabel(order.payment_status || "pending")} | Order: {formatTaskTypeLabel(order.order_status || "pending")}
+                            {order.payment_reference ? ` | Ref: ${order.payment_reference}` : ""}
+                          </div>
+                          <div className="staff-row-meta">
+                            Method: {gatewayManaged ? "Flutterwave secure checkout" : formatTaskTypeLabel(order.payment_method || "manual_transfer")}
+                            {order.payment_gateway_status ? ` | Gateway: ${formatTaskTypeLabel(order.payment_gateway_status)}` : ""}
+                            {order.payment_gateway_reference ? ` | Tx Ref: ${order.payment_gateway_reference}` : ""}
+                          </div>
+                          <div className="staff-row-meta">
+                            Sponsor email: {order.sponsor_email || "-"}
+                            {order.dedication_name ? ` | Dedication: ${order.dedication_name}` : ""}
+                          </div>
+                          {gatewayManaged ? (
+                            <div className="staff-row-meta">
+                              Flutterwave orders are expected to verify automatically. Use manual review only if support intervention is required.
+                            </div>
+                          ) : null}
+                          {order.review_notes ? <div className="staff-row-meta">Latest review note: {order.review_notes}</div> : null}
+                          {gatewayManaged ? (
+                            <div className="work-actions">
+                              {order.payment_link ? (
+                                <button type="button" onClick={() => window.open(order.payment_link || "", "_blank")}>
+                                  Open Checkout
+                                </button>
+                              ) : null}
+                              {!gatewayVerified ? (
+                                <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "verified")}>
+                                  Manual Verify
+                                </button>
+                              ) : null}
+                              <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "rejected")}>
+                                {gatewayVerified ? "Flag Issue" : "Mark Unpaid"}
+                              </button>
+                            </div>
+                          ) : order.payment_proof_url ? (
+                            <div className="work-actions">
+                              <button type="button" onClick={() => window.open(toDisplayPhotoUrl(order.payment_proof_url || ""), "_blank")}>
+                                View Payment Proof
+                              </button>
+                              <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "verified")}>
+                                Verify Payment
+                              </button>
+                              <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "rejected")}>
+                                Reject
+                              </button>
+                              <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "proof_submitted")}>
+                                Return To Review
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="work-actions">
+                              <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "verified")}>
+                                Verify Payment
+                              </button>
+                              <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "rejected")}>
+                                Reject
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="work-actions">
-                          <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "verified")}>
-                            Verify Payment
-                          </button>
-                          <button type="button" onClick={() => void reviewSponsorshipPayment(order.id, "rejected")}>
-                            Reject
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                      );
+                    })()
                   ))}
                 </div>
               )}
