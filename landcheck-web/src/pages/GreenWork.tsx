@@ -4540,13 +4540,13 @@ export default function GreenWork() {
     setSponsorshipOrdersScopeNote(null);
     const ts = Date.now();
     try {
-      const res = await api.get(`/green/admin/sponsorship-orders?project_id=${projectId}&_ts=${ts}`);
+      const res = await api.get(`/green/admin/sponsorship-orders?project_id=${projectId}&sync=1&_ts=${ts}`);
       const rows = Array.isArray(res.data) ? res.data : [];
       if (rows.length > 0) {
         setSponsorshipOrders(rows.map((row: any) => normalizeSponsorshipOrderRecord(row)));
         return;
       }
-      const fallbackRes = await api.get(`/green/admin/sponsorship-orders?_ts=${ts}`);
+      const fallbackRes = await api.get(`/green/admin/sponsorship-orders?sync=1&_ts=${ts}`);
       const fallbackRows = Array.isArray(fallbackRes.data) ? fallbackRes.data : [];
       if (fallbackRows.length > 0) {
         setSponsorshipOrders(fallbackRows.map((row: any) => normalizeSponsorshipOrderRecord(row)));
@@ -4558,6 +4558,7 @@ export default function GreenWork() {
       setSponsorshipOrders([]);
     } catch (error: any) {
       try {
+        // Fallback without sync=1 so we don't trigger a second Flutterwave API call
         const fallbackRes = await api.get(`/green/admin/sponsorship-orders?_ts=${Date.now()}`);
         const fallbackRows = Array.isArray(fallbackRes.data) ? fallbackRes.data : [];
         if (fallbackRows.length > 0) {
@@ -4582,7 +4583,10 @@ export default function GreenWork() {
       const res = await api.get(`/green/admin/sponsors?_ts=${Date.now()}`);
       const rows = Array.isArray(res.data) ? res.data : [];
       setFallbackSponsorAccounts(rows.map((row: any) => normalizeSponsorAccountSummary(row)));
-    } catch {
+    } catch (err: any) {
+      // Surface error into the shared sponsorship error state so the user sees it
+      const msg = err?.response?.data?.detail || err?.message || "Failed to load sponsor accounts";
+      setSponsorshipOrdersError((prev) => prev || msg);
       setFallbackSponsorAccounts([]);
     }
   }, []);
