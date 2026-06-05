@@ -2659,6 +2659,7 @@ export default function GreenWork() {
   const [sponsorshipOrders, setSponsorshipOrders] = useState<SponsorshipOrderRecord[]>([]);
   const [sponsorshipOrdersLoading, setSponsorshipOrdersLoading] = useState(false);
   const [sponsorshipOrdersError, setSponsorshipOrdersError] = useState<string | null>(null);
+  const [sponsorshipOrdersScopeNote, setSponsorshipOrdersScopeNote] = useState<string | null>(null);
   const [custodians, setCustodians] = useState<Custodian[]>([]);
   const [newCustodian, setNewCustodian] = useState<{
     custodian_type: CustodianType;
@@ -3612,6 +3613,7 @@ export default function GreenWork() {
       if (Array.isArray(projectDetail?.sponsorship_orders)) {
         setSponsorshipOrders(projectDetail.sponsorship_orders.map((row: any) => normalizeSponsorshipOrderRecord(row)));
         setSponsorshipOrdersError(null);
+        setSponsorshipOrdersScopeNote(null);
       }
       const settingsPayload = projectDetail?.settings || projectDetail || {};
       const plantingModel = String(settingsPayload?.planting_model || "direct").trim().toLowerCase() as PlantingModel;
@@ -4502,14 +4504,29 @@ export default function GreenWork() {
     if (!projectId) {
       setSponsorshipOrders([]);
       setSponsorshipOrdersError(null);
+      setSponsorshipOrdersScopeNote(null);
       return;
     }
     if (!silent) setSponsorshipOrdersLoading(true);
     setSponsorshipOrdersError(null);
+    setSponsorshipOrdersScopeNote(null);
     try {
       const res = await api.get(`/green/admin/sponsorship-orders?project_id=${projectId}`);
       const rows = Array.isArray(res.data) ? res.data : [];
-      setSponsorshipOrders(rows.map((row: any) => normalizeSponsorshipOrderRecord(row)));
+      if (rows.length > 0) {
+        setSponsorshipOrders(rows.map((row: any) => normalizeSponsorshipOrderRecord(row)));
+        return;
+      }
+      const fallbackRes = await api.get("/green/admin/sponsorship-orders");
+      const fallbackRows = Array.isArray(fallbackRes.data) ? fallbackRes.data : [];
+      if (fallbackRows.length > 0) {
+        setSponsorshipOrders(fallbackRows.map((row: any) => normalizeSponsorshipOrderRecord(row)));
+        setSponsorshipOrdersScopeNote(
+          "No sponsorship orders matched this project yet. Showing all public sponsorship payments across projects so paid sponsors are still visible.",
+        );
+        return;
+      }
+      setSponsorshipOrders([]);
     } catch (error: any) {
       setSponsorshipOrdersError(error?.response?.data?.detail || error?.message || "Failed to load sponsorship records");
     } finally {
@@ -4870,6 +4887,7 @@ export default function GreenWork() {
     if (!activeProjectId || !publicSponsorshipProject) {
       setSponsorshipOrders([]);
       setSponsorshipOrdersError(null);
+      setSponsorshipOrdersScopeNote(null);
       return;
     }
     if (!["sponsors", "sponsorship_orders", "project_focus"].includes(String(activeForm || ""))) return;
@@ -11041,8 +11059,10 @@ export default function GreenWork() {
                   </div>
                   <p className="green-work-note">
                     Sponsor route summary: {sponsorAccounts.length} sponsor account{sponsorAccounts.length === 1 ? "" : "s"} with{" "}
-                    {sponsorshipOrders.length} order{sponsorshipOrders.length === 1 ? "" : "s"} in this project.
+                    {sponsorshipOrders.length} order{sponsorshipOrders.length === 1 ? "" : "s"}{" "}
+                    {sponsorshipOrdersScopeNote ? "across public sponsorship projects." : "in this project."}
                   </p>
+                  {sponsorshipOrdersScopeNote ? <p className="green-work-note">{sponsorshipOrdersScopeNote}</p> : null}
                   {sponsorshipOrdersError ? <p className="green-work-note danger">{sponsorshipOrdersError}</p> : null}
                   {sponsorAccounts.length === 0 ? (
                     <p className="green-work-note">No sponsors have submitted orders for this project yet.</p>
@@ -11091,6 +11111,7 @@ export default function GreenWork() {
                       Refresh Payments
                     </button>
                   </div>
+                  {sponsorshipOrdersScopeNote ? <p className="green-work-note">{sponsorshipOrdersScopeNote}</p> : null}
                   {sponsorshipOrdersError ? <p className="green-work-note danger">{sponsorshipOrdersError}</p> : null}
                   <div className="staff-list">
                     {sponsorshipOrders.map((order) => (
@@ -11122,6 +11143,12 @@ export default function GreenWork() {
                               Sponsor email: {order.sponsor_email || "-"}
                               {order.dedication_name ? ` | Dedication: ${order.dedication_name}` : ""}
                             </div>
+                            {order.project_name ? (
+                              <div className="staff-row-meta">
+                                Project: {order.project_name}
+                                {order.location_text ? ` | ${order.location_text}` : ""}
+                              </div>
+                            ) : null}
                             {gatewayManaged ? (
                               <div className="staff-row-meta">
                                 Flutterwave orders are expected to verify automatically. Use manual review only if support intervention is required.
