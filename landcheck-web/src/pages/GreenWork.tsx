@@ -1658,10 +1658,18 @@ const normalizePhotoList = (value: unknown): string[] => {
 };
 
 const normalizePositiveIntList = (value: unknown): number[] => {
-  if (!Array.isArray(value)) return [];
+  let parsedValue = value;
+  if (typeof parsedValue === "string") {
+    try {
+      parsedValue = JSON.parse(parsedValue);
+    } catch {
+      parsedValue = [];
+    }
+  }
+  if (!Array.isArray(parsedValue)) return [];
   const seen = new Set<number>();
   const rows: number[] = [];
-  value.forEach((item) => {
+  parsedValue.forEach((item) => {
     const numeric = Number(item || 0);
     if (!Number.isInteger(numeric) || numeric <= 0 || seen.has(numeric)) return;
     seen.add(numeric);
