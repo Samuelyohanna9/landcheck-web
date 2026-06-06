@@ -12302,7 +12302,7 @@ export default function GreenWork() {
                         </span>
                       </div>
                       {sponsorAgentPayoutAgents.length === 0 ? (
-                        <p className="green-work-note">No public sponsor agents are selected for this organization yet.</p>
+                        <p className="green-work-note">No public sponsor agents are selected for this sponsor project yet.</p>
                       ) : (
                         <div className="staff-list">
                           {sponsorAgentPayoutAgents.map((agent) => {
