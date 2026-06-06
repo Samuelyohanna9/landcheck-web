@@ -52,6 +52,8 @@ const normalizeWorkflowProfile = (value?: string | null): WorkflowProfile => {
 const isFieldWorkflowProfile = (value?: string | null) => normalizeWorkflowProfile(value) !== "green";
 const normalizeProjectAccessModel = (value?: string | null): ProjectAccessModel =>
   String(value || "").trim().toLowerCase() === "public_sponsorship" ? "public_sponsorship" : "partner_org";
+const isPublicSponsorshipProject = (accessModel?: string | null, publicSponsorEnabled?: boolean | null) =>
+  normalizeProjectAccessModel(accessModel) === "public_sponsorship" || Boolean(publicSponsorEnabled);
 
 const getWorkflowLabels = (profile?: string | null) =>
   normalizeWorkflowProfile(profile) === "agric"
@@ -3001,12 +3003,17 @@ export default function GreenWork() {
   const activeProjectAccessModel = normalizeProjectAccessModel(
     activeProjectRecord?.settings?.access_model || activeProjectRecord?.access_model || projectSettingsDraft.access_model,
   );
+  const activeProjectPublicSponsorEnabled = Boolean(
+    activeProjectRecord?.settings?.public_sponsor_enabled ??
+      activeProjectRecord?.public_sponsor_enabled ??
+      projectSettingsDraft.public_sponsor_enabled,
+  );
   const activeWorkflowLabels = getWorkflowLabels(activeWorkflowProfile);
   const fieldWorkflowMode = isFieldWorkflowProfile(activeWorkflowProfile);
   const agricWorkflowMode = activeWorkflowProfile === "agric";
   const reliefWorkflowMode = activeWorkflowProfile === "relief_recovery";
   const publicSponsorshipProject = Boolean(
-    activeProjectId && activeWorkflowProfile === "green" && activeProjectAccessModel === "public_sponsorship",
+    activeProjectId && activeWorkflowProfile === "green" && isPublicSponsorshipProject(activeProjectAccessModel, activeProjectPublicSponsorEnabled),
   );
   const publicSponsorAgentUserIds = useMemo(
     () =>
@@ -4458,6 +4465,10 @@ export default function GreenWork() {
       toast.error("Public sponsorship projects currently run on the Green workflow only.");
       return;
     }
+    const nextPublicSponsorshipProject = isPublicSponsorshipProject(
+      nextAccessModel,
+      nextAccessModel === "public_sponsorship" ? true : projectSettingsDraft.public_sponsor_enabled,
+    );
     const existingPublicSponsorTitle = String(
       activeProjectRecord?.settings?.public_sponsor_title ?? activeProjectRecord?.public_sponsor_title ?? "",
     ).trim();
@@ -4489,21 +4500,21 @@ export default function GreenWork() {
         workflow_profile: projectSettingsDraft.workflow_profile,
         access_model: nextAccessModel,
         public_sponsor_enabled:
-          nextAccessModel === "public_sponsorship" ? true : false,
+          nextPublicSponsorshipProject,
         public_sponsor_title:
-          nextAccessModel === "public_sponsorship"
+          nextPublicSponsorshipProject
             ? canAccessSuperAdmin
               ? projectSettingsDraft.public_sponsor_title.trim() || null
               : existingPublicSponsorTitle || null
             : null,
         public_sponsor_description:
-          nextAccessModel === "public_sponsorship"
+          nextPublicSponsorshipProject
             ? canAccessSuperAdmin
               ? projectSettingsDraft.public_sponsor_description.trim() || null
               : existingPublicSponsorDescription || null
             : null,
         sponsor_price_per_tree:
-          nextAccessModel === "public_sponsorship"
+          nextPublicSponsorshipProject
             ? canAccessSuperAdmin
               ? Number(projectSettingsDraft.sponsor_price_per_tree || 0) > 0
                 ? Number(projectSettingsDraft.sponsor_price_per_tree)
@@ -4513,13 +4524,13 @@ export default function GreenWork() {
                 : Number(existingSponsorPricePerTree)
             : null,
         sponsor_currency:
-          nextAccessModel === "public_sponsorship"
+          nextPublicSponsorshipProject
             ? canAccessSuperAdmin
               ? normalizeSponsorCurrencyCode(projectSettingsDraft.sponsor_currency)
               : normalizeSponsorCurrencyCode(existingSponsorCurrency)
             : "NGN",
         sponsor_capacity:
-          nextAccessModel === "public_sponsorship"
+          nextPublicSponsorshipProject
             ? canAccessSuperAdmin
               ? Number(projectSettingsDraft.sponsor_capacity || 0) > 0
                 ? Number(projectSettingsDraft.sponsor_capacity)
@@ -4529,7 +4540,7 @@ export default function GreenWork() {
                 : Number(existingSponsorCapacity)
             : null,
         sponsor_max_per_order:
-          nextAccessModel === "public_sponsorship"
+          nextPublicSponsorshipProject
             ? canAccessSuperAdmin
               ? Number(projectSettingsDraft.sponsor_max_per_order || 0) > 0
                 ? Number(projectSettingsDraft.sponsor_max_per_order)
@@ -4539,19 +4550,19 @@ export default function GreenWork() {
                 : Number(existingSponsorMaxPerOrder)
             : null,
         sponsor_dedication_enabled:
-          nextAccessModel === "public_sponsorship"
+          nextPublicSponsorshipProject
             ? canAccessSuperAdmin
               ? Boolean(projectSettingsDraft.sponsor_dedication_enabled)
               : existingSponsorDedicationEnabled
             : false,
         sponsor_payment_instructions:
-          nextAccessModel === "public_sponsorship"
+          nextPublicSponsorshipProject
             ? canAccessSuperAdmin
               ? projectSettingsDraft.sponsor_payment_instructions.trim() || null
               : existingSponsorPaymentInstructions || null
             : null,
         sponsor_agent_planting_fee:
-          nextAccessModel === "public_sponsorship"
+          nextPublicSponsorshipProject
             ? canAccessSuperAdmin
               ? Number(projectSettingsDraft.sponsor_agent_planting_fee || 0) > 0
                 ? Number(projectSettingsDraft.sponsor_agent_planting_fee)
@@ -4561,7 +4572,7 @@ export default function GreenWork() {
                 : Number(existingSponsorAgentPlantingFee)
             : null,
         sponsor_agent_maintenance_fee:
-          nextAccessModel === "public_sponsorship"
+          nextPublicSponsorshipProject
             ? canAccessSuperAdmin
               ? Number(projectSettingsDraft.sponsor_agent_maintenance_fee || 0) > 0
                 ? Number(projectSettingsDraft.sponsor_agent_maintenance_fee)
@@ -4571,7 +4582,7 @@ export default function GreenWork() {
                 : Number(existingSponsorAgentMaintenanceFee)
             : null,
         public_sponsor_agent_user_ids:
-          nextAccessModel === "public_sponsorship" ? projectSettingsDraft.public_sponsor_agent_user_ids : [],
+          nextPublicSponsorshipProject ? projectSettingsDraft.public_sponsor_agent_user_ids : [],
         agric_config:
           projectSettingsDraft.workflow_profile === "agric"
             ? {
@@ -4593,7 +4604,18 @@ export default function GreenWork() {
         planting_model: projectSettingsDraft.planting_model,
       });
       setProjects((prev) =>
-        prev.map((item) => (Number(item.id) === Number(activeProjectId) ? { ...item, ...res.data } : item))
+        prev.map((item) =>
+          Number(item.id) === Number(activeProjectId)
+            ? {
+                ...item,
+                ...res.data,
+                settings: {
+                  ...(item.settings || {}),
+                  ...res.data,
+                },
+              }
+            : item,
+        )
       );
       setProjectSetupExpanded(false);
       toast.success("Project settings updated");
@@ -4609,12 +4631,26 @@ export default function GreenWork() {
       const res = await api.patch(`/green/projects/${activeProjectId}/settings`, {
         public_sponsor_agent_user_ids: projectSettingsDraft.public_sponsor_agent_user_ids,
       });
+      const normalizedPublicSponsorAgentUserIds = normalizePositiveIntList(res.data?.public_sponsor_agent_user_ids);
       setProjects((prev) =>
-        prev.map((item) => (Number(item.id) === Number(activeProjectId) ? { ...item, ...res.data } : item))
+        prev.map((item) =>
+          Number(item.id) === Number(activeProjectId)
+            ? {
+                ...item,
+                ...res.data,
+                public_sponsor_agent_user_ids: normalizedPublicSponsorAgentUserIds,
+                settings: {
+                  ...(item.settings || {}),
+                  ...res.data,
+                  public_sponsor_agent_user_ids: normalizedPublicSponsorAgentUserIds,
+                },
+              }
+            : item,
+        )
       );
       setProjectSettingsDraft((prev) => ({
         ...prev,
-        public_sponsor_agent_user_ids: normalizePositiveIntList(res.data?.public_sponsor_agent_user_ids),
+        public_sponsor_agent_user_ids: normalizedPublicSponsorAgentUserIds,
       }));
       toast.success("Public sponsor agents updated");
     } catch (error: any) {
