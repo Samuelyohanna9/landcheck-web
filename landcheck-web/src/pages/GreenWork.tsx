@@ -118,6 +118,8 @@ type Project = {
   sponsor_dedication_enabled?: boolean | null;
   sponsor_payment_instructions?: string | null;
   public_sponsor_agent_user_ids?: number[] | null;
+  sponsor_agent_planting_fee?: number | null;
+  sponsor_agent_maintenance_fee?: number | null;
   agric_config?: AgricConfig | null;
   relief_config?: ReliefConfig | null;
   planting_model?: "direct" | "community_distributed" | "mixed";
@@ -136,6 +138,8 @@ type Project = {
     sponsor_dedication_enabled?: boolean | null;
     sponsor_payment_instructions?: string | null;
     public_sponsor_agent_user_ids?: number[] | null;
+    sponsor_agent_planting_fee?: number | null;
+    sponsor_agent_maintenance_fee?: number | null;
     agric_config?: AgricConfig | null;
     relief_config?: ReliefConfig | null;
     planting_model?: "direct" | "community_distributed" | "mixed";
@@ -245,6 +249,146 @@ type SponsorAccountSummary = {
   pending_orders_count: number;
   issue_orders_count: number;
   awaiting_tree_units: number;
+};
+
+type SponsorAgentBankAccountRecord = {
+  id: number;
+  user_id: number;
+  organization_id?: number | null;
+  currency?: string | null;
+  bank_code?: string | null;
+  bank_name?: string | null;
+  account_number?: string | null;
+  account_number_masked?: string | null;
+  account_name?: string | null;
+  verified?: boolean;
+  verified_at?: string | null;
+};
+
+type SponsorAgentPayoutRequestRecord = {
+  id: number;
+  request_uid?: string | null;
+  user_id: number;
+  user_name?: string | null;
+  user_uid?: string | null;
+  organization_id?: number | null;
+  currency?: string | null;
+  amount_total: number;
+  payout_minimum?: number | null;
+  status?: string | null;
+  bank_code?: string | null;
+  bank_name?: string | null;
+  account_number?: string | null;
+  account_number_masked?: string | null;
+  account_name?: string | null;
+  earning_keys?: string[];
+  earning_count?: number;
+  project_ids?: number[];
+  review_notes?: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  transfer_reference?: string | null;
+  transfer_id?: number | null;
+  transfer_status?: string | null;
+  paid_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+type SponsorAgentProjectRateRecord = {
+  project_id: number;
+  project_name?: string | null;
+  location_text?: string | null;
+  currency?: string | null;
+  planting_fee?: number | null;
+  maintenance_fee?: number | null;
+};
+
+type SponsorAgentEarningRecord = {
+  earning_key: string;
+  work_type?: string | null;
+  project_id?: number | null;
+  project_name?: string | null;
+  currency?: string | null;
+  amount?: number | null;
+  tree_id?: number | null;
+  task_id?: number | null;
+  unit_id?: number | null;
+  order_id?: number | null;
+  order_uid?: string | null;
+  project_tree_no?: number | null;
+  tree_label?: string | null;
+  species?: string | null;
+  actor_name?: string | null;
+  task_label?: string | null;
+  earned_at?: string | null;
+  sponsor_name?: string | null;
+  sponsor_organization_name?: string | null;
+  payout_status?: string | null;
+  payout_request_id?: number | null;
+  payout_request_uid?: string | null;
+  payout_requested_at?: string | null;
+  payout_paid_at?: string | null;
+};
+
+type SponsorAgentDashboardRecord = {
+  eligible?: boolean;
+  minimum_payout_amount?: number | null;
+  currency?: string | null;
+  auto_payout_available?: boolean;
+  user?: {
+    id: number;
+    full_name?: string | null;
+    user_uid?: string | null;
+    organization_id?: number | null;
+    organization_name?: string | null;
+  } | null;
+  bank_account?: SponsorAgentBankAccountRecord | null;
+  projects?: SponsorAgentProjectRateRecord[];
+  summary?: {
+    eligible_project_count?: number;
+    planting_count?: number;
+    maintenance_count?: number;
+    total_earnings_amount?: number;
+    available_amount?: number;
+    requested_amount?: number;
+    paid_amount?: number;
+    pending_request_count?: number;
+    paid_request_count?: number;
+    payout_eligible?: boolean;
+    bank_verified?: boolean;
+  } | null;
+  project_summaries?: Array<{
+    project_id: number;
+    project_name?: string | null;
+    currency?: string | null;
+    available_amount?: number;
+    requested_amount?: number;
+    paid_amount?: number;
+    planting_count?: number;
+    maintenance_count?: number;
+  }>;
+  earnings?: SponsorAgentEarningRecord[];
+  requests?: SponsorAgentPayoutRequestRecord[];
+};
+
+type SponsorAgentPayoutBoard = {
+  project_id: number;
+  project_name?: string | null;
+  organization_id: number;
+  minimum_payout_amount?: number | null;
+  currency?: string | null;
+  auto_payout_available?: boolean;
+  agents: SponsorAgentDashboardRecord[];
+  requests: SponsorAgentPayoutRequestRecord[];
+  summary?: {
+    agent_count?: number;
+    request_count?: number;
+    pending_request_count?: number;
+    available_amount?: number;
+    requested_amount?: number;
+    paid_amount?: number;
+  } | null;
 };
 
 type AdminOverview = {
@@ -543,6 +687,7 @@ type WorkForm =
   | "existing_tree_intake"
   | "sponsors"
   | "sponsorship_orders"
+  | "sponsor_payouts"
   ;
 
 const AGRIC_HIDDEN_PROJECT_FORMS: WorkForm[] = [
@@ -1569,6 +1714,157 @@ const normalizeSponsorAccountSummary = (row: any): SponsorAccountSummary => ({
   awaiting_tree_units: Number(row?.awaiting_tree_units || 0),
 });
 
+const normalizeSponsorAgentBankAccountRecord = (row: any): SponsorAgentBankAccountRecord => ({
+  id: Number(row?.id || 0),
+  user_id: Number(row?.user_id || 0),
+  organization_id: row?.organization_id ? Number(row.organization_id) : null,
+  currency: row?.currency ? normalizeSponsorCurrencyCode(row.currency) : "NGN",
+  bank_code: row?.bank_code ? String(row.bank_code).trim() || null : null,
+  bank_name: row?.bank_name ? String(row.bank_name).trim() || null : null,
+  account_number: row?.account_number ? String(row.account_number).trim() || null : null,
+  account_number_masked: row?.account_number_masked ? String(row.account_number_masked).trim() || null : null,
+  account_name: row?.account_name ? String(row.account_name).trim() || null : null,
+  verified: Boolean(row?.verified),
+  verified_at: row?.verified_at ? String(row.verified_at) : null,
+});
+
+const normalizeSponsorAgentPayoutRequestRecord = (row: any): SponsorAgentPayoutRequestRecord => ({
+  id: Number(row?.id || 0),
+  request_uid: row?.request_uid ? String(row.request_uid).trim() || null : null,
+  user_id: Number(row?.user_id || 0),
+  user_name: row?.user_name ? String(row.user_name).trim() || null : null,
+  user_uid: row?.user_uid ? String(row.user_uid).trim() || null : null,
+  organization_id: row?.organization_id ? Number(row.organization_id) : null,
+  currency: row?.currency ? normalizeSponsorCurrencyCode(row.currency) : "NGN",
+  amount_total: Number(row?.amount_total || 0),
+  payout_minimum: row?.payout_minimum === null || row?.payout_minimum === undefined ? null : Number(row.payout_minimum || 0),
+  status: row?.status ? String(row.status).trim() || null : null,
+  bank_code: row?.bank_code ? String(row.bank_code).trim() || null : null,
+  bank_name: row?.bank_name ? String(row.bank_name).trim() || null : null,
+  account_number: row?.account_number ? String(row.account_number).trim() || null : null,
+  account_number_masked: row?.account_number_masked ? String(row.account_number_masked).trim() || null : null,
+  account_name: row?.account_name ? String(row.account_name).trim() || null : null,
+  earning_keys: Array.isArray(row?.earning_keys) ? row.earning_keys.map((item: any) => String(item || "").trim()).filter(Boolean) : [],
+  earning_count: Number(row?.earning_count || 0),
+  project_ids: normalizePositiveIntList(row?.project_ids),
+  review_notes: row?.review_notes ? String(row.review_notes).trim() || null : null,
+  reviewed_by: row?.reviewed_by ? String(row.reviewed_by).trim() || null : null,
+  reviewed_at: row?.reviewed_at ? String(row.reviewed_at) : null,
+  transfer_reference: row?.transfer_reference ? String(row.transfer_reference).trim() || null : null,
+  transfer_id: row?.transfer_id ? Number(row.transfer_id) : null,
+  transfer_status: row?.transfer_status ? String(row.transfer_status).trim() || null : null,
+  paid_at: row?.paid_at ? String(row.paid_at) : null,
+  created_at: row?.created_at ? String(row.created_at) : null,
+  updated_at: row?.updated_at ? String(row.updated_at) : null,
+});
+
+const normalizeSponsorAgentProjectRateRecord = (row: any): SponsorAgentProjectRateRecord => ({
+  project_id: Number(row?.project_id || 0),
+  project_name: row?.project_name ? String(row.project_name).trim() || null : null,
+  location_text: row?.location_text ? String(row.location_text).trim() || null : null,
+  currency: row?.currency ? normalizeSponsorCurrencyCode(row.currency) : "NGN",
+  planting_fee: row?.planting_fee === null || row?.planting_fee === undefined ? null : Number(row.planting_fee || 0),
+  maintenance_fee: row?.maintenance_fee === null || row?.maintenance_fee === undefined ? null : Number(row.maintenance_fee || 0),
+});
+
+const normalizeSponsorAgentEarningRecord = (row: any): SponsorAgentEarningRecord => ({
+  earning_key: String(row?.earning_key || "").trim(),
+  work_type: row?.work_type ? String(row.work_type).trim() || null : null,
+  project_id: row?.project_id ? Number(row.project_id) : null,
+  project_name: row?.project_name ? String(row.project_name).trim() || null : null,
+  currency: row?.currency ? normalizeSponsorCurrencyCode(row.currency) : "NGN",
+  amount: row?.amount === null || row?.amount === undefined ? null : Number(row.amount || 0),
+  tree_id: row?.tree_id ? Number(row.tree_id) : null,
+  task_id: row?.task_id ? Number(row.task_id) : null,
+  unit_id: row?.unit_id ? Number(row.unit_id) : null,
+  order_id: row?.order_id ? Number(row.order_id) : null,
+  order_uid: row?.order_uid ? String(row.order_uid).trim() || null : null,
+  project_tree_no: row?.project_tree_no ? Number(row.project_tree_no) : null,
+  tree_label: row?.tree_label ? String(row.tree_label).trim() || null : null,
+  species: row?.species ? String(row.species).trim() || null : null,
+  actor_name: row?.actor_name ? String(row.actor_name).trim() || null : null,
+  task_label: row?.task_label ? String(row.task_label).trim() || null : null,
+  earned_at: row?.earned_at ? String(row.earned_at) : null,
+  sponsor_name: row?.sponsor_name ? String(row.sponsor_name).trim() || null : null,
+  sponsor_organization_name: row?.sponsor_organization_name ? String(row.sponsor_organization_name).trim() || null : null,
+  payout_status: row?.payout_status ? String(row.payout_status).trim() || null : null,
+  payout_request_id: row?.payout_request_id ? Number(row.payout_request_id) : null,
+  payout_request_uid: row?.payout_request_uid ? String(row.payout_request_uid).trim() || null : null,
+  payout_requested_at: row?.payout_requested_at ? String(row.payout_requested_at) : null,
+  payout_paid_at: row?.payout_paid_at ? String(row.payout_paid_at) : null,
+});
+
+const normalizeSponsorAgentDashboardRecord = (row: any): SponsorAgentDashboardRecord => ({
+  eligible: Boolean(row?.eligible),
+  minimum_payout_amount:
+    row?.minimum_payout_amount === null || row?.minimum_payout_amount === undefined ? null : Number(row.minimum_payout_amount || 0),
+  currency: row?.currency ? normalizeSponsorCurrencyCode(row.currency) : "NGN",
+  auto_payout_available: Boolean(row?.auto_payout_available),
+  user:
+    row?.user && typeof row.user === "object"
+      ? {
+          id: Number(row.user.id || 0),
+          full_name: row.user.full_name ? String(row.user.full_name).trim() || null : null,
+          user_uid: row.user.user_uid ? String(row.user.user_uid).trim() || null : null,
+          organization_id: row.user.organization_id ? Number(row.user.organization_id) : null,
+          organization_name: row.user.organization_name ? String(row.user.organization_name).trim() || null : null,
+        }
+      : null,
+  bank_account: row?.bank_account ? normalizeSponsorAgentBankAccountRecord(row.bank_account) : null,
+  projects: Array.isArray(row?.projects) ? row.projects.map((item: any) => normalizeSponsorAgentProjectRateRecord(item)) : [],
+  summary: row?.summary
+    ? {
+        eligible_project_count: Number(row.summary.eligible_project_count || 0),
+        planting_count: Number(row.summary.planting_count || 0),
+        maintenance_count: Number(row.summary.maintenance_count || 0),
+        total_earnings_amount: Number(row.summary.total_earnings_amount || 0),
+        available_amount: Number(row.summary.available_amount || 0),
+        requested_amount: Number(row.summary.requested_amount || 0),
+        paid_amount: Number(row.summary.paid_amount || 0),
+        pending_request_count: Number(row.summary.pending_request_count || 0),
+        paid_request_count: Number(row.summary.paid_request_count || 0),
+        payout_eligible: Boolean(row.summary.payout_eligible),
+        bank_verified: Boolean(row.summary.bank_verified),
+      }
+    : null,
+  project_summaries: Array.isArray(row?.project_summaries)
+    ? row.project_summaries.map((item: any) => ({
+        project_id: Number(item?.project_id || 0),
+        project_name: item?.project_name ? String(item.project_name).trim() || null : null,
+        currency: item?.currency ? normalizeSponsorCurrencyCode(item.currency) : "NGN",
+        available_amount: Number(item?.available_amount || 0),
+        requested_amount: Number(item?.requested_amount || 0),
+        paid_amount: Number(item?.paid_amount || 0),
+        planting_count: Number(item?.planting_count || 0),
+        maintenance_count: Number(item?.maintenance_count || 0),
+      }))
+    : [],
+  earnings: Array.isArray(row?.earnings) ? row.earnings.map((item: any) => normalizeSponsorAgentEarningRecord(item)) : [],
+  requests: Array.isArray(row?.requests) ? row.requests.map((item: any) => normalizeSponsorAgentPayoutRequestRecord(item)) : [],
+});
+
+const normalizeSponsorAgentPayoutBoard = (row: any): SponsorAgentPayoutBoard => ({
+  project_id: Number(row?.project_id || 0),
+  project_name: row?.project_name ? String(row.project_name).trim() || null : null,
+  organization_id: Number(row?.organization_id || 0),
+  minimum_payout_amount:
+    row?.minimum_payout_amount === null || row?.minimum_payout_amount === undefined ? null : Number(row.minimum_payout_amount || 0),
+  currency: row?.currency ? normalizeSponsorCurrencyCode(row.currency) : "NGN",
+  auto_payout_available: Boolean(row?.auto_payout_available),
+  agents: Array.isArray(row?.agents) ? row.agents.map((item: any) => normalizeSponsorAgentDashboardRecord(item)) : [],
+  requests: Array.isArray(row?.requests) ? row.requests.map((item: any) => normalizeSponsorAgentPayoutRequestRecord(item)) : [],
+  summary: row?.summary
+    ? {
+        agent_count: Number(row.summary.agent_count || 0),
+        request_count: Number(row.summary.request_count || 0),
+        pending_request_count: Number(row.summary.pending_request_count || 0),
+        available_amount: Number(row.summary.available_amount || 0),
+        requested_amount: Number(row.summary.requested_amount || 0),
+        paid_amount: Number(row.summary.paid_amount || 0),
+      }
+    : null,
+});
+
 const formatCurrencyAmount = (amount: number | null | undefined, currency?: string | null) => {
   const safeAmount = Number(amount || 0);
   const safeCurrency = normalizeSponsorCurrencyCode(currency);
@@ -1642,6 +1938,15 @@ const renderActionIcon = (form: WorkForm) => {
           <circle cx="8" cy="9" r="3" fill="none" stroke="currentColor" strokeWidth="2" />
           <circle cx="16.5" cy="10" r="2.5" fill="none" stroke="currentColor" strokeWidth="2" />
           <path d="M3.5 19c1-2.6 3.3-4 6.5-4s5.5 1.4 6.5 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+    case "sponsor_payouts":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 7.5h16v9H4z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          <path d="M4 11h16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M8 15h2.8M15.2 15H16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M8.2 4.8h7.6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       );
     case "add_user":
@@ -2546,6 +2851,8 @@ export default function GreenWork() {
     sponsor_max_per_order: "",
     sponsor_dedication_enabled: true,
     sponsor_payment_instructions: "",
+    sponsor_agent_planting_fee: "",
+    sponsor_agent_maintenance_fee: "",
     agric_program_type: "extension_support",
     agric_focus_commodities: "",
     agric_support_packages: "",
@@ -2643,6 +2950,8 @@ export default function GreenWork() {
     sponsor_dedication_enabled: boolean;
     sponsor_payment_instructions: string;
     public_sponsor_agent_user_ids: number[];
+    sponsor_agent_planting_fee: string;
+    sponsor_agent_maintenance_fee: string;
     agric_program_type: string;
     agric_focus_commodities: string;
     agric_support_packages: string;
@@ -2667,6 +2976,8 @@ export default function GreenWork() {
     sponsor_dedication_enabled: true,
     sponsor_payment_instructions: "",
     public_sponsor_agent_user_ids: [],
+    sponsor_agent_planting_fee: "",
+    sponsor_agent_maintenance_fee: "",
     agric_program_type: "extension_support",
     agric_focus_commodities: "",
     agric_support_packages: "",
@@ -2754,6 +3065,10 @@ export default function GreenWork() {
   const [sponsorshipOrdersLoading, setSponsorshipOrdersLoading] = useState(false);
   const [sponsorshipOrdersError, setSponsorshipOrdersError] = useState<string | null>(null);
   const [sponsorshipOrdersScopeNote, setSponsorshipOrdersScopeNote] = useState<string | null>(null);
+  const [sponsorAgentPayoutBoard, setSponsorAgentPayoutBoard] = useState<SponsorAgentPayoutBoard | null>(null);
+  const [sponsorAgentPayoutLoading, setSponsorAgentPayoutLoading] = useState(false);
+  const [sponsorAgentPayoutError, setSponsorAgentPayoutError] = useState<string | null>(null);
+  const [reviewingSponsorAgentPayoutId, setReviewingSponsorAgentPayoutId] = useState<number | null>(null);
   const [savingPublicSponsorAgents, setSavingPublicSponsorAgents] = useState(false);
   const [fallbackSponsorAccounts, setFallbackSponsorAccounts] = useState<SponsorAccountSummary[]>([]);
   const [custodians, setCustodians] = useState<Custodian[]>([]);
@@ -3479,6 +3794,8 @@ export default function GreenWork() {
       sponsor_dedication_enabled: true,
       sponsor_payment_instructions: "",
       public_sponsor_agent_user_ids: [],
+      sponsor_agent_planting_fee: "",
+      sponsor_agent_maintenance_fee: "",
       agric_program_type: "extension_support",
       agric_focus_commodities: "",
       agric_support_packages: "",
@@ -3747,6 +4064,14 @@ export default function GreenWork() {
         public_sponsor_agent_user_ids: normalizePositiveIntList(
           settingsPayload?.public_sponsor_agent_user_ids ?? projectDetail?.public_sponsor_agent_user_ids,
         ),
+        sponsor_agent_planting_fee:
+          settingsPayload?.sponsor_agent_planting_fee === null || settingsPayload?.sponsor_agent_planting_fee === undefined
+            ? String(projectDetail?.sponsor_agent_planting_fee ?? "")
+            : String(settingsPayload?.sponsor_agent_planting_fee ?? ""),
+        sponsor_agent_maintenance_fee:
+          settingsPayload?.sponsor_agent_maintenance_fee === null || settingsPayload?.sponsor_agent_maintenance_fee === undefined
+            ? String(projectDetail?.sponsor_agent_maintenance_fee ?? "")
+            : String(settingsPayload?.sponsor_agent_maintenance_fee ?? ""),
         agric_program_type: String(settingsPayload?.agric_config?.program_type || "extension_support"),
         agric_focus_commodities: String(settingsPayload?.agric_config?.focus_commodities || ""),
         agric_support_packages: String(settingsPayload?.agric_config?.support_packages || ""),
@@ -4147,6 +4472,10 @@ export default function GreenWork() {
     const existingSponsorCapacity = activeProjectRecord?.settings?.sponsor_capacity ?? activeProjectRecord?.sponsor_capacity;
     const existingSponsorMaxPerOrder =
       activeProjectRecord?.settings?.sponsor_max_per_order ?? activeProjectRecord?.sponsor_max_per_order;
+    const existingSponsorAgentPlantingFee =
+      activeProjectRecord?.settings?.sponsor_agent_planting_fee ?? activeProjectRecord?.sponsor_agent_planting_fee;
+    const existingSponsorAgentMaintenanceFee =
+      activeProjectRecord?.settings?.sponsor_agent_maintenance_fee ?? activeProjectRecord?.sponsor_agent_maintenance_fee;
     const existingSponsorDedicationEnabled = Boolean(
       activeProjectRecord?.settings?.sponsor_dedication_enabled ?? activeProjectRecord?.sponsor_dedication_enabled,
     );
@@ -4220,6 +4549,26 @@ export default function GreenWork() {
             ? canAccessSuperAdmin
               ? projectSettingsDraft.sponsor_payment_instructions.trim() || null
               : existingSponsorPaymentInstructions || null
+            : null,
+        sponsor_agent_planting_fee:
+          nextAccessModel === "public_sponsorship"
+            ? canAccessSuperAdmin
+              ? Number(projectSettingsDraft.sponsor_agent_planting_fee || 0) > 0
+                ? Number(projectSettingsDraft.sponsor_agent_planting_fee)
+                : null
+              : existingSponsorAgentPlantingFee === null || existingSponsorAgentPlantingFee === undefined
+                ? null
+                : Number(existingSponsorAgentPlantingFee)
+            : null,
+        sponsor_agent_maintenance_fee:
+          nextAccessModel === "public_sponsorship"
+            ? canAccessSuperAdmin
+              ? Number(projectSettingsDraft.sponsor_agent_maintenance_fee || 0) > 0
+                ? Number(projectSettingsDraft.sponsor_agent_maintenance_fee)
+                : null
+              : existingSponsorAgentMaintenanceFee === null || existingSponsorAgentMaintenanceFee === undefined
+                ? null
+                : Number(existingSponsorAgentMaintenanceFee)
             : null,
         public_sponsor_agent_user_ids:
           nextAccessModel === "public_sponsorship" ? projectSettingsDraft.public_sponsor_agent_user_ids : [],
@@ -4699,6 +5048,76 @@ export default function GreenWork() {
     }
   }, []);
 
+  const loadSponsorAgentPayoutBoard = useCallback(async (projectId: number, options?: { silent?: boolean; forceSync?: boolean }) => {
+    const silent = Boolean(options?.silent);
+    const forceSync = options?.forceSync !== false;
+    if (!projectId) {
+      setSponsorAgentPayoutBoard(null);
+      setSponsorAgentPayoutError(null);
+      return;
+    }
+    if (!silent) setSponsorAgentPayoutLoading(true);
+    setSponsorAgentPayoutError(null);
+    try {
+      const syncQs = forceSync ? "&sync=1" : "";
+      const res = await api.get(`/green/admin/sponsor-agent-payouts?project_id=${projectId}${syncQs}&_ts=${Date.now()}`);
+      setSponsorAgentPayoutBoard(normalizeSponsorAgentPayoutBoard(res.data || {}));
+    } catch (error: any) {
+      setSponsorAgentPayoutError(error?.response?.data?.detail || error?.message || "Failed to load sponsor-agent payouts");
+      setSponsorAgentPayoutBoard(null);
+    } finally {
+      if (!silent) setSponsorAgentPayoutLoading(false);
+    }
+  }, []);
+
+  const reviewSponsorAgentPayoutRequest = useCallback(
+    async (
+      requestId: number,
+      action: "approve" | "approve_and_pay" | "mark_paid" | "reject" | "cancel" | "retry_transfer",
+      options?: { autoTransfer?: boolean },
+    ) => {
+      if (!activeProjectId) return;
+      const rejecting = action === "reject";
+      const reviewNotes =
+        rejecting
+          ? window.prompt("Enter a short reason for rejecting this payout request.", "") || ""
+          : window.prompt("Optional accounting note for this payout request.", "") || "";
+      setReviewingSponsorAgentPayoutId(requestId);
+      try {
+        const res = await api.patch(`/green/admin/sponsor-agent-payouts/${requestId}`, {
+          action,
+          reviewer_name: workAuthSession?.user?.full_name || "super_admin",
+          review_notes: reviewNotes.trim() || null,
+          auto_transfer: Boolean(options?.autoTransfer),
+        });
+        await loadSponsorAgentPayoutBoard(activeProjectId, { forceSync: true });
+        const transferError = String(res?.data?.transfer_error || "").trim();
+        if (transferError) {
+          toast(`Payout reviewed, but transfer needs attention: ${transferError}`);
+        } else {
+          toast.success(
+            action === "approve_and_pay"
+              ? "Payout approved and transfer initiated"
+              : action === "mark_paid"
+                ? "Payout marked as paid"
+                : action === "reject"
+                  ? "Payout request rejected"
+                  : action === "cancel"
+                    ? "Payout request cancelled"
+                    : action === "retry_transfer"
+                      ? "Transfer retried"
+                      : "Payout request approved",
+          );
+        }
+      } catch (error: any) {
+        toast.error(error?.response?.data?.detail || "Failed to update payout request");
+      } finally {
+        setReviewingSponsorAgentPayoutId(null);
+      }
+    },
+    [activeProjectId, loadSponsorAgentPayoutBoard, workAuthSession?.user?.full_name],
+  );
+
   const reviewSponsorshipPayment = async (
     orderId: number,
     paymentStatus: "verified" | "rejected" | "proof_submitted",
@@ -5054,9 +5473,11 @@ export default function GreenWork() {
       setSponsorshipOrdersError(null);
       setSponsorshipOrdersScopeNote(null);
       setFallbackSponsorAccounts([]);
+      setSponsorAgentPayoutBoard(null);
+      setSponsorAgentPayoutError(null);
       return;
     }
-    if (!["sponsors", "sponsorship_orders", "project_focus", "assign_work", "assign_task"].includes(String(activeForm || ""))) return;
+    if (!["sponsors", "sponsorship_orders", "project_focus", "assign_work", "assign_task", "sponsor_payouts"].includes(String(activeForm || ""))) return;
     void loadSponsorshipOrders(activeProjectId);
     void loadSponsorAccounts();
     const timer = window.setInterval(() => {
@@ -5065,6 +5486,20 @@ export default function GreenWork() {
     }, 15000);
     return () => window.clearInterval(timer);
   }, [activeProjectId, activeForm, loadSponsorAccounts, loadSponsorshipOrders, publicSponsorshipProject]);
+
+  useEffect(() => {
+    if (!activeProjectId || !publicSponsorshipProject) {
+      setSponsorAgentPayoutBoard(null);
+      setSponsorAgentPayoutError(null);
+      return;
+    }
+    if (activeForm !== "sponsor_payouts") return;
+    void loadSponsorAgentPayoutBoard(activeProjectId, { forceSync: true });
+    const timer = window.setInterval(() => {
+      void loadSponsorAgentPayoutBoard(activeProjectId, { silent: true, forceSync: false });
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [activeForm, activeProjectId, loadSponsorAgentPayoutBoard, publicSponsorshipProject]);
 
   useEffect(() => {
     if (activeForm !== "remote_monitoring") {
@@ -5202,6 +5637,14 @@ export default function GreenWork() {
       sponsor_dedication_enabled: nextAccessModel === "public_sponsorship" ? Boolean(newProject.sponsor_dedication_enabled) : false,
       sponsor_payment_instructions:
         nextAccessModel === "public_sponsorship" ? newProject.sponsor_payment_instructions.trim() || null : null,
+      sponsor_agent_planting_fee:
+        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_agent_planting_fee || 0) > 0
+          ? Number(newProject.sponsor_agent_planting_fee)
+          : null,
+      sponsor_agent_maintenance_fee:
+        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_agent_maintenance_fee || 0) > 0
+          ? Number(newProject.sponsor_agent_maintenance_fee)
+          : null,
       agric_config:
         newProject.workflow_profile === "agric"
           ? {
@@ -5247,6 +5690,8 @@ export default function GreenWork() {
       sponsor_max_per_order: "",
       sponsor_dedication_enabled: true,
       sponsor_payment_instructions: "",
+      sponsor_agent_planting_fee: "",
+      sponsor_agent_maintenance_fee: "",
       agric_program_type: "extension_support",
       agric_focus_commodities: "",
       agric_support_packages: "",
@@ -7622,6 +8067,7 @@ export default function GreenWork() {
             ? [
                 { form: "sponsors" as WorkForm, title: "Sponsors", note: "Sponsor accounts + linked trees" },
                 { form: "sponsorship_orders" as WorkForm, title: "Payments", note: "Orders + payment review" },
+                { form: "sponsor_payouts" as WorkForm, title: "Payouts", note: "Agent earnings + payout queue" },
               ]
             : []),
           { form: "users", title: "Users", note: "All staff status + roles" },
@@ -7904,6 +8350,48 @@ export default function GreenWork() {
     () =>
       sponsorshipOrderBuckets.successful.filter((order) => Number(order.awaiting_tree_units || 0) > 0),
     [sponsorshipOrderBuckets],
+  );
+  const sponsorAgentPayoutSummary = useMemo(
+    () => ({
+      currency: sponsorAgentPayoutBoard?.currency || activeProjectRecord?.sponsor_currency || "NGN",
+      minimumAmount:
+        sponsorAgentPayoutBoard?.minimum_payout_amount === null || sponsorAgentPayoutBoard?.minimum_payout_amount === undefined
+          ? 10000
+          : Number(sponsorAgentPayoutBoard.minimum_payout_amount || 0),
+      agentCount: Number(sponsorAgentPayoutBoard?.summary?.agent_count || 0),
+      requestCount: Number(sponsorAgentPayoutBoard?.summary?.request_count || 0),
+      pendingRequestCount: Number(sponsorAgentPayoutBoard?.summary?.pending_request_count || 0),
+      availableAmount: Number(sponsorAgentPayoutBoard?.summary?.available_amount || 0),
+      requestedAmount: Number(sponsorAgentPayoutBoard?.summary?.requested_amount || 0),
+      paidAmount: Number(sponsorAgentPayoutBoard?.summary?.paid_amount || 0),
+      autoPayoutAvailable: Boolean(sponsorAgentPayoutBoard?.auto_payout_available),
+    }),
+    [activeProjectRecord?.sponsor_currency, sponsorAgentPayoutBoard],
+  );
+  const sponsorAgentPayoutRequestBuckets = useMemo(() => {
+    const grouped = {
+      awaiting: [] as SponsorAgentPayoutRequestRecord[],
+      paid: [] as SponsorAgentPayoutRequestRecord[],
+      issue: [] as SponsorAgentPayoutRequestRecord[],
+    };
+    (sponsorAgentPayoutBoard?.requests || []).forEach((request) => {
+      const status = normalizeName(request.status);
+      if (status === "paid") {
+        grouped.paid.push(request);
+      } else if (["rejected", "failed", "cancelled"].includes(status)) {
+        grouped.issue.push(request);
+      } else {
+        grouped.awaiting.push(request);
+      }
+    });
+    return grouped;
+  }, [sponsorAgentPayoutBoard?.requests]);
+  const sponsorAgentPayoutAgents = useMemo(
+    () =>
+      [...(sponsorAgentPayoutBoard?.agents || [])].sort((a, b) =>
+        String(a.user?.full_name || "").localeCompare(String(b.user?.full_name || "")),
+      ),
+    [sponsorAgentPayoutBoard?.agents],
   );
   const sponsoredPaidTrees = useMemo(
     () =>
@@ -8979,6 +9467,13 @@ export default function GreenWork() {
                     >
                       Sponsorship Payments
                     </button>
+                    <button
+                      className={`green-work-menu-item ${activeForm === "sponsor_payouts" ? "active" : ""}`}
+                      type="button"
+                      onClick={() => openForm("sponsor_payouts")}
+                    >
+                      Sponsor Payouts
+                    </button>
                   </>
                 ) : null}
               </>
@@ -9372,6 +9867,36 @@ export default function GreenWork() {
                             }))
                           }
                           rows={4}
+                        />
+                        <p className="green-work-note">
+                          Sponsor-agent rates drive what approved public sponsor agents earn for linked planting and approved maintenance work.
+                          Leave blank to keep automatic defaults from the sponsor tree price.
+                        </p>
+                        <input
+                          placeholder="Agent planting fee per linked tree"
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={projectSettingsDraft.sponsor_agent_planting_fee}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              sponsor_agent_planting_fee: e.target.value,
+                            }))
+                          }
+                        />
+                        <input
+                          placeholder="Agent maintenance fee per approved visit"
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={projectSettingsDraft.sponsor_agent_maintenance_fee}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              sponsor_agent_maintenance_fee: e.target.value,
+                            }))
+                          }
                         />
                       </>
                     ) : projectSettingsDraft.access_model === "public_sponsorship" ? (
@@ -11202,6 +11727,25 @@ export default function GreenWork() {
                     onChange={(e) => setNewProject({ ...newProject, sponsor_payment_instructions: e.target.value })}
                     rows={4}
                   />
+                  <p className="green-work-note">
+                    Optional sponsor-agent rates. Leave blank to use automatic defaults from the sponsor price per tree.
+                  </p>
+                  <input
+                    placeholder="Agent planting fee per linked tree"
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={newProject.sponsor_agent_planting_fee}
+                    onChange={(e) => setNewProject({ ...newProject, sponsor_agent_planting_fee: e.target.value })}
+                  />
+                  <input
+                    placeholder="Agent maintenance fee per approved visit"
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={newProject.sponsor_agent_maintenance_fee}
+                    onChange={(e) => setNewProject({ ...newProject, sponsor_agent_maintenance_fee: e.target.value })}
+                  />
                 </>
               ) : null}
               {newProject.workflow_profile === "agric" ? (
@@ -11700,6 +12244,301 @@ export default function GreenWork() {
                           </div>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {activeForm === "sponsor_payouts" && (
+            <div className="green-work-card">
+              <h3>Public Sponsor Payouts</h3>
+              {!publicSponsorshipProject ? (
+                <p className="green-work-note">Switch this project to the Public Sponsorship access route first.</p>
+              ) : sponsorAgentPayoutLoading ? (
+                <p className="green-work-note">Loading sponsor-agent earnings and payout requests...</p>
+              ) : (
+                <>
+                  <div className="work-actions" style={{ marginBottom: 12 }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (activeProjectId) void loadSponsorAgentPayoutBoard(activeProjectId, { forceSync: true });
+                      }}
+                    >
+                      Refresh Payouts
+                    </button>
+                    <button type="button" onClick={() => openForm("users")}>
+                      Manage Sponsor Agents
+                    </button>
+                  </div>
+                  <p className="green-work-note">
+                    This is the live sponsor-agent wallet board. It rolls up what each selected public sponsor agent has earned
+                    from paid sponsor trees, which requests are pending, and whether bank details are ready for payout.
+                  </p>
+                  <div className="work-actions" style={{ marginBottom: 12, flexWrap: "wrap" }}>
+                    <span className="green-work-live-pill neutral">Agents: {sponsorAgentPayoutSummary.agentCount}</span>
+                    <span className="green-work-live-pill warning">Pending requests: {sponsorAgentPayoutSummary.pendingRequestCount}</span>
+                    <span className="green-work-live-pill ok">
+                      Minimum payout: {formatCurrencyAmount(sponsorAgentPayoutSummary.minimumAmount, sponsorAgentPayoutSummary.currency)}
+                    </span>
+                    <span className={`green-work-live-pill ${sponsorAgentPayoutSummary.autoPayoutAvailable ? "info" : "neutral"}`}>
+                      Auto payout: {sponsorAgentPayoutSummary.autoPayoutAvailable ? "available" : "manual only"}
+                    </span>
+                  </div>
+                  {sponsorAgentPayoutError ? <p className="green-work-note danger">{sponsorAgentPayoutError}</p> : null}
+                  <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.6fr) minmax(300px, 0.95fr)", gap: 16, alignItems: "start" }}>
+                    <div>
+                      <div className="work-actions" style={{ marginBottom: 10, flexWrap: "wrap" }}>
+                        <span className="green-work-live-pill ok">
+                          Available: {formatCurrencyAmount(sponsorAgentPayoutSummary.availableAmount, sponsorAgentPayoutSummary.currency)}
+                        </span>
+                        <span className="green-work-live-pill warning">
+                          Requested: {formatCurrencyAmount(sponsorAgentPayoutSummary.requestedAmount, sponsorAgentPayoutSummary.currency)}
+                        </span>
+                        <span className="green-work-live-pill info">
+                          Paid: {formatCurrencyAmount(sponsorAgentPayoutSummary.paidAmount, sponsorAgentPayoutSummary.currency)}
+                        </span>
+                      </div>
+                      {sponsorAgentPayoutAgents.length === 0 ? (
+                        <p className="green-work-note">No public sponsor agents are selected for this organization yet.</p>
+                      ) : (
+                        <div className="staff-list">
+                          {sponsorAgentPayoutAgents.map((agent) => {
+                            const agentSummary = agent.summary || {};
+                            const bank = agent.bank_account;
+                            const recentEarnings = (agent.earnings || []).slice(0, 3);
+                            return (
+                              <div key={`sponsor-agent-wallet-${agent.user?.id || agent.user?.user_uid || "agent"}`} className="staff-row">
+                                <div className="staff-row-head">
+                                  <strong>{agent.user?.full_name || "Sponsor Agent"}</strong>
+                                  <span>{agent.user?.user_uid || "-"}</span>
+                                </div>
+                                <div className="work-actions" style={{ margin: "8px 0 6px", flexWrap: "wrap" }}>
+                                  <span className="green-work-live-pill ok">
+                                    Available: {formatCurrencyAmount(Number(agentSummary.available_amount || 0), agent.currency || sponsorAgentPayoutSummary.currency)}
+                                  </span>
+                                  <span className="green-work-live-pill warning">
+                                    Requested: {formatCurrencyAmount(Number(agentSummary.requested_amount || 0), agent.currency || sponsorAgentPayoutSummary.currency)}
+                                  </span>
+                                  <span className="green-work-live-pill info">
+                                    Paid: {formatCurrencyAmount(Number(agentSummary.paid_amount || 0), agent.currency || sponsorAgentPayoutSummary.currency)}
+                                  </span>
+                                  <span className={`green-work-live-pill ${agentSummary.bank_verified ? "ok" : "danger"}`}>
+                                    {agentSummary.bank_verified ? "Bank verified" : "Bank setup needed"}
+                                  </span>
+                                </div>
+                                <div className="staff-row-meta">
+                                  Planting: {Number(agentSummary.planting_count || 0)} | Maintenance: {Number(agentSummary.maintenance_count || 0)} | Total earned:{" "}
+                                  {formatCurrencyAmount(Number(agentSummary.total_earnings_amount || 0), agent.currency || sponsorAgentPayoutSummary.currency)}
+                                </div>
+                                <div className="staff-row-meta">
+                                  Pending requests: {Number(agentSummary.pending_request_count || 0)} | Paid requests: {Number(agentSummary.paid_request_count || 0)} | Projects:{" "}
+                                  {Array.isArray(agent.projects) ? agent.projects.length : 0}
+                                </div>
+                                <div className="staff-row-meta">
+                                  Bank: {bank?.bank_name || "-"} | {bank?.account_number_masked || bank?.account_number || "-"} | {bank?.account_name || "-"}
+                                </div>
+                                {Array.isArray(agent.projects) && agent.projects.length > 0 ? (
+                                  <div className="staff-row-meta">
+                                    Rates: {agent.projects
+                                      .map(
+                                        (project) =>
+                                          `${project.project_name || `Project #${project.project_id}`} (${formatCurrencyAmount(
+                                            Number(project.planting_fee || 0),
+                                            project.currency || sponsorAgentPayoutSummary.currency,
+                                          )} planting, ${formatCurrencyAmount(
+                                            Number(project.maintenance_fee || 0),
+                                            project.currency || sponsorAgentPayoutSummary.currency,
+                                          )} maintenance)`,
+                                      )
+                                      .join(" | ")}
+                                  </div>
+                                ) : null}
+                                {recentEarnings.length > 0 ? (
+                                  <div className="staff-list" style={{ marginTop: 12 }}>
+                                    {recentEarnings.map((earning) => (
+                                      <div key={earning.earning_key} className="staff-row" style={{ margin: 0 }}>
+                                        <div className="staff-row-head">
+                                          <strong>{earning.task_label || formatTaskTypeLabel(earning.work_type || "planting")}</strong>
+                                          <span>
+                                            {formatCurrencyAmount(Number(earning.amount || 0), earning.currency || sponsorAgentPayoutSummary.currency)}
+                                          </span>
+                                        </div>
+                                        <div className="staff-row-meta">
+                                          {earning.tree_label || "Tree record"}
+                                          {earning.sponsor_name ? ` | Sponsor: ${earning.sponsor_name}` : ""}
+                                          {earning.earned_at ? ` | ${formatDateLabel(earning.earned_at)}` : ""}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="staff-row-meta" style={{ marginTop: 8 }}>
+                                    No verified sponsor-funded earnings recorded for this agent yet.
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="green-work-card" style={{ position: "sticky", top: 16 }}>
+                      <h3>Accounting</h3>
+                      <p className="green-work-note">This board refreshes automatically from the live sponsor-agent payout feed.</p>
+                      <div className="work-actions" style={{ marginBottom: 12, flexWrap: "wrap" }}>
+                        <span className="green-work-live-pill neutral">Requests: {sponsorAgentPayoutSummary.requestCount}</span>
+                        <span className="green-work-live-pill warning">Awaiting: {sponsorAgentPayoutRequestBuckets.awaiting.length}</span>
+                        <span className="green-work-live-pill ok">Paid: {sponsorAgentPayoutRequestBuckets.paid.length}</span>
+                        <span className="green-work-live-pill danger">Issues: {sponsorAgentPayoutRequestBuckets.issue.length}</span>
+                      </div>
+                      <div className="staff-list">
+                        <div className="staff-row">
+                          <div className="staff-row-head">
+                            <strong>Available Liability</strong>
+                            <span>{formatCurrencyAmount(sponsorAgentPayoutSummary.availableAmount, sponsorAgentPayoutSummary.currency)}</span>
+                          </div>
+                          <div className="staff-row-meta">Earnings ready for agents to request.</div>
+                        </div>
+                        <div className="staff-row">
+                          <div className="staff-row-head">
+                            <strong>Requested Liability</strong>
+                            <span>{formatCurrencyAmount(sponsorAgentPayoutSummary.requestedAmount, sponsorAgentPayoutSummary.currency)}</span>
+                          </div>
+                          <div className="staff-row-meta">Already requested and waiting for review or transfer.</div>
+                        </div>
+                        <div className="staff-row">
+                          <div className="staff-row-head">
+                            <strong>Paid Out</strong>
+                            <span>{formatCurrencyAmount(sponsorAgentPayoutSummary.paidAmount, sponsorAgentPayoutSummary.currency)}</span>
+                          </div>
+                          <div className="staff-row-meta">Completed sponsor-agent payouts.</div>
+                        </div>
+                      </div>
+
+                      {([
+                        {
+                          key: "awaiting",
+                          title: "Awaiting Review / Transfer",
+                          tone: "warning",
+                          rows: sponsorAgentPayoutRequestBuckets.awaiting,
+                        },
+                        {
+                          key: "paid",
+                          title: "Paid Requests",
+                          tone: "ok",
+                          rows: sponsorAgentPayoutRequestBuckets.paid,
+                        },
+                        {
+                          key: "issue",
+                          title: "Flagged / Cancelled",
+                          tone: "danger",
+                          rows: sponsorAgentPayoutRequestBuckets.issue,
+                        },
+                      ] as Array<{
+                        key: string;
+                        title: string;
+                        tone: "ok" | "warning" | "danger";
+                        rows: SponsorAgentPayoutRequestRecord[];
+                      }>)
+                        .filter((section) => section.rows.length > 0)
+                        .map((section) => (
+                          <div key={`sponsor-payout-section-${section.key}`} style={{ marginTop: 18 }}>
+                            <div className="work-actions" style={{ marginBottom: 10, flexWrap: "wrap" }}>
+                              <span className={`green-work-live-pill ${section.tone}`}>{section.title}</span>
+                              <span className="green-work-live-pill neutral">
+                                {section.rows.length} request{section.rows.length === 1 ? "" : "s"}
+                              </span>
+                            </div>
+                            <div className="staff-list">
+                              {section.rows.map((request) => {
+                                const status = normalizeName(request.status);
+                                const terminal = ["paid", "rejected", "cancelled"].includes(status);
+                                const failedTransfer = status === "failed";
+                                const processingTransfer = status === "processing";
+                                return (
+                                  <div key={`sponsor-payout-request-${section.key}-${request.id}`} className="staff-row">
+                                    <div className="staff-row-head">
+                                      <strong>{request.user_name || `Agent #${request.user_id}`}</strong>
+                                      <span>{request.request_uid || `Request #${request.id}`}</span>
+                                    </div>
+                                    <div className="work-actions" style={{ margin: "8px 0 6px", flexWrap: "wrap" }}>
+                                      <span className={`green-work-live-pill ${section.tone}`}>{formatTaskTypeLabel(request.status || "requested")}</span>
+                                      <span className="green-work-live-pill neutral">
+                                        {formatCurrencyAmount(request.amount_total, request.currency || sponsorAgentPayoutSummary.currency)}
+                                      </span>
+                                      {request.transfer_status ? (
+                                        <span className="green-work-live-pill info">Transfer: {formatTaskTypeLabel(request.transfer_status)}</span>
+                                      ) : null}
+                                    </div>
+                                    <div className="staff-row-meta">
+                                      Bank: {request.bank_name || "-"} | {request.account_number_masked || request.account_number || "-"} | {request.account_name || "-"}
+                                    </div>
+                                    <div className="staff-row-meta">
+                                      Created: {request.created_at ? formatDateLabel(request.created_at) : "-"}
+                                      {request.paid_at ? ` | Paid: ${formatDateLabel(request.paid_at)}` : ""}
+                                    </div>
+                                    <div className="staff-row-meta">
+                                      Review: {request.reviewed_by || "-"}
+                                      {request.reviewed_at ? ` | ${formatDateLabel(request.reviewed_at)}` : ""}
+                                    </div>
+                                    {request.review_notes ? <div className="staff-row-meta">Note: {request.review_notes}</div> : null}
+                                    {!terminal ? (
+                                      <div className="work-actions">
+                                        {sponsorAgentPayoutSummary.autoPayoutAvailable ? (
+                                          <button
+                                            type="button"
+                                            className="btn-primary"
+                                            disabled={reviewingSponsorAgentPayoutId === request.id || processingTransfer}
+                                            onClick={() =>
+                                              void reviewSponsorAgentPayoutRequest(
+                                                request.id,
+                                                failedTransfer ? "retry_transfer" : "approve_and_pay",
+                                                { autoTransfer: true },
+                                              )
+                                            }
+                                          >
+                                            {reviewingSponsorAgentPayoutId === request.id
+                                              ? "Processing..."
+                                              : failedTransfer
+                                                ? "Retry Auto Payout"
+                                                : "Approve & Auto Pay"}
+                                          </button>
+                                        ) : null}
+                                        {!processingTransfer ? (
+                                          <button
+                                            type="button"
+                                            disabled={reviewingSponsorAgentPayoutId === request.id}
+                                            onClick={() => void reviewSponsorAgentPayoutRequest(request.id, "approve")}
+                                          >
+                                            Approve Only
+                                          </button>
+                                        ) : null}
+                                        <button
+                                          type="button"
+                                          disabled={reviewingSponsorAgentPayoutId === request.id}
+                                          onClick={() => void reviewSponsorAgentPayoutRequest(request.id, "mark_paid")}
+                                        >
+                                          Mark Paid
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={reviewingSponsorAgentPayoutId === request.id}
+                                          onClick={() => void reviewSponsorAgentPayoutRequest(request.id, processingTransfer ? "cancel" : "reject")}
+                                        >
+                                          {processingTransfer ? "Cancel" : "Reject"}
+                                        </button>
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
                     </div>
                   </div>
                 </>
