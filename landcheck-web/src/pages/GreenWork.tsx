@@ -289,6 +289,8 @@ type SponsorAgentPayoutRequestRecord = {
   review_notes?: string | null;
   reviewed_by?: string | null;
   reviewed_at?: string | null;
+  settlement_channel?: string | null;
+  settlement_reference?: string | null;
   transfer_reference?: string | null;
   transfer_id?: number | null;
   transfer_status?: string | null;
@@ -1760,6 +1762,8 @@ const normalizeSponsorAgentPayoutRequestRecord = (row: any): SponsorAgentPayoutR
   review_notes: row?.review_notes ? String(row.review_notes).trim() || null : null,
   reviewed_by: row?.reviewed_by ? String(row.reviewed_by).trim() || null : null,
   reviewed_at: row?.reviewed_at ? String(row.reviewed_at) : null,
+  settlement_channel: row?.settlement_channel ? String(row.settlement_channel).trim() || null : null,
+  settlement_reference: row?.settlement_reference ? String(row.settlement_reference).trim() || null : null,
   transfer_reference: row?.transfer_reference ? String(row.transfer_reference).trim() || null : null,
   transfer_id: row?.transfer_id ? Number(row.transfer_id) : null,
   transfer_status: row?.transfer_status ? String(row.transfer_status).trim() || null : null,
@@ -5122,10 +5126,29 @@ export default function GreenWork() {
     ) => {
       if (!activeProjectId) return;
       const rejecting = action === "reject";
-      const reviewNotes =
-        rejecting
-          ? window.prompt("Enter a short reason for rejecting this payout request.", "") || ""
-          : window.prompt("Optional accounting note for this payout request.", "") || "";
+      const manualSettlement = action === "mark_paid";
+      const autoTransferAction = action === "approve_and_pay" || action === "retry_transfer";
+      const reviewPrompt = rejecting
+        ? "Enter a short reason for rejecting this payout request."
+        : manualSettlement
+          ? "Optional accounting note for this manual settlement."
+          : autoTransferAction
+            ? "Optional accounting note for this automatic payout attempt."
+            : action === "cancel"
+              ? "Optional reason for cancelling this payout request."
+              : "Optional accounting note for this payout request.";
+      const reviewNotes = window.prompt(reviewPrompt, "") || "";
+      if (rejecting && !reviewNotes.trim()) {
+        toast.error("A rejection reason is required.");
+        return;
+      }
+      const settlementReference = manualSettlement
+        ? window.prompt("Enter the external bank transfer reference or receipt number for this manual settlement.", "") || ""
+        : "";
+      if (manualSettlement && !settlementReference.trim()) {
+        toast.error("Manual settlement reference is required.");
+        return;
+      }
       setReviewingSponsorAgentPayoutId(requestId);
       try {
         const res = await api.patch(`/green/admin/sponsor-agent-payouts/${requestId}`, {
@@ -5133,6 +5156,8 @@ export default function GreenWork() {
           reviewer_name: workAuthSession?.user?.full_name || "super_admin",
           review_notes: reviewNotes.trim() || null,
           auto_transfer: Boolean(options?.autoTransfer),
+          settlement_channel: manualSettlement ? "manual" : autoTransferAction ? "flutterwave" : null,
+          settlement_reference: manualSettlement ? settlementReference.trim() || null : null,
         });
         await loadSponsorAgentPayoutBoard(activeProjectId, { forceSync: true });
         const transferError = String(res?.data?.transfer_error || "").trim();
@@ -5140,17 +5165,17 @@ export default function GreenWork() {
           toast(`Payout reviewed, but transfer needs attention: ${transferError}`);
         } else {
           toast.success(
-            action === "approve_and_pay"
-              ? "Payout approved and transfer initiated"
-              : action === "mark_paid"
-                ? "Payout marked as paid"
-                : action === "reject"
-                  ? "Payout request rejected"
-                  : action === "cancel"
-                    ? "Payout request cancelled"
-                    : action === "retry_transfer"
-                      ? "Transfer retried"
-                      : "Payout request approved",
+              action === "approve_and_pay"
+                ? "Payout approved and transfer initiated"
+                : action === "mark_paid"
+                  ? "Manual payout recorded as paid"
+                  : action === "reject"
+                    ? "Payout request rejected"
+                    : action === "cancel"
+                      ? "Payout request cancelled"
+                      : action === "retry_transfer"
+                        ? "Automatic payout retry initiated"
+                        : "Payout request approved",
           );
         }
       } catch (error: any) {
@@ -12382,7 +12407,11 @@ export default function GreenWork() {
                                   {Array.isArray(agent.projects) ? agent.projects.length : 0}
                                 </div>
                                 <div className="staff-row-meta">
-                                  Bank: {bank?.bank_name || "-"} | {bank?.account_number_masked || bank?.account_number || "-"} | {bank?.account_name || "-"}
+                                  Bank: {bank?.bank_name || "-"} | Code: {bank?.bank_code || "-"} | Account:{" "}
+                                  {bank?.account_number_masked || bank?.account_number || "-"}
+                                </div>
+                                <div className="staff-row-meta">
+                                  Account name: {bank?.account_name || "-"} | Verified: {bank?.verified_at ? formatDateLabel(bank.verified_at) : "Not yet"}
                                 </div>
                                 {Array.isArray(agent.projects) && agent.projects.length > 0 ? (
                                   <div className="staff-row-meta">
@@ -12432,12 +12461,17 @@ export default function GreenWork() {
 
                     <div className="green-work-card" style={{ position: "sticky", top: 16 }}>
                       <h3>Accounting</h3>
-                      <p className="green-work-note">This board refreshes automatically from the live sponsor-agent payout feed.</p>
+                      <p className="green-work-note">
+                        This board refreshes automatically from the live sponsor-agent payout feed. Standard flow: verified bank details,
+                        agent payout request, approve only or approve and auto pay, then retry auto payout or complete a manual settlement
+                        with an external reference if the gateway payout needs intervention.
+                      </p>
                       <div className="work-actions" style={{ marginBottom: 12, flexWrap: "wrap" }}>
                         <span className="green-work-live-pill neutral">Requests: {sponsorAgentPayoutSummary.requestCount}</span>
                         <span className="green-work-live-pill warning">Awaiting: {sponsorAgentPayoutRequestBuckets.awaiting.length}</span>
                         <span className="green-work-live-pill ok">Paid: {sponsorAgentPayoutRequestBuckets.paid.length}</span>
                         <span className="green-work-live-pill danger">Issues: {sponsorAgentPayoutRequestBuckets.issue.length}</span>
+                        <span className="green-work-live-pill neutral">Manual fallback: always available</span>
                       </div>
                       <div className="staff-list">
                         <div className="staff-row">
@@ -12519,17 +12553,34 @@ export default function GreenWork() {
                                       ) : null}
                                     </div>
                                     <div className="staff-row-meta">
-                                      Bank: {request.bank_name || "-"} | {request.account_number_masked || request.account_number || "-"} | {request.account_name || "-"}
+                                      Bank: {request.bank_name || "-"} | Code: {request.bank_code || "-"} | Account:{" "}
+                                      {request.account_number_masked || request.account_number || "-"} | {request.account_name || "-"}
                                     </div>
                                     <div className="staff-row-meta">
                                       Created: {request.created_at ? formatDateLabel(request.created_at) : "-"}
                                       {request.paid_at ? ` | Paid: ${formatDateLabel(request.paid_at)}` : ""}
                                     </div>
                                     <div className="staff-row-meta">
+                                      Settlement: {request.settlement_channel ? formatTaskTypeLabel(request.settlement_channel) : "Pending"}
+                                      {request.settlement_reference ? ` | Ref: ${request.settlement_reference}` : ""}
+                                    </div>
+                                    {request.transfer_reference || request.transfer_id || request.transfer_status ? (
+                                      <div className="staff-row-meta">
+                                        Transfer ref: {request.transfer_reference || "-"}
+                                        {request.transfer_id ? ` | Transfer ID: ${request.transfer_id}` : ""}
+                                        {request.transfer_status ? ` | Gateway: ${formatTaskTypeLabel(request.transfer_status)}` : ""}
+                                      </div>
+                                    ) : null}
+                                    <div className="staff-row-meta">
                                       Review: {request.reviewed_by || "-"}
                                       {request.reviewed_at ? ` | ${formatDateLabel(request.reviewed_at)}` : ""}
                                     </div>
                                     {request.review_notes ? <div className="staff-row-meta">Note: {request.review_notes}</div> : null}
+                                    {failedTransfer ? (
+                                      <div className="green-work-note danger">
+                                        Automatic payout failed. Retry the gateway payout or complete a manual settlement with an external bank reference.
+                                      </div>
+                                    ) : null}
                                     {!terminal ? (
                                       <div className="work-actions">
                                         {sponsorAgentPayoutSummary.autoPayoutAvailable ? (
@@ -12563,10 +12614,10 @@ export default function GreenWork() {
                                         ) : null}
                                         <button
                                           type="button"
-                                          disabled={reviewingSponsorAgentPayoutId === request.id}
+                                          disabled={reviewingSponsorAgentPayoutId === request.id || processingTransfer}
                                           onClick={() => void reviewSponsorAgentPayoutRequest(request.id, "mark_paid")}
                                         >
-                                          Mark Paid
+                                          Manual Settlement Complete
                                         </button>
                                         <button
                                           type="button"
