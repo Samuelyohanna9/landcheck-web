@@ -2814,6 +2814,7 @@ export default function GreenWork() {
   const mapCardRef = useRef<HTMLDivElement | null>(null);
   const workPauseNoticeShownRef = useRef(false);
   const workSuspendNoticeShownRef = useRef(false);
+  const lastLoadedProjectIdRef = useRef<number | null>(null);
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -3787,6 +3788,7 @@ export default function GreenWork() {
 
   const clearActiveProjectContext = () => {
     setActiveProjectId(null);
+    lastLoadedProjectIdRef.current = null;
     setOrders([]);
     setNewOrderSpeciesMode(false);
     setNewOrderSpeciesAllocations([{ species: "", count: 0 }]);
@@ -4237,6 +4239,7 @@ export default function GreenWork() {
       setKpiCurrent(null);
       setSpeciesDailyTrend(null);
     }
+    lastLoadedProjectIdRef.current = projectId;
   };
 
   const stopRemoteMonitoringProgress = useCallback(() => {
@@ -5383,6 +5386,9 @@ export default function GreenWork() {
     const exists = projects.some((project) => Number(project.id) === Number(activeProjectId));
     if (!exists) {
       setActiveProjectId(null);
+      return;
+    }
+    if (lastLoadedProjectIdRef.current === activeProjectId) {
       return;
     }
     void loadProjectData(activeProjectId).catch(() => toast.error("Failed to load project data"));
