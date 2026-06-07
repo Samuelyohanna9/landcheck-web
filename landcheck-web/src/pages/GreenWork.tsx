@@ -9888,7 +9888,7 @@ export default function GreenWork() {
                           }
                         />
                         <input
-                          placeholder="Total sponsor capacity"
+                          placeholder="Total trees planned (sponsorship target)"
                           type="number"
                           min="0"
                           step="1"
@@ -11767,7 +11767,7 @@ export default function GreenWork() {
                     }
                   />
                   <input
-                    placeholder="Total sponsor capacity"
+                    placeholder="Total trees planned (sponsorship target)"
                     type="number"
                     min="0"
                     step="1"
