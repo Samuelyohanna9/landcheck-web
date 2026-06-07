@@ -668,6 +668,12 @@ export default function FeatureOverrideModal({
   const [draftingAssist, setDraftingAssist] = useState<DraftingAssistState>(DEFAULT_DRAFTING_ASSIST);
   const [plottingHoverPoint, setPlottingHoverPoint] = useState<number[] | null>(null);
   const [plottingSnapLabel, setPlottingSnapLabel] = useState<string | null>(null);
+  const [plottingSnapState, setPlottingSnapState] = useState<{
+    x: number;
+    y: number;
+    type: "endpoint" | "midpoint" | "intersection";
+    label: string;
+  } | null>(null);
   const [osnapModes, setOsnapModes] = useState<OsnapModes>(DEFAULT_OSNAP_MODES);
   const [selectionMode, setSelectionMode] = useState<SelectionMode>(null);
   const [selectionDrag, setSelectionDrag] = useState<SelectionDrag>(null);
@@ -1422,8 +1428,133 @@ export default function FeatureOverrideModal({
     if (activeTool === "select" || basemapMode !== "plotting") {
       setPlottingHoverPoint(null);
       setPlottingSnapLabel(null);
+      setPlottingSnapState(null);
     }
   }, [activeTool, basemapMode]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          activeEl.tagName === "SELECT" ||
+          activeEl.getAttribute("contenteditable") === "true")
+      ) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      
+      if (event.key === "Escape") {
+        event.preventDefault();
+        clearWorkingSelection();
+        pushCommandMessage("Command cancelled.");
+        return;
+      }
+
+      if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        startDeleteFlow();
+        pushCommandMessage("Erasing selected feature.");
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        if (activeTool !== "select" && plottingPoints.length >= 2) {
+          const geometry = buildGeometryFromPoints(plottingPoints, activeTool);
+          if (geometry) {
+            setSelectedGeometry(geometry);
+            setSelectedMetrics(getGeometryMetrics(geometry));
+            setDraftMetrics(getGeometryMetrics(geometry));
+            setActiveTool("select");
+            pushCommandMessage("Drawing committed.");
+          }
+        }
+        return;
+      }
+
+      switch (key) {
+        case "l":
+          event.preventDefault();
+          setEditorTool("draw_line_string");
+          setSelectionMode(null);
+          pushCommandMessage("Line tool active (L).");
+          break;
+        case "p":
+          event.preventDefault();
+          setEditorTool("draw_polygon");
+          setSelectionMode(null);
+          pushCommandMessage("Polygon tool active (P).");
+          break;
+        case "s":
+          event.preventDefault();
+          setActiveTool("select");
+          setSelectionMode(null);
+          pushCommandMessage("Select tool active (S).");
+          break;
+        case "z":
+          event.preventDefault();
+          fitPlotBoundary();
+          pushCommandMessage("View fit to plot (Z).");
+          break;
+        case "o":
+          event.preventDefault();
+          setDraftingAssist((prev) => {
+            const nextOrtho = !prev.ortho;
+            pushCommandMessage(`Ortho mode toggled: ${nextOrtho ? "ON" : "OFF"} (O)`);
+            return { ...prev, ortho: nextOrtho };
+          });
+          break;
+        case "n":
+          event.preventDefault();
+          setDraftingAssist((prev) => {
+            const nextSnap = !prev.snap;
+            pushCommandMessage(`Snap constraint toggled: ${nextSnap ? "ON" : "OFF"} (N)`);
+            return { ...prev, snap: nextSnap };
+          });
+          break;
+        case "m":
+          event.preventDefault();
+          setDraftingAssist((prev) => {
+            const nextMeasure = !prev.measure;
+            pushCommandMessage(`Measure feedback toggled: ${nextMeasure ? "ON" : "OFF"} (M)`);
+            return { ...prev, measure: nextMeasure };
+          });
+          break;
+        case "b":
+          event.preventDefault();
+          activateSelectionMode("box");
+          pushCommandMessage("Box selection armed (B).");
+          break;
+        case "h":
+          event.preventDefault();
+          pushCommandMessage("Hotkeys: L=Line, P=Polygon, S=Select, Z=Zoom Fit, O=Ortho, N=Snap, M=Measure, B=Box Select, Delete=Erase, Enter=Commit.");
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleGlobalKeyDown);
+    };
+  }, [
+    isOpen,
+    activeTool,
+    plottingPoints,
+    clearWorkingSelection,
+    fitPlotBoundary,
+    startDeleteFlow,
+    pushCommandMessage,
+    setEditorTool,
+    activateSelectionMode,
+  ]);
 
   useEffect(() => {
     if (!isOpen || basemapMode !== "satellite") return;
@@ -1538,6 +1669,18 @@ export default function FeatureOverrideModal({
       const [lng, lat] = plottingViewport.unproject(pointer);
       setCursor({ lng, lat });
       setPlottingSnapLabel(label);
+      if (label) {
+        let type: "endpoint" | "midpoint" | "intersection" = "endpoint";
+        const labelLower = label.toLowerCase();
+        if (labelLower.includes("· mid") || labelLower.includes(" mid ")) {
+          type = "midpoint";
+        } else if (labelLower.includes(" x ") || labelLower.includes("intersection")) {
+          type = "intersection";
+        }
+        setPlottingSnapState({ x: pointer.x, y: pointer.y, type, label });
+      } else {
+        setPlottingSnapState(null);
+      }
       if (activeTool !== "select") {
         setPlottingHoverPoint([lng, lat]);
       }
@@ -1736,6 +1879,7 @@ export default function FeatureOverrideModal({
     setCursor(null);
     setPlottingHoverPoint(null);
     setPlottingSnapLabel(null);
+    setPlottingSnapState(null);
     setSelectionDrag(null);
   }, []);
 
@@ -2438,6 +2582,57 @@ export default function FeatureOverrideModal({
                       const projected = plottingViewport.project(point);
                       return <circle key={`pt-${index}`} cx={projected.x} cy={projected.y} r="4.5" className="cad-svg-vertex" />;
                     })}
+                    {draftingAssist.ortho && plottingPoints.length > 0 && plottingHoverPoint && (
+                      <line
+                        x1={plottingViewport.project(plottingPoints[plottingPoints.length - 1]).x}
+                        y1={plottingViewport.project(plottingPoints[plottingPoints.length - 1]).y}
+                        x2={plottingViewport.project(plottingHoverPoint).x}
+                        y2={plottingViewport.project(plottingHoverPoint).y}
+                        stroke="#9ca3af"
+                        strokeDasharray="4,4"
+                        strokeWidth="1.5"
+                      />
+                    )}
+                    {plottingSnapState && draftingAssist.snap && (
+                      <g className="cad-snap-marker">
+                        {plottingSnapState.type === "endpoint" && (
+                          <rect
+                            x={plottingSnapState.x - 6}
+                            y={plottingSnapState.y - 6}
+                            width="12"
+                            height="12"
+                            fill="none"
+                            stroke="#22c55e"
+                            strokeWidth="2"
+                          />
+                        )}
+                        {plottingSnapState.type === "midpoint" && (
+                          <polygon
+                            points={`${plottingSnapState.x},${plottingSnapState.y - 7} ${plottingSnapState.x - 7},${plottingSnapState.y + 5} ${plottingSnapState.x + 7},${plottingSnapState.y + 5}`}
+                            fill="none"
+                            stroke="#22c55e"
+                            strokeWidth="2"
+                          />
+                        )}
+                        {plottingSnapState.type === "intersection" && (
+                          <g stroke="#22c55e" strokeWidth="2">
+                            <line x1={plottingSnapState.x - 6} y1={plottingSnapState.y - 6} x2={plottingSnapState.x + 6} y2={plottingSnapState.y + 6} />
+                            <line x1={plottingSnapState.x + 6} y1={plottingSnapState.y - 6} x2={plottingSnapState.x - 6} y2={plottingSnapState.y + 6} />
+                          </g>
+                        )}
+                        <text
+                          x={plottingSnapState.x + 10}
+                          y={plottingSnapState.y + 4}
+                          className="cad-snap-tooltip"
+                          fill="#22c55e"
+                          fontSize="10"
+                          fontWeight="bold"
+                          style={{ textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}
+                        >
+                          {plottingSnapState.label}
+                        </text>
+                      </g>
+                    )}
                     {plottingPreviewGeometry?.type === "LineString" && draftingAssist.measure ? (
                       <polyline
                         points={pointsToSvg((plottingPreviewGeometry.coordinates || []) as number[][], plottingViewport.project)}
