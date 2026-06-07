@@ -251,6 +251,11 @@ type SponsorAccountSummary = {
   pending_orders_count: number;
   issue_orders_count: number;
   awaiting_tree_units: number;
+  entity_category?: string | null;
+  leaderboard_visibility?: string | null;
+  monthly_trees?: number;
+  all_time_trees?: number;
+  achievement_level?: string;
 };
 
 type SponsorAgentBankAccountRecord = {
@@ -1724,6 +1729,11 @@ const normalizeSponsorAccountSummary = (row: any): SponsorAccountSummary => ({
   pending_orders_count: Number(row?.pending_orders_count || 0),
   issue_orders_count: Number(row?.issue_orders_count || 0),
   awaiting_tree_units: Number(row?.awaiting_tree_units || 0),
+  entity_category: row?.entity_category ? String(row.entity_category).trim() || null : null,
+  leaderboard_visibility: row?.leaderboard_visibility ? String(row.leaderboard_visibility).trim() || null : null,
+  monthly_trees: Number(row?.monthly_trees || 0),
+  all_time_trees: Number(row?.all_time_trees || 0),
+  achievement_level: row?.achievement_level ? String(row.achievement_level).trim() : undefined,
 });
 
 const normalizeSponsorAgentBankAccountRecord = (row: any): SponsorAgentBankAccountRecord => ({
@@ -12096,8 +12106,22 @@ export default function GreenWork() {
                                 {hasOrders ? `Orders: ${sponsor.orders_count}` : "Signed up only"}
                               </span>
                             </div>
+                            <div className="work-actions" style={{ margin: "0 0 6px", flexWrap: "wrap" }}>
+                              <span className="green-work-live-pill info" style={{ backgroundColor: "#fbf7ee", border: "1px solid rgba(197, 160, 89, 0.35)", color: "#b8860b", fontWeight: "bold" }}>
+                                🏆 {sponsor.achievement_level || "Climate Contributor"}
+                              </span>
+                              <span className="green-work-live-pill neutral">
+                                Category: {sponsor.entity_category || "individual"}
+                              </span>
+                              <span className={`green-work-live-pill ${sponsor.leaderboard_visibility === "public" ? "ok" : "neutral"}`}>
+                                Visibility: {sponsor.leaderboard_visibility || "public"}
+                              </span>
+                            </div>
                             <div className="staff-row-meta">
                               Organization: {sponsor.organization_name || "-"} | Email: {sponsor.email || "-"}
+                            </div>
+                            <div className="staff-row-meta">
+                              Monthly trees (this month): <strong>{sponsor.monthly_trees || 0}</strong> | All-time trees: <strong>{sponsor.all_time_trees || 0}</strong>
                             </div>
                             <div className="staff-row-meta">
                               Orders: {sponsor.orders_count} | Linked trees: {sponsor.linked_units} | Awaiting planting:{" "}
