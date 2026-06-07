@@ -12435,6 +12435,22 @@ export default function GreenWork() {
                                       .join(" | ")}
                                   </div>
                                 ) : null}
+                                {Array.isArray(agent.project_summaries) && agent.project_summaries.length > 0 ? (
+                                  <div className="staff-row-meta" style={{ marginTop: 4 }}>
+                                    Earnings: {agent.project_summaries
+                                      .map(
+                                        (ps) =>
+                                          `${ps.project_name || `Project #${ps.project_id}`}: ${formatCurrencyAmount(
+                                            Number(ps.available_amount || 0),
+                                            ps.currency || sponsorAgentPayoutSummary.currency,
+                                          )} available (Paid: ${formatCurrencyAmount(
+                                            Number(ps.paid_amount || 0),
+                                            ps.currency || sponsorAgentPayoutSummary.currency,
+                                          )})`
+                                      )
+                                      .join(" | ")}
+                                  </div>
+                                ) : null}
                                 {recentEarnings.length > 0 ? (
                                   <div className="staff-list" style={{ marginTop: 12 }}>
                                     {recentEarnings.map((earning) => (
