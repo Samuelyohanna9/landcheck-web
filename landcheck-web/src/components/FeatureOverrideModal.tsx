@@ -716,9 +716,15 @@ export default function FeatureOverrideModal({
   ]);
   const [screenCursor, setScreenCursor] = useState<{ x: number; y: number } | null>(null);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const historyIndexRef = useRef<number>(-1);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState<number>(0);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
+
+  const suggestions = useMemo(() => {
+    const input = commandInput.trim().toUpperCase();
+    if (!input) return [];
+    return ALL_COMMANDS.filter((cmd) => cmd.startsWith(input) || cmd.split(" ").some(part => part.startsWith(input)));
+  }, [commandInput]);
 
   const activeMetrics = useMemo(() => draftMetrics || selectedMetrics, [draftMetrics, selectedMetrics]);
   const plottingDraftGeometry = useMemo(
@@ -855,6 +861,18 @@ export default function FeatureOverrideModal({
       labelY: (last.y + hover.y) / 2 - 12,
     };
   }, [activeTool, draftingAssist.measure, plottingHoverPoint, plottingPoints, plottingPreviewPoints, plottingViewport]);
+
+  const pushCommandMessage = useCallback((message: string) => {
+    setCommandMessages((previous) => [...previous.slice(-7), message]);
+  }, []);
+
+  const activateSelectionMode = useCallback((mode: SelectionMode) => {
+    setSelectionMode((previous) => (previous === mode ? null : mode));
+    setActiveTool("select");
+    setPlottingPoints([]);
+    setPlottingHoverPoint(null);
+    setSelectionDrag(null);
+  }, []);
 
   const isStyleReady = useCallback((map: mapboxgl.Map | null) => {
     if (!map) return false;
@@ -1880,13 +1898,7 @@ export default function FeatureOverrideModal({
     setOsnapModes((previous) => ({ ...previous, [key]: !previous[key] }));
   }, []);
 
-  const activateSelectionMode = useCallback((mode: SelectionMode) => {
-    setSelectionMode((previous) => (previous === mode ? null : mode));
-    setActiveTool("select");
-    setPlottingPoints([]);
-    setPlottingHoverPoint(null);
-    setSelectionDrag(null);
-  }, []);
+
 
   const resolveSelectionKeysFromShape = useCallback(
     (shape: SelectionDrag) => {
@@ -2015,9 +2027,7 @@ export default function FeatureOverrideModal({
     });
   }, [plottingViewport.height, plottingViewport.width]);
 
-  const pushCommandMessage = useCallback((message: string) => {
-    setCommandMessages((previous) => [...previous.slice(-7), message]);
-  }, []);
+
 
   const runCadCommand = useCallback(
     (rawInput: string) => {
@@ -2204,7 +2214,7 @@ export default function FeatureOverrideModal({
       if (prev.length > 0 && prev[0] === next) return prev;
       return [next, ...prev].slice(0, 50);
     });
-    setHistoryIndex(-1);
+    historyIndexRef.current = -1;
     setCommandInput("");
     setShowSuggestions(false);
   }, [commandInput, runCadCommand]);
@@ -2221,7 +2231,7 @@ export default function FeatureOverrideModal({
       if (prev.length > 0 && prev[0] === suggestion) return prev;
       return [suggestion, ...prev].slice(0, 50);
     });
-    setHistoryIndex(-1);
+    historyIndexRef.current = -1;
     setCommandInput("");
     setShowSuggestions(false);
   };
@@ -2253,7 +2263,7 @@ export default function FeatureOverrideModal({
             if (prev.length > 0 && prev[0] === selectedCmd) return prev;
             return [selectedCmd, ...prev].slice(0, 50);
           });
-          setHistoryIndex(-1);
+          historyIndexRef.current = -1;
           setCommandInput("");
           setShowSuggestions(false);
           return;
@@ -2268,28 +2278,24 @@ export default function FeatureOverrideModal({
       if (event.key === "ArrowUp") {
         event.preventDefault();
         if (commandHistory.length > 0) {
-          setHistoryIndex((prevIndex) => {
-            const nextIndex = prevIndex + 1;
-            if (nextIndex < commandHistory.length) {
-              setCommandInput(commandHistory[nextIndex]);
-              return nextIndex;
-            }
-            return prevIndex;
-          });
+          const nextIndex = historyIndexRef.current + 1;
+          if (nextIndex < commandHistory.length) {
+            setCommandInput(commandHistory[nextIndex]);
+            historyIndexRef.current = nextIndex;
+          }
         }
         return;
       }
       if (event.key === "ArrowDown") {
         event.preventDefault();
-        setHistoryIndex((prevIndex) => {
-          const nextIndex = prevIndex - 1;
-          if (nextIndex >= 0) {
-            setCommandInput(commandHistory[nextIndex]);
-            return nextIndex;
-          }
+        const nextIndex = historyIndexRef.current - 1;
+        if (nextIndex >= 0) {
+          setCommandInput(commandHistory[nextIndex]);
+          historyIndexRef.current = nextIndex;
+        } else {
           setCommandInput("");
-          return -1;
-        });
+          historyIndexRef.current = -1;
+        }
         return;
       }
 
