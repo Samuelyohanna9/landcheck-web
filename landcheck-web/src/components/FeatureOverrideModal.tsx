@@ -775,6 +775,9 @@ export default function FeatureOverrideModal({
   const [cursor, setCursor] = useState<{ lng: number; lat: number } | null>(null);
   const [activeTool, setActiveTool] = useState<EditorTool>("select");
   const [basemapMode, setBasemapMode] = useState<BasemapMode>("satellite");
+  const [showLeftSidebar, setShowLeftSidebar] = useState(false);
+  const [showRightSidebar, setShowRightSidebar] = useState(false);
+  const [showTopToolbar, setShowTopToolbar] = useState(false);
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>(DEFAULT_LAYER_VISIBILITY);
   const [featureInventory, setFeatureInventory] = useState<FeatureInventory>(DEFAULT_INVENTORY);
   const [featureCollections, setFeatureCollections] = useState<FeatureCollectionState>(DEFAULT_FEATURE_COLLECTIONS);
@@ -2509,12 +2512,42 @@ export default function FeatureOverrideModal({
             <h3>Feature CAD Editor</h3>
             <p>Use the drafting tools to add, update, or remove detected roads, buildings, rivers, and fences.</p>
           </div>
-          <button className="feature-override-close" onClick={onClose}>
-            Close
-          </button>
+          <div className="cad-header-actions" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <button
+              type="button"
+              className={`cad-header-toggle-btn${showLeftSidebar ? " active" : ""}`}
+              onClick={() => setShowLeftSidebar(!showLeftSidebar)}
+              title="Toggle Feature Setup & Layers Panel"
+            >
+              <span className="cad-indicator-dot" />
+              Setup &amp; Layers
+            </button>
+            <button
+              type="button"
+              className={`cad-header-toggle-btn${showTopToolbar ? " active" : ""}`}
+              onClick={() => setShowTopToolbar(!showTopToolbar)}
+              title="Toggle Top Toolbar"
+            >
+              <span className="cad-indicator-dot" />
+              Toolbar
+            </button>
+            <button
+              type="button"
+              className={`cad-header-toggle-btn${showRightSidebar ? " active" : ""}`}
+              onClick={() => setShowRightSidebar(!showRightSidebar)}
+              title="Toggle Properties &amp; Coordinates Panel"
+            >
+              <span className="cad-indicator-dot" />
+              Inspector
+            </button>
+            <button className="feature-override-close" onClick={onClose}>
+              Close
+            </button>
+          </div>
         </div>
 
-        <div className="cad-editor-toolbar">
+        {showTopToolbar && (
+          <div className="cad-editor-toolbar">
           <div className="cad-toolbar-group">
             <span className="cad-toolbar-label">Tools</span>
             <button
@@ -2642,13 +2675,27 @@ export default function FeatureOverrideModal({
             </span>
           </div>
         </div>
+        )}
 
-        <div className="cad-editor-body">
-          <aside className="cad-editor-sidebar">
+        <div
+          className="cad-editor-body"
+          style={{
+            gridTemplateColumns: `${showLeftSidebar ? "320px" : "0px"} minmax(0, 1fr) ${showRightSidebar ? "320px" : "0px"}`,
+          }}
+        >
+          <aside className="cad-editor-sidebar" style={{ display: showLeftSidebar ? "block" : "none" }}>
             <section className="cad-panel">
-              <div className="cad-panel-head">
+              <div className="cad-panel-head" style={{ position: "relative" }}>
                 <strong>Feature Setup</strong>
                 <span>Type and properties for the active command</span>
+                <button
+                  type="button"
+                  className="cad-panel-close-btn"
+                  onClick={() => setShowLeftSidebar(false)}
+                  title="Collapse panel"
+                >
+                  &times;
+                </button>
               </div>
               <div className="feature-override-controls cad-form-grid">
                 <div className="field">
@@ -2777,8 +2824,9 @@ export default function FeatureOverrideModal({
                 {selectionMode ? <span className="cad-badge cad-badge--ghost">{selectionMode} select</span> : null}
               </div>
             </div>
-            {basemapMode === "plotting" ? (
-              <div className="feature-override-map cad-plotting-stage" ref={plottingStageRef}>
+            <div className="cad-canvas-workspace-wrapper" style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+              {basemapMode === "plotting" ? (
+                <div className="feature-override-map cad-plotting-stage" ref={plottingStageRef}>
                 <div className="cad-plotting-help">
                   Wheel to zoom. Hold middle mouse and drag to pan.
                   {selectionMode ? ` ${selectionMode === "box" ? "Drag a window to select multiple objects." : "Trace a lasso to select multiple objects."}` : ""}
@@ -3351,6 +3399,30 @@ export default function FeatureOverrideModal({
                 ref={containerRef}
               />
             )}
+
+            {!showLeftSidebar && (
+              <button
+                type="button"
+                className="cad-floating-tab cad-floating-tab--left"
+                onClick={() => setShowLeftSidebar(true)}
+                title="Show Setup &amp; Layers"
+              >
+                <span className="cad-floating-tab-arrow">&gt;</span>
+                <span className="cad-floating-tab-text">Setup &amp; Layers</span>
+              </button>
+            )}
+            {!showRightSidebar && (
+              <button
+                type="button"
+                className="cad-floating-tab cad-floating-tab--right"
+                onClick={() => setShowRightSidebar(true)}
+                title="Show Properties &amp; Inspector"
+              >
+                <span className="cad-floating-tab-arrow">&lt;</span>
+                <span className="cad-floating-tab-text">Inspector</span>
+              </button>
+            )}
+          </div>
             <div className="cad-status-bar">
               <span>
                 Cursor:{" "}
@@ -3384,9 +3456,9 @@ export default function FeatureOverrideModal({
             </div>
           </div>
 
-          <aside className="cad-editor-inspector">
+          <aside className="cad-editor-inspector" style={{ display: showRightSidebar ? "block" : "none" }}>
             <section className="cad-panel">
-              <div className="cad-panel-head">
+              <div className="cad-panel-head" style={{ position: "relative" }}>
                 <strong>Properties</strong>
                 <span>
                   {selectedObjectCount > 1
@@ -3395,6 +3467,14 @@ export default function FeatureOverrideModal({
                       ? "Selected feature metadata"
                       : "No selected feature"}
                 </span>
+                <button
+                  type="button"
+                  className="cad-panel-close-btn"
+                  onClick={() => setShowRightSidebar(false)}
+                  title="Collapse panel"
+                >
+                  &times;
+                </button>
               </div>
               {selectedObjectCount > 1 ? (
                 <div className="cad-selection-summary">
