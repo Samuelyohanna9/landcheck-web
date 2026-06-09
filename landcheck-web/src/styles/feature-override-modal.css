@@ -646,9 +646,8 @@
 
 .cad-svg-boundary {
   fill: rgba(15, 23, 42, 0.1);
-  stroke: #f8fafc;
+  stroke: #ef4444;
   stroke-width: 2.2;
-  stroke-dasharray: 7 6;
 }
 
 .cad-svg-feature {
@@ -669,7 +668,81 @@
 .cad-svg-feature--fence {
   stroke: #fda4af;
   stroke-width: 2;
-  stroke-dasharray: 8 6;
+}
+
+/* AutoCAD Layout Sheet & Title Block Column */
+.cad-title-block text {
+  font-family: 'Outfit', 'Inter', monospace;
+  user-select: none;
+}
+
+.cad-title-block line {
+  stroke: #1e293b;
+}
+
+/* Bearing and Distance Text Labels */
+.cad-svg-bearing-label {
+  fill: #e2e8f0;
+  font-size: 8.5px;
+  font-family: monospace;
+  font-weight: bold;
+  text-anchor: middle;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: #020617;
+  stroke-width: 2px;
+  stroke-linejoin: round;
+}
+
+/* Beacon symbols at vertices */
+.cad-svg-beacon circle,
+.cad-svg-beacon rect,
+.cad-svg-beacon polygon,
+.cad-svg-beacon line {
+  stroke: #ef4444;
+  vector-effect: non-scaling-stroke;
+}
+
+.cad-svg-beacon-text {
+  fill: #f8fafc;
+  font-size: 10px;
+  font-family: monospace;
+  font-weight: bold;
+}
+
+/* UCS Coordinate Axis Icon */
+.cad-svg-ucs line {
+  stroke: #64748b;
+}
+
+.cad-svg-ucs text {
+  fill: #94a3b8;
+  font-size: 10px;
+  font-family: monospace;
+}
+
+/* North Arrow */
+.cad-north-arrow circle,
+.cad-north-arrow polygon,
+.cad-north-arrow line {
+  stroke: #cbd5e1;
+  fill: #cbd5e1;
+}
+
+.cad-north-arrow--blue circle,
+.cad-north-arrow--blue polygon,
+.cad-north-arrow--blue line {
+  stroke: #38bdf8;
+  fill: #38bdf8;
+}
+
+.cad-north-arrow text {
+  fill: #cbd5e1;
+  font-family: monospace;
+}
+
+.cad-north-arrow--blue text {
+  fill: #38bdf8;
 }
 
 .cad-svg-feature--building {

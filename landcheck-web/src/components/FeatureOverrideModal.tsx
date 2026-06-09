@@ -64,6 +64,30 @@ type SelectionDrag =
     }
   | null;
 
+type BeaconStyle = "circle" | "square" | "triangle" | "diamond" | "cross";
+type NorthArrowColor = "black" | "blue";
+
+type ManualPoint = {
+  station: string;
+  lng: number;
+  lat: number;
+  height?: number;
+};
+
+type PlotMeta = {
+  title_text: string;
+  location_text: string;
+  lga_text: string;
+  state_text: string;
+  surveyor_name: string;
+  surveyor_rank: string;
+  certification_statement: string;
+  scale_text: string;
+  paper_size: string;
+  template_name: "general" | "adamawa_osg";
+  [key: string]: any;
+};
+
 type Props = {
   isOpen: boolean;
   onClose: () => void;
@@ -78,6 +102,10 @@ type Props = {
   roadWidth: "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
   setRoadWidth: (v: "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30") => void;
   plotId: number | null;
+  meta: PlotMeta;
+  manualPoints: ManualPoint[];
+  beaconStyle: BeaconStyle;
+  northArrowColor: NorthArrowColor;
 };
 
 const DEFAULT_LAYER_VISIBILITY: LayerVisibility = {
@@ -104,9 +132,9 @@ const DEFAULT_FEATURE_COLLECTIONS: FeatureCollectionState = {
   fence: EMPTY_FEATURE_COLLECTION,
 };
 
-const PLOTTING_VIEWPORT_WIDTH = 1280;
-const PLOTTING_VIEWPORT_HEIGHT = 820;
-const PLOTTING_VIEWPORT_PADDING = 84;
+const PLOTTING_VIEWPORT_WIDTH = 950;
+const PLOTTING_VIEWPORT_HEIGHT = 760;
+const PLOTTING_VIEWPORT_PADDING = 64;
 const DEFAULT_PLOTTING_CAMERA: PlottingCamera = {
   zoom: 1,
   offsetX: 0,
@@ -160,6 +188,24 @@ const ALL_COMMANDS = [
 const EARTH_RADIUS_M = 6371008.8;
 
 const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+
+const getSegmentBearing = (p1: number[], p2: number[]) => {
+  const [lng1, lat1] = p1;
+  const [lng2, lat2] = p2;
+  const dLng = toRadians(lng2 - lng1);
+  const lat1Rad = toRadians(lat1);
+  const lat2Rad = toRadians(lat2);
+  const y = Math.sin(dLng) * Math.cos(lat2Rad);
+  const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
+  let bearing = (Math.atan2(y, x) * 180) / Math.PI;
+  if (bearing < 0) bearing += 360;
+  
+  const deg = Math.floor(bearing);
+  const minFloat = (bearing - deg) * 60;
+  const min = Math.floor(minFloat);
+  const sec = Math.round((minFloat - min) * 60);
+  return `${deg}° ${min.toString().padStart(2, "0")}' ${sec.toString().padStart(2, "0")}"`;
+};
 
 const haversineDistanceMeters = (start: number[], end: number[]) => {
   const [lng1, lat1] = start;
@@ -272,6 +318,16 @@ const formatArea = (sqm: number) => {
   if (!Number.isFinite(sqm) || sqm <= 0) return "0 sqm";
   if (sqm >= 10000) return `${(sqm / 10000).toFixed(3)} ha`;
   return `${sqm.toFixed(2)} sqm`;
+};
+
+const getStationName = (index: number): string => {
+  let name = "";
+  let num = index;
+  do {
+    name = String.fromCharCode(65 + (num % 26)) + name;
+    num = Math.floor(num / 26) - 1;
+  } while (num >= 0);
+  return name;
 };
 
 const getBoundsBox = (coords: number[][] | null) => {
@@ -669,6 +725,10 @@ export default function FeatureOverrideModal({
   roadWidth,
   setRoadWidth,
   plotId,
+  meta,
+  manualPoints,
+  beaconStyle,
+  northArrowColor,
 }: Props) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
@@ -1709,8 +1769,8 @@ export default function FeatureOverrideModal({
 
   const plottingScreenToCanvasPoint = useCallback(
     (point: { x: number; y: number }) => ({
-      x: (point.x - plottingCamera.offsetX) / plottingCamera.zoom,
-      y: (point.y - plottingCamera.offsetY) / plottingCamera.zoom,
+      x: (point.x - 30 - plottingCamera.offsetX) / plottingCamera.zoom,
+      y: (point.y - 30 - plottingCamera.offsetY) / plottingCamera.zoom,
     }),
     [plottingCamera.offsetX, plottingCamera.offsetY, plottingCamera.zoom]
   );
@@ -1812,9 +1872,9 @@ export default function FeatureOverrideModal({
         setPlottingHoverPoint([lng, lat]);
       }
 
-      // AutoCAD style screen cursor coordinate projection for snaps
-      const screenX = plottingCamera.offsetX + pointer.x * plottingCamera.zoom;
-      const screenY = plottingCamera.offsetY + pointer.y * plottingCamera.zoom;
+      // AutoCAD style screen cursor coordinate projection for snaps (offset by layout 30px)
+      const screenX = 30 + plottingCamera.offsetX + pointer.x * plottingCamera.zoom;
+      const screenY = 30 + plottingCamera.offsetY + pointer.y * plottingCamera.zoom;
       setScreenCursor({ x: screenX, y: screenY });
     },
     [activeTool, basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport, resolvePlottingCanvasPoint, selectionDrag, plottingCamera.offsetX, plottingCamera.offsetY, plottingCamera.zoom]
@@ -1830,8 +1890,11 @@ export default function FeatureOverrideModal({
       }
       if (selectionMode) return;
       event.preventDefault();
+      const rawPointer = getPlottingPointer(event.currentTarget, event.clientX, event.clientY);
+      // Prevent drawing clicks outside the viewport bounds
+      if (rawPointer.x < 30 || rawPointer.x > 980 || rawPointer.y < 30 || rawPointer.y > 790) return;
       const { point: pointer, label } = resolvePlottingCanvasPoint(
-        getPlottingPointer(event.currentTarget, event.clientX, event.clientY)
+        plottingScreenToCanvasPoint(rawPointer)
       );
       const [lng, lat] = plottingViewport.unproject(pointer);
       setPlottingPoints((previous) => [...previous, [lng, lat]]);
@@ -2685,7 +2748,7 @@ export default function FeatureOverrideModal({
                 </div>
                 <svg
                   className={`cad-plotting-svg${plottingPanActive ? " is-panning" : ""}`}
-                  viewBox={`0 0 ${plottingViewport.width} ${plottingViewport.height}`}
+                  viewBox="0 0 1280 820"
                   onMouseMove={handlePlottingMouseMove}
                   onMouseDown={handlePlottingMouseDown}
                   onMouseUp={handlePlottingMouseUp}
@@ -2695,228 +2758,387 @@ export default function FeatureOverrideModal({
                   onDoubleClick={handlePlottingCanvasDoubleClick}
                   onAuxClick={(event) => event.preventDefault()}
                 >
-                  <rect x="0" y="0" width={plottingViewport.width} height={plottingViewport.height} className="cad-plot-bg" />
-                  <g transform={`translate(${plottingCamera.offsetX.toFixed(2)} ${plottingCamera.offsetY.toFixed(2)}) scale(${plottingCamera.zoom.toFixed(3)})`}>
-                    {plottingGridLines.map((line) => (
-                      <line
-                        key={line.key}
-                        x1={line.x1}
-                        y1={line.y1}
-                        x2={line.x2}
-                        y2={line.y2}
-                        className={line.major ? "cad-grid-line cad-grid-line--major" : "cad-grid-line cad-grid-line--minor"}
-                      />
-                    ))}
-                    {layerVisibility.boundary && plotCoords?.length ? (
-                      <polygon
-                        points={pointsToSvg(closeRing(plotCoords), plottingViewport.project)}
-                        className="cad-svg-boundary"
-                      />
-                    ) : null}
-                    {layerVisibility.road &&
-                      featureCollections.road.features.map((feature, index) => {
-                        const geometry = feature?.geometry;
-                        if (geometry?.type !== "LineString") return null;
-                        const labelPoint = getFeatureLabelPoint(geometry, plottingViewport.project);
-                        const descriptor = objectRecords.find((record) => record.key === `road-${index}`);
-                        const isMultiSelected = descriptor ? multiSelectedKeys.includes(descriptor.key) : false;
-                        return (
-                          <g key={`road-${index}`} onClick={() => handlePlottingFeatureSelect("road", feature, descriptor || undefined)}>
-                            <polyline
-                              points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
-                              className="cad-svg-feature cad-svg-feature--road"
-                            />
-                            {isMultiSelected ? (
-                              <polyline
-                                points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
-                                className="cad-svg-multiselect"
-                              />
-                            ) : null}
-                            {labelPoint ? (
-                              <text x={labelPoint.x + 8} y={labelPoint.y - 8} className="cad-svg-label">
-                                {feature?.properties?.name || `Road ${index + 1}`}
-                              </text>
-                            ) : null}
-                          </g>
-                        );
-                      })}
-                    {layerVisibility.river &&
-                      featureCollections.river.features.map((feature, index) => {
-                        const geometry = feature?.geometry;
-                        if (geometry?.type !== "LineString") return null;
-                        const descriptor = objectRecords.find((record) => record.key === `river-${index}`);
-                        const isMultiSelected = descriptor ? multiSelectedKeys.includes(descriptor.key) : false;
-                        return (
-                          <g key={`river-${index}`} onClick={() => handlePlottingFeatureSelect("river", feature, descriptor || undefined)}>
-                            <polyline
-                              points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
-                              className="cad-svg-feature cad-svg-feature--river"
-                            />
-                            {isMultiSelected ? (
-                              <polyline
-                                points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
-                                className="cad-svg-multiselect"
-                              />
-                            ) : null}
-                          </g>
-                        );
-                      })}
-                    {layerVisibility.fence &&
-                      featureCollections.fence.features.map((feature, index) => {
-                        const geometry = feature?.geometry;
-                        if (geometry?.type !== "LineString") return null;
-                        const descriptor = objectRecords.find((record) => record.key === `fence-${index}`);
-                        const isMultiSelected = descriptor ? multiSelectedKeys.includes(descriptor.key) : false;
-                        return (
-                          <g key={`fence-${index}`} onClick={() => handlePlottingFeatureSelect("fence", feature, descriptor || undefined)}>
-                            <polyline
-                              points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
-                              className="cad-svg-feature cad-svg-feature--fence"
-                            />
-                            {isMultiSelected ? (
-                              <polyline
-                                points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
-                                className="cad-svg-multiselect"
-                              />
-                            ) : null}
-                          </g>
-                        );
-                      })}
-                    {layerVisibility.building &&
-                      featureCollections.building.features.map((feature, index) => {
-                        const geometry = feature?.geometry;
-                        const ring = Array.isArray(geometry?.coordinates?.[0]) ? geometry.coordinates[0] : null;
-                        if (!ring) return null;
-                        const labelPoint = getFeatureLabelPoint(geometry, plottingViewport.project);
-                        const descriptor = objectRecords.find((record) => record.key === `building-${index}`);
-                        const isMultiSelected = descriptor ? multiSelectedKeys.includes(descriptor.key) : false;
-                        return (
-                          <g key={`building-${index}`} onClick={() => handlePlottingFeatureSelect("building", feature, descriptor || undefined)}>
-                            <polygon
-                              points={pointsToSvg(ring, plottingViewport.project)}
-                              className="cad-svg-feature cad-svg-feature--building"
-                            />
-                            {isMultiSelected ? (
-                              <polygon
-                                points={pointsToSvg(ring, plottingViewport.project)}
-                                className="cad-svg-multiselect"
-                              />
-                            ) : null}
-                            {labelPoint ? (
-                              <text x={labelPoint.x + 8} y={labelPoint.y - 8} className="cad-svg-label">
-                                BLD-{index + 1}
-                              </text>
-                            ) : null}
-                          </g>
-                        );
-                      })}
-                    {selectedGeometry?.type === "LineString" ? (
-                      <polyline
-                        points={pointsToSvg(selectedGeometry.coordinates || [], plottingViewport.project)}
-                        className="cad-svg-selected"
-                      />
-                    ) : null}
-                    {selectedGeometry?.type === "Polygon" && Array.isArray(selectedGeometry.coordinates?.[0]) ? (
-                      <polygon
-                        points={pointsToSvg(selectedGeometry.coordinates[0], plottingViewport.project)}
-                        className="cad-svg-selected"
-                      />
-                    ) : null}
-                    {plottingDraftGeometry?.type === "LineString" ? (
-                      <polyline
-                        points={pointsToSvg((plottingDraftGeometry.coordinates || []) as number[][], plottingViewport.project)}
-                        className="cad-svg-draft"
-                      />
-                    ) : null}
-                    {plottingDraftGeometry?.type === "Polygon" && Array.isArray(plottingDraftGeometry.coordinates?.[0]) ? (
-                      <polygon
-                        points={pointsToSvg(plottingDraftGeometry.coordinates[0] as number[][], plottingViewport.project)}
-                        className="cad-svg-draft cad-svg-draft--polygon"
-                      />
-                    ) : null}
-                    {plottingPoints.map((point, index) => {
-                      const projected = plottingViewport.project(point);
-                      return <circle key={`pt-${index}`} cx={projected.x} cy={projected.y} r="4.5" className="cad-svg-vertex" />;
+                  <defs>
+                    <clipPath id="cad-viewport-clip">
+                      <rect x="0" y="0" width="950" height="760" />
+                    </clipPath>
+                  </defs>
+                  
+                  {/* Outer paper sheet grid background */}
+                  <rect x="0" y="0" width="1280" height="820" className="cad-plot-bg" />
+                  
+                  {/* Static double borders */}
+                  <rect x="15" y="15" width="1250" height="790" fill="none" stroke="#1e293b" strokeWidth="1.5" />
+                  <rect x="30" y="30" width="1220" height="760" fill="none" stroke="#475569" strokeWidth="2.2" />
+                  
+                  {/* Static AutoCAD Title Block Column on the right */}
+                  <line x1="980" y1="30" x2="980" y2="790" stroke="#475569" strokeWidth="2.2" />
+                  
+                  <g className="cad-title-block">
+                    {/* Brand header */}
+                    <text x="1115" y="60" textAnchor="middle" fill="#67e8f9" fontSize="13" fontWeight="bold" letterSpacing="0.08em" fontFamily="monospace">LANDCHECK SURVEYS</text>
+                    <line x1="980" y1="75" x2="1250" y2="75" stroke="#334155" strokeWidth="1.5" />
+                    
+                    {/* Title */}
+                    <text x="1115" y="102" textAnchor="middle" fill="#f8fafc" fontSize="14" fontWeight="bold" letterSpacing="0.05em" fontFamily="monospace">{meta.title_text || "SURVEY PLAN"}</text>
+                    <line x1="980" y1="115" x2="1250" y2="115" stroke="#334155" strokeWidth="1.5" />
+                    
+                    {/* Location Metadata */}
+                    <text x="995" y="138" fill="#86efac" fontSize="9" fontWeight="bold" fontFamily="monospace" letterSpacing="0.05em">LOCATION METADATA</text>
+                    <text x="995" y="160" fill="#cbd5e1" fontSize="10" fontFamily="monospace">STATE: {meta.state_text || "ADAMAWA"}</text>
+                    <text x="995" y="180" fill="#cbd5e1" fontSize="10" fontFamily="monospace">L.G.A.: {meta.lga_text || "YOLA NORTH"}</text>
+                    <text x="995" y="200" fill="#cbd5e1" fontSize="10" fontFamily="monospace" clipPath="url(#cad-viewport-clip)">LOC: {meta.location_text || "PILOT PLOT"}</text>
+                    <line x1="980" y1="215" x2="1250" y2="215" stroke="#334155" strokeWidth="1.5" />
+                    
+                    {/* Surveyor Details */}
+                    <text x="995" y="238" fill="#86efac" fontSize="9" fontWeight="bold" fontFamily="monospace" letterSpacing="0.05em">LICENSED SURVEYOR</text>
+                    <text x="995" y="260" fill="#f8fafc" fontSize="11" fontWeight="bold" fontFamily="monospace">{meta.surveyor_name || "STAFF SURVEYOR"}</text>
+                    <text x="995" y="278" fill="#94a3b8" fontSize="10" fontFamily="monospace">RANK: {meta.surveyor_rank || "SURVEYOR GENERAL"}</text>
+                    <line x1="980" y1="295" x2="1250" y2="295" stroke="#334155" strokeWidth="1.5" />
+                    
+                    {/* Scale */}
+                    <text x="995" y="318" fill="#86efac" fontSize="9" fontWeight="bold" fontFamily="monospace" letterSpacing="0.05em">PLAN SCALE</text>
+                    <text x="1115" y="342" textAnchor="middle" fill="#cbd5e1" fontSize="13" fontWeight="bold" fontFamily="monospace">{meta.scale_text || "1 : 1000"}</text>
+                    <line x1="980" y1="358" x2="1250" y2="358" stroke="#334155" strokeWidth="1.5" />
+                    
+                    {/* Coordinate Grid Table */}
+                    <text x="995" y="380" fill="#86efac" fontSize="9" fontWeight="bold" fontFamily="monospace" letterSpacing="0.05em">COORDINATE TABLE (WGS84)</text>
+                    
+                    {/* Table headers */}
+                    <g fill="#67e8f9" fontSize="9" fontWeight="bold" fontFamily="monospace">
+                      <text x="1010" y="405" textAnchor="middle">STN</text>
+                      <text x="1075" y="405" textAnchor="middle">EASTING</text>
+                      <text x="1175" y="405" textAnchor="middle">NORTHING</text>
+                    </g>
+                    <line x1="990" y1="412" x2="1240" y2="412" stroke="#475569" strokeWidth="1.2" />
+                    
+                    {/* Table vertical borders */}
+                    <line x1="1040" y1="392" x2="1040" y2="612" stroke="#475569" strokeWidth="1" />
+                    <line x1="1120" y1="392" x2="1120" y2="612" stroke="#475569" strokeWidth="1" />
+                    
+                    {/* Table Rows (WGS 84 Coordinates) */}
+                    {manualPoints.slice(0, 8).map((pt: ManualPoint, index: number) => {
+                      const station = getStationName(index);
+                      const xVal = pt.lng !== 0 ? pt.lng.toFixed(5) : "--";
+                      const yVal = pt.lat !== 0 ? pt.lat.toFixed(5) : "--";
+                      const rowY = 428 + index * 22;
+                      return (
+                        <g key={`tbl-row-${index}`} fill="#e2e8f0" fontSize="9.5" fontFamily="monospace">
+                          <text x="1015" y={rowY} textAnchor="middle" fontWeight="bold">{station}</text>
+                          <text x="1080" y={rowY} textAnchor="middle">{xVal}</text>
+                          <text x="1180" y={rowY} textAnchor="middle">{yVal}</text>
+                          <line x1="990" y1={rowY + 6} x2="1240" y2={rowY + 6} stroke="#334155" strokeWidth="0.75" />
+                        </g>
+                      );
                     })}
-                    {draftingAssist.ortho && plottingPoints.length > 0 && plottingHoverPoint && (
-                      <line
-                        x1={plottingViewport.project(plottingPoints[plottingPoints.length - 1]).x}
-                        y1={plottingViewport.project(plottingPoints[plottingPoints.length - 1]).y}
-                        x2={plottingViewport.project(plottingHoverPoint).x}
-                        y2={plottingViewport.project(plottingHoverPoint).y}
-                        stroke="#9ca3af"
-                        strokeDasharray="4,4"
-                        strokeWidth="1.5"
-                      />
-                    )}
-                    {plottingSnapState && draftingAssist.snap && (
-                      <g className="cad-snap-marker">
-                        {plottingSnapState.type === "endpoint" && (
-                          <rect
-                            x={plottingSnapState.x - 6}
-                            y={plottingSnapState.y - 6}
-                            width="12"
-                            height="12"
-                            fill="none"
-                            stroke="#22c55e"
-                            strokeWidth="2"
+                    
+                    {/* Info footer */}
+                    <line x1="980" y1="620" x2="1250" y2="620" stroke="#334155" strokeWidth="1.5" />
+                    <text x="995" y="640" fill="#94a3b8" fontSize="8" fontFamily="monospace">REFERENCE ORIGIN: WGS 84 ZONE 33N</text>
+                    <text x="995" y="655" fill="#94a3b8" fontSize="8" fontFamily="monospace">SHEET SIZE: {meta.paper_size || "A4"}</text>
+                    <text x="1115" y="775" textAnchor="middle" fill="#64748b" fontSize="8.5" fontFamily="monospace" fontWeight="bold">© AUTOMATIC PLAN GENERATION</text>
+                  </g>
+                  
+                  {/* Clipped map viewport group */}
+                  <g transform="translate(30, 30)">
+                    <g clipPath="url(#cad-viewport-clip)">
+                      {/* Panned/zoomed group */}
+                      <g transform={`translate(${plottingCamera.offsetX.toFixed(2)} ${plottingCamera.offsetY.toFixed(2)}) scale(${plottingCamera.zoom.toFixed(3)})`}>
+                        {plottingGridLines.map((line) => (
+                          <line
+                            key={line.key}
+                            x1={line.x1}
+                            y1={line.y1}
+                            x2={line.x2}
+                            y2={line.y2}
+                            className={line.major ? "cad-grid-line cad-grid-line--major" : "cad-grid-line cad-grid-line--minor"}
                           />
-                        )}
-                        {plottingSnapState.type === "midpoint" && (
+                        ))}
+                        {layerVisibility.boundary && plotCoords?.length ? (
                           <polygon
-                            points={`${plottingSnapState.x},${plottingSnapState.y - 7} ${plottingSnapState.x - 7},${plottingSnapState.y + 5} ${plottingSnapState.x + 7},${plottingSnapState.y + 5}`}
-                            fill="none"
-                            stroke="#22c55e"
-                            strokeWidth="2"
+                            points={pointsToSvg(closeRing(plotCoords), plottingViewport.project)}
+                            className="cad-svg-boundary"
+                          />
+                        ) : null}
+
+                        {/* AutoCAD style geodesic Bearings and Distances labels parallel to boundary segments */}
+                        {layerVisibility.boundary && plotCoords && plotCoords.length >= 2 && (() => {
+                          const labels: any[] = [];
+                          for (let i = 0; i < plotCoords.length - 1; i++) {
+                            const start = plotCoords[i];
+                            const end = plotCoords[i + 1];
+                            const pStart = plottingViewport.project(start);
+                            const pEnd = plottingViewport.project(end);
+                            const midX = (pStart.x + pEnd.x) / 2;
+                            const midY = (pStart.y + pEnd.y) / 2;
+                            const dist = haversineDistanceMeters(start, end);
+                            const bearingStr = getSegmentBearing(start, end);
+                            const distStr = `${dist.toFixed(2)} m`;
+                            
+                            let angleRad = Math.atan2(pEnd.y - pStart.y, pEnd.x - pStart.x);
+                            let angleDeg = (angleRad * 180) / Math.PI;
+                            if (angleDeg > 90 || angleDeg < -90) {
+                              angleDeg += 180;
+                            }
+                            
+                            labels.push(
+                              <g key={`lbl-${i}`} transform={`translate(${midX}, ${midY}) rotate(${angleDeg})`}>
+                                <text y="-5" className="cad-svg-bearing-label" textAnchor="middle">{bearingStr}</text>
+                                <text y="7" className="cad-svg-bearing-label" textAnchor="middle">{distStr}</text>
+                              </g>
+                            );
+                          }
+                          return labels;
+                        })()}
+
+                        {/* Beacons and Station Names (A, B, C...) at vertices */}
+                        {layerVisibility.boundary && plotCoords && plotCoords.slice(0, -1).map((coord, index) => {
+                          const projected = plottingViewport.project(coord);
+                          const station = getStationName(index);
+                          return (
+                            <g key={`beacon-${index}`} className="cad-svg-beacon">
+                              {beaconStyle === "circle" && <circle cx={projected.x} cy={projected.y} r="5.5" fill="none" stroke="#ef4444" strokeWidth="1.4" />}
+                              {beaconStyle === "square" && <rect x={projected.x - 4.5} y={projected.y - 4.5} width="9" height="9" fill="none" stroke="#ef4444" strokeWidth="1.4" />}
+                              {beaconStyle === "triangle" && <polygon points={`${projected.x},${projected.y - 5.5} ${projected.x - 5.5},${projected.y + 4.5} ${projected.x + 5.5},${projected.y + 4.5}`} fill="none" stroke="#ef4444" strokeWidth="1.4" />}
+                              {beaconStyle === "diamond" && <polygon points={`${projected.x},${projected.y - 5.5} ${projected.x - 5.5},${projected.y} ${projected.x},${projected.y + 5.5} ${projected.x + 5.5},${projected.y}`} fill="none" stroke="#ef4444" strokeWidth="1.4" />}
+                              {beaconStyle === "cross" && (
+                                <g stroke="#ef4444" strokeWidth="1.4">
+                                  <line x1={projected.x - 5.5} y1={projected.y} x2={projected.x + 5.5} y2={projected.y} />
+                                  <line x1={projected.x} y1={projected.y - 5.5} x2={projected.x} y2={projected.y + 5.5} />
+                                </g>
+                              )}
+                              <circle cx={projected.x} cy={projected.y} r="1.2" fill="#ef4444" />
+                              <text x={projected.x + 7} y={projected.y - 7} className="cad-svg-beacon-text" fill="#ef4444" fontSize="10.5" fontWeight="bold" fontFamily="monospace" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.85)" }}>{station}</text>
+                            </g>
+                          );
+                        })}
+
+                        {layerVisibility.road &&
+                          featureCollections.road.features.map((feature, index) => {
+                            const geometry = feature?.geometry;
+                            if (geometry?.type !== "LineString") return null;
+                            const labelPoint = getFeatureLabelPoint(geometry, plottingViewport.project);
+                            const descriptor = objectRecords.find((record) => record.key === `road-${index}`);
+                            const isMultiSelected = descriptor ? multiSelectedKeys.includes(descriptor.key) : false;
+                            return (
+                              <g key={`road-${index}`} onClick={() => handlePlottingFeatureSelect("road", feature, descriptor || undefined)}>
+                                <polyline
+                                  points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
+                                  className="cad-svg-feature cad-svg-feature--road"
+                                />
+                                {isMultiSelected ? (
+                                  <polyline
+                                    points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
+                                    className="cad-svg-multiselect"
+                                  />
+                                ) : null}
+                                {labelPoint ? (
+                                  <text x={labelPoint.x + 8} y={labelPoint.y - 8} className="cad-svg-label">
+                                    {feature?.properties?.name || `Road ${index + 1}`}
+                                  </text>
+                                ) : null}
+                              </g>
+                            );
+                          })}
+                        {layerVisibility.river &&
+                          featureCollections.river.features.map((feature, index) => {
+                            const geometry = feature?.geometry;
+                            if (geometry?.type !== "LineString") return null;
+                            const descriptor = objectRecords.find((record) => record.key === `river-${index}`);
+                            const isMultiSelected = descriptor ? multiSelectedKeys.includes(descriptor.key) : false;
+                            return (
+                              <g key={`river-${index}`} onClick={() => handlePlottingFeatureSelect("river", feature, descriptor || undefined)}>
+                                <polyline
+                                  points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
+                                  className="cad-svg-feature cad-svg-feature--river"
+                                />
+                                {isMultiSelected ? (
+                                  <polyline
+                                    points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
+                                    className="cad-svg-multiselect"
+                                  />
+                                ) : null}
+                              </g>
+                            );
+                          })}
+                        {layerVisibility.fence &&
+                          featureCollections.fence.features.map((feature, index) => {
+                            const geometry = feature?.geometry;
+                            if (geometry?.type !== "LineString") return null;
+                            const descriptor = objectRecords.find((record) => record.key === `fence-${index}`);
+                            const isMultiSelected = descriptor ? multiSelectedKeys.includes(descriptor.key) : false;
+                            return (
+                              <g key={`fence-${index}`} onClick={() => handlePlottingFeatureSelect("fence", feature, descriptor || undefined)}>
+                                <polyline
+                                  points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
+                                  className="cad-svg-feature cad-svg-feature--fence"
+                                />
+                                {isMultiSelected ? (
+                                  <polyline
+                                    points={pointsToSvg(geometry.coordinates || [], plottingViewport.project)}
+                                    className="cad-svg-multiselect"
+                                  />
+                                ) : null}
+                              </g>
+                            );
+                          })}
+                        {layerVisibility.building &&
+                          featureCollections.building.features.map((feature, index) => {
+                            const geometry = feature?.geometry;
+                            const ring = Array.isArray(geometry?.coordinates?.[0]) ? geometry.coordinates[0] : null;
+                            if (!ring) return null;
+                            const labelPoint = getFeatureLabelPoint(geometry, plottingViewport.project);
+                            const descriptor = objectRecords.find((record) => record.key === `building-${index}`);
+                            const isMultiSelected = descriptor ? multiSelectedKeys.includes(descriptor.key) : false;
+                            return (
+                              <g key={`building-${index}`} onClick={() => handlePlottingFeatureSelect("building", feature, descriptor || undefined)}>
+                                <polygon
+                                  points={pointsToSvg(ring, plottingViewport.project)}
+                                  className="cad-svg-feature cad-svg-feature--building"
+                                />
+                                {isMultiSelected ? (
+                                  <polygon
+                                    points={pointsToSvg(ring, plottingViewport.project)}
+                                    className="cad-svg-multiselect"
+                                  />
+                                ) : null}
+                                {labelPoint ? (
+                                  <text x={labelPoint.x + 8} y={labelPoint.y - 8} className="cad-svg-label">
+                                    BLD-{index + 1}
+                                  </text>
+                                ) : null}
+                              </g>
+                            );
+                          })}
+                        {selectedGeometry?.type === "LineString" ? (
+                          <polyline
+                            points={pointsToSvg(selectedGeometry.coordinates || [], plottingViewport.project)}
+                            className="cad-svg-selected"
+                          />
+                        ) : null}
+                        {selectedGeometry?.type === "Polygon" && Array.isArray(selectedGeometry.coordinates?.[0]) ? (
+                          <polygon
+                            points={pointsToSvg(selectedGeometry.coordinates[0], plottingViewport.project)}
+                            className="cad-svg-selected"
+                          />
+                        ) : null}
+                        {plottingDraftGeometry?.type === "LineString" ? (
+                          <polyline
+                            points={pointsToSvg((plottingDraftGeometry.coordinates || []) as number[][], plottingViewport.project)}
+                            className="cad-svg-draft"
+                          />
+                        ) : null}
+                        {plottingDraftGeometry?.type === "Polygon" && Array.isArray(plottingDraftGeometry.coordinates?.[0]) ? (
+                          <polygon
+                            points={pointsToSvg(plottingDraftGeometry.coordinates[0] as number[][], plottingViewport.project)}
+                            className="cad-svg-draft cad-svg-draft--polygon"
+                          />
+                        ) : null}
+                        {plottingPoints.map((point, index) => {
+                          const projected = plottingViewport.project(point);
+                          return <circle key={`pt-${index}`} cx={projected.x} cy={projected.y} r="4.5" className="cad-svg-vertex" />;
+                        })}
+                        {draftingAssist.ortho && plottingPoints.length > 0 && plottingHoverPoint && (
+                          <line
+                            x1={plottingViewport.project(plottingPoints[plottingPoints.length - 1]).x}
+                            y1={plottingViewport.project(plottingPoints[plottingPoints.length - 1]).y}
+                            x2={plottingViewport.project(plottingHoverPoint).x}
+                            y2={plottingViewport.project(plottingHoverPoint).y}
+                            stroke="#9ca3af"
+                            strokeDasharray="4,4"
+                            strokeWidth="1.5"
                           />
                         )}
-                        {plottingSnapState.type === "intersection" && (
-                          <g stroke="#22c55e" strokeWidth="2">
-                            <line x1={plottingSnapState.x - 6} y1={plottingSnapState.y - 6} x2={plottingSnapState.x + 6} y2={plottingSnapState.y + 6} />
-                            <line x1={plottingSnapState.x + 6} y1={plottingSnapState.y - 6} x2={plottingSnapState.x - 6} y2={plottingSnapState.y + 6} />
+                        {plottingSnapState && draftingAssist.snap && (
+                          <g className="cad-snap-marker">
+                            {plottingSnapState.type === "endpoint" && (
+                              <rect
+                                x={plottingSnapState.x - 6}
+                                y={plottingSnapState.y - 6}
+                                width="12"
+                                height="12"
+                                fill="none"
+                                stroke="#22c55e"
+                                strokeWidth="2"
+                              />
+                            )}
+                            {plottingSnapState.type === "midpoint" && (
+                              <polygon
+                                points={`${plottingSnapState.x},${plottingSnapState.y - 7} ${plottingSnapState.x - 7},${plottingSnapState.y + 5} ${plottingSnapState.x + 7},${plottingSnapState.y + 5}`}
+                                fill="none"
+                                stroke="#22c55e"
+                                strokeWidth="2"
+                              />
+                            )}
+                            {plottingSnapState.type === "intersection" && (
+                              <g stroke="#22c55e" strokeWidth="2">
+                                <line x1={plottingSnapState.x - 6} y1={plottingSnapState.y - 6} x2={plottingSnapState.x + 6} y2={plottingSnapState.y + 6} />
+                                <line x1={plottingSnapState.x + 6} y1={plottingSnapState.y - 6} x2={plottingSnapState.x - 6} y2={plottingSnapState.y + 6} />
+                              </g>
+                            )}
+                            <text
+                              x={plottingSnapState.x + 10}
+                              y={plottingSnapState.y + 4}
+                              className="cad-snap-tooltip"
+                              fill="#22c55e"
+                              fontSize="10"
+                              fontWeight="bold"
+                              style={{ textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}
+                            >
+                              {plottingSnapState.label}
+                            </text>
                           </g>
                         )}
-                        <text
-                          x={plottingSnapState.x + 10}
-                          y={plottingSnapState.y + 4}
-                          className="cad-snap-tooltip"
-                          fill="#22c55e"
-                          fontSize="10"
-                          fontWeight="bold"
-                          style={{ textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}
-                        >
-                          {plottingSnapState.label}
-                        </text>
-                      </g>
-                    )}
-                    {plottingPreviewGeometry?.type === "LineString" && draftingAssist.measure ? (
-                      <polyline
-                        points={pointsToSvg((plottingPreviewGeometry.coordinates || []) as number[][], plottingViewport.project)}
-                        className="cad-svg-preview"
-                      />
-                    ) : null}
-                    {plottingPreviewGeometry?.type === "Polygon" && Array.isArray(plottingPreviewGeometry.coordinates?.[0]) && draftingAssist.measure ? (
-                      <polygon
-                        points={pointsToSvg(plottingPreviewGeometry.coordinates[0] as number[][], plottingViewport.project)}
-                        className="cad-svg-preview cad-svg-preview--polygon"
-                      />
-                    ) : null}
-                    {plottingMeasureSummary && draftingAssist.measure ? (
-                      <g className="cad-measure-callout">
-                        <rect
-                          x={plottingMeasureSummary.labelX - 58}
-                          y={plottingMeasureSummary.labelY - 18}
-                          width="116"
-                          height="24"
-                          rx="12"
-                          className="cad-measure-box"
-                        />
-                        <text x={plottingMeasureSummary.labelX} y={plottingMeasureSummary.labelY - 2} textAnchor="middle" className="cad-measure-label">
-                          {formatLength(plottingMeasureSummary.segment)}
-                        </text>
-                      </g>
-                    ) : null}
-                  </g>
+                        {plottingPreviewGeometry?.type === "LineString" && draftingAssist.measure ? (
+                          <polyline
+                            points={pointsToSvg((plottingPreviewGeometry.coordinates || []) as number[][], plottingViewport.project)}
+                            className="cad-svg-preview"
+                          />
+                        ) : null}
+                        {plottingPreviewGeometry?.type === "Polygon" && Array.isArray(plottingPreviewGeometry.coordinates?.[0]) && draftingAssist.measure ? (
+                          <polygon
+                            points={pointsToSvg(plottingPreviewGeometry.coordinates[0] as number[][], plottingViewport.project)}
+                            className="cad-svg-preview cad-svg-preview--polygon"
+                          />
+                        ) : null}
+                        {plottingMeasureSummary && draftingAssist.measure ? (
+                          <g className="cad-measure-callout">
+                            <rect
+                              x={plottingMeasureSummary.labelX - 58}
+                              y={plottingMeasureSummary.labelY - 18}
+                              width="116"
+                              height="24"
+                              rx="12"
+                              className="cad-measure-box"
+                            />
+                            <text x={plottingMeasureSummary.labelX} y={plottingMeasureSummary.labelY - 2} textAnchor="middle" className="cad-measure-label">
+                              {formatLength(plottingMeasureSummary.segment)}
+                            </text>
+                          </g>
+                        ) : null}
+                      </g> {/* Close panned/zoomed group */}
+                    </g> {/* Close viewport clip group */}
+
+                    {/* AutoCAD UCS Coordinate Axis Icon (X-Y Axis) - fixed in map viewport bottom-left */}
+                    <g transform="translate(40, 720)" className="cad-svg-ucs">
+                      <line x1="0" y1="0" x2="50" y2="0" stroke="#94a3b8" strokeWidth="2" />
+                      <line x1="0" y1="0" x2="0" y2="-50" stroke="#94a3b8" strokeWidth="2" />
+                      <text x="56" y="4" className="cad-axis-label" fill="#cbd5e1" fontSize="11" fontWeight="bold">X</text>
+                      <text x="-3" y="-56" className="cad-axis-label" fill="#cbd5e1" fontSize="11" fontWeight="bold">Y</text>
+                      <circle cx="0" cy="0" r="2.5" fill="#94a3b8" />
+                    </g>
+
+                    {/* Static North Arrow Symbol inside map viewport */}
+                    <g transform="translate(900, 80)" className={`cad-north-arrow cad-north-arrow--${northArrowColor}`}>
+                      <circle cx="0" cy="0" r="28" fill="none" stroke={northArrowColor === "blue" ? "#38bdf8" : "#cbd5e1"} strokeWidth="1.5" />
+                      {/* Arrowhead pointing North */}
+                      <polygon points="0,-36 -8,-8 0,-14 8,-8" fill={northArrowColor === "blue" ? "#38bdf8" : "#cbd5e1"} />
+                      {/* South tail */}
+                      <line x1="0" y1="-14" x2="0" y2="28" stroke={northArrowColor === "blue" ? "#38bdf8" : "#cbd5e1"} strokeWidth="1.8" />
+                      <text x="0" y="-42" textAnchor="middle" fill={northArrowColor === "blue" ? "#38bdf8" : "#cbd5e1"} fontSize="12" fontWeight="bold" fontFamily="monospace">N</text>
+                    </g>
+                  </g> {/* Close translate(30, 30) group */}
+
                   {selectionDrag?.mode === "box" ? (
                     <rect
                       x={normalizeSelectionRect(selectionDrag.start, selectionDrag.current).left}
@@ -2932,32 +3154,12 @@ export default function FeatureOverrideModal({
                       className="cad-selection-lasso"
                     />
                   ) : null}
-                  <line
-                    x1={PLOTTING_VIEWPORT_PADDING / 2}
-                    y1={plottingViewport.height - PLOTTING_VIEWPORT_PADDING / 2}
-                    x2={PLOTTING_VIEWPORT_PADDING / 2 + 80}
-                    y2={plottingViewport.height - PLOTTING_VIEWPORT_PADDING / 2}
-                    className="cad-axis-line"
-                  />
-                  <line
-                    x1={PLOTTING_VIEWPORT_PADDING / 2}
-                    y1={plottingViewport.height - PLOTTING_VIEWPORT_PADDING / 2}
-                    x2={PLOTTING_VIEWPORT_PADDING / 2}
-                    y2={plottingViewport.height - PLOTTING_VIEWPORT_PADDING / 2 - 80}
-                    className="cad-axis-line"
-                  />
-                  <text x={PLOTTING_VIEWPORT_PADDING / 2 + 86} y={plottingViewport.height - PLOTTING_VIEWPORT_PADDING / 2 + 4} className="cad-axis-label">
-                    X
-                  </text>
-                  <text x={PLOTTING_VIEWPORT_PADDING / 2 - 6} y={plottingViewport.height - PLOTTING_VIEWPORT_PADDING / 2 - 90} className="cad-axis-label">
-                    Y
-                  </text>
 
                   {/* AutoCAD Full-screen Snap-aligned Crosshairs */}
                   {screenCursor && basemapMode === "plotting" && (
                     <g className="cad-crosshair">
-                      <line x1="0" y1={screenCursor.y} x2={plottingViewport.width} y2={screenCursor.y} />
-                      <line x1={screenCursor.x} y1="0" x2={screenCursor.x} y2={plottingViewport.height} />
+                      <line x1="15" y1={screenCursor.y} x2={1265} y2={screenCursor.y} />
+                      <line x1={screenCursor.x} y1="15" x2={screenCursor.x} y2={805} />
                       <rect x={screenCursor.x - 5} y={screenCursor.y - 5} width="10" height="10" />
                     </g>
                   )}
