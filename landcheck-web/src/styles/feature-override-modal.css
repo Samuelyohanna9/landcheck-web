@@ -160,6 +160,7 @@
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr) 320px;
   background: #050a12;
+  transition: grid-template-columns 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .cad-editor-sidebar {
@@ -1140,4 +1141,142 @@
 .cad-command-suggestions li:hover {
   background: rgba(34, 197, 94, 0.22);
   color: #f8fafc;
+}
+
+/* Header Toggle buttons and LED Indicators */
+.cad-header-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.52rem 0.85rem;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.cad-header-toggle-btn:hover {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(148, 163, 184, 0.4);
+  color: #e2e8f0;
+}
+
+.cad-header-toggle-btn.active {
+  border-color: rgba(34, 197, 94, 0.45);
+  background: rgba(20, 83, 45, 0.22);
+  color: #f8fafc;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.15);
+}
+
+.cad-indicator-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #475569;
+  transition: all 0.18s ease;
+}
+
+.cad-header-toggle-btn:hover .cad-indicator-dot {
+  background: #94a3b8;
+}
+
+.cad-header-toggle-btn.active .cad-indicator-dot {
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e, 0 0 16px #22c55e;
+}
+
+/* Sidebar Panel Close buttons */
+.cad-panel-close-btn {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1.25rem;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.2rem;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.cad-panel-close-btn:hover {
+  color: #f8fafc;
+  transform: translateY(-50%) scale(1.18);
+}
+
+/* Floating Dock Tabs on Workspace Edges */
+.cad-floating-tab {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  background: rgba(11, 18, 32, 0.94);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  backdrop-filter: blur(12px);
+  color: #94a3b8;
+  padding: 1rem 0.45rem;
+  cursor: pointer;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.cad-floating-tab--left {
+  left: 0;
+  border-left: 0;
+  border-radius: 0 10px 10px 0;
+}
+
+.cad-floating-tab--right {
+  right: 0;
+  border-right: 0;
+  border-radius: 10px 0 0 10px;
+}
+
+.cad-floating-tab:hover {
+  background: rgba(15, 23, 42, 0.98);
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #67e8f9;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+}
+
+.cad-floating-tab--left:hover {
+  transform: translateY(-50%) translateX(2px);
+}
+
+.cad-floating-tab--right:hover {
+  transform: translateY(-50%) translateX(-2px);
+}
+
+.cad-floating-tab-arrow {
+  font-size: 0.85rem;
+  font-weight: bold;
+  font-family: monospace;
+}
+
+.cad-floating-tab-text {
+  writing-mode: vertical-rl;
+  text-transform: uppercase;
+  font-family: 'Outfit', 'Inter', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+
+/* Smooth Sidebar Transitions */
+.cad-editor-sidebar,
+.cad-editor-inspector {
+  transition: opacity 0.18s ease-in-out;
 }
