@@ -992,3 +992,76 @@
     flex: 1;
   }
 }
+
+/* AutoCAD UX Enhancement Styles */
+.cad-crosshair {
+  pointer-events: none;
+}
+
+.cad-crosshair line {
+  stroke: rgba(34, 197, 94, 0.38);
+  stroke-width: 0.95;
+}
+
+.cad-crosshair rect {
+  fill: none;
+  stroke: rgba(34, 197, 94, 0.75);
+  stroke-width: 1.2;
+}
+
+.cad-dynamic-input {
+  pointer-events: none;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.55));
+}
+
+.cad-dyn-bg {
+  fill: rgba(15, 23, 42, 0.94);
+  stroke: rgba(148, 163, 184, 0.28);
+  stroke-width: 1;
+}
+
+.cad-dyn-text {
+  fill: #67e8f9;
+  font-size: 11px;
+  font-family: monospace;
+  font-weight: 600;
+}
+
+.cad-command-input-container {
+  position: relative;
+  flex: 1;
+  display: flex;
+}
+
+.cad-command-suggestions {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 250;
+  margin: 0;
+  padding: 0.4rem;
+  list-style: none;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(6, 10, 18, 0.98);
+  box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.45);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.cad-command-suggestions li {
+  padding: 0.55rem 0.8rem;
+  border-radius: 8px;
+  color: #cbd5e1;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  font-family: monospace;
+}
+
+.cad-command-suggestions li.active,
+.cad-command-suggestions li:hover {
+  background: rgba(34, 197, 94, 0.22);
+  color: #f8fafc;
+}
