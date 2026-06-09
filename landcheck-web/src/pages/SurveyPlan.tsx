@@ -2288,20 +2288,24 @@ export default function SurveyPlan() {
 
         {workflowMode && (
           <FeatureOverrideModal
-          isOpen={showFeatureEditor}
-          onClose={() => setShowFeatureEditor(false)}
-          onSave={handleSaveOverride}
-          plotCoords={finalCoords}
-          featureType={featureType}
-          setFeatureType={setFeatureType}
-          action={featureAction}
-          setAction={setFeatureAction}
-          roadName={roadName}
-          setRoadName={setRoadName}
-          roadWidth={newRoadWidth}
-          setRoadWidth={setNewRoadWidth}
-          plotId={plotId}
-        />
+            isOpen={showFeatureEditor}
+            onClose={() => setShowFeatureEditor(false)}
+            onSave={handleSaveOverride}
+            plotCoords={finalCoords}
+            featureType={featureType}
+            setFeatureType={setFeatureType}
+            action={featureAction}
+            setAction={setFeatureAction}
+            roadName={roadName}
+            setRoadName={setRoadName}
+            roadWidth={newRoadWidth}
+            setRoadWidth={setNewRoadWidth}
+            plotId={plotId}
+            meta={meta}
+            manualPoints={manualPoints}
+            beaconStyle={beaconStyle}
+            northArrowColor={northArrowColor}
+          />
         )}
         {/* Step 1: Coordinate Input */}
         {workflowMode && currentStep === 1 && (
