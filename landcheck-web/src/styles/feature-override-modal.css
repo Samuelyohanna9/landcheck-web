@@ -620,6 +620,9 @@
   cursor: crosshair;
   touch-action: none;
   user-select: none;
+  background: #ffffff;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45);
+  border-radius: 4px;
 }
 
 .cad-plotting-svg.is-panning {
@@ -627,7 +630,7 @@
 }
 
 .cad-plot-bg {
-  fill: #010611;
+  fill: #ffffff;
 }
 
 .cad-grid-line {
@@ -635,12 +638,12 @@
 }
 
 .cad-grid-line--minor {
-  stroke: rgba(51, 65, 85, 0.7);
+  stroke: rgba(148, 163, 184, 0.18);
   stroke-width: 0.9;
 }
 
 .cad-grid-line--major {
-  stroke: rgba(100, 116, 139, 0.95);
+  stroke: rgba(148, 163, 184, 0.38);
   stroke-width: 1.2;
 }
 

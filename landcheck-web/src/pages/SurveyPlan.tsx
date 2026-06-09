@@ -2305,6 +2305,7 @@ export default function SurveyPlan() {
             manualPoints={manualPoints}
             beaconStyle={beaconStyle}
             northArrowColor={northArrowColor}
+            coordinateSystem={coordinateSystem}
           />
         )}
         {/* Step 1: Coordinate Input */}
