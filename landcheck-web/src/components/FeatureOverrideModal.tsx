@@ -125,6 +125,38 @@ const DEFAULT_OSNAP_MODES: OsnapModes = {
   intersection: true,
 };
 
+const ALL_COMMANDS = [
+  "HELP",
+  "LINE",
+  "POLYGON",
+  "SELECT",
+  "BOX",
+  "LASSO",
+  "ADD",
+  "MODIFY",
+  "DELETE",
+  "ROAD",
+  "BUILDING",
+  "RIVER",
+  "FENCE",
+  "FIT",
+  "ZOOM IN",
+  "ZOOM OUT",
+  "SATELLITE",
+  "PLOTTING",
+  "CLEAR",
+  "SNAP ON",
+  "SNAP OFF",
+  "ORTHO ON",
+  "ORTHO OFF",
+  "MEASURE ON",
+  "MEASURE OFF",
+  "OSNAP ENDPOINT",
+  "OSNAP MIDPOINT",
+  "OSNAP INTERSECTION",
+  "UNDO"
+];
+
 const EARTH_RADIUS_M = 6371008.8;
 
 const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
@@ -682,6 +714,11 @@ export default function FeatureOverrideModal({
   const [commandMessages, setCommandMessages] = useState<string[]>([
     "Type HELP for editor commands. Use BOX or LASSO to multi-select in plotting view.",
   ]);
+  const [screenCursor, setScreenCursor] = useState<{ x: number; y: number } | null>(null);
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState<number>(0);
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
 
   const activeMetrics = useMemo(() => draftMetrics || selectedMetrics, [draftMetrics, selectedMetrics]);
   const plottingDraftGeometry = useMemo(
@@ -1152,6 +1189,27 @@ export default function FeatureOverrideModal({
     drawRef.current?.changeMode("simple_select");
   }, []);
 
+  const undoLastVertex = useCallback(() => {
+    setPlottingPoints((prev) => {
+      if (prev.length === 0) {
+        pushCommandMessage("No vertices to undo.");
+        return prev;
+      }
+      const next = prev.slice(0, -1);
+      pushCommandMessage(
+        next.length > 0
+          ? `Last vertex undone. ${next.length} points remain.`
+          : "All vertices cleared."
+      );
+      if (next.length === 0) {
+        setPlottingHoverPoint(null);
+      } else {
+        setPlottingHoverPoint(next[next.length - 1]);
+      }
+      return next;
+    });
+  }, [pushCommandMessage]);
+
   const startAddFlow = useCallback(() => {
     setDeleteConfirmArmed(false);
     setAction("add");
@@ -1436,6 +1494,36 @@ export default function FeatureOverrideModal({
     if (!isOpen) return;
 
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      // AutoCAD Standard F-Key Shortcuts - always global
+      if (event.key === "F3") {
+        event.preventDefault();
+        setOsnapModes((prev) => {
+          const nextVal = !prev.endpoint;
+          pushCommandMessage(`OSNAP toggled: ${nextVal ? "ON" : "OFF"} (F3)`);
+          return { endpoint: nextVal, midpoint: nextVal, intersection: nextVal };
+        });
+        setDraftingAssist((prev) => ({ ...prev, snap: !prev.snap }));
+        return;
+      }
+      if (event.key === "F7") {
+        event.preventDefault();
+        setBasemapMode((prev) => {
+          const nextMode = prev === "satellite" ? "plotting" : "satellite";
+          pushCommandMessage(`Basemap switched to ${nextMode} (F7)`);
+          return nextMode;
+        });
+        return;
+      }
+      if (event.key === "F8") {
+        event.preventDefault();
+        setDraftingAssist((prev) => {
+          const nextOrtho = !prev.ortho;
+          pushCommandMessage(`Ortho toggled: ${nextOrtho ? "ON" : "OFF"} (F8)`);
+          return { ...prev, ortho: nextOrtho };
+        });
+        return;
+      }
+
       const activeEl = document.activeElement;
       if (
         activeEl &&
@@ -1448,6 +1536,17 @@ export default function FeatureOverrideModal({
       }
 
       const key = event.key.toLowerCase();
+
+      // Undo last vertex during line/polygon drawing
+      if ((event.ctrlKey || event.metaKey) && key === "z") {
+        event.preventDefault();
+        if (activeTool !== "select" && plottingPoints.length > 0) {
+          undoLastVertex();
+        } else {
+          pushCommandMessage("No action to undo.");
+        }
+        return;
+      }
       
       if (event.key === "Escape") {
         event.preventDefault();
@@ -1531,9 +1630,18 @@ export default function FeatureOverrideModal({
           activateSelectionMode("box");
           pushCommandMessage("Box selection armed (B).");
           break;
+        case "u":
+          event.preventDefault();
+          if (activeTool !== "select" && plottingPoints.length > 0) {
+            undoLastVertex();
+          } else {
+            clearWorkingSelection();
+            pushCommandMessage("Draft cleared (U).");
+          }
+          break;
         case "h":
           event.preventDefault();
-          pushCommandMessage("Hotkeys: L=Line, P=Polygon, S=Select, Z=Zoom Fit, O=Ortho, N=Snap, M=Measure, B=Box Select, Delete=Erase, Enter=Commit.");
+          pushCommandMessage("Hotkeys: L=Line, P=Polygon, S=Select, Z=Zoom Fit, O=Ortho, N=Snap, M=Measure, B=Box Select, U=Undo/Clear, Delete=Erase, Enter=Commit.");
           break;
         default:
           break;
@@ -1554,6 +1662,7 @@ export default function FeatureOverrideModal({
     pushCommandMessage,
     setEditorTool,
     activateSelectionMode,
+    undoLastVertex,
   ]);
 
   useEffect(() => {
@@ -1684,8 +1793,13 @@ export default function FeatureOverrideModal({
       if (activeTool !== "select") {
         setPlottingHoverPoint([lng, lat]);
       }
+
+      // AutoCAD style screen cursor coordinate projection for snaps
+      const screenX = plottingCamera.offsetX + pointer.x * plottingCamera.zoom;
+      const screenY = plottingCamera.offsetY + pointer.y * plottingCamera.zoom;
+      setScreenCursor({ x: screenX, y: screenY });
     },
-    [activeTool, basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport, resolvePlottingCanvasPoint, selectionDrag]
+    [activeTool, basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport, resolvePlottingCanvasPoint, selectionDrag, plottingCamera.offsetX, plottingCamera.offsetY, plottingCamera.zoom]
   );
 
   const handlePlottingCanvasClick = useCallback(
@@ -1881,6 +1995,7 @@ export default function FeatureOverrideModal({
     setPlottingSnapLabel(null);
     setPlottingSnapState(null);
     setSelectionDrag(null);
+    setScreenCursor(null);
   }, []);
 
   const zoomPlottingCamera = useCallback((direction: "in" | "out") => {
@@ -1910,109 +2025,152 @@ export default function FeatureOverrideModal({
       if (!normalized) return;
       const compact = normalized.replace(/\s+/g, " ");
 
-      if (compact === "help") {
-        pushCommandMessage("Commands: SELECT, LINE, POLYGON, BOX, LASSO, ROAD, BUILDING, RIVER, FENCE, ADD, MODIFY, DELETE, FIT, ZOOM IN, ZOOM OUT, SNAP ON/OFF, ORTHO ON/OFF, MEASURE ON/OFF, OSNAP ENDPOINT/MIDPOINT/INTERSECTION, SATELLITE, PLOTTING, CLEAR.");
+      // AutoCAD Command Alias Mapping
+      let cmd = compact;
+      if (cmd === "l") cmd = "line";
+      if (cmd === "pl" || cmd === "pline" || cmd === "poly") cmd = "polygon";
+      if (cmd === "m" || cmd === "move") cmd = "modify";
+      if (cmd === "e" || cmd === "erase" || cmd === "del") cmd = "delete";
+      if (cmd === "z" || cmd === "zoom") cmd = "fit";
+      if (cmd === "c" || cmd === "esc") cmd = "clear";
+      if (cmd === "u") cmd = "undo";
+
+      if (cmd === "help") {
+        pushCommandMessage("Commands: SELECT, LINE, POLYGON, BOX, LASSO, ROAD, BUILDING, RIVER, FENCE, ADD, MODIFY, DELETE, FIT, ZOOM IN, ZOOM OUT, SNAP ON/OFF, ORTHO ON/OFF, MEASURE ON/OFF, OSNAP ENDPOINT/MIDPOINT/INTERSECTION, SATELLITE, PLOTTING, UNDO, CLEAR.");
         return;
       }
-      if (compact === "select") {
+      if (cmd === "select") {
         setActiveTool("select");
         setSelectionMode(null);
         pushCommandMessage("Select tool active.");
         return;
       }
-      if (compact === "line") {
+      if (cmd === "line") {
         setEditorTool("draw_line_string");
         setSelectionMode(null);
         pushCommandMessage("Line tool active.");
         return;
       }
-      if (compact === "polygon") {
+      if (cmd === "polygon") {
         setEditorTool("draw_polygon");
         setSelectionMode(null);
         pushCommandMessage("Polygon tool active.");
         return;
       }
-      if (compact === "box") {
+      if (cmd === "box") {
         activateSelectionMode("box");
         pushCommandMessage("Box selection armed.");
         return;
       }
-      if (compact === "lasso") {
+      if (cmd === "lasso") {
         activateSelectionMode("lasso");
         pushCommandMessage("Lasso selection armed.");
         return;
       }
-      if (compact === "add") {
+      if (cmd === "add") {
         startAddFlow();
         pushCommandMessage("Add command active.");
         return;
       }
-      if (compact === "modify") {
+      if (cmd === "modify") {
         startUpdateFlow();
         pushCommandMessage("Modify command active.");
         return;
       }
-      if (compact === "delete") {
+      if (cmd === "delete") {
         startDeleteFlow();
         pushCommandMessage("Delete command active.");
         return;
       }
-      if (compact === "road" || compact === "building" || compact === "river" || compact === "fence") {
-        setFeatureType(compact as FeatureType);
-        pushCommandMessage(`Feature type set to ${compact}.`);
+      if (cmd === "road" || cmd === "building" || cmd === "river" || cmd === "fence") {
+        setFeatureType(cmd as FeatureType);
+        pushCommandMessage(`Feature type set to ${cmd}.`);
         return;
       }
-      if (compact === "fit") {
+      if (cmd === "fit") {
         fitPlotBoundary();
         pushCommandMessage("View fit to plot.");
         return;
       }
-      if (compact === "zoom in") {
+      if (cmd === "zoom in") {
         zoomPlottingCamera("in");
         pushCommandMessage("Plotting zoom increased.");
         return;
       }
-      if (compact === "zoom out") {
+      if (cmd === "zoom out") {
         zoomPlottingCamera("out");
         pushCommandMessage("Plotting zoom reduced.");
         return;
       }
-      if (compact === "satellite" || compact === "plotting") {
-        setBasemapMode(compact as BasemapMode);
-        pushCommandMessage(`Basemap switched to ${compact}.`);
+      if (cmd === "satellite" || cmd === "plotting") {
+        setBasemapMode(cmd as BasemapMode);
+        pushCommandMessage(`Basemap switched to ${cmd}.`);
         return;
       }
-      if (compact === "clear") {
+      if (cmd === "clear") {
         clearWorkingSelection();
         pushCommandMessage("Working selection cleared.");
         return;
       }
-      if (compact.startsWith("snap ")) {
-        const value = compact.split(" ")[1];
+      if (cmd === "undo") {
+        if (activeTool !== "select" && plottingPoints.length > 0) {
+          undoLastVertex();
+        } else {
+          clearWorkingSelection();
+          pushCommandMessage("Working selection cleared (UNDO).");
+        }
+        return;
+      }
+      if (cmd === "snap") {
+        setDraftingAssist((prev) => {
+          const next = !prev.snap;
+          pushCommandMessage(`Snap toggled: ${next ? "ON" : "OFF"}`);
+          return { ...prev, snap: next };
+        });
+        return;
+      }
+      if (cmd === "ortho") {
+        setDraftingAssist((prev) => {
+          const next = !prev.ortho;
+          pushCommandMessage(`Ortho toggled: ${next ? "ON" : "OFF"}`);
+          return { ...prev, ortho: next };
+        });
+        return;
+      }
+      if (cmd === "grid") {
+        setBasemapMode((prev) => {
+          const next = prev === "satellite" ? "plotting" : "satellite";
+          pushCommandMessage(`Basemap switched to ${next}.`);
+          return next;
+        });
+        return;
+      }
+      if (cmd.startsWith("snap ")) {
+        const value = cmd.split(" ")[1];
         if (value === "on" || value === "off") {
           setDraftingAssist((previous) => ({ ...previous, snap: value === "on" }));
           pushCommandMessage(`Snap ${value}.`);
           return;
         }
       }
-      if (compact.startsWith("ortho ")) {
-        const value = compact.split(" ")[1];
+      if (cmd.startsWith("ortho ")) {
+        const value = cmd.split(" ")[1];
         if (value === "on" || value === "off") {
           setDraftingAssist((previous) => ({ ...previous, ortho: value === "on" }));
           pushCommandMessage(`Ortho ${value}.`);
           return;
         }
       }
-      if (compact.startsWith("measure ")) {
-        const value = compact.split(" ")[1];
+      if (cmd.startsWith("measure ")) {
+        const value = cmd.split(" ")[1];
         if (value === "on" || value === "off") {
           setDraftingAssist((previous) => ({ ...previous, measure: value === "on" }));
           pushCommandMessage(`Measure ${value}.`);
           return;
         }
       }
-      if (compact.startsWith("osnap ")) {
-        const mode = compact.split(" ")[1];
+      if (cmd.startsWith("osnap ")) {
+        const mode = cmd.split(" ")[1];
         if (mode === "endpoint" || mode === "midpoint" || mode === "intersection") {
           toggleOsnapMode(mode as keyof OsnapModes);
           pushCommandMessage(`OSNAP ${mode} toggled.`);
@@ -2032,6 +2190,9 @@ export default function FeatureOverrideModal({
       startUpdateFlow,
       toggleOsnapMode,
       zoomPlottingCamera,
+      activeTool,
+      plottingPoints.length,
+      undoLastVertex,
     ]
   );
 
@@ -2039,16 +2200,105 @@ export default function FeatureOverrideModal({
     const next = commandInput.trim();
     if (!next) return;
     runCadCommand(next);
+    setCommandHistory((prev) => {
+      if (prev.length > 0 && prev[0] === next) return prev;
+      return [next, ...prev].slice(0, 50);
+    });
+    setHistoryIndex(-1);
     setCommandInput("");
+    setShowSuggestions(false);
   }, [commandInput, runCadCommand]);
+
+  const handleCommandInputChange = (val: string) => {
+    setCommandInput(val);
+    setShowSuggestions(val.trim().length > 0);
+    setActiveSuggestionIndex(0);
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    runCadCommand(suggestion);
+    setCommandHistory((prev) => {
+      if (prev.length > 0 && prev[0] === suggestion) return prev;
+      return [suggestion, ...prev].slice(0, 50);
+    });
+    setHistoryIndex(-1);
+    setCommandInput("");
+    setShowSuggestions(false);
+  };
 
   const handleCommandKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLInputElement>) => {
-      if (event.key !== "Enter") return;
-      event.preventDefault();
-      handleCommandSubmit();
+      if (showSuggestions && suggestions.length > 0) {
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          setActiveSuggestionIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length);
+          return;
+        }
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          setActiveSuggestionIndex((prev) => (prev + 1) % suggestions.length);
+          return;
+        }
+        if (event.key === "Tab") {
+          event.preventDefault();
+          setCommandInput(suggestions[activeSuggestionIndex]);
+          setShowSuggestions(false);
+          return;
+        }
+        if (event.key === "Enter") {
+          event.preventDefault();
+          const selectedCmd = suggestions[activeSuggestionIndex];
+          runCadCommand(selectedCmd);
+          setCommandHistory((prev) => {
+            if (prev.length > 0 && prev[0] === selectedCmd) return prev;
+            return [selectedCmd, ...prev].slice(0, 50);
+          });
+          setHistoryIndex(-1);
+          setCommandInput("");
+          setShowSuggestions(false);
+          return;
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          setShowSuggestions(false);
+          return;
+        }
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        if (commandHistory.length > 0) {
+          setHistoryIndex((prevIndex) => {
+            const nextIndex = prevIndex + 1;
+            if (nextIndex < commandHistory.length) {
+              setCommandInput(commandHistory[nextIndex]);
+              return nextIndex;
+            }
+            return prevIndex;
+          });
+        }
+        return;
+      }
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setHistoryIndex((prevIndex) => {
+          const nextIndex = prevIndex - 1;
+          if (nextIndex >= 0) {
+            setCommandInput(commandHistory[nextIndex]);
+            return nextIndex;
+          }
+          setCommandInput("");
+          return -1;
+        });
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        handleCommandSubmit();
+      }
     },
-    [handleCommandSubmit]
+    [showSuggestions, suggestions, activeSuggestionIndex, commandHistory, handleCommandSubmit, runCadCommand]
   );
 
   const plottingGridLines = useMemo(() => {
@@ -2696,6 +2946,42 @@ export default function FeatureOverrideModal({
                   <text x={PLOTTING_VIEWPORT_PADDING / 2 - 6} y={plottingViewport.height - PLOTTING_VIEWPORT_PADDING / 2 - 90} className="cad-axis-label">
                     Y
                   </text>
+
+                  {/* AutoCAD Full-screen Snap-aligned Crosshairs */}
+                  {screenCursor && basemapMode === "plotting" && (
+                    <g className="cad-crosshair">
+                      <line x1="0" y1={screenCursor.y} x2={plottingViewport.width} y2={screenCursor.y} />
+                      <line x1={screenCursor.x} y1="0" x2={screenCursor.x} y2={plottingViewport.height} />
+                      <rect x={screenCursor.x - 5} y={screenCursor.y - 5} width="10" height="10" />
+                    </g>
+                  )}
+
+                  {/* AutoCAD Dynamic Input Tooltip near cursor */}
+                  {screenCursor && basemapMode === "plotting" && (
+                    <g className="cad-dynamic-input" transform={`translate(${screenCursor.x + 14}, ${screenCursor.y + 14})`}>
+                      <rect x="0" y="0" width="138" height="42" rx="4" className="cad-dyn-bg" />
+                      <text x="8" y="16" className="cad-dyn-text">
+                        {plottingPoints.length > 0 && plottingHoverPoint
+                          ? `Len: ${formatLength(lineLengthMeters([plottingPoints[plottingPoints.length - 1], plottingHoverPoint]))}`
+                          : "Specify start point"}
+                      </text>
+                      <text x="8" y="32" className="cad-dyn-text">
+                        {plottingPoints.length > 0 && plottingHoverPoint
+                          ? `Angle: ${(() => {
+                              const lastPt = plottingPoints[plottingPoints.length - 1];
+                              const lastProj = plottingViewport.project(lastPt);
+                              const currProj = plottingViewport.project(plottingHoverPoint);
+                              const dx = currProj.x - lastProj.x;
+                              const dy = lastProj.y - currProj.y;
+                              let angleRad = Math.atan2(dy, dx);
+                              let angleDeg = (angleRad * 180) / Math.PI;
+                              if (angleDeg < 0) angleDeg += 360;
+                              return angleDeg.toFixed(1);
+                            })()}°`
+                          : `${cursor ? `${cursor.lng.toFixed(6)}, ${cursor.lat.toFixed(6)}` : ""}`}
+                      </text>
+                    </g>
+                  )}
                 </svg>
               </div>
             ) : (
@@ -2894,12 +3180,29 @@ export default function FeatureOverrideModal({
           </div>
           <div className="cad-command-entry">
             <span className="cad-command-prompt">Command</span>
-            <input
-              value={commandInput}
-              onChange={(event) => setCommandInput(event.target.value)}
-              onKeyDown={handleCommandKeyDown}
-              placeholder="Type HELP, BOX, LASSO, LINE, POLYGON, FIT..."
-            />
+            <div className="cad-command-input-container">
+              {showSuggestions && suggestions.length > 0 && (
+                <ul className="cad-command-suggestions">
+                  {suggestions.map((suggestion, index) => (
+                    <li
+                      key={suggestion}
+                      className={index === activeSuggestionIndex ? "active" : ""}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                    >
+                      {suggestion}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <input
+                value={commandInput}
+                onChange={(event) => handleCommandInputChange(event.target.value)}
+                onKeyDown={handleCommandKeyDown}
+                placeholder="Type HELP, L, PL, M, E, GRID, SNAP, ORTHO, OSNAP..."
+                autoComplete="off"
+                spellCheck="false"
+              />
+            </div>
             <button type="button" className="cad-tool-btn" onClick={handleCommandSubmit}>
               Run
             </button>
