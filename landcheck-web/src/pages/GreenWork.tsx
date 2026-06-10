@@ -14686,6 +14686,7 @@ export default function GreenWork() {
                         <th>Height</th>
                         <th>CO2</th>
                         <th>Custodian</th>
+                        <th>Tag</th>
                         <th>Created By</th>
                       </tr>
                     )}
@@ -14693,7 +14694,7 @@ export default function GreenWork() {
                   <tbody>
                     {existingTreeIntakeRows.length === 0 ? (
                       <tr>
-                        <td colSpan={agricWorkflowMode ? 12 : reliefWorkflowMode ? 11 : 13} className="green-work-live-empty">
+                        <td colSpan={agricWorkflowMode ? 12 : reliefWorkflowMode ? 11 : 14} className="green-work-live-empty">
                           {agricWorkflowMode
                             ? "No plot records found in this project yet."
                             : reliefWorkflowMode
@@ -14751,6 +14752,15 @@ export default function GreenWork() {
                             <td>{formatTreeHeight(tree.tree_height_m)}</td>
                             <td>{formatExistingTreeCo2Label(metric)}</td>
                             <td>{tree.custodian_name || "-"}</td>
+                            <td>
+                              <button
+                                type="button"
+                                onClick={() => window.open(`${BACKEND_URL}/green/trees/${tree.id}/qr-tag/pdf`, "_blank")}
+                                style={{ padding: '2px 6px', fontSize: '11px', background: '#083e20', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                              >
+                                Print
+                              </button>
+                            </td>
                             <td>{tree.created_by || "-"}</td>
                           </tr>
                         );
