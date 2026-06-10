@@ -4212,6 +4212,18 @@ export default function Green() {
                   ))
                 )}
               </div>
+              <div className="green-tree-inspector-actions" style={{ marginTop: 20 }}>
+                <button
+                  className="green-btn"
+                  style={{ width: "100%", padding: "12px", background: "#083e20", color: "#fff", border: "none", borderRadius: "8px", fontWeight: "bold", cursor: "pointer" }}
+                  type="button"
+                  onClick={() => {
+                    window.open(`${BACKEND_URL}/green/trees/${inspectedTree.id}/qr-tag/pdf`, "_blank");
+                  }}
+                >
+                  🌳 Download QR Tree Tag (PDF)
+                </button>
+              </div>
             </div>
           </aside>
         </>
