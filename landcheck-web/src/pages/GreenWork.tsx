@@ -697,6 +697,7 @@ type WorkForm =
   | "sponsors"
   | "sponsorship_orders"
   | "sponsor_payouts"
+  | "sponsor_feedback"
   ;
 
 const AGRIC_HIDDEN_PROJECT_FORMS: WorkForm[] = [
@@ -2818,6 +2819,8 @@ export default function GreenWork() {
     "verra_reports",
     "sponsors",
     "sponsorship_orders",
+    "sponsor_payouts",
+    "sponsor_feedback",
   ];
 
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -2827,6 +2830,12 @@ export default function GreenWork() {
   const lastLoadedProjectIdRef = useRef<number | null>(null);
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
+  // Sponsor Feedback state
+  const [complaints, setComplaints] = useState<any[]>([]);
+  const [schoolNominations, setSchoolNominations] = useState<any[]>([]);
+  const [communityProjects, setCommunityProjects] = useState<any[]>([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [adminOverview, setAdminOverview] = useState<AdminOverview | null>(null);
   const [adminOverviewLoading, setAdminOverviewLoading] = useState(false);
@@ -5109,6 +5118,62 @@ export default function GreenWork() {
     }
   }, []);
 
+  const loadSponsorFeedback = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = Boolean(options?.silent);
+    if (!silent) setFeedbackLoading(true);
+    setFeedbackError(null);
+    try {
+      const [complaintsRes, nominationsRes, projectsRes] = await Promise.all([
+        api.get(`/green/admin/complaints?_ts=${Date.now()}`),
+        api.get(`/green/admin/school-nominations?_ts=${Date.now()}`),
+        api.get(`/green/admin/community-projects?_ts=${Date.now()}`)
+      ]);
+      setComplaints(Array.isArray(complaintsRes.data) ? complaintsRes.data : []);
+      setSchoolNominations(Array.isArray(nominationsRes.data) ? nominationsRes.data : []);
+      setCommunityProjects(Array.isArray(projectsRes.data) ? projectsRes.data : []);
+    } catch (err: any) {
+      setFeedbackError(err?.response?.data?.detail || err?.message || "Failed to load sponsor feedback data");
+    } finally {
+      if (!silent) setFeedbackLoading(false);
+    }
+  }, []);
+
+  const handleResolveComplaint = async (complaintId: number) => {
+    try {
+      const res = await api.post(`/green/admin/complaints/${complaintId}/resolve`);
+      if (res.data.ok || res.status === 200) {
+        toast.success("Complaint resolved successfully!");
+        void loadSponsorFeedback({ silent: true });
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.message || "Failed to resolve complaint");
+    }
+  };
+
+  const handleReviewSchoolNomination = async (nominationId: number, status: string) => {
+    try {
+      const res = await api.post(`/green/admin/school-nominations/${nominationId}/review`, { status });
+      if (res.data.ok || res.status === 200) {
+        toast.success(`School nomination set to ${status}!`);
+        void loadSponsorFeedback({ silent: true });
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.message || "Failed to review school nomination");
+    }
+  };
+
+  const handleUpdateCommunityProjectStatus = async (projectId: number, status: string) => {
+    try {
+      const res = await api.post(`/green/admin/community-projects/${projectId}/status`, { status });
+      if (res.data.ok || res.status === 200) {
+        toast.success(`Community project status updated to ${status}!`);
+        void loadSponsorFeedback({ silent: true });
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.message || "Failed to update community project status");
+    }
+  };
+
   const loadSponsorAgentPayoutBoard = useCallback(async (projectId: number, options?: { silent?: boolean; forceSync?: boolean }) => {
     const silent = Boolean(options?.silent);
     const forceSync = options?.forceSync !== false;
@@ -5562,7 +5627,7 @@ export default function GreenWork() {
       setSponsorAgentPayoutError(null);
       return;
     }
-    if (!["sponsors", "sponsorship_orders", "project_focus", "assign_work", "assign_task", "sponsor_payouts"].includes(String(activeForm || ""))) return;
+    if (!["sponsors", "sponsorship_orders", "project_focus", "assign_work", "assign_task", "sponsor_payouts", "sponsor_feedback"].includes(String(activeForm || ""))) return;
     void loadSponsorshipOrders(activeProjectId);
     void loadSponsorAccounts();
     const timer = window.setInterval(() => {
@@ -5571,6 +5636,21 @@ export default function GreenWork() {
     }, 15000);
     return () => window.clearInterval(timer);
   }, [activeProjectId, activeForm, loadSponsorAccounts, loadSponsorshipOrders, publicSponsorshipProject]);
+
+  useEffect(() => {
+    if (!activeProjectId || !publicSponsorshipProject) {
+      setComplaints([]);
+      setSchoolNominations([]);
+      setCommunityProjects([]);
+      return;
+    }
+    if (activeForm !== "sponsor_feedback") return;
+    void loadSponsorFeedback();
+    const timer = window.setInterval(() => {
+      void loadSponsorFeedback({ silent: true });
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [activeForm, activeProjectId, loadSponsorFeedback, publicSponsorshipProject]);
 
   useEffect(() => {
     if (!activeProjectId || !publicSponsorshipProject) {
@@ -8153,6 +8233,7 @@ export default function GreenWork() {
                 { form: "sponsors" as WorkForm, title: "Sponsors", note: "Sponsor accounts + linked trees" },
                 { form: "sponsorship_orders" as WorkForm, title: "Payments", note: "Orders + payment review" },
                 { form: "sponsor_payouts" as WorkForm, title: "Payouts", note: "Agent earnings + payout queue" },
+                { form: "sponsor_feedback" as WorkForm, title: "Feedback & Nominations", note: "Complaints + school nominations" },
               ]
             : []),
           { form: "users", title: "Users", note: "All staff status + roles" },
@@ -9558,6 +9639,13 @@ export default function GreenWork() {
                       onClick={() => openForm("sponsor_payouts")}
                     >
                       Sponsor Payouts
+                    </button>
+                    <button
+                      className={`green-work-menu-item ${activeForm === "sponsor_feedback" ? "active" : ""}`}
+                      type="button"
+                      onClick={() => openForm("sponsor_feedback")}
+                    >
+                      Feedback & Nominations
                     </button>
                   </>
                 ) : null}
@@ -12681,6 +12769,217 @@ export default function GreenWork() {
                           </div>
                         ))}
                     </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {activeForm === "sponsor_feedback" && (
+            <div className="green-work-card">
+              <h3>Sponsor Feedback & Nominations</h3>
+              {!publicSponsorshipProject ? (
+                <p className="green-work-note">Switch this project to the Public Sponsorship access route first.</p>
+              ) : feedbackLoading && complaints.length === 0 && schoolNominations.length === 0 && communityProjects.length === 0 ? (
+                <p className="green-work-note">Loading sponsor feedback data...</p>
+              ) : (
+                <>
+                  <div className="work-actions" style={{ marginBottom: 16 }}>
+                    <button
+                      type="button"
+                      onClick={() => void loadSponsorFeedback()}
+                    >
+                      Refresh Data
+                    </button>
+                  </div>
+
+                  {feedbackError && <p className="green-work-error" style={{ color: 'red', marginBottom: 12 }}>{feedbackError}</p>}
+
+                  {/* Section 1: Complaints */}
+                  <div style={{ marginBottom: 24 }}>
+                    <h4>Sponsor Complaints ({complaints.length})</h4>
+                    {complaints.length === 0 ? (
+                      <p className="green-work-note" style={{ marginLeft: 0 }}>No complaints submitted yet.</p>
+                    ) : (
+                      <table className="green-work-table">
+                        <thead>
+                          <tr>
+                            <th>Sponsor</th>
+                            <th>Type</th>
+                            <th>Tree ID</th>
+                            <th>Message</th>
+                            <th>Status</th>
+                            <th>Submitted At</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {complaints.map((c: any) => (
+                            <tr key={`complaint-${c.id}`}>
+                              <td>
+                                <strong>{c.sponsor_name}</strong>
+                                <div style={{ fontSize: 11, color: '#666' }}>{c.sponsor_email}</div>
+                              </td>
+                              <td style={{ textTransform: 'capitalize' }}>{c.complaint_type}</td>
+                              <td>{c.tree_id || "-"}</td>
+                              <td>{c.message}</td>
+                              <td>
+                                <span className={`green-work-live-pill ${c.status === 'resolved' ? 'ok' : 'warning'}`}>
+                                  {c.status}
+                                </span>
+                              </td>
+                              <td>{new Date(c.created_at).toLocaleString()}</td>
+                              <td>
+                                {c.status !== 'resolved' ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleResolveComplaint(c.id)}
+                                    style={{ padding: '4px 8px', fontSize: 11 }}
+                                  >
+                                    Mark Resolved
+                                  </button>
+                                ) : (
+                                  <span style={{ fontSize: 11, color: '#27ae60', fontWeight: 'bold' }}>✓ Resolved</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+
+                  {/* Section 2: School Nominations */}
+                  <div style={{ marginBottom: 24 }}>
+                    <h4>School Nominations ({schoolNominations.length})</h4>
+                    {schoolNominations.length === 0 ? (
+                      <p className="green-work-note" style={{ marginLeft: 0 }}>No nominations submitted yet.</p>
+                    ) : (
+                      <table className="green-work-table">
+                        <thead>
+                          <tr>
+                            <th>School Details</th>
+                            <th>Nominator</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Points Spent</th>
+                            <th>Submitted At</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {schoolNominations.map((n: any) => (
+                            <tr key={`nomination-${n.id}`}>
+                              <td>
+                                <strong>{n.school_name}</strong>
+                                <div style={{ fontSize: 11, color: '#666' }}>{n.school_address}</div>
+                                <div style={{ fontSize: 11, color: '#666' }}>Contact: {n.contact_person || "-"} ({n.contact_phone || "-"})</div>
+                              </td>
+                              <td>
+                                <strong>{n.sponsor_name}</strong>
+                                <div style={{ fontSize: 11, color: '#666' }}>{n.sponsor_email}</div>
+                              </td>
+                              <td>{n.reason}</td>
+                              <td>
+                                <span className={`green-work-live-pill ${n.status === 'approved' ? 'ok' : (n.status === 'rejected' ? 'error' : 'warning')}`}>
+                                  {n.status}
+                                </span>
+                              </td>
+                              <td>{n.points_spent} GP</td>
+                              <td>{new Date(n.created_at).toLocaleString()}</td>
+                              <td>
+                                {n.status === 'pending' ? (
+                                  <div style={{ display: 'flex', gap: 6 }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleReviewSchoolNomination(n.id, "approved")}
+                                      style={{ padding: '4px 8px', fontSize: 11, backgroundColor: '#2ecc71', color: 'white', border: 'none' }}
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleReviewSchoolNomination(n.id, "rejected")}
+                                      style={{ padding: '4px 8px', fontSize: 11, backgroundColor: '#e74c3c', color: 'white', border: 'none' }}
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span style={{ fontSize: 11, textTransform: 'capitalize', fontWeight: 'bold' }}>{n.status}</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+
+                  {/* Section 3: Community Projects */}
+                  <div style={{ marginBottom: 24 }}>
+                    <h4>Proposed Community Forests ({communityProjects.length})</h4>
+                    {communityProjects.length === 0 ? (
+                      <p className="green-work-note" style={{ marginLeft: 0 }}>No community projects proposed yet.</p>
+                    ) : (
+                      <table className="green-work-table">
+                        <thead>
+                          <tr>
+                            <th>Project Details</th>
+                            <th>Proposer</th>
+                            <th>Description</th>
+                            <th>Points Contributed</th>
+                            <th>Status</th>
+                            <th>Submitted At</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {communityProjects.map((p: any) => (
+                            <tr key={`project-${p.id}`}>
+                              <td>
+                                <strong>{p.project_name}</strong>
+                                <div style={{ fontSize: 11, color: '#666' }}>Location: {p.proposed_location}</div>
+                              </td>
+                              <td>
+                                <strong>{p.sponsor_name}</strong>
+                                <div style={{ fontSize: 11, color: '#666' }}>{p.sponsor_email}</div>
+                              </td>
+                              <td>{p.description || "-"}</td>
+                              <td>{p.points_contributed} GP</td>
+                              <td>
+                                <span className={`green-work-live-pill ${p.status === 'approved' ? 'ok' : (p.status === 'rejected' ? 'error' : 'warning')}`}>
+                                  {p.status || "pending"}
+                                </span>
+                              </td>
+                              <td>{new Date(p.created_at).toLocaleString()}</td>
+                              <td>
+                                {(!p.status || p.status === 'pending') ? (
+                                  <div style={{ display: 'flex', gap: 6 }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateCommunityProjectStatus(p.id, "approved")}
+                                      style={{ padding: '4px 8px', fontSize: 11, backgroundColor: '#2ecc71', color: 'white', border: 'none' }}
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateCommunityProjectStatus(p.id, "rejected")}
+                                      style={{ padding: '4px 8px', fontSize: 11, backgroundColor: '#e74c3c', color: 'white', border: 'none' }}
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span style={{ fontSize: 11, textTransform: 'capitalize', fontWeight: 'bold' }}>{p.status}</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 </>
               )}
