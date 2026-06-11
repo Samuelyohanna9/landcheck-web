@@ -256,6 +256,14 @@ type SponsorAccountSummary = {
   monthly_trees?: number;
   all_time_trees?: number;
   achievement_level?: string;
+  green_points?: number | null;
+  lifetime_points?: number | null;
+  referral_code?: string | null;
+  referral_rules_met?: boolean | null;
+  personal_trees_sponsored?: number | null;
+  total_referred_users?: number | null;
+  converted_referred_users?: number | null;
+  referral_conversion_rate?: number | null;
 };
 
 type SponsorAgentBankAccountRecord = {
@@ -698,6 +706,7 @@ type WorkForm =
   | "sponsorship_orders"
   | "sponsor_payouts"
   | "sponsor_feedback"
+  | "logs"
   ;
 
 const AGRIC_HIDDEN_PROJECT_FORMS: WorkForm[] = [
@@ -2821,6 +2830,7 @@ export default function GreenWork() {
     "sponsorship_orders",
     "sponsor_payouts",
     "sponsor_feedback",
+    "logs",
   ];
 
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -2837,6 +2847,16 @@ export default function GreenWork() {
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  // System Logs & Reports state
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsError, setLogsError] = useState<string | null>(null);
+  const [qrPrintsReport, setQrPrintsReport] = useState<any[]>([]);
+  const [redemptions, setRedemptions] = useState<any[]>([]);
+  const [complaintNotes, setComplaintNotes] = useState<Record<number, string>>({});
+  const [nominationNotes, setNominationNotes] = useState<Record<number, string>>({});
+  const [projectNotes, setProjectNotes] = useState<Record<number, string>>({});
+  const [redemptionNotes, setRedemptionNotes] = useState<Record<number, string>>({});
   const [adminOverview, setAdminOverview] = useState<AdminOverview | null>(null);
   const [adminOverviewLoading, setAdminOverviewLoading] = useState(false);
   const [users, setUsers] = useState<GreenUser[]>([]);
@@ -2997,6 +3017,7 @@ export default function GreenWork() {
     planting_model: PlantingModel;
     allow_existing_tree_link: boolean;
     default_existing_tree_scope: ExistingScopeValue;
+    status: string;
   }>({
     workflow_profile: "green",
     access_model: "partner_org",
@@ -3012,6 +3033,7 @@ export default function GreenWork() {
     public_sponsor_agent_user_ids: [],
     sponsor_agent_planting_fee: "",
     sponsor_agent_maintenance_fee: "",
+    status: "ongoing",
     agric_program_type: "extension_support",
     agric_focus_commodities: "",
     agric_support_packages: "",
@@ -3836,6 +3858,7 @@ export default function GreenWork() {
       public_sponsor_agent_user_ids: [],
       sponsor_agent_planting_fee: "",
       sponsor_agent_maintenance_fee: "",
+      status: "ongoing",
       agric_program_type: "extension_support",
       agric_focus_commodities: "",
       agric_support_packages: "",
@@ -4125,6 +4148,7 @@ export default function GreenWork() {
             ? plantingModel
             : "direct",
         allow_existing_tree_link: Boolean(settingsPayload?.allow_existing_tree_link),
+        status: String(settingsPayload?.status || projectDetail?.status || "ongoing"),
         default_existing_tree_scope:
           String(settingsPayload?.default_existing_tree_scope || "exclude_from_planting_kpi").trim().toLowerCase() ===
           "include_in_planting_kpi"
@@ -4636,6 +4660,7 @@ export default function GreenWork() {
               }
             : {},
         planting_model: projectSettingsDraft.planting_model,
+        status: projectSettingsDraft.status,
       });
       setProjects((prev) =>
         prev.map((item) =>
@@ -5123,14 +5148,16 @@ export default function GreenWork() {
     if (!silent) setFeedbackLoading(true);
     setFeedbackError(null);
     try {
-      const [complaintsRes, nominationsRes, projectsRes] = await Promise.all([
+      const [complaintsRes, nominationsRes, projectsRes, redemptionsRes] = await Promise.all([
         api.get(`/green/admin/complaints?_ts=${Date.now()}`),
         api.get(`/green/admin/school-nominations?_ts=${Date.now()}`),
-        api.get(`/green/admin/community-projects?_ts=${Date.now()}`)
+        api.get(`/green/admin/community-projects?_ts=${Date.now()}`),
+        api.get(`/green/admin/point-redemptions?_ts=${Date.now()}`)
       ]);
       setComplaints(Array.isArray(complaintsRes.data) ? complaintsRes.data : []);
       setSchoolNominations(Array.isArray(nominationsRes.data) ? nominationsRes.data : []);
       setCommunityProjects(Array.isArray(projectsRes.data) ? projectsRes.data : []);
+      setRedemptions(Array.isArray(redemptionsRes.data) ? redemptionsRes.data : []);
     } catch (err: any) {
       setFeedbackError(err?.response?.data?.detail || err?.message || "Failed to load sponsor feedback data");
     } finally {
@@ -5138,9 +5165,9 @@ export default function GreenWork() {
     }
   }, []);
 
-  const handleResolveComplaint = async (complaintId: number) => {
+  const handleResolveComplaint = async (complaintId: number, supervisorNote?: string) => {
     try {
-      const res = await api.post(`/green/admin/complaints/${complaintId}/resolve`);
+      const res = await api.post(`/green/admin/complaints/${complaintId}/resolve`, { supervisor_note: supervisorNote });
       if (res.data.ok || res.status === 200) {
         toast.success("Complaint resolved successfully!");
         void loadSponsorFeedback({ silent: true });
@@ -5150,9 +5177,9 @@ export default function GreenWork() {
     }
   };
 
-  const handleReviewSchoolNomination = async (nominationId: number, status: string) => {
+  const handleReviewSchoolNomination = async (nominationId: number, status: string, supervisorNote?: string) => {
     try {
-      const res = await api.post(`/green/admin/school-nominations/${nominationId}/review`, { status });
+      const res = await api.post(`/green/admin/school-nominations/${nominationId}/review`, { status, supervisor_note: supervisorNote });
       if (res.data.ok || res.status === 200) {
         toast.success(`School nomination set to ${status}!`);
         void loadSponsorFeedback({ silent: true });
@@ -5162,15 +5189,64 @@ export default function GreenWork() {
     }
   };
 
-  const handleUpdateCommunityProjectStatus = async (projectId: number, status: string) => {
+  const handleUpdateCommunityProjectStatus = async (projectId: number, status: string, supervisorNote?: string) => {
     try {
-      const res = await api.post(`/green/admin/community-projects/${projectId}/status`, { status });
+      const res = await api.post(`/green/admin/community-projects/${projectId}/status`, { status, supervisor_note: supervisorNote });
       if (res.data.ok || res.status === 200) {
         toast.success(`Community project status updated to ${status}!`);
         void loadSponsorFeedback({ silent: true });
       }
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || err?.message || "Failed to update community project status");
+    }
+  };
+
+  const handleReviewPointRedemption = async (redemptionId: number, status: string, supervisorNote?: string) => {
+    try {
+      const res = await api.post(`/green/admin/point-redemptions/${redemptionId}/review`, { status, supervisor_note: supervisorNote });
+      if (res.data.status === "success" || res.status === 200) {
+        toast.success(`Reward redemption reviewed successfully!`);
+        void loadSponsorFeedback({ silent: true });
+        void loadSponsorAccounts();
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.message || "Failed to review reward redemption");
+    }
+  };
+
+  const loadActivityLogs = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setLogsLoading(true);
+    setLogsError(null);
+    try {
+      const res = await api.get("/green/admin/logs");
+      setActivityLogs(res.data || []);
+    } catch (err: any) {
+      setLogsError(err.message || "Failed to load activity logs");
+    } finally {
+      setLogsLoading(false);
+    }
+  }, []);
+
+  const loadQrPrintsReport = useCallback(async () => {
+    try {
+      const res = await api.get("/green/admin/qr-prints");
+      setQrPrintsReport(res.data || []);
+    } catch (err) {
+      console.error("Failed to load QR prints report:", err);
+    }
+  }, []);
+
+  const resetActivityLogs = async () => {
+    if (!window.confirm("Are you sure you want to clear/reset all system activity logs? This cannot be undone.")) return;
+    try {
+      setLogsLoading(true);
+      await api.post("/green/admin/logs/reset");
+      setActivityLogs([]);
+      toast.success("System logs reset successfully.");
+    } catch (err: any) {
+      toast.error("Error resetting logs: " + (err.message || String(err)));
+    } finally {
+      setLogsLoading(false);
     }
   };
 
@@ -5671,6 +5747,17 @@ export default function GreenWork() {
       setRemoteMonitoringReport(null);
     }
   }, [activeForm]);
+
+  useEffect(() => {
+    if (activeForm !== "logs") return;
+    void loadActivityLogs();
+    void loadQrPrintsReport();
+    const timer = window.setInterval(() => {
+      void loadActivityLogs({ silent: true });
+      void loadQrPrintsReport();
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [activeForm, loadActivityLogs, loadQrPrintsReport]);
 
   useEffect(() => {
     return () => {
@@ -8243,6 +8330,7 @@ export default function GreenWork() {
           { form: "existing_tree_intake", title: "Existing Trees", note: "Existing tree records" },
           { form: "verra_reports", title: "Verra Reports", note: "VCS package + history" },
           { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
+          { form: "logs", title: "System Logs & Reports", note: "Activity logs + QR prints report" },
         ];
 
   const userWorkSummary = useMemo(() => {
@@ -9724,6 +9812,13 @@ export default function GreenWork() {
               Review Queue ({reviewQueue.length})
             </button>
             <button
+              className={`green-work-menu-item ${activeForm === "logs" ? "active" : ""}`}
+              type="button"
+              onClick={() => openForm("logs")}
+            >
+              System Logs & Reports
+            </button>
+            <button
               className={`green-work-menu-item ${activeForm === "users" ? "active" : ""}`}
               type="button"
               onClick={() => openForm("users")}
@@ -9941,6 +10036,22 @@ export default function GreenWork() {
                         <option value="community_distributed">Community distributed</option>
                         <option value="mixed">Mixed model</option>
                         </select>
+                    </label>
+                    <label>
+                      <span>Project Status</span>
+                      <select
+                        value={projectSettingsDraft.status || "ongoing"}
+                        onChange={(e) =>
+                          setProjectSettingsDraft((prev) => ({
+                            ...prev,
+                            status: e.target.value,
+                          }))
+                        }
+                      >
+                        <option value="ongoing">Ongoing</option>
+                        <option value="paused">Paused</option>
+                        <option value="closed">Closed</option>
+                      </select>
                     </label>
                     {projectSettingsDraft.access_model === "public_sponsorship" && canAccessSuperAdmin ? (
                       <>
@@ -12208,7 +12319,14 @@ export default function GreenWork() {
                             <div className="staff-row-meta">
                               Organization: {sponsor.organization_name || "-"} | Email: {sponsor.email || "-"}
                             </div>
-                            <div className="staff-row-meta">
+                            <div className="staff-row-meta" style={{ marginTop: 6, padding: '4px 8px', backgroundColor: '#f9fcf9', borderRadius: 4, border: '1px dashed #2aa852' }}>
+                              <div><strong>Green Points Balance:</strong> {sponsor.green_points ?? 0} GP | <strong>Lifetime Points:</strong> {sponsor.lifetime_points ?? 0} GP</div>
+                              <div><strong>Referral Code:</strong> <code>{sponsor.referral_code || "None"}</code> | <strong>Rules Met:</strong> {sponsor.referral_rules_met ? "✅ Yes" : "❌ No"}</div>
+                              <div style={{ fontSize: 11, color: '#555', marginTop: 2 }}>
+                                Criteria: Sponsored trees: {sponsor.personal_trees_sponsored ?? 0} (req &gt;= 1) | Referred signups: {sponsor.total_referred_users ?? 0} (Converted: {sponsor.converted_referred_users ?? 0}, Conv. Rate: {sponsor.referral_conversion_rate ? `${Math.round(sponsor.referral_conversion_rate * 100)}%` : "0%"} - req &gt;= 20%)
+                              </div>
+                            </div>
+                            <div className="staff-row-meta" style={{ marginTop: 6 }}>
                               Monthly trees (this month): <strong>{sponsor.monthly_trees || 0}</strong> | All-time trees: <strong>{sponsor.all_time_trees || 0}</strong>
                             </div>
                             <div className="staff-row-meta">
@@ -12780,7 +12898,7 @@ export default function GreenWork() {
               <h3>Sponsor Feedback & Nominations</h3>
               {!publicSponsorshipProject ? (
                 <p className="green-work-note">Switch this project to the Public Sponsorship access route first.</p>
-              ) : feedbackLoading && complaints.length === 0 && schoolNominations.length === 0 && communityProjects.length === 0 ? (
+              ) : feedbackLoading && complaints.length === 0 && schoolNominations.length === 0 && communityProjects.length === 0 && redemptions.length === 0 ? (
                 <p className="green-work-note">Loading sponsor feedback data...</p>
               ) : (
                 <>
@@ -12808,7 +12926,7 @@ export default function GreenWork() {
                             <th>Type</th>
                             <th>Tree ID</th>
                             <th>Message</th>
-                            <th>Status</th>
+                            <th>Status / Notes</th>
                             <th>Submitted At</th>
                             <th>Actions</th>
                           </tr>
@@ -12827,17 +12945,31 @@ export default function GreenWork() {
                                 <span className={`green-work-live-pill ${c.status === 'resolved' ? 'ok' : 'warning'}`}>
                                   {c.status}
                                 </span>
+                                {c.supervisor_note && (
+                                  <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                                    <strong>Supervisor note:</strong> {c.supervisor_note}
+                                  </div>
+                                )}
                               </td>
                               <td>{new Date(c.created_at).toLocaleString()}</td>
                               <td>
                                 {c.status !== 'resolved' ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleResolveComplaint(c.id)}
-                                    style={{ padding: '4px 8px', fontSize: 11 }}
-                                  >
-                                    Mark Resolved
-                                  </button>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <textarea
+                                      placeholder="Add supervisor note to sponsor..."
+                                      value={complaintNotes[c.id] || ""}
+                                      onChange={(e) => setComplaintNotes({ ...complaintNotes, [c.id]: e.target.value })}
+                                      style={{ width: "100%", padding: 4, fontSize: 11 }}
+                                      rows={2}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleResolveComplaint(c.id, complaintNotes[c.id])}
+                                      style={{ padding: '4px 8px', fontSize: 11 }}
+                                    >
+                                      Mark Resolved
+                                    </button>
+                                  </div>
                                 ) : (
                                   <span style={{ fontSize: 11, color: '#27ae60', fontWeight: 'bold' }}>✓ Resolved</span>
                                 )}
@@ -12861,7 +12993,7 @@ export default function GreenWork() {
                             <th>School Details</th>
                             <th>Nominator</th>
                             <th>Reason</th>
-                            <th>Status</th>
+                            <th>Status / Notes</th>
                             <th>Points Spent</th>
                             <th>Submitted At</th>
                             <th>Actions</th>
@@ -12884,26 +13016,40 @@ export default function GreenWork() {
                                 <span className={`green-work-live-pill ${n.status === 'approved' ? 'ok' : (n.status === 'rejected' ? 'error' : 'warning')}`}>
                                   {n.status}
                                 </span>
+                                {n.supervisor_note && (
+                                  <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                                    <strong>Supervisor note:</strong> {n.supervisor_note}
+                                  </div>
+                                )}
                               </td>
                               <td>{n.points_spent} GP</td>
                               <td>{new Date(n.created_at).toLocaleString()}</td>
                               <td>
                                 {n.status === 'pending' ? (
-                                  <div style={{ display: 'flex', gap: 6 }}>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleReviewSchoolNomination(n.id, "approved")}
-                                      style={{ padding: '4px 8px', fontSize: 11, backgroundColor: '#2ecc71', color: 'white', border: 'none' }}
-                                    >
-                                      Approve
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleReviewSchoolNomination(n.id, "rejected")}
-                                      style={{ padding: '4px 8px', fontSize: 11, backgroundColor: '#e74c3c', color: 'white', border: 'none' }}
-                                    >
-                                      Reject
-                                    </button>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <textarea
+                                      placeholder="Add supervisor note to sponsor..."
+                                      value={nominationNotes[n.id] || ""}
+                                      onChange={(e) => setNominationNotes({ ...nominationNotes, [n.id]: e.target.value })}
+                                      style={{ width: "100%", padding: 4, fontSize: 11 }}
+                                      rows={2}
+                                    />
+                                    <div style={{ display: 'flex', gap: 6 }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleReviewSchoolNomination(n.id, "approved", nominationNotes[n.id])}
+                                        style={{ padding: '4px 8px', fontSize: 11, backgroundColor: '#2ecc71', color: 'white', border: 'none' }}
+                                      >
+                                        Approve
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleReviewSchoolNomination(n.id, "rejected", nominationNotes[n.id])}
+                                        style={{ padding: '4px 8px', fontSize: 11, backgroundColor: '#e74c3c', color: 'white', border: 'none' }}
+                                      >
+                                        Reject
+                                      </button>
+                                    </div>
                                   </div>
                                 ) : (
                                   <span style={{ fontSize: 11, textTransform: 'capitalize', fontWeight: 'bold' }}>{n.status}</span>
@@ -12929,7 +13075,7 @@ export default function GreenWork() {
                             <th>Proposer</th>
                             <th>Description</th>
                             <th>Points Contributed</th>
-                            <th>Status</th>
+                            <th>Status / Notes</th>
                             <th>Submitted At</th>
                             <th>Actions</th>
                           </tr>
@@ -12951,25 +13097,39 @@ export default function GreenWork() {
                                 <span className={`green-work-live-pill ${p.status === 'approved' ? 'ok' : (p.status === 'rejected' ? 'error' : 'warning')}`}>
                                   {p.status || "pending"}
                                 </span>
+                                {p.supervisor_note && (
+                                  <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                                    <strong>Supervisor note:</strong> {p.supervisor_note}
+                                  </div>
+                                )}
                               </td>
                               <td>{new Date(p.created_at).toLocaleString()}</td>
                               <td>
                                 {(!p.status || p.status === 'pending') ? (
-                                  <div style={{ display: 'flex', gap: 6 }}>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleUpdateCommunityProjectStatus(p.id, "approved")}
-                                      style={{ padding: '4px 8px', fontSize: 11, backgroundColor: '#2ecc71', color: 'white', border: 'none' }}
-                                    >
-                                      Approve
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleUpdateCommunityProjectStatus(p.id, "rejected")}
-                                      style={{ padding: '4px 8px', fontSize: 11, backgroundColor: '#e74c3c', color: 'white', border: 'none' }}
-                                    >
-                                      Reject
-                                    </button>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <textarea
+                                      placeholder="Add supervisor note to sponsor..."
+                                      value={projectNotes[p.id] || ""}
+                                      onChange={(e) => setProjectNotes({ ...projectNotes, [p.id]: e.target.value })}
+                                      style={{ width: "100%", padding: 4, fontSize: 11 }}
+                                      rows={2}
+                                    />
+                                    <div style={{ display: 'flex', gap: 6 }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateCommunityProjectStatus(p.id, "approved", projectNotes[p.id])}
+                                        style={{ padding: '4px 8px', fontSize: 11, backgroundColor: '#2ecc71', color: 'white', border: 'none' }}
+                                      >
+                                        Approve
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateCommunityProjectStatus(p.id, "rejected", projectNotes[p.id])}
+                                        style={{ padding: '4px 8px', fontSize: 11, backgroundColor: '#e74c3c', color: 'white', border: 'none' }}
+                                      >
+                                        Reject
+                                      </button>
+                                    </div>
                                   </div>
                                 ) : (
                                   <span style={{ fontSize: 11, textTransform: 'capitalize', fontWeight: 'bold' }}>{p.status}</span>
@@ -12981,8 +13141,205 @@ export default function GreenWork() {
                       </table>
                     )}
                   </div>
+
+                  {/* Section 4: Reward Redemptions */}
+                  <div style={{ marginBottom: 24 }}>
+                    <h4>Reward Redemptions ({redemptions.length})</h4>
+                    {redemptions.length === 0 ? (
+                      <p className="green-work-note" style={{ marginLeft: 0 }}>No reward redemptions yet.</p>
+                    ) : (
+                      <table className="green-work-table">
+                        <thead>
+                          <tr>
+                            <th>Sponsor</th>
+                            <th>Reward</th>
+                            <th>Points Spent</th>
+                            <th>Shipping Details</th>
+                            <th>Status / Notes</th>
+                            <th>Submitted At</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {redemptions.map((r: any) => (
+                            <tr key={`redemption-${r.id}`}>
+                              <td>
+                                <strong>{r.sponsor_name}</strong>
+                                <div style={{ fontSize: 11, color: '#666' }}>{r.sponsor_email}</div>
+                              </td>
+                              <td style={{ textTransform: 'capitalize' }}>
+                                {String(r.reward_type || "").replace("merch_", "").replace("_", " ")}
+                              </td>
+                              <td>{r.points_spent} GP</td>
+                              <td style={{ fontSize: 11, maxWidth: 250, whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                                {(() => {
+                                  const details = r.shipping_details;
+                                  if (!details || typeof details !== 'object') return 'No delivery details';
+                                  const method = details.delivery_method || '';
+                                  const phone = details.phone || '';
+                                  if (method === 'home_delivery') {
+                                    return `🏠 Home Delivery - Phone: ${phone} - Address: ${details.address || ''}, ${details.state || ''}, ${details.lga || ''}`;
+                                  } else if (method === 'office_pickup') {
+                                    return `🏢 Hub Pickup - Phone: ${phone} - Hub: ${details.hub || ''}`;
+                                  } else if (method === 'transport_terminal') {
+                                    return `🚌 Transport Park - Phone: ${phone} - Company: ${details.transport_company || ''}, Destination Park: ${details.destination_terminal || ''}`;
+                                  }
+                                  return JSON.stringify(details);
+                                })()}
+                              </td>
+                              <td>
+                                <span className={`green-work-live-pill ${r.status === 'approved' ? 'ok' : (r.status === 'rejected' ? 'error' : 'warning')}`}>
+                                  {r.status}
+                                </span>
+                                {r.supervisor_note && (
+                                  <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                                    <strong>Supervisor note:</strong> {r.supervisor_note}
+                                  </div>
+                                )}
+                              </td>
+                              <td>{new Date(r.created_at).toLocaleString()}</td>
+                              <td>
+                                {r.status === 'pending' ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <textarea
+                                      placeholder="Add supervisor note to sponsor..."
+                                      value={redemptionNotes[r.id] || ""}
+                                      onChange={(e) => setRedemptionNotes({ ...redemptionNotes, [r.id]: e.target.value })}
+                                      style={{ width: "100%", padding: 4, fontSize: 11 }}
+                                      rows={2}
+                                    />
+                                    <div style={{ display: 'flex', gap: 6 }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleReviewPointRedemption(r.id, "approved", redemptionNotes[r.id])}
+                                        style={{ padding: '4px 8px', fontSize: 11, backgroundColor: '#2ecc71', color: 'white', border: 'none' }}
+                                      >
+                                        Approve
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleReviewPointRedemption(r.id, "rejected", redemptionNotes[r.id])}
+                                        style={{ padding: '4px 8px', fontSize: 11, backgroundColor: '#e74c3c', color: 'white', border: 'none' }}
+                                      >
+                                        Reject
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span style={{ fontSize: 11, textTransform: 'capitalize', fontWeight: 'bold' }}>{r.status}</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
                 </>
               )}
+            </div>
+          )}
+
+          {activeForm === "logs" && (
+            <div className="green-work-card">
+              <h3>System Logs & Reports</h3>
+              <p className="green-work-note">
+                Monitor live system activity and track tree tag QR code printing statistics.
+              </p>
+              
+              <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void loadActivityLogs();
+                    void loadQrPrintsReport();
+                  }}
+                  disabled={logsLoading}
+                >
+                  {logsLoading ? "Refreshing..." : "Refresh Logs & Reports"}
+                </button>
+                <button
+                  type="button"
+                  onClick={resetActivityLogs}
+                  style={{ backgroundColor: '#e74c3c', color: 'white', border: 'none' }}
+                >
+                  Reset Activity Logs
+                </button>
+              </div>
+
+              {logsError && <p className="green-work-error" style={{ color: 'red', marginBottom: 12 }}>{logsError}</p>}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                {/* QR Code Prints Report */}
+                <div>
+                  <h4>QR Tag Print Status Report</h4>
+                  {qrPrintsReport.length === 0 ? (
+                    <p className="green-work-note" style={{ marginLeft: 0 }}>No QR tag print logs recorded yet.</p>
+                  ) : (
+                    <table className="green-work-table">
+                      <thead>
+                        <tr>
+                          <th>Project</th>
+                          <th>Tree #</th>
+                          <th>Species</th>
+                          <th>Tree ID</th>
+                          <th>Print Count</th>
+                          <th>Last Printed At</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {qrPrintsReport.map((p: any) => (
+                          <tr key={`qrprint-${p.tree_id}`}>
+                            <td>{p.project_name}</td>
+                            <td>#{p.project_tree_no}</td>
+                            <td>{p.species}</td>
+                            <td>{p.tree_id}</td>
+                            <td style={{ fontWeight: 'bold' }}>{p.print_count} times</td>
+                            <td>{new Date(p.last_printed_at).toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                {/* System Activity Logs */}
+                <div>
+                  <h4>System Activity Logs (Capped at 10,000)</h4>
+                  {activityLogs.length === 0 ? (
+                    <p className="green-work-note" style={{ marginLeft: 0 }}>No system activity logs recorded yet.</p>
+                  ) : (
+                    <div style={{ maxHeight: 500, overflowY: 'auto', border: '1px solid #dcdfdc', borderRadius: 4, padding: 12, backgroundColor: '#fcfcfc' }}>
+                      <table className="green-work-table" style={{ margin: 0 }}>
+                        <thead>
+                          <tr>
+                            <th>Time</th>
+                            <th>Source</th>
+                            <th>Event</th>
+                            <th>Actor</th>
+                            <th>Message</th>
+                            <th>Details</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {activityLogs.map((log: any) => (
+                            <tr key={`log-${log.id}`} style={{ fontSize: 12 }}>
+                              <td style={{ whiteSpace: 'nowrap' }}>{new Date(log.created_at).toLocaleString()}</td>
+                              <td style={{ textTransform: 'capitalize' }}>{log.source}</td>
+                              <td><span className="green-work-live-pill neutral">{log.event_type}</span></td>
+                              <td>{log.actor || "-"}</td>
+                              <td>{log.message}</td>
+                              <td style={{ fontSize: 11, maxWidth: 200, whiteSpace: 'normal', wordBreak: 'break-all' }}>
+                                {log.details ? JSON.stringify(log.details) : "-"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
