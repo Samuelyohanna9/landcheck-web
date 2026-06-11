@@ -16625,6 +16625,28 @@ export default function GreenWork() {
                   ))
                 )}
               </div>
+              {activeWorkflowProfile === "green" && (
+                <div style={{ marginTop: 20, padding: '0 16px 16px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open(`${BACKEND_URL}/green/trees/${inspectedTree.id}/qr-tag/pdf`, "_blank");
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      background: "#083e20",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontWeight: "bold",
+                      cursor: "pointer"
+                    }}
+                  >
+                    🌳 Download QR Tree Tag (PDF)
+                  </button>
+                </div>
+              )}
             </div>
           </aside>
         </>
