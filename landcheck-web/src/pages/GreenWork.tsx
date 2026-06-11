@@ -3129,6 +3129,9 @@ export default function GreenWork() {
   const [sponsorAgentPayoutBoard, setSponsorAgentPayoutBoard] = useState<SponsorAgentPayoutBoard | null>(null);
   const [sponsorAgentPayoutLoading, setSponsorAgentPayoutLoading] = useState(false);
   const [sponsorAgentPayoutError, setSponsorAgentPayoutError] = useState<string | null>(null);
+  const [sponsorQrStatusRows, setSponsorQrStatusRows] = useState<any[]>([]);
+  const [sponsorQrStatusLoading, setSponsorQrStatusLoading] = useState(false);
+  const [sponsorQrStatusError, setSponsorQrStatusError] = useState<string | null>(null);
   const [reviewingSponsorAgentPayoutId, setReviewingSponsorAgentPayoutId] = useState<number | null>(null);
   const [savingPublicSponsorAgents, setSavingPublicSponsorAgents] = useState(false);
   const [fallbackSponsorAccounts, setFallbackSponsorAccounts] = useState<SponsorAccountSummary[]>([]);
@@ -5272,6 +5275,28 @@ export default function GreenWork() {
     }
   }, []);
 
+  const loadSponsorQrStatus = useCallback(async (projectId: number, options?: { silent?: boolean; forceSync?: boolean }) => {
+    const silent = Boolean(options?.silent);
+    const forceSync = options?.forceSync !== false;
+    if (!projectId) {
+      setSponsorQrStatusRows([]);
+      setSponsorQrStatusError(null);
+      return;
+    }
+    if (!silent) setSponsorQrStatusLoading(true);
+    setSponsorQrStatusError(null);
+    try {
+      const syncQs = forceSync ? "&sync=1" : "";
+      const res = await api.get(`/green/admin/sponsor-qr-status?project_id=${projectId}${syncQs}&_ts=${Date.now()}`);
+      setSponsorQrStatusRows(Array.isArray(res.data) ? res.data : []);
+    } catch (error: any) {
+      setSponsorQrStatusError(error?.response?.data?.detail || error?.message || "Failed to load sponsor QR status");
+      setSponsorQrStatusRows([]);
+    } finally {
+      if (!silent) setSponsorQrStatusLoading(false);
+    }
+  }, []);
+
   const reviewSponsorAgentPayoutRequest = useCallback(
     async (
       requestId: number,
@@ -5701,6 +5726,8 @@ export default function GreenWork() {
       setFallbackSponsorAccounts([]);
       setSponsorAgentPayoutBoard(null);
       setSponsorAgentPayoutError(null);
+      setSponsorQrStatusRows([]);
+      setSponsorQrStatusError(null);
       return;
     }
     if (!["sponsors", "sponsorship_orders", "project_focus", "assign_work", "assign_task", "sponsor_payouts", "sponsor_feedback"].includes(String(activeForm || ""))) return;
@@ -5712,6 +5739,20 @@ export default function GreenWork() {
     }, 15000);
     return () => window.clearInterval(timer);
   }, [activeProjectId, activeForm, loadSponsorAccounts, loadSponsorshipOrders, publicSponsorshipProject]);
+
+  useEffect(() => {
+    if (!activeProjectId || !publicSponsorshipProject) {
+      setSponsorQrStatusRows([]);
+      setSponsorQrStatusError(null);
+      return;
+    }
+    if (activeForm !== "sponsors") return;
+    void loadSponsorQrStatus(activeProjectId, { forceSync: true });
+    const timer = window.setInterval(() => {
+      void loadSponsorQrStatus(activeProjectId, { silent: true, forceSync: false });
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [activeForm, activeProjectId, loadSponsorQrStatus, publicSponsorshipProject]);
 
   useEffect(() => {
     if (!activeProjectId || !publicSponsorshipProject) {
@@ -12260,6 +12301,7 @@ export default function GreenWork() {
                       onClick={() => {
                         void loadSponsorAccounts();
                         if (activeProjectId) void loadSponsorshipOrders(activeProjectId, { forceSync: true });
+                        if (activeProjectId) void loadSponsorQrStatus(activeProjectId, { forceSync: true });
                       }}
                     >
                       Refresh Sponsors
@@ -12339,6 +12381,80 @@ export default function GreenWork() {
                       })}
                     </div>
                   )}
+                  <div style={{ marginTop: 18 }}>
+                    <h4>Sponsor QR Tag Status</h4>
+                    <p className="green-work-note" style={{ marginLeft: 0 }}>
+                      This shows each paid sponsor unit reserved for planting, whether its QR tag has already been downloaded,
+                      which field agent it was reserved for, and the total number of downloads recorded so far.
+                    </p>
+                    <div className="work-actions" style={{ marginBottom: 12, flexWrap: "wrap" }}>
+                      <span className="green-work-live-pill neutral">Reserved tags: {sponsorQrStatusRows.length}</span>
+                      <span className="green-work-live-pill ok">
+                        Downloaded: {sponsorQrStatusRows.filter((row: any) => Number(row.qr_download_count || 0) > 0).length}
+                      </span>
+                      <span className="green-work-live-pill warning">
+                        Pending: {sponsorQrStatusRows.filter((row: any) => Number(row.qr_download_count || 0) <= 0).length}
+                      </span>
+                    </div>
+                    {sponsorQrStatusLoading ? (
+                      <p className="green-work-note">Loading sponsor QR status...</p>
+                    ) : sponsorQrStatusError ? (
+                      <p className="green-work-note danger">{sponsorQrStatusError}</p>
+                    ) : sponsorQrStatusRows.length === 0 ? (
+                      <p className="green-work-note">No sponsor QR reservations are visible for this project yet.</p>
+                    ) : (
+                      <table className="green-work-table">
+                        <thead>
+                          <tr>
+                            <th>Sponsor</th>
+                            <th>QR Ref</th>
+                            <th>Unit Status</th>
+                            <th>Agent</th>
+                            <th>Downloads</th>
+                            <th>Last Download</th>
+                            <th>Tree Link</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sponsorQrStatusRows.map((row: any) => (
+                            <tr key={`sponsor-qr-${row.unit_id}`}>
+                              <td>
+                                <strong>{row.sponsor_name || row.sponsor_organization_name || `Sponsor #${row.sponsor_account_id || row.unit_id}`}</strong>
+                                {row.dedication_type || row.dedication_name ? (
+                                  <div style={{ fontSize: 11, color: "#56705f", marginTop: 4 }}>
+                                    {`Dedication: ${formatTaskTypeLabel(row.dedication_type || "self")}`}
+                                    {row.dedication_name ? ` | ${row.dedication_name}` : ""}
+                                  </div>
+                                ) : null}
+                              </td>
+                              <td>{row.unit_uid || `Unit #${row.unit_id}`}</td>
+                              <td>
+                                <span className={`green-work-live-pill ${Number(row.qr_download_count || 0) > 0 ? "ok" : "warning"}`}>
+                                  {row.download_status === "downloaded" ? "Downloaded" : "Pending download"}
+                                </span>
+                                <div style={{ fontSize: 11, color: "#56705f", marginTop: 4 }}>
+                                  {formatTaskTypeLabel(row.sponsorship_status || "awaiting_tree")}
+                                </div>
+                              </td>
+                              <td>
+                                {row.assigned_agent_name || row.assigned_agent_username || "-"}
+                                {row.assigned_at ? (
+                                  <div style={{ fontSize: 11, color: "#56705f", marginTop: 4 }}>
+                                    Reserved {new Date(row.assigned_at).toLocaleString()}
+                                  </div>
+                                ) : null}
+                              </td>
+                              <td style={{ fontWeight: 800 }}>{Number(row.qr_download_count || 0)}</td>
+                              <td>{row.last_qr_downloaded_at ? new Date(row.last_qr_downloaded_at).toLocaleString() : "-"}</td>
+                              <td>
+                                {row.tree_project_no ? `Tree #${row.tree_project_no}` : row.tree_id ? `Tree ID ${row.tree_id}` : "Awaiting planting"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
                 </>
               )}
             </div>
