@@ -42,6 +42,9 @@ import "../styles/green.css";
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
 
+type WorkflowProfile = "green" | "agric" | "relief_recovery";
+type ProjectAccessModel = "partner_org" | "public_sponsorship";
+
 type CarbonData = {
   current_co2_kg: number;
   current_co2_tonnes: number;
@@ -61,6 +64,9 @@ type Project = {
   organization_slug?: string | null;
   organization_status?: string | null;
   organization_logo_url?: string | null;
+  workflow_profile?: WorkflowProfile | string | null;
+  access_model?: ProjectAccessModel | string | null;
+  public_sponsor_enabled?: boolean | null;
   name: string;
   location_text: string;
   sponsor: string;
@@ -161,7 +167,96 @@ type ActiveActorOption = {
   id: number;
 };
 
-type Section = "tasks" | "map" | "records" | "profile";
+type SponsorAgentBankOption = {
+  code: string;
+  name: string;
+};
+
+type SponsorAgentBankAccountRecord = {
+  bank_code?: string | null;
+  bank_name?: string | null;
+  account_number?: string | null;
+  account_number_masked?: string | null;
+  account_name?: string | null;
+  verified?: boolean;
+  verified_at?: string | null;
+};
+
+type SponsorAgentProjectRateRecord = {
+  project_id: number;
+  project_name?: string | null;
+  location_text?: string | null;
+  currency?: string | null;
+  planting_fee?: number | null;
+  maintenance_fee?: number | null;
+};
+
+type SponsorAgentEarningRecord = {
+  earning_key: string;
+  work_type?: string | null;
+  project_id?: number | null;
+  project_name?: string | null;
+  currency?: string | null;
+  amount?: number | null;
+  tree_label?: string | null;
+  species?: string | null;
+  sponsor_name?: string | null;
+  payout_status?: string | null;
+  earned_at?: string | null;
+  task_label?: string | null;
+};
+
+type SponsorAgentPayoutRequestRecord = {
+  id: number;
+  request_uid?: string | null;
+  amount_total: number;
+  currency?: string | null;
+  status?: string | null;
+  bank_name?: string | null;
+  account_number_masked?: string | null;
+  account_name?: string | null;
+  review_notes?: string | null;
+  transfer_status?: string | null;
+  settlement_channel?: string | null;
+  created_at?: string | null;
+  paid_at?: string | null;
+};
+
+type SponsorAgentPayoutDashboard = {
+  eligible?: boolean;
+  minimum_payout_amount?: number | null;
+  currency?: string | null;
+  auto_payout_available?: boolean;
+  bank_account?: SponsorAgentBankAccountRecord | null;
+  projects?: SponsorAgentProjectRateRecord[];
+  summary?: {
+    eligible_project_count?: number;
+    planting_count?: number;
+    maintenance_count?: number;
+    total_earnings_amount?: number;
+    available_amount?: number;
+    requested_amount?: number;
+    paid_amount?: number;
+    pending_request_count?: number;
+    paid_request_count?: number;
+    payout_eligible?: boolean;
+    bank_verified?: boolean;
+  } | null;
+  project_summaries?: Array<{
+    project_id: number;
+    project_name?: string | null;
+    currency?: string | null;
+    available_amount?: number;
+    requested_amount?: number;
+    paid_amount?: number;
+    planting_count?: number;
+    maintenance_count?: number;
+  }>;
+  earnings?: SponsorAgentEarningRecord[];
+  requests?: SponsorAgentPayoutRequestRecord[];
+};
+
+type Section = "tasks" | "map" | "records" | "profile" | "review" | "wallet";
 type TaskEdit = {
   status: string;
   notes: string;
@@ -181,6 +276,153 @@ type TaskTreeMetaEdit = {
 type DeferredInstallPrompt = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
+
+const FIELD_CAPTURE_TASK_TYPE = "field_capture";
+const PLANTING_TASK_TYPES = new Set(["planting", "existing_inventory_intake"]);
+const formatCurrencyAmount = (amount: number | null | undefined, currency = "NGN") => {
+  const numeric = Number(amount || 0);
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: String(currency || "NGN").toUpperCase(),
+      maximumFractionDigits: 0,
+    }).format(numeric);
+  } catch {
+    return `${String(currency || "NGN").toUpperCase()} ${numeric.toLocaleString()}`;
+  }
+};
+const toTitle = (value: string | null | undefined) =>
+  String(value || "")
+    .trim()
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+const normalizeWorkflowProfile = (value?: string | null): WorkflowProfile => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "agric") return "agric";
+  if (normalized === "relief_recovery") return "relief_recovery";
+  return "green";
+};
+const normalizeProjectAccessModel = (value?: string | null): ProjectAccessModel =>
+  String(value || "").trim().toLowerCase() === "public_sponsorship" ? "public_sponsorship" : "partner_org";
+const isPublicSponsorshipProject = (accessModel?: string | null, publicSponsorEnabled?: boolean | null) =>
+  normalizeProjectAccessModel(accessModel) === "public_sponsorship" || Boolean(publicSponsorEnabled);
+const getWorkflowLabels = (profile?: WorkflowProfile | string | null) => {
+  const normalized = normalizeWorkflowProfile(profile);
+  if (normalized === "agric") {
+    return {
+      appTitle: "LandCheck Agric",
+      dashboardSubtitle: "Extension field dashboard",
+      entitySingular: "Plot",
+      entityPlural: "Plots",
+      actionTitle: "Map & Add Plots",
+      addActionLabel: "Add Plot",
+      recordsTitle: "Plot Records",
+      totalLabel: "Total Plots",
+      healthyLabel: "Good",
+      healthyHelper: "Healthy + active",
+      attentionLabel: "Needs Support",
+      attentionHelper: "Attention + damaged",
+      deadLabel: "Inactive",
+      deadHelper: "Removed + inactive",
+      ownerLabel: "Farmer",
+      cropLabel: "Primary Crop",
+      cropDistributionTitle: "Crop Distribution",
+      activityTitle: "Field Visits",
+      activityTitleSingular: "Field Visit",
+      latestRecordsTitle: "My latest plot records",
+      latestRecordsSubtitle: "Recent plot records saved by this field user remain visible offline.",
+      mapTitle: "Project plot map",
+      projectCardMetricLabel: "My plots",
+      impactEyebrow: "Programme evidence",
+      impactMessage: "Your mapped farms and field visits are building trusted programme evidence for every farmer you support.",
+      survivalTitle: "Overall Field Condition",
+      emptyRecordsTitle: "No plot records yet",
+      emptyRecordsSubtitle: "Save a farm plot record first and it will appear here.",
+      emptyActivityTitle: "No field visits",
+      walletTitle: "Agent Earnings",
+    };
+  }
+  if (normalized === "relief_recovery") {
+    return {
+      appTitle: "LandCheck Relief",
+      dashboardSubtitle: "Relief field dashboard",
+      entitySingular: "Site",
+      entityPlural: "Sites",
+      actionTitle: "Map & Assess Sites",
+      addActionLabel: "Add Site",
+      recordsTitle: "Site Records",
+      totalLabel: "Total Sites",
+      healthyLabel: "Stable",
+      healthyHelper: "Stable + completed",
+      attentionLabel: "Needs Action",
+      attentionHelper: "Repair + urgent follow-up",
+      deadLabel: "Closed",
+      deadHelper: "Closed + inactive",
+      ownerLabel: "Beneficiary",
+      cropLabel: "Asset Type",
+      cropDistributionTitle: "Asset Distribution",
+      activityTitle: "Relief Visits",
+      activityTitleSingular: "Relief Visit",
+      latestRecordsTitle: "My latest site records",
+      latestRecordsSubtitle: "Recent relief site records saved by this field user remain visible offline.",
+      mapTitle: "Project site map",
+      projectCardMetricLabel: "My sites",
+      impactEyebrow: "Recovery evidence",
+      impactMessage: "Your mapped sites and relief visits are building trusted recovery evidence for every response area.",
+      survivalTitle: "Overall Site Condition",
+      emptyRecordsTitle: "No site records yet",
+      emptyRecordsSubtitle: "Save an assessed site record first and it will appear here.",
+      emptyActivityTitle: "No relief visits",
+      walletTitle: "Agent Earnings",
+    };
+  }
+  return {
+    appTitle: "LandCheck Green",
+    dashboardSubtitle: "Field dashboard",
+    entitySingular: "Tree",
+    entityPlural: "Trees",
+    actionTitle: "Map & Add Trees",
+    addActionLabel: "Add Tree",
+    recordsTitle: "Tree Records",
+    totalLabel: "Total Trees",
+    healthyLabel: "Healthy",
+    healthyHelper: "Healthy + alive",
+    attentionLabel: "Attention",
+    attentionHelper: "Attention + damaged",
+    deadLabel: "Dead",
+    deadHelper: "Dead + removed",
+    ownerLabel: "Custodian",
+    cropLabel: "Species",
+    cropDistributionTitle: "Species Distribution",
+    activityTitle: "Maintenance",
+    activityTitleSingular: "Maintenance",
+    latestRecordsTitle: "My latest tree records",
+    latestRecordsSubtitle: "Recent tree records saved by this field user remain visible offline.",
+    mapTitle: "Project tree map",
+    projectCardMetricLabel: "My trees",
+    impactEyebrow: "Verified climate action",
+    impactMessage: "Your tree records, field photos, and care updates are building a verified climate story.",
+    survivalTitle: "Overall Survival Rate",
+    emptyRecordsTitle: "No tree records yet",
+    emptyRecordsSubtitle: "Save a planting or existing-tree record first and it will appear here.",
+    emptyActivityTitle: "No maintenance",
+    walletTitle: "Agent Earnings",
+  };
+};
+const getGreetingLabel = (date = new Date()) => {
+  const hour = date.getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+};
+const getGreetingIconKind = (date = new Date()): "morning" | "afternoon" | "evening" => {
+  const hour = date.getHours();
+  if (hour < 12) return "morning";
+  if (hour < 17) return "afternoon";
+  return "evening";
 };
 
 const formatDateLabel = (value: string | null | undefined) => {
@@ -279,6 +521,12 @@ const isTaskLockedForField = (task: any) => isTaskApproved(task) || isTaskSubmit
 const isTaskDoneForSummary = (task: any) => {
   return isTaskApproved(task);
 };
+const isMaintenanceBoardTask = (task: any) =>
+  normalizeTaskState(task?.task_type) !== FIELD_CAPTURE_TASK_TYPE &&
+  !PLANTING_TASK_TYPES.has(normalizeTaskState(task?.task_type)) &&
+  !isTaskRejected(task) &&
+  !isTaskMetadataEditRequested(task);
+const isReviewBoardTask = (task: any) => isTaskRejected(task) || isTaskMetadataEditRequested(task);
 const normalizePhotoList = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   const seen = new Set<string>();
@@ -608,6 +856,119 @@ function TreeTileIcon() {
   );
 }
 
+function ReviewTileIcon() {
+  return (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <path d="M16 10h26l10 10v34H16z" fill="#ffffff" stroke="#1b3b32" strokeWidth="3" />
+      <path d="M42 10v12h10" fill="none" stroke="#1b3b32" strokeWidth="3" strokeLinejoin="round" />
+      <path d="M24 28h20M24 36h16" stroke="#6b7f76" strokeWidth="3" strokeLinecap="round" />
+      <path d="M24 46l6 6 12-14" fill="none" stroke="#2ea653" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function WalletIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18a2 2 0 0 1 2 2v1.5H8.5A2.5 2.5 0 0 0 6 11v5.5A2.5 2.5 0 0 0 8.5 19H20v.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 19.5z" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path d="M8.5 8.5H21v9H8.5A1.5 1.5 0 0 1 7 16V10a1.5 1.5 0 0 1 1.5-1.5Z" fill="none" stroke="currentColor" strokeWidth="2" />
+      <circle cx="16.5" cy="13" r="1.25" fill="currentColor" />
+    </svg>
+  );
+}
+
+function LocationIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 21s6-5.7 6-11a6 6 0 1 0-12 0c0 5.3 6 11 6 11Z" fill="none" stroke="currentColor" strokeWidth="2" />
+      <circle cx="12" cy="10" r="2.5" fill="none" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function GreetingIcon({ kind }: { kind: "morning" | "afternoon" | "evening" }) {
+  if (kind === "evening") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path
+          d="M16.8 3.6a8.9 8.9 0 1 0 3.6 16.9 9.6 9.6 0 1 1-3.6-16.9Z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  if (kind === "afternoon") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle cx="12" cy="12" r="4.6" fill="none" stroke="currentColor" strokeWidth="2" />
+        <path
+          d="M12 2.4v2.2M12 19.4v2.2M4.7 4.7l1.6 1.6M17.7 17.7l1.6 1.6M2.4 12h2.2M19.4 12h2.2M4.7 19.3l1.6-1.6M17.7 6.3l1.6-1.6"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M5 15a5 5 0 1 1 9.6-1.9A4.6 4.6 0 1 1 17 22H7a4 4 0 0 1-2-7Z" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path d="M12 2.6v2.1M4.8 9.1l1.8.9M19.2 9.1l-1.8.9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MetricHealthyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        d="M12 20.5 5.6 14.2a4.4 4.4 0 0 1 6.2-6.2l.2.2.2-.2a4.4 4.4 0 1 1 6.2 6.2Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function MetricAttentionIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 4.2 21 20H3Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M12 9v5.2M12 17.2h.01" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MetricDeadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="8.6" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path d="m8.7 8.7 6.6 6.6m0-6.6-6.6 6.6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LeafGlyphIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        d="M19.5 4.5c-5 0-10.3 2.5-12.7 6.2-1.9 2.8-1.7 6 1 7.7 2.6 1.6 6 .8 8.2-1.4 3.2-3.2 3.5-8.6 3.5-12.5Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path d="M7.8 16.8c1.9-2.2 4.2-4.1 7-5.8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function Green() {
   const navigate = useNavigate();
   const greenAuthSession = useMemo(() => getGreenAuthSession(), []);
@@ -624,7 +985,7 @@ export default function Green() {
   const storedSectionRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_green_active_section") || "" : "";
   const storedProjectIdRaw = typeof window !== "undefined" ? localStorage.getItem("landcheck_green_active_project_id") || "" : "";
   const storedProjectId = Number(storedProjectIdRaw || "0");
-  const storedSection = (["tasks", "map", "records", "profile"] as Section[]).includes(storedSectionRaw as Section)
+  const storedSection = (["tasks", "map", "records", "profile", "review", "wallet"] as Section[]).includes(storedSectionRaw as Section)
     ? (storedSectionRaw as Section)
     : null;
 
@@ -677,6 +1038,7 @@ export default function Green() {
   const [selectedExistingTreeAreaOrderId, setSelectedExistingTreeAreaOrderId] = useState<string>("");
   const [addingTree, setAddingTree] = useState(false);
   const [mapDrawMode, setMapDrawMode] = useState(true);
+  const [fieldViewTab, setFieldViewTab] = useState<"map" | "add_tree">("map");
   const [, setMapView] = useState<{
     lng: number;
     lat: number;
@@ -717,6 +1079,19 @@ export default function Green() {
     new_password: "",
     confirm_password: "",
   });
+  const [walletDashboard, setWalletDashboard] = useState<SponsorAgentPayoutDashboard | null>(null);
+  const [walletBanks, setWalletBanks] = useState<SponsorAgentBankOption[]>([]);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [walletRefreshing, setWalletRefreshing] = useState(false);
+  const [walletError, setWalletError] = useState("");
+  const [walletEditingBank, setWalletEditingBank] = useState(false);
+  const [walletSavingBank, setWalletSavingBank] = useState(false);
+  const [walletRequestingPayout, setWalletRequestingPayout] = useState(false);
+  const [walletBankSearch, setWalletBankSearch] = useState("");
+  const [walletBankCode, setWalletBankCode] = useState("");
+  const [walletBankName, setWalletBankName] = useState("");
+  const [walletAccountNumber, setWalletAccountNumber] = useState("");
+  const [walletAccountName, setWalletAccountName] = useState("");
   const isPartnerGreenSession = greenAuthSession?.auth_mode === "partner_user";
   const greenSessionPartnerOrgId =
     isPartnerGreenSession && Number.isFinite(Number(greenAuthUser?.organization_id))
@@ -1222,6 +1597,109 @@ export default function Green() {
       return a.value.localeCompare(b.value);
     });
   }, [users, projectCustodians]);
+  const activeWorkflowProfile = useMemo(() => normalizeWorkflowProfile(activeProject?.workflow_profile), [activeProject?.workflow_profile]);
+  const workflowLabels = useMemo(() => getWorkflowLabels(activeWorkflowProfile), [activeWorkflowProfile]);
+  const greetingLabel = useMemo(() => getGreetingLabel(), []);
+  const greetingIconKind = useMemo(() => getGreetingIconKind(), []);
+  const selectedProjectIsSponsorEnabled = useMemo(
+    () =>
+      Boolean(
+        activeProject &&
+          activeWorkflowProfile === "green" &&
+          isPublicSponsorshipProject(activeProject.access_model, activeProject.public_sponsor_enabled),
+      ),
+    [activeProject, activeWorkflowProfile],
+  );
+  const fieldUserName = activeUser || greenAuthUser?.full_name || "Field user";
+  const fieldUserRoleLabel = activeUserDetail ? toTitle(String(activeUserDetail.role || "").replace(/^custodian_/, "")) : "Field user";
+  const profileDisplayName = activeUserDetail?.full_name || greenAuthUser?.full_name || fieldUserName;
+  const profileRoleText = activeUserDetail
+    ? toTitle(String(activeUserDetail.role || "").replace(/^custodian_/, "").replaceAll("_", " "))
+    : fieldUserRoleLabel;
+  const maintenanceBoardTasks = useMemo(
+    () => myTasks.filter((task) => isMaintenanceBoardTask(task)).sort((a, b) => taskSortStamp(b) - taskSortStamp(a)),
+    [myTasks],
+  );
+  const reviewBoardTasks = useMemo(
+    () => myTasks.filter((task) => isReviewBoardTask(task)).sort((a, b) => taskSortStamp(b) - taskSortStamp(a)),
+    [myTasks],
+  );
+  const activeBoardTasks = useMemo(
+    () => (activeSection === "review" ? reviewBoardTasks : maintenanceBoardTasks),
+    [activeSection, maintenanceBoardTasks, reviewBoardTasks],
+  );
+  const maintenanceBoardStats = useMemo(() => {
+    const open = maintenanceBoardTasks.filter((task) => !isTaskApproved(task) && !isTaskSubmitted(task)).length;
+    const submitted = maintenanceBoardTasks.filter((task) => isTaskSubmitted(task)).length;
+    const approved = maintenanceBoardTasks.filter((task) => isTaskApproved(task)).length;
+    return { open, submitted, approved };
+  }, [maintenanceBoardTasks]);
+  const reviewBoardStats = useMemo(() => {
+    const metadataEdits = reviewBoardTasks.filter((task) => isTaskMetadataEditRequested(task)).length;
+    const rejected = reviewBoardTasks.filter((task) => isTaskRejected(task)).length;
+    return { returned: reviewBoardTasks.length, metadataEdits, rejected };
+  }, [reviewBoardTasks]);
+  const activeWalletProjectRate = useMemo(() => {
+    if (!activeProject || !walletDashboard?.projects?.length) return null;
+    return walletDashboard.projects.find((project) => Number(project.project_id) === Number(activeProject.id)) || null;
+  }, [activeProject, walletDashboard?.projects]);
+  const walletSummary = walletDashboard?.summary || null;
+  const walletProjectSummary = useMemo(() => {
+    if (!activeProject || !walletDashboard?.project_summaries?.length) return null;
+    return walletDashboard.project_summaries.find((item) => Number(item.project_id) === Number(activeProject.id)) || null;
+  }, [activeProject, walletDashboard?.project_summaries]);
+  const applyWalletBankAccount = useCallback((bankAccount?: SponsorAgentBankAccountRecord | null) => {
+    setWalletBankCode(String(bankAccount?.bank_code || ""));
+    setWalletBankName(String(bankAccount?.bank_name || ""));
+    setWalletAccountNumber(String(bankAccount?.account_number || ""));
+    setWalletAccountName(String(bankAccount?.account_name || ""));
+  }, []);
+  const loadWalletDashboard = useCallback(
+    async (refreshing = false) => {
+      if (!selectedProjectIsSponsorEnabled || !activeProject || !greenAuthUser?.id) return;
+      if (refreshing) {
+        setWalletRefreshing(true);
+      } else {
+        setWalletLoading(true);
+      }
+      setWalletError("");
+      try {
+        const [dashboardResponse, banksResponse] = await Promise.all([
+          api.get<SponsorAgentPayoutDashboard>("/green/agent-payouts/me", {
+            params: {
+              user_id: greenAuthUser.id,
+              ...(greenAuthUser.organization_id ? { organization_id: greenAuthUser.organization_id } : {}),
+              project_id: activeProject.id,
+              _ts: Date.now(),
+            },
+          }),
+          api
+            .get<{ banks?: SponsorAgentBankOption[] }>("/green/agent-payouts/banks", {
+              params: { country: "NG", _ts: Date.now() },
+            })
+            .catch(() => ({ data: { banks: [] as SponsorAgentBankOption[] } })),
+        ]);
+        const dashboard = dashboardResponse.data || null;
+        setWalletDashboard(dashboard);
+        setWalletBanks(Array.isArray(banksResponse.data?.banks) ? banksResponse.data.banks : []);
+        applyWalletBankAccount(dashboard?.bank_account || null);
+        setWalletEditingBank(!Boolean(dashboard?.summary?.bank_verified));
+      } catch (error: any) {
+        setWalletError(error?.response?.data?.detail || error?.message || "Failed to load sponsor wallet.");
+      } finally {
+        setWalletLoading(false);
+        setWalletRefreshing(false);
+      }
+    },
+    [activeProject, applyWalletBankAccount, greenAuthUser?.id, greenAuthUser?.organization_id, selectedProjectIsSponsorEnabled],
+  );
+  const filteredWalletBanks = useMemo(() => {
+    const query = String(walletBankSearch || "").trim().toLowerCase();
+    if (!query) return walletBanks;
+    return walletBanks.filter(
+      (bank) => String(bank.name || "").toLowerCase().includes(query) || String(bank.code || "").toLowerCase().includes(query),
+    );
+  }, [walletBankSearch, walletBanks]);
   useEffect(() => {
     if (!lockedGreenActorName) return;
     if (activeUser === lockedGreenActorName) return;
@@ -1683,10 +2161,27 @@ export default function Green() {
   }, [activeProject?.id, activeUser]);
 
   useEffect(() => {
-    if (activeUserIsCustodian && activeSection === "tasks") {
+    if (activeUserIsCustodian && (activeSection === "tasks" || activeSection === "review")) {
       setActiveSection("map");
     }
   }, [activeUserIsCustodian, activeSection]);
+
+  useEffect(() => {
+    if (!selectedProjectIsSponsorEnabled) {
+      setWalletDashboard(null);
+      setWalletError("");
+      setWalletEditingBank(false);
+      setWalletBankSearch("");
+      applyWalletBankAccount(null);
+      if (activeSection === "wallet") {
+        setActiveSection(null);
+      }
+      return;
+    }
+    if (activeSection === "wallet") {
+      void loadWalletDashboard();
+    }
+  }, [activeSection, applyWalletBankAccount, loadWalletDashboard, selectedProjectIsSponsorEnabled]);
 
   useEffect(() => {
     if (!activeUserIsCustodian) return;
@@ -2713,11 +3208,72 @@ export default function Green() {
     setInstallPrompt(null);
   };
 
-  const openSection = (section: Section) => {
+  const openProjectLocation = () => {
+    if (!activeProject) return;
+    const query = String(activeProject.location_text || activeProject.name || "").trim();
+    if (!query) return;
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, "_blank", "noopener,noreferrer");
+  };
+
+  const saveWalletBankAccount = async () => {
+    if (!greenAuthUser?.id) return;
+    if (!walletBankCode || !walletAccountNumber || !walletAccountName) {
+      toast.error("Select a bank and complete the account details first.");
+      return;
+    }
+    setWalletSavingBank(true);
+    setWalletError("");
+    try {
+      await api.put("/green/agent-payouts/account", {
+        user_id: greenAuthUser.id,
+        organization_id: greenAuthUser.organization_id ?? null,
+        bank_code: walletBankCode,
+        bank_name: walletBankName || null,
+        account_number: walletAccountNumber,
+        account_name: walletAccountName,
+      });
+      await loadWalletDashboard(true);
+      setWalletEditingBank(false);
+      toast.success("Bank details saved.");
+    } catch (error: any) {
+      setWalletError(error?.response?.data?.detail || error?.message || "Failed to verify and save bank account.");
+      toast.error(error?.response?.data?.detail || "Failed to verify and save bank account.");
+    } finally {
+      setWalletSavingBank(false);
+    }
+  };
+
+  const requestWalletPayout = async () => {
+    if (!greenAuthUser?.id || !activeProject) return;
+    setWalletRequestingPayout(true);
+    setWalletError("");
+    try {
+      await api.post("/green/agent-payouts/requests", {
+        user_id: greenAuthUser.id,
+        organization_id: greenAuthUser.organization_id ?? null,
+        project_id: activeProject.id,
+      });
+      await loadWalletDashboard(true);
+      toast.success("Payout request submitted.");
+    } catch (error: any) {
+      setWalletError(error?.response?.data?.detail || error?.message || "Failed to request payout.");
+      toast.error(error?.response?.data?.detail || "Failed to request payout.");
+    } finally {
+      setWalletRequestingPayout(false);
+    }
+  };
+
+  const openSection = (section: Section, options?: { fieldViewTab?: "map" | "add_tree" }) => {
     setActiveSection(section);
     setEditingTaskId(null);
     if (section === "map") {
-      setMapDrawMode(true);
+      setFieldViewTab(options?.fieldViewTab || "map");
+      if (options?.fieldViewTab === "add_tree") {
+        setMapDrawMode(true);
+      }
+    }
+    if (section === "wallet") {
+      void loadWalletDashboard();
     }
   };
 
@@ -2726,6 +3282,7 @@ export default function Green() {
     setEditingTaskId(null);
     setSelectedTreeId(null);
     setInspectedTree(null);
+    setFieldViewTab("map");
   };
   const continueFromIntro = () => {
     setIntroGateOpen(false);
@@ -2779,9 +3336,27 @@ export default function Green() {
   ]
     .filter(Boolean)
     .join(" ");
+  const heroPartnerLogoUrl = greenHeaderPartnerLogoUrl || GREEN_LOGO_SRC;
+  const projectCardSelectedLabel = activeProject?.location_text ? `${activeProject.name} · ${activeProject.location_text}` : activeProject?.name || "Choose a project";
+  const survivalQualityLabel =
+    survivalRate >= 90 ? "Excellent" : survivalRate >= 75 ? "Strong" : survivalRate >= 50 ? "Fair" : "Needs attention";
+  const survivalQualityNote =
+    survivalRate >= 90 ? "Keep it up!" : survivalRate >= 75 ? "Steady progress" : survivalRate >= 50 ? "Watch closely" : "Action required";
+  const showWalletTab = Boolean(selectedProjectIsSponsorEnabled && isPartnerGreenSession);
+  const activeDetailSection = activeSection === "wallet" && !showWalletTab ? null : activeSection;
+  const walletMinimumAmount = Number(walletDashboard?.minimum_payout_amount || 0);
+  const walletCurrency = String(walletDashboard?.currency || activeWalletProjectRate?.currency || "NGN").toUpperCase();
+  const walletAvailableAmount = Number(walletSummary?.available_amount || walletProjectSummary?.available_amount || 0);
+  const walletRequestedAmount = Number(walletSummary?.requested_amount || walletProjectSummary?.requested_amount || 0);
+  const walletPaidAmount = Number(walletSummary?.paid_amount || walletProjectSummary?.paid_amount || 0);
+  const walletPlantingRate = Number(activeWalletProjectRate?.planting_fee || 0);
+  const walletMaintenanceRate = Number(activeWalletProjectRate?.maintenance_fee || 0);
+  const walletPayoutEligible = Boolean(walletSummary?.payout_eligible);
+  const walletBankVerified = Boolean(walletSummary?.bank_verified);
+  const walletBankDetailsLocked = walletBankVerified && !walletEditingBank;
 
   return (
-    <div className={`green-container ${activeSection === null ? "green-home-mode" : "green-detail-mode"}`}>
+    <div className={`green-container ${activeDetailSection === null ? "green-home-mode" : "green-detail-mode"}`}>
       <Toaster position="top-right" />
       {privacyConsentModal}
       <header className="green-header">
@@ -2799,10 +3374,8 @@ export default function Green() {
                 </div>
               ) : null}
               <div className="green-header-title">
-              <h1>
-                LandCheck <span>Green</span>
-              </h1>
-              <p>Field dashboard for tree monitoring</p>
+              <h1>{workflowLabels.appTitle}</h1>
+              <p>{workflowLabels.dashboardSubtitle}</p>
             </div>
           </div>
           <div className="green-header-actions">
@@ -2862,7 +3435,7 @@ export default function Green() {
       )}
 
       <main className="green-shell">
-        {activeSection === null && introGateOpen && (
+        {false && (
           <section className="green-intro-card" id="green-intro">
             <span className="green-intro-kicker">LandCheck Green</span>
             <h2>Field Workflow At A Glance</h2>
@@ -2884,216 +3457,390 @@ export default function Green() {
           <>
         {activeSection === null && (
           <>
-        <section className="green-setup-card" id="project">
-          <h2>Project & Field Setup</h2>
+        <section className="green-mobile-hero">
+          <div className="green-mobile-hero-brand">
+            <div className="green-mobile-hero-logos">
+              <span className="green-mobile-hero-logo" aria-hidden="true">
+                <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
+              </span>
+              <span className="green-mobile-hero-logo" aria-hidden="true">
+                <img src={heroPartnerLogoUrl} alt={greenHeaderPartnerName || workflowLabels.appTitle} />
+              </span>
+            </div>
+            <div className="green-mobile-hero-brand-copy">
+              <strong>{workflowLabels.appTitle}</strong>
+              <span>{workflowLabels.dashboardSubtitle}</span>
+            </div>
+          </div>
+          <div className="green-mobile-hero-greeting">
+            <GreetingIcon kind={greetingIconKind} />
+            <span>{greetingLabel}, {fieldUserName}!</span>
+          </div>
+          <div className="green-mobile-hero-status-row">
+            <div className="green-mobile-hero-sync-card">
+              <span className={`green-mobile-hero-dot ${isOnline ? "is-online" : "is-offline"}`} aria-hidden="true" />
+              <div>
+                <small>{syncPrimaryText.toUpperCase()}</small>
+                <strong>{syncSecondaryText}</strong>
+              </div>
+            </div>
+            <div className="green-mobile-hero-user-card">
+              <UserIcon />
+              <span>{fieldUserName}</span>
+            </div>
+          </div>
+          {(syncInProgress || syncPendingCount > 0) && (
+            <div className="green-mobile-hero-progress" aria-hidden="true">
+              <span style={{ width: `${Math.min(100, Math.max(12, syncPendingCount > 0 ? 38 : 76))}%` }} />
+            </div>
+          )}
+        </section>
 
-          <div className="green-form-field">
-            <label>Project Project</label>
-            <div className="green-select-row">
-              <select
-                value={activeProject?.id || ""}
-                onChange={(e) => {
-                  const id = Number(e.target.value);
-                  const project = projects.find((p) => p.id === id);
-                  if (project) {
-                    selectProject(project);
-                  }
-                }}
-              >
-                <option value="">Choose a project</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} {p.location_text ? `- ${p.location_text}` : ""}
+        <section className="green-overview-card green-overview-project-card" id="project">
+          <div className="green-overview-card-head">
+            <div className="green-overview-card-icon" aria-hidden="true">
+              <TreeTileIcon />
+            </div>
+            <div>
+              <span className="green-overview-kicker">Current Project</span>
+              <h2>Project &amp; Field</h2>
+            </div>
+          </div>
+
+          <div className="green-overview-project-select-row">
+            <select
+              value={activeProject?.id || ""}
+              onChange={(e) => {
+                const id = Number(e.target.value);
+                const project = projects.find((p) => p.id === id);
+                if (project) {
+                  selectProject(project);
+                }
+              }}
+            >
+              <option value="">Choose a project</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} {p.location_text ? `- ${p.location_text}` : ""}
+                </option>
+              ))}
+            </select>
+            <button
+              className="green-overview-location-btn"
+              type="button"
+              onClick={openProjectLocation}
+              disabled={!activeProject}
+              aria-label="Open project location"
+            >
+              <LocationIcon />
+            </button>
+          </div>
+
+          {!isLockedGreenUserSession ? (
+            <div className="green-overview-user-select">
+              <select value={activeUser} onChange={(e) => setActiveUser(e.target.value)}>
+                <option value="">Select staff or custodian</option>
+                {activeActorOptions.map((option) => (
+                  <option key={`${option.actorType}-${option.id}`} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
-
-              {!isLockedGreenUserSession && (
-                <select
-                  value={activeUser}
-                  onChange={(e) => setActiveUser(e.target.value)}
-                >
-                  <option value="">Select staff or custodian</option>
-                  {activeActorOptions.map((option) => (
-                    <option key={`${option.actorType}-${option.id}`} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              )}
             </div>
-          </div>
+          ) : (
+            <div className="green-overview-user-pill">
+              <UserIcon />
+              <span>{fieldUserName}</span>
+            </div>
+          )}
 
           <div className={`green-project-status ${activeProject ? "selected" : "empty"}`}>
             {activeProject ? (
               <>
-                <strong>{activeProject.name}</strong>
-                <span>{activeProject.location_text || "Project selected"}</span>
+                <strong>{projectCardSelectedLabel}</strong>
+                <span>{fieldUserRoleLabel}</span>
               </>
             ) : (
               <>
                 <strong>No project selected.</strong>
-                <span>Please select a project to begin.</span>
+                <span>Choose the project you want to work on.</span>
               </>
             )}
           </div>
+
           {activeProject && !activeUser && (
-            <p className="green-empty">Select a staff member or custodian to load only their trees and tasks.</p>
+            <p className="green-empty">Select a staff member or custodian to load only their {workflowLabels.entityPlural.toLowerCase()} and tasks.</p>
           )}
 
-          <div className="green-stats-top">
-            <div className="green-stat-item">
-              <span>Total Trees</span>
-              <strong className="green-stat-total">{totalTrees}</strong>
+          <div className="green-overview-metrics-grid">
+            <div className="green-overview-metric-card">
+              <div className="green-overview-metric-icon is-total" aria-hidden="true">
+                <LeafGlyphIcon />
+              </div>
+              <span>{workflowLabels.totalLabel}</span>
+              <strong>{totalTrees}</strong>
+              <small>{workflowLabels.projectCardMetricLabel}</small>
             </div>
-            <div className="green-stat-item">
-              <span>Healthy</span>
+            <div className="green-overview-metric-card">
+              <div className="green-overview-metric-icon is-healthy" aria-hidden="true">
+                <MetricHealthyIcon />
+              </div>
+              <span>{workflowLabels.healthyLabel}</span>
               <strong className="green-stat-alive">{healthyTrees}</strong>
+              <small>{workflowLabels.healthyHelper}</small>
             </div>
-            <div className="green-stat-item">
-              <span>Dead</span>
-              <strong className="green-stat-dead">{deadTrees}</strong>
-            </div>
-            <div className="green-stat-item">
-              <span>Needs Attention</span>
+            <div className="green-overview-metric-card">
+              <div className="green-overview-metric-icon is-attention" aria-hidden="true">
+                <MetricAttentionIcon />
+              </div>
+              <span>{workflowLabels.attentionLabel}</span>
               <strong className="green-stat-needs">{needsAttentionTrees}</strong>
+              <small>{workflowLabels.attentionHelper}</small>
+            </div>
+            <div className="green-overview-metric-card">
+              <div className="green-overview-metric-icon is-dead" aria-hidden="true">
+                <MetricDeadIcon />
+              </div>
+              <span>{workflowLabels.deadLabel}</span>
+              <strong className="green-stat-dead">{deadTrees}</strong>
+              <small>{workflowLabels.deadHelper}</small>
             </div>
           </div>
 
-          <div className="green-stats-bottom">
-            <span>Survival Rate</span>
+          <div className="green-overview-survival-panel">
             <div className="green-survival-gauge" style={{ background: `conic-gradient(#34a853 ${survivalRate}%, #e8ece8 ${survivalRate}% 100%)` }}>
               <div className="green-survival-gauge-inner">
                 <strong>{survivalRate}%</strong>
               </div>
             </div>
-          </div>
-
-          {activeProject?.carbon && (
-            <div className="green-carbon-panel">
-              <h3 className="green-carbon-title">Carbon Impact</h3>
-              <div className="green-carbon-grid">
-                <div className="green-carbon-card">
-                  <span className="green-carbon-value">{carbonCurrentValue}</span>
-                  <span className="green-carbon-label">CO2 sequestered (current)</span>
-                </div>
-                <div className="green-carbon-card">
-                  <span className="green-carbon-value">{carbonAnnualValue}</span>
-                  <span className="green-carbon-label">estimated CO2 / year now</span>
-                </div>
-                <div className="green-carbon-card green-carbon-card-accent">
-                  <span className="green-carbon-value">{carbonProjectedValue}</span>
-                  <span className="green-carbon-label">projected stock by year 40</span>
-                </div>
-                <div className="green-carbon-card">
-                  <span className="green-carbon-value">{carbonPerTreeValue}</span>
-                  <span className="green-carbon-label">average current per tree</span>
-                  <span className="green-carbon-subvalue">{carbonAnnualPerTreeValue} average annual per tree</span>
-                </div>
-              </div>
+            <div className="green-overview-survival-copy">
+              <h3>{workflowLabels.survivalTitle}</h3>
+              <p>Based on current {workflowLabels.entitySingular.toLowerCase()} status</p>
             </div>
-          )}
+            <div className="green-overview-survival-badge">
+              <strong>{survivalQualityLabel}</strong>
+              <span>{survivalQualityNote}</span>
+            </div>
+          </div>
         </section>
 
-        <section className="green-tiles">
-          <button
-            className={`green-tile ${activeSection === "tasks" ? "active" : ""} ${activeUserIsCustodian ? "is-disabled" : ""}`}
-            onClick={() => {
-              if (activeUserIsCustodian) return;
-              openSection("tasks");
-            }}
-            type="button"
-            disabled={activeUserIsCustodian}
-            title={activeUserIsCustodian ? "Maintenance tasks are disabled for custodian users." : undefined}
-          >
-            <span className="green-tile-icon" aria-hidden="true">
-              <TaskTileIcon />
-            </span>
-            <span className="green-tile-label">Maintenance Tasks</span>
-            <span className="green-tile-meta">
-              <span className="green-tile-meta-item is-review">Submitted {myTaskCounts.submitted}</span>
-              <span className="green-tile-meta-item is-approved">Approved {myTaskCounts.done}</span>
-            </span>
-            <span className={`green-tile-badge ${myTaskCounts.undone > 0 ? "green-tile-badge-assigned" : ""}`}>
-              {activeUserIsCustodian ? "-" : myTaskCounts.undone}
-            </span>
-            {myTaskCounts.rejected > 0 && <span className="green-tile-badge green-tile-badge-rejected">{myTaskCounts.rejected}</span>}
-          </button>
+        <section className="green-overview-section">
+          <div className="green-overview-section-head">
+            <h2>Quick Actions</h2>
+          </div>
+          <div className="green-tiles green-native-tiles">
+            <button
+              className={`green-tile ${activeSection === "tasks" ? "active" : ""} ${activeUserIsCustodian ? "is-disabled" : ""}`}
+              onClick={() => {
+                if (activeUserIsCustodian) return;
+                openSection("tasks");
+              }}
+              type="button"
+              disabled={activeUserIsCustodian}
+              title={activeUserIsCustodian ? `${workflowLabels.activityTitle} are disabled for ${workflowLabels.ownerLabel.toLowerCase()} users.` : undefined}
+            >
+              <span className="green-tile-icon" aria-hidden="true">
+                <TaskTileIcon />
+              </span>
+              <span className="green-tile-label">{workflowLabels.activityTitle}</span>
+              <span className="green-tile-meta">
+                <span className="green-tile-meta-item is-review">{maintenanceBoardStats.submitted} Submitted</span>
+                <span className="green-tile-meta-item is-approved">{maintenanceBoardStats.approved} Approved</span>
+              </span>
+              <span className={`green-tile-badge ${maintenanceBoardStats.open > 0 ? "green-tile-badge-assigned" : ""}`}>
+                {activeUserIsCustodian ? "-" : maintenanceBoardStats.open}
+              </span>
+            </button>
 
-          <button
-            className={`green-tile ${activeSection === "map" ? "active" : ""}`}
-            onClick={() => openSection("map")}
-            type="button"
-          >
-            <span className="green-tile-icon" aria-hidden="true">
-              <MapTileIcon />
-            </span>
-            <span className="green-tile-label">Map & Add Trees</span>
-            <span className="green-tile-meta">
-              <span className="green-tile-meta-item is-review">Submitted {plantingReviewCounts.submitted}</span>
-              <span className="green-tile-meta-item is-approved">Approved {plantingReviewCounts.approved}</span>
-            </span>
-            <span className={`green-tile-badge ${pendingPlanting > 0 ? "green-tile-badge-assigned" : ""}`}>{pendingPlanting}</span>
-          </button>
+            <button className={`green-tile ${activeSection === "map" ? "active" : ""}`} onClick={() => openSection("map")} type="button">
+              <span className="green-tile-icon" aria-hidden="true">
+                <MapTileIcon />
+              </span>
+              <span className="green-tile-label">{workflowLabels.actionTitle}</span>
+              <span className="green-tile-meta">
+                <span className="green-tile-meta-item is-review">{plantingReviewCounts.submitted} Submitted</span>
+                <span className="green-tile-meta-item is-approved">{plantingReviewCounts.approved} Approved</span>
+              </span>
+              <span className={`green-tile-badge ${pendingPlanting > 0 ? "green-tile-badge-assigned" : ""}`}>{pendingPlanting}</span>
+            </button>
 
-          <button
-            className={`green-tile green-tile-wide ${activeSection === "records" ? "active" : ""}`}
-            onClick={() => openSection("records")}
-            type="button"
-          >
-            <span className="green-tile-icon" aria-hidden="true">
-              <TreeTileIcon />
+            <button
+              className={`green-tile ${activeSection === "review" ? "active" : ""} ${activeUserIsCustodian ? "is-disabled" : ""}`}
+              onClick={() => {
+                if (activeUserIsCustodian) return;
+                openSection("review");
+              }}
+              type="button"
+              disabled={activeUserIsCustodian}
+            >
+              <span className="green-tile-icon" aria-hidden="true">
+                <ReviewTileIcon />
+              </span>
+              <span className="green-tile-label">Review Fixes</span>
+              <span className="green-tile-meta">
+                <span className="green-tile-meta-item is-review">{reviewBoardStats.metadataEdits} Metadata</span>
+                <span className="green-tile-meta-item is-approved">{reviewBoardStats.rejected} Rejected</span>
+              </span>
+              <span className={`green-tile-badge ${reviewBoardStats.returned > 0 ? "green-tile-badge-assigned" : ""}`}>{reviewBoardStats.returned}</span>
+            </button>
+
+            <button className={`green-tile ${activeSection === "records" ? "active" : ""}`} onClick={() => openSection("records")} type="button">
+              <span className="green-tile-icon" aria-hidden="true">
+                <TreeTileIcon />
+              </span>
+              <span className="green-tile-label">{workflowLabels.recordsTitle}</span>
+              <span className="green-tile-meta">
+                <span className="green-tile-meta-item is-approved">{myTreeSummary.total} {workflowLabels.entityPlural}</span>
+              </span>
+              <span className="green-tile-badge">{myTreeSummary.total}</span>
+            </button>
+          </div>
+        </section>
+
+        {activeProject?.carbon && activeWorkflowProfile === "green" && (
+          <section className="green-overview-card green-overview-carbon-card">
+            <div className="green-overview-carbon-head">
+              <span className="green-overview-carbon-head-icon" aria-hidden="true">
+                <LeafGlyphIcon />
+              </span>
+              <span>Carbon Impact At A Glance</span>
+            </div>
+            <div className="green-overview-carbon-grid">
+              <div className="green-overview-carbon-stat">
+                <strong>{carbonCurrentValue}</strong>
+                <span>Current CO2</span>
+                <small>{Number(activeProject.carbon.current_co2_kg || 0).toFixed(2)} kg sequestered</small>
+              </div>
+              <div className="green-overview-carbon-stat">
+                <strong>{carbonAnnualValue}</strong>
+                <span>Annual CO2</span>
+                <small>{carbonAnnualPerTreeValue}</small>
+              </div>
+              <div className="green-overview-carbon-stat">
+                <strong>{carbonProjectedValue}</strong>
+                <span>Projected 40y</span>
+                <small>Long-term stock</small>
+              </div>
+              <div className="green-overview-carbon-stat">
+                <strong>{carbonPerTreeValue}</strong>
+                <span>Per Tree</span>
+                <small>Average current tree impact</small>
+              </div>
+            </div>
+          </section>
+        )}
+
+        <section className="green-overview-card green-overview-proof-card">
+          <div className="green-overview-proof-head">
+            <span className="green-overview-proof-icon" aria-hidden="true">
+              <LeafGlyphIcon />
             </span>
-            <span className="green-tile-label">Tree Records</span>
-            <span className="green-tile-badge">{myTreeSummary.total}</span>
-          </button>
+            <span className="green-overview-proof-eyebrow">{workflowLabels.impactEyebrow}</span>
+          </div>
+          <h3>
+            {activeWorkflowProfile === "green"
+              ? "Great job. Your tree records, field photos, and care updates are building a verified climate story."
+              : workflowLabels.impactMessage}
+          </h3>
+          <span className="green-overview-proof-float" aria-hidden="true">
+            {activeWorkflowProfile === "green" ? <TreeTileIcon /> : <LocationIcon />}
+          </span>
+          <div className="green-overview-proof-badges">
+            <span>Mapped {workflowLabels.entityPlural.toLowerCase()}</span>
+            <span>Care updates</span>
+            <span>Photo proof</span>
+          </div>
         </section>
           </>
         )}
 
-        {activeSection !== null && (
+        {activeDetailSection !== null && (
           <div className="green-view-toolbar">
             <button className="green-back-home" type="button" onClick={goHome}>
-              Back To Home
+              Back to Overview
             </button>
           </div>
         )}
 
-        {activeSection !== null && activeSection !== "profile" && !activeProject && (
+        {activeDetailSection !== null && activeDetailSection !== "profile" && !activeProject && (
           <section className="green-detail-card">
             <h3>Select a project to begin</h3>
             <p>Projects are created in LandCheck Work.</p>
           </section>
         )}
 
-        {activeProject && activeSection === "tasks" && (
+        {activeProject && (activeDetailSection === "tasks" || activeDetailSection === "review") && (
           <section className="green-detail-card" id="green-section-tasks">
             <div className="green-detail-header">
-              <h3>Maintenance Tasks</h3>
+              <h3>{activeDetailSection === "review" ? "Review Queue" : workflowLabels.activityTitle}</h3>
               <button className="green-btn-outline" onClick={loadMyTasks} type="button">
                 Refresh
               </button>
+            </div>
+            <div className="green-detail-summary-card">
+              <span className="green-overview-kicker">Current Project</span>
+              <h4>{activeProject.name}</h4>
+              <p>
+                {activeDetailSection === "review"
+                  ? "Returned tasks and metadata corrections for the selected project."
+                  : `Assigned ${workflowLabels.activityTitle.toLowerCase()} for the selected project.`}
+              </p>
+              <div className="green-user-summary green-board-summary">
+                {activeDetailSection === "review" ? (
+                  <>
+                    <div>
+                      <span>Returned</span>
+                      <strong>{reviewBoardStats.returned}</strong>
+                    </div>
+                    <div>
+                      <span>Metadata Edits</span>
+                      <strong>{reviewBoardStats.metadataEdits}</strong>
+                    </div>
+                    <div>
+                      <span>Rejected</span>
+                      <strong>{reviewBoardStats.rejected}</strong>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <span>Open</span>
+                      <strong>{maintenanceBoardStats.open}</strong>
+                    </div>
+                    <div>
+                      <span>Submitted</span>
+                      <strong>{maintenanceBoardStats.submitted}</strong>
+                    </div>
+                    <div>
+                      <span>Approved</span>
+                      <strong>{maintenanceBoardStats.approved}</strong>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
             {!activeUser ? (
               <p className="green-empty">Select a staff member or custodian to view assigned tasks.</p>
             ) : activeUserIsCustodian ? (
               <p className="green-empty">
-                Maintenance tasks are disabled for custodians. Use Map & Add Trees to record custodian planting.
+                {workflowLabels.activityTitle} are disabled for {workflowLabels.ownerLabel.toLowerCase()} users. Use {workflowLabels.actionTitle} instead.
               </p>
-            ) : myTasks.length === 0 ? (
-              <p className="green-empty">No tasks assigned.</p>
-            ) : userTrees.length === 0 ? (
-              <p className="green-empty">No trees recorded yet for this selected user.</p>
+            ) : activeBoardTasks.length === 0 ? (
+              <p className="green-empty">
+                {activeDetailSection === "review"
+                  ? "Rejected and metadata-edit tasks will appear here."
+                  : `Assigned ${workflowLabels.activityTitle.toLowerCase()} for the selected project will appear here.`}
+              </p>
             ) : (
               <div className="tree-table">
                 <div className="tree-row tree-header">
                   <span>Task</span>
-                  <span>Tree</span>
+                  <span>{workflowLabels.entitySingular}</span>
                   <span>Status</span>
                   <span>Due</span>
                   <span>Action</span>
                 </div>
-                {myTasks.map((t) => {
+                {activeBoardTasks.map((t) => {
                   const taskEdit = taskEdits[t.id];
                   const taskTree = userTreeById.get(Number(t.tree_id || 0));
                   const taskTreeMetaDraft = getTaskTreeMetaDraft(t);
@@ -3430,11 +4177,30 @@ export default function Green() {
           </section>
         )}
 
-        {activeProject && activeSection === "map" && (
+        {activeProject && activeDetailSection === "map" && (
           <section className="green-detail-card" id="green-section-map">
             <div className="green-detail-header">
-              <h3>Map & Add Trees</h3>
-              <span className="green-map-hint">Tap a task to zoom to its tree</span>
+              <h3>{workflowLabels.actionTitle}</h3>
+              <span className="green-map-hint">Tap any saved {workflowLabels.entitySingular.toLowerCase()} to open its details</span>
+            </div>
+            <div className="green-field-view-tabs">
+              <button
+                className={`green-field-view-tab ${fieldViewTab === "map" ? "active" : ""}`}
+                type="button"
+                onClick={() => setFieldViewTab("map")}
+              >
+                Map
+              </button>
+              <button
+                className={`green-field-view-tab ${fieldViewTab === "add_tree" ? "active" : ""}`}
+                type="button"
+                onClick={() => {
+                  setFieldViewTab("add_tree");
+                  setMapDrawMode(true);
+                }}
+              >
+                {workflowLabels.addActionLabel}
+              </button>
             </div>
             <div className="green-map-planting-summary">
               <span className="green-task-status-badge is-review">Submitted: {plantingReviewCounts.submitted}</span>
@@ -3444,7 +4210,7 @@ export default function Green() {
               </span>
             </div>
             {!activeUser && <p className="green-empty">Select a staff member or custodian to view only their trees.</p>}
-            <div className="green-map-layout">
+            <div className={`green-map-layout ${fieldViewTab === "map" ? "is-map-only" : ""}`}>
               <div className="green-map-canvas">
                 {assignedPlantingAreas.length > 0 && (
                   <div className="green-map-area-banner">
@@ -3494,6 +4260,7 @@ export default function Green() {
               </div>
             </div>
 
+            {fieldViewTab === "add_tree" && (
             <div className="tree-form">
               {!existingTreeBatchCaptureActive && (
                 <>
@@ -3820,87 +4587,252 @@ export default function Green() {
                 )}
               </div>
               <button className="green-btn-primary" type="button" onClick={addTree} disabled={addingTree}>
-                {addingTree ? "Saving..." : newTree.tree_origin === "existing_inventory" ? "Save Existing Tree" : "Add Tree"}
+                {addingTree ? "Saving..." : newTree.tree_origin === "existing_inventory" ? `Save Existing ${workflowLabels.entitySingular}` : workflowLabels.addActionLabel}
               </button>
             </div>
+            )}
           </section>
         )}
 
-        {activeSection === "profile" && (
-          <section className="green-detail-card" id="green-section-profile">
-            <h3>User Details</h3>
-            {!activeUserDetail ? (
-              <p className="green-empty">Select a staff member or custodian from setup to view profile details.</p>
+        {activeProject && activeDetailSection === "wallet" && showWalletTab && (
+          <section className="green-detail-card" id="green-section-wallet">
+            <div className="green-detail-header">
+              <h3>{workflowLabels.walletTitle}</h3>
+              <button className="green-btn-outline" type="button" onClick={() => void loadWalletDashboard(true)} disabled={walletRefreshing || walletLoading}>
+                {walletRefreshing ? "Refreshing..." : "Refresh"}
+              </button>
+            </div>
+
+            <div className="green-wallet-hero-card">
+              <div>
+                <span className="green-overview-kicker">Public Sponsor Agent Wallet</span>
+                <h4>Track sponsor-funded work, know what is payable, and request payout once you reach the minimum.</h4>
+                <p>Planting earnings come from sponsor-linked trees you plant. Maintenance earnings come from approved follow-up tasks on sponsor-funded trees.</p>
+              </div>
+              <div className="green-wallet-available-card">
+                <span>Available Now</span>
+                <strong>{formatCurrencyAmount(walletAvailableAmount, walletCurrency)}</strong>
+                <small>Minimum payout: {formatCurrencyAmount(walletMinimumAmount, walletCurrency)}</small>
+              </div>
+            </div>
+
+            {walletError ? <div className="green-wallet-error">{walletError}</div> : null}
+            {walletLoading ? (
+              <p className="green-empty">Loading sponsor earnings...</p>
             ) : (
               <>
-                <div className="green-profile-grid">
-                  <div>
-                    <span>Name</span>
-                    <strong>{activeUserDetail.full_name}</strong>
+                <div className="green-wallet-rate-grid">
+                  <div className="green-wallet-rate-card">
+                    <span>Planting Rate</span>
+                    <strong>{formatCurrencyAmount(walletPlantingRate, walletCurrency)}</strong>
                   </div>
-                  <div>
-                    <span>Position</span>
-                    <strong>{activeUserDetail.role.replaceAll("_", " ")}</strong>
+                  <div className="green-wallet-rate-card">
+                    <span>Maintenance Rate</span>
+                    <strong>{formatCurrencyAmount(walletMaintenanceRate, walletCurrency)}</strong>
                   </div>
-                  <div>
-                    <span>User ID</span>
-                    <strong>#{activeUserDetail.id}</strong>
+                  <div className="green-wallet-rate-card">
+                    <span>Requested</span>
+                    <strong>{formatCurrencyAmount(walletRequestedAmount, walletCurrency)}</strong>
                   </div>
-                  <div>
-                    <span>Active Project</span>
-                    <strong>{activeProject?.name || "Not selected"}</strong>
+                  <div className="green-wallet-rate-card">
+                    <span>Paid</span>
+                    <strong>{formatCurrencyAmount(walletPaidAmount, walletCurrency)}</strong>
                   </div>
                 </div>
 
-                <div className="green-user-summary">
-                  <div>
-                    <span>My Trees</span>
-                    <strong>{myTreeSummary.total}</strong>
+                <div className="green-wallet-account-card">
+                  <div className="green-wallet-card-head">
+                    <h4>Bank Details</h4>
+                    {walletBankVerified && !walletEditingBank ? (
+                      <button className="green-btn-outline" type="button" onClick={() => setWalletEditingBank(true)}>
+                        Change Details
+                      </button>
+                    ) : null}
                   </div>
-                  <div>
-                    <span>Healthy</span>
-                    <strong>{myTreeSummary.healthy}</strong>
+                  <p>Search your bank, confirm the account details, then save them once for payout.</p>
+                  {walletBankDetailsLocked ? (
+                    <div className="green-wallet-bank-summary">
+                      <strong>{walletDashboard?.bank_account?.bank_name || "-"}</strong>
+                      <span>{walletDashboard?.bank_account?.account_number_masked || walletDashboard?.bank_account?.account_number || "-"}</span>
+                      <span>{walletDashboard?.bank_account?.account_name || "-"}</span>
+                      <small>Verified {walletDashboard?.bank_account?.verified_at ? formatDateLabel(walletDashboard.bank_account.verified_at) : "recently"}</small>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="green-wallet-bank-search">
+                        <input
+                          type="text"
+                          placeholder="Search bank name"
+                          value={walletBankSearch}
+                          onChange={(e) => setWalletBankSearch(e.target.value)}
+                        />
+                      </div>
+                      <div className="green-wallet-bank-grid">
+                        <select
+                          value={walletBankCode}
+                          onChange={(e) => {
+                            const nextCode = e.target.value;
+                            const selectedBank = walletBanks.find((bank) => bank.code === nextCode);
+                            setWalletBankCode(nextCode);
+                            setWalletBankName(selectedBank?.name || "");
+                          }}
+                        >
+                          <option value="">Select bank</option>
+                          {filteredWalletBanks.map((bank) => (
+                            <option key={`wallet-bank-${bank.code}`} value={bank.code}>
+                              {bank.name}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="Account number"
+                          value={walletAccountNumber}
+                          onChange={(e) => setWalletAccountNumber(e.target.value.replace(/\D+/g, "").slice(0, 10))}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Account name"
+                          value={walletAccountName}
+                          onChange={(e) => setWalletAccountName(e.target.value)}
+                        />
+                      </div>
+                      <div className="green-profile-action-row">
+                        <button className="green-btn-primary" type="button" onClick={() => void saveWalletBankAccount()} disabled={walletSavingBank}>
+                          {walletSavingBank ? "Saving..." : "Verify & Save Bank"}
+                        </button>
+                        {walletDashboard?.bank_account ? (
+                          <button className="green-btn-outline" type="button" onClick={() => {
+                            applyWalletBankAccount(walletDashboard.bank_account);
+                            setWalletEditingBank(false);
+                          }}>
+                            Cancel
+                          </button>
+                        ) : null}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="green-wallet-request-card">
+                  <div className="green-wallet-card-head">
+                    <h4>Payout Request</h4>
+                    <span className={`green-inline-status-pill ${walletPayoutEligible ? "is-online" : "is-offline"}`}>
+                      {walletPayoutEligible ? "Ready" : "Not Ready"}
+                    </span>
                   </div>
-                  <div>
-                    <span>Dead</span>
-                    <strong>{myTreeSummary.dead}</strong>
+                  <p>
+                    {walletBankVerified
+                      ? walletPayoutEligible
+                        ? `You can request payout now. Minimum payout is ${formatCurrencyAmount(walletMinimumAmount, walletCurrency)}.`
+                        : `Keep working until you reach ${formatCurrencyAmount(walletMinimumAmount, walletCurrency)} available balance.`
+                      : "Verify bank details first before requesting payout."}
+                  </p>
+                  <button
+                    className="green-btn-primary"
+                    type="button"
+                    onClick={() => void requestWalletPayout()}
+                    disabled={!walletBankVerified || !walletPayoutEligible || walletRequestingPayout}
+                  >
+                    {walletRequestingPayout ? "Submitting..." : "Request Payout"}
+                  </button>
+                </div>
+
+                <div className="green-wallet-lists">
+                  <div className="green-wallet-list-card">
+                    <h4>Recent Earnings</h4>
+                    {!walletDashboard?.earnings?.length ? (
+                      <p className="green-empty">No sponsor-funded earnings yet for this project.</p>
+                    ) : (
+                      walletDashboard.earnings.slice(0, 8).map((earning) => (
+                        <div key={earning.earning_key} className="green-wallet-row">
+                          <strong>{earning.tree_label || earning.task_label || earning.project_name || "Sponsor earning"}</strong>
+                          <span>{formatCurrencyAmount(earning.amount, earning.currency || walletCurrency)}</span>
+                          <small>
+                            {toTitle(earning.work_type || "task")}
+                            {earning.sponsor_name ? ` · ${earning.sponsor_name}` : ""}
+                            {earning.earned_at ? ` · ${formatDateLabel(earning.earned_at)}` : ""}
+                          </small>
+                        </div>
+                      ))
+                    )}
                   </div>
-                  <div>
-                    <span>Needs Attention</span>
-                    <strong>{myTreeSummary.needs}</strong>
-                  </div>
-                  <div>
-                    <span>Pending Tasks</span>
-                    <strong>{myTaskCounts.pending}</strong>
-                  </div>
-                  <div>
-                    <span>Done Tasks</span>
-                    <strong>{myTaskCounts.done}</strong>
-                  </div>
-                  <div>
-                    <span>Submitted</span>
-                    <strong>{myTaskCounts.submitted}</strong>
-                  </div>
-                  <div>
-                    <span>Task Total</span>
-                    <strong>{myTaskCounts.total}</strong>
-                  </div>
-                  <div>
-                    <span>Pending Planting</span>
-                    <strong>{pendingPlanting}</strong>
+                  <div className="green-wallet-list-card">
+                    <h4>Payout Requests</h4>
+                    {!walletDashboard?.requests?.length ? (
+                      <p className="green-empty">No payout request yet.</p>
+                    ) : (
+                      walletDashboard.requests.slice(0, 6).map((request) => (
+                        <div key={request.id} className="green-wallet-row">
+                          <strong>{request.request_uid || `Request #${request.id}`}</strong>
+                          <span>{formatCurrencyAmount(request.amount_total, request.currency || walletCurrency)}</span>
+                          <small>
+                            {toTitle(request.status || "requested")}
+                            {request.created_at ? ` · ${formatDateLabel(request.created_at)}` : ""}
+                            {request.review_notes ? ` · ${request.review_notes}` : ""}
+                          </small>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
-                <div className="green-profile-export">
-                  <h4>My Report Export</h4>
-                  <p>Export PDF includes only this selected user&apos;s work in the selected project.</p>
-                  <label className="green-profile-export-toggle">
-                    <input
-                      type="checkbox"
-                      checked={includePhotosInReport}
-                      onChange={(e) => setIncludePhotosInReport(e.target.checked)}
-                    />
-                    <span>Include tree photos in appendix (6 per page)</span>
-                  </label>
+              </>
+            )}
+          </section>
+        )}
+
+        {activeDetailSection === "profile" && (
+          <section className="green-detail-card" id="green-section-profile">
+            <h3>Profile</h3>
+            <>
+              <div className="green-profile-hero-card">
+                <div>
+                  <span className="green-overview-kicker">Current User</span>
+                  <strong>{profileDisplayName}</strong>
+                  <p>{profileRoleText}</p>
+                </div>
+                <div className={`green-inline-status-pill ${isOnline ? "is-online" : "is-offline"}`}>
+                  <span className="green-mobile-hero-dot" aria-hidden="true" />
+                  <strong>{isOnline ? "Online" : "Offline"}</strong>
+                </div>
+              </div>
+
+              {!activeUserDetail && (
+                <p className="green-empty">Select a staff member or custodian from setup if you want the profile stats and export to be filtered to that field actor.</p>
+              )}
+
+              <div className="green-user-summary">
+                <div>
+                  <span>{workflowLabels.projectCardMetricLabel}</span>
+                  <strong>{myTreeSummary.total}</strong>
+                </div>
+                <div>
+                  <span>{workflowLabels.healthyLabel}</span>
+                  <strong>{myTreeSummary.healthy}</strong>
+                </div>
+                <div>
+                  <span>Submitted Tasks</span>
+                  <strong>{myTaskCounts.submitted}</strong>
+                </div>
+                <div>
+                  <span>Waiting to Sync</span>
+                  <strong>{syncPendingCount}</strong>
+                </div>
+              </div>
+
+              <div className="green-profile-export">
+                <h4>Actions</h4>
+                <p>Export, secure your login, install the app, or leave the field route from here.</p>
+                <label className="green-profile-export-toggle">
+                  <input
+                    type="checkbox"
+                    checked={includePhotosInReport}
+                    onChange={(e) => setIncludePhotosInReport(e.target.checked)}
+                  />
+                  <span>Include {workflowLabels.entitySingular.toLowerCase()} photos in appendix (6 per page)</span>
+                </label>
+                <div className="green-profile-action-row">
                   <button
                     className="green-btn-primary"
                     type="button"
@@ -3909,39 +4841,55 @@ export default function Green() {
                   >
                     Export My Work (PDF)
                   </button>
-                  {!activeProject && <small>Select a project to enable export.</small>}
-                  {activeProject && !isOnline && <small>Offline now. Reconnect to generate the PDF report.</small>}
-                  {activeProject && activeUser && isOnline && (
-                    <small>
-                      Filter: {activeUser} ({activeProject.name})
-                    </small>
+                  {installPrompt && (
+                    <button className="green-btn-outline" type="button" onClick={installGreenApp}>
+                      Install App
+                    </button>
                   )}
-                  {includePhotosInReport && <small>Photo pages are appended after analytics and record pages.</small>}
+                  {notificationPermission === "default" && (
+                    <button className="green-btn-outline" type="button" onClick={requestGreenNotificationPermission}>
+                      Enable Alerts
+                    </button>
+                  )}
+                  <button className="green-btn-outline" type="button" onClick={openGreenPasswordModal}>
+                    Change Password
+                  </button>
+                  <button className="green-btn-outline" type="button" onClick={logoutGreen}>
+                    Logout
+                  </button>
                 </div>
-              </>
-            )}
+                {!activeProject && <small>Select a project to enable export.</small>}
+                {activeProject && !isOnline && <small>Offline now. Reconnect to generate the PDF report.</small>}
+                {activeProject && activeUser && isOnline && (
+                  <small>
+                    Filter: {activeUser} ({activeProject.name})
+                  </small>
+                )}
+                {includePhotosInReport && <small>Photo pages are appended after analytics and record pages.</small>}
+              </div>
+            </>
           </section>
         )}
 
-        {activeProject && activeSection === "records" && (
+        {activeProject && activeDetailSection === "records" && (
           <section className="green-detail-card" id="green-section-records">
-            <h3>Tree Records</h3>
+            <h3>{workflowLabels.recordsTitle}</h3>
             {activeUser && (
               <div className="green-user-summary">
                 <div>
-                  <span>My Trees</span>
+                  <span>My {workflowLabels.entityPlural}</span>
                   <strong>{myTreeSummary.total}</strong>
                 </div>
                 <div>
-                  <span>Healthy</span>
+                  <span>{workflowLabels.healthyLabel}</span>
                   <strong>{myTreeSummary.healthy}</strong>
                 </div>
                 <div>
-                  <span>Dead</span>
+                  <span>{workflowLabels.deadLabel}</span>
                   <strong>{myTreeSummary.dead}</strong>
                 </div>
                 <div>
-                  <span>Needs Attention</span>
+                  <span>{workflowLabels.attentionLabel}</span>
                   <strong>{myTreeSummary.needs}</strong>
                 </div>
                 <div>
@@ -3956,17 +4904,17 @@ export default function Green() {
             ) : loadingTrees ? (
               <p className="green-empty">Loading trees...</p>
             ) : treeRecordSpeciesSummary.length === 0 ? (
-              <p className="green-empty">No tree records are available for this user yet.</p>
+              <p className="green-empty">{workflowLabels.emptyRecordsSubtitle}</p>
             ) : (
               <div className="green-species-distribution">
-                <h4>Species Distribution</h4>
+                <h4>{workflowLabels.cropDistributionTitle}</h4>
                 <div className="green-species-distribution-list">
                   {treeRecordSpeciesSummary.map((item) => (
                     <div key={`tree-record-species-${item.species}`} className="green-species-distribution-row">
                       <div className="green-species-distribution-text">
                         <span>{item.species}</span>
                         <strong>
-                          {item.count} tree{item.count === 1 ? "" : "s"}
+                          {item.count} {item.count === 1 ? workflowLabels.entitySingular.toLowerCase() : workflowLabels.entityPlural.toLowerCase()}
                         </strong>
                       </div>
                       <div className="green-species-distribution-track">
@@ -3988,9 +4936,9 @@ export default function Green() {
           </section>
         )}
 
-        {activeProject && activeUser && activeSection === "records" && selectedTreeId && (
+        {activeProject && activeUser && activeDetailSection === "records" && selectedTreeId && (
           <section className="green-detail-card" id="green-section-timeline">
-            <h3>Tree Tasks & Timeline</h3>
+            <h3>{workflowLabels.entitySingular} Tasks &amp; Timeline</h3>
             <div className="tree-table">
               <div className="tree-row tree-header">
                 <span>Task</span>
@@ -4231,25 +5179,40 @@ export default function Green() {
 
       <nav className="green-bottom-nav">
         <button
-          className={`green-nav-item ${activeSection === null ? "active" : ""}`}
+          className={`green-nav-item ${activeDetailSection === null ? "active" : ""}`}
           type="button"
           onClick={goHome}
-          aria-label="Home"
+          aria-label="Overview"
         >
           <HomeIcon />
+          <span>Overview</span>
         </button>
 
-        <button className="green-nav-add" type="button" onClick={() => openSection("map")} aria-label="Add Tree">
+        <button className="green-nav-add" type="button" onClick={() => openSection("map", { fieldViewTab: "add_tree" })} aria-label="Capture">
           <PlusIcon />
+          <span>Capture</span>
         </button>
+
+        {showWalletTab && (
+          <button
+            className={`green-nav-item ${activeDetailSection === "wallet" ? "active" : ""}`}
+            type="button"
+            onClick={() => openSection("wallet")}
+            aria-label="Wallet"
+          >
+            <WalletIcon />
+            <span>Wallet</span>
+          </button>
+        )}
 
         <button
-          className={`green-nav-item ${activeSection === "profile" ? "active" : ""}`}
+          className={`green-nav-item ${activeDetailSection === "profile" ? "active" : ""}`}
           type="button"
           onClick={() => openSection("profile")}
           aria-label="Profile"
         >
           <UserIcon />
+          <span>Profile</span>
         </button>
       </nav>
 
