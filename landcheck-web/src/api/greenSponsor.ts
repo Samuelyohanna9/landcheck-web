@@ -423,3 +423,62 @@ export const buildSponsorPublicCertificateUrl = (unitUid?: string | null) => {
 
 export const buildSponsorTermsUrl = () => `${BACKEND_URL}/green/sponsor/public/terms`;
 export const buildSponsorPrivacyUrl = () => "https://landcheck.online/privacy";
+
+// ─── Game actions ─────────────────────────────────────────────────────────────
+export type GameActionPayload = {
+  game_id: "daily_spin" | "fruit_harvest" | "grow_tree" | "forest_quest" | "wildlife_collector" | "rainmaker" | "climate_defender";
+  action: string;
+  amount?: number;
+  meta?: Record<string, unknown>;
+};
+
+export const postSponsorGameAction = async (
+  session: GreenAuthSession,
+  payload: GameActionPayload,
+): Promise<{ ok: boolean; earned: number; new_balance: number; detail?: string }> => {
+  const response = await api.post("/green/sponsor/game/action", {
+    sponsor_id: session.user.id,
+    ...payload,
+  });
+  return response.data;
+};
+
+// ─── Referral ─────────────────────────────────────────────────────────────────
+export const redeemReferralCode = async (session: GreenAuthSession, referral_code: string) => {
+  const response = await api.post("/green/sponsor/referral/redeem", {
+    sponsor_id: session.user.id,
+    referral_code,
+  });
+  return response.data;
+};
+
+// ─── School nomination ────────────────────────────────────────────────────────
+export type SchoolNominationPayload = {
+  school_name: string;
+  school_location: string;
+  contact_name?: string;
+  reason?: string;
+};
+
+export const submitSchoolNomination = async (session: GreenAuthSession, payload: SchoolNominationPayload) => {
+  const response = await api.post("/green/sponsor/schools/nominate", {
+    sponsor_id: session.user.id,
+    ...payload,
+  });
+  return response.data;
+};
+
+// ─── Complaints ───────────────────────────────────────────────────────────────
+export type ComplaintPayload = {
+  tree_unit_id?: number;
+  complaint_type: string;
+  description: string;
+};
+
+export const submitTreeComplaint = async (session: GreenAuthSession, payload: ComplaintPayload) => {
+  const response = await api.post("/green/sponsor/complaints", {
+    sponsor_id: session.user.id,
+    ...payload,
+  });
+  return response.data;
+};
