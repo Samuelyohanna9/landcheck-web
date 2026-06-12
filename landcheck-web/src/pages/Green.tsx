@@ -3415,24 +3415,6 @@ export default function Green() {
       )}
 
       <main className="green-shell">
-        {false && (
-          <section className="green-intro-card" id="green-intro">
-            <span className="green-intro-kicker">LandCheck Green</span>
-            <h2>Field Workflow At A Glance</h2>
-            <p>
-              Select your project and profile, then continue to capture tree planting, maintenance evidence, GPS proof,
-              and offline-safe updates from the field.
-            </p>
-            <div className="green-intro-pills">
-              <span>Live map + tree tracking</span>
-              <span>Offline queue + sync</span>
-              <span>Supervisor-ready evidence</span>
-            </div>
-            <button className="green-btn-primary green-intro-continue" type="button" onClick={continueFromIntro}>
-              Continue
-            </button>
-          </section>
-        )}
         {(activeSection !== null || true) && (
           <>
         {activeSection === null && (
