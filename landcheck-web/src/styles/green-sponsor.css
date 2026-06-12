@@ -1,0 +1,863 @@
+@import url("https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&family=Sora:wght@600;700;800&display=swap");
+
+.green-sponsor-page {
+  min-height: 100dvh;
+  padding: 1.1rem 1rem calc(7rem + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(90% 70% at 15% 0%, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0) 58%),
+    radial-gradient(60% 40% at 100% 10%, rgba(65, 180, 100, 0.16), rgba(65, 180, 100, 0) 60%),
+    linear-gradient(180deg, #edf7ee 0%, #dff0e1 42%, #eef7ef 100%);
+  font-family: "Nunito Sans", sans-serif;
+  color: #133827;
+}
+
+.green-sponsor-header-card,
+.green-sponsor-panel,
+.green-sponsor-toolbar {
+  width: min(1100px, 100%);
+  margin: 0 auto 1rem;
+}
+
+.green-sponsor-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem;
+  border-radius: 28px;
+  border: 1px solid rgba(18, 91, 44, 0.1);
+  background:
+    radial-gradient(70% 90% at 100% 0%, rgba(190, 241, 204, 0.68), rgba(190, 241, 204, 0) 55%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 252, 250, 0.96));
+  box-shadow: 0 18px 40px rgba(19, 56, 39, 0.08);
+}
+
+.green-sponsor-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.green-sponsor-logo-tile {
+  width: 82px;
+  height: 82px;
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  border: 1px solid rgba(18, 91, 44, 0.12);
+  box-shadow: 0 12px 30px rgba(19, 56, 39, 0.08);
+}
+
+.green-sponsor-logo-tile img {
+  width: 62px;
+  height: 62px;
+  object-fit: contain;
+}
+
+.green-sponsor-header-copy {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.green-sponsor-badge {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid rgba(44, 165, 82, 0.18);
+  background: rgba(233, 249, 237, 0.96);
+  color: #0c7331;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.green-sponsor-header-copy h1 {
+  margin: 0;
+  font-family: "Sora", sans-serif;
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+  color: #163b29;
+}
+
+.green-sponsor-header-copy p {
+  max-width: 34rem;
+  margin: 0;
+  color: #476755;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.green-sponsor-weather-orb {
+  width: 76px;
+  height: 76px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, rgba(228, 247, 233, 1), rgba(198, 239, 208, 0.9));
+  border: 1px solid rgba(44, 165, 82, 0.18);
+}
+
+.green-sponsor-weather-icon {
+  width: 30px;
+  height: 30px;
+  color: #1f8a43;
+}
+
+.green-sponsor-hero {
+  width: min(1100px, 100%);
+  margin: 0 auto 1rem;
+  min-height: 360px;
+  border-radius: 34px;
+  padding: 1.3rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(220px, 0.7fr);
+  gap: 1rem;
+  background-position: center;
+  background-size: cover;
+  overflow: hidden;
+  box-shadow: 0 24px 56px rgba(8, 48, 24, 0.24);
+}
+
+.green-sponsor-hero-copy {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  color: #f6fff8;
+}
+
+.green-sponsor-hero-chip,
+.green-sponsor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: fit-content;
+  padding: 0.42rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.green-sponsor-hero-chip {
+  background: rgba(15, 74, 35, 0.6);
+}
+
+.green-sponsor-inline-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.green-sponsor-hero h2 {
+  max-width: 10ch;
+  margin: 0;
+  font-family: "Sora", sans-serif;
+  font-size: clamp(2rem, 6vw, 3.55rem);
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+}
+
+.green-sponsor-hero p {
+  max-width: 32rem;
+  margin: 0;
+  font-size: 1.06rem;
+  line-height: 1.7;
+  color: rgba(247, 255, 249, 0.88);
+}
+
+.green-sponsor-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  padding-top: 0.95rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.green-sponsor-hero-stats strong {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: clamp(1.2rem, 4vw, 2rem);
+  line-height: 1.1;
+}
+
+.green-sponsor-stat-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(232, 248, 236, 0.78);
+}
+
+.green-sponsor-hero-actions,
+.green-sponsor-inline-actions,
+.green-sponsor-inline-chips {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.green-sponsor-primary-btn,
+.green-sponsor-secondary-btn,
+.green-sponsor-bottom-tab {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.green-sponsor-primary-btn,
+.green-sponsor-secondary-btn {
+  min-height: 50px;
+  border-radius: 18px;
+  padding: 0.9rem 1.25rem;
+  font-weight: 800;
+}
+
+.green-sponsor-primary-btn {
+  color: #0d3a22;
+  background: linear-gradient(180deg, #ffffff, #f4fff6);
+  box-shadow: 0 14px 28px rgba(6, 39, 19, 0.18);
+}
+
+.green-sponsor-primary-btn.full {
+  width: 100%;
+  justify-content: center;
+}
+
+.green-sponsor-primary-btn:hover,
+.green-sponsor-secondary-btn:hover,
+.green-sponsor-bottom-tab:hover {
+  transform: translateY(-1px);
+}
+
+.green-sponsor-secondary-btn {
+  color: #f3fff6;
+  background: rgba(9, 56, 26, 0.4);
+  border: 1px solid rgba(243, 255, 246, 0.16);
+}
+
+.green-sponsor-secondary-btn.small {
+  min-height: 40px;
+  padding: 0.7rem 0.95rem;
+  border-radius: 14px;
+}
+
+.green-sponsor-hero-side {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.green-sponsor-difference-card {
+  width: min(260px, 100%);
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1rem 1.1rem;
+  border-radius: 24px;
+  background: rgba(7, 38, 18, 0.42);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fbfffc;
+  font-weight: 700;
+}
+
+.green-sponsor-difference-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  background: rgba(44, 165, 82, 0.18);
+}
+
+.green-sponsor-summary-grid,
+.green-sponsor-content-grid,
+.green-sponsor-tree-detail-grid,
+.green-sponsor-leaderboard-grid {
+  width: min(1100px, 100%);
+  margin: 0 auto 1rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.green-sponsor-summary-grid,
+.green-sponsor-content-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.green-sponsor-tree-detail-grid,
+.green-sponsor-leaderboard-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.green-sponsor-panel {
+  border-radius: 28px;
+  border: 1px solid rgba(18, 91, 44, 0.1);
+  background: rgba(255, 255, 255, 0.94);
+  padding: 1.15rem;
+  box-shadow: 0 14px 34px rgba(19, 56, 39, 0.06);
+}
+
+.green-sponsor-panel.muted {
+  background: linear-gradient(180deg, rgba(250, 254, 250, 0.98), rgba(246, 252, 247, 0.96));
+}
+
+.green-sponsor-panel-heading {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.green-sponsor-heading-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  color: #1e8a42;
+  margin-top: 0.15rem;
+}
+
+.green-sponsor-panel-heading h3,
+.green-sponsor-panel h4 {
+  margin: 0;
+  font-family: "Sora", sans-serif;
+  color: #173c2a;
+  letter-spacing: -0.03em;
+}
+
+.green-sponsor-panel-heading p,
+.green-sponsor-panel > p {
+  margin: 0.35rem 0 0;
+  color: #567261;
+  line-height: 1.65;
+}
+
+.green-sponsor-metric-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.green-sponsor-metric-list.compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.green-sponsor-metric-card,
+.green-sponsor-profile-item {
+  border-radius: 22px;
+  border: 1px solid rgba(18, 91, 44, 0.09);
+  background: #fbfefb;
+  padding: 0.95rem 1rem;
+}
+
+.green-sponsor-metric-card span,
+.green-sponsor-profile-item span,
+.green-sponsor-tree-meta-grid span,
+.green-sponsor-toolbar-label {
+  display: block;
+  color: #62806f;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.green-sponsor-metric-card strong,
+.green-sponsor-profile-item strong,
+.green-sponsor-tree-meta-grid strong {
+  display: block;
+  margin-top: 0.35rem;
+  color: #143625;
+  font-size: clamp(1.05rem, 3vw, 1.4rem);
+  line-height: 1.25;
+}
+
+.green-sponsor-activity-list,
+.green-sponsor-timeline-list,
+.green-sponsor-order-list {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.green-sponsor-activity-item,
+.green-sponsor-timeline-item {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 0.8rem;
+}
+
+.green-sponsor-activity-dot,
+.green-sponsor-timeline-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  margin-top: 0.35rem;
+  background: linear-gradient(180deg, #34a853, #16783d);
+  box-shadow: 0 0 0 4px rgba(52, 168, 83, 0.12);
+}
+
+.green-sponsor-activity-item strong,
+.green-sponsor-timeline-item strong,
+.green-sponsor-ranking-row strong,
+.green-sponsor-order-card strong,
+.green-sponsor-checkout-hero strong,
+.green-sponsor-project-card h4,
+.green-sponsor-tree-card h4 {
+  display: block;
+  color: #153927;
+  font-size: 1rem;
+}
+
+.green-sponsor-activity-item p,
+.green-sponsor-timeline-item p,
+.green-sponsor-ranking-row span,
+.green-sponsor-order-card p,
+.green-sponsor-tree-card p,
+.green-sponsor-empty,
+.green-sponsor-banner,
+.green-sponsor-loading {
+  margin: 0.28rem 0 0;
+  color: #587160;
+  line-height: 1.6;
+}
+
+.green-sponsor-activity-item span,
+.green-sponsor-timeline-item span {
+  display: inline-block;
+  margin-top: 0.28rem;
+  color: #78917f;
+  font-size: 0.84rem;
+}
+
+.green-sponsor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem 1.05rem;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(18, 91, 44, 0.09);
+  backdrop-filter: blur(12px);
+}
+
+.green-sponsor-toolbar strong {
+  display: block;
+  margin-top: 0.25rem;
+  color: #153927;
+}
+
+.green-sponsor-banner,
+.green-sponsor-loading,
+.green-sponsor-empty {
+  width: min(1100px, 100%);
+  margin: 0 auto 1rem;
+  border-radius: 20px;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(18, 91, 44, 0.09);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.green-sponsor-banner.danger {
+  color: #8e1b1b;
+  background: rgba(255, 241, 241, 0.95);
+  border-color: rgba(204, 32, 32, 0.16);
+}
+
+.green-sponsor-project-grid,
+.green-sponsor-tree-grid,
+.green-sponsor-photo-grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.green-sponsor-project-grid,
+.green-sponsor-tree-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.green-sponsor-project-card,
+.green-sponsor-tree-card {
+  text-align: left;
+  padding: 1rem;
+  border-radius: 24px;
+  border: 1px solid rgba(18, 91, 44, 0.09);
+  background: linear-gradient(180deg, rgba(251, 254, 251, 0.98), rgba(245, 251, 246, 0.95));
+  box-shadow: 0 8px 18px rgba(19, 56, 39, 0.04);
+}
+
+.green-sponsor-project-card.active {
+  border-color: rgba(30, 138, 66, 0.32);
+  box-shadow: 0 16px 32px rgba(19, 56, 39, 0.08);
+  transform: translateY(-1px);
+}
+
+.green-sponsor-project-head,
+.green-sponsor-tree-card-head,
+.green-sponsor-order-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.green-sponsor-project-card p,
+.green-sponsor-checkout-hero span,
+.green-sponsor-tree-card p,
+.green-sponsor-order-card p {
+  color: #597463;
+}
+
+.green-sponsor-project-meta,
+.green-sponsor-tree-card-meta,
+.green-sponsor-order-meta {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.green-sponsor-project-meta span,
+.green-sponsor-tree-card-meta span,
+.green-sponsor-order-meta span {
+  border-radius: 999px;
+  padding: 0.38rem 0.7rem;
+  background: rgba(31, 138, 67, 0.06);
+  color: #21533a;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.green-sponsor-tree-mini-icon {
+  width: 2.6rem;
+  height: 2.6rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(31, 138, 67, 0.08);
+  color: #1e8a42;
+}
+
+.green-sponsor-checkout-panel {
+  position: sticky;
+  top: 1rem;
+  align-self: start;
+}
+
+.green-sponsor-checkout-hero {
+  display: grid;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(12, 93, 42, 0.95), rgba(20, 130, 59, 0.85)),
+    url("/background-sponsor.png") center/cover;
+  color: #f5fff8;
+}
+
+.green-sponsor-field {
+  display: grid;
+  gap: 0.42rem;
+  margin-bottom: 0.85rem;
+}
+
+.green-sponsor-field span {
+  color: #20523a;
+  font-size: 0.83rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.green-sponsor-field input,
+.green-sponsor-field select,
+.green-sponsor-field textarea {
+  width: 100%;
+  border: 1px solid rgba(18, 91, 44, 0.14);
+  border-radius: 18px;
+  background: #fbfefb;
+  color: #163927;
+  padding: 0.92rem 1rem;
+  font: inherit;
+}
+
+.green-sponsor-field textarea {
+  resize: vertical;
+}
+
+.green-sponsor-field input:focus,
+.green-sponsor-field select:focus,
+.green-sponsor-field textarea:focus {
+  outline: none;
+  border-color: rgba(31, 138, 67, 0.4);
+  box-shadow: 0 0 0 4px rgba(31, 138, 67, 0.12);
+}
+
+.green-sponsor-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.72rem;
+  margin-bottom: 0.8rem;
+  color: #426150;
+}
+
+.green-sponsor-check input {
+  width: 18px;
+  height: 18px;
+  margin-top: 0.1rem;
+}
+
+.green-sponsor-check a {
+  color: #0c7a33;
+  font-weight: 800;
+}
+
+.green-sponsor-tree-detail {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.green-sponsor-tree-banner {
+  border-radius: 28px;
+  padding: 1.15rem;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  background-position: center;
+  background-size: cover;
+  color: #f6fff8;
+}
+
+.green-sponsor-tree-banner h3 {
+  margin: 0.55rem 0 0;
+  font-family: "Sora", sans-serif;
+  font-size: clamp(1.5rem, 5vw, 2.4rem);
+  line-height: 1;
+}
+
+.green-sponsor-tree-banner p {
+  margin: 0.45rem 0 0;
+  color: rgba(247, 255, 249, 0.84);
+}
+
+.green-sponsor-tree-banner-actions {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.green-sponsor-map-frame {
+  overflow: hidden;
+  border-radius: 24px;
+  margin-top: 1rem;
+  border: 1px solid rgba(18, 91, 44, 0.09);
+}
+
+.green-sponsor-map-frame iframe {
+  display: block;
+  width: 100%;
+  min-height: 320px;
+  border: 0;
+}
+
+.green-sponsor-tree-meta-grid,
+.green-sponsor-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.green-sponsor-photo-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.green-sponsor-photo-grid img {
+  width: 100%;
+  height: 210px;
+  object-fit: cover;
+  border-radius: 22px;
+  border: 1px solid rgba(18, 91, 44, 0.09);
+  background: #f0f7f1;
+}
+
+.green-sponsor-chip.ok {
+  background: rgba(232, 249, 238, 0.95);
+  color: #0f7a34;
+  border-color: rgba(31, 138, 67, 0.16);
+}
+
+.green-sponsor-chip.warning {
+  background: rgba(255, 247, 229, 0.95);
+  color: #a1650c;
+  border-color: rgba(207, 151, 36, 0.16);
+}
+
+.green-sponsor-chip.danger {
+  background: rgba(255, 239, 239, 0.95);
+  color: #b02626;
+  border-color: rgba(203, 60, 60, 0.18);
+}
+
+.green-sponsor-chip.neutral {
+  background: rgba(240, 245, 241, 0.95);
+  color: #466354;
+  border-color: rgba(88, 113, 96, 0.14);
+}
+
+.green-sponsor-inline-chips.wrap {
+  margin-bottom: 1rem;
+}
+
+.green-sponsor-tag-cloud {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.green-sponsor-tag {
+  border-radius: 999px;
+  padding: 0.5rem 0.85rem;
+  background: rgba(31, 138, 67, 0.08);
+  color: #18583a;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.green-sponsor-tag.soft {
+  background: rgba(236, 247, 255, 0.92);
+  color: #276086;
+}
+
+.green-sponsor-tag.muted {
+  background: rgba(246, 246, 246, 0.96);
+  color: #5d6d65;
+}
+
+.green-sponsor-ranking-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0;
+  border-top: 1px solid rgba(18, 91, 44, 0.08);
+}
+
+.green-sponsor-ranking-row:first-of-type {
+  border-top: 0;
+}
+
+.green-sponsor-ranking-total {
+  font-family: "Sora", sans-serif;
+  color: #126d33;
+}
+
+.green-sponsor-order-card {
+  border-radius: 22px;
+  border: 1px solid rgba(18, 91, 44, 0.09);
+  padding: 1rem;
+  background: linear-gradient(180deg, rgba(251, 254, 251, 0.98), rgba(245, 251, 246, 0.95));
+}
+
+.green-sponsor-bottom-nav {
+  position: sticky;
+  bottom: calc(0.65rem + env(safe-area-inset-bottom));
+  z-index: 20;
+  width: min(1100px, 100%);
+  margin: 1rem auto 0;
+  padding: 0.45rem;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.45rem;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(18, 91, 44, 0.1);
+  box-shadow: 0 16px 34px rgba(19, 56, 39, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.green-sponsor-bottom-tab {
+  min-height: 62px;
+  display: grid;
+  place-items: center;
+  gap: 0.3rem;
+  padding: 0.55rem 0.45rem;
+  border-radius: 20px;
+  background: transparent;
+  color: #547362;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.green-sponsor-bottom-tab.active {
+  background: linear-gradient(180deg, rgba(231, 249, 235, 1), rgba(205, 239, 214, 0.88));
+  color: #0e7732;
+}
+
+.green-sponsor-bottom-tab-icon {
+  width: 20px;
+  height: 20px;
+}
+
+@media (max-width: 900px) {
+  .green-sponsor-hero,
+  .green-sponsor-summary-grid,
+  .green-sponsor-content-grid,
+  .green-sponsor-tree-detail-grid,
+  .green-sponsor-leaderboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .green-sponsor-checkout-panel {
+    position: static;
+  }
+
+  .green-sponsor-toolbar {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 700px) {
+  .green-sponsor-page {
+    padding-inline: 0.75rem;
+  }
+
+  .green-sponsor-header-card,
+  .green-sponsor-tree-banner,
+  .green-sponsor-header-brand {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .green-sponsor-weather-orb {
+    align-self: flex-end;
+  }
+
+  .green-sponsor-hero {
+    min-height: unset;
+    padding: 1rem;
+  }
+
+  .green-sponsor-hero h2 {
+    max-width: none;
+  }
+
+  .green-sponsor-metric-list,
+  .green-sponsor-profile-grid,
+  .green-sponsor-tree-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .green-sponsor-bottom-nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.2rem;
+  }
+
+  .green-sponsor-bottom-tab {
+    min-height: 58px;
+    font-size: 0.7rem;
+  }
+}

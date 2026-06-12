@@ -55,6 +55,7 @@ function precacheBuildAssets() {
   // Also cache the logo
   urls.push("/green-logo-cropped-760.png");
   urls.push("/green-logo-cropped-700.png");
+  urls.push("/background-sponsor.png");
 
   if (urls.length > 0 && navigator.serviceWorker.controller) {
     navigator.serviceWorker.controller.postMessage({
