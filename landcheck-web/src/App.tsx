@@ -8,13 +8,14 @@ import AdminDashboard from "./pages/AdminDashboard";
 import HazardAnalysis from "./pages/HazardAnalysis";
 import Green from "./pages/Green";
 import GreenLogin from "./pages/GreenLogin";
+import GreenSponsor from "./pages/GreenSponsor";
 import GreenWork from "./pages/GreenWork";
 import GreenWorkLogin from "./pages/GreenWorkLogin";
 import GreenPartnersLanding from "./pages/GreenPartnersLanding";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import SeoRouteMeta from "./components/SeoRouteMeta";
 import PrivacyNoticeBanner from "./components/PrivacyNoticeBanner";
-import { isGreenAuthed } from "./auth/greenAuth";
+import { getGreenAuthSession, isGreenAuthed, isSponsorGreenSession } from "./auth/greenAuth";
 import { isWorkAuthed } from "./auth/workAuth";
 
 function WorkProtectedRoute({ element }: { element: ReactElement }) {
@@ -23,6 +24,12 @@ function WorkProtectedRoute({ element }: { element: ReactElement }) {
 
 function GreenProtectedRoute({ element }: { element: ReactElement }) {
   return isGreenAuthed() ? element : <Navigate to="/green/login" replace />;
+}
+
+function GreenRouteSwitch() {
+  const session = getGreenAuthSession();
+  if (session && isSponsorGreenSession(session)) return <GreenSponsor />;
+  return <Green />;
 }
 
 export default function App() {
@@ -36,7 +43,8 @@ export default function App() {
         <Route path="/hazard-analysis" element={<HazardAnalysis />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/green/login" element={<GreenLogin />} />
-        <Route path="/green" element={<GreenProtectedRoute element={<Green />} />} />
+        <Route path="/green/login/:authRoute" element={<GreenLogin />} />
+        <Route path="/green" element={<GreenProtectedRoute element={<GreenRouteSwitch />} />} />
         <Route path="/green-work/login" element={<GreenWorkLogin />} />
         <Route path="/green-work" element={<WorkProtectedRoute element={<GreenWork />} />} />
         <Route path="/green-partners" element={<GreenPartnersLanding />} />
