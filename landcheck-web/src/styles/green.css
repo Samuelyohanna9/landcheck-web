@@ -3355,3 +3355,121 @@
     min-height: 170px;
   }
 }
+
+/* ─── Sponsor QR Tag Banner (field worker add-tree tab) ─── */
+.green-sponsor-qr-banner {
+  background: #f0faf2;
+  border: 1.5px solid #86efac;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.green-sponsor-qr-banner-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.green-sponsor-qr-banner-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.green-sponsor-qr-banner-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: #14532d;
+  margin-bottom: 3px;
+}
+
+.green-sponsor-qr-banner-desc {
+  font-size: 12px;
+  color: #4b7a5a;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.green-sponsor-qr-meta {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+  font-style: italic;
+}
+
+.green-sponsor-qr-meta.error {
+  color: #dc2626;
+  font-style: normal;
+}
+
+.green-sponsor-qr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.green-sponsor-qr-card {
+  background: #ffffff;
+  border: 1px solid #d1fae5;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.green-sponsor-qr-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.green-sponsor-qr-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.green-sponsor-qr-card-info strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.green-sponsor-qr-card-uid {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.green-sponsor-qr-card-ded {
+  font-size: 11px;
+  color: #4b7a5a;
+  text-transform: capitalize;
+}
+
+.green-sponsor-qr-dl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #15803d;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.15s;
+  align-self: flex-start;
+}
+
+.green-sponsor-qr-dl-btn:hover {
+  background: #166534;
+}
