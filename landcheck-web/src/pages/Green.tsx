@@ -3453,7 +3453,7 @@ export default function Green() {
             </button>
           </section>
         )}
-        {(activeSection !== null || !introGateOpen) && (
+        {(activeSection !== null || true) && (
           <>
         {activeSection === null && (
           <>
