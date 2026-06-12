@@ -986,8 +986,20 @@ export default function GreenSponsor() {
             <p>See where your trees are planted, how they grow, and the impact they create.</p>
           </div>
         </div>
-        <div className="green-sponsor-weather-orb">
-          <GreenGlyph name={getSponsorGreetingIcon()} className="green-sponsor-weather-icon" />
+        <div className="green-sponsor-header-right">
+          <div className="green-sponsor-weather-orb">
+            <GreenGlyph name={getSponsorGreetingIcon()} className="green-sponsor-weather-icon" />
+          </div>
+          <button
+            type="button"
+            className="green-sponsor-logout-btn"
+            onClick={handleLogout}
+            title="Log out"
+            aria-label="Log out"
+          >
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="18" height="18"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="16 17 21 12 16 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span>Log out</span>
+          </button>
         </div>
       </header>
 
