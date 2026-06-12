@@ -779,6 +779,8 @@ export default function GreenSponsor() {
     quantity: "1", dedicationType: "self", dedicationName: "", dedicationMessage: "", purchaserNote: "", acceptedTerms: false, acceptedPolicy: false,
   });
 
+  const [checkoutSheetOpen, setCheckoutSheetOpen] = useState(false);
+
   // Grove / games state
   const [activeGame, setActiveGame] = useState<string | null>(null);
   const [schoolNomOpen, setSchoolNomOpen] = useState(false);
@@ -1083,7 +1085,7 @@ export default function GreenSponsor() {
                   : projects.map((project) => {
                     const active = selectedProject?.id === project.id;
                     return (
-                      <button type="button" key={`project-${project.id}`} className={`green-sponsor-project-card${active ? " active" : ""}`} onClick={() => setSelectedProjectId(project.id)}>
+                      <button type="button" key={`project-${project.id}`} className={`green-sponsor-project-card${active ? " active" : ""}`} onClick={() => { setSelectedProjectId(project.id); setCheckoutSheetOpen(true); }}>
                         <div className="green-sponsor-project-head">
                           <h4>{project.public_sponsor_title || project.name}</h4>
                           <span className={`green-sponsor-chip ${project.sponsor_checkout_ready ? "ok" : "warning"}`}>{project.sponsor_checkout_ready ? `${Number(project.slots_available ?? 0)} open` : "Preparing"}</span>
@@ -1099,7 +1101,9 @@ export default function GreenSponsor() {
               </div>
             </section>
 
-            <aside className="green-sponsor-panel green-sponsor-checkout-panel">
+            <aside className="green-sponsor-panel green-sponsor-checkout-panel green-sponsor-checkout-panel--desktop"
+              aria-label="Checkout panel"
+            >
               <div className="green-sponsor-panel-heading">
                 <GreenGlyph name="leaf" className="green-sponsor-heading-icon" />
                 <div><h3>Secure Checkout</h3><p>Create an order then continue to the configured payment provider.</p></div>
@@ -1516,6 +1520,63 @@ export default function GreenSponsor() {
           </article>
         </div>
       )}
+
+      {/* ─── Mobile checkout bottom sheet ─── */}
+      {checkoutSheetOpen && (
+        <div className="gs-checkout-backdrop" onClick={() => setCheckoutSheetOpen(false)} aria-hidden="true" />
+      )}
+      <div className={`gs-checkout-sheet${checkoutSheetOpen && selectedProject ? " open" : ""}`} role="dialog" aria-modal="true" aria-label="Sponsor checkout">
+        <div className="gs-checkout-sheet-drag" onClick={() => setCheckoutSheetOpen(false)} />
+        <div className="gs-checkout-sheet-inner">
+          <div className="gs-checkout-sheet-topbar">
+            <div className="gs-checkout-sheet-topbar-info">
+              <strong>{selectedProject?.public_sponsor_title || selectedProject?.name || "Select a project"}</strong>
+              <span>{selectedProject?.location_text || "LandCheck Green project"}</span>
+            </div>
+            <button type="button" className="gs-checkout-sheet-close" onClick={() => setCheckoutSheetOpen(false)} aria-label="Close">✕</button>
+          </div>
+
+          {selectedProject ? (
+            <div className="gs-checkout-sheet-body">
+              {/* Intro banner */}
+              <div className="gs-checkout-intro-banner">
+                <p className="gs-checkout-intro-eyebrow">Secure sponsorship checkout</p>
+                <h3 className="gs-checkout-intro-title">Pay online, then follow real planting evidence as your trees move into the field.</h3>
+                <div className="gs-checkout-intro-chips">
+                  <span className="green-sponsor-chip ok">{formatCurrencyAmount(selectedProject.sponsor_price_per_tree || 0, selectedProject.sponsor_currency || "NGN")} / tree</span>
+                  <span className={`green-sponsor-chip ${selectedProject.sponsor_checkout_ready ? "ok" : "warning"}`}>{selectedProject.sponsor_checkout_ready ? "Ready" : "Preparing"}</span>
+                  {selectedProject.slots_available !== null && selectedProject.slots_available !== undefined && (
+                    <span className="green-sponsor-chip neutral">{selectedProject.slots_available} available</span>
+                  )}
+                </div>
+                {selectedProject.public_sponsor_description || selectedProject.public_description ? (
+                  <p className="gs-checkout-intro-desc">{selectedProject.public_sponsor_description || selectedProject.public_description}</p>
+                ) : null}
+              </div>
+
+              <label className="green-sponsor-field"><span>Trees</span><input type="number" min="1" value={orderDraft.quantity} onChange={(e) => setOrderDraft((c) => ({ ...c, quantity: e.target.value }))} /></label>
+              {selectedProject.sponsor_max_per_order ? (
+                <p className="gs-checkout-note">Max {selectedProject.sponsor_max_per_order} trees per order · Total: {formatCurrencyAmount((Math.max(1, Number(orderDraft.quantity || 1))) * Number(selectedProject.sponsor_price_per_tree || 0), selectedProject.sponsor_currency || "NGN")}</p>
+              ) : (
+                <p className="gs-checkout-note">Total: {formatCurrencyAmount((Math.max(1, Number(orderDraft.quantity || 1))) * Number(selectedProject.sponsor_price_per_tree || 0), selectedProject.sponsor_currency || "NGN")}</p>
+              )}
+              <label className="green-sponsor-field"><span>Dedication type</span><select value={orderDraft.dedicationType} onChange={(e) => setOrderDraft((c) => ({ ...c, dedicationType: e.target.value }))}>{DEDICATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
+              <label className="green-sponsor-field"><span>Dedicated to (optional)</span><input type="text" value={orderDraft.dedicationName} onChange={(e) => setOrderDraft((c) => ({ ...c, dedicationName: e.target.value }))} placeholder="Name, family, or occasion" /></label>
+              <label className="green-sponsor-field"><span>Dedication message (optional)</span><textarea rows={2} value={orderDraft.dedicationMessage} onChange={(e) => setOrderDraft((c) => ({ ...c, dedicationMessage: e.target.value }))} placeholder="Short dedication message" /></label>
+              <label className="green-sponsor-field"><span>Note for team (optional)</span><textarea rows={2} value={orderDraft.purchaserNote} onChange={(e) => setOrderDraft((c) => ({ ...c, purchaserNote: e.target.value }))} placeholder="Message to the LandCheck Green team" /></label>
+
+              <div className="gs-checkout-consent">
+                <label className="green-sponsor-check"><input type="checkbox" checked={orderDraft.acceptedTerms} onChange={(e) => setOrderDraft((c) => ({ ...c, acceptedTerms: e.target.checked }))} /><span>I accept the <a href={buildSponsorTermsUrl()} target="_blank" rel="noreferrer">sponsor terms</a></span></label>
+                <label className="green-sponsor-check"><input type="checkbox" checked={orderDraft.acceptedPolicy} onChange={(e) => setOrderDraft((c) => ({ ...c, acceptedPolicy: e.target.checked }))} /><span>I accept the <a href={buildSponsorPrivacyUrl()} target="_blank" rel="noreferrer">privacy policy</a></span></label>
+              </div>
+
+              <button type="button" className="green-sponsor-primary-btn full gs-checkout-pay-btn" onClick={handleCreateOrder} disabled={creatingOrder}>{creatingOrder ? "Preparing secure payment…" : "Continue to Secure Payment →"}</button>
+            </div>
+          ) : (
+            <div className="green-sponsor-empty">Select a project above to start checkout.</div>
+          )}
+        </div>
+      </div>
 
       {/* ─── Bottom navigation ─── */}
       <nav className="green-sponsor-bottom-nav">

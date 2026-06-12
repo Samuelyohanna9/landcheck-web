@@ -1030,6 +1030,14 @@ export default function Green() {
   const [addingTree, setAddingTree] = useState(false);
   const [mapDrawMode, setMapDrawMode] = useState(true);
   const [fieldViewTab, setFieldViewTab] = useState<"map" | "add_tree">("map");
+  const [sponsorQrUnits, setSponsorQrUnits] = useState<Array<{
+    unit_id: number; unit_uid: string | null; sponsor_name: string | null;
+    sponsor_organization_name: string | null; species: string | null;
+    dedication_type: string | null; dedication_name: string | null;
+    qr_download_count: number; last_qr_downloaded_at: string | null; last_qr_downloaded_by: string | null;
+  }>>([]);
+  const [sponsorQrUnitsLoading, setSponsorQrUnitsLoading] = useState(false);
+  const [sponsorQrUnitsError, setSponsorQrUnitsError] = useState("");
   const [, setMapView] = useState<{
     lng: number;
     lat: number;
@@ -2256,6 +2264,43 @@ export default function Green() {
       localStorage.setItem("landcheck_work_existing_tree_focus_id", String(normalizedTreeId));
     }
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    const userId = Number(greenAuthUser?.id || 0);
+    const orgId = Number(greenAuthUser?.organization_id || 0) || null;
+    const projectId = activeProject?.id || null;
+    if (!selectedProjectIsSponsorEnabled || fieldViewTab !== "add_tree" || !projectId || !userId) {
+      setSponsorQrUnits([]);
+      setSponsorQrUnitsError("");
+      setSponsorQrUnitsLoading(false);
+      return () => { cancelled = true; };
+    }
+    setSponsorQrUnitsLoading(true);
+    setSponsorQrUnitsError("");
+    const params = new URLSearchParams({ _ts: String(Date.now()), sync: "1", project_id: String(projectId), user_id: String(userId) });
+    if (orgId) params.set("organization_id", String(orgId));
+    api.get<Array<Record<string, unknown>>>(`/green/agent/sponsor-qr-tags?${params.toString()}`)
+      .then((res) => {
+        if (cancelled) return;
+        const rows = Array.isArray(res.data) ? res.data : [];
+        setSponsorQrUnits(rows.map((row) => ({
+          unit_id: Number(row.unit_id || 0),
+          unit_uid: row.unit_uid ? String(row.unit_uid) : null,
+          sponsor_name: row.sponsor_name ? String(row.sponsor_name) : null,
+          sponsor_organization_name: row.sponsor_organization_name ? String(row.sponsor_organization_name) : null,
+          species: row.species ? String(row.species) : null,
+          dedication_type: row.dedication_type ? String(row.dedication_type) : null,
+          dedication_name: row.dedication_name ? String(row.dedication_name) : null,
+          qr_download_count: Number(row.qr_download_count || 0),
+          last_qr_downloaded_at: row.last_qr_downloaded_at ? String(row.last_qr_downloaded_at) : null,
+          last_qr_downloaded_by: row.last_qr_downloaded_by ? String(row.last_qr_downloaded_by) : null,
+        })).filter((r) => r.unit_id > 0));
+      })
+      .catch(() => { if (!cancelled) setSponsorQrUnitsError("Failed to load sponsor QR tags."); })
+      .finally(() => { if (!cancelled) setSponsorQrUnitsLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeProject?.id, fieldViewTab, selectedProjectIsSponsorEnabled, greenAuthUser?.id, greenAuthUser?.organization_id]);
 
   const addTree = async () => {
     if (!ensureGreenWritesAllowed()) return;
@@ -4224,6 +4269,59 @@ export default function Green() {
 
             {fieldViewTab === "add_tree" && (
             <div className="tree-form">
+              {/* Sponsor QR tag section – only shown on public sponsorship projects */}
+              {selectedProjectIsSponsorEnabled && (
+                <div className="green-sponsor-qr-banner">
+                  <div className="green-sponsor-qr-banner-head">
+                    <span className="green-sponsor-qr-banner-icon">🏷️</span>
+                    <div>
+                      <strong className="green-sponsor-qr-banner-title">Sponsor QR Tags</strong>
+                      <p className="green-sponsor-qr-banner-desc">
+                        Download a QR tag for each sponsor-funded tree before going to the field. After planting, attach the matching tag and submit for supervisor review.
+                      </p>
+                    </div>
+                  </div>
+                  {sponsorQrUnitsLoading && <p className="green-sponsor-qr-meta">Loading sponsor tags…</p>}
+                  {sponsorQrUnitsError && <p className="green-sponsor-qr-meta error">{sponsorQrUnitsError}</p>}
+                  {!sponsorQrUnitsLoading && !sponsorQrUnitsError && sponsorQrUnits.length === 0 && (
+                    <p className="green-sponsor-qr-meta">No sponsor QR tags are reserved for this planting queue yet.</p>
+                  )}
+                  {sponsorQrUnits.length > 0 && (
+                    <div className="green-sponsor-qr-list">
+                      {sponsorQrUnits.map((unit) => {
+                        const qrUrl = `${BACKEND_URL}/green/sponsorship-units/${unit.unit_id}/qr-tag/pdf?user_id=${Number(greenAuthUser?.id || 0)}${greenAuthUser?.organization_id ? `&organization_id=${greenAuthUser.organization_id}` : ""}`;
+                        return (
+                          <div key={`qr-unit-${unit.unit_id}`} className="green-sponsor-qr-card">
+                            <div className="green-sponsor-qr-card-head">
+                              <div className="green-sponsor-qr-card-info">
+                                <strong>{unit.sponsor_name || unit.sponsor_organization_name || "Sponsor tree"}</strong>
+                                <span className="green-sponsor-qr-card-uid">{unit.unit_uid || `Unit #${unit.unit_id}`}{unit.species ? ` · ${unit.species}` : ""}</span>
+                                {(unit.dedication_type || unit.dedication_name) && (
+                                  <span className="green-sponsor-qr-card-ded">
+                                    {unit.dedication_type ? `${String(unit.dedication_type).replace(/_/g, " ")}` : ""}
+                                    {unit.dedication_name ? ` · ${unit.dedication_name}` : ""}
+                                  </span>
+                                )}
+                              </div>
+                              <span className={`green-task-status-badge ${Number(unit.qr_download_count) > 0 ? "is-done" : "is-review"}`}>
+                                {Number(unit.qr_download_count) > 0 ? `DL×${unit.qr_download_count}` : "Not DL'd"}
+                              </span>
+                            </div>
+                            <a
+                              href={qrUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="green-sponsor-qr-dl-btn"
+                            >
+                              ↓ Download QR Tag PDF
+                            </a>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
               {!existingTreeBatchCaptureActive && (
                 <>
                   <div className="tree-form-row">
