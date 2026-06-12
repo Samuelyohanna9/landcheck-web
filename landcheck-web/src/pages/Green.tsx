@@ -781,15 +781,6 @@ const toDisplayPhotoUrl = (url: string | null | undefined) => {
   }
 };
 
-const readGreenIntroSeen = () => {
-  if (typeof window === "undefined") return false;
-  try {
-    return window.sessionStorage.getItem("landcheck_green_intro_seen") === "1";
-  } catch {
-    return false;
-  }
-};
-
 function HomeIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -1062,7 +1053,6 @@ export default function Green() {
   const [treeAgeMonthsDraftById, setTreeAgeMonthsDraftById] = useState<Record<number, string>>({});
   const [savingTreeAgeMonthsId, setSavingTreeAgeMonthsId] = useState<number | null>(null);
   const [includePhotosInReport, setIncludePhotosInReport] = useState(false);
-  const [introGateOpen, setIntroGateOpen] = useState<boolean>(() => !readGreenIntroSeen());
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">(() => {
     if (!canUseBrowserNotifications()) return "unsupported";
     try {
@@ -3284,16 +3274,6 @@ export default function Green() {
     setInspectedTree(null);
     setFieldViewTab("map");
   };
-  const continueFromIntro = () => {
-    setIntroGateOpen(false);
-    if (typeof window === "undefined") return;
-    try {
-      window.sessionStorage.setItem("landcheck_green_intro_seen", "1");
-    } catch {
-      // ignore storage errors
-    }
-  };
-
   const onPlantingFlowOk = () => {
     const shouldGoHome = plantingFlowState === "success";
     setPlantingFlowState("idle");
