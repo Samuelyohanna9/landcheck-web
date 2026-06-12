@@ -3092,6 +3092,10 @@ export default function GreenWork() {
     const allowed = new Set(publicSponsorAgentUserIds);
     return eligiblePublicSponsorUsers.filter((user) => allowed.has(Number(user.id || 0)));
   }, [eligiblePublicSponsorUsers, projectScopedUsers, publicSponsorAgentUserIds, publicSponsorshipProject]);
+  const sponsorQrAgentOptions = useMemo(
+    () => assignmentUsers.filter((user) => user.allow_green !== false && user.is_active !== false),
+    [assignmentUsers],
+  );
   const defaultProjectForm: WorkForm = fieldWorkflowMode ? "custodian_hub" : "overview";
   const isHiddenInFieldProject = (form: WorkForm) =>
     Boolean(activeProjectId && fieldWorkflowMode && AGRIC_HIDDEN_PROJECT_FORMS.includes(form));
@@ -3132,6 +3136,8 @@ export default function GreenWork() {
   const [sponsorQrStatusRows, setSponsorQrStatusRows] = useState<any[]>([]);
   const [sponsorQrStatusLoading, setSponsorQrStatusLoading] = useState(false);
   const [sponsorQrStatusError, setSponsorQrStatusError] = useState<string | null>(null);
+  const [sponsorQrReissueSelections, setSponsorQrReissueSelections] = useState<Record<number, number>>({});
+  const [reissuingSponsorQrUnitId, setReissuingSponsorQrUnitId] = useState<number | null>(null);
   const [reviewingSponsorAgentPayoutId, setReviewingSponsorAgentPayoutId] = useState<number | null>(null);
   const [savingPublicSponsorAgents, setSavingPublicSponsorAgents] = useState(false);
   const [fallbackSponsorAccounts, setFallbackSponsorAccounts] = useState<SponsorAccountSummary[]>([]);
@@ -5296,6 +5302,39 @@ export default function GreenWork() {
       if (!silent) setSponsorQrStatusLoading(false);
     }
   }, []);
+
+  const reissueSponsorQrUnit = useCallback(
+    async (unitId: number, agentUserId: number) => {
+      if (!activeProjectId) return;
+      if (!canAccessSuperAdmin) {
+        toast.error("Only super admin can reissue sponsor QR tags.");
+        return;
+      }
+      const normalizedAgentUserId = Number(agentUserId || 0);
+      if (!(normalizedAgentUserId > 0)) {
+        toast.error("Select a sponsor agent first.");
+        return;
+      }
+      const agent = sponsorQrAgentOptions.find((item) => Number(item.id || 0) === normalizedAgentUserId);
+      const agentLabel = agent?.full_name || agent?.work_username || `User #${normalizedAgentUserId}`;
+      if (!window.confirm(`Reissue this sponsor QR tag to ${agentLabel}?`)) return;
+      setReissuingSponsorQrUnitId(unitId);
+      try {
+        await api.post(`/green/admin/sponsor-qr-status/${unitId}/reissue`, {
+          agent_user_id: normalizedAgentUserId,
+          reviewer_name: workAuthSession?.user?.full_name || "super_admin",
+        });
+        setSponsorQrReissueSelections((prev) => ({ ...prev, [unitId]: normalizedAgentUserId }));
+        await loadSponsorQrStatus(activeProjectId, { forceSync: false });
+        toast.success(`Sponsor QR tag reissued to ${agentLabel}`);
+      } catch (error: any) {
+        toast.error(error?.response?.data?.detail || "Failed to reissue sponsor QR tag");
+      } finally {
+        setReissuingSponsorQrUnitId(null);
+      }
+    },
+    [activeProjectId, canAccessSuperAdmin, loadSponsorQrStatus, sponsorQrAgentOptions, workAuthSession?.user?.full_name],
+  );
 
   const reviewSponsorAgentPayoutRequest = useCallback(
     async (
@@ -12413,6 +12452,7 @@ export default function GreenWork() {
                             <th>Downloads</th>
                             <th>Last Download</th>
                             <th>Tree Link</th>
+                            <th>Action</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -12448,6 +12488,49 @@ export default function GreenWork() {
                               <td>{row.last_qr_downloaded_at ? new Date(row.last_qr_downloaded_at).toLocaleString() : "-"}</td>
                               <td>
                                 {row.tree_project_no ? `Tree #${row.tree_project_no}` : row.tree_id ? `Tree ID ${row.tree_id}` : "Awaiting planting"}
+                              </td>
+                              <td>
+                                {canAccessSuperAdmin && !row.tree_id && String(row.sponsorship_status || "").trim().toLowerCase() === "awaiting_tree" ? (
+                                  <div style={{ display: "grid", gap: 8, minWidth: 200 }}>
+                                    <select
+                                      value={Number(sponsorQrReissueSelections[row.unit_id] || row.assigned_user_id || 0) > 0 ? Number(sponsorQrReissueSelections[row.unit_id] || row.assigned_user_id || 0) : ""}
+                                      onChange={(event) =>
+                                        setSponsorQrReissueSelections((prev) => ({
+                                          ...prev,
+                                          [row.unit_id]: Number(event.target.value || 0),
+                                        }))
+                                      }
+                                      disabled={reissuingSponsorQrUnitId === Number(row.unit_id)}
+                                    >
+                                      <option value="">Choose sponsor agent</option>
+                                      {sponsorQrAgentOptions.map((user) => (
+                                        <option key={`sponsor-qr-agent-${row.unit_id}-${user.id}`} value={Number(user.id || 0)}>
+                                          {user.full_name}
+                                          {user.work_username ? ` (${user.work_username})` : ""}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void reissueSponsorQrUnit(
+                                          Number(row.unit_id || 0),
+                                          Number(sponsorQrReissueSelections[row.unit_id] || row.assigned_user_id || 0),
+                                        )
+                                      }
+                                      disabled={
+                                        reissuingSponsorQrUnitId === Number(row.unit_id) ||
+                                        !(Number(sponsorQrReissueSelections[row.unit_id] || row.assigned_user_id || 0) > 0)
+                                      }
+                                    >
+                                      {reissuingSponsorQrUnitId === Number(row.unit_id) ? "Reissuing..." : "Reissue Tag"}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span style={{ color: "#56705f", fontSize: 12 }}>
+                                    {row.tree_id ? "Tree already linked" : "No action"}
+                                  </span>
+                                )}
                               </td>
                             </tr>
                           ))}
