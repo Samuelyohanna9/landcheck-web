@@ -428,8 +428,8 @@ function FruitHarvestModal({
   const [timeLeft, setTimeLeft] = useState(30);
   const [claimed, setClaimed] = useState(false);
   const counterRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setInterval>>();
-  const spawnRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const spawnRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   const start = () => {
     setFruits([]); setCaught(0); setTimeLeft(30); setClaimed(false);
@@ -846,7 +846,6 @@ export default function GreenSponsor() {
   }, [achievements, pointsInfo, orders, trees]);
   const supportedProjectCount = useMemo(() => { const ids = new Set<number>(); [...projects,...trees.map(t=>({id:t.project_id})),...orders.map(o=>({id:o.project_id}))].forEach(x => { if (x.id > 0) ids.add(x.id); }); return ids.size; }, [orders, projects, trees]);
   const annualCarbonKg = useMemo(() => { const f = trees.reduce((s, t) => s + Number(t.carbon?.annual_co2_kg || 0), 0); return f > 0 ? f : totalSponsoredTrees * 21; }, [totalSponsoredTrees, trees]);
-  const latestOrder = useMemo(() => [...orders].sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime())[0] || null, [orders]);
   const recentActivity = useMemo(() => buildActivityFeed(orders, trees), [orders, trees]);
   const treePhotoUrls = useMemo(() => collectPhotoUrls(selectedTreeDetail), [selectedTreeDetail]);
   const gpBalance = Number(pointsInfo?.green_points || 0);
