@@ -148,7 +148,7 @@
   position: relative;
   z-index: 2;
   padding: 0 40px;
-  max-width: 760px;
+  max-width: 960px;
   text-align: center;
 }
 
@@ -174,8 +174,9 @@
 .lp-hero-lead {
   font-size: clamp(1rem, 1.8vw, 1.1rem);
   color: rgba(255, 255, 255, 0.82);
-  margin: 0 0 32px;
+  margin: 0 auto 32px;
   line-height: 1.6;
+  max-width: 640px;
 }
 
 .lp-hero-ctas {
