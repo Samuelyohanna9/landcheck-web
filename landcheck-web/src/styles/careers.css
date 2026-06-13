@@ -1,0 +1,142 @@
+/* careers.css */
+
+.cp-hero {
+  padding: 100px 0 80px;
+  background:
+    radial-gradient(ellipse 70% 60% at 10% 50%, rgba(10, 80, 40, 0.22) 0%, transparent 55%),
+    linear-gradient(160deg, #040c18 0%, #061220 60%, #040c18 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cp-hero h1 {
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 800;
+  line-height: 1.1;
+  color: #fff;
+  margin: 0 0 20px;
+  letter-spacing: -0.02em;
+}
+
+.cp-hero p {
+  font-size: 1.05rem;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.65;
+  max-width: 580px;
+  margin: 0;
+}
+
+/* ── SECTIONS ─────────────────────────────────────────────── */
+.cp-section {
+  padding: 72px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cp-section h2 {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 22px;
+}
+
+.cp-section p {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.75;
+  max-width: 700px;
+  margin: 0 0 16px;
+}
+
+/* ── ROLES GRID ───────────────────────────────────────────── */
+.cp-roles-section {
+  padding: 72px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cp-roles-section h2 {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 32px;
+}
+
+.cp-roles-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.cp-role-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 26px 24px;
+  transition: border-color 0.2s;
+}
+
+.cp-role-card:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.cp-role-card h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 10px;
+}
+
+.cp-role-card p {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.58);
+  line-height: 1.62;
+  margin: 0;
+}
+
+/* ── CONTACT ──────────────────────────────────────────────── */
+.cp-contact-section {
+  padding: 72px 0 96px;
+}
+
+.cp-contact-section h2 {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 22px;
+}
+
+.cp-contact-section p {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.75;
+  max-width: 620px;
+  margin: 0 0 16px;
+}
+
+.cp-email-cta {
+  display: inline-block;
+  margin: 20px 0 10px;
+  padding: 14px 34px;
+  background: #e07b00;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.15s;
+  letter-spacing: 0.01em;
+}
+
+.cp-email-cta:hover {
+  background: #c96e00;
+}
+
+.cp-email-hint {
+  font-size: 0.82rem !important;
+  color: rgba(255, 255, 255, 0.38) !important;
+  margin-top: 8px !important;
+}
+
+@media (max-width: 640px) {
+  .cp-hero { padding: 80px 0 60px; }
+  .cp-roles-grid { grid-template-columns: 1fr; gap: 14px; }
+  .cp-role-card { padding: 22px 18px; }
+}

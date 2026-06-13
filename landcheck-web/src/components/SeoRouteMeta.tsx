@@ -66,6 +66,18 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
     canonicalPath: "/feedback",
     ogType: "website",
   },
+  "/career": {
+    title: "Careers | LandCheck",
+    description: "Join LandCheck Geospatial Technologies. We hire engineers, GIS specialists, product designers, and partnership professionals working on land intelligence tools for Nigeria.",
+    canonicalPath: "/career",
+    ogType: "website",
+  },
+  "/news": {
+    title: "News | LandCheck",
+    description: "News and updates from LandCheck Geospatial Technologies — partnerships, product launches, and platform milestones.",
+    canonicalPath: "/news",
+    ogType: "website",
+  },
 };
 
 const PRIVATE_ROUTE_PREFIXES = ["/green", "/green-work", "/dashboard", "/admin"];

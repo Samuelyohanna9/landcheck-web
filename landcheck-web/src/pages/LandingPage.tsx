@@ -64,11 +64,12 @@ export default function LandingPage() {
           <img src="/logo.svg" alt="LandCheck" />
         </button>
         <nav className="lp-nav-menu" aria-label="Main navigation">
-          <button type="button" onClick={() => navigate("/survey")}>Survey Plan</button>
-          <button type="button" onClick={() => navigate("/hazard-analysis")}>Hazard Analysis</button>
           <button type="button" onClick={() => navigate("/green-partners")}>LandCheck Green</button>
-          <button type="button" onClick={() => navigate("/dashboard")}>My Plots</button>
-          <button type="button" onClick={() => navigate("/feedback")}>Support</button>
+          <button type="button" onClick={() => navigate("/survey")}>Survey Plan</button>
+          <button type="button" onClick={() => navigate("/flood")}>Flood Analysis</button>
+          <button type="button" onClick={() => navigate("/career")}>Career</button>
+          <button type="button" onClick={() => navigate("/news")}>News</button>
+          <a href="mailto:landchecktech@gmail.com?subject=LandCheck%20Support" className="lp-nav-support">Support</a>
         </nav>
       </header>
 
@@ -315,24 +316,24 @@ export default function LandingPage() {
             <h5>Products</h5>
             <ul>
               <li>
+                <button type="button" onClick={() => navigate("/green-partners")}>
+                  LandCheck Green
+                </button>
+              </li>
+              <li>
                 <button type="button" onClick={() => navigate("/survey")}>
                   Survey Plan
                 </button>
               </li>
               <li>
-                <button type="button" onClick={() => navigate("/hazard-analysis")}>
+                <button type="button" onClick={() => navigate("/flood")}>
                   Flood Risk Analysis
-                </button>
-              </li>
-              <li>
-                <button type="button" onClick={() => navigate("/green-partners")}>
-                  LandCheck Green
                 </button>
               </li>
             </ul>
           </div>
           <div className="lp-footer-col">
-            <h5>Platform</h5>
+            <h5>Tools</h5>
             <ul>
               <li>
                 <button type="button" onClick={() => navigate("/survey-plan")}>
@@ -340,20 +341,10 @@ export default function LandingPage() {
                 </button>
               </li>
               <li>
-                <button type="button" onClick={() => navigate("/dashboard")}>
-                  My Plots
+                <button type="button" onClick={() => navigate("/hazard-analysis")}>
+                  Hazard Analysis
                 </button>
               </li>
-              <li>
-                <button type="button" onClick={() => navigate("/feedback")}>
-                  Feedback
-                </button>
-              </li>
-            </ul>
-          </div>
-          <div className="lp-footer-col">
-            <h5>LandCheck Green</h5>
-            <ul>
               <li>
                 <a
                   href="https://play.google.com/store/apps/details?id=online.landcheck.mobile"
@@ -367,6 +358,26 @@ export default function LandingPage() {
                 <button type="button" onClick={() => navigate("/green/login/sponsor")}>
                   Sponsor a Tree
                 </button>
+              </li>
+            </ul>
+          </div>
+          <div className="lp-footer-col">
+            <h5>Company</h5>
+            <ul>
+              <li>
+                <button type="button" onClick={() => navigate("/career")}>
+                  Career
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => navigate("/news")}>
+                  News
+                </button>
+              </li>
+              <li>
+                <a href="mailto:landchecktech@gmail.com?subject=LandCheck%20Support">
+                  Support
+                </a>
               </li>
             </ul>
           </div>

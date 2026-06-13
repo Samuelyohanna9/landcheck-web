@@ -1,0 +1,141 @@
+/* inner-pages.css — shared nav + base for Career and News pages */
+
+.ip-page {
+  min-height: 100dvh;
+  background: #050d1a;
+  color: #fff;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ── NAV ─────────────────────────────────────────────────── */
+.ip-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  height: 60px;
+  background: rgba(5, 13, 26, 0.97);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ip-nav-brand {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.ip-nav-brand img {
+  height: 28px;
+  width: auto;
+}
+
+.ip-nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ip-nav-menu button,
+.ip-nav-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.78);
+  padding: 6px 14px;
+  border-radius: 20px;
+  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+  font-family: inherit;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.ip-nav-menu button:hover,
+.ip-nav-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.ip-nav-active {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+}
+
+/* ── CONTAINER + HELPERS ─────────────────────────────────── */
+.ip-container {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+
+.ip-eyebrow {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  color: #e07b00;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+
+/* ── FOOTER ──────────────────────────────────────────────── */
+.ip-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 28px 40px;
+}
+
+.ip-footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 860px;
+  margin: 0 auto;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.ip-footer-links {
+  display: flex;
+  gap: 20px;
+}
+
+.ip-footer-links button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.85rem;
+  font-family: inherit;
+  transition: color 0.15s;
+  padding: 0;
+}
+
+.ip-footer-links button:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ── RESPONSIVE ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .ip-nav { padding: 0 20px; }
+  .ip-nav-menu button,
+  .ip-nav-link { font-size: 0.8rem; padding: 5px 10px; }
+  .ip-container { padding: 0 20px; }
+  .ip-footer { padding: 24px 20px; }
+  .ip-footer-inner { flex-direction: column; gap: 12px; text-align: center; }
+}
+
+@media (max-width: 540px) {
+  .ip-nav-menu { overflow-x: auto; max-width: calc(100vw - 90px); }
+}
