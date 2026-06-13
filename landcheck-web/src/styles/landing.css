@@ -798,24 +798,86 @@
   color: #fff;
 }
 
-/* App screenshot */
+/* App screenshot — phone frame */
 .lp-sponsor-visual {
-  flex: 0 0 340px;
+  flex: 0 0 300px;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
 }
 
-.lp-sponsor-screenshot {
-  width: 100%;
-  max-width: 340px;
-  height: auto;
-  border-radius: 20px;
+.lp-sponsor-phone {
+  position: relative;
+  width: 272px;
+  border-radius: 38px;
+  overflow: hidden;
+  border: 3px solid rgba(255, 255, 255, 0.14);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 24px 64px rgba(0, 0, 0, 0.55),
-    0 8px 24px rgba(0, 0, 0, 0.35);
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 0 60px rgba(34, 197, 94, 0.12),
+    0 28px 80px rgba(0, 0, 0, 0.65),
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  background: #071208;
+}
+
+.lp-sponsor-phone img {
+  width: 100%;
+  height: auto;
   display: block;
+}
+
+.lp-sponsor-phone::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 72px;
+  background: linear-gradient(to bottom, transparent, rgba(5, 15, 8, 0.92));
+  pointer-events: none;
+}
+
+/* Play Store badge */
+.lp-sponsor-playstore {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: #000;
+  color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  padding: 10px 20px;
+  text-decoration: none;
+  transition: background 0.18s, border-color 0.18s;
+  white-space: nowrap;
+}
+
+.lp-sponsor-playstore:hover {
+  background: #1a1a1a;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.lp-sponsor-playstore-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1;
+}
+
+.lp-sponsor-playstore-text small {
+  font-size: 0.62rem;
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
+
+.lp-sponsor-playstore-text strong {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.01em;
+  font-family: inherit;
 }
 
 /* ── Contact Ribbon ── */
@@ -1003,7 +1065,8 @@
 
 @media (max-width: 900px) {
   .lp-sponsor-inner { flex-direction: column; gap: 48px; padding: 0 40px; }
-  .lp-sponsor-visual { flex: none; width: 100%; max-width: 360px; margin: 0 auto; }
+  .lp-sponsor-visual { flex: none; width: 100%; max-width: 300px; margin: 0 auto; }
+  .lp-sponsor-phone { width: 100%; }
 }
 
 @media (max-width: 768px) {
