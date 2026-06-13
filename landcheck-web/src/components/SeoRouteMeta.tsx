@@ -20,10 +20,16 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
     ogType: "website",
   },
   "/green-partners": {
-    title: "LandCheck Green Partners Nigeria | NGO Tree Monitoring Platform",
+    title: "LandCheck Green Nigeria | Tree Monitoring App, Agric & Relief Programs",
     description:
-      "Collaborate with LandCheck Green for transparent NGO field monitoring, project oversight, and report-ready climate impact tracking in Nigeria.",
+      "Download LandCheck Green on Google Play or sponsor trees online. Tree inventory, agricultural monitoring, humanitarian relief site assessment, and program reporting for NGOs and partners in Nigeria.",
     canonicalPath: "/green-partners",
+    ogType: "website",
+  },
+  "/privacy": {
+    title: "Privacy Policy | LandCheck",
+    description: "LandCheck privacy policy covering data collection, usage, and user rights.",
+    canonicalPath: "/privacy",
     ogType: "website",
   },
   "/hazard-analysis": {
