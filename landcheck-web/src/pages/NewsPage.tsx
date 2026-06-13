@@ -66,7 +66,7 @@ export default function NewsPage() {
 
               <figure className="np-figure">
                 <img
-                  src="/ecf-partnership.jpg"
+                  src="/ecf-partnership.jpeg"
                   alt="LandCheck and ECF representatives at partnership event, Adamawa State"
                 />
                 <figcaption>
