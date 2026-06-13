@@ -1,23 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import planProduction1 from "./plan production1.png";
-import planProduction2 from "./plan production 2.png";
-import planProduction3 from "./plan production 3.png";
-import planProduction4 from "./plan pruction 4.png";
-import planProduction5 from "./plan production5.png";
 import "../styles/landing.css";
 import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 
-type LaptopShot = { src: string; label: string; fit?: "cover" | "contain" };
 type PartnerOrg = { name: string; logo: string | null };
-
-const planProductionShots: LaptopShot[] = [
-  { src: planProduction1, label: "Survey plan production workspace", fit: "contain" },
-  { src: planProduction2, label: "Coordinate workflow and boundary plotting", fit: "contain" },
-  { src: planProduction3, label: "Plan drafting and output preparation", fit: "contain" },
-  { src: planProduction4, label: "Map-driven survey editing and review", fit: "contain" },
-  { src: planProduction5, label: "Final report and export-ready view", fit: "contain" },
-];
 
 const problemStatements = [
   "Records are fragmented",
@@ -69,23 +55,13 @@ const futureVision = [
   "Fraudulent land sales become traceable",
 ];
 
-const laptopKeys = Array.from({ length: 56 }, (_, index) => index);
-
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=online.landcheck.mobile";
 
 const PILOT_ORG_NAMES = new Set(["Think Green Foundation"]);
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const [activeShot, setActiveShot] = useState(0);
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setActiveShot((prev) => (prev + 1) % planProductionShots.length);
-    }, 3200);
-    return () => window.clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -225,67 +201,6 @@ export default function LandingPage() {
                 </a>
               </div>
             </article>
-          </div>
-        </section>
-
-        {/* Platform Demo */}
-        <section className="lp-platform">
-          <div className="lp-platform-copy">
-            <h2>LANDCHECK OPERATION HUB</h2>
-            <p className="lp-platform-kicker">SURVEY PLAN PRODUCTION AND FLOOD INTELLIGENCE SOFTWARE</p>
-            <div className="lp-platform-divider" aria-hidden="true" />
-            <div className="lp-platform-body">
-              <p>
-                LandCheck is first of its kind in Nigerian surveying — a powerful web application that reduces hours
-                of CAD work to minutes of clicks, with flood hazard screening done in seconds. Built for surveyors,
-                planners, developers, real estate firms, and land owners.
-              </p>
-              <p>
-                Generate accurate, true-scale professional survey plans from coordinate input or CSV/Excel upload.
-                Automatic detection of buildings, roads, and rivers anywhere in Nigeria. Export DWG, PDF,
-                computation sheets, orthophoto, and topographic maps.
-              </p>
-              <p>
-                Flood risk analysis for any land parcel in Nigeria using global datasets — detailed report with risk
-                indicators and map overlay.
-              </p>
-            </div>
-          </div>
-
-          <div className="lp-platform-demo">
-            <div className="lp-device-showcase">
-              <div className="lp-laptop">
-                <div className="lp-laptop-screen">
-                  {planProductionShots.map((shot, index) => (
-                    <img
-                      key={`${shot.src}-${shot.label}`}
-                      src={shot.src}
-                      alt={shot.label}
-                      className={`lp-laptop-shot ${shot.fit === "contain" ? "fit-contain" : "fit-cover"} ${index === activeShot ? "active" : ""}`}
-                    />
-                  ))}
-                </div>
-                <div className="lp-laptop-hinge" />
-                <div className="lp-laptop-base" />
-                <div className="lp-laptop-deck">
-                  <div className="lp-laptop-keys">
-                    {laptopKeys.map((keyId) => (
-                      <span key={keyId} className="lp-key" />
-                    ))}
-                  </div>
-                  <div className="lp-laptop-trackpad" />
-                </div>
-              </div>
-            </div>
-
-            <div className="lp-demo-actions">
-              <button type="button" onClick={() => navigate("/survey-plan")}>
-                Start Survey Plan
-              </button>
-              <button type="button" onClick={() => navigate("/hazard-analysis")}>
-                Run Flood Analysis
-              </button>
-            </div>
           </div>
         </section>
 
