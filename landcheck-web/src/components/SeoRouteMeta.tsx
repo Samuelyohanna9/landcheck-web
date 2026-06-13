@@ -7,9 +7,11 @@ type SeoConfig = {
   canonicalPath: string;
   robots: string;
   ogType?: "website" | "article";
+  ogImage?: string;
 };
 
 const SITE_ORIGIN = "https://landcheck.online";
+const DEFAULT_OG_IMAGE = "https://landcheck.online/green-logo-cropped-820.png";
 
 const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: string }> = {
   "/": {
@@ -18,6 +20,7 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
       "LandCheck is a Nigeria-focused platform for survey plan production, flood risk analysis, and tree monitoring with GPS evidence and audit-ready reports.",
     canonicalPath: "/",
     ogType: "website",
+    ogImage: DEFAULT_OG_IMAGE,
   },
   "/green-partners": {
     title: "LandCheck Green Nigeria | Tree Monitoring App, Agric & Relief Programs",
@@ -25,12 +28,14 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
       "Download LandCheck Green on Google Play or sponsor trees online. Tree inventory, agricultural monitoring, humanitarian relief site assessment, and program reporting for NGOs and partners in Nigeria.",
     canonicalPath: "/green-partners",
     ogType: "website",
+    ogImage: "https://landcheck.online/background-sponsor.png",
   },
   "/privacy": {
     title: "Privacy Policy | LandCheck",
     description: "LandCheck privacy policy covering data collection, usage, and user rights.",
     canonicalPath: "/privacy",
     ogType: "website",
+    ogImage: DEFAULT_OG_IMAGE,
   },
   "/flood": {
     title: "Flood Risk & Land Hazard Analysis Nigeria | LandCheck",
@@ -38,6 +43,7 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
       "Screen any Nigerian land parcel for flood risk, erosion, and soil stability. Instant PDF risk report. Free for any location in Nigeria.",
     canonicalPath: "/flood",
     ogType: "website",
+    ogImage: "https://landcheck.online/flood-background.jpg",
   },
   "/hazard-analysis": {
     title: "Flood Risk Hazard Analysis Nigeria | LandCheck",
@@ -45,6 +51,7 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
       "Analyze land and site flood risks across Nigeria with map-based hazard tools for better planning and resilient project execution.",
     canonicalPath: "/hazard-analysis",
     ogType: "website",
+    ogImage: "https://landcheck.online/flood-background.jpg",
   },
   "/survey": {
     title: "Survey Plan Production Nigeria | LandCheck",
@@ -52,6 +59,7 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
       "Generate true-scale professional survey plans in Nigeria from coordinate input. PDF, DWG, orthophoto, computation sheets, and topographic maps. No CAD required.",
     canonicalPath: "/survey",
     ogType: "website",
+    ogImage: "https://landcheck.online/Digital-Land-Survey.jpg",
   },
   "/survey-plan": {
     title: "Survey Plan Tool | LandCheck",
@@ -59,24 +67,28 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
       "Create professional survey plans for Nigeria from coordinate input with map editing and export-ready outputs.",
     canonicalPath: "/survey-plan",
     ogType: "website",
+    ogImage: "https://landcheck.online/Digital-Land-Survey.jpg",
   },
   "/feedback": {
     title: "Feedback | LandCheck",
     description: "Share product feedback with the LandCheck team.",
     canonicalPath: "/feedback",
     ogType: "website",
+    ogImage: DEFAULT_OG_IMAGE,
   },
   "/career": {
     title: "Careers | LandCheck",
     description: "Join LandCheck Geospatial Technologies. We hire engineers, GIS specialists, product designers, and partnership professionals working on land intelligence tools for Nigeria.",
     canonicalPath: "/career",
     ogType: "website",
+    ogImage: DEFAULT_OG_IMAGE,
   },
   "/news": {
     title: "News | LandCheck",
     description: "News and updates from LandCheck Geospatial Technologies — partnerships, product launches, and platform milestones.",
     canonicalPath: "/news",
-    ogType: "website",
+    ogType: "article",
+    ogImage: "https://landcheck.online/ecf-partnership.jpeg",
   },
 };
 
@@ -132,6 +144,7 @@ const resolveSeoConfig = (pathname: string): SeoConfig => {
       canonicalPath: "/",
       robots: "noindex,nofollow,noarchive",
       ogType: "website",
+      ogImage: DEFAULT_OG_IMAGE,
     };
   }
 
@@ -149,6 +162,7 @@ const resolveSeoConfig = (pathname: string): SeoConfig => {
     canonicalPath: "/",
     robots: "noindex,nofollow,noarchive",
     ogType: "website",
+    ogImage: DEFAULT_OG_IMAGE,
   };
 };
 
@@ -158,6 +172,7 @@ export default function SeoRouteMeta() {
   useEffect(() => {
     const seo = resolveSeoConfig(location.pathname);
     const canonicalUrl = `${SITE_ORIGIN}${seo.canonicalPath}`;
+    const ogImage = seo.ogImage || DEFAULT_OG_IMAGE;
 
     document.title = seo.title;
     document.documentElement.setAttribute("lang", "en");
@@ -171,9 +186,15 @@ export default function SeoRouteMeta() {
     upsertMetaByProperty("og:description", seo.description);
     upsertMetaByProperty("og:type", seo.ogType || "website");
     upsertMetaByProperty("og:url", canonicalUrl);
+    upsertMetaByProperty("og:image", ogImage);
+    upsertMetaByProperty("og:image:width", "1200");
+    upsertMetaByProperty("og:image:height", "630");
+    upsertMetaByProperty("og:image:alt", seo.title);
 
     upsertMetaByName("twitter:title", seo.title);
     upsertMetaByName("twitter:description", seo.description);
+    upsertMetaByName("twitter:image", ogImage);
+    upsertMetaByName("twitter:image:alt", seo.title);
   }, [location.pathname]);
 
   return null;

@@ -273,6 +273,9 @@ export default function GreenPartnersLanding() {
                     src={encodeURI(shot.src)}
                     alt={shot.label}
                     className={`gp-laptop-shot ${shot.fit === "contain" ? "fit-contain" : "fit-cover"} ${index === activeLaptopShot ? "active" : ""}`}
+                    loading="lazy"
+                    width="640"
+                    height="400"
                   />
                 ))}
               </div>
@@ -297,6 +300,9 @@ export default function GreenPartnersLanding() {
                     src={encodeURI(shot.src)}
                     alt={shot.label}
                     className={`gp-phone-shot ${index === activePhoneShot ? "active" : ""}`}
+                    loading="lazy"
+                    width="300"
+                    height="600"
                   />
                 ))}
               </div>

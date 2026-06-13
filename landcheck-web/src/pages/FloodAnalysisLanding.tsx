@@ -105,6 +105,7 @@ export default function FloodAnalysisLanding() {
     <div className="fal-page">
       {/* Navigation */}
       <NavBar fixed activeRoute="/flood" ctaLabel="Run Analysis" ctaRoute="/hazard-analysis" />
+      <main>
 
       {/* Hero */}
       <section className="fal-hero">
@@ -305,6 +306,7 @@ export default function FloodAnalysisLanding() {
           <span>&copy; {new Date().getFullYear()} LandCheck Geospatial Technologies Limited</span>
         </div>
       </footer>
+      </main>
     </div>
   );
 }
