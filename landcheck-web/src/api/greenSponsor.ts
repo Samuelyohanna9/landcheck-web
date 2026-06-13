@@ -309,7 +309,17 @@ export const fetchPublicPartnerOrganizations = async (): Promise<
   Array<{ id: number; name: string; logo_url: string | null }>
 > => {
   const response = await api.get("/green/public/partner-organizations");
-  return Array.isArray(response.data) ? response.data : [];
+  const items: Array<{ id: number; name: string; logo_url: string | null }> = Array.isArray(response.data)
+    ? response.data
+    : [];
+  return items.map((item) => ({
+    ...item,
+    logo_url: item.logo_url
+      ? item.logo_url.startsWith("/")
+        ? `${BACKEND_URL}${item.logo_url}`
+        : item.logo_url
+      : null,
+  }));
 };
 
 export const fetchSponsorOrders = async (session: GreenAuthSession) => {

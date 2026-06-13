@@ -1018,7 +1018,7 @@ export default function GreenSponsor() {
           </div>
           <div className="green-sponsor-hero-actions">
             <button type="button" className="green-sponsor-primary-btn" onClick={() => setActiveTab("trees")}>View My Trees</button>
-            <button type="button" className="green-sponsor-secondary-btn" onClick={() => setActiveTab("grove")}>🎮 Play Games</button>
+            <button type="button" className="green-sponsor-secondary-btn" onClick={() => setActiveTab("grove")}>Explore Games</button>
           </div>
         </div>
         <div className="green-sponsor-hero-side">
@@ -1595,13 +1595,15 @@ export default function GreenSponsor() {
         {[
           { key: "projects",    label: "Projects",    icon: "leaf"   },
           { key: "trees",       label: "My Trees",    icon: "branch" },
-          { key: "leaderboard", label: "Leaders",     icon: "trophy" },
-          { key: "grove",       label: "Grove 🎮",    icon: "spark"  },
+          { key: "leaderboard", label: "Rankings",    icon: "trophy" },
+          { key: "grove",       label: "Games",       icon: "spark"  },
           { key: "profile",     label: "Profile",     icon: "person" },
         ].map((tab) => (
           <button key={tab.key} type="button" className={`green-sponsor-bottom-tab${activeTab === tab.key ? " active" : ""}`} onClick={() => setActiveTab(tab.key as SponsorTabKey)}>
-            <GreenGlyph name={tab.icon} className="green-sponsor-bottom-tab-icon" />
-            <span>{tab.label}</span>
+            <span className="green-sponsor-bottom-tab-icon-wrap" aria-hidden="true">
+              <GreenGlyph name={tab.icon} className="green-sponsor-bottom-tab-icon" />
+            </span>
+            <span className="green-sponsor-bottom-tab-label">{tab.label}</span>
           </button>
         ))}
       </nav>
@@ -1627,4 +1629,3 @@ export default function GreenSponsor() {
     </div>
   );
 }
-
