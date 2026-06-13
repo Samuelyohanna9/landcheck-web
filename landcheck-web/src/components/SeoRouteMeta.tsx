@@ -34,6 +34,7 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
     title: "Privacy Policy | LandCheck",
     description: "LandCheck privacy policy covering data collection, usage, and user rights.",
     canonicalPath: "/privacy",
+    robots: "noindex,nofollow",
     ogType: "website",
     ogImage: DEFAULT_OG_IMAGE,
   },
@@ -50,6 +51,7 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
     description:
       "Analyze land and site flood risks across Nigeria with map-based hazard tools for better planning and resilient project execution.",
     canonicalPath: "/hazard-analysis",
+    robots: "noindex,nofollow",
     ogType: "website",
     ogImage: "https://landcheck.online/flood-background.jpg",
   },
@@ -66,6 +68,7 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
     description:
       "Create professional survey plans for Nigeria from coordinate input with map editing and export-ready outputs.",
     canonicalPath: "/survey-plan",
+    robots: "noindex,nofollow",
     ogType: "website",
     ogImage: "https://landcheck.online/Digital-Land-Survey.jpg",
   },
@@ -73,6 +76,7 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
     title: "Feedback | LandCheck",
     description: "Share product feedback with the LandCheck team.",
     canonicalPath: "/feedback",
+    robots: "noindex,nofollow",
     ogType: "website",
     ogImage: DEFAULT_OG_IMAGE,
   },
