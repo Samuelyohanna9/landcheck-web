@@ -284,18 +284,28 @@ export default function LandingPage() {
                 href="https://play.google.com/store/apps/details?id=online.landcheck.mobile"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="lp-sponsor-btn-secondary"
+                className="lp-sponsor-playstore"
               >
-                DOWNLOAD THE APP
+                <svg viewBox="0 0 24 28" width="20" height="24" fill="none" aria-hidden="true">
+                  <path d="M1.5 0.8L13.8 13 1.5 25.2V0.8z" fill="#34A853"/>
+                  <path d="M1.5 0.8L13.8 13 20.5 6.5 5.2 0z" fill="#4285F4"/>
+                  <path d="M1.5 25.2L13.8 13 20.5 19.5 5.2 26z" fill="#FBBC05"/>
+                  <path d="M20.5 6.5L13.8 13l6.7 6.5 2.5-6.5-2.5-6.5z" fill="#EA4335"/>
+                </svg>
+                <div className="lp-sponsor-playstore-text">
+                  <small>Get it on</small>
+                  <strong>Google Play</strong>
+                </div>
               </a>
             </div>
           </div>
           <div className="lp-sponsor-visual">
-            <img
-              src="/sponsor-tree-app.jpeg"
-              alt="LandCheck Green — Sponsor a Tree app screenshot"
-              className="lp-sponsor-screenshot"
-            />
+            <div className="lp-sponsor-phone">
+              <img
+                src="/sponsor-tree-app.jpeg"
+                alt="LandCheck Green — Sponsor a Tree app screenshot"
+              />
+            </div>
           </div>
         </div>
       </section>
