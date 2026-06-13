@@ -1,12 +1,13 @@
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap");
 
+/* ─── Page Shell ─────────────────────────────────────────────────────── */
+
 .green-partners-page {
   min-height: 100dvh;
   height: auto;
   overflow-x: hidden;
   overflow-y: auto;
-  display: grid;
-  grid-template-rows: auto minmax(220px, 36dvh) minmax(0, 1fr);
+  display: block;
   background: #eef2f6;
   color: #132f22;
   font-family: "Outfit", sans-serif;
@@ -14,6 +15,8 @@
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
+
+/* ─── Navigation ─────────────────────────────────────────────────────── */
 
 .gp-nav {
   min-height: 74px;
@@ -24,6 +27,11 @@
   padding: 10px 22px;
   background: linear-gradient(180deg, rgba(13, 17, 24, 0.96), rgba(16, 22, 31, 0.94));
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .gp-nav-brand {
@@ -35,6 +43,11 @@
   display: inline-grid;
   place-items: center;
   cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.gp-nav-brand:hover {
+  transform: scale(1.04);
 }
 
 .gp-nav-brand img {
@@ -47,23 +60,57 @@
 .gp-nav-links {
   display: flex;
   justify-content: center;
-  gap: 8px;
+  gap: 4px;
 }
 
-.gp-nav-links button {
+.gp-nav-links a {
   border: 0;
   background: transparent;
+  color: rgba(234, 245, 237, 0.85);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 9px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.gp-nav-links a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(234, 245, 237, 1);
+}
+
+.gp-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: end;
+}
+
+.gp-nav-playstore {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-decoration: none;
   color: rgba(234, 245, 237, 0.9);
   font-family: "Plus Jakarta Sans", sans-serif;
-  font-size: 0.92rem;
+  font-size: 0.82rem;
   font-weight: 700;
-  padding: 10px 12px;
-  border-radius: 9px;
-  cursor: default;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.gp-nav-playstore:hover {
+  background: rgba(255, 255, 255, 0.13);
 }
 
 .gp-nav-cta {
-  justify-self: end;
   border-radius: 8px;
   text-decoration: none;
   color: #f4fbff;
@@ -71,42 +118,55 @@
   font-size: 0.9rem;
   font-weight: 800;
   line-height: 1;
-  padding: 13px 16px;
+  padding: 12px 16px;
   background: linear-gradient(135deg, #1889ff, #0a62cf);
-  box-shadow: 0 10px 20px rgba(6, 49, 108, 0.32);
+  box-shadow: 0 8px 18px rgba(6, 49, 108, 0.32);
+  white-space: nowrap;
+  transition: transform 0.15s, box-shadow 0.15s;
 }
+
+.gp-nav-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(6, 49, 108, 0.42);
+}
+
+/* ─── Hero Banner ─────────────────────────────────────────────────────── */
 
 .gp-hero-banner {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   background: url("/landcheck green.png") center 68% / cover no-repeat;
+  min-height: clamp(260px, 62dvh, 720px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .gp-hero-tint {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(6, 10, 16, 0.62) 0%, rgba(7, 17, 23, 0.46) 58%, rgba(9, 21, 28, 0.38) 100%);
+    linear-gradient(180deg, rgba(6, 10, 16, 0.68) 0%, rgba(7, 17, 23, 0.52) 52%, rgba(9, 21, 28, 0.44) 100%);
 }
 
 .gp-hero-copy {
   position: relative;
   z-index: 1;
-  width: min(1180px, calc(100% - 24px));
-  height: 100%;
-  margin: 0 auto;
-  display: grid;
-  align-content: center;
-  justify-items: center;
+  width: min(1000px, calc(100% - 32px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 48px 16px 52px;
 }
 
 .gp-hero-copy p {
   margin: 0;
-  color: rgba(229, 243, 233, 0.95);
-  font-size: 0.86rem;
+  color: rgba(229, 243, 233, 0.9);
+  font-size: 0.82rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   font-weight: 700;
@@ -116,29 +176,295 @@
   margin: 0;
   color: #f5fbf6;
   font-family: "Plus Jakarta Sans", sans-serif;
-  font-size: clamp(1.8rem, 4.7vw, 4rem);
+  font-size: clamp(2rem, 5vw, 4.4rem);
   letter-spacing: 0.01em;
   line-height: 1.04;
 }
 
-.gp-hero-copy span {
+.gp-hero-copy > span {
   margin: 0;
-  color: rgba(236, 248, 239, 0.95);
-  font-size: clamp(0.76rem, 1.3vw, 1.3rem);
+  color: rgba(236, 248, 239, 0.9);
+  font-size: clamp(0.7rem, 1.2vw, 1.1rem);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   font-weight: 600;
 }
 
+.gp-hero-ctas {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.gp-hero-playstore-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  padding: 11px 18px;
+  text-decoration: none;
+  color: white;
+  transition: transform 0.15s, border-color 0.15s, background 0.15s;
+  backdrop-filter: blur(6px);
+}
+
+.gp-hero-playstore-btn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.44);
+  background: rgba(0, 0, 0, 0.92);
+}
+
+.gp-ps-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.gp-ps-text span {
+  font-size: 0.58rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  line-height: 1;
+}
+
+.gp-ps-text strong {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+.gp-hero-sponsor-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #1dba66, #0f8745);
+  border-radius: 12px;
+  padding: 13px 20px;
+  text-decoration: none;
+  color: white;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 800;
+  font-size: 0.9rem;
+  box-shadow: 0 10px 22px rgba(14, 96, 56, 0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.gp-hero-sponsor-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(14, 96, 56, 0.52);
+}
+
+/* ─── Section Header (shared) ────────────────────────────────────────── */
+
+.gp-section-head {
+  margin-bottom: 24px;
+}
+
+.gp-section-head--center {
+  text-align: center;
+}
+
+.gp-section-eyebrow {
+  display: inline-block;
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  font-weight: 700;
+  color: #1d7a40;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.gp-section-head h2 {
+  margin: 0 0 8px;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: clamp(1.35rem, 2.8vw, 2.1rem);
+  color: #0f2a1e;
+  line-height: 1.1;
+}
+
+.gp-section-head p {
+  margin: 0;
+  font-size: clamp(0.78rem, 1.1vw, 0.96rem);
+  color: #3a5848;
+  line-height: 1.45;
+}
+
+/* ─── Platform Modes Section ─────────────────────────────────────────── */
+
+.gp-modes-section {
+  background: linear-gradient(180deg, #e8f0ea 0%, #dfeae2 100%);
+  padding: 40px 0 48px;
+  border-bottom: 1px solid rgba(17, 58, 35, 0.1);
+}
+
+.gp-modes-inner {
+  width: min(1180px, calc(100% - 36px));
+  margin: 0 auto;
+}
+
+.gp-modes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.gp-mode-card {
+  border-radius: 20px;
+  border: 1px solid rgba(21, 91, 56, 0.2);
+  background: linear-gradient(148deg, rgba(255, 255, 255, 0.99), rgba(244, 253, 249, 0.98));
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow:
+    0 14px 28px rgba(14, 58, 35, 0.09),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.gp-mode-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #1dba66, #34d4a8);
+  border-radius: 20px 20px 0 0;
+}
+
+.gp-mode-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 44px rgba(14, 58, 35, 0.15);
+}
+
+.gp-mode-relief {
+  border-color: rgba(24, 95, 140, 0.22);
+  background: linear-gradient(148deg, rgba(255, 255, 255, 0.99), rgba(244, 249, 255, 0.98));
+}
+
+.gp-mode-relief::before {
+  background: linear-gradient(90deg, #1b7ec8, #38b2e8);
+}
+
+.gp-mode-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(22, 120, 65, 0.14), rgba(22, 120, 65, 0.07));
+  color: #1a8046;
+  border: 1px solid rgba(22, 120, 65, 0.16);
+  flex-shrink: 0;
+}
+
+.gp-mode-relief .gp-mode-icon-wrap {
+  background: linear-gradient(135deg, rgba(24, 95, 140, 0.14), rgba(24, 95, 140, 0.07));
+  color: #1b6599;
+  border-color: rgba(24, 95, 140, 0.18);
+}
+
+.gp-mode-tag {
+  display: inline-flex;
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, rgba(218, 248, 228, 0.95), rgba(201, 240, 215, 0.95));
+  color: #125c35;
+  border: 1px solid rgba(22, 110, 60, 0.22);
+}
+
+.gp-mode-relief .gp-mode-tag {
+  background: linear-gradient(180deg, rgba(216, 235, 255, 0.95), rgba(199, 223, 255, 0.95));
+  color: #1a4e7a;
+  border-color: rgba(24, 95, 140, 0.22);
+}
+
+.gp-mode-card h3 {
+  margin: 0;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: clamp(0.98rem, 1.6vw, 1.22rem);
+  color: #0e2a1c;
+  line-height: 1.2;
+}
+
+.gp-mode-card > p {
+  margin: 0;
+  font-size: clamp(0.72rem, 1vw, 0.86rem);
+  color: #3a5848;
+  line-height: 1.45;
+}
+
+.gp-mode-relief > p {
+  color: #3a4d5e;
+}
+
+.gp-mode-features {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  border-top: 1px solid rgba(17, 70, 42, 0.1);
+  padding-top: 12px;
+}
+
+.gp-mode-relief .gp-mode-features {
+  border-color: rgba(17, 55, 90, 0.1);
+}
+
+.gp-mode-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: clamp(0.66rem, 0.9vw, 0.78rem);
+  color: #2d4d39;
+  line-height: 1.35;
+}
+
+.gp-mode-features li::before {
+  content: "✓";
+  color: #1a8046;
+  font-weight: 700;
+  font-size: 0.7rem;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.gp-mode-relief .gp-mode-features li {
+  color: #2d3f50;
+}
+
+.gp-mode-relief .gp-mode-features li::before {
+  color: #1b6599;
+}
+
+/* ─── Main Suite (two-column) ─────────────────────────────────────────── */
+
 .gp-suite {
   width: min(1840px, calc(100% - 24px));
   margin: 0 auto;
-  min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
   align-items: start;
   gap: 16px;
-  padding: 14px 0 16px;
+  padding: 18px 0 20px;
 }
 
 .gp-suite-copy,
@@ -153,7 +479,7 @@
 .gp-suite-copy {
   position: relative;
   overflow: hidden;
-  padding: 14px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -199,7 +525,7 @@
 .gp-suite-copy h2 {
   margin: 0;
   font-family: "Plus Jakarta Sans", sans-serif;
-  font-size: clamp(1.02rem, 2vw, 1.88rem);
+  font-size: clamp(1rem, 2vw, 1.88rem);
   letter-spacing: 0.015em;
   line-height: 1.12;
   color: #15354f;
@@ -335,6 +661,8 @@
   color: #123f2d;
   line-height: 1.2;
   letter-spacing: 0.01em;
+  position: relative;
+  z-index: 1;
 }
 
 .gp-capability-card p {
@@ -342,6 +670,8 @@
   font-size: clamp(0.63rem, 0.82vw, 0.76rem);
   color: #355c49;
   line-height: 1.28;
+  position: relative;
+  z-index: 1;
 }
 
 .gp-proof-row {
@@ -385,6 +715,8 @@
   line-height: 1.3;
   color: #143f2b;
 }
+
+/* ─── Suite Demo Panel ─────────────────────────────────────────────────── */
 
 .gp-suite-demo {
   padding: 10px;
@@ -584,25 +916,53 @@
   margin: 6px auto 8px;
 }
 
-.gp-device-labels {
+.gp-demo-dl-row {
   display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 7px;
+  gap: 8px;
+  align-items: stretch;
 }
 
-.gp-device-labels span {
-  border-radius: 999px;
-  border: 1px solid rgba(20, 87, 49, 0.2);
-  background: rgba(18, 113, 58, 0.09);
-  color: #1e573a;
-  font-size: 0.68rem;
-  font-weight: 700;
+.gp-demo-playstore {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: #050810;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 8px 12px;
+  text-decoration: none;
+  color: white;
+  transition: opacity 0.15s;
+}
+
+.gp-demo-playstore:hover {
+  opacity: 0.82;
+}
+
+.gp-demo-playstore div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.gp-demo-playstore span {
+  font-size: 0.54rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.7;
   line-height: 1;
-  padding: 6px 10px;
+}
+
+.gp-demo-playstore strong {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .gp-suite-cta {
+  flex: 1;
   border-radius: 10px;
   text-align: center;
   text-decoration: none;
@@ -612,26 +972,230 @@
   color: #f2fff5;
   background: linear-gradient(135deg, #1ba659, #0f7e45);
   padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+.privacy-inline-link {
+  display: block;
+  text-align: center;
+  font-size: 0.66rem;
+  color: rgba(42, 80, 55, 0.55);
+  text-decoration: none;
+}
+
+.privacy-inline-link:hover {
+  color: rgba(42, 80, 55, 0.8);
+  text-decoration: underline;
+}
+
+/* ─── Partner Organizations ───────────────────────────────────────────── */
+
+.gp-partners-section {
+  background: linear-gradient(180deg, #f4f9f6 0%, #edf3ee 100%);
+  padding: 40px 0 48px;
+  border-top: 1px solid rgba(17, 58, 35, 0.1);
+  border-bottom: 1px solid rgba(17, 58, 35, 0.1);
+}
+
+.gp-partners-inner {
+  width: min(1180px, calc(100% - 36px));
+  margin: 0 auto;
+}
+
+.gp-partners-logos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.gp-partner-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 18px;
+  border: 1px solid rgba(19, 75, 43, 0.14);
+  padding: 20px 24px;
+  box-shadow:
+    0 8px 18px rgba(18, 68, 39, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  min-width: 150px;
+  max-width: 200px;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gp-partner-badge:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 16px 32px rgba(18, 68, 39, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.gp-partner-logo {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  border-radius: 14px;
+}
+
+.gp-partner-name-initials {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #1a7a42, #0e5c2f);
+  color: white;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.gp-partner-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #2a4e38;
+  line-height: 1.35;
+  max-width: 140px;
+}
+
+/* ─── Footer CTA ──────────────────────────────────────────────────────── */
+
+.gp-footer-cta {
+  background: linear-gradient(148deg, #0a1a12 0%, #0d2318 50%, #091811 100%);
+  padding: 48px 0 0;
+  border-top: 1px solid rgba(30, 140, 70, 0.2);
+}
+
+.gp-footer-inner {
+  width: min(1180px, calc(100% - 36px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 36px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.gp-footer-copy h2 {
+  margin: 0 0 8px;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: clamp(1.15rem, 2.2vw, 1.8rem);
+  color: #d4f0e0;
+  line-height: 1.15;
+}
+
+.gp-footer-copy p {
+  margin: 0;
+  font-size: clamp(0.74rem, 1vw, 0.92rem);
+  color: rgba(196, 228, 208, 0.68);
+  line-height: 1.45;
+  max-width: 44ch;
+}
+
+.gp-footer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.gp-footer-email-btn {
+  display: block;
+  text-decoration: none;
+  background: linear-gradient(135deg, #1dba66, #0e8544);
+  color: white;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 800;
+  font-size: 0.84rem;
+  padding: 13px 22px;
+  border-radius: 11px;
+  text-align: center;
+  white-space: nowrap;
+  box-shadow: 0 10px 22px rgba(14, 100, 56, 0.38);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.gp-footer-email-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(14, 100, 56, 0.5);
+}
+
+.gp-footer-play-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(230, 248, 238, 0.88);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 9px 16px;
+  border-radius: 9px;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.gp-footer-play-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.gp-footer-bottom {
+  width: min(1180px, calc(100% - 36px));
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0 18px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.gp-footer-privacy {
+  font-size: 0.66rem;
+  color: rgba(185, 220, 200, 0.4);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.gp-footer-privacy:hover {
+  color: rgba(185, 220, 200, 0.7);
+  text-decoration: underline;
+}
+
+.gp-footer-copy-text {
+  font-size: 0.66rem;
+  color: rgba(185, 220, 200, 0.3);
+}
+
+/* ─── Responsive — 1100px ─────────────────────────────────────────────── */
 
 @media (max-width: 1100px) {
   .gp-suite {
     width: min(1560px, calc(100% - 18px));
   }
 
-  .gp-nav-links button {
-    font-size: 0.84rem;
+  .gp-nav-links a {
+    font-size: 0.82rem;
     padding: 8px 8px;
   }
 }
 
-@media (max-width: 920px) {
-  .green-partners-page {
-    grid-template-rows: auto minmax(200px, 34dvh) minmax(0, 1fr);
-  }
+/* ─── Responsive — 920px ──────────────────────────────────────────────── */
 
+@media (max-width: 920px) {
   .gp-nav {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto 1fr auto;
     gap: 10px;
   }
 
@@ -639,17 +1203,11 @@
     justify-content: flex-start;
   }
 
-  .gp-nav-cta {
-    grid-column: 1 / -1;
-    justify-self: stretch;
-    text-align: center;
-  }
-
   .gp-suite {
     width: calc(100% - 14px);
     grid-template-columns: 1fr;
     gap: 10px;
-    padding: 10px 0 12px;
+    padding: 12px 0 14px;
   }
 
   .gp-suite-demo {
@@ -660,11 +1218,64 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-auto-rows: minmax(90px, auto);
   }
+
+  .gp-footer-inner {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .gp-footer-copy p {
+    max-width: none;
+  }
+
+  .gp-footer-actions {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 }
 
+/* ─── Responsive — 700px ──────────────────────────────────────────────── */
+
 @media (max-width: 700px) {
-  .green-partners-page {
-    grid-template-rows: auto minmax(170px, 30dvh) minmax(0, 1fr);
+  .gp-hero-banner {
+    min-height: clamp(220px, 54dvh, 560px);
+  }
+
+  .gp-hero-copy {
+    padding: 36px 14px 40px;
+    gap: 8px;
+  }
+
+  .gp-hero-copy p {
+    font-size: 0.6rem;
+    letter-spacing: 0.17em;
+  }
+
+  .gp-hero-copy h1 {
+    font-size: clamp(1.5rem, 7vw, 2.4rem);
+  }
+
+  .gp-hero-copy > span {
+    font-size: clamp(0.56rem, 2.4vw, 0.78rem);
+    letter-spacing: 0.07em;
+  }
+
+  .gp-hero-ctas {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 320px;
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  .gp-hero-playstore-btn,
+  .gp-hero-sponsor-btn {
+    justify-content: center;
+    padding: 12px 16px;
   }
 
   .gp-nav {
@@ -688,38 +1299,34 @@
   }
 
   .gp-nav-cta {
-    grid-column: 3;
-    justify-self: end;
-    width: auto;
-    max-width: 52vw;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     font-size: 0.68rem;
     padding: 8px 10px;
   }
 
-  .gp-hero-copy {
-    width: calc(100% - 16px);
-    gap: 6px;
+  .gp-nav-playstore span {
+    display: none;
   }
 
-  .gp-hero-banner {
-    background-position: center 72%;
+  .gp-nav-playstore {
+    padding: 8px 9px;
   }
 
-  .gp-hero-copy p {
-    font-size: 0.6rem;
-    letter-spacing: 0.17em;
+  .gp-modes-section {
+    padding: 28px 0 32px;
   }
 
-  .gp-hero-copy h1 {
-    font-size: clamp(1.15rem, 6vw, 1.8rem);
+  .gp-modes-inner {
+    width: calc(100% - 20px);
   }
 
-  .gp-hero-copy span {
-    font-size: clamp(0.56rem, 2.4vw, 0.78rem);
-    letter-spacing: 0.07em;
+  .gp-modes-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .gp-mode-card {
+    padding: 18px;
+    border-radius: 16px;
   }
 
   .gp-suite-copy {
@@ -867,28 +1474,72 @@
     margin: 5px auto 6px;
   }
 
-  .gp-device-labels span {
-    font-size: 0.56rem;
-    padding: 5px 7px;
-  }
-
   .gp-suite-cta {
     font-size: 0.7rem;
     padding: 8px;
     border-radius: 8px;
   }
+
+  .gp-partners-section {
+    padding: 28px 0 32px;
+  }
+
+  .gp-partners-inner {
+    width: calc(100% - 20px);
+  }
+
+  .gp-partner-badge {
+    min-width: 130px;
+    max-width: 160px;
+    padding: 14px 16px;
+    gap: 8px;
+  }
+
+  .gp-partner-logo {
+    width: 72px;
+    height: 72px;
+  }
+
+  .gp-footer-cta {
+    padding: 36px 0 0;
+  }
+
+  .gp-footer-inner {
+    width: calc(100% - 20px);
+    padding-bottom: 28px;
+    gap: 16px;
+  }
+
+  .gp-footer-bottom {
+    width: calc(100% - 20px);
+    flex-direction: column;
+    text-align: center;
+    gap: 6px;
+    padding: 12px 0 16px;
+  }
+
+  .gp-footer-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .gp-footer-email-btn {
+    width: 100%;
+  }
 }
+
+/* ─── Responsive — 520px ──────────────────────────────────────────────── */
 
 @media (max-width: 520px) {
   .gp-nav {
     padding: 6px 8px;
-    gap: 8px;
+    gap: 6px;
   }
 
   .gp-nav-cta {
-    max-width: 56vw;
-    font-size: 0.64rem;
-    padding: 7px 9px;
+    max-width: 48vw;
+    font-size: 0.62rem;
+    padding: 7px 8px;
   }
 
   .gp-suite {
@@ -896,10 +1547,10 @@
   }
 
   .gp-hero-copy h1 {
-    font-size: clamp(1.05rem, 6.2vw, 1.55rem);
+    font-size: clamp(1.3rem, 7vw, 2rem);
   }
 
-  .gp-hero-copy span {
+  .gp-hero-copy > span {
     font-size: clamp(0.5rem, 2.5vw, 0.7rem);
   }
 
@@ -932,12 +1583,13 @@
     width: clamp(84px, 24%, 110px);
   }
 
-  .gp-device-labels {
-    gap: 5px;
+  .gp-partner-badge {
+    min-width: 110px;
+    padding: 12px 14px;
   }
 
-  .gp-device-labels span {
-    font-size: 0.53rem;
-    padding: 4px 6px;
+  .gp-partner-logo {
+    width: 60px;
+    height: 60px;
   }
 }
