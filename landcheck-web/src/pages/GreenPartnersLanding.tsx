@@ -107,27 +107,14 @@ export default function GreenPartnersLanding() {
         <button type="button" className="gp-nav-brand" onClick={() => navigate("/")}>
           <img src="/green-logo-cropped-700.png" alt="LandCheck" />
         </button>
-        <nav className="gp-nav-links" aria-label="Partner navigation">
-          <a href="#platform">Platform</a>
-          <a href="#modes">Modes</a>
-          <a href="#partners">Partners</a>
-          <a href="#contact">Contact</a>
+        <nav className="gp-nav-links" aria-label="Main navigation">
+          <button type="button" onClick={() => navigate("/green-partners")}>LandCheck Green</button>
+          <button type="button" onClick={() => navigate("/survey")}>Survey Plan</button>
+          <button type="button" onClick={() => navigate("/flood")}>Flood Analysis</button>
+          <button type="button" onClick={() => navigate("/career")}>Career</button>
+          <button type="button" onClick={() => navigate("/news")}>News</button>
+          <a href="mailto:landchecktech@gmail.com?subject=LandCheck%20Support">Support</a>
         </nav>
-        <div className="gp-nav-actions">
-          <a
-            className="gp-nav-playstore"
-            href={PLAY_STORE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Download Android app on Google Play"
-          >
-            <PlayStoreTriangle size={15} />
-            <span>Android App</span>
-          </a>
-          <a className="gp-nav-cta" href="/green/login/sponsor">
-            Sponsor Online
-          </a>
-        </div>
       </header>
 
       {/* Hero Banner */}

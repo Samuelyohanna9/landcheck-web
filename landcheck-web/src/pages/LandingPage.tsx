@@ -260,17 +260,17 @@ export default function LandingPage() {
           <div className="lp-sponsor-text">
             <span className="lp-sponsor-eyebrow">LandCheck Green</span>
             <h2>
-              🌳 Sponsor a Tree.<br />Track Its Journey.
+              Sponsor a Tree.<br />Track Its Journey.
             </h2>
             <p>
               Support verified tree planting projects and monitor your environmental impact through
               GPS tracking, photo updates, maintenance records, and carbon reporting.
             </p>
             <div className="lp-sponsor-features">
-              <span className="lp-sponsor-feature">📍 GPS Tracking</span>
-              <span className="lp-sponsor-feature">📷 Photo Updates</span>
-              <span className="lp-sponsor-feature">🔧 Maintenance Records</span>
-              <span className="lp-sponsor-feature">🌿 Carbon Reporting</span>
+              <span className="lp-sponsor-feature"> GPS Tracking</span>
+              <span className="lp-sponsor-feature"> Photo Updates</span>
+              <span className="lp-sponsor-feature"> Maintenance Records</span>
+              <span className="lp-sponsor-feature"> Carbon Reporting</span>
             </div>
             <div className="lp-sponsor-ctas">
               <button
