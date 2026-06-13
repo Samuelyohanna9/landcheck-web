@@ -60,6 +60,7 @@ export default function LandingPage() {
   return (
     <div className="landcheck-landing">
       <NavBar fixed />
+      <main>
 
       {/* Hero */}
       <section className="lp-hero">
@@ -337,6 +338,9 @@ export default function LandingPage() {
                   <img
                     src="/sponsor-tree-app.jpeg"
                     alt="LandCheck Green — Sponsor a Tree app screenshot"
+                    loading="lazy"
+                    width="280"
+                    height="560"
                   />
                 </div>
               </div>
@@ -399,6 +403,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      </main>
+
       {/* Footer */}
       <footer className="lp-footer">
         <div className="lp-footer-inner">
@@ -412,7 +418,7 @@ export default function LandingPage() {
             </ul>
           </div>
           <div className="lp-footer-col">
-            <h5>Products</h5>
+            <h3>Products</h3>
             <ul>
               <li>
                 <button type="button" onClick={() => navigate("/green-partners")}>
@@ -432,7 +438,7 @@ export default function LandingPage() {
             </ul>
           </div>
           <div className="lp-footer-col">
-            <h5>Tools</h5>
+            <h3>Tools</h3>
             <ul>
               <li>
                 <button type="button" onClick={() => navigate("/survey-plan")}>
@@ -461,7 +467,7 @@ export default function LandingPage() {
             </ul>
           </div>
           <div className="lp-footer-col">
-            <h5>Company</h5>
+            <h3>Company</h3>
             <ul>
               <li>
                 <button type="button" onClick={() => navigate("/career")}>
@@ -477,6 +483,11 @@ export default function LandingPage() {
                 <a href="mailto:landchecktech@gmail.com?subject=LandCheck%20Support">
                   Support
                 </a>
+              </li>
+              <li>
+                <button type="button" onClick={() => navigate("/feedback")}>
+                  Feedback
+                </button>
               </li>
             </ul>
           </div>

@@ -3,11 +3,47 @@ import "../styles/inner-pages.css";
 import "../styles/news.css";
 import NavBar from "../components/NavBar";
 
+const ARTICLE_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "NewsArticle",
+  "headline": "LandCheck Signs Strategic Partnership MoU with Environmental Care Foundation",
+  "datePublished": "2026-05-15",
+  "dateModified": "2026-05-15",
+  "author": {
+    "@type": "Organization",
+    "name": "LandCheck Geospatial Technologies Limited",
+    "url": "https://landcheck.online/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "LandCheck Geospatial Technologies Limited",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://landcheck.online/green-logo-cropped-820.png"
+    }
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "https://landcheck.online/ecf-partnership.jpeg",
+    "description": "LandCheck and ECF representatives at partnership event, Adamawa State"
+  },
+  "url": "https://landcheck.online/news",
+  "description": "LandCheck Geospatial Technologies and the Environmental Care Foundation (ECF) have formalised a strategic partnership to expand the reach of LandCheck Green across environmental and humanitarian programmes in Nigeria.",
+  "about": {
+    "@type": "Thing",
+    "name": "LandCheck Green — Tree Monitoring and Environmental Programs"
+  }
+};
+
 export default function NewsPage() {
   const navigate = useNavigate();
 
   return (
     <div className="ip-page">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(ARTICLE_SCHEMA) }}
+      />
       <NavBar activeRoute="/news" />
 
       <main>
@@ -39,6 +75,9 @@ export default function NewsPage() {
                 <img
                   src="/ecf-partnership.jpeg"
                   alt="LandCheck and ECF representatives at partnership event, Adamawa State"
+                  loading="lazy"
+                  width="800"
+                  height="480"
                 />
                 <figcaption>
                   Representatives at the ECF partnership event, Adamawa State, May 2026

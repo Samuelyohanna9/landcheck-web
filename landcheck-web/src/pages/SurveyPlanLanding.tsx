@@ -84,6 +84,7 @@ export default function SurveyPlanLanding() {
     <div className="spl-page">
       {/* Navigation */}
       <NavBar fixed activeRoute="/survey" ctaLabel="Open Survey Plan" ctaRoute="/survey-plan" />
+      <main>
 
       {/* Hero */}
       <section className="spl-hero">
@@ -178,6 +179,9 @@ export default function SurveyPlanLanding() {
                     src={shot.src}
                     alt={shot.label}
                     className={`spl-laptop-shot fit-contain ${index === activeShot ? "active" : ""}`}
+                    loading="lazy"
+                    width="440"
+                    height="275"
                   />
                 ))}
               </div>
@@ -270,6 +274,7 @@ export default function SurveyPlanLanding() {
           <span>&copy; {new Date().getFullYear()} LandCheck Geospatial Technologies Limited</span>
         </div>
       </footer>
+      </main>
     </div>
   );
 }

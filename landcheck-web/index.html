@@ -4,14 +4,21 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/green-logo-cropped-700.png" />
     <link rel="manifest" href="/green/manifest.webmanifest" />
-    <meta name="theme-color" content="#22c55e" />
+    <meta name="theme-color" content="#0e2b4a" />
     <link rel="apple-touch-icon" href="/green/icons/icon-192.png" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="LandCheck Green" />
+    <meta name="apple-mobile-web-app-title" content="LandCheck" />
     <meta name="application-name" content="LandCheck" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Preconnect to external origins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://api.mapbox.com" />
+    <link rel="dns-prefetch" href="https://events.mapbox.com" />
+
     <title>LandCheck Nigeria | Survey Plan, Flood Risk, and Tree Monitoring</title>
     <meta
       name="description"
@@ -31,6 +38,9 @@
     />
     <meta property="og:url" content="https://landcheck.online/" />
     <meta property="og:image" content="https://landcheck.online/green-logo-cropped-820.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="LandCheck Nigeria — Geospatial Intelligence Platform" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="LandCheck Nigeria | Survey Plan, Flood Risk, and Tree Monitoring" />
@@ -39,6 +49,7 @@
       content="Survey plans, flood risk analysis, and field tree monitoring for projects in Nigeria."
     />
     <meta name="twitter:image" content="https://landcheck.online/green-logo-cropped-820.png" />
+    <meta name="twitter:image:alt" content="LandCheck Nigeria — Geospatial Intelligence Platform" />
 
     <script type="application/ld+json">
       {
@@ -53,12 +64,22 @@
             "identifier": "RC: 9350241",
             "logo": {
               "@type": "ImageObject",
-              "url": "https://landcheck.online/green-logo-cropped-820.png"
+              "url": "https://landcheck.online/green-logo-cropped-820.png",
+              "width": 820,
+              "height": 820
+            },
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "email": "landchecktech@gmail.com",
+              "contactType": "customer support"
             },
             "areaServed": {
               "@type": "Country",
               "name": "Nigeria"
-            }
+            },
+            "sameAs": [
+              "https://play.google.com/store/apps/details?id=online.landcheck.mobile"
+            ]
           },
           {
             "@type": "WebSite",
@@ -68,6 +89,28 @@
             "description": "Nigeria-focused survey plan, flood risk, and tree monitoring platform.",
             "publisher": {
               "@id": "https://landcheck.online/#organization"
+            },
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "https://landcheck.online/hazard-analysis?q={search_term_string}"
+              },
+              "query-input": "required name=search_term_string"
+            }
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://landcheck.online/#app",
+            "name": "LandCheck Green",
+            "applicationCategory": "EnvironmentalApp",
+            "operatingSystem": "Android",
+            "url": "https://play.google.com/store/apps/details?id=online.landcheck.mobile",
+            "description": "Tree inventory, GPS monitoring, and environmental program reporting for NGOs and field teams in Nigeria.",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "NGN"
             }
           }
         ]
