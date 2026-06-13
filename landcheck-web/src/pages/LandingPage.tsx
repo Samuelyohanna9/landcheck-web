@@ -291,34 +291,11 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="lp-sponsor-visual">
-            <div className="lp-sponsor-card">
-              <div className="lp-sponsor-card-header">
-                <span className="lp-sponsor-card-icon">🌳</span>
-                <div className="lp-sponsor-card-info">
-                  <h4>Afzelia africana</h4>
-                  <span>Planted · Adamawa State, Nigeria</span>
-                </div>
-              </div>
-              <div className="lp-sponsor-card-stats">
-                <div className="lp-sponsor-stat">
-                  <span className="lp-sponsor-stat-label">Height</span>
-                  <span className="lp-sponsor-stat-value">2.4 m</span>
-                </div>
-                <div className="lp-sponsor-stat">
-                  <span className="lp-sponsor-stat-label">CO₂ Stored</span>
-                  <span className="lp-sponsor-stat-value">18 kg</span>
-                </div>
-                <div className="lp-sponsor-stat">
-                  <span className="lp-sponsor-stat-label">Tree Age</span>
-                  <span className="lp-sponsor-stat-value">14 mo</span>
-                </div>
-                <div className="lp-sponsor-stat">
-                  <span className="lp-sponsor-stat-label">Photos</span>
-                  <span className="lp-sponsor-stat-value">12</span>
-                </div>
-              </div>
-              <span className="lp-sponsor-card-badge">✓ GPS Verified</span>
-            </div>
+            <img
+              src="/sponsor-tree-app.jpeg"
+              alt="LandCheck Green — Sponsor a Tree app screenshot"
+              className="lp-sponsor-screenshot"
+            />
           </div>
         </div>
       </section>
