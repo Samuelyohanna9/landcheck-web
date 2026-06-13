@@ -1,0 +1,167 @@
+/* news.css */
+
+.np-page-header {
+  padding: 80px 0 56px;
+  background:
+    radial-gradient(ellipse 55% 50% at 50% 50%, rgba(14, 43, 74, 0.35) 0%, transparent 62%),
+    linear-gradient(160deg, #040c18 0%, #061220 60%, #040c18 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.np-page-header h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 10px;
+}
+
+.np-page-header p {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+}
+
+/* ── ARTICLES AREA ──────────────────────────────────────── */
+.np-articles-wrap {
+  padding: 64px 0 100px;
+}
+
+/* ── META ROW ───────────────────────────────────────────── */
+.np-article-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.np-tag {
+  background: rgba(224, 123, 0, 0.13);
+  color: #e07b00;
+  border: 1px solid rgba(224, 123, 0, 0.28);
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.np-article-meta time {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+/* ── ARTICLE HEADER ─────────────────────────────────────── */
+.np-article h2 {
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+  margin: 0 0 20px;
+  letter-spacing: -0.01em;
+  max-width: 680px;
+}
+
+.np-lead {
+  font-size: 1.08rem;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.68;
+  max-width: 680px;
+  margin: 0;
+}
+
+/* ── FIGURE ─────────────────────────────────────────────── */
+.np-figure {
+  margin: 40px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.np-figure img {
+  width: 100%;
+  height: auto;
+  max-height: 480px;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+}
+
+.np-figure figcaption {
+  padding: 12px 18px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.38);
+  background: rgba(255, 255, 255, 0.025);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ── BODY TEXT ──────────────────────────────────────────── */
+.np-body p {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.85;
+  margin: 0 0 22px;
+  max-width: 720px;
+}
+
+.np-body h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 40px 0 14px;
+}
+
+/* ── BLOCKQUOTE ─────────────────────────────────────────── */
+.np-quote {
+  border-left: 3px solid #e07b00;
+  margin: 40px 0;
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 0 8px 8px 0;
+  max-width: 680px;
+}
+
+.np-quote p {
+  font-size: 1.05rem !important;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.85) !important;
+  margin: 0 0 10px !important;
+  line-height: 1.6 !important;
+}
+
+.np-quote cite {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.42);
+  font-style: normal;
+}
+
+/* ── INLINE ELEMENTS ────────────────────────────────────── */
+.np-inline-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #e07b00;
+  font-size: inherit;
+  font-family: inherit;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s;
+}
+
+.np-inline-link:hover { color: #f59a30; }
+
+.np-body a {
+  color: #e07b00;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.np-body a:hover { color: #f59a30; }
+
+@media (max-width: 640px) {
+  .np-page-header { padding: 60px 0 40px; }
+  .np-articles-wrap { padding: 44px 0 70px; }
+  .np-figure { margin: 28px 0; }
+  .np-quote { margin: 28px 0; padding: 14px 18px; }
+}
