@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/green-partners.css";
-import { fetchPublicSponsorshipProjects } from "../api/greenSponsor";
+import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 
 type LaptopShot = { src: string; label: string; fit?: "cover" | "contain" };
 type PhoneShot = { src: string; label: string };
@@ -86,19 +86,11 @@ export default function GreenPartnersLanding() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchPublicSponsorshipProjects()
-      .then((projects) => {
+    fetchPublicPartnerOrganizations()
+      .then((orgs) => {
         if (cancelled) return;
-        const seen = new Set<string>();
-        const orgs: PartnerOrg[] = [];
-        for (const p of projects) {
-          const name = p.organization_name;
-          if (name && !seen.has(name)) {
-            seen.add(name);
-            orgs.push({ name, logo: p.organization_logo_url ?? null });
-          }
-        }
-        if (orgs.length > 0) setPartners(orgs);
+        const mapped: PartnerOrg[] = orgs.map((o) => ({ name: o.name, logo: o.logo_url }));
+        if (mapped.length > 0) setPartners(mapped);
       })
       .catch(() => {});
     return () => {

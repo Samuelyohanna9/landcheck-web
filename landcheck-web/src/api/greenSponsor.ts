@@ -305,6 +305,13 @@ export const fetchPublicSponsorshipProjects = async () => {
   return (Array.isArray(response.data) ? response.data : []).map(normalizeProject);
 };
 
+export const fetchPublicPartnerOrganizations = async (): Promise<
+  Array<{ id: number; name: string; logo_url: string | null }>
+> => {
+  const response = await api.get("/green/public/partner-organizations");
+  return Array.isArray(response.data) ? response.data : [];
+};
+
 export const fetchSponsorOrders = async (session: GreenAuthSession) => {
   const response = await api.get("/green/sponsor/orders", {
     params: { sponsor_id: session.user.id },
