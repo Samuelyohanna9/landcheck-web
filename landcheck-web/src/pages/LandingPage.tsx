@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/landing.css";
 import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
+import NavBar from "../components/NavBar";
 
 type PartnerOrg = { name: string; logo: string | null };
 
@@ -58,20 +59,7 @@ export default function LandingPage() {
 
   return (
     <div className="landcheck-landing">
-      {/* Navigation */}
-      <header className="lp-nav">
-        <button type="button" className="lp-nav-brand" onClick={() => navigate("/")}>
-          <img src="/logo.svg" alt="LandCheck" />
-        </button>
-        <nav className="lp-nav-menu" aria-label="Main navigation">
-          <button type="button" onClick={() => navigate("/green-partners")}>LandCheck Green</button>
-          <button type="button" onClick={() => navigate("/survey")}>Survey Plan</button>
-          <button type="button" onClick={() => navigate("/flood")}>Flood Analysis</button>
-          <button type="button" onClick={() => navigate("/career")}>Career</button>
-          <button type="button" onClick={() => navigate("/news")}>News</button>
-          <a href="mailto:landchecktech@gmail.com?subject=LandCheck%20Support" className="lp-nav-support">Support</a>
-        </nav>
-      </header>
+      <NavBar fixed />
 
       {/* Hero */}
       <section className="lp-hero">
@@ -102,6 +90,9 @@ export default function LandingPage() {
             </button>
             <button type="button" className="lp-hero-btn-outline" onClick={() => navigate("/survey")}>
               SURVEY PLAN
+            </button>
+            <button type="button" className="lp-hero-btn-outline" onClick={() => navigate("/flood")}>
+              FLOOD ANALYSIS
             </button>
           </div>
         </div>

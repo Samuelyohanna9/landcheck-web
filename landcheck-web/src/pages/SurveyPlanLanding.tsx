@@ -6,6 +6,7 @@ import planProduction3 from "./plan production 3.png";
 import planProduction4 from "./plan pruction 4.png";
 import planProduction5 from "./plan production5.png";
 import "../styles/survey-plan-landing.css";
+import NavBar from "../components/NavBar";
 
 type LaptopShot = { src: string; label: string };
 
@@ -82,19 +83,7 @@ export default function SurveyPlanLanding() {
   return (
     <div className="spl-page">
       {/* Navigation */}
-      <header className="spl-nav">
-        <button type="button" className="spl-nav-brand" onClick={() => navigate("/")}>
-          <img src="/logo.svg" alt="LandCheck" />
-        </button>
-        <nav className="spl-nav-links" aria-label="Survey plan navigation">
-          <a href="#features">Features</a>
-          <a href="#how-it-works">How It Works</a>
-          <a href="#who-its-for">Who It's For</a>
-        </nav>
-        <button type="button" className="spl-nav-cta" onClick={() => navigate("/survey-plan")}>
-          Open Survey Plan
-        </button>
-      </header>
+      <NavBar fixed activeRoute="/survey" ctaLabel="Open Survey Plan" ctaRoute="/survey-plan" />
 
       {/* Hero */}
       <section className="spl-hero">

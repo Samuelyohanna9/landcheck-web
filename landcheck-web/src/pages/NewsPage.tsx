@@ -1,43 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import "../styles/inner-pages.css";
 import "../styles/news.css";
-
-const NAV_ITEMS = [
-  { label: "LandCheck Green", route: "/green-partners" },
-  { label: "Survey Plan", route: "/survey" },
-  { label: "Flood Analysis", route: "/flood" },
-  { label: "Career", route: "/career" },
-  { label: "News", route: "/news" },
-] as const;
+import NavBar from "../components/NavBar";
 
 export default function NewsPage() {
   const navigate = useNavigate();
 
   return (
     <div className="ip-page">
-      <header className="ip-nav">
-        <button type="button" className="ip-nav-brand" onClick={() => navigate("/")}>
-          <img src="/logo.svg" alt="LandCheck" />
-        </button>
-        <nav className="ip-nav-menu" aria-label="Main navigation">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.route}
-              type="button"
-              className={item.route === "/news" ? "ip-nav-active" : undefined}
-              onClick={() => navigate(item.route)}
-            >
-              {item.label}
-            </button>
-          ))}
-          <a
-            href="mailto:landchecktech@gmail.com?subject=LandCheck%20Support"
-            className="ip-nav-link"
-          >
-            Support
-          </a>
-        </nav>
-      </header>
+      <NavBar activeRoute="/news" />
 
       <main>
         <section className="np-page-header">
