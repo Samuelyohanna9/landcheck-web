@@ -21,6 +21,8 @@ const laptopKeys = Array.from({ length: 56 }, (_, index) => index);
 
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=online.landcheck.mobile";
 
+const PILOT_ORG_NAMES = new Set(["Think Green Foundation"]);
+
 const capabilities = [
   {
     title: "Inventory + Field Capture",
@@ -132,7 +134,6 @@ export default function GreenPartnersLanding() {
       <section className="gp-hero-banner">
         <div className="gp-hero-tint" />
         <div className="gp-hero-copy">
-          <p>TREE PROGRAM SOFTWARE FOR NIGERIA</p>
           <h1>LANDCHECK GREEN</h1>
           <span>INVENTORY · MONITORING · MAINTENANCE · OUTREACH · REPORTING</span>
           <div className="gp-hero-ctas">
@@ -364,6 +365,9 @@ export default function GreenPartnersLanding() {
             <div className="gp-partners-logos">
               {partners.map((org) => (
                 <div key={org.name} className="gp-partner-badge">
+                  {PILOT_ORG_NAMES.has(org.name) && (
+                    <span className="gp-partner-pilot-tag">Pilot Programme</span>
+                  )}
                   {org.logo ? (
                     <img src={org.logo} alt={org.name} className="gp-partner-logo" />
                   ) : (
