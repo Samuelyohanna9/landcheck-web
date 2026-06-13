@@ -91,10 +91,10 @@ export default function LandingPage() {
         <div className="lp-hero-overlay" />
         <div className="lp-hero-content">
           <h1>
-            Land Intelligence<br />for Nigeria
+            Geospatial Intelligence <br />for Development Projects
           </h1>
           <p className="lp-hero-lead">
-            Environmental monitoring, field operations, survey plans, and flood risk — all in one platform
+            Environmental monitoring, tree planting sponsorship, field operations, survey plans, and flood risk — all in one platform
           </p>
           <div className="lp-hero-ctas">
             <button type="button" className="lp-hero-btn-primary" onClick={() => navigate("/green-partners")}>
@@ -117,6 +117,14 @@ export default function LandingPage() {
           </svg>
         </a>
       </section>
+
+      {/* Motto Band */}
+      <div className="lp-motto-band">
+        <span className="lp-motto-label">Our Mission</span>
+        <p className="lp-motto-text">
+          From Mapping to <span className="lp-motto-accent">Impact</span>
+        </p>
+      </div>
 
       {/* We are LandCheck */}
       <section id="landcheck-intro" className="lp-intro-section">
@@ -243,6 +251,75 @@ export default function LandingPage() {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Sponsor a Tree */}
+      <section className="lp-sponsor-section">
+        <div className="lp-sponsor-inner">
+          <div className="lp-sponsor-text">
+            <span className="lp-sponsor-eyebrow">LandCheck Green</span>
+            <h2>
+              🌳 Sponsor a Tree.<br />Track Its Journey.
+            </h2>
+            <p>
+              Support verified tree planting projects and monitor your environmental impact through
+              GPS tracking, photo updates, maintenance records, and carbon reporting.
+            </p>
+            <div className="lp-sponsor-features">
+              <span className="lp-sponsor-feature">📍 GPS Tracking</span>
+              <span className="lp-sponsor-feature">📷 Photo Updates</span>
+              <span className="lp-sponsor-feature">🔧 Maintenance Records</span>
+              <span className="lp-sponsor-feature">🌿 Carbon Reporting</span>
+            </div>
+            <div className="lp-sponsor-ctas">
+              <button
+                type="button"
+                className="lp-sponsor-btn-primary"
+                onClick={() => navigate("/green/login/sponsor")}
+              >
+                SPONSOR A TREE
+              </button>
+              <a
+                href="https://play.google.com/store/apps/details?id=online.landcheck.mobile"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="lp-sponsor-btn-secondary"
+              >
+                DOWNLOAD THE APP
+              </a>
+            </div>
+          </div>
+          <div className="lp-sponsor-visual">
+            <div className="lp-sponsor-card">
+              <div className="lp-sponsor-card-header">
+                <span className="lp-sponsor-card-icon">🌳</span>
+                <div className="lp-sponsor-card-info">
+                  <h4>Afzelia africana</h4>
+                  <span>Planted · Adamawa State, Nigeria</span>
+                </div>
+              </div>
+              <div className="lp-sponsor-card-stats">
+                <div className="lp-sponsor-stat">
+                  <span className="lp-sponsor-stat-label">Height</span>
+                  <span className="lp-sponsor-stat-value">2.4 m</span>
+                </div>
+                <div className="lp-sponsor-stat">
+                  <span className="lp-sponsor-stat-label">CO₂ Stored</span>
+                  <span className="lp-sponsor-stat-value">18 kg</span>
+                </div>
+                <div className="lp-sponsor-stat">
+                  <span className="lp-sponsor-stat-label">Tree Age</span>
+                  <span className="lp-sponsor-stat-value">14 mo</span>
+                </div>
+                <div className="lp-sponsor-stat">
+                  <span className="lp-sponsor-stat-label">Photos</span>
+                  <span className="lp-sponsor-stat-value">12</span>
+                </div>
+              </div>
+              <span className="lp-sponsor-card-badge">✓ GPS Verified</span>
+            </div>
+          </div>
         </div>
       </section>
 
