@@ -249,27 +249,67 @@ export default function LandingPage() {
       <section className="lp-sponsor-section">
         <div className="lp-sponsor-inner">
           <div className="lp-sponsor-text">
-            <span className="lp-sponsor-eyebrow">LandCheck Green</span>
+            <span className="lp-sponsor-eyebrow">LANDCHECK GREEN</span>
             <h2>
-              Sponsor a Tree.<br />Track Its Journey.
+              Sponsor a Tree.<br />
+              Track Its Journey.
             </h2>
             <p>
-              Support verified tree planting projects and monitor your environmental impact through
-              GPS tracking, photo updates, maintenance records, and carbon reporting.
+              Support verified tree planting projects and monitor your environmental impact
+              through GPS tracking, photo updates, maintenance records, and carbon reporting.
             </p>
-            <div className="lp-sponsor-features">
-              <span className="lp-sponsor-feature"> GPS Tracking</span>
-              <span className="lp-sponsor-feature"> Photo Updates</span>
-              <span className="lp-sponsor-feature"> Maintenance Records</span>
-              <span className="lp-sponsor-feature"> Carbon Reporting</span>
-            </div>
+            <ul className="lp-sponsor-bullets">
+              <li className="lp-sponsor-bullet">
+                <svg viewBox="0 0 24 24" fill="none" width="22" height="22" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" fill="rgba(34,197,94,0.15)" stroke="#22c55e" strokeWidth="1.5"/>
+                  <path d="M8 12l3 3 5-5" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <div>
+                  <strong>GPS Tracking</strong>
+                  <span>Know exactly where your trees are planted on the map</span>
+                </div>
+              </li>
+              <li className="lp-sponsor-bullet">
+                <svg viewBox="0 0 24 24" fill="none" width="22" height="22" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" fill="rgba(34,197,94,0.15)" stroke="#22c55e" strokeWidth="1.5"/>
+                  <path d="M8 12l3 3 5-5" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <div>
+                  <strong>Photo Updates</strong>
+                  <span>See photo evidence as your tree grows over time</span>
+                </div>
+              </li>
+              <li className="lp-sponsor-bullet">
+                <svg viewBox="0 0 24 24" fill="none" width="22" height="22" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" fill="rgba(34,197,94,0.15)" stroke="#22c55e" strokeWidth="1.5"/>
+                  <path d="M8 12l3 3 5-5" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <div>
+                  <strong>Maintenance Records</strong>
+                  <span>Track watering, pruning, and full care history</span>
+                </div>
+              </li>
+              <li className="lp-sponsor-bullet">
+                <svg viewBox="0 0 24 24" fill="none" width="22" height="22" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" fill="rgba(34,197,94,0.15)" stroke="#22c55e" strokeWidth="1.5"/>
+                  <path d="M8 12l3 3 5-5" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <div>
+                  <strong>Carbon Reporting</strong>
+                  <span>Measure your CO₂ offset with verified impact data</span>
+                </div>
+              </li>
+            </ul>
             <div className="lp-sponsor-ctas">
               <button
                 type="button"
                 className="lp-sponsor-btn-primary"
                 onClick={() => navigate("/green/login/sponsor")}
               >
-                SPONSOR A TREE
+                Sponsor a Tree
+                <svg viewBox="0 0 24 24" fill="none" width="16" height="16" aria-hidden="true">
+                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </button>
               <a
                 href="https://play.google.com/store/apps/details?id=online.landcheck.mobile"
@@ -291,11 +331,15 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="lp-sponsor-visual">
-            <div className="lp-sponsor-phone">
-              <img
-                src="/sponsor-tree-app.jpeg"
-                alt="LandCheck Green — Sponsor a Tree app screenshot"
-              />
+            <div className="lp-sponsor-phone-wrap">
+              <div className="lp-sponsor-phone-frame">
+                <div className="lp-sponsor-phone-screen">
+                  <img
+                    src="/sponsor-tree-app.jpeg"
+                    alt="LandCheck Green — Sponsor a Tree app screenshot"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

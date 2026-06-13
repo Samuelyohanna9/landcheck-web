@@ -729,49 +729,75 @@
   max-width: 500px;
 }
 
-.lp-sponsor-features {
+.lp-sponsor-bullets {
+  list-style: none;
+  margin: 0 0 40px;
+  padding: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 40px;
+  flex-direction: column;
+  gap: 18px;
 }
 
-.lp-sponsor-feature {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: 7px 16px;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.78);
-  white-space: nowrap;
+.lp-sponsor-bullet {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.lp-sponsor-bullet svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.lp-sponsor-bullet div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lp-sponsor-bullet strong {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+}
+
+.lp-sponsor-bullet span {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.45;
 }
 
 .lp-sponsor-ctas {
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .lp-sponsor-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   background: #22c55e;
   color: #fff;
   border: none;
-  border-radius: 2px;
-  padding: 13px 30px;
-  font-size: 0.82rem;
+  border-radius: 9px;
+  padding: 15px 32px;
+  font-size: 1rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.15s;
   font-family: inherit;
   white-space: nowrap;
+  box-shadow: 0 6px 24px rgba(34, 197, 94, 0.3);
 }
-
-.lp-sponsor-btn-primary::after { content: " →"; }
 
 .lp-sponsor-btn-primary:hover {
   background: #16a34a;
-  transform: translateX(2px);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 32px rgba(34, 197, 94, 0.4);
 }
 
 .lp-sponsor-btn-secondary {
@@ -798,44 +824,84 @@
   color: #fff;
 }
 
-/* App screenshot — phone frame */
+/* App screenshot — Apporio-style phone frame */
 .lp-sponsor-visual {
-  flex: 0 0 300px;
+  flex: 0 0 320px;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
 }
 
-.lp-sponsor-phone {
+.lp-sponsor-phone-wrap {
   position: relative;
-  width: 272px;
-  border-radius: 38px;
-  overflow: hidden;
-  border: 3px solid rgba(255, 255, 255, 0.14);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 0 60px rgba(34, 197, 94, 0.12),
-    0 28px 80px rgba(0, 0, 0, 0.65),
-    0 8px 24px rgba(0, 0, 0, 0.4),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-  background: #071208;
 }
 
-.lp-sponsor-phone img {
+/* Outer phone shell (black device body) */
+.lp-sponsor-phone-frame {
+  position: relative;
+  width: 300px;
+  background: #0d0d0d;
+  border-radius: 46px;
+  padding: 14px 10px;
+  box-shadow:
+    0 0 0 1.5px rgba(255, 255, 255, 0.08),
+    0 32px 80px rgba(0, 0, 0, 0.75),
+    0 0 80px rgba(34, 197, 94, 0.10),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+/* Side buttons */
+.lp-sponsor-phone-frame::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: 100px;
+  width: 3px;
+  height: 38px;
+  background: #1a1a1a;
+  border-radius: 2px 0 0 2px;
+  box-shadow: 0 50px 0 #1a1a1a;
+}
+
+.lp-sponsor-phone-frame::after {
+  content: '';
+  position: absolute;
+  right: -3px;
+  top: 140px;
+  width: 3px;
+  height: 52px;
+  background: #1a1a1a;
+  border-radius: 0 2px 2px 0;
+}
+
+/* Screen area */
+.lp-sponsor-phone-screen {
+  position: relative;
+  border-radius: 36px;
+  overflow: hidden;
+  background: #000;
+  line-height: 0;
+}
+
+.lp-sponsor-phone-screen img {
   width: 100%;
   height: auto;
   display: block;
+  border-radius: 36px;
 }
 
-.lp-sponsor-phone::after {
+/* Ambient glow under phone */
+.lp-sponsor-phone-wrap::after {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 72px;
-  background: linear-gradient(to bottom, transparent, rgba(5, 15, 8, 0.92));
-  pointer-events: none;
+  bottom: -28px;
+  left: 10%;
+  right: 10%;
+  height: 40px;
+  background: rgba(34, 197, 94, 0.2);
+  filter: blur(20px);
+  border-radius: 50%;
+  z-index: -1;
 }
 
 /* Play Store badge */
@@ -1065,8 +1131,8 @@
 
 @media (max-width: 900px) {
   .lp-sponsor-inner { flex-direction: column; gap: 48px; padding: 0 40px; }
-  .lp-sponsor-visual { flex: none; width: 100%; max-width: 300px; margin: 0 auto; }
-  .lp-sponsor-phone { width: 100%; }
+  .lp-sponsor-visual { flex: none; width: 100%; max-width: 320px; margin: 0 auto; }
+  .lp-sponsor-phone-frame { width: 100%; }
 }
 
 @media (max-width: 768px) {
@@ -1111,7 +1177,8 @@
 
   .lp-sponsor-section { padding: 64px 0; }
   .lp-sponsor-inner { padding: 0 24px; gap: 40px; }
-  .lp-sponsor-visual { max-width: 100%; }
+  .lp-sponsor-visual { max-width: 280px; }
+  .lp-sponsor-phone-frame { width: 100%; }
 
   .lp-contact-inner {
     flex-direction: column;
