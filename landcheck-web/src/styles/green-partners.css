@@ -1265,6 +1265,18 @@
 @media (max-width: 700px) {
   .gp-hero-banner {
     min-height: clamp(220px, 54dvh, 560px);
+    /* Push image down to hide the "LandCheck Green" text watermark in the upper portion */
+    background-position: center 92%;
+  }
+
+  .gp-hero-tint {
+    /* Stronger top overlay on mobile to fully obscure any residual image text */
+    background: linear-gradient(
+      180deg,
+      rgba(6, 10, 16, 0.92) 0%,
+      rgba(7, 17, 23, 0.72) 38%,
+      rgba(9, 21, 28, 0.44) 100%
+    );
   }
 
   .gp-hero-copy {
