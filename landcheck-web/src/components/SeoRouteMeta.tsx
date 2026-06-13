@@ -32,6 +32,13 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
     canonicalPath: "/privacy",
     ogType: "website",
   },
+  "/flood": {
+    title: "Flood Risk & Land Hazard Analysis Nigeria | LandCheck",
+    description:
+      "Screen any Nigerian land parcel for flood risk, erosion, and soil stability. Instant PDF risk report. Free for any location in Nigeria.",
+    canonicalPath: "/flood",
+    ogType: "website",
+  },
   "/hazard-analysis": {
     title: "Flood Risk Hazard Analysis Nigeria | LandCheck",
     description:

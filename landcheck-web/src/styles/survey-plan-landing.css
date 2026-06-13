@@ -89,7 +89,7 @@
 .spl-hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(10, 20, 60, 0.88) 0%, rgba(20, 50, 100, 0.72) 100%);
+  background: linear-gradient(135deg, rgba(8, 16, 48, 0.86) 0%, rgba(14, 40, 90, 0.68) 50%, rgba(8, 16, 48, 0.80) 100%);
 }
 
 .spl-hero-content {

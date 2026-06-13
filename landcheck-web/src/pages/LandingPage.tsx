@@ -16,6 +16,13 @@ const targets = [
 
 const products = [
   {
+    key: "green",
+    title: "LandCheck Green",
+    description: "GPS tree inventory, agric farm monitoring, humanitarian site assessment, and program reporting for NGOs, donors, and government agencies.",
+    route: "/green-partners",
+    bgClass: "lp-prod-green-bg",
+  },
+  {
     key: "survey",
     title: "Survey Plan",
     description: "True-scale professional plans from coordinate input — PDF, DWG, orthophoto, and computation sheet exports.",
@@ -25,16 +32,9 @@ const products = [
   {
     key: "flood",
     title: "Flood Risk Analysis",
-    description: "Hazard screening for any land parcel in Nigeria using global datasets with detailed PDF risk report.",
-    route: "/hazard-analysis",
+    description: "Screen any Nigerian land parcel for flood risk, erosion, and soil stability with a detailed PDF risk report.",
+    route: "/flood",
     bgClass: "lp-prod-flood-bg",
-  },
-  {
-    key: "green",
-    title: "LandCheck Green",
-    description: "Tree inventory, agric farm monitoring, and humanitarian site assessment for NGOs and government programs.",
-    route: "/green-partners",
-    bgClass: "lp-prod-green-bg",
   },
 ];
 
@@ -74,20 +74,33 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="lp-hero">
+        {/* Decorative geographic SVG */}
+        <svg className="lp-hero-svg" aria-hidden="true" viewBox="0 0 1440 800" preserveAspectRatio="xMidYMid slice">
+          <path d="M-50,310 Q160,285 380,315 Q590,345 810,300 Q1010,258 1240,292 Q1360,308 1490,295" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1.5"/>
+          <path d="M-50,410 Q160,385 380,412 Q590,440 810,398 Q1010,358 1240,388 Q1360,404 1490,395" fill="none" stroke="rgba(255,255,255,0.035)" strokeWidth="1.5"/>
+          <path d="M-50,505 Q160,480 380,505 Q590,530 810,492 Q1010,458 1240,484 Q1360,500 1490,492" fill="none" stroke="rgba(255,255,255,0.025)" strokeWidth="1"/>
+          <path d="M-50,220 Q160,200 380,224 Q590,248 810,212 Q1010,180 1240,208 Q1360,222 1490,215" fill="none" stroke="rgba(255,255,255,0.022)" strokeWidth="1"/>
+          <rect x="340" y="178" width="762" height="374" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1.2" strokeDasharray="10 6"/>
+          <circle cx="340" cy="178" r="5" fill="rgba(224,123,0,0.6)"/>
+          <circle cx="1102" cy="178" r="5" fill="rgba(224,123,0,0.6)"/>
+          <circle cx="340" cy="552" r="5" fill="rgba(224,123,0,0.6)"/>
+          <circle cx="1102" cy="552" r="5" fill="rgba(224,123,0,0.5)"/>
+          <circle cx="720" cy="340" r="3" fill="rgba(255,255,255,0.15)"/>
+        </svg>
         <div className="lp-hero-overlay" />
         <div className="lp-hero-content">
           <h1>
             Land Intelligence<br />for Nigeria
           </h1>
           <p className="lp-hero-lead">
-            Digital tools for survey plans, flood risk assessment, and environmental monitoring
+            Environmental monitoring, field operations, survey plans, and flood risk — all in one platform
           </p>
           <div className="lp-hero-ctas">
-            <button type="button" className="lp-hero-btn-primary" onClick={() => navigate("/survey")}>
-              SURVEY PLAN
-            </button>
-            <button type="button" className="lp-hero-btn-outline" onClick={() => navigate("/green-partners")}>
+            <button type="button" className="lp-hero-btn-primary" onClick={() => navigate("/green-partners")}>
               LANDCHECK GREEN
+            </button>
+            <button type="button" className="lp-hero-btn-outline" onClick={() => navigate("/survey")}>
+              SURVEY PLAN
             </button>
           </div>
         </div>

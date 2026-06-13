@@ -79,26 +79,52 @@
   width: 100%;
   height: 100dvh;
   min-height: 600px;
-  background: url("/Digital-Land-Survey.jpg") center / cover no-repeat;
+  /* CSS-designed geographic background — balances land, environment, water */
+  background:
+    radial-gradient(ellipse 90% 80% at -8% 74%, rgba(10, 90, 50, 0.32) 0%, transparent 52%),
+    radial-gradient(ellipse 80% 70% at 108% 12%, rgba(18, 72, 160, 0.28) 0%, transparent 52%),
+    radial-gradient(ellipse 55% 55% at 55% 50%, rgba(14, 43, 74, 0.4) 0%, transparent 65%),
+    linear-gradient(158deg, #040c1c 0%, #050f1f 42%, #040e1a 70%, #050d0e 100%);
   display: flex;
   align-items: flex-end;
   overflow: hidden;
+}
+
+.lp-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 59px, rgba(255,255,255,0.022) 59px, rgba(255,255,255,0.022) 60px),
+    repeating-linear-gradient(90deg, transparent, transparent 59px, rgba(255,255,255,0.022) 59px, rgba(255,255,255,0.022) 60px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.lp-hero-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .lp-hero-overlay {
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    155deg,
-    rgba(10, 20, 52, 0.76) 0%,
-    rgba(14, 43, 74, 0.55) 55%,
-    rgba(10, 20, 52, 0.38) 100%
+    160deg,
+    rgba(4, 12, 28, 0.45) 0%,
+    rgba(4, 12, 28, 0.2) 50%,
+    rgba(4, 12, 28, 0.55) 100%
   );
+  z-index: 0;
 }
 
 .lp-hero-content {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   padding: 0 64px 96px;
   max-width: 720px;
 }
@@ -176,7 +202,7 @@
   bottom: 32px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 2;
+  z-index: 3;
   color: rgba(255, 255, 255, 0.65);
   text-decoration: none;
   animation: lp-bounce 2.2s ease-in-out infinite;
@@ -410,11 +436,12 @@
 .lp-prod-survey-bg { background-image: url("/Digital-Land-Survey.jpg"); }
 
 .lp-prod-flood-bg {
-  background: linear-gradient(145deg, #0a1e40 0%, #0e3060 55%, #0a4a7c 100%);
+  background: linear-gradient(145deg, #050e2a 0%, #081c4a 40%, #0a2e6e 70%, #0a3a7c 100%);
 }
 
 .lp-prod-green-bg {
-  background: linear-gradient(145deg, #062006 0%, #0f3a0f 55%, #1a5c1a 100%);
+  background: url("/background-sponsor.png") center / cover no-repeat;
+  background-color: #062006;
 }
 
 .lp-prod-overlay {
