@@ -2789,6 +2789,7 @@ const SpeciesDailySurvivalChart = ({
 export default function GreenWork() {
   const workAuthSession = getWorkAuthSession();
   const canAccessSuperAdmin = workAuthSession?.auth_mode === "env_admin";
+  const isSuperAdminOnlyForm = (form: WorkForm | null | undefined) => form === "super_admin" || form === "logs";
   const isPartnerWorkSession = workAuthSession?.auth_mode === "partner_user";
   const normalizeOrgLifecycleStatus = (value: unknown) => String(value || "").trim().toLowerCase();
   const workScopedOrganizationId =
@@ -3325,14 +3326,12 @@ export default function GreenWork() {
   const [assigningMaintenanceTask, setAssigningMaintenanceTask] = useState(false);
   const [inspectedTree, setInspectedTree] = useState<TreeInspectData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activeForm, setActiveForm] = useState<WorkForm | null>(
-    allowedForms.includes(storedFormNormalized as WorkForm) &&
-      (storedFormNormalized as WorkForm) !== "super_admin"
-      ? (storedFormNormalized as WorkForm)
-      : canAccessSuperAdmin && (storedFormNormalized as WorkForm) === "super_admin"
-      ? "super_admin"
-      : null
-  );
+  const [activeForm, setActiveForm] = useState<WorkForm | null>(() => {
+    const storedForm = storedFormNormalized as WorkForm;
+    if (!allowedForms.includes(storedForm)) return null;
+    if (isSuperAdminOnlyForm(storedForm) && !canAccessSuperAdmin) return null;
+    return storedForm;
+  });
   const activeFormHiddenInAgric = activeForm ? isHiddenInFieldProject(activeForm) : false;
   const [remoteMonitoringReport, setRemoteMonitoringReport] = useState<RemoteMonitoringReport | null>(null);
   const [remoteMonitoringLoading, setRemoteMonitoringLoading] = useState(false);
@@ -5829,7 +5828,7 @@ export default function GreenWork() {
   }, [activeForm]);
 
   useEffect(() => {
-    if (activeForm !== "logs") return;
+    if (!canAccessSuperAdmin || activeForm !== "logs") return;
     void loadActivityLogs();
     void loadQrPrintsReport();
     const timer = window.setInterval(() => {
@@ -5837,7 +5836,7 @@ export default function GreenWork() {
       void loadQrPrintsReport();
     }, 15000);
     return () => window.clearInterval(timer);
-  }, [activeForm, loadActivityLogs, loadQrPrintsReport]);
+  }, [activeForm, canAccessSuperAdmin, loadActivityLogs, loadQrPrintsReport]);
 
   useEffect(() => {
     return () => {
@@ -8378,6 +8377,9 @@ export default function GreenWork() {
           { form: "remote_monitoring", title: "Farm Health", note: "NDVI + vigor + drought watch", isNew: true },
           { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
           { form: "users", title: "Users", note: "All staff status + roles" },
+          ...(canAccessSuperAdmin
+            ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Cross-product activity + QR reports" }]
+            : []),
         ]
       : actionWorkflowProfile === "relief_recovery"
         ? [
@@ -8389,6 +8391,9 @@ export default function GreenWork() {
             { form: "map_view", title: "Map View", note: "Sites + boundaries" },
             { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
             { form: "users", title: "Users", note: "All staff status + roles" },
+            ...(canAccessSuperAdmin
+              ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Cross-product activity + QR reports" }]
+              : []),
           ]
       : [
           { form: "overview", title: "Overview", note: "Progress summary" },
@@ -8410,7 +8415,9 @@ export default function GreenWork() {
           { form: "existing_tree_intake", title: "Existing Trees", note: "Existing tree records" },
           { form: "verra_reports", title: "Verra Reports", note: "VCS package + history" },
           { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
-          { form: "logs", title: "System Logs & Reports", note: "Activity logs + QR prints report" },
+          ...(canAccessSuperAdmin
+            ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Activity logs + QR prints report" }]
+            : []),
         ];
 
   const userWorkSummary = useMemo(() => {
@@ -9257,7 +9264,7 @@ export default function GreenWork() {
     : undefined;
 
   const openForm = (form: WorkForm) => {
-    if (form === "super_admin" && !canAccessSuperAdmin) {
+    if (isSuperAdminOnlyForm(form) && !canAccessSuperAdmin) {
       toast.error("Super Admin access is restricted.");
       setMenuOpen(false);
       return;
@@ -9394,7 +9401,7 @@ export default function GreenWork() {
 
   useEffect(() => {
     if (canAccessSuperAdmin) return;
-    if (activeForm !== "super_admin") return;
+    if (activeForm !== "super_admin" && activeForm !== "logs") return;
     setActiveForm(activeProjectId ? defaultProjectForm : "project_focus");
   }, [activeForm, activeProjectId, canAccessSuperAdmin, defaultProjectForm]);
 
@@ -13439,11 +13446,12 @@ export default function GreenWork() {
             </div>
           )}
 
-          {activeForm === "logs" && (
+          {activeForm === "logs" && canAccessSuperAdmin && (
             <div className="green-work-card">
               <h3>System Logs & Reports</h3>
               <p className="green-work-note">
-                Monitor live system activity and track tree tag QR code printing statistics.
+                Monitor live API activity across Survey Plan, Flood, LandCheck Work, sponsor, and field capture surfaces,
+                plus tree tag QR printing statistics.
               </p>
               
               <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
