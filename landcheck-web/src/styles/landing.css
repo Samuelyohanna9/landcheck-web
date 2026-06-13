@@ -466,7 +466,8 @@
 .lp-prod-survey-bg { background-image: url("/Digital-Land-Survey.jpg"); }
 
 .lp-prod-flood-bg {
-  background: linear-gradient(145deg, #050e2a 0%, #081c4a 40%, #0a2e6e 70%, #0a3a7c 100%);
+  background-image: url("/flood-background.jpg");
+  background-color: #050e2a;
 }
 
 .lp-prod-green-bg {
