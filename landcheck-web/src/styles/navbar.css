@@ -1,0 +1,264 @@
+/* navbar.css — shared nav for all LandCheck pages */
+
+.lc-nav {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  height: 66px;
+  background: rgba(10, 18, 40, 0.96);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  gap: 6px;
+}
+
+.lc-nav--fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+/* ── Hamburger (left, mobile only) ─────────────────────── */
+.lc-nav-hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 7px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  margin-right: 6px;
+  transition: background 0.15s;
+}
+
+.lc-nav-hamburger:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.lc-nav-hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 2px;
+}
+
+/* ── Logo ───────────────────────────────────────────────── */
+.lc-nav-brand {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.lc-nav-brand img {
+  height: 42px;
+  width: auto;
+  display: block;
+}
+
+/* White-square badge variant (Green Partners) */
+.lc-nav-brand--badge {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  border: 1px solid rgba(203, 236, 212, 0.28);
+  background: rgba(255, 255, 255, 0.98);
+  display: inline-grid;
+  place-items: center;
+}
+
+.lc-nav-brand--badge img {
+  width: 33px;
+  height: 33px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+/* ── Desktop nav links ──────────────────────────────────── */
+.lc-nav-desktop {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.lc-nav-desktop button,
+.lc-nav-desktop a.lc-nav-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 7px 14px;
+  border-radius: 20px;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  font-family: inherit;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.lc-nav-desktop button:hover,
+.lc-nav-desktop a.lc-nav-link:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+}
+
+.lc-nav-item-active {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+}
+
+/* Optional right CTA */
+.lc-nav-cta {
+  margin-left: 8px;
+  background: #e07b00;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 8px 18px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.lc-nav-cta:hover { background: #c96e00; }
+
+/* ── Mobile overlay + drawer ────────────────────────────── */
+.lc-mobile-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.52);
+  z-index: 400;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.24s;
+}
+
+.lc-mobile-overlay--open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.lc-mobile-drawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  max-width: 82vw;
+  background: #091625;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.27s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+}
+
+.lc-mobile-drawer--open {
+  transform: translateX(0);
+}
+
+.lc-mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.lc-mobile-logo {
+  height: 36px;
+  width: auto;
+}
+
+.lc-mobile-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+  font-family: inherit;
+}
+
+.lc-mobile-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.lc-mobile-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 16px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.14s, color 0.14s;
+  text-decoration: none;
+  font-family: inherit;
+  letter-spacing: 0.01em;
+}
+
+.lc-mobile-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.lc-mobile-item--active {
+  color: #e07b00;
+}
+
+.lc-mobile-cta {
+  margin: 20px 24px;
+  display: block;
+  background: #e07b00;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 14px 20px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+
+.lc-mobile-cta:hover { background: #c96e00; }
+
+/* ── Responsive breakpoints ─────────────────────────────── */
+@media (max-width: 768px) {
+  .lc-nav { padding: 0 16px; height: 60px; }
+  .lc-nav-hamburger { display: flex; }
+  .lc-nav-desktop { display: none; }
+}

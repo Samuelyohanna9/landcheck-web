@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import "../styles/flood-landing.css";
+import NavBar from "../components/NavBar";
 
 const features = [
   {
@@ -103,19 +104,7 @@ export default function FloodAnalysisLanding() {
   return (
     <div className="fal-page">
       {/* Navigation */}
-      <header className="fal-nav">
-        <button type="button" className="fal-nav-brand" onClick={() => navigate("/")}>
-          <img src="/logo.svg" alt="LandCheck" />
-        </button>
-        <nav className="fal-nav-links" aria-label="Flood analysis navigation">
-          <a href="#features">Features</a>
-          <a href="#how-it-works">How It Works</a>
-          <a href="#who-its-for">Who It's For</a>
-        </nav>
-        <button type="button" className="fal-nav-cta" onClick={() => navigate("/hazard-analysis")}>
-          Run Analysis
-        </button>
-      </header>
+      <NavBar fixed activeRoute="/flood" ctaLabel="Run Analysis" ctaRoute="/hazard-analysis" />
 
       {/* Hero */}
       <section className="fal-hero">

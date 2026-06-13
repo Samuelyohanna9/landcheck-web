@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import "../styles/green-partners.css";
 import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
+import NavBar from "../components/NavBar";
 
 type LaptopShot = { src: string; label: string; fit?: "cover" | "contain" };
 type PhoneShot = { src: string; label: string };
@@ -73,7 +73,6 @@ function PlayStoreTriangle({ size = 24 }: { size?: number }) {
 }
 
 export default function GreenPartnersLanding() {
-  const navigate = useNavigate();
   const [activeLaptopShot, setActiveLaptopShot] = useState(0);
   const [activePhoneShot, setActivePhoneShot] = useState(0);
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
@@ -103,19 +102,7 @@ export default function GreenPartnersLanding() {
   return (
     <div className="green-partners-page">
       {/* Navigation */}
-      <header className="gp-nav">
-        <button type="button" className="gp-nav-brand" onClick={() => navigate("/")}>
-          <img src="/green-logo-cropped-700.png" alt="LandCheck" />
-        </button>
-        <nav className="gp-nav-links" aria-label="Main navigation">
-          <button type="button" onClick={() => navigate("/green-partners")}>LandCheck Green</button>
-          <button type="button" onClick={() => navigate("/survey")}>Survey Plan</button>
-          <button type="button" onClick={() => navigate("/flood")}>Flood Analysis</button>
-          <button type="button" onClick={() => navigate("/career")}>Career</button>
-          <button type="button" onClick={() => navigate("/news")}>News</button>
-          <a href="mailto:landchecktech@gmail.com?subject=LandCheck%20Support">Support</a>
-        </nav>
-      </header>
+      <NavBar logoBadge logoSrc="/green-logo-cropped-700.png" activeRoute="/green-partners" />
 
       {/* Hero Banner */}
       <section className="gp-hero-banner">
