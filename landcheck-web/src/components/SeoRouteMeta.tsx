@@ -39,8 +39,15 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
     canonicalPath: "/hazard-analysis",
     ogType: "website",
   },
-  "/survey-plan": {
+  "/survey": {
     title: "Survey Plan Production Nigeria | LandCheck",
+    description:
+      "Generate true-scale professional survey plans in Nigeria from coordinate input. PDF, DWG, orthophoto, computation sheets, and topographic maps. No CAD required.",
+    canonicalPath: "/survey",
+    ogType: "website",
+  },
+  "/survey-plan": {
+    title: "Survey Plan Tool | LandCheck",
     description:
       "Create professional survey plans for Nigeria from coordinate input with map editing and export-ready outputs.",
     canonicalPath: "/survey-plan",

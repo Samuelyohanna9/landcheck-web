@@ -5,59 +5,38 @@ import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 
 type PartnerOrg = { name: string; logo: string | null };
 
-const problemStatements = [
-  "Records are fragmented",
-  "Surveys are slow & expensive",
-  "Fraud & land theft common",
-  "Verification is difficult",
-  "Disputes waste years in court",
-];
-
-const quickFeatures = [
-  "Generate true-scale survey plans (PDF & DWG)",
-  "View orthophoto maps instantly",
-  "Detect buildings, roads & rivers automatically",
-  "Support for UTM & Minna Datum coordinates",
-  "Export professional reports",
-  "Work entirely online - no software install",
-];
-
-const surveyPlanFeatures = [
-  "Interactive map plotting",
-  "WGS84, UTM & Minna Datum",
-  "PDF & DWG export",
-  "Orthophoto generation",
-  "Back computation sheets",
-];
-
-const floodFeatures = [
-  "Flood risk assessment",
-  "Erosion analysis",
-  "Soil stability reports",
-  "Environmental impact",
-  "Risk mitigation advice",
-];
-
-const greenFeatures = [
-  "GPS tree inventory + field capture",
-  "Agric farm boundary monitoring",
-  "Relief & humanitarian site capture",
-  "Work orders + staff assignment",
-  "Program reporting for donors & NGOs",
-];
-
-const futureVision = [
-  "Every surveyed plot will have a unique digital fingerprint",
-  "Ownership history can be verified instantly",
-  "Duplicate registrations can be detected",
-  "Boundary conflicts can be resolved objectively",
-  "Governments can validate land records before approval",
-  "Fraudulent land sales become traceable",
-];
-
-const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=online.landcheck.mobile";
-
 const PILOT_ORG_NAMES = new Set(["Think Green Foundation"]);
+
+const targets = [
+  "Licensed Surveyors",
+  "Land Owners & Real Estate",
+  "Environmental Organisations & NGOs",
+  "Government Agencies",
+];
+
+const products = [
+  {
+    key: "survey",
+    title: "Survey Plan",
+    description: "True-scale professional plans from coordinate input — PDF, DWG, orthophoto, and computation sheet exports.",
+    route: "/survey",
+    bgClass: "lp-prod-survey-bg",
+  },
+  {
+    key: "flood",
+    title: "Flood Risk Analysis",
+    description: "Hazard screening for any land parcel in Nigeria using global datasets with detailed PDF risk report.",
+    route: "/hazard-analysis",
+    bgClass: "lp-prod-flood-bg",
+  },
+  {
+    key: "green",
+    title: "LandCheck Green",
+    description: "Tree inventory, agric farm monitoring, and humanitarian site assessment for NGOs and government programs.",
+    route: "/green-partners",
+    bgClass: "lp-prod-green-bg",
+  },
+];
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -84,202 +63,183 @@ export default function LandingPage() {
         <button type="button" className="lp-nav-brand" onClick={() => navigate("/")}>
           <img src="/logo.svg" alt="LandCheck" />
         </button>
-        <div className="lp-nav-actions">
-          <button type="button" className="lp-nav-btn subtle" onClick={() => navigate("/survey-plan")}>
-            Survey Plans
-          </button>
-          <button type="button" className="lp-nav-btn subtle" onClick={() => navigate("/hazard-analysis")}>
-            Hazard Analysis
-          </button>
-          <button type="button" className="lp-nav-btn subtle" onClick={() => navigate("/green-partners")}>
-            LandCheck Green
-          </button>
-          <button type="button" className="lp-nav-btn subtle" onClick={() => navigate("/dashboard")}>
-            My Plots
-          </button>
-          <button type="button" className="lp-nav-btn primary" onClick={() => navigate("/feedback")}>
-            Give Feedback
-          </button>
-        </div>
+        <nav className="lp-nav-menu" aria-label="Main navigation">
+          <button type="button" onClick={() => navigate("/survey")}>Survey Plan</button>
+          <button type="button" onClick={() => navigate("/hazard-analysis")}>Hazard Analysis</button>
+          <button type="button" onClick={() => navigate("/green-partners")}>LandCheck Green</button>
+          <button type="button" onClick={() => navigate("/dashboard")}>My Plots</button>
+          <button type="button" onClick={() => navigate("/feedback")}>Support</button>
+        </nav>
       </header>
 
       {/* Hero */}
       <section className="lp-hero">
-        <div className="lp-hero-tint" />
-        <div className="lp-hero-copy">
-          <p>LAND INTELLIGENCE PLATFORM FOR NIGERIA</p>
-          <h1>Survey Plans, Flood Risk + Environmental Monitoring</h1>
-          <span>VERIFIABLE RECORDS · FASTER SURVEYS · FIELD MONITORING · TRANSPARENT REPORTING</span>
-          <div className="lp-hero-cta-row">
-            <button type="button" className="lp-hero-cta primary" onClick={() => navigate("/survey-plan")}>
-              Survey Plan
+        <div className="lp-hero-overlay" />
+        <div className="lp-hero-content">
+          <h1>
+            Land Intelligence<br />for Nigeria
+          </h1>
+          <p className="lp-hero-lead">
+            Digital tools for survey plans, flood risk assessment, and environmental monitoring
+          </p>
+          <div className="lp-hero-ctas">
+            <button type="button" className="lp-hero-btn-primary" onClick={() => navigate("/survey")}>
+              SURVEY PLAN
             </button>
-            <button type="button" className="lp-hero-cta" onClick={() => navigate("/hazard-analysis")}>
-              Flood Analysis
-            </button>
-            <button type="button" className="lp-hero-cta green" onClick={() => navigate("/green-partners")}>
-              LandCheck Green
+            <button type="button" className="lp-hero-btn-outline" onClick={() => navigate("/green-partners")}>
+              LANDCHECK GREEN
             </button>
           </div>
         </div>
+        <a href="#landcheck-intro" className="lp-scroll-indicator" aria-label="Scroll to content">
+          <svg viewBox="0 0 24 24" fill="none" width="40" height="40">
+            <path
+              d="M6 9l6 6 6-6"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </a>
       </section>
 
-      <main className="lp-main">
-        {/* Three-product cards */}
-        <section className="lp-products-section">
-          <div className="lp-section-eyebrow-row">
-            <span className="lp-eyebrow">OUR PLATFORM</span>
-            <h2 className="lp-products-title">Three Integrated Products</h2>
-            <p className="lp-products-sub">One platform covering land documentation, risk assessment, and field monitoring</p>
+      {/* We are LandCheck */}
+      <section id="landcheck-intro" className="lp-intro-section">
+        <div className="lp-intro-inner">
+          <h2>
+            We are <strong>LandCheck</strong>
+          </h2>
+          <div className="lp-intro-lead-wrap">
+            <p>
+              LandCheck develops web and mobile tools for land documentation, flood hazard analysis, and
+              environmental field monitoring — providing cutting-edge solutions for surveyors, land owners,
+              NGOs, and government agencies across Nigeria.
+            </p>
           </div>
-          <div className="lp-products-grid">
-            <article className="lp-product-card lp-product-survey" onClick={() => navigate("/survey-plan")}>
-              <div className="lp-product-icon">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="26" height="26">
-                  <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.6" />
-                  <path d="M3 9h18M9 21V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <div className="lp-stats-row">
+            <div className="lp-stat-card">
+              <div className="lp-stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" width="52" height="52">
+                  <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.4" />
+                  <path d="M3 9h18M9 21V9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                 </svg>
               </div>
-              <div className="lp-product-badge">Available Now</div>
-              <h3>Survey Plan Production</h3>
-              <p>Generate true-scale professional survey plans from coordinate input. PDF, DWG, orthophoto, and computation sheet exports.</p>
-              <ul className="lp-product-features">
-                {surveyPlanFeatures.map((f) => <li key={f}>{f}</li>)}
-              </ul>
-              <span className="lp-product-cta">Open Survey Plan →</span>
-            </article>
-
-            <article className="lp-product-card lp-product-hazard" onClick={() => navigate("/hazard-analysis")}>
-              <div className="lp-product-icon">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="26" height="26">
-                  <path d="M12 9v3m0 4h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-              <div className="lp-product-badge beta">Flood Risk Beta</div>
-              <h3>Land Hazard Analysis</h3>
-              <p>Screen any land parcel in Nigeria for flood risk, erosion, and soil stability using global datasets with PDF report.</p>
-              <ul className="lp-product-features">
-                {floodFeatures.map((f) => <li key={f}>{f}</li>)}
-              </ul>
-              <span className="lp-product-cta">Run Flood Analysis →</span>
-            </article>
-
-            <article className="lp-product-card lp-product-green" onClick={() => navigate("/green-partners")}>
-              <div className="lp-product-icon">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="26" height="26">
-                  <path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 2-8 2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-              <div className="lp-product-badge green">Android + Web</div>
-              <h3>LandCheck Green</h3>
-              <p>Tree inventory, agric farm monitoring, and humanitarian site assessment for NGOs, government agencies, and CSR programs.</p>
-              <ul className="lp-product-features">
-                {greenFeatures.map((f) => <li key={f}>{f}</li>)}
-              </ul>
-              <div className="lp-product-green-actions">
-                <a
-                  href={PLAY_STORE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="lp-product-play-btn"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" width="14" height="14" aria-hidden="true">
-                    <path d="M3.5 2.87L12.41 12 3.5 21.13c-.31-.3-.5-.72-.5-1.17V4.04c0-.45.19-.87.5-1.17z" fill="#4285F4" />
-                    <path d="M3.5 2.87L12.41 12l3.3-3.3L5.27 2.36A1.79 1.79 0 0 0 3.5 2.87z" fill="#34A853" />
-                    <path d="M3.5 21.13L12.41 12l3.3 3.3-10.44 6.34A1.79 1.79 0 0 1 3.5 21.13z" fill="#EA4335" />
-                    <path d="M15.71 8.7L12.41 12l3.3 3.3 3.5-2.01a1.5 1.5 0 0 0 0-2.6l-3.5-2z" fill="#FBBC04" />
-                  </svg>
-                  Google Play
-                </a>
-                <a
-                  href="/green/login/sponsor"
-                  className="lp-product-sponsor-btn"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Sponsor a Tree
-                </a>
-              </div>
-            </article>
-          </div>
-        </section>
-
-        {/* Why LandCheck Exists */}
-        <section className="lp-section">
-          <h3>Why LandCheck Exists</h3>
-          <div className="lp-problem-grid">
-            {problemStatements.map((item) => (
-              <article key={item} className="lp-problem-card">
-                <span className="lp-problem-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <path d="M12 9v3m0 4h.01m8.3 3H3.7c-1.26 0-2.04-1.37-1.41-2.46l8.3-14.4c.63-1.1 2.2-1.1 2.83 0l8.3 14.4c.63 1.09-.15 2.46-1.41 2.46z" />
-                  </svg>
+              <div className="lp-stat-text">
+                <strong>3</strong>
+                <span>
+                  Integrated
+                  <br />
+                  Products
                 </span>
-                <span>{item}</span>
-              </article>
-            ))}
-          </div>
-          <p className="lp-section-note">LandCheck changes that.</p>
-        </section>
-
-        {/* What You Can Do Today */}
-        <section className="lp-section">
-          <h3>What You Can Do Today</h3>
-          <div className="lp-feature-grid">
-            {quickFeatures.map((item) => (
-              <article key={item} className="lp-feature-item">
-                <span className="lp-feature-check" aria-hidden="true">
-                  <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+              </div>
+            </div>
+            <div className="lp-stat-card">
+              <div className="lp-stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" width="52" height="52">
+                  <path
+                    d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                  />
+                  <circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="1.4" />
+                </svg>
+              </div>
+              <div className="lp-stat-text">
+                <strong>Nigeria</strong>
+                <span>
+                  Precision
+                  <br />
+                  Datasets
                 </span>
-                <span>{item}</span>
-              </article>
-            ))}
+              </div>
+            </div>
+            <div className="lp-stat-card">
+              <div className="lp-stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" width="52" height="52">
+                  <rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.4" />
+                  <path
+                    d="M8 21h8M12 17v4"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+              <div className="lp-stat-text">
+                <strong>Web</strong>
+                <span>
+                  No Installation
+                  <br />
+                  Required
+                </span>
+              </div>
+            </div>
           </div>
-          <p className="lp-section-note">Built for surveyors, planners, developers, real-estate firms, and land owners.</p>
-        </section>
+          <button
+            type="button"
+            className="lp-intro-cta"
+            onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth" })}
+          >
+            EXPLORE OUR PRODUCTS
+          </button>
+        </div>
+      </section>
 
-        {/* Vision */}
-        <section className="lp-section lp-vision">
-          <h3>Our Bigger Mission: Stop Land Theft</h3>
-          <p className="lp-vision-intro">
-            LandCheck is not just a mapping tool. It is being built as the foundation for a trusted digital land
-            registry and verification system.
-          </p>
-          <div className="lp-vision-grid">
-            <article className="lp-vision-card">
-              <h4>In the Future</h4>
-              <ul>
-                {futureVision.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </article>
-            <article className="lp-vision-card highlight">
-              <h4>Our Long-Term Vision</h4>
-              <p>
-                <strong>A national reference database for land verification.</strong>
-              </p>
-              <p>A system governments, banks, courts, and citizens can rely on.</p>
-            </article>
-          </div>
-        </section>
-      </main>
+      {/* Who We Serve */}
+      <section id="targets" className="lp-targets-section">
+        <div className="lp-targets-header">
+          <h2>
+            <strong>Who We Serve</strong>
+          </h2>
+          <p>LandCheck builds digital tools that help you deliver on your goals.</p>
+        </div>
+        <div className="lp-targets-list">
+          {targets.map((item, i) => (
+            <div key={item} className="lp-target-item">
+              <span className="lp-target-num">{i + 1}</span>
+              <h3>{item}</h3>
+            </div>
+          ))}
+        </div>
+      </section>
 
-      {/* Partner Organizations */}
+      {/* Products */}
+      <section id="products" className="lp-products-section">
+        <div className="lp-products-header">
+          <h2>
+            Our <strong>Products</strong>
+          </h2>
+          <p>Explore our products and find the best fit for your needs.</p>
+        </div>
+        <div className="lp-products-row">
+          {products.map((prod) => (
+            <div
+              key={prod.key}
+              className={`lp-prod-card ${prod.bgClass}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(prod.route)}
+              onKeyDown={(e) => e.key === "Enter" && navigate(prod.route)}
+            >
+              <div className="lp-prod-overlay" />
+              <div className="lp-prod-content">
+                <h2>{prod.title}</h2>
+                <p>{prod.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Partners */}
       {partners.length > 0 && (
         <section className="lp-partners-section">
           <div className="lp-partners-inner">
-            <div className="lp-partners-head">
-              <span className="lp-eyebrow">TRUSTED BY</span>
-              <h2>Our Partner Organizations</h2>
-              <p>Organizations running field programs on LandCheck Green across Nigeria</p>
-            </div>
+            <h2>
+              Our <strong>Partner Organizations</strong>
+            </h2>
+            <p>Field programs powered by LandCheck across Nigeria</p>
             <div className="lp-partners-logos">
               {partners.map((org) => (
                 <div
@@ -297,7 +257,12 @@ export default function LandingPage() {
                     <img src={org.logo} alt={org.name} className="lp-partner-logo" />
                   ) : (
                     <span className="lp-partner-initials">
-                      {org.name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase()}
+                      {org.name
+                        .split(" ")
+                        .slice(0, 2)
+                        .map((w) => w[0])
+                        .join("")
+                        .toUpperCase()}
                     </span>
                   )}
                   <span className="lp-partner-name">{org.name}</span>
@@ -308,22 +273,102 @@ export default function LandingPage() {
         </section>
       )}
 
+      {/* Contact Ribbon */}
+      <section className="lp-contact-ribbon">
+        <div className="lp-contact-inner">
+          <h3>To request more information about our products</h3>
+          <a
+            href="mailto:landchecktech@gmail.com?subject=LandCheck%20Products%20Enquiry"
+            className="lp-contact-cta"
+          >
+            CONTACT US
+          </a>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="lp-footer">
-        <p>&copy; {new Date().getFullYear()} LandCheck Geospatial Technologies Limited</p>
-        <div className="lp-footer-links">
-          <button type="button" onClick={() => navigate("/green-partners")}>
-            LandCheck Green
-          </button>
-          <button type="button" onClick={() => navigate("/dashboard")}>
-            Dashboard
-          </button>
-          <button type="button" onClick={() => navigate("/feedback")}>
-            Feedback
-          </button>
-          <button type="button" onClick={() => navigate("/privacy")}>
-            Privacy Policy
-          </button>
+        <div className="lp-footer-inner">
+          <div className="lp-footer-brand">
+            <img src="/logo.svg" alt="LandCheck" className="lp-footer-logo" />
+            <ul>
+              <li>
+                <a href="mailto:landchecktech@gmail.com">landchecktech@gmail.com</a>
+              </li>
+              <li>LandCheck Geospatial Technologies Limited</li>
+            </ul>
+          </div>
+          <div className="lp-footer-col">
+            <h5>Products</h5>
+            <ul>
+              <li>
+                <button type="button" onClick={() => navigate("/survey")}>
+                  Survey Plan
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => navigate("/hazard-analysis")}>
+                  Flood Risk Analysis
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => navigate("/green-partners")}>
+                  LandCheck Green
+                </button>
+              </li>
+            </ul>
+          </div>
+          <div className="lp-footer-col">
+            <h5>Platform</h5>
+            <ul>
+              <li>
+                <button type="button" onClick={() => navigate("/survey-plan")}>
+                  Survey Plan Tool
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => navigate("/dashboard")}>
+                  My Plots
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => navigate("/feedback")}>
+                  Feedback
+                </button>
+              </li>
+            </ul>
+          </div>
+          <div className="lp-footer-col">
+            <h5>LandCheck Green</h5>
+            <ul>
+              <li>
+                <a
+                  href="https://play.google.com/store/apps/details?id=online.landcheck.mobile"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Android App
+                </a>
+              </li>
+              <li>
+                <button type="button" onClick={() => navigate("/green/login/sponsor")}>
+                  Sponsor a Tree
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div className="lp-footer-bottom">
+          <span>
+            All rights reserved. &copy; {new Date().getFullYear()} LandCheck Geospatial Technologies Limited
+          </span>
+          <ul className="lp-footer-legal">
+            <li>
+              <button type="button" onClick={() => navigate("/privacy")}>
+                Privacy
+              </button>
+            </li>
+          </ul>
         </div>
       </footer>
     </div>
