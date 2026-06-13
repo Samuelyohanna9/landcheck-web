@@ -13,6 +13,7 @@ import GreenWork from "./pages/GreenWork";
 import GreenWorkLogin from "./pages/GreenWorkLogin";
 import GreenPartnersLanding from "./pages/GreenPartnersLanding";
 import SurveyPlanLanding from "./pages/SurveyPlanLanding";
+import FloodAnalysisLanding from "./pages/FloodAnalysisLanding";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import SeoRouteMeta from "./components/SeoRouteMeta";
 import PrivacyNoticeBanner from "./components/PrivacyNoticeBanner";
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="/green-work/login" element={<GreenWorkLogin />} />
         <Route path="/green-work" element={<WorkProtectedRoute element={<GreenWork />} />} />
         <Route path="/survey" element={<SurveyPlanLanding />} />
+        <Route path="/flood" element={<FloodAnalysisLanding />} />
         <Route path="/green-partners" element={<GreenPartnersLanding />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/feedback" element={<Feedback />} />
