@@ -102,7 +102,7 @@ export default function NewsPage() {
                   In turn, LandCheck will identify ECF as a strategic or ecosystem partner in
                   proposals, campaigns, and public materials — and ECF will be prioritised for
                   pilot collaborations and early access to new platform features. As a Founding
-                  Strategic Partner, ECF also receives a twenty-five percent discount on
+                  Strategic Partner, ECF also receives a discount on
                   LandCheck's standard subscription plans.
                 </p>
 
