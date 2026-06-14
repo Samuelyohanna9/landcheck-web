@@ -2930,6 +2930,7 @@ export default function GreenWork() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   // Sponsor Feedback state
+  const [socialFollowClaims, setSocialFollowClaims] = useState<any[]>([]);
   const [complaints, setComplaints] = useState<any[]>([]);
   const [schoolNominations, setSchoolNominations] = useState<any[]>([]);
   const [communityProjects, setCommunityProjects] = useState<any[]>([]);
@@ -2943,6 +2944,7 @@ export default function GreenWork() {
   const [selectedActivityLog, setSelectedActivityLog] = useState<ActivityLogEntry | null>(null);
   const [qrPrintsReport, setQrPrintsReport] = useState<any[]>([]);
   const [redemptions, setRedemptions] = useState<any[]>([]);
+  const [followClaimNotes, setFollowClaimNotes] = useState<Record<number, string>>({});
   const [complaintNotes, setComplaintNotes] = useState<Record<number, string>>({});
   const [nominationNotes, setNominationNotes] = useState<Record<number, string>>({});
   const [projectNotes, setProjectNotes] = useState<Record<number, string>>({});
@@ -5245,12 +5247,16 @@ export default function GreenWork() {
     if (!silent) setFeedbackLoading(true);
     setFeedbackError(null);
     try {
-      const [complaintsRes, nominationsRes, projectsRes, redemptionsRes] = await Promise.all([
+      const [followClaimsRes, complaintsRes, nominationsRes, projectsRes, redemptionsRes] = await Promise.all([
+        canAccessSuperAdmin
+          ? api.get(`/green/admin/social-follow-claims?_ts=${Date.now()}`)
+          : Promise.resolve({ data: [] }),
         api.get(`/green/admin/complaints?_ts=${Date.now()}`),
         api.get(`/green/admin/school-nominations?_ts=${Date.now()}`),
         api.get(`/green/admin/community-projects?_ts=${Date.now()}`),
         api.get(`/green/admin/point-redemptions?_ts=${Date.now()}`)
       ]);
+      setSocialFollowClaims(Array.isArray(followClaimsRes.data) ? followClaimsRes.data : []);
       setComplaints(Array.isArray(complaintsRes.data) ? complaintsRes.data : []);
       setSchoolNominations(Array.isArray(nominationsRes.data) ? nominationsRes.data : []);
       setCommunityProjects(Array.isArray(projectsRes.data) ? projectsRes.data : []);
@@ -5260,7 +5266,7 @@ export default function GreenWork() {
     } finally {
       if (!silent) setFeedbackLoading(false);
     }
-  }, []);
+  }, [canAccessSuperAdmin]);
 
   const handleResolveComplaint = async (complaintId: number, supervisorNote?: string) => {
     try {
@@ -5308,6 +5314,31 @@ export default function GreenWork() {
       }
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || err?.message || "Failed to review reward redemption");
+    }
+  };
+
+  const handleReviewSocialFollowClaim = async (claimId: number, status: "approved" | "rejected", supervisorNote?: string) => {
+    if (!canAccessSuperAdmin) {
+      toast.error("Only super admin can review follow-proof claims.");
+      return;
+    }
+    try {
+      const res = await api.post(`/green/admin/social-follow-claims/${claimId}/review`, {
+        status,
+        supervisor_note: supervisorNote,
+        reviewer_name: workAuthSession?.user?.full_name || "super_admin",
+      });
+      if (res.data?.ok || res.status === 200) {
+        toast.success(
+          status === "approved"
+            ? `Follow proof approved${res.data?.gp_awarded ? " and 20 GP awarded" : ""}.`
+            : "Follow proof rejected.",
+        );
+        void loadSponsorFeedback({ silent: true });
+        void loadSponsorAccounts();
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.message || "Failed to review social follow proof");
     }
   };
 
@@ -5883,9 +5914,11 @@ export default function GreenWork() {
 
   useEffect(() => {
     if (!activeProjectId || !publicSponsorshipProject) {
+      setSocialFollowClaims([]);
       setComplaints([]);
       setSchoolNominations([]);
       setCommunityProjects([]);
+      setRedemptions([]);
       return;
     }
     if (activeForm !== "sponsor_feedback") return;
@@ -13210,7 +13243,12 @@ export default function GreenWork() {
               <h3>Sponsor Feedback & Nominations</h3>
               {!publicSponsorshipProject ? (
                 <p className="green-work-note">Switch this project to the Public Sponsorship access route first.</p>
-              ) : feedbackLoading && complaints.length === 0 && schoolNominations.length === 0 && communityProjects.length === 0 && redemptions.length === 0 ? (
+              ) : feedbackLoading &&
+                socialFollowClaims.length === 0 &&
+                complaints.length === 0 &&
+                schoolNominations.length === 0 &&
+                communityProjects.length === 0 &&
+                redemptions.length === 0 ? (
                 <p className="green-work-note">Loading sponsor feedback data...</p>
               ) : (
                 <>
@@ -13225,7 +13263,175 @@ export default function GreenWork() {
 
                   {feedbackError && <p className="green-work-error" style={{ color: 'red', marginBottom: 12 }}>{feedbackError}</p>}
 
-                  {/* Section 1: Complaints */}
+                  {canAccessSuperAdmin ? (
+                    <div style={{ marginBottom: 24 }}>
+                      <h4>Social Follow Proofs ({socialFollowClaims.length})</h4>
+                      <p className="green-work-note" style={{ marginLeft: 0 }}>
+                        Sponsors submit Facebook and Instagram follow screenshots here. Only super admin can approve the proof and award the 20 GP follow bonus.
+                      </p>
+                      {socialFollowClaims.length === 0 ? (
+                        <p className="green-work-note" style={{ marginLeft: 0 }}>No follow-proof submissions yet.</p>
+                      ) : (
+                        <table className="green-work-table">
+                          <thead>
+                            <tr>
+                              <th>Sponsor</th>
+                              <th>Proof</th>
+                              <th>Opened</th>
+                              <th>Status / Notes</th>
+                              <th>Submitted</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {socialFollowClaims.map((claim: any) => {
+                              const submittedAt = claim.submitted_at || claim.updated_at || claim.created_at;
+                              const isPending = String(claim.status || "").toLowerCase() === "pending";
+                              const statusTone =
+                                claim.status === "approved"
+                                  ? "ok"
+                                  : claim.status === "rejected"
+                                    ? "error"
+                                    : "warning";
+                              return (
+                                <tr key={`follow-claim-${claim.id}`}>
+                                  <td>
+                                    <strong>{claim.sponsor_name || `Sponsor #${claim.sponsor_id}`}</strong>
+                                    <div style={{ fontSize: 11, color: "#666" }}>{claim.sponsor_email || "-"}</div>
+                                  </td>
+                                  <td style={{ minWidth: 240 }}>
+                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(88px, 1fr))", gap: 8 }}>
+                                      {(["facebook", "instagram"] as const).map((platform) => {
+                                        const label = platform === "facebook" ? "Facebook" : "Instagram";
+                                        const rawUrl =
+                                          platform === "facebook"
+                                            ? String(claim.facebook_screenshot_url || "").trim()
+                                            : String(claim.instagram_screenshot_url || "").trim();
+                                        return rawUrl ? (
+                                          <button
+                                            key={`${claim.id}-${platform}`}
+                                            type="button"
+                                            onClick={() => window.open(toDisplayPhotoUrl(rawUrl), "_blank")}
+                                            style={{
+                                              display: "flex",
+                                              flexDirection: "column",
+                                              gap: 6,
+                                              alignItems: "stretch",
+                                              padding: 6,
+                                              borderRadius: 12,
+                                              border: "1px solid #dbe9dd",
+                                              background: "#f8fcf9",
+                                              cursor: "pointer",
+                                            }}
+                                          >
+                                            <img
+                                              src={toDisplayPhotoUrl(rawUrl)}
+                                              alt={`${label} proof`}
+                                              style={{
+                                                width: "100%",
+                                                height: 120,
+                                                objectFit: "cover",
+                                                borderRadius: 8,
+                                                background: "#edf6ef",
+                                              }}
+                                            />
+                                            <span style={{ fontSize: 11, fontWeight: 700, color: "#16532d" }}>
+                                              Open {label} proof
+                                            </span>
+                                          </button>
+                                        ) : (
+                                          <div
+                                            key={`${claim.id}-${platform}`}
+                                            style={{
+                                              minHeight: 120,
+                                              borderRadius: 12,
+                                              border: "1px dashed #dbe9dd",
+                                              background: "#fbfdfb",
+                                              display: "flex",
+                                              alignItems: "center",
+                                              justifyContent: "center",
+                                              padding: 10,
+                                              fontSize: 11,
+                                              color: "#708676",
+                                              textAlign: "center",
+                                            }}
+                                          >
+                                            No {label.toLowerCase()} proof uploaded
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </td>
+                                  <td style={{ minWidth: 140 }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                      <span className={`green-work-live-pill ${claim.facebook_opened ? "ok" : "warning"}`}>
+                                        Facebook: {claim.facebook_opened ? "opened" : "not opened"}
+                                      </span>
+                                      <span className={`green-work-live-pill ${claim.instagram_opened ? "ok" : "warning"}`}>
+                                        Instagram: {claim.instagram_opened ? "opened" : "not opened"}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <span className={`green-work-live-pill ${statusTone}`}>{claim.status}</span>
+                                    <div style={{ fontSize: 11, color: "#2f4f3a", marginTop: 6 }}>
+                                      GP awarded: {claim.points_awarded ? "Yes" : "No"}
+                                    </div>
+                                    {claim.supervisor_note ? (
+                                      <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>
+                                        <strong>Supervisor note:</strong> {claim.supervisor_note}
+                                      </div>
+                                    ) : null}
+                                  </td>
+                                  <td>
+                                    {submittedAt ? new Date(submittedAt).toLocaleString() : "-"}
+                                    {claim.reviewed_at ? (
+                                      <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>
+                                        Reviewed: {new Date(claim.reviewed_at).toLocaleString()}
+                                      </div>
+                                    ) : null}
+                                  </td>
+                                  <td style={{ minWidth: 210 }}>
+                                    {isPending ? (
+                                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                        <textarea
+                                          placeholder="Optional note to the sponsor..."
+                                          value={followClaimNotes[claim.id] || ""}
+                                          onChange={(e) => setFollowClaimNotes({ ...followClaimNotes, [claim.id]: e.target.value })}
+                                          style={{ width: "100%", padding: 6, fontSize: 11 }}
+                                          rows={2}
+                                        />
+                                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleReviewSocialFollowClaim(claim.id, "approved", followClaimNotes[claim.id])}
+                                            style={{ padding: "4px 8px", fontSize: 11, backgroundColor: "#2ecc71", color: "white", border: "none" }}
+                                          >
+                                            Approve + award GP
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleReviewSocialFollowClaim(claim.id, "rejected", followClaimNotes[claim.id])}
+                                            style={{ padding: "4px 8px", fontSize: 11, backgroundColor: "#e74c3c", color: "white", border: "none" }}
+                                          >
+                                            Reject proof
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <span style={{ fontSize: 11, textTransform: "capitalize", fontWeight: "bold" }}>{claim.status}</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {/* Section 2: Complaints */}
                   <div style={{ marginBottom: 24 }}>
                     <h4>Sponsor Complaints ({complaints.length})</h4>
                     {complaints.length === 0 ? (
@@ -13293,7 +13499,7 @@ export default function GreenWork() {
                     )}
                   </div>
 
-                  {/* Section 2: School Nominations */}
+                  {/* Section 3: School Nominations */}
                   <div style={{ marginBottom: 24 }}>
                     <h4>School Nominations ({schoolNominations.length})</h4>
                     {schoolNominations.length === 0 ? (
@@ -13374,7 +13580,7 @@ export default function GreenWork() {
                     )}
                   </div>
 
-                  {/* Section 3: Community Projects */}
+                  {/* Section 4: Community Projects */}
                   <div style={{ marginBottom: 24 }}>
                     <h4>Proposed Community Forests ({communityProjects.length})</h4>
                     {communityProjects.length === 0 ? (
@@ -13454,7 +13660,7 @@ export default function GreenWork() {
                     )}
                   </div>
 
-                  {/* Section 4: Reward Redemptions */}
+                  {/* Section 5: Reward Redemptions */}
                   <div style={{ marginBottom: 24 }}>
                     <h4>Reward Redemptions ({redemptions.length})</h4>
                     {redemptions.length === 0 ? (

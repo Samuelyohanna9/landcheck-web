@@ -1476,13 +1476,21 @@
 .gs-booster-badge {
   font-size: 11px;
   font-weight: 700;
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.25);
   border-radius: 20px;
-  padding: 4px 10px;
-  color: white;
+  padding: 5px 12px;
   margin-top: 6px;
   display: inline-block;
+}
+.gs-booster-badge.active {
+  background: rgba(251,191,36,0.2);
+  border: 1px solid rgba(251,191,36,0.5);
+  color: #fde68a;
+  animation: gs-golden-pulse 2.4s ease-in-out infinite;
+}
+.gs-booster-badge.inactive {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.5);
 }
 
 /* ─── Achievement card (grove) ───────────────────────────────── */
@@ -2691,3 +2699,175 @@
     border-radius: 12px;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────
+   AVATAR BORDER EFFECTS
+   ────────────────────────────────────────────────────────────── */
+
+/* Header avatar (46px circle, replaces logo tile when photo exists) */
+.gs-header-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2.5px solid var(--gc-brand);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gc-brand-light);
+  transition: box-shadow 0.3s, border-color 0.3s;
+}
+.gs-header-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.gs-header-avatar-placeholder {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--gc-brand);
+}
+
+/* Inner wrapper for profile avatar (adds equippable effects) */
+.gs-profile-avatar-inner {
+  position: relative;
+  display: inline-flex;
+  transition: box-shadow 0.3s, border-color 0.3s;
+}
+.gs-profile-avatar-inner img,
+.gs-profile-avatar-inner .gs-profile-avatar-placeholder {
+  border: 3px solid var(--gc-brand);
+}
+
+/* ── Golden Canopy Border ── */
+@keyframes gs-golden-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(251,191,36,0.3), 0 0 18px rgba(251,191,36,0.5); }
+  50%       { box-shadow: 0 0 0 7px rgba(251,191,36,0.45), 0 0 28px rgba(251,191,36,0.7); }
+}
+.gs-avatar--golden img,
+.gs-avatar--golden .gs-profile-avatar-placeholder,
+.gs-avatar--golden.gs-header-avatar,
+.gs-avatar--golden.gs-asset-avatar-preview {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 4px rgba(251,191,36,0.3), 0 0 18px rgba(251,191,36,0.5);
+  animation: gs-golden-pulse 2.4s ease-in-out infinite;
+}
+
+/* ── Emerald Glow ── */
+@keyframes gs-emerald-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(16,185,129,0.25), 0 0 16px rgba(16,185,129,0.45); }
+  50%       { box-shadow: 0 0 0 6px rgba(16,185,129,0.4), 0 0 24px rgba(16,185,129,0.65); }
+}
+.gs-avatar--emerald img,
+.gs-avatar--emerald .gs-profile-avatar-placeholder,
+.gs-avatar--emerald.gs-header-avatar,
+.gs-avatar--emerald.gs-asset-avatar-preview {
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 4px rgba(16,185,129,0.25), 0 0 16px rgba(16,185,129,0.45);
+  animation: gs-emerald-pulse 2.8s ease-in-out infinite;
+}
+
+/* ── 3D Pine Frame ── */
+.gs-avatar--pine3d img,
+.gs-avatar--pine3d .gs-profile-avatar-placeholder,
+.gs-avatar--pine3d.gs-header-avatar,
+.gs-avatar--pine3d.gs-asset-avatar-preview {
+  border-color: #15803d !important;
+  box-shadow: 5px 5px 0 #052e16, 0 0 0 3px #22c55e;
+  transform: perspective(300px) rotateY(-4deg) rotateX(2deg);
+}
+
+/* ── Assets section — equippable border list ── */
+.gs-asset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.gs-asset-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--gc-bg);
+  border: 1.5px solid var(--gc-border);
+  transition: border-color 0.2s, background 0.2s;
+}
+.gs-asset-item.equipped {
+  border-color: var(--gc-brand);
+  background: var(--gc-brand-light);
+}
+
+.gs-asset-avatar-preview {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--gc-brand);
+  color: white;
+  font-weight: 800;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2.5px solid var(--gc-brand);
+  flex-shrink: 0;
+  transition: box-shadow 0.3s, border-color 0.3s;
+}
+
+.gs-asset-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gc-text);
+  flex: 1;
+}
+
+.gs-asset-equip-btn {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 13px;
+  border-radius: 8px;
+  border: 1.5px solid var(--gc-brand);
+  background: transparent;
+  color: var(--gc-brand);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.gs-asset-equip-btn:hover { background: var(--gc-brand); color: white; }
+.gs-asset-equip-btn.active {
+  background: var(--gc-brand);
+  color: white;
+  pointer-events: none;
+}
+
+/* ── Profile photo upload ── */
+.gs-profile-avatar {
+  align-items: center;
+  flex-direction: column;
+  gap: 8px;
+}
+.gs-photo-upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 10px;
+  border: 1.5px dashed var(--gc-brand);
+  background: var(--gc-brand-light);
+  color: var(--gc-brand-mid);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-style 0.15s;
+  font-family: inherit;
+}
+.gs-photo-upload-btn:hover {
+  background: var(--gc-brand);
+  color: white;
+  border-style: solid;
+}
+.gs-photo-upload-btn:disabled { opacity: 0.6; cursor: not-allowed; }

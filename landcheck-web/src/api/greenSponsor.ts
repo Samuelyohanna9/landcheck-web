@@ -183,6 +183,7 @@ export type SponsorPointsInfo = {
 export type SponsorProfileSettingsPayload = {
   entity_category?: string;
   leaderboard_visibility?: string;
+  current_avatar_border?: string | null;
 };
 
 type SponsorOrderPaymentInitResult = {
@@ -421,6 +422,19 @@ export const fetchPublicLeaderboard = async (): Promise<SponsorLeaderboardData> 
 export const updateSponsorProfileSettings = async (session: GreenAuthSession, payload: SponsorProfileSettingsPayload) => {
   const response = await api.patch("/green/sponsor/profile/settings", payload, {
     params: { sponsor_id: session.user.id },
+  });
+  return response.data;
+};
+
+export const uploadSponsorProfilePhoto = async (
+  session: GreenAuthSession,
+  file: File,
+): Promise<{ profile_photo_url: string }> => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("sponsor_id", String(session.user.id));
+  const response = await api.post("/green/sponsor/profile/photo", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data;
 };
