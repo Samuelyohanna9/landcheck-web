@@ -76,6 +76,7 @@ type SchoolNomState = {
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
 const SPONSOR_BACKGROUND = "/background-sponsor.png";
 const TAB_STORAGE_KEY = "landcheck_green_sponsor_tab";
+const BUILT_IN_BORDERS = ["Golden Canopy Border", "Emerald Glow", "3D Pine Frame"];
 
 const DEDICATION_OPTIONS = [
   { value: "self", label: "Self" },
@@ -800,6 +801,15 @@ export default function GreenSponsor() {
   const [referralBusy, setReferralBusy] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoUploadRef = useRef<HTMLInputElement>(null);
+  const [localPhotoUrl, setLocalPhotoUrl] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    const stored = localStorage.getItem(`lc_sphoto_${session?.user?.id || ""}`);
+    return stored || "";
+  });
+  const [localBorder, setLocalBorder] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(`lc_sborder_${session?.user?.id || ""}`) || null;
+  });
 
   useEffect(() => {
     if (!session || !isSponsorGreenSession(session)) navigate("/green/login/sponsor", { replace: true });
@@ -863,6 +873,9 @@ export default function GreenSponsor() {
   const recentActivity = useMemo(() => buildActivityFeed(orders, trees), [orders, trees]);
   const treePhotoUrls = useMemo(() => collectPhotoUrls(selectedTreeDetail), [selectedTreeDetail]);
   const gpBalance = Number(pointsInfo?.green_points || 0);
+  const displayPhotoUrl = localPhotoUrl || (pointsInfo?.profile_photo_url ? toDisplayPhotoUrl(pointsInfo.profile_photo_url) : "");
+  const displayBorder = localBorder ?? pointsInfo?.current_avatar_border ?? null;
+  const allBorders = [...new Set([...BUILT_IN_BORDERS, ...(pointsInfo?.unlocked_avatars || [])])];
 
   const handleLogout = () => { clearGreenAuthed(); navigate("/green/login", { replace: true }); };
 
@@ -974,26 +987,39 @@ export default function GreenSponsor() {
     if (file.size > 5 * 1024 * 1024) { toast.error("Photo must be under 5 MB."); return; }
     setUploadingPhoto(true);
     try {
-      const result = await uploadSponsorProfilePhoto(session, file);
-      setPointsInfo((prev) => prev ? { ...prev, profile_photo_url: result.profile_photo_url } : prev);
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("File read failed"));
+        reader.readAsDataURL(file);
+      });
+      setLocalPhotoUrl(dataUrl);
+      localStorage.setItem(`lc_sphoto_${session.user.id}`, dataUrl);
       toast.success("Profile photo updated!");
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail || err?.message || "Photo upload failed.");
+      // Try backend non-blocking — ignore failure
+      uploadSponsorProfilePhoto(session, file)
+        .then((r) => setPointsInfo((prev) => prev ? { ...prev, profile_photo_url: r.profile_photo_url } : prev))
+        .catch(() => {});
+    } catch {
+      toast.error("Could not read photo file.");
     } finally {
       setUploadingPhoto(false);
       if (photoUploadRef.current) photoUploadRef.current.value = "";
     }
   };
 
-  const handleEquipBorder = async (borderName: string | null) => {
+  const handleEquipBorder = (borderName: string | null) => {
     if (!session) return;
-    try {
-      await updateSponsorProfileSettings(session, { current_avatar_border: borderName });
-      setPointsInfo((prev) => prev ? { ...prev, current_avatar_border: borderName } : prev);
-      toast.success(borderName ? `${borderName} equipped!` : "Border removed.");
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail || "Failed to equip border.");
+    setLocalBorder(borderName);
+    if (borderName) {
+      localStorage.setItem(`lc_sborder_${session.user.id}`, borderName);
+    } else {
+      localStorage.removeItem(`lc_sborder_${session.user.id}`);
     }
+    setPointsInfo((prev) => prev ? { ...prev, current_avatar_border: borderName } : prev);
+    toast.success(borderName ? `${borderName} equipped!` : "Border removed.");
+    // Try backend non-blocking — ignore failure
+    updateSponsorProfileSettings(session, { current_avatar_border: borderName }).catch(() => {});
   };
 
   const handleSaveProfile = async () => {
@@ -1017,9 +1043,9 @@ export default function GreenSponsor() {
       {/* ─── Header ─── */}
       <header className="green-sponsor-header-card">
         <div className="green-sponsor-header-brand">
-          {pointsInfo?.profile_photo_url ? (
-            <div className={`gs-header-avatar ${getAvatarBorderClass(pointsInfo.current_avatar_border)}`}>
-              <img src={toDisplayPhotoUrl(pointsInfo.profile_photo_url)} alt={getSponsorFirstName(session.user.full_name)} />
+          {displayPhotoUrl ? (
+            <div className={`gs-header-avatar ${getAvatarBorderClass(displayBorder)}`}>
+              <img src={displayPhotoUrl} alt={getSponsorFirstName(session.user.full_name)} />
             </div>
           ) : (
             <div className="green-sponsor-logo-tile">
@@ -1469,32 +1495,27 @@ export default function GreenSponsor() {
             </div>
             <div className="gs-unlock-group">
               <div className="gs-unlock-group-label">Avatar Borders</div>
-              {(pointsInfo?.unlocked_avatars || []).length === 0
-                ? <span className="gs-unlock-empty">None unlocked yet</span>
-                : (
-                  <div className="gs-asset-list">
-                    {(pointsInfo?.unlocked_avatars || []).map((border) => {
-                      const isEquipped = pointsInfo?.current_avatar_border === border;
-                      const cls = getAvatarBorderClass(border);
-                      return (
-                        <div key={border} className={`gs-asset-item${isEquipped ? " equipped" : ""}`}>
-                          <div className={`gs-asset-avatar-preview${cls ? ` ${cls}` : ""}`}>
-                            {getSponsorFirstName(session.user.full_name).charAt(0).toUpperCase()}
-                          </div>
-                          <span className="gs-asset-name">{border}</span>
-                          <button
-                            type="button"
-                            className={`gs-asset-equip-btn${isEquipped ? " active" : ""}`}
-                            onClick={() => void handleEquipBorder(isEquipped ? null : border)}
-                          >
-                            {isEquipped ? "Equipped ✓" : "Equip"}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )
-              }
+              <div className="gs-asset-list">
+                {allBorders.map((border) => {
+                  const isEquipped = displayBorder === border;
+                  const cls = getAvatarBorderClass(border);
+                  return (
+                    <div key={border} className={`gs-asset-item${isEquipped ? " equipped" : ""}`}>
+                      <div className={`gs-asset-avatar-preview${cls ? ` ${cls}` : ""}`}>
+                        {getSponsorFirstName(session.user.full_name).charAt(0).toUpperCase()}
+                      </div>
+                      <span className="gs-asset-name">{border}</span>
+                      <button
+                        type="button"
+                        className={`gs-asset-equip-btn${isEquipped ? " active" : ""}`}
+                        onClick={() => handleEquipBorder(isEquipped ? null : border)}
+                      >
+                        {isEquipped ? "Equipped ✓" : "Equip"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
             <div className="gs-unlock-group">
               <div className="gs-unlock-group-label">Map Icons</div>
@@ -1543,14 +1564,14 @@ export default function GreenSponsor() {
             </div>
             {/* Profile photo */}
             <div className="gs-profile-avatar">
-              <div className={`gs-profile-avatar-inner ${getAvatarBorderClass(pointsInfo?.current_avatar_border)}`}>
-                {pointsInfo?.profile_photo_url
-                  ? <img src={toDisplayPhotoUrl(pointsInfo.profile_photo_url)} alt="Profile" />
+              <div className={`gs-profile-avatar-inner ${getAvatarBorderClass(displayBorder)}`}>
+                {displayPhotoUrl
+                  ? <img src={displayPhotoUrl} alt="Profile" />
                   : <div className="gs-profile-avatar-placeholder">{getSponsorFirstName(session.user.full_name).charAt(0).toUpperCase()}</div>}
               </div>
               <input ref={photoUploadRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handlePhotoUpload} disabled={uploadingPhoto} />
               <button type="button" className="gs-photo-upload-btn" onClick={() => photoUploadRef.current?.click()} disabled={uploadingPhoto}>
-                {uploadingPhoto ? "Uploading…" : (pointsInfo?.profile_photo_url ? "📷 Change photo" : "📷 Add profile photo")}
+                {uploadingPhoto ? "Uploading…" : (displayPhotoUrl ? "📷 Change photo" : "📷 Add profile photo")}
               </button>
             </div>
             <div className="green-sponsor-profile-grid">
