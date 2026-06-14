@@ -42,6 +42,65 @@ type ReliefConfig = {
   package_types?: string | null;
   target_zone?: string | null;
 };
+type ActivityLogEntry = {
+  id: number;
+  source?: string | null;
+  event_type?: string | null;
+  actor?: string | null;
+  message?: string | null;
+  details?: unknown;
+  created_at?: string | null;
+};
+
+const normalizeActivityLogDetails = (details: unknown) => {
+  if (details == null || details === "") return null;
+  if (typeof details === "string") {
+    const trimmed = details.trim();
+    if (!trimmed) return null;
+    try {
+      return JSON.parse(trimmed) as unknown;
+    } catch {
+      return trimmed;
+    }
+  }
+  return details;
+};
+
+const summarizeActivityLogDetails = (details: unknown) => {
+  const normalized = normalizeActivityLogDetails(details);
+  if (normalized == null) return "No details";
+  if (Array.isArray(normalized)) {
+    return `${normalized.length} item${normalized.length === 1 ? "" : "s"}`;
+  }
+  if (typeof normalized === "object") {
+    const keys = Object.keys(normalized as Record<string, unknown>);
+    if (!keys.length) return "No details";
+    const namedKeys = keys.slice(0, 2).map((key) => key.replace(/_/g, " "));
+    const suffix = keys.length === 1 ? "1 field" : `${keys.length} fields`;
+    return namedKeys.length ? `${namedKeys.join(" • ")} | ${suffix}` : suffix;
+  }
+  const value = String(normalized).replace(/\s+/g, " ").trim();
+  return value.length > 48 ? `${value.slice(0, 45)}...` : value;
+};
+
+const hasActivityLogDetails = (details: unknown) => {
+  const normalized = normalizeActivityLogDetails(details);
+  if (normalized == null) return false;
+  if (Array.isArray(normalized)) return normalized.length > 0;
+  if (typeof normalized === "object") return Object.keys(normalized as Record<string, unknown>).length > 0;
+  return Boolean(String(normalized).trim());
+};
+
+const formatActivityLogDetails = (details: unknown) => {
+  const normalized = normalizeActivityLogDetails(details);
+  if (normalized == null) return "No details recorded for this entry.";
+  if (typeof normalized === "string") return normalized;
+  try {
+    return JSON.stringify(normalized, null, 2);
+  } catch {
+    return String(normalized);
+  }
+};
 
 const normalizeWorkflowProfile = (value?: string | null): WorkflowProfile => {
   const normalized = String(value || "").trim().toLowerCase();
@@ -2849,9 +2908,10 @@ export default function GreenWork() {
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   // System Logs & Reports state
-  const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsError, setLogsError] = useState<string | null>(null);
+  const [selectedActivityLog, setSelectedActivityLog] = useState<ActivityLogEntry | null>(null);
   const [qrPrintsReport, setQrPrintsReport] = useState<any[]>([]);
   const [redemptions, setRedemptions] = useState<any[]>([]);
   const [complaintNotes, setComplaintNotes] = useState<Record<number, string>>({});
@@ -5837,6 +5897,22 @@ export default function GreenWork() {
     }, 15000);
     return () => window.clearInterval(timer);
   }, [activeForm, canAccessSuperAdmin, loadActivityLogs, loadQrPrintsReport]);
+
+  useEffect(() => {
+    if (activeForm === "logs") return;
+    setSelectedActivityLog(null);
+  }, [activeForm]);
+
+  useEffect(() => {
+    if (!selectedActivityLog) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedActivityLog(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedActivityLog]);
 
   useEffect(() => {
     return () => {
@@ -9262,6 +9338,7 @@ export default function GreenWork() {
         height: `${drawerFrame.height}px`,
       }
     : undefined;
+  const selectedActivityLogDetailsText = selectedActivityLog ? formatActivityLogDetails(selectedActivityLog.details) : "";
 
   const openForm = (form: WorkForm) => {
     if (isSuperAdminOnlyForm(form) && !canAccessSuperAdmin) {
@@ -13516,7 +13593,7 @@ export default function GreenWork() {
                   {activityLogs.length === 0 ? (
                     <p className="green-work-note" style={{ marginLeft: 0 }}>No system activity logs recorded yet.</p>
                   ) : (
-                    <div style={{ maxHeight: 500, overflowY: 'auto', border: '1px solid #dcdfdc', borderRadius: 4, padding: 12, backgroundColor: '#fcfcfc' }}>
+                    <div style={{ maxHeight: 500, overflow: 'auto', border: '1px solid #dcdfdc', borderRadius: 4, padding: 12, backgroundColor: '#fcfcfc' }}>
                       <table className="green-work-table" style={{ margin: 0 }}>
                         <thead>
                           <tr>
@@ -13529,18 +13606,33 @@ export default function GreenWork() {
                           </tr>
                         </thead>
                         <tbody>
-                          {activityLogs.map((log: any) => (
-                            <tr key={`log-${log.id}`} style={{ fontSize: 12 }}>
-                              <td style={{ whiteSpace: 'nowrap' }}>{new Date(log.created_at).toLocaleString()}</td>
-                              <td style={{ textTransform: 'capitalize' }}>{log.source}</td>
-                              <td><span className="green-work-live-pill neutral">{log.event_type}</span></td>
-                              <td>{log.actor || "-"}</td>
-                              <td>{log.message}</td>
-                              <td style={{ fontSize: 11, maxWidth: 200, whiteSpace: 'normal', wordBreak: 'break-all' }}>
-                                {log.details ? JSON.stringify(log.details) : "-"}
-                              </td>
-                            </tr>
-                          ))}
+                          {activityLogs.map((log) => {
+                            const hasDetails = hasActivityLogDetails(log.details);
+                            const detailsSummary = summarizeActivityLogDetails(log.details);
+                            return (
+                              <tr key={`log-${log.id}`} style={{ fontSize: 12 }}>
+                                <td style={{ whiteSpace: 'nowrap' }}>{new Date(log.created_at || "").toLocaleString()}</td>
+                                <td style={{ textTransform: 'capitalize' }}>{log.source}</td>
+                                <td><span className="green-work-live-pill neutral">{log.event_type}</span></td>
+                                <td>{log.actor || "-"}</td>
+                                <td style={{ minWidth: 220 }}>{log.message}</td>
+                                <td className="green-work-log-details-cell">
+                                  {hasDetails ? (
+                                    <button
+                                      type="button"
+                                      className="green-work-log-details-trigger"
+                                      onClick={() => setSelectedActivityLog(log)}
+                                    >
+                                      <span className="green-work-log-details-trigger-label">View details</span>
+                                      <span className="green-work-log-details-trigger-meta">{detailsSummary}</span>
+                                    </button>
+                                  ) : (
+                                    <span className="green-work-log-details-empty">-</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -16478,6 +16570,72 @@ export default function GreenWork() {
           )}
         </section>
       </div>
+
+      {selectedActivityLog && (
+        <>
+          <button
+            type="button"
+            className="green-work-log-detail-overlay"
+            onClick={() => setSelectedActivityLog(null)}
+            aria-label="Close activity log details"
+          />
+          <section
+            className="green-work-log-detail-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="green-work-log-detail-title"
+          >
+            <div className="green-work-log-detail-head">
+              <div>
+                <p className="green-work-log-detail-kicker">Activity log details</p>
+                <h3 id="green-work-log-detail-title">Log Entry #{selectedActivityLog.id}</h3>
+              </div>
+              <button
+                type="button"
+                className="green-work-log-detail-close"
+                onClick={() => setSelectedActivityLog(null)}
+                aria-label="Close activity log details"
+              >
+                X
+              </button>
+            </div>
+
+            <div className="green-work-log-detail-grid">
+              <div>
+                <span>Time</span>
+                <strong>{new Date(selectedActivityLog.created_at || "").toLocaleString()}</strong>
+              </div>
+              <div>
+                <span>Source</span>
+                <strong>{selectedActivityLog.source || "-"}</strong>
+              </div>
+              <div>
+                <span>Event</span>
+                <strong>{selectedActivityLog.event_type || "-"}</strong>
+              </div>
+              <div>
+                <span>Actor</span>
+                <strong>{selectedActivityLog.actor || "-"}</strong>
+              </div>
+              <div className="green-work-log-detail-grid-wide">
+                <span>Message</span>
+                <strong>{selectedActivityLog.message || "-"}</strong>
+              </div>
+              <div className="green-work-log-detail-grid-wide">
+                <span>Details summary</span>
+                <strong>{summarizeActivityLogDetails(selectedActivityLog.details)}</strong>
+              </div>
+            </div>
+
+            <div className="green-work-log-detail-body">
+              <p className="green-work-note" style={{ marginLeft: 0, marginBottom: 0 }}>
+                Full request or event payload for this activity log entry.
+              </p>
+              <pre className="green-work-log-detail-json">{selectedActivityLogDetailsText}</pre>
+            </div>
+          </section>
+        </>
+      )}
 
       {inspectedTree && (
         <>
