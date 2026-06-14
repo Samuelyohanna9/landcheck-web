@@ -74,9 +74,14 @@ const resolveWebClientLabel = (pathname: string, greenSession: StoredSession | n
 const attachLandCheckHeaders = (config: InternalAxiosRequestConfig) => {
   if (typeof window === "undefined") return config;
   const pathname = String(window.location.pathname || "").trim();
+  const cleanPathname = pathname.toLowerCase();
   const greenSession = readStoredSession(GREEN_AUTH_STORAGE_KEY);
   const workSession = readStoredSession(WORK_AUTH_STORAGE_KEY);
-  const activeSession = pathname.toLowerCase().startsWith("/green-work") ? workSession : greenSession;
+  const activeSession = cleanPathname.startsWith("/green-work")
+    ? workSession || greenSession
+    : cleanPathname.startsWith("/green")
+      ? greenSession || workSession
+      : workSession || greenSession;
   const headers = config.headers instanceof AxiosHeaders ? config.headers : new AxiosHeaders(config.headers);
   config.headers = headers;
   headers.set("X-LC-Client", resolveWebClientLabel(pathname, greenSession));

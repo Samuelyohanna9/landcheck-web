@@ -91,6 +91,35 @@ const hasActivityLogDetails = (details: unknown) => {
   return Boolean(String(normalized).trim());
 };
 
+const resolveActivityLogActor = (log: Pick<ActivityLogEntry, "actor" | "details">) => {
+  const directActor = String(log.actor || "").trim();
+  if (directActor) return directActor;
+  const normalized = normalizeActivityLogDetails(log.details);
+  if (!normalized || typeof normalized !== "object" || Array.isArray(normalized)) return "-";
+  const detailRecord = normalized as Record<string, unknown>;
+  const actorKeys = [
+    "actor_name",
+    "user_name",
+    "full_name",
+    "resolved_reviewer",
+    "reviewer_name",
+    "created_by",
+    "updated_by",
+    "submitted_by",
+    "requested_by",
+    "assigned_by",
+    "assignee_name",
+    "sponsor_name",
+    "actor",
+    "email",
+  ];
+  for (const key of actorKeys) {
+    const value = String(detailRecord[key] || "").trim();
+    if (value) return value;
+  }
+  return "-";
+};
+
 const formatActivityLogDetails = (details: unknown) => {
   const normalized = normalizeActivityLogDetails(details);
   if (normalized == null) return "No details recorded for this entry.";
@@ -13614,7 +13643,7 @@ export default function GreenWork() {
                                 <td style={{ whiteSpace: 'nowrap' }}>{new Date(log.created_at || "").toLocaleString()}</td>
                                 <td style={{ textTransform: 'capitalize' }}>{log.source}</td>
                                 <td><span className="green-work-live-pill neutral">{log.event_type}</span></td>
-                                <td>{log.actor || "-"}</td>
+                                <td>{resolveActivityLogActor(log)}</td>
                                 <td style={{ minWidth: 220 }}>{log.message}</td>
                                 <td className="green-work-log-details-cell">
                                   {hasDetails ? (
@@ -16615,7 +16644,7 @@ export default function GreenWork() {
               </div>
               <div>
                 <span>Actor</span>
-                <strong>{selectedActivityLog.actor || "-"}</strong>
+                <strong>{resolveActivityLogActor(selectedActivityLog)}</strong>
               </div>
               <div className="green-work-log-detail-grid-wide">
                 <span>Message</span>
