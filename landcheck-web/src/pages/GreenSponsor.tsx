@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import {
@@ -28,6 +28,7 @@ import {
   type SponsorTreeSummary,
   SPONSOR_TERMS_VERSION,
   updateSponsorProfileSettings,
+  uploadSponsorProfilePhoto,
 } from "../api/greenSponsor";
 import { BACKEND_URL } from "../api/client";
 import {
@@ -229,6 +230,15 @@ const toDisplayPhotoUrl = (url: string | null | undefined) => {
     const key = (maybeBucket ? parts.slice(1) : parts).join("/");
     return toProxy(key) || raw;
   } catch { return raw; }
+};
+
+const getAvatarBorderClass = (border: string | null | undefined): string => {
+  const b = String(border || "").toLowerCase();
+  if (!b) return "";
+  if (b.includes("golden") || b.includes("gold") || b.includes("canopy")) return "gs-avatar--golden";
+  if (b.includes("emerald")) return "gs-avatar--emerald";
+  if (b.includes("pine") || b.includes("3d")) return "gs-avatar--pine3d";
+  return "";
 };
 
 const getSponsorGreeting = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
@@ -788,6 +798,8 @@ export default function GreenSponsor() {
   const [schoolNomBusy, setSchoolNomBusy] = useState(false);
   const [referralInput, setReferralInput] = useState("");
   const [referralBusy, setReferralBusy] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoUploadRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!session || !isSponsorGreenSession(session)) navigate("/green/login/sponsor", { replace: true });
@@ -956,6 +968,34 @@ export default function GreenSponsor() {
     } catch {}
   };
 
+  const handlePhotoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !session) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Photo must be under 5 MB."); return; }
+    setUploadingPhoto(true);
+    try {
+      const result = await uploadSponsorProfilePhoto(session, file);
+      setPointsInfo((prev) => prev ? { ...prev, profile_photo_url: result.profile_photo_url } : prev);
+      toast.success("Profile photo updated!");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.message || "Photo upload failed.");
+    } finally {
+      setUploadingPhoto(false);
+      if (photoUploadRef.current) photoUploadRef.current.value = "";
+    }
+  };
+
+  const handleEquipBorder = async (borderName: string | null) => {
+    if (!session) return;
+    try {
+      await updateSponsorProfileSettings(session, { current_avatar_border: borderName });
+      setPointsInfo((prev) => prev ? { ...prev, current_avatar_border: borderName } : prev);
+      toast.success(borderName ? `${borderName} equipped!` : "Border removed.");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || "Failed to equip border.");
+    }
+  };
+
   const handleSaveProfile = async () => {
     if (!session) return;
     setSavingProfile(true);
@@ -977,11 +1017,17 @@ export default function GreenSponsor() {
       {/* ─── Header ─── */}
       <header className="green-sponsor-header-card">
         <div className="green-sponsor-header-brand">
-          <div className="green-sponsor-logo-tile">
-            <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
-          </div>
+          {pointsInfo?.profile_photo_url ? (
+            <div className={`gs-header-avatar ${getAvatarBorderClass(pointsInfo.current_avatar_border)}`}>
+              <img src={toDisplayPhotoUrl(pointsInfo.profile_photo_url)} alt={getSponsorFirstName(session.user.full_name)} />
+            </div>
+          ) : (
+            <div className="green-sponsor-logo-tile">
+              <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
+            </div>
+          )}
           <div className="green-sponsor-header-copy">
-            <div className="green-sponsor-badge">Climate Contributor</div>
+            <div className="green-sponsor-badge">{achievements?.badge_emoji || "🌱"} {achievements?.level || "Climate Contributor"}</div>
             <h1>{getSponsorGreeting()}, {getSponsorFirstName(session.user.full_name)}</h1>
             <p>See where your trees are planted, how they grow, and the impact they create.</p>
           </div>
@@ -1155,10 +1201,9 @@ export default function GreenSponsor() {
                   <div key={`order-${order.id}`} className="green-sponsor-order-card">
                     <div className="green-sponsor-order-head">
                       <div><strong>{order.project_name || `Order #${order.order_uid || order.id}`}</strong><p>{order.quantity} tree{order.quantity === 1 ? "" : "s"} | {formatCurrencyAmount(order.amount_total, order.currency || "NGN")}</p></div>
-                      <span className={`green-sponsor-chip ${toneClassForStatus(order.order_status || order.payment_status)}`}>{humanizeLabel(order.order_status || order.payment_status, "Pending")}</span>
+                      <span className={`green-sponsor-chip ${toneClassForStatus(order.order_status || (order.linked_units ? "linked" : "neutral"))}`}>{humanizeLabel(order.order_status, order.linked_units ? "Active" : "In progress")}</span>
                     </div>
                     <div className="green-sponsor-order-meta">
-                      <span>Payment: {humanizeLabel(order.payment_status, "Pending")}</span>
                       <span>Linked: {Number(order.linked_units || 0)}</span>
                       <span>Awaiting: {Number(order.awaiting_tree_units || 0)}</span>
                       <span>{formatDateLabel(order.payment_verified_at || order.updated_at || order.created_at)}</span>
@@ -1329,9 +1374,10 @@ export default function GreenSponsor() {
             </div>
             <div className="gs-gp-hero-right">
               <div className="gs-gp-lifetime">{Number(pointsInfo?.lifetime_points || 0).toLocaleString()} GP lifetime</div>
-              {pointsInfo?.point_booster_multiplier && Number(pointsInfo.point_booster_multiplier) > 1 && (
-                <div className="gs-booster-badge">🚀 ×{pointsInfo.point_booster_multiplier} Booster · {pointsInfo.point_booster_remaining_uses} uses</div>
-              )}
+              {pointsInfo?.point_booster_multiplier && Number(pointsInfo.point_booster_multiplier) > 1
+                ? <div className="gs-booster-badge active">🚀 ×{pointsInfo.point_booster_multiplier} Booster ACTIVE · {pointsInfo.point_booster_remaining_uses} uses left</div>
+                : <div className="gs-booster-badge inactive">No booster active — earn GP to unlock one</div>
+              }
             </div>
           </div>
 
@@ -1368,6 +1414,15 @@ export default function GreenSponsor() {
             </div>
           </div>
 
+          {/* Influence */}
+          <h3 className="gs-section-title">🌍 Influence</h3>
+          <div className="green-sponsor-metric-list" style={{ marginBottom: 4 }}>
+            <div className="green-sponsor-metric-card"><span>Referred users</span><strong>{Number(pointsInfo?.total_referred_users || 0)}</strong></div>
+            <div className="green-sponsor-metric-card"><span>Converted</span><strong>{Number(pointsInfo?.converted_referred_users || 0)}</strong></div>
+            <div className="green-sponsor-metric-card"><span>Sponsor goal</span><strong>{pointsInfo?.personal_sponsor_met ? "✅ Met" : "Not yet"}</strong></div>
+            <div className="green-sponsor-metric-card"><span>Referral rule</span><strong>{pointsInfo?.referral_rules_met ? "✅ Met" : "Not yet"}</strong></div>
+          </div>
+
           {/* Redeem a referral code */}
           <div className="gs-redeem-row">
             <input className="gs-redeem-input" type="text" placeholder="Enter a friend's referral code…" value={referralInput} onChange={(e) => setReferralInput(e.target.value)} />
@@ -1401,8 +1456,8 @@ export default function GreenSponsor() {
             ))}
           </div>
 
-          {/* Unlocks */}
-          <h3 className="gs-section-title">🏆 Unlocked Rewards</h3>
+          {/* Assets */}
+          <h3 className="gs-section-title">🎨 Assets</h3>
           <div className="gs-unlocks-section">
             <div className="gs-unlock-group">
               <div className="gs-unlock-group-label">Species</div>
@@ -1413,12 +1468,33 @@ export default function GreenSponsor() {
               </div>
             </div>
             <div className="gs-unlock-group">
-              <div className="gs-unlock-group-label">Avatars</div>
-              <div className="gs-tag-cloud">
-                {(pointsInfo?.unlocked_avatars || []).length === 0
-                  ? <span className="gs-unlock-empty">None unlocked yet</span>
-                  : (pointsInfo?.unlocked_avatars || []).map((s) => <span key={s} className="gs-unlock-tag blue">{s}</span>)}
-              </div>
+              <div className="gs-unlock-group-label">Avatar Borders</div>
+              {(pointsInfo?.unlocked_avatars || []).length === 0
+                ? <span className="gs-unlock-empty">None unlocked yet</span>
+                : (
+                  <div className="gs-asset-list">
+                    {(pointsInfo?.unlocked_avatars || []).map((border) => {
+                      const isEquipped = pointsInfo?.current_avatar_border === border;
+                      const cls = getAvatarBorderClass(border);
+                      return (
+                        <div key={border} className={`gs-asset-item${isEquipped ? " equipped" : ""}`}>
+                          <div className={`gs-asset-avatar-preview${cls ? ` ${cls}` : ""}`}>
+                            {getSponsorFirstName(session.user.full_name).charAt(0).toUpperCase()}
+                          </div>
+                          <span className="gs-asset-name">{border}</span>
+                          <button
+                            type="button"
+                            className={`gs-asset-equip-btn${isEquipped ? " active" : ""}`}
+                            onClick={() => void handleEquipBorder(isEquipped ? null : border)}
+                          >
+                            {isEquipped ? "Equipped ✓" : "Equip"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              }
             </div>
             <div className="gs-unlock-group">
               <div className="gs-unlock-group-label">Map Icons</div>
@@ -1465,11 +1541,17 @@ export default function GreenSponsor() {
               <GreenGlyph name="person" className="green-sponsor-heading-icon" />
               <div><h3>Sponsor Profile</h3><p>Your identity and account details.</p></div>
             </div>
-            {/* Profile photo placeholder */}
+            {/* Profile photo */}
             <div className="gs-profile-avatar">
-              {pointsInfo?.profile_photo_url
-                ? <img src={toDisplayPhotoUrl(pointsInfo.profile_photo_url)} alt="Profile" />
-                : <div className="gs-profile-avatar-placeholder">{getSponsorFirstName(session.user.full_name).charAt(0).toUpperCase()}</div>}
+              <div className={`gs-profile-avatar-inner ${getAvatarBorderClass(pointsInfo?.current_avatar_border)}`}>
+                {pointsInfo?.profile_photo_url
+                  ? <img src={toDisplayPhotoUrl(pointsInfo.profile_photo_url)} alt="Profile" />
+                  : <div className="gs-profile-avatar-placeholder">{getSponsorFirstName(session.user.full_name).charAt(0).toUpperCase()}</div>}
+              </div>
+              <input ref={photoUploadRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handlePhotoUpload} disabled={uploadingPhoto} />
+              <button type="button" className="gs-photo-upload-btn" onClick={() => photoUploadRef.current?.click()} disabled={uploadingPhoto}>
+                {uploadingPhoto ? "Uploading…" : (pointsInfo?.profile_photo_url ? "📷 Change photo" : "📷 Add profile photo")}
+              </button>
             </div>
             <div className="green-sponsor-profile-grid">
               <div className="green-sponsor-profile-item"><span>Full name</span><strong>{session.user.full_name}</strong></div>
