@@ -3229,7 +3229,9 @@ export default function GreenWork() {
   const [sponsorQrStatusLoading, setSponsorQrStatusLoading] = useState(false);
   const [sponsorQrStatusError, setSponsorQrStatusError] = useState<string | null>(null);
   const [sponsorQrReissueSelections, setSponsorQrReissueSelections] = useState<Record<number, number>>({});
+  const [sponsorshipOrderAgentSelections, setSponsorshipOrderAgentSelections] = useState<Record<number, number>>({});
   const [reissuingSponsorQrUnitId, setReissuingSponsorQrUnitId] = useState<number | null>(null);
+  const [assigningSponsorOrderId, setAssigningSponsorOrderId] = useState<number | null>(null);
   const [reviewingSponsorAgentPayoutId, setReviewingSponsorAgentPayoutId] = useState<number | null>(null);
   const [savingPublicSponsorAgents, setSavingPublicSponsorAgents] = useState(false);
   const [fallbackSponsorAccounts, setFallbackSponsorAccounts] = useState<SponsorAccountSummary[]>([]);
@@ -5453,6 +5455,42 @@ export default function GreenWork() {
       }
     },
     [activeProjectId, canAccessSuperAdmin, loadSponsorQrStatus, sponsorQrAgentOptions, workAuthSession?.user?.full_name],
+  );
+
+  const assignSponsorOrderQrTags = useCallback(
+    async (orderId: number, agentUserId: number) => {
+      if (!activeProjectId) return;
+      if (!canAccessSuperAdmin) {
+        toast.error("Only super admin can assign sponsor QR tags.");
+        return;
+      }
+      const normalizedAgentUserId = Number(agentUserId || 0);
+      if (!(normalizedAgentUserId > 0)) {
+        toast.error("Select a sponsor agent first.");
+        return;
+      }
+      const agent = sponsorQrAgentOptions.find((item) => Number(item.id || 0) === normalizedAgentUserId);
+      const agentLabel = agent?.full_name || agent?.work_username || `User #${normalizedAgentUserId}`;
+      if (!window.confirm(`Assign all pending sponsor QR tags in this paid order to ${agentLabel}?`)) return;
+      setAssigningSponsorOrderId(orderId);
+      try {
+        await api.post(`/green/admin/sponsorship-orders/${orderId}/assign-agent`, {
+          agent_user_id: normalizedAgentUserId,
+          reviewer_name: workAuthSession?.user?.full_name || "super_admin",
+        });
+        setSponsorshipOrderAgentSelections((prev) => ({ ...prev, [orderId]: normalizedAgentUserId }));
+        await Promise.all([
+          loadSponsorshipOrders(activeProjectId, { forceSync: false }),
+          loadSponsorQrStatus(activeProjectId, { forceSync: false }),
+        ]);
+        toast.success(`Pending sponsor QR tags assigned to ${agentLabel}`);
+      } catch (error: any) {
+        toast.error(error?.response?.data?.detail || "Failed to assign sponsor QR tags");
+      } finally {
+        setAssigningSponsorOrderId(null);
+      }
+    },
+    [activeProjectId, canAccessSuperAdmin, loadSponsorQrStatus, loadSponsorshipOrders, sponsorQrAgentOptions, workAuthSession?.user?.full_name],
   );
 
   const reviewSponsorAgentPayoutRequest = useCallback(
@@ -12795,6 +12833,55 @@ export default function GreenWork() {
                                       <div className="staff-row-meta">
                                         Project: {order.project_name}
                                         {order.location_text ? ` | ${order.location_text}` : ""}
+                                      </div>
+                                    ) : null}
+                                    {Number(order.awaiting_tree_units || 0) > 0 ? (
+                                      <div
+                                        style={{
+                                          marginTop: 10,
+                                          padding: 12,
+                                          borderRadius: 14,
+                                          border: "1px solid #cfe6d3",
+                                          background: "#f5fbf6",
+                                        }}
+                                      >
+                                        <div className="staff-row-meta" style={{ marginBottom: 8 }}>
+                                          Manual QR assignment: send the pending sponsor QR tags in this paid order directly to one field agent.
+                                        </div>
+                                        <div className="work-actions" style={{ flexWrap: "wrap" }}>
+                                          <select
+                                            value={String(sponsorshipOrderAgentSelections[order.id] || "")}
+                                            onChange={(e) =>
+                                              setSponsorshipOrderAgentSelections((prev) => ({
+                                                ...prev,
+                                                [order.id]: Number(e.target.value || 0),
+                                              }))
+                                            }
+                                            disabled={!sponsorQrAgentOptions.length || assigningSponsorOrderId === order.id}
+                                          >
+                                            <option value="">Select sponsor agent</option>
+                                            {sponsorQrAgentOptions.map((user) => (
+                                              <option key={`sponsor-order-agent-${order.id}-${user.id}`} value={user.id}>
+                                                {user.full_name}
+                                              </option>
+                                            ))}
+                                          </select>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              void assignSponsorOrderQrTags(
+                                                Number(order.id || 0),
+                                                Number(sponsorshipOrderAgentSelections[order.id] || 0),
+                                              )
+                                            }
+                                            disabled={
+                                              assigningSponsorOrderId === order.id ||
+                                              !(Number(sponsorshipOrderAgentSelections[order.id] || 0) > 0)
+                                            }
+                                          >
+                                            {assigningSponsorOrderId === order.id ? "Assigning..." : "Assign Pending QR Tags"}
+                                          </button>
+                                        </div>
                                       </div>
                                     ) : null}
                                     {gatewayManaged ? (
