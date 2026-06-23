@@ -6536,7 +6536,12 @@ export default function GreenWork() {
         toast.success(`Assigned planting orders to ${successCount} staff`);
         toast.error(`Failed for: ${failedAssignees.join(", ")}`);
       } else {
-        toast.error(`Failed to assign planting order${assignees.length > 1 ? "s" : ""}`);
+        const firstFailure = results.find((item): item is PromiseRejectedResult => item.status === "rejected");
+        const failureDetail =
+          (firstFailure?.reason as any)?.response?.data?.detail ||
+          (firstFailure?.reason as any)?.message ||
+          `Failed to assign planting order${assignees.length > 1 ? "s" : ""}`;
+        toast.error(String(failureDetail));
       }
     } catch (error: any) {
       toast.dismiss(loadingId);
