@@ -4069,6 +4069,33 @@ export default function GreenWork() {
     },
     [userNameByKnownAlias],
   );
+  const buildSponsorDispatchAssigneeName = useCallback((user: GreenUser | null | undefined) => {
+    if (!user) return "";
+    const fullName = String(user.full_name || "").trim();
+    const workUsername = String(user.work_username || "").trim();
+    const userUid = String(user.user_uid || "").trim();
+    if (fullName && userUid) return `${fullName} (${userUid})`;
+    if (workUsername && userUid) return `${workUsername} (${userUid})`;
+    return fullName || workUsername || userUid || String(user.email || "").trim();
+  }, []);
+  const resolveAssignmentUserRecord = useCallback(
+    (value: string | null | undefined) => {
+      const normalizedValue = normalizeName(String(value || ""));
+      if (!normalizedValue) return null;
+      return (
+        assignmentUsers.find((user) =>
+          [
+            user.full_name,
+            user.work_username,
+            user.user_uid,
+            user.email,
+            buildSponsorDispatchAssigneeName(user),
+          ].some((candidate) => normalizeName(String(candidate || "")) === normalizedValue),
+        ) || null
+      );
+    },
+    [assignmentUsers, buildSponsorDispatchAssigneeName],
+  );
 
   const toggleMaintenanceRowSelection = useCallback((rowKey: string) => {
     const cleanKey = String(rowKey || "").trim();
@@ -6372,9 +6399,27 @@ export default function GreenWork() {
 
   const createWorkOrder = async () => {
     if (!activeProjectId) return;
-    const assignees = currentWorkOrderAssignees;
-    const allowedAssigneeNames = new Set(assignmentUsers.map((user) => normalizeName(user.full_name)));
-    if (publicSponsorshipProject && assignees.some((assignee) => !allowedAssigneeNames.has(normalizeName(assignee)))) {
+    const assigneeTargets = currentWorkOrderAssignees
+      .map((rawAssignee) => {
+        const matchedUser = resolveAssignmentUserRecord(rawAssignee);
+        return {
+          raw: String(rawAssignee || "").trim(),
+          dispatch:
+            publicSponsorshipProject && matchedUser
+              ? buildSponsorDispatchAssigneeName(matchedUser)
+              : String(rawAssignee || "").trim(),
+        };
+      })
+      .filter((item) => item.raw && item.dispatch);
+    const assignees = assigneeTargets.map((item) => item.raw);
+    const allowedAssigneeNames = new Set(
+      assignmentUsers.flatMap((user) =>
+        [user.full_name, user.work_username, user.user_uid, user.email, buildSponsorDispatchAssigneeName(user)]
+          .map((value) => normalizeName(String(value || "")))
+          .filter(Boolean),
+      ),
+    );
+    if (publicSponsorshipProject && assigneeTargets.some((assignee) => !allowedAssigneeNames.has(normalizeName(assignee.dispatch)))) {
       toast.error("Only saved public sponsor agents can receive sponsor-funded planting work.");
       return;
     }
@@ -6434,8 +6479,8 @@ export default function GreenWork() {
         allow_existing_tree_area_reuse: newOrderAreaEnabled ? Boolean(newOrder.allow_existing_tree_area_reuse) : false,
       };
       const results = await Promise.allSettled(
-        assignees.map((assignee) => {
-          const override = newOrderMultiAssignOverrides[assignee];
+        assigneeTargets.map(({ raw, dispatch }) => {
+          const override = newOrderMultiAssignOverrides[raw];
           const assigneeTargetTrees = workOrderUsesCustomTargets
             ? Number(override?.target_trees || 0)
             : targetTrees;
@@ -6444,7 +6489,7 @@ export default function GreenWork() {
             : String(newOrder.due_date || "").trim() || null;
           return api.post("/green/work-orders", {
             ...payloadBase,
-            assignee_name: assignee,
+            assignee_name: dispatch,
             target_trees: assigneeTargetTrees,
             due_date: assigneeDueDate,
           });
@@ -6452,7 +6497,7 @@ export default function GreenWork() {
       );
       const successCount = results.filter((item) => item.status === "fulfilled").length;
       const failedAssignees = results
-        .map((item, index) => ({ item, assignee: assignees[index] }))
+        .map((item, index) => ({ item, assignee: assigneeTargets[index]?.raw || assigneeTargets[index]?.dispatch || "" }))
         .filter((entry): entry is { item: PromiseRejectedResult; assignee: string } => entry.item.status === "rejected")
         .map((entry) => entry.assignee);
       if (successCount > 0 && failedAssignees.length === 0) {
