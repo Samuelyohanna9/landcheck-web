@@ -352,6 +352,12 @@ type SponsorAccountSummary = {
   total_referred_users?: number | null;
   converted_referred_users?: number | null;
   referral_conversion_rate?: number | null;
+  project_orders_count?: number;
+  project_amount_total?: number;
+  project_verified_orders_count?: number;
+  project_pending_orders_count?: number;
+  project_issue_orders_count?: number;
+  project_awaiting_tree_units?: number;
 };
 
 type SponsorAgentBankAccountRecord = {
@@ -1832,6 +1838,12 @@ const normalizeSponsorAccountSummary = (row: any): SponsorAccountSummary => ({
   monthly_trees: Number(row?.monthly_trees || 0),
   all_time_trees: Number(row?.all_time_trees || 0),
   achievement_level: row?.achievement_level ? String(row.achievement_level).trim() : undefined,
+  project_orders_count: Number(row?.project_orders_count || 0),
+  project_amount_total: Number(row?.project_amount_total || 0),
+  project_verified_orders_count: Number(row?.project_verified_orders_count || 0),
+  project_pending_orders_count: Number(row?.project_pending_orders_count || 0),
+  project_issue_orders_count: Number(row?.project_issue_orders_count || 0),
+  project_awaiting_tree_units: Number(row?.project_awaiting_tree_units || 0),
 });
 
 const normalizeSponsorAgentBankAccountRecord = (row: any): SponsorAgentBankAccountRecord => ({
@@ -8812,30 +8824,123 @@ export default function GreenWork() {
   }, [speciesDailyTrend]);
 
   const sponsorAccounts = useMemo(() => {
+    const projectStatsBySponsorId = new Map<
+      number,
+      {
+        orders_count: number;
+        amount_total: number;
+        verified_orders_count: number;
+        pending_orders_count: number;
+        issue_orders_count: number;
+        awaiting_tree_units: number;
+      }
+    >();
+    sponsorshipOrders.forEach((order) => {
+      const sponsorId = Number(order.sponsor_account_id || 0);
+      if (!(sponsorId > 0)) return;
+      const outcome = getSponsorshipPaymentOutcomeGroup(order.payment_status);
+      const existing = projectStatsBySponsorId.get(sponsorId) || {
+        orders_count: 0,
+        amount_total: 0,
+        verified_orders_count: 0,
+        pending_orders_count: 0,
+        issue_orders_count: 0,
+        awaiting_tree_units: 0,
+      };
+      existing.orders_count += 1;
+      existing.amount_total = Number((existing.amount_total + Number(order.amount_total || 0)).toFixed(2));
+      if (outcome === "successful") existing.verified_orders_count += 1;
+      if (outcome === "awaiting") existing.pending_orders_count += 1;
+      if (outcome === "issue") existing.issue_orders_count += 1;
+      existing.awaiting_tree_units += Number(order.awaiting_tree_units || 0);
+      projectStatsBySponsorId.set(sponsorId, existing);
+    });
+
     const byId = new Map<number, SponsorAccountSummary>();
     fallbackSponsorAccounts.forEach((account) => {
-      byId.set(account.id, { ...account });
+      const projectStats = projectStatsBySponsorId.get(Number(account.id || 0));
+      byId.set(account.id, {
+        ...account,
+        project_orders_count: Number(projectStats?.orders_count || 0),
+        project_amount_total: Number(projectStats?.amount_total || 0),
+        project_verified_orders_count: Number(projectStats?.verified_orders_count || 0),
+        project_pending_orders_count: Number(projectStats?.pending_orders_count || 0),
+        project_issue_orders_count: Number(projectStats?.issue_orders_count || 0),
+        project_awaiting_tree_units: Number(projectStats?.awaiting_tree_units || 0),
+      });
     });
     sponsorshipOrders.forEach((order) => {
       const sponsorId = Number(order.sponsor_account_id || 0);
-      if (!(sponsorId > 0) || byId.has(sponsorId)) return;
       const outcome = getSponsorshipPaymentOutcomeGroup(order.payment_status);
+      if (!(sponsorId > 0)) return;
+      const existing = byId.get(sponsorId);
+      if (existing) {
+        byId.set(sponsorId, {
+          ...existing,
+          full_name: existing.full_name || String(order.sponsor_name || "").trim() || `Sponsor #${sponsorId}`,
+          organization_name:
+            existing.organization_name || String(order.sponsor_organization_name || "").trim() || null,
+          email: existing.email || String(order.sponsor_email || "").trim() || null,
+          account_type: existing.account_type || String(order.sponsor_account_type || "").trim() || null,
+          project_orders_count: Number(existing.project_orders_count || 0) || 1,
+          project_amount_total:
+            Number(existing.project_amount_total || 0) > 0
+              ? Number(existing.project_amount_total || 0)
+              : Number(order.amount_total || 0),
+          project_verified_orders_count:
+            Number(existing.project_verified_orders_count || 0) > 0
+              ? Number(existing.project_verified_orders_count || 0)
+              : outcome === "successful"
+              ? 1
+              : 0,
+          project_pending_orders_count:
+            Number(existing.project_pending_orders_count || 0) > 0
+              ? Number(existing.project_pending_orders_count || 0)
+              : outcome === "awaiting"
+              ? 1
+              : 0,
+          project_issue_orders_count:
+            Number(existing.project_issue_orders_count || 0) > 0
+              ? Number(existing.project_issue_orders_count || 0)
+              : outcome === "issue"
+              ? 1
+              : 0,
+          project_awaiting_tree_units:
+            Number(existing.project_awaiting_tree_units || 0) > 0
+              ? Number(existing.project_awaiting_tree_units || 0)
+              : Number(order.awaiting_tree_units || 0),
+        });
+        return;
+      }
+      const projectStats = projectStatsBySponsorId.get(sponsorId);
       byId.set(sponsorId, {
         id: sponsorId,
         full_name: String(order.sponsor_name || "").trim() || `Sponsor #${sponsorId}`,
         organization_name: String(order.sponsor_organization_name || "").trim() || null,
         email: String(order.sponsor_email || "").trim() || null,
         account_type: String(order.sponsor_account_type || "").trim() || null,
-        orders_count: 1,
-        amount_total: Number(order.amount_total || 0),
+        orders_count: Number(projectStats?.orders_count || 1),
+        amount_total: Number(projectStats?.amount_total || order.amount_total || 0),
         linked_units: Number(order.linked_units || 0),
-        verified_orders_count: outcome === "successful" ? 1 : 0,
-        pending_orders_count: outcome === "awaiting" ? 1 : 0,
-        issue_orders_count: outcome === "issue" ? 1 : 0,
-        awaiting_tree_units: Number(order.awaiting_tree_units || 0),
+        verified_orders_count: Number(projectStats?.verified_orders_count || (outcome === "successful" ? 1 : 0)),
+        pending_orders_count: Number(projectStats?.pending_orders_count || (outcome === "awaiting" ? 1 : 0)),
+        issue_orders_count: Number(projectStats?.issue_orders_count || (outcome === "issue" ? 1 : 0)),
+        awaiting_tree_units: Number(projectStats?.awaiting_tree_units || order.awaiting_tree_units || 0),
+        project_orders_count: Number(projectStats?.orders_count || 1),
+        project_amount_total: Number(projectStats?.amount_total || order.amount_total || 0),
+        project_verified_orders_count: Number(projectStats?.verified_orders_count || (outcome === "successful" ? 1 : 0)),
+        project_pending_orders_count: Number(projectStats?.pending_orders_count || (outcome === "awaiting" ? 1 : 0)),
+        project_issue_orders_count: Number(projectStats?.issue_orders_count || (outcome === "issue" ? 1 : 0)),
+        project_awaiting_tree_units: Number(projectStats?.awaiting_tree_units || order.awaiting_tree_units || 0),
       });
     });
-    return Array.from(byId.values()).sort((a, b) => a.full_name.localeCompare(b.full_name));
+    return Array.from(byId.values()).sort((a, b) => {
+      const projectOrderDelta = Number(b.project_orders_count || 0) - Number(a.project_orders_count || 0);
+      if (projectOrderDelta !== 0) return projectOrderDelta;
+      const totalOrderDelta = Number(b.orders_count || 0) - Number(a.orders_count || 0);
+      if (totalOrderDelta !== 0) return totalOrderDelta;
+      return a.full_name.localeCompare(b.full_name);
+    });
   }, [fallbackSponsorAccounts, sponsorshipOrders]);
   const sponsorAccountSummary = useMemo(
     () =>
@@ -12607,6 +12712,11 @@ export default function GreenWork() {
                               <span>{formatTaskTypeLabel(sponsor.account_type || "individual")}</span>
                             </div>
                             <div className="work-actions" style={{ margin: "8px 0 6px", flexWrap: "wrap" }}>
+                              {Number(sponsor.project_orders_count || 0) > 0 ? (
+                                <span className="green-work-live-pill info">
+                                  This project: {Number(sponsor.project_orders_count || 0)} order{Number(sponsor.project_orders_count || 0) === 1 ? "" : "s"}
+                                </span>
+                              ) : null}
                               <span className={`green-work-live-pill ${sponsor.verified_orders_count > 0 ? "ok" : "neutral"}`}>
                                 Paid: {sponsor.verified_orders_count}
                               </span>
@@ -12649,6 +12759,12 @@ export default function GreenWork() {
                               {sponsor.awaiting_tree_units} | Spend:{" "}
                               {formatCurrencyAmount(sponsor.amount_total, activeProjectRecord?.sponsor_currency || "NGN")}
                             </div>
+                            {Number(sponsor.project_orders_count || 0) > 0 ? (
+                              <div className="staff-row-meta">
+                                Current project spend: {formatCurrencyAmount(Number(sponsor.project_amount_total || 0), activeProjectRecord?.sponsor_currency || "NGN")} | Current project awaiting payment:{" "}
+                                {Number(sponsor.project_pending_orders_count || 0)} | Current project awaiting planting: {Number(sponsor.project_awaiting_tree_units || 0)}
+                              </div>
+                            ) : null}
                           </div>
                         );
                       })}
