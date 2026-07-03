@@ -3388,13 +3388,15 @@ export default function Green() {
         <div className="green-header-inner">
             <div className="green-header-brand">
               <div className="green-brand-logo" aria-hidden="true">
-                <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
+                <img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="52" height="52" />
               </div>
               {greenHeaderPartnerLogoUrl ? (
                 <div className="green-brand-logo green-brand-logo-partner" aria-hidden="true">
                   <img
                     src={greenHeaderPartnerLogoUrl}
                     alt={`${greenHeaderPartnerName || "Partner"} logo`}
+                    width="44"
+                    height="44"
                   />
                 </div>
               ) : null}
@@ -3468,10 +3470,10 @@ export default function Green() {
           <div className="green-mobile-hero-brand">
             <div className="green-mobile-hero-logos">
               <span className="green-mobile-hero-logo" aria-hidden="true">
-                <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
+                <img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="40" height="40" />
               </span>
               <span className="green-mobile-hero-logo" aria-hidden="true">
-                <img src={heroPartnerLogoUrl} alt={greenHeaderPartnerName || workflowLabels.appTitle} />
+                <img src={heroPartnerLogoUrl} alt={greenHeaderPartnerName || workflowLabels.appTitle} width="40" height="40" />
               </span>
             </div>
             <div className="green-mobile-hero-brand-copy">
@@ -4625,7 +4627,7 @@ export default function Green() {
                     {treePhotoPreviews.length > 0 && (
                       <div className="green-photo-preview-grid">
                         {treePhotoPreviews.map((src, index) => (
-                          <img key={`tree-preview-${index}`} className="tree-photo-preview" src={src} alt={`Tree preview ${index + 1}`} />
+                          <img key={`tree-preview-${index}`} className="tree-photo-preview" src={src} alt={`Tree preview ${index + 1}`} loading="lazy" decoding="async" />
                         ))}
                       </div>
                     )}
@@ -4642,7 +4644,7 @@ export default function Green() {
                       onChange={(e) => void onPhotoPicked(e.target.files?.[0] || null)}
                     />
                     <small className="tree-photo-hint">Take or choose one tree photo. A photo is required before you can add this tree.</small>
-                    {photoPreview && <img className="tree-photo-preview" src={photoPreview} alt="Tree preview" />}
+                    {photoPreview && <img className="tree-photo-preview" src={photoPreview} alt="Tree preview" loading="lazy" decoding="async" />}
                   </>
                 )}
               </div>

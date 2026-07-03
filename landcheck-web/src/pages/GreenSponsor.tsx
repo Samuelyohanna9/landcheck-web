@@ -1045,11 +1045,11 @@ export default function GreenSponsor() {
         <div className="green-sponsor-header-brand">
           {displayPhotoUrl ? (
             <div className={`gs-header-avatar ${getAvatarBorderClass(displayBorder)}`}>
-              <img src={displayPhotoUrl} alt={getSponsorFirstName(session.user.full_name)} />
+              <img src={displayPhotoUrl} alt={getSponsorFirstName(session.user.full_name)} width="46" height="46" />
             </div>
           ) : (
             <div className="green-sponsor-logo-tile">
-              <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
+              <img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="46" height="46" />
             </div>
           )}
           <div className="green-sponsor-header-copy">
@@ -1303,7 +1303,7 @@ export default function GreenSponsor() {
               <div className="green-sponsor-panel">
                 <h4>Photo evidence</h4>
                 {treePhotoUrls.length === 0 ? <div className="green-sponsor-empty">No approved photos yet.</div>
-                  : <div className="green-sponsor-photo-grid">{treePhotoUrls.map((u) => <img key={u} src={u} alt="Tree evidence" />)}</div>}
+                  : <div className="green-sponsor-photo-grid">{treePhotoUrls.map((u) => <img key={u} src={u} alt="Tree evidence" loading="lazy" decoding="async" />)}</div>}
               </div>
 
               <div className="green-sponsor-panel">
@@ -1566,7 +1566,7 @@ export default function GreenSponsor() {
             <div className="gs-profile-avatar">
               <div className={`gs-profile-avatar-inner ${getAvatarBorderClass(displayBorder)}`}>
                 {displayPhotoUrl
-                  ? <img src={displayPhotoUrl} alt="Profile" />
+                  ? <img src={displayPhotoUrl} alt="Profile" width="80" height="80" loading="lazy" />
                   : <div className="gs-profile-avatar-placeholder">{getSponsorFirstName(session.user.full_name).charAt(0).toUpperCase()}</div>}
               </div>
               <input ref={photoUploadRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handlePhotoUpload} disabled={uploadingPhoto} />

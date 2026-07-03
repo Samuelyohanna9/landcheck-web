@@ -470,7 +470,7 @@ function PhotoGallery({ photos }: { photos: DonorImpactPhoto[] }) {
       {lightbox && (
         <div className="gi-lightbox-backdrop" onClick={() => setLightbox(null)}>
           <div className="gi-lightbox-inner" onClick={(e) => e.stopPropagation()}>
-            <img src={resolveAssetUrl(lightbox.url)} alt={lightbox.entity_label || "Evidence"} className="gi-lightbox-img" />
+            <img src={resolveAssetUrl(lightbox.url)} alt={lightbox.entity_label || "Evidence"} className="gi-lightbox-img" loading="lazy" decoding="async" />
             <button className="gi-lightbox-close" onClick={() => setLightbox(null)}>✕</button>
             <div className="gi-lightbox-caption">
               {lightbox.entity_label && <span>{lightbox.entity_label}</span>}
@@ -771,7 +771,7 @@ export default function DonorImpactPage() {
         <footer className="gi-footer">
           <div className="gi-footer-inner">
             <a href="https://landcheck.online" className="gi-footer-brand" target="_blank" rel="noopener noreferrer">
-              <img src={GREEN_LOGO_SRC} alt="LandCheck" className="gi-footer-logo" />
+              <img src={GREEN_LOGO_SRC} alt="LandCheck" className="gi-footer-logo" width="80" height="24" loading="lazy" />
             </a>
             <div className="gi-footer-text">Powered by LandCheck Geospatial Technologies</div>
           </div>
@@ -793,7 +793,7 @@ export default function DonorImpactPage() {
       {/* Top nav */}
       <header className="gi-topbar">
         <a href="https://landcheck.online" className="gi-topbar-brand" target="_blank" rel="noopener noreferrer">
-          <img src={GREEN_LOGO_SRC} alt="LandCheck" className="gi-topbar-logo" />
+          <img src={GREEN_LOGO_SRC} alt="LandCheck" className="gi-topbar-logo" width="90" height="28" />
           <span className="gi-topbar-name">LandCheck</span>
         </a>
         <div className="gi-topbar-actions">

@@ -349,7 +349,7 @@ export default function GreenPartnersLanding() {
                     <span className="gp-partner-pilot-tag">Pilot Programme</span>
                   )}
                   {org.logo ? (
-                    <img src={org.logo} alt={org.name} className="gp-partner-logo" />
+                    <img src={org.logo} alt={org.name} className="gp-partner-logo" width="88" height="88" loading="lazy" />
                   ) : (
                     <span className="gp-partner-name-initials">
                       {org.name
