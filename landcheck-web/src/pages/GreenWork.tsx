@@ -15223,6 +15223,20 @@ export default function GreenWork() {
               <div className="green-work-row">
                 <h3>Project Overview</h3>
                 <div className="work-actions">
+                  {activeProjectRecord?.organization_slug && (
+                    <button
+                      onClick={() => {
+                        const slug = String(activeProjectRecord.organization_slug || "");
+                        const url = `https://landcheck.online/impact/${encodeURIComponent(slug)}`;
+                        navigator.clipboard.writeText(url).catch(() => {});
+                        toast.success(`Donor impact link copied: ${url}`, { duration: 5000 });
+                      }}
+                      style={{ background: "linear-gradient(135deg,#1a5c2a,#2aa852)", color: "#fff", fontWeight: 700, border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer" }}
+                      title="Copy a public link to share your organisation's impact report with donors"
+                    >
+                      🔗 Share Impact Page
+                    </button>
+                  )}
                   <button onClick={exportWorkCsv} disabled={workPartnerOrgPaused} title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}>
                     Export CSV
                   </button>

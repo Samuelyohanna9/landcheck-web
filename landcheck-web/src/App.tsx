@@ -17,6 +17,7 @@ import FloodAnalysisLanding from "./pages/FloodAnalysisLanding";
 import CareersPage from "./pages/CareersPage";
 import NewsPage from "./pages/NewsPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import DonorImpactPage from "./pages/DonorImpactPage";
 import SeoRouteMeta from "./components/SeoRouteMeta";
 import PrivacyNoticeBanner from "./components/PrivacyNoticeBanner";
 import { getGreenAuthSession, isGreenAuthed, isSponsorGreenSession } from "./auth/greenAuth";
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="/career" element={<CareersPage />} />
         <Route path="/news" element={<NewsPage />} />
         <Route path="/green-partners" element={<GreenPartnersLanding />} />
+        <Route path="/impact/:orgSlug" element={<DonorImpactPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/feedback" element={<Feedback />} />
         <Route path="/admin" element={<AdminDashboard />} />
