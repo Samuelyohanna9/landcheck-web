@@ -226,6 +226,7 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
 };
 
 const PRIVATE_ROUTE_PREFIXES = ["/green", "/green-work", "/dashboard", "/admin"];
+const IMPACT_ROUTE_PREFIX = "/impact/";
 
 const normalizePath = (value: string) => {
   const trimmed = String(value || "").trim();
@@ -288,6 +289,31 @@ const upsertPageJsonLd = (data: object | null) => {
 
 const resolveSeoConfig = (pathname: string): SeoConfig => {
   const normalizedPath = normalizePath(pathname);
+
+  // /impact/:orgSlug — public shareable donor impact page
+  if (normalizedPath.startsWith(IMPACT_ROUTE_PREFIX) || normalizedPath === "/impact") {
+    const orgSlug = normalizedPath.replace(/^\/impact\/?/, "") || "organisation";
+    const orgName = orgSlug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    return {
+      title: `${orgName} — Programme Impact Report | LandCheck`,
+      description: `View the verified programme impact report for ${orgName} — field activities, evidence photos, GPS maps, and supervisor-approved outcomes. Powered by LandCheck.`,
+      keywords: `${orgName} impact report, LandCheck impact, programme report Nigeria, field monitoring impact, NGO transparency`,
+      canonicalPath: normalizedPath,
+      robots: "index,follow,max-image-preview:large,max-snippet:-1",
+      ogType: "website",
+      ogImage: DEFAULT_OG_IMAGE,
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "Report",
+        "name": `${orgName} Programme Impact Report`,
+        "description": `Supervisor-verified field monitoring impact report for ${orgName}. Powered by LandCheck Geospatial Technologies.`,
+        "url": `${SITE_ORIGIN}/impact/${orgSlug}`,
+        "publisher": { "@id": `${SITE_ORIGIN}/#organization` },
+        "inLanguage": "en-NG",
+      },
+    };
+  }
+
   const isPrivate = PRIVATE_ROUTE_PREFIXES.some(
     (prefix) => normalizedPath === prefix || normalizedPath.startsWith(`${prefix}/`),
   );
