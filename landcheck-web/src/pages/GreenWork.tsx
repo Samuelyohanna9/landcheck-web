@@ -4467,6 +4467,7 @@ export default function GreenWork() {
           project_id: activeProjectId,
           area_geojson: geometry,
         },
+        { timeout: 180000 },
       );
       stopRemoteMonitoringProgress();
       setRemoteMonitoringProgressStep(REMOTE_MONITORING_PROGRESS_STEPS.length - 1);
@@ -4477,9 +4478,13 @@ export default function GreenWork() {
     } catch (error: any) {
       stopRemoteMonitoringProgress();
       setRemoteMonitoringReport(null);
+      const isTimeout = error?.code === "ECONNABORTED" || String(error?.message || "").toLowerCase().includes("timeout");
+      const defaultMessage = draftWorkflowProfile === "agric" ? "Farm health monitoring" : "Remote monitoring";
       toast.error(
         error?.response?.data?.detail ||
-          (draftWorkflowProfile === "agric" ? "Failed to load farm health monitoring" : "Failed to load remote monitoring"),
+          (isTimeout
+            ? `${defaultMessage} timed out. The satellite analysis is taking too long — try a smaller area or retry shortly.`
+            : `${defaultMessage} failed. Check your connection and try again.`),
       );
     } finally {
       setRemoteMonitoringLoading(false);
@@ -7583,7 +7588,7 @@ export default function GreenWork() {
         ? visibleProjectTrees
             .map((tree) => {
               const geometry = normalizeMapAreaGeometry(tree.existing_area_geojson);
-              if (!geometry) return null;
+              if (!geometry || !["Polygon", "MultiPolygon"].includes(geometry.type)) return null;
               const plotLabel = formatPlotRecordLabel(tree);
               const farmerName = String(tree.custodian_name || "").trim() || "Farmer not linked";
               const cropLabel = getPlotCommodityLabel(tree);
