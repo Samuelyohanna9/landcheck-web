@@ -10176,9 +10176,9 @@ export default function GreenWork() {
       <header className="green-work-header">
         <div className="green-work-header-inner">
           <div className="green-work-brand">
-            <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
+            <img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="50" height="50" />
             {partnerLogoDisplayUrl ? (
-              <img className="green-work-partner-logo" src={partnerLogoDisplayUrl} alt={`${partnerLogoName} logo`} />
+              <img className="green-work-partner-logo" src={partnerLogoDisplayUrl} alt={`${partnerLogoName} logo`} width="42" height="42" />
             ) : null}
           </div>
           <div className="green-work-title">
@@ -12028,7 +12028,7 @@ export default function GreenWork() {
                 <h3>{editingOrganizationId ? "Edit Organization" : "Add Organization"}</h3>
                 {newOrganization.logo_url ? (
                   <div className="green-work-brand-preview">
-                    <img src={toDisplayPhotoUrl(newOrganization.logo_url)} alt="Organization logo preview" />
+                    <img src={toDisplayPhotoUrl(newOrganization.logo_url)} alt="Organization logo preview" loading="lazy" decoding="async" />
                     <span>Organization logo preview</span>
                   </div>
                 ) : null}
@@ -12465,7 +12465,7 @@ export default function GreenWork() {
                         </div>
                         {org.logo_url ? (
                           <div className="green-work-brand-preview compact">
-                            <img src={toDisplayPhotoUrl(org.logo_url)} alt={`${org.name} logo`} />
+                            <img src={toDisplayPhotoUrl(org.logo_url)} alt={`${org.name} logo`} loading="lazy" decoding="async" />
                             <span>Logo attached</span>
                           </div>
                         ) : null}

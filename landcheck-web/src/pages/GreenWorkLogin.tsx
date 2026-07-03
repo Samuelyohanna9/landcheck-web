@@ -48,7 +48,7 @@ export default function GreenWorkLogin() {
       <div className="work-login-card">
         <div className="work-login-brand">
           <div className="work-login-brand-logos">
-            <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
+            <img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="72" height="72" />
           </div>
           <h1>LandCheck Work</h1>
         </div>

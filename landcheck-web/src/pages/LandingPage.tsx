@@ -371,7 +371,7 @@ export default function LandingPage() {
                     <span className="lp-partner-pilot-tag">Pilot</span>
                   )}
                   {org.logo ? (
-                    <img src={org.logo} alt={org.name} className="lp-partner-logo" />
+                    <img src={org.logo} alt={org.name} className="lp-partner-logo" width="80" height="58" loading="lazy" />
                   ) : (
                     <span className="lp-partner-initials">
                       {org.name
@@ -409,7 +409,7 @@ export default function LandingPage() {
       <footer className="lp-footer">
         <div className="lp-footer-inner">
           <div className="lp-footer-brand">
-            <img src="/logo.svg" alt="LandCheck" className="lp-footer-logo" />
+            <img src="/logo.svg" alt="LandCheck" className="lp-footer-logo" width="100" height="34" loading="lazy" />
             <ul>
               <li>
                 <a href="mailto:landchecktech@gmail.com">landchecktech@gmail.com</a>

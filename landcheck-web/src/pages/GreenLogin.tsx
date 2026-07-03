@@ -171,7 +171,7 @@ export default function GreenLogin() {
         <div className="green-auth-shell">
           <section className="green-auth-hero">
             <div className="green-auth-brand-tile">
-              <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
+              <img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="72" height="72" />
             </div>
             <div className="green-auth-hero-copy">
               <div className="green-auth-chip">LC Green Mobile</div>
@@ -239,7 +239,7 @@ export default function GreenLogin() {
 
           <div className="green-auth-detail-head">
             <div className="green-auth-brand-tile small">
-              <img src={GREEN_LOGO_SRC} alt="LandCheck Green" />
+              <img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="72" height="72" />
             </div>
             <div className="green-auth-detail-orb">
               <RouteGlyph icon={activeRouteCopy.icon} />

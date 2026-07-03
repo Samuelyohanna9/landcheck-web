@@ -274,7 +274,7 @@ export default function HazardAnalysis() {
             <h3>Flood Risk Overlay</h3>
             {result?.overlay ? (
               <>
-                <img src={result.overlay} alt="Flood risk overlay" />
+                <img src={result.overlay} alt="Flood risk overlay" width="600" height="600" loading="lazy" decoding="async" />
                 <div className="hazard-north" aria-hidden="true">
                   <div className="north-arrow" />
                   <span>N</span>

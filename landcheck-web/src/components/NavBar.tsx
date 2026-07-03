@@ -63,7 +63,7 @@ export default function NavBar({
           className={logoBadge ? "lc-nav-brand lc-nav-brand--badge" : "lc-nav-brand"}
           onClick={() => navigate("/")}
         >
-          <img src={logoSrc} alt="LandCheck" />
+          <img src={logoSrc} alt="LandCheck" width="140" height="42" />
         </button>
 
         {/* Desktop links */}
@@ -107,7 +107,7 @@ export default function NavBar({
           aria-label="Mobile navigation"
         >
           <div className="lc-mobile-header">
-            <img src={logoSrc} alt="LandCheck" className="lc-mobile-logo" />
+            <img src={logoSrc} alt="LandCheck" className="lc-mobile-logo" width="110" height="36" />
             <button
               type="button"
               className="lc-mobile-close"
