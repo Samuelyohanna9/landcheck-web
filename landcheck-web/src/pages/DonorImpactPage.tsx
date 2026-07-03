@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import mapboxgl from "mapbox-gl";
 import {
   fetchOrgImpact,
@@ -9,7 +9,15 @@ import {
   type DonorImpactProject,
   type DonorImpactPhoto,
 } from "../api/donorImpact";
+import { BACKEND_URL } from "../api/client";
 import "../styles/green-impact.css";
+
+const resolveAssetUrl = (url: string | null | undefined): string => {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+  if (raw.startsWith("/")) return `${BACKEND_URL}${raw}`;
+  return raw;
+};
 
 const MAPBOX_TOKEN = String(import.meta.env.VITE_MAPBOX_TOKEN || "").trim();
 mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -185,7 +193,7 @@ function PhotoGallery({ photos }: { photos: DonorImpactPhoto[] }) {
         {photos.map((ph, i) => (
           <div key={i} className="gi-photo-item" onClick={() => setLightbox(ph)}>
             <img
-              src={ph.url}
+              src={resolveAssetUrl(ph.url)}
               alt={ph.entity_label || "Field evidence"}
               className="gi-photo-img"
               loading="lazy"
@@ -204,7 +212,7 @@ function PhotoGallery({ photos }: { photos: DonorImpactPhoto[] }) {
       {lightbox && (
         <div className="gi-lightbox-backdrop" onClick={() => setLightbox(null)}>
           <div className="gi-lightbox-inner" onClick={(e) => e.stopPropagation()}>
-            <img src={lightbox.url} alt={lightbox.entity_label || "Evidence"} className="gi-lightbox-img" />
+            <img src={resolveAssetUrl(lightbox.url)} alt={lightbox.entity_label || "Evidence"} className="gi-lightbox-img" />
             <button className="gi-lightbox-close" onClick={() => setLightbox(null)}>✕</button>
             <div className="gi-lightbox-caption">
               {lightbox.entity_label && <span>{lightbox.entity_label}</span>}
@@ -425,6 +433,8 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
 // ── Main page ────────────────────────────────────────────────────────────────
 export default function DonorImpactPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
+  const [searchParams] = useSearchParams();
+  const projectFilter = searchParams.get("project") || null;
   const [data, setData] = useState<DonorImpactData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -442,9 +452,10 @@ export default function DonorImpactPage() {
       .then((res) => {
         setData(res);
         setTimeout(() => {
+          const filtered = projectFilter ? res.projects.filter((p) => String(p.id) === projectFilter) : res.projects;
           animateCount(totalRecRef.current, res.summary.total_records);
           animateCount(totalActRef.current, res.summary.total_approved_activities);
-          animateCount(totalProjRef.current, res.projects.length);
+          animateCount(totalProjRef.current, filtered.length);
         }, 120);
       })
       .catch(() => setError("This impact page could not be found. The link may be incorrect or the organisation is not yet active."))
@@ -492,6 +503,12 @@ export default function DonorImpactPage() {
           <div className="gi-error-icon">📊</div>
           <div className="gi-error-title">Impact page not found</div>
           <div className="gi-error-text">{error || "Something went wrong loading this impact page."}</div>
+          {orgSlug && (
+            <div className="gi-error-text" style={{ marginTop: 8, fontSize: "0.8em", opacity: 0.65 }}>
+              Looked up: <code style={{ background: "rgba(0,0,0,0.08)", padding: "2px 6px", borderRadius: 4 }}>{orgSlug}</code>
+              {" — "} Ask your LandCheck administrator to confirm the organisation has a slug set.
+            </div>
+          )}
         </div>
         <footer className="gi-footer">
           <div className="gi-footer-inner">
@@ -505,7 +522,11 @@ export default function DonorImpactPage() {
     );
   }
 
-  const { org, projects, summary } = data;
+  const { org, projects: allProjects, summary } = data;
+  const projects = projectFilter
+    ? allProjects.filter((p) => String(p.id) === projectFilter)
+    : allProjects;
+  const singleProjectName = projects.length === 1 && projectFilter ? projects[0]?.name : null;
   const orgLocation = [org.city, org.state_region, org.country].filter(Boolean).join(", ");
   const lastUpdated = summary.last_updated_at ? formatDate(summary.last_updated_at) : null;
 
@@ -535,12 +556,24 @@ export default function DonorImpactPage() {
           <div className="gi-hero-top">
             <div className="gi-hero-logo-wrap">
               {org.logo_url ? (
-                <img src={org.logo_url} alt={org.name} className="gi-hero-logo" />
-              ) : (
-                <div className="gi-hero-logo-placeholder">
-                  {org.short_name ? org.short_name.slice(0, 2).toUpperCase() : org.name.slice(0, 2).toUpperCase()}
-                </div>
-              )}
+                <img
+                  src={resolveAssetUrl(org.logo_url)}
+                  alt={org.name}
+                  className="gi-hero-logo"
+                  onError={(e) => {
+                    const el = e.currentTarget as HTMLImageElement;
+                    el.style.display = "none";
+                    const placeholder = el.nextElementSibling as HTMLElement | null;
+                    if (placeholder) placeholder.style.display = "flex";
+                  }}
+                />
+              ) : null}
+              <div
+                className="gi-hero-logo-placeholder"
+                style={{ display: org.logo_url ? "none" : "flex" }}
+              >
+                {org.short_name ? org.short_name.slice(0, 2).toUpperCase() : org.name.slice(0, 2).toUpperCase()}
+              </div>
             </div>
             <div>
               <div className="gi-hero-org-name">{org.name}</div>
@@ -570,9 +603,13 @@ export default function DonorImpactPage() {
             {lastUpdated && (
               <div className="gi-hero-badge">Last updated: {lastUpdated}</div>
             )}
-            <div className="gi-hero-badge">
-              {projects.length} {projects.length === 1 ? "project" : "projects"}
-            </div>
+            {singleProjectName ? (
+              <div className="gi-hero-badge">{singleProjectName}</div>
+            ) : (
+              <div className="gi-hero-badge">
+                {projects.length} {projects.length === 1 ? "project" : "projects"}
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -590,7 +627,7 @@ export default function DonorImpactPage() {
           </div>
           <div className="gi-summary-cell">
             <div className="gi-summary-val"><span ref={totalProjRef}>0</span></div>
-            <div className="gi-summary-label">Projects</div>
+            <div className="gi-summary-label">{projectFilter ? "Showing Project" : "Projects"}</div>
           </div>
           <div className="gi-summary-cell">
             <div className="gi-summary-val" style={{ fontSize: "clamp(15px,2vw,20px)" }}>
