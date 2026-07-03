@@ -1863,6 +1863,33 @@
   margin-top: 0.75rem;
 }
 
+.green-work-remote-tech-details {
+  margin-top: 1rem;
+  border: 1px solid var(--gw-border, #e5e7eb);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.green-work-remote-tech-details > summary {
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gw-muted, #6b7280);
+  background: var(--gw-panel-soft, #f9fafb);
+  user-select: none;
+  list-style: none;
+}
+.green-work-remote-tech-details > summary::-webkit-details-marker { display: none; }
+.green-work-remote-tech-details > summary::before {
+  content: "▶ ";
+  font-size: 10px;
+  opacity: 0.6;
+}
+.green-work-remote-tech-details[open] > summary::before { content: "▼ "; }
+.green-work-remote-tech-details > :not(summary) {
+  padding: 0 0.75rem 0.75rem;
+}
+
 .green-work-remote-health-scale {
   margin-top: 0.9rem;
   display: grid;

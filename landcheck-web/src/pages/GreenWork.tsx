@@ -27,6 +27,14 @@ const REMOTE_MONITORING_PROGRESS_STEPS = [
   "Calculating NDVI and vegetated area",
   "Preparing vegetation summary",
 ];
+const REMOTE_MONITORING_PROGRESS_STEPS_AGRIC = [
+  "Validating selected farm block",
+  "Counting mapped plots in farm area",
+  "Fetching satellite imagery window",
+  "Filtering cloud-free vegetation pixels",
+  "Calculating crop vigor and coverage",
+  "Preparing farm health summary",
+];
 
 type WorkflowProfile = "green" | "agric" | "relief_recovery";
 type ProjectAccessModel = "partner_org" | "public_sponsorship";
@@ -16892,7 +16900,7 @@ export default function GreenWork() {
                         <span style={{ width: `${Math.max(8, Math.min(100, remoteMonitoringProgressPct || 0))}%` }} />
                       </div>
                       <div className="green-work-remote-progress-steps">
-                        {REMOTE_MONITORING_PROGRESS_STEPS.map((label, index) => {
+                        {(activeWorkflowProfile === "agric" ? REMOTE_MONITORING_PROGRESS_STEPS_AGRIC : REMOTE_MONITORING_PROGRESS_STEPS).map((label, index) => {
                           const isDone = index < remoteMonitoringProgressStep;
                           const isActive = index === remoteMonitoringProgressStep;
                           return (
@@ -16991,7 +16999,7 @@ export default function GreenWork() {
                       <span style={{ width: `${Math.max(8, Math.min(100, remoteMonitoringProgressPct || 0))}%` }} />
                     </div>
                     <div className="green-work-remote-progress-steps">
-                      {REMOTE_MONITORING_PROGRESS_STEPS.map((label, index) => {
+                      {(activeWorkflowProfile === "agric" ? REMOTE_MONITORING_PROGRESS_STEPS_AGRIC : REMOTE_MONITORING_PROGRESS_STEPS).map((label, index) => {
                         const isDone = index < remoteMonitoringProgressStep;
                         const isActive = index === remoteMonitoringProgressStep;
                         return (
@@ -17039,7 +17047,12 @@ export default function GreenWork() {
                     ) : null}
                     {remoteMonitoringTopRiskTrees.length ? (
                       <div className="green-work-remote-risk-strip">
-                        <strong>{activeWorkflowProfile === "agric" ? "Priority farms" : "Priority trees"}</strong>
+                        <strong>{activeWorkflowProfile === "agric" ? "Farms needing attention" : "Priority trees"}</strong>
+                        {activeWorkflowProfile === "agric" && (
+                          <small style={{ display: "block", marginBottom: 8, color: "var(--gw-muted, #888)", fontSize: 12 }}>
+                            These plots show stress signals. Tap to locate on map, then assign a support visit.
+                          </small>
+                        )}
                         <div className="green-work-remote-risk-list">
                           {remoteMonitoringTopRiskTrees.map((tree) => (
                             <button
@@ -17050,7 +17063,9 @@ export default function GreenWork() {
                             >
                               <span>{tree.tree_label || formatProjectTreeLabelById(tree.tree_id)}</span>
                               <strong>{tree.satellite_health_label || "No data"}</strong>
-                              <small>{typeof tree.local_mean_ndvi === "number" ? `NDVI ${tree.local_mean_ndvi.toFixed(3)}` : "No NDVI"}</small>
+                              {activeWorkflowProfile !== "agric" && (
+                                <small>{typeof tree.local_mean_ndvi === "number" ? `NDVI ${tree.local_mean_ndvi.toFixed(3)}` : "No NDVI"}</small>
+                              )}
                             </button>
                           ))}
                         </div>
@@ -17098,10 +17113,21 @@ export default function GreenWork() {
                                     : "Satellite vegetation proxy not available for this tree yet.")}
                                 </p>
                                 <div className="green-work-remote-tree-card-metrics">
-                                  <div>
-                                    <span>NDVI</span>
-                                    <strong>{typeof tree.local_mean_ndvi === "number" ? tree.local_mean_ndvi.toFixed(3) : "-"}</strong>
-                                  </div>
+                                  {activeWorkflowProfile === "agric" ? (
+                                    <div>
+                                      <span>Vegetation Signal</span>
+                                      <strong>
+                                        {typeof tree.local_mean_ndvi === "number"
+                                          ? tree.local_mean_ndvi >= 0.5 ? "Strong" : tree.local_mean_ndvi >= 0.35 ? "Moderate" : tree.local_mean_ndvi >= 0.2 ? "Weak" : "Very Low"
+                                          : "-"}
+                                      </strong>
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <span>NDVI</span>
+                                      <strong>{typeof tree.local_mean_ndvi === "number" ? tree.local_mean_ndvi.toFixed(3) : "-"}</strong>
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="green-work-remote-tree-actions-menu">
                                   <button
@@ -17146,96 +17172,186 @@ export default function GreenWork() {
                         </div>
                       )}
                     </div>
-                    <div className="green-work-remote-summary-grid">
-                      <div className="green-work-remote-metric">
-                        <span>{activeWorkflowProfile === "agric" ? "Plots In Block" : "Trees In Polygon"}</span>
-                        <strong>{remoteMonitoringReport.area.tree_count || 0}</strong>
-                        <small>{remoteMonitoringReport.area.tree_record_count || 0} {activeWorkflowProfile === "agric" ? "plot rows" : "tree rows"} stored</small>
-                      </div>
-                      <div className="green-work-remote-metric">
-                        <span>{activeWorkflowProfile === "agric" ? "Healthy Vegetation Area" : "Vegetation Signal Area"}</span>
-                        <strong>{remoteMonitoringReport.summary.vegetation_area_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_sqm || 0} sqm</strong>
-                        <small>{remoteMonitoringReport.summary.vegetation_coverage_pct ?? 0}% of polygon</small>
-                      </div>
-                      <div className="green-work-remote-metric">
-                        <span>{activeWorkflowProfile === "agric" ? "Vegetation sqm / Plot" : "Signal Per Tree"}</span>
-                        <strong>{remoteMonitoringReport.summary.vegetation_area_per_tree_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_per_tree_sqm || 0} sqm</strong>
-                        <small>{activeWorkflowProfile === "agric" ? "Uses mapped plots inside the selected block as denominator" : "Uses stored trees inside polygon as denominator"}</small>
-                      </div>
-                      <div className="green-work-remote-metric">
-                        <span>{activeWorkflowProfile === "agric" ? "Crop Vigor (NDVI)" : "Mean NDVI"}</span>
-                        <strong>{remoteMonitoringReport.summary.mean_ndvi?.toFixed?.(3) || remoteMonitoringReport.summary.mean_ndvi || "-"}</strong>
-                        <small>Latest composite window across the polygon</small>
-                      </div>
-                      <div className="green-work-remote-metric">
-                        <span>Latest Image</span>
-                        <strong>{formatDateLabel(remoteMonitoringReport.summary.latest_image_date || null)}</strong>
-                        <small>{remoteMonitoringReport.summary.image_count || 0} image(s) used</small>
-                      </div>
-                      <div className="green-work-remote-metric">
-                        <span>{activeWorkflowProfile === "agric" ? "Block Mix" : "Inventory Mix"}</span>
-                        <strong>{remoteMonitoringReport.area.new_planting_tree_count || 0} {activeWorkflowProfile === "agric" ? "new plots" : "planted"}</strong>
-                        <small>{remoteMonitoringReport.area.existing_inventory_tree_count || 0} {activeWorkflowProfile === "agric" ? "existing plot records" : "existing inventory"}</small>
-                      </div>
-                    </div>
-
-                    {remoteMonitoringReport.health_scale?.bands?.length ? (
-                      <div className="green-work-remote-health-scale">
-                        <div className="green-work-remote-health-scale-head">
-                          <strong>{activeWorkflowProfile === "agric" ? "Farm-health signal bands" : "Satellite health bands"}</strong>
-                          {remoteMonitoringReport.health_scale?.buffer_meters ? (
-                            <span>
-                              {remoteMonitoringReport.health_scale.buffer_meters}m {activeWorkflowProfile === "agric" ? "plot-anchor buffer" : "tree buffer"}
-                            </span>
-                          ) : null}
+                    {activeWorkflowProfile === "agric" ? (
+                      <details className="green-work-remote-tech-details">
+                        <summary>Technical details</summary>
+                        <div className="green-work-remote-summary-grid">
+                          <div className="green-work-remote-metric">
+                            <span>Plots In Block</span>
+                            <strong>{remoteMonitoringReport.area.tree_count || 0}</strong>
+                            <small>{remoteMonitoringReport.area.tree_record_count || 0} plot rows stored</small>
+                          </div>
+                          <div className="green-work-remote-metric">
+                            <span>Healthy Vegetation Area</span>
+                            <strong>{remoteMonitoringReport.summary.vegetation_area_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_sqm || 0} sqm</strong>
+                            <small>{remoteMonitoringReport.summary.vegetation_coverage_pct ?? 0}% of farm block</small>
+                          </div>
+                          <div className="green-work-remote-metric">
+                            <span>Vegetation sqm / Plot</span>
+                            <strong>{remoteMonitoringReport.summary.vegetation_area_per_tree_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_per_tree_sqm || 0} sqm</strong>
+                            <small>Uses mapped plots in block as denominator</small>
+                          </div>
+                          <div className="green-work-remote-metric">
+                            <span>Crop Vigor Index (NDVI)</span>
+                            <strong>{remoteMonitoringReport.summary.mean_ndvi?.toFixed?.(3) || remoteMonitoringReport.summary.mean_ndvi || "-"}</strong>
+                            <small>Latest composite window across the farm block</small>
+                          </div>
+                          <div className="green-work-remote-metric">
+                            <span>Latest Satellite Image</span>
+                            <strong>{formatDateLabel(remoteMonitoringReport.summary.latest_image_date || null)}</strong>
+                            <small>{remoteMonitoringReport.summary.image_count || 0} image(s) used</small>
+                          </div>
+                          <div className="green-work-remote-metric">
+                            <span>Block Mix</span>
+                            <strong>{remoteMonitoringReport.area.new_planting_tree_count || 0} new plots</strong>
+                            <small>{remoteMonitoringReport.area.existing_inventory_tree_count || 0} existing plot records</small>
+                          </div>
                         </div>
-                        <div className="green-work-remote-health-scale-list">
-                          {remoteMonitoringReport.health_scale.bands.map((band) => (
-                            <div key={`remote-health-band-${band.key}`} className={`green-work-remote-health-band is-${normalizeName(band.key)}`}>
-                              <strong>{band.label}</strong>
-                              <span>{formatNdviBandLabel(band)}</span>
-                              <small>{band.description || ""}</small>
+                        {remoteMonitoringReport.health_scale?.bands?.length ? (
+                          <div className="green-work-remote-health-scale">
+                            <div className="green-work-remote-health-scale-head">
+                              <strong>Farm-health signal bands</strong>
+                              {remoteMonitoringReport.health_scale?.buffer_meters ? (
+                                <span>{remoteMonitoringReport.health_scale.buffer_meters}m plot-anchor buffer</span>
+                              ) : null}
                             </div>
-                          ))}
-                        </div>
-                        {remoteMonitoringReport.health_scale?.note ? (
-                          <p className="green-work-note green-work-remote-summary-note">{remoteMonitoringReport.health_scale.note}</p>
+                            <div className="green-work-remote-health-scale-list">
+                              {remoteMonitoringReport.health_scale.bands.map((band) => (
+                                <div key={`remote-health-band-${band.key}`} className={`green-work-remote-health-band is-${normalizeName(band.key)}`}>
+                                  <strong>{band.label}</strong>
+                                  <span>{formatNdviBandLabel(band)}</span>
+                                  <small>{band.description || ""}</small>
+                                </div>
+                              ))}
+                            </div>
+                            {remoteMonitoringReport.health_scale?.note ? (
+                              <p className="green-work-note green-work-remote-summary-note">{remoteMonitoringReport.health_scale.note}</p>
+                            ) : null}
+                          </div>
                         ) : null}
-                      </div>
-                    ) : null}
-
-                    <div className="green-work-remote-series-table-wrap">
-                      <table className="green-work-live-table green-work-remote-series-table">
-                        <thead>
-                          <tr>
-                            <th>Period</th>
-                            <th>Latest Image</th>
-                            <th>Mean NDVI</th>
-                            <th>{activeWorkflowProfile === "agric" ? "Healthy Area" : "Signal Area"}</th>
-                            <th>Cover %</th>
-                            <th>{activeWorkflowProfile === "agric" ? "Vigor sqm / Plot" : "Signal sqm / Tree"}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {remoteMonitoringReport.series.length === 0 ? (
-                            <tr>
-                              <td colSpan={6} className="green-work-live-empty">{activeWorkflowProfile === "agric" ? "No monthly farm-health rows available yet." : "No monthly monitoring rows available yet."}</td>
-                            </tr>
-                          ) : (
-                            remoteMonitoringReport.series.map((row) => (
-                              <tr key={`remote-series-${row.label}`}>
-                                <td>{row.label}</td>
-                                <td>{formatDateLabel(row.latest_image_date || null)}</td>
-                                <td>{row.mean_ndvi?.toFixed?.(3) || row.mean_ndvi || "-"}</td>
-                                <td>{row.vegetation_area_sqm?.toFixed?.(2) || row.vegetation_area_sqm || "-"}</td>
-                                <td>{row.vegetation_coverage_pct?.toFixed?.(1) || row.vegetation_coverage_pct || "-"}</td>
-                                <td>{row.vegetation_area_per_tree_sqm?.toFixed?.(2) || row.vegetation_area_per_tree_sqm || "-"}</td>
+                        <div className="green-work-remote-series-table-wrap">
+                          <table className="green-work-live-table green-work-remote-series-table">
+                            <thead>
+                              <tr>
+                                <th>Period</th>
+                                <th>Latest Image</th>
+                                <th>NDVI</th>
+                                <th>Healthy Area</th>
+                                <th>Cover %</th>
+                                <th>Vigor sqm / Plot</th>
                               </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+                            </thead>
+                            <tbody>
+                              {remoteMonitoringReport.series.length === 0 ? (
+                                <tr>
+                                  <td colSpan={6} className="green-work-live-empty">No monthly farm-health rows available yet.</td>
+                                </tr>
+                              ) : (
+                                remoteMonitoringReport.series.map((row) => (
+                                  <tr key={`remote-series-${row.label}`}>
+                                    <td>{row.label}</td>
+                                    <td>{formatDateLabel(row.latest_image_date || null)}</td>
+                                    <td>{row.mean_ndvi?.toFixed?.(3) || row.mean_ndvi || "-"}</td>
+                                    <td>{row.vegetation_area_sqm?.toFixed?.(2) || row.vegetation_area_sqm || "-"}</td>
+                                    <td>{row.vegetation_coverage_pct?.toFixed?.(1) || row.vegetation_coverage_pct || "-"}</td>
+                                    <td>{row.vegetation_area_per_tree_sqm?.toFixed?.(2) || row.vegetation_area_per_tree_sqm || "-"}</td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </details>
+                    ) : (
+                      <>
+                        <div className="green-work-remote-summary-grid">
+                          <div className="green-work-remote-metric">
+                            <span>Trees In Polygon</span>
+                            <strong>{remoteMonitoringReport.area.tree_count || 0}</strong>
+                            <small>{remoteMonitoringReport.area.tree_record_count || 0} tree rows stored</small>
+                          </div>
+                          <div className="green-work-remote-metric">
+                            <span>Vegetation Signal Area</span>
+                            <strong>{remoteMonitoringReport.summary.vegetation_area_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_sqm || 0} sqm</strong>
+                            <small>{remoteMonitoringReport.summary.vegetation_coverage_pct ?? 0}% of polygon</small>
+                          </div>
+                          <div className="green-work-remote-metric">
+                            <span>Signal Per Tree</span>
+                            <strong>{remoteMonitoringReport.summary.vegetation_area_per_tree_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_per_tree_sqm || 0} sqm</strong>
+                            <small>Uses stored trees inside polygon as denominator</small>
+                          </div>
+                          <div className="green-work-remote-metric">
+                            <span>Mean NDVI</span>
+                            <strong>{remoteMonitoringReport.summary.mean_ndvi?.toFixed?.(3) || remoteMonitoringReport.summary.mean_ndvi || "-"}</strong>
+                            <small>Latest composite window across the polygon</small>
+                          </div>
+                          <div className="green-work-remote-metric">
+                            <span>Latest Image</span>
+                            <strong>{formatDateLabel(remoteMonitoringReport.summary.latest_image_date || null)}</strong>
+                            <small>{remoteMonitoringReport.summary.image_count || 0} image(s) used</small>
+                          </div>
+                          <div className="green-work-remote-metric">
+                            <span>Inventory Mix</span>
+                            <strong>{remoteMonitoringReport.area.new_planting_tree_count || 0} planted</strong>
+                            <small>{remoteMonitoringReport.area.existing_inventory_tree_count || 0} existing inventory</small>
+                          </div>
+                        </div>
+                        {remoteMonitoringReport.health_scale?.bands?.length ? (
+                          <div className="green-work-remote-health-scale">
+                            <div className="green-work-remote-health-scale-head">
+                              <strong>Satellite health bands</strong>
+                              {remoteMonitoringReport.health_scale?.buffer_meters ? (
+                                <span>{remoteMonitoringReport.health_scale.buffer_meters}m tree buffer</span>
+                              ) : null}
+                            </div>
+                            <div className="green-work-remote-health-scale-list">
+                              {remoteMonitoringReport.health_scale.bands.map((band) => (
+                                <div key={`remote-health-band-${band.key}`} className={`green-work-remote-health-band is-${normalizeName(band.key)}`}>
+                                  <strong>{band.label}</strong>
+                                  <span>{formatNdviBandLabel(band)}</span>
+                                  <small>{band.description || ""}</small>
+                                </div>
+                              ))}
+                            </div>
+                            {remoteMonitoringReport.health_scale?.note ? (
+                              <p className="green-work-note green-work-remote-summary-note">{remoteMonitoringReport.health_scale.note}</p>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        <div className="green-work-remote-series-table-wrap">
+                          <table className="green-work-live-table green-work-remote-series-table">
+                            <thead>
+                              <tr>
+                                <th>Period</th>
+                                <th>Latest Image</th>
+                                <th>Mean NDVI</th>
+                                <th>Signal Area</th>
+                                <th>Cover %</th>
+                                <th>Signal sqm / Tree</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {remoteMonitoringReport.series.length === 0 ? (
+                                <tr>
+                                  <td colSpan={6} className="green-work-live-empty">No monthly monitoring rows available yet.</td>
+                                </tr>
+                              ) : (
+                                remoteMonitoringReport.series.map((row) => (
+                                  <tr key={`remote-series-${row.label}`}>
+                                    <td>{row.label}</td>
+                                    <td>{formatDateLabel(row.latest_image_date || null)}</td>
+                                    <td>{row.mean_ndvi?.toFixed?.(3) || row.mean_ndvi || "-"}</td>
+                                    <td>{row.vegetation_area_sqm?.toFixed?.(2) || row.vegetation_area_sqm || "-"}</td>
+                                    <td>{row.vegetation_coverage_pct?.toFixed?.(1) || row.vegetation_coverage_pct || "-"}</td>
+                                    <td>{row.vegetation_area_per_tree_sqm?.toFixed?.(2) || row.vegetation_area_per_tree_sqm || "-"}</td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
               </div>
