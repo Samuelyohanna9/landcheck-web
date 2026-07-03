@@ -159,21 +159,19 @@ function ProjectMap({
           paint: { "text-color": "#fff" },
         });
 
-        if (!hasPolygons) {
-          map.addLayer({
-            id: "unclustered-point",
-            type: "circle",
-            source: "impact-points",
-            filter: ["!", ["has", "point_count"]],
-            paint: {
-              "circle-color": accentColor,
-              "circle-radius": 6,
-              "circle-opacity": 0.9,
-              "circle-stroke-width": 1.5,
-              "circle-stroke-color": "#fff",
-            },
-          });
-        }
+        map.addLayer({
+          id: "unclustered-point",
+          type: "circle",
+          source: "impact-points",
+          filter: ["!", ["has", "point_count"]],
+          paint: {
+            "circle-color": accentColor,
+            "circle-radius": 6,
+            "circle-opacity": 0.9,
+            "circle-stroke-width": 1.5,
+            "circle-stroke-color": "#fff",
+          },
+        });
       }
 
       // ── Polygon layers (agric/relief plot boundaries) ──
@@ -245,7 +243,7 @@ function ProjectMap({
       mapRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points, features, accentColor]);
+  }, []);
 
   if (points.length === 0 && features.length === 0) return null;
 
