@@ -59,6 +59,7 @@ export type DonorImpactComment = {
   commenter_name: string;
   commenter_rank?: string | null;
   commenter_org?: string | null;
+  project_name?: string | null;
   comment_body: string;
   created_at?: string | null;
 };
@@ -143,7 +144,7 @@ export const fetchOrgImpactComments = async (orgSlug: string): Promise<DonorImpa
 
 export const postOrgImpactComment = async (
   orgSlug: string,
-  payload: { commenter_name: string; commenter_rank: string; commenter_org: string; comment_body: string },
+  payload: { commenter_name: string; commenter_rank: string; commenter_org: string; project_name: string; comment_body: string },
 ): Promise<DonorImpactComment> => {
   const response = await api.post<DonorImpactComment>(`/green/public/impact/${encodeURIComponent(orgSlug)}/comment`, payload);
   return response.data;

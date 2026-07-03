@@ -2905,6 +2905,7 @@ type ImpactComment = {
   commenter_name: string;
   commenter_rank?: string | null;
   commenter_org?: string | null;
+  project_name?: string | null;
   comment_body: string;
   created_at?: string | null;
 };
@@ -3095,6 +3096,11 @@ function ShareImpactPanel({
                       </div>
                     )}
                   </div>
+                  {c.project_name && (
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(26,92,42,0.08)", border: "1px solid #c4ddc9", borderRadius: 6, padding: "2px 9px", fontSize: 11, color: "#1a5c2a", fontWeight: 600, marginBottom: 6 }}>
+                      📂 {c.project_name}
+                    </div>
+                  )}
                   <div style={{ fontSize: 13.5, color: "#2d4a35", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{c.comment_body}</div>
                 </div>
               ))}
