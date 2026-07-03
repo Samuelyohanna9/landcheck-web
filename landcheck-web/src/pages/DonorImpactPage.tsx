@@ -339,7 +339,25 @@ function EndorsementSection({ orgSlug }: { orgSlug: string }) {
           </div>
           {submitError && <div className="gi-form-error">{submitError}</div>}
           {submitted && <div className="gi-form-success">✓ Your endorsement has been submitted. Thank you.</div>}
-          <button type="submit" className="gi-btn gi-btn-primary" disabled={submitting} style={{ marginTop: 14 }}>
+          <button
+            type="submit"
+            disabled={submitting}
+            style={{
+              marginTop: 14,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
+              background: submitting ? "#6b9e7a" : "linear-gradient(135deg,#1a5c2a,#2aa852)",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 14,
+              border: "none",
+              borderRadius: 10,
+              padding: "10px 22px",
+              cursor: submitting ? "not-allowed" : "pointer",
+              transition: "background 0.18s",
+            }}
+          >
             {submitting ? "Submitting…" : "Submit Endorsement"}
           </button>
         </form>
