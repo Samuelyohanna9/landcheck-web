@@ -13,40 +13,57 @@
     <meta name="application-name" content="LandCheck" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
+    <!-- Hreflang for Nigerian English targeting -->
+    <link rel="alternate" hreflang="en-ng" href="https://landcheck.online/" />
+    <link rel="alternate" hreflang="en" href="https://landcheck.online/" />
+    <link rel="alternate" hreflang="x-default" href="https://landcheck.online/" />
+
     <!-- Preconnect to external origins -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://api.mapbox.com" />
     <link rel="dns-prefetch" href="https://events.mapbox.com" />
+    <link rel="dns-prefetch" href="https://api.landcheck.online" />
 
-    <title>LandCheck Nigeria | Survey Plan, Flood Risk, and Tree Monitoring</title>
+    <!-- Preload critical above-the-fold image -->
+    <link rel="preload" as="image" href="/green-logo-cropped-820.png" />
+
+    <title>LandCheck Nigeria | Survey Plan, Flood Risk & Tree Monitoring</title>
     <meta
       name="description"
-      content="LandCheck is a Nigeria-focused platform for survey plan production, flood risk analysis, and tree monitoring with GPS evidence and audit-ready reports."
+      content="LandCheck is Nigeria's geospatial intelligence platform for survey plan production, flood risk analysis, and GPS tree monitoring with audit-ready reports."
     />
+    <meta
+      name="keywords"
+      content="survey plan Nigeria, flood risk analysis Nigeria, tree monitoring app Nigeria, geospatial platform Nigeria, LandCheck Nigeria, land survey Nigeria, GPS tree monitoring"
+    />
+    <meta name="author" content="LandCheck Geospatial Technologies Limited" />
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
     <meta name="googlebot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
-    <link rel="canonical" href="https://landcheck.online/" />
+    <!-- canonical is set per-route by SeoRouteMeta.tsx; no static override here -->
     <link rel="sitemap" type="application/xml" href="https://landcheck.online/sitemap.xml" />
 
     <meta property="og:site_name" content="LandCheck" />
+    <meta property="og:locale" content="en_NG" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="LandCheck Nigeria | Survey Plan, Flood Risk, and Tree Monitoring" />
+    <meta property="og:title" content="LandCheck Nigeria | Survey Plan, Flood Risk & Tree Monitoring" />
     <meta
       property="og:description"
-      content="Survey plans, flood risk analysis, and field tree monitoring for projects in Nigeria."
+      content="Nigeria's geospatial intelligence platform — survey plans, flood risk screening, and GPS tree monitoring for development projects."
     />
     <meta property="og:url" content="https://landcheck.online/" />
     <meta property="og:image" content="https://landcheck.online/green-logo-cropped-820.png" />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="LandCheck Nigeria — Geospatial Intelligence Platform" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="LandCheck Nigeria | Survey Plan, Flood Risk, and Tree Monitoring" />
+    <meta name="twitter:site" content="@LandCheckNG" />
+    <meta name="twitter:title" content="LandCheck Nigeria | Survey Plan, Flood Risk & Tree Monitoring" />
     <meta
       name="twitter:description"
-      content="Survey plans, flood risk analysis, and field tree monitoring for projects in Nigeria."
+      content="Nigeria's geospatial intelligence platform — survey plans, flood risk screening, and GPS tree monitoring for development projects."
     />
     <meta name="twitter:image" content="https://landcheck.online/green-logo-cropped-820.png" />
     <meta name="twitter:image:alt" content="LandCheck Nigeria — Geospatial Intelligence Platform" />
@@ -59,7 +76,7 @@
             "@type": "Organization",
             "@id": "https://landcheck.online/#organization",
             "name": "LandCheck Geospatial Technologies Limited",
-            "alternateName": "LandCheck",
+            "alternateName": ["LandCheck", "LandCheck Nigeria"],
             "url": "https://landcheck.online/",
             "identifier": "RC: 9350241",
             "logo": {
@@ -68,14 +85,47 @@
               "width": 820,
               "height": 820
             },
+            "email": "landchecktech@gmail.com",
             "contactPoint": {
               "@type": "ContactPoint",
               "email": "landchecktech@gmail.com",
-              "contactType": "customer support"
+              "contactType": "customer support",
+              "availableLanguage": "English",
+              "areaServed": "NG"
             },
             "areaServed": {
               "@type": "Country",
               "name": "Nigeria"
+            },
+            "knowsAbout": [
+              "Survey Plans",
+              "Geographic Information Systems",
+              "Flood Risk Analysis",
+              "Tree Monitoring",
+              "Agricultural Monitoring",
+              "Environmental Reporting",
+              "Geospatial Technology"
+            ],
+            "hasOfferCatalog": {
+              "@type": "OfferCatalog",
+              "name": "LandCheck Products and Services",
+              "itemListElement": [
+                {
+                  "@type": "Offer",
+                  "name": "LandCheck Green — Tree & Agricultural Monitoring App",
+                  "url": "https://landcheck.online/green-partners"
+                },
+                {
+                  "@type": "Offer",
+                  "name": "Survey Plan Production",
+                  "url": "https://landcheck.online/survey"
+                },
+                {
+                  "@type": "Offer",
+                  "name": "Flood Risk & Land Hazard Analysis",
+                  "url": "https://landcheck.online/flood"
+                }
+              ]
             },
             "sameAs": [
               "https://play.google.com/store/apps/details?id=online.landcheck.mobile"
@@ -86,7 +136,8 @@
             "@id": "https://landcheck.online/#website",
             "name": "LandCheck",
             "url": "https://landcheck.online/",
-            "description": "Nigeria-focused survey plan, flood risk, and tree monitoring platform.",
+            "description": "Nigeria-focused geospatial intelligence platform for survey plan production, flood risk analysis, and GPS tree monitoring.",
+            "inLanguage": "en-NG",
             "publisher": {
               "@id": "https://landcheck.online/#organization"
             },
@@ -100,18 +151,54 @@
             }
           },
           {
-            "@type": "SoftwareApplication",
-            "@id": "https://landcheck.online/#app",
+            "@type": "MobileApplication",
+            "@id": "https://landcheck.online/#android-app",
             "name": "LandCheck Green",
+            "alternateName": "LC Green",
+            "operatingSystem": "ANDROID",
             "applicationCategory": "EnvironmentalApp",
-            "operatingSystem": "Android",
-            "url": "https://play.google.com/store/apps/details?id=online.landcheck.mobile",
-            "description": "Tree inventory, GPS monitoring, and environmental program reporting for NGOs and field teams in Nigeria.",
+            "applicationSubCategory": "Agricultural Monitoring App",
+            "downloadUrl": "https://play.google.com/store/apps/details?id=online.landcheck.mobile",
+            "installUrl": "https://play.google.com/store/apps/details?id=online.landcheck.mobile",
+            "identifier": "online.landcheck.mobile",
+            "url": "https://landcheck.online/green-partners",
+            "description": "Free Android app for GPS tree inventory, agricultural farm health monitoring, humanitarian relief site assessment, and environmental program reporting. Used by NGOs and field teams in Nigeria.",
+            "inLanguage": "en",
+            "author": {
+              "@id": "https://landcheck.online/#organization"
+            },
             "offers": {
               "@type": "Offer",
               "price": "0",
               "priceCurrency": "NGN"
-            }
+            },
+            "featureList": [
+              "GPS tree planting and inventory records",
+              "Agricultural farm health monitoring with NDVI",
+              "Humanitarian relief and recovery site assessment",
+              "Photo evidence capture with timestamps",
+              "Offline field data collection with background sync",
+              "Maintenance and field visit tracking",
+              "Farmer and beneficiary management",
+              "Carbon reporting and donor impact reports"
+            ],
+            "screenshot": [
+              {
+                "@type": "ImageObject",
+                "url": "https://landcheck.online/Screenshotgreen.png",
+                "caption": "LandCheck Green field monitoring app"
+              }
+            ]
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://landcheck.online/#homepage",
+            "url": "https://landcheck.online/",
+            "name": "LandCheck Nigeria | Survey Plan, Flood Risk & Tree Monitoring",
+            "description": "LandCheck is Nigeria's geospatial intelligence platform for survey plan production, flood risk analysis, and GPS tree monitoring.",
+            "isPartOf": { "@id": "https://landcheck.online/#website" },
+            "about": { "@id": "https://landcheck.online/#organization" },
+            "inLanguage": "en-NG"
           }
         ]
       }
