@@ -187,30 +187,47 @@ function ProjectMap({
           id: "polygon-fill",
           type: "fill",
           source: "impact-polygons",
-          paint: { "fill-color": accentColor, "fill-opacity": 0.22 },
+          paint: { "fill-color": accentColor, "fill-opacity": 0.25 },
         });
         map.addLayer({
           id: "polygon-outline",
           type: "line",
           source: "impact-polygons",
-          paint: { "line-color": accentColor, "line-width": 2, "line-opacity": 0.88 },
+          paint: { "line-color": accentColor, "line-width": 2.5, "line-opacity": 0.95 },
         });
 
-        map.on("click", "polygon-fill", (e) => {
-          const feat = e.features?.[0];
-          if (!feat) return;
-          const p = feat.properties as { custodian_name?: string; commodity?: string; area_ha?: number | null; ref_no?: string };
-          const parts = [
-            p.custodian_name ? `<strong>${p.custodian_name}</strong>` : null,
-            p.commodity ? `🌾 ${p.commodity}` : null,
-            p.area_ha != null ? `📐 ${Number(p.area_ha).toFixed(2)} ha` : null,
-            p.ref_no ? `🔖 Ref: ${p.ref_no}` : null,
-          ].filter(Boolean);
-          new mapboxgl.Popup({ closeButton: true, maxWidth: "230px" })
-            .setLngLat(e.lngLat)
-            .setHTML(`<div style="font-size:13px;line-height:1.7">${parts.join("<br>") || "Plot"}</div>`)
-            .addTo(map);
+        // Always-visible text labels centred on each polygon
+        map.addLayer({
+          id: "polygon-labels",
+          type: "symbol",
+          source: "impact-polygons",
+          layout: {
+            "text-field": ["concat",
+              ["coalesce", ["get", "custodian_name"], ""],
+              "\n",
+              ["coalesce", ["get", "commodity"], ""],
+              ["case",
+                ["!=", ["get", "area_ha"], null],
+                ["concat", "  ·  ", ["to-string", ["get", "area_ha"]], " ha"],
+                "",
+              ],
+            ],
+            "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+            "text-size": 11,
+            "text-anchor": "center",
+            "text-max-width": 12,
+            "text-allow-overlap": false,
+            "text-ignore-placement": false,
+            "symbol-placement": "point",
+          },
+          paint: {
+            "text-color": "#ffffff",
+            "text-halo-color": accentColor,
+            "text-halo-width": 1.8,
+            "text-halo-blur": 0.4,
+          },
         });
+
         map.on("mouseenter", "polygon-fill", () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", "polygon-fill", () => { map.getCanvas().style.cursor = ""; });
       }
@@ -244,10 +261,10 @@ function ProjectMap({
 }
 
 // ── Public endorsements section ──────────────────────────────────────────────
-function EndorsementSection({ orgSlug }: { orgSlug: string }) {
+function EndorsementSection({ orgSlug, projectName }: { orgSlug: string; projectName?: string | null }) {
   const [comments, setComments] = useState<DonorImpactComment[]>([]);
   const [commentsLoaded, setCommentsLoaded] = useState(false);
-  const [form, setForm] = useState({ commenter_name: "", commenter_rank: "", commenter_org: "", comment_body: "" });
+  const [form, setForm] = useState({ commenter_name: "", commenter_rank: "", commenter_org: "", project_name: projectName || "", comment_body: "" });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -268,7 +285,7 @@ function EndorsementSection({ orgSlug }: { orgSlug: string }) {
     try {
       const newComment = await postOrgImpactComment(orgSlug, form);
       setComments((prev) => [newComment, ...prev]);
-      setForm({ commenter_name: "", commenter_rank: "", commenter_org: "", comment_body: "" });
+      setForm({ commenter_name: "", commenter_rank: "", commenter_org: "", project_name: projectName || "", comment_body: "" });
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 4000);
     } catch {
@@ -326,6 +343,17 @@ function EndorsementSection({ orgSlug }: { orgSlug: string }) {
               />
             </div>
           </div>
+          <div className="gi-form-group" style={{ marginTop: 12 }}>
+            <label className="gi-form-label">Project (optional)</label>
+            <input
+              className="gi-form-input"
+              type="text"
+              placeholder="Which project are you commenting on?"
+              value={form.project_name}
+              onChange={(e) => setForm((f) => ({ ...f, project_name: e.target.value }))}
+              maxLength={200}
+            />
+          </div>
           <div className="gi-form-group" style={{ marginTop: 14 }}>
             <label className="gi-form-label">Message <span style={{ color: "#e53e3e" }}>*</span></label>
             <textarea
@@ -381,6 +409,11 @@ function EndorsementSection({ orgSlug }: { orgSlug: string }) {
                   </div>
                   <div className="gi-comment-date">{formatDate(c.created_at)}</div>
                 </div>
+                {c.project_name && (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(22,163,74,0.1)", border: "1px solid rgba(22,163,74,0.25)", borderRadius: 6, padding: "2px 10px", fontSize: 12, color: "var(--gi-accent)", fontWeight: 600, marginBottom: 8 }}>
+                    📂 {c.project_name}
+                  </div>
+                )}
                 <div className="gi-comment-body">{c.comment_body}</div>
               </div>
             ))}
@@ -877,7 +910,7 @@ export default function DonorImpactPage() {
       </main>
 
       {/* Endorsements */}
-      {orgSlug && <EndorsementSection orgSlug={orgSlug} />}
+      {orgSlug && <EndorsementSection orgSlug={orgSlug} projectName={singleProjectName} />}
 
       {/* Footer */}
       <footer className="gi-footer">
