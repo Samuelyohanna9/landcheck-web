@@ -37,6 +37,30 @@ export type DonorImpactPhoto = {
 export type DonorImpactMapPoint = {
   lng: number;
   lat: number;
+  custodian_name?: string;
+  commodity?: string;
+  area_ha?: number | null;
+  ref_no?: string;
+};
+
+export type DonorImpactMapFeature = {
+  type: "Feature";
+  geometry: Record<string, unknown>;
+  properties: {
+    custodian_name: string;
+    commodity: string;
+    area_ha: number | null;
+    ref_no: string;
+  };
+};
+
+export type DonorImpactComment = {
+  id: number;
+  commenter_name: string;
+  commenter_rank?: string | null;
+  commenter_org?: string | null;
+  comment_body: string;
+  created_at?: string | null;
 };
 
 export type DonorImpactActivity = {
@@ -86,6 +110,7 @@ export type DonorImpactProject = {
   stats: DonorImpactStats;
   recent_photos: DonorImpactPhoto[];
   map_points: DonorImpactMapPoint[];
+  map_features?: DonorImpactMapFeature[];
   recent_activities: DonorImpactActivity[];
 };
 
@@ -110,3 +135,16 @@ export const buildOrgImpactPdfUrl = (orgSlug: string): string =>
 
 export const buildOrgImpactShareUrl = (orgSlug: string): string =>
   `https://landcheck.online/impact/${encodeURIComponent(orgSlug)}`;
+
+export const fetchOrgImpactComments = async (orgSlug: string): Promise<DonorImpactComment[]> => {
+  const response = await api.get<DonorImpactComment[]>(`/green/public/impact/${encodeURIComponent(orgSlug)}/comments`);
+  return response.data;
+};
+
+export const postOrgImpactComment = async (
+  orgSlug: string,
+  payload: { commenter_name: string; commenter_rank: string; commenter_org: string; comment_body: string },
+): Promise<DonorImpactComment> => {
+  const response = await api.post<DonorImpactComment>(`/green/public/impact/${encodeURIComponent(orgSlug)}/comment`, payload);
+  return response.data;
+};

@@ -3,11 +3,15 @@ import { useParams, useSearchParams } from "react-router-dom";
 import mapboxgl from "mapbox-gl";
 import {
   fetchOrgImpact,
+  fetchOrgImpactComments,
+  postOrgImpactComment,
   buildOrgImpactPdfUrl,
   buildOrgImpactShareUrl,
   type DonorImpactData,
   type DonorImpactProject,
   type DonorImpactPhoto,
+  type DonorImpactMapFeature,
+  type DonorImpactComment,
 } from "../api/donorImpact";
 import { BACKEND_URL } from "../api/client";
 import "../styles/green-impact.css";
@@ -71,19 +75,42 @@ const animateCount = (el: HTMLElement | null, target: number, duration = 900) =>
 };
 
 // ── Project map component ────────────────────────────────────────────────────
-function ProjectMap({ points, mode }: { points: { lng: number; lat: number }[]; mode: string }) {
+function ProjectMap({
+  points,
+  features = [],
+  mode,
+}: {
+  points: { lng: number; lat: number }[];
+  features?: DonorImpactMapFeature[];
+  mode: string;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
 
   const accentColor =
     mode === "agric" ? "#b45309" : mode === "relief_recovery" ? "#1d4ed8" : "#16a34a";
 
+  const hasPolygons = features.length > 0;
+  const totalLocations = hasPolygons ? features.length : points.length;
+
   useEffect(() => {
-    if (!containerRef.current || mapRef.current || !MAPBOX_TOKEN || points.length === 0) return;
+    const hasPoints = points.length > 0;
+    const hasFeats = features.length > 0;
+    if (!containerRef.current || mapRef.current || !MAPBOX_TOKEN || (!hasPoints && !hasFeats)) return;
+
+    const center: [number, number] = hasPoints
+      ? [points[0].lng, points[0].lat]
+      : (() => {
+          const geom = features[0]?.geometry as { coordinates?: unknown } | undefined;
+          const coords = geom?.coordinates;
+          const flat = Array.isArray(coords) ? coords.flat(Infinity) as number[] : [];
+          return flat.length >= 2 ? [flat[0], flat[1]] as [number, number] : [0, 0] as [number, number];
+        })();
+
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: "mapbox://styles/mapbox/satellite-streets-v12",
-      center: [points[0].lng, points[0].lat],
+      center,
       zoom: 12,
       attributionControl: false,
     });
@@ -93,62 +120,106 @@ function ProjectMap({ points, mode }: { points: { lng: number; lat: number }[]; 
 
     map.on("load", () => {
       if (!mapRef.current) return;
-      const geojson: GeoJSON.FeatureCollection = {
-        type: "FeatureCollection",
-        features: points.map((p) => ({
-          type: "Feature",
-          geometry: { type: "Point", coordinates: [p.lng, p.lat] },
-          properties: {},
-        })),
-      };
-      map.addSource("impact-points", { type: "geojson", data: geojson, cluster: true, clusterMaxZoom: 14, clusterRadius: 40 });
 
-      // Cluster circles
-      map.addLayer({
-        id: "clusters",
-        type: "circle",
-        source: "impact-points",
-        filter: ["has", "point_count"],
-        paint: {
-          "circle-color": accentColor,
-          "circle-radius": ["step", ["get", "point_count"], 18, 10, 24, 50, 30],
-          "circle-opacity": 0.88,
-          "circle-stroke-width": 2,
-          "circle-stroke-color": "#fff",
-        },
-      });
-      map.addLayer({
-        id: "cluster-count",
-        type: "symbol",
-        source: "impact-points",
-        filter: ["has", "point_count"],
-        layout: {
-          "text-field": "{point_count_abbreviated}",
-          "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
-          "text-size": 12,
-        },
-        paint: { "text-color": "#fff" },
-      });
-      // Unclustered dots
-      map.addLayer({
-        id: "unclustered-point",
-        type: "circle",
-        source: "impact-points",
-        filter: ["!", ["has", "point_count"]],
-        paint: {
-          "circle-color": accentColor,
-          "circle-radius": 6,
-          "circle-opacity": 0.9,
-          "circle-stroke-width": 1.5,
-          "circle-stroke-color": "#fff",
-        },
-      });
+      // ── Centroid cluster source (always) ──
+      if (hasPoints) {
+        const pointGeoJson: GeoJSON.FeatureCollection = {
+          type: "FeatureCollection",
+          features: points.map((p) => ({
+            type: "Feature" as const,
+            geometry: { type: "Point" as const, coordinates: [p.lng, p.lat] },
+            properties: {},
+          })),
+        };
+        map.addSource("impact-points", { type: "geojson", data: pointGeoJson, cluster: true, clusterMaxZoom: 14, clusterRadius: 40 });
 
-      // Fit bounds
+        map.addLayer({
+          id: "clusters",
+          type: "circle",
+          source: "impact-points",
+          filter: ["has", "point_count"],
+          paint: {
+            "circle-color": accentColor,
+            "circle-radius": ["step", ["get", "point_count"], 18, 10, 24, 50, 30],
+            "circle-opacity": 0.88,
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#fff",
+          },
+        });
+        map.addLayer({
+          id: "cluster-count",
+          type: "symbol",
+          source: "impact-points",
+          filter: ["has", "point_count"],
+          layout: {
+            "text-field": "{point_count_abbreviated}",
+            "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+            "text-size": 12,
+          },
+          paint: { "text-color": "#fff" },
+        });
+
+        if (!hasPolygons) {
+          map.addLayer({
+            id: "unclustered-point",
+            type: "circle",
+            source: "impact-points",
+            filter: ["!", ["has", "point_count"]],
+            paint: {
+              "circle-color": accentColor,
+              "circle-radius": 6,
+              "circle-opacity": 0.9,
+              "circle-stroke-width": 1.5,
+              "circle-stroke-color": "#fff",
+            },
+          });
+        }
+      }
+
+      // ── Polygon layers (agric/relief plot boundaries) ──
+      if (hasFeats) {
+        const polyGeoJson: GeoJSON.FeatureCollection = {
+          type: "FeatureCollection",
+          features: features as unknown as GeoJSON.Feature[],
+        };
+        map.addSource("impact-polygons", { type: "geojson", data: polyGeoJson });
+        map.addLayer({
+          id: "polygon-fill",
+          type: "fill",
+          source: "impact-polygons",
+          paint: { "fill-color": accentColor, "fill-opacity": 0.22 },
+        });
+        map.addLayer({
+          id: "polygon-outline",
+          type: "line",
+          source: "impact-polygons",
+          paint: { "line-color": accentColor, "line-width": 2, "line-opacity": 0.88 },
+        });
+
+        map.on("click", "polygon-fill", (e) => {
+          const feat = e.features?.[0];
+          if (!feat) return;
+          const p = feat.properties as { custodian_name?: string; commodity?: string; area_ha?: number | null; ref_no?: string };
+          const parts = [
+            p.custodian_name ? `<strong>${p.custodian_name}</strong>` : null,
+            p.commodity ? `🌾 ${p.commodity}` : null,
+            p.area_ha != null ? `📐 ${Number(p.area_ha).toFixed(2)} ha` : null,
+            p.ref_no ? `🔖 Ref: ${p.ref_no}` : null,
+          ].filter(Boolean);
+          new mapboxgl.Popup({ closeButton: true, maxWidth: "230px" })
+            .setLngLat(e.lngLat)
+            .setHTML(`<div style="font-size:13px;line-height:1.7">${parts.join("<br>") || "Plot"}</div>`)
+            .addTo(map);
+        });
+        map.on("mouseenter", "polygon-fill", () => { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", "polygon-fill", () => { map.getCanvas().style.cursor = ""; });
+      }
+
+      // ── Fit bounds ──
       if (points.length > 1) {
         const bounds = new mapboxgl.LngLatBounds();
         points.forEach((p) => bounds.extend([p.lng, p.lat]));
-        map.fitBounds(bounds, { padding: 44, maxZoom: 16, duration: 800 });
+        map.fitBounds(bounds, { padding: 44, maxZoom: 17, duration: 800 });
       }
     });
 
@@ -156,17 +227,155 @@ function ProjectMap({ points, mode }: { points: { lng: number; lat: number }[]; 
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [points, accentColor]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [points, features, accentColor]);
 
-  if (points.length === 0) return null;
+  if (points.length === 0 && features.length === 0) return null;
 
   return (
     <div className="gi-map-wrap">
       <div ref={containerRef} className="gi-map-canvas" />
       <div className="gi-map-badge">
-        {points.length.toLocaleString()} verified GPS {points.length === 1 ? "location" : "locations"}
+        {totalLocations.toLocaleString()} verified GPS {totalLocations === 1 ? "location" : "locations"}
+        {hasPolygons ? " · click plot for details" : ""}
       </div>
     </div>
+  );
+}
+
+// ── Public endorsements section ──────────────────────────────────────────────
+function EndorsementSection({ orgSlug }: { orgSlug: string }) {
+  const [comments, setComments] = useState<DonorImpactComment[]>([]);
+  const [commentsLoaded, setCommentsLoaded] = useState(false);
+  const [form, setForm] = useState({ commenter_name: "", commenter_rank: "", commenter_org: "", comment_body: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    fetchOrgImpactComments(orgSlug)
+      .then(setComments)
+      .catch(() => {})
+      .finally(() => setCommentsLoaded(true));
+  }, [orgSlug]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitError(null);
+    if (!form.commenter_name.trim()) { setSubmitError("Your name is required."); return; }
+    if (!form.comment_body.trim()) { setSubmitError("Message is required."); return; }
+    setSubmitting(true);
+    try {
+      const newComment = await postOrgImpactComment(orgSlug, form);
+      setComments((prev) => [newComment, ...prev]);
+      setForm({ commenter_name: "", commenter_rank: "", commenter_org: "", comment_body: "" });
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 4000);
+    } catch {
+      setSubmitError("Failed to submit. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <section className="gi-endorsements">
+      <div className="gi-endorsements-inner">
+        <div className="gi-section-heading" style={{ marginBottom: 20 }}>
+          <div className="gi-section-heading-bar" />
+          <div className="gi-section-heading-text">Endorsements & Comments</div>
+        </div>
+        <p className="gi-endorsements-intro">
+          Reviewing this programme? Leave a professional endorsement or public comment below.
+          Your name, position, and message will be visible on this page.
+        </p>
+
+        <form className="gi-endorsement-form" onSubmit={handleSubmit}>
+          <div className="gi-endorsement-form-row">
+            <div className="gi-form-group">
+              <label className="gi-form-label">Full Name <span style={{ color: "#e53e3e" }}>*</span></label>
+              <input
+                className="gi-form-input"
+                type="text"
+                placeholder="e.g. Dr. Amina Yusuf"
+                value={form.commenter_name}
+                onChange={(e) => setForm((f) => ({ ...f, commenter_name: e.target.value }))}
+                maxLength={120}
+              />
+            </div>
+            <div className="gi-form-group">
+              <label className="gi-form-label">Role / Position</label>
+              <input
+                className="gi-form-input"
+                type="text"
+                placeholder="e.g. Director of Programmes"
+                value={form.commenter_rank}
+                onChange={(e) => setForm((f) => ({ ...f, commenter_rank: e.target.value }))}
+                maxLength={120}
+              />
+            </div>
+            <div className="gi-form-group">
+              <label className="gi-form-label">Organisation</label>
+              <input
+                className="gi-form-input"
+                type="text"
+                placeholder="e.g. Federal Ministry of Agriculture"
+                value={form.commenter_org}
+                onChange={(e) => setForm((f) => ({ ...f, commenter_org: e.target.value }))}
+                maxLength={180}
+              />
+            </div>
+          </div>
+          <div className="gi-form-group" style={{ marginTop: 14 }}>
+            <label className="gi-form-label">Message <span style={{ color: "#e53e3e" }}>*</span></label>
+            <textarea
+              className="gi-form-textarea"
+              placeholder="Share your professional assessment or endorsement of this programme…"
+              value={form.comment_body}
+              onChange={(e) => setForm((f) => ({ ...f, comment_body: e.target.value }))}
+              rows={4}
+              maxLength={1200}
+            />
+          </div>
+          {submitError && <div className="gi-form-error">{submitError}</div>}
+          {submitted && <div className="gi-form-success">✓ Your endorsement has been submitted. Thank you.</div>}
+          <button type="submit" className="gi-btn gi-btn-primary" disabled={submitting} style={{ marginTop: 14 }}>
+            {submitting ? "Submitting…" : "Submit Endorsement"}
+          </button>
+        </form>
+
+        {commentsLoaded && comments.length > 0 && (
+          <div className="gi-comments-list">
+            <div style={{ fontWeight: 700, fontSize: 15, color: "var(--gi-text)", marginBottom: 4 }}>
+              {comments.length} {comments.length === 1 ? "Endorsement" : "Endorsements"}
+            </div>
+            {comments.map((c) => (
+              <div key={c.id} className="gi-comment-card">
+                <div className="gi-comment-meta">
+                  <div className="gi-comment-avatar">{c.commenter_name.slice(0, 1).toUpperCase()}</div>
+                  <div>
+                    <div className="gi-comment-name">{c.commenter_name}</div>
+                    {(c.commenter_rank || c.commenter_org) && (
+                      <div className="gi-comment-role">
+                        {[c.commenter_rank, c.commenter_org].filter(Boolean).join(" · ")}
+                      </div>
+                    )}
+                  </div>
+                  <div className="gi-comment-date">{formatDate(c.created_at)}</div>
+                </div>
+                <div className="gi-comment-body">{c.comment_body}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {commentsLoaded && comments.length === 0 && (
+          <div className="gi-empty-section" style={{ marginTop: 24 }}>
+            No endorsements yet. Be the first to leave a comment.
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -365,13 +574,13 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
         )}
 
         {/* Map */}
-        {project.map_points.length > 0 && (
+        {(project.map_points.length > 0 || (project.map_features || []).length > 0) && (
           <div>
             <div className="gi-section-heading">
               <div className="gi-section-heading-bar" />
               <div className="gi-section-heading-text">Field Activity Map</div>
             </div>
-            <ProjectMap points={project.map_points} mode={mode} />
+            <ProjectMap points={project.map_points} features={project.map_features || []} mode={mode} />
           </div>
         )}
 
@@ -648,6 +857,9 @@ export default function DonorImpactPage() {
           projects.map((proj) => <ProjectSection key={proj.id} project={proj} />)
         )}
       </main>
+
+      {/* Endorsements */}
+      {orgSlug && <EndorsementSection orgSlug={orgSlug} />}
 
       {/* Footer */}
       <footer className="gi-footer">

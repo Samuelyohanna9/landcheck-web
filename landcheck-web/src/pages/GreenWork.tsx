@@ -2207,6 +2207,13 @@ const renderActionIcon = (form: WorkForm) => {
       return renderActionIcon("users");
     case "sponsorship_orders":
       return renderActionIcon("review_queue");
+    case "share_impact":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      );
     default:
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -2893,6 +2900,15 @@ const SI_COPY_ICON = (
   </svg>
 );
 
+type ImpactComment = {
+  id: number;
+  commenter_name: string;
+  commenter_rank?: string | null;
+  commenter_org?: string | null;
+  comment_body: string;
+  created_at?: string | null;
+};
+
 function ShareImpactPanel({
   orgSlug,
   orgProjects,
@@ -2908,6 +2924,18 @@ function ShareImpactPanel({
 }) {
   const [orgCopied, setOrgCopied] = useState(false);
   const [projCopied, setProjCopied] = useState(false);
+  const [comments, setComments] = useState<ImpactComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsLoaded, setCommentsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!orgSlug) return;
+    setCommentsLoading(true);
+    api.get<ImpactComment[]>(`/green/public/impact/${encodeURIComponent(orgSlug)}/comments`)
+      .then((r) => setComments(r.data))
+      .catch(() => {})
+      .finally(() => { setCommentsLoading(false); setCommentsLoaded(true); });
+  }, [orgSlug]);
 
   const orgImpactUrl = orgSlug ? `https://landcheck.online/impact/${encodeURIComponent(orgSlug)}` : null;
   const selectedProject = orgProjects.find((p) => String(p.id) === shareProjectId) || null;
@@ -3030,6 +3058,49 @@ function ShareImpactPanel({
             )}
           </div>
         </>
+      )}
+
+      {/* ─── Endorsements received ─── */}
+      {orgSlug && (
+        <div style={{ borderTop: "1.5px solid #e4ede6", paddingTop: 28, marginTop: 28 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6, color: "#0c2b1a" }}>
+            Endorsements Received
+          </div>
+          <p className="green-work-note" style={{ marginTop: 0, marginBottom: 14 }}>
+            Public comments and endorsements left by donors, officials, and reviewers on your impact page.
+          </p>
+          {commentsLoading && <p className="green-work-note">Loading endorsements…</p>}
+          {commentsLoaded && comments.length === 0 && (
+            <p className="green-work-note" style={{ fontStyle: "italic" }}>No endorsements yet. They will appear here once visitors leave comments on your impact page.</p>
+          )}
+          {commentsLoaded && comments.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 660 }}>
+              {comments.map((c) => (
+                <div key={c.id} style={{ background: "#f4f7f4", border: "1px solid #d1e8d5", borderRadius: 12, padding: "14px 16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <div style={{ width: 34, height: 34, minWidth: 34, background: "#1a5c2a", color: "#fff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14 }}>
+                      {c.commenter_name.slice(0, 1).toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: "#0c2b1a" }}>{c.commenter_name}</div>
+                      {(c.commenter_rank || c.commenter_org) && (
+                        <div style={{ fontSize: 12, color: "#5a7a63" }}>
+                          {[c.commenter_rank, c.commenter_org].filter(Boolean).join(" · ")}
+                        </div>
+                      )}
+                    </div>
+                    {c.created_at && (
+                      <div style={{ marginLeft: "auto", fontSize: 11, color: "#8aaa93", whiteSpace: "nowrap" }}>
+                        {new Date(c.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 13.5, color: "#2d4a35", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{c.comment_body}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -8774,6 +8845,9 @@ export default function GreenWork() {
           ...(canAccessSuperAdmin
             ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Cross-product activity + QR reports" }]
             : []),
+          ...(activeProjectRecord?.organization_slug
+            ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links · endorsements" }]
+            : []),
         ]
       : actionWorkflowProfile === "relief_recovery"
         ? [
@@ -8787,6 +8861,9 @@ export default function GreenWork() {
             { form: "users", title: "Users", note: "All staff status + roles" },
             ...(canAccessSuperAdmin
               ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Cross-product activity + QR reports" }]
+              : []),
+            ...(activeProjectRecord?.organization_slug
+              ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links · endorsements" }]
               : []),
           ]
       : [
@@ -8811,6 +8888,9 @@ export default function GreenWork() {
           { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
           ...(canAccessSuperAdmin
             ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Activity logs + QR prints report" }]
+            : []),
+          ...(activeProjectRecord?.organization_slug
+            ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links · endorsements" }]
             : []),
         ];
 
@@ -10381,15 +10461,6 @@ export default function GreenWork() {
                 Verra Reports
               </button>
             ) : null}
-            {activeProjectRecord?.organization_slug && (
-              <button
-                className={`green-work-menu-item ${activeForm === "share_impact" ? "active" : ""}`}
-                type="button"
-                onClick={() => openForm("share_impact")}
-              >
-                🔗 Share Impact Page
-              </button>
-            )}
             <button
               className={`green-work-menu-item ${activeForm === "review_queue" ? "active" : ""}`}
               type="button"
@@ -11145,21 +11216,6 @@ export default function GreenWork() {
                   </p>
                 )}
                 <div className="work-actions">
-                  {activeProjectRecord?.organization_slug && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const slug = String(activeProjectRecord.organization_slug || "");
-                        const url = `https://landcheck.online/impact/${encodeURIComponent(slug)}`;
-                        navigator.clipboard.writeText(url).catch(() => {});
-                        toast.success(`Donor impact link copied: ${url}`, { duration: 5000 });
-                      }}
-                      style={{ background: "linear-gradient(135deg,#1a5c2a,#2aa852)", color: "#fff", fontWeight: 700, border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer" }}
-                      title="Copy a public link to share your organisation's impact report with donors"
-                    >
-                      🔗 Share Impact Page
-                    </button>
-                  )}
                   <button
                     type="button"
                     className="green-work-option-toggle"
@@ -15411,20 +15467,6 @@ export default function GreenWork() {
               <div className="green-work-row">
                 <h3>Project Overview</h3>
                 <div className="work-actions">
-                  {activeProjectRecord?.organization_slug && (
-                    <button
-                      onClick={() => {
-                        const slug = String(activeProjectRecord.organization_slug || "");
-                        const url = `https://landcheck.online/impact/${encodeURIComponent(slug)}`;
-                        navigator.clipboard.writeText(url).catch(() => {});
-                        toast.success(`Donor impact link copied: ${url}`, { duration: 5000 });
-                      }}
-                      style={{ background: "linear-gradient(135deg,#1a5c2a,#2aa852)", color: "#fff", fontWeight: 700, border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer" }}
-                      title="Copy a public link to share your organisation's impact report with donors"
-                    >
-                      🔗 Share Impact Page
-                    </button>
-                  )}
                   <button onClick={exportWorkCsv} disabled={workPartnerOrgPaused} title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}>
                     Export CSV
                   </button>
