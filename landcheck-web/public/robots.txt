@@ -4,9 +4,15 @@ Allow: /green-partners
 Allow: /green-partners/
 Allow: /green/login/sponsor
 Allow: /privacy
-Allow: /hazard-analysis
-Allow: /survey-plan
-Allow: /feedback
+Allow: /flood
+Allow: /survey
+Allow: /news
+Allow: /career
+
+# Disallow noindex tool alias routes (canonical points to primary)
+Disallow: /hazard-analysis
+Disallow: /survey-plan
+Disallow: /feedback
 
 # Keep authenticated operation consoles out of search
 Disallow: /green$
