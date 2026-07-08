@@ -7,6 +7,9 @@ import NavBar from "../components/NavBar";
 type PartnerOrg = { name: string; logo: string | null };
 
 const PILOT_ORG_NAMES = new Set(["Think Green Foundation"]);
+const HERO_VIDEO_SRC = "/make_it_ro_rotate_like_a_video.mp4";
+const HERO_VIDEO_CROSSFADE_MS = 900;
+const HERO_VIDEO_CROSSFADE_SECONDS = 1.05;
 
 const targets = [
   "Licensed Surveyors",
@@ -43,7 +46,13 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
   const [heroVideoReady, setHeroVideoReady] = useState(false);
-  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [visibleHeroVideoIndex, setVisibleHeroVideoIndex] = useState(0);
+  const heroVideoRefs = useRef<Array<HTMLVideoElement | null>>([null, null]);
+  const activeHeroVideoIndexRef = useRef(0);
+  const visibleHeroVideoIndexRef = useRef(0);
+  const heroVideoCrossfadeLockRef = useRef(false);
+  const heroVideoRafRef = useRef<number | null>(null);
+  const heroVideoSwapTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,10 +69,11 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
-    const video = heroVideoRef.current;
-    if (!video) return undefined;
+    const videos = heroVideoRefs.current;
+    if (videos.some((video) => !video)) return undefined;
 
-    const playVideo = () => {
+    const playVideo = (video: HTMLVideoElement | null) => {
+      if (!video) return;
       video.muted = true;
       video.defaultMuted = true;
       const playPromise = video.play();
@@ -72,16 +82,98 @@ export default function LandingPage() {
       }
     };
 
-    playVideo();
+    const resetVideo = (video: HTMLVideoElement | null) => {
+      if (!video) return;
+      video.pause();
+      try {
+        video.currentTime = 0;
+      } catch {
+        // Ignore browsers that block direct currentTime resets while buffering.
+      }
+    };
+
+    const stopLoopWatch = () => {
+      if (heroVideoRafRef.current !== null) {
+        cancelAnimationFrame(heroVideoRafRef.current);
+        heroVideoRafRef.current = null;
+      }
+      if (heroVideoSwapTimeoutRef.current !== null) {
+        window.clearTimeout(heroVideoSwapTimeoutRef.current);
+        heroVideoSwapTimeoutRef.current = null;
+      }
+    };
+
+    const startLoopWatch = () => {
+      stopLoopWatch();
+
+      const tick = () => {
+        const currentVideo = heroVideoRefs.current[activeHeroVideoIndexRef.current];
+        if (!currentVideo) {
+          heroVideoRafRef.current = requestAnimationFrame(tick);
+          return;
+        }
+
+        const duration = Number(currentVideo.duration);
+        if (!Number.isFinite(duration) || duration <= 0) {
+          heroVideoRafRef.current = requestAnimationFrame(tick);
+          return;
+        }
+
+        const remaining = duration - currentVideo.currentTime;
+        if (!heroVideoCrossfadeLockRef.current && remaining <= HERO_VIDEO_CROSSFADE_SECONDS) {
+          heroVideoCrossfadeLockRef.current = true;
+          const nextIndex = activeHeroVideoIndexRef.current === 0 ? 1 : 0;
+          const nextVideo = heroVideoRefs.current[nextIndex];
+
+          if (nextVideo) {
+            try {
+              nextVideo.currentTime = 0;
+            } catch {
+              // Ignore currentTime reset failures during browser buffering.
+            }
+            visibleHeroVideoIndexRef.current = nextIndex;
+            setVisibleHeroVideoIndex(nextIndex);
+            playVideo(nextVideo);
+            setHeroVideoReady(true);
+
+            heroVideoSwapTimeoutRef.current = window.setTimeout(() => {
+              resetVideo(heroVideoRefs.current[activeHeroVideoIndexRef.current]);
+              activeHeroVideoIndexRef.current = nextIndex;
+              heroVideoCrossfadeLockRef.current = false;
+              heroVideoSwapTimeoutRef.current = null;
+            }, HERO_VIDEO_CROSSFADE_MS);
+          } else {
+            heroVideoCrossfadeLockRef.current = false;
+          }
+        }
+
+        heroVideoRafRef.current = requestAnimationFrame(tick);
+      };
+
+      heroVideoRafRef.current = requestAnimationFrame(tick);
+    };
+
+    heroVideoRefs.current.forEach((video, index) => {
+      if (index !== visibleHeroVideoIndexRef.current) {
+        resetVideo(video);
+      }
+    });
+
+    playVideo(heroVideoRefs.current[visibleHeroVideoIndexRef.current]);
+    startLoopWatch();
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible" && video.paused) {
-        playVideo();
+      if (document.visibilityState === "visible") {
+        playVideo(heroVideoRefs.current[visibleHeroVideoIndexRef.current]);
+        startLoopWatch();
+      } else {
+        stopLoopWatch();
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
+      stopLoopWatch();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
@@ -138,22 +230,26 @@ export default function LandingPage() {
       {/* Hero */}
       <section className={`lp-hero${heroVideoReady ? " lp-hero--video-ready" : ""}`}>
         <div className="lp-hero-video-wrap" aria-hidden="true">
-          <video
-            ref={heroVideoRef}
-            className="lp-hero-video"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            disablePictureInPicture
-            disableRemotePlayback
-            onPlaying={() => setHeroVideoReady(true)}
-            onLoadedData={() => setHeroVideoReady(true)}
-            onError={() => setHeroVideoReady(false)}
-          >
-            <source src="/make_it_ro_rotate_like_a_video.mp4" type="video/mp4" />
-          </video>
+          {[0, 1].map((index) => (
+            <video
+              key={index}
+              ref={(node) => {
+                heroVideoRefs.current[index] = node;
+              }}
+              className={`lp-hero-video${visibleHeroVideoIndex === index ? " lp-hero-video--active" : " lp-hero-video--inactive"}`}
+              autoPlay={index === 0}
+              muted
+              playsInline
+              preload="auto"
+              disablePictureInPicture
+              disableRemotePlayback
+              onPlaying={() => setHeroVideoReady(true)}
+              onLoadedData={() => setHeroVideoReady(true)}
+              onError={() => setHeroVideoReady(false)}
+            >
+              <source src={HERO_VIDEO_SRC} type="video/mp4" />
+            </video>
+          ))}
         </div>
         <div className="lp-hero-overlay" />
         <div className="lp-hero-content">
