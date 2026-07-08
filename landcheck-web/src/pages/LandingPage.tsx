@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/landing.css";
 import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
@@ -42,6 +42,8 @@ const products = [
 export default function LandingPage() {
   const navigate = useNavigate();
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
+  const [heroVideoReady, setHeroVideoReady] = useState(false);
+  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,6 +56,33 @@ export default function LandingPage() {
       .catch(() => {});
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const video = heroVideoRef.current;
+    if (!video) return undefined;
+
+    const playVideo = () => {
+      video.muted = true;
+      video.defaultMuted = true;
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+      }
+    };
+
+    playVideo();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && video.paused) {
+        playVideo();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
@@ -107,7 +136,25 @@ export default function LandingPage() {
       <main>
 
       {/* Hero */}
-      <section className="lp-hero">
+      <section className={`lp-hero${heroVideoReady ? " lp-hero--video-ready" : ""}`}>
+        <div className="lp-hero-video-wrap" aria-hidden="true">
+          <video
+            ref={heroVideoRef}
+            className="lp-hero-video"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            disablePictureInPicture
+            disableRemotePlayback
+            onPlaying={() => setHeroVideoReady(true)}
+            onLoadedData={() => setHeroVideoReady(true)}
+            onError={() => setHeroVideoReady(false)}
+          >
+            <source src="/make_it_ro_rotate_like_a_video.mp4" type="video/mp4" />
+          </video>
+        </div>
         {/* Decorative geographic SVG */}
         <svg className="lp-hero-svg" aria-hidden="true" viewBox="0 0 1440 800" preserveAspectRatio="xMidYMid slice">
           <path d="M-50,310 Q160,285 380,315 Q590,345 810,300 Q1010,258 1240,292 Q1360,308 1490,295" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1.5"/>
