@@ -15,6 +15,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 const canRegisterGreenSw =
   typeof window !== "undefined" &&
   "serviceWorker" in navigator &&
+  isGreenSwRoute(window.location.pathname) &&
   (import.meta.env.PROD || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
 if (canRegisterGreenSw) {
@@ -63,4 +64,15 @@ function precacheBuildAssets() {
       urls,
     });
   }
+}
+
+function isGreenSwRoute(pathname: string) {
+  return (
+    pathname === "/green" ||
+    pathname === "/green/" ||
+    pathname === "/green-work" ||
+    pathname === "/green-work/" ||
+    pathname.startsWith("/green/") ||
+    pathname.startsWith("/green-work/")
+  );
 }
