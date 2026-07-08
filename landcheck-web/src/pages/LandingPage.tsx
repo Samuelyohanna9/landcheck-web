@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/landing.css";
 import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
@@ -56,6 +56,50 @@ export default function LandingPage() {
       cancelled = true;
     };
   }, []);
+
+  const marqueePartners = useMemo(() => {
+    if (partners.length === 0) return [];
+    const minimumCardsPerLoop = 6;
+    const repeatCount = Math.max(1, Math.ceil(minimumCardsPerLoop / partners.length));
+    return Array.from({ length: repeatCount }, (_, repeatIndex) =>
+      partners.map((org, partnerIndex) => ({
+        ...org,
+        renderKey: `${org.name}-${repeatIndex}-${partnerIndex}`,
+      })),
+    ).flat();
+  }, [partners]);
+
+  const renderPartnerBadge = (
+    org: PartnerOrg & { renderKey: string },
+    duplicate = false,
+  ) => (
+    <div
+      key={`${org.renderKey}${duplicate ? "-duplicate" : ""}`}
+      className="lp-partner-badge"
+      role="button"
+      tabIndex={duplicate ? -1 : 0}
+      aria-hidden={duplicate ? true : undefined}
+      onClick={() => navigate("/green-partners#partners")}
+      onKeyDown={(e) => e.key === "Enter" && navigate("/green-partners#partners")}
+    >
+      {PILOT_ORG_NAMES.has(org.name) && (
+        <span className="lp-partner-pilot-tag">Pilot</span>
+      )}
+      {org.logo ? (
+        <img src={org.logo} alt={org.name} className="lp-partner-logo" width="80" height="58" loading="lazy" />
+      ) : (
+        <span className="lp-partner-initials">
+          {org.name
+            .split(" ")
+            .slice(0, 2)
+            .map((w) => w[0])
+            .join("")
+            .toUpperCase()}
+        </span>
+      )}
+      <span className="lp-partner-name">{org.name}</span>
+    </div>
+  );
 
   return (
     <div className="landcheck-landing">
@@ -357,34 +401,15 @@ export default function LandingPage() {
               Our <strong>Partner Organizations</strong>
             </h2>
             <p>Field programs powered by LandCheck across Nigeria</p>
-            <div className="lp-partners-logos">
-              {partners.map((org) => (
-                <div
-                  key={org.name}
-                  className="lp-partner-badge"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate("/green-partners#partners")}
-                  onKeyDown={(e) => e.key === "Enter" && navigate("/green-partners#partners")}
-                >
-                  {PILOT_ORG_NAMES.has(org.name) && (
-                    <span className="lp-partner-pilot-tag">Pilot</span>
-                  )}
-                  {org.logo ? (
-                    <img src={org.logo} alt={org.name} className="lp-partner-logo" width="80" height="58" loading="lazy" />
-                  ) : (
-                    <span className="lp-partner-initials">
-                      {org.name
-                        .split(" ")
-                        .slice(0, 2)
-                        .map((w) => w[0])
-                        .join("")
-                        .toUpperCase()}
-                    </span>
-                  )}
-                  <span className="lp-partner-name">{org.name}</span>
+            <div className="lp-partners-marquee" aria-label="Partner organizations">
+              <div className="lp-partners-track">
+                <div className="lp-partners-logos">
+                  {marqueePartners.map((org) => renderPartnerBadge(org))}
                 </div>
-              ))}
+                <div className="lp-partners-logos lp-partners-logos-duplicate" aria-hidden="true">
+                  {marqueePartners.map((org) => renderPartnerBadge(org, true))}
+                </div>
+              </div>
             </div>
           </div>
         </section>
