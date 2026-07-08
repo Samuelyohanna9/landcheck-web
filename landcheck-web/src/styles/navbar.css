@@ -22,6 +22,28 @@
   right: 0;
 }
 
+.lc-nav--fixed.lc-nav--overlay {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: none;
+}
+
+.lc-nav--overlay .lc-nav-desktop button,
+.lc-nav--overlay .lc-nav-desktop a.lc-nav-link {
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+}
+
+.lc-nav--overlay .lc-nav-desktop button:hover,
+.lc-nav--overlay .lc-nav-desktop a.lc-nav-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.lc-nav--overlay .lc-nav-hamburger span {
+  background: rgba(255, 255, 255, 0.96);
+}
+
 /* ── Hamburger (left, mobile only) ─────────────────────── */
 .lc-nav-hamburger {
   display: none;
