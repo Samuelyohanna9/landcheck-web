@@ -397,6 +397,18 @@
   transform: translateY(-1px);
 }
 
+.lp-hero-video.lp-hero-video--active {
+  opacity: 0;
+}
+
+.lp-hero--video-ready .lp-hero-video.lp-hero-video--active {
+  opacity: 1;
+}
+
+.lp-hero-video.lp-hero-video--inactive {
+  opacity: 0;
+}
+
 .lp-intro-section {
   padding: 88px 0 76px;
   background: #fff;
