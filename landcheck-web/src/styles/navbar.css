@@ -29,19 +29,58 @@
   border-bottom: none;
 }
 
+.lc-nav--overlay {
+  justify-content: flex-start;
+}
+
+.lc-nav--overlay .lc-nav-brand {
+  position: relative;
+  z-index: 2;
+}
+
+.lc-nav--overlay .lc-nav-desktop {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin-left: 0;
+  gap: 18px;
+}
+
 .lc-nav--overlay .lc-nav-desktop button,
 .lc-nav--overlay .lc-nav-desktop a.lc-nav-link {
-  color: rgba(255, 255, 255, 0.92);
-  text-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  padding: 4px 2px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-shadow: 0 5px 16px rgba(0, 0, 0, 0.24);
 }
 
 .lc-nav--overlay .lc-nav-desktop button:hover,
 .lc-nav--overlay .lc-nav-desktop a.lc-nav-link:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .lc-nav--overlay .lc-nav-hamburger span {
   background: rgba(255, 255, 255, 0.96);
+}
+
+.lc-nav--overlay .lc-nav-item-active {
+  background: transparent !important;
+  color: #fff !important;
+}
+
+@media (max-width: 1180px) {
+  .lc-nav--overlay .lc-nav-desktop {
+    gap: 12px;
+  }
+
+  .lc-nav--overlay .lc-nav-desktop button,
+  .lc-nav--overlay .lc-nav-desktop a.lc-nav-link {
+    font-size: 0.92rem;
+  }
 }
 
 /* ── Hamburger (left, mobile only) ─────────────────────── */

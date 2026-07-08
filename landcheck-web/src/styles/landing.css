@@ -307,9 +307,9 @@
 
 .lp-hero-content {
   z-index: 3;
-  width: min(100%, 1360px);
-  padding: clamp(128px, 18vh, 190px) 56px 84px;
-  margin: 0 auto;
+  width: min(100%, 720px);
+  padding: clamp(148px, 21vh, 220px) 0 84px;
+  margin: 0 0 0 clamp(28px, 6vw, 104px);
   text-align: left;
   text-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
@@ -335,8 +335,8 @@
 }
 
 .lp-hero-content h1 {
-  max-width: 780px;
-  font-size: clamp(3rem, 6vw, 5.3rem);
+  max-width: 700px;
+  font-size: clamp(3rem, 5.4vw, 5.1rem);
   line-height: 0.98;
   margin: 0 0 20px;
   letter-spacing: -0.045em;
@@ -351,7 +351,7 @@
   color: rgba(255, 255, 255, 0.86);
   margin: 0 0 36px;
   line-height: 1.5;
-  max-width: 780px;
+  max-width: 620px;
 }
 
 .lp-hero-ctas {
@@ -1371,6 +1371,8 @@
   }
 
   .lp-hero-content {
+    width: auto;
+    margin: 0;
     padding: 136px 24px 72px;
   }
 
