@@ -155,21 +155,9 @@ export default function LandingPage() {
             <source src="/make_it_ro_rotate_like_a_video.mp4" type="video/mp4" />
           </video>
         </div>
-        {/* Decorative geographic SVG */}
-        <svg className="lp-hero-svg" aria-hidden="true" viewBox="0 0 1440 800" preserveAspectRatio="xMidYMid slice">
-          <path d="M-50,310 Q160,285 380,315 Q590,345 810,300 Q1010,258 1240,292 Q1360,308 1490,295" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1.5"/>
-          <path d="M-50,410 Q160,385 380,412 Q590,440 810,398 Q1010,358 1240,388 Q1360,404 1490,395" fill="none" stroke="rgba(255,255,255,0.035)" strokeWidth="1.5"/>
-          <path d="M-50,505 Q160,480 380,505 Q590,530 810,492 Q1010,458 1240,484 Q1360,500 1490,492" fill="none" stroke="rgba(255,255,255,0.025)" strokeWidth="1"/>
-          <path d="M-50,220 Q160,200 380,224 Q590,248 810,212 Q1010,180 1240,208 Q1360,222 1490,215" fill="none" stroke="rgba(255,255,255,0.022)" strokeWidth="1"/>
-          <rect x="340" y="178" width="762" height="374" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1.2" strokeDasharray="10 6"/>
-          <circle cx="340" cy="178" r="5" fill="rgba(224,123,0,0.6)"/>
-          <circle cx="1102" cy="178" r="5" fill="rgba(224,123,0,0.6)"/>
-          <circle cx="340" cy="552" r="5" fill="rgba(224,123,0,0.6)"/>
-          <circle cx="1102" cy="552" r="5" fill="rgba(224,123,0,0.5)"/>
-          <circle cx="720" cy="340" r="3" fill="rgba(255,255,255,0.15)"/>
-        </svg>
         <div className="lp-hero-overlay" />
         <div className="lp-hero-content">
+          <span className="lp-hero-kicker">LANDCHECK PLATFORM</span>
           <h1>
             Geospatial Intelligence <br />for Development Projects
           </h1>
