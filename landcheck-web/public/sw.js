@@ -1,4 +1,4 @@
-var CACHE_NAME = "green-shell-v11";
+var CACHE_NAME = "green-shell-v12";
 var MAP_CACHE_NAME = "green-map-v6";
 var SYNC_TAG = "green-sync-queue";
 
@@ -147,7 +147,7 @@ self.addEventListener("message", function (event) {
               if (existing) return;
               return fetch(url)
                 .then(function (resp) {
-                  if (resp && resp.ok) {
+                  if (resp && resp.ok && !isHtmlResponse(resp)) {
                     return cache.put(url, resp);
                   }
                 })
@@ -286,7 +286,6 @@ function responseWithRange(fullResponse, rangeHeader) {
 
 function isGreenRoute(pathname) {
   return (
-    pathname === "/" ||
     pathname === "/green" ||
     pathname === "/green/" ||
     pathname === "/green-work" ||
@@ -308,6 +307,12 @@ function isGreenAsset(pathname) {
   );
 }
 
+function isHtmlResponse(resp) {
+  if (!resp) return false;
+  var contentType = String(resp.headers.get("Content-Type") || "").toLowerCase();
+  return contentType.includes("text/html");
+}
+
 /**
  * Try to find the SPA shell HTML in the cache.
  * iOS Safari may cache it under different keys depending on how the page was first loaded,
@@ -320,10 +325,6 @@ function findCachedShell() {
       .then(function (resp) {
         if (resp) return resp;
         return cache.match("/green/");
-      })
-      .then(function (resp) {
-        if (resp) return resp;
-        return cache.match("/");
       })
       .then(function (resp) {
         if (resp) return resp;
@@ -431,7 +432,8 @@ self.addEventListener("fetch", function (event) {
   }
 
   /* ── SPA navigation (network-first → cache → shell fallback) ────── */
-  var isAppNavigation = req.mode === "navigate" && isSameOrigin;
+  var isAppNavigation =
+    req.mode === "navigate" && isSameOrigin && isGreenRoute(url.pathname);
 
   if (isAppNavigation) {
     event.respondWith(
@@ -441,8 +443,7 @@ self.addEventListener("fetch", function (event) {
             var copy = resp.clone();
             var greenShellCopy =
               url.pathname === "/green" ||
-              url.pathname === "/green/" ||
-              url.pathname === "/"
+              url.pathname === "/green/"
                 ? resp.clone()
                 : null;
             caches.open(CACHE_NAME).then(function (cache) {
@@ -491,9 +492,16 @@ self.addEventListener("fetch", function (event) {
 
   event.respondWith(
     caches.match(req).then(function (cached) {
-      if (cached) return cached;
+      if (cached && !isHtmlResponse(cached)) return cached;
+      if (cached && isHtmlResponse(cached)) {
+        event.waitUntil(
+          caches.open(CACHE_NAME).then(function (cache) {
+            return cache.delete(req);
+          })
+        );
+      }
       return fetch(req).then(function (resp) {
-        if (resp.ok) {
+        if (resp.ok && !isHtmlResponse(resp)) {
           var copy = resp.clone();
           caches.open(CACHE_NAME).then(function (cache) {
             cache.put(req, copy);
