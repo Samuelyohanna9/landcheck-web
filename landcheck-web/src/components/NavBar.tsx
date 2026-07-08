@@ -23,6 +23,8 @@ interface NavBarProps {
   ctaLabel?: string;
   /** Route for the right-side CTA */
   ctaRoute?: string;
+  /** Transparent overlay treatment for full-bleed hero backgrounds */
+  overlay?: boolean;
 }
 
 export default function NavBar({
@@ -32,6 +34,7 @@ export default function NavBar({
   activeRoute,
   ctaLabel,
   ctaRoute,
+  overlay = false,
 }: NavBarProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -43,7 +46,7 @@ export default function NavBar({
 
   return (
     <>
-      <header className={`lc-nav${fixed ? " lc-nav--fixed" : ""}`}>
+      <header className={`lc-nav${fixed ? " lc-nav--fixed" : ""}${overlay ? " lc-nav--overlay" : ""}`}>
         {/* Hamburger — top left on mobile */}
         <button
           type="button"

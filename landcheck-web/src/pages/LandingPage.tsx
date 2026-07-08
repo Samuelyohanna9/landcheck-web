@@ -132,7 +132,7 @@ export default function LandingPage() {
 
   return (
     <div className="landcheck-landing">
-      <NavBar fixed />
+      <NavBar fixed overlay />
       <main>
 
       {/* Hero */}
