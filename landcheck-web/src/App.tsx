@@ -4,8 +4,8 @@ import SeoRouteMeta from "./components/SeoRouteMeta";
 import PrivacyNoticeBanner from "./components/PrivacyNoticeBanner";
 import { getGreenAuthSession, isGreenAuthed, isSponsorGreenSession } from "./auth/greenAuth";
 import { isWorkAuthed } from "./auth/workAuth";
+import LandingPage from "./pages/LandingPage";
 
-const LandingPage = lazy(() => import("./pages/LandingPage"));
 const SurveyPlan = lazy(() => import("./pages/SurveyPlan"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Feedback = lazy(() => import("./pages/Feedback"));
