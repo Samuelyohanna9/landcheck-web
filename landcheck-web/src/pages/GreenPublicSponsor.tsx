@@ -71,7 +71,7 @@ const PROJECT_THUMBNAIL_SRC = "/thumpnail_public.webp";
 
 const GALLERY_IMAGES = [
   { src: "/info_web.webp", label: "How LandCheck Green works" },
-  { src: "/verified_tree_image.webp", label: "Verified map & photo evidence" },
+  { src: "/verified_tree_map_evidence.webp", label: "Verified map & photo evidence" },
   { src: "/cert_sample.webp", label: "Your sponsorship certificate" },
   { src: "/tree_tag_sample.webp", label: "Physical tree tag on your tree" },
 ];
