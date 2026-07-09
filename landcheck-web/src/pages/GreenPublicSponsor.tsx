@@ -62,11 +62,13 @@ function formatRelativeTime(value: string | null): string {
   return date.toLocaleDateString(undefined, { day: "2-digit", month: "short" });
 }
 
-const PROJECT_CARD_THEMES = [
-  { tintA: "#1f8f49CC", tintB: "#0a3d20E6", icon: "🌳" },
-  { tintA: "#2aa852CC", tintB: "#195f38E6", icon: "🌲" },
-  { tintA: "#4cc46aCC", tintB: "#1a6e37E6", icon: "🌱" },
-  { tintA: "#7dd892CC", tintB: "#18582eE6", icon: "🍃" },
+const PROJECT_THUMBNAIL_SRC = "/thumpnail_public.webp";
+
+const GALLERY_IMAGES = [
+  { src: "/info_web.webp", label: "How LandCheck Green works" },
+  { src: "/verified_tree_image.webp", label: "Verified map & photo evidence" },
+  { src: "/cert_sample.webp", label: "Your sponsorship certificate" },
+  { src: "/tree_tag_sample.webp", label: "Physical tree tag on your tree" },
 ];
 
 const DEDICATION_OPTIONS = [
@@ -562,18 +564,15 @@ export default function GreenPublicSponsor() {
                 <div className="gps-empty">No public projects are open for sponsorship right now — please check back soon.</div>
               ) : (
                 <div className="gps-project-grid">
-                  {projects.map((project, index) => {
-                    const theme = PROJECT_CARD_THEMES[index % PROJECT_CARD_THEMES.length];
+                  {projects.map((project) => {
                     const ready = project.sponsor_checkout_ready;
                     return (
                       <div className="gps-project-card" key={project.id}>
                         <div className="gps-project-card-photo-wrap">
                           <div
                             className="gps-project-card-photo"
-                            style={{ backgroundImage: `linear-gradient(160deg, ${theme.tintA}, ${theme.tintB}), url(${SPONSOR_BACKGROUND})` }}
-                          >
-                            <span className="gps-project-card-emoji">{theme.icon}</span>
-                          </div>
+                            style={{ backgroundImage: `url(${PROJECT_THUMBNAIL_SRC})` }}
+                          />
                         </div>
                         <div className="gps-project-card-body">
                           <h3>{project.public_sponsor_title || project.name}</h3>
@@ -603,7 +602,6 @@ export default function GreenPublicSponsor() {
             {/* ─── Checkout (product-detail-page style) ─── */}
             {selectedProject && (() => {
               const projectTitle = selectedProject.public_sponsor_title || selectedProject.name;
-              const activeTheme = PROJECT_CARD_THEMES[galleryIndex % PROJECT_CARD_THEMES.length];
               const quantityNum = Math.max(1, Number(form.quantity || 1));
               const accordions = [
                 {
@@ -639,22 +637,20 @@ export default function GreenPublicSponsor() {
                     <div className="gps-pdp-gallery">
                       <div
                         className="gps-pdp-main-photo"
-                        style={{ backgroundImage: `linear-gradient(160deg, ${activeTheme.tintA}, ${activeTheme.tintB}), url(${SPONSOR_BACKGROUND})` }}
-                      >
-                        <span className="gps-pdp-main-emoji">{activeTheme.icon}</span>
-                      </div>
+                        style={{ backgroundImage: `url(${GALLERY_IMAGES[galleryIndex % GALLERY_IMAGES.length].src})` }}
+                        role="img"
+                        aria-label={GALLERY_IMAGES[galleryIndex % GALLERY_IMAGES.length].label}
+                      />
                       <div className="gps-pdp-thumb-row">
-                        {PROJECT_CARD_THEMES.map((theme, index) => (
+                        {GALLERY_IMAGES.map((image, index) => (
                           <button
                             type="button"
-                            key={index}
+                            key={image.src}
                             className={`gps-pdp-thumb${index === galleryIndex ? " active" : ""}`}
-                            style={{ backgroundImage: `linear-gradient(160deg, ${theme.tintA}, ${theme.tintB}), url(${SPONSOR_BACKGROUND})` }}
+                            style={{ backgroundImage: `url(${image.src})` }}
                             onClick={() => setGalleryIndex(index)}
-                            aria-label={`View gallery image ${index + 1}`}
-                          >
-                            <span>{theme.icon}</span>
-                          </button>
+                            aria-label={image.label}
+                          />
                         ))}
                       </div>
                     </div>
