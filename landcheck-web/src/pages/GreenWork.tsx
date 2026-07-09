@@ -209,6 +209,8 @@ type Project = {
   public_sponsor_enabled?: boolean | null;
   public_sponsor_title?: string | null;
   public_sponsor_description?: string | null;
+  sponsor_price_per_tree_ngn?: number | null;
+  sponsor_price_per_tree_usd?: number | null;
   sponsor_price_per_tree?: number | null;
   sponsor_currency?: string | null;
   sponsor_capacity?: number | null;
@@ -229,6 +231,8 @@ type Project = {
     public_sponsor_enabled?: boolean | null;
     public_sponsor_title?: string | null;
     public_sponsor_description?: string | null;
+    sponsor_price_per_tree_ngn?: number | null;
+    sponsor_price_per_tree_usd?: number | null;
     sponsor_price_per_tree?: number | null;
     sponsor_currency?: string | null;
     sponsor_capacity?: number | null;
@@ -2030,6 +2034,42 @@ const normalizeSponsorCurrencyCode = (value?: string | null) => {
   return lettersOnly.length === 3 ? lettersOnly : "NGN";
 };
 
+const getProjectSponsorPriceEntries = (project?: Pick<Project, "sponsor_price_per_tree_ngn" | "sponsor_price_per_tree_usd" | "sponsor_price_per_tree" | "sponsor_currency"> | null) => {
+  const entries: Array<{ currency: string; amount: number }> = [];
+  const push = (currency: string | null | undefined, amount: number | null | undefined) => {
+    const code = normalizeSponsorCurrencyCode(currency);
+    const numeric = Number(amount || 0);
+    if (!Number.isFinite(numeric) || numeric <= 0 || entries.some((item) => item.currency === code)) {
+      return;
+    }
+    entries.push({ currency: code, amount: numeric });
+  };
+  push("NGN", project?.sponsor_price_per_tree_ngn);
+  push("USD", project?.sponsor_price_per_tree_usd);
+  if (entries.length === 0) {
+    push(project?.sponsor_currency || "NGN", project?.sponsor_price_per_tree);
+  }
+  return entries;
+};
+
+const formatProjectSponsorPriceChoices = (project?: Pick<Project, "sponsor_price_per_tree_ngn" | "sponsor_price_per_tree_usd" | "sponsor_price_per_tree" | "sponsor_currency"> | null) => {
+  const entries = getProjectSponsorPriceEntries(project);
+  if (entries.length === 0) return "Pricing not set";
+  return entries.map((entry) => `${formatCurrencyAmount(entry.amount, entry.currency)} / tree`).join(" · ");
+};
+
+const formatCurrencyBreakdownMap = (value?: Record<string, number> | null) => {
+  const entries = Object.entries(value || {})
+    .map(([currency, amount]) => ({
+      currency: normalizeSponsorCurrencyCode(currency),
+      amount: Number(amount || 0),
+    }))
+    .filter((entry) => Number.isFinite(entry.amount) && entry.amount > 0)
+    .sort((a, b) => a.currency.localeCompare(b.currency));
+  if (entries.length === 0) return formatCurrencyAmount(0, "NGN");
+  return entries.map((entry) => formatCurrencyAmount(entry.amount, entry.currency)).join(" · ");
+};
+
 const getSponsorshipPaymentOutcomeGroup = (paymentStatus?: string | null) => {
   const normalized = normalizeName(paymentStatus);
   if (normalized === "verified") return "successful" as const;
@@ -3238,8 +3278,8 @@ export default function GreenWork() {
     public_sponsor_enabled: false,
     public_sponsor_title: "",
     public_sponsor_description: "",
-    sponsor_price_per_tree: "",
-    sponsor_currency: "NGN",
+    sponsor_price_per_tree_ngn: "",
+    sponsor_price_per_tree_usd: "",
     sponsor_capacity: "",
     sponsor_max_per_order: "",
     sponsor_dedication_enabled: true,
@@ -3336,8 +3376,8 @@ export default function GreenWork() {
     public_sponsor_enabled: boolean;
     public_sponsor_title: string;
     public_sponsor_description: string;
-    sponsor_price_per_tree: string;
-    sponsor_currency: string;
+    sponsor_price_per_tree_ngn: string;
+    sponsor_price_per_tree_usd: string;
     sponsor_capacity: string;
     sponsor_max_per_order: string;
     sponsor_dedication_enabled: boolean;
@@ -3363,8 +3403,8 @@ export default function GreenWork() {
     public_sponsor_enabled: false,
     public_sponsor_title: "",
     public_sponsor_description: "",
-    sponsor_price_per_tree: "",
-    sponsor_currency: "NGN",
+    sponsor_price_per_tree_ngn: "",
+    sponsor_price_per_tree_usd: "",
     sponsor_capacity: "",
     sponsor_max_per_order: "",
     sponsor_dedication_enabled: true,
@@ -4198,8 +4238,8 @@ export default function GreenWork() {
       public_sponsor_enabled: false,
       public_sponsor_title: "",
       public_sponsor_description: "",
-      sponsor_price_per_tree: "",
-      sponsor_currency: "NGN",
+      sponsor_price_per_tree_ngn: "",
+      sponsor_price_per_tree_usd: "",
       sponsor_capacity: "",
       sponsor_max_per_order: "",
       sponsor_dedication_enabled: true,
@@ -4481,11 +4521,14 @@ export default function GreenWork() {
         public_sponsor_enabled: Boolean(settingsPayload?.public_sponsor_enabled ?? projectDetail?.public_sponsor_enabled),
         public_sponsor_title: String(settingsPayload?.public_sponsor_title || projectDetail?.public_sponsor_title || ""),
         public_sponsor_description: String(settingsPayload?.public_sponsor_description || projectDetail?.public_sponsor_description || ""),
-        sponsor_price_per_tree:
-          settingsPayload?.sponsor_price_per_tree === null || settingsPayload?.sponsor_price_per_tree === undefined
-            ? String(projectDetail?.sponsor_price_per_tree ?? "")
-            : String(settingsPayload?.sponsor_price_per_tree ?? ""),
-        sponsor_currency: String(settingsPayload?.sponsor_currency || projectDetail?.sponsor_currency || "NGN"),
+        sponsor_price_per_tree_ngn:
+          settingsPayload?.sponsor_price_per_tree_ngn === null || settingsPayload?.sponsor_price_per_tree_ngn === undefined
+            ? String(projectDetail?.sponsor_price_per_tree_ngn ?? "")
+            : String(settingsPayload?.sponsor_price_per_tree_ngn ?? ""),
+        sponsor_price_per_tree_usd:
+          settingsPayload?.sponsor_price_per_tree_usd === null || settingsPayload?.sponsor_price_per_tree_usd === undefined
+            ? String(projectDetail?.sponsor_price_per_tree_usd ?? "")
+            : String(settingsPayload?.sponsor_price_per_tree_usd ?? ""),
         sponsor_capacity:
           settingsPayload?.sponsor_capacity === null || settingsPayload?.sponsor_capacity === undefined
             ? String(projectDetail?.sponsor_capacity ?? "")
@@ -4914,11 +4957,10 @@ export default function GreenWork() {
     const existingPublicSponsorDescription = String(
       activeProjectRecord?.settings?.public_sponsor_description ?? activeProjectRecord?.public_sponsor_description ?? "",
     ).trim();
-    const existingSponsorPricePerTree =
-      activeProjectRecord?.settings?.sponsor_price_per_tree ?? activeProjectRecord?.sponsor_price_per_tree;
-    const existingSponsorCurrency = String(
-      activeProjectRecord?.settings?.sponsor_currency ?? activeProjectRecord?.sponsor_currency ?? "NGN",
-    ).trim();
+    const existingSponsorPricePerTreeNgn =
+      activeProjectRecord?.settings?.sponsor_price_per_tree_ngn ?? activeProjectRecord?.sponsor_price_per_tree_ngn;
+    const existingSponsorPricePerTreeUsd =
+      activeProjectRecord?.settings?.sponsor_price_per_tree_usd ?? activeProjectRecord?.sponsor_price_per_tree_usd;
     const existingSponsorCapacity = activeProjectRecord?.settings?.sponsor_capacity ?? activeProjectRecord?.sponsor_capacity;
     const existingSponsorMaxPerOrder =
       activeProjectRecord?.settings?.sponsor_max_per_order ?? activeProjectRecord?.sponsor_max_per_order;
@@ -4952,22 +4994,56 @@ export default function GreenWork() {
               ? projectSettingsDraft.public_sponsor_description.trim() || null
               : existingPublicSponsorDescription || null
             : null,
-        sponsor_price_per_tree:
+        sponsor_price_per_tree_ngn:
           nextPublicSponsorshipProject
             ? canAccessSuperAdmin
-              ? Number(projectSettingsDraft.sponsor_price_per_tree || 0) > 0
-                ? Number(projectSettingsDraft.sponsor_price_per_tree)
-                : null
-              : existingSponsorPricePerTree === null || existingSponsorPricePerTree === undefined
+              ? Number(projectSettingsDraft.sponsor_price_per_tree_ngn || 0)
+              : existingSponsorPricePerTreeNgn === null || existingSponsorPricePerTreeNgn === undefined
                 ? null
-                : Number(existingSponsorPricePerTree)
+                : Number(existingSponsorPricePerTreeNgn)
+            : null,
+        sponsor_price_per_tree_usd:
+          nextPublicSponsorshipProject
+            ? canAccessSuperAdmin
+              ? Number(projectSettingsDraft.sponsor_price_per_tree_usd || 0)
+              : existingSponsorPricePerTreeUsd === null || existingSponsorPricePerTreeUsd === undefined
+                ? null
+                : Number(existingSponsorPricePerTreeUsd)
             : null,
         sponsor_currency:
           nextPublicSponsorshipProject
-            ? canAccessSuperAdmin
-              ? normalizeSponsorCurrencyCode(projectSettingsDraft.sponsor_currency)
-              : normalizeSponsorCurrencyCode(existingSponsorCurrency)
+            ? Number(
+                canAccessSuperAdmin
+                  ? projectSettingsDraft.sponsor_price_per_tree_ngn || 0
+                  : existingSponsorPricePerTreeNgn || 0,
+              ) > 0
+              ? "NGN"
+              : "USD"
             : "NGN",
+        sponsor_price_per_tree:
+          nextPublicSponsorshipProject
+            ? Number(
+                canAccessSuperAdmin
+                  ? projectSettingsDraft.sponsor_price_per_tree_ngn || 0
+                  : existingSponsorPricePerTreeNgn || 0,
+              ) > 0
+              ? Number(
+                  canAccessSuperAdmin
+                    ? projectSettingsDraft.sponsor_price_per_tree_ngn || 0
+                    : existingSponsorPricePerTreeNgn || 0,
+                )
+              : Number(
+                    canAccessSuperAdmin
+                      ? projectSettingsDraft.sponsor_price_per_tree_usd || 0
+                      : existingSponsorPricePerTreeUsd || 0,
+                  ) > 0
+                ? Number(
+                    canAccessSuperAdmin
+                      ? projectSettingsDraft.sponsor_price_per_tree_usd || 0
+                      : existingSponsorPricePerTreeUsd || 0,
+                  )
+                : null
+            : null,
         sponsor_capacity:
           nextPublicSponsorshipProject
             ? canAccessSuperAdmin
@@ -6408,11 +6484,26 @@ export default function GreenWork() {
       public_sponsor_title: nextAccessModel === "public_sponsorship" ? newProject.public_sponsor_title.trim() || null : null,
       public_sponsor_description:
         nextAccessModel === "public_sponsorship" ? newProject.public_sponsor_description.trim() || null : null,
-      sponsor_price_per_tree:
-        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_price_per_tree || 0) > 0
-          ? Number(newProject.sponsor_price_per_tree)
+      sponsor_price_per_tree_ngn:
+        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_price_per_tree_ngn || 0) > 0
+          ? Number(newProject.sponsor_price_per_tree_ngn)
           : null,
-      sponsor_currency: nextAccessModel === "public_sponsorship" ? normalizeSponsorCurrencyCode(newProject.sponsor_currency) : "NGN",
+      sponsor_price_per_tree_usd:
+        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_price_per_tree_usd || 0) > 0
+          ? Number(newProject.sponsor_price_per_tree_usd)
+          : null,
+      sponsor_price_per_tree:
+        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_price_per_tree_ngn || 0) > 0
+          ? Number(newProject.sponsor_price_per_tree_ngn)
+          : nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_price_per_tree_usd || 0) > 0
+            ? Number(newProject.sponsor_price_per_tree_usd)
+            : null,
+      sponsor_currency:
+        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_price_per_tree_ngn || 0) > 0
+          ? "NGN"
+          : nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_price_per_tree_usd || 0) > 0
+            ? "USD"
+            : "NGN",
       sponsor_capacity:
         nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_capacity || 0) > 0
           ? Number(newProject.sponsor_capacity)
@@ -6471,8 +6562,8 @@ export default function GreenWork() {
       public_sponsor_enabled: false,
       public_sponsor_title: "",
       public_sponsor_description: "",
-      sponsor_price_per_tree: "",
-      sponsor_currency: "NGN",
+      sponsor_price_per_tree_ngn: "",
+      sponsor_price_per_tree_usd: "",
       sponsor_capacity: "",
       sponsor_max_per_order: "",
       sponsor_dedication_enabled: true,
@@ -9234,22 +9325,24 @@ export default function GreenWork() {
     [sponsorshipOrderBuckets],
   );
   const sponsorshipAccountingSummary = useMemo(() => {
-    const safeCurrency = activeProjectRecord?.sponsor_currency || "NGN";
     const totals = {
-      currency: safeCurrency,
       totalOrders: sponsorshipOrders.length,
-      successfulAmount: 0,
-      awaitingAmount: 0,
-      issueAmount: 0,
+      successfulAmounts: {} as Record<string, number>,
+      awaitingAmounts: {} as Record<string, number>,
+      issueAmounts: {} as Record<string, number>,
       successfulTrees: 0,
       awaitingTrees: 0,
       issueTrees: 0,
       uniqueSponsorsPaid: 0,
       latestSuccessfulAt: "" as string,
     };
+    const addAmount = (target: Record<string, number>, currency: string | null | undefined, amount: number) => {
+      const safeCurrency = normalizeSponsorCurrencyCode(currency);
+      target[safeCurrency] = Number(target[safeCurrency] || 0) + Number(amount || 0);
+    };
     const paidSponsorIds = new Set<number>();
     sponsorshipOrderBuckets.successful.forEach((order) => {
-      totals.successfulAmount += Number(order.amount_total || 0);
+      addAmount(totals.successfulAmounts, order.currency, Number(order.amount_total || 0));
       totals.successfulTrees += Number(order.quantity || 0);
       if (Number(order.sponsor_account_id || 0) > 0) paidSponsorIds.add(Number(order.sponsor_account_id || 0));
       const stamp = String(order.payment_verified_at || order.updated_at || order.created_at || "");
@@ -9258,16 +9351,30 @@ export default function GreenWork() {
       }
     });
     sponsorshipOrderBuckets.awaiting.forEach((order) => {
-      totals.awaitingAmount += Number(order.amount_total || 0);
+      addAmount(totals.awaitingAmounts, order.currency, Number(order.amount_total || 0));
       totals.awaitingTrees += Number(order.quantity || 0);
     });
     sponsorshipOrderBuckets.issue.forEach((order) => {
-      totals.issueAmount += Number(order.amount_total || 0);
+      addAmount(totals.issueAmounts, order.currency, Number(order.amount_total || 0));
       totals.issueTrees += Number(order.quantity || 0);
     });
     totals.uniqueSponsorsPaid = paidSponsorIds.size;
     return totals;
-  }, [activeProjectRecord?.sponsor_currency, sponsorshipOrderBuckets, sponsorshipOrders.length]);
+  }, [sponsorshipOrderBuckets, sponsorshipOrders.length]);
+  const sponsorProjectSpendById = useMemo(() => {
+    const bySponsor = new Map<number, Record<string, number>>();
+    sponsorshipOrders.forEach((order) => {
+      const sponsorId = Number(order.sponsor_account_id || 0);
+      if (sponsorId <= 0) return;
+      const currency = normalizeSponsorCurrencyCode(order.currency);
+      const amount = Number(order.amount_total || 0);
+      if (!Number.isFinite(amount) || amount <= 0) return;
+      const existing = bySponsor.get(sponsorId) || {};
+      existing[currency] = Number(existing[currency] || 0) + amount;
+      bySponsor.set(sponsorId, existing);
+    });
+    return bySponsor;
+  }, [sponsorshipOrders]);
   const sponsoredBacklogOrders = useMemo(
     () =>
       sponsorshipOrderBuckets.successful.filter((order) => Number(order.awaiting_tree_units || 0) > 0),
@@ -9275,7 +9382,7 @@ export default function GreenWork() {
   );
   const sponsorAgentPayoutSummary = useMemo(
     () => ({
-      currency: sponsorAgentPayoutBoard?.currency || activeProjectRecord?.sponsor_currency || "NGN",
+      currency: sponsorAgentPayoutBoard?.currency || "NGN",
       minimumAmount:
         sponsorAgentPayoutBoard?.minimum_payout_amount === null || sponsorAgentPayoutBoard?.minimum_payout_amount === undefined
           ? 10000
@@ -9288,7 +9395,7 @@ export default function GreenWork() {
       paidAmount: Number(sponsorAgentPayoutBoard?.summary?.paid_amount || 0),
       autoPayoutAvailable: Boolean(sponsorAgentPayoutBoard?.auto_payout_available),
     }),
-    [activeProjectRecord?.sponsor_currency, sponsorAgentPayoutBoard],
+    [sponsorAgentPayoutBoard],
   );
   const sponsorAgentPayoutRequestBuckets = useMemo(() => {
     const grouped = {
@@ -10729,6 +10836,14 @@ export default function GreenWork() {
                         <p className="green-work-note">
                           Public sponsor projects appear automatically in the sponsor app once this route is saved.
                         </p>
+                        <p className="green-work-note">
+                          Current pricing display: {formatProjectSponsorPriceChoices({
+                            sponsor_price_per_tree_ngn: Number(projectSettingsDraft.sponsor_price_per_tree_ngn || 0) || null,
+                            sponsor_price_per_tree_usd: Number(projectSettingsDraft.sponsor_price_per_tree_usd || 0) || null,
+                            sponsor_price_per_tree: null,
+                            sponsor_currency: "NGN",
+                          })}
+                        </p>
                         <input
                           placeholder="Public sponsor title"
                           value={projectSettingsDraft.public_sponsor_title}
@@ -10751,28 +10866,34 @@ export default function GreenWork() {
                           rows={4}
                         />
                         <input
-                          placeholder="Price per tree"
+                          placeholder="Sponsor price per tree (NGN)"
                           type="number"
                           min="0"
                           step="100"
-                          value={projectSettingsDraft.sponsor_price_per_tree}
+                          value={projectSettingsDraft.sponsor_price_per_tree_ngn}
                           onChange={(e) =>
                             setProjectSettingsDraft((prev) => ({
                               ...prev,
-                              sponsor_price_per_tree: e.target.value,
+                              sponsor_price_per_tree_ngn: e.target.value,
                             }))
                           }
                         />
                         <input
-                          placeholder="Currency code (NGN)"
-                          value={projectSettingsDraft.sponsor_currency}
+                          placeholder="Sponsor price per tree (USD)"
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={projectSettingsDraft.sponsor_price_per_tree_usd}
                           onChange={(e) =>
                             setProjectSettingsDraft((prev) => ({
                               ...prev,
-                              sponsor_currency: normalizeSponsorCurrencyCode(e.target.value),
+                              sponsor_price_per_tree_usd: e.target.value,
                             }))
                           }
                         />
+                        <p className="green-work-note">
+                          Set both currencies if this project should accept local NGN sponsorships and international USD sponsorships. Agent payouts remain NGN.
+                        </p>
                         <input
                           placeholder="Total trees planned (sponsorship target)"
                           type="number"
@@ -12626,6 +12747,14 @@ export default function GreenWork() {
                   <p className="green-work-note">
                     Public sponsor projects appear automatically in the sponsor app once they are created.
                   </p>
+                  <p className="green-work-note">
+                    Sponsor app pricing preview: {formatProjectSponsorPriceChoices({
+                      sponsor_price_per_tree_ngn: Number(newProject.sponsor_price_per_tree_ngn || 0) || null,
+                      sponsor_price_per_tree_usd: Number(newProject.sponsor_price_per_tree_usd || 0) || null,
+                      sponsor_price_per_tree: null,
+                      sponsor_currency: "NGN",
+                    })}
+                  </p>
                   <input
                     placeholder="Public sponsor title"
                     value={newProject.public_sponsor_title}
@@ -12642,16 +12771,20 @@ export default function GreenWork() {
                     type="number"
                     min="0"
                     step="100"
-                    value={newProject.sponsor_price_per_tree}
-                    onChange={(e) => setNewProject({ ...newProject, sponsor_price_per_tree: e.target.value })}
+                    value={newProject.sponsor_price_per_tree_ngn}
+                    onChange={(e) => setNewProject({ ...newProject, sponsor_price_per_tree_ngn: e.target.value })}
                   />
                   <input
-                    placeholder="Currency code (NGN)"
-                    value={newProject.sponsor_currency}
-                    onChange={(e) =>
-                      setNewProject({ ...newProject, sponsor_currency: normalizeSponsorCurrencyCode(e.target.value) })
-                    }
+                    placeholder="Price per tree (USD)"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={newProject.sponsor_price_per_tree_usd}
+                    onChange={(e) => setNewProject({ ...newProject, sponsor_price_per_tree_usd: e.target.value })}
                   />
+                  <p className="green-work-note">
+                    Sponsors will see both prices in the public app and choose their checkout currency. Field-agent earnings stay in NGN.
+                  </p>
                   <input
                     placeholder="Total trees planned (sponsorship target)"
                     type="number"
@@ -13008,12 +13141,11 @@ export default function GreenWork() {
                             </div>
                             <div className="staff-row-meta">
                               Orders: {sponsor.orders_count} | Linked trees: {sponsor.linked_units} | Awaiting planting:{" "}
-                              {sponsor.awaiting_tree_units} | Spend:{" "}
-                              {formatCurrencyAmount(sponsor.amount_total, activeProjectRecord?.sponsor_currency || "NGN")}
+                              {sponsor.awaiting_tree_units}
                             </div>
                             {Number(sponsor.project_orders_count || 0) > 0 ? (
                               <div className="staff-row-meta">
-                                Current project spend: {formatCurrencyAmount(Number(sponsor.project_amount_total || 0), activeProjectRecord?.sponsor_currency || "NGN")} | Current project awaiting payment:{" "}
+                                Current project spend: {formatCurrencyBreakdownMap(sponsorProjectSpendById.get(Number(sponsor.id || 0)) || {})} | Current project awaiting payment:{" "}
                                 {Number(sponsor.project_pending_orders_count || 0)} | Current project awaiting planting: {Number(sponsor.project_awaiting_tree_units || 0)}
                               </div>
                             ) : null}
@@ -13367,7 +13499,7 @@ export default function GreenWork() {
                         <div className="staff-row">
                           <div className="staff-row-head">
                             <strong>Verified Revenue</strong>
-                            <span>{formatCurrencyAmount(sponsorshipAccountingSummary.successfulAmount, sponsorshipAccountingSummary.currency)}</span>
+                            <span>{formatCurrencyBreakdownMap(sponsorshipAccountingSummary.successfulAmounts)}</span>
                           </div>
                           <div className="staff-row-meta">Successful payments: {sponsorshipOrderSummary.successful}</div>
                           <div className="staff-row-meta">Trees paid for: {sponsorshipAccountingSummary.successfulTrees}</div>
@@ -13375,7 +13507,7 @@ export default function GreenWork() {
                         <div className="staff-row">
                           <div className="staff-row-head">
                             <strong>Awaiting Revenue</strong>
-                            <span>{formatCurrencyAmount(sponsorshipAccountingSummary.awaitingAmount, sponsorshipAccountingSummary.currency)}</span>
+                            <span>{formatCurrencyBreakdownMap(sponsorshipAccountingSummary.awaitingAmounts)}</span>
                           </div>
                           <div className="staff-row-meta">Awaiting payments: {sponsorshipOrderSummary.awaiting}</div>
                           <div className="staff-row-meta">Trees in pending checkout: {sponsorshipAccountingSummary.awaitingTrees}</div>
@@ -13383,7 +13515,7 @@ export default function GreenWork() {
                         <div className="staff-row">
                           <div className="staff-row-head">
                             <strong>Flagged Revenue</strong>
-                            <span>{formatCurrencyAmount(sponsorshipAccountingSummary.issueAmount, sponsorshipAccountingSummary.currency)}</span>
+                            <span>{formatCurrencyBreakdownMap(sponsorshipAccountingSummary.issueAmounts)}</span>
                           </div>
                           <div className="staff-row-meta">Flagged payments: {sponsorshipOrderSummary.issue}</div>
                           <div className="staff-row-meta">Trees in flagged orders: {sponsorshipAccountingSummary.issueTrees}</div>

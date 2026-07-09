@@ -3,8 +3,6 @@
    Full-featured: projects, trees, leaderboard, grove/games, profile
    ═══════════════════════════════════════════════════════════════ */
 
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap");
-
 /* ─── Root variables ─────────────────────────────────────────── */
 :root {
   --gc-brand: #1f8f49;
@@ -26,8 +24,8 @@
   --gc-shadow: 0 10px 26px rgba(18, 63, 43, 0.08);
   --gc-shadow-md: 0 18px 40px rgba(18, 63, 43, 0.12);
   --gc-shadow-lg: 0 26px 60px rgba(18, 63, 43, 0.18);
-  --gc-font-body: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
-  --gc-font-display: "Sora", "Plus Jakarta Sans", system-ui, sans-serif;
+  --gc-font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --gc-font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --gc-nav-h: 90px;
   --gc-page-max: 1180px;
 }
@@ -50,8 +48,10 @@
   color: var(--gc-text);
   min-height: 100dvh;
   padding-bottom: calc(var(--gc-nav-h) + 46px);
-  line-height: 1.58;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
 .green-sponsor-page button {
@@ -74,7 +74,10 @@
   justify-content: space-between;
   gap: 16px;
   padding: 18px 20px 14px;
-  background: var(--gc-surface);
+  background-color: var(--gc-surface);
+  background-size: cover;
+  background-position: center right;
+  background-repeat: no-repeat;
   border-bottom: 1.5px solid var(--gc-border);
   max-width: var(--gc-page-max);
   margin: 0 auto;
@@ -1674,55 +1677,76 @@
 }
 
 .gs-game-card {
-  background: var(--gc-surface);
-  border: 1.5px solid var(--gc-border);
-  border-radius: var(--gc-radius);
-  padding: 18px 14px;
+  border: none;
+  border-radius: 16px;
+  padding: 16px 12px;
   text-align: center;
   cursor: pointer;
-  transition: border-color 0.18s, box-shadow 0.18s, transform 0.12s;
+  transition: box-shadow 0.18s, transform 0.12s;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
   position: relative;
   font-family: inherit;
+  color: #fff;
+  min-height: 118px;
+  justify-content: center;
+  box-shadow: 0 8px 18px rgba(15, 61, 31, 0.16);
 }
 
 .gs-game-card:hover:not(:disabled) {
-  border-color: var(--gc-brand);
-  box-shadow: var(--gc-shadow-md);
+  box-shadow: 0 12px 22px rgba(15, 61, 31, 0.24);
   transform: translateY(-2px);
 }
 
-.gs-game-card.locked {
-  opacity: 0.65;
+.gs-game-card:disabled {
   cursor: default;
 }
 
+.gs-game-card.locked {
+  opacity: 0.55;
+  filter: grayscale(0.3);
+}
+
+.gs-game-card-tag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.22);
+  color: #fff;
+  border-radius: 8px;
+  padding: 3px 7px;
+}
+
 .gs-game-card-emoji {
-  font-size: 32px;
+  font-size: 30px;
   line-height: 1;
+  margin-top: 8px;
 }
 
 .gs-game-card-title {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 800;
-  color: var(--gc-text);
+  color: #fff;
 }
 
 .gs-game-card-desc {
   font-size: 11px;
-  color: var(--gc-text-muted);
+  color: rgba(255,255,255,0.85);
   line-height: 1.4;
 }
 
 .gs-game-android-badge {
   position: absolute;
-  top: 8px;
+  bottom: 8px;
   right: 8px;
-  font-size: 9px;
-  background: #fef3c7;
+  font-size: 8px;
+  background: rgba(255,255,255,0.9);
   color: #92400e;
   border-radius: 8px;
   padding: 2px 6px;
@@ -2299,13 +2323,13 @@
 }
 
 .green-sponsor-header-copy h1 {
-  font-size: clamp(1.8rem, 2.2vw, 2.5rem);
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  font-size: clamp(1.05rem, 1.4vw, 1.3rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .green-sponsor-header-copy p {
-  font-size: 1rem;
+  font-size: 0.82rem;
   color: var(--gc-text-muted);
 }
 
@@ -2379,16 +2403,16 @@
 }
 
 .green-sponsor-hero-copy h2 {
-  font-size: clamp(2rem, 4vw, 3.4rem);
-  line-height: 1.08;
-  letter-spacing: -0.06em;
+  font-size: clamp(1.3rem, 2.4vw, 1.6rem);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
   max-width: 9ch;
 }
 
 .green-sponsor-hero-copy > p {
   max-width: 52ch;
-  font-size: 1.08rem;
-  line-height: 1.72;
+  font-size: 0.88rem;
+  line-height: 1.5;
   color: rgba(255,255,255,0.86);
 }
 
@@ -2407,7 +2431,7 @@
 }
 
 .green-sponsor-hero-stats strong {
-  font-size: clamp(1.9rem, 3vw, 2.4rem);
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
   line-height: 1;
 }
 
@@ -2446,8 +2470,8 @@
   justify-content: center;
   padding: 22px 24px;
   border-radius: 24px;
-  font-size: 1.15rem;
-  font-weight: 800;
+  font-size: 0.92rem;
+  font-weight: 700;
   text-align: center;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
 }
@@ -2479,15 +2503,15 @@
 }
 
 .green-sponsor-panel-heading h3 {
-  font-size: 1.9rem;
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .green-sponsor-panel-heading p {
   margin-top: 6px;
-  font-size: 1rem;
-  line-height: 1.65;
+  font-size: 0.82rem;
+  line-height: 1.45;
 }
 
 .green-sponsor-metric-card {
@@ -2504,8 +2528,8 @@
 }
 
 .green-sponsor-metric-card strong {
-  font-size: clamp(1.55rem, 2vw, 2rem);
-  letter-spacing: -0.04em;
+  font-size: clamp(1.1rem, 1.4vw, 1.3rem);
+  letter-spacing: -0.01em;
 }
 
 .green-sponsor-activity-list {
@@ -2517,14 +2541,14 @@
 }
 
 .green-sponsor-activity-item strong {
-  font-size: 1.08rem;
-  font-weight: 800;
+  font-size: 0.92rem;
+  font-weight: 700;
 }
 
 .green-sponsor-activity-item p,
 .green-sponsor-activity-item span {
-  font-size: 0.97rem;
-  line-height: 1.58;
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 .green-sponsor-toolbar {
@@ -2643,11 +2667,11 @@
   }
 
   .green-sponsor-header-copy h1 {
-    font-size: 1.6rem;
+    font-size: 1.05rem;
   }
 
   .green-sponsor-header-copy p {
-    font-size: 0.95rem;
+    font-size: 0.78rem;
   }
 
   .green-sponsor-hero {
@@ -2657,16 +2681,16 @@
 
   .green-sponsor-hero-copy h2 {
     max-width: none;
-    font-size: 2.05rem;
+    font-size: 1.5rem;
   }
 
   .green-sponsor-hero-copy > p,
   .green-sponsor-panel-heading p {
-    font-size: 0.95rem;
+    font-size: 0.8rem;
   }
 
   .green-sponsor-panel-heading h3 {
-    font-size: 1.45rem;
+    font-size: 1rem;
   }
 
   .green-sponsor-toolbar {
@@ -2871,3 +2895,331 @@
   border-style: solid;
 }
 .gs-photo-upload-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ══════════════════════════════════════════════════════════════
+   PER-TAB HEADER VARIANTS (Android parity pass)
+   ══════════════════════════════════════════════════════════════ */
+
+/* Small header brand variants (Leaderboard) */
+.gs-header-avatar.sm, .green-sponsor-logo-tile.sm { width: 36px; height: 36px; }
+
+.green-sponsor-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--gc-brand-light);
+  color: var(--gc-brand-mid);
+  border: 1px solid rgba(31, 143, 73, 0.18);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.gs-header-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--gc-border);
+  background: var(--gc-surface);
+  color: var(--gc-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.gs-header-refresh-btn:hover { color: var(--gc-brand); border-color: var(--gc-brand); }
+.gs-header-refresh-btn:disabled { opacity: 0.6; cursor: default; }
+.gs-spin { animation: gs-refresh-spin 0.9s linear infinite; }
+@keyframes gs-refresh-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* Flat header (Leaderboard) — no image, no gradient */
+.green-sponsor-header-card.gs-header-flat {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  background: var(--gc-surface);
+}
+.gs-leaderboard-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.gs-leaderboard-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #a6813c;
+  background: #fbf7ee;
+  border: 1px solid rgba(197, 160, 89, 0.35);
+  padding: 5px 12px;
+  border-radius: 999px;
+  width: fit-content;
+}
+.green-sponsor-header-card.gs-header-flat h1 {
+  font-family: var(--gc-font-display);
+  font-size: clamp(1.15rem, 1.6vw, 1.4rem);
+  font-weight: 700;
+  color: var(--gc-text);
+}
+.green-sponsor-header-card.gs-header-flat p {
+  font-size: 0.85rem;
+  color: var(--gc-text-muted);
+}
+
+/* Dark Grove header */
+.gs-grove-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #0d2818 0%, #0f3d20 55%, #155e2f 100%);
+  margin: 0 auto 16px;
+  max-width: var(--gc-page-max);
+}
+.gs-grove-header-copy h1 {
+  font-family: var(--gc-font-display);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #fff;
+}
+.gs-grove-header-copy p {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.65);
+  margin-top: 2px;
+}
+.gs-grove-gp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.gs-grove-gp-pill span { font-size: 10px; opacity: 0.8; margin-left: 2px; }
+
+/* Grove tab drops the leafy background in favor of flat, matching Android */
+.green-sponsor-page.gs-grove-active {
+  background: #f0f6f1;
+}
+
+.gs-section-title--dark {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gc-text-muted);
+  margin: 4px 0 -2px;
+}
+
+.gs-featured-game-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-radius: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+  cursor: pointer;
+  position: relative;
+  font-family: inherit;
+  box-shadow: 0 10px 22px rgba(217, 119, 6, 0.28);
+}
+.gs-featured-game-tag {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: #fff;
+  color: #92400e;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.gs-featured-game-emoji { font-size: 40px; line-height: 1; }
+.gs-featured-game-title { font-size: 18px; font-weight: 800; }
+.gs-featured-game-desc { font-size: 12px; color: rgba(255,255,255,0.85); }
+.gs-featured-game-cta {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gs-grove-info-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(42, 168, 82, 0.1);
+  border: 1px solid rgba(42, 168, 82, 0.2);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--gc-text-muted);
+}
+
+/* Evidence strip (Projects tab) */
+.gs-evidence-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+  border: 1.5px solid var(--gc-brand-dark);
+}
+.gs-evidence-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 80px;
+  color: var(--gc-brand-dark);
+  text-align: center;
+}
+.gs-evidence-item span { font-size: 10.5px; font-weight: 700; color: var(--gc-text-muted); }
+
+/* Points hub (Projects tab) */
+.gs-points-hub { border: 1.5px solid #c5a059; }
+.gs-points-hub-emoji { font-size: 24px; line-height: 1; }
+
+/* Support / complaint card */
+.gs-support-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.gs-support-copy { flex: 1; min-width: 180px; }
+.gs-support-copy strong { display: block; font-size: 0.95rem; color: var(--gc-text); margin-bottom: 2px; }
+.gs-support-copy p { font-size: 0.82rem; color: var(--gc-text-muted); }
+
+/* Story banner (My Trees tab) */
+.gs-story-banner {
+  background-size: cover;
+  background-position: center;
+  border: 1.5px solid var(--gc-brand-dark);
+  border-radius: var(--gc-radius);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.gs-story-banner-eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--gc-brand);
+}
+.gs-story-banner h3 {
+  font-family: var(--gc-font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 6px 0 4px;
+  color: var(--gc-text);
+}
+.gs-story-banner p { font-size: 0.85rem; color: var(--gc-text-muted); }
+.gs-story-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.gs-story-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f6f9f7;
+  border: 1px solid var(--gc-border);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gc-text-muted);
+}
+
+/* Leaderboard: rank banner, segmented tabs, rank list */
+.gs-rank-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fbf7ee;
+  border: 1.5px solid #c5a059;
+  border-radius: var(--gc-radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.gs-rank-banner strong { display: block; font-size: 0.92rem; color: var(--gc-text); }
+.gs-rank-banner span { font-size: 0.8rem; color: var(--gc-text-muted); }
+
+.gs-leaderboard-tabs {
+  display: flex;
+  background: var(--gc-bg);
+  border: 1px solid var(--gc-border);
+  border-radius: var(--gc-radius-sm);
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+.gs-leaderboard-tab {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 8px 6px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gc-text-muted);
+  cursor: pointer;
+  font-family: inherit;
+}
+.gs-leaderboard-tab.active {
+  background: var(--gc-brand-dark);
+  color: #fff;
+}
+
+.gs-rank-list { display: flex; flex-direction: column; gap: 8px; }
+.gs-rank-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f9faf9;
+  border-radius: var(--gc-radius-sm);
+  padding: 10px 14px;
+}
+.gs-rank-row.me {
+  background: #fff;
+  border-left: 4px solid var(--gc-brand);
+}
+.gs-rank-num {
+  width: 32px;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--gc-text-muted);
+}
+.gs-rank-body { flex: 1; min-width: 0; }
+.gs-rank-body strong { display: block; font-size: 0.88rem; color: var(--gc-text); }
+.gs-rank-body span { font-size: 0.75rem; color: var(--gc-text-muted); }
+.gs-rank-trees { text-align: right; flex-shrink: 0; }
+.gs-rank-trees strong { display: block; font-size: 1rem; color: var(--gc-brand-dark); }
+.gs-rank-trees span { font-size: 0.68rem; color: var(--gc-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+@media (max-width: 640px) {
+  .gs-grove-header { border-radius: 0; margin-bottom: 12px; }
+  .gs-featured-game-emoji { font-size: 34px; }
+}

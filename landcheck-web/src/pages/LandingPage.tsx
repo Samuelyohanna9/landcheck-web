@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/landing.css";
-import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
+import { fetchPublicImpactStats, fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
 
 type PartnerOrg = { name: string; logo: string | null };
@@ -45,6 +45,7 @@ const products = [
 export default function LandingPage() {
   const navigate = useNavigate();
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
+  const [totalTrees, setTotalTrees] = useState<number | null>(null);
   const [heroVideoReady, setHeroVideoReady] = useState(false);
   const [visibleHeroVideoIndex, setVisibleHeroVideoIndex] = useState(0);
   const heroVideoRefs = useRef<Array<HTMLVideoElement | null>>([null, null]);
@@ -61,6 +62,12 @@ export default function LandingPage() {
         if (cancelled) return;
         const mapped = orgs.map((o) => ({ name: o.name, logo: o.logo_url }));
         if (mapped.length > 0) setPartners(mapped);
+      })
+      .catch(() => {});
+    fetchPublicImpactStats()
+      .then((stats) => {
+        if (cancelled) return;
+        setTotalTrees(stats.total_trees);
       })
       .catch(() => {});
     return () => {
@@ -307,6 +314,28 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="lp-stats-row">
+            {totalTrees !== null && totalTrees > 0 && (
+              <div className="lp-stat-card">
+                <div className="lp-stat-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" width="52" height="52">
+                    <path
+                      d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                    />
+                    <path d="M12 15v-9M9 9l3-3 3 3M8.5 12.5L12 9l3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <div className="lp-stat-text">
+                  <strong>{totalTrees.toLocaleString()}</strong>
+                  <span>
+                    Trees Planted
+                    <br />
+                    &amp; Managed
+                  </span>
+                </div>
+              </div>
+            )}
             <div className="lp-stat-card">
               <div className="lp-stat-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" width="52" height="52">
