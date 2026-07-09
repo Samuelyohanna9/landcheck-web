@@ -170,6 +170,16 @@ export default function GreenPublicSponsor() {
   const [lookupError, setLookupError] = useState("");
   const [lookupResult, setLookupResult] = useState<{ sponsor_name: string | null; orders: LookedUpSponsorOrder[] } | null>(null);
   const [showOrderLookup, setShowOrderLookup] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [openAccordions, setOpenAccordions] = useState<Set<string>>(() => new Set(["about", "approval"]));
+
+  const toggleAccordion = (key: string) => {
+    setOpenAccordions((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
 
   const [toastIndex, setToastIndex] = useState(0);
   const [toastVisible, setToastVisible] = useState(false);
@@ -210,12 +220,18 @@ export default function GreenPublicSponsor() {
 
   const handleSelectProject = (projectId: number) => {
     setSelectedProjectId(projectId);
+    setGalleryIndex(0);
+    setOpenAccordions(new Set(["about", "approval"]));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleBackToProjects = () => {
     setSelectedProjectId(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const bumpQuantity = (delta: number) => {
+    setForm((c) => ({ ...c, quantity: String(Math.max(1, Math.round(Number(c.quantity || 1)) + delta)) }));
   };
 
   useEffect(() => {
@@ -584,79 +600,149 @@ export default function GreenPublicSponsor() {
             </section>
             )}
 
-            {/* ─── Checkout ─── */}
-            {selectedProject && (
-              <section className="gps-checkout-section" id="gps-checkout">
-                <button type="button" className="gps-back-link" onClick={handleBackToProjects}>
-                  <span aria-hidden="true">←</span> Back to Projects
-                </button>
-                <div className="gps-approval-banner">
-                  <span className="gps-approval-icon">✅</span>
-                  <div>
-                    <strong>Approved &amp; Ready to Plant</strong>
-                    <p>
-                      <strong>{selectedProject.public_sponsor_title || selectedProject.name}</strong> has full land-rights and planting
-                      approval on record, and LandCheck field agents are already on the ground ready to plant your trees.
-                    </p>
-                  </div>
-                </div>
-                <div className="gps-checkout-card">
-                  <div className="gps-checkout-head">
-                    <div>
-                      <span className="gps-checkout-eyebrow">Secure Checkout</span>
-                      <h2>{selectedProject.public_sponsor_title || selectedProject.name}</h2>
-                      <span className="gps-checkout-location">{selectedProject.location_text || "LandCheck Green project"}</span>
-                    </div>
-                    <span className="gps-checkout-price">{formatSponsorPriceChoices(selectedProject)}</span>
-                  </div>
+            {/* ─── Checkout (product-detail-page style) ─── */}
+            {selectedProject && (() => {
+              const projectTitle = selectedProject.public_sponsor_title || selectedProject.name;
+              const activeTheme = PROJECT_CARD_THEMES[galleryIndex % PROJECT_CARD_THEMES.length];
+              const quantityNum = Math.max(1, Number(form.quantity || 1));
+              const accordions = [
+                {
+                  key: "about",
+                  title: "About this project",
+                  body: selectedProject.public_sponsor_description || selectedProject.public_description || "A verified, GPS-mapped tree planting project in Nigeria, monitored by LandCheck field officers from planting through maturity.",
+                },
+                {
+                  key: "certificate",
+                  title: "How your certificate & tracking works",
+                  body: "The moment your payment is confirmed, we email you a digital sponsorship certificate. As your tree is planted and cared for, you'll get GPS map location, photo evidence, and maintenance updates — no account required to check on it.",
+                },
+                {
+                  key: "impact",
+                  title: "Your climate impact",
+                  body: `Each tree you sponsor absorbs roughly 21 kg of CO₂ per year and helps retain around 120 L of water. Sponsoring ${quantityNum} tree${quantityNum === 1 ? "" : "s"} adds up to real, measurable impact over time.`,
+                },
+                {
+                  key: "approval",
+                  title: "Approvals & field agents on the ground",
+                  body: `${projectTitle} has full land-rights and planting approval on record, and LandCheck field agents are already on the ground ready to plant your trees.`,
+                },
+              ];
 
-                  <div className="gps-form-grid">
-                    <label className="gps-field"><span>Full name <span className="gps-required">*</span></span><input type="text" value={form.fullName} onChange={(e) => setForm((c) => ({ ...c, fullName: e.target.value }))} placeholder="Your name" /></label>
-                    <label className="gps-field"><span>Email <span className="gps-required">*</span></span><input type="email" value={form.email} onChange={(e) => setForm((c) => ({ ...c, email: e.target.value }))} placeholder="you@example.com" /></label>
-                    <label className="gps-field"><span>Phone (optional)</span><input type="tel" value={form.phone} onChange={(e) => setForm((c) => ({ ...c, phone: e.target.value }))} placeholder="Phone number" /></label>
-                    <label className="gps-field"><span>Trees <span className="gps-required">*</span></span><input type="number" min="1" value={form.quantity} onChange={(e) => setForm((c) => ({ ...c, quantity: e.target.value }))} /></label>
-                    {priceEntries.length > 1 && (
-                      <label className="gps-field">
-                        <span>Pay in</span>
-                        <select value={form.checkoutCurrency} onChange={(e) => setForm((c) => ({ ...c, checkoutCurrency: e.target.value }))}>
-                          {priceEntries.map((entry) => (
-                            <option key={entry.currency} value={entry.currency}>{entry.currency} — {formatCurrencyAmount(entry.amount, entry.currency)} / tree</option>
-                          ))}
-                        </select>
-                      </label>
-                    )}
-                    <label className="gps-field"><span>Dedication</span>
-                      <select value={form.dedicationType} onChange={(e) => setForm((c) => ({ ...c, dedicationType: e.target.value }))}>
-                        {DEDICATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
-                    </label>
-                    {form.dedicationType !== "self" && (
-                      <label className="gps-field"><span>Dedicated to (optional)</span><input type="text" value={form.dedicationName} onChange={(e) => setForm((c) => ({ ...c, dedicationName: e.target.value }))} placeholder="Name or occasion" /></label>
-                    )}
-                  </div>
-
-                  <label className="gps-field"><span>Message (optional)</span><textarea rows={2} value={form.purchaserNote} onChange={(e) => setForm((c) => ({ ...c, purchaserNote: e.target.value }))} placeholder="Note for the LandCheck Green team" /></label>
-
-                  <p className="gps-total-note">
-                    {selectedProject.sponsor_max_per_order ? `Max ${selectedProject.sponsor_max_per_order} trees per order · ` : ""}
-                    Total: <strong>{formatCurrencyAmount(total, priceEntry?.currency || form.checkoutCurrency)}</strong>
-                  </p>
-
-                  <label className="gps-check"><input type="checkbox" checked={form.acceptedTerms} onChange={(e) => setForm((c) => ({ ...c, acceptedTerms: e.target.checked }))} /><span>I accept the <a href={buildSponsorTermsUrl()} target="_blank" rel="noreferrer">sponsor terms</a></span></label>
-                  <label className="gps-check"><input type="checkbox" checked={form.acceptedPolicy} onChange={(e) => setForm((c) => ({ ...c, acceptedPolicy: e.target.checked }))} /><span>I accept the <a href={buildSponsorPrivacyUrl()} target="_blank" rel="noreferrer">privacy policy</a></span></label>
-
-                  {error && <p className="gps-error">{error}</p>}
-
-                  <button type="button" className="gps-primary-btn full" onClick={handleSubmit} disabled={submitting}>
-                    {submitting ? "Preparing secure payment…" : `Pay ${formatCurrencyAmount(total, priceEntry?.currency || form.checkoutCurrency)} & Sponsor`}
+              return (
+                <section className="gps-pdp" id="gps-checkout">
+                  <button type="button" className="gps-back-link" onClick={handleBackToProjects}>
+                    <span aria-hidden="true">←</span> Back to Projects
                   </button>
-                  <p className="gps-checkout-footnote">
-                    Already have an account? <a href="/green/login/sponsor">Sign in</a>, or{" "}
-                    <button type="button" onClick={() => setShowOrderLookup(true)}>track an order</button> without one.
-                  </p>
-                </div>
-              </section>
-            )}
+
+                  <div className="gps-pdp-grid">
+                    {/* ─── Gallery ─── */}
+                    <div className="gps-pdp-gallery">
+                      <div
+                        className="gps-pdp-main-photo"
+                        style={{ backgroundImage: `linear-gradient(160deg, ${activeTheme.tintA}, ${activeTheme.tintB}), url(${SPONSOR_BACKGROUND})` }}
+                      >
+                        <span className="gps-pdp-main-emoji">{activeTheme.icon}</span>
+                      </div>
+                      <div className="gps-pdp-thumb-row">
+                        {PROJECT_CARD_THEMES.map((theme, index) => (
+                          <button
+                            type="button"
+                            key={index}
+                            className={`gps-pdp-thumb${index === galleryIndex ? " active" : ""}`}
+                            style={{ backgroundImage: `linear-gradient(160deg, ${theme.tintA}, ${theme.tintB}), url(${SPONSOR_BACKGROUND})` }}
+                            onClick={() => setGalleryIndex(index)}
+                            aria-label={`View gallery image ${index + 1}`}
+                          >
+                            <span>{theme.icon}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* ─── Info + form ─── */}
+                    <div className="gps-pdp-info">
+                      <span className="gps-checkout-eyebrow">Secure Checkout</span>
+                      <h1>{projectTitle}</h1>
+                      <span className="gps-checkout-location">📍 {selectedProject.location_text || "LandCheck Green project"}</span>
+                      <div className="gps-pdp-price-row">
+                        <span className="gps-pdp-price">{formatSponsorPriceChoices(selectedProject)}</span>
+                        <span className={`gps-chip ${selectedProject.sponsor_checkout_ready ? "ok" : "warning"}`}>
+                          {selectedProject.sponsor_checkout_ready ? `${Number(selectedProject.slots_available ?? 0)} slots open` : "Preparing"}
+                        </span>
+                      </div>
+
+                      <div className="gps-accordion">
+                        {accordions.map((item) => {
+                          const open = openAccordions.has(item.key);
+                          return (
+                            <div key={item.key} className={`gps-accordion-item${open ? " open" : ""}`}>
+                              <button type="button" className="gps-accordion-head" onClick={() => toggleAccordion(item.key)}>
+                                <span>{item.title}</span>
+                                <span className="gps-accordion-chevron" aria-hidden="true">›</span>
+                              </button>
+                              {open && <p className="gps-accordion-body">{item.body}</p>}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="gps-pdp-divider" />
+
+                      <div className="gps-quantity-row">
+                        <span className="gps-field-label">Trees <span className="gps-required">*</span></span>
+                        <div className="gps-quantity-stepper">
+                          <button type="button" onClick={() => bumpQuantity(-1)} aria-label="Decrease quantity">−</button>
+                          <input type="number" min="1" value={form.quantity} onChange={(e) => setForm((c) => ({ ...c, quantity: e.target.value }))} />
+                          <button type="button" onClick={() => bumpQuantity(1)} aria-label="Increase quantity">+</button>
+                        </div>
+                        {priceEntries.length > 1 && (
+                          <select className="gps-quantity-currency" value={form.checkoutCurrency} onChange={(e) => setForm((c) => ({ ...c, checkoutCurrency: e.target.value }))}>
+                            {priceEntries.map((entry) => (
+                              <option key={entry.currency} value={entry.currency}>{entry.currency} — {formatCurrencyAmount(entry.amount, entry.currency)} / tree</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+
+                      <h2 className="gps-pdp-section-title">Your Details</h2>
+                      <div className="gps-form-grid">
+                        <label className="gps-field"><span>Full name <span className="gps-required">*</span></span><input type="text" value={form.fullName} onChange={(e) => setForm((c) => ({ ...c, fullName: e.target.value }))} placeholder="Your name" /></label>
+                        <label className="gps-field"><span>Email <span className="gps-required">*</span></span><input type="email" value={form.email} onChange={(e) => setForm((c) => ({ ...c, email: e.target.value }))} placeholder="you@example.com" /></label>
+                        <label className="gps-field"><span>Phone (optional)</span><input type="tel" value={form.phone} onChange={(e) => setForm((c) => ({ ...c, phone: e.target.value }))} placeholder="Phone number" /></label>
+                        <label className="gps-field"><span>Dedication</span>
+                          <select value={form.dedicationType} onChange={(e) => setForm((c) => ({ ...c, dedicationType: e.target.value }))}>
+                            {DEDICATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </label>
+                        {form.dedicationType !== "self" && (
+                          <label className="gps-field"><span>Dedicated to (optional)</span><input type="text" value={form.dedicationName} onChange={(e) => setForm((c) => ({ ...c, dedicationName: e.target.value }))} placeholder="Name or occasion" /></label>
+                        )}
+                      </div>
+
+                      <label className="gps-field"><span>Message (optional)</span><textarea rows={2} value={form.purchaserNote} onChange={(e) => setForm((c) => ({ ...c, purchaserNote: e.target.value }))} placeholder="Note for the LandCheck Green team" /></label>
+
+                      <p className="gps-total-note">
+                        {selectedProject.sponsor_max_per_order ? `Max ${selectedProject.sponsor_max_per_order} trees per order · ` : ""}
+                        Total: <strong>{formatCurrencyAmount(total, priceEntry?.currency || form.checkoutCurrency)}</strong>
+                      </p>
+
+                      <label className="gps-check"><input type="checkbox" checked={form.acceptedTerms} onChange={(e) => setForm((c) => ({ ...c, acceptedTerms: e.target.checked }))} /><span>I accept the <a href={buildSponsorTermsUrl()} target="_blank" rel="noreferrer">sponsor terms</a></span></label>
+                      <label className="gps-check"><input type="checkbox" checked={form.acceptedPolicy} onChange={(e) => setForm((c) => ({ ...c, acceptedPolicy: e.target.checked }))} /><span>I accept the <a href={buildSponsorPrivacyUrl()} target="_blank" rel="noreferrer">privacy policy</a></span></label>
+
+                      {error && <p className="gps-error">{error}</p>}
+
+                      <button type="button" className="gps-primary-btn full" onClick={handleSubmit} disabled={submitting}>
+                        {submitting ? "Preparing secure payment…" : `Pay ${formatCurrencyAmount(total, priceEntry?.currency || form.checkoutCurrency)} & Sponsor`}
+                      </button>
+                      <p className="gps-checkout-footnote">
+                        Already have an account? <a href="/green/login/sponsor">Sign in</a>, or{" "}
+                        <button type="button" onClick={() => setShowOrderLookup(true)}>track an order</button> without one.
+                      </p>
+                    </div>
+                  </div>
+                </section>
+              );
+            })()}
           </>
         )}
       </main>
