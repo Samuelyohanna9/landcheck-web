@@ -108,9 +108,16 @@
   background: var(--gps-brand-light);
   color: var(--gps-brand-dark);
   font-size: 12.5px;
-  font-weight: 700;
+  font-weight: 600;
   text-align: center;
 }
+
+.gps-promo-message {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.gps-promo-message .gps-icon { width: 15px; height: 15px; }
 
 .gps-promo-banner button {
   border: none;
@@ -127,25 +134,55 @@
   isolation: isolate;
   overflow: hidden;
   padding: 56px 24px 64px;
+  background-color: #04150b;
   background-size: cover;
   background-position: center right;
   background-repeat: no-repeat;
   color: #ffffff;
 }
 
-.gps-hero-video {
+.gps-hero-video-wrap {
   position: absolute;
   inset: 0;
   z-index: -2;
+  overflow: hidden;
+  pointer-events: none;
+  background: #04150b;
+}
+
+.gps-hero-video {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center;
   opacity: 0;
-  transition: opacity 0.8s ease;
+  transform: translate3d(0, 0, 0) scale(1.06);
+  transform-origin: center center;
+  transition: opacity 700ms ease, transform 1400ms ease;
+  will-change: transform, opacity;
+  filter: saturate(0.96) brightness(0.8) contrast(1.04);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
-.gps-hero--video-ready .gps-hero-video { opacity: 1; }
+.gps-hero--video-ready .gps-hero-video {
+  opacity: 0.48;
+  transform: translate3d(0, 0, 0) scale(1.02);
+}
+
+.gps-hero-video.gps-hero-video--active {
+  opacity: 0;
+}
+
+.gps-hero--video-ready .gps-hero-video.gps-hero-video--active {
+  opacity: 1;
+}
+
+.gps-hero-video.gps-hero-video--inactive {
+  opacity: 0;
+}
 
 .gps-hero-scrim {
   position: absolute;
@@ -167,7 +204,7 @@
 .gps-hero-eyebrow {
   display: inline-flex;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #bfe8c9;
@@ -178,19 +215,25 @@
 }
 
 .gps-hero-inner h1 {
-  font-size: clamp(2rem, 4.5vw, 2.9rem);
-  font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
-  margin: 4px 0;
+  font-size: clamp(1.9rem, 4vw, 2.65rem);
+  font-weight: 700;
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+  margin: 6px 0;
 }
 
 .gps-hero-inner p {
-  font-size: 1.02rem;
-  color: rgba(255,255,255,0.88);
-  max-width: 560px;
-  line-height: 1.6;
+  font-size: 1rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.86);
+  max-width: 540px;
+  line-height: 1.65;
+  letter-spacing: 0.001em;
 }
+
+/* Shared icon sizing — icons inherit currentColor from their surrounding text */
+.gps-icon { width: 1em; height: 1em; flex-shrink: 0; }
+.gps-icon-inline { width: 13px; height: 13px; vertical-align: -2px; margin-right: 1px; flex-shrink: 0; }
 
 .gps-feature-row {
   display: flex;
@@ -218,19 +261,20 @@
 }
 
 .gps-feature-icon {
-  font-size: 30px;
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: rgba(255,255,255,0.14);
+  color: #bfe8c9;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 4px;
 }
+.gps-feature-icon .gps-icon { width: 22px; height: 22px; }
 
-.gps-feature-card strong { font-size: 0.95rem; font-weight: 700; }
-.gps-feature-card p { font-size: 0.8rem; color: rgba(255,255,255,0.78); line-height: 1.45; }
+.gps-feature-card strong { font-size: 0.92rem; font-weight: 600; letter-spacing: -0.005em; }
+.gps-feature-card p { font-size: 0.79rem; font-weight: 400; color: rgba(255,255,255,0.75); line-height: 1.5; }
 
 .gps-hero-ctas {
   display: flex;
@@ -241,11 +285,14 @@
 }
 
 .gps-hero-secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   border: 1.5px solid rgba(255,255,255,0.6);
   border-radius: 999px;
   padding: 13px 22px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   background: rgba(255,255,255,0.08);
 }
@@ -278,10 +325,10 @@
 }
 
 .gps-toast-icon {
-  font-size: 22px;
-  line-height: 1;
+  color: var(--gps-brand);
   flex-shrink: 0;
 }
+.gps-toast-icon .gps-icon { width: 22px; height: 22px; }
 
 .gps-toast-body {
   font-size: 12.5px;
@@ -314,7 +361,7 @@
 
 .gps-projects-section h2 {
   font-size: 1.5rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.01em;
 }
 
@@ -393,7 +440,7 @@
 
 .gps-project-card-body h3 {
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--gps-brand-dark);
   line-height: 1.3;
 }
@@ -422,7 +469,7 @@
 
 .gps-project-card-price {
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--gps-brand-dark);
 }
 
@@ -453,7 +500,7 @@
   border-radius: 999px;
   padding: 13px;
   font-size: 12.5px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #ffffff;
@@ -464,7 +511,7 @@
 
 .gps-chip {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   padding: 3px 10px;
   border-radius: 999px;
   white-space: nowrap;
@@ -531,7 +578,7 @@
 .gps-pdp-thumb.active { opacity: 1; border-color: var(--gps-brand); box-shadow: 0 0 0 2px rgba(31,143,73,0.16); }
 
 .gps-pdp-info { display: flex; flex-direction: column; gap: 10px; }
-.gps-pdp-info h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; line-height: 1.25; }
+.gps-pdp-info h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.25; }
 
 .gps-pdp-price-row {
   display: flex;
@@ -539,7 +586,7 @@
   gap: 10px;
   margin: 4px 0 6px;
 }
-.gps-pdp-price { font-size: 1.4rem; font-weight: 800; color: var(--gps-brand-dark); }
+.gps-pdp-price { font-size: 1.4rem; font-weight: 700; color: var(--gps-brand-dark); }
 
 /* ─── Accordion ─────────────────────────────────────────────────── */
 .gps-accordion {
@@ -633,7 +680,7 @@
 
 .gps-pdp-section-title {
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 700;
   margin-top: 6px;
 }
 
@@ -683,7 +730,7 @@
 .gps-approval-banner strong { display: block; font-size: 0.9rem; color: var(--gps-brand-dark); margin-bottom: 3px; }
 .gps-approval-banner p { font-size: 0.82rem; color: var(--gps-text-muted); line-height: 1.5; }
 
-.gps-required { color: #dc2626; font-weight: 800; }
+.gps-required { color: #dc2626; font-weight: 700; }
 
 .gps-checkout-card {
   width: 100%;
@@ -710,19 +757,19 @@
 .gps-checkout-eyebrow {
   display: block;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--gps-gold);
   margin-bottom: 4px;
 }
 
-.gps-checkout-head h2 { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.01em; }
+.gps-checkout-head h2 { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.01em; }
 .gps-checkout-location { font-size: 0.85rem; color: var(--gps-text-muted); }
 
 .gps-checkout-price {
   font-size: 0.85rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--gps-brand-mid);
   background: var(--gps-brand-light);
   padding: 8px 14px;
@@ -787,7 +834,7 @@
   border-radius: 999px;
   padding: 15px 22px;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
   color: #ffffff;
   background: linear-gradient(135deg, var(--gps-brand), var(--gps-brand-mid));
   box-shadow: 0 12px 24px rgba(10,61,32,0.24);
@@ -834,8 +881,25 @@
 .gps-return-status.success { border-color: var(--gps-brand); }
 .gps-return-status.failed { border-color: #dc2626; }
 
-.gps-return-icon { font-size: 46px; line-height: 1; }
-.gps-return-status h2 { font-size: 1.3rem; font-weight: 800; }
+.gps-return-icon { color: var(--gps-brand); }
+.gps-return-icon .gps-icon { width: 42px; height: 42px; }
+.gps-return-status.failed .gps-return-icon { color: #dc2626; }
+.gps-return-status.pending .gps-return-icon { color: #b7791f; }
+
+.gps-return-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.gps-return-note {
+  font-size: 0.78rem;
+  color: var(--gps-text-muted);
+  margin-top: 2px;
+}
+.gps-return-status h2 { font-size: 1.3rem; font-weight: 700; }
 .gps-return-status p { font-size: 0.92rem; color: var(--gps-text-muted); }
 
 .gps-spinner {
@@ -861,7 +925,7 @@
   align-items: center;
   gap: 10px;
 }
-.gps-claim-card h2 { font-size: 1.25rem; font-weight: 800; }
+.gps-claim-card h2 { font-size: 1.25rem; font-weight: 700; }
 .gps-claim-card h3 { font-size: 1.05rem; font-weight: 700; margin-top: 4px; }
 .gps-claim-card > p { font-size: 0.9rem; color: var(--gps-text-muted); }
 .gps-claim-sub { margin-bottom: 6px; }
@@ -926,7 +990,7 @@
   box-shadow: var(--gps-shadow-md);
 }
 
-.gps-lookup-modal h2 { font-size: 1.2rem; font-weight: 800; margin-bottom: 2px; }
+.gps-lookup-modal h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 2px; }
 
 .gps-modal-close {
   position: absolute;
@@ -961,18 +1025,26 @@
 
 /* ─── Responsive ───────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .gps-hero { padding: 108px 18px 48px; }
+  .gps-topbar { padding: 10px 14px; gap: 10px; }
+  .gps-topbar-brand span { display: none; }
+  .gps-promo-banner { font-size: 11.5px; padding: 8px 10px; gap: 10px; }
+  .gps-hero { padding: 40px 16px 40px; }
+  .gps-hero-inner { gap: 12px; }
   .gps-main { margin-top: -20px; padding: 0 16px 48px; gap: 24px; }
   .gps-form-grid { grid-template-columns: 1fr; }
-  .gps-checkout-card { padding: 20px; }
-  .gps-checkout-head { flex-direction: column; }
-  .gps-checkout-price { align-self: flex-start; }
-  .gps-feature-card { min-width: 140px; padding: 14px 12px; }
+  .gps-feature-row { gap: 10px; }
+  .gps-feature-card { min-width: 0; flex: 1 1 30%; padding: 12px 8px; }
   .gps-feature-card p { display: none; }
+  .gps-hero-ctas { flex-direction: column; width: 100%; }
+  .gps-hero-ctas button { width: 100%; justify-content: center; }
   .gps-hero-video { object-position: center 30%; }
+  .gps-project-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 36px 12px; }
+  .gps-project-card { padding: 38px 14px 16px; }
+  .gps-quantity-row { gap: 10px; }
+  .gps-lookup-modal { padding: 22px 18px; }
 }
 
 /* Respect data-saver / low-power devices further: keep the video paused off-screen */
 @media (max-width: 420px) {
-  .gps-hero { padding: 96px 14px 40px; }
+  .gps-hero { padding: 32px 14px 36px; }
 }
