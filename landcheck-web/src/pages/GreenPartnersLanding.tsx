@@ -123,7 +123,7 @@ export default function GreenPartnersLanding() {
                 <strong>Google Play</strong>
               </div>
             </a>
-            <a href="/green/login/sponsor" className="gp-hero-sponsor-btn">
+            <a href="/sponsor" className="gp-hero-sponsor-btn">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="18" height="18">
                 <path
                   d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 2-8 2"
@@ -323,7 +323,7 @@ export default function GreenPartnersLanding() {
                 <strong>Google Play</strong>
               </div>
             </a>
-            <a className="gp-suite-cta" href="/green/login/sponsor">
+            <a className="gp-suite-cta" href="/sponsor">
               Sponsor online
             </a>
           </div>

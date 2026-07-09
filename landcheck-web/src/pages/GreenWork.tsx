@@ -370,6 +370,8 @@ type SponsorAccountSummary = {
   project_pending_orders_count?: number;
   project_issue_orders_count?: number;
   project_awaiting_tree_units?: number;
+  is_guest?: boolean;
+  claimed_at?: string | null;
 };
 
 type SponsorAgentBankAccountRecord = {
@@ -13095,6 +13097,15 @@ export default function GreenWork() {
                             <div className="staff-row-head">
                               <strong>{sponsor.full_name}</strong>
                               <span>{formatTaskTypeLabel(sponsor.account_type || "individual")}</span>
+                              {sponsor.is_guest ? (
+                                <span className="green-work-live-pill warning" title="Checked out without creating a password — hasn't claimed their account yet">
+                                  Guest (unclaimed)
+                                </span>
+                              ) : sponsor.claimed_at ? (
+                                <span className="green-work-live-pill ok" title="Started as a guest checkout, later claimed a full account">
+                                  Claimed from guest
+                                </span>
+                              ) : null}
                             </div>
                             <div className="work-actions" style={{ margin: "8px 0 6px", flexWrap: "wrap" }}>
                               {Number(sponsor.project_orders_count || 0) > 0 ? (

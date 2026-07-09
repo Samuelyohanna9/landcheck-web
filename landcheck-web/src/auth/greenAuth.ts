@@ -177,6 +177,21 @@ export const signUpGreenSponsor = async (input: SponsorSignupInput) => {
   return session;
 };
 
+export const claimGreenSponsorGuestAccount = async (params: { sponsorId: number; email: string; password: string }) => {
+  const email = params.email.trim().toLowerCase();
+  if (!params.sponsorId || !email || !params.password) {
+    throw new Error("Email and password are required");
+  }
+  const res = await api.post("/green/sponsor/guest/claim", {
+    sponsor_id: params.sponsorId,
+    email,
+    password: params.password,
+  });
+  const session = normalizeGreenSession(res.data || {}, "green_sponsor");
+  setGreenAuthed(session);
+  return session;
+};
+
 export const requestGreenSponsorPasswordReset = async (email: string) => {
   const normalizedEmail = email.trim().toLowerCase();
   if (!normalizedEmail) {
