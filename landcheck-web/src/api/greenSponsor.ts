@@ -14,8 +14,12 @@ export type SponsorProject = {
   public_sponsor_title?: string | null;
   public_sponsor_description?: string | null;
   public_description?: string | null;
+  sponsor_price_per_tree_ngn?: number | null;
+  sponsor_price_per_tree_usd?: number | null;
   sponsor_price_per_tree?: number | null;
   sponsor_currency?: string | null;
+  available_sponsor_currencies?: string[];
+  sponsor_price_options?: Record<string, number>;
   sponsor_capacity?: number | null;
   sponsor_max_per_order?: number | null;
   sponsor_dedication_enabled?: boolean | null;
@@ -236,6 +240,35 @@ const normalizeProject = (project: any): SponsorProject => ({
     project?.sponsor_price_per_tree === null || project?.sponsor_price_per_tree === undefined
       ? null
       : Number(project.sponsor_price_per_tree || 0),
+  sponsor_price_per_tree_ngn:
+    project?.sponsor_price_per_tree_ngn === null || project?.sponsor_price_per_tree_ngn === undefined
+      ? null
+      : Number(project.sponsor_price_per_tree_ngn || 0),
+  sponsor_price_per_tree_usd:
+    project?.sponsor_price_per_tree_usd === null || project?.sponsor_price_per_tree_usd === undefined
+      ? null
+      : Number(project.sponsor_price_per_tree_usd || 0),
+  available_sponsor_currencies: Array.isArray(project?.available_sponsor_currencies)
+    ? project.available_sponsor_currencies
+        .map((item: unknown) => String(item || "").trim().toUpperCase())
+        .filter((item: string, index: number, arr: string[]) => item.length === 3 && arr.indexOf(item) === index)
+    : [
+        project?.sponsor_price_per_tree_ngn ? "NGN" : null,
+        project?.sponsor_price_per_tree_usd ? "USD" : null,
+        !project?.sponsor_price_per_tree_ngn && !project?.sponsor_price_per_tree_usd && project?.sponsor_price_per_tree
+          ? String(project?.sponsor_currency || "NGN").trim().toUpperCase()
+          : null,
+      ].filter((item: string | null): item is string => Boolean(item)),
+  sponsor_price_options:
+    project?.sponsor_price_options && typeof project.sponsor_price_options === "object"
+      ? Object.fromEntries(
+          Object.entries(project.sponsor_price_options).flatMap(([currency, amount]) => {
+            const code = String(currency || "").trim().toUpperCase();
+            const numeric = Number(amount || 0);
+            return code.length === 3 && Number.isFinite(numeric) && numeric > 0 ? [[code, numeric]] : [];
+          }),
+        )
+      : {},
   sponsor_capacity:
     project?.sponsor_capacity === null || project?.sponsor_capacity === undefined
       ? null
@@ -306,6 +339,17 @@ export const fetchPublicSponsorshipProjects = async () => {
   return (Array.isArray(response.data) ? response.data : []).map(normalizeProject);
 };
 
+export const fetchPublicImpactStats = async (): Promise<{
+  total_trees: number;
+  total_organizations: number;
+}> => {
+  const response = await api.get("/green/public/impact-stats");
+  return {
+    total_trees: Number(response.data?.total_trees || 0),
+    total_organizations: Number(response.data?.total_organizations || 0),
+  };
+};
+
 export const fetchPublicPartnerOrganizations = async (): Promise<
   Array<{ id: number; name: string; logo_url: string | null }>
 > => {
@@ -364,6 +408,7 @@ export const createSponsorOrder = async (
   payload: {
     project_id: number;
     quantity: number;
+    checkout_currency?: string | null;
     dedication_type?: string | null;
     dedication_name?: string | null;
     dedication_message?: string | null;

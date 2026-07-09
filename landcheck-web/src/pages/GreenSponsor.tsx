@@ -19,6 +19,7 @@ import {
   postSponsorGameAction,
   redeemReferralCode,
   submitSchoolNomination,
+  submitTreeComplaint,
   type SponsorAchievements,
   type SponsorLeaderboardData,
   type SponsorOrder,
@@ -43,13 +44,6 @@ import "../styles/green-sponsor.css";
 // ─── Tab & form types ─────────────────────────────────────────────────────────
 type SponsorTabKey = "projects" | "trees" | "leaderboard" | "grove" | "profile";
 
-type ActivityItem = {
-  id: string;
-  title: string;
-  detail: string;
-  date: string | null;
-};
-
 type ProfileFormState = {
   entity_category: string;
   leaderboard_visibility: string;
@@ -57,6 +51,7 @@ type ProfileFormState = {
 
 type OrderDraftState = {
   quantity: string;
+  checkoutCurrency: string;
   dedicationType: string;
   dedicationName: string;
   dedicationMessage: string;
@@ -197,6 +192,36 @@ const formatCurrencyAmount = (amount: number | null | undefined, currency = "NGN
   return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 0 }).format(numeric);
 };
 
+const getSponsorPriceEntries = (project?: SponsorProject | null) => {
+  const entries: Array<{ currency: string; amount: number }> = [];
+  const push = (currency: string | null | undefined, amount: number | null | undefined) => {
+    const code = String(currency || "").trim().toUpperCase();
+    const numeric = Number(amount || 0);
+    if (code.length !== 3 || !Number.isFinite(numeric) || numeric <= 0 || entries.some((item) => item.currency === code)) {
+      return;
+    }
+    entries.push({ currency: code, amount: numeric });
+  };
+  push("NGN", project?.sponsor_price_per_tree_ngn);
+  push("USD", project?.sponsor_price_per_tree_usd);
+  if (entries.length === 0) {
+    push(project?.sponsor_currency || "NGN", project?.sponsor_price_per_tree);
+  }
+  return entries;
+};
+
+const getPreferredSponsorPriceEntry = (project?: SponsorProject | null, currency?: string | null) => {
+  const entries = getSponsorPriceEntries(project);
+  const requested = String(currency || "").trim().toUpperCase();
+  return entries.find((item) => item.currency === requested) || entries[0] || null;
+};
+
+const formatSponsorPriceChoices = (project?: SponsorProject | null) => {
+  const entries = getSponsorPriceEntries(project);
+  if (entries.length === 0) return "Pricing coming soon";
+  return entries.map((item) => `${formatCurrencyAmount(item.amount, item.currency)} / tree`).join(" · ");
+};
+
 const humanizeLabel = (value: string | null | undefined, fallback = "Not available") => {
   const raw = String(value || "").trim().replace(/_/g, " ");
   if (!raw) return fallback;
@@ -243,7 +268,6 @@ const getAvatarBorderClass = (border: string | null | undefined): string => {
 };
 
 const getSponsorGreeting = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
-const getSponsorGreetingIcon = () => { const h = new Date().getHours(); return h < 12 ? "sun" : h < 18 ? "cloud" : "moon"; };
 const getSponsorFirstName = (v?: string | null) => { const t = String(v || "").trim(); if (!t) return "there"; return t.split(/\s+/)[0] || t; };
 
 const buildDirectionsUrl = (lat?: number | null, lng?: number | null) => {
@@ -275,16 +299,6 @@ const collectPhotoUrls = (detail: SponsorTreeDetail | null) => {
   return output;
 };
 
-const buildActivityFeed = (orders: SponsorOrder[], trees: SponsorTreeSummary[]) => {
-  const items: ActivityItem[] = [];
-  orders.forEach((order) => {
-    items.push({ id: `order-created-${order.id}`, title: `${order.quantity} tree${order.quantity === 1 ? "" : "s"} reserved`, detail: `Order created for ${order.project_name || "your selected project"}.`, date: order.created_at || null });
-    if (String(order.payment_status || "").trim()) items.push({ id: `order-payment-${order.id}`, title: `Payment ${humanizeLabel(order.payment_status, "updated")}`, detail: `${order.project_name || "Project"} | ${formatCurrencyAmount(order.amount_total, order.currency || "NGN")}`, date: order.payment_verified_at || order.updated_at || order.created_at || null });
-  });
-  trees.forEach((tree) => items.push({ id: `tree-linked-${tree.unit_id}`, title: tree.project_tree_no ? `Tree ${tree.project_tree_no} linked` : "Sponsored tree linked", detail: `${tree.project_name || "LandCheck Green project"} | ${humanizeLabel(tree.tree_status, "Awaiting planting")}`, date: tree.linked_at || tree.tree_created_at || tree.order_created_at || null }));
-  return items.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime()).slice(0, 6);
-};
-
 // ─── SVG Glyphs ───────────────────────────────────────────────────────────────
 function GreenGlyph({ name, className = "" }: { name: string; className?: string }) {
   switch (name) {
@@ -296,8 +310,12 @@ function GreenGlyph({ name, className = "" }: { name: string; className?: string
     case "branch": return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 18c2.8 0 5-2.2 5-5V6m0 7h5m-5-3h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /><circle cx="7" cy="18" r="2.4" stroke="currentColor" strokeWidth="1.8" /><circle cx="12" cy="6" r="2.4" stroke="currentColor" strokeWidth="1.8" /><circle cx="17" cy="13" r="2.4" stroke="currentColor" strokeWidth="1.8" /></svg>;
     case "trophy": return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 4h8v2a4 4 0 0 1-8 0V4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /><path d="M9 16h6M10 20h4M6 6H4a2 2 0 0 0 2 2M18 6h2a2 2 0 0 1-2 2M12 10v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
     case "spark": return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>;
+    case "game-controller": return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="7.5" width="19" height="11" rx="5.5" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /><path d="M7 10.2v3.6M5.2 12h3.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><circle cx="15.2" cy="10.6" r="1" fill="currentColor" /><circle cx="17.6" cy="13" r="1" fill="currentColor" /></svg>;
     case "person": return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.6" stroke="currentColor" strokeWidth="1.8" /><path d="M5.5 19a6.5 6.5 0 0 1 13 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
     case "map": return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 4-5 2v14l5-2 6 2 5-2V4l-5 2-6-2Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /><path d="M9 4v14M15 6v14" stroke="currentColor" strokeWidth="1.8" /></svg>;
+    case "camera": return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8.5a1.5 1.5 0 0 1 1.5-1.5h1.6l1-1.6h7.8l1 1.6h1.6A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-9Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /><circle cx="12" cy="13" r="3.4" stroke="currentColor" strokeWidth="1.8" /></svg>;
+    case "pulse": return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12h4l2-7 4 14 2-7h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case "help": return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" /><path d="M9.5 9.3a2.5 2.5 0 1 1 3.7 2.2c-.8.5-1.2 1-1.2 1.9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><circle cx="12" cy="17" r="0.9" fill="currentColor" /></svg>;
     default: return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.8" /></svg>;
   }
 }
@@ -787,7 +805,7 @@ export default function GreenSponsor() {
     leaderboard_visibility: String(session?.user.leaderboard_visibility || "public"),
   });
   const [orderDraft, setOrderDraft] = useState<OrderDraftState>({
-    quantity: "1", dedicationType: "self", dedicationName: "", dedicationMessage: "", purchaserNote: "", acceptedTerms: false, acceptedPolicy: false,
+    quantity: "1", checkoutCurrency: "NGN", dedicationType: "self", dedicationName: "", dedicationMessage: "", purchaserNote: "", acceptedTerms: false, acceptedPolicy: false,
   });
 
   const [checkoutSheetOpen, setCheckoutSheetOpen] = useState(false);
@@ -797,6 +815,12 @@ export default function GreenSponsor() {
   const [schoolNomOpen, setSchoolNomOpen] = useState(false);
   const [schoolNom, setSchoolNom] = useState<SchoolNomState>({ name: "", location: "", contact: "", reason: "" });
   const [schoolNomBusy, setSchoolNomBusy] = useState(false);
+  const [leaderboardCategory, setLeaderboardCategory] = useState<"top_overall" | "top_schools" | "top_communities" | "top_companies">("top_overall");
+  const [complaintOpen, setComplaintOpen] = useState(false);
+  const [complaintType, setComplaintType] = useState("general");
+  const [complaintTreeId, setComplaintTreeId] = useState("");
+  const [complaintMessage, setComplaintMessage] = useState("");
+  const [complaintBusy, setComplaintBusy] = useState(false);
   const [referralInput, setReferralInput] = useState("");
   const [referralBusy, setReferralBusy] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -863,6 +887,16 @@ export default function GreenSponsor() {
 
   const featuredProject = useMemo(() => projects.find((p) => p.sponsor_checkout_ready) || projects[0] || null, [projects]);
   const selectedProject = useMemo(() => projects.find((p) => p.id === selectedProjectId) || featuredProject, [featuredProject, projects, selectedProjectId]);
+  useEffect(() => {
+    const preferredPrice = getPreferredSponsorPriceEntry(selectedProject, orderDraft.checkoutCurrency);
+    if (preferredPrice && preferredPrice.currency !== orderDraft.checkoutCurrency) {
+      setOrderDraft((current) =>
+        current.checkoutCurrency === preferredPrice.currency
+          ? current
+          : { ...current, checkoutCurrency: preferredPrice.currency },
+      );
+    }
+  }, [orderDraft.checkoutCurrency, selectedProject]);
   const totalSponsoredTrees = useMemo(() => {
     const a = Number(achievements?.total_trees || 0), b = Number(pointsInfo?.personal_trees_sponsored || 0);
     const c = orders.reduce((s, o) => s + Number(o.total_units || o.quantity || 0), 0);
@@ -870,7 +904,14 @@ export default function GreenSponsor() {
   }, [achievements, pointsInfo, orders, trees]);
   const supportedProjectCount = useMemo(() => { const ids = new Set<number>(); [...projects,...trees.map(t=>({id:t.project_id})),...orders.map(o=>({id:o.project_id}))].forEach(x => { if (x.id > 0) ids.add(x.id); }); return ids.size; }, [orders, projects, trees]);
   const annualCarbonKg = useMemo(() => { const f = trees.reduce((s, t) => s + Number(t.carbon?.annual_co2_kg || 0), 0); return f > 0 ? f : totalSponsoredTrees * 21; }, [totalSponsoredTrees, trees]);
-  const recentActivity = useMemo(() => buildActivityFeed(orders, trees), [orders, trees]);
+  const selectedProjectPriceEntry = useMemo(
+    () => getPreferredSponsorPriceEntry(selectedProject, orderDraft.checkoutCurrency),
+    [orderDraft.checkoutCurrency, selectedProject],
+  );
+  const selectedProjectCheckoutTotal = useMemo(
+    () => Math.max(1, Number(orderDraft.quantity || 1)) * Number(selectedProjectPriceEntry?.amount || 0),
+    [orderDraft.quantity, selectedProjectPriceEntry],
+  );
   const treePhotoUrls = useMemo(() => collectPhotoUrls(selectedTreeDetail), [selectedTreeDetail]);
   const gpBalance = Number(pointsInfo?.green_points || 0);
   const displayPhotoUrl = localPhotoUrl || (pointsInfo?.profile_photo_url ? toDisplayPhotoUrl(pointsInfo.profile_photo_url) : "");
@@ -935,11 +976,29 @@ export default function GreenSponsor() {
     setSchoolNomBusy(false);
   };
 
+  const handleComplaintSubmit = async () => {
+    if (!session || !complaintMessage.trim()) { toast.error("Please describe the issue before submitting."); return; }
+    setComplaintBusy(true);
+    try {
+      await submitTreeComplaint(session, {
+        complaint_type: complaintType,
+        description: complaintMessage.trim(),
+        tree_unit_id: complaintTreeId.trim() ? Number(complaintTreeId.trim()) : undefined,
+      });
+      toast.success("Report submitted. The LandCheck Green team will follow up.");
+      setComplaintType("general"); setComplaintTreeId(""); setComplaintMessage(""); setComplaintOpen(false);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.detail || e?.message || "Could not submit report — try again.");
+    }
+    setComplaintBusy(false);
+  };
+
   const handleCreateOrder = async () => {
     if (!session || !selectedProject) return;
     const quantity = Math.max(1, Number(orderDraft.quantity || 0));
     const maxPerOrder = Number(selectedProject.sponsor_max_per_order || 0);
     const slotsAvailable = Number(selectedProject.slots_available ?? selectedProject.sponsor_capacity ?? 0);
+    const checkoutCurrency = selectedProjectPriceEntry?.currency || orderDraft.checkoutCurrency || "NGN";
     if (!selectedProject.sponsor_checkout_ready) { toast.error("This project is not open for online sponsorship yet."); return; }
     if (!Number.isFinite(quantity) || quantity <= 0) { toast.error("Enter a valid number of trees."); return; }
     if (maxPerOrder > 0 && quantity > maxPerOrder) { toast.error(`Max ${maxPerOrder} trees per order.`); return; }
@@ -947,7 +1006,7 @@ export default function GreenSponsor() {
     if (!orderDraft.acceptedTerms || !orderDraft.acceptedPolicy) { toast.error("Accept the sponsor terms and privacy policy to continue."); return; }
     setCreatingOrder(true);
     try {
-      const result = await createSponsorOrder(session, { project_id: selectedProject.id, quantity, dedication_type: orderDraft.dedicationType || null, dedication_name: orderDraft.dedicationName.trim() || null, dedication_message: orderDraft.dedicationMessage.trim() || null, purchaser_note: orderDraft.purchaserNote.trim() || null, payment_method: selectedProject.flutterwave_available ? "flutterwave" : "manual", accepted_terms: orderDraft.acceptedTerms, accepted_policy: orderDraft.acceptedPolicy, consent_version: SPONSOR_TERMS_VERSION });
+      const result = await createSponsorOrder(session, { project_id: selectedProject.id, quantity, checkout_currency: checkoutCurrency, dedication_type: orderDraft.dedicationType || null, dedication_name: orderDraft.dedicationName.trim() || null, dedication_message: orderDraft.dedicationMessage.trim() || null, purchaser_note: orderDraft.purchaserNote.trim() || null, payment_method: selectedProject.flutterwave_available ? "flutterwave" : "manual", accepted_terms: orderDraft.acceptedTerms, accepted_policy: orderDraft.acceptedPolicy, consent_version: SPONSOR_TERMS_VERSION });
       toast.success("Sponsor order created.");
       await loadOverview(false);
       if (result.payment_link) { window.location.href = result.payment_link; return; }
@@ -1037,118 +1096,75 @@ export default function GreenSponsor() {
 
 
   return (
-    <div className="green-sponsor-page">
+    <div className={`green-sponsor-page${activeTab === "grove" ? " gs-grove-active" : ""}`}>
       <Toaster position="top-right" />
 
-      {/* ─── Header ─── */}
-      <header className="green-sponsor-header-card">
-        <div className="green-sponsor-header-brand">
-          {displayPhotoUrl ? (
-            <div className={`gs-header-avatar ${getAvatarBorderClass(displayBorder)}`}>
-              <img src={displayPhotoUrl} alt={getSponsorFirstName(session.user.full_name)} width="46" height="46" />
-            </div>
-          ) : (
-            <div className="green-sponsor-logo-tile">
-              <img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="46" height="46" />
-            </div>
-          )}
-          <div className="green-sponsor-header-copy">
-            <div className="green-sponsor-badge">{achievements?.badge_emoji || "🌱"} {achievements?.level || "Climate Contributor"}</div>
-            <h1>{getSponsorGreeting()}, {getSponsorFirstName(session.user.full_name)}</h1>
-            <p>See where your trees are planted, how they grow, and the impact they create.</p>
-          </div>
-        </div>
-        <div className="green-sponsor-header-right">
-          <div className="green-sponsor-weather-orb">
-            <GreenGlyph name={getSponsorGreetingIcon()} className="green-sponsor-weather-icon" />
-          </div>
-          <button
-            type="button"
-            className="green-sponsor-logout-btn"
-            onClick={handleLogout}
-            title="Log out"
-            aria-label="Log out"
-          >
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="18" height="18"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="16 17 21 12 16 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            <span>Log out</span>
-          </button>
-        </div>
-      </header>
-
-      {/* ─── Hero Banner ─── */}
-      <section className="green-sponsor-hero" style={{ backgroundImage: `linear-gradient(135deg, rgba(8,62,32,0.96), rgba(24,124,58,0.88)), url(${SPONSOR_BACKGROUND})` }}>
-        <div className="green-sponsor-hero-copy">
-          <div className="green-sponsor-hero-chip">
-            <GreenGlyph name="leaf" className="green-sponsor-inline-icon" />
-            <span>Impact Verified</span>
-          </div>
-          <h2>Your climate legacy starts here</h2>
-          <p>Every tree you sponsor is planted, monitored, and verified with map proof, photos, and live updates.</p>
-          <div className="green-sponsor-hero-stats">
-            <div><span className="green-sponsor-stat-label">Trees sponsored</span><strong>{totalSponsoredTrees}</strong></div>
-            <div><span className="green-sponsor-stat-label">Green Points</span><strong>{gpBalance} GP</strong></div>
-          </div>
-          <div className="green-sponsor-hero-actions">
-            <button type="button" className="green-sponsor-primary-btn" onClick={() => setActiveTab("trees")}>View My Trees</button>
-            <button type="button" className="green-sponsor-secondary-btn" onClick={() => setActiveTab("grove")}>Explore Games</button>
-          </div>
-        </div>
-        <div className="green-sponsor-hero-side">
-          <div className="green-sponsor-difference-card">
-            <span className="green-sponsor-difference-icon">❤</span>
-            <span>You're making a real difference.</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Summary grid ─── */}
-      <section className="green-sponsor-summary-grid">
-        <article className="green-sponsor-panel">
-          <div className="green-sponsor-panel-heading">
-            <GreenGlyph name="leaf" className="green-sponsor-heading-icon" />
-            <div><h3>Your Impact Journey</h3><p>Track your growth from your first tree to a verified climate footprint.</p></div>
-          </div>
-          {achievements && (
-            <div className="gs-achievement-bar-wrap">
-              <div className="gs-achievement-level-row">
-                <span>{achievements.badge_emoji} {achievements.level}</span>
-                {achievements.next_level && <span className="gs-achievement-next">→ {achievements.next_level}</span>}
+      {/* ─── Per-tab header (mirrors Android: each tab has its own header treatment) ─── */}
+      {activeTab === "leaderboard" ? (
+        <header className="green-sponsor-header-card gs-header-flat">
+          <div className="gs-leaderboard-header-top">
+            <span className="gs-leaderboard-badge"><GreenGlyph name="trophy" className="green-sponsor-inline-icon" />Monthly Leaderboard</span>
+            {displayPhotoUrl ? (
+              <div className={`gs-header-avatar sm ${getAvatarBorderClass(displayBorder)}`}>
+                <img src={displayPhotoUrl} alt={getSponsorFirstName(session.user.full_name)} width="36" height="36" />
               </div>
-              <div className="gs-achievement-track"><div className="gs-achievement-fill" style={{ width: `${achievements.progress_percentage}%` }} /></div>
-              {achievements.next_level_threshold && <span className="gs-achievement-hint">{totalSponsoredTrees} / {achievements.next_level_threshold} trees</span>}
-            </div>
-          )}
-          <div className="green-sponsor-metric-list">
-            <div className="green-sponsor-metric-card"><span>Trees Sponsored</span><strong>{totalSponsoredTrees}</strong></div>
-            <div className="green-sponsor-metric-card"><span>Water Retained</span><strong>{totalSponsoredTrees * 120} L</strong></div>
-            <div className="green-sponsor-metric-card"><span>CO₂ / year</span><strong>{annualCarbonKg.toFixed(0)} kg</strong></div>
-            <div className="green-sponsor-metric-card"><span>Projects</span><strong>{supportedProjectCount}</strong></div>
+            ) : (
+              <div className="green-sponsor-logo-tile sm"><img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="36" height="36" /></div>
+            )}
           </div>
-        </article>
-        <article className="green-sponsor-panel">
-          <div className="green-sponsor-panel-heading">
-            <GreenGlyph name="spark" className="green-sponsor-heading-icon" />
-            <div><h3>Recent Activity</h3><p>Latest sponsor actions, payment milestones, and tree updates.</p></div>
+          <h1>Top Sponsors</h1>
+          <p>See who's leading the climate action movement this month, and where you rank.</p>
+        </header>
+      ) : activeTab === "grove" ? (
+        <header className="gs-grove-header">
+          <div className="gs-grove-header-copy">
+            <h1>🌿 Grove</h1>
+            <p>Play. Earn. Grow your impact.</p>
           </div>
-          <div className="green-sponsor-activity-list">
-            {recentActivity.length === 0 ? <div className="green-sponsor-empty">No activity yet — your updates will appear after your first sponsorship.</div>
-              : recentActivity.map((item) => (
-                <div key={item.id} className="green-sponsor-activity-item">
-                  <div className="green-sponsor-activity-dot" />
-                  <div><strong>{item.title}</strong><p>{item.detail}</p><span>{formatDateLabel(item.date)}</span></div>
+          <div className="gs-grove-gp-pill">🌿 {gpBalance.toLocaleString()} <span>GP</span></div>
+        </header>
+      ) : (
+        <header className="green-sponsor-header-card" style={{ backgroundImage: `linear-gradient(90deg, #f9fcf9 0%, rgba(249,252,249,0.88) 55%, rgba(249,252,249,0) 100%), url(${SPONSOR_BACKGROUND})` }}>
+          <div className="green-sponsor-header-brand">
+            {activeTab === "projects" && (
+              displayPhotoUrl ? (
+                <div className={`gs-header-avatar ${getAvatarBorderClass(displayBorder)}`}>
+                  <img src={displayPhotoUrl} alt={getSponsorFirstName(session.user.full_name)} width="46" height="46" />
                 </div>
-              ))}
+              ) : (
+                <div className="green-sponsor-logo-tile">
+                  <img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="46" height="46" />
+                </div>
+              )
+            )}
+            <div className="green-sponsor-header-copy">
+              <div className="green-sponsor-badge">{achievements?.badge_emoji || "🌱"} {achievements?.level || "Climate Contributor"}</div>
+              <h1>{getSponsorGreeting()}, {getSponsorFirstName(session.user.full_name)}</h1>
+              <p>
+                {activeTab === "trees"
+                  ? "Trace every sponsored tree from reservation to verified planting, care, certificate, and public impact sharing."
+                  : activeTab === "profile"
+                    ? "Your sponsor account keeps every verified tree, payment, certificate, and impact record together."
+                    : "See where your trees are planted, how they grow, and the impact they create."}
+              </p>
+            </div>
           </div>
-        </article>
-      </section>
-
-      {/* ─── Toolbar ─── */}
-      <div className="green-sponsor-toolbar">
-        <div><span className="green-sponsor-toolbar-label">Level</span><strong>{achievements?.level || "Climate Contributor"}</strong></div>
-        <div><span className="green-sponsor-toolbar-label">Green Points</span><strong>{gpBalance} GP</strong></div>
-        <div><span className="green-sponsor-toolbar-label">Lifetime</span><strong>{Number(pointsInfo?.lifetime_points || 0)} GP</strong></div>
-        <button type="button" className="green-sponsor-secondary-btn small" onClick={() => void loadOverview(false)}>{refreshing ? "Refreshing…" : "Refresh"}</button>
-      </div>
+          <div className="green-sponsor-header-right">
+            <div className="green-sponsor-stat-pill"><GreenGlyph name="leaf" className="green-sponsor-inline-icon" />{totalSponsoredTrees} tree{totalSponsoredTrees === 1 ? "" : "s"} sponsored</div>
+            <div className="green-sponsor-stat-pill"><GreenGlyph name="branch" className="green-sponsor-inline-icon" />{trees.length} live tree{trees.length === 1 ? "" : "s"}</div>
+            <button
+              type="button"
+              className="gs-header-refresh-btn"
+              onClick={() => void loadOverview(false)}
+              disabled={refreshing}
+              title="Refresh"
+              aria-label="Refresh"
+            >
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="16" height="16" className={refreshing ? "gs-spin" : ""}><path d="M4 4v5h5M20 20v-5h-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M4.6 15a8 8 0 0 0 14.5 2.5M19.4 9a8 8 0 0 0-14.5-2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+          </div>
+        </header>
+      )}
 
       {error && <div className="green-sponsor-banner danger">{error}</div>}
       {loading && <div className="green-sponsor-loading">Loading sponsor dashboard…</div>}
@@ -1158,11 +1174,152 @@ export default function GreenSponsor() {
       ════════════════════════════════════════════════════════════════════════ */}
       {!loading && activeTab === "projects" && (
         <>
+          {/* Verified Evidence Program strip */}
+          <section className="green-sponsor-panel gs-evidence-strip">
+            <div className="gs-evidence-item"><GreenGlyph name="map" className="green-sponsor-heading-icon" /><span>Map proof</span></div>
+            <div className="gs-evidence-item"><GreenGlyph name="camera" className="green-sponsor-heading-icon" /><span>Photo evidence</span></div>
+            <div className="gs-evidence-item"><GreenGlyph name="pulse" className="green-sponsor-heading-icon" /><span>Tracked growth</span></div>
+            <div className="gs-evidence-item"><GreenGlyph name="spark" className="green-sponsor-heading-icon" /><span>Live updates</span></div>
+          </section>
+
+          {/* 2 stat cards */}
+          <div className="green-sponsor-metric-list" style={{ marginBottom: 4 }}>
+            <div className="green-sponsor-metric-card"><span>Trees Sponsored</span><strong>{totalSponsoredTrees}</strong></div>
+            <div className="green-sponsor-metric-card"><span>Current Status</span><strong>{humanizeLabel(trees[0]?.sponsorship_status, "No trees yet")}</strong></div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="green-sponsor-hero-actions" style={{ marginBottom: 4 }}>
+            <button type="button" className="green-sponsor-secondary-btn" onClick={() => setActiveTab("trees")}>
+              <GreenGlyph name="branch" className="green-sponsor-inline-icon" /> View My Trees
+            </button>
+            <button
+              type="button"
+              className="green-sponsor-secondary-btn"
+              disabled={!featuredProject}
+              onClick={() => { if (!featuredProject) return; setSelectedProjectId(featuredProject.id); setCheckoutSheetOpen(true); }}
+            >
+              <GreenGlyph name="leaf" className="green-sponsor-inline-icon" /> {featuredProject ? "Sponsor More" : "Loading…"}
+            </button>
+          </div>
+
+          {/* Green Points & Rewards hub */}
+          <section className="green-sponsor-panel gs-points-hub">
+            <div className="green-sponsor-panel-heading">
+              <span className="gs-points-hub-emoji">🎁</span>
+              <div><h3>Green Points &amp; Rewards</h3><p>Earn Green Points and unlock rewards as you sponsor more trees.</p></div>
+            </div>
+
+            {achievements && (
+              <div className="gs-achievement-bar-wrap">
+                <div className="gs-achievement-level-row">
+                  <span>{achievements.badge_emoji} {achievements.level}</span>
+                  {achievements.next_level && <span className="gs-achievement-next">→ {achievements.next_level}</span>}
+                </div>
+                <div className="gs-achievement-track"><div className="gs-achievement-fill" style={{ width: `${achievements.progress_percentage}%` }} /></div>
+                {achievements.next_level_threshold && <span className="gs-achievement-hint">{totalSponsoredTrees} / {achievements.next_level_threshold} trees</span>}
+              </div>
+            )}
+
+            <div className="gs-referral-card">
+              <div className="gs-referral-left">
+                <div className="gs-referral-label">👥 Refer a Friend &amp; Get 25 GP</div>
+                <div className="gs-referral-code">{pointsInfo?.referral_code || "---"}</div>
+                <div className="gs-referral-hint">Share this code. When friends join and sponsor a tree, you both earn bonus GP.</div>
+              </div>
+              <div className="gs-referral-actions">
+                <button className="gs-referral-btn" onClick={handleCopyReferral}>Copy</button>
+                <button className="gs-referral-btn primary" onClick={handleShareReferral}>Share Link</button>
+              </div>
+            </div>
+
+            <div className="gs-redeem-row">
+              <input className="gs-redeem-input" type="text" placeholder="Enter a friend's referral code…" value={referralInput} onChange={(e) => setReferralInput(e.target.value)} />
+              <button className="gs-redeem-btn" onClick={handleRedeemReferral} disabled={referralBusy || !referralInput.trim()}>{referralBusy ? "…" : "Apply"}</button>
+            </div>
+
+            <div className="gs-unlocks-section">
+              <div className="gs-unlock-group">
+                <div className="gs-unlock-group-label">Rare Tree Species (500 GP)</div>
+                <div className="gs-tag-cloud">
+                  {(pointsInfo?.unlocked_species || []).length === 0
+                    ? <span className="gs-unlock-empty">None unlocked yet</span>
+                    : (pointsInfo?.unlocked_species || []).map((s) => <span key={s} className="gs-unlock-tag green">{s}</span>)}
+                </div>
+              </div>
+              <div className="gs-unlock-group">
+                <div className="gs-unlock-group-label">Custom Avatars (200 GP)</div>
+                <div className="gs-asset-list">
+                  {allBorders.map((border) => {
+                    const isEquipped = displayBorder === border;
+                    const cls = getAvatarBorderClass(border);
+                    return (
+                      <div key={border} className={`gs-asset-item${isEquipped ? " equipped" : ""}`}>
+                        <div className={`gs-asset-avatar-preview${cls ? ` ${cls}` : ""}`}>
+                          {getSponsorFirstName(session.user.full_name).charAt(0).toUpperCase()}
+                        </div>
+                        <span className="gs-asset-name">{border}</span>
+                        <button type="button" className={`gs-asset-equip-btn${isEquipped ? " active" : ""}`} onClick={() => handleEquipBorder(isEquipped ? null : border)}>
+                          {isEquipped ? "Equipped ✓" : "Equip"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="gs-unlock-group">
+                <div className="gs-unlock-group-label">Custom 3D Map Icons (150 GP)</div>
+                <div className="gs-tag-cloud">
+                  {(pointsInfo?.unlocked_map_icons || []).length === 0
+                    ? <span className="gs-unlock-empty">None unlocked yet</span>
+                    : (pointsInfo?.unlocked_map_icons || []).map((s) => <span key={s} className="gs-unlock-tag muted">{s}</span>)}
+                </div>
+              </div>
+            </div>
+
+            <h4 className="gs-section-title">🛍️ Merch Redemption</h4>
+            <div className="gs-merch-grid">
+              {MERCH.map((item) => {
+                const canRedeem = gpBalance >= item.gp;
+                return (
+                  <div key={item.name} className="gs-merch-card">
+                    <div className="gs-merch-emoji">{item.emoji}</div>
+                    <div className="gs-merch-name">{item.name}</div>
+                    <div className="gs-merch-desc">{item.desc}</div>
+                    <div className="gs-merch-cost">{item.gp.toLocaleString()} GP</div>
+                    <button
+                      className={`gs-game-btn sm ${canRedeem ? "primary" : "muted"}`}
+                      disabled={!canRedeem}
+                      onClick={() => toast.success(`Merch redemption coming soon! You need ${item.gp} GP. You have ${gpBalance} GP.`)}
+                    >
+                      {canRedeem ? "Redeem" : `Need ${(item.gp - gpBalance).toLocaleString()} more GP`}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Impact Summary */}
+          <section className="green-sponsor-panel">
+            <div className="green-sponsor-panel-heading">
+              <GreenGlyph name="leaf" className="green-sponsor-heading-icon" />
+              <div><h3>Impact Summary</h3><p>Track your growth from your first tree to a verified climate footprint.</p></div>
+            </div>
+            <div className="green-sponsor-metric-list">
+              <div className="green-sponsor-metric-card"><span>Trees Sponsored</span><strong>{totalSponsoredTrees}</strong></div>
+              <div className="green-sponsor-metric-card"><span>Live Trees</span><strong>{trees.length}</strong></div>
+              <div className="green-sponsor-metric-card"><span>Water Retained</span><strong>{totalSponsoredTrees * 120} L</strong></div>
+              <div className="green-sponsor-metric-card"><span>CO₂ / year</span><strong>{annualCarbonKg.toFixed(0)} kg</strong></div>
+              <div className="green-sponsor-metric-card"><span>Projects</span><strong>{supportedProjectCount}</strong></div>
+            </div>
+          </section>
+
           <div className="green-sponsor-content-grid">
             <section className="green-sponsor-panel">
               <div className="green-sponsor-panel-heading">
                 <GreenGlyph name="map" className="green-sponsor-heading-icon" />
-                <div><h3>Available Projects</h3><p>Choose a project and reserve trees with secure online payment.</p></div>
+                <div><h3>Sponsor Projects</h3><p>Choose a project and reserve trees with secure online payment.</p></div>
               </div>
               <div className="green-sponsor-project-grid">
                 {projects.length === 0 ? <div className="green-sponsor-empty">No public projects available yet.</div>
@@ -1176,7 +1333,7 @@ export default function GreenSponsor() {
                         </div>
                         <p>{project.public_sponsor_description || project.public_description || project.location_text || "Verified tree project"}</p>
                         <div className="green-sponsor-project-meta">
-                          <span>{formatCurrencyAmount(project.sponsor_price_per_tree || 0, project.sponsor_currency || "NGN")} / tree</span>
+                          <span>{formatSponsorPriceChoices(project)}</span>
                           <span>{project.location_text || "Location shared after planting"}</span>
                         </div>
                       </button>
@@ -1198,11 +1355,27 @@ export default function GreenSponsor() {
                     <strong>{selectedProject.public_sponsor_title || selectedProject.name}</strong>
                     <span>{selectedProject.location_text || "LandCheck Green project"}</span>
                     <div className="green-sponsor-inline-chips">
-                      <span className="green-sponsor-chip ok">{formatCurrencyAmount(selectedProject.sponsor_price_per_tree || 0, selectedProject.sponsor_currency || "NGN")} / tree</span>
+                      <span className="green-sponsor-chip ok">{formatSponsorPriceChoices(selectedProject)}</span>
                       <span className={`green-sponsor-chip ${selectedProject.sponsor_checkout_ready ? "ok" : "warning"}`}>{selectedProject.sponsor_checkout_ready ? "Ready" : "Preparing"}</span>
                     </div>
                   </div>
                   <label className="green-sponsor-field"><span>Trees</span><input type="number" min="1" value={orderDraft.quantity} onChange={(e) => setOrderDraft((c) => ({ ...c, quantity: e.target.value }))} /></label>
+                  {getSponsorPriceEntries(selectedProject).length > 1 ? (
+                    <label className="green-sponsor-field">
+                      <span>Pay in</span>
+                      <select value={orderDraft.checkoutCurrency} onChange={(e) => setOrderDraft((c) => ({ ...c, checkoutCurrency: e.target.value }))}>
+                        {getSponsorPriceEntries(selectedProject).map((entry) => (
+                          <option key={entry.currency} value={entry.currency}>
+                            {entry.currency} - {formatCurrencyAmount(entry.amount, entry.currency)} / tree
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                  <p className="gs-checkout-note">
+                    {selectedProject.sponsor_max_per_order ? `Max ${selectedProject.sponsor_max_per_order} trees per order · ` : ""}
+                    Total: {formatCurrencyAmount(selectedProjectCheckoutTotal, selectedProjectPriceEntry?.currency || orderDraft.checkoutCurrency || "NGN")}
+                  </p>
                   <label className="green-sponsor-field"><span>Dedication type</span><select value={orderDraft.dedicationType} onChange={(e) => setOrderDraft((c) => ({ ...c, dedicationType: e.target.value }))}>{DEDICATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
                   <label className="green-sponsor-field"><span>Dedication name (optional)</span><input type="text" value={orderDraft.dedicationName} onChange={(e) => setOrderDraft((c) => ({ ...c, dedicationName: e.target.value }))} placeholder="Who this sponsorship is for" /></label>
                   <label className="green-sponsor-field"><span>Dedication message (optional)</span><textarea rows={2} value={orderDraft.dedicationMessage} onChange={(e) => setOrderDraft((c) => ({ ...c, dedicationMessage: e.target.value }))} placeholder="Short dedication message" /></label>
@@ -1242,7 +1415,49 @@ export default function GreenSponsor() {
                 ))}
             </div>
           </section>
+
+          {/* Support / Complaint card */}
+          <section className="green-sponsor-panel gs-support-card">
+            <GreenGlyph name="help" className="green-sponsor-heading-icon" />
+            <div className="gs-support-copy">
+              <strong>Need Help or Have a Complaint?</strong>
+              <p>Report an issue with a sponsored tree, allocation, or Green Points balance.</p>
+            </div>
+            <button type="button" className="green-sponsor-primary-btn" onClick={() => setComplaintOpen(true)}>
+              Submit Report / Complaint
+            </button>
+          </section>
         </>
+      )}
+
+      {/* Complaint modal */}
+      {complaintOpen && (
+        <div className="gs-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setComplaintOpen(false); }}>
+          <div className="gs-modal">
+            <button className="gs-modal-close" onClick={() => setComplaintOpen(false)} aria-label="Close">✕</button>
+            <div className="gs-modal-header">
+              <span className="gs-modal-emoji">🛟</span>
+              <h2>Submit a Report</h2>
+              <p>Tell us what's wrong — the LandCheck Green team will review it.</p>
+            </div>
+            <label className="green-sponsor-field">
+              <span>Type</span>
+              <select value={complaintType} onChange={(e) => setComplaintType(e.target.value)}>
+                <option value="general">General</option>
+                <option value="allocation">Allocation issue</option>
+                <option value="points">Green Points issue</option>
+              </select>
+            </label>
+            {complaintType === "allocation" && (
+              <label className="green-sponsor-field"><span>Tree ID (optional)</span><input type="text" value={complaintTreeId} onChange={(e) => setComplaintTreeId(e.target.value)} placeholder="e.g. 1024" /></label>
+            )}
+            <label className="green-sponsor-field"><span>Message</span><textarea rows={3} value={complaintMessage} onChange={(e) => setComplaintMessage(e.target.value)} placeholder="Describe the issue" /></label>
+            <div className="green-sponsor-inline-actions">
+              <button type="button" className="green-sponsor-secondary-btn" onClick={() => setComplaintOpen(false)}>Cancel</button>
+              <button type="button" className="green-sponsor-primary-btn" onClick={handleComplaintSubmit} disabled={complaintBusy}>{complaintBusy ? "Submitting…" : "Submit"}</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
@@ -1250,6 +1465,23 @@ export default function GreenSponsor() {
       ════════════════════════════════════════════════════════════════════════ */}
       {!loading && activeTab === "trees" && (
         <section className="green-sponsor-panel">
+          {!selectedTreeDetail && (
+            <div className="gs-story-banner" style={{ backgroundImage: `linear-gradient(0deg, rgba(255,255,255,0.92), rgba(255,255,255,0.92)), url(${SPONSOR_BACKGROUND})` }}>
+              <span className="gs-story-banner-eyebrow">Your live tree portfolio</span>
+              <h3>Every verified tree now has a richer story you can follow and share.</h3>
+              <p>Track GPS location, photo evidence, and share-ready certificates for every tree you've sponsored.</p>
+              <div className="gs-story-chip-row">
+                <span className="gs-story-chip"><GreenGlyph name="camera" className="green-sponsor-inline-icon" />Evidence photos</span>
+                <span className="gs-story-chip"><GreenGlyph name="map" className="green-sponsor-inline-icon" />Map direction</span>
+                <span className="gs-story-chip"><GreenGlyph name="spark" className="green-sponsor-inline-icon" />Share-ready link</span>
+              </div>
+              <div className="green-sponsor-metric-list" style={{ marginTop: 12 }}>
+                <div className="green-sponsor-metric-card"><span>Live CO₂</span><strong>{annualCarbonKg.toFixed(0)} kg</strong></div>
+                <div className="green-sponsor-metric-card"><span>Verified Trees</span><strong>{trees.length}</strong></div>
+              </div>
+            </div>
+          )}
+
           <div className="green-sponsor-panel-heading">
             <GreenGlyph name="branch" className="green-sponsor-heading-icon" />
             <div><h3>My Trees</h3><p>Every sponsor-linked tree with field photos, care history, and live location.</p></div>
@@ -1349,37 +1581,67 @@ export default function GreenSponsor() {
       ════════════════════════════════════════════════════════════════════════ */}
       {!loading && activeTab === "leaderboard" && (
         <section className="green-sponsor-panel">
-          <div className="green-sponsor-panel-heading">
-            <GreenGlyph name="trophy" className="green-sponsor-heading-icon" />
-            <div><h3>Public Leaderboard</h3><p>Top climate contributors across the LandCheck Green community.</p></div>
-          </div>
-          {leaderboardLoading && <div className="green-sponsor-loading">Loading leaderboard…</div>}
-          {!leaderboardLoading && leaderboard && (
-            <div className="green-sponsor-leaderboard-grid">
-              {[
-                { key: "top_overall", label: "🏆 Top Overall" },
-                { key: "top_schools", label: "🏫 Top Schools" },
-                { key: "top_communities", label: "🏘️ Top Communities" },
-                { key: "top_companies", label: "🏢 Top Companies" },
-              ].map((section) => {
-                const rows = leaderboard[section.key as keyof SponsorLeaderboardData] || [];
+          {/* User rank banner */}
+          {leaderboard?.top_overall?.some((r) => r.sponsor_id === Number(session.user.id)) && (
+            <div className="gs-rank-banner">
+              {(() => {
+                const mine = leaderboard.top_overall.find((r) => r.sponsor_id === Number(session.user.id))!;
                 return (
-                  <article key={section.key} className="green-sponsor-panel muted">
-                    <h4>{section.label}</h4>
-                    {Array.isArray(rows) && rows.length > 0 ? rows.slice(0, 8).map((item) => (
-                      <div key={`${section.key}-${item.sponsor_id}-${item.rank}`} className="green-sponsor-ranking-row">
-                        <div>
-                          <strong>{item.rank}. {item.display_name}</strong>
-                          <span>{humanizeLabel(item.entity_category, "Supporter")} | {item.achievement_level}</span>
-                        </div>
-                        <div className="green-sponsor-ranking-total">{item.all_time_trees} 🌳</div>
-                      </div>
-                    )) : <div className="green-sponsor-empty">No entries yet.</div>}
-                  </article>
+                  <>
+                    <div className="gs-header-avatar sm"><span className="gs-profile-avatar-placeholder" style={{ width: 36, height: 36, fontSize: 16 }}>{getSponsorFirstName(session.user.full_name).charAt(0).toUpperCase()}</span></div>
+                    <div><strong>You are ranked #{mine.rank} overall!</strong><span>{mine.monthly_trees} trees this month</span></div>
+                  </>
                 );
-              })}
+              })()}
             </div>
           )}
+
+          {/* Segmented category tabs */}
+          <div className="gs-leaderboard-tabs">
+            {[
+              { key: "top_overall" as const, label: "Overall" },
+              { key: "top_schools" as const, label: "Schools" },
+              { key: "top_communities" as const, label: "Communities" },
+              { key: "top_companies" as const, label: "Companies" },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                className={`gs-leaderboard-tab${leaderboardCategory === tab.key ? " active" : ""}`}
+                onClick={() => setLeaderboardCategory(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="green-sponsor-panel-heading">
+            <GreenGlyph name="trophy" className="green-sponsor-heading-icon" />
+            <div><h3>{humanizeLabel(leaderboardCategory.replace("top_", ""))} Rankings</h3><p>Top climate contributors across the LandCheck Green community.</p></div>
+          </div>
+          {leaderboardLoading && <div className="green-sponsor-loading">Loading leaderboard…</div>}
+          {!leaderboardLoading && leaderboard && (() => {
+            const rows = leaderboard[leaderboardCategory] || [];
+            if (!Array.isArray(rows) || rows.length === 0) return <div className="green-sponsor-empty">No entries yet.</div>;
+            return (
+              <div className="gs-rank-list">
+                {rows.slice(0, 20).map((item) => {
+                  const isMe = item.sponsor_id === Number(session.user.id);
+                  const rankIcon = item.rank === 1 ? "🥇" : item.rank === 2 ? "🥈" : item.rank === 3 ? "🥉" : null;
+                  return (
+                    <div key={`${leaderboardCategory}-${item.sponsor_id}-${item.rank}`} className={`gs-rank-row${isMe ? " me" : ""}`}>
+                      <div className="gs-rank-num">{rankIcon || `#${item.rank}`}</div>
+                      <div className="gs-rank-body">
+                        <strong>{item.display_name}</strong>
+                        <span>{humanizeLabel(item.entity_category, "Supporter")} · All-time: {item.all_time_trees} trees</span>
+                      </div>
+                      <div className="gs-rank-trees"><strong>{item.monthly_trees}</strong><span>Trees</span></div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </section>
       )}
 
@@ -1388,166 +1650,57 @@ export default function GreenSponsor() {
       ════════════════════════════════════════════════════════════════════════ */}
       {!loading && activeTab === "grove" && (
         <div className="gs-grove-page">
+          {/* Today's highlight — Daily Spin featured card, matching Android exactly */}
+          <h3 className="gs-section-title gs-section-title--dark">TODAY'S HIGHLIGHT</h3>
+          <button type="button" className="gs-featured-game-card" onClick={() => setActiveGame("daily_spin")}>
+            <span className="gs-featured-game-tag">FREE DAILY</span>
+            <div className="gs-featured-game-emoji">🎰</div>
+            <div className="gs-featured-game-title">Daily Spin</div>
+            <div className="gs-featured-game-desc">Spin once per day for up to 200 GP</div>
+            <div className="gs-featured-game-cta">Play Now <span aria-hidden="true">→</span></div>
+          </button>
 
-          {/* GP Hero */}
-          <div className="gs-gp-hero">
-            <div className="gs-gp-hero-left">
-              <div className="gs-gp-orb">🟢</div>
-              <div>
-                <div className="gs-gp-big">{gpBalance.toLocaleString()} GP</div>
-                <div className="gs-gp-sub">Green Points Balance</div>
-              </div>
-            </div>
-            <div className="gs-gp-hero-right">
-              <div className="gs-gp-lifetime">{Number(pointsInfo?.lifetime_points || 0).toLocaleString()} GP lifetime</div>
-              {pointsInfo?.point_booster_multiplier && Number(pointsInfo.point_booster_multiplier) > 1
-                ? <div className="gs-booster-badge active">🚀 ×{pointsInfo.point_booster_multiplier} Booster ACTIVE · {pointsInfo.point_booster_remaining_uses} uses left</div>
-                : <div className="gs-booster-badge inactive">No booster active — earn GP to unlock one</div>
-              }
-            </div>
-          </div>
-
-          {/* Achievement Progress */}
-          {achievements && (
-            <div className="gs-achievement-card">
-              <div className="gs-achievement-row">
-                <span className="gs-achievement-badge">{achievements.badge_emoji}</span>
-                <div className="gs-achievement-info">
-                  <div className="gs-achievement-name">{achievements.level}</div>
-                  {achievements.next_level && <div className="gs-achievement-next-label">→ {achievements.next_level}</div>}
-                </div>
-                <div className="gs-achievement-pct">{Math.round(achievements.progress_percentage)}%</div>
-              </div>
-              <div className="gs-achievement-track-outer">
-                <div className="gs-achievement-track-inner" style={{ width: `${achievements.progress_percentage}%` }} />
-              </div>
-              {achievements.next_level_threshold && (
-                <div className="gs-achievement-count">{totalSponsoredTrees} of {achievements.next_level_threshold} trees to reach {achievements.next_level}</div>
-              )}
-            </div>
-          )}
-
-          {/* Referral Card */}
-          <div className="gs-referral-card">
-            <div className="gs-referral-left">
-              <div className="gs-referral-label">🔗 Your Referral Code</div>
-              <div className="gs-referral-code">{pointsInfo?.referral_code || "---"}</div>
-              <div className="gs-referral-hint">Share this code. When friends join and sponsor a tree, you both earn bonus GP.</div>
-            </div>
-            <div className="gs-referral-actions">
-              <button className="gs-referral-btn" onClick={handleCopyReferral}>Copy</button>
-              <button className="gs-referral-btn primary" onClick={handleShareReferral}>Share</button>
-            </div>
-          </div>
-
-          {/* Influence */}
-          <h3 className="gs-section-title">🌍 Influence</h3>
-          <div className="green-sponsor-metric-list" style={{ marginBottom: 4 }}>
-            <div className="green-sponsor-metric-card"><span>Referred users</span><strong>{Number(pointsInfo?.total_referred_users || 0)}</strong></div>
-            <div className="green-sponsor-metric-card"><span>Converted</span><strong>{Number(pointsInfo?.converted_referred_users || 0)}</strong></div>
-            <div className="green-sponsor-metric-card"><span>Sponsor goal</span><strong>{pointsInfo?.personal_sponsor_met ? "✅ Met" : "Not yet"}</strong></div>
-            <div className="green-sponsor-metric-card"><span>Referral rule</span><strong>{pointsInfo?.referral_rules_met ? "✅ Met" : "Not yet"}</strong></div>
-          </div>
-
-          {/* Redeem a referral code */}
-          <div className="gs-redeem-row">
-            <input className="gs-redeem-input" type="text" placeholder="Enter a friend's referral code…" value={referralInput} onChange={(e) => setReferralInput(e.target.value)} />
-            <button className="gs-redeem-btn" onClick={handleRedeemReferral} disabled={referralBusy || !referralInput.trim()}>{referralBusy ? "…" : "Redeem"}</button>
-          </div>
-
-          {/* Games Grid */}
-          <h3 className="gs-section-title">🎮 Mini Games</h3>
+          {/* All games — Android's exact roster/order/gradients; unimplemented slots are locked, matching mobile's own locked/"coming soon" affordance */}
+          <h3 className="gs-section-title gs-section-title--dark">ALL GAMES</h3>
           <div className="gs-games-grid">
             {[
-              { key: "daily_spin",    emoji: "🎡", title: "Daily Spin",         desc: "Spin once per day · up to 200 GP",   web: true  },
-              { key: "fruit_harvest", emoji: "🍎", title: "Fruit Harvest",      desc: "Tap fruits before they fall · 25 GP", web: true  },
-              { key: "grow_tree",     emoji: "🌱", title: "Grow My Tree",        desc: "Care for your virtual tree · earn GP",web: true  },
-              { key: "forest_quest",  emoji: "🗺️", title: "Forest Quest",       desc: "Weekly missions · up to 500 GP",      web: true  },
-              { key: "wildlife",      emoji: "🦁", title: "Wildlife Collector",  desc: "Discover 12 rare forest animals",      web: true  },
-              { key: "eco_match",     emoji: "🎮", title: "Eco-Match",           desc: "Match-3 puzzle · Android exclusive",   web: false },
-              { key: "rainmaker",     emoji: "🌧️", title: "Rainmaker",          desc: "Slide clouds · Android exclusive",     web: false },
-              { key: "climate",       emoji: "🌍", title: "Climate Defender",    desc: "CO₂ quiz · Android exclusive",        web: false },
+              { key: "follow_us",       emoji: "📲", title: "Follow Us",          tag: "20 GP",      gradient: ["#2563eb", "#166534"], web: false },
+              { key: "grow_tree",       emoji: "🌱", title: "Grow My Tree",       tag: "FAVOURITE",  gradient: ["#2aa852", "#166534"], web: true  },
+              { key: "save_forest",     emoji: "🛡️", title: "Save the Forest",    tag: "EARN GP",    gradient: ["#ef4444", "#b91c1c"], web: false },
+              { key: "forest_builder",  emoji: "🌳", title: "Forest Builder",     tag: "SPEND GP",   gradient: ["#0ea5e9", "#0369a1"], web: false },
+              { key: "wildlife",        emoji: "🦋", title: "Wildlife Collector", tag: "12 ANIMALS", gradient: ["#ec4899", "#9d174d"], web: true  },
+              { key: "climate",         emoji: "🌍", title: "Climate Defender",   tag: "EARN GP",    gradient: ["#10b981", "#065f46"], web: false },
+              { key: "fruit_harvest",   emoji: "🥭", title: "Fruit Harvest",      tag: "EARN GP",    gradient: ["#f97316", "#c2410c"], web: true  },
+              { key: "school_challenge",emoji: "🏫", title: "School Challenge",   tag: "COMPETE",    gradient: ["#6366f1", "#3730a3"], web: false },
             ].map((game) => (
               <button
                 key={game.key}
                 className={`gs-game-card ${!game.web ? "locked" : ""}`}
+                style={{ background: `linear-gradient(135deg, ${game.gradient[0]}, ${game.gradient[1]})` }}
                 onClick={() => { if (game.web) setActiveGame(game.key); }}
                 disabled={!game.web}
               >
+                <span className="gs-game-card-tag">{game.tag}</span>
                 <div className="gs-game-card-emoji">{game.emoji}</div>
                 <div className="gs-game-card-title">{game.title}</div>
-                <div className="gs-game-card-desc">{game.desc}</div>
                 {!game.web && <div className="gs-game-android-badge">📱 Android</div>}
               </button>
             ))}
           </div>
 
-          {/* Assets */}
-          <h3 className="gs-section-title">🎨 Assets</h3>
-          <div className="gs-unlocks-section">
-            <div className="gs-unlock-group">
-              <div className="gs-unlock-group-label">Species</div>
-              <div className="gs-tag-cloud">
-                {(pointsInfo?.unlocked_species || []).length === 0
-                  ? <span className="gs-unlock-empty">None unlocked yet</span>
-                  : (pointsInfo?.unlocked_species || []).map((s) => <span key={s} className="gs-unlock-tag green">{s}</span>)}
-              </div>
-            </div>
-            <div className="gs-unlock-group">
-              <div className="gs-unlock-group-label">Avatar Borders</div>
-              <div className="gs-asset-list">
-                {allBorders.map((border) => {
-                  const isEquipped = displayBorder === border;
-                  const cls = getAvatarBorderClass(border);
-                  return (
-                    <div key={border} className={`gs-asset-item${isEquipped ? " equipped" : ""}`}>
-                      <div className={`gs-asset-avatar-preview${cls ? ` ${cls}` : ""}`}>
-                        {getSponsorFirstName(session.user.full_name).charAt(0).toUpperCase()}
-                      </div>
-                      <span className="gs-asset-name">{border}</span>
-                      <button
-                        type="button"
-                        className={`gs-asset-equip-btn${isEquipped ? " active" : ""}`}
-                        onClick={() => handleEquipBorder(isEquipped ? null : border)}
-                      >
-                        {isEquipped ? "Equipped ✓" : "Equip"}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="gs-unlock-group">
-              <div className="gs-unlock-group-label">Map Icons</div>
-              <div className="gs-tag-cloud">
-                {(pointsInfo?.unlocked_map_icons || []).length === 0
-                  ? <span className="gs-unlock-empty">None unlocked yet</span>
-                  : (pointsInfo?.unlocked_map_icons || []).map((s) => <span key={s} className="gs-unlock-tag muted">{s}</span>)}
-              </div>
-            </div>
+          {/* Bonus web game (no Android equivalent) — kept as an extra, not interleaved with the Android-matching grid above */}
+          <h3 className="gs-section-title gs-section-title--dark">BONUS (WEB-ONLY)</h3>
+          <div className="gs-games-grid">
+            <button type="button" className="gs-game-card" style={{ background: "linear-gradient(135deg, #7c3aed, #4c1d95)" }} onClick={() => setActiveGame("forest_quest")}>
+              <span className="gs-game-card-tag">WEEKLY MISSIONS</span>
+              <div className="gs-game-card-emoji">🗺️</div>
+              <div className="gs-game-card-title">Forest Quest</div>
+            </button>
           </div>
 
-          {/* Merch */}
-          <h3 className="gs-section-title">🛍️ Merch Redemption</h3>
-          <div className="gs-merch-grid">
-            {MERCH.map((item) => {
-              const canRedeem = gpBalance >= item.gp;
-              return (
-                <div key={item.name} className="gs-merch-card">
-                  <div className="gs-merch-emoji">{item.emoji}</div>
-                  <div className="gs-merch-name">{item.name}</div>
-                  <div className="gs-merch-desc">{item.desc}</div>
-                  <div className="gs-merch-cost">{item.gp.toLocaleString()} GP</div>
-                  <button
-                    className={`gs-game-btn sm ${canRedeem ? "primary" : "muted"}`}
-                    disabled={!canRedeem}
-                    onClick={() => toast.success(`Merch redemption coming soon! You need ${item.gp} GP. You have ${gpBalance} GP.`)}
-                  >
-                    {canRedeem ? "Redeem" : `Need ${(item.gp - gpBalance).toLocaleString()} more GP`}
-                  </button>
-                </div>
-              );
-            })}
+          <div className="gs-grove-info-banner">
+            <GreenGlyph name="help" className="green-sponsor-inline-icon" />
+            <span>Sponsor real trees to earn GP · Use GP in games to grow your virtual world</span>
           </div>
         </div>
       )}
@@ -1589,6 +1742,46 @@ export default function GreenSponsor() {
               <span className={`green-sponsor-chip ${pointsInfo?.referral_rules_met ? "ok" : "neutral"}`}>Referral rule {pointsInfo?.referral_rules_met ? "✓" : ""}</span>
               <span className={`green-sponsor-chip ${pointsInfo?.conversion_rate_met ? "ok" : "neutral"}`}>Conversion rate {pointsInfo?.conversion_rate_met ? "✓" : ""}</span>
             </div>
+          </article>
+
+          <article className="green-sponsor-panel">
+            <div className="green-sponsor-panel-heading">
+              <GreenGlyph name="leaf" className="green-sponsor-heading-icon" />
+              <div><h3>Impact Summary</h3><p>Your contribution, orders, and verified climate footprint.</p></div>
+            </div>
+            <div className="green-sponsor-metric-list">
+              <div className="green-sponsor-metric-card"><span>Orders</span><strong>{orders.length}</strong></div>
+              <div className="green-sponsor-metric-card"><span>Live Trees</span><strong>{trees.length}</strong></div>
+              <div className="green-sponsor-metric-card"><span>Current CO₂</span><strong>{annualCarbonKg.toFixed(0)} kg</strong></div>
+            </div>
+          </article>
+
+          <article className="green-sponsor-panel">
+            <div className="green-sponsor-panel-heading">
+              <GreenGlyph name="branch" className="green-sponsor-heading-icon" />
+              <div><h3>Verification Updates</h3><p>Recent order and payment status changes.</p></div>
+            </div>
+            <div className="green-sponsor-order-list">
+              {orders.length === 0 ? <div className="green-sponsor-empty">No sponsor updates yet.</div>
+                : orders.slice(0, 5).map((order) => (
+                  <div key={`profile-order-${order.id}`} className="green-sponsor-order-card">
+                    <div className="green-sponsor-order-head">
+                      <div><strong>{order.project_name || `Order #${order.order_uid || order.id}`}</strong><p>{order.quantity} tree{order.quantity === 1 ? "" : "s"} | {formatCurrencyAmount(order.amount_total, order.currency || "NGN")}</p></div>
+                      <span className={`green-sponsor-chip ${toneClassForStatus(order.order_status || (order.linked_units ? "linked" : "neutral"))}`}>{humanizeLabel(order.order_status, order.linked_units ? "Active" : "In progress")}</span>
+                    </div>
+                    <div className="green-sponsor-order-meta"><span>{formatDateLabel(order.payment_verified_at || order.updated_at || order.created_at)}</span></div>
+                  </div>
+                ))}
+            </div>
+          </article>
+
+          <article className="green-sponsor-panel gs-support-card">
+            <GreenGlyph name="leaf" className="green-sponsor-heading-icon" />
+            <div className="gs-support-copy">
+              <strong>Take Climate Action</strong>
+              <p>Sponsor more trees to grow your impact and Green Points balance.</p>
+            </div>
+            <button type="button" className="green-sponsor-primary-btn" onClick={() => setActiveTab("projects")}>Sponsor More Trees</button>
           </article>
 
           <article className="green-sponsor-panel">
@@ -1658,7 +1851,7 @@ export default function GreenSponsor() {
                 <p className="gs-checkout-intro-eyebrow">Secure sponsorship checkout</p>
                 <h3 className="gs-checkout-intro-title">Pay online, then follow real planting evidence as your trees move into the field.</h3>
                 <div className="gs-checkout-intro-chips">
-                  <span className="green-sponsor-chip ok">{formatCurrencyAmount(selectedProject.sponsor_price_per_tree || 0, selectedProject.sponsor_currency || "NGN")} / tree</span>
+                  <span className="green-sponsor-chip ok">{formatSponsorPriceChoices(selectedProject)}</span>
                   <span className={`green-sponsor-chip ${selectedProject.sponsor_checkout_ready ? "ok" : "warning"}`}>{selectedProject.sponsor_checkout_ready ? "Ready" : "Preparing"}</span>
                   {selectedProject.slots_available !== null && selectedProject.slots_available !== undefined && (
                     <span className="green-sponsor-chip neutral">{selectedProject.slots_available} available</span>
@@ -1670,10 +1863,22 @@ export default function GreenSponsor() {
               </div>
 
               <label className="green-sponsor-field"><span>Trees</span><input type="number" min="1" value={orderDraft.quantity} onChange={(e) => setOrderDraft((c) => ({ ...c, quantity: e.target.value }))} /></label>
+              {getSponsorPriceEntries(selectedProject).length > 1 ? (
+                <label className="green-sponsor-field">
+                  <span>Pay in</span>
+                  <select value={orderDraft.checkoutCurrency} onChange={(e) => setOrderDraft((c) => ({ ...c, checkoutCurrency: e.target.value }))}>
+                    {getSponsorPriceEntries(selectedProject).map((entry) => (
+                      <option key={entry.currency} value={entry.currency}>
+                        {entry.currency} - {formatCurrencyAmount(entry.amount, entry.currency)} / tree
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
               {selectedProject.sponsor_max_per_order ? (
-                <p className="gs-checkout-note">Max {selectedProject.sponsor_max_per_order} trees per order · Total: {formatCurrencyAmount((Math.max(1, Number(orderDraft.quantity || 1))) * Number(selectedProject.sponsor_price_per_tree || 0), selectedProject.sponsor_currency || "NGN")}</p>
+                <p className="gs-checkout-note">Max {selectedProject.sponsor_max_per_order} trees per order · Total: {formatCurrencyAmount(selectedProjectCheckoutTotal, selectedProjectPriceEntry?.currency || orderDraft.checkoutCurrency || "NGN")}</p>
               ) : (
-                <p className="gs-checkout-note">Total: {formatCurrencyAmount((Math.max(1, Number(orderDraft.quantity || 1))) * Number(selectedProject.sponsor_price_per_tree || 0), selectedProject.sponsor_currency || "NGN")}</p>
+                <p className="gs-checkout-note">Total: {formatCurrencyAmount(selectedProjectCheckoutTotal, selectedProjectPriceEntry?.currency || orderDraft.checkoutCurrency || "NGN")}</p>
               )}
               <label className="green-sponsor-field"><span>Dedication type</span><select value={orderDraft.dedicationType} onChange={(e) => setOrderDraft((c) => ({ ...c, dedicationType: e.target.value }))}>{DEDICATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
               <label className="green-sponsor-field"><span>Dedicated to (optional)</span><input type="text" value={orderDraft.dedicationName} onChange={(e) => setOrderDraft((c) => ({ ...c, dedicationName: e.target.value }))} placeholder="Name, family, or occasion" /></label>
@@ -1698,8 +1903,8 @@ export default function GreenSponsor() {
         {[
           { key: "projects",    label: "Projects",    icon: "leaf"   },
           { key: "trees",       label: "My Trees",    icon: "branch" },
-          { key: "leaderboard", label: "Rankings",    icon: "trophy" },
-          { key: "grove",       label: "Games",       icon: "spark"  },
+          { key: "leaderboard", label: "Leaderboard", icon: "trophy" },
+          { key: "grove",       label: "Grove",       icon: "game-controller" },
           { key: "profile",     label: "Profile",     icon: "person" },
         ].map((tab) => (
           <button key={tab.key} type="button" className={`green-sponsor-bottom-tab${activeTab === tab.key ? " active" : ""}`} onClick={() => setActiveTab(tab.key as SponsorTabKey)}>

@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&family=Sora:wght@600;700;800&display=swap");
-
 /* ── Design System (shared with green.css) ── */
 .green-work-container {
   --green-50: #f0faf2;
@@ -47,7 +45,7 @@
   flex-direction: column;
   overflow: hidden;
   color: var(--gw-text);
-  font-family: "Nunito Sans", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: geometricPrecision;
@@ -120,7 +118,7 @@
 
 .green-work-title h1 {
   margin: 0;
-  font-family: "Sora", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: clamp(1.2rem, 2.1vw, 1.8rem);
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -152,7 +150,7 @@
 }
 
 .green-work-toolbar-label {
-  font-family: "Sora", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--green-800);
@@ -288,7 +286,7 @@
   white-space: normal;
   line-height: 0.92;
   text-align: center;
-  font-family: "Sora", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -597,7 +595,7 @@
 .green-work-delete-modal h3 {
   margin: 0 0 0.45rem;
   color: #7f1d1d;
-  font-family: "Sora", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 1rem;
 }
 
@@ -617,7 +615,7 @@
   display: block;
   margin-top: 0.2rem;
   color: #7f1d1d;
-  font-family: "Sora", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 0.95rem;
 }
 
@@ -664,7 +662,7 @@
 .green-work-password-head h3 {
   margin: 0;
   color: var(--green-900);
-  font-family: "Sora", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 1rem;
 }
 
@@ -762,7 +760,7 @@
 }
 
 .green-work-log-details-trigger-label {
-  font-family: "Sora", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 0.7rem;
   font-weight: 800;
   line-height: 1.2;
@@ -830,7 +828,7 @@
 .green-work-log-detail-head h3 {
   margin: 0;
   color: var(--green-900);
-  font-family: "Sora", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 1.08rem;
 }
 
@@ -931,7 +929,7 @@
 }
 
 .green-work-menu-head strong {
-  font-family: "Sora", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 0.95rem;
   color: var(--green-900);
 }
@@ -1221,7 +1219,7 @@
 
 .green-work-card h3 {
   margin: 0 0 0.6rem;
-  font-family: "Sora", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 0.95rem;
   letter-spacing: -0.01em;
   color: var(--green-900);
@@ -1568,7 +1566,7 @@
 }
 
 .green-work-remote-insight-card strong {
-  font-family: "Sora", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 1rem;
   color: var(--green-950);
 }
@@ -1617,7 +1615,7 @@
 }
 
 .green-work-remote-health-chip strong {
-  font-family: "Sora", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 0.96rem;
   color: var(--green-950);
 }
@@ -1997,7 +1995,7 @@
 }
 
 .green-work-remote-metric strong {
-  font-family: "Sora", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 1.18rem;
   line-height: 1.12;
   color: var(--green-900);
@@ -2221,7 +2219,7 @@
 }
 
 .green-work-tree-drawer-head strong {
-  font-family: "Sora", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 0.9rem;
   color: var(--green-900);
 }
@@ -2246,7 +2244,7 @@
 
 .green-work-tree-inspector-body h4 {
   margin: 0.42rem 0 0.34rem;
-  font-family: "Sora", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 0.88rem;
   color: var(--green-900);
 }
@@ -4968,7 +4966,7 @@
   fill: var(--green-900);
   font-size: 16px;
   font-weight: 800;
-  font-family: "Sora", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 .green-work-overview-donut-total-label {
