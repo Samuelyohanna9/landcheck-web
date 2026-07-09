@@ -47,6 +47,28 @@ function canAffordHeroVideo(): boolean {
   return true;
 }
 
+function formatRelativeTime(value: string | null): string {
+  if (!value) return "recently";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "recently";
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
+  return date.toLocaleDateString(undefined, { day: "2-digit", month: "short" });
+}
+
+const PROJECT_CARD_THEMES = [
+  { gradient: "linear-gradient(135deg, #1f8f49, #0a3d20)", icon: "🌳" },
+  { gradient: "linear-gradient(135deg, #2aa852, #195f38)", icon: "🌲" },
+  { gradient: "linear-gradient(135deg, #4cc46a, #1a6e37)", icon: "🌱" },
+  { gradient: "linear-gradient(135deg, #7dd892, #18582e)", icon: "🍃" },
+];
+
 const DEDICATION_OPTIONS = [
   { value: "self", label: "Myself" },
   { value: "birthday", label: "Birthday" },
@@ -149,11 +171,47 @@ export default function GreenPublicSponsor() {
   const [lookupResult, setLookupResult] = useState<{ sponsor_name: string | null; orders: LookedUpSponsorOrder[] } | null>(null);
   const [showOrderLookup, setShowOrderLookup] = useState(false);
 
+  const [toastIndex, setToastIndex] = useState(0);
+  const [toastVisible, setToastVisible] = useState(false);
+
   useEffect(() => {
     fetchPublicRecentSponsorships(10)
       .then(setRecentSponsorships)
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (recentSponsorships.length === 0) return undefined;
+    let cancelled = false;
+    let showTimer: ReturnType<typeof setTimeout> | undefined;
+    let hideTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const showNext = () => {
+      if (cancelled) return;
+      setToastVisible(true);
+      hideTimer = setTimeout(() => {
+        if (cancelled) return;
+        setToastVisible(false);
+        showTimer = setTimeout(() => {
+          if (cancelled) return;
+          setToastIndex((i) => (i + 1) % recentSponsorships.length);
+          showNext();
+        }, 2200);
+      }, 5500);
+    };
+
+    showTimer = setTimeout(showNext, 1800);
+    return () => {
+      cancelled = true;
+      clearTimeout(showTimer);
+      clearTimeout(hideTimer);
+    };
+  }, [recentSponsorships]);
+
+  const handleSelectProject = (projectId: number) => {
+    setSelectedProjectId(projectId);
+    setTimeout(() => document.getElementById("gps-checkout")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+  };
 
   useEffect(() => {
     if (returnState) return;
@@ -162,7 +220,6 @@ export default function GreenPublicSponsor() {
       .then((rows) => {
         if (cancelled) return;
         setProjects(rows);
-        setSelectedProjectId((current) => current || rows.find((p) => p.sponsor_checkout_ready)?.id || rows[0]?.id || null);
       })
       .catch(() => setError("Could not load public sponsorship projects."))
       .finally(() => { if (!cancelled) setLoadingProjects(false); });
@@ -308,8 +365,8 @@ export default function GreenPublicSponsor() {
         <div className="gps-hero-scrim" />
         <div className="gps-hero-inner">
           <span className="gps-hero-eyebrow">LandCheck Green · Public Sponsorship</span>
-          <h1>Sponsor a Tree.<br />No Account Needed.</h1>
-          <p>Pick a verified project, sponsor trees in NGN or USD, and get GPS-tracked, photo-verified updates straight to your email — no sign-up required.</p>
+          <h1>Give Nigeria a Greener Future.<br />One Tree at a Time.</h1>
+          <p>Sponsor a verified tree project in minutes, in NGN or USD, and watch it grow with GPS-tracked, photo-verified updates straight to your inbox.</p>
 
           <div className="gps-feature-row">
             <div className="gps-feature-card">
@@ -340,18 +397,17 @@ export default function GreenPublicSponsor() {
         </div>
       </section>
 
-      {/* ─── Recently sponsored ─── */}
+      {/* ─── Recently sponsored — floating balloon notification ─── */}
       {recentSponsorships.length > 0 && (
-        <section className="gps-recent-band">
-          <div className="gps-recent-track">
-            {[...recentSponsorships, ...recentSponsorships].map((item, index) => (
-              <span key={`recent-${index}`} className="gps-recent-item">
-                🌱 <strong>{item.sponsor_first_name}</strong> sponsored {item.quantity} tree{item.quantity === 1 ? "" : "s"}
-                {item.project_name ? <> for <strong>{item.project_name}</strong></> : null}
-              </span>
-            ))}
+        <div className={`gps-toast${toastVisible ? " gps-toast--visible" : ""}`} aria-live="polite">
+          <span className="gps-toast-icon">🌳</span>
+          <div className="gps-toast-body">
+            <strong>{recentSponsorships[toastIndex]?.sponsor_first_name}</strong> just sponsored{" "}
+            {recentSponsorships[toastIndex]?.quantity} tree{recentSponsorships[toastIndex]?.quantity === 1 ? "" : "s"}
+            {recentSponsorships[toastIndex]?.project_name ? <> for <strong>{recentSponsorships[toastIndex]?.project_name}</strong></> : null}
+            <span className="gps-toast-time">{formatRelativeTime(recentSponsorships[toastIndex]?.sponsored_at || null)}</span>
           </div>
-        </section>
+        </div>
       )}
 
       {/* ─── Order lookup modal ─── */}
@@ -484,25 +540,30 @@ export default function GreenPublicSponsor() {
                 <div className="gps-empty">No public projects are open for sponsorship right now — please check back soon.</div>
               ) : (
                 <div className="gps-project-grid">
-                  {projects.map((project) => {
+                  {projects.map((project, index) => {
                     const active = selectedProjectId === project.id;
+                    const theme = PROJECT_CARD_THEMES[index % PROJECT_CARD_THEMES.length];
                     return (
                       <button
                         type="button"
                         key={project.id}
                         className={`gps-project-card${active ? " active" : ""}`}
-                        onClick={() => setSelectedProjectId(project.id)}
+                        onClick={() => handleSelectProject(project.id)}
                       >
-                        <div className="gps-project-card-head">
-                          <h3>{project.public_sponsor_title || project.name}</h3>
+                        <div className="gps-project-card-banner" style={{ background: theme.gradient }}>
+                          <span className="gps-project-card-emoji">{theme.icon}</span>
                           <span className={`gps-chip ${project.sponsor_checkout_ready ? "ok" : "warning"}`}>
-                            {project.sponsor_checkout_ready ? `${Number(project.slots_available ?? 0)} open` : "Preparing"}
+                            {project.sponsor_checkout_ready ? `${Number(project.slots_available ?? 0)} slots open` : "Preparing"}
                           </span>
                         </div>
-                        <p>{project.public_sponsor_description || project.public_description || project.location_text || "Verified tree project"}</p>
-                        <div className="gps-project-card-meta">
-                          <span>{formatSponsorPriceChoices(project)}</span>
-                          <span>{project.location_text || "Location shared after planting"}</span>
+                        <div className="gps-project-card-body">
+                          <h3>{project.public_sponsor_title || project.name}</h3>
+                          <p>{project.public_sponsor_description || project.public_description || project.location_text || "Verified tree project"}</p>
+                          <div className="gps-project-card-meta">
+                            <span className="gps-project-card-price">{formatSponsorPriceChoices(project)}</span>
+                            <span className="gps-project-card-location">📍 {project.location_text || "Location shared after planting"}</span>
+                          </div>
+                          <div className="gps-project-card-cta">View &amp; Sponsor <span aria-hidden="true">→</span></div>
                         </div>
                       </button>
                     );
@@ -513,7 +574,17 @@ export default function GreenPublicSponsor() {
 
             {/* ─── Checkout ─── */}
             {selectedProject && (
-              <section className="gps-checkout-section">
+              <section className="gps-checkout-section" id="gps-checkout">
+                <div className="gps-approval-banner">
+                  <span className="gps-approval-icon">✅</span>
+                  <div>
+                    <strong>Approved &amp; Ready to Plant</strong>
+                    <p>
+                      <strong>{selectedProject.public_sponsor_title || selectedProject.name}</strong> has full land-rights and planting
+                      approval on record, and LandCheck field agents are already on the ground ready to plant your trees.
+                    </p>
+                  </div>
+                </div>
                 <div className="gps-checkout-card">
                   <div className="gps-checkout-head">
                     <div>
@@ -525,10 +596,10 @@ export default function GreenPublicSponsor() {
                   </div>
 
                   <div className="gps-form-grid">
-                    <label className="gps-field"><span>Full name</span><input type="text" value={form.fullName} onChange={(e) => setForm((c) => ({ ...c, fullName: e.target.value }))} placeholder="Your name" /></label>
-                    <label className="gps-field"><span>Email</span><input type="email" value={form.email} onChange={(e) => setForm((c) => ({ ...c, email: e.target.value }))} placeholder="you@example.com" /></label>
+                    <label className="gps-field"><span>Full name <span className="gps-required">*</span></span><input type="text" value={form.fullName} onChange={(e) => setForm((c) => ({ ...c, fullName: e.target.value }))} placeholder="Your name" /></label>
+                    <label className="gps-field"><span>Email <span className="gps-required">*</span></span><input type="email" value={form.email} onChange={(e) => setForm((c) => ({ ...c, email: e.target.value }))} placeholder="you@example.com" /></label>
                     <label className="gps-field"><span>Phone (optional)</span><input type="tel" value={form.phone} onChange={(e) => setForm((c) => ({ ...c, phone: e.target.value }))} placeholder="Phone number" /></label>
-                    <label className="gps-field"><span>Trees</span><input type="number" min="1" value={form.quantity} onChange={(e) => setForm((c) => ({ ...c, quantity: e.target.value }))} /></label>
+                    <label className="gps-field"><span>Trees <span className="gps-required">*</span></span><input type="number" min="1" value={form.quantity} onChange={(e) => setForm((c) => ({ ...c, quantity: e.target.value }))} /></label>
                     {priceEntries.length > 1 && (
                       <label className="gps-field">
                         <span>Pay in</span>
