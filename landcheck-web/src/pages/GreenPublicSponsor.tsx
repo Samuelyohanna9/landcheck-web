@@ -63,10 +63,10 @@ function formatRelativeTime(value: string | null): string {
 }
 
 const PROJECT_CARD_THEMES = [
-  { gradient: "linear-gradient(135deg, #1f8f49, #0a3d20)", icon: "🌳" },
-  { gradient: "linear-gradient(135deg, #2aa852, #195f38)", icon: "🌲" },
-  { gradient: "linear-gradient(135deg, #4cc46a, #1a6e37)", icon: "🌱" },
-  { gradient: "linear-gradient(135deg, #7dd892, #18582e)", icon: "🍃" },
+  { tintA: "#1f8f49CC", tintB: "#0a3d20E6", icon: "🌳" },
+  { tintA: "#2aa852CC", tintB: "#195f38E6", icon: "🌲" },
+  { tintA: "#4cc46aCC", tintB: "#1a6e37E6", icon: "🌱" },
+  { tintA: "#7dd892CC", tintB: "#18582eE6", icon: "🍃" },
 ];
 
 const DEDICATION_OPTIONS = [
@@ -210,7 +210,12 @@ export default function GreenPublicSponsor() {
 
   const handleSelectProject = (projectId: number) => {
     setSelectedProjectId(projectId);
-    setTimeout(() => document.getElementById("gps-checkout")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleBackToProjects = () => {
+    setSelectedProjectId(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -530,6 +535,7 @@ export default function GreenPublicSponsor() {
         ) : (
           <>
             {/* ─── Project grid ─── */}
+            {!selectedProject && (
             <section className="gps-projects-section" id="gps-projects">
               <h2>Choose a Verified Project</h2>
               <p className="gps-section-sub">Every project is field-monitored with GPS mapping and photo evidence.</p>
@@ -541,40 +547,49 @@ export default function GreenPublicSponsor() {
               ) : (
                 <div className="gps-project-grid">
                   {projects.map((project, index) => {
-                    const active = selectedProjectId === project.id;
                     const theme = PROJECT_CARD_THEMES[index % PROJECT_CARD_THEMES.length];
+                    const ready = project.sponsor_checkout_ready;
                     return (
-                      <button
-                        type="button"
-                        key={project.id}
-                        className={`gps-project-card${active ? " active" : ""}`}
-                        onClick={() => handleSelectProject(project.id)}
-                      >
-                        <div className="gps-project-card-banner" style={{ background: theme.gradient }}>
-                          <span className="gps-project-card-emoji">{theme.icon}</span>
-                          <span className={`gps-chip ${project.sponsor_checkout_ready ? "ok" : "warning"}`}>
-                            {project.sponsor_checkout_ready ? `${Number(project.slots_available ?? 0)} slots open` : "Preparing"}
-                          </span>
+                      <div className="gps-project-card" key={project.id}>
+                        <div className="gps-project-card-photo-wrap">
+                          <div
+                            className="gps-project-card-photo"
+                            style={{ backgroundImage: `linear-gradient(160deg, ${theme.tintA}, ${theme.tintB}), url(${SPONSOR_BACKGROUND})` }}
+                          >
+                            <span className="gps-project-card-emoji">{theme.icon}</span>
+                          </div>
                         </div>
                         <div className="gps-project-card-body">
                           <h3>{project.public_sponsor_title || project.name}</h3>
                           <p>{project.public_sponsor_description || project.public_description || project.location_text || "Verified tree project"}</p>
-                          <div className="gps-project-card-meta">
+                          <div className="gps-project-card-price-row">
+                            <span className="gps-project-card-price-label">from</span>
                             <span className="gps-project-card-price">{formatSponsorPriceChoices(project)}</span>
-                            <span className="gps-project-card-location">📍 {project.location_text || "Location shared after planting"}</span>
                           </div>
-                          <div className="gps-project-card-cta">View &amp; Sponsor <span aria-hidden="true">→</span></div>
+                          <div className="gps-project-card-tags">
+                            <span className="gps-project-tag">📍 {project.location_text || "Nigeria"}</span>
+                            <span className={`gps-project-tag ${ready ? "ok" : "warning"}`}>
+                              {ready ? `${Number(project.slots_available ?? 0)} slots open` : "Preparing"}
+                            </span>
+                          </div>
+                          <button type="button" className="gps-project-card-btn" onClick={() => handleSelectProject(project.id)}>
+                            Select Trees
+                          </button>
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
               )}
             </section>
+            )}
 
             {/* ─── Checkout ─── */}
             {selectedProject && (
               <section className="gps-checkout-section" id="gps-checkout">
+                <button type="button" className="gps-back-link" onClick={handleBackToProjects}>
+                  <span aria-hidden="true">←</span> Back to Projects
+                </button>
                 <div className="gps-approval-banner">
                   <span className="gps-approval-icon">✅</span>
                   <div>
