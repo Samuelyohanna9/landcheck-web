@@ -107,6 +107,10 @@ function GpsIcon({ name, className = "" }: { name: string; className?: string })
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" /><path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
     case "user":
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.6" stroke="currentColor" strokeWidth="1.8" /><path d="M5.5 19a6.5 6.5 0 0 1 13 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
+    case "menu":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6.5h16M4 12h16M4 17.5h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
+    case "close":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5.5 5.5 13 13M18.5 5.5l-13 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
     case "leaf":
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 5C12 5 7 9 5 15c2.5 1.5 5.6 1.8 8.3.6 2.8-1.2 4.9-3.8 5.7-7.2Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 16c2-3 5-5.3 9-7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>;
     default:
@@ -230,6 +234,7 @@ export default function GreenPublicSponsor() {
   const [lookupError, setLookupError] = useState("");
   const [lookupResult, setLookupResult] = useState<{ sponsor_name: string | null; orders: LookedUpSponsorOrder[] } | null>(null);
   const [showOrderLookup, setShowOrderLookup] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [promoIndex, setPromoIndex] = useState(0);
   const [openAccordions, setOpenAccordions] = useState<Set<string>>(() => new Set(["about", "approval"]));
@@ -548,6 +553,15 @@ export default function GreenPublicSponsor() {
     <div className="gps-page">
       {/* ─── Shop-style top bar ─── */}
       <header className="gps-topbar">
+        <button
+          type="button"
+          className="gps-topbar-hamburger"
+          onClick={() => setMobileMenuOpen((o) => !o)}
+          aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={mobileMenuOpen}
+        >
+          <GpsIcon name={mobileMenuOpen ? "close" : "menu"} className="gps-icon" />
+        </button>
         <a href="/" className="gps-topbar-brand">
           <img src="/logo.svg" alt="LandCheck" width="28" height="28" />
           <span>LandCheck <strong>Green</strong></span>
@@ -566,6 +580,37 @@ export default function GreenPublicSponsor() {
           </a>
         </div>
       </header>
+
+      {/* ─── Mobile menu dropdown ─── */}
+      {mobileMenuOpen && (
+        <>
+          <div className="gps-mobile-menu-backdrop" onClick={() => setMobileMenuOpen(false)} />
+          <nav className="gps-mobile-menu" aria-label="Sponsor navigation (mobile)">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedProjectId(null);
+                setMobileMenuOpen(false);
+                document.getElementById("gps-projects")?.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
+              <GpsIcon name="tree" className="gps-icon" /> Shop Projects
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowOrderLookup(true); setMobileMenuOpen(false); }}
+            >
+              <GpsIcon name="search" className="gps-icon" /> Track Order
+            </button>
+            <a href="/green-partners" onClick={() => setMobileMenuOpen(false)}>
+              <GpsIcon name="package" className="gps-icon" /> For Organizations
+            </a>
+            <a href="/green/login/sponsor" onClick={() => setMobileMenuOpen(false)}>
+              <GpsIcon name="user" className="gps-icon" /> Sign In
+            </a>
+          </nav>
+        </>
+      )}
 
       {/* ─── Promo banner ─── */}
       <div className="gps-promo-banner">
