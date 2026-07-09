@@ -386,6 +386,177 @@
 .gps-chip.ok { background: #e7f5e7; color: #1f8f49; }
 .gps-chip.warning { background: #fff4de; color: #b7791f; }
 
+/* ─── Product-detail-page style checkout ───────────────────────── */
+.gps-pdp {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.gps-pdp-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 340px) 1fr;
+  gap: 32px;
+  align-items: start;
+  background: var(--gps-surface);
+  border: 1px solid var(--gps-border);
+  border-radius: var(--gps-radius);
+  padding: 28px;
+  box-shadow: var(--gps-shadow-md);
+}
+
+.gps-pdp-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: sticky;
+  top: 96px;
+}
+
+.gps-pdp-main-photo {
+  height: 260px;
+  border-radius: var(--gps-radius-sm);
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gps-pdp-main-emoji { font-size: 64px; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3)); }
+
+.gps-pdp-thumb-row { display: flex; gap: 8px; }
+
+.gps-pdp-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  opacity: 0.75;
+  transition: opacity 0.15s, border-color 0.15s, transform 0.15s;
+}
+.gps-pdp-thumb:hover { opacity: 1; transform: translateY(-2px); }
+.gps-pdp-thumb.active { opacity: 1; border-color: var(--gps-brand); box-shadow: 0 0 0 2px rgba(31,143,73,0.16); }
+
+.gps-pdp-info { display: flex; flex-direction: column; gap: 10px; }
+.gps-pdp-info h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; line-height: 1.25; }
+
+.gps-pdp-price-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 6px;
+}
+.gps-pdp-price { font-size: 1.4rem; font-weight: 800; color: var(--gps-brand-dark); }
+
+/* ─── Accordion ─────────────────────────────────────────────────── */
+.gps-accordion {
+  border-top: 1px solid var(--gps-border);
+  margin-top: 4px;
+}
+
+.gps-accordion-item { border-bottom: 1px solid var(--gps-border); }
+
+.gps-accordion-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: none;
+  border: none;
+  padding: 13px 2px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--gps-text);
+  text-align: left;
+}
+
+.gps-accordion-chevron {
+  transition: transform 0.2s ease;
+  color: var(--gps-brand);
+  font-size: 1.1rem;
+}
+.gps-accordion-item.open .gps-accordion-chevron { transform: rotate(90deg); }
+
+.gps-accordion-body {
+  font-size: 0.85rem;
+  color: var(--gps-text-muted);
+  line-height: 1.6;
+  padding: 0 2px 14px;
+}
+
+.gps-pdp-divider { height: 1px; background: var(--gps-border); margin: 6px 0; }
+
+/* ─── Quantity stepper ─────────────────────────────────────────── */
+.gps-quantity-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.gps-field-label { font-size: 12.5px; font-weight: 700; color: var(--gps-text-muted); }
+
+.gps-quantity-stepper {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--gps-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.gps-quantity-stepper button {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: var(--gps-bg);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gps-brand-dark);
+}
+.gps-quantity-stepper button:hover { background: var(--gps-brand-light); }
+
+.gps-quantity-stepper input {
+  width: 48px;
+  text-align: center;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gps-text);
+  -moz-appearance: textfield;
+}
+.gps-quantity-stepper input::-webkit-outer-spin-button,
+.gps-quantity-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.gps-quantity-currency {
+  border: 1.5px solid var(--gps-border);
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  background: #fbfdfb;
+  color: var(--gps-text);
+}
+
+.gps-pdp-section-title {
+  font-size: 1rem;
+  font-weight: 800;
+  margin-top: 6px;
+}
+
+@media (max-width: 860px) {
+  .gps-pdp-grid { grid-template-columns: 1fr; padding: 20px; }
+  .gps-pdp-gallery { position: static; }
+  .gps-pdp-main-photo { height: 200px; }
+}
+
 /* ─── Checkout ─────────────────────────────────────────────────── */
 .gps-checkout-section {
   display: flex;
@@ -396,9 +567,7 @@
 }
 
 .gps-back-link {
-  align-self: center;
-  max-width: 640px;
-  width: 100%;
+  align-self: flex-start;
   border: none;
   background: none;
   padding: 0;
