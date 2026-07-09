@@ -395,6 +395,63 @@ export const fetchPublicImpactStats = async (): Promise<{
   };
 };
 
+export type RecentSponsorshipItem = {
+  sponsor_first_name: string;
+  project_name: string | null;
+  quantity: number;
+  sponsored_at: string | null;
+};
+
+export const fetchPublicRecentSponsorships = async (limit = 12): Promise<RecentSponsorshipItem[]> => {
+  const response = await api.get("/green/public/recent-sponsorships", { params: { limit } });
+  return (Array.isArray(response.data) ? response.data : []).map((row: any) => ({
+    sponsor_first_name: String(row?.sponsor_first_name || "A supporter"),
+    project_name: row?.project_name ? String(row.project_name) : null,
+    quantity: Number(row?.quantity || 0),
+    sponsored_at: row?.sponsored_at ? String(row.sponsored_at) : null,
+  }));
+};
+
+export type LookedUpSponsorOrder = {
+  id: number;
+  order_uid: string;
+  project_name: string | null;
+  location_text: string | null;
+  quantity: number;
+  amount_total: number;
+  currency: string | null;
+  payment_status: string | null;
+  order_status: string | null;
+  payment_verified_at: string | null;
+  dedication_type: string | null;
+  dedication_name: string | null;
+  created_at: string | null;
+  total_units: number;
+  linked_units: number;
+  awaiting_tree_units: number;
+};
+
+export const lookupPublicSponsorOrders = async (
+  orderUid: string,
+  email: string,
+): Promise<{ sponsor_name: string | null; orders: LookedUpSponsorOrder[] }> => {
+  const response = await api.get("/green/sponsor/public/order-lookup", {
+    params: { order_uid: orderUid, email },
+  });
+  return {
+    sponsor_name: response.data?.sponsor_name || null,
+    orders: (Array.isArray(response.data?.orders) ? response.data.orders : []).map((row: any) => ({
+      ...(row || {}),
+      id: Number(row?.id || 0),
+      quantity: Number(row?.quantity || 0),
+      amount_total: Number(row?.amount_total || 0),
+      total_units: Number(row?.total_units || 0),
+      linked_units: Number(row?.linked_units || 0),
+      awaiting_tree_units: Number(row?.awaiting_tree_units || 0),
+    })),
+  };
+};
+
 export const fetchPublicPartnerOrganizations = async (): Promise<
   Array<{ id: number; name: string; logo_url: string | null }>
 > => {
