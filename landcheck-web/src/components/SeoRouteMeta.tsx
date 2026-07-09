@@ -91,6 +91,17 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
     jsonLd: APP_MOBILE_JSON_LD,
   },
 
+  "/sponsor": {
+    title: "Sponsor a Tree Online — No Sign-Up Required | LandCheck Green",
+    description:
+      "Sponsor verified trees in Nigeria online in NGN or USD — no account required. Get GPS map proof, photo evidence, and email updates on your tree.",
+    keywords:
+      "sponsor a tree online, plant a tree Nigeria, tree sponsorship no signup, donate trees Nigeria, LandCheck Green sponsorship, offset carbon Nigeria",
+    canonicalPath: "/sponsor",
+    ogType: "website",
+    ogImage: "https://landcheck.online/background-sponsor.png",
+  },
+
   "/privacy": {
     title: "Privacy Policy | LandCheck Geospatial Technologies",
     description:

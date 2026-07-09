@@ -16,6 +16,10 @@ import {
   fetchSponsorPoints,
   fetchSponsorTreeDetail,
   fetchSponsorTrees,
+  formatCurrencyAmount,
+  getPreferredSponsorPriceEntry,
+  getSponsorPriceEntries,
+  formatSponsorPriceChoices,
   postSponsorGameAction,
   redeemReferralCode,
   submitSchoolNomination,
@@ -187,45 +191,6 @@ const formatDateTimeLabel = (value: string | null | undefined) => {
   return date.toLocaleString(undefined, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 };
 
-const formatCurrencyAmount = (amount: number | null | undefined, currency = "NGN") => {
-  const numeric = Number(amount || 0);
-  const safeCurrency = /^[A-Za-z]{3}$/.test(String(currency || "")) ? String(currency).toUpperCase() : "NGN";
-  try {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency: safeCurrency, maximumFractionDigits: 0 }).format(numeric);
-  } catch {
-    return `${safeCurrency} ${numeric.toLocaleString()}`;
-  }
-};
-
-const getSponsorPriceEntries = (project?: SponsorProject | null) => {
-  const entries: Array<{ currency: string; amount: number }> = [];
-  const push = (currency: string | null | undefined, amount: number | null | undefined) => {
-    const code = String(currency || "").trim().toUpperCase();
-    const numeric = Number(amount || 0);
-    if (code.length !== 3 || !Number.isFinite(numeric) || numeric <= 0 || entries.some((item) => item.currency === code)) {
-      return;
-    }
-    entries.push({ currency: code, amount: numeric });
-  };
-  push("NGN", project?.sponsor_price_per_tree_ngn);
-  push("USD", project?.sponsor_price_per_tree_usd);
-  if (entries.length === 0) {
-    push(project?.sponsor_currency || "NGN", project?.sponsor_price_per_tree);
-  }
-  return entries;
-};
-
-const getPreferredSponsorPriceEntry = (project?: SponsorProject | null, currency?: string | null) => {
-  const entries = getSponsorPriceEntries(project);
-  const requested = String(currency || "").trim().toUpperCase();
-  return entries.find((item) => item.currency === requested) || entries[0] || null;
-};
-
-const formatSponsorPriceChoices = (project?: SponsorProject | null) => {
-  const entries = getSponsorPriceEntries(project);
-  if (entries.length === 0) return "Pricing coming soon";
-  return entries.map((item) => `${formatCurrencyAmount(item.amount, item.currency)} / tree`).join(" · ");
-};
 
 const humanizeLabel = (value: string | null | undefined, fallback = "Not available") => {
   const raw = String(value || "").trim().replace(/_/g, " ");
@@ -1189,7 +1154,7 @@ export default function GreenSponsor() {
 
           {/* 2 stat cards */}
           <div className="green-sponsor-metric-list" style={{ marginBottom: 4 }}>
-            <div className="green-sponsor-metric-card"><span>Trees Sponsored</span><strong>{totalSponsoredTrees}</strong></div>
+            <div className="green-sponsor-metric-card"><span>Live Trees</span><strong>{trees.length}</strong></div>
             <div className="green-sponsor-metric-card"><span>Current Status</span><strong>{humanizeLabel(trees[0]?.sponsorship_status, "No trees yet")}</strong></div>
           </div>
 

@@ -197,6 +197,8 @@ type SponsorOrderPaymentInitResult = {
   payment_method?: string | null;
   payment_status?: string | null;
   payment_link?: string | null;
+  sponsor_id?: number;
+  is_guest?: boolean;
 };
 
 const normalizePhotoUrl = (value: unknown) => {
@@ -334,6 +336,49 @@ const normalizeTree = (row: any): SponsorTreeSummary => ({
     : null,
 });
 
+export const formatCurrencyAmount = (amount: number | null | undefined, currency = "NGN") => {
+  const numeric = Number(amount || 0);
+  const safeCurrency = /^[A-Za-z]{3}$/.test(String(currency || "")) ? String(currency).toUpperCase() : "NGN";
+  try {
+    return new Intl.NumberFormat(undefined, { style: "currency", currency: safeCurrency, maximumFractionDigits: 0 }).format(numeric);
+  } catch {
+    return `${safeCurrency} ${numeric.toLocaleString()}`;
+  }
+};
+
+export const getSponsorPriceEntries = (project?: Pick<SponsorProject, "sponsor_price_per_tree_ngn" | "sponsor_price_per_tree_usd" | "sponsor_price_per_tree" | "sponsor_currency"> | null) => {
+  const entries: Array<{ currency: string; amount: number }> = [];
+  const push = (currency: string | null | undefined, amount: number | null | undefined) => {
+    const code = String(currency || "").trim().toUpperCase();
+    const numeric = Number(amount || 0);
+    if (code.length !== 3 || !Number.isFinite(numeric) || numeric <= 0 || entries.some((item) => item.currency === code)) {
+      return;
+    }
+    entries.push({ currency: code, amount: numeric });
+  };
+  push("NGN", project?.sponsor_price_per_tree_ngn);
+  push("USD", project?.sponsor_price_per_tree_usd);
+  if (entries.length === 0) {
+    push(project?.sponsor_currency || "NGN", project?.sponsor_price_per_tree);
+  }
+  return entries;
+};
+
+export const getPreferredSponsorPriceEntry = (
+  project?: Pick<SponsorProject, "sponsor_price_per_tree_ngn" | "sponsor_price_per_tree_usd" | "sponsor_price_per_tree" | "sponsor_currency"> | null,
+  currency?: string | null,
+) => {
+  const entries = getSponsorPriceEntries(project);
+  const requested = String(currency || "").trim().toUpperCase();
+  return entries.find((item) => item.currency === requested) || entries[0] || null;
+};
+
+export const formatSponsorPriceChoices = (project?: Pick<SponsorProject, "sponsor_price_per_tree_ngn" | "sponsor_price_per_tree_usd" | "sponsor_price_per_tree" | "sponsor_currency"> | null) => {
+  const entries = getSponsorPriceEntries(project);
+  if (entries.length === 0) return "Pricing coming soon";
+  return entries.map((item) => `${formatCurrencyAmount(item.amount, item.currency)} / tree`).join(" · ");
+};
+
 export const fetchPublicSponsorshipProjects = async () => {
   const response = await api.get("/green/public-projects");
   return (Array.isArray(response.data) ? response.data : []).map(normalizeProject);
@@ -435,12 +480,51 @@ export const createSponsorOrder = async (
   };
 };
 
+export const createGuestSponsorOrder = async (payload: {
+  guest_full_name: string;
+  guest_email: string;
+  guest_phone?: string | null;
+  project_id: number;
+  quantity: number;
+  checkout_currency?: string | null;
+  dedication_type?: string | null;
+  dedication_name?: string | null;
+  dedication_message?: string | null;
+  purchaser_note?: string | null;
+  payment_method?: string | null;
+  payment_reference?: string | null;
+  payment_proof_url?: string | null;
+  accepted_terms?: boolean;
+  accepted_policy?: boolean;
+  consent_version?: string | null;
+  payment_return_url?: string | null;
+}): Promise<SponsorOrderPaymentInitResult> => {
+  const response = await api.post("/green/sponsor/orders", payload);
+  return {
+    ok: Boolean(response.data?.ok),
+    order_id: Number(response.data?.order_id || 0),
+    order_uid: String(response.data?.order_uid || ""),
+    payment_method: response.data?.payment_method ? String(response.data.payment_method) : null,
+    payment_status: response.data?.payment_status ? String(response.data.payment_status) : null,
+    payment_link: response.data?.payment_link ? String(response.data.payment_link) : null,
+    sponsor_id: Number(response.data?.sponsor_id || 0),
+    is_guest: Boolean(response.data?.is_guest),
+  };
+};
+
 export const fetchSponsorOrderPaymentStatus = async (session: GreenAuthSession, orderUid: string, refresh = false) => {
   const response = await api.get(`/green/sponsor/orders/${encodeURIComponent(orderUid)}/payment-status`, {
     params: {
       sponsor_id: session.user.id,
       refresh,
     },
+  });
+  return normalizeOrder(response.data || {});
+};
+
+export const fetchGuestSponsorOrderPaymentStatus = async (sponsorId: number, orderUid: string, refresh = false) => {
+  const response = await api.get(`/green/sponsor/orders/${encodeURIComponent(orderUid)}/payment-status`, {
+    params: { sponsor_id: sponsorId, refresh },
   });
   return normalizeOrder(response.data || {});
 };

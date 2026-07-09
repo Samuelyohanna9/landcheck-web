@@ -636,22 +636,26 @@
 
 .green-sponsor-project-card {
   text-align: left;
-  background: var(--gc-bg);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdfb 100%);
   border: 1.5px solid var(--gc-border);
+  border-left: 4px solid #c5a059;
   border-radius: var(--gc-radius-sm);
   padding: 14px 16px;
   cursor: pointer;
-  transition: border-color 0.18s, box-shadow 0.18s;
+  transition: border-color 0.18s, box-shadow 0.18s, transform 0.12s;
   width: 100%;
+  box-shadow: 0 2px 8px rgba(18, 63, 43, 0.05);
 }
 
 .green-sponsor-project-card:hover {
   border-color: var(--gc-brand);
-  box-shadow: 0 0 0 2px rgba(22,163,74,0.12);
+  box-shadow: 0 6px 16px rgba(18, 63, 43, 0.1);
+  transform: translateY(-2px);
 }
 
 .green-sponsor-project-card.active {
   border-color: var(--gc-brand);
+  border-left-color: var(--gc-brand);
   background: var(--gc-brand-light);
 }
 
@@ -987,10 +991,12 @@
 }
 
 .green-sponsor-order-card {
-  background: var(--gc-bg);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdfb 100%);
   border: 1px solid var(--gc-border);
+  border-left: 3px solid #c5a059;
   border-radius: var(--gc-radius-sm);
   padding: 14px 16px;
+  box-shadow: 0 2px 8px rgba(18, 63, 43, 0.04);
 }
 
 .green-sponsor-order-head {
@@ -1033,13 +1039,15 @@
 
 .green-sponsor-tree-card {
   text-align: left;
-  background: var(--gc-bg);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdfb 100%);
   border: 1.5px solid var(--gc-border);
+  border-left: 4px solid #c5a059;
   border-radius: var(--gc-radius);
   padding: 16px;
   cursor: pointer;
   transition: border-color 0.18s, box-shadow 0.18s, transform 0.12s;
   width: 100%;
+  box-shadow: 0 2px 8px rgba(18, 63, 43, 0.05);
 }
 
 .green-sponsor-tree-card:hover {
@@ -2489,8 +2497,24 @@
   padding: 24px;
   border-width: 1px;
   border-radius: 28px;
-  box-shadow: var(--gc-shadow);
+  background: linear-gradient(165deg, #ffffff 0%, #fbfdfb 62%, #f5faf3 100%);
+  box-shadow: 0 4px 14px rgba(18, 63, 43, 0.05), var(--gc-shadow);
+  position: relative;
+  overflow: hidden;
 }
+
+.green-sponsor-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gc-brand) 0%, #c5a059 100%);
+  opacity: 0.7;
+}
+
+.green-sponsor-panel.muted::before { display: none; }
 
 .green-sponsor-panel-heading {
   gap: 14px;

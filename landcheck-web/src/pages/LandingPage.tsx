@@ -509,7 +509,7 @@ export default function LandingPage() {
               <button
                 type="button"
                 className="lp-sponsor-btn-primary"
-                onClick={() => navigate("/green/login/sponsor")}
+                onClick={() => navigate("/sponsor")}
               >
                 Sponsor a Tree
                 <svg viewBox="0 0 24 24" fill="none" width="16" height="16" aria-hidden="true">
@@ -645,7 +645,7 @@ export default function LandingPage() {
                 </a>
               </li>
               <li>
-                <button type="button" onClick={() => navigate("/green/login/sponsor")}>
+                <button type="button" onClick={() => navigate("/sponsor")}>
                   Sponsor a Tree
                 </button>
               </li>
