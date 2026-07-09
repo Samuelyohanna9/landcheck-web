@@ -22,6 +22,8 @@ import "../styles/green-public-sponsor.css";
 
 const SPONSOR_BACKGROUND = "/background-sponsor.png";
 const HERO_VIDEO_SRC = "/let_the_video_be_black_nigeria.mp4";
+const HERO_VIDEO_CROSSFADE_MS = 900;
+const HERO_VIDEO_CROSSFADE_SECONDS = 1.05;
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=online.landcheck.mobile";
 const GUEST_CHECKOUT_STORAGE_KEY = "lc_guest_checkout_pending";
 
@@ -46,6 +48,18 @@ function canAffordHeroVideo(): boolean {
   return true;
 }
 
+function shouldRenderHeroVideo(): boolean {
+  if (canAffordHeroVideo()) return true;
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  try {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return false;
+  } catch {
+    // Ignore browsers without matchMedia support and keep the poster fallback.
+  }
+  const nav = navigator as Navigator & { connection?: NetworkInfoLike };
+  return !Boolean(nav.connection?.saveData);
+}
+
 function formatRelativeTime(value: string | null): string {
   if (!value) return "recently";
   const date = new Date(value);
@@ -62,10 +76,43 @@ function formatRelativeTime(value: string | null): string {
 }
 
 const PROMO_MESSAGES = [
-  "🌳 Every tree is GPS-tracked & verified — sponsor with confidence!",
-  "📜 Get your digital sponsorship certificate the moment you pay.",
-  "🏷️ Your name goes on a real QR tag, on a real tree, in the field.",
-];
+  { icon: "tree", text: "Every tree is GPS-tracked & verified — sponsor with confidence!" },
+  { icon: "certificate", text: "Get your digital sponsorship certificate the moment you pay." },
+  { icon: "tag", text: "Your name goes on a real QR tag, on a real tree, in the field." },
+] as const;
+
+function GpsIcon({ name, className = "" }: { name: string; className?: string }) {
+  switch (name) {
+    case "tree":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 6.5 11h3L5 19h6v3h2v-3h6l-4.5-8h3L12 3Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" /></svg>;
+    case "certificate":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="4" width="17" height="12.5" rx="1.6" stroke="currentColor" strokeWidth="1.6" /><path d="M7 8h10M7 11h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /><circle cx="9.5" cy="19.5" r="1.6" stroke="currentColor" strokeWidth="1.4" /><path d="m8.3 19.9-1.1 2.6 2.3-1 2.3 1-1.1-2.6" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /></svg>;
+    case "tag":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11.6 3.5H5a1.5 1.5 0 0 0-1.5 1.5v6.6c0 .4.16.78.44 1.06l8.9 8.9a1.5 1.5 0 0 0 2.12 0l6.6-6.6a1.5 1.5 0 0 0 0-2.12l-8.9-8.9a1.5 1.5 0 0 0-1.06-.44Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><circle cx="8.3" cy="8.3" r="1.4" stroke="currentColor" strokeWidth="1.4" /></svg>;
+    case "lock":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="1.8" stroke="currentColor" strokeWidth="1.6" /><path d="M7.8 10.5V7.8a4.2 4.2 0 1 1 8.4 0v2.7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /><circle cx="12" cy="15" r="1.5" fill="currentColor" /></svg>;
+    case "pin":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21s7-6.3 7-11.6A7 7 0 0 0 5 9.4C5 14.7 12 21 12 21Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><circle cx="12" cy="9.3" r="2.4" stroke="currentColor" strokeWidth="1.5" /></svg>;
+    case "package":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m3.5 7.5 8.5-4 8.5 4-8.5 4-8.5-4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><path d="M3.5 7.5v9l8.5 4 8.5-4v-9M12 11.5V20.5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" /></svg>;
+    case "check-circle":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.6" /><path d="m8.3 12.3 2.4 2.4 5-5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case "hourglass":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.5 3.5h11M6.5 20.5h11M7.5 3.5c0 4 3 5.6 4.5 6.5-1.5.9-4.5 2.5-4.5 6.5M16.5 3.5c0 4-3 5.6-4.5 6.5 1.5.9 4.5 2.5 4.5 6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case "alert":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4 3 20h18L12 4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><path d="M12 10.5v4M12 17.2v.1" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>;
+    case "sparkle":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 3 1.7 4.8L18.5 9l-4.8 1.7L12 15.5l-1.7-4.8L5.5 9l4.8-1.7L12 3ZM19 15l.9 2.5L22.5 18l-2.6.9L19 21.5l-.9-2.6-2.6-.9 2.6-.9L19 15Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /></svg>;
+    case "search":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" /><path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
+    case "user":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.6" stroke="currentColor" strokeWidth="1.8" /><path d="M5.5 19a6.5 6.5 0 0 1 13 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
+    case "leaf":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 5C12 5 7 9 5 15c2.5 1.5 5.6 1.8 8.3.6 2.8-1.2 4.9-3.8 5.7-7.2Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 16c2-3 5-5.3 9-7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>;
+    default:
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" /></svg>;
+  }
+}
 
 const PROJECT_THUMBNAIL_SRC = "/thumpnail_public.webp";
 
@@ -167,9 +214,15 @@ export default function GreenPublicSponsor() {
   const [claiming, setClaiming] = useState(false);
   const [claimError, setClaimError] = useState("");
   const [claimed, setClaimed] = useState(false);
-  const [heroVideoEnabled] = useState(() => canAffordHeroVideo());
+  const [heroVideoEnabled] = useState(() => shouldRenderHeroVideo());
   const [heroVideoReady, setHeroVideoReady] = useState(false);
-  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [visibleHeroVideoIndex, setVisibleHeroVideoIndex] = useState(0);
+  const heroVideoRefs = useRef<Array<HTMLVideoElement | null>>([null, null]);
+  const activeHeroVideoIndexRef = useRef(0);
+  const visibleHeroVideoIndexRef = useRef(0);
+  const heroVideoCrossfadeLockRef = useRef(false);
+  const heroVideoRafRef = useRef<number | null>(null);
+  const heroVideoSwapTimeoutRef = useRef<number | null>(null);
   const [recentSponsorships, setRecentSponsorships] = useState<RecentSponsorshipItem[]>([]);
   const [lookupOrderUid, setLookupOrderUid] = useState("");
   const [lookupEmail, setLookupEmail] = useState("");
@@ -277,10 +330,127 @@ export default function GreenPublicSponsor() {
     () => projects.find((p) => p.id === selectedProjectId) || null,
     [projects, selectedProjectId],
   );
+  const shouldShowHero = !selectedProject && !returnState;
 
   const priceEntry = useMemo(() => getPreferredSponsorPriceEntry(selectedProject, form.checkoutCurrency), [selectedProject, form.checkoutCurrency]);
   const priceEntries = useMemo(() => getSponsorPriceEntries(selectedProject), [selectedProject]);
   const total = useMemo(() => Math.max(1, Number(form.quantity || 1)) * Number(priceEntry?.amount || 0), [form.quantity, priceEntry]);
+
+  useEffect(() => {
+    if (!heroVideoEnabled || !shouldShowHero) {
+      setHeroVideoReady(false);
+      return undefined;
+    }
+
+    const videos = heroVideoRefs.current;
+    if (videos.some((video) => !video)) return undefined;
+
+    const playVideo = (video: HTMLVideoElement | null) => {
+      if (!video) return;
+      video.muted = true;
+      video.defaultMuted = true;
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+      }
+    };
+
+    const resetVideo = (video: HTMLVideoElement | null) => {
+      if (!video) return;
+      video.pause();
+      try {
+        video.currentTime = 0;
+      } catch {
+        // Ignore browsers that block direct currentTime resets while buffering.
+      }
+    };
+
+    const stopLoopWatch = () => {
+      if (heroVideoRafRef.current !== null) {
+        cancelAnimationFrame(heroVideoRafRef.current);
+        heroVideoRafRef.current = null;
+      }
+      if (heroVideoSwapTimeoutRef.current !== null) {
+        window.clearTimeout(heroVideoSwapTimeoutRef.current);
+        heroVideoSwapTimeoutRef.current = null;
+      }
+      heroVideoCrossfadeLockRef.current = false;
+    };
+
+    const startLoopWatch = () => {
+      stopLoopWatch();
+
+      const tick = () => {
+        const currentVideo = heroVideoRefs.current[activeHeroVideoIndexRef.current];
+        if (!currentVideo) {
+          heroVideoRafRef.current = requestAnimationFrame(tick);
+          return;
+        }
+
+        const duration = Number(currentVideo.duration);
+        if (!Number.isFinite(duration) || duration <= 0) {
+          heroVideoRafRef.current = requestAnimationFrame(tick);
+          return;
+        }
+
+        const remaining = duration - currentVideo.currentTime;
+        if (!heroVideoCrossfadeLockRef.current && remaining <= HERO_VIDEO_CROSSFADE_SECONDS) {
+          heroVideoCrossfadeLockRef.current = true;
+          const nextIndex = activeHeroVideoIndexRef.current === 0 ? 1 : 0;
+          const nextVideo = heroVideoRefs.current[nextIndex];
+
+          if (nextVideo) {
+            try {
+              nextVideo.currentTime = 0;
+            } catch {
+              // Ignore currentTime reset failures during browser buffering.
+            }
+            visibleHeroVideoIndexRef.current = nextIndex;
+            setVisibleHeroVideoIndex(nextIndex);
+            playVideo(nextVideo);
+            setHeroVideoReady(true);
+
+            heroVideoSwapTimeoutRef.current = window.setTimeout(() => {
+              resetVideo(heroVideoRefs.current[activeHeroVideoIndexRef.current]);
+              activeHeroVideoIndexRef.current = nextIndex;
+              heroVideoCrossfadeLockRef.current = false;
+              heroVideoSwapTimeoutRef.current = null;
+            }, HERO_VIDEO_CROSSFADE_MS);
+          } else {
+            heroVideoCrossfadeLockRef.current = false;
+          }
+        }
+
+        heroVideoRafRef.current = requestAnimationFrame(tick);
+      };
+
+      heroVideoRafRef.current = requestAnimationFrame(tick);
+    };
+
+    heroVideoRefs.current.forEach((video, index) => {
+      if (index !== visibleHeroVideoIndexRef.current) {
+        resetVideo(video);
+      }
+    });
+
+    playVideo(heroVideoRefs.current[visibleHeroVideoIndexRef.current]);
+    startLoopWatch();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        playVideo(heroVideoRefs.current[visibleHeroVideoIndexRef.current]);
+        startLoopWatch();
+      } else {
+        stopLoopWatch();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      stopLoopWatch();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [heroVideoEnabled, shouldShowHero]);
 
   useEffect(() => {
     if (priceEntry && priceEntry.currency !== form.checkoutCurrency) {
@@ -389,10 +559,10 @@ export default function GreenPublicSponsor() {
         </nav>
         <div className="gps-topbar-icons">
           <button type="button" className="gps-topbar-icon-btn" onClick={() => setShowOrderLookup(true)} aria-label="Track my order">
-            <svg viewBox="0 0 24 24" fill="none" width="19" height="19" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" /><path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+            <GpsIcon name="search" className="gps-icon" />
           </button>
           <a href="/green/login/sponsor" className="gps-topbar-icon-btn" aria-label="Sign in to my account">
-            <svg viewBox="0 0 24 24" fill="none" width="19" height="19" aria-hidden="true"><circle cx="12" cy="8" r="3.6" stroke="currentColor" strokeWidth="1.8" /><path d="M5.5 19a6.5 6.5 0 0 1 13 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+            <GpsIcon name="user" className="gps-icon" />
           </a>
         </div>
       </header>
@@ -400,29 +570,44 @@ export default function GreenPublicSponsor() {
       {/* ─── Promo banner ─── */}
       <div className="gps-promo-banner">
         <button type="button" onClick={() => setPromoIndex((i) => (i - 1 + PROMO_MESSAGES.length) % PROMO_MESSAGES.length)} aria-label="Previous message">‹</button>
-        <span>{PROMO_MESSAGES[promoIndex]}</span>
+        <span className="gps-promo-message">
+          <GpsIcon name={PROMO_MESSAGES[promoIndex].icon} className="gps-icon" />
+          {PROMO_MESSAGES[promoIndex].text}
+        </span>
         <button type="button" onClick={() => setPromoIndex((i) => (i + 1) % PROMO_MESSAGES.length)} aria-label="Next message">›</button>
       </div>
 
-      {/* ─── Hero ─── */}
+      {/* ─── Hero (browsing view only — hidden once a project/checkout or payment-return view is active) ─── */}
+      {!selectedProject && !returnState && (
       <section className={`gps-hero${heroVideoReady ? " gps-hero--video-ready" : ""}`} style={{ backgroundImage: `url(${SPONSOR_BACKGROUND})` }}>
         {heroVideoEnabled && (
-          <video
-            ref={heroVideoRef}
-            className="gps-hero-video"
-            poster={SPONSOR_BACKGROUND}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            disablePictureInPicture
-            disableRemotePlayback
-            onCanPlay={() => setHeroVideoReady(true)}
-            onError={() => setHeroVideoReady(false)}
-          >
-            <source src={HERO_VIDEO_SRC} type="video/mp4" />
-          </video>
+          <div className="gps-hero-video-wrap" aria-hidden="true">
+            {[0, 1].map((index) => (
+              <video
+                key={index}
+                ref={(node) => {
+                  heroVideoRefs.current[index] = node;
+                }}
+                className={`gps-hero-video${visibleHeroVideoIndex === index ? " gps-hero-video--active" : " gps-hero-video--inactive"}`}
+                poster={SPONSOR_BACKGROUND}
+                autoPlay={index === 0}
+                muted
+                playsInline
+                preload="auto"
+                disablePictureInPicture
+                disableRemotePlayback
+                onPlaying={() => setHeroVideoReady(true)}
+                onLoadedData={() => setHeroVideoReady(true)}
+                onError={() => {
+                  if (index === visibleHeroVideoIndexRef.current) {
+                    setHeroVideoReady(false);
+                  }
+                }}
+              >
+                <source src={HERO_VIDEO_SRC} type="video/mp4" />
+              </video>
+            ))}
+          </div>
         )}
         <div className="gps-hero-scrim" />
         <div className="gps-hero-inner">
@@ -432,17 +617,17 @@ export default function GreenPublicSponsor() {
 
           <div className="gps-feature-row">
             <div className="gps-feature-card">
-              <span className="gps-feature-icon">🌳</span>
+              <span className="gps-feature-icon"><GpsIcon name="tree" className="gps-icon" /></span>
               <strong>Reforestation in Nigeria</strong>
               <p>Verified, GPS-mapped tree projects with field officers on the ground.</p>
             </div>
             <div className="gps-feature-card">
-              <span className="gps-feature-icon">📜</span>
+              <span className="gps-feature-icon"><GpsIcon name="certificate" className="gps-icon" /></span>
               <strong>Certificate in 60 seconds</strong>
               <p>Instant digital certificate emailed the moment your payment is confirmed.</p>
             </div>
             <div className="gps-feature-card">
-              <span className="gps-feature-icon">🔒</span>
+              <span className="gps-feature-icon"><GpsIcon name="lock" className="gps-icon" /></span>
               <strong>Track without an account</strong>
               <p>Your order ID and email are all you need to check on your tree, anytime.</p>
             </div>
@@ -453,16 +638,17 @@ export default function GreenPublicSponsor() {
               Plant Your Tree Now
             </button>
             <button type="button" className="gps-hero-secondary-btn" onClick={() => setShowOrderLookup(true)}>
-              📦 Track My Order
+              <GpsIcon name="package" className="gps-icon" /> Track My Order
             </button>
           </div>
         </div>
       </section>
+      )}
 
       {/* ─── Recently sponsored — floating balloon notification ─── */}
-      {recentSponsorships.length > 0 && (
+      {!selectedProject && !returnState && recentSponsorships.length > 0 && (
         <div className={`gps-toast${toastVisible ? " gps-toast--visible" : ""}`} aria-live="polite">
-          <span className="gps-toast-icon">🌳</span>
+          <span className="gps-toast-icon"><GpsIcon name="tree" className="gps-icon" /></span>
           <div className="gps-toast-body">
             <strong>{recentSponsorships[toastIndex]?.sponsor_first_name}</strong> just sponsored{" "}
             {recentSponsorships[toastIndex]?.quantity} tree{recentSponsorships[toastIndex]?.quantity === 1 ? "" : "s"}
@@ -522,13 +708,13 @@ export default function GreenPublicSponsor() {
             ) : paymentVerified ? (
               claimed ? (
                 <div className="gps-return-status success">
-                  <div className="gps-return-icon">🎉</div>
+                  <div className="gps-return-icon"><GpsIcon name="sparkle" className="gps-icon" /></div>
                   <h2>You're all set!</h2>
                   <p>Taking you to your sponsor dashboard…</p>
                 </div>
               ) : pendingCheckout && !pendingCheckout.isGuest ? (
                 <div className="gps-return-status success">
-                  <div className="gps-return-icon">🌳</div>
+                  <div className="gps-return-icon"><GpsIcon name="tree" className="gps-icon" /></div>
                   <h2>Payment received — thank you!</h2>
                   <p>
                     Your sponsorship for <strong>{pendingCheckout.projectTitle}</strong> is confirmed. Since{" "}
@@ -538,7 +724,7 @@ export default function GreenPublicSponsor() {
                 </div>
               ) : (
                 <div className="gps-claim-card">
-                  <div className="gps-return-icon">🌳</div>
+                  <div className="gps-return-icon"><GpsIcon name="tree" className="gps-icon" /></div>
                   <h2>Payment received — thank you!</h2>
                   <p>
                     Your sponsorship for <strong>{pendingCheckout?.projectTitle || "your project"}</strong> is confirmed. We've emailed{" "}
@@ -563,29 +749,41 @@ export default function GreenPublicSponsor() {
               )
             ) : paymentFailed ? (
               <div className="gps-return-status failed">
-                <div className="gps-return-icon">⚠️</div>
+                <div className="gps-return-icon"><GpsIcon name="alert" className="gps-icon" /></div>
                 <h2>Payment incomplete</h2>
                 <p>{returnState.message || "Your payment did not complete. You can try again below."}</p>
-                <button type="button" className="gps-primary-btn" onClick={() => { setReturnState(null); window.history.replaceState({}, "", "/sponsor"); }}>Back to Projects</button>
+                <button type="button" className="gps-primary-btn" onClick={() => { setReturnState(null); setPendingCheckout(null); setOrderStatus(null); window.history.replaceState({}, "", "/sponsor"); }}>Sponsor Another Tree</button>
               </div>
             ) : (
               <div className="gps-return-status pending">
-                <div className="gps-return-icon">⏳</div>
+                <div className="gps-return-icon"><GpsIcon name="hourglass" className="gps-icon" /></div>
                 <h2>Payment pending</h2>
                 <p>{returnState.message || "We're still confirming your payment with our provider. This can take a minute."}</p>
-                <button
-                  type="button"
-                  className="gps-secondary-btn"
-                  onClick={() => {
-                    if (!returnState.sponsorId) return;
-                    setCheckingPayment(true);
-                    fetchGuestSponsorOrderPaymentStatus(returnState.sponsorId, returnState.orderUid, true)
-                      .then((order) => setOrderStatus(order))
-                      .finally(() => setCheckingPayment(false));
-                  }}
-                >
-                  Check Again
-                </button>
+                <div className="gps-return-actions">
+                  <button
+                    type="button"
+                    className="gps-secondary-btn"
+                    onClick={() => {
+                      if (!returnState.sponsorId) return;
+                      setCheckingPayment(true);
+                      fetchGuestSponsorOrderPaymentStatus(returnState.sponsorId, returnState.orderUid, true)
+                        .then((order) => setOrderStatus(order))
+                        .finally(() => setCheckingPayment(false));
+                    }}
+                  >
+                    Check Again
+                  </button>
+                  <button
+                    type="button"
+                    className="gps-primary-btn"
+                    onClick={() => { setReturnState(null); setPendingCheckout(null); setOrderStatus(null); window.history.replaceState({}, "", "/sponsor"); }}
+                  >
+                    Sponsor Another Tree
+                  </button>
+                </div>
+                <p className="gps-return-note">
+                  This order will keep confirming in the background — check your email for a receipt once it clears.
+                </p>
               </div>
             )}
           </section>
@@ -621,7 +819,7 @@ export default function GreenPublicSponsor() {
                             <span className="gps-project-card-price">{formatSponsorPriceChoices(project)}</span>
                           </div>
                           <div className="gps-project-card-tags">
-                            <span className="gps-project-tag">📍 {project.location_text || "Nigeria"}</span>
+                            <span className="gps-project-tag"><GpsIcon name="pin" className="gps-icon-inline" /> {project.location_text || "Nigeria"}</span>
                             <span className={`gps-project-tag ${ready ? "ok" : "warning"}`}>
                               {ready ? `${Number(project.slots_available ?? 0)} slots open` : "Preparing"}
                             </span>
@@ -698,7 +896,7 @@ export default function GreenPublicSponsor() {
                     <div className="gps-pdp-info">
                       <span className="gps-checkout-eyebrow">Secure Checkout</span>
                       <h1>{projectTitle}</h1>
-                      <span className="gps-checkout-location">📍 {selectedProject.location_text || "LandCheck Green project"}</span>
+                      <span className="gps-checkout-location"><GpsIcon name="pin" className="gps-icon-inline" /> {selectedProject.location_text || "LandCheck Green project"}</span>
                       <div className="gps-pdp-price-row">
                         <span className="gps-pdp-price">{formatSponsorPriceChoices(selectedProject)}</span>
                         <span className={`gps-chip ${selectedProject.sponsor_checkout_ready ? "ok" : "warning"}`}>
