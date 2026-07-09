@@ -92,14 +92,83 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
   },
 
   "/sponsor": {
-    title: "Sponsor a Tree Online — No Sign-Up Required | LandCheck Green",
+    title: "Sponsor a Tree Online in Nigeria — No Sign-Up, GPS-Verified | LandCheck Green",
     description:
-      "Sponsor verified trees in Nigeria online in NGN or USD — no account required. Get GPS map proof, photo evidence, and email updates on your tree.",
+      "Sponsor a real, GPS-verified tree in Nigeria from anywhere in the world — pay in NGN or USD, no account required. Get a digital certificate instantly, plus map proof, photo evidence, and email updates as your tree grows.",
     keywords:
-      "sponsor a tree online, plant a tree Nigeria, tree sponsorship no signup, donate trees Nigeria, LandCheck Green sponsorship, offset carbon Nigeria",
+      "sponsor a tree online, sponsor a tree Nigeria, plant a tree online Nigeria, tree sponsorship no signup, donate trees Nigeria, adopt a tree Africa, carbon offset Nigeria, gift a tree, plant trees for climate change, verified tree planting donation, diaspora tree donation Nigeria",
     canonicalPath: "/sponsor",
     ogType: "website",
     ogImage: "https://landcheck.online/background-sponsor.png",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "@id": "https://landcheck.online/sponsor#service",
+          "name": "Tree Sponsorship — LandCheck Green",
+          "serviceType": "Tree Planting Sponsorship",
+          "provider": { "@id": "https://landcheck.online/#organization" },
+          "areaServed": { "@type": "Country", "name": "Nigeria" },
+          "audience": { "@type": "Audience", "audienceType": "Global donors and diaspora" },
+          "description":
+            "Sponsor a GPS-verified tree planted and maintained in Nigeria by LandCheck field agents. No account required — pay online in NGN or USD and receive a digital certificate, GPS map location, and photo evidence by email.",
+          "url": "https://landcheck.online/sponsor",
+          "offers": {
+            "@type": "Offer",
+            "priceCurrency": "NGN",
+            "availability": "https://schema.org/InStock",
+            "url": "https://landcheck.online/sponsor",
+          },
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://landcheck.online/sponsor#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do I need to create an account to sponsor a tree?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. You can sponsor a tree as a guest with just your name, email, and phone number. You can optionally set up an account afterward to track your trees over time.",
+              },
+            },
+            {
+              "@type": "Question",
+              "name": "How does my certificate and tracking work?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The moment your payment is confirmed, you receive a digital sponsorship certificate by email. As your tree is planted and cared for, you get its GPS map location, photo evidence, and maintenance updates — no account required to check on it.",
+              },
+            },
+            {
+              "@type": "Question",
+              "name": "What is the climate impact of sponsoring a tree?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Each sponsored tree absorbs roughly 21 kg of CO2 per year and helps retain around 120 liters of water, adding up to measurable climate impact over time.",
+              },
+            },
+            {
+              "@type": "Question",
+              "name": "Are the tree planting sites approved and monitored?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Every project has full land-rights and planting approval on record, and LandCheck field agents are on the ground to plant and maintain the trees.",
+              },
+            },
+            {
+              "@type": "Question",
+              "name": "Can I sponsor a tree from outside Nigeria?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. LandCheck Green accepts payment in NGN or USD, so donors and diaspora anywhere in the world can sponsor a verified tree in Nigeria online.",
+              },
+            },
+          ],
+        },
+      ],
+    },
   },
 
   "/privacy": {
