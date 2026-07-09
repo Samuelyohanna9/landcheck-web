@@ -189,7 +189,12 @@ const formatDateTimeLabel = (value: string | null | undefined) => {
 
 const formatCurrencyAmount = (amount: number | null | undefined, currency = "NGN") => {
   const numeric = Number(amount || 0);
-  return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 0 }).format(numeric);
+  const safeCurrency = /^[A-Za-z]{3}$/.test(String(currency || "")) ? String(currency).toUpperCase() : "NGN";
+  try {
+    return new Intl.NumberFormat(undefined, { style: "currency", currency: safeCurrency, maximumFractionDigits: 0 }).format(numeric);
+  } catch {
+    return `${safeCurrency} ${numeric.toLocaleString()}`;
+  }
 };
 
 const getSponsorPriceEntries = (project?: SponsorProject | null) => {
