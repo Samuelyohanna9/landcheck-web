@@ -37,6 +37,9 @@
 
 /* ─── Hero ─────────────────────────────────────────────────────── */
 .gps-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   padding: 132px 24px 64px;
   background-size: cover;
   background-position: center right;
@@ -44,8 +47,29 @@
   color: #ffffff;
 }
 
+.gps-hero-video {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+.gps-hero--video-ready .gps-hero-video { opacity: 1; }
+
+.gps-hero-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(10,61,32,0.82) 0%, rgba(10,61,32,0.72) 45%, rgba(10,61,32,0.88) 100%);
+}
+
 .gps-hero-inner {
-  max-width: 760px;
+  max-width: 820px;
   margin: 0 auto;
   text-align: center;
   display: flex;
@@ -82,21 +106,93 @@
   line-height: 1.6;
 }
 
-.gps-trust-row {
+.gps-feature-row {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
-  margin-top: 8px;
+  gap: 14px;
+  margin-top: 16px;
+  width: 100%;
 }
 
-.gps-trust-row span {
-  font-size: 12.5px;
-  font-weight: 700;
+.gps-feature-card {
+  flex: 1;
+  min-width: 190px;
+  max-width: 260px;
+  background: rgba(15, 15, 15, 0.42);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 18px;
+  padding: 18px 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.gps-feature-icon {
+  font-size: 30px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
   background: rgba(255,255,255,0.14);
-  border: 1px solid rgba(255,255,255,0.22);
-  padding: 7px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.gps-feature-card strong { font-size: 0.95rem; font-weight: 700; }
+.gps-feature-card p { font-size: 0.8rem; color: rgba(255,255,255,0.78); line-height: 1.45; }
+
+.gps-hero-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.gps-hero-secondary-btn {
+  border: 1.5px solid rgba(255,255,255,0.6);
   border-radius: 999px;
+  padding: 13px 22px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(255,255,255,0.08);
+}
+.gps-hero-secondary-btn:hover { background: rgba(255,255,255,0.16); }
+
+/* ─── Recently sponsored ticker ─────────────────────────────────── */
+.gps-recent-band {
+  background: var(--gps-brand-dark);
+  overflow: hidden;
+  padding: 10px 0;
+}
+
+.gps-recent-track {
+  display: flex;
+  gap: 40px;
+  width: max-content;
+  animation: gps-marquee 32s linear infinite;
+}
+
+.gps-recent-item {
+  font-size: 13px;
+  color: rgba(255,255,255,0.9);
+  white-space: nowrap;
+}
+.gps-recent-item strong { color: #bfe8c9; }
+
+@keyframes gps-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gps-recent-track { animation: none; }
 }
 
 /* ─── Main container ───────────────────────────────────────────── */
@@ -408,6 +504,74 @@
 }
 .gps-footer a { color: var(--gps-brand-mid); }
 
+.gps-checkout-footnote button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--gps-brand-mid);
+  font-weight: 700;
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ─── Order lookup modal ───────────────────────────────────────── */
+.gps-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 20, 14, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 200;
+}
+
+.gps-lookup-modal {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--gps-surface);
+  border-radius: var(--gps-radius);
+  padding: 28px;
+  box-shadow: var(--gps-shadow-md);
+}
+
+.gps-lookup-modal h2 { font-size: 1.2rem; font-weight: 800; margin-bottom: 2px; }
+
+.gps-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--gps-border);
+  background: #ffffff;
+  color: var(--gps-text-muted);
+  font-size: 14px;
+}
+
+.gps-lookup-results { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+.gps-lookup-results h3 { font-size: 1rem; font-weight: 700; }
+
+.gps-lookup-order-card {
+  background: var(--gps-bg);
+  border: 1px solid var(--gps-border);
+  border-left: 3px solid #c5a059;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gps-lookup-order-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.gps-lookup-order-head strong { font-size: 0.9rem; }
+.gps-lookup-order-meta { font-size: 0.78rem; color: var(--gps-text-muted); }
+
 /* ─── Responsive ───────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .gps-hero { padding: 108px 18px 48px; }
@@ -416,4 +580,12 @@
   .gps-checkout-card { padding: 20px; }
   .gps-checkout-head { flex-direction: column; }
   .gps-checkout-price { align-self: flex-start; }
+  .gps-feature-card { min-width: 140px; padding: 14px 12px; }
+  .gps-feature-card p { display: none; }
+  .gps-hero-video { object-position: center 30%; }
+}
+
+/* Respect data-saver / low-power devices further: keep the video paused off-screen */
+@media (max-width: 420px) {
+  .gps-hero { padding: 96px 14px 40px; }
 }

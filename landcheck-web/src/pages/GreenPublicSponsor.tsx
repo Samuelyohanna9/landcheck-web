@@ -1,16 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   buildSponsorPrivacyUrl,
   buildSponsorTermsUrl,
   createGuestSponsorOrder,
   fetchGuestSponsorOrderPaymentStatus,
+  fetchPublicRecentSponsorships,
   fetchPublicSponsorshipProjects,
   formatCurrencyAmount,
   formatSponsorPriceChoices,
   getPreferredSponsorPriceEntry,
   getSponsorPriceEntries,
+  lookupPublicSponsorOrders,
   SPONSOR_TERMS_VERSION,
+  type LookedUpSponsorOrder,
+  type RecentSponsorshipItem,
   type SponsorProject,
 } from "../api/greenSponsor";
 import { claimGreenSponsorGuestAccount } from "../auth/greenAuth";
@@ -18,8 +22,30 @@ import NavBar from "../components/NavBar";
 import "../styles/green-public-sponsor.css";
 
 const SPONSOR_BACKGROUND = "/background-sponsor.png";
+const HERO_VIDEO_SRC = "/let_the_video_be_black_nigeria.mp4";
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=online.landcheck.mobile";
 const GUEST_CHECKOUT_STORAGE_KEY = "lc_guest_checkout_pending";
+
+type NetworkInfoLike = { effectiveType?: string; saveData?: boolean; downlink?: number };
+
+function canAffordHeroVideo(): boolean {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  try {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return false;
+  } catch {
+    /* matchMedia unsupported — fall through to connection check */
+  }
+  const nav = navigator as Navigator & { connection?: NetworkInfoLike };
+  const conn = nav.connection;
+  if (!conn) return true; // Network Information API unavailable (e.g. iOS Safari) — default to allowing video.
+  const effectiveType = String(conn.effectiveType || "").toLowerCase();
+  const downlink = Number(conn.downlink || 0);
+  // Nigeria field conditions: skip the video entirely on slow/metered connections, same threshold used elsewhere in this app.
+  if (conn.saveData) return false;
+  if (effectiveType === "slow-2g" || effectiveType === "2g" || effectiveType === "3g") return false;
+  if (downlink > 0 && downlink < 2.5) return false;
+  return true;
+}
 
 const DEDICATION_OPTIONS = [
   { value: "self", label: "Myself" },
@@ -112,6 +138,22 @@ export default function GreenPublicSponsor() {
   const [claiming, setClaiming] = useState(false);
   const [claimError, setClaimError] = useState("");
   const [claimed, setClaimed] = useState(false);
+  const [heroVideoEnabled] = useState(() => canAffordHeroVideo());
+  const [heroVideoReady, setHeroVideoReady] = useState(false);
+  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [recentSponsorships, setRecentSponsorships] = useState<RecentSponsorshipItem[]>([]);
+  const [lookupOrderUid, setLookupOrderUid] = useState("");
+  const [lookupEmail, setLookupEmail] = useState("");
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupError, setLookupError] = useState("");
+  const [lookupResult, setLookupResult] = useState<{ sponsor_name: string | null; orders: LookedUpSponsorOrder[] } | null>(null);
+  const [showOrderLookup, setShowOrderLookup] = useState(false);
+
+  useEffect(() => {
+    fetchPublicRecentSponsorships(10)
+      .then(setRecentSponsorships)
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (returnState) return;
@@ -221,6 +263,21 @@ export default function GreenPublicSponsor() {
     }
   };
 
+  const handleLookupOrders = async () => {
+    setLookupError("");
+    setLookupResult(null);
+    if (!lookupOrderUid.trim() || !lookupEmail.trim()) { setLookupError("Enter both your order ID and the email you sponsored with."); return; }
+    setLookupLoading(true);
+    try {
+      const result = await lookupPublicSponsorOrders(lookupOrderUid.trim(), lookupEmail.trim());
+      setLookupResult(result);
+    } catch (err: any) {
+      setLookupError(err?.response?.data?.detail || err?.message || "We could not find any orders matching that order ID and email.");
+    } finally {
+      setLookupLoading(false);
+    }
+  };
+
   const paymentVerified = orderStatus?.payment_status === "verified" || returnState?.status === "verified";
   const paymentFailed = returnState?.status === "failed";
 
@@ -229,22 +286,111 @@ export default function GreenPublicSponsor() {
       <NavBar fixed overlay />
 
       {/* ─── Hero ─── */}
-      <section
-        className="gps-hero"
-        style={{ backgroundImage: `linear-gradient(90deg, #0a3d20 0%, rgba(10,61,32,0.86) 55%, rgba(10,61,32,0.55) 100%), url(${SPONSOR_BACKGROUND})` }}
-      >
+      <section className={`gps-hero${heroVideoReady ? " gps-hero--video-ready" : ""}`} style={{ backgroundImage: `url(${SPONSOR_BACKGROUND})` }}>
+        {heroVideoEnabled && (
+          <video
+            ref={heroVideoRef}
+            className="gps-hero-video"
+            poster={SPONSOR_BACKGROUND}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            disablePictureInPicture
+            disableRemotePlayback
+            onCanPlay={() => setHeroVideoReady(true)}
+            onError={() => setHeroVideoReady(false)}
+          >
+            <source src={HERO_VIDEO_SRC} type="video/mp4" />
+          </video>
+        )}
+        <div className="gps-hero-scrim" />
         <div className="gps-hero-inner">
           <span className="gps-hero-eyebrow">LandCheck Green · Public Sponsorship</span>
           <h1>Sponsor a Tree.<br />No Account Needed.</h1>
           <p>Pick a verified project, sponsor trees in NGN or USD, and get GPS-tracked, photo-verified updates straight to your email — no sign-up required.</p>
-          <div className="gps-trust-row">
-            <span>✓ No sign-up to sponsor</span>
-            <span>✓ Secure online payment</span>
-            <span>✓ Verified GPS &amp; photo evidence</span>
-            <span>✓ Email updates on your tree</span>
+
+          <div className="gps-feature-row">
+            <div className="gps-feature-card">
+              <span className="gps-feature-icon">🌳</span>
+              <strong>Reforestation in Nigeria</strong>
+              <p>Verified, GPS-mapped tree projects with field officers on the ground.</p>
+            </div>
+            <div className="gps-feature-card">
+              <span className="gps-feature-icon">📜</span>
+              <strong>Certificate in 60 seconds</strong>
+              <p>Instant digital certificate emailed the moment your payment is confirmed.</p>
+            </div>
+            <div className="gps-feature-card">
+              <span className="gps-feature-icon">🔒</span>
+              <strong>Track without an account</strong>
+              <p>Your order ID and email are all you need to check on your tree, anytime.</p>
+            </div>
+          </div>
+
+          <div className="gps-hero-ctas">
+            <button type="button" className="gps-primary-btn" onClick={() => document.getElementById("gps-projects")?.scrollIntoView({ behavior: "smooth" })}>
+              Plant Your Tree Now
+            </button>
+            <button type="button" className="gps-hero-secondary-btn" onClick={() => setShowOrderLookup(true)}>
+              📦 Track My Order
+            </button>
           </div>
         </div>
       </section>
+
+      {/* ─── Recently sponsored ─── */}
+      {recentSponsorships.length > 0 && (
+        <section className="gps-recent-band">
+          <div className="gps-recent-track">
+            {[...recentSponsorships, ...recentSponsorships].map((item, index) => (
+              <span key={`recent-${index}`} className="gps-recent-item">
+                🌱 <strong>{item.sponsor_first_name}</strong> sponsored {item.quantity} tree{item.quantity === 1 ? "" : "s"}
+                {item.project_name ? <> for <strong>{item.project_name}</strong></> : null}
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ─── Order lookup modal ─── */}
+      {showOrderLookup && (
+        <div className="gps-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowOrderLookup(false); }}>
+          <div className="gps-lookup-modal">
+            <button type="button" className="gps-modal-close" onClick={() => setShowOrderLookup(false)} aria-label="Close">✕</button>
+            <h2>Track My Order</h2>
+            <p className="gps-section-sub">Enter the order ID from your confirmation email and the email you sponsored with.</p>
+            <label className="gps-field"><span>Order ID</span><input type="text" value={lookupOrderUid} onChange={(e) => setLookupOrderUid(e.target.value)} placeholder="e.g. ORD-A1B2C3D4" /></label>
+            <label className="gps-field"><span>Email</span><input type="email" value={lookupEmail} onChange={(e) => setLookupEmail(e.target.value)} placeholder="you@example.com" /></label>
+            {lookupError && <p className="gps-error">{lookupError}</p>}
+            <button type="button" className="gps-primary-btn full" onClick={handleLookupOrders} disabled={lookupLoading}>
+              {lookupLoading ? "Looking up your orders…" : "Find My Orders"}
+            </button>
+
+            {lookupResult && (
+              <div className="gps-lookup-results">
+                <h3>{lookupResult.sponsor_name ? `Hi ${lookupResult.sponsor_name.split(" ")[0]}, here's your history` : "Your orders"}</h3>
+                {lookupResult.orders.length === 0 ? (
+                  <p className="gps-section-sub">No orders found yet.</p>
+                ) : (
+                  lookupResult.orders.map((order) => (
+                    <div key={order.id} className="gps-lookup-order-card">
+                      <div className="gps-lookup-order-head">
+                        <strong>{order.project_name || `Order ${order.order_uid}`}</strong>
+                        <span className={`gps-chip ${order.payment_status === "verified" ? "ok" : "warning"}`}>{order.payment_status || "pending"}</span>
+                      </div>
+                      <span className="gps-lookup-order-meta">
+                        {order.quantity} tree{order.quantity === 1 ? "" : "s"} · {formatCurrencyAmount(order.amount_total, order.currency || "NGN")} · Linked: {order.linked_units}/{order.total_units}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <main className="gps-main">
         {returnState ? (
@@ -328,7 +474,7 @@ export default function GreenPublicSponsor() {
         ) : (
           <>
             {/* ─── Project grid ─── */}
-            <section className="gps-projects-section">
+            <section className="gps-projects-section" id="gps-projects">
               <h2>Choose a Verified Project</h2>
               <p className="gps-section-sub">Every project is field-monitored with GPS mapping and photo evidence.</p>
               {error && !loadingProjects && projects.length === 0 && <p className="gps-error">{error}</p>}
@@ -419,7 +565,8 @@ export default function GreenPublicSponsor() {
                     {submitting ? "Preparing secure payment…" : `Pay ${formatCurrencyAmount(total, priceEntry?.currency || form.checkoutCurrency)} & Sponsor`}
                   </button>
                   <p className="gps-checkout-footnote">
-                    Already have an account? <a href="/green/login/sponsor">Sign in</a> to track past sponsorships.
+                    Already have an account? <a href="/green/login/sponsor">Sign in</a>, or{" "}
+                    <button type="button" onClick={() => setShowOrderLookup(true)}>track an order</button> without one.
                   </p>
                 </div>
               </section>
