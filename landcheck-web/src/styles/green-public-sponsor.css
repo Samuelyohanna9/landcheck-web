@@ -36,11 +36,97 @@
 .gps-page input, .gps-page select, .gps-page textarea { font-family: inherit; }
 
 /* ─── Hero ─────────────────────────────────────────────────────── */
+/* ─── Shop-style top bar ────────────────────────────────────────── */
+.gps-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 24px;
+  background: var(--gps-brand-dark);
+  color: #ffffff;
+}
+
+.gps-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+.gps-topbar-brand img { filter: brightness(0) invert(1); }
+.gps-topbar-brand strong { color: #bfe8c9; }
+
+.gps-topbar-links {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex: 1;
+}
+
+.gps-topbar-links button,
+.gps-topbar-links a {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.82);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.gps-topbar-links button:hover,
+.gps-topbar-links a:hover { color: #ffffff; }
+
+.gps-topbar-icons { display: flex; align-items: center; gap: 8px; }
+
+.gps-topbar-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.12);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gps-topbar-icon-btn:hover { background: rgba(255,255,255,0.22); }
+
+@media (max-width: 720px) {
+  .gps-topbar-links { display: none; }
+}
+
+/* ─── Promo announcement banner ─────────────────────────────────── */
+.gps-promo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 9px 16px;
+  background: var(--gps-brand-light);
+  color: var(--gps-brand-dark);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.gps-promo-banner button {
+  border: none;
+  background: none;
+  color: var(--gps-brand-dark);
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0.6;
+}
+.gps-promo-banner button:hover { opacity: 1; }
+
 .gps-hero {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  padding: 132px 24px 64px;
+  padding: 56px 24px 64px;
   background-size: cover;
   background-position: center right;
   background-repeat: no-repeat;

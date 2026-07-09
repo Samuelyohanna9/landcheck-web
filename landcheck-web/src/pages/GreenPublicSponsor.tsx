@@ -18,7 +18,6 @@ import {
   type SponsorProject,
 } from "../api/greenSponsor";
 import { claimGreenSponsorGuestAccount } from "../auth/greenAuth";
-import NavBar from "../components/NavBar";
 import "../styles/green-public-sponsor.css";
 
 const SPONSOR_BACKGROUND = "/background-sponsor.png";
@@ -61,6 +60,12 @@ function formatRelativeTime(value: string | null): string {
   if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
   return date.toLocaleDateString(undefined, { day: "2-digit", month: "short" });
 }
+
+const PROMO_MESSAGES = [
+  "🌳 Every tree is GPS-tracked & verified — sponsor with confidence!",
+  "📜 Get your digital sponsorship certificate the moment you pay.",
+  "🏷️ Your name goes on a real QR tag, on a real tree, in the field.",
+];
 
 const PROJECT_THUMBNAIL_SRC = "/thumpnail_public.webp";
 
@@ -173,6 +178,7 @@ export default function GreenPublicSponsor() {
   const [lookupResult, setLookupResult] = useState<{ sponsor_name: string | null; orders: LookedUpSponsorOrder[] } | null>(null);
   const [showOrderLookup, setShowOrderLookup] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const [promoIndex, setPromoIndex] = useState(0);
   const [openAccordions, setOpenAccordions] = useState<Set<string>>(() => new Set(["about", "approval"]));
 
   const toggleAccordion = (key: string) => {
@@ -190,6 +196,13 @@ export default function GreenPublicSponsor() {
     fetchPublicRecentSponsorships(10)
       .then(setRecentSponsorships)
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPromoIndex((i) => (i + 1) % PROMO_MESSAGES.length);
+    }, 5000);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -363,7 +376,33 @@ export default function GreenPublicSponsor() {
 
   return (
     <div className="gps-page">
-      <NavBar fixed overlay />
+      {/* ─── Shop-style top bar ─── */}
+      <header className="gps-topbar">
+        <a href="/" className="gps-topbar-brand">
+          <img src="/logo.svg" alt="LandCheck" width="28" height="28" />
+          <span>LandCheck <strong>Green</strong></span>
+        </a>
+        <nav className="gps-topbar-links" aria-label="Sponsor navigation">
+          <button type="button" onClick={() => { setSelectedProjectId(null); document.getElementById("gps-projects")?.scrollIntoView({ behavior: "smooth" }); }}>Shop Projects</button>
+          <button type="button" onClick={() => setShowOrderLookup(true)}>Track Order</button>
+          <a href="/green-partners">For Organizations</a>
+        </nav>
+        <div className="gps-topbar-icons">
+          <button type="button" className="gps-topbar-icon-btn" onClick={() => setShowOrderLookup(true)} aria-label="Track my order">
+            <svg viewBox="0 0 24 24" fill="none" width="19" height="19" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" /><path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+          </button>
+          <a href="/green/login/sponsor" className="gps-topbar-icon-btn" aria-label="Sign in to my account">
+            <svg viewBox="0 0 24 24" fill="none" width="19" height="19" aria-hidden="true"><circle cx="12" cy="8" r="3.6" stroke="currentColor" strokeWidth="1.8" /><path d="M5.5 19a6.5 6.5 0 0 1 13 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+          </a>
+        </div>
+      </header>
+
+      {/* ─── Promo banner ─── */}
+      <div className="gps-promo-banner">
+        <button type="button" onClick={() => setPromoIndex((i) => (i - 1 + PROMO_MESSAGES.length) % PROMO_MESSAGES.length)} aria-label="Previous message">‹</button>
+        <span>{PROMO_MESSAGES[promoIndex]}</span>
+        <button type="button" onClick={() => setPromoIndex((i) => (i + 1) % PROMO_MESSAGES.length)} aria-label="Next message">›</button>
+      </div>
 
       {/* ─── Hero ─── */}
       <section className={`gps-hero${heroVideoReady ? " gps-hero--video-ready" : ""}`} style={{ backgroundImage: `url(${SPONSOR_BACKGROUND})` }}>
