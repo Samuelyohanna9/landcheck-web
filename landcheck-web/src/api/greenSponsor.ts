@@ -452,6 +452,35 @@ export const lookupPublicSponsorOrders = async (
   };
 };
 
+export const askSponsorAssistant = async (
+  message: string,
+  sessionId: string,
+): Promise<{ matched: boolean; answer: string; intent_key: string | null }> => {
+  const response = await api.post("/green/sponsor/assistant/ask", { message, session_id: sessionId });
+  return {
+    matched: Boolean(response.data?.matched),
+    answer: String(response.data?.answer || ""),
+    intent_key: response.data?.intent_key ? String(response.data.intent_key) : null,
+  };
+};
+
+export const escalateSponsorAssistantQuestion = async (params: {
+  sessionId: string;
+  name: string;
+  email: string;
+  question: string;
+  transcript?: string;
+}): Promise<{ ok: boolean; message: string }> => {
+  const response = await api.post("/green/sponsor/assistant/escalate", {
+    session_id: params.sessionId,
+    name: params.name,
+    email: params.email,
+    question: params.question,
+    transcript: params.transcript,
+  });
+  return { ok: Boolean(response.data?.ok), message: String(response.data?.message || "") };
+};
+
 export const fetchPublicPartnerOrganizations = async (): Promise<
   Array<{ id: number; name: string; logo_url: string | null }>
 > => {

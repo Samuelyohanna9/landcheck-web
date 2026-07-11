@@ -341,6 +341,42 @@
   display: block;
 }
 
+.green-work-unread-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0.68rem;
+  height: 0.68rem;
+  border-radius: var(--radius-pill);
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 0.34rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0 0.14rem;
+  position: absolute;
+  top: 0.2rem;
+  right: 0.2rem;
+  z-index: 1;
+  box-shadow: 0 0 0 1.5px #ffffff;
+}
+
+.green-work-action-card.active .green-work-unread-badge {
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.6);
+}
+
+.green-work-unread-badge--inline {
+  position: static;
+  display: inline-flex;
+  min-width: 1rem;
+  height: 1rem;
+  font-size: 0.6rem;
+  padding: 0 0.32rem;
+  margin-left: 0.4rem;
+  box-shadow: none;
+  vertical-align: middle;
+}
+
 .green-work-live-badge-dot {
   width: 4px;
   height: 4px;

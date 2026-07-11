@@ -19,6 +19,7 @@ import {
 } from "../api/greenSponsor";
 import { claimGreenSponsorGuestAccount } from "../auth/greenAuth";
 import GpsIcon from "../components/GpsIcon";
+import PlantyAssistant from "../components/PlantyAssistant";
 import "../styles/green-public-sponsor.css";
 
 const SPONSOR_BACKGROUND = "/background-sponsor.png";
@@ -1029,6 +1030,8 @@ export default function GreenPublicSponsor() {
         <span>LandCheck Green Geospatial Technologies Limited</span>
         <a href="mailto:landchecktech@gmail.com">landchecktech@gmail.com</a>
       </footer>
+
+      <PlantyAssistant />
     </div>
   );
 }

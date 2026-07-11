@@ -1,0 +1,188 @@
+/* ═══════════════════════════════════════════════════════════════
+   Planty — sponsor page chat assistant widget
+   Reuses --gps-* brand variables from green-public-sponsor.css.
+   ═══════════════════════════════════════════════════════════════ */
+
+.planty-widget {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+  font-family: var(--gps-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+}
+
+.planty-fab {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: var(--gps-brand, #1f8f49);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 24px rgba(18, 63, 43, 0.28);
+}
+.planty-fab .gps-icon { width: 26px; height: 26px; }
+.planty-fab:hover { background: var(--gps-brand-mid, #195f38); }
+
+.planty-panel {
+  width: min(360px, calc(100vw - 32px));
+  max-height: min(560px, calc(100vh - 120px));
+  background: var(--gps-surface, #ffffff);
+  border-radius: 18px;
+  box-shadow: 0 24px 56px rgba(10, 40, 25, 0.28);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--gps-border, #d4e2d2);
+}
+
+.planty-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--gps-brand-dark, #0a3d20);
+  color: #ffffff;
+}
+.planty-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+.planty-avatar .gps-icon { width: 18px; height: 18px; }
+.planty-panel-title { font-weight: 700; flex: 1; }
+.planty-collapse-btn { background: none; border: none; color: #ffffff; opacity: 0.8; display: flex; }
+.planty-collapse-btn:hover { opacity: 1; }
+.planty-collapse-btn .gps-icon-inline { width: 16px; height: 16px; }
+
+.planty-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 220px;
+  background: var(--gps-bg, #f4f8f2);
+}
+
+.planty-bubble {
+  max-width: 88%;
+  padding: 10px 13px;
+  border-radius: 14px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.planty-bubble--bot {
+  align-self: flex-start;
+  background: #ffffff;
+  border: 1px solid var(--gps-border, #d4e2d2);
+  color: var(--gps-text, #13271d);
+  border-bottom-left-radius: 4px;
+}
+.planty-bubble--user {
+  align-self: flex-end;
+  background: var(--gps-brand, #1f8f49);
+  color: #ffffff;
+  border-bottom-right-radius: 4px;
+}
+.planty-bubble--typing { color: var(--gps-text-muted, #5a6f63); font-style: italic; }
+
+.planty-escalate-cta, .planty-escalate-form {
+  align-self: stretch;
+  background: var(--gps-brand-light, #e7f5e7);
+  border: 1px solid var(--gps-border, #d4e2d2);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--gps-text, #13271d);
+}
+.planty-escalate-cta-actions, .planty-escalate-form-actions { display: flex; gap: 8px; }
+.planty-escalate-cta-actions button, .planty-escalate-form-actions button {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: var(--gps-brand, #1f8f49);
+  color: #ffffff;
+}
+.planty-escalate-cta-actions button.ghost, .planty-escalate-form-actions button.ghost {
+  background: none;
+  color: var(--gps-text-muted, #5a6f63);
+  border: 1px solid var(--gps-border, #d4e2d2);
+}
+.planty-escalate-form input {
+  border: 1px solid var(--gps-border, #d4e2d2);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  font-family: inherit;
+}
+.planty-escalate-error { color: #c0392b; font-size: 0.76rem; }
+
+.planty-footer {
+  border-top: 1px solid var(--gps-border, #d4e2d2);
+  background: #ffffff;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.planty-human-link {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: none;
+  color: var(--gps-brand, #1f8f49);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0;
+}
+.planty-human-link .gps-icon-inline { width: 13px; height: 13px; }
+.planty-input-row { display: flex; align-items: center; gap: 8px; }
+.planty-input-row input {
+  flex: 1;
+  border: 1px solid var(--gps-border, #d4e2d2);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 0.86rem;
+  font-family: inherit;
+}
+.planty-send-btn {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: none;
+  background: var(--gps-brand, #1f8f49);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.planty-send-btn:disabled { opacity: 0.5; }
+.planty-send-btn .gps-icon-inline { width: 16px; height: 16px; }
+
+@media (max-width: 480px) {
+  .planty-widget { right: 12px; bottom: 12px; }
+  .planty-panel { width: calc(100vw - 24px); max-height: min(72vh, 560px); }
+}
