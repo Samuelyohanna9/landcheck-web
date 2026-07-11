@@ -455,13 +455,24 @@ export const lookupPublicSponsorOrders = async (
 export const askSponsorAssistant = async (
   message: string,
   sessionId: string,
-): Promise<{ matched: boolean; answer: string; intent_key: string | null }> => {
+): Promise<{ matched: boolean; answer: string; intent_key: string | null; source: "faq" | "llm" | null }> => {
   const response = await api.post("/green/sponsor/assistant/ask", { message, session_id: sessionId });
   return {
     matched: Boolean(response.data?.matched),
     answer: String(response.data?.answer || ""),
     intent_key: response.data?.intent_key ? String(response.data.intent_key) : null,
+    source: response.data?.source === "llm" ? "llm" : response.data?.source === "faq" ? "faq" : null,
   };
+};
+
+export type SponsorAssistantSuggestedQuestion = { key: string; question: string };
+
+export const fetchSponsorAssistantSuggestedQuestions = async (): Promise<SponsorAssistantSuggestedQuestion[]> => {
+  const response = await api.get("/green/sponsor/assistant/suggested-questions");
+  return (Array.isArray(response.data) ? response.data : []).map((row: any) => ({
+    key: String(row?.key || ""),
+    question: String(row?.question || ""),
+  }));
 };
 
 export const escalateSponsorAssistantQuestion = async (params: {

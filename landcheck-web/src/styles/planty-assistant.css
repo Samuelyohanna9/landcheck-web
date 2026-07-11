@@ -99,6 +99,42 @@
   border-bottom-right-radius: 4px;
 }
 .planty-bubble--typing { color: var(--gps-text-muted, #5a6f63); font-style: italic; }
+.planty-ai-tag {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--gps-text-muted, #5a6f63);
+  opacity: 0.75;
+}
+
+.planty-suggestions {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.planty-suggestions-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--gps-text-muted, #5a6f63);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.planty-suggestions-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.planty-chip {
+  border: 1px solid var(--gps-brand, #1f8f49);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--gps-brand, #1f8f49);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 7px 13px;
+  text-align: left;
+}
+.planty-chip:hover { background: var(--gps-brand-light, #e7f5e7); }
 
 .planty-escalate-cta, .planty-escalate-form {
   align-self: stretch;
@@ -145,6 +181,7 @@
   flex-direction: column;
   gap: 8px;
 }
+.planty-footer-links { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .planty-human-link {
   align-self: flex-start;
   display: inline-flex;
