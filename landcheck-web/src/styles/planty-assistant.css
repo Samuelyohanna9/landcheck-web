@@ -30,6 +30,53 @@
 .planty-fab .gps-icon { width: 26px; height: 26px; }
 .planty-fab:hover { background: var(--gps-brand-mid, #195f38); }
 
+.planty-hint {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  color: var(--gps-text, #13271d);
+  border: 1px solid var(--gps-border, #d4e2d2);
+  border-radius: 999px;
+  padding: 10px 12px 10px 16px;
+  box-shadow: 0 10px 24px rgba(18, 63, 43, 0.18);
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  animation: planty-hint-in 0.25s ease-out;
+}
+.planty-hint::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  right: 22px;
+  width: 12px;
+  height: 12px;
+  background: #ffffff;
+  border-right: 1px solid var(--gps-border, #d4e2d2);
+  border-bottom: 1px solid var(--gps-border, #d4e2d2);
+  transform: rotate(45deg);
+}
+.planty-hint-dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: var(--gps-bg, #f4f8f2);
+  color: var(--gps-text-muted, #5a6f63);
+  flex-shrink: 0;
+}
+.planty-hint-dismiss .gps-icon-inline { width: 10px; height: 10px; }
+
+@keyframes planty-hint-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .planty-panel {
   width: min(360px, calc(100vw - 32px));
   max-height: min(560px, calc(100vh - 120px));
