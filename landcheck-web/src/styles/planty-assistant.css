@@ -215,7 +215,7 @@
   border: 1px solid var(--gps-border, #d4e2d2);
   border-radius: 10px;
   padding: 8px 10px;
-  font-size: 0.82rem;
+  font-size: 16px; /* iOS Safari auto-zooms on focus for inputs under 16px */
   font-family: inherit;
 }
 .planty-escalate-error { color: #c0392b; font-size: 0.76rem; }
@@ -245,10 +245,11 @@
 .planty-input-row { display: flex; align-items: center; gap: 8px; }
 .planty-input-row input {
   flex: 1;
+  min-width: 0;
   border: 1px solid var(--gps-border, #d4e2d2);
   border-radius: 999px;
   padding: 10px 14px;
-  font-size: 0.86rem;
+  font-size: 16px; /* iOS Safari auto-zooms on focus for inputs under 16px */
   font-family: inherit;
 }
 .planty-send-btn {
@@ -268,5 +269,7 @@
 
 @media (max-width: 480px) {
   .planty-widget { right: 12px; bottom: 12px; }
-  .planty-panel { width: calc(100vw - 24px); max-height: min(72vh, 560px); }
+  .planty-panel { width: calc(100vw - 24px); max-height: min(72dvh, 560px); }
+  .planty-hint { max-width: calc(100vw - 96px); }
+  .planty-hint span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }

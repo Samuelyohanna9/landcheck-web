@@ -722,7 +722,7 @@
   width: 48px;
   text-align: center;
   border: none;
-  font-size: 15px;
+  font-size: 16px; /* iOS Safari auto-zooms on focus for inputs under 16px */
   font-weight: 700;
   color: var(--gps-text);
   -moz-appearance: textfield;
@@ -851,7 +851,7 @@
   border: 1.5px solid var(--gps-border);
   border-radius: 12px;
   padding: 11px 14px;
-  font-size: 14px;
+  font-size: 16px; /* iOS Safari auto-zooms on focus for inputs under 16px */
   color: var(--gps-text);
   background: #fbfdfb;
   resize: vertical;
@@ -1163,6 +1163,11 @@
   .gps-project-card { padding: 38px 14px 16px; }
   .gps-quantity-row { gap: 10px; }
   .gps-lookup-modal { padding: 22px 18px; }
+  .gps-checkout-card { padding: 18px; }
+  .gps-checkout-head { flex-wrap: wrap; }
+  .gps-checkout-price { white-space: normal; }
+  .gps-topbar-icon-btn, .gps-topbar-hamburger { width: 40px; height: 40px; }
+  .gps-approval-banner { padding: 12px 14px; }
 }
 
 /* Respect data-saver / low-power devices further: keep the video paused off-screen */
