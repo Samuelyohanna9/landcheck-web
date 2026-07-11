@@ -58,7 +58,7 @@
   color: #ffffff;
   flex-shrink: 0;
 }
-.gps-topbar-brand img { filter: brightness(0) invert(1); }
+.gps-topbar-brand img { height: 32px; width: auto; filter: brightness(0) invert(1); }
 .gps-topbar-brand strong { color: #bfe8c9; }
 
 .gps-topbar-links {
