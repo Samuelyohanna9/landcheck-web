@@ -3236,6 +3236,12 @@ export default function GreenWork() {
   const [followClaimNotes, setFollowClaimNotes] = useState<Record<number, string>>({});
   const [complaintNotes, setComplaintNotes] = useState<Record<number, string>>({});
   const [nominationNotes, setNominationNotes] = useState<Record<number, string>>({});
+  // Planty assistant escalations (unanswered chat questions from the public sponsor page)
+  const [assistantEscalations, setAssistantEscalations] = useState<any[]>([]);
+  const [assistantUnreadCount, setAssistantUnreadCount] = useState(0);
+  const [assistantEscalationNotes, setAssistantEscalationNotes] = useState<Record<number, string>>({});
+  const [assistantEscalationReplies, setAssistantEscalationReplies] = useState<Record<number, string>>({});
+  const [resolvingAssistantEscalationId, setResolvingAssistantEscalationId] = useState<number | null>(null);
   const [projectNotes, setProjectNotes] = useState<Record<number, string>>({});
   const [redemptionNotes, setRedemptionNotes] = useState<Record<number, string>>({});
   const [adminOverview, setAdminOverview] = useState<AdminOverview | null>(null);
@@ -5607,20 +5613,22 @@ export default function GreenWork() {
     if (!silent) setFeedbackLoading(true);
     setFeedbackError(null);
     try {
-      const [followClaimsRes, complaintsRes, nominationsRes, projectsRes, redemptionsRes] = await Promise.all([
+      const [followClaimsRes, complaintsRes, nominationsRes, projectsRes, redemptionsRes, assistantEscalationsRes] = await Promise.all([
         canAccessSuperAdmin
           ? api.get(`/green/admin/social-follow-claims?_ts=${Date.now()}`)
           : Promise.resolve({ data: [] }),
         api.get(`/green/admin/complaints?_ts=${Date.now()}`),
         api.get(`/green/admin/school-nominations?_ts=${Date.now()}`),
         api.get(`/green/admin/community-projects?_ts=${Date.now()}`),
-        api.get(`/green/admin/point-redemptions?_ts=${Date.now()}`)
+        api.get(`/green/admin/point-redemptions?_ts=${Date.now()}`),
+        api.get(`/green/admin/assistant-escalations?_ts=${Date.now()}`),
       ]);
       setSocialFollowClaims(Array.isArray(followClaimsRes.data) ? followClaimsRes.data : []);
       setComplaints(Array.isArray(complaintsRes.data) ? complaintsRes.data : []);
       setSchoolNominations(Array.isArray(nominationsRes.data) ? nominationsRes.data : []);
       setCommunityProjects(Array.isArray(projectsRes.data) ? projectsRes.data : []);
       setRedemptions(Array.isArray(redemptionsRes.data) ? redemptionsRes.data : []);
+      setAssistantEscalations(Array.isArray(assistantEscalationsRes.data) ? assistantEscalationsRes.data : []);
     } catch (err: any) {
       setFeedbackError(err?.response?.data?.detail || err?.message || "Failed to load sponsor feedback data");
     } finally {
@@ -5637,6 +5645,24 @@ export default function GreenWork() {
       }
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || err?.message || "Failed to resolve complaint");
+    }
+  };
+
+  const handleResolveAssistantEscalation = async (escalationId: number, supervisorNote?: string, adminReply?: string) => {
+    setResolvingAssistantEscalationId(escalationId);
+    try {
+      const res = await api.post(`/green/admin/assistant-escalations/${escalationId}/resolve`, {
+        supervisor_note: supervisorNote,
+        admin_reply: adminReply,
+      });
+      if (res.data?.ok || res.status === 200) {
+        toast.success(adminReply ? "Reply sent to the visitor by email!" : "Escalation marked resolved!");
+        void loadSponsorFeedback({ silent: true });
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.message || "Failed to resolve this question");
+    } finally {
+      setResolvingAssistantEscalationId(null);
     }
   };
 
@@ -6315,15 +6341,39 @@ export default function GreenWork() {
       setSchoolNominations([]);
       setCommunityProjects([]);
       setRedemptions([]);
+      setAssistantEscalations([]);
       return;
     }
     if (activeForm !== "sponsor_feedback") return;
     void loadSponsorFeedback();
+    // Opening the tab clears the unread badge — mirrors an inbox "mark as read on open".
+    setAssistantUnreadCount(0);
+    api.post("/green/admin/assistant-escalations/mark-seen").catch(() => {});
     const timer = window.setInterval(() => {
       void loadSponsorFeedback({ silent: true });
     }, 15000);
     return () => window.clearInterval(timer);
   }, [activeForm, activeProjectId, loadSponsorFeedback, publicSponsorshipProject]);
+
+  // Poll the unread assistant-escalation count regardless of which tab is open, so the
+  // red badge on "Feedback & Nominations" shows up even while browsing elsewhere.
+  useEffect(() => {
+    if (!activeProjectId || !publicSponsorshipProject) {
+      setAssistantUnreadCount(0);
+      return;
+    }
+    if (activeForm === "sponsor_feedback") return; // already cleared/tracked by the effect above
+    let cancelled = false;
+    const poll = () => {
+      api
+        .get(`/green/admin/assistant-escalations/unread-count?_ts=${Date.now()}`)
+        .then((res) => { if (!cancelled) setAssistantUnreadCount(Number(res.data?.count || 0)); })
+        .catch(() => {});
+    };
+    poll();
+    const timer = window.setInterval(poll, 20000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [activeForm, activeProjectId, publicSponsorshipProject]);
 
   useEffect(() => {
     if (!activeProjectId || !publicSponsorshipProject) {
@@ -10384,6 +10434,11 @@ export default function GreenWork() {
                             Live
                           </span>
                         )}
+                        {action.form === "sponsor_feedback" && assistantUnreadCount > 0 && (
+                          <span className="green-work-unread-badge" aria-label={`${assistantUnreadCount} new assistant question${assistantUnreadCount === 1 ? "" : "s"}`}>
+                            {assistantUnreadCount > 99 ? "99+" : assistantUnreadCount}
+                          </span>
+                        )}
                       </span>
                       <small>{action.note}</small>
                     </span>
@@ -10514,6 +10569,11 @@ export default function GreenWork() {
                       onClick={() => openForm("sponsor_feedback")}
                     >
                       Feedback & Nominations
+                      {assistantUnreadCount > 0 && (
+                        <span className="green-work-unread-badge green-work-unread-badge--inline" aria-label={`${assistantUnreadCount} new assistant question${assistantUnreadCount === 1 ? "" : "s"}`}>
+                          {assistantUnreadCount > 99 ? "99+" : assistantUnreadCount}
+                        </span>
+                      )}
                     </button>
                   </>
                 ) : null}
@@ -13896,7 +13956,8 @@ export default function GreenWork() {
                 complaints.length === 0 &&
                 schoolNominations.length === 0 &&
                 communityProjects.length === 0 &&
-                redemptions.length === 0 ? (
+                redemptions.length === 0 &&
+                assistantEscalations.length === 0 ? (
                 <p className="green-work-note">Loading sponsor feedback data...</p>
               ) : (
                 <>
@@ -13910,6 +13971,83 @@ export default function GreenWork() {
                   </div>
 
                   {feedbackError && <p className="green-work-error" style={{ color: 'red', marginBottom: 12 }}>{feedbackError}</p>}
+
+                  <div style={{ marginBottom: 24 }}>
+                    <h4>Assistant Questions ({assistantEscalations.filter((e: any) => e.status !== "resolved").length} open)</h4>
+                    <p className="green-work-note" style={{ marginLeft: 0 }}>
+                      Questions Planty (the sponsor page chat assistant) couldn't confidently answer, escalated here for a human reply.
+                    </p>
+                    {assistantEscalations.length === 0 ? (
+                      <p className="green-work-note" style={{ marginLeft: 0 }}>No escalated questions yet.</p>
+                    ) : (
+                      <table className="green-work-table">
+                        <thead>
+                          <tr>
+                            <th>Visitor</th>
+                            <th>Question</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                            <th>Reply / Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {assistantEscalations.map((e: any) => {
+                            const isResolved = e.status === "resolved";
+                            return (
+                              <tr key={`assistant-escalation-${e.id}`}>
+                                <td>
+                                  <strong>{e.visitor_name || "Anonymous visitor"}</strong>
+                                  <div style={{ fontSize: 11, color: "#666" }}>{e.visitor_email}</div>
+                                </td>
+                                <td style={{ maxWidth: 260 }}>{e.question}</td>
+                                <td>
+                                  <span className={`green-work-live-pill ${isResolved ? "ok" : "warning"}`}>
+                                    {isResolved ? "Replied" : "Needs reply"}
+                                  </span>
+                                  {e.admin_reply && (
+                                    <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>
+                                      <strong>Reply sent:</strong> {e.admin_reply}
+                                    </div>
+                                  )}
+                                </td>
+                                <td>{new Date(e.created_at).toLocaleString()}</td>
+                                <td>
+                                  {!isResolved ? (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 200 }}>
+                                      <textarea
+                                        placeholder="Write the reply to email the visitor..."
+                                        value={assistantEscalationReplies[e.id] || ""}
+                                        onChange={(ev) => setAssistantEscalationReplies({ ...assistantEscalationReplies, [e.id]: ev.target.value })}
+                                        style={{ width: "100%", padding: 4, fontSize: 11 }}
+                                        rows={2}
+                                      />
+                                      <textarea
+                                        placeholder="Internal note (optional, not emailed)"
+                                        value={assistantEscalationNotes[e.id] || ""}
+                                        onChange={(ev) => setAssistantEscalationNotes({ ...assistantEscalationNotes, [e.id]: ev.target.value })}
+                                        style={{ width: "100%", padding: 4, fontSize: 11 }}
+                                        rows={1}
+                                      />
+                                      <button
+                                        type="button"
+                                        disabled={resolvingAssistantEscalationId === e.id}
+                                        onClick={() => handleResolveAssistantEscalation(e.id, assistantEscalationNotes[e.id], assistantEscalationReplies[e.id])}
+                                        style={{ padding: "4px 8px", fontSize: 11 }}
+                                      >
+                                        {resolvingAssistantEscalationId === e.id ? "Sending…" : "Send Reply & Resolve"}
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span style={{ fontSize: 11, color: "#27ae60", fontWeight: "bold" }}>✓ Resolved</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
 
                   {canAccessSuperAdmin ? (
                     <div style={{ marginBottom: 24 }}>
