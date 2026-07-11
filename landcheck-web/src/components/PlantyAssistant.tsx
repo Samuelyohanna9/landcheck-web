@@ -12,6 +12,7 @@ type ChatMessage = { role: "bot" | "user"; text: string; source?: "faq" | "llm" 
 
 const SESSION_STORAGE_KEY = "lc_planty_session_id";
 const HISTORY_STORAGE_KEY = "lc_planty_history";
+const HINT_DISMISSED_STORAGE_KEY = "lc_planty_hint_dismissed";
 const GREETING =
   "Hi, I'm Planty! I'm happy to answer your questions about our trees, reforestation projects, and our commitment to climate protection and biodiversity. How can I help you?";
 
@@ -33,6 +34,7 @@ function getOrCreateSessionId(): string {
 
 export default function PlantyAssistant() {
   const [open, setOpen] = useState(false);
+  const [showHint, setShowHint] = useState(false);
   const [sessionId] = useState(getOrCreateSessionId);
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     if (typeof window === "undefined") return [{ role: "bot", text: GREETING }];
@@ -62,6 +64,32 @@ export default function PlantyAssistant() {
       .then(setSuggestedQuestions)
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    let dismissed = false;
+    try {
+      dismissed = window.sessionStorage.getItem(HINT_DISMISSED_STORAGE_KEY) === "1";
+    } catch {
+      /* sessionStorage unavailable — just show the hint */
+    }
+    if (dismissed) return;
+    const timer = window.setTimeout(() => setShowHint(true), 1800);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const dismissHint = () => {
+    setShowHint(false);
+    try {
+      window.sessionStorage.setItem(HINT_DISMISSED_STORAGE_KEY, "1");
+    } catch {
+      /* sessionStorage unavailable — hint may reappear on next render, harmless */
+    }
+  };
+
+  const handleOpen = () => {
+    setOpen(true);
+    dismissHint();
+  };
 
   useEffect(() => {
     try {
@@ -225,10 +253,24 @@ export default function PlantyAssistant() {
         </div>
       )}
 
+      {!open && showHint && (
+        <div className="planty-hint" role="button" tabIndex={0} onClick={handleOpen} onKeyDown={(e) => { if (e.key === "Enter") handleOpen(); }}>
+          <span>Need Assistant?</span>
+          <button
+            type="button"
+            className="planty-hint-dismiss"
+            aria-label="Dismiss"
+            onClick={(e) => { e.stopPropagation(); dismissHint(); }}
+          >
+            <GpsIcon name="close" className="gps-icon-inline" />
+          </button>
+        </div>
+      )}
+
       <button
         type="button"
         className="planty-fab"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (open ? setOpen(false) : handleOpen())}
         aria-label={open ? "Close Planty chat" : "Open Planty chat"}
       >
         {open ? <GpsIcon name="close" className="gps-icon" /> : <GpsIcon name="leaf" className="gps-icon" />}
