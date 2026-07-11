@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { askSponsorAssistant, escalateSponsorAssistantQuestion } from "../api/greenSponsor";
+import {
+  askSponsorAssistant,
+  escalateSponsorAssistantQuestion,
+  fetchSponsorAssistantSuggestedQuestions,
+  type SponsorAssistantSuggestedQuestion,
+} from "../api/greenSponsor";
 import GpsIcon from "./GpsIcon";
 import "../styles/planty-assistant.css";
 
-type ChatMessage = { role: "bot" | "user"; text: string };
+type ChatMessage = { role: "bot" | "user"; text: string; source?: "faq" | "llm" | null };
 
 const SESSION_STORAGE_KEY = "lc_planty_session_id";
 const HISTORY_STORAGE_KEY = "lc_planty_history";
@@ -48,7 +53,15 @@ export default function PlantyAssistant() {
   const [escalationEmail, setEscalationEmail] = useState("");
   const [escalationSending, setEscalationSending] = useState(false);
   const [escalationError, setEscalationError] = useState("");
+  const [suggestedQuestions, setSuggestedQuestions] = useState<SponsorAssistantSuggestedQuestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const bodyRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    fetchSponsorAssistantSuggestedQuestions()
+      .then(setSuggestedQuestions)
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     try {
@@ -61,17 +74,18 @@ export default function PlantyAssistant() {
 
   const pushMessage = (msg: ChatMessage) => setMessages((current) => [...current, msg]);
 
-  const handleSend = async () => {
-    const text = input.trim();
+  const handleSend = async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
     if (!text || sending) return;
     setInput("");
+    setShowSuggestions(false);
     pushMessage({ role: "user", text });
     setSending(true);
     setPendingEscalationQuestion(null);
     setEscalationFormOpen(false);
     try {
       const result = await askSponsorAssistant(text, sessionId);
-      pushMessage({ role: "bot", text: result.answer });
+      pushMessage({ role: "bot", text: result.answer, source: result.source });
       if (!result.matched) {
         setPendingEscalationQuestion(text);
       }
@@ -138,9 +152,23 @@ export default function PlantyAssistant() {
             {messages.map((msg, i) => (
               <div key={i} className={`planty-bubble planty-bubble--${msg.role}`}>
                 {msg.text}
+                {msg.source === "llm" && <span className="planty-ai-tag">AI-assisted answer</span>}
               </div>
             ))}
             {sending && <div className="planty-bubble planty-bubble--bot planty-bubble--typing">Planty is typing…</div>}
+
+            {showSuggestions && !pendingEscalationQuestion && !escalationFormOpen && suggestedQuestions.length > 0 && (
+              <div className="planty-suggestions">
+                <span className="planty-suggestions-label">Suggested questions</span>
+                <div className="planty-suggestions-chips">
+                  {suggestedQuestions.map((q) => (
+                    <button key={q.key} type="button" className="planty-chip" onClick={() => void handleSend(q.question)}>
+                      {q.question}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {pendingEscalationQuestion && !escalationFormOpen && (
               <div className="planty-escalate-cta">
@@ -170,9 +198,16 @@ export default function PlantyAssistant() {
 
           <div className="planty-footer">
             {!pendingEscalationQuestion && !escalationFormOpen && (
-              <button type="button" className="planty-human-link" onClick={() => openEscalationForm(input.trim() || "General question from the sponsor page")}>
-                <GpsIcon name="user" className="gps-icon-inline" /> Talk to a human
-              </button>
+              <div className="planty-footer-links">
+                <button type="button" className="planty-human-link" onClick={() => openEscalationForm(input.trim() || "General question from the sponsor page")}>
+                  <GpsIcon name="user" className="gps-icon-inline" /> Talk to a human
+                </button>
+                {!showSuggestions && suggestedQuestions.length > 0 && (
+                  <button type="button" className="planty-human-link" onClick={() => setShowSuggestions(true)}>
+                    <GpsIcon name="sparkle" className="gps-icon-inline" /> Suggested questions
+                  </button>
+                )}
+              </div>
             )}
             <div className="planty-input-row">
               <input
