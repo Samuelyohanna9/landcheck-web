@@ -18,6 +18,7 @@ const GreenWork = lazy(() => import("./pages/GreenWork"));
 const GreenWorkLogin = lazy(() => import("./pages/GreenWorkLogin"));
 const GreenPartnersLanding = lazy(() => import("./pages/GreenPartnersLanding"));
 const GreenPublicSponsor = lazy(() => import("./pages/GreenPublicSponsor"));
+const GreenFootprintCalculator = lazy(() => import("./pages/GreenFootprintCalculator"));
 const SurveyPlanLanding = lazy(() => import("./pages/SurveyPlanLanding"));
 const FloodAnalysisLanding = lazy(() => import("./pages/FloodAnalysisLanding"));
 const CareersPage = lazy(() => import("./pages/CareersPage"));
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/news" element={<NewsPage />} />
           <Route path="/green-partners" element={<GreenPartnersLanding />} />
           <Route path="/sponsor" element={<GreenPublicSponsor />} />
+          <Route path="/sponsor/calculator" element={<GreenFootprintCalculator />} />
           <Route path="/impact/:orgSlug" element={<DonorImpactPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/feedback" element={<Feedback />} />
