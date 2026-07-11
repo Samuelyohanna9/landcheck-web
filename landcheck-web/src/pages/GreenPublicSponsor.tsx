@@ -563,7 +563,7 @@ export default function GreenPublicSponsor() {
           <GpsIcon name={mobileMenuOpen ? "close" : "menu"} className="gps-icon" />
         </button>
         <a href="/" className="gps-topbar-brand">
-          <img src="/logo.svg" alt="LandCheck" width="28" height="28" />
+          <img src="/logo.svg" alt="LandCheck" width="130" height="35" />
           <span>LandCheck <strong>Green</strong></span>
         </a>
         <nav className="gps-topbar-links" aria-label="Sponsor navigation">
