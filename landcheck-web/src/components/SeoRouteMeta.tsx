@@ -171,6 +171,17 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
     },
   },
 
+  "/sponsor/calculator": {
+    title: "CO2 Footprint Calculator — How Many Trees Should You Sponsor? | LandCheck Green",
+    description:
+      "Estimate your annual carbon footprint from travel, home energy, and diet, and find out how many verified trees in Nigeria would offset it. Free, quick, works for anyone worldwide.",
+    keywords:
+      "carbon footprint calculator, CO2 calculator trees, how many trees to offset carbon, tree offset calculator, personal carbon footprint, climate calculator",
+    canonicalPath: "/sponsor/calculator",
+    ogType: "website",
+    ogImage: "https://landcheck.online/background-sponsor.png",
+  },
+
   "/privacy": {
     title: "Privacy Policy | LandCheck Geospatial Technologies",
     description:

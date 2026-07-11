@@ -1085,6 +1085,65 @@
 .gps-lookup-order-head strong { font-size: 0.9rem; }
 .gps-lookup-order-meta { font-size: 0.78rem; color: var(--gps-text-muted); }
 
+/* ─── CO2 footprint calculator promo ───────────────────────────── */
+.gps-footprint-promo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--gps-surface);
+  border: 1px solid var(--gps-border);
+  border-radius: var(--gps-radius-sm);
+  box-shadow: var(--gps-shadow);
+  padding: 16px 20px;
+}
+.gps-footprint-promo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--gps-brand-light);
+  color: var(--gps-brand);
+}
+.gps-footprint-promo-icon .gps-icon { width: 22px; height: 22px; }
+.gps-footprint-promo-body { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; flex: 1; }
+.gps-footprint-promo-body strong { font-size: 0.95rem; color: var(--gps-text); }
+.gps-footprint-promo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 20px;
+  background: var(--gps-brand);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+.gps-footprint-promo-btn:hover { background: var(--gps-brand-mid); }
+.gps-footprint-promo-btn .gps-icon-inline { width: 16px; height: 16px; }
+
+.gps-suggested-qty-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--gps-brand-light);
+  color: var(--gps-brand-dark);
+  border-radius: var(--gps-radius-sm);
+  padding: 12px 18px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+.gps-suggested-qty-banner .gps-icon-inline { width: 18px; height: 18px; flex-shrink: 0; color: var(--gps-brand); }
+
+@media (max-width: 640px) {
+  .gps-footprint-promo { flex-direction: column; align-items: flex-start; padding: 16px; }
+  .gps-footprint-promo-btn { width: 100%; justify-content: center; }
+}
+
 /* ─── Responsive ───────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .gps-topbar { padding: 10px 14px; gap: 10px; }

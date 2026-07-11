@@ -18,6 +18,7 @@ import {
   type SponsorProject,
 } from "../api/greenSponsor";
 import { claimGreenSponsorGuestAccount } from "../auth/greenAuth";
+import GpsIcon from "../components/GpsIcon";
 import "../styles/green-public-sponsor.css";
 
 const SPONSOR_BACKGROUND = "/background-sponsor.png";
@@ -80,43 +81,6 @@ const PROMO_MESSAGES = [
   { icon: "certificate", text: "Get your digital sponsorship certificate the moment you pay." },
   { icon: "tag", text: "Your name goes on a real QR tag, on a real tree, in the field." },
 ] as const;
-
-function GpsIcon({ name, className = "" }: { name: string; className?: string }) {
-  switch (name) {
-    case "tree":
-      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 6.5 11h3L5 19h6v3h2v-3h6l-4.5-8h3L12 3Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" /></svg>;
-    case "certificate":
-      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="4" width="17" height="12.5" rx="1.6" stroke="currentColor" strokeWidth="1.6" /><path d="M7 8h10M7 11h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /><circle cx="9.5" cy="19.5" r="1.6" stroke="currentColor" strokeWidth="1.4" /><path d="m8.3 19.9-1.1 2.6 2.3-1 2.3 1-1.1-2.6" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /></svg>;
-    case "tag":
-      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11.6 3.5H5a1.5 1.5 0 0 0-1.5 1.5v6.6c0 .4.16.78.44 1.06l8.9 8.9a1.5 1.5 0 0 0 2.12 0l6.6-6.6a1.5 1.5 0 0 0 0-2.12l-8.9-8.9a1.5 1.5 0 0 0-1.06-.44Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><circle cx="8.3" cy="8.3" r="1.4" stroke="currentColor" strokeWidth="1.4" /></svg>;
-    case "lock":
-      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="1.8" stroke="currentColor" strokeWidth="1.6" /><path d="M7.8 10.5V7.8a4.2 4.2 0 1 1 8.4 0v2.7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /><circle cx="12" cy="15" r="1.5" fill="currentColor" /></svg>;
-    case "pin":
-      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21s7-6.3 7-11.6A7 7 0 0 0 5 9.4C5 14.7 12 21 12 21Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><circle cx="12" cy="9.3" r="2.4" stroke="currentColor" strokeWidth="1.5" /></svg>;
-    case "package":
-      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m3.5 7.5 8.5-4 8.5 4-8.5 4-8.5-4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><path d="M3.5 7.5v9l8.5 4 8.5-4v-9M12 11.5V20.5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" /></svg>;
-    case "check-circle":
-      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.6" /><path d="m8.3 12.3 2.4 2.4 5-5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-    case "hourglass":
-      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.5 3.5h11M6.5 20.5h11M7.5 3.5c0 4 3 5.6 4.5 6.5-1.5.9-4.5 2.5-4.5 6.5M16.5 3.5c0 4-3 5.6-4.5 6.5 1.5.9 4.5 2.5 4.5 6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-    case "alert":
-      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4 3 20h18L12 4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><path d="M12 10.5v4M12 17.2v.1" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>;
-    case "sparkle":
-      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 3 1.7 4.8L18.5 9l-4.8 1.7L12 15.5l-1.7-4.8L5.5 9l4.8-1.7L12 3ZM19 15l.9 2.5L22.5 18l-2.6.9L19 21.5l-.9-2.6-2.6-.9 2.6-.9L19 15Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /></svg>;
-    case "search":
-      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" /><path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
-    case "user":
-      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.6" stroke="currentColor" strokeWidth="1.8" /><path d="M5.5 19a6.5 6.5 0 0 1 13 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
-    case "menu":
-      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6.5h16M4 12h16M4 17.5h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
-    case "close":
-      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5.5 5.5 13 13M18.5 5.5l-13 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
-    case "leaf":
-      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 5C12 5 7 9 5 15c2.5 1.5 5.6 1.8 8.3.6 2.8-1.2 4.9-3.8 5.7-7.2Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 16c2-3 5-5.3 9-7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>;
-    default:
-      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" /></svg>;
-  }
-}
 
 const PROJECT_THUMBNAIL_SRC = "/thumpnail_public.webp";
 
@@ -238,6 +202,7 @@ export default function GreenPublicSponsor() {
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [promoIndex, setPromoIndex] = useState(0);
   const [openAccordions, setOpenAccordions] = useState<Set<string>>(() => new Set(["about", "approval"]));
+  const [suggestedQuantityNote, setSuggestedQuantityNote] = useState<number | null>(null);
 
   const toggleAccordion = (key: string) => {
     setOpenAccordions((current) => {
@@ -254,6 +219,21 @@ export default function GreenPublicSponsor() {
     fetchPublicRecentSponsorships(10)
       .then(setRecentSponsorships)
       .catch(() => {});
+  }, []);
+
+  // Pre-fill quantity when arriving from the CO2 footprint calculator (?suggested_qty=N)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const raw = Number(params.get("suggested_qty") || 0);
+    if (raw > 0) {
+      const qty = Math.min(500, Math.round(raw));
+      setForm((c) => ({ ...c, quantity: String(qty) }));
+      setSuggestedQuantityNote(qty);
+      window.history.replaceState({}, "", "/sponsor");
+      window.requestAnimationFrame(() => {
+        document.getElementById("gps-projects")?.scrollIntoView({ behavior: "smooth" });
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -834,6 +814,26 @@ export default function GreenPublicSponsor() {
           </section>
         ) : (
           <>
+            {/* ─── CO2 footprint calculator promo ─── */}
+            {!selectedProject && (
+              <section className="gps-footprint-promo">
+                <span className="gps-footprint-promo-icon"><GpsIcon name="leaf" className="gps-icon" /></span>
+                <div className="gps-footprint-promo-body">
+                  <strong>Find out how many trees suit you:</strong>
+                  <button type="button" className="gps-footprint-promo-btn" onClick={() => navigate("/sponsor/calculator")}>
+                    <GpsIcon name="calculator" className="gps-icon-inline" /> Calculate CO₂ footprint
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {suggestedQuantityNote && !selectedProject && (
+              <div className="gps-suggested-qty-banner">
+                <GpsIcon name="sparkle" className="gps-icon-inline" />
+                Based on your footprint calculation, we've pre-filled <strong>{suggestedQuantityNote} tree{suggestedQuantityNote === 1 ? "" : "s"}</strong> below. Pick a project to continue — you can still adjust the quantity.
+              </div>
+            )}
+
             {/* ─── Project grid ─── */}
             {!selectedProject && (
             <section className="gps-projects-section" id="gps-projects">
