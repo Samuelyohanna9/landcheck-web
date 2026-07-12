@@ -222,16 +222,17 @@
   z-index: 1;
 }
 
-/* Centered on the curved seam (see #gpsHeroCurveClip): the cubic bezier
-   M 0.35 0 C 0.02 0.3, 0.02 0.7, 0.04 1 evaluates to local-x ≈ 6.4% at t=0.5. */
+/* Centered on the curved seam (see #gpsHeroCurveClip): quadratic bezier
+   M 0.35 0 Q -0.15 0.5, 0.04 1 has y(t) = t exactly (control-y is 0.5),
+   so x at height t = 0.35 - t + 0.69*t^2. At t=0.45: x ≈ 4%. */
 .gps-hero-globe {
   position: absolute;
   z-index: 2;
-  left: 6%;
-  top: 50%;
+  left: 4%;
+  top: 45%;
   transform: translate(-50%, -50%);
-  width: clamp(260px, 32vw, 430px);
-  height: clamp(260px, 32vw, 430px);
+  width: clamp(300px, 36vw, 480px);
+  height: clamp(300px, 36vw, 480px);
   pointer-events: none;
 }
 .gps-hero-globe-svg { width: 100%; height: 100%; display: block; object-fit: contain; filter: drop-shadow(0 14px 26px rgba(27,58,44,0.28)); }
@@ -382,9 +383,9 @@
   .gps-hero { min-height: 0; display: flex; flex-direction: column; }
   .gps-hero-text-panel { position: static; order: -1; max-width: 100%; padding: 32px 20px 20px; }
   .gps-hero-text-panel p { max-width: 100%; }
-  .gps-hero-media-wrap { position: relative; inset: auto; left: auto; height: 360px; margin-top: 24px; }
-  /* Same curve as desktop (objectBoundingBox scales with the box); at t=0.35 the bezier gives local-x ≈ 11%. */
-  .gps-hero-globe { left: 11%; top: 35%; transform: translate(-50%, -50%); width: 300px; height: 300px; }
+  .gps-hero-media-wrap { position: relative; inset: auto; left: auto; height: 400px; margin-top: 24px; }
+  /* Same curve as desktop (objectBoundingBox scales with the box); at t=0.35, x = 0.35-0.35+0.69*0.35^2 ≈ 8.5%. */
+  .gps-hero-globe { left: 8%; top: 35%; transform: translate(-50%, -50%); width: 340px; height: 340px; }
 }
 
 /* ─── Recently sponsored — floating balloon toast ──────────────── */
@@ -1347,6 +1348,6 @@
 /* Respect data-saver / low-power devices further: keep the video paused off-screen */
 @media (max-width: 420px) {
   .gps-hero-text-panel { padding: 28px 14px 32px; }
-  .gps-hero-media-wrap { height: 300px; }
-  .gps-hero-globe { width: 230px; height: 230px; }
+  .gps-hero-media-wrap { height: 330px; }
+  .gps-hero-globe { width: 270px; height: 270px; }
 }

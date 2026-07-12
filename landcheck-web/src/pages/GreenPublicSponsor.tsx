@@ -639,8 +639,11 @@ export default function GreenPublicSponsor() {
         {/* objectBoundingBox clip-path so the curved seam scales with the panel at any size */}
         <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
           <defs>
+            {/* Single quadratic bezier (one control point) = guaranteed one smooth arc,
+                no kink. With control-y at 0.5, y(t) simplifies exactly to t, so any
+                point on the curve at height t has x = 0.35 - t + 0.69*t^2 (see CSS). */}
             <clipPath id="gpsHeroCurveClip" clipPathUnits="objectBoundingBox">
-              <path d="M 0.35 0 C 0.02 0.3, 0.02 0.7, 0.04 1 L 1 1 L 1 0 Z" />
+              <path d="M 0.35 0 Q -0.15 0.5, 0.04 1 L 1 1 L 1 0 Z" />
             </clipPath>
           </defs>
         </svg>
