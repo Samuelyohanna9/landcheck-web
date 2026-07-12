@@ -629,6 +629,11 @@ export default function GreenPublicSponsor() {
           <span className="gps-hero-eyebrow">LandCheck Green · Public Sponsorship</span>
           <h1>Give Nigeria a <span className="gps-hero-accent">Greener Future.</span><br />One Tree at a Time.</h1>
           <p>Sponsor a verified tree project in minutes, in NGN or USD, and watch it grow with GPS-tracked, photo-verified updates straight to your inbox.</p>
+          <div className="gps-hero-ctas">
+            <button type="button" className="gps-primary-btn" onClick={() => document.getElementById("gps-projects")?.scrollIntoView({ behavior: "smooth" })}>
+              Plant Your Tree Now
+            </button>
+          </div>
         </div>
 
         <div className="gps-hero-media-wrap">
