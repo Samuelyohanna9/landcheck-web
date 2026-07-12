@@ -629,33 +629,6 @@ export default function GreenPublicSponsor() {
           <span className="gps-hero-eyebrow">LandCheck Green · Public Sponsorship</span>
           <h1>Give Nigeria a <span className="gps-hero-accent">Greener Future.</span><br />One Tree at a Time.</h1>
           <p>Sponsor a verified tree project in minutes, in NGN or USD, and watch it grow with GPS-tracked, photo-verified updates straight to your inbox.</p>
-
-          <div className="gps-feature-row">
-            <div className="gps-feature-card">
-              <span className="gps-feature-icon"><GpsIcon name="tree" className="gps-icon" /></span>
-              <strong>Reforestation in Nigeria</strong>
-              <p>Verified, GPS-mapped tree projects with field officers on the ground.</p>
-            </div>
-            <div className="gps-feature-card">
-              <span className="gps-feature-icon"><GpsIcon name="certificate" className="gps-icon" /></span>
-              <strong>Certificate in 60 seconds</strong>
-              <p>Instant digital certificate emailed the moment your payment is confirmed.</p>
-            </div>
-            <div className="gps-feature-card">
-              <span className="gps-feature-icon"><GpsIcon name="lock" className="gps-icon" /></span>
-              <strong>Track without an account</strong>
-              <p>Your order ID and email are all you need to check on your tree, anytime.</p>
-            </div>
-          </div>
-
-          <div className="gps-hero-ctas">
-            <button type="button" className="gps-primary-btn" onClick={() => document.getElementById("gps-projects")?.scrollIntoView({ behavior: "smooth" })}>
-              Plant Your Tree Now
-            </button>
-            <button type="button" className="gps-hero-secondary-btn" onClick={() => setShowOrderLookup(true)}>
-              <GpsIcon name="package" className="gps-icon" /> Track My Order
-            </button>
-          </div>
         </div>
 
         <div className="gps-hero-media-wrap">
