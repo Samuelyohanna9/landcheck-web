@@ -6,6 +6,7 @@ import {
   createGuestSponsorOrder,
   fetchGuestSponsorOrderPaymentStatus,
   fetchPublicRecentSponsorships,
+  fetchPublicSponsorImpactStats,
   fetchPublicSponsorshipProjects,
   formatCurrencyAmount,
   formatSponsorPriceChoices,
@@ -15,6 +16,7 @@ import {
   SPONSOR_TERMS_VERSION,
   type LookedUpSponsorOrder,
   type RecentSponsorshipItem,
+  type SponsorImpactStats,
   type SponsorProject,
 } from "../api/greenSponsor";
 import { claimGreenSponsorGuestAccount } from "../auth/greenAuth";
@@ -91,6 +93,16 @@ const GALLERY_IMAGES = [
   { src: "/cert_sample.webp", label: "Your sponsorship certificate" },
   { src: "/tree_tag_sample.webp", label: "Physical tree tag on your tree" },
 ];
+
+const TREE_QUANTITY_TIERS = [1, 5, 10, 25, 50] as const;
+const POPULAR_TIER_QUANTITY = 10;
+
+const HOW_IT_WORKS_STEPS = [
+  { icon: "search", title: "Choose a Project", body: "Browse verified, GPS-mapped tree projects across Nigeria." },
+  { icon: "lock", title: "Sponsor Securely", body: "Pay in NGN or USD as a guest — no account required." },
+  { icon: "certificate", title: "Get Your Certificate", body: "Receive your digital sponsorship certificate instantly by email." },
+  { icon: "pin", title: "Track Your Tree", body: "Follow GPS location and photo evidence as your tree grows." },
+] as const;
 
 const DEDICATION_OPTIONS = [
   { value: "self", label: "Myself" },
@@ -193,6 +205,7 @@ export default function GreenPublicSponsor() {
   const heroVideoRafRef = useRef<number | null>(null);
   const heroVideoSwapTimeoutRef = useRef<number | null>(null);
   const [recentSponsorships, setRecentSponsorships] = useState<RecentSponsorshipItem[]>([]);
+  const [impactStats, setImpactStats] = useState<SponsorImpactStats | null>(null);
   const [lookupOrderUid, setLookupOrderUid] = useState("");
   const [lookupEmail, setLookupEmail] = useState("");
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -219,6 +232,12 @@ export default function GreenPublicSponsor() {
   useEffect(() => {
     fetchPublicRecentSponsorships(10)
       .then(setRecentSponsorships)
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchPublicSponsorImpactStats()
+      .then(setImpactStats)
       .catch(() => {});
   }, []);
 
@@ -638,7 +657,7 @@ export default function GreenPublicSponsor() {
         <div className="gps-hero-scrim" />
         <div className="gps-hero-inner">
           <span className="gps-hero-eyebrow">LandCheck Green · Public Sponsorship</span>
-          <h1>Give Nigeria a Greener Future.<br />One Tree at a Time.</h1>
+          <h1>Give Nigeria a <span className="gps-hero-accent">Greener Future.</span><br />One Tree at a Time.</h1>
           <p>Sponsor a verified tree project in minutes, in NGN or USD, and watch it grow with GPS-tracked, photo-verified updates straight to your inbox.</p>
 
           <div className="gps-feature-row">
@@ -682,6 +701,48 @@ export default function GreenPublicSponsor() {
             <span className="gps-toast-time">{formatRelativeTime(recentSponsorships[toastIndex]?.sponsored_at || null)}</span>
           </div>
         </div>
+      )}
+
+      {/* ─── How it works ─── */}
+      {!selectedProject && !returnState && (
+        <section className="gps-how-it-works">
+          <span className="gps-section-eyebrow">It's That Easy</span>
+          <h2>How Sponsoring a Tree Works</h2>
+          <div className="gps-how-it-works-grid">
+            {HOW_IT_WORKS_STEPS.map((step, i) => (
+              <div className="gps-how-step" key={step.title}>
+                <span className="gps-how-step-num">{i + 1}</span>
+                <span className="gps-how-step-icon"><GpsIcon name={step.icon} className="gps-icon" /></span>
+                <strong>{step.title}</strong>
+                <p>{step.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ─── Impact stats band — real, verified-payment totals only ─── */}
+      {!selectedProject && !returnState && impactStats && impactStats.total_trees_sponsored > 0 && (
+        <section className="gps-impact-band">
+          <div className="gps-impact-band-inner">
+            <div className="gps-impact-stat">
+              <strong>{impactStats.total_trees_sponsored.toLocaleString()}</strong>
+              <span>Trees Sponsored</span>
+            </div>
+            <div className="gps-impact-stat">
+              <strong>{impactStats.total_sponsors.toLocaleString()}</strong>
+              <span>Sponsors Worldwide</span>
+            </div>
+            <div className="gps-impact-stat">
+              <strong>{(impactStats.total_co2_kg_per_year / 1000).toFixed(1)}t</strong>
+              <span>CO₂ Offset / Year</span>
+            </div>
+            <div className="gps-impact-stat">
+              <strong>{impactStats.total_projects.toLocaleString()}</strong>
+              <span>Active Projects</span>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* ─── Order lookup modal ─── */}
@@ -967,8 +1028,35 @@ export default function GreenPublicSponsor() {
 
                       <div className="gps-pdp-divider" />
 
+                      <span className="gps-field-label">Every tree counts — choose your package <span className="gps-required">*</span></span>
+                      <div className="gps-tier-grid">
+                        {TREE_QUANTITY_TIERS.map((tierQty) => {
+                          const tierPrice = tierQty * Number(priceEntry?.amount || 0);
+                          const isActive = quantityNum === tierQty;
+                          const iconCount = Math.min(tierQty, 16);
+                          return (
+                            <button
+                              type="button"
+                              key={tierQty}
+                              className={`gps-tier-card${isActive ? " active" : ""}${tierQty === POPULAR_TIER_QUANTITY ? " popular" : ""}`}
+                              onClick={() => setForm((c) => ({ ...c, quantity: String(tierQty) }))}
+                            >
+                              {tierQty === POPULAR_TIER_QUANTITY && <span className="gps-tier-badge">Most Popular</span>}
+                              <span className="gps-tier-count">{tierQty}</span>
+                              <span className="gps-tier-icons">
+                                {Array.from({ length: iconCount }).map((_, i) => (
+                                  <GpsIcon key={i} name="tree" className="gps-tier-icon" />
+                                ))}
+                                {tierQty > iconCount && <span className="gps-tier-more">+{tierQty - iconCount}</span>}
+                              </span>
+                              <span className="gps-tier-price">{formatCurrencyAmount(tierPrice, priceEntry?.currency || form.checkoutCurrency)}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
                       <div className="gps-quantity-row">
-                        <span className="gps-field-label">Trees <span className="gps-required">*</span></span>
+                        <span className="gps-field-label">Or enter a custom amount</span>
                         <div className="gps-quantity-stepper">
                           <button type="button" onClick={() => bumpQuantity(-1)} aria-label="Decrease quantity">−</button>
                           <input type="number" min="1" value={form.quantity} onChange={(e) => setForm((c) => ({ ...c, quantity: e.target.value }))} />
@@ -1027,8 +1115,31 @@ export default function GreenPublicSponsor() {
       </main>
 
       <footer className="gps-footer">
-        <span>LandCheck Green Geospatial Technologies Limited</span>
-        <a href="mailto:landchecktech@gmail.com">landchecktech@gmail.com</a>
+        <div className="gps-footer-inner">
+          <div className="gps-footer-col gps-footer-brand">
+            <span className="gps-footer-brand-name"><GpsIcon name="leaf" className="gps-icon-inline" /> LandCheck Green</span>
+            <p>GPS-verified tree sponsorship in Nigeria — no account required to get started.</p>
+          </div>
+          <div className="gps-footer-col">
+            <strong>Sponsor</strong>
+            <button type="button" onClick={() => { setSelectedProjectId(null); document.getElementById("gps-projects")?.scrollIntoView({ behavior: "smooth" }); }}>Shop Projects</button>
+            <button type="button" onClick={() => setShowOrderLookup(true)}>Track My Order</button>
+            <a href="/sponsor/calculator">CO₂ Footprint Calculator</a>
+          </div>
+          <div className="gps-footer-col">
+            <strong>Company</strong>
+            <a href="/green-partners">For Organizations</a>
+            <a href={buildSponsorTermsUrl()} target="_blank" rel="noreferrer">Sponsor Terms</a>
+            <a href={buildSponsorPrivacyUrl()} target="_blank" rel="noreferrer">Privacy Policy</a>
+          </div>
+          <div className="gps-footer-col">
+            <strong>Contact</strong>
+            <a href="mailto:landchecktech@gmail.com">landchecktech@gmail.com</a>
+          </div>
+        </div>
+        <div className="gps-footer-bottom">
+          <span>© {new Date().getFullYear()} LandCheck Green Geospatial Technologies Limited</span>
+        </div>
       </footer>
 
       <PlantyAssistant />
