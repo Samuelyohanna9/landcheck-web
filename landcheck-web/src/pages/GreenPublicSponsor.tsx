@@ -624,38 +624,8 @@ export default function GreenPublicSponsor() {
 
       {/* ─── Hero (browsing view only — hidden once a project/checkout or payment-return view is active) ─── */}
       {!selectedProject && !returnState && (
-      <section className={`gps-hero${heroVideoReady ? " gps-hero--video-ready" : ""}`} style={{ backgroundImage: `url(${SPONSOR_BACKGROUND})` }}>
-        {heroVideoEnabled && (
-          <div className="gps-hero-video-wrap" aria-hidden="true">
-            {[0, 1].map((index) => (
-              <video
-                key={index}
-                ref={(node) => {
-                  heroVideoRefs.current[index] = node;
-                }}
-                className={`gps-hero-video${visibleHeroVideoIndex === index ? " gps-hero-video--active" : " gps-hero-video--inactive"}`}
-                poster={SPONSOR_BACKGROUND}
-                autoPlay={index === 0}
-                muted
-                playsInline
-                preload="auto"
-                disablePictureInPicture
-                disableRemotePlayback
-                onPlaying={() => setHeroVideoReady(true)}
-                onLoadedData={() => setHeroVideoReady(true)}
-                onError={() => {
-                  if (index === visibleHeroVideoIndexRef.current) {
-                    setHeroVideoReady(false);
-                  }
-                }}
-              >
-                <source src={HERO_VIDEO_SRC} type="video/mp4" />
-              </video>
-            ))}
-          </div>
-        )}
-        <div className="gps-hero-scrim" />
-        <div className="gps-hero-inner">
+      <section className="gps-hero">
+        <div className="gps-hero-text-panel">
           <span className="gps-hero-eyebrow">LandCheck Green · Public Sponsorship</span>
           <h1>Give Nigeria a <span className="gps-hero-accent">Greener Future.</span><br />One Tree at a Time.</h1>
           <p>Sponsor a verified tree project in minutes, in NGN or USD, and watch it grow with GPS-tracked, photo-verified updates straight to your inbox.</p>
@@ -686,6 +656,38 @@ export default function GreenPublicSponsor() {
               <GpsIcon name="package" className="gps-icon" /> Track My Order
             </button>
           </div>
+        </div>
+
+        <div className={`gps-hero-media-panel${heroVideoReady ? " gps-hero--video-ready" : ""}`} style={{ backgroundImage: `url(${SPONSOR_BACKGROUND})` }}>
+          {heroVideoEnabled && (
+            <div className="gps-hero-video-wrap" aria-hidden="true">
+              {[0, 1].map((index) => (
+                <video
+                  key={index}
+                  ref={(node) => {
+                    heroVideoRefs.current[index] = node;
+                  }}
+                  className={`gps-hero-video${visibleHeroVideoIndex === index ? " gps-hero-video--active" : " gps-hero-video--inactive"}`}
+                  poster={SPONSOR_BACKGROUND}
+                  autoPlay={index === 0}
+                  muted
+                  playsInline
+                  preload="auto"
+                  disablePictureInPicture
+                  disableRemotePlayback
+                  onPlaying={() => setHeroVideoReady(true)}
+                  onLoadedData={() => setHeroVideoReady(true)}
+                  onError={() => {
+                    if (index === visibleHeroVideoIndexRef.current) {
+                      setHeroVideoReady(false);
+                    }
+                  }}
+                >
+                  <source src={HERO_VIDEO_SRC} type="video/mp4" />
+                </video>
+              ))}
+            </div>
+          )}
         </div>
       </section>
       )}
