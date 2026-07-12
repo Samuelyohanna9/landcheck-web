@@ -657,8 +657,8 @@ export default function GreenPublicSponsor() {
               </svg>
             </button>
 
-            {/* Discount Code Overlay */}
-            <div className="gps-hero-code">CODE: EARTH26</div>
+            {/* Trust Subtext Overlay */}
+            <div className="gps-hero-code">100% VERIFIED EVIDENCE</div>
             {heroVideoEnabled && (
               <div className="gps-hero-video-wrap" aria-hidden="true">
                 {[0, 1].map((index) => (
@@ -694,8 +694,8 @@ export default function GreenPublicSponsor() {
             {/* Red Starburst Sticker Badge */}
             <div className="gps-hero-badge">
               <div className="gps-hero-badge-inner">
-                <span className="gps-hero-badge-percent">15%</span>
-                <span className="gps-hero-badge-off">OFF</span>
+                <span className="gps-hero-badge-top">GPS</span>
+                <span className="gps-hero-badge-bottom">TRACKED</span>
               </div>
             </div>
           </div>

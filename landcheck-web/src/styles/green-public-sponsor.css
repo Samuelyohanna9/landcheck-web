@@ -449,16 +449,16 @@
   text-align: center;
 }
 
-.gps-hero-badge-percent {
+.gps-hero-badge-top {
   font-size: 1.45rem;
   font-weight: 900;
   letter-spacing: -0.01em;
 }
 
-.gps-hero-badge-off {
-  font-size: 0.8rem;
+.gps-hero-badge-bottom {
+  font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
 }
 
 
