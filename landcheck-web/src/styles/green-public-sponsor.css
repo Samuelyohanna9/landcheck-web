@@ -203,7 +203,7 @@
 .gps-hero-text-panel {
   position: relative;
   z-index: 2;
-  max-width: 47%;
+  max-width: 42%;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -251,17 +251,18 @@
 }
 
 .gps-hero-text-panel h1 {
-  font-size: clamp(1.9rem, 3.2vw, 2.65rem);
+  font-size: clamp(1.6rem, 2.5vw, 2.25rem);
   font-weight: 700;
   line-height: 1.22;
   letter-spacing: -0.02em;
   margin: 6px 0;
   color: var(--gps-text);
+  max-width: 420px;
 }
 .gps-hero-accent { color: var(--gps-brand); }
 
 .gps-hero-text-panel p {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 400;
   color: var(--gps-text-muted);
   max-width: 480px;
@@ -346,7 +347,7 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  clip-path: url(#gpsHeroCurveClip);
+  clip-path: polygon(25% 0%, 100% 0%, 100% 100%, 0% 100%);
 }
 
 .gps-hero-video-wrap {
@@ -384,6 +385,7 @@
   .gps-hero-text-panel { position: static; order: -1; max-width: 100%; padding: 32px 20px 20px; }
   .gps-hero-text-panel p { max-width: 100%; }
   .gps-hero-media-wrap { position: relative; inset: auto; left: auto; height: 400px; margin-top: 24px; }
+  .gps-hero-media-panel { clip-path: polygon(0% 12%, 100% 0%, 100% 100%, 0% 100%); }
   /* Same curve as desktop (objectBoundingBox scales with the box); at t=0.35, x = 0.35-0.35+0.69*0.35^2 ≈ 8.5%. */
   .gps-hero-globe { left: 8%; top: 35%; transform: translate(-50%, -50%); width: 340px; height: 340px; }
 }

@@ -96,6 +96,7 @@ const GALLERY_IMAGES = [
 
 const TREE_QUANTITY_TIERS = [1, 5, 10, 25, 50] as const;
 const POPULAR_TIER_QUANTITY = 10;
+const IMPACT_BAND_MIN_TREES = 100;
 
 const HOW_IT_WORKS_STEPS = [
   { icon: "search", title: "Choose a Project", body: "Browse verified, GPS-mapped tree projects across Nigeria." },
@@ -636,17 +637,6 @@ export default function GreenPublicSponsor() {
           </div>
         </div>
 
-        {/* objectBoundingBox clip-path so the curved seam scales with the panel at any size */}
-        <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
-          <defs>
-            {/* Single quadratic bezier (one control point) = guaranteed one smooth arc,
-                no kink. With control-y at 0.5, y(t) simplifies exactly to t, so any
-                point on the curve at height t has x = 0.35 - t + 0.69*t^2 (see CSS). */}
-            <clipPath id="gpsHeroCurveClip" clipPathUnits="objectBoundingBox">
-              <path d="M 0.35 0 Q -0.15 0.5, 0.04 1 L 1 1 L 1 0 Z" />
-            </clipPath>
-          </defs>
-        </svg>
 
         <div className="gps-hero-media-wrap">
           <div className={`gps-hero-media-panel${heroVideoReady ? " gps-hero--video-ready" : ""}`} style={{ backgroundImage: `url(${SPONSOR_BACKGROUND})` }}>
@@ -718,8 +708,11 @@ export default function GreenPublicSponsor() {
         </section>
       )}
 
-      {/* ─── Impact stats band — real, verified-payment totals only ─── */}
-      {!selectedProject && !returnState && impactStats && impactStats.total_trees_sponsored > 0 && (
+      {/* ─── Impact stats band — real, verified-payment totals only.
+          Gated behind a credibility threshold (not just >0) since early,
+          tiny numbers look worse publicly than no band at all. Raise/lower
+          IMPACT_BAND_MIN_TREES as the program grows. ─── */}
+      {!selectedProject && !returnState && impactStats && impactStats.total_trees_sponsored >= IMPACT_BAND_MIN_TREES && (
         <section className="gps-impact-band">
           <div className="gps-impact-band-inner">
             <div className="gps-impact-stat">
