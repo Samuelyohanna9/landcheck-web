@@ -380,12 +380,97 @@
 .gps-hero--video-ready .gps-hero-video.gps-hero-video--active { opacity: 1; }
 .gps-hero-video.gps-hero-video--inactive { opacity: 0; }
 
+/* Overlays for matching mobile hero view style */
+.gps-hero-layers-btn {
+  display: none;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.85);
+  color: #2f6b4f;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+.gps-hero-layers-btn:hover {
+  background: #ffffff;
+  transform: scale(1.05);
+}
+
+.gps-hero-code {
+  display: none;
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ffffff;
+  font-size: clamp(1.2rem, 4vw, 1.45rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.gps-hero-badge {
+  display: none;
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 92px;
+  height: 92px;
+  background: #dc2626; /* clean red starburst */
+  clip-path: polygon(
+    50% 0%, 55% 10%, 70% 5%, 70% 20%, 85% 15%, 80% 30%, 95% 30%, 88% 45%, 100% 50%, 88% 55%, 
+    95% 70%, 80% 70%, 85% 85%, 70% 80%, 70% 95%, 55% 90%, 50% 100%, 45% 90%, 30% 95%, 30% 80%, 
+    15% 85%, 20% 70%, 5% 70%, 12% 55%, 0% 50%, 12% 45%, 5% 30%, 20% 30%, 15% 15%, 30% 20%, 
+    30% 5%, 45% 10%
+  );
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  z-index: 5;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.22));
+}
+
+.gps-hero-badge-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.gps-hero-badge-percent {
+  font-size: 1.45rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.gps-hero-badge-off {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+
 @media (max-width: 900px) {
   .gps-hero { min-height: 0; display: flex; flex-direction: column; }
   .gps-hero-text-panel { position: static; order: -1; max-width: 100%; padding: 32px 20px 20px; }
   .gps-hero-text-panel p { max-width: 100%; }
   .gps-hero-media-wrap { position: relative; inset: auto; left: auto; height: 400px; margin-top: 24px; }
-  .gps-hero-media-panel { clip-path: polygon(0% 12%, 100% 0%, 100% 100%, 0% 100%); }
+  .gps-hero-media-panel { clip-path: url(#gpsHeroCurveClip); }
+  .gps-hero-layers-btn { display: flex; }
+  .gps-hero-code { display: block; }
+  .gps-hero-badge { display: flex; }
   /* Same curve as desktop (objectBoundingBox scales with the box); at t=0.35, x = 0.35-0.35+0.69*0.35^2 ≈ 8.5%. */
   .gps-hero-globe { left: 8%; top: 35%; transform: translate(-50%, -50%); width: 340px; height: 340px; }
 }
