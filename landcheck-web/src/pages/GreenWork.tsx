@@ -13272,7 +13272,14 @@ export default function GreenWork() {
                                   </div>
                                 ) : null}
                               </td>
-                              <td>{row.unit_uid || `Unit #${row.unit_id}`}</td>
+                              <td>
+                                <div>{row.unit_uid || `Unit #${row.unit_id}`}</div>
+                                {row.species ? (
+                                  <div style={{ fontSize: 11, color: "#56705f", marginTop: 4 }}>
+                                    Species: {row.species}
+                                  </div>
+                                ) : null}
+                              </td>
                               <td>
                                 <span className={`green-work-live-pill ${Number(row.qr_download_count || 0) > 0 ? "ok" : "warning"}`}>
                                   {row.download_status === "downloaded" ? "Downloaded" : "Pending download"}
@@ -14848,12 +14855,12 @@ export default function GreenWork() {
                   }}
                   disabled={!activeProjectId || assigningWorkOrder}
                 />
-                <span>Enable species-based allocation (optional)</span>
+                <span>Enable species-based allocation for the assigned sponsor QR tags (optional)</span>
               </label>
               {newOrderSpeciesMode && (
                 <div className="green-work-species-allocation">
                   <label className="green-work-field-label">Species allocation rows</label>
-                  <p className="green-work-note">Enter species names manually exactly as you want field officers to select them in Green.</p>
+                  <p className="green-work-note">Enter species names exactly as you want them to appear on the agent QR sheet before planting and inside Green capture.</p>
                   {newOrderSpeciesAllocations.map((row, index) => (
                     <div key={`species-allocation-${index}`} className="green-work-species-allocation-row">
                       <input

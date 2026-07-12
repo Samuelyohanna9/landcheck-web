@@ -1031,7 +1031,7 @@ export default function Green() {
   const [mapDrawMode, setMapDrawMode] = useState(true);
   const [fieldViewTab, setFieldViewTab] = useState<"map" | "add_tree">("map");
   const [sponsorQrUnits, setSponsorQrUnits] = useState<Array<{
-    unit_id: number; unit_uid: string | null; sponsor_name: string | null;
+    unit_id: number; unit_uid: string | null; assigned_work_order_id?: number | null; sponsor_name: string | null;
     sponsor_organization_name: string | null; species: string | null;
     dedication_type: string | null; dedication_name: string | null;
     qr_download_count: number; last_qr_downloaded_at: string | null; last_qr_downloaded_by: string | null;
@@ -2287,6 +2287,7 @@ export default function Green() {
         setSponsorQrUnits(rows.map((row) => ({
           unit_id: Number(row.unit_id || 0),
           unit_uid: row.unit_uid ? String(row.unit_uid) : null,
+          assigned_work_order_id: row.assigned_work_order_id == null ? null : Number(row.assigned_work_order_id || 0),
           sponsor_name: row.sponsor_name ? String(row.sponsor_name) : null,
           sponsor_organization_name: row.sponsor_organization_name ? String(row.sponsor_organization_name) : null,
           species: row.species ? String(row.species) : null,
@@ -4290,8 +4291,17 @@ export default function Green() {
                   )}
                   {sponsorQrUnits.length > 0 && (
                     <div className="green-sponsor-qr-list">
+                      <div className="work-actions" style={{ marginBottom: 12 }}>
+                        <a
+                          href={`${BACKEND_URL}/green/agent/sponsor-qr-tags/pdf?project_id=${Number(activeProject?.id || 0)}&user_id=${Number(greenAuthUser?.id || 0)}&sync=1${greenAuthUser?.organization_id ? `&organization_id=${greenAuthUser.organization_id}` : ""}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="green-sponsor-qr-dl-btn"
+                        >
+                          ↓ Download QR Sheet ({sponsorQrUnits.length} tag{sponsorQrUnits.length === 1 ? "" : "s"})
+                        </a>
+                      </div>
                       {sponsorQrUnits.map((unit) => {
-                        const qrUrl = `${BACKEND_URL}/green/sponsorship-units/${unit.unit_id}/qr-tag/pdf?user_id=${Number(greenAuthUser?.id || 0)}${greenAuthUser?.organization_id ? `&organization_id=${greenAuthUser.organization_id}` : ""}`;
                         return (
                           <div key={`qr-unit-${unit.unit_id}`} className="green-sponsor-qr-card">
                             <div className="green-sponsor-qr-card-head">
@@ -4309,14 +4319,12 @@ export default function Green() {
                                 {Number(unit.qr_download_count) > 0 ? `DL×${unit.qr_download_count}` : "Not DL'd"}
                               </span>
                             </div>
-                            <a
-                              href={qrUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="green-sponsor-qr-dl-btn"
-                            >
-                              ↓ Download QR Tag PDF
-                            </a>
+                            {unit.last_qr_downloaded_at ? (
+                              <span className="green-sponsor-qr-card-ded">
+                                Last download: {new Date(unit.last_qr_downloaded_at).toLocaleString()}
+                                {unit.last_qr_downloaded_by ? ` · ${unit.last_qr_downloaded_by}` : ""}
+                              </span>
+                            ) : null}
                           </div>
                         );
                       })}
