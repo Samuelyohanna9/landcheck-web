@@ -14855,12 +14855,20 @@ export default function GreenWork() {
                   }}
                   disabled={!activeProjectId || assigningWorkOrder}
                 />
-                <span>Enable species-based allocation for the assigned sponsor QR tags (optional)</span>
+                <span>
+                  {publicSponsorshipProject
+                    ? "Enable species-based allocation for the assigned sponsor QR tags (optional)"
+                    : "Enable species-based allocation (optional)"}
+                </span>
               </label>
               {newOrderSpeciesMode && (
                 <div className="green-work-species-allocation">
                   <label className="green-work-field-label">Species allocation rows</label>
-                  <p className="green-work-note">Enter species names exactly as you want them to appear on the agent QR sheet before planting and inside Green capture.</p>
+                  <p className="green-work-note">
+                    {publicSponsorshipProject
+                      ? "Enter species names exactly as you want them to appear on the agent QR sheet before planting and inside Green capture."
+                      : "Enter species names manually exactly as you want field officers to select them in Green."}
+                  </p>
                   {newOrderSpeciesAllocations.map((row, index) => (
                     <div key={`species-allocation-${index}`} className="green-work-species-allocation-row">
                       <input
