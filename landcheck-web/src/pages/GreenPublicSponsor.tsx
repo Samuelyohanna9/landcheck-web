@@ -637,9 +637,28 @@ export default function GreenPublicSponsor() {
           </div>
         </div>
 
+        {/* objectBoundingBox clip-path so the curved seam scales with the panel at any size on mobile */}
+        <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
+          <defs>
+            <clipPath id="gpsHeroCurveClip" clipPathUnits="objectBoundingBox">
+              <path d="M 0.35 0 Q -0.15 0.5, 0.04 1 L 1 1 L 1 0 Z" />
+            </clipPath>
+          </defs>
+        </svg>
 
         <div className="gps-hero-media-wrap">
           <div className={`gps-hero-media-panel${heroVideoReady ? " gps-hero--video-ready" : ""}`} style={{ backgroundImage: `url(${SPONSOR_BACKGROUND})` }}>
+            {/* Layers Toggle Button */}
+            <button type="button" className="gps-hero-layers-btn" aria-label="Toggle layers">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 17 12 22 22 17" />
+                <polyline points="2 12 12 17 22 12" />
+              </svg>
+            </button>
+
+            {/* Discount Code Overlay */}
+            <div className="gps-hero-code">CODE: EARTH26</div>
             {heroVideoEnabled && (
               <div className="gps-hero-video-wrap" aria-hidden="true">
                 {[0, 1].map((index) => (
@@ -672,6 +691,13 @@ export default function GreenPublicSponsor() {
           </div>
           <div className="gps-hero-globe" aria-hidden="true">
             <img src="/globe_sponsor.webp" alt="" className="gps-hero-globe-svg" />
+            {/* Red Starburst Sticker Badge */}
+            <div className="gps-hero-badge">
+              <div className="gps-hero-badge-inner">
+                <span className="gps-hero-badge-percent">15%</span>
+                <span className="gps-hero-badge-off">OFF</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
