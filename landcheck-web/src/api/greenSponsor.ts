@@ -402,6 +402,23 @@ export type RecentSponsorshipItem = {
   sponsored_at: string | null;
 };
 
+export type SponsorImpactStats = {
+  total_trees_sponsored: number;
+  total_sponsors: number;
+  total_projects: number;
+  total_co2_kg_per_year: number;
+};
+
+export const fetchPublicSponsorImpactStats = async (): Promise<SponsorImpactStats> => {
+  const response = await api.get("/green/public/sponsor-impact-stats");
+  return {
+    total_trees_sponsored: Number(response.data?.total_trees_sponsored || 0),
+    total_sponsors: Number(response.data?.total_sponsors || 0),
+    total_projects: Number(response.data?.total_projects || 0),
+    total_co2_kg_per_year: Number(response.data?.total_co2_kg_per_year || 0),
+  };
+};
+
 export const fetchPublicRecentSponsorships = async (limit = 12): Promise<RecentSponsorshipItem[]> => {
   const response = await api.get("/green/public/recent-sponsorships", { params: { limit } });
   return (Array.isArray(response.data) ? response.data : []).map((row: any) => ({
