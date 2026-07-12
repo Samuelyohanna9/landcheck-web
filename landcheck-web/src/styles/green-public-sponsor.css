@@ -194,22 +194,45 @@
 .gps-promo-banner button:hover { opacity: 1; }
 
 .gps-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: stretch;
-  gap: 0;
+  position: relative;
+  overflow: hidden;
   background: var(--gps-bg);
+  min-height: 520px;
 }
 
 .gps-hero-text-panel {
+  position: relative;
+  z-index: 2;
+  max-width: 47%;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
   gap: 14px;
-  padding: 64px clamp(24px, 5vw, 64px);
+  padding: 64px clamp(24px, 5vw, 56px);
   text-align: left;
 }
+
+/* Media (video) + globe live in one wrapper so the globe can straddle the
+   diagonal seam without being clipped by the video panel's own clip-path. */
+.gps-hero-media-wrap {
+  position: absolute;
+  inset: 0;
+  left: 46%;
+  z-index: 1;
+}
+
+.gps-hero-globe {
+  position: absolute;
+  z-index: 2;
+  left: -4%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: clamp(150px, 19vw, 240px);
+  height: clamp(150px, 19vw, 240px);
+  pointer-events: none;
+}
+.gps-hero-globe-svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 14px 26px rgba(27,58,44,0.28)); }
 
 .gps-hero-eyebrow {
   display: inline-flex;
@@ -310,16 +333,17 @@
 }
 .gps-hero-secondary-btn:hover { background: var(--gps-brand-light); }
 
-/* ─── Hero media panel (clean video, no dark overlay) ─────────────── */
+/* ─── Hero media panel (clean video, no dark overlay, diagonal seam) ── */
 .gps-hero-media-panel {
-  position: relative;
+  position: absolute;
+  inset: 0;
   isolation: isolate;
   overflow: hidden;
-  min-height: 420px;
   background-color: #0a2015;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  clip-path: polygon(35% 0%, 100% 0%, 100% 100%, 4% 100%);
 }
 
 .gps-hero-video-wrap {
@@ -353,12 +377,13 @@
 .gps-hero-video.gps-hero-video--inactive { opacity: 0; }
 
 @media (max-width: 900px) {
-  .gps-hero { grid-template-columns: 1fr; }
-  .gps-hero-media-panel { min-height: 280px; order: -1; }
-  .gps-hero-text-panel { padding: 32px 20px 40px; align-items: center; text-align: center; }
+  .gps-hero { min-height: 0; display: flex; flex-direction: column; }
+  .gps-hero-text-panel { position: static; order: -1; max-width: 100%; padding: 32px 20px 20px; align-items: center; text-align: center; }
   .gps-hero-text-panel p { max-width: 100%; }
   .gps-feature-row, .gps-hero-ctas { justify-content: center; }
   .gps-feature-card { text-align: center; align-items: center; }
+  .gps-hero-media-wrap { position: relative; inset: auto; left: auto; height: 260px; }
+  .gps-hero-globe { left: 20%; top: 6%; transform: translate(-50%, 0); width: 120px; height: 120px; }
 }
 
 /* ─── Recently sponsored — floating balloon toast ──────────────── */
@@ -1323,5 +1348,6 @@
 /* Respect data-saver / low-power devices further: keep the video paused off-screen */
 @media (max-width: 420px) {
   .gps-hero-text-panel { padding: 28px 14px 32px; }
-  .gps-hero-media-panel { min-height: 220px; }
+  .gps-hero-media-wrap { height: 210px; }
+  .gps-hero-globe { width: 100px; height: 100px; }
 }
