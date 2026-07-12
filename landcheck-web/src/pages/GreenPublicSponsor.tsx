@@ -20,6 +20,7 @@ import {
   type SponsorProject,
 } from "../api/greenSponsor";
 import { claimGreenSponsorGuestAccount } from "../auth/greenAuth";
+import EarthGlobe from "../components/EarthGlobe";
 import GpsIcon from "../components/GpsIcon";
 import PlantyAssistant from "../components/PlantyAssistant";
 import "../styles/green-public-sponsor.css";
@@ -658,36 +659,41 @@ export default function GreenPublicSponsor() {
           </div>
         </div>
 
-        <div className={`gps-hero-media-panel${heroVideoReady ? " gps-hero--video-ready" : ""}`} style={{ backgroundImage: `url(${SPONSOR_BACKGROUND})` }}>
-          {heroVideoEnabled && (
-            <div className="gps-hero-video-wrap" aria-hidden="true">
-              {[0, 1].map((index) => (
-                <video
-                  key={index}
-                  ref={(node) => {
-                    heroVideoRefs.current[index] = node;
-                  }}
-                  className={`gps-hero-video${visibleHeroVideoIndex === index ? " gps-hero-video--active" : " gps-hero-video--inactive"}`}
-                  poster={SPONSOR_BACKGROUND}
-                  autoPlay={index === 0}
-                  muted
-                  playsInline
-                  preload="auto"
-                  disablePictureInPicture
-                  disableRemotePlayback
-                  onPlaying={() => setHeroVideoReady(true)}
-                  onLoadedData={() => setHeroVideoReady(true)}
-                  onError={() => {
-                    if (index === visibleHeroVideoIndexRef.current) {
-                      setHeroVideoReady(false);
-                    }
-                  }}
-                >
-                  <source src={HERO_VIDEO_SRC} type="video/mp4" />
-                </video>
-              ))}
-            </div>
-          )}
+        <div className="gps-hero-media-wrap">
+          <div className={`gps-hero-media-panel${heroVideoReady ? " gps-hero--video-ready" : ""}`} style={{ backgroundImage: `url(${SPONSOR_BACKGROUND})` }}>
+            {heroVideoEnabled && (
+              <div className="gps-hero-video-wrap" aria-hidden="true">
+                {[0, 1].map((index) => (
+                  <video
+                    key={index}
+                    ref={(node) => {
+                      heroVideoRefs.current[index] = node;
+                    }}
+                    className={`gps-hero-video${visibleHeroVideoIndex === index ? " gps-hero-video--active" : " gps-hero-video--inactive"}`}
+                    poster={SPONSOR_BACKGROUND}
+                    autoPlay={index === 0}
+                    muted
+                    playsInline
+                    preload="auto"
+                    disablePictureInPicture
+                    disableRemotePlayback
+                    onPlaying={() => setHeroVideoReady(true)}
+                    onLoadedData={() => setHeroVideoReady(true)}
+                    onError={() => {
+                      if (index === visibleHeroVideoIndexRef.current) {
+                        setHeroVideoReady(false);
+                      }
+                    }}
+                  >
+                    <source src={HERO_VIDEO_SRC} type="video/mp4" />
+                  </video>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="gps-hero-globe" aria-hidden="true">
+            <EarthGlobe className="gps-hero-globe-svg" />
+          </div>
         </div>
       </section>
       )}
