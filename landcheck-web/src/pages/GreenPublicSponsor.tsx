@@ -20,7 +20,6 @@ import {
   type SponsorProject,
 } from "../api/greenSponsor";
 import { claimGreenSponsorGuestAccount } from "../auth/greenAuth";
-import EarthGlobe from "../components/EarthGlobe";
 import GpsIcon from "../components/GpsIcon";
 import PlantyAssistant from "../components/PlantyAssistant";
 import "../styles/green-public-sponsor.css";
@@ -692,7 +691,7 @@ export default function GreenPublicSponsor() {
             )}
           </div>
           <div className="gps-hero-globe" aria-hidden="true">
-            <EarthGlobe className="gps-hero-globe-svg" />
+            <img src="/globe_sponsor.webp" alt="" className="gps-hero-globe-svg" />
           </div>
         </div>
       </section>
