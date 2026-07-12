@@ -381,13 +381,11 @@
 
 @media (max-width: 900px) {
   .gps-hero { min-height: 0; display: flex; flex-direction: column; }
-  .gps-hero-text-panel { position: static; order: -1; max-width: 100%; padding: 32px 20px 20px; align-items: center; text-align: center; }
+  .gps-hero-text-panel { position: static; order: -1; max-width: 100%; padding: 32px 20px 20px; }
   .gps-hero-text-panel p { max-width: 100%; }
-  .gps-feature-row, .gps-hero-ctas { justify-content: center; }
-  .gps-feature-card { text-align: center; align-items: center; }
-  .gps-hero-media-wrap { position: relative; inset: auto; left: auto; height: 260px; }
+  .gps-hero-media-wrap { position: relative; inset: auto; left: auto; height: 300px; margin-top: 12px; }
   /* Same clip-path percentages as desktop; at y=18% the seam is at local-x ≈ 35% - 31%*0.18 = 29.4% */
-  .gps-hero-globe { left: 29%; top: 18%; transform: translate(-50%, -50%); width: 155px; height: 155px; }
+  .gps-hero-globe { left: 29%; top: 18%; transform: translate(-50%, -50%); width: 190px; height: 190px; }
 }
 
 /* ─── Recently sponsored — floating balloon toast ──────────────── */
@@ -1328,8 +1326,6 @@
   .gps-feature-row { gap: 10px; }
   .gps-feature-card { min-width: 0; flex: 1 1 30%; padding: 12px 8px; }
   .gps-feature-card p { display: none; }
-  .gps-hero-ctas { flex-direction: column; width: 100%; }
-  .gps-hero-ctas button { width: 100%; justify-content: center; }
   .gps-hero-video { object-position: center 30%; }
   .gps-project-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 36px 12px; }
   .gps-project-card { padding: 38px 14px 16px; }
