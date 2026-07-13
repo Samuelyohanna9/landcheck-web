@@ -3251,6 +3251,7 @@ export default function GreenWork() {
     Number.isFinite(storedProjectId) && storedProjectId > 0 ? storedProjectId : null
   );
   const [orders, setOrders] = useState<WorkOrder[]>([]);
+  const [cancellingWorkOrderId, setCancellingWorkOrderId] = useState<number | null>(null);
   const [trees, setTrees] = useState<Tree[]>([]);
   const [tasks, setTasks] = useState<WorkTask[]>([]);
   const [assigneeFilter, setAssigneeFilter] = useState<string>(storedAssigneeFilter || "all");
@@ -5924,6 +5925,28 @@ export default function GreenWork() {
       }
     },
     [activeProjectId, canAccessSuperAdmin, loadPublicSponsorDonors],
+  );
+
+  const cancelPlantingWorkOrder = useCallback(
+    async (orderId: number) => {
+      if (!activeProjectId) return;
+      if (!canAccessSuperAdmin) {
+        toast.error("Only super admin can cancel planting orders.");
+        return;
+      }
+      if (!window.confirm("Cancel this planting order? Its remaining target will stop counting toward the agent's quota.")) return;
+      setCancellingWorkOrderId(orderId);
+      try {
+        await api.patch(`/green/work-orders/${orderId}`, { status: "cancelled" });
+        toast.success("Planting order cancelled");
+        await loadProjectData(activeProjectId);
+      } catch (error: any) {
+        toast.error(error?.response?.data?.detail || "Failed to cancel planting order");
+      } finally {
+        setCancellingWorkOrderId(null);
+      }
+    },
+    [activeProjectId, canAccessSuperAdmin, loadProjectData],
   );
 
   const reissueSponsorQrUnit = useCallback(
@@ -15099,6 +15122,57 @@ export default function GreenWork() {
                       </tbody>
                     </table>
                   )}
+                </div>
+              )}
+              {publicSponsorshipProject && activeProjectId && (
+                <div className="green-work-card" style={{ marginBottom: 20 }}>
+                  <h4 style={{ marginTop: 0 }}>Active Planting Orders</h4>
+                  <p className="green-work-note" style={{ marginLeft: 0 }}>
+                    Cancel a stale or incorrect planting order here — for example, one assigned before sponsor-based
+                    assignment existed, whose quota no longer reflects real sponsored trees. Cancelling stops it from
+                    counting toward the agent's "remaining" total in the app.
+                  </p>
+                  {(() => {
+                    const activePlantingOrders = orders.filter(
+                      (o) => o.work_type === "planting" && !["done", "completed", "closed", "cancelled"].includes(String(o.status || "").trim().toLowerCase()),
+                    );
+                    return activePlantingOrders.length === 0 ? (
+                      <p className="green-work-note" style={{ marginLeft: 0 }}>No active planting orders for this project.</p>
+                    ) : (
+                      <table className="green-work-table">
+                        <thead>
+                          <tr>
+                            <th>Agent</th>
+                            <th>Target</th>
+                            <th>Planted</th>
+                            <th>Remaining</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {activePlantingOrders.map((o) => (
+                            <tr key={`planting-order-${o.id}`}>
+                              <td>{o.assignee_name}</td>
+                              <td style={{ fontWeight: 800 }}>{Number(o.target_trees || 0)}</td>
+                              <td>{Number(o.planted_count || 0)}</td>
+                              <td>{Math.max(Number(o.target_trees || 0) - Number(o.planted_count || 0), 0)}</td>
+                              <td>{o.status}</td>
+                              <td>
+                                <button
+                                  type="button"
+                                  onClick={() => void cancelPlantingWorkOrder(o.id)}
+                                  disabled={cancellingWorkOrderId === o.id}
+                                >
+                                  {cancellingWorkOrderId === o.id ? "Cancelling..." : "Cancel"}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    );
+                  })()}
                 </div>
               )}
               {publicSponsorshipProject && (
