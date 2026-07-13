@@ -3536,6 +3536,8 @@ export default function GreenWork() {
   const [donorAssignCount, setDonorAssignCount] = useState<Record<number, string>>({});
   const [assigningDonorSponsorId, setAssigningDonorSponsorId] = useState<number | null>(null);
   const [unassigningDonorUnitIds, setUnassigningDonorUnitIds] = useState<Set<number>>(() => new Set());
+  const [donorSpeciesMode, setDonorSpeciesMode] = useState<Record<number, boolean>>({});
+  const [donorSpeciesRows, setDonorSpeciesRows] = useState<Record<number, Array<{ species: string; count: string }>>>({});
   const [assigningSponsorOrderId, setAssigningSponsorOrderId] = useState<number | null>(null);
   const [reviewingSponsorAgentPayoutId, setReviewingSponsorAgentPayoutId] = useState<number | null>(null);
   const [savingPublicSponsorAgents, setSavingPublicSponsorAgents] = useState(false);
@@ -5856,6 +5858,14 @@ export default function GreenWork() {
         toast.error("Enter a positive number, or leave blank to assign all remaining.");
         return;
       }
+      const speciesRows = donorSpeciesMode[sponsorAccountId] ? donorSpeciesRows[sponsorAccountId] || [] : [];
+      const speciesAllocations = speciesRows
+        .map((row) => ({ species: row.species.trim(), count: Number(row.count || 0) }))
+        .filter((row) => row.species && row.count > 0);
+      if (donorSpeciesMode[sponsorAccountId] && speciesRows.some((row) => row.species.trim() || row.count.trim()) && speciesAllocations.length === 0) {
+        toast.error("Enter at least one valid species + count, or turn off species allocation.");
+        return;
+      }
       setAssigningDonorSponsorId(sponsorAccountId);
       try {
         const res = await api.post(`/green/admin/public-sponsor-donors/assign`, {
@@ -5863,10 +5873,12 @@ export default function GreenWork() {
           sponsor_account_id: sponsorAccountId,
           agent_user_id: agentUserId,
           count: count,
+          species_allocations: speciesAllocations.length > 0 ? speciesAllocations : undefined,
         });
         const assignedCount = Number(res.data?.assigned_count || 0);
         toast.success(`Assigned ${assignedCount} tree${assignedCount === 1 ? "" : "s"}`);
         setDonorAssignCount((prev) => ({ ...prev, [sponsorAccountId]: "" }));
+        setDonorSpeciesRows((prev) => ({ ...prev, [sponsorAccountId]: [] }));
         await loadPublicSponsorDonors(activeProjectId, { silent: true });
       } catch (error: any) {
         toast.error(error?.response?.data?.detail || "Failed to assign sponsor trees");
@@ -5874,7 +5886,7 @@ export default function GreenWork() {
         setAssigningDonorSponsorId(null);
       }
     },
-    [activeProjectId, canAccessSuperAdmin, donorAssignAgent, donorAssignCount, loadPublicSponsorDonors],
+    [activeProjectId, canAccessSuperAdmin, donorAssignAgent, donorAssignCount, donorSpeciesMode, donorSpeciesRows, loadPublicSponsorDonors],
   );
 
   const unassignSponsorDonorUnits = useCallback(
@@ -14979,16 +14991,96 @@ export default function GreenWork() {
                                         </option>
                                       ))}
                                     </select>
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      max={Number(donor.unassigned_remaining || 0)}
-                                      placeholder={`All remaining (${Number(donor.unassigned_remaining || 0)})`}
-                                      value={donorAssignCount[sponsorId] || ""}
-                                      onChange={(e) => setDonorAssignCount((prev) => ({ ...prev, [sponsorId]: e.target.value }))}
-                                      disabled={assigningDonorSponsorId === sponsorId}
-                                      style={{ fontSize: 12, padding: 4 }}
-                                    />
+                                    {!donorSpeciesMode[sponsorId] && (
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={Number(donor.unassigned_remaining || 0)}
+                                        placeholder={`All remaining (${Number(donor.unassigned_remaining || 0)})`}
+                                        value={donorAssignCount[sponsorId] || ""}
+                                        onChange={(e) => setDonorAssignCount((prev) => ({ ...prev, [sponsorId]: e.target.value }))}
+                                        disabled={assigningDonorSponsorId === sponsorId}
+                                        style={{ fontSize: 12, padding: 4 }}
+                                      />
+                                    )}
+                                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={Boolean(donorSpeciesMode[sponsorId])}
+                                        onChange={(e) => {
+                                          const enabled = e.target.checked;
+                                          setDonorSpeciesMode((prev) => ({ ...prev, [sponsorId]: enabled }));
+                                          if (enabled && !(donorSpeciesRows[sponsorId] || []).length) {
+                                            setDonorSpeciesRows((prev) => ({ ...prev, [sponsorId]: [{ species: "", count: "" }] }));
+                                          }
+                                        }}
+                                        disabled={assigningDonorSponsorId === sponsorId}
+                                      />
+                                      Allocate by species (optional)
+                                    </label>
+                                    {donorSpeciesMode[sponsorId] && (
+                                      <div style={{ display: "grid", gap: 4 }}>
+                                        {(donorSpeciesRows[sponsorId] || []).map((row, rowIndex) => (
+                                          <div key={`donor-species-${sponsorId}-${rowIndex}`} style={{ display: "flex", gap: 4 }}>
+                                            <input
+                                              type="text"
+                                              placeholder="Species"
+                                              value={row.species}
+                                              onChange={(e) =>
+                                                setDonorSpeciesRows((prev) => {
+                                                  const rows = [...(prev[sponsorId] || [])];
+                                                  rows[rowIndex] = { ...rows[rowIndex], species: e.target.value };
+                                                  return { ...prev, [sponsorId]: rows };
+                                                })
+                                              }
+                                              disabled={assigningDonorSponsorId === sponsorId}
+                                              style={{ fontSize: 11, padding: 4, width: "60%" }}
+                                            />
+                                            <input
+                                              type="number"
+                                              min={1}
+                                              placeholder="Count"
+                                              value={row.count}
+                                              onChange={(e) =>
+                                                setDonorSpeciesRows((prev) => {
+                                                  const rows = [...(prev[sponsorId] || [])];
+                                                  rows[rowIndex] = { ...rows[rowIndex], count: e.target.value };
+                                                  return { ...prev, [sponsorId]: rows };
+                                                })
+                                              }
+                                              disabled={assigningDonorSponsorId === sponsorId}
+                                              style={{ fontSize: 11, padding: 4, width: "35%" }}
+                                            />
+                                            <button
+                                              type="button"
+                                              style={{ fontSize: 11, padding: "2px 6px" }}
+                                              onClick={() =>
+                                                setDonorSpeciesRows((prev) => ({
+                                                  ...prev,
+                                                  [sponsorId]: (prev[sponsorId] || []).filter((_, i) => i !== rowIndex),
+                                                }))
+                                              }
+                                              disabled={assigningDonorSponsorId === sponsorId}
+                                            >
+                                              ×
+                                            </button>
+                                          </div>
+                                        ))}
+                                        <button
+                                          type="button"
+                                          style={{ fontSize: 11, padding: "2px 6px", justifySelf: "start" }}
+                                          onClick={() =>
+                                            setDonorSpeciesRows((prev) => ({
+                                              ...prev,
+                                              [sponsorId]: [...(prev[sponsorId] || []), { species: "", count: "" }],
+                                            }))
+                                          }
+                                          disabled={assigningDonorSponsorId === sponsorId}
+                                        >
+                                          + Add species
+                                        </button>
+                                      </div>
+                                    )}
                                     <button
                                       type="button"
                                       onClick={() => void assignSponsorDonorTrees(sponsorId)}
