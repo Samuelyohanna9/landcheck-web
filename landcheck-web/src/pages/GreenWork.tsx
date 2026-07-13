@@ -3526,6 +3526,16 @@ export default function GreenWork() {
   const [sponsorQrReissueSelections, setSponsorQrReissueSelections] = useState<Record<number, number>>({});
   const [sponsorshipOrderAgentSelections, setSponsorshipOrderAgentSelections] = useState<Record<number, number>>({});
   const [reissuingSponsorQrUnitId, setReissuingSponsorQrUnitId] = useState<number | null>(null);
+  const [selectedSponsorQrUnitIds, setSelectedSponsorQrUnitIds] = useState<Set<number>>(() => new Set());
+  const [bulkReissueAgentUserId, setBulkReissueAgentUserId] = useState<number>(0);
+  const [bulkReissuingSponsorQr, setBulkReissuingSponsorQr] = useState(false);
+  const [sponsorDonors, setSponsorDonors] = useState<any[]>([]);
+  const [sponsorDonorsLoading, setSponsorDonorsLoading] = useState(false);
+  const [sponsorDonorsError, setSponsorDonorsError] = useState<string | null>(null);
+  const [donorAssignAgent, setDonorAssignAgent] = useState<Record<number, number>>({});
+  const [donorAssignCount, setDonorAssignCount] = useState<Record<number, string>>({});
+  const [assigningDonorSponsorId, setAssigningDonorSponsorId] = useState<number | null>(null);
+  const [unassigningDonorUnitIds, setUnassigningDonorUnitIds] = useState<Set<number>>(() => new Set());
   const [assigningSponsorOrderId, setAssigningSponsorOrderId] = useState<number | null>(null);
   const [reviewingSponsorAgentPayoutId, setReviewingSponsorAgentPayoutId] = useState<number | null>(null);
   const [savingPublicSponsorAgents, setSavingPublicSponsorAgents] = useState(false);
@@ -5808,6 +5818,102 @@ export default function GreenWork() {
     }
   }, []);
 
+  const loadPublicSponsorDonors = useCallback(async (projectId: number, options?: { silent?: boolean }) => {
+    const silent = Boolean(options?.silent);
+    if (!projectId) {
+      setSponsorDonors([]);
+      setSponsorDonorsError(null);
+      return;
+    }
+    if (!silent) setSponsorDonorsLoading(true);
+    setSponsorDonorsError(null);
+    try {
+      const res = await api.get(`/green/admin/public-sponsor-donors?project_id=${projectId}&_ts=${Date.now()}`);
+      setSponsorDonors(Array.isArray(res.data) ? res.data : []);
+    } catch (error: any) {
+      setSponsorDonorsError(error?.response?.data?.detail || error?.message || "Failed to load sponsor donors");
+      setSponsorDonors([]);
+    } finally {
+      if (!silent) setSponsorDonorsLoading(false);
+    }
+  }, []);
+
+  const assignSponsorDonorTrees = useCallback(
+    async (sponsorAccountId: number) => {
+      if (!activeProjectId) return;
+      if (!canAccessSuperAdmin) {
+        toast.error("Only super admin can assign sponsor trees.");
+        return;
+      }
+      const agentUserId = Number(donorAssignAgent[sponsorAccountId] || 0);
+      if (!(agentUserId > 0)) {
+        toast.error("Select a sponsor agent first.");
+        return;
+      }
+      const countRaw = String(donorAssignCount[sponsorAccountId] || "").trim();
+      const count = countRaw ? Number(countRaw) : null;
+      if (countRaw && !(count && count > 0)) {
+        toast.error("Enter a positive number, or leave blank to assign all remaining.");
+        return;
+      }
+      setAssigningDonorSponsorId(sponsorAccountId);
+      try {
+        const res = await api.post(`/green/admin/public-sponsor-donors/assign`, {
+          project_id: activeProjectId,
+          sponsor_account_id: sponsorAccountId,
+          agent_user_id: agentUserId,
+          count: count,
+        });
+        const assignedCount = Number(res.data?.assigned_count || 0);
+        toast.success(`Assigned ${assignedCount} tree${assignedCount === 1 ? "" : "s"}`);
+        setDonorAssignCount((prev) => ({ ...prev, [sponsorAccountId]: "" }));
+        await loadPublicSponsorDonors(activeProjectId, { silent: true });
+      } catch (error: any) {
+        toast.error(error?.response?.data?.detail || "Failed to assign sponsor trees");
+      } finally {
+        setAssigningDonorSponsorId(null);
+      }
+    },
+    [activeProjectId, canAccessSuperAdmin, donorAssignAgent, donorAssignCount, loadPublicSponsorDonors],
+  );
+
+  const unassignSponsorDonorUnits = useCallback(
+    async (unitIds: number[]) => {
+      if (!activeProjectId) return;
+      if (!canAccessSuperAdmin) {
+        toast.error("Only super admin can cancel sponsor tree assignments.");
+        return;
+      }
+      if (unitIds.length === 0) return;
+      if (!window.confirm(`Cancel ${unitIds.length} assignment${unitIds.length === 1 ? "" : "s"}? These trees will return to the unassigned pool.`)) return;
+      setUnassigningDonorUnitIds((prev) => {
+        const next = new Set(prev);
+        unitIds.forEach((id) => next.add(id));
+        return next;
+      });
+      try {
+        const res = await api.post(`/green/admin/public-sponsor-donors/unassign`, { unit_ids: unitIds });
+        const succeeded = Number(res.data?.succeeded || 0);
+        const failed = Number(res.data?.failed || 0);
+        await loadPublicSponsorDonors(activeProjectId, { silent: true });
+        if (failed > 0) {
+          toast.error(`Cancelled ${succeeded}; ${failed} could not be cancelled (already planted).`);
+        } else {
+          toast.success(`Cancelled ${succeeded} assignment${succeeded === 1 ? "" : "s"}`);
+        }
+      } catch (error: any) {
+        toast.error(error?.response?.data?.detail || "Failed to cancel sponsor tree assignments");
+      } finally {
+        setUnassigningDonorUnitIds((prev) => {
+          const next = new Set(prev);
+          unitIds.forEach((id) => next.delete(id));
+          return next;
+        });
+      }
+    },
+    [activeProjectId, canAccessSuperAdmin, loadPublicSponsorDonors],
+  );
+
   const reissueSponsorQrUnit = useCallback(
     async (unitId: number, agentUserId: number) => {
       if (!activeProjectId) return;
@@ -5840,6 +5946,48 @@ export default function GreenWork() {
     },
     [activeProjectId, canAccessSuperAdmin, loadSponsorQrStatus, sponsorQrAgentOptions, workAuthSession?.user?.full_name],
   );
+
+  const bulkReissueSponsorQrUnits = useCallback(async () => {
+    if (!activeProjectId) return;
+    if (!canAccessSuperAdmin) {
+      toast.error("Only super admin can reissue sponsor QR tags.");
+      return;
+    }
+    const unitIds = Array.from(selectedSponsorQrUnitIds);
+    if (unitIds.length === 0) {
+      toast.error("Select at least one sponsor QR tag first.");
+      return;
+    }
+    const normalizedAgentUserId = Number(bulkReissueAgentUserId || 0);
+    if (!(normalizedAgentUserId > 0)) {
+      toast.error("Select a sponsor agent first.");
+      return;
+    }
+    const agent = sponsorQrAgentOptions.find((item) => Number(item.id || 0) === normalizedAgentUserId);
+    const agentLabel = agent?.full_name || agent?.work_username || `User #${normalizedAgentUserId}`;
+    if (!window.confirm(`Reissue ${unitIds.length} sponsor QR tag${unitIds.length === 1 ? "" : "s"} to ${agentLabel}?`)) return;
+    setBulkReissuingSponsorQr(true);
+    try {
+      const res = await api.post(`/green/admin/sponsor-qr-status/reissue-bulk`, {
+        unit_ids: unitIds,
+        agent_user_id: normalizedAgentUserId,
+        reviewer_name: workAuthSession?.user?.full_name || "super_admin",
+      });
+      const succeeded = Number(res.data?.succeeded || 0);
+      const failed = Number(res.data?.failed || 0);
+      await loadSponsorQrStatus(activeProjectId, { forceSync: false });
+      setSelectedSponsorQrUnitIds(new Set());
+      if (failed > 0) {
+        toast.error(`Reissued ${succeeded} tag${succeeded === 1 ? "" : "s"} to ${agentLabel}; ${failed} failed (already planted or invalid).`);
+      } else {
+        toast.success(`Reissued ${succeeded} tag${succeeded === 1 ? "" : "s"} to ${agentLabel}`);
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to reissue sponsor QR tags");
+    } finally {
+      setBulkReissuingSponsorQr(false);
+    }
+  }, [activeProjectId, bulkReissueAgentUserId, canAccessSuperAdmin, loadSponsorQrStatus, selectedSponsorQrUnitIds, sponsorQrAgentOptions, workAuthSession?.user?.full_name]);
 
   const assignSponsorOrderQrTags = useCallback(
     async (orderId: number, agentUserId: number) => {
@@ -6333,6 +6481,20 @@ export default function GreenWork() {
     }, 15000);
     return () => window.clearInterval(timer);
   }, [activeForm, activeProjectId, loadSponsorQrStatus, publicSponsorshipProject]);
+
+  useEffect(() => {
+    if (!activeProjectId || !publicSponsorshipProject) {
+      setSponsorDonors([]);
+      setSponsorDonorsError(null);
+      return;
+    }
+    if (activeForm !== "assign_work") return;
+    void loadPublicSponsorDonors(activeProjectId);
+    const timer = window.setInterval(() => {
+      void loadPublicSponsorDonors(activeProjectId, { silent: true });
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [activeForm, activeProjectId, loadPublicSponsorDonors, publicSponsorshipProject]);
 
   useEffect(() => {
     if (!activeProjectId || !publicSponsorshipProject) {
@@ -13240,6 +13402,51 @@ export default function GreenWork() {
                         Pending: {sponsorQrStatusRows.filter((row: any) => Number(row.qr_download_count || 0) <= 0).length}
                       </span>
                     </div>
+                    {(() => {
+                      const eligibleUnitIds = sponsorQrStatusRows
+                        .filter((row: any) => !row.tree_id && String(row.sponsorship_status || "").trim().toLowerCase() === "awaiting_tree")
+                        .map((row: any) => Number(row.unit_id || 0))
+                        .filter((id: number) => id > 0);
+                      const allEligibleSelected = eligibleUnitIds.length > 0 && eligibleUnitIds.every((id: number) => selectedSponsorQrUnitIds.has(id));
+                      return canAccessSuperAdmin && eligibleUnitIds.length > 0 ? (
+                        <div className="work-actions" style={{ marginBottom: 12, flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+                          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                            <input
+                              type="checkbox"
+                              checked={allEligibleSelected}
+                              onChange={(e) => setSelectedSponsorQrUnitIds(e.target.checked ? new Set(eligibleUnitIds) : new Set())}
+                            />
+                            Select all reissuable ({eligibleUnitIds.length})
+                          </label>
+                          {selectedSponsorQrUnitIds.size > 0 && (
+                            <>
+                              <select
+                                value={bulkReissueAgentUserId > 0 ? bulkReissueAgentUserId : ""}
+                                onChange={(e) => setBulkReissueAgentUserId(Number(e.target.value || 0))}
+                                disabled={bulkReissuingSponsorQr}
+                              >
+                                <option value="">Choose sponsor agent</option>
+                                {sponsorQrAgentOptions.map((user) => (
+                                  <option key={`bulk-reissue-agent-${user.id}`} value={Number(user.id || 0)}>
+                                    {user.full_name}
+                                    {user.work_username ? ` (${user.work_username})` : ""}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => void bulkReissueSponsorQrUnits()}
+                                disabled={bulkReissuingSponsorQr || !(bulkReissueAgentUserId > 0)}
+                              >
+                                {bulkReissuingSponsorQr
+                                  ? "Reissuing..."
+                                  : `Reissue Selected (${selectedSponsorQrUnitIds.size})`}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      ) : null;
+                    })()}
                     {sponsorQrStatusLoading ? (
                       <p className="green-work-note">Loading sponsor QR status...</p>
                     ) : sponsorQrStatusError ? (
@@ -13250,6 +13457,7 @@ export default function GreenWork() {
                       <table className="green-work-table">
                         <thead>
                           <tr>
+                            {canAccessSuperAdmin && <th></th>}
                             <th>Sponsor</th>
                             <th>QR Ref</th>
                             <th>Unit Status</th>
@@ -13261,8 +13469,28 @@ export default function GreenWork() {
                           </tr>
                         </thead>
                         <tbody>
-                          {sponsorQrStatusRows.map((row: any) => (
+                          {sponsorQrStatusRows.map((row: any) => {
+                            const isReissuable = !row.tree_id && String(row.sponsorship_status || "").trim().toLowerCase() === "awaiting_tree";
+                            const unitIdNum = Number(row.unit_id || 0);
+                            return (
                             <tr key={`sponsor-qr-${row.unit_id}`}>
+                              {canAccessSuperAdmin && (
+                                <td>
+                                  {isReissuable && (
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedSponsorQrUnitIds.has(unitIdNum)}
+                                      onChange={(e) =>
+                                        setSelectedSponsorQrUnitIds((prev) => {
+                                          const next = new Set(prev);
+                                          if (e.target.checked) next.add(unitIdNum); else next.delete(unitIdNum);
+                                          return next;
+                                        })
+                                      }
+                                    />
+                                  )}
+                                </td>
+                              )}
                               <td>
                                 <strong>{row.sponsor_name || row.sponsor_organization_name || `Sponsor #${row.sponsor_account_id || row.unit_id}`}</strong>
                                 {row.dedication_type || row.dedication_name ? (
@@ -13345,7 +13573,8 @@ export default function GreenWork() {
                                 )}
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     )}
@@ -14674,6 +14903,112 @@ export default function GreenWork() {
             <div className="green-work-card">
               <h3>Assign Tree Planting</h3>
               {!activeProjectId && <p className="green-work-note">Select project first from Project Focus.</p>}
+              {publicSponsorshipProject && activeProjectId && (
+                <div className="green-work-card" style={{ marginBottom: 20, background: "#f8fcf9" }}>
+                  <h4 style={{ marginTop: 0 }}>Assign by Sponsor (recommended)</h4>
+                  <p className="green-work-note" style={{ marginLeft: 0 }}>
+                    Pick a paid sponsor, see how many of their trees are already assigned (and to whom), and assign some or
+                    all of the remaining ones to an agent. Cancel an assignment below if planting hasn't happened yet.
+                  </p>
+                  <div className="work-actions" style={{ marginBottom: 12 }}>
+                    <button type="button" onClick={() => void loadPublicSponsorDonors(activeProjectId)} disabled={sponsorDonorsLoading}>
+                      {sponsorDonorsLoading ? "Loading..." : "Refresh Sponsors"}
+                    </button>
+                  </div>
+                  {sponsorDonorsError && <p className="green-work-error" style={{ color: "red" }}>{sponsorDonorsError}</p>}
+                  {sponsorDonors.length === 0 ? (
+                    <p className="green-work-note" style={{ marginLeft: 0 }}>
+                      {sponsorDonorsLoading ? "Loading sponsor donors..." : "No paid sponsors found for this project yet."}
+                    </p>
+                  ) : (
+                    <table className="green-work-table">
+                      <thead>
+                        <tr>
+                          <th>Sponsor</th>
+                          <th>Paid Trees</th>
+                          <th>Assigned (unplanted)</th>
+                          <th>Planted</th>
+                          <th>Remaining</th>
+                          <th>Assign Remaining</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sponsorDonors.map((donor: any) => {
+                          const sponsorId = Number(donor.sponsor_account_id || 0);
+                          return (
+                            <tr key={`sponsor-donor-${sponsorId}`}>
+                              <td>
+                                <strong>{donor.sponsor_name || donor.sponsor_organization_name || `Sponsor #${sponsorId}`}</strong>
+                              </td>
+                              <td style={{ fontWeight: 800 }}>{Number(donor.total_paid_trees || 0)}</td>
+                              <td>
+                                {Number(donor.assigned_unplanted || 0) > 0 ? (
+                                  <div style={{ display: "grid", gap: 6 }}>
+                                    {(donor.assignments || []).map((a: any) => (
+                                      <div key={`donor-${sponsorId}-agent-${a.agent_user_id || a.agent_name}`} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                                        <span>{a.agent_name} × {a.count}</span>
+                                        <button
+                                          type="button"
+                                          style={{ fontSize: 11, padding: "2px 6px" }}
+                                          disabled={(a.unit_ids || []).some((id: number) => unassigningDonorUnitIds.has(id))}
+                                          onClick={() => void unassignSponsorDonorUnits(a.unit_ids || [])}
+                                        >
+                                          {(a.unit_ids || []).some((id: number) => unassigningDonorUnitIds.has(id)) ? "Cancelling..." : "Cancel"}
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span style={{ color: "#56705f", fontSize: 12 }}>None</span>
+                                )}
+                              </td>
+                              <td>{Number(donor.planted || 0)}</td>
+                              <td style={{ fontWeight: 800 }}>{Number(donor.unassigned_remaining || 0)}</td>
+                              <td>
+                                {Number(donor.unassigned_remaining || 0) > 0 ? (
+                                  <div style={{ display: "grid", gap: 6, minWidth: 200 }}>
+                                    <select
+                                      value={Number(donorAssignAgent[sponsorId] || 0) > 0 ? Number(donorAssignAgent[sponsorId] || 0) : ""}
+                                      onChange={(e) => setDonorAssignAgent((prev) => ({ ...prev, [sponsorId]: Number(e.target.value || 0) }))}
+                                      disabled={assigningDonorSponsorId === sponsorId}
+                                    >
+                                      <option value="">Choose sponsor agent</option>
+                                      {assignmentUsers.map((u: any) => (
+                                        <option key={`donor-agent-${sponsorId}-${u.id}`} value={Number(u.id || 0)}>
+                                          {u.full_name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      max={Number(donor.unassigned_remaining || 0)}
+                                      placeholder={`All remaining (${Number(donor.unassigned_remaining || 0)})`}
+                                      value={donorAssignCount[sponsorId] || ""}
+                                      onChange={(e) => setDonorAssignCount((prev) => ({ ...prev, [sponsorId]: e.target.value }))}
+                                      disabled={assigningDonorSponsorId === sponsorId}
+                                      style={{ fontSize: 12, padding: 4 }}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => void assignSponsorDonorTrees(sponsorId)}
+                                      disabled={assigningDonorSponsorId === sponsorId || !(Number(donorAssignAgent[sponsorId] || 0) > 0)}
+                                    >
+                                      {assigningDonorSponsorId === sponsorId ? "Assigning..." : "Assign"}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span style={{ color: "#56705f", fontSize: 12 }}>Fully assigned</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
               {publicSponsorshipProject && (
                 <>
                   <div className="work-actions" style={{ marginBottom: 12, flexWrap: "wrap" }}>
