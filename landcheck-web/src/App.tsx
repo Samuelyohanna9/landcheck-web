@@ -38,7 +38,10 @@ function GreenProtectedRoute({ element }: { element: ReactElement }) {
 function MerchantProtectedRoute({ element }: { element: ReactElement }) {
   const session = getGreenAuthSession();
   if (!session || !isSponsorGreenSession(session)) {
-    return <Navigate to="/green/login" state={{ from: "/green-merchant" }} replace />;
+    // Straight to the sponsor login form (the same one merchant credentials already work
+    // with), not the bare route-selector page — that page only offers "Sponsor Trees" /
+    // "Perform Field Work", neither of which reads as "I'm a merchant."
+    return <Navigate to="/green/login/sponsor" state={{ from: "/green-merchant" }} replace />;
   }
   // A merchant landing on the wrong dashboard route is a routing mistake, not an auth
   // failure — send individual/organization sponsors back to their own dashboard instead
