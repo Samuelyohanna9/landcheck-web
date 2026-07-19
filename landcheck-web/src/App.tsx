@@ -35,10 +35,24 @@ function GreenProtectedRoute({ element }: { element: ReactElement }) {
   return isGreenAuthed() ? element : <Navigate to="/green/login" replace />;
 }
 
+function MerchantProtectedRoute({ element }: { element: ReactElement }) {
+  const session = getGreenAuthSession();
+  if (!session || !isSponsorGreenSession(session)) {
+    return <Navigate to="/green/login" state={{ from: "/green-merchant" }} replace />;
+  }
+  // A merchant landing on the wrong dashboard route is a routing mistake, not an auth
+  // failure — send individual/organization sponsors back to their own dashboard instead
+  // of erroring, since they do have a valid session, just not this one.
+  if (session.user?.account_type !== "merchant") return <Navigate to="/green" replace />;
+  return element;
+}
+
 function GreenRouteSwitch() {
   const session = getGreenAuthSession();
   if (session && isSponsorGreenSession(session)) {
-    if (session.user?.account_type === "merchant") return <GreenMerchantDashboard />;
+    // Merchants live on their own dedicated route (/green-merchant), not this shared
+    // public-sponsor / organization-sponsor route.
+    if (session.user?.account_type === "merchant") return <Navigate to="/green-merchant" replace />;
     return <GreenSponsor />;
   }
   return <Green />;
@@ -58,6 +72,7 @@ export default function App() {
           <Route path="/green/login" element={<GreenLogin />} />
           <Route path="/green/login/:authRoute" element={<GreenLogin />} />
           <Route path="/green" element={<GreenProtectedRoute element={<GreenRouteSwitch />} />} />
+          <Route path="/green-merchant" element={<MerchantProtectedRoute element={<GreenMerchantDashboard />} />} />
           <Route path="/green-work/login" element={<GreenWorkLogin />} />
           <Route path="/green-work" element={<WorkProtectedRoute element={<GreenWork />} />} />
           <Route path="/survey" element={<SurveyPlanLanding />} />
