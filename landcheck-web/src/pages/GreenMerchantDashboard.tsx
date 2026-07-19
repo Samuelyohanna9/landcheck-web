@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { getGreenAuthSession, clearGreenAuthed } from "../auth/greenAuth";
+import { GreenGlyph } from "../components/GreenGlyph";
 import { ProjectMap } from "../components/ProjectMap";
+import "../styles/green-merchant.css";
 
 type MerchantOrder = {
   id: number;
@@ -50,12 +52,28 @@ const formatAmount = (amount?: number | null, currency?: string | null) => {
   }
 };
 
-const StatTile = ({ label, value }: { label: string; value: string | number }) => (
-  <div style={styles.statTile}>
-    <div style={styles.statValue}>{value}</div>
-    <div style={styles.statLabel}>{label}</div>
-  </div>
-);
+const STATUS_LABELS: Record<string, string> = {
+  pending_payment: "Pending",
+  payment_review: "In Review",
+  paid: "Confirmed",
+  allocated: "Assigned",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+const toneForStatus = (status?: string | null): "ok" | "warn" | "neutral" | "info" => {
+  const key = String(status || "").toLowerCase();
+  if (key === "completed") return "ok";
+  if (key === "allocated" || key === "payment_review") return "warn";
+  if (key === "cancelled") return "neutral";
+  return "info";
+};
+
+const SOURCE_LABELS: Record<string, string> = {
+  api: "Direct API",
+  webhook_shopify: "Shopify",
+  admin: "Manual",
+};
 
 export default function GreenMerchantDashboard() {
   const navigate = useNavigate();
@@ -97,83 +115,168 @@ export default function GreenMerchantDashboard() {
   }
 
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
-        <div>
-          <div style={styles.eyebrow}>LandCheck Green — Merchant</div>
-          <h1 style={styles.title}>{data?.merchant?.organization_name || "Your Sponsorship Program"}</h1>
+    <div className="gm-page">
+      <header className="gm-header">
+        <div className="gm-header-left">
+          <div className="gm-header-icon">
+            <GreenGlyph name="briefcase" />
+          </div>
+          <div>
+            <div className="gm-eyebrow">LandCheck Green &middot; Merchant Partner</div>
+            <h1 className="gm-title">{data?.merchant?.organization_name || "Your Sponsorship Program"}</h1>
+          </div>
         </div>
-        <button type="button" style={styles.logoutButton} onClick={handleLogout}>
-          Log out
-        </button>
+        <div className="gm-header-right">
+          {data?.merchant?.contact_email ? <span className="gm-contact-pill">{data.merchant.contact_email}</span> : null}
+          <button type="button" className="gm-logout-btn" onClick={handleLogout}>
+            <GreenGlyph name="logout" />
+            Log out
+          </button>
+        </div>
       </header>
 
-      <main style={styles.main}>
-        {error ? <p style={styles.error}>{error}</p> : null}
+      <main className="gm-main">
+        {error ? <p className="gm-error">{error}</p> : null}
+
         {loading ? (
-          <p style={styles.note}>Loading your dashboard...</p>
+          <p className="gm-loading">Loading your dashboard&hellip;</p>
         ) : data ? (
           <>
-            <section style={styles.statGrid}>
-              <StatTile label="Orders" value={data.summary.total_orders} />
-              <StatTile label="Trees Sponsored" value={data.summary.total_trees} />
-              <StatTile label="Trees Planted" value={data.summary.planted_trees} />
-              <StatTile label="Survival Rate" value={`${data.summary.survival_rate}%`} />
+            <section className="gm-stat-grid">
+              <div className="gm-stat-card">
+                <div className="gm-stat-icon">
+                  <GreenGlyph name="receipt" />
+                </div>
+                <div className="gm-stat-value">{data.summary.total_orders}</div>
+                <div className="gm-stat-label">Orders</div>
+              </div>
+              <div className="gm-stat-card">
+                <div className="gm-stat-icon">
+                  <GreenGlyph name="leaf" />
+                </div>
+                <div className="gm-stat-value">{data.summary.total_trees}</div>
+                <div className="gm-stat-label">Trees Sponsored</div>
+              </div>
+              <div className="gm-stat-card">
+                <div className="gm-stat-icon">
+                  <GreenGlyph name="check-circle" />
+                </div>
+                <div className="gm-stat-value">{data.summary.planted_trees}</div>
+                <div className="gm-stat-label">Trees Planted</div>
+              </div>
+              <div className="gm-stat-card">
+                <div className="gm-stat-icon warn">
+                  <GreenGlyph name="pulse" />
+                </div>
+                <div className="gm-stat-value">{data.summary.survival_rate}%</div>
+                <div className="gm-stat-label">Survival Rate</div>
+              </div>
             </section>
 
             {data.map_points && data.map_points.length > 0 ? (
-              <section style={{ ...styles.card, padding: 0, overflow: "hidden", marginBottom: 20 }}>
-                <ProjectMap points={data.map_points} mode="green" />
+              <section className="gm-card gm-map-card">
+                <div className="gm-card-body">
+                  <div className="gm-card-heading">
+                    <div className="gm-card-heading-icon">
+                      <GreenGlyph name="map" />
+                    </div>
+                    <div>
+                      <div className="gm-card-title">Where Your Trees Are Growing</div>
+                      <div className="gm-card-subtitle">Verified GPS locations of your customers' sponsored trees.</div>
+                    </div>
+                  </div>
+                  <ProjectMap points={data.map_points} mode="green" />
+                </div>
               </section>
             ) : null}
 
-            <div style={styles.actionsRow}>
-              <a
-                href={`${api.defaults.baseURL || ""}/green/merchant-auth/report.pdf?merchant_id=${merchantId}`}
-                target="_blank"
-                rel="noreferrer"
-                style={styles.reportButton}
-              >
-                Download Impact Report
-              </a>
-            </div>
-
-            <section style={styles.card}>
-              <h2 style={styles.cardTitle}>Recent Orders</h2>
-              {data.orders.length === 0 ? (
-                <p style={styles.note}>No orders yet — once your integration sends its first order, it'll show up here.</p>
-              ) : (
-                <div style={styles.tableWrap}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.th}>Order</th>
-                        <th style={styles.th}>Your Order Ref</th>
-                        <th style={styles.th}>Trees</th>
-                        <th style={styles.th}>Planted</th>
-                        <th style={styles.th}>Amount</th>
-                        <th style={styles.th}>Status</th>
-                        <th style={styles.th}>Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.orders.map((order) => (
-                        <tr key={order.id}>
-                          <td style={styles.td}>{order.order_uid || "-"}</td>
-                          <td style={styles.td}>{order.external_order_id || "-"}</td>
-                          <td style={styles.td}>{order.quantity}</td>
-                          <td style={styles.td}>
-                            {order.linked_count ?? 0}/{order.quantity}
-                          </td>
-                          <td style={styles.td}>{formatAmount(order.amount_total, order.currency)}</td>
-                          <td style={styles.td}>{order.order_status || "-"}</td>
-                          <td style={styles.td}>{formatDate(order.created_at)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            <section className="gm-card gm-report-card">
+              <div className="gm-card-body">
+                <div className="gm-report-copy">
+                  <div className="gm-report-icon">
+                    <GreenGlyph name="chart" />
+                  </div>
+                  <div>
+                    <div className="gm-card-title">Impact Report</div>
+                    <div className="gm-card-subtitle">A downloadable summary of every tree sponsored through your integration.</div>
+                  </div>
                 </div>
-              )}
+                <a
+                  href={`${api.defaults.baseURL || ""}/green/merchant-auth/report.pdf?merchant_id=${merchantId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="gm-report-btn"
+                >
+                  <GreenGlyph name="download" />
+                  Download Report
+                </a>
+              </div>
+            </section>
+
+            <section className="gm-card">
+              <div className="gm-card-body">
+                <div className="gm-card-heading">
+                  <div className="gm-card-heading-icon">
+                    <GreenGlyph name="branch" />
+                  </div>
+                  <div>
+                    <div className="gm-card-title">Recent Orders</div>
+                    <div className="gm-card-subtitle">Every sponsorship created automatically through your integration.</div>
+                  </div>
+                </div>
+
+                {data.orders.length === 0 ? (
+                  <p className="gm-empty">No orders yet — once your integration sends its first order, it'll show up here.</p>
+                ) : (
+                  <div className="gm-table-wrap">
+                    <table className="gm-table">
+                      <thead>
+                        <tr>
+                          <th>Order</th>
+                          <th>Your Reference</th>
+                          <th>Source</th>
+                          <th>Trees Planted</th>
+                          <th>Amount</th>
+                          <th>Status</th>
+                          <th>Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.orders.map((order) => {
+                          const planted = order.linked_count ?? 0;
+                          const pct = order.quantity > 0 ? Math.round((planted / order.quantity) * 100) : 0;
+                          return (
+                            <tr key={order.id}>
+                              <td className="gm-mono">{order.order_uid || "-"}</td>
+                              <td className="gm-mono">{order.external_order_id || "-"}</td>
+                              <td>
+                                <span className="gm-pill neutral">{SOURCE_LABELS[order.source || ""] || order.source || "-"}</span>
+                              </td>
+                              <td>
+                                <div className="gm-progress-cell">
+                                  <div className="gm-progress-track">
+                                    <div className="gm-progress-fill" style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <span>
+                                    {planted}/{order.quantity}
+                                  </span>
+                                </div>
+                              </td>
+                              <td>{formatAmount(order.amount_total, order.currency)}</td>
+                              <td>
+                                <span className={`gm-pill ${toneForStatus(order.order_status)}`}>
+                                  {STATUS_LABELS[order.order_status || ""] || order.order_status || "-"}
+                                </span>
+                              </td>
+                              <td>{formatDate(order.created_at)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </section>
           </>
         ) : null}
@@ -181,54 +284,3 @@ export default function GreenMerchantDashboard() {
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  page: { minHeight: "100vh", background: "#f4f8f5", fontFamily: "'Segoe UI', system-ui, sans-serif" },
-  header: {
-    background: "linear-gradient(135deg, #0d2818, #155e2f)",
-    color: "#fff",
-    padding: "24px 28px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  eyebrow: { fontSize: 12, letterSpacing: 1, opacity: 0.75, textTransform: "uppercase" },
-  title: { margin: "4px 0 0", fontSize: 24 },
-  logoutButton: {
-    background: "rgba(255,255,255,0.12)",
-    color: "#fff",
-    border: "1px solid rgba(255,255,255,0.3)",
-    borderRadius: 8,
-    padding: "8px 16px",
-    cursor: "pointer",
-  },
-  main: { maxWidth: 960, margin: "0 auto", padding: "28px 20px 60px" },
-  error: { color: "#b91c1c", background: "#fef2f2", padding: 12, borderRadius: 8 },
-  note: { color: "#6b7280" },
-  statGrid: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 20 },
-  statTile: {
-    background: "#eef6f0",
-    border: "1px solid #cfe6d5",
-    borderRadius: 10,
-    padding: "18px 10px",
-    textAlign: "center",
-  },
-  statValue: { fontSize: 26, fontWeight: 800, color: "#0d2818" },
-  statLabel: { fontSize: 12, color: "#3f5847", marginTop: 4 },
-  actionsRow: { marginBottom: 20 },
-  reportButton: {
-    display: "inline-block",
-    background: "#155e2f",
-    color: "#fff",
-    padding: "10px 18px",
-    borderRadius: 8,
-    textDecoration: "none",
-    fontWeight: 600,
-  },
-  card: { background: "#fff", border: "1px solid #e2e8e4", borderRadius: 12, padding: 20 },
-  cardTitle: { margin: "0 0 12px", fontSize: 16, color: "#0d2818" },
-  tableWrap: { overflowX: "auto" },
-  table: { width: "100%", borderCollapse: "collapse", fontSize: 13 },
-  th: { textAlign: "left", padding: "8px 10px", borderBottom: "2px solid #e2e8e4", color: "#3f5847" },
-  td: { padding: "8px 10px", borderBottom: "1px solid #eef2ef", color: "#1f2937" },
-};

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
+  getGreenAuthSession,
   isGreenAuthed,
   loginGreen,
   loginGreenSponsor,
@@ -111,7 +112,9 @@ export default function GreenLogin() {
 
   useEffect(() => {
     if (!isGreenAuthed()) return;
-    navigate("/green", { replace: true });
+    const existingSession = getGreenAuthSession();
+    const target = existingSession?.user?.account_type === "merchant" ? "/green-merchant" : "/green";
+    navigate(target, { replace: true });
   }, [navigate]);
 
   const onSubmit = async (event: FormEvent) => {
@@ -142,7 +145,10 @@ export default function GreenLogin() {
           password,
         });
       }
-      navigate(redirectTo, { replace: true });
+      const loggedInSession = getGreenAuthSession();
+      const target =
+        loggedInSession?.user?.account_type === "merchant" && redirectTo === "/green" ? "/green-merchant" : redirectTo;
+      navigate(target, { replace: true });
     } catch (err: any) {
       setError(err?.response?.data?.detail || err?.message || "Unable to continue.");
     } finally {
