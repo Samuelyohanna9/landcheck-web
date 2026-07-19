@@ -1684,6 +1684,14 @@ export default function GreenSponsor() {
             <div className="green-sponsor-panel-heading">
               <GreenGlyph name="person" className="green-sponsor-heading-icon" />
               <div><h3>Sponsor Profile</h3><p>Your identity and account details.</p></div>
+              <button
+                type="button"
+                className="green-sponsor-secondary-btn"
+                style={{ marginLeft: "auto", flexShrink: 0 }}
+                onClick={handleLogout}
+              >
+                Log out
+              </button>
             </div>
             {/* Profile photo */}
             <div className="gs-profile-avatar">
