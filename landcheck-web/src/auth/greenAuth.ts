@@ -3,7 +3,7 @@ import { api } from "../api/client";
 export const GREEN_AUTH_STORAGE_KEY = "landcheck_green_auth";
 export type GreenAppMode = "green" | "green_sponsor";
 export type GreenAuthMode = "env_admin" | "partner_user" | "sponsor_user";
-export type GreenSponsorAccountType = "individual" | "organization";
+export type GreenSponsorAccountType = "individual" | "organization" | "merchant";
 
 export type GreenAuthUser = {
   id: number;

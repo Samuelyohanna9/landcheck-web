@@ -14,6 +14,7 @@ const HazardAnalysis = lazy(() => import("./pages/HazardAnalysis"));
 const Green = lazy(() => import("./pages/Green"));
 const GreenLogin = lazy(() => import("./pages/GreenLogin"));
 const GreenSponsor = lazy(() => import("./pages/GreenSponsor"));
+const GreenMerchantDashboard = lazy(() => import("./pages/GreenMerchantDashboard"));
 const GreenWork = lazy(() => import("./pages/GreenWork"));
 const GreenWorkLogin = lazy(() => import("./pages/GreenWorkLogin"));
 const GreenPartnersLanding = lazy(() => import("./pages/GreenPartnersLanding"));
@@ -36,7 +37,10 @@ function GreenProtectedRoute({ element }: { element: ReactElement }) {
 
 function GreenRouteSwitch() {
   const session = getGreenAuthSession();
-  if (session && isSponsorGreenSession(session)) return <GreenSponsor />;
+  if (session && isSponsorGreenSession(session)) {
+    if (session.user?.account_type === "merchant") return <GreenMerchantDashboard />;
+    return <GreenSponsor />;
+  }
   return <Green />;
 }
 
