@@ -516,6 +516,50 @@ type SponsorAgentPayoutBoard = {
   } | null;
 };
 
+type MerchantOrderRecord = {
+  id: number;
+  order_uid?: string | null;
+  external_order_id?: string | null;
+  source?: string | null;
+  quantity: number;
+  amount_total?: number | null;
+  currency?: string | null;
+  order_status?: string | null;
+  created_at?: string | null;
+  linked_count?: number;
+};
+
+type MerchantWebhookEventRecord = {
+  id: number;
+  platform: string;
+  external_event_id?: string | null;
+  order_id?: number | null;
+  status: string;
+  error_message?: string | null;
+  created_at?: string | null;
+};
+
+type MerchantAccountRecord = {
+  id: number;
+  sponsor_uid?: string | null;
+  organization_name?: string | null;
+  contact_name?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  is_active?: boolean;
+  default_project_id?: number | null;
+  agreed_price_per_tree?: number | null;
+  has_webhook_secret?: boolean;
+  created_at?: string | null;
+  order_count?: number;
+  tree_count?: number;
+  linked_count?: number;
+  webhook_url_shopify?: string | null;
+  orders?: MerchantOrderRecord[];
+  api_key?: string | null;
+  webhook_secret?: string | null;
+};
+
 type AdminOverview = {
   totals: {
     organizations: number;
@@ -813,6 +857,7 @@ type WorkForm =
   | "sponsors"
   | "sponsorship_orders"
   | "sponsor_payouts"
+  | "merchants"
   | "sponsor_feedback"
   | "logs"
   | "share_impact"
@@ -3165,7 +3210,7 @@ function ShareImpactPanel({
 export default function GreenWork() {
   const workAuthSession = getWorkAuthSession();
   const canAccessSuperAdmin = workAuthSession?.auth_mode === "env_admin";
-  const isSuperAdminOnlyForm = (form: WorkForm | null | undefined) => form === "super_admin" || form === "logs";
+  const isSuperAdminOnlyForm = (form: WorkForm | null | undefined) => form === "super_admin" || form === "logs" || form === "merchants";
   const isPartnerWorkSession = workAuthSession?.auth_mode === "partner_user";
   const normalizeOrgLifecycleStatus = (value: unknown) => String(value || "").trim().toLowerCase();
   const workScopedOrganizationId =
@@ -3521,6 +3566,23 @@ export default function GreenWork() {
   const [sponsorAgentPayoutBoard, setSponsorAgentPayoutBoard] = useState<SponsorAgentPayoutBoard | null>(null);
   const [sponsorAgentPayoutLoading, setSponsorAgentPayoutLoading] = useState(false);
   const [sponsorAgentPayoutError, setSponsorAgentPayoutError] = useState<string | null>(null);
+  const [merchants, setMerchants] = useState<MerchantAccountRecord[]>([]);
+  const [merchantsLoading, setMerchantsLoading] = useState(false);
+  const [merchantsError, setMerchantsError] = useState<string | null>(null);
+  const [newMerchantOrgName, setNewMerchantOrgName] = useState("");
+  const [newMerchantContactName, setNewMerchantContactName] = useState("");
+  const [newMerchantContactEmail, setNewMerchantContactEmail] = useState("");
+  const [newMerchantContactPhone, setNewMerchantContactPhone] = useState("");
+  const [newMerchantProjectId, setNewMerchantProjectId] = useState("");
+  const [newMerchantPrice, setNewMerchantPrice] = useState("");
+  const [creatingMerchant, setCreatingMerchant] = useState(false);
+  const [revealedMerchantCredentials, setRevealedMerchantCredentials] = useState<MerchantAccountRecord | null>(null);
+  const [expandedMerchantId, setExpandedMerchantId] = useState<number | null>(null);
+  const [merchantDetail, setMerchantDetail] = useState<MerchantAccountRecord | null>(null);
+  const [merchantDetailLoading, setMerchantDetailLoading] = useState(false);
+  const [merchantWebhookEvents, setMerchantWebhookEvents] = useState<MerchantWebhookEventRecord[]>([]);
+  const [rotatingMerchantKeyId, setRotatingMerchantKeyId] = useState<number | null>(null);
+  const [rotatingMerchantWebhookSecretId, setRotatingMerchantWebhookSecretId] = useState<number | null>(null);
   const [sponsorQrStatusRows, setSponsorQrStatusRows] = useState<any[]>([]);
   const [sponsorQrStatusLoading, setSponsorQrStatusLoading] = useState(false);
   const [sponsorQrStatusError, setSponsorQrStatusError] = useState<string | null>(null);
@@ -5799,6 +5861,121 @@ export default function GreenWork() {
     }
   }, []);
 
+  const loadMerchants = useCallback(async (options?: { silent?: boolean }) => {
+    if (!canAccessSuperAdmin) return;
+    if (!options?.silent) setMerchantsLoading(true);
+    setMerchantsError(null);
+    try {
+      const res = await api.get(`/green/admin/merchants?_ts=${Date.now()}`);
+      setMerchants(Array.isArray(res.data) ? res.data : []);
+    } catch (error: any) {
+      setMerchantsError(error?.response?.data?.detail || error?.message || "Failed to load merchants");
+      setMerchants([]);
+    } finally {
+      if (!options?.silent) setMerchantsLoading(false);
+    }
+  }, [canAccessSuperAdmin]);
+
+  const createMerchant = useCallback(async () => {
+    if (!canAccessSuperAdmin) return;
+    if (!newMerchantOrgName.trim() || !newMerchantContactName.trim() || !newMerchantContactEmail.trim()) {
+      toast.error("Organization name, contact name and contact email are required");
+      return;
+    }
+    setCreatingMerchant(true);
+    try {
+      const res = await api.post(`/green/admin/merchants`, {
+        organization_name: newMerchantOrgName.trim(),
+        contact_name: newMerchantContactName.trim(),
+        contact_email: newMerchantContactEmail.trim(),
+        contact_phone: newMerchantContactPhone.trim() || null,
+        default_project_id: newMerchantProjectId ? Number(newMerchantProjectId) : null,
+        agreed_price_per_tree: newMerchantPrice ? Number(newMerchantPrice) : null,
+      });
+      toast.success("Merchant created — copy the API key now, it won't be shown again");
+      setRevealedMerchantCredentials(res.data);
+      setNewMerchantOrgName("");
+      setNewMerchantContactName("");
+      setNewMerchantContactEmail("");
+      setNewMerchantContactPhone("");
+      setNewMerchantProjectId("");
+      setNewMerchantPrice("");
+      await loadMerchants({ silent: true });
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to create merchant");
+    } finally {
+      setCreatingMerchant(false);
+    }
+  }, [canAccessSuperAdmin, newMerchantOrgName, newMerchantContactName, newMerchantContactEmail, newMerchantContactPhone, newMerchantProjectId, newMerchantPrice, loadMerchants]);
+
+  const rotateMerchantKey = useCallback(async (merchantId: number) => {
+    if (!canAccessSuperAdmin) return;
+    if (!window.confirm("Rotate this merchant's API key? Their existing key will stop working immediately.")) return;
+    setRotatingMerchantKeyId(merchantId);
+    try {
+      const res = await api.post(`/green/admin/merchants/${merchantId}/rotate-key`, {});
+      toast.success("API key rotated — share the new key with the merchant now");
+      setRevealedMerchantCredentials({ id: merchantId, api_key: res.data?.api_key } as MerchantAccountRecord);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to rotate API key");
+    } finally {
+      setRotatingMerchantKeyId(null);
+    }
+  }, [canAccessSuperAdmin]);
+
+  const rotateMerchantWebhookSecret = useCallback(async (merchantId: number) => {
+    if (!canAccessSuperAdmin) return;
+    if (!window.confirm("Regenerate this merchant's webhook secret? Their existing Shopify webhook will stop verifying until they update it.")) return;
+    setRotatingMerchantWebhookSecretId(merchantId);
+    try {
+      const res = await api.post(`/green/admin/merchants/${merchantId}/rotate-webhook-secret`, {});
+      toast.success("Webhook secret regenerated — share the new secret with the merchant now");
+      setRevealedMerchantCredentials({
+        id: merchantId,
+        webhook_secret: res.data?.webhook_secret,
+        webhook_url_shopify: res.data?.webhook_url_shopify,
+      } as MerchantAccountRecord);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to regenerate webhook secret");
+    } finally {
+      setRotatingMerchantWebhookSecretId(null);
+    }
+  }, [canAccessSuperAdmin]);
+
+  const sendMerchantLoginInvite = useCallback(async (contactEmail?: string | null) => {
+    if (!canAccessSuperAdmin) return;
+    const email = String(contactEmail || "").trim();
+    if (!email) {
+      toast.error("This merchant has no contact email on file");
+      return;
+    }
+    try {
+      await api.post(`/green/sponsor-auth/forgot-password`, { email });
+      toast.success(`Login invite sent to ${email}`);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to send login invite");
+    }
+  }, [canAccessSuperAdmin]);
+
+  const loadMerchantDetail = useCallback(async (merchantId: number) => {
+    if (!canAccessSuperAdmin) return;
+    setMerchantDetailLoading(true);
+    try {
+      const [detailRes, eventsRes] = await Promise.all([
+        api.get(`/green/admin/merchants/${merchantId}?_ts=${Date.now()}`),
+        api.get(`/green/admin/merchants/${merchantId}/webhook-events?_ts=${Date.now()}`),
+      ]);
+      setMerchantDetail(detailRes.data);
+      setMerchantWebhookEvents(Array.isArray(eventsRes.data) ? eventsRes.data : []);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || "Failed to load merchant detail");
+      setMerchantDetail(null);
+      setMerchantWebhookEvents([]);
+    } finally {
+      setMerchantDetailLoading(false);
+    }
+  }, [canAccessSuperAdmin]);
+
   const loadSponsorQrStatus = useCallback(async (projectId: number, options?: { silent?: boolean; forceSync?: boolean }) => {
     const silent = Boolean(options?.silent);
     const forceSync = options?.forceSync !== false;
@@ -6585,6 +6762,16 @@ export default function GreenWork() {
     }, 15000);
     return () => window.clearInterval(timer);
   }, [activeForm, activeProjectId, loadSponsorAgentPayoutBoard, publicSponsorshipProject]);
+
+  useEffect(() => {
+    if (activeForm !== "merchants" || !canAccessSuperAdmin) {
+      setRevealedMerchantCredentials(null);
+      setExpandedMerchantId(null);
+      setMerchantDetail(null);
+      return;
+    }
+    void loadMerchants();
+  }, [activeForm, canAccessSuperAdmin, loadMerchants]);
 
   useEffect(() => {
     if (activeForm !== "remote_monitoring") {
@@ -9233,6 +9420,9 @@ export default function GreenWork() {
                 { form: "sponsor_feedback" as WorkForm, title: "Feedback & Nominations", note: "Complaints + school nominations" },
               ]
             : []),
+          ...(publicSponsorshipProject && canAccessSuperAdmin
+            ? [{ form: "merchants" as WorkForm, title: "Merchants", note: "API/webhook sponsorship integrations" }]
+            : []),
           { form: "users", title: "Users", note: "All staff status + roles" },
           { form: "assign_work", title: "Planting Orders", note: "Assign planting targets" },
           { form: "assign_task", title: "Maintenance", note: "Assign maintenance" },
@@ -10760,6 +10950,15 @@ export default function GreenWork() {
                     >
                       Sponsor Payouts
                     </button>
+                    {canAccessSuperAdmin && (
+                      <button
+                        className={`green-work-menu-item ${activeForm === "merchants" ? "active" : ""}`}
+                        type="button"
+                        onClick={() => openForm("merchants")}
+                      >
+                        Merchants
+                      </button>
+                    )}
                     <button
                       className={`green-work-menu-item ${activeForm === "sponsor_feedback" ? "active" : ""}`}
                       type="button"
@@ -14212,6 +14411,205 @@ export default function GreenWork() {
                         ))}
                     </div>
                   </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {activeForm === "merchants" && canAccessSuperAdmin && (
+            <div className="green-work-card">
+              <h3>Merchant Integrations</h3>
+              <p className="green-work-note">
+                Merchants sponsor trees automatically for their own customers via API or webhook — no manual order
+                entry. Provision a merchant here to get an API key and (for Shopify) a webhook URL; their integration
+                then creates sponsorship orders on its own, and shows up below for monitoring.
+              </p>
+              {!publicSponsorshipProject ? (
+                <p className="green-work-note">Switch this project to the Public Sponsorship access route first.</p>
+              ) : (
+                <>
+                  {revealedMerchantCredentials ? (
+                    <div className="green-work-card" style={{ marginBottom: 16, borderColor: "#c5a059" }}>
+                      <h4 style={{ marginTop: 0 }}>Save these credentials now — they won't be shown again</h4>
+                      {revealedMerchantCredentials.api_key ? (
+                        <p className="green-work-note" style={{ wordBreak: "break-all" }}>
+                          <strong>API key:</strong> {revealedMerchantCredentials.api_key}
+                        </p>
+                      ) : null}
+                      {revealedMerchantCredentials.webhook_secret ? (
+                        <p className="green-work-note" style={{ wordBreak: "break-all" }}>
+                          <strong>Webhook secret:</strong> {revealedMerchantCredentials.webhook_secret}
+                        </p>
+                      ) : null}
+                      {revealedMerchantCredentials.webhook_url_shopify ? (
+                        <p className="green-work-note" style={{ wordBreak: "break-all" }}>
+                          <strong>Shopify webhook URL:</strong> {revealedMerchantCredentials.webhook_url_shopify}
+                        </p>
+                      ) : null}
+                      <button type="button" onClick={() => setRevealedMerchantCredentials(null)}>
+                        I've saved this — dismiss
+                      </button>
+                    </div>
+                  ) : null}
+
+                  <div className="green-work-card" style={{ marginBottom: 16 }}>
+                    <h4 style={{ marginTop: 0 }}>Add Merchant</h4>
+                    <div className="work-actions" style={{ flexWrap: "wrap", gap: 8 }}>
+                      <input
+                        placeholder="Organization name (e.g. Kyalli)"
+                        value={newMerchantOrgName}
+                        onChange={(e) => setNewMerchantOrgName(e.target.value)}
+                      />
+                      <input
+                        placeholder="Contact name"
+                        value={newMerchantContactName}
+                        onChange={(e) => setNewMerchantContactName(e.target.value)}
+                      />
+                      <input
+                        placeholder="Contact email"
+                        value={newMerchantContactEmail}
+                        onChange={(e) => setNewMerchantContactEmail(e.target.value)}
+                      />
+                      <input
+                        placeholder="Contact phone (optional)"
+                        value={newMerchantContactPhone}
+                        onChange={(e) => setNewMerchantContactPhone(e.target.value)}
+                      />
+                      <select value={newMerchantProjectId} onChange={(e) => setNewMerchantProjectId(e.target.value)}>
+                        <option value="">Default project...</option>
+                        {projects
+                          .filter((p) => p.access_model === "public_sponsorship" || p.public_sponsor_enabled)
+                          .map((p) => (
+                            <option key={`merchant-project-${p.id}`} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                      </select>
+                      <input
+                        placeholder="Agreed price/tree (optional, overrides public price)"
+                        value={newMerchantPrice}
+                        onChange={(e) => setNewMerchantPrice(e.target.value.replace(/[^0-9.]/g, ""))}
+                      />
+                      <button type="button" onClick={() => void createMerchant()} disabled={creatingMerchant}>
+                        {creatingMerchant ? "Creating..." : "Add Merchant"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {merchantsError ? <p className="green-work-note danger">{merchantsError}</p> : null}
+                  {merchantsLoading ? (
+                    <p className="green-work-note">Loading merchants...</p>
+                  ) : merchants.length === 0 ? (
+                    <p className="green-work-note">No merchants provisioned yet.</p>
+                  ) : (
+                    <div className="staff-list">
+                      {merchants.map((merchant) => {
+                        const expanded = expandedMerchantId === merchant.id;
+                        return (
+                          <div key={`merchant-${merchant.id}`} className="staff-row">
+                            <div className="staff-row-head">
+                              <strong>{merchant.organization_name || "Merchant"}</strong>
+                              <span>{merchant.sponsor_uid || "-"}</span>
+                            </div>
+                            <div className="work-actions" style={{ margin: "8px 0 6px", flexWrap: "wrap" }}>
+                              <span className="green-work-live-pill neutral">Orders: {merchant.order_count ?? 0}</span>
+                              <span className="green-work-live-pill ok">Trees: {merchant.tree_count ?? 0}</span>
+                              <span className="green-work-live-pill info">Planted: {merchant.linked_count ?? 0}</span>
+                              <span className={`green-work-live-pill ${merchant.is_active ? "ok" : "danger"}`}>
+                                {merchant.is_active ? "Active" : "Disabled"}
+                              </span>
+                            </div>
+                            <div className="staff-row-meta">
+                              Contact: {merchant.contact_name || "-"} | {merchant.contact_email || "-"}
+                              {merchant.contact_phone ? ` | ${merchant.contact_phone}` : ""}
+                            </div>
+                            <div className="staff-row-meta">
+                              Agreed price/tree: {merchant.agreed_price_per_tree != null ? formatCurrencyAmount(merchant.agreed_price_per_tree, "NGN") : "Public project price"}
+                            </div>
+                            <div className="work-actions" style={{ marginTop: 8 }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (expanded) {
+                                    setExpandedMerchantId(null);
+                                    setMerchantDetail(null);
+                                    return;
+                                  }
+                                  setExpandedMerchantId(merchant.id);
+                                  void loadMerchantDetail(merchant.id);
+                                }}
+                              >
+                                {expanded ? "Hide details" : "View orders & webhook log"}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={rotatingMerchantKeyId === merchant.id}
+                                onClick={() => void rotateMerchantKey(merchant.id)}
+                              >
+                                {rotatingMerchantKeyId === merchant.id ? "Rotating..." : "Rotate API Key"}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={rotatingMerchantWebhookSecretId === merchant.id}
+                                onClick={() => void rotateMerchantWebhookSecret(merchant.id)}
+                              >
+                                {rotatingMerchantWebhookSecretId === merchant.id ? "Regenerating..." : "Regenerate Webhook Secret"}
+                              </button>
+                              <button type="button" onClick={() => void sendMerchantLoginInvite(merchant.contact_email)}>
+                                Send Login Invite
+                              </button>
+                            </div>
+                            <div className="staff-row-meta">
+                              Merchant dashboard: they log in at /green/login with their contact email — "Send Login
+                              Invite" emails them a link to set their password the first time.
+                            </div>
+                            {expanded ? (
+                              merchantDetailLoading ? (
+                                <p className="green-work-note">Loading details...</p>
+                              ) : merchantDetail ? (
+                                <div style={{ marginTop: 10 }}>
+                                  {merchantDetail.webhook_url_shopify ? (
+                                    <p className="green-work-note" style={{ wordBreak: "break-all" }}>
+                                      Shopify webhook URL: {merchantDetail.webhook_url_shopify}
+                                    </p>
+                                  ) : null}
+                                  <strong>Recent orders</strong>
+                                  {!merchantDetail.orders || merchantDetail.orders.length === 0 ? (
+                                    <p className="green-work-note">No orders yet — nothing has called the API/webhook for this merchant.</p>
+                                  ) : (
+                                    <div className="staff-list">
+                                      {merchantDetail.orders.map((order) => (
+                                        <div key={`merchant-order-${order.id}`} className="staff-row-meta">
+                                          {order.order_uid} | Ext: {order.external_order_id || "-"} | Source: {order.source || "-"} | Qty:{" "}
+                                          {order.quantity} | {formatCurrencyAmount(order.amount_total || 0, order.currency || "NGN")} | Status:{" "}
+                                          {order.order_status} | Planted: {order.linked_count ?? 0}/{order.quantity} |{" "}
+                                          {order.created_at ? formatDateLabel(order.created_at) : "-"}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <strong style={{ display: "block", marginTop: 10 }}>Recent webhook events</strong>
+                                  {merchantWebhookEvents.length === 0 ? (
+                                    <p className="green-work-note">No webhook deliveries recorded yet.</p>
+                                  ) : (
+                                    <div className="staff-list">
+                                      {merchantWebhookEvents.map((event) => (
+                                        <div key={`merchant-webhook-event-${event.id}`} className="staff-row-meta">
+                                          {event.platform} | {event.status}
+                                          {event.error_message ? ` | Error: ${event.error_message}` : ""} |{" "}
+                                          {event.created_at ? formatDateLabel(event.created_at) : "-"}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : null
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </>
               )}
             </div>
