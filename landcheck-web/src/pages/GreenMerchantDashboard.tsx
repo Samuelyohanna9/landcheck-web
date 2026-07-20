@@ -36,6 +36,8 @@ type MerchantDashboardData = {
   map_points?: { lat: number; lng: number }[];
 };
 
+type DashboardTab = "overview" | "map";
+
 const formatDate = (iso?: string | null) => {
   if (!iso) return "-";
   const d = new Date(iso);
@@ -82,6 +84,7 @@ export default function GreenMerchantDashboard() {
   const [data, setData] = useState<MerchantDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
 
   useEffect(() => {
     if (!merchantId) return;
@@ -114,6 +117,8 @@ export default function GreenMerchantDashboard() {
     return null;
   }
 
+  const mapPoints = data?.map_points || [];
+
   return (
     <div className="gm-page">
       <header className="gm-header">
@@ -135,45 +140,173 @@ export default function GreenMerchantDashboard() {
         </div>
       </header>
 
+      <nav className="gm-tabbar">
+        <button
+          type="button"
+          className={`gm-tab ${activeTab === "overview" ? "active" : ""}`}
+          onClick={() => setActiveTab("overview")}
+        >
+          <span className="gm-tab-icon">
+            <GreenGlyph name="chart" />
+          </span>
+          <span>
+            <span className="gm-tab-title">Overview</span>
+            <span className="gm-tab-note">Orders, trees, impact</span>
+          </span>
+        </button>
+        <button type="button" className={`gm-tab ${activeTab === "map" ? "active" : ""}`} onClick={() => setActiveTab("map")}>
+          <span className="gm-tab-icon">
+            <GreenGlyph name="map" />
+          </span>
+          <span>
+            <span className="gm-tab-title">Map View</span>
+            <span className="gm-tab-note">Verified tree locations</span>
+          </span>
+        </button>
+      </nav>
+
       <main className="gm-main">
         {error ? <p className="gm-error">{error}</p> : null}
 
         {loading ? (
           <p className="gm-loading">Loading your dashboard&hellip;</p>
         ) : data ? (
-          <>
-            <section className="gm-stat-grid">
-              <div className="gm-stat-card">
-                <div className="gm-stat-icon">
-                  <GreenGlyph name="receipt" />
+          activeTab === "overview" ? (
+            <>
+              <div className="gm-section-label">Program Summary</div>
+              <section className="gm-stat-grid">
+                <div className="gm-stat-card">
+                  <div className="gm-stat-icon">
+                    <GreenGlyph name="receipt" />
+                  </div>
+                  <div className="gm-stat-value">{data.summary.total_orders}</div>
+                  <div className="gm-stat-label">Orders</div>
                 </div>
-                <div className="gm-stat-value">{data.summary.total_orders}</div>
-                <div className="gm-stat-label">Orders</div>
-              </div>
-              <div className="gm-stat-card">
-                <div className="gm-stat-icon">
-                  <GreenGlyph name="leaf" />
+                <div className="gm-stat-card">
+                  <div className="gm-stat-icon">
+                    <GreenGlyph name="leaf" />
+                  </div>
+                  <div className="gm-stat-value">{data.summary.total_trees}</div>
+                  <div className="gm-stat-label">Trees Sponsored</div>
                 </div>
-                <div className="gm-stat-value">{data.summary.total_trees}</div>
-                <div className="gm-stat-label">Trees Sponsored</div>
-              </div>
-              <div className="gm-stat-card">
-                <div className="gm-stat-icon">
-                  <GreenGlyph name="check-circle" />
+                <div className="gm-stat-card">
+                  <div className="gm-stat-icon">
+                    <GreenGlyph name="check-circle" />
+                  </div>
+                  <div className="gm-stat-value">{data.summary.planted_trees}</div>
+                  <div className="gm-stat-label">Trees Planted</div>
                 </div>
-                <div className="gm-stat-value">{data.summary.planted_trees}</div>
-                <div className="gm-stat-label">Trees Planted</div>
-              </div>
-              <div className="gm-stat-card">
-                <div className="gm-stat-icon warn">
-                  <GreenGlyph name="pulse" />
+                <div className="gm-stat-card">
+                  <div className="gm-stat-icon warn">
+                    <GreenGlyph name="pulse" />
+                  </div>
+                  <div className="gm-stat-value">{data.summary.survival_rate}%</div>
+                  <div className="gm-stat-label">Survival Rate</div>
                 </div>
-                <div className="gm-stat-value">{data.summary.survival_rate}%</div>
-                <div className="gm-stat-label">Survival Rate</div>
-              </div>
-            </section>
+              </section>
 
-            {data.map_points && data.map_points.length > 0 ? (
+              <section className="gm-card gm-report-card">
+                <div className="gm-card-body">
+                  <div className="gm-report-copy">
+                    <div className="gm-report-icon">
+                      <GreenGlyph name="download" />
+                    </div>
+                    <div>
+                      <div className="gm-card-title">Impact Report</div>
+                      <div className="gm-card-subtitle">A downloadable PDF summary of every tree sponsored through your integration &mdash; species, planting date, and status.</div>
+                    </div>
+                  </div>
+                  <a
+                    href={`${api.defaults.baseURL || ""}/green/merchant-auth/report.pdf?merchant_id=${merchantId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="gm-report-btn"
+                  >
+                    <GreenGlyph name="download" />
+                    Download Report
+                  </a>
+                </div>
+              </section>
+
+              <div className="gm-section-label">Order Activity</div>
+              <section className="gm-card">
+                <div className="gm-card-body">
+                  <div className="gm-card-heading">
+                    <div className="gm-card-heading-icon">
+                      <GreenGlyph name="branch" />
+                    </div>
+                    <div>
+                      <div className="gm-card-title">Recent Orders</div>
+                      <div className="gm-card-subtitle">Every sponsorship created automatically through your integration &mdash; no manual entry.</div>
+                    </div>
+                  </div>
+
+                  {data.orders.length === 0 ? (
+                    <div className="gm-empty-state">
+                      <div className="gm-empty-icon">
+                        <GreenGlyph name="receipt" />
+                      </div>
+                      <p className="gm-empty-title">No orders yet</p>
+                      <p className="gm-empty-copy">
+                        Once your integration sends its first order &mdash; via the API or your Shopify webhook &mdash; it'll appear
+                        here automatically.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="gm-table-wrap">
+                      <table className="gm-table">
+                        <thead>
+                          <tr>
+                            <th>Order</th>
+                            <th>Your Reference</th>
+                            <th>Source</th>
+                            <th>Trees Planted</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.orders.map((order) => {
+                            const planted = order.linked_count ?? 0;
+                            const pct = order.quantity > 0 ? Math.round((planted / order.quantity) * 100) : 0;
+                            return (
+                              <tr key={order.id}>
+                                <td className="gm-mono">{order.order_uid || "-"}</td>
+                                <td className="gm-mono">{order.external_order_id || "-"}</td>
+                                <td>
+                                  <span className="gm-pill neutral">{SOURCE_LABELS[order.source || ""] || order.source || "-"}</span>
+                                </td>
+                                <td>
+                                  <div className="gm-progress-cell">
+                                    <div className="gm-progress-track">
+                                      <div className="gm-progress-fill" style={{ width: `${pct}%` }} />
+                                    </div>
+                                    <span>
+                                      {planted}/{order.quantity}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td>{formatAmount(order.amount_total, order.currency)}</td>
+                                <td>
+                                  <span className={`gm-pill ${toneForStatus(order.order_status)}`}>
+                                    {STATUS_LABELS[order.order_status || ""] || order.order_status || "-"}
+                                  </span>
+                                </td>
+                                <td>{formatDate(order.created_at)}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </>
+          ) : (
+            <>
+              <div className="gm-section-label">Map View</div>
               <section className="gm-card gm-map-card">
                 <div className="gm-card-body">
                   <div className="gm-card-heading">
@@ -182,103 +315,31 @@ export default function GreenMerchantDashboard() {
                     </div>
                     <div>
                       <div className="gm-card-title">Where Your Trees Are Growing</div>
-                      <div className="gm-card-subtitle">Verified GPS locations of your customers' sponsored trees.</div>
+                      <div className="gm-card-subtitle">
+                        {mapPoints.length > 0
+                          ? "Verified GPS locations of your customers' sponsored trees, captured by our field agents at planting."
+                          : "Verified GPS locations will appear here once trees are planted."}
+                      </div>
                     </div>
                   </div>
-                  <ProjectMap points={data.map_points} mode="green" />
+                  {mapPoints.length > 0 ? (
+                    <ProjectMap points={mapPoints} mode="green" />
+                  ) : (
+                    <div className="gm-empty-state gm-empty-state--map">
+                      <div className="gm-empty-icon">
+                        <GreenGlyph name="map" />
+                      </div>
+                      <p className="gm-empty-title">No verified tree locations yet</p>
+                      <p className="gm-empty-copy">
+                        Once your customers' sponsored trees are planted, our field agents record a verified GPS location for
+                        each one &mdash; they'll show up here automatically.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </section>
-            ) : null}
-
-            <section className="gm-card gm-report-card">
-              <div className="gm-card-body">
-                <div className="gm-report-copy">
-                  <div className="gm-report-icon">
-                    <GreenGlyph name="chart" />
-                  </div>
-                  <div>
-                    <div className="gm-card-title">Impact Report</div>
-                    <div className="gm-card-subtitle">A downloadable summary of every tree sponsored through your integration.</div>
-                  </div>
-                </div>
-                <a
-                  href={`${api.defaults.baseURL || ""}/green/merchant-auth/report.pdf?merchant_id=${merchantId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="gm-report-btn"
-                >
-                  <GreenGlyph name="download" />
-                  Download Report
-                </a>
-              </div>
-            </section>
-
-            <section className="gm-card">
-              <div className="gm-card-body">
-                <div className="gm-card-heading">
-                  <div className="gm-card-heading-icon">
-                    <GreenGlyph name="branch" />
-                  </div>
-                  <div>
-                    <div className="gm-card-title">Recent Orders</div>
-                    <div className="gm-card-subtitle">Every sponsorship created automatically through your integration.</div>
-                  </div>
-                </div>
-
-                {data.orders.length === 0 ? (
-                  <p className="gm-empty">No orders yet — once your integration sends its first order, it'll show up here.</p>
-                ) : (
-                  <div className="gm-table-wrap">
-                    <table className="gm-table">
-                      <thead>
-                        <tr>
-                          <th>Order</th>
-                          <th>Your Reference</th>
-                          <th>Source</th>
-                          <th>Trees Planted</th>
-                          <th>Amount</th>
-                          <th>Status</th>
-                          <th>Date</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.orders.map((order) => {
-                          const planted = order.linked_count ?? 0;
-                          const pct = order.quantity > 0 ? Math.round((planted / order.quantity) * 100) : 0;
-                          return (
-                            <tr key={order.id}>
-                              <td className="gm-mono">{order.order_uid || "-"}</td>
-                              <td className="gm-mono">{order.external_order_id || "-"}</td>
-                              <td>
-                                <span className="gm-pill neutral">{SOURCE_LABELS[order.source || ""] || order.source || "-"}</span>
-                              </td>
-                              <td>
-                                <div className="gm-progress-cell">
-                                  <div className="gm-progress-track">
-                                    <div className="gm-progress-fill" style={{ width: `${pct}%` }} />
-                                  </div>
-                                  <span>
-                                    {planted}/{order.quantity}
-                                  </span>
-                                </div>
-                              </td>
-                              <td>{formatAmount(order.amount_total, order.currency)}</td>
-                              <td>
-                                <span className={`gm-pill ${toneForStatus(order.order_status)}`}>
-                                  {STATUS_LABELS[order.order_status || ""] || order.order_status || "-"}
-                                </span>
-                              </td>
-                              <td>{formatDate(order.created_at)}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </section>
-          </>
+            </>
+          )
         ) : null}
       </main>
     </div>
