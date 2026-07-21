@@ -52,7 +52,10 @@ export default function GreenWorkLogin() {
           </div>
           <h1>LandCheck Work</h1>
         </div>
-        <p className="work-login-subtitle">Operations dashboard login</p>
+        <p className="work-login-subtitle">Operations, partner organization, and CSR client dashboard login</p>
+        <p className="privacy-inline-note">
+          CSR organizations use the same secure LandCheck Work login issued by LandCheck or their linked organization.
+        </p>
         <p className="privacy-inline-note">
           By using LandCheck Work, you agree to process operational and contact records only when authorized.
           <a className="privacy-inline-link" href="/privacy">
