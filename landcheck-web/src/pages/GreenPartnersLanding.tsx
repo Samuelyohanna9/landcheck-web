@@ -7,6 +7,7 @@ import { useCookieConsent } from "../privacy/cookieConsent";
 type PartnerOrg = { name: string; logo: string | null };
 type ImpactSnapshot = { total_trees: number; total_organizations: number };
 type MediaFit = "cover" | "contain";
+type StatIcon = "tree" | "models" | "partners" | "checkout";
 
 type GreenModel = {
   id: string;
@@ -220,6 +221,53 @@ function formatTreeMetric(value: number | null): string {
   return `${value.toLocaleString()}+`;
 }
 
+function renderStatIcon(icon: StatIcon) {
+  switch (icon) {
+    case "tree":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" width="20" height="20" aria-hidden="true">
+          <path
+            d="M12 21v-4m0 0c-2.6 0-4.6-1.4-5.5-3.9 1 .3 1.9.4 2.7.2C8.2 10.8 9.1 9 12 7c2.9 2 3.8 3.8 2.8 6.3.8.2 1.7.1 2.7-.2-.9 2.5-2.9 3.9-5.5 3.9Z"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+    case "models":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" width="20" height="20" aria-hidden="true">
+          <rect x="3.5" y="4" width="7" height="6" rx="1.6" stroke="currentColor" strokeWidth="1.8" />
+          <rect x="13.5" y="4" width="7" height="6" rx="1.6" stroke="currentColor" strokeWidth="1.8" />
+          <rect x="8.5" y="14" width="7" height="6" rx="1.6" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M7 10.5v2h10v-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case "partners":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" width="20" height="20" aria-hidden="true">
+          <circle cx="8" cy="9" r="2.6" stroke="currentColor" strokeWidth="1.8" />
+          <circle cx="16.5" cy="8.5" r="2.2" stroke="currentColor" strokeWidth="1.8" />
+          <path
+            d="M4.5 18c.6-2.3 2.5-3.8 5-3.8S13.9 15.7 14.5 18M14.3 17c.4-1.7 1.8-2.8 3.7-2.8 1.7 0 3 .9 3.5 2.5"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
+    case "checkout":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" width="20" height="20" aria-hidden="true">
+          <rect x="3.5" y="6" width="17" height="12" rx="2.4" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M3.5 10h17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M8 14h3.2M14.5 14h1.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+  }
+}
+
 export default function GreenPartnersLanding() {
   const { preferences, ready: cookieConsentReady } = useCookieConsent();
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
@@ -258,21 +306,25 @@ export default function GreenPartnersLanding() {
         value: formatTreeMetric(impactSnapshot?.total_trees || null),
         label: "Trees tracked",
         note: "Across field, CSR, and sponsor workflows",
+        icon: "tree" as const,
       },
       {
         value: "3",
         label: "Delivery models",
         note: "Organisation, CSR, and public sponsor routes",
+        icon: "models" as const,
       },
       {
         value: String(Math.max(impactSnapshot?.total_organizations || 0, partners.length || 0, 1)),
         label: "Partner organisations",
         note: "Already operating inside the LandCheck ecosystem",
+        icon: "partners" as const,
       },
       {
         value: "NGN + USD",
         label: "Checkout ready",
         note: "Flexible public sponsorship payments with live tracking",
+        icon: "checkout" as const,
       },
     ],
     [impactSnapshot?.total_organizations, impactSnapshot?.total_trees, partners.length],
@@ -348,6 +400,7 @@ export default function GreenPartnersLanding() {
         <div className="gp-stats-bar">
           {statCards.map((card) => (
             <article key={card.label} className="gp-stat-card">
+              <span className="gp-stat-card__icon">{renderStatIcon(card.icon)}</span>
               <strong>{card.value}</strong>
               <span>{card.label}</span>
               <small>{card.note}</small>
