@@ -22,6 +22,7 @@ import {
 import { claimGreenSponsorGuestAccount } from "../auth/greenAuth";
 import GpsIcon from "../components/GpsIcon";
 import PlantyAssistant from "../components/PlantyAssistant";
+import { useCookieConsent } from "../privacy/cookieConsent";
 import "../styles/green-public-sponsor.css";
 
 const SPONSOR_BACKGROUND = "/background-sponsor.png";
@@ -191,6 +192,7 @@ function readReturnStateFromUrl(): ReturnState | null {
 
 export default function GreenPublicSponsor() {
   const navigate = useNavigate();
+  const { preferences, ready: cookieConsentReady } = useCookieConsent();
   const [projects, setProjects] = useState<SponsorProject[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
@@ -214,7 +216,7 @@ export default function GreenPublicSponsor() {
   const [claiming, setClaiming] = useState(false);
   const [claimError, setClaimError] = useState("");
   const [claimed, setClaimed] = useState(false);
-  const [heroVideoEnabled] = useState(() => shouldRenderHeroVideo());
+  const [networkHeroVideoEnabled] = useState(() => shouldRenderHeroVideo());
   const [heroVideoReady, setHeroVideoReady] = useState(false);
   const [visibleHeroVideoIndex, setVisibleHeroVideoIndex] = useState(0);
   const heroVideoRefs = useRef<Array<HTMLVideoElement | null>>([null, null]);
@@ -355,6 +357,7 @@ export default function GreenPublicSponsor() {
     [projects, selectedProjectId],
   );
   const shouldShowHero = !selectedProject && !returnState;
+  const heroVideoEnabled = cookieConsentReady && preferences.experience && networkHeroVideoEnabled;
 
   const priceEntry = useMemo(() => getPreferredSponsorPriceEntry(selectedProject, form.checkoutCurrency), [selectedProject, form.checkoutCurrency]);
   const priceEntries = useMemo(() => getSponsorPriceEntries(selectedProject), [selectedProject]);

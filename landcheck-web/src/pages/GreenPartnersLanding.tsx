@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "../styles/green-partners.css";
 import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
+import { useCookieConsent } from "../privacy/cookieConsent";
 
 type PartnerOrg = { name: string; logo: string | null };
 type ShowcaseItem = {
@@ -245,8 +246,10 @@ const trustPillars = [
 ];
 
 export default function GreenPartnersLanding() {
+  const { preferences, ready: cookieConsentReady } = useCookieConsent();
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
   const [activeShowcaseId, setActiveShowcaseId] = useState(showcaseItems[0]?.id || "ops");
+  const heroVideoEnabled = cookieConsentReady && preferences.experience;
 
   useEffect(() => {
     let cancelled = false;
@@ -277,12 +280,14 @@ export default function GreenPartnersLanding() {
       />
 
       <section className="gp-corporate-hero">
-        <div className="gp-corporate-hero-media" aria-hidden="true">
-          <video autoPlay muted loop playsInline preload="auto">
-            <source src={HERO_VIDEO_SRC} type="video/mp4" />
-          </video>
-          <div className="gp-corporate-hero-overlay" />
-        </div>
+        {heroVideoEnabled && (
+          <div className="gp-corporate-hero-media" aria-hidden="true">
+            <video autoPlay muted loop playsInline preload="auto">
+              <source src={HERO_VIDEO_SRC} type="video/mp4" />
+            </video>
+            <div className="gp-corporate-hero-overlay" />
+          </div>
+        )}
         <div className="gp-corporate-hero-inner">
           <div className="gp-corporate-copy">
             <span className="gp-corporate-eyebrow">LandCheck Green Platform</span>
