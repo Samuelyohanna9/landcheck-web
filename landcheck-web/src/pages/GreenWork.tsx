@@ -38,6 +38,7 @@ const REMOTE_MONITORING_PROGRESS_STEPS_AGRIC = [
 
 type WorkflowProfile = "green" | "agric" | "relief_recovery" | "csr";
 type ProjectAccessModel = "partner_org" | "public_sponsorship" | "csr_programme";
+type OrganizationType = "standard" | "csr";
 type AgricConfig = {
   program_type?: string | null;
   focus_commodities?: string | null;
@@ -176,6 +177,12 @@ const getProjectAccessModelLabel = (accessModel?: string | null, publicSponsorEn
   if (isPublicSponsorshipProject(accessModel, publicSponsorEnabled)) return "Public sponsorship";
   return "Partner organization";
 };
+const normalizeOrganizationType = (value?: string | null): OrganizationType => {
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized === "csr" ? "csr" : "standard";
+};
+const getOrganizationTypeLabel = (value?: string | null) =>
+  normalizeOrganizationType(value) === "csr" ? "CSR client" : "Standard partner";
 
 const getWorkflowLabels = (profile?: string | null) =>
   normalizeWorkflowProfile(profile) === "agric"
@@ -318,6 +325,7 @@ type Organization = {
   id: number;
   name: string;
   slug: string;
+  organization_type?: OrganizationType | string | null;
   short_name?: string | null;
   logo_url?: string | null;
   status?: string | null;
@@ -3416,6 +3424,7 @@ export default function GreenWork() {
   const [newOrganization, setNewOrganization] = useState({
     name: "",
     slug: "",
+    organization_type: "standard" as OrganizationType,
     short_name: "",
     logo_url: "",
     status: "pilot",
@@ -7150,6 +7159,7 @@ export default function GreenWork() {
     }
     const payload = {
       ...newOrganization,
+      organization_type: normalizeOrganizationType(newOrganization.organization_type),
       status: (newOrganization.status || "pilot").trim().toLowerCase() || "pilot",
     };
     if (
@@ -7187,6 +7197,7 @@ export default function GreenWork() {
       setNewOrganization({
         name: "",
         slug: "",
+        organization_type: "standard",
         short_name: "",
         logo_url: "",
         status: "pilot",
@@ -7211,6 +7222,7 @@ export default function GreenWork() {
     setNewOrganization({
       name: String(org.name || ""),
       slug: String(org.slug || ""),
+      organization_type: normalizeOrganizationType(org.organization_type),
       short_name: String(org.short_name || ""),
       logo_url: String(org.logo_url || ""),
       status: String(org.status || "pilot"),
@@ -7232,6 +7244,7 @@ export default function GreenWork() {
     setNewOrganization({
       name: "",
       slug: "",
+      organization_type: "standard",
       short_name: "",
       logo_url: "",
       status: "pilot",
@@ -12884,7 +12897,7 @@ export default function GreenWork() {
                   </p>
                 ) : (
                   <p className="green-work-note">
-                    Creating a new organization can send the normal welcome email if a contact email is provided.
+                    Creating a new organization can send a type-specific welcome email if a contact email is provided.
                   </p>
                 )}
                 <input
@@ -12897,6 +12910,23 @@ export default function GreenWork() {
                   value={newOrganization.slug}
                   onChange={(e) => setNewOrganization((prev) => ({ ...prev, slug: e.target.value }))}
                 />
+                <select
+                  value={newOrganization.organization_type}
+                  onChange={(e) =>
+                    setNewOrganization((prev) => ({
+                      ...prev,
+                      organization_type: normalizeOrganizationType(e.target.value),
+                    }))
+                  }
+                >
+                  <option value="standard">Standard organization</option>
+                  <option value="csr">CSR client organization</option>
+                </select>
+                <p className="green-work-note" style={{ marginTop: "-0.15rem" }}>
+                  {normalizeOrganizationType(newOrganization.organization_type) === "csr"
+                    ? "CSR organizations receive the CSR dashboard welcome email with LandCheck Work access steps, evidence guidance, and reporting instructions."
+                    : "Standard organizations receive the regular LandCheck partnership welcome email."}
+                </p>
                 <input
                   placeholder="Short name (optional)"
                   value={newOrganization.short_name}
@@ -13304,7 +13334,7 @@ export default function GreenWork() {
                         <div className="staff-row-head">
                           <strong>{org.name}</strong>
                           <span>
-                            {(org.status || "pilot").toString()}
+                            {getOrganizationTypeLabel(org.organization_type)} | {(org.status || "pilot").toString()}
                             {org.is_active === false ? " - inactive" : ""}
                           </span>
                         </div>
@@ -13315,7 +13345,7 @@ export default function GreenWork() {
                           </div>
                         ) : null}
                         <div className="staff-row-meta">
-                          Slug: {org.slug || "-"} | Projects: {Number(org.projects_count || 0)} | Trees:{" "}
+                          Type: {getOrganizationTypeLabel(org.organization_type)} | Slug: {org.slug || "-"} | Projects: {Number(org.projects_count || 0)} | Trees:{" "}
                           {Number(org.trees_count || 0)} | Tasks: {Number(org.tasks_count || 0)}
                         </div>
                         <div className="staff-row-meta">
