@@ -1,211 +1,196 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "../styles/green-partners.css";
-import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
+import { fetchPublicImpactStats, fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
 import { useCookieConsent } from "../privacy/cookieConsent";
 
 type PartnerOrg = { name: string; logo: string | null };
-type ShowcaseItem = {
+type ImpactSnapshot = { total_trees: number; total_organizations: number };
+type MediaFit = "cover" | "contain";
+
+type GreenModel = {
   id: string;
-  eyebrow: string;
+  order: string;
+  heroLabel: string;
+  selectorTitle: string;
   title: string;
-  blurb: string;
-  audience: string;
-  proofItems: string[];
-  image: string;
-  fit?: "cover" | "contain";
+  summary: string;
+  detail: string;
+  bullets: string[];
+  href: string;
+  cta: string;
+  desktopImage: string;
+  phoneImage: string;
+  desktopFit: MediaFit;
+  phoneFit: MediaFit;
+  accentLabel: string;
 };
 
 const HERO_VIDEO_SRC = "/let_the_video_be_black_nigeria.mp4";
+const HERO_FALLBACK_IMAGE = "/agent planting 1.JPG";
 const BROCHURE_PDF_SRC = "/lc-green-corporate-brochure.pdf";
 const PILOT_ORG_NAMES = new Set(["Think Green Foundation"]);
 
-const deliverySignals = [
-  "Organisation operations",
-  "CSR implementation",
-  "Public tree sponsorship",
-  "Evidence-rich reporting",
-];
-
-const platformRouteCards = [
-  {
-    eyebrow: "Organisation route",
-    title: "Run field operations for partner teams",
-    detail: "For NGOs, programme teams, and field supervisors managing internal capture, reviews, and maintenance work.",
-    href: "/green/login/field",
-    cta: "Open field login",
-  },
-  {
-    eyebrow: "CSR route",
-    title: "Deliver verified corporate programmes",
-    detail: "For sustainability and CSR managers who need operational control, evidence governance, and export-ready reporting.",
-    href: "/green-work/login",
-    cta: "Open Work login",
-  },
-  {
-    eyebrow: "Public sponsor route",
-    title: "Let sponsors fund and follow trees online",
-    detail: "For public campaigns where individuals or brands can pay online, receive certificates, and follow map-backed updates.",
-    href: "/sponsor",
-    cta: "Open sponsor route",
-  },
-] as const;
-
-const routeSpotlights = [
-  {
-    eyebrow: "Organisation operations",
-    title: "Field control for partner organisations",
-    detail: "Give organisation teams a structured field route for tree records, maintenance work, reviews, and daily programme execution.",
-    points: ["Assigned field capture and maintenance flow", "Supervisor review and evidence visibility", "Mapped programme records and export support"],
-    href: "/green/login/field",
-    cta: "Field route access",
-    image: "/screenshot phone-green.jpg",
-    fit: "contain" as const,
-  },
-  {
-    eyebrow: "CSR and ESG delivery",
-    title: "Verified implementation for corporate and donor programmes",
-    detail: "Move beyond planting claims with field assignments, GPS proof, timeline visibility, and premium reports for leadership and stakeholders.",
-    points: ["Implementation orders and programme controls", "Board-ready CSR and ESG reporting", "Maintenance and survival visibility after planting day"],
-    href: "/green-work/login",
-    cta: "Open CSR workspace",
-    image: "/Screenshot landcheck report.png",
-    fit: "contain" as const,
-  },
-  {
-    eyebrow: "Public tree sponsorship",
-    title: "A premium route for online supporters",
-    detail: "Allow individuals and organisations to sponsor trees online, receive certificates, and follow verified updates with map and photo proof.",
-    points: ["NGN and USD online sponsorship", "Guest checkout plus account route", "Certificate, GPS proof, and public storytelling"],
-    href: "/sponsor",
-    cta: "View sponsor experience",
-    image: "/sponsor-tree-app.jpeg",
-    fit: "cover" as const,
-  },
-] as const;
-
-const executiveCards = [
-  {
-    title: "Project planning",
-    detail: "Define locations, species mix, partners, implementation phases, and reporting cadence before field deployment starts.",
-  },
-  {
-    title: "Verified implementation",
-    detail: "Track who planted what, where it happened, and what proof was captured at each step of delivery.",
-  },
-  {
-    title: "Maintenance oversight",
-    detail: "Monitor follow-up field visits, tree survival, risk flags, and unresolved issues from one dashboard.",
-  },
-  {
-    title: "Stakeholder reporting",
-    detail: "Prepare board, donor, media, and sustainability updates using map proof, photos, and exportable summaries.",
-  },
-];
-
-const showcaseItems: ShowcaseItem[] = [
-  {
-    id: "ops",
-    eyebrow: "Programme control",
-    title: "Implementation control board",
-    blurb: "Assign planting orders, review evidence, monitor staff output, and keep programme delivery on track.",
-    audience: "Best for CSR leads, programme managers, and operations teams.",
-    proofItems: ["Named work orders", "Live staffing visibility", "Backlog and approval control"],
-    image: "/Screenshot lndcheck work.png",
-    fit: "cover",
-  },
-  {
-    id: "reports",
-    eyebrow: "Reporting outputs",
-    title: "Board-ready CSR reporting",
-    blurb: "Export premium reports with survival rates, evidence coverage, carbon snapshots, and implementation timelines.",
-    audience: "Best for leadership, sustainability teams, donor reviews, and board updates.",
-    proofItems: ["Executive summary pages", "Evidence coverage metrics", "Timeline and carbon reporting"],
-    image: "/Screenshot landcheck report.png",
-    fit: "contain",
-  },
-  {
-    id: "review",
-    eyebrow: "Evidence governance",
-    title: "Supervisor review workflow",
-    blurb: "Approve or reject planting and field submissions with the exact photos, coordinates, and implementation context attached.",
-    audience: "Best for field supervisors, quality assurance, and partner oversight.",
-    proofItems: ["Submission review", "GPS-linked evidence", "Clear accept or reject trace"],
-    image: "/Screenshot landcheck work 2.png",
-    fit: "cover",
-  },
+const greenModels: GreenModel[] = [
   {
     id: "field",
-    eyebrow: "Field execution",
-    title: "Field app execution",
-    blurb: "Support field agents with guided mobile capture, QR-linked records, and live sync back to the central dashboard.",
-    audience: "Best for showing how field execution becomes reporting evidence.",
-    proofItems: ["Guided mobile capture", "QR-tag workflow", "Fast sync into dashboard"],
-    image: "/screenshot phone-green.jpg",
-    fit: "contain",
+    order: "01",
+    heroLabel: "Field operations",
+    selectorTitle: "Field control for partner organisations",
+    title: "Turn field operations for partner teams into live, controlled delivery.",
+    summary: "Assign tasks, collect field data, track maintenance, and monitor survival from one route.",
+    detail:
+      "Manage projects, assign tasks, collect field data, monitor progress, and roll evidence into one controlled partner workflow.",
+    bullets: [
+      "Project and task management",
+      "Real-time data collection",
+      "Interactive map workflow",
+      "Maintenance reminders",
+      "Survival monitoring",
+    ],
+    href: "/green/login/field",
+    cta: "Explore field operations",
+    desktopImage: "/screenshotlandche green 2.png",
+    phoneImage: "/screenshot phone-green.jpg",
+    desktopFit: "contain",
+    phoneFit: "contain",
+    accentLabel: "Partner route",
   },
+  {
+    id: "csr",
+    order: "02",
+    heroLabel: "Certified transparency",
+    selectorTitle: "Verified implementation for corporate and donor programmes",
+    title: "Deliver verified corporate and donor programmes with evidence, reports, and implementation control.",
+    summary: "Real-time dashboards, reports, and impact metrics you can trust.",
+    detail:
+      "Track implementation with verified data, mapped outputs, survival monitoring, and board-ready CSR reporting from one premium workspace.",
+    bullets: [
+      "Verified field data",
+      "Survival monitoring",
+      "Impact reporting and analytics",
+      "Export-ready executive reports",
+      "Review queue and quality control",
+    ],
+    href: "/green-work/login",
+    cta: "See verification in action",
+    desktopImage: "/Screenshot landcheck report.png",
+    phoneImage: "/Screenshot landcheck report 2.png",
+    desktopFit: "contain",
+    phoneFit: "contain",
+    accentLabel: "CSR route",
+  },
+  {
+    id: "public",
+    order: "03",
+    heroLabel: "Online supporters",
+    selectorTitle: "A premium route for online supporters",
+    title: "Let supporters fund and follow impact online with certificates, map proof, and live updates.",
+    summary: "A premium online route for donors and supporters to engage and see impact.",
+    detail:
+      "Give supporters a simple way to fund trees online, receive certificates, and follow verified real-world impact from payment to planting.",
+    bullets: [
+      "Sponsor trees online instantly",
+      "Live impact updates",
+      "Map, image, and certificate proof",
+      "Guest checkout with NGN and USD",
+      "Supporter-facing premium experience",
+    ],
+    href: "/sponsor",
+    cta: "See supporter experience",
+    desktopImage: "/info.png",
+    phoneImage: "/sponsor-tree-app.jpeg",
+    desktopFit: "contain",
+    phoneFit: "cover",
+    accentLabel: "Public sponsor route",
+  },
+];
+
+const whyPillars = [
+  "Built for forestry and restoration projects",
+  "Designed for NGOs, communities, and companies",
+  "Offline-first with smart sync",
+  "From planting to survival and impact",
+  "Secure, transparent, and audit-ready",
+];
+
+const budgetSignals = [
+  "Clear project scope and methodology",
+  "Live data and proof of implementation",
+  "Survival monitoring and maintenance plan",
+  "Impact metrics and reporting outputs",
+  "Budget breakdown and cost visibility",
 ];
 
 const dueDiligenceAssets = [
   {
     eyebrow: "Brochure PDF",
-    title: "One-page LC Green Corporate brochure",
-    detail: "A concise executive handout covering implementation scope, controls, outputs, and contact route.",
+    title: "Download the LC Green Corporate brochure",
+    detail:
+      "A concise executive handout covering delivery scope, field control, reporting outputs, and the routes available inside LC Green.",
     href: BROCHURE_PDF_SRC,
     cta: "Download brochure",
     download: true,
   },
   {
     eyebrow: "Sample CSR report",
-    title: "Download a sample executive report",
-    detail: "Show stakeholders the reporting package style you can produce from verified field execution, governance controls, and field evidence.",
+    title: "Show stakeholders what the reporting package looks like",
+    detail:
+      "Preview the type of executive-ready report LC Green can generate from verified field implementation and timeline evidence.",
     href: "/lc-green-csr-sample-report.pdf",
     cta: "Download sample report",
     download: true,
   },
   {
-    eyebrow: "Public project page",
-    title: "Sponsor and transparency experience",
-    detail: "See how the public-facing experience can connect sponsorship, impact storytelling, and field proof.",
+    eyebrow: "Public sponsor page",
+    title: "See the premium public-facing sponsorship route",
+    detail:
+      "Explore the online supporter route where people can pay, receive certificates, and follow tree impact with map-backed updates.",
     href: "/sponsor",
-    cta: "Open public project page",
+    cta: "Open public sponsor page",
   },
   {
     eyebrow: "Case study",
-    title: "Pilot partnership story",
-    detail: "Use an early strategic partnership story to show buyers that real organisations are already working with LandCheck.",
+    title: "Use the pilot story as proof of ecosystem traction",
+    detail:
+      "Share how LandCheck is already working with real partner organisations and building the operational systems behind verified impact.",
     href: "/news#ecf-partnership",
     cta: "Read case study",
   },
 ];
 
-const deliveryFlow = [
+const workflowStages = [
   {
     step: "01",
-    title: "Design the CSR programme",
-    detail: "Define target location, land approval, species plan, field team structure, and reporting expectations.",
+    title: "Discover & Align",
+    detail: "Understand goals, scope, locations, stakeholders, and the evidence needed before deployment starts.",
   },
   {
     step: "02",
-    title: "Deploy and verify",
-    detail: "Assign field agents, capture GPS evidence, manage QR-linked records, and review submissions centrally.",
+    title: "Design & Plan",
+    detail: "Define project routes, species mix, approvals, staffing model, and reporting expectations.",
   },
   {
     step: "03",
-    title: "Maintain and monitor",
-    detail: "Track survival, schedule field visits, resolve risks early, and keep the implementation register current.",
+    title: "Implement & Monitor",
+    detail: "Run field assignments, capture map-linked data, review evidence, and monitor progress in real time.",
   },
   {
     step: "04",
-    title: "Report to stakeholders",
-    detail: "Export reports, share proof pages, and provide executive summaries for CSR, ESG, donor, or board reporting.",
+    title: "Report & Validate",
+    detail: "Generate premium reports, validate outputs, and present impact with confidence to stakeholders.",
+  },
+  {
+    step: "05",
+    title: "Scale & Sustain",
+    detail: "Improve survival, expand routes, and create long-term programme value from verified implementation data.",
   },
 ];
 
-const insightArticles = [
+const expertiseCards = [
   {
     title: "How to manage corporate tree-planting projects",
-    blurb: "A practical guide to scope, land rights, field delivery, maintenance, and stakeholder reporting.",
+    blurb: "A practical guide to scope, land rights, implementation, maintenance, and stakeholder reporting.",
     href: "/news#corporate-tree-projects",
   },
   {
@@ -230,42 +215,75 @@ const insightArticles = [
   },
 ];
 
-const trustPillars = [
-  {
-    title: "Useful for GRI-style reporting inputs",
-    detail: "Capture implementation evidence and material programme updates in a format CSR teams can reuse in sustainability narratives.",
-  },
-  {
-    title: "Supportive of IFRS S1/S2-style disclosure workflows",
-    detail: "Keep traceable records around climate action delivery, field controls, and programme progress for internal reporting teams.",
-  },
-  {
-    title: "Built for Nigerian field realities",
-    detail: "Works across partner organisations, field agents, CSR programmes, and public sponsorship models in the same ecosystem.",
-  },
-];
+function formatTreeMetric(value: number | null): string {
+  if (!value || value <= 0) return "Live";
+  return `${value.toLocaleString()}+`;
+}
 
 export default function GreenPartnersLanding() {
   const { preferences, ready: cookieConsentReady } = useCookieConsent();
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
-  const [activeShowcaseId, setActiveShowcaseId] = useState(showcaseItems[0]?.id || "ops");
+  const [impactSnapshot, setImpactSnapshot] = useState<ImpactSnapshot | null>(null);
+  const [activeModelId, setActiveModelId] = useState(greenModels[0].id);
   const heroVideoEnabled = cookieConsentReady && preferences.experience;
 
   useEffect(() => {
     let cancelled = false;
+
     fetchPublicPartnerOrganizations()
       .then((orgs) => {
         if (cancelled) return;
-        const mapped: PartnerOrg[] = orgs.map((o) => ({ name: o.name, logo: o.logo_url }));
-        if (mapped.length > 0) setPartners(mapped);
+        const mapped = orgs.map((org) => ({ name: org.name, logo: org.logo_url }));
+        setPartners(mapped);
       })
       .catch(() => {});
+
+    fetchPublicImpactStats()
+      .then((stats) => {
+        if (cancelled) return;
+        setImpactSnapshot(stats);
+      })
+      .catch(() => {});
+
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const activeShowcase = showcaseItems.find((item) => item.id === activeShowcaseId) || showcaseItems[0];
+  const activeModel = greenModels.find((model) => model.id === activeModelId) || greenModels[0];
+
+  const statCards = useMemo(
+    () => [
+      {
+        value: formatTreeMetric(impactSnapshot?.total_trees || null),
+        label: "Trees tracked",
+        note: "Across field, CSR, and sponsor workflows",
+      },
+      {
+        value: "3",
+        label: "Delivery models",
+        note: "Organisation, CSR, and public sponsor routes",
+      },
+      {
+        value: String(Math.max(impactSnapshot?.total_organizations || 0, partners.length || 0, 1)),
+        label: "Partner organisations",
+        note: "Already operating inside the LandCheck ecosystem",
+      },
+      {
+        value: "NGN + USD",
+        label: "Checkout ready",
+        note: "Flexible public sponsorship payments with live tracking",
+      },
+    ],
+    [impactSnapshot?.total_organizations, impactSnapshot?.total_trees, partners.length],
+  );
+
+  const focusModel = (modelId: string) => {
+    setActiveModelId(modelId);
+    window.setTimeout(() => {
+      document.getElementById("platform-routes")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  };
 
   return (
     <div className="green-partners-page">
@@ -275,116 +293,197 @@ export default function GreenPartnersLanding() {
         logoBadge
         logoSrc="/green-logo-cropped-700.png"
         activeRoute="/green-partners"
-        ctaLabel="Open Work Login"
+        ctaLabel="Get Started"
         ctaRoute="/green-work/login"
       />
 
-      <section className="gp-corporate-hero">
+      <section
+        className="gp-hero"
+        style={!heroVideoEnabled ? { backgroundImage: `url("${HERO_FALLBACK_IMAGE}")` } : undefined}
+      >
         {heroVideoEnabled && (
-          <div className="gp-corporate-hero-media" aria-hidden="true">
+          <div className="gp-hero-media" aria-hidden="true">
             <video autoPlay muted loop playsInline preload="auto">
               <source src={HERO_VIDEO_SRC} type="video/mp4" />
             </video>
-            <div className="gp-corporate-hero-overlay" />
           </div>
         )}
-        <div className="gp-corporate-hero-inner">
-          <div className="gp-corporate-copy">
-            <span className="gp-corporate-eyebrow">LandCheck Green Platform</span>
-            <h1>One green platform. Three professional delivery models.</h1>
+        <div className="gp-hero-scrim" aria-hidden="true" />
+        <div className="gp-shell gp-hero-inner">
+          <div className="gp-hero-copy">
+            <span className="gp-hero-badge">LC Green</span>
+            <h1>
+              One <span>green</span> platform. Three professional delivery models.
+            </h1>
             <p>
-              LandCheck Green supports partner organisation field work, corporate CSR and ESG implementation, and
-              public tree sponsorship from one evidence-first ecosystem built for Nigeria.
+              LC Green helps organisations and communities plant, monitor, and protect trees with data,
+              transparency, and purpose across partner operations, corporate programmes, and public sponsorship.
             </p>
-            <div className="gp-corporate-signal-row">
-              {deliverySignals.map((signal) => (
-                <span key={signal}>{signal}</span>
-              ))}
-            </div>
-            <div className="gp-corporate-actions">
-              <a className="gp-corporate-btn gp-corporate-btn--primary" href="#platform-routes">
-                Compare the routes
+            <div className="gp-hero-actions">
+              <a className="gp-btn gp-btn--primary" href="/green-work/login">
+                Start Your Project
               </a>
-              <a className="gp-corporate-btn gp-corporate-btn--secondary" href="/sponsor">
-                Open sponsor route
-              </a>
-              <a
-                className="gp-corporate-btn gp-corporate-btn--ghost"
-                href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Corporate%20Demo"
-              >
-                Request platform demo
-              </a>
+              <button type="button" className="gp-btn gp-btn--secondary" onClick={() => focusModel(activeModel.id)}>
+                Explore the Platform
+              </button>
             </div>
           </div>
 
-          <div className="gp-platform-route-stack" aria-label="LandCheck Green route summary">
-            {platformRouteCards.map((item) => (
-              <article key={item.title} className="gp-platform-route-card">
-                <span className="gp-platform-route-eyebrow">{item.eyebrow}</span>
-                <h2>{item.title}</h2>
-                <p>{item.detail}</p>
-                <a href={item.href}>{item.cta}</a>
+          <div className="gp-hero-route-stack" aria-label="LC Green delivery routes">
+            {greenModels.map((model) => (
+              <article key={model.id} className="gp-hero-route-card">
+                <span className="gp-hero-route-card__eyebrow">{model.heroLabel}</span>
+                <h2>{model.title}</h2>
+                <p>{model.summary}</p>
+                <button type="button" onClick={() => focusModel(model.id)}>
+                  See how it works
+                </button>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="platform-routes" className="gp-route-stage">
+      <div className="gp-shell gp-stats-bridge">
+        <div className="gp-stats-bar">
+          {statCards.map((card) => (
+            <article key={card.label} className="gp-stat-card">
+              <strong>{card.value}</strong>
+              <span>{card.label}</span>
+              <small>{card.note}</small>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      <section id="platform-routes" className="gp-model-stage">
         <div className="gp-shell">
-          <div className="gp-section-head">
-            <span className="gp-section-eyebrow">Platform routes</span>
+          <div className="gp-section-intro gp-section-intro--center">
+            <span className="gp-section-eyebrow">Choose your model</span>
             <h2>Choose the LC Green model that matches how you work</h2>
             <p>
-              Whether you are coordinating internal field teams, running a branded CSR programme, or opening tree
-              sponsorship to the public, the platform should feel intentional and premium at every route.
+              Whether you are managing field teams, reporting to donors, or engaging supporters, LC Green has you
+              covered with a route designed for the job.
             </p>
           </div>
-          <div className="gp-route-grid">
-            {routeSpotlights.map((item) => (
-              <article key={item.title} className="gp-route-card">
-                <div className="gp-route-card-copy">
-                  <span className="gp-route-card-eyebrow">{item.eyebrow}</span>
-                  <h3>{item.title}</h3>
-                  <p>{item.detail}</p>
-                  <ul>
-                    {item.points.map((point) => (
-                      <li key={point}>{point}</li>
-                    ))}
-                  </ul>
-                  <a href={item.href}>{item.cta}</a>
-                </div>
-                <div className="gp-route-card-media">
+
+          <div className="gp-model-grid">
+            <aside className="gp-model-selector">
+              {greenModels.map((model) => (
+                <button
+                  key={model.id}
+                  type="button"
+                  className={`gp-model-selector-card${model.id === activeModel.id ? " is-active" : ""}`}
+                  onClick={() => setActiveModelId(model.id)}
+                >
+                  <div>
+                    <strong>{model.selectorTitle}</strong>
+                    <span>{model.summary}</span>
+                  </div>
+                  <em>{model.order}</em>
+                </button>
+              ))}
+            </aside>
+
+            <div className="gp-model-showcase">
+              <div className="gp-model-showcase__header">
+                <span className="gp-model-accent">{activeModel.accentLabel}</span>
+                <h3>{activeModel.selectorTitle}</h3>
+                <p>{activeModel.detail}</p>
+              </div>
+
+              <div className="gp-device-stage">
+                <div className="gp-device gp-device--desktop">
                   <img
-                    src={item.image}
-                    alt={item.title}
-                    className={item.fit === "contain" ? "fit-contain" : "fit-cover"}
-                    width="960"
-                    height="720"
+                    src={activeModel.desktopImage}
+                    alt={activeModel.selectorTitle}
+                    className={activeModel.desktopFit === "contain" ? "fit-contain" : "fit-cover"}
+                    width="1400"
+                    height="900"
                     loading="lazy"
                   />
                 </div>
-              </article>
-            ))}
+                <div className="gp-device gp-device--phone">
+                  <img
+                    src={activeModel.phoneImage}
+                    alt={`${activeModel.selectorTitle} mobile preview`}
+                    className={activeModel.phoneFit === "contain" ? "fit-contain" : "fit-cover"}
+                    width="720"
+                    height="1520"
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+
+              <div className="gp-model-showcase__footer">
+                <ul>
+                  {activeModel.bullets.map((bullet) => (
+                    <li key={bullet}>{bullet}</li>
+                  ))}
+                </ul>
+                <a href={activeModel.href}>{activeModel.cta}</a>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="gp-executive-strip">
+      <section className="gp-story-stage">
         <div className="gp-shell">
-          <div className="gp-section-head">
-            <span className="gp-section-eyebrow">Executive value</span>
+          {greenModels.map((model, index) => (
+            <article
+              key={model.id}
+              className={`gp-story-card${index % 2 === 1 ? " is-reversed" : ""}`}
+            >
+              <div className="gp-story-card__copy">
+                <span className="gp-story-card__eyebrow">{model.selectorTitle}</span>
+                <h3>{model.title}</h3>
+                <p>{model.detail}</p>
+                <ul>
+                  {model.bullets.map((bullet) => (
+                    <li key={bullet}>{bullet}</li>
+                  ))}
+                </ul>
+                <a href={model.href}>{model.cta}</a>
+              </div>
+              <div className="gp-story-card__media">
+                <div className="gp-story-screen gp-story-screen--desktop">
+                  <img
+                    src={model.desktopImage}
+                    alt={model.selectorTitle}
+                    className={model.desktopFit === "contain" ? "fit-contain" : "fit-cover"}
+                    width="1400"
+                    height="900"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="gp-story-screen gp-story-screen--phone">
+                  <img
+                    src={model.phoneImage}
+                    alt={`${model.selectorTitle} mobile`}
+                    className={model.phoneFit === "contain" ? "fit-contain" : "fit-cover"}
+                    width="720"
+                    height="1520"
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="gp-strength-stage">
+        <div className="gp-shell">
+          <div className="gp-section-intro gp-section-intro--center">
+            <span className="gp-section-eyebrow">Why LC Green</span>
             <h2>Why LC Green feels stronger than a generic field app</h2>
-            <p>
-              The product becomes more credible when every route feels intentionally designed for its user: field
-              teams, corporate managers, and public sponsors.
-            </p>
           </div>
-          <div className="gp-executive-grid">
-            {executiveCards.map((item) => (
-              <article key={item.title} className="gp-executive-card">
-                <h3>{item.title}</h3>
-                <p>{item.detail}</p>
+          <div className="gp-pill-grid">
+            {whyPillars.map((pillar) => (
+              <article key={pillar} className="gp-pill-card">
+                <span className="gp-pill-card__icon" aria-hidden="true" />
+                <p>{pillar}</p>
               </article>
             ))}
           </div>
@@ -393,78 +492,56 @@ export default function GreenPartnersLanding() {
 
       <section className="gp-proof-stage">
         <div className="gp-shell gp-proof-grid">
-          <article className="gp-panel gp-video-panel">
-            <div className="gp-panel-head">
-              <span className="gp-section-eyebrow">Demo video</span>
-              <h2>Show the platform before the sales call</h2>
-            </div>
+          <article className="gp-proof-card">
+            <span className="gp-section-eyebrow">Truth and transparency</span>
+            <h3>Show the platform before the sales call</h3>
+            <p>Let buyers see how LC Green works in action before they ask for a full demo.</p>
             <video controls preload="metadata" poster="/thumpnail_public.jpg" className="gp-demo-video">
               <source src={HERO_VIDEO_SRC} type="video/mp4" />
             </video>
-            <p className="gp-panel-note">
-              Use a short walkthrough to introduce the dashboard, field capture flow, reporting outputs, and the
-              public-facing proof experience.
-            </p>
           </article>
 
-          <article className="gp-panel gp-showcase-panel">
-            <div className="gp-panel-head">
-              <span className="gp-section-eyebrow">Interactive screenshots</span>
-              <h2>Walk buyers through the exact working surfaces that justify the budget</h2>
-            </div>
-            <div className="gp-showcase-main">
+          <article className="gp-proof-card gp-proof-card--dashboard">
+            <span className="gp-section-eyebrow">Platform walkthrough</span>
+            <h3>Walk buyers through the trees, routes, and survival data that justify the budget.</h3>
+            <p>
+              Use one premium view to explain route control, implementation evidence, maintenance status, and
+              export-ready reporting.
+            </p>
+            <div className="gp-proof-screenshot">
               <img
-                src={activeShowcase.image}
-                alt={activeShowcase.title}
-                className={activeShowcase.fit === "contain" ? "fit-contain" : "fit-cover"}
-                width="1280"
-                height="720"
+                src="/Screenshot lndcheck work.png"
+                alt="LandCheck Green dashboard overview"
+                width="1400"
+                height="900"
                 loading="lazy"
               />
             </div>
-            <div className="gp-showcase-copy">
-              <div className="gp-showcase-metadata">
-                <span>{activeShowcase.eyebrow}</span>
-                <strong>{activeShowcase.audience}</strong>
-              </div>
-              <h3>{activeShowcase.title}</h3>
-              <p>{activeShowcase.blurb}</p>
-              <ul className="gp-showcase-proof-list">
-                {activeShowcase.proofItems.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="gp-showcase-tabs">
-              {showcaseItems.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={item.id === activeShowcase.id ? "is-active" : ""}
-                  onClick={() => setActiveShowcaseId(item.id)}
-                >
-                  {item.title}
-                </button>
-              ))}
+            <div className="gp-proof-actions">
+              <a href="/green-work/login">View full dashboard</a>
+              <a href="mailto:landchecktech@gmail.com?subject=LC%20Green%20Demo">Request a demo</a>
             </div>
           </article>
         </div>
       </section>
 
-      <section className="gp-assets-stage">
+      <section className="gp-budget-stage">
         <div className="gp-shell">
-          <div className="gp-section-head gp-section-head--center">
-            <span className="gp-section-eyebrow">Credibility assets</span>
+          <div className="gp-section-intro gp-section-intro--center">
+            <span className="gp-section-eyebrow">Before you ask for budget</span>
             <h2>Everything a CSR manager should see before you ask for budget</h2>
-            <p>
-              Put the brochure, report preview, public-facing example, and pilot proof in one place so the product
-              feels purchase-ready.
-            </p>
           </div>
-          <div className="gp-assets-grid">
+          <div className="gp-budget-signal-row">
+            {budgetSignals.map((signal) => (
+              <span key={signal} className="gp-budget-signal">
+                {signal}
+              </span>
+            ))}
+          </div>
+          <div className="gp-asset-grid">
             {dueDiligenceAssets.map((asset) => (
               <article key={asset.title} className="gp-asset-card">
-                <span className="gp-asset-eyebrow">{asset.eyebrow}</span>
+                <span className="gp-asset-card__eyebrow">{asset.eyebrow}</span>
                 <h3>{asset.title}</h3>
                 <p>{asset.detail}</p>
                 <a href={asset.href} download={asset.download}>
@@ -476,65 +553,36 @@ export default function GreenPartnersLanding() {
         </div>
       </section>
 
-      <section className="gp-delivery-stage">
+      <section className="gp-workflow-stage">
         <div className="gp-shell">
-          <div className="gp-section-head">
-            <span className="gp-section-eyebrow">Delivery model</span>
-            <h2>How the LC Green Corporate workflow is sold and delivered</h2>
-            <p>
-              Use the same field ecosystem, but let the corporate buyer experience it as a verified CSR implementation
-              service rather than a generic software tool.
-            </p>
+          <div className="gp-section-intro gp-section-intro--center">
+            <span className="gp-section-eyebrow">How the workflow is sold and delivered</span>
+            <h2>From discovery to reporting, LC Green stays structured the whole way</h2>
           </div>
-          <div className="gp-delivery-flow">
-            {deliveryFlow.map((item) => (
-              <article key={item.step} className="gp-delivery-card">
-                <span className="gp-delivery-step">{item.step}</span>
-                <h3>{item.title}</h3>
-                <p>{item.detail}</p>
+          <div className="gp-workflow-grid">
+            {workflowStages.map((stage) => (
+              <article key={stage.step} className="gp-workflow-card">
+                <span className="gp-workflow-card__step">{stage.step}</span>
+                <h3>{stage.title}</h3>
+                <p>{stage.detail}</p>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="gp-trust-stage">
-        <div className="gp-shell gp-trust-layout">
-          <div className="gp-trust-copy">
-            <span className="gp-section-eyebrow">Reporting confidence</span>
-            <h2>Built for reporting teams, not just field teams</h2>
-            <p>
-              The platform helps sustainability, CSR, donor, and communications teams reuse verified implementation
-              records in a more credible reporting workflow.
-            </p>
-          </div>
-          <div className="gp-trust-grid">
-            {trustPillars.map((item) => (
-              <article key={item.title} className="gp-trust-card">
-                <h3>{item.title}</h3>
-                <p>{item.detail}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="gp-insights-stage">
+      <section className="gp-expertise-stage">
         <div className="gp-shell">
-          <div className="gp-section-head">
-            <span className="gp-section-eyebrow">Search visibility</span>
-            <h2>Publish expertise that helps companies discover you</h2>
-            <p>
-              These article topics position LandCheck as the implementation and reporting partner behind serious field
-              programmes.
-            </p>
+          <div className="gp-section-intro gp-section-intro--center">
+            <span className="gp-section-eyebrow">Published expertise</span>
+            <h2>Use expertise content to strengthen credibility and discovery</h2>
           </div>
-          <div className="gp-insights-grid">
-            {insightArticles.map((article) => (
-              <article key={article.title} className="gp-insight-card">
-                <h3>{article.title}</h3>
-                <p>{article.blurb}</p>
-                <a href={article.href}>Read article</a>
+          <div className="gp-expertise-grid">
+            {expertiseCards.map((card) => (
+              <article key={card.title} className="gp-expertise-card">
+                <h3>{card.title}</h3>
+                <p>{card.blurb}</p>
+                <a href={card.href}>Read article</a>
               </article>
             ))}
           </div>
@@ -542,22 +590,21 @@ export default function GreenPartnersLanding() {
       </section>
 
       {partners.length > 0 && (
-        <section id="partners" className="gp-partners-stage">
+        <section className="gp-partners-stage">
           <div className="gp-shell">
-            <div className="gp-section-head gp-section-head--center">
-              <span className="gp-section-eyebrow">Trusted relationships</span>
-              <h2>Partner organisations already in the ecosystem</h2>
-              <p>Show buyers that LandCheck is building with real field actors, not just a concept deck.</p>
+            <div className="gp-section-intro gp-section-intro--center">
+              <span className="gp-section-eyebrow">Partner organisations already in the ecosystem</span>
+              <h2>Real field actors already working with LandCheck</h2>
             </div>
-            <div className="gp-partners-grid">
-              {partners.map((org) => (
-                <div key={org.name} className="gp-partner-card">
-                  {PILOT_ORG_NAMES.has(org.name) ? <span className="gp-partner-tag">Pilot programme</span> : null}
-                  {org.logo ? (
-                    <img src={org.logo} alt={org.name} width="88" height="88" loading="lazy" />
+            <div className="gp-partner-grid">
+              {partners.map((partner) => (
+                <article key={partner.name} className="gp-partner-card">
+                  {PILOT_ORG_NAMES.has(partner.name) ? <span className="gp-partner-card__tag">Pilot</span> : null}
+                  {partner.logo ? (
+                    <img src={partner.logo} alt={partner.name} width="96" height="96" loading="lazy" />
                   ) : (
-                    <span className="gp-partner-fallback">
-                      {org.name
+                    <span className="gp-partner-card__fallback">
+                      {partner.name
                         .split(" ")
                         .slice(0, 2)
                         .map((word) => word[0])
@@ -565,8 +612,8 @@ export default function GreenPartnersLanding() {
                         .toUpperCase()}
                     </span>
                   )}
-                  <strong>{org.name}</strong>
-                </div>
+                  <strong>{partner.name}</strong>
+                </article>
               ))}
             </div>
           </div>
@@ -574,23 +621,25 @@ export default function GreenPartnersLanding() {
       )}
 
       <footer className="gp-footer">
-        <div className="gp-shell gp-footer-inner">
-          <div>
-            <span className="gp-section-eyebrow">Next step</span>
-            <h2>Present LC Green Corporate like a premium implementation partner.</h2>
-            <p>
-              Use the brochure, video, article content, and dashboard proof to move from interest to serious CSR
-              procurement conversations.
-            </p>
-          </div>
-          <div className="gp-footer-actions">
-            <a href={BROCHURE_PDF_SRC} download>
-              Download brochure
-            </a>
-            <a href="/green-work/login">Open Work login</a>
-            <a href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Corporate%20Partnership">
-              Contact LandCheck
-            </a>
+        <div className="gp-shell">
+          <div className="gp-footer-panel">
+            <div>
+              <span className="gp-section-eyebrow">Next step</span>
+              <h2>Present LC Green Corporate like a premium implementation partner.</h2>
+              <p>
+                Download the brochure, show the sample report, and take buyers into the operational dashboard only
+                when they are ready for the deeper conversation.
+              </p>
+            </div>
+            <div className="gp-footer-panel__actions">
+              <a href={BROCHURE_PDF_SRC} download>
+                Download brochure
+              </a>
+              <a href="/green-work/login">Open Work login</a>
+              <a href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Corporate%20Partnership">
+                Schedule a demo
+              </a>
+            </div>
           </div>
         </div>
       </footer>
