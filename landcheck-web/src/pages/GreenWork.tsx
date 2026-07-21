@@ -36,8 +36,8 @@ const REMOTE_MONITORING_PROGRESS_STEPS_AGRIC = [
   "Preparing farm health summary",
 ];
 
-type WorkflowProfile = "green" | "agric" | "relief_recovery";
-type ProjectAccessModel = "partner_org" | "public_sponsorship";
+type WorkflowProfile = "green" | "agric" | "relief_recovery" | "csr";
+type ProjectAccessModel = "partner_org" | "public_sponsorship" | "csr_programme";
 type AgricConfig = {
   program_type?: string | null;
   focus_commodities?: string | null;
@@ -49,6 +49,13 @@ type ReliefConfig = {
   intervention_focus?: string | null;
   package_types?: string | null;
   target_zone?: string | null;
+};
+type CsrConfig = {
+  program_type?: string | null;
+  client_name?: string | null;
+  implementation_scope?: string | null;
+  reporting_cycle?: string | null;
+  target_outcomes?: string | null;
 };
 type ActivityLogEntry = {
   id: number;
@@ -143,13 +150,32 @@ const normalizeWorkflowProfile = (value?: string | null): WorkflowProfile => {
   const normalized = String(value || "").trim().toLowerCase();
   if (normalized === "agric") return "agric";
   if (normalized === "relief_recovery") return "relief_recovery";
+  if (normalized === "csr") return "csr";
   return "green";
 };
-const isFieldWorkflowProfile = (value?: string | null) => normalizeWorkflowProfile(value) !== "green";
-const normalizeProjectAccessModel = (value?: string | null): ProjectAccessModel =>
-  String(value || "").trim().toLowerCase() === "public_sponsorship" ? "public_sponsorship" : "partner_org";
-const isPublicSponsorshipProject = (accessModel?: string | null, publicSponsorEnabled?: boolean | null) =>
-  normalizeProjectAccessModel(accessModel) === "public_sponsorship" || Boolean(publicSponsorEnabled);
+const isFieldWorkflowProfile = (value?: string | null) => {
+  const profile = normalizeWorkflowProfile(value);
+  return profile === "agric" || profile === "relief_recovery";
+};
+const normalizeProjectAccessModel = (value?: string | null): ProjectAccessModel => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "public_sponsorship") return "public_sponsorship";
+  if (normalized === "csr_programme") return "csr_programme";
+  return "partner_org";
+};
+const isCsrProgrammeProject = (accessModel?: string | null) =>
+  normalizeProjectAccessModel(accessModel) === "csr_programme";
+const isPublicSponsorshipProject = (accessModel?: string | null, publicSponsorEnabled?: boolean | null) => {
+  const normalized = normalizeProjectAccessModel(accessModel);
+  return normalized === "public_sponsorship" || (normalized !== "csr_programme" && Boolean(publicSponsorEnabled));
+};
+const isAgentRosterProject = (accessModel?: string | null, publicSponsorEnabled?: boolean | null) =>
+  isCsrProgrammeProject(accessModel) || isPublicSponsorshipProject(accessModel, publicSponsorEnabled);
+const getProjectAccessModelLabel = (accessModel?: string | null, publicSponsorEnabled?: boolean | null) => {
+  if (isCsrProgrammeProject(accessModel)) return "CSR client route";
+  if (isPublicSponsorshipProject(accessModel, publicSponsorEnabled)) return "Public sponsorship";
+  return "Partner organization";
+};
 
 const getWorkflowLabels = (profile?: string | null) =>
   normalizeWorkflowProfile(profile) === "agric"
@@ -180,6 +206,20 @@ const getWorkflowLabels = (profile?: string | null) =>
           supportVisitTitle: "Relief Visits",
           recordTitle: "Site Records",
         }
+      : normalizeWorkflowProfile(profile) === "csr"
+        ? {
+            modeLabel: "CSR",
+            ownerSingular: "Community Partner",
+            ownerPlural: "Community Partners",
+            entitySingular: "Tree",
+            entityPlural: "Trees",
+            actionTitle: "Map & Plant Trees",
+            registryTitle: "CSR Partner Hub",
+            liveTableTitle: "Implementation Live",
+            fieldCaptureTitle: "Implementation Capture",
+            supportVisitTitle: "Field Visits",
+            recordTitle: "Implementation Trees",
+          }
     : {
         modeLabel: "Green",
         ownerSingular: "Custodian",
@@ -222,6 +262,7 @@ type Project = {
   sponsor_agent_maintenance_fee?: number | null;
   agric_config?: AgricConfig | null;
   relief_config?: ReliefConfig | null;
+  csr_config?: CsrConfig | null;
   planting_model?: "direct" | "community_distributed" | "mixed";
   allow_existing_tree_link?: boolean;
   default_existing_tree_scope?: "exclude_from_planting_kpi" | "include_in_planting_kpi";
@@ -244,6 +285,7 @@ type Project = {
     sponsor_agent_maintenance_fee?: number | null;
     agric_config?: AgricConfig | null;
     relief_config?: ReliefConfig | null;
+    csr_config?: CsrConfig | null;
     planting_model?: "direct" | "community_distributed" | "mixed";
     allow_existing_tree_link?: boolean;
     default_existing_tree_scope?: "exclude_from_planting_kpi" | "include_in_planting_kpi";
@@ -1202,6 +1244,16 @@ const formatReliefProgramTypeLabel = (value: string | null | undefined) => {
   if (key === "construction_materials") return "Construction materials";
   if (key === "infrastructure_rehab") return "Infrastructure rehabilitation";
   if (key === "cash_voucher") return "Cash and voucher";
+  if (key === "mixed") return "Mixed";
+  return value ? formatTaskTypeLabel(value) : "-";
+};
+const formatCsrProgramTypeLabel = (value: string | null | undefined) => {
+  const key = normalizeName(value);
+  if (key === "tree_planting") return "Tree planting";
+  if (key === "urban_greening") return "Urban greening";
+  if (key === "school_greening") return "School greening";
+  if (key === "community_restoration") return "Community restoration";
+  if (key === "employee_volunteering") return "Employee volunteering";
   if (key === "mixed") return "Mixed";
   return value ? formatTaskTypeLabel(value) : "-";
 };
@@ -3053,7 +3105,14 @@ function ShareImpactPanel({
     setTimeout(() => setCopied(false), 2200);
   };
 
-  const modeLabel = workflowProfile === "agric" ? "Agric Programme" : workflowProfile === "relief_recovery" ? "Relief Programme" : "Tree Planting Programme";
+  const modeLabel =
+    workflowProfile === "agric"
+      ? "Agric Programme"
+      : workflowProfile === "relief_recovery"
+        ? "Relief Programme"
+        : workflowProfile === "csr"
+          ? "CSR Programme"
+          : "Tree Planting Programme";
   const entityPl = workflowProfile === "agric" ? "farms" : workflowProfile === "relief_recovery" ? "sites" : "trees";
 
   return (
@@ -3348,6 +3407,11 @@ export default function GreenWork() {
     relief_intervention_focus: "",
     relief_package_types: "",
     relief_target_zone: "",
+    csr_program_type: "tree_planting",
+    csr_client_name: "",
+    csr_implementation_scope: "",
+    csr_reporting_cycle: "",
+    csr_target_outcomes: "",
   });
   const [newOrganization, setNewOrganization] = useState({
     name: "",
@@ -3447,6 +3511,11 @@ export default function GreenWork() {
     relief_intervention_focus: string;
     relief_package_types: string;
     relief_target_zone: string;
+    csr_program_type: string;
+    csr_client_name: string;
+    csr_implementation_scope: string;
+    csr_reporting_cycle: string;
+    csr_target_outcomes: string;
     planting_model: PlantingModel;
     allow_existing_tree_link: boolean;
     default_existing_tree_scope: ExistingScopeValue;
@@ -3475,6 +3544,11 @@ export default function GreenWork() {
     relief_intervention_focus: "",
     relief_package_types: "",
     relief_target_zone: "",
+    csr_program_type: "tree_planting",
+    csr_client_name: "",
+    csr_implementation_scope: "",
+    csr_reporting_cycle: "",
+    csr_target_outcomes: "",
     planting_model: "direct",
     allow_existing_tree_link: false,
     default_existing_tree_scope: "exclude_from_planting_kpi",
@@ -3499,9 +3573,16 @@ export default function GreenWork() {
   const fieldWorkflowMode = isFieldWorkflowProfile(activeWorkflowProfile);
   const agricWorkflowMode = activeWorkflowProfile === "agric";
   const reliefWorkflowMode = activeWorkflowProfile === "relief_recovery";
+  const csrWorkflowMode = activeWorkflowProfile === "csr";
+  const csrRouteProject = Boolean(activeProjectId && isCsrProgrammeProject(activeProjectAccessModel));
+  const csrProjectMode = csrWorkflowMode || csrRouteProject;
   const publicSponsorshipProject = Boolean(
     activeProjectId && activeWorkflowProfile === "green" && isPublicSponsorshipProject(activeProjectAccessModel, activeProjectPublicSponsorEnabled),
   );
+  const agentRosterProject = Boolean(
+    activeProjectId && isAgentRosterProject(activeProjectAccessModel, activeProjectPublicSponsorEnabled),
+  );
+  const csrPartnerDashboardMode = Boolean(csrRouteProject && isPartnerWorkSession);
   const publicSponsorAgentUserIds = useMemo(
     () =>
       normalizePositiveIntList(
@@ -3521,10 +3602,10 @@ export default function GreenWork() {
     [projectScopedUsers],
   );
   const assignmentUsers = useMemo(() => {
-    if (!publicSponsorshipProject) return projectScopedUsers;
+    if (!agentRosterProject) return projectScopedUsers;
     const allowed = new Set(publicSponsorAgentUserIds);
     return eligiblePublicSponsorUsers.filter((user) => allowed.has(Number(user.id || 0)));
-  }, [eligiblePublicSponsorUsers, projectScopedUsers, publicSponsorAgentUserIds, publicSponsorshipProject]);
+  }, [agentRosterProject, eligiblePublicSponsorUsers, projectScopedUsers, publicSponsorAgentUserIds]);
   const sponsorQrAgentOptions = useMemo(
     () => assignmentUsers.filter((user) => user.allow_green !== false && user.is_active !== false),
     [assignmentUsers],
@@ -4339,6 +4420,11 @@ export default function GreenWork() {
       relief_intervention_focus: "",
       relief_package_types: "",
       relief_target_zone: "",
+      csr_program_type: "tree_planting",
+      csr_client_name: "",
+      csr_implementation_scope: "",
+      csr_reporting_cycle: "",
+      csr_target_outcomes: "",
       planting_model: "direct",
       allow_existing_tree_link: false,
       default_existing_tree_scope: "exclude_from_planting_kpi",
@@ -4645,6 +4731,11 @@ export default function GreenWork() {
         relief_intervention_focus: String(settingsPayload?.relief_config?.intervention_focus || ""),
         relief_package_types: String(settingsPayload?.relief_config?.package_types || ""),
         relief_target_zone: String(settingsPayload?.relief_config?.target_zone || ""),
+        csr_program_type: String(settingsPayload?.csr_config?.program_type || "tree_planting"),
+        csr_client_name: String(settingsPayload?.csr_config?.client_name || ""),
+        csr_implementation_scope: String(settingsPayload?.csr_config?.implementation_scope || ""),
+        csr_reporting_cycle: String(settingsPayload?.csr_config?.reporting_cycle || ""),
+        csr_target_outcomes: String(settingsPayload?.csr_config?.target_outcomes || ""),
         planting_model:
           plantingModel === "community_distributed" || plantingModel === "mixed" || plantingModel === "direct"
             ? plantingModel
@@ -5023,17 +5114,22 @@ export default function GreenWork() {
       !canAccessSuperAdmin &&
       normalizeProjectAccessModel(projectSettingsDraft.access_model) !== existingAccessModel
     ) {
-      toast.error("Only super admin can change the public sponsorship route.");
+      toast.error("Only super admin can change the project access route.");
       return;
     }
-    if (nextAccessModel === "public_sponsorship" && projectSettingsDraft.workflow_profile !== "green") {
-      toast.error("Public sponsorship projects currently run on the Green workflow only.");
+    if (["public_sponsorship", "csr_programme"].includes(nextAccessModel) && projectSettingsDraft.workflow_profile !== "green") {
+      toast.error("Public sponsorship and CSR client projects currently run on the Green workflow only.");
       return;
     }
     const nextPublicSponsorshipProject = isPublicSponsorshipProject(
       nextAccessModel,
       nextAccessModel === "public_sponsorship" ? true : projectSettingsDraft.public_sponsor_enabled,
     );
+    const nextAgentRosterProject = isAgentRosterProject(
+      nextAccessModel,
+      nextAccessModel === "public_sponsorship" ? true : projectSettingsDraft.public_sponsor_enabled,
+    );
+    const nextCsrClientProject = nextAccessModel === "csr_programme";
     const existingPublicSponsorTitle = String(
       activeProjectRecord?.settings?.public_sponsor_title ?? activeProjectRecord?.public_sponsor_title ?? "",
     ).trim();
@@ -5063,8 +5159,7 @@ export default function GreenWork() {
       const res = await api.patch(`/green/projects/${activeProjectId}/settings`, {
         workflow_profile: projectSettingsDraft.workflow_profile,
         access_model: nextAccessModel,
-        public_sponsor_enabled:
-          nextPublicSponsorshipProject,
+        public_sponsor_enabled: nextPublicSponsorshipProject,
         public_sponsor_title:
           nextPublicSponsorshipProject
             ? canAccessSuperAdmin
@@ -5180,7 +5275,7 @@ export default function GreenWork() {
                 : Number(existingSponsorAgentMaintenanceFee)
             : null,
         public_sponsor_agent_user_ids:
-          nextPublicSponsorshipProject ? projectSettingsDraft.public_sponsor_agent_user_ids : [],
+          nextAgentRosterProject ? projectSettingsDraft.public_sponsor_agent_user_ids : [],
         agric_config:
           projectSettingsDraft.workflow_profile === "agric"
             ? {
@@ -5197,6 +5292,16 @@ export default function GreenWork() {
                 intervention_focus: projectSettingsDraft.relief_intervention_focus || null,
                 package_types: projectSettingsDraft.relief_package_types || null,
                 target_zone: projectSettingsDraft.relief_target_zone || null,
+              }
+            : {},
+        csr_config:
+          nextCsrClientProject || projectSettingsDraft.workflow_profile === "csr"
+            ? {
+                program_type: projectSettingsDraft.csr_program_type || "tree_planting",
+                client_name: projectSettingsDraft.csr_client_name || null,
+                implementation_scope: projectSettingsDraft.csr_implementation_scope || null,
+                reporting_cycle: projectSettingsDraft.csr_reporting_cycle || null,
+                target_outcomes: projectSettingsDraft.csr_target_outcomes || null,
               }
             : {},
         planting_model: projectSettingsDraft.planting_model,
@@ -5251,9 +5356,9 @@ export default function GreenWork() {
         ...prev,
         public_sponsor_agent_user_ids: normalizedPublicSponsorAgentUserIds,
       }));
-      toast.success("Public sponsor agents updated");
+      toast.success(csrRouteProject ? "CSR field agents updated" : "Public sponsor agents updated");
     } catch (error: any) {
-      toast.error(error?.response?.data?.detail || "Failed to update public sponsor agents");
+      toast.error(error?.response?.data?.detail || (csrRouteProject ? "Failed to update CSR field agents" : "Failed to update public sponsor agents"));
     } finally {
       setSavingPublicSponsorAgents(false);
     }
@@ -6898,65 +7003,67 @@ export default function GreenWork() {
     const nextAccessModel = canAccessSuperAdmin
       ? normalizeProjectAccessModel(newProject.access_model)
       : "partner_org";
-    if (!canAccessSuperAdmin && normalizeProjectAccessModel(newProject.access_model) === "public_sponsorship") {
-      toast.error("Only super admin can create public sponsorship projects.");
+    if (!canAccessSuperAdmin && normalizeProjectAccessModel(newProject.access_model) !== "partner_org") {
+      toast.error("Only super admin can create public sponsorship or CSR client projects.");
       return;
     }
-    if (nextAccessModel === "public_sponsorship" && normalizeWorkflowProfile(newProject.workflow_profile) !== "green") {
-      toast.error("Public sponsorship projects currently run on the Green workflow only.");
+    if (["public_sponsorship", "csr_programme"].includes(nextAccessModel) && normalizeWorkflowProfile(newProject.workflow_profile) !== "green") {
+      toast.error("Public sponsorship and CSR client projects currently run on the Green workflow only.");
       return;
     }
     if (isPartnerWorkSession && !workScopedOrganizationId) {
       toast.error("Your user account is not linked to an organization.");
       return;
     }
+    const nextPublicSponsorshipProject = nextAccessModel === "public_sponsorship";
+    const nextCsrClientProject = nextAccessModel === "csr_programme";
     const forcedOrgId = workScopedOrganizationId;
     const orgId = forcedOrgId || Number(newProject.organization_id || 0);
     const payload = {
       ...newProject,
       organization_id: Number.isFinite(orgId) && orgId > 0 ? orgId : null,
       access_model: nextAccessModel,
-      public_sponsor_enabled: nextAccessModel === "public_sponsorship" ? true : false,
-      public_sponsor_title: nextAccessModel === "public_sponsorship" ? newProject.public_sponsor_title.trim() || null : null,
+      public_sponsor_enabled: nextPublicSponsorshipProject,
+      public_sponsor_title: nextPublicSponsorshipProject ? newProject.public_sponsor_title.trim() || null : null,
       public_sponsor_description:
-        nextAccessModel === "public_sponsorship" ? newProject.public_sponsor_description.trim() || null : null,
+        nextPublicSponsorshipProject ? newProject.public_sponsor_description.trim() || null : null,
       sponsor_price_per_tree_ngn:
-        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_price_per_tree_ngn || 0) > 0
+        nextPublicSponsorshipProject && Number(newProject.sponsor_price_per_tree_ngn || 0) > 0
           ? Number(newProject.sponsor_price_per_tree_ngn)
           : null,
       sponsor_price_per_tree_usd:
-        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_price_per_tree_usd || 0) > 0
+        nextPublicSponsorshipProject && Number(newProject.sponsor_price_per_tree_usd || 0) > 0
           ? Number(newProject.sponsor_price_per_tree_usd)
           : null,
       sponsor_price_per_tree:
-        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_price_per_tree_ngn || 0) > 0
+        nextPublicSponsorshipProject && Number(newProject.sponsor_price_per_tree_ngn || 0) > 0
           ? Number(newProject.sponsor_price_per_tree_ngn)
-          : nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_price_per_tree_usd || 0) > 0
+          : nextPublicSponsorshipProject && Number(newProject.sponsor_price_per_tree_usd || 0) > 0
             ? Number(newProject.sponsor_price_per_tree_usd)
             : null,
       sponsor_currency:
-        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_price_per_tree_ngn || 0) > 0
+        nextPublicSponsorshipProject && Number(newProject.sponsor_price_per_tree_ngn || 0) > 0
           ? "NGN"
-          : nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_price_per_tree_usd || 0) > 0
+          : nextPublicSponsorshipProject && Number(newProject.sponsor_price_per_tree_usd || 0) > 0
             ? "USD"
             : "NGN",
       sponsor_capacity:
-        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_capacity || 0) > 0
+        nextPublicSponsorshipProject && Number(newProject.sponsor_capacity || 0) > 0
           ? Number(newProject.sponsor_capacity)
           : null,
       sponsor_max_per_order:
-        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_max_per_order || 0) > 0
+        nextPublicSponsorshipProject && Number(newProject.sponsor_max_per_order || 0) > 0
           ? Number(newProject.sponsor_max_per_order)
           : null,
-      sponsor_dedication_enabled: nextAccessModel === "public_sponsorship" ? Boolean(newProject.sponsor_dedication_enabled) : false,
+      sponsor_dedication_enabled: nextPublicSponsorshipProject ? Boolean(newProject.sponsor_dedication_enabled) : false,
       sponsor_payment_instructions:
-        nextAccessModel === "public_sponsorship" ? newProject.sponsor_payment_instructions.trim() || null : null,
+        nextPublicSponsorshipProject ? newProject.sponsor_payment_instructions.trim() || null : null,
       sponsor_agent_planting_fee:
-        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_agent_planting_fee || 0) > 0
+        nextPublicSponsorshipProject && Number(newProject.sponsor_agent_planting_fee || 0) > 0
           ? Number(newProject.sponsor_agent_planting_fee)
           : null,
       sponsor_agent_maintenance_fee:
-        nextAccessModel === "public_sponsorship" && Number(newProject.sponsor_agent_maintenance_fee || 0) > 0
+        nextPublicSponsorshipProject && Number(newProject.sponsor_agent_maintenance_fee || 0) > 0
           ? Number(newProject.sponsor_agent_maintenance_fee)
           : null,
       agric_config:
@@ -6975,6 +7082,16 @@ export default function GreenWork() {
               intervention_focus: newProject.relief_intervention_focus || null,
               package_types: newProject.relief_package_types || null,
               target_zone: newProject.relief_target_zone || null,
+            }
+          : {},
+      csr_config:
+        nextCsrClientProject || newProject.workflow_profile === "csr"
+          ? {
+              program_type: newProject.csr_program_type || "tree_planting",
+              client_name: newProject.csr_client_name || null,
+              implementation_scope: newProject.csr_implementation_scope || null,
+              reporting_cycle: newProject.csr_reporting_cycle || null,
+              target_outcomes: newProject.csr_target_outcomes || null,
             }
           : {},
     };
@@ -7014,6 +7131,11 @@ export default function GreenWork() {
       relief_intervention_focus: "",
       relief_package_types: "",
       relief_target_zone: "",
+      csr_program_type: "tree_planting",
+      csr_client_name: "",
+      csr_implementation_scope: "",
+      csr_reporting_cycle: "",
+      csr_target_outcomes: "",
     });
     if (canAccessSuperAdmin) {
       void loadAdminOverview().catch(() => {});
@@ -9369,6 +9491,8 @@ export default function GreenWork() {
     }
   }, [maintenanceMapFocusEnabled, selectedMaintenanceRows.length]);
   const actionWorkflowProfile = normalizeWorkflowProfile(projectSettingsDraft.workflow_profile);
+  const actionAccessModel = normalizeProjectAccessModel(projectSettingsDraft.access_model);
+  const actionCsrMode = actionWorkflowProfile === "csr" || actionAccessModel === "csr_programme";
   const actionWorkflowLabels = getWorkflowLabels(actionWorkflowProfile);
 
   const activeProjectActions: Array<{ form: WorkForm; title: string; note: string; isNew?: boolean }> =
@@ -9408,10 +9532,10 @@ export default function GreenWork() {
               : []),
           ]
       : [
-          { form: "overview", title: "Overview", note: "Progress summary" },
+          { form: "overview", title: actionCsrMode ? "CSR Overview" : "Overview", note: actionCsrMode ? "Programme progress + implementation status" : "Progress summary" },
           { form: "map_view", title: "Map View", note: `${actionWorkflowLabels.entityPlural} + draw polygons` },
-          { form: "remote_monitoring", title: "Remote Monitoring", note: "Satellite Monitoring +", isNew: true },
-          { form: "live_table", title: "Live Maintenance", note: "New planting + existing tree" },
+          { form: "remote_monitoring", title: actionCsrMode ? "Impact Monitoring" : "Remote Monitoring", note: actionCsrMode ? "Satellite monitoring +" : "Satellite Monitoring +", isNew: true },
+          { form: "live_table", title: actionCsrMode ? "Implementation Live" : "Live Maintenance", note: actionCsrMode ? "Planting + maintenance + verification" : "New planting + existing tree" },
           ...(publicSponsorshipProject
             ? [
                 { form: "sponsors" as WorkForm, title: "Sponsors", note: "Sponsor accounts + linked trees" },
@@ -9424,11 +9548,11 @@ export default function GreenWork() {
             ? [{ form: "merchants" as WorkForm, title: "Merchants", note: "API/webhook sponsorship integrations" }]
             : []),
           { form: "users", title: "Users", note: "All staff status + roles" },
-          { form: "assign_work", title: "Planting Orders", note: "Assign planting targets" },
-          { form: "assign_task", title: "Maintenance", note: "Assign maintenance" },
-          { form: "custodian_hub", title: actionWorkflowLabels.registryTitle, note: "Overview + custodians +" },
-          { form: "existing_tree_intake", title: "Existing Trees", note: "Existing tree records" },
-          { form: "verra_reports", title: "Verra Reports", note: "VCS package + history" },
+          { form: "assign_work", title: actionCsrMode ? "Implementation Orders" : "Planting Orders", note: actionCsrMode ? "Assign CSR planting targets" : "Assign planting targets" },
+          { form: "assign_task", title: actionCsrMode ? "Field Visits" : "Maintenance", note: actionCsrMode ? "Assign maintenance + verification" : "Assign maintenance" },
+          { form: "custodian_hub", title: actionWorkflowLabels.registryTitle, note: actionCsrMode ? "Community partners + programme setup" : "Overview + custodians +" },
+          { form: "existing_tree_intake", title: actionCsrMode ? "Programme Records" : actionWorkflowLabels.recordTitle, note: actionCsrMode ? "Verified implementation records" : "Existing tree records" },
+          { form: "verra_reports", title: actionCsrMode ? "Programme Reports" : "Verra Reports", note: actionCsrMode ? "CSR reporting package + history" : "VCS package + history" },
           { form: "review_queue", title: "Review Queue", note: "Approve or reject submissions" },
           ...(canAccessSuperAdmin
             ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Activity logs + QR prints report" }]
@@ -9437,6 +9561,20 @@ export default function GreenWork() {
             ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links · endorsements" }]
             : []),
         ];
+  const displayedProjectActions: Array<{ form: WorkForm; title: string; note: string; isNew?: boolean }> = csrPartnerDashboardMode
+    ? [
+        { form: "overview", title: "CSR Overview", note: "Programme progress + implementation status" },
+        { form: "map_view", title: "Map View", note: "Trees + verified field locations" },
+        { form: "remote_monitoring", title: "Impact Monitoring", note: "Satellite monitoring +", isNew: true },
+        { form: "live_table", title: "Implementation Live", note: "Planting + maintenance + verification" },
+        { form: "existing_tree_intake", title: "Programme Records", note: "Verified implementation records" },
+        { form: "verra_reports", title: "Programme Reports", note: "Client-ready reports + export history" },
+        { form: "users", title: "Users", note: "Field teams + assigned agents" },
+        ...(activeProjectRecord?.organization_slug
+          ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Campaign story + stakeholder links" }]
+          : []),
+      ]
+    : activeProjectActions;
 
   const userWorkSummary = useMemo(() => {
     return users
@@ -9477,10 +9615,10 @@ export default function GreenWork() {
       .sort((a, b) => a.user.full_name.localeCompare(b.user.full_name));
   }, [users, orders, tasks, trees]);
   const visibleUserWorkSummary = useMemo(() => {
-    if (!publicSponsorshipProject) return userWorkSummary;
+    if (!agentRosterProject) return userWorkSummary;
     const allowed = new Set(publicSponsorAgentUserIds);
     return userWorkSummary.filter((item) => allowed.has(Number(item.user.id || 0)));
-  }, [publicSponsorshipProject, publicSponsorAgentUserIds, userWorkSummary]);
+  }, [agentRosterProject, publicSponsorAgentUserIds, userWorkSummary]);
 
   const calcProgress = (value: number, target: number) => {
     if (!target || target <= 0) return 0;
@@ -9939,8 +10077,11 @@ export default function GreenWork() {
     activeProjectMaturityMap,
   ]);
   const existingTreeIntakeRows = useMemo(
-    () =>
-      visibleProjectTrees
+    () => {
+      if (csrProjectMode) {
+        return [...visibleProjectTrees].sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+      }
+      return visibleProjectTrees
         .filter((tree) => {
           const origin = normalizeName(String(tree.tree_origin || "").replaceAll(" ", "_"));
           const scope = normalizeName(String(tree.attribution_scope || "").replaceAll(" ", "_"));
@@ -9951,8 +10092,9 @@ export default function GreenWork() {
           if (hasSourceProject) return true;
           return false;
         })
-        .sort((a, b) => Number(b.id || 0) - Number(a.id || 0)),
-    [visibleProjectTrees],
+        .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+    },
+    [csrProjectMode, visibleProjectTrees],
   );
   const existingTreeIntakeAgricSummary = useMemo(
     () =>
@@ -10414,6 +10556,26 @@ export default function GreenWork() {
       setMenuOpen(false);
       return;
     }
+    if (
+      csrPartnerDashboardMode &&
+      [
+        "create_project",
+        "add_user",
+        "assign_work",
+        "assign_task",
+        "review_queue",
+        "sponsors",
+        "sponsorship_orders",
+        "sponsor_payouts",
+        "sponsor_feedback",
+        "merchants",
+        "custodian_hub",
+      ].includes(form)
+    ) {
+      toast.error("CSR client access is view and reporting only. Operational assignment stays with super admin.");
+      setMenuOpen(false);
+      return;
+    }
     setActiveForm(form);
     setMenuOpen(false);
     setStaffMenu(null);
@@ -10547,6 +10709,19 @@ export default function GreenWork() {
     if (!["create_project", "add_user", "assign_work", "assign_task"].includes(activeForm)) return;
     setActiveForm(activeProjectId ? defaultProjectForm : "project_focus");
   }, [workPartnerOrgPaused, activeForm, activeProjectId, defaultProjectForm]);
+
+  useEffect(() => {
+    if (!csrPartnerDashboardMode) return;
+    if (!activeForm) return;
+    if (
+      ["project_focus", "overview", "map_view", "remote_monitoring", "live_table", "existing_tree_intake", "verra_reports", "users", "share_impact"].includes(
+        activeForm,
+      )
+    ) {
+      return;
+    }
+    setActiveForm(activeProjectId ? "overview" : "project_focus");
+  }, [csrPartnerDashboardMode, activeForm, activeProjectId]);
 
   useEffect(() => {
     if (!workPartnerOrgPaused) return;
@@ -10788,7 +10963,7 @@ export default function GreenWork() {
         <div className="green-work-active-hub-wrap">
           <div className="green-work-active-hub">
             <div className="green-work-action-grid">
-              {activeProjectActions.map((action) => {
+              {displayedProjectActions.map((action) => {
                 return (
                   <button
                     key={action.form}
@@ -10869,13 +11044,15 @@ export default function GreenWork() {
         >
           Project Focus
         </button>
-        <button
-          className={`green-work-menu-item ${activeForm === "create_project" ? "active" : ""}`}
-          type="button"
-          onClick={() => openForm("create_project")}
-        >
-          Create Project
-        </button>
+        {!csrPartnerDashboardMode && (
+          <button
+            className={`green-work-menu-item ${activeForm === "create_project" ? "active" : ""}`}
+            type="button"
+            onClick={() => openForm("create_project")}
+          >
+            Create Project
+          </button>
+        )}
         <button
           className="green-work-menu-item"
           type="button"
@@ -10918,14 +11095,14 @@ export default function GreenWork() {
                   type="button"
                   onClick={() => openForm("remote_monitoring")}
                 >
-                  Remote Monitoring
+                  {csrProjectMode ? "Impact Monitoring" : "Remote Monitoring"}
                 </button>
                 <button
                   className={`green-work-menu-item ${activeForm === "live_table" ? "active" : ""}`}
                   type="button"
                   onClick={() => openForm("live_table")}
                 >
-                  Live Maintenance Table
+                  {csrProjectMode ? "Implementation Live" : "Live Maintenance Table"}
                 </button>
                 {publicSponsorshipProject ? (
                   <>
@@ -11029,7 +11206,11 @@ export default function GreenWork() {
               type="button"
               onClick={() => openForm("existing_tree_intake")}
             >
-              {fieldWorkflowMode ? activeWorkflowLabels.recordTitle : "Existing Trees"}
+              {fieldWorkflowMode
+                ? activeWorkflowLabels.recordTitle
+                : csrProjectMode
+                  ? "Programme Records"
+                  : "Existing Trees"}
             </button>
             {!fieldWorkflowMode ? (
               <button
@@ -11037,16 +11218,18 @@ export default function GreenWork() {
                 type="button"
                 onClick={() => openForm("verra_reports")}
               >
-                Verra Reports
+                {csrProjectMode ? "Programme Reports" : "Verra Reports"}
               </button>
             ) : null}
-            <button
-              className={`green-work-menu-item ${activeForm === "review_queue" ? "active" : ""}`}
-              type="button"
-              onClick={() => openForm("review_queue")}
-            >
-              Review Queue ({reviewQueue.length})
-            </button>
+            {!csrPartnerDashboardMode && (
+              <button
+                className={`green-work-menu-item ${activeForm === "review_queue" ? "active" : ""}`}
+                type="button"
+                onClick={() => openForm("review_queue")}
+              >
+                Review Queue ({reviewQueue.length})
+              </button>
+            )}
             <button
               className={`green-work-menu-item ${activeForm === "logs" ? "active" : ""}`}
               type="button"
@@ -11061,14 +11244,16 @@ export default function GreenWork() {
             >
               Users
             </button>
-            <button
-              className={`green-work-menu-item ${activeForm === "add_user" ? "active" : ""}`}
-              type="button"
-              onClick={() => openForm("add_user")}
-            >
-              Add User
-            </button>
-            {!fieldWorkflowMode ? (
+            {!csrPartnerDashboardMode && (
+              <button
+                className={`green-work-menu-item ${activeForm === "add_user" ? "active" : ""}`}
+                type="button"
+                onClick={() => openForm("add_user")}
+              >
+                Add User
+              </button>
+            )}
+            {!fieldWorkflowMode && !csrPartnerDashboardMode ? (
               <>
                 <button
                   className={`green-work-menu-item ${activeForm === "assign_work" ? "active" : ""}`}
@@ -11134,7 +11319,7 @@ export default function GreenWork() {
                 )}
                 {activeProjectRecord && (
                   <p className="green-work-note">
-                    Access route: {activeProjectAccessModel === "public_sponsorship" ? "Public sponsorship" : "Partner organization"}
+                    Access route: {getProjectAccessModelLabel(activeProjectAccessModel, activeProjectPublicSponsorEnabled)}
                   </p>
                 )}
                 {activeProjectRecord && (
@@ -11142,7 +11327,7 @@ export default function GreenWork() {
                     Active model: {formatTaskTypeLabel(activeProjectRecord.planting_model || "direct")}
                   </p>
                 )}
-                {activeProjectRecord && (
+                {activeProjectRecord && !csrPartnerDashboardMode && (
                   <div className="green-work-project-options">
                     <button
                       type="button"
@@ -11160,7 +11345,7 @@ export default function GreenWork() {
                 )}
               </div>
 
-              {activeProjectId && showProjectDangerOptions && (
+              {activeProjectId && showProjectDangerOptions && !csrPartnerDashboardMode && (
                 <>
                   <div className="green-work-card green-work-project-flow-card">
                     <h3>Workflow State</h3>
@@ -11198,6 +11383,19 @@ export default function GreenWork() {
                           ? ` | Target Zone: ${String(activeProjectRecord?.settings?.relief_config?.target_zone || projectSettingsDraft.relief_target_zone).trim()}`
                           : ""}
                       </p>
+                    ) : csrProjectMode ? (
+                      <p className="green-work-note">
+                        Programme: {formatCsrProgramTypeLabel(activeProjectRecord?.settings?.csr_config?.program_type || projectSettingsDraft.csr_program_type)}
+                        {String(activeProjectRecord?.settings?.csr_config?.client_name || projectSettingsDraft.csr_client_name || "").trim()
+                          ? ` | Client: ${String(activeProjectRecord?.settings?.csr_config?.client_name || projectSettingsDraft.csr_client_name).trim()}`
+                          : ""}
+                        {String(activeProjectRecord?.settings?.csr_config?.implementation_scope || projectSettingsDraft.csr_implementation_scope || "").trim()
+                          ? ` | Scope: ${String(activeProjectRecord?.settings?.csr_config?.implementation_scope || projectSettingsDraft.csr_implementation_scope).trim()}`
+                          : ""}
+                        {String(activeProjectRecord?.settings?.csr_config?.reporting_cycle || projectSettingsDraft.csr_reporting_cycle || "").trim()
+                          ? ` | Reporting: ${String(activeProjectRecord?.settings?.csr_config?.reporting_cycle || projectSettingsDraft.csr_reporting_cycle).trim()}`
+                          : ""}
+                      </p>
                     ) : null}
                     <p className="green-work-note">
                       Setup panels are hidden by default to reduce clutter. Open them only when you need to change
@@ -11228,6 +11426,7 @@ export default function GreenWork() {
                         <option value="green">Green</option>
                         <option value="agric">Agric</option>
                         <option value="relief_recovery">Relief &amp; Recovery</option>
+                        <option value="csr">CSR</option>
                         </select>
                     </label>
                     <label>
@@ -11245,15 +11444,14 @@ export default function GreenWork() {
                         >
                           <option value="partner_org">Partner organization route</option>
                           <option value="public_sponsorship">Public sponsorship route</option>
+                          <option value="csr_programme">CSR client route</option>
                         </select>
                       ) : (
                         <>
                           <div className="green-work-note">
-                            {activeProjectAccessModel === "public_sponsorship"
-                              ? "Public sponsorship route"
-                              : "Partner organization route"}
+                            {getProjectAccessModelLabel(activeProjectAccessModel, activeProjectPublicSponsorEnabled)}
                           </div>
-                          <p className="green-work-note">Public sponsorship route changes are restricted to super admin.</p>
+                          <p className="green-work-note">Project access route changes are restricted to super admin.</p>
                         </>
                       )}
                     </label>
@@ -11539,6 +11737,72 @@ export default function GreenWork() {
                               relief_target_zone: e.target.value,
                             }))
                           }
+                        />
+                      </>
+                    ) : projectSettingsDraft.workflow_profile === "csr" || projectSettingsDraft.access_model === "csr_programme" ? (
+                      <>
+                        <p className="green-work-note">
+                          CSR client projects stay on the Green field workflow, while this panel controls the client reporting context shown in Work exports and dashboards.
+                        </p>
+                        <label>
+                          CSR programme type
+                          <select
+                            value={projectSettingsDraft.csr_program_type}
+                            onChange={(e) =>
+                              setProjectSettingsDraft((prev) => ({
+                                ...prev,
+                                csr_program_type: e.target.value,
+                              }))
+                            }
+                          >
+                            <option value="tree_planting">Tree planting</option>
+                            <option value="urban_greening">Urban greening</option>
+                            <option value="school_greening">School greening</option>
+                            <option value="community_restoration">Community restoration</option>
+                            <option value="employee_volunteering">Employee volunteering</option>
+                            <option value="mixed">Mixed</option>
+                          </select>
+                        </label>
+                        <input
+                          placeholder="Client / company name"
+                          value={projectSettingsDraft.csr_client_name}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              csr_client_name: e.target.value,
+                            }))
+                          }
+                        />
+                        <input
+                          placeholder="Implementation scope"
+                          value={projectSettingsDraft.csr_implementation_scope}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              csr_implementation_scope: e.target.value,
+                            }))
+                          }
+                        />
+                        <input
+                          placeholder="Reporting cycle"
+                          value={projectSettingsDraft.csr_reporting_cycle}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              csr_reporting_cycle: e.target.value,
+                            }))
+                          }
+                        />
+                        <textarea
+                          placeholder="Target outcomes / stakeholder goals"
+                          value={projectSettingsDraft.csr_target_outcomes}
+                          onChange={(e) =>
+                            setProjectSettingsDraft((prev) => ({
+                              ...prev,
+                              csr_target_outcomes: e.target.value,
+                            }))
+                          }
+                          rows={4}
                         />
                       </>
                     ) : null}
@@ -12519,12 +12783,14 @@ export default function GreenWork() {
 
           {activeForm === "existing_tree_intake" && (
             <div className="green-work-card">
-              <h3>{fieldWorkflowMode ? activeWorkflowLabels.recordTitle : "Existing Trees"}</h3>
+              <h3>{fieldWorkflowMode ? activeWorkflowLabels.recordTitle : csrProjectMode ? "Programme Records" : "Existing Trees"}</h3>
               {!activeProjectId && <p className="green-work-note">Select a project first from Project Focus.</p>}
               <p className="green-work-note">
                 {activeWorkflowProfile === "agric"
                   ? "This tab shows mapped plot records captured directly in the mobile field app for this project."
-                  : "This tab shows existing trees captured directly in Green for this project."}
+                  : csrProjectMode
+                    ? "This tab shows verified CSR implementation trees captured directly in Green for this project."
+                    : "This tab shows existing trees captured directly in Green for this project."}
               </p>
             </div>
           )}
@@ -13173,6 +13439,7 @@ export default function GreenWork() {
                 <option value="green">Green workflow</option>
                 <option value="agric">Agric workflow</option>
                 <option value="relief_recovery">Relief &amp; Recovery workflow</option>
+                <option value="csr">CSR workflow</option>
               </select>
               <select
                 value={newProject.access_model}
@@ -13186,9 +13453,10 @@ export default function GreenWork() {
               >
                 <option value="partner_org">Partner organization route</option>
                 {canAccessSuperAdmin ? <option value="public_sponsorship">Public sponsorship route</option> : null}
+                {canAccessSuperAdmin ? <option value="csr_programme">CSR client route</option> : null}
               </select>
               {!canAccessSuperAdmin ? (
-                <p className="green-work-note">Only super admin can create a public sponsorship project.</p>
+                <p className="green-work-note">Only super admin can create public sponsorship or CSR client projects.</p>
               ) : null}
               <input
                 placeholder="Location"
@@ -13293,6 +13561,10 @@ export default function GreenWork() {
                     onChange={(e) => setNewProject({ ...newProject, sponsor_agent_maintenance_fee: e.target.value })}
                   />
                 </>
+              ) : newProject.access_model === "csr_programme" ? (
+                <p className="green-work-note">
+                  CSR client projects stay on the Green field workflow. Super admin manages implementation, while the client gets a reporting dashboard inside LandCheck Work.
+                </p>
               ) : null}
               {newProject.workflow_profile === "agric" ? (
                 <>
@@ -13351,6 +13623,41 @@ export default function GreenWork() {
                     onChange={(e) => setNewProject({ ...newProject, relief_target_zone: e.target.value })}
                   />
                 </>
+              ) : newProject.workflow_profile === "csr" || newProject.access_model === "csr_programme" ? (
+                <>
+                  <select
+                    value={newProject.csr_program_type}
+                    onChange={(e) => setNewProject({ ...newProject, csr_program_type: e.target.value })}
+                  >
+                    <option value="tree_planting">Tree planting</option>
+                    <option value="urban_greening">Urban greening</option>
+                    <option value="school_greening">School greening</option>
+                    <option value="community_restoration">Community restoration</option>
+                    <option value="employee_volunteering">Employee volunteering</option>
+                    <option value="mixed">Mixed</option>
+                  </select>
+                  <input
+                    placeholder="Client / company name"
+                    value={newProject.csr_client_name}
+                    onChange={(e) => setNewProject({ ...newProject, csr_client_name: e.target.value })}
+                  />
+                  <input
+                    placeholder="Implementation scope"
+                    value={newProject.csr_implementation_scope}
+                    onChange={(e) => setNewProject({ ...newProject, csr_implementation_scope: e.target.value })}
+                  />
+                  <input
+                    placeholder="Reporting cycle"
+                    value={newProject.csr_reporting_cycle}
+                    onChange={(e) => setNewProject({ ...newProject, csr_reporting_cycle: e.target.value })}
+                  />
+                  <textarea
+                    placeholder="Target outcomes / stakeholder goals"
+                    value={newProject.csr_target_outcomes}
+                    onChange={(e) => setNewProject({ ...newProject, csr_target_outcomes: e.target.value })}
+                    rows={4}
+                  />
+                </>
               ) : null}
               <button className="btn-primary" onClick={createProject}>
                 Create Project
@@ -13382,13 +13689,18 @@ export default function GreenWork() {
             <div className="green-work-card">
               <h3>Users & Staff</h3>
               {!activeProjectId && <p className="green-work-note">Select project focus to load full assignment status.</p>}
-              <p className="green-work-note">Right-click a staff row to assign tree planting or maintenance.</p>
-              {publicSponsorshipProject && canAccessSuperAdmin ? (
+              <p className="green-work-note">
+                {csrPartnerDashboardMode
+                  ? "This view shows the field team roster and live work status for this CSR client project."
+                  : "Right-click a staff row to assign tree planting or maintenance."}
+              </p>
+              {agentRosterProject && canAccessSuperAdmin ? (
                 <div className="green-work-card" style={{ marginBottom: 14 }}>
-                  <h3>Public Sponsor Agents</h3>
+                  <h3>{csrRouteProject ? "CSR Field Agents" : "Public Sponsor Agents"}</h3>
                   <p className="green-work-note">
-                    Choose which staff can receive sponsor-funded planting and maintenance work in this public sponsor project.
-                    Only active Green-enabled users can be selected, and only selected agents will appear in assignment lists.
+                    {csrRouteProject
+                      ? "Choose which staff can be used as LandCheck field agents for this CSR client project. Only selected Green-enabled users will appear in assignment lists."
+                      : "Choose which staff can receive sponsor-funded planting and maintenance work in this public sponsor project. Only active Green-enabled users can be selected, and only selected agents will appear in assignment lists."}
                   </p>
                   <div className="work-actions" style={{ marginBottom: 12, flexWrap: "wrap" }}>
                     <span className="green-work-live-pill neutral">Available staff: {eligiblePublicSponsorUsers.length}</span>
@@ -13452,7 +13764,7 @@ export default function GreenWork() {
                                 }
                                 disabled={savingPublicSponsorAgents}
                               />
-                              <span>{selected ? "Assigned as sponsor agent" : "Select as sponsor agent"}</span>
+                              <span>{selected ? (csrRouteProject ? "Assigned as CSR field agent" : "Assigned as sponsor agent") : (csrRouteProject ? "Select as CSR field agent" : "Select as sponsor agent")}</span>
                             </label>
                           </div>
                         );
@@ -13463,8 +13775,10 @@ export default function GreenWork() {
               ) : null}
               {visibleUserWorkSummary.length === 0 && (
                 <p className="green-work-note">
-                  {publicSponsorshipProject
-                    ? "No public sponsor agents selected yet."
+                  {agentRosterProject
+                    ? csrRouteProject
+                      ? "No CSR field agents selected yet."
+                      : "No public sponsor agents selected yet."
                     : "No users found."}
                 </p>
               )}
@@ -13475,6 +13789,10 @@ export default function GreenWork() {
                     type="button"
                     className="staff-row"
                     onContextMenu={(event) => {
+                      if (csrPartnerDashboardMode) {
+                        event.preventDefault();
+                        return;
+                      }
                       event.preventDefault();
                       if (!activeProjectId) {
                         toast("Select an active project first.");
@@ -14478,7 +14796,7 @@ export default function GreenWork() {
                       <select value={newMerchantProjectId} onChange={(e) => setNewMerchantProjectId(e.target.value)}>
                         <option value="">Default project...</option>
                         {projects
-                          .filter((p) => p.access_model === "public_sponsorship" || p.public_sponsor_enabled)
+                          .filter((p) => isPublicSponsorshipProject(p.access_model, p.public_sponsor_enabled))
                           .map((p) => (
                             <option key={`merchant-project-${p.id}`} value={p.id}>
                               {p.name}
@@ -16477,7 +16795,7 @@ export default function GreenWork() {
                     else if (distanceFromTreeMeters <= 30) distanceToneClass = "is-near";
                     else distanceToneClass = "is-far";
                   }
-                  const reviewWorkflowProfile = fieldWorkflowMode ? activeWorkflowProfile : "green";
+                  const reviewWorkflowProfile = activeWorkflowProfile;
                   const reviewTaskLabel = formatWorkflowTaskTypeLabel(task.task_type, reviewWorkflowProfile);
                   const reviewEntityLabel = agricWorkflowMode
                     ? reviewTreeRecord
@@ -16969,141 +17287,225 @@ export default function GreenWork() {
 
           {activeProjectId && activeForm === "verra_reports" && (
             <div className="green-work-card green-work-verra-card">
-              <div className="green-work-row">
-                <h3>Verra Reports</h3>
-                <div className="work-actions">
-                  <button
-                    type="button"
-                    onClick={() => exportVerraPackage("zip")}
-                    disabled={workPartnerOrgPaused}
-                    title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}
-                  >
-                    Export Verra ZIP
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => exportVerraPackage("json")}
-                    disabled={workPartnerOrgPaused}
-                    title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}
-                  >
-                    Export Verra JSON
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => exportVerraPackage("docx")}
-                    disabled={workPartnerOrgPaused}
-                    title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}
-                  >
-                    Export Verra DOCX
-                  </button>
-                  <button type="button" onClick={() => void loadVerraHistory(activeProjectId)}>
-                    Refresh History
-                  </button>
-                </div>
-              </div>
+              {csrProjectMode ? (
+                <>
+                  <div className="green-work-row">
+                    <h3>Programme Reports</h3>
+                    <div className="work-actions">
+                      <button
+                        type="button"
+                        onClick={exportExistingTreesCsv}
+                        disabled={workPartnerOrgPaused}
+                        title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}
+                      >
+                        Export Programme CSV
+                      </button>
+                      <button type="button" onClick={exportExistingTreesPdf}>
+                        Export Programme PDF
+                      </button>
+                      <label className="green-work-export-photo-toggle">
+                        <input
+                          type="checkbox"
+                          checked={includePhotosInExistingTreesPdf}
+                          onChange={(e) => setIncludePhotosInExistingTreesPdf(e.target.checked)}
+                        />
+                        <span>Include photos (appendix)</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void Promise.all([
+                            loadProjectData(activeProjectId),
+                            loadExistingTreeMetrics(activeProjectId),
+                          ])
+                        }
+                      >
+                        Refresh
+                      </button>
+                    </div>
+                  </div>
 
-              <p className="green-work-chart-context">
-                Use monitoring-period and verifier metadata filters before export. Every export is logged under this project for one-click rerun.
-              </p>
+                  <p className="green-work-chart-context">
+                    Client-ready CSR report download. The PDF now packages executive summary, programme scope,
+                    implementation footprint, field evidence coverage, field-team readiness, carbon impact, and the
+                    detailed implementation register.
+                  </p>
 
-              <div className="green-work-verra-filters">
-                <label>
-                  Monitoring Start
-                  <input
-                    type="date"
-                    value={verraFilters.monitoring_start}
-                    onChange={(e) => setVerraFilters((prev) => ({ ...prev, monitoring_start: e.target.value }))}
-                  />
-                </label>
-                <label>
-                  Monitoring End
-                  <input
-                    type="date"
-                    value={verraFilters.monitoring_end}
-                    onChange={(e) => setVerraFilters((prev) => ({ ...prev, monitoring_end: e.target.value }))}
-                  />
-                </label>
-                <label>
-                  Season Model
-                  <select
-                    value={verraFilters.season_mode}
-                    onChange={(e) =>
-                      setVerraFilters((prev) => ({
-                        ...prev,
-                        season_mode: (e.target.value === "dry" ? "dry" : "rainy") as SeasonMode,
-                      }))
-                    }
-                  >
-                    <option value="rainy">Rainy Season</option>
-                    <option value="dry">Dry Season</option>
-                  </select>
-                </label>
-                <label>
-                  Staff Scope
-                  <select
-                    value={verraFilters.assignee_name}
-                    onChange={(e) => setVerraFilters((prev) => ({ ...prev, assignee_name: e.target.value }))}
-                  >
-                    {assignees.map((a) => (
-                      <option key={`verra-assignee-${a}`} value={a}>
-                        {a === "all" ? "All staff" : a}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Methodology ID
-                  <input
-                    type="text"
-                    placeholder="e.g. VM0047"
-                    value={verraFilters.methodology_id}
-                    onChange={(e) => setVerraFilters((prev) => ({ ...prev, methodology_id: e.target.value }))}
-                  />
-                </label>
-                <label>
-                  Generated By
-                  <input
-                    type="text"
-                    placeholder="Supervisor name"
-                    value={verraFilters.generated_by}
-                    onChange={(e) => setVerraFilters((prev) => ({ ...prev, generated_by: e.target.value }))}
-                  />
-                </label>
-                <label className="is-wide">
-                  Verifier-ready Notes
-                  <textarea
-                    rows={3}
-                    placeholder="Notes for verifier package context..."
-                    value={verraFilters.verifier_notes}
-                    onChange={(e) => setVerraFilters((prev) => ({ ...prev, verifier_notes: e.target.value }))}
-                  />
-                </label>
-              </div>
+                  <div className="green-work-live-summary">
+                    <span className="green-work-live-pill neutral">Implementation records: {existingTreeIntakeRows.length}</span>
+                    <span className="green-work-live-pill ok">Visible trees: {projectStats.trees_total}</span>
+                    <span className="green-work-live-pill neutral">
+                      Programme: {formatCsrProgramTypeLabel(activeProjectRecord?.settings?.csr_config?.program_type || projectSettingsDraft.csr_program_type)}
+                    </span>
+                    <span className="green-work-live-pill warning">
+                      Reporting: {String(activeProjectRecord?.settings?.csr_config?.reporting_cycle || projectSettingsDraft.csr_reporting_cycle || "current cycle")}
+                    </span>
+                  </div>
 
-              <div className="green-work-verra-history">
-                <h4>Project Export History</h4>
-                {verraHistory.length === 0 ? (
-                  <p className="green-work-note">No Verra export history yet for this project.</p>
-                ) : (
-                  <div className="green-work-live-table-wrap">
-                    <table className="green-work-live-table green-work-verra-table">
-                      <thead>
-                        <tr>
-                          <th>Date</th>
-                          <th>Period</th>
-                          <th>Methodology</th>
-                          <th>Scope</th>
-                          <th>Format</th>
-                          <th>Summary</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {verraHistory.map((item) => {
-                          const periodText =
-                            item.monitoring_start || item.monitoring_end
-                              ? `${item.monitoring_start || "..."} to ${item.monitoring_end || "..."}`
-                              : "Full project";
+                  <div className="green-work-verra-filters">
+                    <label>
+                      CSR Client
+                      <input
+                        type="text"
+                        value={String(activeProjectRecord?.settings?.csr_config?.client_name || projectSettingsDraft.csr_client_name || "")}
+                        readOnly
+                      />
+                    </label>
+                    <label className="is-wide">
+                      Implementation Scope
+                      <textarea
+                        rows={3}
+                        value={String(activeProjectRecord?.settings?.csr_config?.implementation_scope || projectSettingsDraft.csr_implementation_scope || "")}
+                        readOnly
+                      />
+                    </label>
+                    <label className="is-wide">
+                      Target Outcomes
+                      <textarea
+                        rows={3}
+                        value={String(activeProjectRecord?.settings?.csr_config?.target_outcomes || projectSettingsDraft.csr_target_outcomes || "")}
+                        readOnly
+                      />
+                    </label>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="green-work-row">
+                    <h3>Verra Reports</h3>
+                    <div className="work-actions">
+                      <button
+                        type="button"
+                        onClick={() => exportVerraPackage("zip")}
+                        disabled={workPartnerOrgPaused}
+                        title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}
+                      >
+                        Export Verra ZIP
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => exportVerraPackage("json")}
+                        disabled={workPartnerOrgPaused}
+                        title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}
+                      >
+                        Export Verra JSON
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => exportVerraPackage("docx")}
+                        disabled={workPartnerOrgPaused}
+                        title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}
+                      >
+                        Export Verra DOCX
+                      </button>
+                      <button type="button" onClick={() => void loadVerraHistory(activeProjectId)}>
+                        Refresh History
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="green-work-chart-context">
+                    Use monitoring-period and verifier metadata filters before export. Every export is logged under this project for one-click rerun.
+                  </p>
+
+                  <div className="green-work-verra-filters">
+                    <label>
+                      Monitoring Start
+                      <input
+                        type="date"
+                        value={verraFilters.monitoring_start}
+                        onChange={(e) => setVerraFilters((prev) => ({ ...prev, monitoring_start: e.target.value }))}
+                      />
+                    </label>
+                    <label>
+                      Monitoring End
+                      <input
+                        type="date"
+                        value={verraFilters.monitoring_end}
+                        onChange={(e) => setVerraFilters((prev) => ({ ...prev, monitoring_end: e.target.value }))}
+                      />
+                    </label>
+                    <label>
+                      Season Model
+                      <select
+                        value={verraFilters.season_mode}
+                        onChange={(e) =>
+                          setVerraFilters((prev) => ({
+                            ...prev,
+                            season_mode: (e.target.value === "dry" ? "dry" : "rainy") as SeasonMode,
+                          }))
+                        }
+                      >
+                        <option value="rainy">Rainy Season</option>
+                        <option value="dry">Dry Season</option>
+                      </select>
+                    </label>
+                    <label>
+                      Staff Scope
+                      <select
+                        value={verraFilters.assignee_name}
+                        onChange={(e) => setVerraFilters((prev) => ({ ...prev, assignee_name: e.target.value }))}
+                      >
+                        {assignees.map((a) => (
+                          <option key={`verra-assignee-${a}`} value={a}>
+                            {a === "all" ? "All staff" : a}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Methodology ID
+                      <input
+                        type="text"
+                        placeholder="e.g. VM0047"
+                        value={verraFilters.methodology_id}
+                        onChange={(e) => setVerraFilters((prev) => ({ ...prev, methodology_id: e.target.value }))}
+                      />
+                    </label>
+                    <label>
+                      Generated By
+                      <input
+                        type="text"
+                        placeholder="Supervisor name"
+                        value={verraFilters.generated_by}
+                        onChange={(e) => setVerraFilters((prev) => ({ ...prev, generated_by: e.target.value }))}
+                      />
+                    </label>
+                    <label className="is-wide">
+                      Verifier-ready Notes
+                      <textarea
+                        rows={3}
+                        placeholder="Notes for verifier package context..."
+                        value={verraFilters.verifier_notes}
+                        onChange={(e) => setVerraFilters((prev) => ({ ...prev, verifier_notes: e.target.value }))}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="green-work-verra-history">
+                    <h4>Project Export History</h4>
+                    {verraHistory.length === 0 ? (
+                      <p className="green-work-note">No Verra export history yet for this project.</p>
+                    ) : (
+                      <div className="green-work-live-table-wrap">
+                        <table className="green-work-live-table green-work-verra-table">
+                          <thead>
+                            <tr>
+                              <th>Date</th>
+                              <th>Period</th>
+                              <th>Methodology</th>
+                              <th>Scope</th>
+                              <th>Format</th>
+                              <th>Summary</th>
+                              <th>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {verraHistory.map((item) => {
+                              const periodText =
+                                item.monitoring_start || item.monitoring_end
+                                  ? `${item.monitoring_start || "..."} to ${item.monitoring_end || "..."}`
+                                  : "Full project";
                           const summary = item.payload_summary || {};
                           return (
                             <tr key={`verra-history-${item.id}`}>
@@ -17481,7 +17883,7 @@ export default function GreenWork() {
           {activeProjectId && activeForm === "existing_tree_intake" && (
             <div className="green-work-card">
               <div className="green-work-row">
-                <h3>{agricWorkflowMode ? "Plot Records Inventory" : reliefWorkflowMode ? "Site Records Inventory" : "Existing Trees Inventory"}</h3>
+                <h3>{agricWorkflowMode ? "Plot Records Inventory" : reliefWorkflowMode ? "Site Records Inventory" : csrProjectMode ? "CSR Implementation Inventory" : "Existing Trees Inventory"}</h3>
                 <div className="work-actions">
                   <button
                     type="button"
@@ -17489,10 +17891,10 @@ export default function GreenWork() {
                     disabled={workPartnerOrgPaused}
                     title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}
                   >
-                    {agricWorkflowMode ? "Export Plot CSV" : reliefWorkflowMode ? "Export Site CSV" : "Export CSV"}
+                    {agricWorkflowMode ? "Export Plot CSV" : reliefWorkflowMode ? "Export Site CSV" : csrProjectMode ? "Export Programme CSV" : "Export CSV"}
                   </button>
                   <button type="button" onClick={exportExistingTreesPdf}>
-                    {agricWorkflowMode ? "Export Plot PDF" : reliefWorkflowMode ? "Export Site PDF" : "Export PDF"}
+                    {agricWorkflowMode ? "Export Plot PDF" : reliefWorkflowMode ? "Export Site PDF" : csrProjectMode ? "Export Programme PDF" : "Export PDF"}
                   </button>
                   <label className="green-work-export-photo-toggle">
                     <input
@@ -17520,7 +17922,9 @@ export default function GreenWork() {
                   ? "Context: mapped plot records captured in the Agric mobile workflow, including area, crop, season, and support-ready field metadata."
                   : reliefWorkflowMode
                     ? "Context: mapped site records captured in the Relief mobile workflow, including damage level, response pathway, boundary area, and field evidence."
-                  : "Context: trees tagged as Existing using origin, attribution scope, KPI scope, or source-project linkage."}
+                    : csrProjectMode
+                      ? "Context: all verified CSR implementation trees captured in Green for this client project, including status, care history, carbon metrics, and field evidence."
+                      : "Context: trees tagged as Existing using origin, attribution scope, KPI scope, or source-project linkage."}
               </p>
               <div className="green-work-live-summary">
                 <span className="green-work-live-pill neutral">Rows: {existingTreeIntakeRows.length}</span>
