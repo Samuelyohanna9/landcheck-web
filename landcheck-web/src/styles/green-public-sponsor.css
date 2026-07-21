@@ -279,7 +279,7 @@
   flex-wrap: wrap;
   justify-content: flex-start;
   gap: 12px;
-  margin-top: 8px;
+  margin-top: 10px;
   width: 100%;
 }
 
@@ -287,16 +287,16 @@
   flex: 1;
   min-width: 150px;
   max-width: 210px;
-  background: var(--gps-surface);
-  border: 1px solid var(--gps-border);
-  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248, 250, 245, 0.92));
+  border: 1px solid rgba(47, 107, 79, 0.12);
+  border-radius: 18px;
   padding: 16px 14px;
   text-align: left;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
-  box-shadow: var(--gps-shadow);
+  box-shadow: 0 14px 28px rgba(27, 58, 44, 0.08);
 }
 
 .gps-feature-icon {
@@ -312,8 +312,8 @@
 }
 .gps-feature-icon .gps-icon { width: 20px; height: 20px; }
 
-.gps-feature-card strong { font-size: 0.88rem; font-weight: 700; letter-spacing: -0.005em; color: var(--gps-text); }
-.gps-feature-card p { font-size: 0.78rem; font-weight: 400; color: var(--gps-text-muted); line-height: 1.5; }
+.gps-feature-card strong { font-size: 0.9rem; font-weight: 800; letter-spacing: -0.01em; color: var(--gps-text); }
+.gps-feature-card p { font-size: 0.79rem; font-weight: 500; color: var(--gps-text-muted); line-height: 1.55; }
 
 .gps-hero-ctas {
   display: flex;
@@ -321,6 +321,12 @@
   justify-content: flex-start;
   gap: 12px;
   margin-top: 10px;
+}
+
+.gps-hero-support-note {
+  margin: 2px 0 0;
+  font-size: 0.82rem;
+  color: rgba(28, 36, 32, 0.72);
 }
 
 .gps-hero-secondary-btn {
@@ -632,6 +638,18 @@
   overflow: hidden;
 }
 
+.gps-project-card-proof {
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(233, 236, 224, 0.7);
+  color: var(--gps-brand-mid);
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .gps-project-card-price-row {
   display: flex;
   align-items: baseline;
@@ -765,6 +783,13 @@
   margin: 4px 0 6px;
 }
 .gps-pdp-price { font-size: 1.4rem; font-weight: 700; color: var(--gps-brand-dark); }
+
+.gps-checkout-note {
+  margin: -2px 0 2px;
+  color: var(--gps-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
 
 /* ─── Accordion ─────────────────────────────────────────────────── */
 .gps-accordion {
@@ -1413,6 +1438,7 @@
   .gps-feature-row { gap: 10px; }
   .gps-feature-card { min-width: 0; flex: 1 1 30%; padding: 12px 8px; }
   .gps-feature-card p { display: none; }
+  .gps-hero-support-note { font-size: 0.78rem; }
   .gps-hero-video { object-position: center 30%; }
   .gps-project-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 36px 12px; }
   .gps-project-card { padding: 38px 14px 16px; }

@@ -80,15 +80,73 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
   },
 
   "/green-partners": {
-    title: "LandCheck Green Nigeria | Free Tree Monitoring App on Google Play",
+    title: "CSR Tree Planting Software Nigeria | ESG Reporting Dashboard | LandCheck Green Corporate",
     description:
-      "Download LandCheck Green free on Google Play. GPS tree inventory, agricultural farm health monitoring with NDVI, humanitarian relief site assessment, and program reporting for NGOs and field teams in Nigeria.",
+      "LandCheck Green Corporate helps CSR, ESG, donor, and sustainability teams plan tree-planting programmes, deploy field agents, verify GPS evidence, monitor maintenance, and export stakeholder-ready reports in Nigeria.",
     keywords:
-      "LandCheck Green app Nigeria, tree monitoring app Google Play, agricultural monitoring app Nigeria, NGO tree planting app, field monitoring app Nigeria, download LandCheck, agric monitoring Nigeria, tree inventory app",
+      "CSR tree planting software Nigeria, ESG reporting dashboard Nigeria, tree planting CSR reporting, environmental project monitoring software, GPS verification tree planting, CSR implementation dashboard, sustainability reporting tree projects, NGO monitoring dashboard Nigeria",
     canonicalPath: "/green-partners",
     ogType: "website",
     ogImage: "https://landcheck.online/background-sponsor.png",
-    jsonLd: APP_MOBILE_JSON_LD,
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@graph": [
+        APP_MOBILE_JSON_LD,
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://landcheck.online/green-partners#csr-software",
+          "name": "LandCheck Green Corporate",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web, Android",
+          "url": "https://landcheck.online/green-partners",
+          "description":
+            "Corporate CSR and ESG implementation dashboard for project planning, GPS field verification, maintenance monitoring, stakeholder reporting, and public impact visibility.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "NGN"
+          },
+          "featureList": [
+            "CSR programme planning and implementation control",
+            "GPS evidence capture and review",
+            "QR-coded field workflow support",
+            "Maintenance and field visit monitoring",
+            "Board-ready PDF and CSV reporting exports",
+            "Public sponsorship and transparency experience"
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://landcheck.online/green-partners#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What does LandCheck Green Corporate help CSR managers do?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It helps CSR managers design programmes, assign field work, verify GPS and photo evidence, monitor maintenance, and prepare stakeholder-ready reporting from one dashboard."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is this only for tree planting?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The platform is strongest for verified tree-planting and environmental programmes, but the same monitoring model also supports agricultural and field implementation workflows."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can LandCheck support ESG and sustainability reporting workflows?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. LandCheck helps teams keep structured field evidence, implementation progress, and reporting exports that can support internal ESG, CSR, donor, and board reporting processes."
+              }
+            }
+          ]
+        }
+      ]
+    },
   },
 
   "/sponsor": {
@@ -295,11 +353,11 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
   },
 
   "/news": {
-    title: "News & Updates | LandCheck Geospatial Technologies Nigeria",
+    title: "CSR Reporting, ESG & Environmental Monitoring Insights | LandCheck",
     description:
-      "Latest news and updates from LandCheck Geospatial Technologies — partnerships, product launches, platform milestones, and environmental project highlights from Nigeria.",
+      "Read LandCheck insights on CSR reporting, GPS verification, environmental project monitoring, ESG workflow support, and tree-planting programme delivery in Nigeria.",
     keywords:
-      "LandCheck news, LandCheck Nigeria updates, geospatial technology Nigeria news, LandCheck announcements",
+      "CSR reporting checklist, ESG reporting Nigeria, GPS verification environmental projects, tree planting project management, environmental monitoring software, LandCheck insights",
     canonicalPath: "/news",
     ogType: "article",
     ogImage: "https://landcheck.online/ecf-partnership.jpeg",
@@ -307,9 +365,9 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
       "@context": "https://schema.org",
       "@type": "Blog",
       "@id": "https://landcheck.online/news#blog",
-      "name": "LandCheck News",
+      "name": "LandCheck Insights",
       "description":
-        "News, updates, and project highlights from LandCheck Geospatial Technologies in Nigeria.",
+        "Articles and updates about CSR reporting, ESG workflows, GPS verification, and environmental project monitoring from LandCheck.",
       "url": "https://landcheck.online/news",
       "publisher": { "@id": "https://landcheck.online/#organization" },
     },

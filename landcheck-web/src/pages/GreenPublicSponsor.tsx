@@ -105,6 +105,24 @@ const HOW_IT_WORKS_STEPS = [
   { icon: "pin", title: "Track Your Tree", body: "Follow GPS location and photo evidence as your tree grows." },
 ] as const;
 
+const HERO_TRUST_CARDS = [
+  {
+    icon: "lock",
+    title: "Secure global checkout",
+    body: "Sponsor in NGN or USD with a simple guest payment flow.",
+  },
+  {
+    icon: "certificate",
+    title: "Instant proof of support",
+    body: "Get your certificate and order confirmation as soon as payment clears.",
+  },
+  {
+    icon: "pin",
+    title: "Follow real field evidence",
+    body: "See where your trees are planted with GPS location, photos, and care updates.",
+  },
+] as const;
+
 const DEDICATION_OPTIONS = [
   { value: "self", label: "Myself" },
   { value: "birthday", label: "Birthday" },
@@ -628,13 +646,33 @@ export default function GreenPublicSponsor() {
       <section className="gps-hero">
         <div className="gps-hero-text-panel">
           <span className="gps-hero-eyebrow">LandCheck Green · Public Sponsorship</span>
-          <h1>Give Nigeria a <span className="gps-hero-accent">Greener Future.</span><br />One Tree at a Time.</h1>
-          <p>Sponsor a verified tree project in minutes, in NGN or USD, and watch it grow with GPS-tracked, photo-verified updates straight to your inbox.</p>
+          <h1>Sponsor a real tree. <span className="gps-hero-accent">Follow its story</span> from checkout to canopy.</h1>
+          <p>
+            Choose a verified public project in Nigeria, pay securely in NGN or USD, receive your digital
+            certificate, and follow GPS location, photo evidence, and care updates as your trees grow.
+          </p>
+          <div className="gps-feature-row">
+            {HERO_TRUST_CARDS.map((item) => (
+              <article key={item.title} className="gps-feature-card">
+                <span className="gps-feature-icon">
+                  <GpsIcon name={item.icon} className="gps-icon" />
+                </span>
+                <strong>{item.title}</strong>
+                <p>{item.body}</p>
+              </article>
+            ))}
+          </div>
           <div className="gps-hero-ctas">
             <button type="button" className="gps-primary-btn" onClick={() => document.getElementById("gps-projects")?.scrollIntoView({ behavior: "smooth" })}>
-              Plant Your Tree Now
+              Choose a Project
+            </button>
+            <button type="button" className="gps-hero-secondary-btn" onClick={() => document.querySelector(".gps-how-it-works")?.scrollIntoView({ behavior: "smooth" })}>
+              See How It Works
             </button>
           </div>
+          <p className="gps-hero-support-note">
+            No account is required to sponsor. You can create or claim an account later if you want a full dashboard.
+          </p>
         </div>
 
         {/* objectBoundingBox clip-path so the curved seam scales with the panel at any size on mobile */}
@@ -915,8 +953,11 @@ export default function GreenPublicSponsor() {
             {/* ─── Project grid ─── */}
             {!selectedProject && (
             <section className="gps-projects-section" id="gps-projects">
-              <h2>Choose a Verified Project</h2>
-              <p className="gps-section-sub">Every project is field-monitored with GPS mapping and photo evidence.</p>
+              <h2>Choose where your climate contribution will grow</h2>
+              <p className="gps-section-sub">
+                Every public project is GPS-mapped, field-managed, and built to give you certificate, location proof,
+                and progress updates after payment.
+              </p>
               {error && !loadingProjects && projects.length === 0 && <p className="gps-error">{error}</p>}
               {loadingProjects ? (
                 <div className="gps-loading">Loading projects…</div>
@@ -937,6 +978,7 @@ export default function GreenPublicSponsor() {
                         <div className="gps-project-card-body">
                           <h3>{project.public_sponsor_title || project.name}</h3>
                           <p>{project.public_sponsor_description || project.public_description || project.location_text || "Verified tree project"}</p>
+                          <div className="gps-project-card-proof">Certificate, GPS location, and photo updates included.</div>
                           <div className="gps-project-card-price-row">
                             <span className="gps-project-card-price-label">from</span>
                             <span className="gps-project-card-price">{formatSponsorPriceChoices(project)}</span>
@@ -948,7 +990,7 @@ export default function GreenPublicSponsor() {
                             </span>
                           </div>
                           <button type="button" className="gps-project-card-btn" onClick={() => handleSelectProject(project.id)}>
-                            Select Trees
+                            Sponsor this project
                           </button>
                         </div>
                       </div>
@@ -1017,7 +1059,7 @@ export default function GreenPublicSponsor() {
 
                     {/* ─── Info + form ─── */}
                     <div className="gps-pdp-info">
-                      <span className="gps-checkout-eyebrow">Secure Checkout</span>
+                      <span className="gps-checkout-eyebrow">Secure guest checkout</span>
                       <h1>{projectTitle}</h1>
                       <span className="gps-checkout-location"><GpsIcon name="pin" className="gps-icon-inline" /> {selectedProject.location_text || "LandCheck Green project"}</span>
                       <div className="gps-pdp-price-row">
@@ -1026,6 +1068,10 @@ export default function GreenPublicSponsor() {
                           {selectedProject.sponsor_checkout_ready ? `${Number(selectedProject.slots_available ?? 0)} slots open` : "Preparing"}
                         </span>
                       </div>
+                      <p className="gps-checkout-note">
+                        One secure sponsorship gives you certificate delivery, GPS-linked proof, and follow-up updates
+                        as planting and maintenance happen in the field.
+                      </p>
 
                       <div className="gps-accordion">
                         {accordions.map((item) => {
@@ -1044,7 +1090,7 @@ export default function GreenPublicSponsor() {
 
                       <div className="gps-pdp-divider" />
 
-                      <span className="gps-field-label">Every tree counts — choose your package <span className="gps-required">*</span></span>
+                      <span className="gps-field-label">Choose how many verified trees you want to sponsor <span className="gps-required">*</span></span>
                       <div className="gps-tier-grid">
                         {TREE_QUANTITY_TIERS.map((tierQty) => {
                           const tierPrice = tierQty * Number(priceEntry?.amount || 0);
@@ -1072,7 +1118,7 @@ export default function GreenPublicSponsor() {
                       </div>
 
                       <div className="gps-quantity-row">
-                        <span className="gps-field-label">Or enter a custom amount</span>
+                        <span className="gps-field-label">Or set a custom quantity</span>
                         <div className="gps-quantity-stepper">
                           <button type="button" onClick={() => bumpQuantity(-1)} aria-label="Decrease quantity">−</button>
                           <input type="number" min="1" value={form.quantity} onChange={(e) => setForm((c) => ({ ...c, quantity: e.target.value }))} />
@@ -1087,7 +1133,7 @@ export default function GreenPublicSponsor() {
                         )}
                       </div>
 
-                      <h2 className="gps-pdp-section-title">Your Details</h2>
+                      <h2 className="gps-pdp-section-title">Sponsor details</h2>
                       <div className="gps-form-grid">
                         <label className="gps-field"><span>Full name <span className="gps-required">*</span></span><input type="text" value={form.fullName} onChange={(e) => setForm((c) => ({ ...c, fullName: e.target.value }))} placeholder="Your name" /></label>
                         <label className="gps-field"><span>Email <span className="gps-required">*</span></span><input type="email" value={form.email} onChange={(e) => setForm((c) => ({ ...c, email: e.target.value }))} placeholder="you@example.com" /></label>
@@ -1118,7 +1164,7 @@ export default function GreenPublicSponsor() {
                         {submitting ? "Preparing secure payment…" : `Pay ${formatCurrencyAmount(total, priceEntry?.currency || form.checkoutCurrency)} & Sponsor`}
                       </button>
                       <p className="gps-checkout-footnote">
-                        Already have an account? <a href="/green/login/sponsor">Sign in</a>, or{" "}
+                        Already have a sponsor dashboard? <a href="/green/login/sponsor">Sign in</a>, or{" "}
                         <button type="button" onClick={() => setShowOrderLookup(true)}>track an order</button> without one.
                       </p>
                     </div>
