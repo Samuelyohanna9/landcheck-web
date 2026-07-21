@@ -13,6 +13,9 @@ type GreenModel = {
   id: string;
   order: string;
   heroLabel: string;
+  heroStatement: string;
+  heroSupport: string;
+  heroImage: string;
   selectorTitle: string;
   title: string;
   summary: string;
@@ -37,6 +40,9 @@ const greenModels: GreenModel[] = [
     id: "field",
     order: "01",
     heroLabel: "Field operations",
+    heroStatement: "We Plant",
+    heroSupport: "Field teams plant, capture, and maintain with live task control.",
+    heroImage: "/agent planting 2.JPG",
     selectorTitle: "Field control for partner organisations",
     title: "Turn field operations for partner teams into live, controlled delivery.",
     summary: "Assign tasks, collect field data, track maintenance, and monitor survival from one route.",
@@ -61,6 +67,9 @@ const greenModels: GreenModel[] = [
     id: "csr",
     order: "02",
     heroLabel: "Certified transparency",
+    heroStatement: "We Verify",
+    heroSupport: "Corporate and donor programmes backed by mapped evidence and premium reporting.",
+    heroImage: "/ecf-partnership.jpeg",
     selectorTitle: "Verified implementation for corporate and donor programmes",
     title: "Deliver verified corporate and donor programmes with evidence, reports, and implementation control.",
     summary: "Real-time dashboards, reports, and impact metrics you can trust.",
@@ -85,6 +94,9 @@ const greenModels: GreenModel[] = [
     id: "public",
     order: "03",
     heroLabel: "Online supporters",
+    heroStatement: "We Restore",
+    heroSupport: "Supporters fund trees online and follow transparent impact as it grows.",
+    heroImage: "/thumpnail_public.jpg",
     selectorTitle: "A premium route for online supporters",
     title: "Let supporters fund and follow impact online with certificates, map proof, and live updates.",
     summary: "A premium online route for donors and supporters to engage and see impact.",
@@ -383,14 +395,22 @@ export default function GreenPartnersLanding() {
 
           <div className="gp-hero-route-stack" aria-label="LC Green delivery routes">
             {greenModels.map((model) => (
-              <article key={model.id} className="gp-hero-route-card">
-                <span className="gp-hero-route-card__eyebrow">{model.heroLabel}</span>
-                <h2>{model.title}</h2>
-                <p>{model.summary}</p>
-                <button type="button" onClick={() => focusModel(model.id)}>
-                  See how it works
-                </button>
-              </article>
+              <button
+                key={model.id}
+                className="gp-hero-route-card"
+                type="button"
+                style={{ backgroundImage: `url("${model.heroImage}")` }}
+                onClick={() => focusModel(model.id)}
+                aria-label={`${model.selectorTitle}. ${model.heroSupport}`}
+              >
+                <div className="gp-hero-route-card__overlay" aria-hidden="true" />
+                <div className="gp-hero-route-card__content">
+                  <span className="gp-hero-route-card__eyebrow">{model.heroLabel}</span>
+                  <h2>{model.heroStatement}</h2>
+                  <p>{model.heroSupport}</p>
+                  <span className="gp-hero-route-card__cta">Explore route</span>
+                </div>
+              </button>
             ))}
           </div>
         </div>
