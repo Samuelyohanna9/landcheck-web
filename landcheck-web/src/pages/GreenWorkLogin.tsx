@@ -6,12 +6,6 @@ import "../styles/green-work-login.css";
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
 
-const accessScopes = [
-  "Organisation operations",
-  "Public sponsor administration",
-  "CSR reporting and delivery",
-];
-
 export default function GreenWorkLogin() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -51,38 +45,28 @@ export default function GreenWorkLogin() {
 
   return (
     <div className="work-login-page">
-      <div className="work-login-shell">
-        <section className="work-login-stage" aria-label="LandCheck Work access overview">
-          <span className="work-login-eyebrow">LandCheck Work</span>
-          <h1>Secure workspace for approved operational teams.</h1>
-          <p className="work-login-stage-copy">
-            Sign in to manage field programmes, sponsor-linked operations, evidence review, and premium reporting from
-            one controlled workspace.
-          </p>
-          <div className="work-login-scope-row">
-            {accessScopes.map((item) => (
-              <span key={item} className="work-login-scope-chip">
-                {item}
-              </span>
-            ))}
-          </div>
-        </section>
+      <div className="work-login-watermark" aria-hidden="true">
+        <img src={GREEN_LOGO_SRC} alt="" width="320" height="320" />
+      </div>
+      <div className="work-login-accent" aria-hidden="true">
+        <div className="work-login-accent-halo" />
+        <div className="work-login-accent-panel" />
+      </div>
 
-        <section className="work-login-panel">
-          <div className="work-login-panel-head">
-            <div className="work-login-brand-lockup">
-              <div className="work-login-brand-logo">
-                <img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="68" height="68" />
-              </div>
-              <div>
-                <span className="work-login-panel-badge">Authorised access</span>
-                <h2>Sign in to LandCheck Work</h2>
-                <p>For project admins, organisation teams, sponsor operations staff, and CSR managers.</p>
-              </div>
-            </div>
-            <div className="work-login-panel-note">
-              Use this workspace only if your organization or LandCheck admin has already granted access.
-            </div>
+      <div className="work-login-top-badge">LandCheck Work</div>
+
+      <div className="work-login-shell">
+        <div className="work-login-brandmark" aria-hidden="true">
+          <img src={GREEN_LOGO_SRC} alt="" width="180" height="180" />
+        </div>
+
+        <section className="work-login-card">
+          <div className="work-login-card-head">
+            <span className="work-login-card-kicker">Authorised access</span>
+            <h1>Login to your account</h1>
+            <p>
+              Sign in to manage field programmes, sponsor-linked operations, evidence review, and CSR reporting.
+            </p>
           </div>
 
           <form className="work-login-form" onSubmit={onSubmit}>
@@ -120,24 +104,19 @@ export default function GreenWorkLogin() {
             {error ? <p className="work-login-error">{error}</p> : null}
 
             <button type="submit" className="work-login-submit" disabled={loading}>
-              {loading ? "Signing in..." : "Open dashboard"}
+              {loading ? "Signing in..." : "Login"}
             </button>
           </form>
+
+          <div className="work-login-actions">
+            <a href="/green-partners">Explore LC Green Platform</a>
+            <a href="mailto:landchecktech@gmail.com?subject=LandCheck%20Work%20Access">
+              Request organisation access
+            </a>
+          </div>
         </section>
 
-        <section className="work-login-links" aria-label="Work login support links">
-          <a className="work-login-link-card" href="/green-partners">
-            <strong>Explore LC Green Platform</strong>
-            <span>See organisation, CSR, and public sponsorship routes before you enter the workspace.</span>
-          </a>
-          <a
-            className="work-login-link-card"
-            href="mailto:landchecktech@gmail.com?subject=LandCheck%20Work%20Access"
-          >
-            <strong>Request organisation access</strong>
-            <span>Contact LandCheck if your team needs onboarding, support, or a new workspace invitation.</span>
-          </a>
-        </section>
+        <p className="work-login-footer">LandCheck Work by LandCheck Green</p>
       </div>
     </div>
   );
