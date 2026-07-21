@@ -1,236 +1,100 @@
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap");
 
 :root {
-  --work-brand-ink: #0d241e;
-  --work-brand-deep: #122f28;
+  --work-brand-ink: #102a23;
+  --work-brand-deep: #0f261f;
   --work-brand-green: #1f8f57;
-  --work-brand-mint: #dff4e8;
-  --work-brand-gold: #dd9b31;
-  --work-brand-line: rgba(20, 55, 42, 0.13);
-  --work-brand-soft: rgba(255, 255, 255, 0.74);
+  --work-brand-mint: #dbf1e4;
+  --work-brand-line: rgba(20, 55, 42, 0.12);
 }
 
 .work-login-page {
   min-height: 100dvh;
-  padding: 28px;
+  padding: 28px 20px 40px;
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 10% 14%, rgba(210, 243, 222, 0.72), transparent 26%),
-    radial-gradient(circle at 86% 18%, rgba(138, 204, 170, 0.22), transparent 26%),
-    linear-gradient(145deg, #eef5ef 0%, #e2efe6 48%, #dcebe1 100%);
+    radial-gradient(circle at 12% 12%, rgba(202, 235, 214, 0.78), transparent 26%),
+    radial-gradient(circle at 86% 14%, rgba(147, 209, 175, 0.2), transparent 24%),
+    linear-gradient(155deg, #f4f7f2 0%, #edf3ee 52%, #e7f0ea 100%);
   font-family: "Manrope", sans-serif;
   color: var(--work-brand-ink);
 }
 
 .work-login-shell {
-  width: min(1240px, 100%);
+  width: min(760px, 100%);
   display: grid;
-  grid-template-columns: minmax(0, 1.18fr) minmax(360px, 430px);
-  gap: 22px;
-  align-items: stretch;
+  gap: 18px;
 }
 
-.work-login-showcase,
-.work-login-panel {
+.work-login-stage,
+.work-login-panel,
+.work-login-link-card {
   border: 1px solid var(--work-brand-line);
   border-radius: 30px;
-  box-shadow: 0 28px 70px rgba(20, 51, 39, 0.1);
-  overflow: hidden;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 28px 70px rgba(20, 51, 39, 0.08);
 }
 
-.work-login-showcase {
-  position: relative;
-  padding: 30px;
-  background:
-    radial-gradient(circle at 16% 14%, rgba(98, 205, 146, 0.18), transparent 28%),
-    radial-gradient(circle at 92% 10%, rgba(87, 131, 255, 0.14), transparent 24%),
-    linear-gradient(160deg, #0f241f 0%, #13332c 40%, #112b24 100%);
-  color: #eff8f3;
-}
-
-.work-login-showcase::after {
-  content: "";
-  position: absolute;
-  inset: auto -120px -140px auto;
-  width: 320px;
-  height: 320px;
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(74, 185, 127, 0.24) 0%, rgba(74, 185, 127, 0) 72%);
-  pointer-events: none;
-}
-
-.work-login-showcase-copy,
-.work-login-proof-grid,
-.work-login-preview,
-.work-login-mini-stats {
-  position: relative;
-  z-index: 1;
+.work-login-stage {
+  padding: 34px 34px 28px;
+  text-align: center;
 }
 
 .work-login-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
   margin-bottom: 16px;
   padding: 8px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(222, 236, 227, 0.18);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(241, 248, 243, 0.92);
-  font-size: 0.75rem;
+  background: rgba(31, 143, 87, 0.1);
+  color: #176f43;
+  font-size: 0.74rem;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
-.work-login-showcase h1 {
+.work-login-stage h1 {
   margin: 0;
-  max-width: 12ch;
   font-family: "Fraunces", serif;
-  font-size: clamp(2.4rem, 5vw, 4.35rem);
-  line-height: 0.96;
+  font-size: clamp(2rem, 4.8vw, 3.35rem);
+  line-height: 0.98;
   letter-spacing: -0.045em;
 }
 
-.work-login-lead {
-  margin: 18px 0 0;
-  max-width: 52ch;
-  color: rgba(230, 241, 234, 0.82);
-  font-size: 1rem;
-  line-height: 1.7;
+.work-login-stage-copy {
+  max-width: 54ch;
+  margin: 16px auto 0;
+  color: #4a675a;
+  font-size: 0.98rem;
+  line-height: 1.72;
 }
 
-.work-login-proof-grid {
-  margin-top: 28px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.work-login-proof-card {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  gap: 12px;
-  padding: 16px;
-  border-radius: 22px;
-  border: 1px solid rgba(233, 243, 236, 0.11);
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(12px);
-}
-
-.work-login-proof-icon {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border-radius: 14px;
-  background: linear-gradient(145deg, rgba(228, 250, 236, 0.22), rgba(142, 214, 173, 0.12));
-  color: #b8f0cb;
-  border: 1px solid rgba(236, 246, 239, 0.12);
-}
-
-.work-login-proof-card h2 {
-  margin: 0 0 6px;
-  font-size: 0.96rem;
-  font-weight: 800;
-  color: #ffffff;
-}
-
-.work-login-proof-card p {
-  margin: 0;
-  font-size: 0.83rem;
-  line-height: 1.55;
-  color: rgba(231, 241, 234, 0.76);
-}
-
-.work-login-preview {
-  margin-top: 22px;
-  padding: 18px;
-  border-radius: 26px;
-  background: rgba(243, 249, 245, 0.08);
-  border: 1px solid rgba(236, 246, 239, 0.11);
-}
-
-.work-login-preview-head {
+.work-login-scope-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 22px;
 }
 
-.work-login-preview-badge {
-  display: inline-flex;
-  align-items: center;
+.work-login-scope-chip {
+  padding: 10px 14px;
   border-radius: 999px;
-  padding: 7px 12px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #f3faf5;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.work-login-preview-head a,
-.work-login-footer a,
-.work-login-inline-link {
-  color: #d4f1df;
-  text-decoration: none;
+  background: linear-gradient(180deg, #f7fbf8, #eef6f0);
+  border: 1px solid rgba(31, 143, 87, 0.12);
+  color: #23463b;
+  font-size: 0.84rem;
   font-weight: 700;
 }
 
-.work-login-preview-head a:hover,
-.work-login-footer a:hover,
-.work-login-inline-link:hover {
-  text-decoration: underline;
-}
-
-.work-login-preview img {
-  width: 100%;
-  display: block;
-  border-radius: 18px;
-  border: 1px solid rgba(239, 248, 242, 0.08);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22);
-}
-
-.work-login-mini-stats {
-  margin-top: 18px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.work-login-mini-stat {
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(236, 246, 239, 0.1);
-}
-
-.work-login-mini-stat strong {
-  display: block;
-  color: #ffffff;
-  font-size: 1.18rem;
-  font-weight: 800;
-}
-
-.work-login-mini-stat span {
-  display: block;
-  margin-top: 4px;
-  color: rgba(230, 241, 234, 0.76);
-  font-size: 0.82rem;
-  line-height: 1.45;
-}
-
 .work-login-panel {
-  display: flex;
-  flex-direction: column;
+  overflow: hidden;
   background:
     radial-gradient(circle at 100% 0%, rgba(95, 178, 126, 0.12), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 252, 250, 0.98));
-  color: var(--work-brand-ink);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.985), rgba(249, 252, 250, 0.98));
 }
 
 .work-login-panel-head {
@@ -240,25 +104,25 @@
 
 .work-login-brand-lockup {
   display: grid;
-  grid-template-columns: 78px minmax(0, 1fr);
+  grid-template-columns: 76px minmax(0, 1fr);
   gap: 16px;
   align-items: center;
 }
 
 .work-login-brand-logo {
-  width: 78px;
-  height: 78px;
+  width: 76px;
+  height: 76px;
   display: grid;
   place-items: center;
   border-radius: 24px;
-  background: linear-gradient(180deg, #ffffff, #eff7f2);
+  background: linear-gradient(180deg, #ffffff, #eef7f1);
   border: 1px solid rgba(31, 143, 87, 0.18);
   box-shadow: 0 12px 24px rgba(31, 95, 63, 0.08);
 }
 
 .work-login-brand-logo img {
-  width: 58px;
-  height: 58px;
+  width: 56px;
+  height: 56px;
   object-fit: contain;
 }
 
@@ -279,38 +143,32 @@
 .work-login-panel h2 {
   margin: 0;
   font-family: "Fraunces", serif;
-  font-size: 2rem;
+  font-size: 1.9rem;
   line-height: 1;
   letter-spacing: -0.03em;
-  color: #102a23;
 }
 
 .work-login-panel-head p {
   margin: 10px 0 0;
   color: #45645b;
   font-size: 0.94rem;
-  line-height: 1.65;
+  line-height: 1.62;
 }
 
 .work-login-panel-note {
   margin-top: 18px;
-  padding: 14px 16px;
+  padding: 13px 15px;
   border-radius: 18px;
   background: rgba(222, 244, 231, 0.7);
   color: #31564a;
   font-size: 0.84rem;
-  line-height: 1.6;
-}
-
-.work-login-inline-link {
-  margin-left: 6px;
-  color: #176f43;
+  line-height: 1.58;
 }
 
 .work-login-form {
   display: grid;
   gap: 12px;
-  padding: 22px 28px 10px;
+  padding: 22px 28px 28px;
 }
 
 .work-login-form label {
@@ -407,57 +265,66 @@
   cursor: wait;
 }
 
-.work-login-footer {
-  display: flex;
-  justify-content: space-between;
+.work-login-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
-  padding: 16px 28px 24px;
-  margin-top: auto;
-  border-top: 1px solid rgba(18, 47, 40, 0.08);
-  color: #355b4d;
-  font-size: 0.84rem;
 }
 
-.work-login-footer a {
-  color: #204f3d;
+.work-login-link-card {
+  display: grid;
+  gap: 8px;
+  padding: 20px 22px;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
-@media (max-width: 1100px) {
-  .work-login-shell {
-    grid-template-columns: 1fr;
-  }
+.work-login-link-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(31, 143, 87, 0.2);
+  box-shadow: 0 22px 40px rgba(20, 51, 39, 0.1);
+}
 
-  .work-login-showcase h1 {
-    max-width: 14ch;
-  }
+.work-login-link-card strong {
+  color: #133128;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.work-login-link-card span {
+  color: #4e675d;
+  font-size: 0.9rem;
+  line-height: 1.62;
 }
 
 @media (max-width: 760px) {
   .work-login-page {
-    padding: 14px;
+    padding: 16px 14px 28px;
   }
 
-  .work-login-showcase,
-  .work-login-panel {
+  .work-login-stage,
+  .work-login-panel,
+  .work-login-link-card {
     border-radius: 24px;
   }
 
-  .work-login-showcase,
+  .work-login-stage,
   .work-login-panel-head,
   .work-login-form,
-  .work-login-footer {
+  .work-login-link-card {
     padding-left: 20px;
     padding-right: 20px;
+  }
+
+  .work-login-stage {
+    padding-top: 28px;
+    padding-bottom: 24px;
   }
 
   .work-login-panel-head {
     padding-top: 22px;
     padding-bottom: 16px;
-  }
-
-  .work-login-showcase {
-    padding-top: 22px;
-    padding-bottom: 22px;
   }
 
   .work-login-brand-lockup {
@@ -472,17 +339,10 @@
   }
 
   .work-login-panel h2 {
-    font-size: 1.7rem;
+    font-size: 1.65rem;
   }
 
-  .work-login-proof-grid,
-  .work-login-mini-stats {
+  .work-login-links {
     grid-template-columns: 1fr;
-  }
-
-  .work-login-preview-head,
-  .work-login-footer {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }

@@ -20,26 +20,68 @@ const BROCHURE_PDF_SRC = "/lc-green-corporate-brochure.pdf";
 const PILOT_ORG_NAMES = new Set(["Think Green Foundation"]);
 
 const deliverySignals = [
-  "GPS project mapping",
-  "QR-coded implementation",
-  "Field agent controls",
+  "Organisation operations",
+  "CSR implementation",
+  "Public tree sponsorship",
   "Evidence-rich reporting",
 ];
 
-const corporateProofCards = [
+const platformRouteCards = [
   {
-    title: "Board-ready exports",
-    detail: "Executive PDFs, reporting summaries, and public proof links for stakeholder review.",
+    eyebrow: "Organisation route",
+    title: "Run field operations for partner teams",
+    detail: "For NGOs, programme teams, and field supervisors managing internal capture, reviews, and maintenance work.",
+    href: "/green/login/field",
+    cta: "Open field login",
   },
   {
-    title: "Operational control",
-    detail: "Implementation orders, field agents, review queues, and live programme visibility.",
+    eyebrow: "CSR route",
+    title: "Deliver verified corporate programmes",
+    detail: "For sustainability and CSR managers who need operational control, evidence governance, and export-ready reporting.",
+    href: "/green-work/login",
+    cta: "Open Work login",
   },
   {
-    title: "Field credibility",
-    detail: "GPS evidence, QR-linked workflow, mapped sites, and verified photo records.",
+    eyebrow: "Public sponsor route",
+    title: "Let sponsors fund and follow trees online",
+    detail: "For public campaigns where individuals or brands can pay online, receive certificates, and follow map-backed updates.",
+    href: "/sponsor",
+    cta: "Open sponsor route",
   },
-];
+] as const;
+
+const routeSpotlights = [
+  {
+    eyebrow: "Organisation operations",
+    title: "Field control for partner organisations",
+    detail: "Give organisation teams a structured field route for tree records, maintenance work, reviews, and daily programme execution.",
+    points: ["Assigned field capture and maintenance flow", "Supervisor review and evidence visibility", "Mapped programme records and export support"],
+    href: "/green/login/field",
+    cta: "Field route access",
+    image: "/screenshot phone-green.jpg",
+    fit: "contain" as const,
+  },
+  {
+    eyebrow: "CSR and ESG delivery",
+    title: "Verified implementation for corporate and donor programmes",
+    detail: "Move beyond planting claims with field assignments, GPS proof, timeline visibility, and premium reports for leadership and stakeholders.",
+    points: ["Implementation orders and programme controls", "Board-ready CSR and ESG reporting", "Maintenance and survival visibility after planting day"],
+    href: "/green-work/login",
+    cta: "Open CSR workspace",
+    image: "/Screenshot landcheck report.png",
+    fit: "contain" as const,
+  },
+  {
+    eyebrow: "Public tree sponsorship",
+    title: "A premium route for online supporters",
+    detail: "Allow individuals and organisations to sponsor trees online, receive certificates, and follow verified updates with map and photo proof.",
+    points: ["NGN and USD online sponsorship", "Guest checkout plus account route", "Certificate, GPS proof, and public storytelling"],
+    href: "/sponsor",
+    cta: "View sponsor experience",
+    image: "/sponsor-tree-app.jpeg",
+    fit: "cover" as const,
+  },
+] as const;
 
 const executiveCards = [
   {
@@ -225,6 +267,8 @@ export default function GreenPartnersLanding() {
   return (
     <div className="green-partners-page">
       <NavBar
+        fixed
+        overlay
         logoBadge
         logoSrc="/green-logo-cropped-700.png"
         activeRoute="/green-partners"
@@ -241,12 +285,11 @@ export default function GreenPartnersLanding() {
         </div>
         <div className="gp-corporate-hero-inner">
           <div className="gp-corporate-copy">
-            <span className="gp-corporate-eyebrow">LC Green Corporate</span>
-            <h1>Turn CSR ambition into verified field delivery.</h1>
+            <span className="gp-corporate-eyebrow">LandCheck Green Platform</span>
+            <h1>One green platform. Three professional delivery models.</h1>
             <p>
-              LandCheck Green Corporate helps sustainability teams design tree-planting and environmental programmes,
-              deploy field agents, verify GPS evidence, monitor maintenance, and export reporting that procurement,
-              leadership, and partners can trust.
+              LandCheck Green supports partner organisation field work, corporate CSR and ESG implementation, and
+              public tree sponsorship from one evidence-first ecosystem built for Nigeria.
             </p>
             <div className="gp-corporate-signal-row">
               {deliverySignals.map((signal) => (
@@ -254,42 +297,70 @@ export default function GreenPartnersLanding() {
               ))}
             </div>
             <div className="gp-corporate-actions">
-              <a className="gp-corporate-btn gp-corporate-btn--primary" href={BROCHURE_PDF_SRC} download>
-                Download brochure
+              <a className="gp-corporate-btn gp-corporate-btn--primary" href="#platform-routes">
+                Compare the routes
               </a>
-              <a className="gp-corporate-btn gp-corporate-btn--secondary" href="/green-work/login">
-                Open work login
+              <a className="gp-corporate-btn gp-corporate-btn--secondary" href="/sponsor">
+                Open sponsor route
               </a>
               <a
                 className="gp-corporate-btn gp-corporate-btn--ghost"
                 href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Corporate%20Demo"
               >
-                Request demo
+                Request platform demo
               </a>
-            </div>
-            <div className="gp-corporate-proof-strip">
-              {corporateProofCards.map((item) => (
-                <article key={item.title} className="gp-corporate-proof-card">
-                  <strong>{item.title}</strong>
-                  <span>{item.detail}</span>
-                </article>
-              ))}
             </div>
           </div>
 
-          <div className="gp-corporate-summary-card">
-            <span className="gp-summary-tag">What buyers need to see</span>
-            <h2>A buyer should understand the offer in under three minutes.</h2>
-            <ul>
-              <li>What the programme manager controls day to day</li>
-              <li>What evidence exists after planting starts</li>
-              <li>What reporting leadership can actually export</li>
-              <li>Why LandCheck is more than a seedling supplier</li>
-            </ul>
-            <div className="gp-summary-foot">
-              <strong>Positioning:</strong>
-              <span>Not just tree planting. Verified CSR implementation, oversight, and reporting.</span>
-            </div>
+          <div className="gp-platform-route-stack" aria-label="LandCheck Green route summary">
+            {platformRouteCards.map((item) => (
+              <article key={item.title} className="gp-platform-route-card">
+                <span className="gp-platform-route-eyebrow">{item.eyebrow}</span>
+                <h2>{item.title}</h2>
+                <p>{item.detail}</p>
+                <a href={item.href}>{item.cta}</a>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="platform-routes" className="gp-route-stage">
+        <div className="gp-shell">
+          <div className="gp-section-head">
+            <span className="gp-section-eyebrow">Platform routes</span>
+            <h2>Choose the LC Green model that matches how you work</h2>
+            <p>
+              Whether you are coordinating internal field teams, running a branded CSR programme, or opening tree
+              sponsorship to the public, the platform should feel intentional and premium at every route.
+            </p>
+          </div>
+          <div className="gp-route-grid">
+            {routeSpotlights.map((item) => (
+              <article key={item.title} className="gp-route-card">
+                <div className="gp-route-card-copy">
+                  <span className="gp-route-card-eyebrow">{item.eyebrow}</span>
+                  <h3>{item.title}</h3>
+                  <p>{item.detail}</p>
+                  <ul>
+                    {item.points.map((point) => (
+                      <li key={point}>{point}</li>
+                    ))}
+                  </ul>
+                  <a href={item.href}>{item.cta}</a>
+                </div>
+                <div className="gp-route-card-media">
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    className={item.fit === "contain" ? "fit-contain" : "fit-cover"}
+                    width="960"
+                    height="720"
+                    loading="lazy"
+                  />
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       </section>
@@ -298,10 +369,10 @@ export default function GreenPartnersLanding() {
         <div className="gp-shell">
           <div className="gp-section-head">
             <span className="gp-section-eyebrow">Executive value</span>
-            <h2>Why organisations pay for LC Green Corporate</h2>
+            <h2>Why LC Green feels stronger than a generic field app</h2>
             <p>
-              You are not selling seedlings. You are selling planning, implementation control, field verification,
-              maintenance visibility, and credible reporting.
+              The product becomes more credible when every route feels intentionally designed for its user: field
+              teams, corporate managers, and public sponsors.
             </p>
           </div>
           <div className="gp-executive-grid">
