@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../styles/landing.css";
 import { fetchPublicImpactStats, fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
+import { useCookieConsent } from "../privacy/cookieConsent";
 
 type PartnerOrg = { name: string; logo: string | null };
 
@@ -44,6 +45,7 @@ const products = [
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { preferences, ready: cookieConsentReady } = useCookieConsent();
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
   const [totalTrees, setTotalTrees] = useState<number | null>(null);
   const [heroVideoReady, setHeroVideoReady] = useState(false);
@@ -54,6 +56,7 @@ export default function LandingPage() {
   const heroVideoCrossfadeLockRef = useRef(false);
   const heroVideoRafRef = useRef<number | null>(null);
   const heroVideoSwapTimeoutRef = useRef<number | null>(null);
+  const heroVideoEnabled = cookieConsentReady && preferences.experience;
 
   useEffect(() => {
     let cancelled = false;
@@ -76,6 +79,11 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
+    if (!heroVideoEnabled) {
+      setHeroVideoReady(false);
+      return undefined;
+    }
+
     const videos = heroVideoRefs.current;
     if (videos.some((video) => !video)) return undefined;
 
@@ -183,7 +191,7 @@ export default function LandingPage() {
       stopLoopWatch();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
+  }, [heroVideoEnabled]);
 
   const marqueePartners = useMemo(() => {
     if (partners.length === 0) return [];
@@ -236,28 +244,30 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className={`lp-hero${heroVideoReady ? " lp-hero--video-ready" : ""}`}>
-        <div className="lp-hero-video-wrap" aria-hidden="true">
-          {[0, 1].map((index) => (
-            <video
-              key={index}
-              ref={(node) => {
-                heroVideoRefs.current[index] = node;
-              }}
-              className={`lp-hero-video${visibleHeroVideoIndex === index ? " lp-hero-video--active" : " lp-hero-video--inactive"}`}
-              autoPlay={index === 0}
-              muted
-              playsInline
-              preload="auto"
-              disablePictureInPicture
-              disableRemotePlayback
-              onPlaying={() => setHeroVideoReady(true)}
-              onLoadedData={() => setHeroVideoReady(true)}
-              onError={() => setHeroVideoReady(false)}
-            >
-              <source src={HERO_VIDEO_SRC} type="video/mp4" />
-            </video>
-          ))}
-        </div>
+        {heroVideoEnabled && (
+          <div className="lp-hero-video-wrap" aria-hidden="true">
+            {[0, 1].map((index) => (
+              <video
+                key={index}
+                ref={(node) => {
+                  heroVideoRefs.current[index] = node;
+                }}
+                className={`lp-hero-video${visibleHeroVideoIndex === index ? " lp-hero-video--active" : " lp-hero-video--inactive"}`}
+                autoPlay={index === 0}
+                muted
+                playsInline
+                preload="auto"
+                disablePictureInPicture
+                disableRemotePlayback
+                onPlaying={() => setHeroVideoReady(true)}
+                onLoadedData={() => setHeroVideoReady(true)}
+                onError={() => setHeroVideoReady(false)}
+              >
+                <source src={HERO_VIDEO_SRC} type="video/mp4" />
+              </video>
+            ))}
+          </div>
+        )}
         <div className="lp-hero-overlay" />
         <div className="lp-hero-content">
           <span className="lp-hero-kicker">LANDCHECK PLATFORM</span>
