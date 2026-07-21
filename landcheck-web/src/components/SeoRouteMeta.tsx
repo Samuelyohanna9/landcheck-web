@@ -80,11 +80,11 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
   },
 
   "/green-partners": {
-    title: "CSR Tree Planting Software Nigeria | ESG Reporting Dashboard | LandCheck Green Corporate",
+    title: "LandCheck Green Platform | Organisation Ops, CSR Delivery & Public Tree Sponsorship",
     description:
-      "LandCheck Green Corporate helps CSR, ESG, donor, and sustainability teams plan tree-planting programmes, deploy field agents, verify GPS evidence, monitor maintenance, and export stakeholder-ready reports in Nigeria.",
+      "LandCheck Green combines partner organisation field operations, CSR and ESG programme delivery, and premium public tree sponsorship in one GPS-verified platform for Nigeria.",
     keywords:
-      "CSR tree planting software Nigeria, ESG reporting dashboard Nigeria, tree planting CSR reporting, environmental project monitoring software, GPS verification tree planting, CSR implementation dashboard, sustainability reporting tree projects, NGO monitoring dashboard Nigeria",
+      "tree monitoring software Nigeria, CSR tree planting software Nigeria, ESG reporting dashboard Nigeria, public tree sponsorship Nigeria, environmental project monitoring software, GPS verification tree planting, NGO monitoring dashboard Nigeria, field operations platform Nigeria",
     canonicalPath: "/green-partners",
     ogType: "website",
     ogImage: "https://landcheck.online/background-sponsor.png",
@@ -95,24 +95,25 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
         {
           "@type": "SoftwareApplication",
           "@id": "https://landcheck.online/green-partners#csr-software",
-          "name": "LandCheck Green Corporate",
+          "name": "LandCheck Green Platform",
           "applicationCategory": "BusinessApplication",
           "operatingSystem": "Web, Android",
           "url": "https://landcheck.online/green-partners",
           "description":
-            "Corporate CSR and ESG implementation dashboard for project planning, GPS field verification, maintenance monitoring, stakeholder reporting, and public impact visibility.",
+            "A multi-route green operations platform for partner organisations, CSR and ESG implementation teams, and public tree sponsorship programmes with GPS verification and reporting.",
           "offers": {
             "@type": "Offer",
             "price": "0",
             "priceCurrency": "NGN"
           },
           "featureList": [
+            "Partner organisation field operations",
             "CSR programme planning and implementation control",
+            "Public tree sponsorship and donor storytelling",
             "GPS evidence capture and review",
             "QR-coded field workflow support",
             "Maintenance and field visit monitoring",
-            "Board-ready PDF and CSV reporting exports",
-            "Public sponsorship and transparency experience"
+            "Board-ready PDF and CSV reporting exports"
           ]
         },
         {
@@ -121,7 +122,15 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
           "mainEntity": [
             {
               "@type": "Question",
-              "name": "What does LandCheck Green Corporate help CSR managers do?",
+              "name": "What are the three routes inside LandCheck Green?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "LandCheck Green supports three routes: partner organisation field operations, CSR and ESG programme delivery, and public tree sponsorship with online payments and evidence-backed updates."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What does LandCheck Green help CSR managers do?",
               "acceptedAnswer": {
                 "@type": "Answer",
                 "text": "It helps CSR managers design programmes, assign field work, verify GPS and photo evidence, monitor maintenance, and prepare stakeholder-ready reporting from one dashboard."
@@ -129,18 +138,10 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
             },
             {
               "@type": "Question",
-              "name": "Is this only for tree planting?",
+              "name": "Can the same platform support public sponsorship as well as organisation delivery?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "The platform is strongest for verified tree-planting and environmental programmes, but the same monitoring model also supports agricultural and field implementation workflows."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "Can LandCheck support ESG and sustainability reporting workflows?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Yes. LandCheck helps teams keep structured field evidence, implementation progress, and reporting exports that can support internal ESG, CSR, donor, and board reporting processes."
+                "text": "Yes. The platform supports partner organisation workflows, CSR programme management, and a premium public sponsorship route where sponsors can pay online and track verified tree updates."
               }
             }
           ]
