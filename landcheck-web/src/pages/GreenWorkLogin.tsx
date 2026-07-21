@@ -5,7 +5,11 @@ import { isWorkAuthed, loginWork } from "../auth/workAuth";
 import "../styles/green-work-login.css";
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
-const WORK_LOGIN_ACCENT_IMAGES = ["/agent planting 1.JPG", "/agent planting 2.JPG"];
+const WORK_LOGIN_VISUALS = [
+  { src: "/agent planting 1.JPG", fit: "cover" },
+  { src: "/agent planting 2.JPG", fit: "cover" },
+  { src: GREEN_LOGO_SRC, fit: "contain" },
+] as const;
 
 export default function GreenWorkLogin() {
   const navigate = useNavigate();
@@ -46,22 +50,22 @@ export default function GreenWorkLogin() {
 
   return (
     <div className="work-login-page">
-      <div className="work-login-watermark" aria-hidden="true">
-        <img src={GREEN_LOGO_SRC} alt="" width="320" height="320" />
-      </div>
-      <div className="work-login-accent" aria-hidden="true">
-        <div className="work-login-accent-frame">
-          {WORK_LOGIN_ACCENT_IMAGES.map((src, index) => (
+      <div className="work-login-visual" aria-hidden="true">
+        <div className="work-login-visual-fade" />
+        {WORK_LOGIN_VISUALS.map((item, index) => (
+          <div
+            key={item.src}
+            className={`work-login-visual-slide${index === 1 ? " is-second" : ""}${index === 2 ? " is-third" : ""}`}
+          >
             <img
-              key={src}
-              src={src}
+              src={item.src}
               alt=""
               width="800"
               height="1000"
-              className={`work-login-accent-image${index === 1 ? " is-alt" : ""}`}
+              className={item.fit === "contain" ? "is-contain" : "is-cover"}
             />
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
 
       <div className="work-login-top-badge">LandCheck Work</div>
