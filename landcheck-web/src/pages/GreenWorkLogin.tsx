@@ -5,6 +5,7 @@ import { isWorkAuthed, loginWork } from "../auth/workAuth";
 import "../styles/green-work-login.css";
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
+const WORK_LOGIN_ACCENT_IMAGES = ["/agent planting 1.JPG", "/agent planting 2.JPG"];
 
 export default function GreenWorkLogin() {
   const navigate = useNavigate();
@@ -49,8 +50,18 @@ export default function GreenWorkLogin() {
         <img src={GREEN_LOGO_SRC} alt="" width="320" height="320" />
       </div>
       <div className="work-login-accent" aria-hidden="true">
-        <div className="work-login-accent-halo" />
-        <div className="work-login-accent-panel" />
+        <div className="work-login-accent-frame">
+          {WORK_LOGIN_ACCENT_IMAGES.map((src, index) => (
+            <img
+              key={src}
+              src={src}
+              alt=""
+              width="800"
+              height="1000"
+              className={`work-login-accent-image${index === 1 ? " is-alt" : ""}`}
+            />
+          ))}
+        </div>
       </div>
 
       <div className="work-login-top-badge">LandCheck Work</div>
