@@ -5338,7 +5338,7 @@ export default function GreenWork() {
   };
 
   const savePublicSponsorAgents = async () => {
-    if (!activeProjectId || !publicSponsorshipProject || !canAccessSuperAdmin) return;
+    if (!activeProjectId || !agentRosterProject || !canAccessSuperAdmin) return;
     try {
       setSavingPublicSponsorAgents(true);
       const res = await api.patch(`/green/projects/${activeProjectId}/settings`, {
@@ -7334,8 +7334,8 @@ export default function GreenWork() {
           .filter(Boolean),
       ),
     );
-    if (publicSponsorshipProject && assigneeTargets.some((assignee) => !allowedAssigneeNames.has(normalizeName(assignee.dispatch)))) {
-      toast.error("Only saved public sponsor agents can receive sponsor-funded planting work.");
+    if (agentRosterProject && assigneeTargets.some((assignee) => !allowedAssigneeNames.has(normalizeName(assignee.dispatch)))) {
+      toast.error(csrRouteProject ? "Only saved CSR field agents can receive implementation orders." : "Only saved public sponsor agents can receive sponsor-funded planting work.");
       return;
     }
     if (!assignees.length) {
@@ -7612,11 +7612,11 @@ export default function GreenWork() {
         : [String(newTask.assignee_name || "").trim()].filter(Boolean);
     const allowedAssigneeNames = new Set(assignmentUsers.map((user) => normalizeName(user.full_name)));
     if (
-      publicSponsorshipProject &&
+      agentRosterProject &&
       !usePlanterStrategy &&
       assignees.some((assignee) => !allowedAssigneeNames.has(normalizeName(assignee)))
     ) {
-      toast.error("Only saved public sponsor agents can receive sponsor-funded maintenance work.");
+      toast.error(csrRouteProject ? "Only saved CSR field agents can receive field visits." : "Only saved public sponsor agents can receive sponsor-funded maintenance work.");
       return;
     }
     if (usePlanterStrategy) {
@@ -15956,9 +15956,11 @@ export default function GreenWork() {
                   )}
                 </>
               )}
-              {publicSponsorshipProject && assignmentUsers.length === 0 ? (
+              {agentRosterProject && assignmentUsers.length === 0 ? (
                 <p className="green-work-note danger">
-                  No public sponsor agents are selected for this project yet. Open Users and save at least one sponsor agent first.
+                  {csrRouteProject
+                    ? "No CSR field agents are selected for this project yet. Open Users and save at least one CSR field agent first."
+                    : "No public sponsor agents are selected for this project yet. Open Users and save at least one sponsor agent first."}
                 </p>
               ) : null}
               <label className="green-work-checkbox-row">
@@ -16103,8 +16105,10 @@ export default function GreenWork() {
                   disabled={!activeProjectId || assigningWorkOrder}
                 />
                 <span>
-                  {publicSponsorshipProject
-                    ? "Enable species-based allocation for the assigned sponsor QR tags (optional)"
+                  {agentRosterProject
+                    ? csrRouteProject
+                      ? "Enable species-based allocation for CSR implementation assignments (optional)"
+                      : "Enable species-based allocation for the assigned sponsor QR tags (optional)"
                     : "Enable species-based allocation (optional)"}
                 </span>
               </label>
@@ -16112,7 +16116,7 @@ export default function GreenWork() {
                 <div className="green-work-species-allocation">
                   <label className="green-work-field-label">Species allocation rows</label>
                   <p className="green-work-note">
-                    {publicSponsorshipProject
+                    {agentRosterProject
                       ? "Enter species names exactly as you want them to appear on the agent QR sheet before planting and inside Green capture."
                       : "Enter species names manually exactly as you want field officers to select them in Green."}
                   </p>
@@ -16271,7 +16275,7 @@ export default function GreenWork() {
               <button
                 className="btn-primary"
                 onClick={createWorkOrder}
-                disabled={!activeProjectId || assigningWorkOrder || (publicSponsorshipProject && assignmentUsers.length === 0)}
+                disabled={!activeProjectId || assigningWorkOrder || (agentRosterProject && assignmentUsers.length === 0)}
               >
                 {assigningWorkOrder ? "Assigning..." : "Assign Work"}
               </button>
@@ -16296,9 +16300,11 @@ export default function GreenWork() {
                   </p>
                 </>
               )}
-              {publicSponsorshipProject && assignmentUsers.length === 0 ? (
+              {agentRosterProject && assignmentUsers.length === 0 ? (
                 <p className="green-work-note danger">
-                  No public sponsor agents are selected for this project yet. Open Users and save at least one sponsor agent first.
+                  {csrRouteProject
+                    ? "No CSR field agents are selected for this project yet. Open Users and save at least one CSR field agent first."
+                    : "No public sponsor agents are selected for this project yet. Open Users and save at least one sponsor agent first."}
                 </p>
               ) : null}
               {selectedMaintenanceRows.length > 0 ? (
@@ -16782,7 +16788,7 @@ export default function GreenWork() {
               <button
                 className="btn-primary"
                 onClick={assignTask}
-                disabled={!activeProjectId || assigningMaintenanceTask || (publicSponsorshipProject && assignmentUsers.length === 0)}
+                disabled={!activeProjectId || assigningMaintenanceTask || (agentRosterProject && assignmentUsers.length === 0)}
               >
                 {assigningMaintenanceTask ? "Assigning..." : "Assign Task"}
               </button>
