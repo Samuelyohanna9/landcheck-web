@@ -17333,7 +17333,7 @@ export default function GreenWork() {
 
                   <div className="green-work-live-summary">
                     <span className="green-work-live-pill neutral">Implementation records: {existingTreeIntakeRows.length}</span>
-                    <span className="green-work-live-pill ok">Visible trees: {projectStats.trees_total}</span>
+                    <span className="green-work-live-pill ok">Visible trees: {visibleProjectTrees.length}</span>
                     <span className="green-work-live-pill neutral">
                       Programme: {formatCsrProgramTypeLabel(activeProjectRecord?.settings?.csr_config?.program_type || projectSettingsDraft.csr_program_type)}
                     </span>
