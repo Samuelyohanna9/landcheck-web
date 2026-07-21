@@ -124,18 +124,6 @@ export default function CookieConsentManager() {
         </aside>
       )}
 
-      {hasDecision && (
-        <button
-          type="button"
-          className="cookie-settings-trigger"
-          onClick={openPreferences}
-          aria-label="Open cookie preferences"
-        >
-          <span className="cookie-settings-trigger__dot" aria-hidden="true" />
-          Cookie settings
-        </button>
-      )}
-
       {isModalOpen && (
         <div className="cookie-modal-backdrop" role="presentation" onClick={closePreferences}>
           <div
