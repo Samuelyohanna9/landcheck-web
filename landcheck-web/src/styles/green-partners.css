@@ -87,7 +87,7 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 430px);
+  grid-template-columns: minmax(0, 1.02fr) minmax(420px, 560px);
   gap: 40px;
   align-items: center;
 }
@@ -175,54 +175,93 @@
 
 .gp-hero-route-stack {
   display: grid;
-  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 206px;
+  gap: 1.15rem;
 }
 
 .gp-hero-route-card {
+  position: relative;
+  min-height: 206px;
+  display: flex;
+  align-items: flex-end;
   padding: 1.3rem 1.35rem 1.2rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 28px;
-  background: rgba(13, 22, 18, 0.58);
+  background:
+    center center / cover no-repeat,
+    rgba(13, 22, 18, 0.58);
   box-shadow: 0 24px 48px rgba(5, 10, 8, 0.18);
   backdrop-filter: blur(18px);
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gp-hero-route-card:first-child {
+  grid-row: span 2;
+  min-height: 427px;
+}
+
+.gp-hero-route-card__overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(7, 15, 10, 0.14) 0%, rgba(7, 15, 10, 0.72) 100%),
+    radial-gradient(circle at 20% 18%, rgba(106, 214, 136, 0.18), transparent 22%);
+}
+
+.gp-hero-route-card__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 
 .gp-hero-route-card__eyebrow {
   display: inline-flex;
-  margin-bottom: 0.75rem;
+  width: fit-content;
+  margin-bottom: 0.7rem;
   padding: 0.42rem 0.72rem;
   border-radius: 999px;
-  background: rgba(90, 215, 126, 0.1);
-  color: #8ae59f;
+  background: rgba(255, 255, 255, 0.14);
+  color: #f3faf4;
   font-size: 0.69rem;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  backdrop-filter: blur(10px);
 }
 
 .gp-hero-route-card h2 {
   margin: 0;
   color: #f8fcf9;
-  font-size: 1.35rem;
-  line-height: 1.12;
+  max-width: 8ch;
+  font-family: "Fraunces", serif;
+  font-size: 2.3rem;
+  line-height: 0.94;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
 }
 
 .gp-hero-route-card p {
-  margin: 0.78rem 0 0;
-  color: rgba(225, 237, 229, 0.82);
-  font-size: 0.9rem;
-  line-height: 1.68;
+  margin: 0.7rem 0 0;
+  max-width: 24ch;
+  color: rgba(243, 249, 245, 0.9);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.52;
 }
 
-.gp-hero-route-card button {
-  margin-top: 1rem;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: #84df96;
-  font-size: 0.88rem;
+.gp-hero-route-card__cta {
+  margin-top: 0.95rem;
+  color: #95ecab;
+  font-size: 0.82rem;
   font-weight: 800;
-  cursor: pointer;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .gp-stats-bridge {
@@ -879,6 +918,17 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .gp-hero-route-stack {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+  }
+
+  .gp-hero-route-card,
+  .gp-hero-route-card:first-child {
+    min-height: 220px;
+    grid-row: auto;
+  }
+
   .gp-device--desktop {
     margin-right: 80px;
   }
@@ -968,6 +1018,14 @@
   .gp-hero-copy h1 {
     max-width: 10ch;
     font-size: clamp(2.8rem, 13vw, 4.5rem);
+  }
+
+  .gp-hero-route-card {
+    min-height: 190px;
+  }
+
+  .gp-hero-route-card h2 {
+    font-size: 1.9rem;
   }
 
   .gp-hero-route-card,
