@@ -1,0 +1,772 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 2 /Kids [3 0 R 4 0 R] >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R /F3 7 0 R /F4 8 0 R >> >> /Contents 9 0 R >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R /F3 7 0 R /F4 8 0 R >> >> /Contents 10 0 R >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+7 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Times-Roman >>
+endobj
+8 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Times-Bold >>
+endobj
+9 0 obj
+<< /Length 7670 >>
+stream
+0.983 0.981 0.973 rg
+0.00 0.00 595.00 842.00 re f
+0.054 0.158 0.126 rg
+0.00 746.00 595.00 96.00 re f
+0.850 0.632 0.228 RG
+4.00 w
+0.00 746.00 m
+595.00 746.00 l S
+BT
+/F4 21.00 Tf
+0.968 0.979 0.971 rg
+1 0 0 1 42.00 800.00 Tm
+(LandCheck Green Corporate) Tj
+ET
+BT
+/F3 12.40 Tf
+0.860 0.920 0.888 rg
+1 0 0 1 42.00 776.00 Tm
+(Sample CSR implementation report) Tj
+ET
+BT
+/F3 10.40 Tf
+0.890 0.940 0.914 rg
+1 0 0 1 427.00 800.00 Tm
+(Generated: 21 Jul 2026) Tj
+ET
+BT
+/F3 10.20 Tf
+0.770 0.860 0.814 rg
+1 0 0 1 409.00 782.00 Tm
+(For proposal and due-diligence use) Tj
+ET
+BT
+/F4 18.00 Tf
+0.112 0.215 0.171 rg
+1 0 0 1 42.00 714.00 Tm
+(Executive snapshot) Tj
+ET
+1.000 1.000 0.998 rg
+42.00 612.00 118.00 84.00 re f
+0.854 0.898 0.870 RG
+1.00 w
+42.00 612.00 118.00 84.00 re S
+BT
+/F4 20.00 Tf
+0.092 0.220 0.172 rg
+1 0 0 1 54.00 664.00 Tm
+(10,000) Tj
+ET
+BT
+/F4 10.40 Tf
+0.262 0.367 0.322 rg
+1 0 0 1 54.00 646.00 Tm
+(Target trees) Tj
+ET
+BT
+/F3 8.60 Tf
+0.427 0.505 0.461 rg
+1 0 0 1 54.00 630.00 Tm
+(Approved) Tj
+ET
+BT
+/F3 8.60 Tf
+0.427 0.505 0.461 rg
+1 0 0 1 54.00 619.40 Tm
+(implementation) Tj
+ET
+BT
+/F3 8.60 Tf
+0.427 0.505 0.461 rg
+1 0 0 1 54.00 608.80 Tm
+(scope) Tj
+ET
+1.000 1.000 0.998 rg
+172.00 612.00 118.00 84.00 re f
+0.854 0.898 0.870 RG
+1.00 w
+172.00 612.00 118.00 84.00 re S
+BT
+/F4 20.00 Tf
+0.092 0.220 0.172 rg
+1 0 0 1 184.00 664.00 Tm
+(96%) Tj
+ET
+BT
+/F4 10.40 Tf
+0.262 0.367 0.322 rg
+1 0 0 1 184.00 646.00 Tm
+(Evidence rate) Tj
+ET
+BT
+/F3 8.60 Tf
+0.427 0.505 0.461 rg
+1 0 0 1 184.00 630.00 Tm
+(GPS plus photo) Tj
+ET
+BT
+/F3 8.60 Tf
+0.427 0.505 0.461 rg
+1 0 0 1 184.00 619.40 Tm
+(proof coverage) Tj
+ET
+1.000 1.000 0.998 rg
+302.00 612.00 118.00 84.00 re f
+0.854 0.898 0.870 RG
+1.00 w
+302.00 612.00 118.00 84.00 re S
+BT
+/F4 20.00 Tf
+0.092 0.220 0.172 rg
+1 0 0 1 314.00 664.00 Tm
+(91%) Tj
+ET
+BT
+/F4 10.40 Tf
+0.262 0.367 0.322 rg
+1 0 0 1 314.00 646.00 Tm
+(Survival) Tj
+ET
+BT
+/F3 8.60 Tf
+0.427 0.505 0.461 rg
+1 0 0 1 314.00 630.00 Tm
+(Current approved) Tj
+ET
+BT
+/F3 8.60 Tf
+0.427 0.505 0.461 rg
+1 0 0 1 314.00 619.40 Tm
+(survival view) Tj
+ET
+1.000 1.000 0.998 rg
+432.00 612.00 118.00 84.00 re f
+0.854 0.898 0.870 RG
+1.00 w
+432.00 612.00 118.00 84.00 re S
+BT
+/F4 20.00 Tf
+0.092 0.220 0.172 rg
+1 0 0 1 444.00 664.00 Tm
+(4) Tj
+ET
+BT
+/F4 10.40 Tf
+0.262 0.367 0.322 rg
+1 0 0 1 444.00 646.00 Tm
+(Field zones) Tj
+ET
+BT
+/F3 8.60 Tf
+0.427 0.505 0.461 rg
+1 0 0 1 444.00 630.00 Tm
+(Mapped delivery) Tj
+ET
+BT
+/F3 8.60 Tf
+0.427 0.505 0.461 rg
+1 0 0 1 444.00 619.40 Tm
+(clusters) Tj
+ET
+BT
+/F4 16.40 Tf
+0.112 0.215 0.171 rg
+1 0 0 1 42.00 570.00 Tm
+(Programme brief) Tj
+ET
+BT
+/F3 10.70 Tf
+0.254 0.332 0.297 rg
+1 0 0 1 42.00 546.00 Tm
+(This sample report shows the kind of premium package a CSR manager receives from) Tj
+ET
+BT
+/F3 10.70 Tf
+0.254 0.332 0.297 rg
+1 0 0 1 42.00 532.60 Tm
+(LandCheck Green Corporate. It combines implementation footprint, governance controls,) Tj
+ET
+BT
+/F3 10.70 Tf
+0.254 0.332 0.297 rg
+1 0 0 1 42.00 519.20 Tm
+(evidence coverage, survival visibility, and clear next actions into one exportable) Tj
+ET
+BT
+/F3 10.70 Tf
+0.254 0.332 0.297 rg
+1 0 0 1 42.00 505.80 Tm
+(record for internal review, donor communication, and board reporting.) Tj
+ET
+1.000 1.000 0.998 rg
+42.00 354.00 249.00 152.00 re f
+0.854 0.898 0.870 RG
+1.00 w
+42.00 354.00 249.00 152.00 re S
+1.000 1.000 0.998 rg
+304.00 354.00 249.00 152.00 re f
+0.854 0.898 0.870 RG
+1.00 w
+304.00 354.00 249.00 152.00 re S
+BT
+/F4 14.20 Tf
+0.112 0.215 0.171 rg
+1 0 0 1 58.00 478.00 Tm
+(Implementation footprint) Tj
+ET
+0.120 0.530 0.320 rg
+58.00 456.00 5.00 5.00 re f
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 452.00 Tm
+(4 mapped field zones with) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 438.80 Tm
+(polygon coverage already) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 425.60 Tm
+(approved.) Tj
+ET
+0.120 0.530 0.320 rg
+58.00 412.40 5.00 5.00 re f
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 408.40 Tm
+(Named field agents assigned) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 395.20 Tm
+(through implementation) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 382.00 Tm
+(orders.) Tj
+ET
+0.120 0.530 0.320 rg
+58.00 368.80 5.00 5.00 re f
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 364.80 Tm
+(Species allocation can be) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 351.60 Tm
+(attached at assignment stage) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 338.40 Tm
+(for QR-tag printing.) Tj
+ET
+0.120 0.530 0.320 rg
+58.00 325.20 5.00 5.00 re f
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 321.20 Tm
+(Supervisor review keeps) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 308.00 Tm
+(planting, maintenance, and) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 294.80 Tm
+(evidence status aligned.) Tj
+ET
+BT
+/F4 14.20 Tf
+0.112 0.215 0.171 rg
+1 0 0 1 320.00 478.00 Tm
+(Governance and controls) Tj
+ET
+0.120 0.530 0.320 rg
+320.00 456.00 5.00 5.00 re f
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 332.00 452.00 Tm
+(Assignment logs show who was) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 332.00 438.80 Tm
+(instructed, when, and for) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 332.00 425.60 Tm
+(which site.) Tj
+ET
+0.120 0.530 0.320 rg
+320.00 412.40 5.00 5.00 re f
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 332.00 408.40 Tm
+(GPS coordinates and photos) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 332.00 395.20 Tm
+(remain tied to each verified) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 332.00 382.00 Tm
+(record.) Tj
+ET
+0.120 0.530 0.320 rg
+320.00 368.80 5.00 5.00 re f
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 332.00 364.80 Tm
+(Outstanding risks and low-) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 332.00 351.60 Tm
+(evidence zones are visible) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 332.00 338.40 Tm
+(before reporting.) Tj
+ET
+0.120 0.530 0.320 rg
+320.00 325.20 5.00 5.00 re f
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 332.00 321.20 Tm
+(Public proof pages and) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 332.00 308.00 Tm
+(certificates can extend) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 332.00 294.80 Tm
+(transparency externally.) Tj
+ET
+0.092 0.188 0.153 rg
+42.00 172.00 511.00 126.00 re f
+BT
+/F4 15.60 Tf
+0.968 0.979 0.971 rg
+1 0 0 1 60.00 266.00 Tm
+(Reporting highlights) Tj
+ET
+0.878 0.635 0.202 rg
+60.00 246.00 5.00 5.00 re f
+BT
+/F3 10.40 Tf
+0.862 0.924 0.890 rg
+1 0 0 1 72.00 242.00 Tm
+(Evidence-backed reporting supports leadership updates,) Tj
+ET
+BT
+/F3 10.40 Tf
+0.862 0.924 0.890 rg
+1 0 0 1 72.00 228.80 Tm
+(partner briefings, and external storytelling.) Tj
+ET
+0.878 0.635 0.202 rg
+60.00 215.60 5.00 5.00 re f
+BT
+/F3 10.40 Tf
+0.862 0.924 0.890 rg
+1 0 0 1 72.00 211.60 Tm
+(Mapped implementation coverage reduces ambiguity about) Tj
+ET
+BT
+/F3 10.40 Tf
+0.862 0.924 0.890 rg
+1 0 0 1 72.00 198.40 Tm
+(where activity actually happened.) Tj
+ET
+0.878 0.635 0.202 rg
+60.00 185.20 5.00 5.00 re f
+BT
+/F3 10.40 Tf
+0.862 0.924 0.890 rg
+1 0 0 1 72.00 181.20 Tm
+(Maintenance visibility helps teams speak honestly) Tj
+ET
+BT
+/F3 10.40 Tf
+0.862 0.924 0.890 rg
+1 0 0 1 72.00 168.00 Tm
+(about programme quality after planting day.) Tj
+ET
+0.878 0.635 0.202 rg
+60.00 154.80 5.00 5.00 re f
+BT
+/F3 10.40 Tf
+0.862 0.924 0.890 rg
+1 0 0 1 72.00 150.80 Tm
+(Exports are designed to support sustainability, CSR,) Tj
+ET
+BT
+/F3 10.40 Tf
+0.862 0.924 0.890 rg
+1 0 0 1 72.00 137.60 Tm
+(donor, and communications workflows.) Tj
+ET
+BT
+/F3 9.60 Tf
+0.370 0.460 0.421 rg
+1 0 0 1 42.00 72.00 Tm
+(Sample only. Live client exports include current programme values and verified field records.) Tj
+ET
+BT
+/F3 9.60 Tf
+0.370 0.460 0.421 rg
+1 0 0 1 427.00 72.00 Tm
+(landcheck.online) Tj
+ET
+
+endstream
+endobj
+10 0 obj
+<< /Length 4444 >>
+stream
+0.983 0.981 0.973 rg
+0.00 0.00 595.00 842.00 re f
+0.056 0.161 0.127 rg
+0.00 758.00 595.00 84.00 re f
+BT
+/F4 19.50 Tf
+0.968 0.979 0.971 rg
+1 0 0 1 42.00 800.00 Tm
+(Implementation register sample) Tj
+ET
+BT
+/F3 10.20 Tf
+0.860 0.920 0.888 rg
+1 0 0 1 437.00 800.00 Tm
+(Page 2 of 2) Tj
+ET
+1.000 1.000 0.998 rg
+42.00 478.00 511.00 244.00 re f
+0.854 0.898 0.870 RG
+1.00 w
+42.00 478.00 511.00 244.00 re S
+0.932 0.951 0.939 rg
+42.00 688.00 511.00 34.00 re f
+BT
+/F4 10.60 Tf
+0.112 0.215 0.171 rg
+1 0 0 1 54.00 700.00 Tm
+(Site / Stakeholder) Tj
+ET
+BT
+/F4 10.60 Tf
+0.112 0.215 0.171 rg
+1 0 0 1 270.00 700.00 Tm
+(Trees) Tj
+ET
+BT
+/F4 10.60 Tf
+0.112 0.215 0.171 rg
+1 0 0 1 328.00 700.00 Tm
+(Alive) Tj
+ET
+BT
+/F4 10.60 Tf
+0.112 0.215 0.171 rg
+1 0 0 1 384.00 700.00 Tm
+(Evidence) Tj
+ET
+BT
+/F4 10.60 Tf
+0.112 0.215 0.171 rg
+1 0 0 1 476.00 700.00 Tm
+(Status) Tj
+ET
+0.890 0.922 0.902 RG
+0.80 w
+42.00 664.00 m
+553.00 664.00 l S
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 54.00 648.00 Tm
+(Adamawa urban belt | school corridor) Tj
+ET
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 272.00 648.00 Tm
+(2,500) Tj
+ET
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 330.00 648.00 Tm
+(2,304) Tj
+ET
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 388.00 648.00 Tm
+(97%) Tj
+ET
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 478.00 648.00 Tm
+(Active) Tj
+ET
+0.890 0.922 0.902 RG
+0.80 w
+42.00 620.00 m
+553.00 620.00 l S
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 54.00 604.00 Tm
+(Community resilience cluster | river buffer) Tj
+ET
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 272.00 604.00 Tm
+(3,000) Tj
+ET
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 330.00 604.00 Tm
+(2,761) Tj
+ET
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 388.00 604.00 Tm
+(95%) Tj
+ET
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 478.00 604.00 Tm
+(Monitored) Tj
+ET
+0.890 0.922 0.902 RG
+0.80 w
+42.00 576.00 m
+553.00 576.00 l S
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 54.00 560.00 Tm
+(Corporate volunteer grove | pilot site) Tj
+ET
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 272.00 560.00 Tm
+(1,500) Tj
+ET
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 330.00 560.00 Tm
+(1,396) Tj
+ET
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 388.00 560.00 Tm
+(99%) Tj
+ET
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 478.00 560.00 Tm
+(Verified) Tj
+ET
+0.890 0.922 0.902 RG
+0.80 w
+42.00 532.00 m
+553.00 532.00 l S
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 54.00 516.00 Tm
+(Peri-urban restoration strip | access road) Tj
+ET
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 272.00 516.00 Tm
+(3,000) Tj
+ET
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 330.00 516.00 Tm
+(2,672) Tj
+ET
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 388.00 516.00 Tm
+(94%) Tj
+ET
+BT
+/F3 10.20 Tf
+0.247 0.333 0.298 rg
+1 0 0 1 478.00 516.00 Tm
+(Needs follow-up) Tj
+ET
+1.000 1.000 0.998 rg
+42.00 202.00 511.00 214.00 re f
+0.854 0.898 0.870 RG
+1.00 w
+42.00 202.00 511.00 214.00 re S
+BT
+/F4 14.60 Tf
+0.112 0.215 0.171 rg
+1 0 0 1 58.00 386.00 Tm
+(Risk, care cadence, and next actions) Tj
+ET
+0.120 0.530 0.320 rg
+58.00 362.00 5.00 5.00 re f
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 358.00 Tm
+(Low-survival pockets should trigger targeted maintenance) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 344.80 Tm
+(revisits, not only year-end reporting notes.) Tj
+ET
+0.120 0.530 0.320 rg
+58.00 331.60 5.00 5.00 re f
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 327.60 Tm
+(Client exports should distinguish between approved records,) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 314.40 Tm
+(rejected submissions, and evidence still outstanding.) Tj
+ET
+0.120 0.530 0.320 rg
+58.00 301.20 5.00 5.00 re f
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 297.20 Tm
+(Where public or donor visibility is needed, link the report to) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 284.00 Tm
+(a public proof page or certificate route for selected sites.) Tj
+ET
+0.120 0.530 0.320 rg
+58.00 270.80 5.00 5.00 re f
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 266.80 Tm
+(Use this register alongside map snapshots, field photos, and) Tj
+ET
+BT
+/F3 10.40 Tf
+0.294 0.385 0.349 rg
+1 0 0 1 70.00 253.60 Tm
+(timeline charts in the live reporting package.) Tj
+ET
+BT
+/F3 9.50 Tf
+0.370 0.460 0.421 rg
+1 0 0 1 42.00 78.00 Tm
+(Sample CSR reporting asset for premium sales and due-diligence conversations.) Tj
+ET
+BT
+/F3 9.50 Tf
+0.370 0.460 0.421 rg
+1 0 0 1 385.00 78.00 Tm
+(Live dashboards, proof pages, and exports powered by LandCheck) Tj
+ET
+
+endstream
+endobj
+xref
+0 11
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000127 00000 n 
+0000000283 00000 n 
+0000000440 00000 n 
+0000000510 00000 n 
+0000000585 00000 n 
+0000000657 00000 n 
+0000000728 00000 n 
+0000008450 00000 n 
+trailer
+<< /Size 11 /Root 1 0 R >>
+startxref
+12947
+%%EOF
