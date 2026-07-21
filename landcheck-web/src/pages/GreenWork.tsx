@@ -17506,49 +17506,51 @@ export default function GreenWork() {
                                 item.monitoring_start || item.monitoring_end
                                   ? `${item.monitoring_start || "..."} to ${item.monitoring_end || "..."}`
                                   : "Full project";
-                          const summary = item.payload_summary || {};
-                          return (
-                            <tr key={`verra-history-${item.id}`}>
-                              <td>{formatDateLabel(item.created_at)}</td>
-                              <td>{periodText}</td>
-                              <td>{item.methodology_id || "-"}</td>
-                              <td>{item.assignee_name || "All staff"}</td>
-                              <td>{String(item.output_format || "zip").toUpperCase()}</td>
-                              <td>
-                                Trees {Number(summary.tree_inventory_count || 0)} | Tasks {Number(summary.task_timeline_count || 0)}
-                              </td>
-                              <td>
-                                <button
-                                  type="button"
-                                  className="green-work-live-tree-link"
-                                  onClick={() =>
-                                    exportVerraPackage(
-                                      normalizeVerraExportFormat(item.output_format),
-                                      {
-                                        monitoring_start: item.monitoring_start || "",
-                                        monitoring_end: item.monitoring_end || "",
-                                        methodology_id: item.methodology_id || "",
-                                        verifier_notes: item.verifier_notes || "",
-                                        generated_by: item.generated_by || "supervisor",
-                                        season_mode: (String(item.season_mode || "rainy").toLowerCase() === "dry"
-                                          ? "dry"
-                                          : "rainy") as SeasonMode,
-                                        assignee_name: item.assignee_name || "all",
-                                      },
-                                    )
-                                  }
-                                >
-                                  Export again
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                              const summary = item.payload_summary || {};
+                              return (
+                                <tr key={`verra-history-${item.id}`}>
+                                  <td>{formatDateLabel(item.created_at)}</td>
+                                  <td>{periodText}</td>
+                                  <td>{item.methodology_id || "-"}</td>
+                                  <td>{item.assignee_name || "All staff"}</td>
+                                  <td>{String(item.output_format || "zip").toUpperCase()}</td>
+                                  <td>
+                                    Trees {Number(summary.tree_inventory_count || 0)} | Tasks {Number(summary.task_timeline_count || 0)}
+                                  </td>
+                                  <td>
+                                    <button
+                                      type="button"
+                                      className="green-work-live-tree-link"
+                                      onClick={() =>
+                                        exportVerraPackage(
+                                          normalizeVerraExportFormat(item.output_format),
+                                          {
+                                            monitoring_start: item.monitoring_start || "",
+                                            monitoring_end: item.monitoring_end || "",
+                                            methodology_id: item.methodology_id || "",
+                                            verifier_notes: item.verifier_notes || "",
+                                            generated_by: item.generated_by || "supervisor",
+                                            season_mode: (String(item.season_mode || "rainy").toLowerCase() === "dry"
+                                              ? "dry"
+                                              : "rainy") as SeasonMode,
+                                            assignee_name: item.assignee_name || "all",
+                                          },
+                                        )
+                                      }
+                                    >
+                                      Export again
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </>
+              )}
             </div>
           )}
 
