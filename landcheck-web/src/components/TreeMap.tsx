@@ -117,7 +117,7 @@ type Props = {
   onViewChange?: (view: { lng: number; lat: number; zoom: number; bearing: number; pitch: number }) => void;
   fitBounds?: { lng: number; lat: number }[] | null;
   assignmentAreas?: Array<{ id?: number | string; label?: string | null; treeId?: number | null; geojson: any }>;
-  workflowMode?: "green" | "agric" | "relief_recovery";
+  workflowMode?: "green" | "agric" | "relief_recovery" | "csr";
   minHeight?: number;
 };
 
@@ -408,10 +408,13 @@ const getFeatureProps = (feature: any): TreeFeatureProps | null => {
   };
 };
 
-const buildTreeFeatureCollection = (items: TreePoint[], workflowMode: "green" | "agric" | "relief_recovery" = "green") => {
+const isFieldWorkflowMode = (workflowMode: "green" | "agric" | "relief_recovery" | "csr") =>
+  workflowMode === "agric" || workflowMode === "relief_recovery";
+
+const buildTreeFeatureCollection = (items: TreePoint[], workflowMode: "green" | "agric" | "relief_recovery" | "csr" = "green") => {
   const features = items
     .map((tree) => {
-      if (workflowMode !== "green" && tree.existing_area_geojson) return null;
+      if (isFieldWorkflowMode(workflowMode) && tree.existing_area_geojson) return null;
       const props = buildTreeFeatureProps(tree);
       if (!props) return null;
       return {
@@ -463,7 +466,7 @@ const formatReliefGeometryLabel = (geometryInput: any, tree: TreePoint) => {
 const buildAssignmentAreaFeatureCollection = (
   areas: Array<{ id?: number | string; label?: string | null; treeId?: number | null; geojson: any }>,
   trees: TreePoint[] = [],
-  workflowMode: "green" | "agric" | "relief_recovery" = "green",
+  workflowMode: "green" | "agric" | "relief_recovery" | "csr" = "green",
 ) => {
   const features: any[] = [];
   const seenGeometry = new Set<string>();
@@ -526,7 +529,7 @@ const buildAssignmentAreaFeatureCollection = (
   } as any;
 };
 
-const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null, loading = false, workflowMode: "green" | "agric" | "relief_recovery" = "green") => {
+const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null, loading = false, workflowMode: "green" | "agric" | "relief_recovery" | "csr" = "green") => {
   const tree = detail?.tree || {};
   const status = String(tree.status || base.status || "unknown");
   const species = String(tree.species || base.species || "-");
@@ -757,7 +760,7 @@ export default function TreeMap({
   const onSelectTreeRef = useRef(onSelectTree);
   const onTreeInspectRef = useRef(onTreeInspect);
   const treesRef = useRef(trees);
-  const workflowModeRef = useRef<"green" | "agric" | "relief_recovery">(workflowMode);
+  const workflowModeRef = useRef<"green" | "agric" | "relief_recovery" | "csr">(workflowMode);
   const mapReadyRef = useRef(false);
   const mapErrorRef = useRef<string | null>(null);
   const hoverPopupRef = useRef<mapboxgl.Popup | null>(null);
