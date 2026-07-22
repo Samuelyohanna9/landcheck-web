@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" fill="none" stroke="#0B5E42" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Route Path -->
+  <path d="M10 14c8 0 8 10 16 10s8 10 16 10" stroke-width="2"/>
+  <path d="M10 34c6 0 8-10 14-10" stroke="#B2D3C7" stroke-dasharray="3 3"/>
+  <!-- Nodes & Arrows -->
+  <circle cx="10" cy="14" r="3" fill="#0B5E42"/>
+  <circle cx="26" cy="24" r="3" fill="#0B5E42"/>
+  <circle cx="42" cy="34" r="3" fill="#0B5E42"/>
+  <path d="M18 19l2 2m-2 0l2-2" stroke-width="1.5"/>
+  <path d="M34 29l2 2m-2 0l2-2" stroke-width="1.5"/>
+  <!-- Badge Label 3 -->
+  <rect x="20" y="4" width="12" height="12" rx="3" fill="#FFFFFF" stroke="#0B5E42" stroke-width="1.5"/>
+  <text x="26" y="13" font-family="Arial, sans-serif" font-size="9" font-weight="bold" fill="#0B5E42" text-anchor="middle" stroke="none">3</text>
+</svg>
