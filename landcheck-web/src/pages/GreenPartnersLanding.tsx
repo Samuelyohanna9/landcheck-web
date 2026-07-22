@@ -626,20 +626,23 @@ export default function GreenPartnersLanding() {
         <div className="gp-shell">
           <div className="gp-footer-panel">
             <div>
-              <span className="gp-section-eyebrow">Next step</span>
-              <h2>Present LC Green Corporate like a premium implementation partner.</h2>
+              <span className="gp-section-eyebrow">GET STARTED</span>
+              <h2>Deliver verified restoration.</h2>
               <p>
-                Download the brochure, show the sample report, and take buyers into the operational dashboard only
-                when they are ready for the deeper conversation.
+                Start tracking your restoration projects with real-time field evidence and board-ready reporting.
               </p>
             </div>
             <div className="gp-footer-panel__actions">
-              <a href={BROCHURE_PDF_SRC} download>
-                Download brochure
-              </a>
-              <a href="/green-work/login">Open Work login</a>
-              <a href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Corporate%20Partnership">
-                Schedule a demo
+              <div className="gp-footer-buttons">
+                <a className="gp-btn gp-btn--primary" href="/green-work/login">
+                  Start Your Project
+                </a>
+                <a className="gp-btn gp-btn--secondary" href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Corporate%20Partnership">
+                  Schedule a Demo
+                </a>
+              </div>
+              <a className="gp-footer-link" href={BROCHURE_PDF_SRC} download>
+                Download brochure (PDF)
               </a>
             </div>
           </div>
