@@ -1,127 +1,128 @@
-@import url("https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&family=Sora:wght@600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Nunito+Sans:wght@400;600;700;800;900&family=Outfit:wght@600;700;800&display=swap");
 
 .green-auth-page {
   min-height: 100dvh;
   display: grid;
   place-items: center;
-  padding: 1rem;
-  background:
-    radial-gradient(120% 100% at 10% 0%, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0) 52%),
-    radial-gradient(70% 60% at 100% 12%, rgba(49, 162, 85, 0.18), rgba(49, 162, 85, 0) 58%),
-    linear-gradient(170deg, #edf8ee 0%, #d6ecd9 44%, #f4faf5 100%);
+  padding: 2.5rem 1rem;
+  background: 
+    radial-gradient(circle at 10% 20%, rgba(42, 176, 97, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(224, 166, 71, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(184, 227, 197, 0.12) 0%, transparent 60%),
+    #f2f8f4;
   font-family: "Nunito Sans", sans-serif;
+  position: relative;
+  overflow: hidden;
 }
 
 .green-auth-shell {
   width: min(1080px, 100%);
   display: grid;
-  gap: 1rem;
+  gap: 1.5rem;
+  position: relative;
+  z-index: 10;
 }
 
 .green-auth-shell.auth-form-layout {
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
-  align-items: start;
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 440px);
+  align-items: stretch;
+  gap: 2rem;
 }
 
 .green-auth-hero,
 .green-auth-form-card,
 .green-auth-note {
-  border-radius: 28px;
-  border: 1px solid rgba(19, 88, 45, 0.1);
-  background:
-    radial-gradient(90% 90% at 100% 0%, rgba(204, 242, 213, 0.68), rgba(204, 242, 213, 0) 56%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 252, 249, 0.96));
-  box-shadow: 0 18px 42px rgba(18, 56, 37, 0.08);
+  border-radius: 32px;
+  border: 1px solid rgba(19, 88, 45, 0.07);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: 
+    0 10px 30px rgba(18, 48, 36, 0.02),
+    0 32px 64px rgba(18, 48, 36, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .green-auth-hero {
-  padding: 1.25rem;
-  overflow: hidden;
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2rem;
+  position: relative;
 }
 
 .green-auth-hero.detail {
-  display: grid;
-  gap: 1rem;
-}
-
-.green-auth-hero.detail.sponsor {
-  background:
-    radial-gradient(80% 60% at 100% 0%, rgba(191, 242, 205, 0.68), rgba(191, 242, 205, 0) 54%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 252, 248, 0.96));
-}
-
-.green-auth-hero.detail.field {
-  background:
-    radial-gradient(80% 60% at 100% 0%, rgba(207, 241, 214, 0.68), rgba(207, 241, 214, 0) 54%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 251, 248, 0.96));
+  display: flex;
+  flex-direction: column;
+  gap: 1.8rem;
 }
 
 .green-auth-brand-tile {
-  width: 94px;
-  height: 94px;
+  width: 80px;
+  height: 80px;
   display: grid;
   place-items: center;
-  border-radius: 26px;
+  border-radius: 20px;
   background: #ffffff;
-  border: 1px solid rgba(19, 88, 45, 0.12);
-  box-shadow: 0 12px 32px rgba(18, 56, 37, 0.08);
+  border: 1px solid rgba(19, 88, 45, 0.08);
+  box-shadow: 
+    0 8px 20px rgba(18, 56, 37, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .green-auth-brand-tile.small {
-  width: 76px;
-  height: 76px;
-  border-radius: 22px;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
 }
 
 .green-auth-brand-tile img {
-  width: 72px;
-  height: 72px;
+  width: 58px;
+  height: 58px;
   object-fit: contain;
 }
 
 .green-auth-brand-tile.small img {
-  width: 58px;
-  height: 58px;
-}
-
-.green-auth-hero {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
+  width: 46px;
+  height: 46px;
 }
 
 .green-auth-hero-copy {
   display: grid;
-  gap: 0.4rem;
+  gap: 0.6rem;
+  width: 100%;
 }
 
 .green-auth-chip {
   width: fit-content;
   border-radius: 999px;
-  padding: 0.42rem 0.85rem;
-  background: rgba(232, 249, 237, 0.96);
-  border: 1px solid rgba(41, 162, 80, 0.16);
-  color: #0e7834;
-  font-size: 0.82rem;
+  padding: 0.44rem 0.85rem;
+  background: rgba(42, 176, 97, 0.08);
+  color: #1d864b;
+  font-size: 0.72rem;
   font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: none;
 }
 
 .green-auth-hero-copy h1,
 .green-auth-form-head h2 {
   margin: 0;
-  font-family: "Sora", sans-serif;
-  color: #173b28;
-  letter-spacing: -0.05em;
+  font-family: "Fraunces", serif;
+  color: #133126;
+  letter-spacing: -0.04em;
 }
 
 .green-auth-hero-copy h1 {
-  font-size: clamp(2.2rem, 5vw, 3.25rem);
-  line-height: 1.02;
+  font-size: clamp(2rem, 4.5vw, 3rem);
+  line-height: 1.08;
 }
 
 .green-auth-form-head h2 {
-  font-size: clamp(1.65rem, 4vw, 2rem);
-  line-height: 1.06;
+  font-size: clamp(1.6rem, 3.5vw, 2rem);
+  line-height: 1.1;
+  font-weight: 800;
 }
 
 .green-auth-hero-copy p,
@@ -131,104 +132,127 @@
 .green-auth-privacy,
 .green-auth-support span {
   margin: 0;
-  color: #4d6f5c;
-  line-height: 1.65;
+  color: #556d60;
+  line-height: 1.7;
+  font-size: 0.95rem;
 }
 
 .green-auth-route-grid {
   display: grid;
-  gap: 1rem;
+  gap: 1.1rem;
 }
 
 .green-auth-route-card {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr) auto;
-  gap: 1rem;
+  gap: 1.25rem;
   align-items: center;
-  padding: 1rem;
+  padding: 1.5rem;
   border-radius: 24px;
-  border: 1px solid rgba(19, 88, 45, 0.1);
-  background: rgba(255, 255, 255, 0.96);
-  color: #173b28;
+  border: 1px solid rgba(19, 88, 45, 0.08);
+  background: #ffffff;
+  color: #133126;
   cursor: pointer;
   text-align: left;
-  box-shadow: 0 12px 26px rgba(18, 56, 37, 0.04);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-}
-
-.green-auth-route-card.sponsor {
-  background: linear-gradient(180deg, rgba(253, 255, 253, 0.98), rgba(248, 252, 248, 0.96));
+  box-shadow: 0 10px 30px rgba(18, 48, 36, 0.03);
+  transition: transform 300ms cubic-bezier(0.25, 0.8, 0.25, 1), border-color 300ms ease, box-shadow 300ms ease;
 }
 
 .green-auth-route-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 16px 34px rgba(18, 56, 37, 0.08);
+  transform: translateY(-2px);
+  border-color: rgba(42, 176, 97, 0.2);
+  box-shadow: 0 16px 36px rgba(18, 48, 36, 0.06);
 }
 
 .green-auth-route-icon,
 .green-auth-detail-orb {
   width: 56px;
   height: 56px;
-  border-radius: 18px;
+  border-radius: 16px;
   display: grid;
   place-items: center;
-  background: rgba(41, 162, 80, 0.08);
-  color: #0f7a34;
+  background: rgba(42, 176, 97, 0.08);
+  color: #1d864b;
+  transition: background 300ms ease, color 300ms ease;
+}
+
+.green-auth-route-card:hover .green-auth-route-icon {
+  background: #1f8f57;
+  color: #ffffff;
 }
 
 .green-auth-route-icon svg,
 .green-auth-detail-orb svg {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
 }
 
 .green-auth-route-head {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.4rem;
 }
 
 .green-auth-route-head strong {
-  font-size: 1.12rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
 }
 
 .green-auth-route-head span {
   border-radius: 999px;
-  padding: 0.24rem 0.62rem;
-  background: rgba(41, 162, 80, 0.08);
-  color: #0f7a34;
-  font-size: 0.75rem;
+  padding: 0.25rem 0.65rem;
+  background: rgba(42, 176, 97, 0.08);
+  color: #1d864b;
+  font-size: 0.72rem;
   font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .green-auth-route-arrow {
-  color: #2c8f4a;
+  color: #1f8f57;
   font-size: 1.35rem;
   font-weight: 800;
+  transition: transform 300ms ease;
+}
+
+.green-auth-route-card:hover .green-auth-route-arrow {
+  transform: translateX(4px);
 }
 
 .green-auth-note {
-  padding: 1rem 1.1rem;
+  padding: 1.5rem 2rem;
 }
 
 .green-auth-note strong,
 .green-auth-guidance-card strong,
 .green-auth-support button,
 .green-auth-toggle button {
-  color: #173b28;
+  color: #133126;
   font-weight: 800;
 }
 
 .green-auth-back {
   width: fit-content;
   border: 0;
-  background: transparent;
-  color: #1b5a35;
-  font: inherit;
+  background: rgba(42, 176, 97, 0.08);
+  color: #1d864b;
+  font-size: 0.72rem;
   font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
   cursor: pointer;
+  transition: background 200ms ease, color 200ms ease;
+}
+
+.green-auth-back:hover {
+  background: #1f8f57;
+  color: #ffffff;
 }
 
 .green-auth-detail-head {
@@ -236,78 +260,105 @@
   justify-content: space-between;
   gap: 1rem;
   align-items: center;
+  width: 100%;
 }
 
 .green-auth-guidance-card {
   border-radius: 24px;
-  padding: 1rem;
-  background: rgba(247, 252, 248, 0.96);
-  border: 1px solid rgba(19, 88, 45, 0.08);
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(19, 88, 45, 0.06);
+  width: 100%;
+}
+
+.green-auth-guidance-card strong {
+  display: block;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #133126;
 }
 
 .green-auth-guidance-card ul {
-  margin: 0.75rem 0 0;
-  padding-left: 1rem;
+  margin: 0.8rem 0 0;
+  padding-left: 1.1rem;
   display: grid;
-  gap: 0.55rem;
+  gap: 0.6rem;
+}
+
+.green-auth-guidance-card li {
+  font-size: 0.88rem;
+  color: #4b6255;
 }
 
 .green-auth-guidance-divider {
   height: 1px;
-  margin: 1rem 0;
+  margin: 1.25rem 0;
   background: rgba(19, 88, 45, 0.08);
 }
 
 .green-auth-form-card {
-  padding: 1.1rem;
+  padding: 3rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .green-auth-form-head {
   display: grid;
-  gap: 0.42rem;
-  margin-bottom: 1rem;
+  gap: 0.5rem;
+  margin-bottom: 1.8rem;
 }
 
 .green-auth-form-eyebrow {
-  color: #0f7a34;
-  font-size: 0.78rem;
-  font-weight: 900;
-  letter-spacing: 0.09em;
+  color: #1d864b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+.green-auth-form-head p {
+  font-size: 0.88rem;
+  color: #556d60;
+  line-height: 1.6;
 }
 
 .green-auth-form {
   display: grid;
-  gap: 0.85rem;
+  gap: 1.1rem;
 }
 
 .green-auth-field {
   display: grid;
-  gap: 0.42rem;
+  gap: 0.45rem;
 }
 
 .green-auth-field span {
   color: #1c5637;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .green-auth-field input {
   width: 100%;
   border: 1px solid rgba(19, 88, 45, 0.12);
-  border-radius: 18px;
-  background: #fbfefb;
-  color: #163826;
-  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #133126;
+  padding: 0.85rem 1rem;
   font: inherit;
+  font-size: 0.95rem;
+  box-shadow: 0 2px 6px rgba(18, 48, 36, 0.01);
+  transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 
 .green-auth-field input:focus {
   outline: none;
-  border-color: rgba(41, 162, 80, 0.34);
-  box-shadow: 0 0 0 4px rgba(41, 162, 80, 0.12);
+  border-color: #1f8f57;
+  box-shadow: 0 0 0 4px rgba(31, 143, 86, 0.12);
 }
 
 .green-auth-password-wrap {
@@ -315,29 +366,35 @@
 }
 
 .green-auth-password-wrap input {
-  padding-right: 5rem;
+  padding-right: 4.5rem;
 }
 
 .green-auth-password-eye {
   position: absolute;
   top: 50%;
-  right: 0.5rem;
+  right: 0.6rem;
   transform: translateY(-50%);
   border: 1px solid rgba(19, 88, 45, 0.12);
-  border-radius: 12px;
-  padding: 0.38rem 0.62rem;
-  background: #f6faf7;
-  color: #1d5d39;
+  border-radius: 10px;
+  padding: 0.35rem 0.6rem;
+  background: #fbfdfb;
+  color: #1d864b;
   font: inherit;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 800;
   cursor: pointer;
+  transition: background-color 200ms ease, border-color 200ms ease;
+}
+
+.green-auth-password-eye:hover {
+  background: rgba(42, 176, 97, 0.06);
+  border-color: #1f8f57;
 }
 
 .green-auth-segment {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.7rem;
+  gap: 0.8rem;
 }
 
 .green-auth-segment button,
@@ -350,71 +407,113 @@
 }
 
 .green-auth-segment button {
-  min-height: 48px;
-  border-radius: 18px;
-  background: #f4faf5;
-  color: #204f37;
+  min-height: 46px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.8);
+  color: #1d864b;
   font-weight: 800;
+  font-size: 0.9rem;
   border: 1px solid rgba(19, 88, 45, 0.1);
+  transition: background 200ms ease, border-color 200ms ease, color 200ms ease;
 }
 
 .green-auth-segment button.active {
-  background: linear-gradient(180deg, #1a9444, #0f7a34);
-  color: #f5fff8;
-  box-shadow: 0 14px 28px rgba(18, 104, 50, 0.18);
+  background: linear-gradient(135deg, #1f8f57 0%, #166f3b 100%);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 10px 24px rgba(31, 140, 88, 0.18);
 }
 
 .green-auth-support,
 .green-auth-toggle {
-  display: grid;
-  gap: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.86rem;
 }
 
 .green-auth-support button,
 .green-auth-toggle button {
   width: fit-content;
   padding: 0;
-  color: #0f7a34;
+  color: #1f8f57;
   background: transparent;
   font-weight: 800;
+  font-size: 0.86rem;
+  text-decoration: underline;
+  transition: color 200ms ease;
+}
+
+.green-auth-support button:hover,
+.green-auth-toggle button:hover {
+  color: #166f3b;
+}
+
+.green-auth-support span {
+  font-size: 0.78rem;
+  color: #718d7d;
 }
 
 .green-auth-error {
   margin: 0;
-  color: #9e1d1d;
+  color: #b91c1c;
   font-size: 0.88rem;
   font-weight: 700;
+  background: #fdf2f2;
+  border: 1px solid rgba(185, 28, 28, 0.2);
+  border-radius: 12px;
+  padding: 10px 14px;
 }
 
 .green-auth-submit {
-  min-height: 54px;
-  border-radius: 20px;
-  background: linear-gradient(180deg, #123f27, #0d311f);
-  color: #f3fff7;
-  font-weight: 900;
-  letter-spacing: 0.03em;
+  min-height: 50px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1f8f57 0%, #166f3b 100%);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  box-shadow: 0 18px 34px rgba(18, 56, 37, 0.18);
+  box-shadow: 0 12px 28px rgba(31, 140, 88, 0.2);
+  transition: transform 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
+}
+
+.green-auth-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 34px rgba(31, 140, 88, 0.3);
 }
 
 .green-auth-submit:disabled,
 .green-auth-support button:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .green-auth-privacy {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
+  font-size: 0.8rem;
+  color: #718d7d;
+  text-align: center;
 }
 
 .green-auth-privacy a {
-  color: #0f7a34;
+  color: #1f8f57;
   font-weight: 800;
+  text-decoration: underline;
 }
 
 @media (max-width: 920px) {
   .green-auth-shell.auth-form-layout {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .green-auth-hero {
+    padding: 2rem;
+  }
+  
+  .green-auth-form-card {
+    padding: 2.2rem 1.8rem;
   }
 }
 
@@ -426,10 +525,13 @@
   .green-auth-hero {
     flex-direction: column;
     align-items: flex-start;
+    gap: 1.5rem;
   }
 
   .green-auth-route-card {
     grid-template-columns: 48px minmax(0, 1fr);
+    padding: 1.2rem;
+    border-radius: 20px;
   }
 
   .green-auth-route-arrow {
@@ -438,5 +540,9 @@
 
   .green-auth-detail-head {
     width: 100%;
+  }
+  
+  .green-auth-guidance-card {
+    padding: 1.2rem;
   }
 }
