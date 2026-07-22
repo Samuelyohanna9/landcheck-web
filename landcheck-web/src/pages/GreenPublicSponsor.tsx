@@ -763,9 +763,8 @@ export default function GreenPublicSponsor() {
           <span className="gps-section-eyebrow">It's That Easy</span>
           <h2>How Sponsoring a Tree Works</h2>
           <div className="gps-how-it-works-grid">
-            {HOW_IT_WORKS_STEPS.map((step, i) => (
+            {HOW_IT_WORKS_STEPS.map((step) => (
               <div className="gps-how-step" key={step.title}>
-                <span className="gps-how-step-num">{i + 1}</span>
                 <span className="gps-how-step-icon"><GpsIcon name={step.icon} className="gps-icon" /></span>
                 <strong>{step.title}</strong>
                 <p>{step.body}</p>
