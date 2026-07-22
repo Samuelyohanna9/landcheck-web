@@ -515,36 +515,26 @@ export default function GreenPartnersLanding() {
       </section>
 
       <section className="gp-proof-stage">
-        <div className="gp-shell gp-proof-grid">
-          <article className="gp-proof-card">
-            <span className="gp-section-eyebrow">FIELD DEMONSTRATION</span>
-            <h3>See how field planting is verified</h3>
-            <p>Watch how forestry operators utilize the LandCheck platform in remote areas to log coordinates and verify survival.</p>
-            <video controls preload="metadata" poster="/thumpnail_public.jpg" className="gp-demo-video">
-              <source src={HERO_VIDEO_SRC} type="video/mp4" />
-            </video>
-          </article>
-
-          <article className="gp-proof-card gp-proof-card--dashboard">
-            <span className="gp-section-eyebrow">PLATFORM WALKTHROUGH</span>
-            <h3>Monitor trees, routes, and impact metrics in real time</h3>
-            <p>
-              View coordinates, verify high-resolution photo evidence, track maintenance logs, and generate executive-level reports.
-            </p>
-            <div className="gp-proof-screenshot">
-              <img
-                src="/Screenshot lndcheck work.png"
-                alt="LandCheck Green dashboard overview"
-                width="1400"
-                height="900"
-                loading="lazy"
-              />
+        <div className="gp-shell">
+          <div className="gp-proof-showcase">
+            <div className="gp-proof-content">
+              <span className="gp-section-eyebrow">FIELD DEMONSTRATION</span>
+              <h2>See how field planting is verified</h2>
+              <p>
+                Watch how our partner foresters and field agents utilize the LandCheck Green mobile application to log sub-meter GPS coordinates, upload instant photo evidence, and register new growth.
+              </p>
+              <div className="gp-proof-actions">
+                <a href="/green-work/login" className="gp-btn gp-btn--primary">
+                  Try the Workspace
+                </a>
+              </div>
             </div>
-            <div className="gp-proof-actions">
-              <a href="/green-work/login">View full dashboard</a>
-              <a href="mailto:landchecktech@gmail.com?subject=LC%20Green%20Demo">Request a demo</a>
+            <div className="gp-proof-media">
+              <video controls preload="metadata" poster="/thumpnail_public.jpg" className="gp-demo-video">
+                <source src={HERO_VIDEO_SRC} type="video/mp4" />
+              </video>
             </div>
-          </article>
+          </div>
         </div>
       </section>
 
