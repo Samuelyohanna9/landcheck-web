@@ -210,7 +210,7 @@ const dueDiligenceAssets = [
   {
     eyebrow: "Brochure PDF",
     title: "Download the LC Green Corporate brochure",
-    detail: "A quick executive handout for buyer conversations.",
+    detail: "A comprehensive overview of our technology stack, partnership structures, and delivery models.",
     imageSrc: "/Screenshot lndcheck work.png",
     href: BROCHURE_PDF_SRC,
     cta: "Download brochure",
@@ -218,8 +218,8 @@ const dueDiligenceAssets = [
   },
   {
     eyebrow: "Sample CSR report",
-    title: "Show stakeholders what the reporting package looks like",
-    detail: "Preview the premium CSR reporting package.",
+    title: "Preview a verified audit-ready impact report",
+    detail: "See how we compile field photographs, coordinates, and seedling survival statistics into board-ready PDFs.",
     imageSrc: "/Screenshot landcheck report.png",
     href: "/lc-green-csr-sample-report.pdf",
     cta: "Download sample report",
@@ -227,8 +227,8 @@ const dueDiligenceAssets = [
   },
   {
     eyebrow: "Public sponsor page",
-    title: "See the premium public-facing sponsorship route",
-    detail: "Open the supporter route with payment, proof, and updates.",
+    title: "Explore the public supporter portal",
+    detail: "Experience how sponsors fund trees online, download digital certificates, and track growth interactively.",
     imageSrc: "/sponsor-tree-app.jpeg",
     href: "/sponsor",
     cta: "Open public sponsor page",
@@ -486,9 +486,9 @@ export default function GreenPartnersLanding() {
         <div className="gp-shell">
           <div className="gp-photo-grid">
             <article className="gp-photo-lead">
-              <span className="gp-section-eyebrow">Field reality</span>
-              <h2>Show the work clearly.</h2>
-              <p>Use real field photos to make the platform feel credible before the demo starts.</p>
+              <span className="gp-section-eyebrow">Field transparency</span>
+              <h2>Real-time field validation.</h2>
+              <p>We verify every planting activity using high-precision GPS coordinates, timestamps, and physical photo validation directly from the field.</p>
               <ul className="gp-photo-points">
                 {proofHighlights.map((item) => (
                   <li key={item}>{item}</li>
@@ -514,8 +514,8 @@ export default function GreenPartnersLanding() {
       <section className="gp-strength-stage">
         <div className="gp-shell">
           <div className="gp-section-intro gp-section-intro--center">
-            <span className="gp-section-eyebrow">Why LC Green</span>
-            <h2>Why LC Green feels stronger than a generic field app</h2>
+            <span className="gp-section-eyebrow">TRUSTED RESTORATION</span>
+            <h2>Built for professional environmental projects</h2>
           </div>
           <div className="gp-pill-grid">
             {whyPillars.map((pillar) => (
@@ -533,19 +533,19 @@ export default function GreenPartnersLanding() {
       <section className="gp-proof-stage">
         <div className="gp-shell gp-proof-grid">
           <article className="gp-proof-card">
-            <span className="gp-section-eyebrow">Truth and transparency</span>
-            <h3>Show the platform before the sales call</h3>
-            <p>Let buyers see the platform in action before they commit to a full demo.</p>
+            <span className="gp-section-eyebrow">FIELD DEMONSTRATION</span>
+            <h3>See how field planting is verified</h3>
+            <p>Watch how forestry operators utilize the LandCheck platform in remote areas to log coordinates and verify survival.</p>
             <video controls preload="metadata" poster="/thumpnail_public.jpg" className="gp-demo-video">
               <source src={HERO_VIDEO_SRC} type="video/mp4" />
             </video>
           </article>
 
           <article className="gp-proof-card gp-proof-card--dashboard">
-            <span className="gp-section-eyebrow">Platform walkthrough</span>
-            <h3>Walk buyers through the trees, routes, and proof in one view.</h3>
+            <span className="gp-section-eyebrow">PLATFORM WALKTHROUGH</span>
+            <h3>Monitor trees, routes, and impact metrics in real time</h3>
             <p>
-              Use one premium view to explain route control, implementation evidence, and reporting outputs.
+              View coordinates, verify high-resolution photo evidence, track maintenance logs, and generate executive-level reports.
             </p>
             <div className="gp-proof-screenshot">
               <img
@@ -567,9 +567,9 @@ export default function GreenPartnersLanding() {
       <section className="gp-budget-stage">
         <div className="gp-shell">
           <div className="gp-section-intro gp-section-intro--center">
-            <span className="gp-section-eyebrow">Quick resources</span>
-            <h2>Keep the next step clear</h2>
-            <p>Use compact resources instead of overwhelming buyers with long text.</p>
+            <span className="gp-section-eyebrow">PLATFORM RESOURCES</span>
+            <h2>Explore our platform assets</h2>
+            <p>Access our corporate brochures, download sample reports, or review the public checkout portal.</p>
           </div>
           <div className="gp-asset-grid">
             {dueDiligenceAssets.map((asset) => (
