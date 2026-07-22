@@ -200,11 +200,6 @@ const photoMoments = [
   },
 ];
 
-const proofHighlights = [
-  "High-resolution geotagged photos",
-  "Secure cryptographic GPS coordinates",
-  "Unified NGO and Corporate workspaces",
-];
 
 const dueDiligenceAssets = [
   {
@@ -485,17 +480,6 @@ export default function GreenPartnersLanding() {
       <section className="gp-photo-stage">
         <div className="gp-shell">
           <div className="gp-photo-grid">
-            <article className="gp-photo-lead">
-              <span className="gp-section-eyebrow">FIELDPROOF</span>
-              <h2>Uncompromising verification from the soil up.</h2>
-              <p>We verify every planting activity using high-precision GPS coordinates, timestamps, and physical photo validation directly from the field.</p>
-              <ul className="gp-photo-points">
-                {proofHighlights.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </article>
-
             {photoMoments.map((moment) => (
               <article key={moment.title} className="gp-photo-card">
                 <div className="gp-photo-card__media">
