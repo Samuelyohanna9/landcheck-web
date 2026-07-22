@@ -603,20 +603,33 @@
   width: min(100%, 930px);
   min-height: 420px;
   margin-right: 110px;
+  margin-left: 0;
   padding: 1.2rem;
   border: 1px solid rgba(18, 62, 36, 0.09);
   border-radius: 28px;
+  transition: margin 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gp-device--desktop-public {
+  margin-left: 110px;
+  margin-right: 0;
 }
 
 .gp-device--phone {
   position: absolute;
-  right: 0;
+  left: calc(100% - 220px);
   bottom: 0;
   width: 220px;
   height: 470px;
   padding: 0.7rem;
   border: 8px solid #10251b;
   border-radius: 42px;
+  transition: left 500ms cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 2;
+}
+
+.gp-device--phone-public {
+  left: 24px;
 }
 
 .gp-model-showcase__footer {
@@ -1260,15 +1273,26 @@
     width: 100%;
     min-height: 320px;
     margin-right: 0;
+    margin-left: 0;
+  }
+
+  .gp-device--desktop-public {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
   }
 
   .gp-device--phone {
     position: relative;
+    left: auto !important;
     right: auto;
     bottom: auto;
     width: min(220px, 62%);
     height: 430px;
     margin: 1rem auto 0;
+  }
+
+  .gp-device--phone-public {
+    left: auto !important;
   }
 
   .gp-model-showcase__footer {

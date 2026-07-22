@@ -444,7 +444,7 @@ export default function GreenPartnersLanding() {
               </div>
 
               <div className="gp-device-stage">
-                <div className="gp-device gp-device--desktop">
+                <div className={`gp-device gp-device--desktop gp-device--desktop-${activeModel.id}`}>
                   <img
                     src={activeModel.desktopImage}
                     alt={activeModel.selectorTitle}
@@ -454,7 +454,7 @@ export default function GreenPartnersLanding() {
                     loading="lazy"
                   />
                 </div>
-                <div className="gp-device gp-device--phone">
+                <div className={`gp-device gp-device--phone gp-device--phone-${activeModel.id}`}>
                   <img
                     src={activeModel.phoneImage}
                     alt={`${activeModel.selectorTitle} mobile preview`}
