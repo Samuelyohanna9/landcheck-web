@@ -1270,37 +1270,66 @@
 }
 .gps-how-it-works {
   max-width: 1180px;
-  margin: 48px auto 0;
+  margin: 56px auto 0;
   padding: 0 24px;
   text-align: center;
 }
-.gps-how-it-works h2 { font-size: 1.6rem; font-weight: 700; color: var(--gps-text); margin: 0 0 30px; }
+.gps-how-it-works h2 { font-size: 1.75rem; font-weight: 700; color: var(--gps-text); margin: 0 0 40px; letter-spacing: -0.02em; }
+
 .gps-how-it-works-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 24px;
+  position: relative;
 }
-.gps-how-step { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.gps-how-step-num {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--gps-gold);
+
+@media (min-width: 641px) {
+  .gps-how-it-works-grid::before {
+    content: "";
+    position: absolute;
+    top: 32px;
+    left: 12.5%;
+    right: 12.5%;
+    height: 2px;
+    background: repeating-linear-gradient(to right, rgba(42, 176, 97, 0.2) 0, rgba(42, 176, 97, 0.2) 6px, transparent 6px, transparent 12px);
+    z-index: 1;
+  }
 }
+
+.gps-how-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 2;
+}
+
 .gps-how-step-icon {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: var(--gps-brand-light);
+  background: #ffffff;
+  border: 2px solid rgba(42, 176, 97, 0.16);
   color: var(--gps-brand);
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 8px 24px rgba(42, 176, 97, 0.05);
+  transition: transform 300ms cubic-bezier(0.25, 0.8, 0.25, 1), border-color 300ms ease, box-shadow 300ms ease;
 }
+
+.gps-how-step:hover .gps-how-step-icon {
+  transform: scale(1.1);
+  border-color: var(--gps-brand);
+  box-shadow: 0 12px 28px rgba(42, 176, 97, 0.14);
+}
+
 .gps-how-step-icon .gps-icon { width: 28px; height: 28px; }
-.gps-how-step strong { font-size: 0.98rem; font-weight: 700; color: var(--gps-text); }
-.gps-how-step p { font-size: 0.84rem; color: var(--gps-text-muted); line-height: 1.5; max-width: 220px; }
+.gps-how-step strong { font-size: 1rem; font-weight: 700; color: var(--gps-text); margin-top: 2px; }
+.gps-how-step p { font-size: 0.85rem; color: var(--gps-text-muted); line-height: 1.6; max-width: 220px; margin: 0; }
 
 /* ─── Impact stats band (real, verified-payment totals) ─────────── */
 .gps-impact-band { margin-top: 48px; background: var(--gps-brand-dark); padding: 40px 24px; }
