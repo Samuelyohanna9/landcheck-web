@@ -611,6 +611,61 @@ export default function GreenPartnersLanding() {
           </div>
         </div>
       </footer>
+
+      <footer className="gp-global-footer">
+        <div className="gp-shell">
+          <div className="gp-global-footer__top">
+            <div className="gp-footer-brand">
+              <img src="/green-logo-cropped-700.png" alt="LandCheck Green" className="gp-footer-logo" />
+              <p className="gp-footer-brand-text">
+                Verifiably restoring forests through cryptographic site evidence, real-time tracking, and board-ready reporting.
+              </p>
+              <div className="gp-footer-badges">
+                <span className="gp-badge">GPS Geotagged</span>
+                <span className="gp-badge">Audit-Ready</span>
+              </div>
+            </div>
+            
+            <div className="gp-footer-links-grid">
+              <div className="gp-footer-col">
+                <h4>Workspaces</h4>
+                <ul>
+                  <li><a href="/green/login/field">NGO Campaign Portal</a></li>
+                  <li><a href="/green-work/login">CSR Onboarding</a></li>
+                  <li><a href="/sponsor">Public Sponsorships</a></li>
+                  <li><a href="/green/footprint">Footprint Calculator</a></li>
+                </ul>
+              </div>
+              <div className="gp-footer-col">
+                <h4>Solutions</h4>
+                <ul>
+                  <li><a href="#platform-routes">Corporate CSR Donors</a></li>
+                  <li><a href="#platform-routes">Planting NGOs</a></li>
+                  <li><a href="#platform-routes">Public Campaigns</a></li>
+                </ul>
+              </div>
+              <div className="gp-footer-col">
+                <h4>Resources</h4>
+                <ul>
+                  <li><a href="/lc-green-corporate-brochure.pdf" download>Capability Brochure</a></li>
+                  <li><a href="/lc-green-csr-sample-report.pdf" download>CSR Impact Template</a></li>
+                  <li><a href="/privacy">Privacy Policy</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div className="gp-global-footer__bottom">
+            <p className="gp-footer-copyright">
+              © {new Date().getFullYear()} LandCheck Technology Ltd. All rights reserved.
+            </p>
+            <div className="gp-footer-status">
+              <span className="gp-status-indicator"></span>
+              <span>Platform Status: Active</span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
