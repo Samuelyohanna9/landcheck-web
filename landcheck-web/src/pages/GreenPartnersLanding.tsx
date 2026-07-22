@@ -208,30 +208,30 @@ const proofHighlights = [
 
 const dueDiligenceAssets = [
   {
-    eyebrow: "Brochure PDF",
-    title: "Download the LC Green Corporate brochure",
-    detail: "A comprehensive overview of our technology stack, partnership structures, and delivery models.",
+    eyebrow: "Capability Statement",
+    title: "Download the corporate capability brochure",
+    detail: "Review our technology stack, service level agreements, and enterprise-grade delivery models.",
     imageSrc: "/Screenshot lndcheck work.png",
     href: BROCHURE_PDF_SRC,
     cta: "Download brochure",
     download: true,
   },
   {
-    eyebrow: "Sample CSR report",
+    eyebrow: "Impact Report Template",
     title: "Preview a verified audit-ready impact report",
-    detail: "See how we compile field photographs, coordinates, and seedling survival statistics into board-ready PDFs.",
+    detail: "See how field photographs, coordinates, and seedling survival statistics compile into CSR-compliant PDFs.",
     imageSrc: "/Screenshot landcheck report.png",
     href: "/lc-green-csr-sample-report.pdf",
     cta: "Download sample report",
     download: true,
   },
   {
-    eyebrow: "Public sponsor page",
-    title: "Explore the public supporter portal",
-    detail: "Experience how sponsors fund trees online, download digital certificates, and track growth interactively.",
+    eyebrow: "Supporter Experience",
+    title: "Explore the public supporter dashboard",
+    detail: "See how sponsors fund restoration projects online, download certificates, and track tree growth interactively.",
     imageSrc: "/sponsor-tree-app.jpeg",
     href: "/sponsor",
-    cta: "Open public sponsor page",
+    cta: "Launch demo portal",
   },
 ];
 
@@ -627,9 +627,9 @@ export default function GreenPartnersLanding() {
           <div className="gp-footer-panel">
             <div>
               <span className="gp-section-eyebrow">GET STARTED</span>
-              <h2>Deliver verified restoration.</h2>
+              <h2>Join the ecosystem.</h2>
               <p>
-                Start tracking your restoration projects with real-time field evidence and board-ready reporting.
+                Whether you are a planting partner, a corporate donor, or an online sponsor, LandCheck Green is your single source of environmental truth.
               </p>
             </div>
             <div className="gp-footer-panel__actions">
@@ -641,9 +641,6 @@ export default function GreenPartnersLanding() {
                   Schedule a Demo
                 </a>
               </div>
-              <a className="gp-footer-link" href={BROCHURE_PDF_SRC} download>
-                Download brochure (PDF)
-              </a>
             </div>
           </div>
         </div>
