@@ -220,14 +220,6 @@ const dueDiligenceAssets = [
     cta: "Download sample report",
     download: true,
   },
-  {
-    eyebrow: "Supporter Experience",
-    title: "Explore the public supporter dashboard",
-    detail: "See how sponsors fund restoration projects online, download certificates, and track tree growth interactively.",
-    imageSrc: "/sponsor-tree-app.jpeg",
-    href: "/sponsor",
-    cta: "Launch demo portal",
-  },
 ];
 
 function formatTreeMetric(value: number | null): string {
