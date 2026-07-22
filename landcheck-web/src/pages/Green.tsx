@@ -3362,7 +3362,6 @@ export default function Green() {
   ]
     .filter(Boolean)
     .join(" ");
-  const heroPartnerLogoUrl = greenHeaderPartnerLogoUrl || GREEN_LOGO_SRC;
   const projectCardSelectedLabel = activeProject?.location_text ? `${activeProject.name} · ${activeProject.location_text}` : activeProject?.name || "Choose a project";
   const survivalQualityLabel =
     survivalRate >= 90 ? "Excellent" : survivalRate >= 75 ? "Strong" : survivalRate >= 50 ? "Fair" : "Needs attention";
@@ -3473,9 +3472,11 @@ export default function Green() {
               <span className="green-mobile-hero-logo" aria-hidden="true">
                 <img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="40" height="40" />
               </span>
-              <span className="green-mobile-hero-logo" aria-hidden="true">
-                <img src={heroPartnerLogoUrl} alt={greenHeaderPartnerName || workflowLabels.appTitle} width="40" height="40" />
-              </span>
+              {greenHeaderPartnerLogoUrl ? (
+                <span className="green-mobile-hero-logo" aria-hidden="true">
+                  <img src={greenHeaderPartnerLogoUrl} alt={greenHeaderPartnerName || workflowLabels.appTitle} width="40" height="40" />
+                </span>
+              ) : null}
             </div>
             <div className="green-mobile-hero-brand-copy">
               <strong>{workflowLabels.appTitle}</strong>
