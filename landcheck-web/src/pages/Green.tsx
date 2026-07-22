@@ -835,14 +835,17 @@ function MapTileIcon() {
 
 function TreeTileIcon() {
   return (
-    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
-      <ellipse cx="32" cy="52" rx="18" ry="4" fill="#9ac6a4" />
-      <rect x="28" y="32" width="8" height="18" fill="#7b4f2b" />
-      <circle cx="23" cy="30" r="10" fill="#3f8f2f" />
-      <circle cx="41" cy="30" r="10" fill="#3d8a2d" />
-      <circle cx="32" cy="22" r="12" fill="#67b13c" />
-      <circle cx="18" cy="38" r="8" fill="#2f7b23" />
-      <circle cx="46" cy="38" r="8" fill="#2f7b23" />
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" className="green-premium-tree-svg">
+      <ellipse cx="32" cy="54" rx="16" ry="3.5" fill="rgba(19, 49, 38, 0.12)" />
+      <path d="M32 54V34" stroke="#5c3f25" strokeWidth="4" strokeLinecap="round" />
+      <path d="M32 44l-6-6" stroke="#5c3f25" strokeWidth="3" strokeLinecap="round" />
+      <path d="M32 40l6-6" stroke="#5c3f25" strokeWidth="3" strokeLinecap="round" />
+      <path d="M26 38l-4-2" stroke="#5c3f25" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M38 34l4-2" stroke="#5c3f25" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M32 12C20 24 16 38 18 42c2 4 10 6 14 6s12-2 14-6c2-4-2-18-14-30z" fill="#135132" opacity="0.85" />
+      <path d="M32 14C22 25 18 37 20 40c1.5 3 8 4.5 12 4.5s10.5-1.5 12-4.5c2-3-2-15-12-26z" fill="#1e7e4c" />
+      <path d="M32 14c-5 8-8 17-8 21 0 3 4 4.5 8 4.5s8-1.5 8-4.5c0-4-3-13-8-21z" fill="#42b876" opacity="0.9" />
+      <path d="M32 17c-2 5-3.5 11-3.5 13.5 0 2 2.5 3 3.5 3s3.5-1 3.5-3c0-2.5-1.5-8.5-3.5-13.5z" fill="#86efac" opacity="0.8" />
     </svg>
   );
 }
@@ -870,9 +873,11 @@ function WalletIcon() {
 
 function LocationIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M12 21s6-5.7 6-11a6 6 0 1 0-12 0c0 5.3 6 11 6 11Z" fill="none" stroke="currentColor" strokeWidth="2" />
-      <circle cx="12" cy="10" r="2.5" fill="none" stroke="currentColor" strokeWidth="2" />
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" className="green-premium-location-svg">
+      <ellipse cx="32" cy="54" rx="12" ry="3" fill="rgba(19, 49, 38, 0.12)" />
+      <path d="M32 54c8-4 14-16 14-23a14 14 0 1 0-28 0c0 7 6 19 14 23z" fill="#1e7e4c" stroke="#135132" strokeWidth="2.5" strokeLinejoin="round" />
+      <circle cx="32" cy="31" r="5" fill="#ffffff" />
+      <path d="M32 20a11 11 0 0 1 11 11" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -3757,9 +3762,27 @@ export default function Green() {
             {activeWorkflowProfile === "green" ? <TreeTileIcon /> : <LocationIcon />}
           </span>
           <div className="green-overview-proof-badges">
-            <span>Mapped {workflowLabels.entityPlural.toLowerCase()}</span>
-            <span>Care updates</span>
-            <span>Photo proof</span>
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              Mapped {workflowLabels.entityPlural.toLowerCase()}
+            </span>
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+                <path d="m9 12 2 2 4-4" />
+              </svg>
+              Care updates
+            </span>
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+              Photo proof
+            </span>
           </div>
         </section>
           </>
