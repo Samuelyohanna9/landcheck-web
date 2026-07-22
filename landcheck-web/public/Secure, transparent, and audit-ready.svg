@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <!-- Audit Clipboard Board -->
+  <rect x="12" y="22" width="46" height="76" rx="4" fill="#E8F4EC" stroke="#1A1A1A" stroke-width="2.5"/>
+  <!-- Top Clip -->
+  <rect x="25" y="16" width="20" height="10" rx="2" fill="#1E5631" stroke="#1A1A1A" stroke-width="2"/>
+  <circle cx="35" cy="21" r="2" fill="#FFFFFF"/>
+
+  <!-- Checklist Items (Boxes + Lines) -->
+  <!-- Item 1 -->
+  <rect x="18" y="34" width="8" height="8" rx="1" fill="#4C8C5A" stroke="#1A1A1A" stroke-width="1.5"/>
+  <path d="M 20 38 L 22 40 L 25 36" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="30" y1="38" x2="50" y2="38" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Item 2 -->
+  <rect x="18" y="48" width="8" height="8" rx="1" fill="#4C8C5A" stroke="#1A1A1A" stroke-width="1.5"/>
+  <path d="M 20 52 L 22 54 L 25 50" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="30" y1="52" x2="48" y2="52" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Item 3 -->
+  <rect x="18" y="62" width="8" height="8" rx="1" fill="#4C8C5A" stroke="#1A1A1A" stroke-width="1.5"/>
+  <path d="M 20 66 L 22 68 L 25 64" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="30" y1="66" x2="45" y2="66" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Item 4 -->
+  <rect x="18" y="76" width="8" height="8" rx="1" fill="#4C8C5A" stroke="#1A1A1A" stroke-width="1.5"/>
+  <path d="M 20 80 L 22 82 L 25 78" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="30" y1="80" x2="48" y2="80" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Security Key (Middle) -->
+  <circle cx="68" cy="36" r="9" fill="#1E5631" stroke="#1A1A1A" stroke-width="2.5"/>
+  <circle cx="68" cy="36" r="4" fill="#E8F4EC"/>
+  <path d="M 68 45 V 82 L 75 76 M 68 70 L 73 66" stroke="#1E5631" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 68 45 V 82 L 75 76 M 68 70 L 73 66" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Audit Glass (Right) -->
+  <circle cx="92" cy="62" r="16" fill="#FFFFFF" stroke="#1A1A1A" stroke-width="3"/>
+  <circle cx="92" cy="62" r="12" fill="#E8F4EC" opacity="0.5"/>
+  <!-- Analytics Bar chart inside lens -->
+  <rect x="84" y="64" width="3" height="6" fill="#1E5631"/>
+  <rect x="89" y="58" width="3" height="12" fill="#4C8C5A"/>
+  <rect x="94" y="54" width="3" height="16" fill="#1E5631"/>
+  <!-- Lens Handle -->
+  <path d="M 103 73 L 114 84" stroke="#1A1A1A" stroke-width="4.5" stroke-linecap="round"/>
+</svg>

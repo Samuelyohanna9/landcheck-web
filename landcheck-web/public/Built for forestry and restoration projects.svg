@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <!-- Ground Line -->
+  <path d="M 10 80 H 110" stroke="#1A1A1A" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- Left Pine Tree -->
+  <polygon points="25,40 15,58 20,58 12,72 38,72 30,58 35,58" fill="#1E5631" stroke="#1A1A1A" stroke-width="2.5" stroke-linejoin="round"/>
+  <rect x="22" y="72" width="6" height="8" fill="#5C4033" stroke="#1A1A1A" stroke-width="2"/>
+  
+  <!-- Center Main Tree -->
+  <rect x="52" y="65" width="10" height="15" fill="#5C4033" stroke="#1A1A1A" stroke-width="2.5"/>
+  <!-- Foliage Clusters -->
+  <circle cx="42" cy="50" r="14" fill="#4C8C5A" stroke="#1A1A1A" stroke-width="2.5"/>
+  <circle cx="70" cy="50" r="14" fill="#4C8C5A" stroke="#1A1A1A" stroke-width="2.5"/>
+  <circle cx="56" cy="38" r="16" fill="#1E5631" stroke="#1A1A1A" stroke-width="2.5"/>
+  <circle cx="56" cy="48" r="10" fill="#A8D08D" opacity="0.7"/>
+
+  <!-- Right Deciduous Tree -->
+  <rect x="88" y="68" width="8" height="12" fill="#5C4033" stroke="#1A1A1A" stroke-width="2"/>
+  <path d="M 78 55 C 78 40, 106 40, 106 55 C 112 65, 72 65, 78 55 Z" fill="#4C8C5A" stroke="#1A1A1A" stroke-width="2.5" stroke-linejoin="round"/>
+
+  <!-- Small Sprout -->
+  <path d="M 38 80 Q 35 74 38 72 Q 42 74 38 80 Z" fill="#A8D08D" stroke="#1A1A1A" stroke-width="1.5"/>
+  <path d="M 38 80 Q 42 76 44 75 Q 43 80 38 80 Z" fill="#A8D08D" stroke="#1A1A1A" stroke-width="1.5"/>
+
+  <!-- Underground Root Lattice -->
+  <path d="M 25 80 Q 25 95 35 100 T 57 102 T 80 98 T 92 80" fill="none" stroke="#1A1A1A" stroke-width="2.5"/>
+  <path d="M 57 80 V 102" stroke="#1A1A1A" stroke-width="2.5"/>
+  
+  <!-- Network Nodes -->
+  <circle cx="35" cy="100" r="4" fill="#A8D08D" stroke="#1A1A1A" stroke-width="2"/>
+  <circle cx="57" cy="102" r="5" fill="#1E5631" stroke="#1A1A1A" stroke-width="2"/>
+  <circle cx="80" cy="98" r="4" fill="#A8D08D" stroke="#1A1A1A" stroke-width="2"/>
+  <circle cx="45" cy="90" r="3" fill="#4C8C5A" stroke="#1A1A1A" stroke-width="1.5"/>
+  <circle cx="68" cy="91" r="3" fill="#4C8C5A" stroke="#1A1A1A" stroke-width="1.5"/>
+</svg>

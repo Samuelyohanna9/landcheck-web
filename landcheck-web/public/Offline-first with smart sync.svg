@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <!-- Smartphone (Offline Storage) -->
+  <rect x="15" y="25" width="34" height="68" rx="6" fill="#1A1A1A" stroke="#1A1A1A" stroke-width="2"/>
+  <rect x="18" y="32" width="28" height="52" rx="2" fill="#FFFFFF"/>
+  <!-- Phone Speaker & Home Button -->
+  <line x1="28" y1="28" x2="36" y2="28" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="32" cy="88" r="2" fill="#FFFFFF"/>
+  <!-- Cloud Icon on Phone Screen -->
+  <path d="M 24 60 A 4 4 0 0 1 31 57 A 5 5 0 0 1 39 60 A 3 3 0 0 1 38 66 H 24 A 3 3 0 0 1 24 60 Z" fill="#1E5631"/>
+
+  <!-- Sync Arrow System -->
+  <!-- Upper Arrow (Right) -->
+  <path d="M 54 45 H 70 M 70 45 L 65 40 M 70 45 L 65 50" stroke="#1A1A1A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Lower Arrow (Left) -->
+  <path d="M 70 65 H 54 M 54 65 L 59 60 M 54 65 L 59 70" stroke="#1E5631" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Signal Dots -->
+  <circle cx="62" cy="55" r="2" fill="#1A1A1A"/>
+  <circle cx="56" cy="55" r="1.5" fill="#1A1A1A"/>
+  <circle cx="68" cy="55" r="1.5" fill="#1A1A1A"/>
+
+  <!-- Cloud Server Network (Right Side) -->
+  <!-- Top Cloud -->
+  <path d="M 78 38 A 7 7 0 0 1 90 33 A 9 9 0 0 1 104 38 A 6 6 0 0 1 102 48 H 78 A 5 5 0 0 1 78 38 Z" fill="#E8F4EC" stroke="#1A1A1A" stroke-width="2.5"/>
+  <!-- Server Tower Block -->
+  <rect x="80" y="52" width="26" height="34" rx="3" fill="#1E5631" stroke="#1A1A1A" stroke-width="2.5"/>
+  <!-- Server LED / Drive Lines -->
+  <line x1="85" y1="60" x2="95" y2="60" stroke="#A8D08D" stroke-width="2"/>
+  <circle cx="100" cy="60" r="1.5" fill="#A8D08D"/>
+  <line x1="85" y1="68" x2="95" y2="68" stroke="#A8D08D" stroke-width="2"/>
+  <circle cx="100" cy="68" r="1.5" fill="#A8D08D"/>
+  <line x1="85" y1="76" x2="95" y2="76" stroke="#A8D08D" stroke-width="2"/>
+  <circle cx="100" cy="76" r="1.5" fill="#A8D08D"/>
+
+  <!-- Server Circuit Nodes -->
+  <path d="M 93 86 V 96 M 85 96 H 101" stroke="#1A1A1A" stroke-width="2"/>
+  <circle cx="85" cy="96" r="2.5" fill="#4C8C5A"/>
+  <circle cx="101" cy="96" r="2.5" fill="#4C8C5A"/>
+</svg>
