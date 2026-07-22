@@ -961,7 +961,14 @@
     linear-gradient(180deg, rgba(248, 251, 248, 0.94) 0%, rgba(241, 246, 242, 0.98) 100%);
 }
 
-.gp-asset-grid,
+.gp-asset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
 .gp-workflow-grid,
 .gp-expertise-grid,
 .gp-partner-grid {
