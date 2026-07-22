@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactElement } from "react";
 import "../styles/green-partners.css";
 import { fetchPublicImpactStats, fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
@@ -7,11 +7,9 @@ import { useCookieConsent } from "../privacy/cookieConsent";
 type PartnerOrg = { name: string; logo: string | null };
 type ImpactSnapshot = { total_trees: number; total_organizations: number };
 type MediaFit = "cover" | "contain";
-type StatIcon = "tree" | "models" | "partners" | "checkout";
 
 type GreenModel = {
   id: string;
-  order: string;
   heroLabel: string;
   heroStatement: string;
   heroSupport: string;
@@ -35,24 +33,74 @@ const HERO_FALLBACK_IMAGE = "/agent planting 1.JPG";
 const BROCHURE_PDF_SRC = "/lc-green-corporate-brochure.pdf";
 const PILOT_ORG_NAMES = new Set(["Think Green Foundation"]);
 
+const svgAsset = (fileName: string) => encodeURI(`/${fileName}`);
+const photoAsset = (fileName: string) => encodeURI(`/${fileName}`);
+
+const bulletIconMap: Record<string, string> = {
+  "Project and task management": "project_task.svg",
+  "Real-time data collection": "Real-time_data.svg",
+  "Interactive map workflow": "interactive_map.svg",
+  "Maintenance reminders": "maintenace_reminder.svg",
+  "Survival monitoring": "Survival_monitoring.svg",
+  "Verified field data": "verified_field_data.svg",
+  "Impact reporting and analytics": "Impact reporting and analytics.svg",
+  "Export-ready executive reports": "Export-ready executive reports.svg",
+  "Review queue and quality control": "Review queue and quality control.svg",
+  "Sponsor trees online instantly": "Sponsor trees online instantly.svg",
+  "Live impact updates": "Live impact updates.svg",
+  "Map, image, and certificate proof": "Map, image, and certificate proof.svg",
+  "Guest checkout with NGN and USD": "Guest checkout with NGN and USD.svg",
+  "Supporter-facing premium experience": "Supporter-facing premium experience.svg",
+};
+
+const statIconMap: Record<string, string> = {
+  "Trees tracked": "Trees Tracked.svg",
+  "Delivery models": "Delivery Models.svg",
+  "Partner organisations": "Partner Organisations.svg",
+  "Checkout ready": "NGN + USD Checkout Ready.svg",
+};
+
+const modelRouteIcons: Record<string, ReactElement> = {
+  field: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="6" y="4" width="12" height="17" rx="2" />
+      <path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" />
+      <path d="M9 12.5l2 2 4-4.5" />
+    </svg>
+  ),
+  csr: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" />
+      <path d="M9.2 12.2l1.9 1.9 3.7-4" />
+    </svg>
+  ),
+  public: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20s-7-4.35-9.5-8.5C.7 8.2 2 4.8 5.3 4.1 7.6 3.6 9.8 4.7 12 7c2.2-2.3 4.4-3.4 6.7-2.9 3.3.7 4.6 4.1 2.8 7.4C19 15.65 12 20 12 20z" />
+    </svg>
+  ),
+};
+
+const modelSelectorChevronIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 5l7 7-7 7" />
+  </svg>
+);
+
 const greenModels: GreenModel[] = [
   {
     id: "field",
-    order: "01",
     heroLabel: "Field operations",
     heroStatement: "We Plant",
-    heroSupport: "Field teams plant, capture, and maintain with live task control.",
+    heroSupport: "Field teams plant, capture, and maintain with live control.",
     heroImage: "/agent planting 2.JPG",
-    selectorTitle: "Field control for partner organisations",
+    selectorTitle: "Field control for partner teams",
     title: "Turn field operations for partner teams into live, controlled delivery.",
-    summary: "Assign tasks, collect field data, track maintenance, and monitor survival from one route.",
-    detail:
-      "Manage projects, assign tasks, collect field data, monitor progress, and roll evidence into one controlled partner workflow.",
+    summary: "Assign, capture, and track field work from one route.",
+    detail: "Live task control, map capture, and survival follow-up in one route.",
     bullets: [
       "Project and task management",
       "Real-time data collection",
-      "Interactive map workflow",
-      "Maintenance reminders",
       "Survival monitoring",
     ],
     href: "/green/login/field",
@@ -65,21 +113,17 @@ const greenModels: GreenModel[] = [
   },
   {
     id: "csr",
-    order: "02",
     heroLabel: "Certified transparency",
     heroStatement: "We Verify",
-    heroSupport: "Corporate and donor programmes backed by mapped evidence and premium reporting.",
+    heroSupport: "Corporate and donor programmes backed by evidence and premium reporting.",
     heroImage: "/ecf-partnership.jpeg",
-    selectorTitle: "Verified implementation for corporate and donor programmes",
+    selectorTitle: "Verified CSR delivery",
     title: "Deliver verified corporate and donor programmes with evidence, reports, and implementation control.",
-    summary: "Real-time dashboards, reports, and impact metrics you can trust.",
-    detail:
-      "Track implementation with verified data, mapped outputs, survival monitoring, and board-ready CSR reporting from one premium workspace.",
+    summary: "Verified dashboards, evidence, and premium reports.",
+    detail: "Verified delivery, mapped evidence, and board-ready reporting from one workspace.",
     bullets: [
       "Verified field data",
-      "Survival monitoring",
       "Impact reporting and analytics",
-      "Export-ready executive reports",
       "Review queue and quality control",
     ],
     href: "/green-work/login",
@@ -92,22 +136,18 @@ const greenModels: GreenModel[] = [
   },
   {
     id: "public",
-    order: "03",
     heroLabel: "Online supporters",
     heroStatement: "We Restore",
     heroSupport: "Supporters fund trees online and follow transparent impact as it grows.",
     heroImage: "/thumpnail_public.jpg",
-    selectorTitle: "A premium route for online supporters",
+    selectorTitle: "Public sponsor experience",
     title: "Let supporters fund and follow impact online with certificates, map proof, and live updates.",
-    summary: "A premium online route for donors and supporters to engage and see impact.",
-    detail:
-      "Give supporters a simple way to fund trees online, receive certificates, and follow verified real-world impact from payment to planting.",
+    summary: "A premium supporter route with payment, proof, and updates.",
+    detail: "Online sponsorship with payment, certificates, and live impact proof.",
     bullets: [
       "Sponsor trees online instantly",
       "Live impact updates",
       "Map, image, and certificate proof",
-      "Guest checkout with NGN and USD",
-      "Supporter-facing premium experience",
     ],
     href: "/sponsor",
     cta: "See supporter experience",
@@ -120,27 +160,58 @@ const greenModels: GreenModel[] = [
 ];
 
 const whyPillars = [
-  "Built for forestry and restoration projects",
-  "Designed for NGOs, communities, and companies",
-  "Offline-first with smart sync",
-  "From planting to survival and impact",
-  "Secure, transparent, and audit-ready",
+  {
+    label: "Built for forestry and restoration projects",
+    iconSrc: svgAsset("Built for forestry and restoration projects.svg"),
+  },
+  {
+    label: "Designed for NGOs, communities, and companies",
+    iconSrc: svgAsset("Designed for NGOs, communities, and companies.svg"),
+  },
+  {
+    label: "Offline-first with smart sync",
+    iconSrc: svgAsset("Offline-first with smart sync.svg"),
+  },
+  {
+    label: "From planting to survival and impact",
+    iconSrc: svgAsset("From planting to survival and impact.svg"),
+  },
+  {
+    label: "Secure, transparent, and audit-ready",
+    iconSrc: svgAsset("Secure, transparent, and audit-ready.svg"),
+  },
 ];
 
-const budgetSignals = [
-  "Clear project scope and methodology",
-  "Live data and proof of implementation",
-  "Survival monitoring and maintenance plan",
-  "Impact metrics and reporting outputs",
-  "Budget breakdown and cost visibility",
+const photoMoments = [
+  {
+    imageSrc: photoAsset("agent planting 2.JPG"),
+    label: "Field delivery",
+    title: "Planting work is captured where it happens.",
+  },
+  {
+    imageSrc: photoAsset("tree_adamawa.JPG"),
+    label: "Community proof",
+    title: "Real teams, real seedlings, real locations.",
+  },
+  {
+    imageSrc: photoAsset("agent planting 1.JPG"),
+    label: "Protection setup",
+    title: "Protection and care are part of the workflow.",
+  },
+];
+
+const proofHighlights = [
+  "Real field photos",
+  "GPS-linked proof",
+  "CSR and sponsor routes in one platform",
 ];
 
 const dueDiligenceAssets = [
   {
     eyebrow: "Brochure PDF",
     title: "Download the LC Green Corporate brochure",
-    detail:
-      "A concise executive handout covering delivery scope, field control, reporting outputs, and the routes available inside LC Green.",
+    detail: "A quick executive handout for buyer conversations.",
+    imageSrc: "/Screenshot lndcheck work.png",
     href: BROCHURE_PDF_SRC,
     cta: "Download brochure",
     download: true,
@@ -148,8 +219,8 @@ const dueDiligenceAssets = [
   {
     eyebrow: "Sample CSR report",
     title: "Show stakeholders what the reporting package looks like",
-    detail:
-      "Preview the type of executive-ready report LC Green can generate from verified field implementation and timeline evidence.",
+    detail: "Preview the premium CSR reporting package.",
+    imageSrc: "/Screenshot landcheck report.png",
     href: "/lc-green-csr-sample-report.pdf",
     cta: "Download sample report",
     download: true,
@@ -157,74 +228,10 @@ const dueDiligenceAssets = [
   {
     eyebrow: "Public sponsor page",
     title: "See the premium public-facing sponsorship route",
-    detail:
-      "Explore the online supporter route where people can pay, receive certificates, and follow tree impact with map-backed updates.",
+    detail: "Open the supporter route with payment, proof, and updates.",
+    imageSrc: "/sponsor-tree-app.jpeg",
     href: "/sponsor",
     cta: "Open public sponsor page",
-  },
-  {
-    eyebrow: "Case study",
-    title: "Use the pilot story as proof of ecosystem traction",
-    detail:
-      "Share how LandCheck is already working with real partner organisations and building the operational systems behind verified impact.",
-    href: "/news#ecf-partnership",
-    cta: "Read case study",
-  },
-];
-
-const workflowStages = [
-  {
-    step: "01",
-    title: "Discover & Align",
-    detail: "Understand goals, scope, locations, stakeholders, and the evidence needed before deployment starts.",
-  },
-  {
-    step: "02",
-    title: "Design & Plan",
-    detail: "Define project routes, species mix, approvals, staffing model, and reporting expectations.",
-  },
-  {
-    step: "03",
-    title: "Implement & Monitor",
-    detail: "Run field assignments, capture map-linked data, review evidence, and monitor progress in real time.",
-  },
-  {
-    step: "04",
-    title: "Report & Validate",
-    detail: "Generate premium reports, validate outputs, and present impact with confidence to stakeholders.",
-  },
-  {
-    step: "05",
-    title: "Scale & Sustain",
-    detail: "Improve survival, expand routes, and create long-term programme value from verified implementation data.",
-  },
-];
-
-const expertiseCards = [
-  {
-    title: "How to manage corporate tree-planting projects",
-    blurb: "A practical guide to scope, land rights, implementation, maintenance, and stakeholder reporting.",
-    href: "/news#corporate-tree-projects",
-  },
-  {
-    title: "CSR reporting checklist for implementation teams",
-    blurb: "What a CSR manager needs before approving a field programme: maps, evidence, risks, and reporting cadence.",
-    href: "/news#csr-reporting-checklist",
-  },
-  {
-    title: "GPS verification for environmental projects",
-    blurb: "Why coordinates, timestamped photos, and supervisor review are essential to project credibility.",
-    href: "/news#gps-verification",
-  },
-  {
-    title: "Environmental project monitoring made easier",
-    blurb: "How to move from spreadsheets to live implementation oversight without losing field accountability.",
-    href: "/news#environmental-monitoring",
-  },
-  {
-    title: "ESG reporting made easier with field evidence",
-    blurb: "Turn implementation records into reportable outcomes for boards, donors, and public stakeholders.",
-    href: "/news#esg-reporting-easier",
   },
 ];
 
@@ -233,51 +240,17 @@ function formatTreeMetric(value: number | null): string {
   return `${value.toLocaleString()}+`;
 }
 
-function renderStatIcon(icon: StatIcon) {
-  switch (icon) {
-    case "tree":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" width="20" height="20" aria-hidden="true">
-          <path
-            d="M12 21v-4m0 0c-2.6 0-4.6-1.4-5.5-3.9 1 .3 1.9.4 2.7.2C8.2 10.8 9.1 9 12 7c2.9 2 3.8 3.8 2.8 6.3.8.2 1.7.1 2.7-.2-.9 2.5-2.9 3.9-5.5 3.9Z"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      );
-    case "models":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" width="20" height="20" aria-hidden="true">
-          <rect x="3.5" y="4" width="7" height="6" rx="1.6" stroke="currentColor" strokeWidth="1.8" />
-          <rect x="13.5" y="4" width="7" height="6" rx="1.6" stroke="currentColor" strokeWidth="1.8" />
-          <rect x="8.5" y="14" width="7" height="6" rx="1.6" stroke="currentColor" strokeWidth="1.8" />
-          <path d="M7 10.5v2h10v-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      );
-    case "partners":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" width="20" height="20" aria-hidden="true">
-          <circle cx="8" cy="9" r="2.6" stroke="currentColor" strokeWidth="1.8" />
-          <circle cx="16.5" cy="8.5" r="2.2" stroke="currentColor" strokeWidth="1.8" />
-          <path
-            d="M4.5 18c.6-2.3 2.5-3.8 5-3.8S13.9 15.7 14.5 18M14.3 17c.4-1.7 1.8-2.8 3.7-2.8 1.7 0 3 .9 3.5 2.5"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case "checkout":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" width="20" height="20" aria-hidden="true">
-          <rect x="3.5" y="6" width="17" height="12" rx="2.4" stroke="currentColor" strokeWidth="1.8" />
-          <path d="M3.5 10h17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          <path d="M8 14h3.2M14.5 14h1.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
-      );
+function renderListIcon(label: string) {
+  const iconFile = bulletIconMap[label];
+  if (iconFile) {
+    return (
+      <span className="gp-list-icon" aria-hidden="true">
+        <img src={svgAsset(iconFile)} alt="" loading="lazy" />
+      </span>
+    );
   }
+
+  return <span className="gp-list-icon gp-list-icon--fallback" aria-hidden="true" />;
 }
 
 export default function GreenPartnersLanding() {
@@ -318,25 +291,25 @@ export default function GreenPartnersLanding() {
         value: formatTreeMetric(impactSnapshot?.total_trees || null),
         label: "Trees tracked",
         note: "Across field, CSR, and sponsor workflows",
-        icon: "tree" as const,
+        iconSrc: svgAsset(statIconMap["Trees tracked"]),
       },
       {
         value: "3",
         label: "Delivery models",
         note: "Organisation, CSR, and public sponsor routes",
-        icon: "models" as const,
+        iconSrc: svgAsset(statIconMap["Delivery models"]),
       },
       {
         value: String(Math.max(impactSnapshot?.total_organizations || 0, partners.length || 0, 1)),
         label: "Partner organisations",
         note: "Already operating inside the LandCheck ecosystem",
-        icon: "partners" as const,
+        iconSrc: svgAsset(statIconMap["Partner organisations"]),
       },
       {
         value: "NGN + USD",
         label: "Checkout ready",
         note: "Flexible public sponsorship payments with live tracking",
-        icon: "checkout" as const,
+        iconSrc: svgAsset(statIconMap["Checkout ready"]),
       },
     ],
     [impactSnapshot?.total_organizations, impactSnapshot?.total_trees, partners.length],
@@ -380,8 +353,7 @@ export default function GreenPartnersLanding() {
               One <span>green</span> platform. Three professional delivery models.
             </h1>
             <p>
-              LC Green helps organisations and communities plant, monitor, and protect trees with data,
-              transparency, and purpose across partner operations, corporate programmes, and public sponsorship.
+              LC Green helps teams plant, verify, and report restoration work without losing the field reality.
             </p>
             <div className="gp-hero-actions">
               <a className="gp-btn gp-btn--primary" href="/green-work/login">
@@ -420,7 +392,9 @@ export default function GreenPartnersLanding() {
         <div className="gp-stats-bar">
           {statCards.map((card) => (
             <article key={card.label} className="gp-stat-card">
-              <span className="gp-stat-card__icon">{renderStatIcon(card.icon)}</span>
+              <span className="gp-stat-card__icon" aria-hidden="true">
+                <img src={card.iconSrc} alt="" loading="lazy" />
+              </span>
               <strong>{card.value}</strong>
               <span>{card.label}</span>
               <small>{card.note}</small>
@@ -435,8 +409,7 @@ export default function GreenPartnersLanding() {
             <span className="gp-section-eyebrow">Choose your model</span>
             <h2>Choose the LC Green model that matches how you work</h2>
             <p>
-              Whether you are managing field teams, reporting to donors, or engaging supporters, LC Green has you
-              covered with a route designed for the job.
+              One platform, three routes, each designed for a different job.
             </p>
           </div>
 
@@ -449,11 +422,16 @@ export default function GreenPartnersLanding() {
                   className={`gp-model-selector-card${model.id === activeModel.id ? " is-active" : ""}`}
                   onClick={() => setActiveModelId(model.id)}
                 >
-                  <div>
+                  <span className="gp-model-selector-card__icon" aria-hidden="true">
+                    {modelRouteIcons[model.id]}
+                  </span>
+                  <div className="gp-model-selector-card__body">
                     <strong>{model.selectorTitle}</strong>
                     <span>{model.summary}</span>
                   </div>
-                  <em>{model.order}</em>
+                  <span className="gp-model-selector-card__chevron" aria-hidden="true">
+                    {modelSelectorChevronIcon}
+                  </span>
                 </button>
               ))}
             </aside>
@@ -491,7 +469,10 @@ export default function GreenPartnersLanding() {
               <div className="gp-model-showcase__footer">
                 <ul>
                   {activeModel.bullets.map((bullet) => (
-                    <li key={bullet}>{bullet}</li>
+                    <li key={bullet}>
+                      {renderListIcon(bullet)}
+                      <span>{bullet}</span>
+                    </li>
                   ))}
                 </ul>
                 <a href={activeModel.href}>{activeModel.cta}</a>
@@ -501,48 +482,32 @@ export default function GreenPartnersLanding() {
         </div>
       </section>
 
-      <section className="gp-story-stage">
+      <section className="gp-photo-stage">
         <div className="gp-shell">
-          {greenModels.map((model, index) => (
-            <article
-              key={model.id}
-              className={`gp-story-card${index % 2 === 1 ? " is-reversed" : ""}`}
-            >
-              <div className="gp-story-card__copy">
-                <span className="gp-story-card__eyebrow">{model.selectorTitle}</span>
-                <h3>{model.title}</h3>
-                <p>{model.detail}</p>
-                <ul>
-                  {model.bullets.map((bullet) => (
-                    <li key={bullet}>{bullet}</li>
-                  ))}
-                </ul>
-                <a href={model.href}>{model.cta}</a>
-              </div>
-              <div className="gp-story-card__media">
-                <div className="gp-story-screen gp-story-screen--desktop">
-                  <img
-                    src={model.desktopImage}
-                    alt={model.selectorTitle}
-                    className={model.desktopFit === "contain" ? "fit-contain" : "fit-cover"}
-                    width="1400"
-                    height="900"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="gp-story-screen gp-story-screen--phone">
-                  <img
-                    src={model.phoneImage}
-                    alt={`${model.selectorTitle} mobile`}
-                    className={model.phoneFit === "contain" ? "fit-contain" : "fit-cover"}
-                    width="720"
-                    height="1520"
-                    loading="lazy"
-                  />
-                </div>
-              </div>
+          <div className="gp-photo-grid">
+            <article className="gp-photo-lead">
+              <span className="gp-section-eyebrow">Field reality</span>
+              <h2>Show the work clearly.</h2>
+              <p>Use real field photos to make the platform feel credible before the demo starts.</p>
+              <ul className="gp-photo-points">
+                {proofHighlights.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
             </article>
-          ))}
+
+            {photoMoments.map((moment) => (
+              <article key={moment.title} className="gp-photo-card">
+                <div className="gp-photo-card__media">
+                  <img src={moment.imageSrc} alt={moment.title} loading="lazy" />
+                </div>
+                <div className="gp-photo-card__body">
+                  <span>{moment.label}</span>
+                  <h3>{moment.title}</h3>
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -554,9 +519,11 @@ export default function GreenPartnersLanding() {
           </div>
           <div className="gp-pill-grid">
             {whyPillars.map((pillar) => (
-              <article key={pillar} className="gp-pill-card">
-                <span className="gp-pill-card__icon" aria-hidden="true" />
-                <p>{pillar}</p>
+              <article key={pillar.label} className="gp-pill-card">
+                <span className="gp-pill-card__icon" aria-hidden="true">
+                  <img src={pillar.iconSrc} alt="" loading="lazy" />
+                </span>
+                <p>{pillar.label}</p>
               </article>
             ))}
           </div>
@@ -568,7 +535,7 @@ export default function GreenPartnersLanding() {
           <article className="gp-proof-card">
             <span className="gp-section-eyebrow">Truth and transparency</span>
             <h3>Show the platform before the sales call</h3>
-            <p>Let buyers see how LC Green works in action before they ask for a full demo.</p>
+            <p>Let buyers see the platform in action before they commit to a full demo.</p>
             <video controls preload="metadata" poster="/thumpnail_public.jpg" className="gp-demo-video">
               <source src={HERO_VIDEO_SRC} type="video/mp4" />
             </video>
@@ -576,10 +543,9 @@ export default function GreenPartnersLanding() {
 
           <article className="gp-proof-card gp-proof-card--dashboard">
             <span className="gp-section-eyebrow">Platform walkthrough</span>
-            <h3>Walk buyers through the trees, routes, and survival data that justify the budget.</h3>
+            <h3>Walk buyers through the trees, routes, and proof in one view.</h3>
             <p>
-              Use one premium view to explain route control, implementation evidence, maintenance status, and
-              export-ready reporting.
+              Use one premium view to explain route control, implementation evidence, and reporting outputs.
             </p>
             <div className="gp-proof-screenshot">
               <img
@@ -601,61 +567,24 @@ export default function GreenPartnersLanding() {
       <section className="gp-budget-stage">
         <div className="gp-shell">
           <div className="gp-section-intro gp-section-intro--center">
-            <span className="gp-section-eyebrow">Before you ask for budget</span>
-            <h2>Everything a CSR manager should see before you ask for budget</h2>
-          </div>
-          <div className="gp-budget-signal-row">
-            {budgetSignals.map((signal) => (
-              <span key={signal} className="gp-budget-signal">
-                {signal}
-              </span>
-            ))}
+            <span className="gp-section-eyebrow">Quick resources</span>
+            <h2>Keep the next step clear</h2>
+            <p>Use compact resources instead of overwhelming buyers with long text.</p>
           </div>
           <div className="gp-asset-grid">
             {dueDiligenceAssets.map((asset) => (
               <article key={asset.title} className="gp-asset-card">
+                {"imageSrc" in asset ? (
+                  <div className="gp-asset-card__media">
+                    <img src={asset.imageSrc} alt={asset.title} loading="lazy" />
+                  </div>
+                ) : null}
                 <span className="gp-asset-card__eyebrow">{asset.eyebrow}</span>
                 <h3>{asset.title}</h3>
                 <p>{asset.detail}</p>
                 <a href={asset.href} download={asset.download}>
                   {asset.cta}
                 </a>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="gp-workflow-stage">
-        <div className="gp-shell">
-          <div className="gp-section-intro gp-section-intro--center">
-            <span className="gp-section-eyebrow">How the workflow is sold and delivered</span>
-            <h2>From discovery to reporting, LC Green stays structured the whole way</h2>
-          </div>
-          <div className="gp-workflow-grid">
-            {workflowStages.map((stage) => (
-              <article key={stage.step} className="gp-workflow-card">
-                <span className="gp-workflow-card__step">{stage.step}</span>
-                <h3>{stage.title}</h3>
-                <p>{stage.detail}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="gp-expertise-stage">
-        <div className="gp-shell">
-          <div className="gp-section-intro gp-section-intro--center">
-            <span className="gp-section-eyebrow">Published expertise</span>
-            <h2>Use expertise content to strengthen credibility and discovery</h2>
-          </div>
-          <div className="gp-expertise-grid">
-            {expertiseCards.map((card) => (
-              <article key={card.title} className="gp-expertise-card">
-                <h3>{card.title}</h3>
-                <p>{card.blurb}</p>
-                <a href={card.href}>Read article</a>
               </article>
             ))}
           </div>
