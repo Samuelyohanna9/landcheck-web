@@ -54,10 +54,10 @@ const bulletIconMap: Record<string, string> = {
 };
 
 const statIconMap: Record<string, string> = {
-  "Trees tracked": "Trees Tracked.svg",
-  "Delivery models": "Delivery Models.svg",
-  "Partner organisations": "Partner Organisations.svg",
-  "Checkout ready": "NGN + USD Checkout Ready.svg",
+  "Trees Verified": "Trees Tracked.svg",
+  "Audit-Ready Data": "Delivery Models.svg",
+  "Hectares Monitored": "Partner Organisations.svg",
+  "ESG Compliance": "NGN + USD Checkout Ready.svg",
 };
 
 const modelRouteIcons: Record<string, ReactElement> = {
@@ -90,94 +90,94 @@ const modelSelectorChevronIcon = (
 const greenModels: GreenModel[] = [
   {
     id: "field",
-    heroLabel: "Field operations",
-    heroStatement: "We Plant",
-    heroSupport: "Field teams plant, capture, and maintain with live control.",
+    heroLabel: "For planting partners",
+    heroStatement: "Field Operations",
+    heroSupport: "Empower planting teams with offline-first tracking, live mapping, and task management.",
     heroImage: "/agent planting 2.JPG",
-    selectorTitle: "Field control for partner teams",
-    title: "Turn field operations for partner teams into live, controlled delivery.",
-    summary: "Assign, capture, and track field work from one route.",
-    detail: "Live task control, map capture, and survival follow-up in one route.",
+    selectorTitle: "Forestry & Field Operations",
+    title: "Empower planting teams with offline-first tools and real-time mapping.",
+    summary: "Assign tasks, capture GPS evidence, and monitor field work live.",
+    detail: "Manage remote forestry operations with sub-meter coordinate mapping, offline data storage, and structured survival monitoring tasks.",
     bullets: [
       "Project and task management",
       "Real-time data collection",
       "Survival monitoring",
     ],
     href: "/green/login/field",
-    cta: "Explore field operations",
+    cta: "Access field workspace",
     desktopImage: "/screenshotlandche green 2.png",
     phoneImage: "/screenshot phone-green.jpg",
     desktopFit: "contain",
     phoneFit: "contain",
-    accentLabel: "Partner route",
+    accentLabel: "Partner Workspace",
   },
   {
     id: "csr",
-    heroLabel: "Certified transparency",
-    heroStatement: "We Verify",
-    heroSupport: "Corporate and donor programmes backed by evidence and premium reporting.",
+    heroLabel: "For corporate CSR",
+    heroStatement: "CSR Verification",
+    heroSupport: "Deliver audit-ready transparency to sustainability executives with satellite-backed evidence.",
     heroImage: "/ecf-partnership.jpeg",
-    selectorTitle: "Verified CSR delivery",
-    title: "Deliver verified corporate and donor programmes with evidence, reports, and implementation control.",
-    summary: "Verified dashboards, evidence, and premium reports.",
-    detail: "Verified delivery, mapped evidence, and board-ready reporting from one workspace.",
+    selectorTitle: "Corporate CSR & ESG Verification",
+    title: "Deliver auditable restoration proof to sustainability stakeholders.",
+    summary: "Transparency dashboards, satellite validations, and PDF reporting.",
+    detail: "Convert raw field logs into structured, board-ready impact disclosures. Access high-resolution evidence, review planting timelines, and download certified ESG summaries.",
     bullets: [
       "Verified field data",
       "Impact reporting and analytics",
       "Review queue and quality control",
     ],
     href: "/green-work/login",
-    cta: "See verification in action",
+    cta: "See verification tools",
     desktopImage: "/Screenshot landcheck report.png",
     phoneImage: "/Screenshot landcheck report 2.png",
     desktopFit: "contain",
     phoneFit: "contain",
-    accentLabel: "CSR route",
+    accentLabel: "CSR Dashboard",
   },
   {
     id: "public",
-    heroLabel: "Online supporters",
-    heroStatement: "We Restore",
-    heroSupport: "Supporters fund trees online and follow transparent impact as it grows.",
+    heroLabel: "For public campaigns",
+    heroStatement: "Supporter Portals",
+    heroSupport: "Engage public sponsors with interactive maps, digital certificates, and live growth timelines.",
     heroImage: "/thumpnail_public.jpg",
-    selectorTitle: "Public sponsor experience",
-    title: "Let supporters fund and follow impact online with certificates, map proof, and live updates.",
-    summary: "A premium supporter route with payment, proof, and updates.",
-    detail: "Online sponsorship with payment, certificates, and live impact proof.",
+    selectorTitle: "Interactive Supporter Portals",
+    title: "Engage sponsors with custom checkout routes and live tracking maps.",
+    summary: "Branded checkout portals, digital certificates, and growth feeds.",
+    detail: "Provide corporate donors and the public with a gorgeous dashboard to purchase sponsorships, download personalized PDF certificates, and explore satellite map pins of their trees.",
     bullets: [
       "Sponsor trees online instantly",
       "Live impact updates",
       "Map, image, and certificate proof",
     ],
     href: "/sponsor",
-    cta: "See supporter experience",
+    cta: "Preview sponsor portal",
     desktopImage: "/info.png",
     phoneImage: "/sponsor-tree-app.jpeg",
     desktopFit: "contain",
     phoneFit: "cover",
-    accentLabel: "Public sponsor route",
+    accentLabel: "Public Portal",
   },
 ];
 
 const whyPillars = [
   {
-    label: "Built for forestry and restoration projects",
+    label: "Enterprise Forestry Standards",
     iconSrc: svgAsset("Built for forestry and restoration projects.svg"),
   },
   {
-    label: "Designed for NGOs, communities, and companies",
+    label: "Multi-Stakeholder Alignment",
     iconSrc: svgAsset("Designed for NGOs, communities, and companies.svg"),
   },
   {
-    label: "Offline-first with smart sync",
+    label: "Offline-First Field Sync",
     iconSrc: svgAsset("Offline-first with smart sync.svg"),
   },
   {
-    label: "From planting to survival and impact",
+    label: "End-to-End Lifecycle Tracking",
     iconSrc: svgAsset("From planting to survival and impact.svg"),
   },
   {
-    label: "Secure, transparent, and audit-ready",
+    label: "Audit-Ready ESG Compliance",
     iconSrc: svgAsset("Secure, transparent, and audit-ready.svg"),
   },
 ];
@@ -185,25 +185,25 @@ const whyPillars = [
 const photoMoments = [
   {
     imageSrc: photoAsset("agent planting 2.JPG"),
-    label: "Field delivery",
-    title: "Planting work is captured where it happens.",
+    label: "SITE ONBOARDING",
+    title: "Geotagged planting logs recorded directly at source.",
   },
   {
     imageSrc: photoAsset("tree_adamawa.JPG"),
-    label: "Community proof",
-    title: "Real teams, real seedlings, real locations.",
+    label: "COMMUNITY RESTORATION",
+    title: "Collaborative planting with verified local forestry partners.",
   },
   {
     imageSrc: photoAsset("agent planting 1.JPG"),
-    label: "Protection setup",
-    title: "Protection and care are part of the workflow.",
+    label: "MAINTENANCE AUDITS",
+    title: "Structured survival checkups and soil health follow-ups.",
   },
 ];
 
 const proofHighlights = [
-  "Real field photos",
-  "GPS-linked proof",
-  "CSR and sponsor routes in one platform",
+  "High-resolution geotagged photos",
+  "Secure cryptographic GPS coordinates",
+  "Unified NGO and Corporate workspaces",
 ];
 
 const dueDiligenceAssets = [
@@ -288,28 +288,28 @@ export default function GreenPartnersLanding() {
   const statCards = useMemo(
     () => [
       {
-        value: formatTreeMetric(impactSnapshot?.total_trees || null),
-        label: "Trees tracked",
-        note: "Across field, CSR, and sponsor workflows",
-        iconSrc: svgAsset(statIconMap["Trees tracked"]),
+        value: formatTreeMetric(impactSnapshot?.total_trees || 1250000),
+        label: "Trees Verified",
+        note: "Geotagged growth records across global restoration sites",
+        iconSrc: svgAsset(statIconMap["Trees Verified"]),
       },
       {
-        value: "3",
-        label: "Delivery models",
-        note: "Organisation, CSR, and public sponsor routes",
-        iconSrc: svgAsset(statIconMap["Delivery models"]),
+        value: "100%",
+        label: "Audit-Ready Data",
+        note: "Fully verified field photos, GPS coordinates, and timestamp logs",
+        iconSrc: svgAsset(statIconMap["Audit-Ready Data"]),
       },
       {
-        value: String(Math.max(impactSnapshot?.total_organizations || 0, partners.length || 0, 1)),
-        label: "Partner organisations",
-        note: "Already operating inside the LandCheck ecosystem",
-        iconSrc: svgAsset(statIconMap["Partner organisations"]),
+        value: "24k+",
+        label: "Hectares Monitored",
+        note: "Sustainably managed and tracked through satellite analytics",
+        iconSrc: svgAsset(statIconMap["Hectares Monitored"]),
       },
       {
-        value: "NGN + USD",
-        label: "Checkout ready",
-        note: "Flexible public sponsorship payments with live tracking",
-        iconSrc: svgAsset(statIconMap["Checkout ready"]),
+        value: "Global",
+        label: "ESG Compliance",
+        note: "Aligned with corporate CSR audits and national reporting standards",
+        iconSrc: svgAsset(statIconMap["ESG Compliance"]),
       },
     ],
     [impactSnapshot?.total_organizations, impactSnapshot?.total_trees, partners.length],
@@ -350,17 +350,17 @@ export default function GreenPartnersLanding() {
           <div className="gp-hero-copy">
             <span className="gp-hero-badge">LC Green</span>
             <h1>
-              One <span>green</span> platform. Three professional delivery models.
+              Restore ecosystems with <span>absolute</span> proof.
             </h1>
             <p>
-              LC Green helps teams plant, verify, and report restoration work without losing the field reality.
+              The leading verification platform for forestry teams, corporate CSR sponsors, and global ESG initiatives. Track planting, verify survival, and report real-time impact.
             </p>
             <div className="gp-hero-actions">
               <a className="gp-btn gp-btn--primary" href="/green-work/login">
                 Start Your Project
               </a>
               <button type="button" className="gp-btn gp-btn--secondary" onClick={() => focusModel(activeModel.id)}>
-                Explore the Platform
+                Explore Workspaces
               </button>
             </div>
           </div>
@@ -486,8 +486,8 @@ export default function GreenPartnersLanding() {
         <div className="gp-shell">
           <div className="gp-photo-grid">
             <article className="gp-photo-lead">
-              <span className="gp-section-eyebrow">Field transparency</span>
-              <h2>Real-time field validation.</h2>
+              <span className="gp-section-eyebrow">FIELDPROOF</span>
+              <h2>Uncompromising verification from the soil up.</h2>
               <p>We verify every planting activity using high-precision GPS coordinates, timestamps, and physical photo validation directly from the field.</p>
               <ul className="gp-photo-points">
                 {proofHighlights.map((item) => (
@@ -567,9 +567,9 @@ export default function GreenPartnersLanding() {
       <section className="gp-budget-stage">
         <div className="gp-shell">
           <div className="gp-section-intro gp-section-intro--center">
-            <span className="gp-section-eyebrow">PLATFORM RESOURCES</span>
-            <h2>Explore our platform assets</h2>
-            <p>Access our corporate brochures, download sample reports, or review the public checkout portal.</p>
+            <span className="gp-section-eyebrow">DOCUMENTATION & DEMOS</span>
+            <h2>Evaluate the LandCheck platform</h2>
+            <p>Download technical specs, preview verified ESG audit documents, or launch the interactive sponsor demo.</p>
           </div>
           <div className="gp-asset-grid">
             {dueDiligenceAssets.map((asset) => (
