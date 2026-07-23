@@ -555,13 +555,13 @@
 
 .lp-target-item:hover { background: rgba(255, 255, 255, 0.05); }
 
-.lp-target-num {
+.lp-target-num-bullet {
   display: block;
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #e07b00;
-  letter-spacing: 0.08em;
-  margin-bottom: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e07b00;
+  margin-bottom: 14px;
 }
 
 .lp-target-item h3 {

@@ -388,14 +388,28 @@
   text-align: center;
 }
 
-.fal-step-num {
-  font-size: 2.4rem;
-  font-weight: 900;
-  color: rgba(14, 43, 74, 0.14);
-  line-height: 1;
-  margin-bottom: 14px;
+.fal-step-icon-dot {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.2rem;
+  transition: transform 300ms ease;
+}
+
+.fal-step-card:hover .fal-step-icon-dot {
+  transform: scale(1.08);
+}
+
+.fal-step-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2563eb;
   display: block;
-  font-variant-numeric: tabular-nums;
 }
 
 .fal-step-card h3 {

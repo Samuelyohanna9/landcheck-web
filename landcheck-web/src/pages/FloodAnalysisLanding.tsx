@@ -70,18 +70,15 @@ const features = [
 
 const steps = [
   {
-    num: "01",
     title: "Enter the Location",
     detail: "Input the coordinates or address of the land parcel you want to screen. Works anywhere in Nigeria.",
   },
   {
-    num: "02",
     title: "Run Hazard Screening",
     detail:
       "Our system analyzes flood exposure, erosion risk, soil stability, and environmental factors using global datasets.",
   },
   {
-    num: "03",
     title: "Download the Report",
     detail: "Get a detailed PDF risk report instantly — with risk level indicators, satellite map overlay, and recommendations.",
   },
@@ -242,8 +239,10 @@ export default function FloodAnalysisLanding() {
           </div>
           <div className="fal-steps-grid">
             {steps.map((s) => (
-              <article key={s.num} className="fal-step-card">
-                <div className="fal-step-num">{s.num}</div>
+              <article key={s.title} className="fal-step-card">
+                <div className="fal-step-icon-dot">
+                  <span className="fal-step-dot"></span>
+                </div>
                 <h3>{s.title}</h3>
                 <p>{s.detail}</p>
               </article>
