@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import "../styles/green-partners.css";
-import { fetchPublicImpactStats, fetchPublicPartnerOrganizations } from "../api/greenSponsor";
+import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
-import { useCookieConsent } from "../privacy/cookieConsent";
 
 type PartnerOrg = { name: string; logo: string | null };
-type ImpactSnapshot = { total_trees: number; total_organizations: number };
 type MediaFit = "cover" | "contain";
 
 type GreenModel = {
@@ -29,7 +27,6 @@ type GreenModel = {
 };
 
 const HERO_VIDEO_SRC = "/let_the_video_be_black_nigeria.mp4";
-const HERO_FALLBACK_IMAGE = "/agent planting 1.JPG";
 const BROCHURE_PDF_SRC = "/lc-green-corporate-brochure.pdf";
 const PILOT_ORG_NAMES = new Set(["Think Green Foundation"]);
 
@@ -52,12 +49,7 @@ const bulletIconMap: Record<string, string> = {
   "Green points & live updates": "Live impact updates.svg",
 };
 
-const statIconMap: Record<string, string> = {
-  "Trees Verified": "Trees Tracked.svg",
-  "Audit-Ready Data": "Delivery Models.svg",
-  "Hectares Monitored": "Partner Organisations.svg",
-  "ESG Compliance": "NGN + USD Checkout Ready.svg",
-};
+// statIconMap removed
 
 const modelRouteIcons: Record<string, ReactElement> = {
   field: (
@@ -159,28 +151,7 @@ const greenModels: GreenModel[] = [
   },
 ];
 
-const whyPillars = [
-  {
-    label: "Enterprise Forestry Standards",
-    iconSrc: svgAsset("Built for forestry and restoration projects.svg"),
-  },
-  {
-    label: "Multi-Stakeholder Alignment",
-    iconSrc: svgAsset("Designed for NGOs, communities, and companies.svg"),
-  },
-  {
-    label: "Offline-First Field Sync",
-    iconSrc: svgAsset("Offline-first with smart sync.svg"),
-  },
-  {
-    label: "End-to-End Lifecycle Tracking",
-    iconSrc: svgAsset("From planting to survival and impact.svg"),
-  },
-  {
-    label: "Audit-Ready ESG Compliance",
-    iconSrc: svgAsset("Secure, transparent, and audit-ready.svg"),
-  },
-];
+// whyPillars removed
 
 const photoMoments = [
   {
@@ -222,10 +193,7 @@ const dueDiligenceAssets = [
   },
 ];
 
-function formatTreeMetric(value: number | null): string {
-  if (!value || value <= 0) return "Live";
-  return `${value.toLocaleString()}+`;
-}
+
 
 function renderListIcon(label: string) {
   const iconFile = bulletIconMap[label];
@@ -241,11 +209,8 @@ function renderListIcon(label: string) {
 }
 
 export default function GreenPartnersLanding() {
-  const { preferences, ready: cookieConsentReady } = useCookieConsent();
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
-  const [impactSnapshot, setImpactSnapshot] = useState<ImpactSnapshot | null>(null);
   const [activeModelId, setActiveModelId] = useState(greenModels[0].id);
-  const heroVideoEnabled = cookieConsentReady && preferences.experience;
 
   useEffect(() => {
     let cancelled = false;
@@ -258,56 +223,12 @@ export default function GreenPartnersLanding() {
       })
       .catch(() => {});
 
-    fetchPublicImpactStats()
-      .then((stats) => {
-        if (cancelled) return;
-        setImpactSnapshot(stats);
-      })
-      .catch(() => {});
-
     return () => {
       cancelled = true;
     };
   }, []);
 
   const activeModel = greenModels.find((model) => model.id === activeModelId) || greenModels[0];
-
-  const statCards = useMemo(
-    () => [
-      {
-        value: formatTreeMetric(impactSnapshot?.total_trees || 1250000),
-        label: "Trees Verified",
-        note: "Geotagged growth records across global restoration sites",
-        iconSrc: svgAsset(statIconMap["Trees Verified"]),
-      },
-      {
-        value: "100%",
-        label: "Audit-Ready Data",
-        note: "Fully verified field photos, GPS coordinates, and timestamp logs",
-        iconSrc: svgAsset(statIconMap["Audit-Ready Data"]),
-      },
-      {
-        value: "24k+",
-        label: "Hectares Monitored",
-        note: "Sustainably managed and tracked through satellite analytics",
-        iconSrc: svgAsset(statIconMap["Hectares Monitored"]),
-      },
-      {
-        value: "Global",
-        label: "ESG Compliance",
-        note: "Aligned with corporate CSR audits and national reporting standards",
-        iconSrc: svgAsset(statIconMap["ESG Compliance"]),
-      },
-    ],
-    [impactSnapshot?.total_organizations, impactSnapshot?.total_trees, partners.length],
-  );
-
-  const focusModel = (modelId: string) => {
-    setActiveModelId(modelId);
-    window.setTimeout(() => {
-      document.getElementById("platform-routes")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 0);
-  };
 
   return (
     <div className="green-partners-page">
@@ -321,74 +242,168 @@ export default function GreenPartnersLanding() {
         ctaRoute="/green-work/login"
       />
 
-      <section
-        className="gp-hero"
-        style={!heroVideoEnabled ? { backgroundImage: `url("${HERO_FALLBACK_IMAGE}")` } : undefined}
-      >
-        {heroVideoEnabled && (
-          <div className="gp-hero-media" aria-hidden="true">
-            <video autoPlay muted loop playsInline preload="auto">
-              <source src={HERO_VIDEO_SRC} type="video/mp4" />
-            </video>
-          </div>
-        )}
-        <div className="gp-hero-scrim" aria-hidden="true" />
-        <div className="gp-shell gp-hero-inner">
-          <div className="gp-hero-copy">
-            <span className="gp-hero-badge">LC Green</span>
+      <section className="gp-new-hero">
+        <div className="gp-shell gp-new-hero-inner">
+          <div className="gp-new-hero-copy">
+            <span className="gp-new-hero-badge">CSR + ESG Verification</span>
             <h1>
-              Restore ecosystems with <span>absolute</span> proof.
+              Plant Trees.<br />
+              Prove Your Impact.
             </h1>
-            <p>
-              The leading verification platform for forestry teams, corporate CSR sponsors, and global ESG initiatives. Track planting, verify survival, and report real-time impact.
+            <p className="gp-new-hero-subheadline">
+              Manage every sponsored tree with GPS verification, maintenance tracking, CSR reports and live dashboards.
             </p>
-            <div className="gp-hero-actions">
+            <div className="gp-new-hero-actions">
               <a className="gp-btn gp-btn--primary" href="/green-work/login">
-                Start Your Project
+                Launch Your CSR Project
               </a>
-              <button type="button" className="gp-btn gp-btn--secondary" onClick={() => focusModel(activeModel.id)}>
-                Explore Workspaces
-              </button>
+              <a className="gp-btn gp-btn--secondary" href="/sponsor">
+                Sponsor a Tree
+              </a>
+            </div>
+            
+            <div className="gp-new-hero-stats">
+              <div className="gp-new-hero-stat-item">
+                <strong>4,000+</strong>
+                <span>Trees Managed</span>
+              </div>
+              <div className="gp-new-hero-stat-item">
+                <strong>15+</strong>
+                <span>Field Agents</span>
+              </div>
+              <div className="gp-new-hero-stat-item">
+                <strong>Live</strong>
+                <span>Monitoring</span>
+              </div>
+              <div className="gp-new-hero-stat-item">
+                <strong>GPS</strong>
+                <span>Verified</span>
+              </div>
             </div>
           </div>
 
-          <div className="gp-hero-route-stack" aria-label="LC Green delivery routes">
-            {greenModels.map((model) => (
-              <button
-                key={model.id}
-                className="gp-hero-route-card"
-                type="button"
-                style={{ backgroundImage: `url("${model.heroImage}")` }}
-                onClick={() => focusModel(model.id)}
-                aria-label={`${model.selectorTitle}. ${model.heroSupport}`}
-              >
-                <div className="gp-hero-route-card__overlay" aria-hidden="true" />
-                <div className="gp-hero-route-card__content">
-                  <span className="gp-hero-route-card__eyebrow">{model.heroLabel}</span>
-                  <h2>{model.heroStatement}</h2>
-                  <p>{model.heroSupport}</p>
-                  <span className="gp-hero-route-card__cta">Explore route</span>
-                </div>
-              </button>
-            ))}
+          <div className="gp-new-hero-mockup">
+            <div className="gp-mockup-window">
+              <div className="gp-mockup-header">
+                <span className="dot dot-red"></span>
+                <span className="dot dot-yellow"></span>
+                <span className="dot dot-green"></span>
+                <span className="gp-mockup-url">green.landcheck.org/dashboard</span>
+              </div>
+              <div className="gp-mockup-viewport">
+                <img 
+                  src="/Screenshot landcheck report.png" 
+                  alt="LandCheck Green ESG Dashboard Mockup" 
+                  loading="eager"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <div className="gp-shell gp-stats-bridge">
-        <div className="gp-stats-bar">
-          {statCards.map((card) => (
-            <article key={card.label} className="gp-stat-card">
-              <span className="gp-stat-card__icon" aria-hidden="true">
-                <img src={card.iconSrc} alt="" loading="lazy" />
-              </span>
-              <strong>{card.value}</strong>
-              <span>{card.label}</span>
-              <small>{card.note}</small>
-            </article>
-          ))}
+      <section className="gp-social-proof">
+        <div className="gp-shell">
+          <span className="gp-social-label">USED BY LEADING ACTORS IN THE RESTORATION ECOSYSTEM</span>
+          <div className="gp-social-logos">
+            <span>CSR Teams</span>
+            <span>NGOs</span>
+            <span>Foundations</span>
+            <span>Government Projects</span>
+          </div>
         </div>
-      </div>
+      </section>
+
+      <section className="gp-six-features">
+        <div className="gp-shell">
+          <div className="gp-section-intro gp-section-intro--center">
+            <span className="gp-section-eyebrow">Platform Capabilities</span>
+            <h2>Everything you need to prove environmental action</h2>
+            <p>Built for companies that value trust, auditability, and real-time verification.</p>
+          </div>
+          
+          <div className="gp-features-grid">
+            <article className="gp-feature-card">
+              <span className="gp-feature-icon">🌳</span>
+              <h3>Tree Management</h3>
+              <p>Oversee every sponsored tree from initial seedling planting to full maturity.</p>
+            </article>
+            
+            <article className="gp-feature-card">
+              <span className="gp-feature-icon">📍</span>
+              <h3>GPS Verification</h3>
+              <p>Pinpoint the exact sub-meter satellite coordinates of each tree planted.</p>
+            </article>
+            
+            <article className="gp-feature-card">
+              <span className="gp-feature-icon">📸</span>
+              <h3>Photo Evidence</h3>
+              <p>Capture high-resolution site photographs for audit-ready field proof.</p>
+            </article>
+            
+            <article className="gp-feature-card">
+              <span className="gp-feature-icon">📊</span>
+              <h3>CSR Reports</h3>
+              <p>Generate clean, board-ready sustainability reports for your ESG stakeholders.</p>
+            </article>
+            
+            <article className="gp-feature-card">
+              <span className="gp-feature-icon">📱</span>
+              <h3>Field App</h3>
+              <p>Equip field teams with offline-first tracking tools that sync logs automatically.</p>
+            </article>
+            
+            <article className="gp-feature-card">
+              <span className="gp-feature-icon">📈</span>
+              <h3>Impact Analytics</h3>
+              <p>Monitor tree survival rates, carbon sequestration metrics, and canopy growth.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="gp-how-it-works-saas">
+        <div className="gp-shell">
+          <div className="gp-section-intro gp-section-intro--center">
+            <span className="gp-section-eyebrow">The Verification Cycle</span>
+            <h2>Simple flow. Continuous trust.</h2>
+          </div>
+          
+          <div className="gp-how-timeline">
+            <div className="gp-timeline-step">
+              <div className="gp-step-icon-wrap">
+                <span className="gp-step-circle"></span>
+              </div>
+              <h3>Create Project</h3>
+              <p>Define target planting zones, tree species, and carbon offsets inside the dashboard.</p>
+            </div>
+            
+            <div className="gp-timeline-step">
+              <div className="gp-step-icon-wrap">
+                <span className="gp-step-circle"></span>
+              </div>
+              <h3>Assign Field Team</h3>
+              <p>Delegate planting and routine care tasks to local forestry agents via the field app.</p>
+            </div>
+            
+            <div className="gp-timeline-step">
+              <div className="gp-step-icon-wrap">
+                <span className="gp-step-circle"></span>
+              </div>
+              <h3>Plant Trees</h3>
+              <p>Agents record geotags and upload high-resolution photos during physical planting.</p>
+            </div>
+            
+            <div className="gp-timeline-step">
+              <div className="gp-step-icon-wrap">
+                <span className="gp-step-circle"></span>
+              </div>
+              <h3>Receive Reports</h3>
+              <p>Access your live CSR dashboard and download audit-ready compliance summaries.</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section id="platform-routes" className="gp-model-stage">
         <div className="gp-shell">
@@ -481,25 +496,6 @@ export default function GreenPartnersLanding() {
                   <span>{moment.label}</span>
                   <h3>{moment.title}</h3>
                 </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="gp-strength-stage">
-        <div className="gp-shell">
-          <div className="gp-section-intro gp-section-intro--center">
-            <span className="gp-section-eyebrow">TRUSTED RESTORATION</span>
-            <h2>Built for professional environmental projects</h2>
-          </div>
-          <div className="gp-pill-grid">
-            {whyPillars.map((pillar) => (
-              <article key={pillar.label} className="gp-pill-card">
-                <span className="gp-pill-card__icon" aria-hidden="true">
-                  <img src={pillar.iconSrc} alt="" loading="lazy" />
-                </span>
-                <p>{pillar.label}</p>
               </article>
             ))}
           </div>
