@@ -2,6 +2,10 @@ import { useEffect, useRef, useState, type ReactElement } from "react";
 import "../styles/green-partners.css";
 import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
+import FeaturedStorySpotlight from "../components/FeaturedStorySpotlight";
+import { getArticleBySlug } from "../data/newsArticles";
+
+const greenPartnersFeaturedStory = getArticleBySlug("fufore-model-school-first-trees")!;
 
 type PartnerOrg = { name: string; logo: string | null };
 type MediaFit = "cover" | "contain";
@@ -159,21 +163,57 @@ const greenModels: GreenModel[] = [
 
 // whyPillars removed
 
+const photoEvidencePoints = [
+  "GPS-tagged the moment each seedling goes into the ground",
+  "QR Tag carrying the name of the tree sponsor and the seedling's unique ID",
+  "Logged by named field supervisors, not stock photography",
+];
+
 const photoMoments = [
   {
-    imageSrc: photoAsset("agent planting 2.JPG"),
-    label: "SITE ONBOARDING",
-    title: "Geotagged planting logs recorded directly at source.",
+    imageSrc: photoAsset("seeds.JPG"),
+    label: "NURSERY STOCK",
+    title: "Seedlings staged and inspected before they leave for the field.",
   },
   {
-    imageSrc: photoAsset("tree_adamawa.JPG"),
-    label: "COMMUNITY RESTORATION",
-    title: "Collaborative planting with verified local forestry partners.",
+    imageSrc: photoAsset("yola south 4.JPG"),
+    label: "YOLA SOUTH",
+    title: "A supervisor photographs and confirms placement before planting.",
   },
   {
-    imageSrc: photoAsset("agent planting 1.JPG"),
-    label: "MAINTENANCE AUDITS",
-    title: "Structured survival checkups and soil health follow-ups.",
+    imageSrc: photoAsset("yola south planting2.JPG"),
+    label: "YOLA SOUTH",
+    title: "Every seedling carries a scannable QR tag from the nursery onward.",
+  },
+  {
+    imageSrc: photoAsset("yola south plantin3.JPG"),
+    label: "COMMUNITY PARTNERSHIP",
+    title: "Working directly with Jabbi Primary Health Care Authority in Yola South.",
+  },
+  {
+    imageSrc: photoAsset("fufore planting-New Model school fufore1.JPG"),
+    label: "FUFORE",
+    title: "Principal of Model School Fufore during new trees planting in the school compound.",
+  },
+  {
+    imageSrc: photoAsset("fufore planting-New Model school fufore2.JPG"),
+    label: "FUFORE",
+    title: "GPS coordinates and QR tags are captured before a tree is confirmed planted.",
+  },
+  {
+    imageSrc: photoAsset("fufore planting-New Model school fufore3.JPG"),
+    label: "FUFORE — NEW MODEL SCHOOL",
+    title: "Trees planted on school grounds.",
+  },
+  {
+    imageSrc: photoAsset("sangere girei 1.JPG"),
+    label: "SANGERE, GIREI",
+    title: "Community members receive a new tree in Sangere, home to Modibbo Adama University.",
+  },
+  {
+    imageSrc: photoAsset("sabgere girei 2.JPG"),
+    label: "SANGERE, GIREI",
+    title: "A seedling goes into the ground minutes from one of Adamawa's busiest university communities.",
   },
 ];
 
@@ -355,6 +395,8 @@ export default function GreenPartnersLanding() {
           </div>
         </div>
       </section>
+
+      <FeaturedStorySpotlight article={greenPartnersFeaturedStory} />
 
       <section className="gp-social-proof">
         <div className="gp-shell">
@@ -717,6 +759,19 @@ export default function GreenPartnersLanding() {
       <section className="gp-photo-stage">
         <div className="gp-shell">
           <div className="gp-photo-grid">
+            <article className="gp-photo-lead">
+              <span className="gp-section-eyebrow">Field evidence</span>
+              <h2>Real plantings. Real places. Real proof.</h2>
+              <p>
+                Every photo below is unedited field evidence from active LandCheck Green
+                projects in Yola South, Fufore, and Girei, Adamawa State — not stock photography.
+              </p>
+              <ul className="gp-photo-points">
+                {photoEvidencePoints.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
+            </article>
             {photoMoments.map((moment) => (
               <article key={moment.title} className="gp-photo-card">
                 <div className="gp-photo-card__media">

@@ -3,7 +3,11 @@ import { useNavigate } from "react-router-dom";
 import "../styles/landing.css";
 import { fetchPublicImpactStats, fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
+import FeaturedStorySpotlight from "../components/FeaturedStorySpotlight";
+import { getArticleBySlug } from "../data/newsArticles";
 import { useCookieConsent } from "../privacy/cookieConsent";
+
+const landingFeaturedStory = getArticleBySlug("yola-south-health-center-trees")!;
 
 type PartnerOrg = { name: string; logo: string | null };
 
@@ -301,6 +305,8 @@ export default function LandingPage() {
           </svg>
         </a>
       </section>
+
+      <FeaturedStorySpotlight article={landingFeaturedStory} />
 
       {/* Motto Band */}
       <div className="lp-motto-band">

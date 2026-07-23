@@ -689,29 +689,29 @@
   padding: 0;
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.82rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
 }
 
 .gp-model-showcase__footer li,
 .gp-story-card__copy li {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.65rem;
-  padding: 0.95rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.7rem;
   border: 1px solid rgba(18, 62, 36, 0.08);
-  border-radius: 20px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.9);
   color: #244338;
-  font-size: 0.88rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  line-height: 1.58;
+  line-height: 1.32;
 }
 
 .gp-list-icon {
-  width: 42px;
-  height: 42px;
+  width: 30px;
+  height: 30px;
   margin-top: 0;
   display: inline-flex;
   align-items: center;
@@ -722,12 +722,12 @@
   background: linear-gradient(180deg, #ffffff 0%, #f2fbf6 100%);
   box-shadow:
     inset 0 0 0 1px rgba(31, 140, 88, 0.05),
-    0 10px 18px rgba(20, 88, 52, 0.1);
+    0 6px 12px rgba(20, 88, 52, 0.1);
 }
 
 .gp-list-icon img {
-  width: 26px;
-  height: 26px;
+  width: 16px;
+  height: 16px;
   display: block;
   object-fit: contain;
   filter: saturate(1.35) contrast(1.2) brightness(0.56);
@@ -787,6 +787,10 @@
 }
 
 .gp-photo-lead {
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   padding: 2rem;
   background:
     radial-gradient(circle at top right, rgba(184, 227, 197, 0.28), transparent 22%),
@@ -2611,6 +2615,11 @@
   }
   .gp-photo-card__media {
     aspect-ratio: 1.25 / 1 !important;
+  }
+  .gp-photo-lead {
+    flex: 0 0 82vw !important;
+    scroll-snap-align: center !important;
+    padding: 1.5rem !important;
   }
 
   /* Partner organization cards compression */
