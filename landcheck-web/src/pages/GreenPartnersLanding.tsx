@@ -324,37 +324,68 @@ export default function GreenPartnersLanding() {
           
           <div className="gp-features-grid">
             <article className="gp-feature-card">
-              <span className="gp-feature-icon">🌳</span>
+              <div className="gp-feature-icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20V10" />
+                  <path d="M18 10a6 6 0 0 0-12 0c0 4 3 6 6 10 3-4 6-6 6-10z" />
+                </svg>
+              </div>
               <h3>Tree Management</h3>
               <p>Oversee every sponsored tree from initial seedling planting to full maturity.</p>
             </article>
             
             <article className="gp-feature-card">
-              <span className="gp-feature-icon">📍</span>
+              <div className="gp-feature-icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+              </div>
               <h3>GPS Verification</h3>
               <p>Pinpoint the exact sub-meter satellite coordinates of each tree planted.</p>
             </article>
             
             <article className="gp-feature-card">
-              <span className="gp-feature-icon">📸</span>
+              <div className="gp-feature-icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+              </div>
               <h3>Photo Evidence</h3>
               <p>Capture high-resolution site photographs for audit-ready field proof.</p>
             </article>
             
             <article className="gp-feature-card">
-              <span className="gp-feature-icon">📊</span>
+              <div className="gp-feature-icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+                </svg>
+              </div>
               <h3>CSR Reports</h3>
               <p>Generate clean, board-ready sustainability reports for your ESG stakeholders.</p>
             </article>
             
             <article className="gp-feature-card">
-              <span className="gp-feature-icon">📱</span>
+              <div className="gp-feature-icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                  <line x1="12" y1="18" x2="12.01" y2="18" />
+                </svg>
+              </div>
               <h3>Field App</h3>
               <p>Equip field teams with offline-first tracking tools that sync logs automatically.</p>
             </article>
             
             <article className="gp-feature-card">
-              <span className="gp-feature-icon">📈</span>
+              <div className="gp-feature-icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="20" x2="18" y2="10" />
+                  <line x1="12" y1="20" x2="12" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="14" />
+                </svg>
+              </div>
               <h3>Impact Analytics</h3>
               <p>Monitor tree survival rates, carbon sequestration metrics, and canopy growth.</p>
             </article>
