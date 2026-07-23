@@ -423,9 +423,9 @@ export default function LandingPage() {
           <p>LandCheck builds digital tools that help you deliver on your goals.</p>
         </div>
         <div className="lp-targets-list">
-          {targets.map((item, i) => (
+          {targets.map((item) => (
             <div key={item} className="lp-target-item">
-              <span className="lp-target-num">{i + 1}</span>
+              <span className="lp-target-num-bullet"></span>
               <h3>{item}</h3>
             </div>
           ))}

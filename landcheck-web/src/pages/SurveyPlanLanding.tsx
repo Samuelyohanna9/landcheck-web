@@ -41,19 +41,16 @@ const features = [
 
 const steps = [
   {
-    num: "01",
     title: "Enter Your Coordinates",
     detail:
       "Paste, upload CSV/Excel, or type coordinates in WGS84, UTM, or Minna Datum. Back-computation supported.",
   },
   {
-    num: "02",
     title: "Plot on the Interactive Map",
     detail:
       "See your boundary rendered on a live map. Satellite features are detected and overlaid automatically.",
   },
   {
-    num: "03",
     title: "Generate and Export",
     detail:
       "One click generates a true-scale plan with title block, north arrow, and scale bar. Download PDF, DWG, or orthophoto.",
@@ -210,8 +207,10 @@ export default function SurveyPlanLanding() {
           </div>
           <div className="spl-steps-grid">
             {steps.map((s) => (
-              <article key={s.num} className="spl-step-card">
-                <div className="spl-step-num">{s.num}</div>
+              <article key={s.title} className="spl-step-card">
+                <div className="spl-step-icon-dot">
+                  <span className="spl-step-dot"></span>
+                </div>
                 <h3>{s.title}</h3>
                 <p>{s.detail}</p>
               </article>
