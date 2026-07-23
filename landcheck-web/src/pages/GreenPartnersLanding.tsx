@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import "../styles/green-partners.css";
 import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
@@ -72,7 +72,13 @@ const modelRouteIcons: Record<string, ReactElement> = {
   ),
 };
 
-const modelSelectorChevronIcon = (
+const modelCarouselPrevIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 5l-7 7 7 7" />
+  </svg>
+);
+
+const modelCarouselNextIcon = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 5l7 7-7 7" />
   </svg>
@@ -211,6 +217,20 @@ function renderListIcon(label: string) {
 export default function GreenPartnersLanding() {
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
   const [activeModelId, setActiveModelId] = useState(greenModels[0].id);
+  const modelTrackRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const track = modelTrackRef.current;
+    if (!track) return;
+    const activeCard = track.querySelector<HTMLElement>(`[data-model-id="${activeModelId}"]`);
+    activeCard?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [activeModelId]);
+
+  function goToModelOffset(offset: number) {
+    const currentIndex = greenModels.findIndex((model) => model.id === activeModelId);
+    const nextIndex = (currentIndex + offset + greenModels.length) % greenModels.length;
+    setActiveModelId(greenModels[nextIndex].id);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -582,27 +602,48 @@ export default function GreenPartnersLanding() {
           </div>
 
           <div className="gp-model-grid">
-            <aside className="gp-model-selector">
-              {greenModels.map((model) => (
-                <button
-                  key={model.id}
-                  type="button"
-                  className={`gp-model-selector-card${model.id === activeModel.id ? " is-active" : ""}`}
-                  onClick={() => setActiveModelId(model.id)}
-                >
-                  <span className="gp-model-selector-card__icon" aria-hidden="true">
-                    {modelRouteIcons[model.id]}
-                  </span>
-                  <div className="gp-model-selector-card__body">
-                    <strong>{model.selectorTitle}</strong>
-                    <span>{model.summary}</span>
-                  </div>
-                  <span className="gp-model-selector-card__chevron" aria-hidden="true">
-                    {modelSelectorChevronIcon}
-                  </span>
-                </button>
-              ))}
-            </aside>
+            <div className="gp-model-carousel">
+              <button
+                type="button"
+                className="gp-model-carousel__arrow gp-model-carousel__arrow--prev"
+                onClick={() => goToModelOffset(-1)}
+                aria-label="Previous route"
+              >
+                {modelCarouselPrevIcon}
+              </button>
+
+              <div className="gp-model-carousel__track" ref={modelTrackRef}>
+                {greenModels.map((model) => (
+                  <button
+                    key={model.id}
+                    type="button"
+                    data-model-id={model.id}
+                    className={`gp-model-carousel__card${model.id === activeModel.id ? " is-active" : ""}`}
+                    style={{ backgroundImage: `url("${model.heroImage}")` }}
+                    onClick={() => setActiveModelId(model.id)}
+                  >
+                    <span className="gp-model-carousel__overlay" aria-hidden="true" />
+                    <span className="gp-model-carousel__icon" aria-hidden="true">
+                      {modelRouteIcons[model.id]}
+                    </span>
+                    <span className="gp-model-carousel__content">
+                      <strong>{model.heroStatement}</strong>
+                      <span className="gp-model-carousel__rule" aria-hidden="true" />
+                      <span className="gp-model-carousel__desc">{model.heroSupport}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="gp-model-carousel__arrow gp-model-carousel__arrow--next"
+                onClick={() => goToModelOffset(1)}
+                aria-label="Next route"
+              >
+                {modelCarouselNextIcon}
+              </button>
+            </div>
 
             <div className="gp-model-showcase">
               <div className="gp-model-showcase__header">
