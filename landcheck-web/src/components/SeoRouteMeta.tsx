@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { getArticleBySlug } from "../data/newsArticles";
 
 type SeoConfig = {
   title: string;
@@ -462,6 +463,41 @@ const resolveSeoConfig = (pathname: string): SeoConfig => {
         "inLanguage": "en-NG",
       },
     };
+  }
+
+  // /news/:slug — individual story page
+  if (normalizedPath.startsWith("/news/")) {
+    const slug = normalizedPath.replace(/^\/news\/?/, "");
+    const article = getArticleBySlug(slug);
+    if (article) {
+      return {
+        title: `${article.title} | LandCheck Insights`,
+        description: article.summary,
+        keywords: `${article.tag}, LandCheck, ${article.location || "tree planting Nigeria"}`,
+        canonicalPath: normalizedPath,
+        robots: "index,follow,max-image-preview:large,max-snippet:-1",
+        ogType: "article",
+        ogImage: article.heroImage ? `${SITE_ORIGIN}${article.heroImage}` : DEFAULT_OG_IMAGE,
+        jsonLd: {
+          "@context": "https://schema.org",
+          "@type": "BlogPosting",
+          "@id": `${SITE_ORIGIN}/news/${article.slug}`,
+          headline: article.title,
+          datePublished: article.date,
+          dateModified: article.date,
+          description: article.summary,
+          url: `${SITE_ORIGIN}/news/${article.slug}`,
+          author: { "@type": "Organization", name: "LandCheck Geospatial Technologies Limited", url: SITE_ORIGIN },
+          publisher: {
+            "@type": "Organization",
+            name: "LandCheck Geospatial Technologies Limited",
+            logo: { "@type": "ImageObject", url: `${SITE_ORIGIN}/green-logo-cropped-820.png` },
+          },
+          image: article.heroImage ? `${SITE_ORIGIN}${article.heroImage}` : `${SITE_ORIGIN}/green-logo-cropped-820.png`,
+          articleSection: article.tag,
+        },
+      };
+    }
   }
 
   const isPrivate = PRIVATE_ROUTE_PREFIXES.some(

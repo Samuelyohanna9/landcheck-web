@@ -1,0 +1,126 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap");
+
+.fs-spotlight {
+  padding: 28px 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: calc(100% - 48px);
+}
+
+.fs-spotlight-media {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 380px;
+  border: none;
+  border-radius: 28px;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  background-color: #0e2017;
+  background-size: cover;
+  background-position: center;
+  text-align: left;
+  font-family: inherit;
+  box-shadow: 0 30px 64px rgba(10, 30, 20, 0.28);
+}
+
+.fs-spotlight-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(8, 24, 16, 0.15) 0%, rgba(6, 18, 12, 0.92) 82%);
+}
+
+.fs-spotlight-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 640px;
+  padding: 40px 44px;
+}
+
+.fs-spotlight-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(95, 215, 148, 0.16);
+  border: 1px solid rgba(95, 215, 148, 0.4);
+  color: #8ff0b8;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.fs-spotlight-title {
+  display: block;
+  margin-top: 4px;
+  font-family: "Fraunces", "Georgia", serif;
+  font-weight: 700;
+  font-size: clamp(1.6rem, 3.2vw, 2.5rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  color: #f8fdf9;
+}
+
+.fs-spotlight-summary {
+  display: block;
+  margin-top: 2px;
+  max-width: 56ch;
+  font-size: 1rem;
+  line-height: 1.68;
+  color: rgba(232, 244, 235, 0.86);
+}
+
+.fs-spotlight-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.fs-spotlight-cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: #1f8c58;
+  color: #f6fff8;
+  font-weight: 800;
+  font-size: 0.92rem;
+}
+
+.fs-spotlight-sponsor {
+  color: rgba(232, 244, 235, 0.82);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.fs-spotlight-sponsor:hover {
+  color: #ffffff;
+}
+
+@media (max-width: 640px) {
+  .fs-spotlight-media {
+    min-height: 320px;
+    border-radius: 20px;
+  }
+
+  .fs-spotlight-content {
+    padding: 26px 22px;
+  }
+
+  .fs-spotlight-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
