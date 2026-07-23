@@ -282,21 +282,55 @@ export default function GreenPartnersLanding() {
             </div>
           </div>
 
-          <div className="gp-new-hero-mockup">
-            <div className="gp-mockup-window">
-              <div className="gp-mockup-header">
-                <span className="dot dot-red"></span>
-                <span className="dot dot-yellow"></span>
-                <span className="dot dot-green"></span>
-                <span className="gp-mockup-url">green.landcheck.org/dashboard</span>
+          <div className="gp-hero-circles">
+            {/* Satellite Grid Radar Backdrop */}
+            <div className="gp-hero-radar-backdrop" aria-hidden="true">
+              <svg viewBox="0 0 400 400" className="gp-radar-svg">
+                <circle cx="200" cy="200" r="180" className="gp-radar-ring" />
+                <circle cx="200" cy="200" r="120" className="gp-radar-ring" />
+                <circle cx="200" cy="200" r="60" className="gp-radar-ring" />
+                <line x1="20" y1="200" x2="380" y2="200" className="gp-radar-axis" />
+                <line x1="200" y1="20" x2="200" y2="380" className="gp-radar-axis" />
+                <circle cx="90" cy="110" r="4" className="gp-radar-target" />
+                <circle cx="280" cy="120" r="5" className="gp-radar-target" />
+                <circle cx="150" cy="290" r="4" className="gp-radar-target" />
+                <circle cx="310" cy="270" r="6" className="gp-radar-target" />
+                <path d="M 200,200 L 290,110" className="gp-radar-sweep" />
+              </svg>
+            </div>
+
+            {/* Live GPS Telemetry Badge */}
+            <div className="gp-hero-telemetry-badge">
+              <span className="gp-telemetry-dot"></span>
+              <div className="gp-telemetry-text-wrap">
+                <strong>GPS Satellite Synced</strong>
+                <span>Lagos, Abuja, Adamawa active</span>
               </div>
-              <div className="gp-mockup-viewport">
-                <img 
-                  src="/Screenshot landcheck report.png" 
-                  alt="LandCheck Green ESG Dashboard Mockup" 
-                  loading="eager"
-                />
-              </div>
+            </div>
+
+            <div className="gp-circle gp-circle-main">
+              <img 
+                src="/agent planting 1.JPG" 
+                alt="Forestry field work" 
+                className="gp-circle-img" 
+                loading="eager"
+              />
+            </div>
+            <div className="gp-circle gp-circle-sub1">
+              <img 
+                src="/agent planting 2.JPG" 
+                alt="Field agent planting seedling" 
+                className="gp-circle-img" 
+                loading="eager"
+              />
+            </div>
+            <div className="gp-circle gp-circle-sub2">
+              <img 
+                src="/tree_adamawa.JPG" 
+                alt="Verified community tree growth" 
+                className="gp-circle-img" 
+                loading="eager"
+              />
             </div>
           </div>
         </div>
@@ -306,10 +340,36 @@ export default function GreenPartnersLanding() {
         <div className="gp-shell">
           <span className="gp-social-label">USED BY LEADING ACTORS IN THE RESTORATION ECOSYSTEM</span>
           <div className="gp-social-logos">
-            <span>CSR Teams</span>
-            <span>NGOs</span>
-            <span>Foundations</span>
-            <span>Government Projects</span>
+            <div className="gp-social-logo-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="gp-social-icon">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+              </svg>
+              <span>CSR Teams</span>
+            </div>
+            
+            <div className="gp-social-logo-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="gp-social-icon">
+                <path d="M12 2a5 5 0 0 0-5 5v3H2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-9h-5V7a5 5 0 0 0-5-5z" />
+                <path d="M12 10V2" />
+              </svg>
+              <span>NGOs</span>
+            </div>
+            
+            <div className="gp-social-logo-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="gp-social-icon">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <span>Foundations</span>
+            </div>
+            
+            <div className="gp-social-logo-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="gp-social-icon">
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                <line x1="4" y1="22" x2="4" y2="15" />
+              </svg>
+              <span>Government Projects</span>
+            </div>
           </div>
         </div>
       </section>
@@ -323,67 +383,142 @@ export default function GreenPartnersLanding() {
           </div>
           
           <div className="gp-features-grid">
-            <article className="gp-feature-card">
-              <div className="gp-feature-icon-wrapper">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 20V10" />
-                  <path d="M18 10a6 6 0 0 0-12 0c0 4 3 6 6 10 3-4 6-6 6-10z" />
+            {/* Feature 1: Tree Management */}
+            <article className="gp-feature-card gp-feature-card-illustrated">
+              <div className="gp-feature-illustration-wrap">
+                <svg viewBox="0 0 200 120" className="gp-illustration-svg">
+                  <circle cx="100" cy="60" r="50" fill="#f0fdf4" />
+                  {/* Soil Mound */}
+                  <path d="M 60,95 Q 100,75 140,95 Z" fill="#b0967e" />
+                  {/* Shovel stuck in ground */}
+                  <line x1="130" y1="50" x2="130" y2="85" stroke="#78350f" strokeWidth="4" strokeLinecap="round" />
+                  <line x1="122" y1="50" x2="138" y2="50" stroke="#78350f" strokeWidth="4" strokeLinecap="round" />
+                  <path d="M 124,85 L 136,85 L 133,98 L 127,98 Z" fill="#94a3b8" />
+                  {/* Growing Seedling */}
+                  <path d="M 90,88 Q 90,55 90,45" stroke="#78350f" strokeWidth="3" fill="none" strokeLinecap="round" />
+                  {/* Leaves */}
+                  <path d="M 90,55 C 75,50 75,60 90,62 Z" fill="#22c55e" />
+                  <path d="M 90,68 C 105,63 105,73 90,75 Z" fill="#4ade80" />
+                  <path d="M 90,45 C 80,35 100,35 90,45 Z" fill="#15803d" />
                 </svg>
               </div>
               <h3>Tree Management</h3>
               <p>Oversee every sponsored tree from initial seedling planting to full maturity.</p>
             </article>
             
-            <article className="gp-feature-card">
-              <div className="gp-feature-icon-wrapper">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z" />
-                  <circle cx="12" cy="10" r="3" />
+            {/* Feature 2: GPS Verification */}
+            <article className="gp-feature-card gp-feature-card-illustrated">
+              <div className="gp-feature-illustration-wrap">
+                <svg viewBox="0 0 200 120" className="gp-illustration-svg">
+                  <circle cx="100" cy="60" r="50" fill="#f0fdf4" />
+                  {/* Folded Map Isometric projection */}
+                  <path d="M 50,75 L 85,60 L 120,75 L 150,60 L 150,85 L 120,100 L 85,85 L 50,100 Z" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="1.5" />
+                  {/* Map lines */}
+                  <line x1="85" y1="60" x2="85" y2="85" stroke="#cbd5e1" strokeWidth="1.5" />
+                  <line x1="120" y1="75" x2="120" y2="100" stroke="#cbd5e1" strokeWidth="1.5" />
+                  {/* Location Pin */}
+                  <path d="M 100,72 C 100,55 85,55 85,42 C 85,34 92,27 100,27 C 108,27 115,34 115,42 C 115,55 100,72 100,72 Z" fill="#ef4444" />
+                  <circle cx="100" cy="42" r="5" fill="#ffffff" />
+                  {/* Small Green Tree on map */}
+                  <circle cx="132" cy="72" r="6" fill="#22c55e" />
+                  <line x1="132" y1="72" x2="132" y2="80" stroke="#78350f" strokeWidth="2" />
                 </svg>
               </div>
               <h3>GPS Verification</h3>
               <p>Pinpoint the exact sub-meter satellite coordinates of each tree planted.</p>
             </article>
             
-            <article className="gp-feature-card">
-              <div className="gp-feature-icon-wrapper">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                  <circle cx="12" cy="13" r="4" />
+            {/* Feature 3: Photo Evidence */}
+            <article className="gp-feature-card gp-feature-card-illustrated">
+              <div className="gp-feature-illustration-wrap">
+                <svg viewBox="0 0 200 120" className="gp-illustration-svg">
+                  <circle cx="100" cy="60" r="50" fill="#f0fdf4" />
+                  {/* Snapshot Photo Card */}
+                  <rect x="55" y="30" width="60" height="52" rx="6" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1.5" transform="rotate(-8 85 56)" />
+                  <circle cx="85" cy="52" r="16" fill="#d1fae5" transform="rotate(-8 85 56)" />
+                  <path d="M 85,62 L 85,48" stroke="#15803d" strokeWidth="3" strokeLinecap="round" transform="rotate(-8 85 56)" />
+                  <path d="M 85,52 C 75,48 75,56 85,58 Z" fill="#22c55e" transform="rotate(-8 85 56)" />
+                  {/* Shutter Camera box body */}
+                  <rect x="95" y="55" width="55" height="38" rx="6" fill="#1f8c58" stroke="#15803d" strokeWidth="1.5" />
+                  <circle cx="122.5" cy="74" r="11" fill="#e2e8f0" stroke="#15803d" strokeWidth="2.5" />
+                  <circle cx="122.5" cy="74" r="5" fill="#0f2017" />
+                  <rect x="105" y="49" width="14" height="6" fill="#15803d" rx="2" />
+                  {/* Checkmark Badge */}
+                  <circle cx="150" cy="45" r="10" fill="#22c55e" />
+                  <path d="M 146,45 L 149,48 L 155,42" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
                 </svg>
               </div>
               <h3>Photo Evidence</h3>
               <p>Capture high-resolution site photographs for audit-ready field proof.</p>
             </article>
             
-            <article className="gp-feature-card">
-              <div className="gp-feature-icon-wrapper">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+            {/* Feature 4: CSR Reports */}
+            <article className="gp-feature-card gp-feature-card-illustrated">
+              <div className="gp-feature-illustration-wrap">
+                <svg viewBox="0 0 200 120" className="gp-illustration-svg">
+                  <circle cx="100" cy="60" r="50" fill="#f0fdf4" />
+                  {/* Document Background */}
+                  <rect x="65" y="25" width="70" height="76" rx="8" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1.5" />
+                  {/* Header block */}
+                  <rect x="75" y="35" width="30" height="8" rx="2" fill="#d1fae5" />
+                  {/* Lines */}
+                  <line x1="75" y1="52" x2="125" y2="52" stroke="#e2e8f0" strokeWidth="3" strokeLinecap="round" />
+                  <line x1="75" y1="60" x2="115" y2="60" stroke="#e2e8f0" strokeWidth="3" strokeLinecap="round" />
+                  <line x1="75" y1="68" x2="120" y2="68" stroke="#e2e8f0" strokeWidth="3" strokeLinecap="round" />
+                  {/* Mini Chart */}
+                  <rect x="75" y="80" width="10" height="12" fill="#22c55e" rx="1" />
+                  <rect x="90" y="74" width="10" height="18" fill="#1f8c58" rx="1" />
+                  <rect x="105" y="77" width="10" height="15" fill="#a7f3d0" rx="1" />
+                  {/* CO2 verified leaf stamp */}
+                  <rect x="110" y="32" width="22" height="14" rx="4" fill="#1f8c58" />
+                  <text x="121" y="42" fill="#ffffff" fontSize="7" fontWeight="bold" textAnchor="middle">CO₂</text>
                 </svg>
               </div>
               <h3>CSR Reports</h3>
               <p>Generate clean, board-ready sustainability reports for your ESG stakeholders.</p>
             </article>
             
-            <article className="gp-feature-card">
-              <div className="gp-feature-icon-wrapper">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-                  <line x1="12" y1="18" x2="12.01" y2="18" />
+            {/* Feature 5: Field App */}
+            <article className="gp-feature-card gp-feature-card-illustrated">
+              <div className="gp-feature-illustration-wrap">
+                <svg viewBox="0 0 200 120" className="gp-illustration-svg">
+                  <circle cx="100" cy="60" r="50" fill="#f0fdf4" />
+                  {/* Phone Shell */}
+                  <rect x="65" y="24" width="48" height="80" rx="8" fill="#1e293b" />
+                  {/* Phone screen */}
+                  <rect x="69" y="28" width="40" height="72" rx="4" fill="#ffffff" />
+                  {/* Phone map screen detail */}
+                  <path d="M 69,75 L 85,68 L 100,75 L 109,68 L 109,100 L 69,100 Z" fill="#d1fae5" />
+                  <circle cx="88" cy="55" r="5" fill="#22c55e" />
+                  <line x1="88" y1="55" x2="88" y2="62" stroke="#78350f" strokeWidth="1.5" />
+                  {/* Cloud Sync Icon */}
+                  <path d="M 125,52 C 120,52 118,56 120,60 C 116,60 116,66 122,66 L 140,66 C 144,66 144,60 141,60 C 142,55 137,52 135,52 Z" fill="#94a3b8" />
+                  <path d="M 130,58 L 130,68 M 126,62 L 130,58 L 134,62" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                  <circle cx="130" cy="60" r="12" stroke="#cbd5e1" strokeWidth="1.5" fill="none" strokeDasharray="3 3" />
                 </svg>
               </div>
               <h3>Field App</h3>
               <p>Equip field teams with offline-first tracking tools that sync logs automatically.</p>
             </article>
             
-            <article className="gp-feature-card">
-              <div className="gp-feature-icon-wrapper">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="20" x2="18" y2="10" />
-                  <line x1="12" y1="20" x2="12" y2="4" />
-                  <line x1="6" y1="20" x2="6" y2="14" />
+            {/* Feature 6: Impact Analytics */}
+            <article className="gp-feature-card gp-feature-card-illustrated">
+              <div className="gp-feature-illustration-wrap">
+                <svg viewBox="0 0 200 120" className="gp-illustration-svg">
+                  <circle cx="100" cy="60" r="50" fill="#f0fdf4" />
+                  {/* Graph backdrop grid */}
+                  <rect x="55" y="30" width="90" height="66" rx="6" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1.5" />
+                  <line x1="55" y1="46" x2="145" y2="46" stroke="#f1f5f9" strokeWidth="1" />
+                  <line x1="55" y1="62" x2="145" y2="62" stroke="#f1f5f9" strokeWidth="1" />
+                  <line x1="55" y1="78" x2="145" y2="78" stroke="#f1f5f9" strokeWidth="1" />
+                  {/* Growth Trend Line */}
+                  <path d="M 60,82 Q 95,78 115,55 T 140,42" fill="none" stroke="#22c55e" strokeWidth="3.5" strokeLinecap="round" />
+                  {/* Trend glowing endpoint */}
+                  <circle cx="140" cy="42" r="5" fill="#1f8c58" />
+                  <circle cx="140" cy="42" r="10" fill="rgba(31, 140, 88, 0.2)" />
+                  {/* Mini bar widgets */}
+                  <circle cx="70" cy="40" r="6" fill="#3b82f6" />
+                  <rect x="80" y="37" width="22" height="6" rx="2" fill="#e2e8f0" />
                 </svg>
               </div>
               <h3>Impact Analytics</h3>
@@ -477,25 +612,48 @@ export default function GreenPartnersLanding() {
               </div>
 
               <div className="gp-device-stage">
-                <div className={`gp-device gp-device--desktop gp-device--desktop-${activeModel.id}`}>
-                  <img
-                    src={activeModel.desktopImage}
-                    alt={activeModel.selectorTitle}
-                    className={activeModel.desktopFit === "contain" ? "fit-contain" : "fit-cover"}
-                    width="1400"
-                    height="900"
-                    loading="lazy"
-                  />
+                {/* Safari-style Browser Mockup */}
+                <div className="gp-browser-frame">
+                  <div className="gp-browser-header">
+                    <span className="gp-browser-dots">
+                      <span className="gp-dot gp-dot--red"></span>
+                      <span className="gp-dot gp-dot--yellow"></span>
+                      <span className="gp-dot gp-dot--green"></span>
+                    </span>
+                    <span className="gp-browser-address">
+                      landcheck.online/green/{activeModel.id}-workspace
+                    </span>
+                  </div>
+                  <div className="gp-browser-content">
+                    <div className={`gp-device gp-device--desktop gp-device--desktop-${activeModel.id}`}>
+                      <img
+                        src={activeModel.desktopImage}
+                        alt={activeModel.selectorTitle}
+                        className={activeModel.desktopFit === "contain" ? "fit-contain" : "fit-cover"}
+                        width="1400"
+                        height="900"
+                        loading="lazy"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className={`gp-device gp-device--phone gp-device--phone-${activeModel.id}`}>
-                  <img
-                    src={activeModel.phoneImage}
-                    alt={`${activeModel.selectorTitle} mobile preview`}
-                    className={activeModel.phoneFit === "contain" ? "fit-contain" : "fit-cover"}
-                    width="720"
-                    height="1520"
-                    loading="lazy"
-                  />
+
+                {/* iPhone-style Mobile Mockup */}
+                <div className="gp-phone-frame">
+                  <div className="gp-phone-notch"></div>
+                  <div className="gp-phone-screen">
+                    <div className={`gp-device gp-device--phone gp-device--phone-${activeModel.id}`}>
+                      <img
+                        src={activeModel.phoneImage}
+                        alt={`${activeModel.selectorTitle} mobile preview`}
+                        className={activeModel.phoneFit === "contain" ? "fit-contain" : "fit-cover"}
+                        width="720"
+                        height="1520"
+                        loading="lazy"
+                      />
+                    </div>
+                  </div>
+                  <div className="gp-phone-home-indicator"></div>
                 </div>
               </div>
 
