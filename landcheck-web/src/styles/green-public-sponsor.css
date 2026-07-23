@@ -120,7 +120,7 @@
 .gps-mobile-menu {
   position: fixed;
   top: 0;
-  left: 0;
+  right: 0;
   bottom: 0;
   z-index: 140;
   width: min(78vw, 300px);
@@ -134,7 +134,7 @@
 }
 
 @keyframes gps-mobile-menu-in {
-  from { transform: translateX(-16px); opacity: 0; }
+  from { transform: translateX(16px); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
 
@@ -159,7 +159,13 @@
 
 @media (max-width: 720px) {
   .gps-topbar-links { display: none; }
-  .gps-topbar-hamburger { display: flex; }
+  .gps-topbar-hamburger {
+    display: flex;
+    order: 3;
+    margin-left: auto;
+  }
+  .gps-topbar-brand { order: 1; }
+  .gps-topbar-icons { order: 2; }
 }
 
 /* ─── Promo announcement banner ─────────────────────────────────── */

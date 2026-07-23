@@ -1445,14 +1445,25 @@
     line-height: 1.3 !important;
   }
 
-  .lp-targets-header { padding: 0 24px 48px; }
+  .lp-targets-section { padding: 48px 0 0; }
+
+  .lp-targets-header { padding: 0 24px 28px; }
 
   .lp-targets-list { flex-direction: column; }
 
   .lp-target-item {
     flex: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px;
     border-right: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .lp-target-num-bullet {
+    margin-bottom: 0;
+    flex-shrink: 0;
   }
 
   .lp-products-row {
