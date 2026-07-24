@@ -272,6 +272,49 @@ export default function GreenPartnersLanding() {
     setActiveModelId(greenModels[nextIndex].id);
   }
 
+  const photoTrackRef = useRef<HTMLDivElement | null>(null);
+  const photoAutoplayPausedRef = useRef(false);
+
+  useEffect(() => {
+    const track = photoTrackRef.current;
+    if (!track) return;
+
+    const mobileQuery = window.matchMedia("(max-width: 768px)");
+
+    const pauseAutoplay = () => {
+      photoAutoplayPausedRef.current = true;
+    };
+
+    const intervalId = window.setInterval(() => {
+      if (photoAutoplayPausedRef.current || !mobileQuery.matches) return;
+      const atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 8;
+      track.scrollTo({ left: atEnd ? 0 : track.scrollLeft + track.clientWidth, behavior: "smooth" });
+    }, 4000);
+
+    // Only a real user gesture should permanently stop the auto-slide — our own
+    // programmatic scrollTo() calls never fire pointerdown/wheel, so this can't
+    // self-cancel.
+    track.addEventListener("pointerdown", pauseAutoplay, { passive: true });
+    track.addEventListener("wheel", pauseAutoplay, { passive: true });
+
+    return () => {
+      window.clearInterval(intervalId);
+      track.removeEventListener("pointerdown", pauseAutoplay);
+      track.removeEventListener("wheel", pauseAutoplay);
+    };
+  }, []);
+
+  function goToPhotoOffset(offset: number) {
+    const track = photoTrackRef.current;
+    if (!track) return;
+    photoAutoplayPausedRef.current = true;
+    const maxScroll = track.scrollWidth - track.clientWidth;
+    let next = track.scrollLeft + offset * track.clientWidth;
+    if (next < 0) next = maxScroll;
+    if (next > maxScroll) next = 0;
+    track.scrollTo({ left: next, behavior: "smooth" });
+  }
+
   useEffect(() => {
     let cancelled = false;
 
@@ -302,7 +345,8 @@ export default function GreenPartnersLanding() {
         ctaRoute="/green-work/login"
       />
 
-      <section className="gp-new-hero">
+      <section className="gp-new-hero" style={{ backgroundImage: `url("${photoAsset("seeds.JPG")}")` }}>
+        <div className="gp-new-hero-scrim" aria-hidden="true" />
         <div className="gp-shell gp-new-hero-inner">
           <div className="gp-new-hero-copy">
             <span className="gp-new-hero-badge">CSR + ESG Verification</span>
@@ -321,7 +365,7 @@ export default function GreenPartnersLanding() {
                 Sponsor a Tree
               </a>
             </div>
-            
+
             <div className="gp-new-hero-stats">
               <div className="gp-new-hero-stat-item">
                 <strong>4,000+</strong>
@@ -339,58 +383,6 @@ export default function GreenPartnersLanding() {
                 <strong>GPS</strong>
                 <span>Verified</span>
               </div>
-            </div>
-          </div>
-
-          <div className="gp-hero-circles">
-            {/* Satellite Grid Radar Backdrop */}
-            <div className="gp-hero-radar-backdrop" aria-hidden="true">
-              <svg viewBox="0 0 400 400" className="gp-radar-svg">
-                <circle cx="200" cy="200" r="180" className="gp-radar-ring" />
-                <circle cx="200" cy="200" r="120" className="gp-radar-ring" />
-                <circle cx="200" cy="200" r="60" className="gp-radar-ring" />
-                <line x1="20" y1="200" x2="380" y2="200" className="gp-radar-axis" />
-                <line x1="200" y1="20" x2="200" y2="380" className="gp-radar-axis" />
-                <circle cx="90" cy="110" r="4" className="gp-radar-target" />
-                <circle cx="280" cy="120" r="5" className="gp-radar-target" />
-                <circle cx="150" cy="290" r="4" className="gp-radar-target" />
-                <circle cx="310" cy="270" r="6" className="gp-radar-target" />
-                <path d="M 200,200 L 290,110" className="gp-radar-sweep" />
-              </svg>
-            </div>
-
-            {/* Live GPS Telemetry Badge */}
-            <div className="gp-hero-telemetry-badge">
-              <span className="gp-telemetry-dot"></span>
-              <div className="gp-telemetry-text-wrap">
-                <strong>GPS Satellite Synced</strong>
-                <span>Lagos, Abuja, Adamawa active</span>
-              </div>
-            </div>
-
-            <div className="gp-circle gp-circle-main">
-              <img 
-                src="/agent planting 1.JPG" 
-                alt="Forestry field work" 
-                className="gp-circle-img" 
-                loading="eager"
-              />
-            </div>
-            <div className="gp-circle gp-circle-sub1">
-              <img 
-                src="/agent planting 2.JPG" 
-                alt="Field agent planting seedling" 
-                className="gp-circle-img" 
-                loading="eager"
-              />
-            </div>
-            <div className="gp-circle gp-circle-sub2">
-              <img 
-                src="/tree_adamawa.JPG" 
-                alt="Verified community tree growth" 
-                className="gp-circle-img" 
-                loading="eager"
-              />
             </div>
           </div>
         </div>
@@ -758,31 +750,51 @@ export default function GreenPartnersLanding() {
 
       <section className="gp-photo-stage">
         <div className="gp-shell">
-          <div className="gp-photo-grid">
-            <article className="gp-photo-lead">
-              <span className="gp-section-eyebrow">Field evidence</span>
-              <h2>Real plantings. Real places. Real proof.</h2>
-              <p>
-                Every photo below is unedited field evidence from active LandCheck Green
-                projects in Yola South, Fufore, and Girei, Adamawa State — not stock photography.
-              </p>
-              <ul className="gp-photo-points">
-                {photoEvidencePoints.map((point) => (
-                  <li key={point}>{point}</li>
-                ))}
-              </ul>
-            </article>
-            {photoMoments.map((moment) => (
-              <article key={moment.title} className="gp-photo-card">
-                <div className="gp-photo-card__media">
-                  <img src={moment.imageSrc} alt={moment.title} loading="lazy" />
-                </div>
-                <div className="gp-photo-card__body">
-                  <span>{moment.label}</span>
-                  <h3>{moment.title}</h3>
-                </div>
+          <div className="gp-photo-carousel">
+            <button
+              type="button"
+              className="gp-photo-carousel__arrow gp-photo-carousel__arrow--prev"
+              onClick={() => goToPhotoOffset(-1)}
+              aria-label="Previous photo"
+            >
+              {modelCarouselPrevIcon}
+            </button>
+
+            <div className="gp-photo-grid" ref={photoTrackRef}>
+              <article className="gp-photo-lead">
+                <span className="gp-section-eyebrow">Field evidence</span>
+                <h2>Real plantings. Real places. Real proof.</h2>
+                <p>
+                  Every photo below is unedited field evidence from active LandCheck Green
+                  projects in Yola South, Fufore, and Girei, Adamawa State — not stock photography.
+                </p>
+                <ul className="gp-photo-points">
+                  {photoEvidencePoints.map((point) => (
+                    <li key={point}>{point}</li>
+                  ))}
+                </ul>
               </article>
-            ))}
+              {photoMoments.map((moment) => (
+                <article key={moment.title} className="gp-photo-card">
+                  <div className="gp-photo-card__media">
+                    <img src={moment.imageSrc} alt={moment.title} loading="lazy" />
+                  </div>
+                  <div className="gp-photo-card__body">
+                    <span>{moment.label}</span>
+                    <h3>{moment.title}</h3>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="gp-photo-carousel__arrow gp-photo-carousel__arrow--next"
+              onClick={() => goToPhotoOffset(1)}
+              aria-label="Next photo"
+            >
+              {modelCarouselNextIcon}
+            </button>
           </div>
         </div>
       </section>
