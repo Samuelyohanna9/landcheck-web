@@ -47,44 +47,44 @@ const GALLERY_IMAGES = [
 const PROOF_PHOTOS: ProofPhoto[] = [
   {
     src: "/fufore.JPG",
-    heading: "Regenerate the planet",
+    heading: "A new school campus welcomes its first trees",
     description:
       "The Principal of Model School Fufore welcomed the very first trees ever planted on this brand-new school campus — the first afforestation effort here since construction began.",
   },
   {
     src: "/yola south planting2.JPG",
-    heading: "Protect biodiversity",
+    heading: "QR tags connect each seedling to its sponsor",
    
     description:
       "Each seedling carries a scannable QR tag linking it to your name and your contributions to climate action.",
   },
   {
     src: "/seeds.JPG",
-    heading: "Ensure income and food security",
+    heading: "Seedlings are prepared before field deployment",
     
     description: "Seedlings are staged and inspected at the nursery before field agents take them out for planting.",
   },
   {
     src: "/sangere girei 1.JPG",
-    heading: "Promote gender equality",
+    heading: "Community members join the planting effort",
     
     description: "Local community members participate in the planting of new trees.",
   },
   {
     src: "/fufore planting-New Model school fufore3.JPG",
-    heading: "Support local education",
+    heading: "Field agents plant directly on school grounds",
     
     description: "Field agents plant new trees side by side on school grounds.",
   },
   {
     src: "/yola south plantin3.JPG",
-    heading: "Strengthen public health",
+    heading: "Primary health centre grounds receive new trees",
    
     description: "Tree planting at Jabbi Primary Health Care Authority.",
   },
   {
     src: "/sabgere girei 2.JPG",
-    heading: "Engage community leaders",
+    heading: "Local leadership is present during planting",
     
     description: "The local chief and our agent during the planting of new trees.",
   },

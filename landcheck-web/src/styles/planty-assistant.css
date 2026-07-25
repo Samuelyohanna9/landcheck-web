@@ -35,16 +35,20 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #ffffff;
-  color: var(--gps-text, #13271d);
-  border: 1px solid var(--gps-border, #d4e2d2);
+  background: linear-gradient(135deg, rgba(16, 54, 37, 0.96) 0%, rgba(23, 88, 57, 0.96) 100%);
+  color: #f7fbf8;
+  border: 1px solid rgba(111, 221, 162, 0.38);
   border-radius: 999px;
   padding: 10px 12px 10px 16px;
-  box-shadow: 0 10px 24px rgba(18, 63, 43, 0.18);
+  box-shadow: 0 14px 28px rgba(18, 63, 43, 0.24);
   font-size: 0.86rem;
   font-weight: 700;
   cursor: pointer;
   animation: planty-hint-in 0.25s ease-out;
+}
+.planty-hint span {
+  color: #f7fbf8;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
 }
 .planty-hint::after {
   content: "";
@@ -53,9 +57,9 @@
   right: 22px;
   width: 12px;
   height: 12px;
-  background: #ffffff;
-  border-right: 1px solid var(--gps-border, #d4e2d2);
-  border-bottom: 1px solid var(--gps-border, #d4e2d2);
+  background: rgba(20, 73, 48, 0.98);
+  border-right: 1px solid rgba(111, 221, 162, 0.38);
+  border-bottom: 1px solid rgba(111, 221, 162, 0.38);
   transform: rotate(45deg);
 }
 .planty-hint-dismiss {
@@ -66,8 +70,8 @@
   height: 20px;
   border-radius: 50%;
   border: none;
-  background: var(--gps-bg, #f4f8f2);
-  color: var(--gps-text-muted, #5a6f63);
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(247, 251, 248, 0.86);
   flex-shrink: 0;
 }
 .planty-hint-dismiss .gps-icon-inline { width: 10px; height: 10px; }
