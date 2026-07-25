@@ -14707,8 +14707,8 @@ export default function GreenWork() {
                     </div>
                   ) : null}
                   {sponsorAgentPayoutError ? <p className="green-work-note danger">{sponsorAgentPayoutError}</p> : null}
-                  <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.6fr) minmax(300px, 0.95fr)", gap: 16, alignItems: "start" }}>
-                    <div>
+                    <div className="green-work-payout-shell">
+                      <div className="green-work-payout-primary">
                       <div className="work-actions" style={{ marginBottom: 10, flexWrap: "wrap" }}>
                         <span className="green-work-live-pill ok">
                           Available: {formatCurrencyAmount(sponsorAgentPayoutSummary.availableAmount, sponsorAgentPayoutSummary.currency)}
@@ -14984,7 +14984,7 @@ export default function GreenWork() {
                       )}
                     </div>
 
-                    <div className="green-work-card" style={{ position: "sticky", top: 16 }}>
+                      <div className="green-work-card green-work-payout-side">
                       <h3>Accounting</h3>
                       <p className="green-work-note">
                         This board refreshes automatically from the live sponsor-agent payout feed. Standard flow: verified bank details,
