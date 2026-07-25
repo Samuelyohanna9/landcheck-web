@@ -3659,6 +3659,25 @@
   border-color: rgba(37, 99, 235, 0.2);
 }
 
+.green-work-payout-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(300px, 0.95fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.green-work-payout-primary {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.green-work-payout-side {
+  position: sticky;
+  top: 16px;
+  align-self: start;
+}
+
 .green-work-live-bulk-bar {
   display: flex;
   align-items: center;
@@ -4835,6 +4854,38 @@
     font-size: 0.88rem;
   }
 
+  .green-work-payout-shell {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+
+  .green-work-payout-side {
+    position: static;
+    top: auto;
+    order: -1;
+  }
+
+  .staff-row {
+    padding: 0.68rem;
+  }
+
+  .staff-row-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.32rem;
+  }
+
+  .staff-row-head span {
+    max-width: 100%;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .staff-row-meta {
+    line-height: 1.44;
+    word-break: break-word;
+  }
+
   .green-work-row {
     flex-direction: column;
     align-items: flex-start;
@@ -4851,6 +4902,7 @@
 
   .work-actions {
     width: 100%;
+    gap: 0.42rem;
   }
 
   .green-work-export-photo-toggle {
@@ -4860,7 +4912,8 @@
   }
 
   .work-actions button {
-    flex: 1 1 auto;
+    flex: 1 1 100%;
+    width: 100%;
     text-align: center;
   }
 
@@ -4963,6 +5016,90 @@
 
   .green-work-remote-report-copy h3 {
     font-size: 1.08rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .green-work-header-inner {
+    gap: 0.55rem;
+    padding: 0.66rem 0.72rem;
+  }
+
+  .green-work-brand img {
+    width: 40px;
+    height: 40px;
+  }
+
+  .green-work-title h1 {
+    font-size: 1.04rem;
+    line-height: 1.08;
+  }
+
+  .green-work-title span {
+    font-size: 0.7rem;
+  }
+
+  .green-work-toolbar-wrap,
+  .green-work-active-hub-wrap,
+  .green-work-content {
+    width: calc(100% - 10px);
+  }
+
+  .green-work-toolbar-wrap {
+    padding: 0.46rem 0.5rem 0;
+  }
+
+  .green-work-active-hub-wrap {
+    padding: 0.36rem 0.5rem 0;
+  }
+
+  .green-work-content {
+    padding: 0.68rem 0.5rem 0.8rem;
+    gap: 0.62rem;
+  }
+
+  .green-work-active-hub {
+    padding: 0.32rem;
+  }
+
+  .green-work-action-grid {
+    gap: 0.36rem;
+    padding: 0 0.04rem 0.08rem;
+  }
+
+  .green-work-action-card {
+    min-width: 84px;
+    min-height: 40px;
+    padding: 0.5rem 0.76rem;
+    gap: 0.28rem;
+  }
+
+  .green-work-action-title-row > span:first-child {
+    font-size: 0.72rem;
+  }
+
+  .green-work-profile-chip {
+    max-width: 48vw;
+    font-size: 0.68rem;
+    padding: 0.36rem 0.48rem;
+  }
+
+  .green-work-auth-btn {
+    padding: 0.38rem 0.5rem;
+    font-size: 0.68rem;
+  }
+
+  .green-work-live-pill {
+    font-size: 0.68rem;
+    padding: 0.16rem 0.4rem;
+  }
+
+  .green-work-card {
+    padding: 0.64rem;
+  }
+
+  .green-work-note {
+    font-size: 0.78rem;
   }
 }
 
