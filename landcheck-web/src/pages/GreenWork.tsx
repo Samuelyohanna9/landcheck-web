@@ -3751,6 +3751,7 @@ export default function GreenWork() {
   const [sponsorAgentPayoutLoading, setSponsorAgentPayoutLoading] = useState(false);
   const [sponsorAgentPayoutError, setSponsorAgentPayoutError] = useState<string | null>(null);
   const [reviewingSponsorAgentClearanceUnitId, setReviewingSponsorAgentClearanceUnitId] = useState<number | null>(null);
+  const [reconcilingSponsorAgentUserId, setReconcilingSponsorAgentUserId] = useState<number | null>(null);
   const [merchants, setMerchants] = useState<MerchantAccountRecord[]>([]);
   const [merchantsLoading, setMerchantsLoading] = useState(false);
   const [merchantsError, setMerchantsError] = useState<string | null>(null);
@@ -6544,6 +6545,47 @@ export default function GreenWork() {
         toast.error(error?.response?.data?.detail || "Failed to update payout clearance");
       } finally {
         setReviewingSponsorAgentClearanceUnitId(null);
+      }
+    },
+    [activeProjectId, canReviewSponsorPayoutClearance, loadSponsorAgentPayoutBoard, workAuthSession?.user?.full_name],
+  );
+
+  const autoReconcileSponsorAgentPayouts = useCallback(
+    async (agentUserId: number, agentName?: string | null) => {
+      if (!activeProjectId) return;
+      if (!canReviewSponsorPayoutClearance) {
+        toast.error("Only super admin can run payout reconciliation.");
+        return;
+      }
+      const reviewNotes =
+        window.prompt(
+          `Optional note for auto-matching paid sponsor units to approved planted trees for ${agentName || "this agent"}.`,
+          "",
+        ) || "";
+      setReconcilingSponsorAgentUserId(agentUserId);
+      try {
+        const res = await api.post("/green/admin/sponsor-agent-payout-reconcile", {
+          project_id: activeProjectId,
+          user_id: agentUserId,
+          reviewer_name: workAuthSession?.user?.full_name || "super_admin",
+          review_notes: reviewNotes.trim() || null,
+        });
+        await loadSponsorAgentPayoutBoard(activeProjectId, { forceSync: true });
+        const relinkedUnits = Number(res?.data?.relinked_units || 0);
+        const remainingGap = Number(res?.data?.remaining_gap || 0);
+        if (relinkedUnits > 0) {
+          toast.success(
+            remainingGap > 0
+              ? `${relinkedUnits} sponsor tree link(s) were matched. ${remainingGap} still need manual review.`
+              : `${relinkedUnits} sponsor tree link(s) were matched successfully.`,
+          );
+        } else {
+          toast("No approved unlinked trees were available for auto-matching. Manual review is still needed.");
+        }
+      } catch (error: any) {
+        toast.error(error?.response?.data?.detail || "Failed to auto-reconcile sponsor payout links");
+      } finally {
+        setReconcilingSponsorAgentUserId(null);
       }
     },
     [activeProjectId, canReviewSponsorPayoutClearance, loadSponsorAgentPayoutBoard, workAuthSession?.user?.full_name],
@@ -14720,6 +14762,22 @@ export default function GreenWork() {
                                         These linked sponsor trees are not yet entering the payout wallet automatically. Review the reason below and clear only
                                         if you have confirmed the sponsor payment is valid.
                                       </div>
+                                      {canReviewSponsorPayoutClearance && clearanceBlockers.length === 0 ? (
+                                        <div className="work-actions" style={{ marginTop: 10 }}>
+                                          <button
+                                            type="button"
+                                            className="btn-primary"
+                                            disabled={reconcilingSponsorAgentUserId === Number(agent.user?.id || 0) || !Number(agent.user?.id || 0)}
+                                            onClick={() =>
+                                              Number(agent.user?.id || 0)
+                                                ? void autoReconcileSponsorAgentPayouts(Number(agent.user?.id || 0), agent.user?.full_name || undefined)
+                                                : undefined
+                                            }
+                                          >
+                                            {reconcilingSponsorAgentUserId === Number(agent.user?.id || 0) ? "Reconciling..." : "Auto Match Approved Trees"}
+                                          </button>
+                                        </div>
+                                      ) : null}
                                     </div>
                                     {clearanceBlockers.length > 0 ? clearanceBlockers.map((blocker) => (
                                       <div key={`sponsor-agent-clearance-${blocker.unit_id}`} className="staff-row" style={{ margin: 0 }}>
@@ -14761,8 +14819,8 @@ export default function GreenWork() {
                                           response yet.
                                         </div>
                                         <div className="staff-row-meta" style={{ marginTop: 6 }}>
-                                          Click <strong>Refresh Payouts</strong>. If this stays the same after refresh, deploy the latest API and web build so the blocker
-                                          rows can be reviewed individually.
+                                          This usually means paid sponsor units are linked to the wrong planted tree, or duplicate links are collapsing the payable count.
+                                          Use <strong>Auto Match Approved Trees</strong> first, then refresh the payout board again.
                                         </div>
                                       </div>
                                     )}
