@@ -470,19 +470,15 @@ export default function GreenPublicSponsor() {
           </p>
         </div>
 
-        {/* objectBoundingBox clip-path so the curved seam scales with the panel at any size on mobile */}
-        <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
-          <defs>
-            <clipPath id="gpsHeroCurveClip" clipPathUnits="objectBoundingBox">
-              <path d="M 0.35 0 Q -0.15 0.5, 0.04 1 L 1 1 L 1 0 Z" />
-            </clipPath>
-          </defs>
-        </svg>
-
         <div className="gps-hero-media-wrap">
-          <div className="gps-hero-media-panel" style={{ backgroundImage: `url(${SPONSOR_BACKGROUND})` }}>
-            
-          </div>
+          <div
+            className="gps-hero-media-panel gps-hero-media-panel--a"
+            style={{ backgroundImage: `url(${SPONSOR_BACKGROUND})` }}
+          />
+          <div
+            className="gps-hero-media-panel gps-hero-media-panel--b"
+            style={{ backgroundImage: `url(${photoAsset("seeds.JPG")})` }}
+          />
         </div>
       </section>
       )}

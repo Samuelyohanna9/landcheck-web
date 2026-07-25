@@ -207,35 +207,42 @@
   position: relative;
   overflow: hidden;
   background: var(--gps-bg);
-  min-height: 520px;
+  min-height: clamp(620px, 88vh, 840px);
+  display: flex;
+  align-items: center;
 }
 
 .gps-hero-text-panel {
   position: relative;
   z-index: 2;
-  max-width: 44%;
+  max-width: 680px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  gap: 18px;
-  padding: 72px clamp(24px, 5vw, 56px);
-  text-align: left;
+  gap: 22px;
+  padding: 96px clamp(24px, 5vw, 56px);
+  text-align: center;
 }
 
-/* Media (video) + globe live in one wrapper so the globe can straddle the
-   diagonal seam without being clipped by the video panel's own clip-path. */
+/* Full-bleed dual-photo background behind the centered text panel — the two
+   photos blend into each other via a soft diagonal mask, then a single
+   scrim on top of both keeps the centered text legible. */
 .gps-hero-media-wrap {
   position: absolute;
   inset: 0;
-  left: 46%;
   z-index: 1;
 }
 
-/* Centered on the curved seam (see #gpsHeroCurveClip): quadratic bezier
-   M 0.35 0 Q -0.15 0.5, 0.04 1 has y(t) = t exactly (control-y is 0.5),
-   so x at height t = 0.35 - t + 0.69*t^2. At t=0.45: x ≈ 4%. */
-/* Globe elements removed to focus on premium photography seam */
+.gps-hero-media-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background:
+    linear-gradient(180deg, rgba(4, 10, 7, 0.8) 0%, rgba(4, 10, 7, 0.5) 45%, rgba(4, 10, 7, 0.85) 100%);
+}
 
 .gps-hero-eyebrow {
   display: inline-flex;
@@ -252,13 +259,13 @@
 
 .gps-hero-text-panel h1 {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-  font-size: clamp(2.1rem, 3.4vw, 2.95rem) !important;
+  font-size: clamp(2.6rem, 4.6vw, 3.75rem) !important;
   font-weight: 800 !important;
-  line-height: 1.08;
+  line-height: 1.1;
   letter-spacing: -0.04em;
   margin: 8px 0;
   color: var(--gps-text);
-  max-width: 460px;
+  max-width: 560px;
 }
 .gps-hero-accent { color: var(--gps-brand); }
 
@@ -281,8 +288,9 @@
 .gps-hero-assurance {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 0;
-  margin-top: 2px;
+  margin: 2px auto 0;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.04);
@@ -362,7 +370,7 @@
 .gps-hero-ctas {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 12px;
   margin-top: 10px;
 }
@@ -392,17 +400,26 @@
   color: #ffffff;
 }
 
-/* ─── Hero media panel (clean video, no dark overlay, curved seam) ──── */
+/* ─── Hero media panels — two photos blended into one composite backdrop ─── */
 .gps-hero-media-panel {
   position: absolute;
   inset: 0;
-  isolation: isolate;
   overflow: hidden;
   background-color: #0a2015;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  clip-path: polygon(25% 0%, 100% 0%, 100% 100%, 0% 100%);
+}
+
+.gps-hero-media-panel--a {
+  z-index: 1;
+}
+
+.gps-hero-media-panel--b {
+  z-index: 2;
+  background-position: center 25%;
+  -webkit-mask-image: linear-gradient(112deg, transparent 28%, rgba(0, 0, 0, 0.55) 46%, #000 66%);
+  mask-image: linear-gradient(112deg, transparent 28%, rgba(0, 0, 0, 0.55) 46%, #000 66%);
 }
 
 .gps-hero-media-caption {
@@ -451,103 +468,10 @@
 .gps-hero--video-ready .gps-hero-video.gps-hero-video--active { opacity: 1; }
 .gps-hero-video.gps-hero-video--inactive { opacity: 0; }
 
-/* Overlays for matching mobile hero view style */
-.gps-hero-layers-btn {
-  display: none;
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 10;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255, 255, 255, 0.85);
-  color: #2f6b4f;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-  cursor: pointer;
-  transition: transform 0.2s, background 0.2s;
-}
-.gps-hero-layers-btn:hover {
-  background: #ffffff;
-  transform: scale(1.05);
-}
-
-.gps-hero-code {
-  display: none;
-  position: absolute;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: #ffffff;
-  font-size: clamp(1.2rem, 4vw, 1.45rem);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.6);
-  z-index: 5;
-  pointer-events: none;
-}
-
-.gps-hero-badge {
-  display: flex !important;
-  position: absolute;
-  bottom: 24px;
-  right: 24px;
-  width: 92px;
-  height: 92px;
-  background: #dc2626; /* clean red starburst */
-  clip-path: polygon(
-    50% 0%, 55% 10%, 70% 5%, 70% 20%, 85% 15%, 80% 30%, 95% 30%, 88% 45%, 100% 50%, 88% 55%, 
-    95% 70%, 80% 70%, 85% 85%, 70% 80%, 70% 95%, 55% 90%, 50% 100%, 45% 90%, 30% 95%, 30% 80%, 
-    15% 85%, 20% 70%, 5% 70%, 12% 55%, 0% 50%, 12% 45%, 5% 30%, 20% 30%, 15% 15%, 30% 20%, 
-    30% 5%, 45% 10%
-  );
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  z-index: 5;
-  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.22));
-  transform: rotate(-12deg);
-  transition: transform 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.gps-hero-badge:hover {
-  transform: rotate(-8deg) scale(1.08);
-}
-
-.gps-hero-badge-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  line-height: 1.1;
-  text-align: center;
-}
-
-.gps-hero-badge-top {
-  font-size: 1.45rem;
-  font-weight: 900;
-  letter-spacing: -0.01em;
-}
-
-.gps-hero-badge-bottom {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-}
-
-
 @media (max-width: 900px) {
-  .gps-hero { min-height: 0; display: flex; flex-direction: column; }
-  .gps-hero-text-panel { position: static; order: -1; max-width: 100%; padding: 32px 20px 20px; }
+  .gps-hero { min-height: 560px; }
+  .gps-hero-text-panel { max-width: 100%; padding: 40px 20px; }
   .gps-hero-text-panel p { max-width: 100%; }
-  .gps-hero-media-wrap { position: relative; inset: auto; left: auto; height: 400px; margin-top: 24px; }
-  .gps-hero-media-panel { clip-path: url(#gpsHeroCurveClip); }
-  .gps-hero-layers-btn { display: flex; }
-  .gps-hero-code { display: block; }
-  .gps-hero-badge { display: flex; }
 }
 
 /* ─── Recently sponsored — floating balloon toast ──────────────── */
@@ -1486,25 +1410,27 @@
   .gps-proof-strip {
     display: flex !important;
     flex-direction: row !important;
-    height: 320px !important;
-    gap: 2px !important;
+    height: 360px !important;
+    gap: 3px !important;
     border-radius: 16px !important;
   }
   .gps-proof-panel {
     height: 100% !important;
-    flex-grow: 1 !important;
+    flex-grow: 0.5 !important;
     min-width: 0 !important;
     transition: flex-grow 550ms cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
   .gps-proof-panel:not(.is-active) {
-    flex-grow: 1 !important;
+    flex-grow: 0.5 !important;
   }
   .gps-proof-panel.is-active {
-    flex-grow: 5 !important;
+    flex-grow: 12 !important;
   }
   .gps-proof-panel-body {
-    padding: 10px 8px !important;
-    width: 250px !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: auto !important;
+    padding: 14px 12px !important;
     transform: translateZ(0);
     will-change: opacity;
   }
@@ -1516,25 +1442,27 @@
   .gps-proof-panel.is-active .gps-proof-panel-body {
     opacity: 1 !important;
     transition: opacity 300ms ease 200ms !important;
-    padding-left: 12px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
   }
   .gps-proof-panel-location {
-    font-size: 0.58rem !important;
-    margin-bottom: 2px !important;
+    font-size: 0.62rem !important;
+    margin-bottom: 4px !important;
+    white-space: normal !important;
   }
   .gps-proof-panel-heading {
-    font-size: 0.75rem !important;
-    line-height: 1.25 !important;
+    font-size: 0.84rem !important;
+    line-height: 1.3 !important;
   }
   .gps-proof-panel.is-active .gps-proof-panel-heading {
-    font-size: 0.95rem !important;
+    font-size: 1.08rem !important;
   }
   .gps-proof-panel-desc {
-    font-size: 0.7rem !important;
-    line-height: 1.35 !important;
+    font-size: 0.78rem !important;
+    line-height: 1.48 !important;
   }
   .gps-proof-panel.is-active .gps-proof-panel-desc {
-    max-height: 120px !important;
+    max-height: 180px !important;
     margin-top: 4px !important;
     opacity: 1 !important;
   }
@@ -1766,8 +1694,7 @@
   .gps-tier-grid { grid-template-columns: repeat(3, 1fr); }
 }
 
-/* Respect data-saver / low-power devices further: keep the video paused off-screen */
 @media (max-width: 420px) {
-  .gps-hero-text-panel { padding: 28px 14px 32px; }
-  .gps-hero-media-wrap { height: 330px; }
+  .gps-hero-text-panel { padding: 32px 14px 36px; }
+  .gps-hero { min-height: 500px; }
 }
