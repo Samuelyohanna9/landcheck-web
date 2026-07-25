@@ -522,6 +522,7 @@ type SponsorAgentReconciliationRecord = {
   unlinked_approved_count?: number;
   unpaid_linked_count?: number;
   approved_beyond_assignment_count?: number;
+  manual_payout_exception_count?: number;
 };
 
 type SponsorAgentPayoutClearanceBlockerRecord = {
@@ -2108,6 +2109,7 @@ const normalizeSponsorAgentReconciliationRecord = (row: any): SponsorAgentReconc
   unlinked_approved_count: Number(row?.unlinked_approved_count || 0),
   unpaid_linked_count: Number(row?.unpaid_linked_count || 0),
   approved_beyond_assignment_count: Number(row?.approved_beyond_assignment_count || 0),
+  manual_payout_exception_count: Number(row?.manual_payout_exception_count || 0),
 });
 
 const normalizeSponsorAgentPayoutClearanceBlockerRecord = (row: any): SponsorAgentPayoutClearanceBlockerRecord => ({
@@ -3752,6 +3754,7 @@ export default function GreenWork() {
   const [sponsorAgentPayoutError, setSponsorAgentPayoutError] = useState<string | null>(null);
   const [reviewingSponsorAgentClearanceUnitId, setReviewingSponsorAgentClearanceUnitId] = useState<number | null>(null);
   const [reconcilingSponsorAgentUserId, setReconcilingSponsorAgentUserId] = useState<number | null>(null);
+  const [manuallyClearingSponsorAgentUserId, setManuallyClearingSponsorAgentUserId] = useState<number | null>(null);
   const [merchants, setMerchants] = useState<MerchantAccountRecord[]>([]);
   const [merchantsLoading, setMerchantsLoading] = useState(false);
   const [merchantsError, setMerchantsError] = useState<string | null>(null);
@@ -6589,6 +6592,46 @@ export default function GreenWork() {
       }
     },
     [activeProjectId, canReviewSponsorPayoutClearance, loadSponsorAgentPayoutBoard, workAuthSession?.user?.full_name],
+  );
+
+  const manuallyClearSponsorAgentExtraApprovedTree = useCallback(
+    async (agentUserId: number, agentName?: string | null) => {
+      if (!activeProjectId) return;
+      if (!canReviewSponsorPayoutClearance) {
+        toast.error("Only super admin can grant a manual payout exception.");
+        return;
+      }
+      const reviewNotes =
+        window.prompt(
+          `Enter a short note explaining why the extra approved tree for ${agentName || "this agent"} should be paid manually.`,
+          "",
+        ) || "";
+      if (!reviewNotes.trim()) {
+        toast.error("A short review note is required.");
+        return;
+      }
+      setManuallyClearingSponsorAgentUserId(agentUserId);
+      try {
+        const res = await api.post("/green/admin/sponsor-agent-payout-manual-clear", {
+          project_id: activeProjectId,
+          user_id: agentUserId,
+          reviewer_name: workAuthSession?.user?.full_name || "super_admin",
+          review_notes: reviewNotes.trim(),
+        });
+        await loadSponsorAgentPayoutBoard(activeProjectId, { forceSync: true });
+        toast.success(
+          `Manual payout clearance added for ${res?.data?.tree_label || "the extra approved tree"} (${formatCurrencyAmount(
+            Number(res?.data?.amount || 0),
+            String(res?.data?.currency || sponsorAgentPayoutSummary.currency),
+          )}).`,
+        );
+      } catch (error: any) {
+        toast.error(error?.response?.data?.detail || "Failed to manually clear extra approved tree");
+      } finally {
+        setManuallyClearingSponsorAgentUserId(null);
+      }
+    },
+    [activeProjectId, canReviewSponsorPayoutClearance, loadSponsorAgentPayoutBoard, sponsorAgentPayoutSummary.currency, workAuthSession?.user?.full_name],
   );
 
   const reviewSponsorshipPayment = async (
@@ -14690,7 +14733,10 @@ export default function GreenWork() {
                             const projectApprovalGap = Number(reconciliation?.unlinked_approved_count || 0);
                             const projectUnpaidGap = Number(reconciliation?.unpaid_linked_count || 0);
                             const assignmentOverrun = Number(reconciliation?.approved_beyond_assignment_count || 0);
-                            const showPayoutClearanceReview = clearanceBlockers.length > 0 || (canReviewSponsorPayoutClearance && projectUnpaidGap > 0);
+                            const manualPayoutExceptionCount = Number(reconciliation?.manual_payout_exception_count || 0);
+                            const showPayoutClearanceReview =
+                              clearanceBlockers.length > 0 ||
+                              (canReviewSponsorPayoutClearance && (projectUnpaidGap > 0 || projectApprovalGap > 0 || assignmentOverrun > 0));
                             return (
                               <div key={`sponsor-agent-wallet-${agent.user?.id || agent.user?.user_uid || "agent"}`} className="staff-row">
                                 <div className="staff-row-head">
@@ -14733,6 +14779,9 @@ export default function GreenWork() {
                                       <span className="green-work-live-pill ok">
                                         Payable: {Number(reconciliation.payable_count || 0)}
                                       </span>
+                                      <span className="green-work-live-pill neutral">
+                                        Manual cleared: {manualPayoutExceptionCount}
+                                      </span>
                                       <span className="green-work-live-pill warning">
                                         Remaining: {Number(reconciliation.remaining_target_trees || 0)}
                                       </span>
@@ -14760,8 +14809,29 @@ export default function GreenWork() {
                                       </div>
                                       <div className="staff-row-meta">
                                         These linked sponsor trees are not yet entering the payout wallet automatically. Review the reason below and clear only
-                                        if you have confirmed the sponsor payment is valid.
+                                        if you have confirmed the sponsor payment is valid. Extra approved trees above the assigned target can also be manually cleared here.
                                       </div>
+                                      {canReviewSponsorPayoutClearance && (projectApprovalGap > 0 || assignmentOverrun > 0) ? (
+                                        <div className="work-actions" style={{ marginTop: 10 }}>
+                                          <button
+                                            type="button"
+                                            className="btn-primary"
+                                            disabled={manuallyClearingSponsorAgentUserId === Number(agent.user?.id || 0) || !Number(agent.user?.id || 0)}
+                                            onClick={() =>
+                                              Number(agent.user?.id || 0)
+                                                ? void manuallyClearSponsorAgentExtraApprovedTree(
+                                                    Number(agent.user?.id || 0),
+                                                    agent.user?.full_name || undefined,
+                                                  )
+                                                : undefined
+                                            }
+                                          >
+                                            {manuallyClearingSponsorAgentUserId === Number(agent.user?.id || 0)
+                                              ? "Clearing..."
+                                              : "Manual Clear Extra Approved Tree"}
+                                          </button>
+                                        </div>
+                                      ) : null}
                                       {canReviewSponsorPayoutClearance && clearanceBlockers.length === 0 ? (
                                         <div className="work-actions" style={{ marginTop: 10 }}>
                                           <button
@@ -14815,12 +14885,22 @@ export default function GreenWork() {
                                     )) : (
                                       <div className="staff-row" style={{ margin: 0 }}>
                                         <div className="green-work-note danger" style={{ marginTop: 0 }}>
-                                          {projectUnpaidGap} linked sponsor tree(s) are still marked as not payable, but the itemized clearance rows did not load in this
-                                          response yet.
+                                          {projectUnpaidGap > 0
+                                            ? `${projectUnpaidGap} linked sponsor tree(s) are still marked as not payable, but the itemized clearance rows did not load in this response yet.`
+                                            : `${Math.max(projectApprovalGap, assignmentOverrun)} approved tree(s) still need manual payout review because they are not sponsor-linked or sit above the assigned target.`}
                                         </div>
                                         <div className="staff-row-meta" style={{ marginTop: 6 }}>
-                                          This usually means paid sponsor units are linked to the wrong planted tree, or duplicate links are collapsing the payable count.
-                                          Use <strong>Auto Match Approved Trees</strong> first, then refresh the payout board again.
+                                          {projectUnpaidGap > 0 ? (
+                                            <>
+                                              This usually means paid sponsor units are linked to the wrong planted tree, or duplicate links are collapsing the payable
+                                              count. Use <strong>Auto Match Approved Trees</strong> first, then refresh the payout board again.
+                                            </>
+                                          ) : (
+                                            <>
+                                              Use <strong>Manual Clear Extra Approved Tree</strong> only after confirming the tree was genuinely planted and approved, even
+                                              though it sits outside the assigned sponsor target.
+                                            </>
+                                          )}
                                         </div>
                                       </div>
                                     )}
