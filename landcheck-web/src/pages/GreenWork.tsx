@@ -506,11 +506,30 @@ type SponsorAgentEarningRecord = {
   payout_paid_at?: string | null;
 };
 
+type SponsorAgentReconciliationRecord = {
+  project_id?: number | null;
+  active_order_count?: number;
+  assigned_target_trees?: number;
+  remaining_target_trees?: number;
+  saved_count?: number;
+  approved_count?: number;
+  sponsor_linked_count?: number;
+  payable_count?: number;
+  payable_available_count?: number;
+  payable_requested_count?: number;
+  payable_paid_count?: number;
+  unreviewed_count?: number;
+  unlinked_approved_count?: number;
+  unpaid_linked_count?: number;
+  approved_beyond_assignment_count?: number;
+};
+
 type SponsorAgentDashboardRecord = {
   eligible?: boolean;
   minimum_payout_amount?: number | null;
   currency?: string | null;
   auto_payout_available?: boolean;
+  repaired_missing_links?: number;
   user?: {
     id: number;
     full_name?: string | null;
@@ -533,6 +552,7 @@ type SponsorAgentDashboardRecord = {
     payout_eligible?: boolean;
     bank_verified?: boolean;
   } | null;
+  reconciliation?: SponsorAgentReconciliationRecord | null;
   project_summaries?: Array<{
     project_id: number;
     project_name?: string | null;
@@ -563,6 +583,7 @@ type SponsorAgentPayoutBoard = {
     available_amount?: number;
     requested_amount?: number;
     paid_amount?: number;
+    reconciliation?: SponsorAgentReconciliationRecord | null;
   } | null;
 };
 
@@ -2048,12 +2069,31 @@ const normalizeSponsorAgentEarningRecord = (row: any): SponsorAgentEarningRecord
   payout_paid_at: row?.payout_paid_at ? String(row.payout_paid_at) : null,
 });
 
+const normalizeSponsorAgentReconciliationRecord = (row: any): SponsorAgentReconciliationRecord => ({
+  project_id: row?.project_id ? Number(row.project_id) : null,
+  active_order_count: Number(row?.active_order_count || 0),
+  assigned_target_trees: Number(row?.assigned_target_trees || 0),
+  remaining_target_trees: Number(row?.remaining_target_trees || 0),
+  saved_count: Number(row?.saved_count || 0),
+  approved_count: Number(row?.approved_count || 0),
+  sponsor_linked_count: Number(row?.sponsor_linked_count || 0),
+  payable_count: Number(row?.payable_count || 0),
+  payable_available_count: Number(row?.payable_available_count || 0),
+  payable_requested_count: Number(row?.payable_requested_count || 0),
+  payable_paid_count: Number(row?.payable_paid_count || 0),
+  unreviewed_count: Number(row?.unreviewed_count || 0),
+  unlinked_approved_count: Number(row?.unlinked_approved_count || 0),
+  unpaid_linked_count: Number(row?.unpaid_linked_count || 0),
+  approved_beyond_assignment_count: Number(row?.approved_beyond_assignment_count || 0),
+});
+
 const normalizeSponsorAgentDashboardRecord = (row: any): SponsorAgentDashboardRecord => ({
   eligible: Boolean(row?.eligible),
   minimum_payout_amount:
     row?.minimum_payout_amount === null || row?.minimum_payout_amount === undefined ? null : Number(row.minimum_payout_amount || 0),
   currency: row?.currency ? normalizeSponsorCurrencyCode(row.currency) : "NGN",
   auto_payout_available: Boolean(row?.auto_payout_available),
+  repaired_missing_links: Number(row?.repaired_missing_links || 0),
   user:
     row?.user && typeof row.user === "object"
       ? {
@@ -2081,6 +2121,7 @@ const normalizeSponsorAgentDashboardRecord = (row: any): SponsorAgentDashboardRe
         bank_verified: Boolean(row.summary.bank_verified),
       }
     : null,
+  reconciliation: row?.reconciliation ? normalizeSponsorAgentReconciliationRecord(row.reconciliation) : null,
   project_summaries: Array.isArray(row?.project_summaries)
     ? row.project_summaries.map((item: any) => ({
         project_id: Number(item?.project_id || 0),
@@ -2115,6 +2156,7 @@ const normalizeSponsorAgentPayoutBoard = (row: any): SponsorAgentPayoutBoard => 
         available_amount: Number(row.summary.available_amount || 0),
         requested_amount: Number(row.summary.requested_amount || 0),
         paid_amount: Number(row.summary.paid_amount || 0),
+        reconciliation: row.summary.reconciliation ? normalizeSponsorAgentReconciliationRecord(row.summary.reconciliation) : null,
       }
     : null,
 });
@@ -9984,6 +10026,9 @@ export default function GreenWork() {
       requestedAmount: Number(sponsorAgentPayoutBoard?.summary?.requested_amount || 0),
       paidAmount: Number(sponsorAgentPayoutBoard?.summary?.paid_amount || 0),
       autoPayoutAvailable: Boolean(sponsorAgentPayoutBoard?.auto_payout_available),
+      reconciliation: sponsorAgentPayoutBoard?.summary?.reconciliation
+        ? normalizeSponsorAgentReconciliationRecord(sponsorAgentPayoutBoard.summary.reconciliation)
+        : null,
     }),
     [sponsorAgentPayoutBoard],
   );
@@ -14463,6 +14508,32 @@ export default function GreenWork() {
                       Auto payout: {sponsorAgentPayoutSummary.autoPayoutAvailable ? "available" : "manual only"}
                     </span>
                   </div>
+                  {sponsorAgentPayoutSummary.reconciliation ? (
+                    <div className="work-actions" style={{ marginBottom: 12, flexWrap: "wrap" }}>
+                      <span className="green-work-live-pill neutral">
+                        Assigned: {Number(sponsorAgentPayoutSummary.reconciliation.assigned_target_trees || 0)}
+                      </span>
+                      <span className="green-work-live-pill neutral">
+                        Saved: {Number(sponsorAgentPayoutSummary.reconciliation.saved_count || 0)}
+                      </span>
+                      <span className="green-work-live-pill info">
+                        Approved: {Number(sponsorAgentPayoutSummary.reconciliation.approved_count || 0)}
+                      </span>
+                      <span className="green-work-live-pill ok">
+                        Sponsor-linked: {Number(sponsorAgentPayoutSummary.reconciliation.sponsor_linked_count || 0)}
+                      </span>
+                      <span className="green-work-live-pill ok">
+                        Payable: {Number(sponsorAgentPayoutSummary.reconciliation.payable_count || 0)}
+                      </span>
+                      <span
+                        className={`green-work-live-pill ${
+                          Number(sponsorAgentPayoutSummary.reconciliation.unlinked_approved_count || 0) > 0 ? "danger" : "neutral"
+                        }`}
+                      >
+                        Approval gap: {Number(sponsorAgentPayoutSummary.reconciliation.unlinked_approved_count || 0)}
+                      </span>
+                    </div>
+                  ) : null}
                   {sponsorAgentPayoutError ? <p className="green-work-note danger">{sponsorAgentPayoutError}</p> : null}
                   <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.6fr) minmax(300px, 0.95fr)", gap: 16, alignItems: "start" }}>
                     <div>
@@ -14485,6 +14556,10 @@ export default function GreenWork() {
                             const agentSummary = agent.summary || {};
                             const bank = agent.bank_account;
                             const recentEarnings = (agent.earnings || []).slice(0, 3);
+                            const reconciliation = agent.reconciliation || null;
+                            const projectApprovalGap = Number(reconciliation?.unlinked_approved_count || 0);
+                            const projectUnpaidGap = Number(reconciliation?.unpaid_linked_count || 0);
+                            const assignmentOverrun = Number(reconciliation?.approved_beyond_assignment_count || 0);
                             return (
                               <div key={`sponsor-agent-wallet-${agent.user?.id || agent.user?.user_uid || "agent"}`} className="staff-row">
                                 <div className="staff-row-head">
@@ -14509,10 +14584,51 @@ export default function GreenWork() {
                                   Planting: {Number(agentSummary.planting_count || 0)} | Maintenance: {Number(agentSummary.maintenance_count || 0)} | Total earned:{" "}
                                   {formatCurrencyAmount(Number(agentSummary.total_earnings_amount || 0), agent.currency || sponsorAgentPayoutSummary.currency)}
                                 </div>
+                                {reconciliation ? (
+                                  <>
+                                    <div className="work-actions" style={{ margin: "8px 0 6px", flexWrap: "wrap" }}>
+                                      <span className="green-work-live-pill neutral">
+                                        Project assigned: {Number(reconciliation.assigned_target_trees || 0)}
+                                      </span>
+                                      <span className="green-work-live-pill neutral">
+                                        Saved: {Number(reconciliation.saved_count || 0)}
+                                      </span>
+                                      <span className="green-work-live-pill info">
+                                        Approved: {Number(reconciliation.approved_count || 0)}
+                                      </span>
+                                      <span className="green-work-live-pill ok">
+                                        Linked: {Number(reconciliation.sponsor_linked_count || 0)}
+                                      </span>
+                                      <span className="green-work-live-pill ok">
+                                        Payable: {Number(reconciliation.payable_count || 0)}
+                                      </span>
+                                      <span className="green-work-live-pill warning">
+                                        Remaining: {Number(reconciliation.remaining_target_trees || 0)}
+                                      </span>
+                                    </div>
+                                    {projectApprovalGap > 0 || projectUnpaidGap > 0 || assignmentOverrun > 0 ? (
+                                      <div className="green-work-note danger" style={{ marginTop: 4 }}>
+                                        Project reconciliation issue:
+                                        {projectApprovalGap > 0 ? ` ${projectApprovalGap} approved tree(s) are not yet sponsor-linked.` : ""}
+                                        {projectUnpaidGap > 0 ? ` ${projectUnpaidGap} linked tree(s) are not yet payable.` : ""}
+                                        {assignmentOverrun > 0 ? ` ${assignmentOverrun} approved tree(s) sit above the assigned target.` : ""}
+                                      </div>
+                                    ) : (
+                                      <div className="staff-row-meta" style={{ marginTop: 4 }}>
+                                        Project reconciliation is clean: approved sponsor trees are linked and payable.
+                                      </div>
+                                    )}
+                                  </>
+                                ) : null}
                                 <div className="staff-row-meta">
                                   Pending requests: {Number(agentSummary.pending_request_count || 0)} | Paid requests: {Number(agentSummary.paid_request_count || 0)} | Projects:{" "}
                                   {Array.isArray(agent.projects) ? agent.projects.length : 0}
                                 </div>
+                                {Number(agent.repaired_missing_links || 0) > 0 ? (
+                                  <div className="staff-row-meta">
+                                    Recovery: {Number(agent.repaired_missing_links || 0)} older sponsor tree link(s) were repaired automatically on refresh.
+                                  </div>
+                                ) : null}
                                 <div className="staff-row-meta">
                                   Bank: {bank?.bank_name || "-"} | Code: {bank?.bank_code || "-"} | Account:{" "}
                                   {bank?.account_number_masked || bank?.account_number || "-"}
