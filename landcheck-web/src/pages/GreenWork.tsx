@@ -6618,20 +6618,20 @@ export default function GreenWork() {
           reviewer_name: workAuthSession?.user?.full_name || "super_admin",
           review_notes: reviewNotes.trim(),
         });
-        await loadSponsorAgentPayoutBoard(activeProjectId, { forceSync: true });
-        toast.success(
-          `Manual payout clearance added for ${res?.data?.tree_label || "the extra approved tree"} (${formatCurrencyAmount(
-            Number(res?.data?.amount || 0),
-            String(res?.data?.currency || sponsorAgentPayoutSummary.currency),
-          )}).`,
-        );
+         await loadSponsorAgentPayoutBoard(activeProjectId, { forceSync: true });
+         toast.success(
+           `Manual payout clearance added for ${res?.data?.tree_label || "the extra approved tree"} (${formatCurrencyAmount(
+             Number(res?.data?.amount || 0),
+            String(res?.data?.currency || "NGN"),
+           )}).`,
+         );
       } catch (error: any) {
         toast.error(error?.response?.data?.detail || "Failed to manually clear extra approved tree");
       } finally {
         setManuallyClearingSponsorAgentUserId(null);
       }
     },
-    [activeProjectId, canReviewSponsorPayoutClearance, loadSponsorAgentPayoutBoard, sponsorAgentPayoutSummary.currency, workAuthSession?.user?.full_name],
+    [activeProjectId, canReviewSponsorPayoutClearance, loadSponsorAgentPayoutBoard, workAuthSession?.user?.full_name],
   );
 
   const reviewSponsorshipPayment = async (
