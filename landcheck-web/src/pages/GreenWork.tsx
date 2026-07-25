@@ -524,6 +524,28 @@ type SponsorAgentReconciliationRecord = {
   approved_beyond_assignment_count?: number;
 };
 
+type SponsorAgentPayoutClearanceBlockerRecord = {
+  unit_id: number;
+  unit_uid?: string | null;
+  tree_id?: number | null;
+  tree_label?: string | null;
+  species?: string | null;
+  order_id?: number | null;
+  order_uid?: string | null;
+  payment_status?: string | null;
+  order_status?: string | null;
+  payment_verified_at?: string | null;
+  sponsor_name?: string | null;
+  sponsor_organization_name?: string | null;
+  linked_at?: string | null;
+  created_by?: string | null;
+  manual_payout_clearance?: boolean;
+  manual_payout_clearance_by?: string | null;
+  manual_payout_clearance_at?: string | null;
+  manual_payout_clearance_reason?: string | null;
+  blocker_reason?: string | null;
+};
+
 type SponsorAgentDashboardRecord = {
   eligible?: boolean;
   minimum_payout_amount?: number | null;
@@ -553,6 +575,7 @@ type SponsorAgentDashboardRecord = {
     bank_verified?: boolean;
   } | null;
   reconciliation?: SponsorAgentReconciliationRecord | null;
+  payout_clearance_blockers?: SponsorAgentPayoutClearanceBlockerRecord[];
   project_summaries?: Array<{
     project_id: number;
     project_name?: string | null;
@@ -2087,6 +2110,28 @@ const normalizeSponsorAgentReconciliationRecord = (row: any): SponsorAgentReconc
   approved_beyond_assignment_count: Number(row?.approved_beyond_assignment_count || 0),
 });
 
+const normalizeSponsorAgentPayoutClearanceBlockerRecord = (row: any): SponsorAgentPayoutClearanceBlockerRecord => ({
+  unit_id: Number(row?.unit_id || 0),
+  unit_uid: row?.unit_uid ? String(row.unit_uid).trim() || null : null,
+  tree_id: row?.tree_id ? Number(row.tree_id) : null,
+  tree_label: row?.tree_label ? String(row.tree_label).trim() || null : null,
+  species: row?.species ? String(row.species).trim() || null : null,
+  order_id: row?.order_id ? Number(row.order_id) : null,
+  order_uid: row?.order_uid ? String(row.order_uid).trim() || null : null,
+  payment_status: row?.payment_status ? String(row.payment_status).trim() || null : null,
+  order_status: row?.order_status ? String(row.order_status).trim() || null : null,
+  payment_verified_at: row?.payment_verified_at ? String(row.payment_verified_at) : null,
+  sponsor_name: row?.sponsor_name ? String(row.sponsor_name).trim() || null : null,
+  sponsor_organization_name: row?.sponsor_organization_name ? String(row.sponsor_organization_name).trim() || null : null,
+  linked_at: row?.linked_at ? String(row.linked_at) : null,
+  created_by: row?.created_by ? String(row.created_by).trim() || null : null,
+  manual_payout_clearance: Boolean(row?.manual_payout_clearance),
+  manual_payout_clearance_by: row?.manual_payout_clearance_by ? String(row.manual_payout_clearance_by).trim() || null : null,
+  manual_payout_clearance_at: row?.manual_payout_clearance_at ? String(row.manual_payout_clearance_at) : null,
+  manual_payout_clearance_reason: row?.manual_payout_clearance_reason ? String(row.manual_payout_clearance_reason).trim() || null : null,
+  blocker_reason: row?.blocker_reason ? String(row.blocker_reason).trim() || null : null,
+});
+
 const normalizeSponsorAgentDashboardRecord = (row: any): SponsorAgentDashboardRecord => ({
   eligible: Boolean(row?.eligible),
   minimum_payout_amount:
@@ -2122,6 +2167,9 @@ const normalizeSponsorAgentDashboardRecord = (row: any): SponsorAgentDashboardRe
       }
     : null,
   reconciliation: row?.reconciliation ? normalizeSponsorAgentReconciliationRecord(row.reconciliation) : null,
+  payout_clearance_blockers: Array.isArray(row?.payout_clearance_blockers)
+    ? row.payout_clearance_blockers.map((item: any) => normalizeSponsorAgentPayoutClearanceBlockerRecord(item))
+    : [],
   project_summaries: Array.isArray(row?.project_summaries)
     ? row.project_summaries.map((item: any) => ({
         project_id: Number(item?.project_id || 0),
@@ -3698,6 +3746,7 @@ export default function GreenWork() {
   const [sponsorAgentPayoutBoard, setSponsorAgentPayoutBoard] = useState<SponsorAgentPayoutBoard | null>(null);
   const [sponsorAgentPayoutLoading, setSponsorAgentPayoutLoading] = useState(false);
   const [sponsorAgentPayoutError, setSponsorAgentPayoutError] = useState<string | null>(null);
+  const [reviewingSponsorAgentClearanceUnitId, setReviewingSponsorAgentClearanceUnitId] = useState<number | null>(null);
   const [merchants, setMerchants] = useState<MerchantAccountRecord[]>([]);
   const [merchantsLoading, setMerchantsLoading] = useState(false);
   const [merchantsError, setMerchantsError] = useState<string | null>(null);
@@ -6460,6 +6509,40 @@ export default function GreenWork() {
       }
     },
     [activeProjectId, loadSponsorAgentPayoutBoard, workAuthSession?.user?.full_name],
+  );
+
+  const reviewSponsorAgentPayoutClearance = useCallback(
+    async (unitId: number, action: "clear" | "revoke", treeLabel?: string | null) => {
+      if (!activeProjectId) return;
+      if (!canAccessSuperAdmin) {
+        toast.error("Only super admin can review payout clearance exceptions.");
+        return;
+      }
+      const promptText =
+        action === "clear"
+          ? `Enter a short note confirming why ${treeLabel || "this linked tree"} should be cleared for agent payout.`
+          : `Enter a short note explaining why payout clearance is being revoked for ${treeLabel || "this linked tree"}.`;
+      const reviewNotes = window.prompt(promptText, "") || "";
+      if (!reviewNotes.trim()) {
+        toast.error("A short review note is required.");
+        return;
+      }
+      setReviewingSponsorAgentClearanceUnitId(unitId);
+      try {
+        await api.patch(`/green/admin/sponsor-agent-payout-clearance/${unitId}`, {
+          action,
+          reviewer_name: workAuthSession?.user?.full_name || "super_admin",
+          review_notes: reviewNotes.trim(),
+        });
+        await loadSponsorAgentPayoutBoard(activeProjectId, { forceSync: true });
+        toast.success(action === "clear" ? "Linked tree cleared for payout" : "Manual payout clearance revoked");
+      } catch (error: any) {
+        toast.error(error?.response?.data?.detail || "Failed to update payout clearance");
+      } finally {
+        setReviewingSponsorAgentClearanceUnitId(null);
+      }
+    },
+    [activeProjectId, canAccessSuperAdmin, loadSponsorAgentPayoutBoard, workAuthSession?.user?.full_name],
   );
 
   const reviewSponsorshipPayment = async (
@@ -14557,6 +14640,7 @@ export default function GreenWork() {
                             const bank = agent.bank_account;
                             const recentEarnings = (agent.earnings || []).slice(0, 3);
                             const reconciliation = agent.reconciliation || null;
+                            const clearanceBlockers = agent.payout_clearance_blockers || [];
                             const projectApprovalGap = Number(reconciliation?.unlinked_approved_count || 0);
                             const projectUnpaidGap = Number(reconciliation?.unpaid_linked_count || 0);
                             const assignmentOverrun = Number(reconciliation?.approved_beyond_assignment_count || 0);
@@ -14619,6 +14703,54 @@ export default function GreenWork() {
                                       </div>
                                     )}
                                   </>
+                                ) : null}
+                                {clearanceBlockers.length > 0 ? (
+                                  <div className="staff-list" style={{ marginTop: 12 }}>
+                                    <div className="staff-row" style={{ margin: 0 }}>
+                                      <div className="staff-row-head">
+                                        <strong>Blocked payout items</strong>
+                                        <span>{clearanceBlockers.length}</span>
+                                      </div>
+                                      <div className="staff-row-meta">
+                                        These linked sponsor trees are not yet entering the payout wallet automatically. Review the reason below and clear only
+                                        if you have confirmed the sponsor payment is valid.
+                                      </div>
+                                    </div>
+                                    {clearanceBlockers.map((blocker) => (
+                                      <div key={`sponsor-agent-clearance-${blocker.unit_id}`} className="staff-row" style={{ margin: 0 }}>
+                                        <div className="staff-row-head">
+                                          <strong>{blocker.tree_label || `Tree #${blocker.tree_id || blocker.unit_id}`}</strong>
+                                          <span>{blocker.order_uid || blocker.unit_uid || `Unit #${blocker.unit_id}`}</span>
+                                        </div>
+                                        <div className="staff-row-meta">
+                                          {blocker.sponsor_name ? `Sponsor: ${blocker.sponsor_name}` : "Sponsor: -"}
+                                          {blocker.species ? ` | Species: ${blocker.species}` : ""}
+                                          {blocker.linked_at ? ` | Linked: ${formatDateLabel(blocker.linked_at)}` : ""}
+                                        </div>
+                                        <div className="staff-row-meta">
+                                          Payment: {formatTaskTypeLabel(blocker.payment_status || "pending")} | Order:{" "}
+                                          {formatTaskTypeLabel(blocker.order_status || "pending_payment")}
+                                        </div>
+                                        <div className="green-work-note danger" style={{ marginTop: 6 }}>
+                                          {blocker.blocker_reason || "Manual payout clearance review required."}
+                                        </div>
+                                        {canAccessSuperAdmin ? (
+                                          <div className="work-actions" style={{ marginTop: 10 }}>
+                                            <button
+                                              type="button"
+                                              className="btn-primary"
+                                              disabled={reviewingSponsorAgentClearanceUnitId === blocker.unit_id}
+                                              onClick={() =>
+                                                void reviewSponsorAgentPayoutClearance(blocker.unit_id, "clear", blocker.tree_label || undefined)
+                                              }
+                                            >
+                                              {reviewingSponsorAgentClearanceUnitId === blocker.unit_id ? "Clearing..." : "Clear For Payment"}
+                                            </button>
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                    ))}
+                                  </div>
                                 ) : null}
                                 <div className="staff-row-meta">
                                   Pending requests: {Number(agentSummary.pending_request_count || 0)} | Paid requests: {Number(agentSummary.paid_request_count || 0)} | Projects:{" "}
