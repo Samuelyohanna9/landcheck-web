@@ -9,6 +9,11 @@ const greenPartnersFeaturedStory = getArticleBySlug("fufore-model-school-first-t
 
 type PartnerOrg = { name: string; logo: string | null };
 type MediaFit = "cover" | "contain";
+type PhotoMoment = {
+  imageSrc: string;
+  title: string;
+  label?: string;
+};
 
 type GreenModel = {
   id: string;
@@ -169,42 +174,50 @@ const photoEvidencePoints = [
   "Logged by named field supervisors, not stock photography",
 ];
 
-const photoMoments = [
+const photoMoments: PhotoMoment[] = [
   {
     imageSrc: photoAsset("seeds.JPG"),
-    
+    label: "Nursery preparation",
     title: "Seedlings staged and inspected before they leave for the field.",
   },
   {
     imageSrc: photoAsset("yola south 4.JPG"),
+    label: "Supervisor verification",
     title: "A supervisor photographs and confirms placement before planting.",
   },
   {
     imageSrc: photoAsset("yola south planting2.JPG"),
+    label: "QR identity",
     title: "Every seedling carries a scannable QR tag from the nursery onward.",
   },
   {
     imageSrc: photoAsset("yola south plantin3.JPG"),
+    label: "Health facility planting",
     title: "Working directly with Jabbi Primary Health Care Authority in Yola South.",
   },
   {
     imageSrc: photoAsset("fufore planting-New Model school fufore1.JPG"),
+    label: "School grounds",
     title: "Principal of Model School Fufore during new trees planting in the school compound.",
   },
   {
     imageSrc: photoAsset("fufore planting-New Model school fufore2.JPG"),
+    label: "GPS confirmation",
     title: "GPS coordinates and QR tags are captured before a tree is confirmed planted.",
   },
   {
     imageSrc: photoAsset("fufore planting-New Model school fufore3.JPG"),
+    label: "Live planting",
     title: "Trees planted on school grounds.",
   },
   {
     imageSrc: photoAsset("sangere girei 1.JPG"),
+    label: "Community stewardship",
     title: "Community members receive a new tree in Sangere, home to Modibbo Adama University.",
   },
   {
     imageSrc: photoAsset("sabgere girei 2.JPG"),
+    label: "University corridor",
     title: "A seedling goes into the ground minutes from one of Adamawa's busiest university communities.",
   },
 ];

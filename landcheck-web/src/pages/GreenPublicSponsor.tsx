@@ -30,6 +30,13 @@ const GUEST_CHECKOUT_STORAGE_KEY = "lc_guest_checkout_pending";
 
 const PROJECT_THUMBNAIL_SRC = "/thumpnail_public.webp";
 
+type ProofPhoto = {
+  src: string;
+  heading: string;
+  description: string;
+  location?: string;
+};
+
 const GALLERY_IMAGES = [
   { src: "/info_web.webp", label: "How LandCheck Green works" },
   { src: "/verified_tree_map_evidence.webp", label: "Verified map & photo evidence" },
@@ -37,7 +44,7 @@ const GALLERY_IMAGES = [
   { src: "/tree_tag_sample.webp", label: "Physical tree tag on your tree" },
 ];
 
-const PROOF_PHOTOS = [
+const PROOF_PHOTOS: ProofPhoto[] = [
   {
     src: "/fufore.JPG",
     heading: "Regenerate the planet",
@@ -81,7 +88,7 @@ const PROOF_PHOTOS = [
     
     description: "The local chief and our agent during the planting of new trees.",
   },
-] as const;
+];
 
 const TREE_QUANTITY_TIERS = [1, 5, 10, 25, 50] as const;
 const POPULAR_TIER_QUANTITY = 10;
@@ -502,7 +509,7 @@ export default function GreenPublicSponsor() {
                 <span className="gps-proof-panel-scrim" aria-hidden="true" />
                 <span className="gps-proof-panel-accent" aria-hidden="true" />
                 <span className="gps-proof-panel-body">
-                  <span className="gps-proof-panel-location">{photo.location}</span>
+                  {photo.location ? <span className="gps-proof-panel-location">{photo.location}</span> : null}
                   <span className="gps-proof-panel-heading">{photo.heading}</span>
                   <span className="gps-proof-panel-desc">{photo.description}</span>
                 </span>
