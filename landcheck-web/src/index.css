@@ -108,3 +108,54 @@ img {
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/* Public web typography: match LandCheck sponsor pages */
+:root {
+  --lc-public-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --lc-public-heading-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.landcheck-landing,
+.green-partners-page,
+.gps-page,
+.gfc-page,
+.spl-page,
+.fal-page,
+.ip-page,
+.privacy-policy-page,
+.green-auth-page,
+.work-login-page,
+.gi-page {
+  font-family: var(--lc-public-font) !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.landcheck-landing :where(h1, h2, h3, h4, h5, h6),
+.green-partners-page :where(h1, h2, h3, h4, h5, h6),
+.gps-page :where(h1, h2, h3, h4, h5, h6),
+.gfc-page :where(h1, h2, h3, h4, h5, h6),
+.spl-page :where(h1, h2, h3, h4, h5, h6),
+.fal-page :where(h1, h2, h3, h4, h5, h6),
+.ip-page :where(h1, h2, h3, h4, h5, h6),
+.privacy-policy-page :where(h1, h2, h3, h4, h5, h6),
+.green-auth-page :where(h1, h2, h3, h4, h5, h6),
+.work-login-page :where(h1, h2, h3, h4, h5, h6),
+.gi-page :where(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--lc-public-heading-font) !important;
+  letter-spacing: -0.035em;
+}
+
+.landcheck-landing :where(p, li, a, button, input, textarea, select, label, span, time, small),
+.green-partners-page :where(p, li, a, button, input, textarea, select, label, span, time, small),
+.gps-page :where(p, li, a, button, input, textarea, select, label, span, time, small),
+.gfc-page :where(p, li, a, button, input, textarea, select, label, span, time, small),
+.spl-page :where(p, li, a, button, input, textarea, select, label, span, time, small),
+.fal-page :where(p, li, a, button, input, textarea, select, label, span, time, small),
+.ip-page :where(p, li, a, button, input, textarea, select, label, span, time, small),
+.privacy-policy-page :where(p, li, a, button, input, textarea, select, label, span, time, small),
+.green-auth-page :where(p, li, a, button, input, textarea, select, label, span, time, small),
+.work-login-page :where(p, li, a, button, input, textarea, select, label, span, time, small),
+.gi-page :where(p, li, a, button, input, textarea, select, label, span, time, small) {
+  font-family: var(--lc-public-font) !important;
+}

@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   buildSponsorPrivacyUrl,
   buildSponsorTermsUrl,
   createGuestSponsorOrder,
   fetchGuestSponsorOrderPaymentStatus,
-  fetchPublicRecentSponsorships,
   fetchPublicSponsorImpactStats,
   fetchPublicSponsorshipProjects,
   formatCurrencyAmount,
@@ -15,76 +14,19 @@ import {
   lookupPublicSponsorOrders,
   SPONSOR_TERMS_VERSION,
   type LookedUpSponsorOrder,
-  type RecentSponsorshipItem,
   type SponsorImpactStats,
   type SponsorProject,
 } from "../api/greenSponsor";
 import { claimGreenSponsorGuestAccount } from "../auth/greenAuth";
 import GpsIcon from "../components/GpsIcon";
 import PlantyAssistant from "../components/PlantyAssistant";
-import { useCookieConsent } from "../privacy/cookieConsent";
 import "../styles/green-public-sponsor.css";
 
-const SPONSOR_BACKGROUND = "/background-sponsor.png";
-const HERO_VIDEO_SRC = "/let_the_video_be_black_nigeria.mp4";
-const HERO_VIDEO_CROSSFADE_MS = 900;
-const HERO_VIDEO_CROSSFADE_SECONDS = 1.05;
+const photoAsset = (fileName: string) => encodeURI(fileName);
+
+const SPONSOR_BACKGROUND = "/sponsor_landing_page.jpg";
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=online.landcheck.mobile";
 const GUEST_CHECKOUT_STORAGE_KEY = "lc_guest_checkout_pending";
-
-type NetworkInfoLike = { effectiveType?: string; saveData?: boolean; downlink?: number };
-
-function canAffordHeroVideo(): boolean {
-  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
-  try {
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return false;
-  } catch {
-    /* matchMedia unsupported — fall through to connection check */
-  }
-  const nav = navigator as Navigator & { connection?: NetworkInfoLike };
-  const conn = nav.connection;
-  if (!conn) return true; // Network Information API unavailable (e.g. iOS Safari) — default to allowing video.
-  const effectiveType = String(conn.effectiveType || "").toLowerCase();
-  const downlink = Number(conn.downlink || 0);
-  // Nigeria field conditions: skip the video entirely on slow/metered connections, same threshold used elsewhere in this app.
-  if (conn.saveData) return false;
-  if (effectiveType === "slow-2g" || effectiveType === "2g" || effectiveType === "3g") return false;
-  if (downlink > 0 && downlink < 2.5) return false;
-  return true;
-}
-
-function shouldRenderHeroVideo(): boolean {
-  if (canAffordHeroVideo()) return true;
-  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
-  try {
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return false;
-  } catch {
-    // Ignore browsers without matchMedia support and keep the poster fallback.
-  }
-  const nav = navigator as Navigator & { connection?: NetworkInfoLike };
-  return !Boolean(nav.connection?.saveData);
-}
-
-function formatRelativeTime(value: string | null): string {
-  if (!value) return "recently";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "recently";
-  const diffMs = Date.now() - date.getTime();
-  const minutes = Math.floor(diffMs / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
-  return date.toLocaleDateString(undefined, { day: "2-digit", month: "short" });
-}
-
-const PROMO_MESSAGES = [
-  { icon: "tree", text: "Every tree is GPS-tracked & verified — sponsor with confidence!" },
-  { icon: "certificate", text: "Get your digital sponsorship certificate the moment you pay." },
-  { icon: "tag", text: "Your name goes on a real QR tag, on a real tree, in the field." },
-] as const;
 
 const PROJECT_THUMBNAIL_SRC = "/thumpnail_public.webp";
 
@@ -95,33 +37,65 @@ const GALLERY_IMAGES = [
   { src: "/tree_tag_sample.webp", label: "Physical tree tag on your tree" },
 ];
 
+const PROOF_PHOTOS = [
+  {
+    src: "/fufore.JPG",
+    heading: "Regenerate the planet",
+    description:
+      "The Principal of Model School Fufore welcomed the very first trees ever planted on this brand-new school campus — the first afforestation effort here since construction began.",
+  },
+  {
+    src: "/yola south planting2.JPG",
+    heading: "Protect biodiversity",
+   
+    description:
+      "Each seedling carries a scannable QR tag linking it to your name and your contributions to climate action.",
+  },
+  {
+    src: "/seeds.JPG",
+    heading: "Ensure income and food security",
+    
+    description: "Seedlings are staged and inspected at the nursery before field agents take them out for planting.",
+  },
+  {
+    src: "/sangere girei 1.JPG",
+    heading: "Promote gender equality",
+    
+    description: "Local community members participate in the planting of new trees.",
+  },
+  {
+    src: "/fufore planting-New Model school fufore3.JPG",
+    heading: "Support local education",
+    
+    description: "Field agents plant new trees side by side on school grounds.",
+  },
+  {
+    src: "/yola south plantin3.JPG",
+    heading: "Strengthen public health",
+   
+    description: "Tree planting at Jabbi Primary Health Care Authority.",
+  },
+  {
+    src: "/sabgere girei 2.JPG",
+    heading: "Engage community leaders",
+    
+    description: "The local chief and our agent during the planting of new trees.",
+  },
+] as const;
+
 const TREE_QUANTITY_TIERS = [1, 5, 10, 25, 50] as const;
 const POPULAR_TIER_QUANTITY = 10;
 const IMPACT_BAND_MIN_TREES = 100;
 
 const HOW_IT_WORKS_STEPS = [
-  { icon: "search", title: "Choose a Project", body: "Browse verified, GPS-mapped tree projects across Nigeria." },
-  { icon: "lock", title: "Sponsor Securely", body: "Pay in NGN or USD as a guest — no account required." },
-  { icon: "certificate", title: "Get Your Certificate", body: "Receive your digital sponsorship certificate instantly by email." },
-  { icon: "pin", title: "Track Your Tree", body: "Follow GPS location and photo evidence as your tree grows." },
+  { title: "Choose a Project", body: "Choose from the list of approved tree planting projects bellow." },
+  { title: "Sponsor Securely", body: "Pay in NGN or USD" },
+  { title: "Get Your Certificate", body: "Receive your digital sponsorship certificate instantly by email." },
+  { title: "Track Your Tree", body: "Follow GPS location, maintenance updates, and photo evidence as your tree grows." },
 ] as const;
 
-const HERO_TRUST_CARDS = [
-  {
-    icon: "lock",
-    title: "Secure global checkout",
-    body: "Sponsor in NGN or USD with a simple guest payment flow.",
-  },
-  {
-    icon: "certificate",
-    title: "Instant proof of support",
-    body: "Get your certificate and order confirmation as soon as payment clears.",
-  },
-  {
-    icon: "pin",
-    title: "Follow real field evidence",
-    body: "See where your trees are planted with GPS location, photos, and care updates.",
-  },
+const HERO_ASSURANCE_ITEMS = [
+  
 ] as const;
 
 const DEDICATION_OPTIONS = [
@@ -192,7 +166,6 @@ function readReturnStateFromUrl(): ReturnState | null {
 
 export default function GreenPublicSponsor() {
   const navigate = useNavigate();
-  const { preferences, ready: cookieConsentReady } = useCookieConsent();
   const [projects, setProjects] = useState<SponsorProject[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
@@ -216,16 +189,7 @@ export default function GreenPublicSponsor() {
   const [claiming, setClaiming] = useState(false);
   const [claimError, setClaimError] = useState("");
   const [claimed, setClaimed] = useState(false);
-  const [networkHeroVideoEnabled] = useState(() => shouldRenderHeroVideo());
-  const [heroVideoReady, setHeroVideoReady] = useState(false);
-  const [visibleHeroVideoIndex, setVisibleHeroVideoIndex] = useState(0);
-  const heroVideoRefs = useRef<Array<HTMLVideoElement | null>>([null, null]);
-  const activeHeroVideoIndexRef = useRef(0);
-  const visibleHeroVideoIndexRef = useRef(0);
-  const heroVideoCrossfadeLockRef = useRef(false);
-  const heroVideoRafRef = useRef<number | null>(null);
-  const heroVideoSwapTimeoutRef = useRef<number | null>(null);
-  const [recentSponsorships, setRecentSponsorships] = useState<RecentSponsorshipItem[]>([]);
+
   const [impactStats, setImpactStats] = useState<SponsorImpactStats | null>(null);
   const [lookupOrderUid, setLookupOrderUid] = useState("");
   const [lookupEmail, setLookupEmail] = useState("");
@@ -235,7 +199,7 @@ export default function GreenPublicSponsor() {
   const [showOrderLookup, setShowOrderLookup] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
-  const [promoIndex, setPromoIndex] = useState(0);
+  const [activeProofIndex, setActiveProofIndex] = useState(0);
   const [openAccordions, setOpenAccordions] = useState<Set<string>>(() => new Set(["about", "approval"]));
   const [suggestedQuantityNote, setSuggestedQuantityNote] = useState<number | null>(null);
 
@@ -246,16 +210,6 @@ export default function GreenPublicSponsor() {
       return next;
     });
   };
-
-  const [toastIndex, setToastIndex] = useState(0);
-  const [toastVisible, setToastVisible] = useState(false);
-
-  useEffect(() => {
-    fetchPublicRecentSponsorships(10)
-      .then(setRecentSponsorships)
-      .catch(() => {});
-  }, []);
-
   useEffect(() => {
     fetchPublicSponsorImpactStats()
       .then(setImpactStats)
@@ -276,41 +230,6 @@ export default function GreenPublicSponsor() {
       });
     }
   }, []);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setPromoIndex((i) => (i + 1) % PROMO_MESSAGES.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    if (recentSponsorships.length === 0) return undefined;
-    let cancelled = false;
-    let showTimer: ReturnType<typeof setTimeout> | undefined;
-    let hideTimer: ReturnType<typeof setTimeout> | undefined;
-
-    const showNext = () => {
-      if (cancelled) return;
-      setToastVisible(true);
-      hideTimer = setTimeout(() => {
-        if (cancelled) return;
-        setToastVisible(false);
-        showTimer = setTimeout(() => {
-          if (cancelled) return;
-          setToastIndex((i) => (i + 1) % recentSponsorships.length);
-          showNext();
-        }, 2200);
-      }, 5500);
-    };
-
-    showTimer = setTimeout(showNext, 1800);
-    return () => {
-      cancelled = true;
-      clearTimeout(showTimer);
-      clearTimeout(hideTimer);
-    };
-  }, [recentSponsorships]);
 
   const handleSelectProject = (projectId: number) => {
     setSelectedProjectId(projectId);
@@ -356,128 +275,9 @@ export default function GreenPublicSponsor() {
     () => projects.find((p) => p.id === selectedProjectId) || null,
     [projects, selectedProjectId],
   );
-  const shouldShowHero = !selectedProject && !returnState;
-  const heroVideoEnabled = cookieConsentReady && preferences.experience && networkHeroVideoEnabled;
-
   const priceEntry = useMemo(() => getPreferredSponsorPriceEntry(selectedProject, form.checkoutCurrency), [selectedProject, form.checkoutCurrency]);
   const priceEntries = useMemo(() => getSponsorPriceEntries(selectedProject), [selectedProject]);
   const total = useMemo(() => Math.max(1, Number(form.quantity || 1)) * Number(priceEntry?.amount || 0), [form.quantity, priceEntry]);
-
-  useEffect(() => {
-    if (!heroVideoEnabled || !shouldShowHero) {
-      setHeroVideoReady(false);
-      return undefined;
-    }
-
-    const videos = heroVideoRefs.current;
-    if (videos.some((video) => !video)) return undefined;
-
-    const playVideo = (video: HTMLVideoElement | null) => {
-      if (!video) return;
-      video.muted = true;
-      video.defaultMuted = true;
-      const playPromise = video.play();
-      if (playPromise && typeof playPromise.catch === "function") {
-        playPromise.catch(() => {});
-      }
-    };
-
-    const resetVideo = (video: HTMLVideoElement | null) => {
-      if (!video) return;
-      video.pause();
-      try {
-        video.currentTime = 0;
-      } catch {
-        // Ignore browsers that block direct currentTime resets while buffering.
-      }
-    };
-
-    const stopLoopWatch = () => {
-      if (heroVideoRafRef.current !== null) {
-        cancelAnimationFrame(heroVideoRafRef.current);
-        heroVideoRafRef.current = null;
-      }
-      if (heroVideoSwapTimeoutRef.current !== null) {
-        window.clearTimeout(heroVideoSwapTimeoutRef.current);
-        heroVideoSwapTimeoutRef.current = null;
-      }
-      heroVideoCrossfadeLockRef.current = false;
-    };
-
-    const startLoopWatch = () => {
-      stopLoopWatch();
-
-      const tick = () => {
-        const currentVideo = heroVideoRefs.current[activeHeroVideoIndexRef.current];
-        if (!currentVideo) {
-          heroVideoRafRef.current = requestAnimationFrame(tick);
-          return;
-        }
-
-        const duration = Number(currentVideo.duration);
-        if (!Number.isFinite(duration) || duration <= 0) {
-          heroVideoRafRef.current = requestAnimationFrame(tick);
-          return;
-        }
-
-        const remaining = duration - currentVideo.currentTime;
-        if (!heroVideoCrossfadeLockRef.current && remaining <= HERO_VIDEO_CROSSFADE_SECONDS) {
-          heroVideoCrossfadeLockRef.current = true;
-          const nextIndex = activeHeroVideoIndexRef.current === 0 ? 1 : 0;
-          const nextVideo = heroVideoRefs.current[nextIndex];
-
-          if (nextVideo) {
-            try {
-              nextVideo.currentTime = 0;
-            } catch {
-              // Ignore currentTime reset failures during browser buffering.
-            }
-            visibleHeroVideoIndexRef.current = nextIndex;
-            setVisibleHeroVideoIndex(nextIndex);
-            playVideo(nextVideo);
-            setHeroVideoReady(true);
-
-            heroVideoSwapTimeoutRef.current = window.setTimeout(() => {
-              resetVideo(heroVideoRefs.current[activeHeroVideoIndexRef.current]);
-              activeHeroVideoIndexRef.current = nextIndex;
-              heroVideoCrossfadeLockRef.current = false;
-              heroVideoSwapTimeoutRef.current = null;
-            }, HERO_VIDEO_CROSSFADE_MS);
-          } else {
-            heroVideoCrossfadeLockRef.current = false;
-          }
-        }
-
-        heroVideoRafRef.current = requestAnimationFrame(tick);
-      };
-
-      heroVideoRafRef.current = requestAnimationFrame(tick);
-    };
-
-    heroVideoRefs.current.forEach((video, index) => {
-      if (index !== visibleHeroVideoIndexRef.current) {
-        resetVideo(video);
-      }
-    });
-
-    playVideo(heroVideoRefs.current[visibleHeroVideoIndexRef.current]);
-    startLoopWatch();
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        playVideo(heroVideoRefs.current[visibleHeroVideoIndexRef.current]);
-        startLoopWatch();
-      } else {
-        stopLoopWatch();
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      stopLoopWatch();
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [heroVideoEnabled, shouldShowHero]);
 
   useEffect(() => {
     if (priceEntry && priceEntry.currency !== form.checkoutCurrency) {
@@ -634,37 +434,22 @@ export default function GreenPublicSponsor() {
         </>
       )}
 
-      {/* ─── Promo banner ─── */}
-      <div className="gps-promo-banner">
-        <button type="button" onClick={() => setPromoIndex((i) => (i - 1 + PROMO_MESSAGES.length) % PROMO_MESSAGES.length)} aria-label="Previous message">‹</button>
-        <span className="gps-promo-message">
-          <GpsIcon name={PROMO_MESSAGES[promoIndex].icon} className="gps-icon" />
-          {PROMO_MESSAGES[promoIndex].text}
-        </span>
-        <button type="button" onClick={() => setPromoIndex((i) => (i + 1) % PROMO_MESSAGES.length)} aria-label="Next message">›</button>
-      </div>
-
       {/* ─── Hero (browsing view only — hidden once a project/checkout or payment-return view is active) ─── */}
       {!selectedProject && !returnState && (
       <section className="gps-hero">
         <div className="gps-hero-text-panel">
-          <span className="gps-hero-eyebrow">LandCheck Green · Public Sponsorship</span>
-          <h1>Sponsor a real tree. <span className="gps-hero-accent">Follow its story</span> from checkout to canopy.</h1>
-          <p>
-            Choose a verified public project in Nigeria, pay securely in NGN or USD, receive your digital
-            certificate, and follow GPS location, photo evidence, and care updates as your trees grow.
+          <h1>Sponsor a real tree, <span className="gps-hero-accent">follow its story</span> </h1>
+
+          <p className="gps-hero-summary">
+            GPS location, photos, and care updates
           </p>
-          <div className="gps-feature-row">
-            {HERO_TRUST_CARDS.map((item) => (
-              <article key={item.title} className="gps-feature-card">
-                <span className="gps-feature-icon">
-                  <GpsIcon name={item.icon} className="gps-icon" />
-                </span>
-                <strong>{item.title}</strong>
-                <p>{item.body}</p>
-              </article>
+
+          <div className="gps-hero-assurance" aria-label="Sponsor assurance">
+            {HERO_ASSURANCE_ITEMS.map((item) => (
+              <span key={item} className="gps-hero-assurance-item">{item}</span>
             ))}
           </div>
+
           <div className="gps-hero-ctas">
             <button type="button" className="gps-primary-btn" onClick={() => document.getElementById("gps-projects")?.scrollIntoView({ behavior: "smooth" })}>
               Choose a Project
@@ -674,7 +459,7 @@ export default function GreenPublicSponsor() {
             </button>
           </div>
           <p className="gps-hero-support-note">
-            No account is required to sponsor. You can create or claim an account later if you want a full dashboard.
+            No account is required to sponsor
           </p>
         </div>
 
@@ -688,73 +473,43 @@ export default function GreenPublicSponsor() {
         </svg>
 
         <div className="gps-hero-media-wrap">
-          <div className={`gps-hero-media-panel${heroVideoReady ? " gps-hero--video-ready" : ""}`} style={{ backgroundImage: `url(${SPONSOR_BACKGROUND})` }}>
-            {/* Layers Toggle Button */}
-            <button type="button" className="gps-hero-layers-btn" aria-label="Toggle layers">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                <polyline points="2 17 12 22 22 17" />
-                <polyline points="2 12 12 17 22 12" />
-              </svg>
-            </button>
-
-            {/* Trust Subtext Overlay */}
-            <div className="gps-hero-code">100% VERIFIED EVIDENCE</div>
-            {heroVideoEnabled && (
-              <div className="gps-hero-video-wrap" aria-hidden="true">
-                {[0, 1].map((index) => (
-                  <video
-                    key={index}
-                    ref={(node) => {
-                      heroVideoRefs.current[index] = node;
-                    }}
-                    className={`gps-hero-video${visibleHeroVideoIndex === index ? " gps-hero-video--active" : " gps-hero-video--inactive"}`}
-                    poster={SPONSOR_BACKGROUND}
-                    autoPlay={index === 0}
-                    muted
-                    playsInline
-                    preload="auto"
-                    disablePictureInPicture
-                    disableRemotePlayback
-                    onPlaying={() => setHeroVideoReady(true)}
-                    onLoadedData={() => setHeroVideoReady(true)}
-                    onError={() => {
-                      if (index === visibleHeroVideoIndexRef.current) {
-                        setHeroVideoReady(false);
-                      }
-                    }}
-                  >
-                    <source src={HERO_VIDEO_SRC} type="video/mp4" />
-                  </video>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="gps-hero-globe" aria-hidden="true">
-            <img src="/globe_sponsor.webp" alt="" className="gps-hero-globe-svg" />
-            {/* Red Starburst Sticker Badge */}
-            <div className="gps-hero-badge">
-              <div className="gps-hero-badge-inner">
-                <span className="gps-hero-badge-top">GPS</span>
-                <span className="gps-hero-badge-bottom">TRACKED</span>
-              </div>
-            </div>
+          <div className="gps-hero-media-panel" style={{ backgroundImage: `url(${SPONSOR_BACKGROUND})` }}>
+            
           </div>
         </div>
       </section>
       )}
 
-      {/* ─── Recently sponsored — floating balloon notification ─── */}
-      {!selectedProject && !returnState && recentSponsorships.length > 0 && (
-        <div className={`gps-toast${toastVisible ? " gps-toast--visible" : ""}`} aria-live="polite">
-          <span className="gps-toast-icon"><GpsIcon name="tree" className="gps-icon" /></span>
-          <div className="gps-toast-body">
-            <strong>{recentSponsorships[toastIndex]?.sponsor_first_name}</strong> just sponsored{" "}
-            {recentSponsorships[toastIndex]?.quantity} tree{recentSponsorships[toastIndex]?.quantity === 1 ? "" : "s"}
-            {recentSponsorships[toastIndex]?.project_name ? <> for <strong>{recentSponsorships[toastIndex]?.project_name}</strong></> : null}
-            <span className="gps-toast-time">{formatRelativeTime(recentSponsorships[toastIndex]?.sponsored_at || null)}</span>
+      {/* ─── Photo proof — real field evidence, not stock photography ─── */}
+      {!selectedProject && !returnState && (
+        <section className="gps-proof-gallery">
+          <div className="gps-proof-gallery-intro">
+            <h2>See how your support makes a difference</h2>
+            <span className="gps-proof-gallery-sub">photos speak louder than words</span>
           </div>
-        </div>
+          <div className="gps-proof-strip">
+            {PROOF_PHOTOS.map((photo, index) => (
+              <button
+                key={photo.src}
+                type="button"
+                className={`gps-proof-panel${index === activeProofIndex ? " is-active" : ""}`}
+                onMouseEnter={() => setActiveProofIndex(index)}
+                onFocus={() => setActiveProofIndex(index)}
+                onClick={() => setActiveProofIndex(index)}
+                aria-expanded={index === activeProofIndex}
+              >
+                <img src={photoAsset(photo.src)} alt={photo.description} loading="lazy" />
+                <span className="gps-proof-panel-scrim" aria-hidden="true" />
+                <span className="gps-proof-panel-accent" aria-hidden="true" />
+                <span className="gps-proof-panel-body">
+                  <span className="gps-proof-panel-location">{photo.location}</span>
+                  <span className="gps-proof-panel-heading">{photo.heading}</span>
+                  <span className="gps-proof-panel-desc">{photo.description}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* ─── How it works ─── */}
@@ -763,9 +518,9 @@ export default function GreenPublicSponsor() {
           <span className="gps-section-eyebrow">It's That Easy</span>
           <h2>How Sponsoring a Tree Works</h2>
           <div className="gps-how-it-works-grid">
-            {HOW_IT_WORKS_STEPS.map((step) => (
+            {HOW_IT_WORKS_STEPS.map((step, index) => (
               <div className="gps-how-step" key={step.title}>
-                <span className="gps-how-step-icon"><GpsIcon name={step.icon} className="gps-icon" /></span>
+                <span className="gps-how-step-number">{String(index + 1).padStart(2, "0")}</span>
                 <strong>{step.title}</strong>
                 <p>{step.body}</p>
               </div>
@@ -971,7 +726,7 @@ export default function GreenPublicSponsor() {
                     const ready = project.sponsor_checkout_ready;
                     return (
                       <div className="gps-project-card" key={project.id}>
-                        <div className="gps-project-card-photo-wrap">
+                        <div className="gps-project-card-media">
                           <div
                             className="gps-project-card-photo"
                             style={{ backgroundImage: `url(${PROJECT_THUMBNAIL_SRC})` }}
@@ -980,13 +735,13 @@ export default function GreenPublicSponsor() {
                         <div className="gps-project-card-body">
                           <h3>{project.public_sponsor_title || project.name}</h3>
                           <p>{project.public_sponsor_description || project.public_description || project.location_text || "Verified tree project"}</p>
-                          <div className="gps-project-card-proof">Certificate, GPS location, and photo updates included.</div>
+                          <div className="gps-project-card-proof">Includes digital certificate, GPS records, and field-photo updates.</div>
                           <div className="gps-project-card-price-row">
                             <span className="gps-project-card-price-label">from</span>
                             <span className="gps-project-card-price">{formatSponsorPriceChoices(project)}</span>
                           </div>
                           <div className="gps-project-card-tags">
-                            <span className="gps-project-tag"><GpsIcon name="pin" className="gps-icon-inline" /> {project.location_text || "Nigeria"}</span>
+                            <span className="gps-project-tag">{project.location_text || "Nigeria"}</span>
                             <span className={`gps-project-tag ${ready ? "ok" : "warning"}`}>
                               {ready ? `${Number(project.slots_available ?? 0)} slots open` : "Preparing"}
                             </span>

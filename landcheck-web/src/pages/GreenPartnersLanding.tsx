@@ -172,47 +172,39 @@ const photoEvidencePoints = [
 const photoMoments = [
   {
     imageSrc: photoAsset("seeds.JPG"),
-    label: "NURSERY STOCK",
+    
     title: "Seedlings staged and inspected before they leave for the field.",
   },
   {
     imageSrc: photoAsset("yola south 4.JPG"),
-    label: "YOLA SOUTH",
     title: "A supervisor photographs and confirms placement before planting.",
   },
   {
     imageSrc: photoAsset("yola south planting2.JPG"),
-    label: "YOLA SOUTH",
     title: "Every seedling carries a scannable QR tag from the nursery onward.",
   },
   {
     imageSrc: photoAsset("yola south plantin3.JPG"),
-    label: "COMMUNITY PARTNERSHIP",
     title: "Working directly with Jabbi Primary Health Care Authority in Yola South.",
   },
   {
     imageSrc: photoAsset("fufore planting-New Model school fufore1.JPG"),
-    label: "FUFORE",
     title: "Principal of Model School Fufore during new trees planting in the school compound.",
   },
   {
     imageSrc: photoAsset("fufore planting-New Model school fufore2.JPG"),
-    label: "FUFORE",
     title: "GPS coordinates and QR tags are captured before a tree is confirmed planted.",
   },
   {
     imageSrc: photoAsset("fufore planting-New Model school fufore3.JPG"),
-    label: "FUFORE — NEW MODEL SCHOOL",
     title: "Trees planted on school grounds.",
   },
   {
     imageSrc: photoAsset("sangere girei 1.JPG"),
-    label: "SANGERE, GIREI",
     title: "Community members receive a new tree in Sangere, home to Modibbo Adama University.",
   },
   {
     imageSrc: photoAsset("sabgere girei 2.JPG"),
-    label: "SANGERE, GIREI",
     title: "A seedling goes into the ground minutes from one of Adamawa's busiest university communities.",
   },
 ];
@@ -349,10 +341,8 @@ export default function GreenPartnersLanding() {
         <div className="gp-new-hero-scrim" aria-hidden="true" />
         <div className="gp-shell gp-new-hero-inner">
           <div className="gp-new-hero-copy">
-            <span className="gp-new-hero-badge">CSR + ESG Verification</span>
             <h1>
-              Plant Trees.<br />
-              Prove Your Impact.
+              Plant Trees, Prove Your Impact.
             </h1>
             <p className="gp-new-hero-subheadline">
               Manage every sponsored tree with GPS verification, maintenance tracking, CSR reports and live dashboards.
@@ -586,7 +576,6 @@ export default function GreenPartnersLanding() {
         <div className="gp-shell">
           <div className="gp-section-intro gp-section-intro--center">
             <span className="gp-section-eyebrow">The Verification Cycle</span>
-            <h2>Simple flow. Continuous trust.</h2>
           </div>
           
           <div className="gp-how-timeline">
