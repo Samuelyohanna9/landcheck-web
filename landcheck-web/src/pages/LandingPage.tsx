@@ -274,7 +274,6 @@ export default function LandingPage() {
         )}
         <div className="lp-hero-overlay" />
         <div className="lp-hero-content">
-          <span className="lp-hero-kicker">LANDCHECK PLATFORM</span>
           <h1>
             Geospatial Intelligence <br />for Development Projects
           </h1>

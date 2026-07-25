@@ -55,8 +55,8 @@ export default function NewsPage() {
       <main>
         <section className="np-page-header">
           <div className="ip-container">
-            <span className="ip-eyebrow">LandCheck insights</span>
-            <h1>Real trees. Real places. Real stories.</h1>
+            <span className="ip-eyebrow">LandCheck News</span>
+            <h1>Real trees, real places, real stories of impact.</h1>
             <p>
               Field stories from LandCheck Green's public sponsors, plus practical guides on running verified,
               audit-ready environmental programmes in Nigeria.
