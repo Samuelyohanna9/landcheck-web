@@ -3367,6 +3367,10 @@ function ShareImpactPanel({
 export default function GreenWork() {
   const workAuthSession = getWorkAuthSession();
   const canAccessSuperAdmin = workAuthSession?.auth_mode === "env_admin";
+  const canReviewSponsorPayoutClearance =
+    canAccessSuperAdmin ||
+    normalizeName(workAuthSession?.user?.role_key) === "super_admin" ||
+    normalizeName(workAuthSession?.user?.role) === "super_admin";
   const isSuperAdminOnlyForm = (form: WorkForm | null | undefined) => form === "super_admin" || form === "logs" || form === "merchants";
   const isPartnerWorkSession = workAuthSession?.auth_mode === "partner_user";
   const normalizeOrgLifecycleStatus = (value: unknown) => String(value || "").trim().toLowerCase();
@@ -6514,7 +6518,7 @@ export default function GreenWork() {
   const reviewSponsorAgentPayoutClearance = useCallback(
     async (unitId: number, action: "clear" | "revoke", treeLabel?: string | null) => {
       if (!activeProjectId) return;
-      if (!canAccessSuperAdmin) {
+      if (!canReviewSponsorPayoutClearance) {
         toast.error("Only super admin can review payout clearance exceptions.");
         return;
       }
@@ -6542,7 +6546,7 @@ export default function GreenWork() {
         setReviewingSponsorAgentClearanceUnitId(null);
       }
     },
-    [activeProjectId, canAccessSuperAdmin, loadSponsorAgentPayoutBoard, workAuthSession?.user?.full_name],
+    [activeProjectId, canReviewSponsorPayoutClearance, loadSponsorAgentPayoutBoard, workAuthSession?.user?.full_name],
   );
 
   const reviewSponsorshipPayment = async (
@@ -14644,6 +14648,7 @@ export default function GreenWork() {
                             const projectApprovalGap = Number(reconciliation?.unlinked_approved_count || 0);
                             const projectUnpaidGap = Number(reconciliation?.unpaid_linked_count || 0);
                             const assignmentOverrun = Number(reconciliation?.approved_beyond_assignment_count || 0);
+                            const showPayoutClearanceReview = clearanceBlockers.length > 0 || (canReviewSponsorPayoutClearance && projectUnpaidGap > 0);
                             return (
                               <div key={`sponsor-agent-wallet-${agent.user?.id || agent.user?.user_uid || "agent"}`} className="staff-row">
                                 <div className="staff-row-head">
@@ -14704,19 +14709,19 @@ export default function GreenWork() {
                                     )}
                                   </>
                                 ) : null}
-                                {clearanceBlockers.length > 0 ? (
+                                {showPayoutClearanceReview ? (
                                   <div className="staff-list" style={{ marginTop: 12 }}>
                                     <div className="staff-row" style={{ margin: 0 }}>
                                       <div className="staff-row-head">
-                                        <strong>Blocked payout items</strong>
-                                        <span>{clearanceBlockers.length}</span>
+                                        <strong>Payout clearance review</strong>
+                                        <span>{clearanceBlockers.length > 0 ? clearanceBlockers.length : projectUnpaidGap}</span>
                                       </div>
                                       <div className="staff-row-meta">
                                         These linked sponsor trees are not yet entering the payout wallet automatically. Review the reason below and clear only
                                         if you have confirmed the sponsor payment is valid.
                                       </div>
                                     </div>
-                                    {clearanceBlockers.map((blocker) => (
+                                    {clearanceBlockers.length > 0 ? clearanceBlockers.map((blocker) => (
                                       <div key={`sponsor-agent-clearance-${blocker.unit_id}`} className="staff-row" style={{ margin: 0 }}>
                                         <div className="staff-row-head">
                                           <strong>{blocker.tree_label || `Tree #${blocker.tree_id || blocker.unit_id}`}</strong>
@@ -14734,7 +14739,7 @@ export default function GreenWork() {
                                         <div className="green-work-note danger" style={{ marginTop: 6 }}>
                                           {blocker.blocker_reason || "Manual payout clearance review required."}
                                         </div>
-                                        {canAccessSuperAdmin ? (
+                                        {canReviewSponsorPayoutClearance ? (
                                           <div className="work-actions" style={{ marginTop: 10 }}>
                                             <button
                                               type="button"
@@ -14749,7 +14754,18 @@ export default function GreenWork() {
                                           </div>
                                         ) : null}
                                       </div>
-                                    ))}
+                                    )) : (
+                                      <div className="staff-row" style={{ margin: 0 }}>
+                                        <div className="green-work-note danger" style={{ marginTop: 0 }}>
+                                          {projectUnpaidGap} linked sponsor tree(s) are still marked as not payable, but the itemized clearance rows did not load in this
+                                          response yet.
+                                        </div>
+                                        <div className="staff-row-meta" style={{ marginTop: 6 }}>
+                                          Click <strong>Refresh Payouts</strong>. If this stays the same after refresh, deploy the latest API and web build so the blocker
+                                          rows can be reviewed individually.
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 ) : null}
                                 <div className="staff-row-meta">
