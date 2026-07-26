@@ -1,14 +1,14 @@
- .gi-page {
-  --gi-green-50: #eff9f1;
-  --gi-green-100: #dff2e4;
-  --gi-green-200: #c7e7cf;
-  --gi-green-300: #9fd6ae;
-  --gi-green-400: #64bb7e;
-  --gi-green-500: #2fa255;
-  --gi-green-600: #228345;
-  --gi-green-700: #1a6a38;
-  --gi-green-800: #15562f;
-  --gi-green-900: #0d3720;
+.gi-page {
+  --gi-green-50: #f0faf2;
+  --gi-green-100: #dcf5e0;
+  --gi-green-200: #b8eac2;
+  --gi-green-300: #7dd892;
+  --gi-green-400: #4cc46a;
+  --gi-green-500: #2aa852;
+  --gi-green-600: #1e8a42;
+  --gi-green-700: #1a6e37;
+  --gi-green-800: #18582e;
+  --gi-green-900: #0f3d1f;
 
   --gi-amber-100: #fdf1cf;
   --gi-amber-500: #b96d0d;
@@ -26,9 +26,9 @@
   --gi-text-faint: #8aa090;
   --gi-border: rgba(20, 74, 40, 0.12);
   --gi-border-strong: rgba(20, 74, 40, 0.2);
-  --gi-shadow-sm: 0 6px 14px rgba(12, 49, 26, 0.08);
-  --gi-shadow-md: 0 16px 34px rgba(12, 49, 26, 0.12);
-  --gi-shadow-lg: 0 26px 56px rgba(12, 49, 26, 0.16);
+  --gi-shadow-sm: 0 2px 6px rgba(15, 61, 31, 0.1);
+  --gi-shadow-md: 0 10px 22px rgba(15, 61, 31, 0.13);
+  --gi-shadow-lg: 0 16px 34px rgba(15, 61, 31, 0.18);
   --gi-radius-sm: 12px;
   --gi-radius-md: 18px;
   --gi-radius-lg: 26px;
@@ -43,14 +43,17 @@
 
   min-height: 100vh;
   color: var(--gi-text);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --gi-font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --gi-font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  font-family: var(--gi-font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: geometricPrecision;
   background:
-    radial-gradient(120% 90% at 8% 0%, rgba(255, 255, 255, 0.56) 0%, rgba(255, 255, 255, 0) 46%),
-    radial-gradient(95% 72% at 92% 8%, rgba(61, 149, 89, 0.18) 0%, rgba(61, 149, 89, 0) 58%),
-    linear-gradient(168deg, #e8f5eb 0%, #d4eeda 42%, #c0e4c8 72%, #add9b5 100%);
+    radial-gradient(120% 90% at 12% 0%, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 52%),
+    radial-gradient(90% 70% at 92% 10%, rgba(59, 152, 90, 0.2) 0%, rgba(59, 152, 90, 0) 58%),
+    linear-gradient(168deg, #e8f5eb 0%, #d4eeda 40%, #c0e4c8 70%, #a8d8b2 100%);
 }
 
 .gi-page.gi-mode-agric {
@@ -123,6 +126,7 @@
 }
 
 .gi-topbar-name {
+  font-family: var(--gi-font-display);
   font-size: 1rem;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -218,16 +222,16 @@
 
 .gi-hero-copy {
   padding: 1.3rem 1.35rem 1.4rem;
-  background: linear-gradient(145deg, rgba(17, 84, 39, 0.98) 0%, rgba(24, 111, 51, 0.95) 56%, rgba(18, 80, 39, 0.96) 100%);
+  background: linear-gradient(132deg, rgba(14, 88, 40, 0.97) 0%, rgba(28, 132, 61, 0.95) 52%, rgba(16, 92, 42, 0.95) 100%);
   color: #ffffff;
 }
 
 .gi-page.gi-mode-agric .gi-hero-copy {
-  background: linear-gradient(145deg, rgba(102, 59, 7, 0.98) 0%, rgba(140, 83, 16, 0.95) 56%, rgba(103, 62, 7, 0.96) 100%);
+  background: linear-gradient(132deg, rgba(120, 53, 15, 0.97) 0%, rgba(180, 83, 9, 0.95) 52%, rgba(146, 64, 14, 0.95) 100%);
 }
 
 .gi-page.gi-mode-relief .gi-hero-copy {
-  background: linear-gradient(145deg, rgba(29, 63, 137, 0.98) 0%, rgba(37, 87, 180, 0.95) 56%, rgba(30, 58, 138, 0.96) 100%);
+  background: linear-gradient(132deg, rgba(30, 58, 138, 0.97) 0%, rgba(37, 99, 235, 0.95) 52%, rgba(29, 78, 216, 0.95) 100%);
 }
 
 .gi-hero-kicker {
@@ -293,6 +297,7 @@
 
 .gi-hero-org-name {
   margin: 0;
+  font-family: var(--gi-font-display);
   font-size: clamp(1.9rem, 4vw, 3rem);
   line-height: 1.04;
   font-weight: 900;
@@ -446,6 +451,7 @@
 
 .gi-summary-val {
   margin-top: 0.36rem;
+  font-family: var(--gi-font-display);
   color: var(--gi-accent);
   font-size: clamp(1.7rem, 3.4vw, 2.35rem);
   line-height: 1.02;
@@ -492,7 +498,7 @@
 .gi-project-header {
   position: relative;
   padding: 1.3rem 1.45rem 1.15rem;
-  background: linear-gradient(138deg, rgba(16, 90, 42, 0.98) 0%, rgba(42, 168, 82, 0.96) 100%);
+  background: linear-gradient(132deg, rgba(14, 88, 40, 0.97) 0%, rgba(28, 132, 61, 0.95) 52%, rgba(16, 92, 42, 0.95) 100%);
 }
 
 .gi-page.gi-mode-agric .gi-project-header {
@@ -533,6 +539,7 @@
 
 .gi-project-name {
   margin-top: 0.7rem;
+  font-family: var(--gi-font-display);
   color: #ffffff;
   font-size: clamp(1.45rem, 2.8vw, 2rem);
   line-height: 1.08;
@@ -628,6 +635,7 @@
 }
 
 .gi-section-heading-text {
+  font-family: var(--gi-font-display);
   color: var(--gi-text);
   font-size: 1.35rem;
   line-height: 1.15;
@@ -660,6 +668,7 @@
 
 .gi-metric-val {
   margin-top: 0.52rem;
+  font-family: var(--gi-font-display);
   color: var(--gi-text);
   font-size: clamp(1.45rem, 3vw, 2rem);
   line-height: 1.02;
@@ -750,6 +759,42 @@
   color: var(--gi-text-soft);
   font-size: 0.8rem;
   font-weight: 800;
+}
+
+.gi-map-wrap {
+  position: relative;
+  overflow: hidden;
+  height: 360px;
+  border-radius: var(--gi-radius-md);
+  border: 1px solid var(--gi-border);
+  background: #e8f4e9;
+  box-shadow: var(--gi-shadow-sm);
+}
+
+.gi-map-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.gi-map-badge {
+  position: absolute;
+  left: 0.95rem;
+  bottom: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  max-width: calc(100% - 1.9rem);
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 16px rgba(15, 61, 31, 0.16);
+  color: var(--gi-text-mid);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.35;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .gi-photos-grid {
@@ -859,6 +904,7 @@
 }
 
 .gi-timeline-title {
+  font-family: var(--gi-font-display);
   color: var(--gi-text);
   font-size: 0.98rem;
   line-height: 1.35;
@@ -1187,6 +1233,7 @@
 }
 
 .gi-error-title {
+  font-family: var(--gi-font-display);
   color: var(--gi-text);
   font-size: clamp(1.4rem, 3vw, 2rem);
   line-height: 1.08;
@@ -1236,6 +1283,7 @@
 .gi-footer-text,
 .gi-footer-verified,
 .gi-footer-link {
+  font-family: var(--gi-font-body);
   color: rgba(236, 255, 240, 0.72);
   font-size: 0.82rem;
   font-weight: 700;
@@ -1365,6 +1413,10 @@
     border-radius: 18px;
   }
 
+  .gi-map-wrap {
+    height: 300px;
+  }
+
   .gi-comment-meta {
     flex-wrap: wrap;
   }
@@ -1412,5 +1464,16 @@
 
   .gi-project-lead {
     width: 100%;
+  }
+
+  .gi-map-wrap {
+    height: 250px;
+  }
+
+  .gi-map-badge {
+    max-width: calc(100% - 1.3rem);
+    left: 0.65rem;
+    right: 0.65rem;
+    bottom: 0.65rem;
   }
 }

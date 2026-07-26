@@ -525,7 +525,7 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
           <section>
             <div className="gi-section-heading">
               <div className="gi-section-heading-bar" />
-              <div className="gi-section-heading-text">Verified Activity Map</div>
+              <div className="gi-section-heading-text">Field Activity Map</div>
             </div>
             <ProjectMap
               points={project.map_points}
