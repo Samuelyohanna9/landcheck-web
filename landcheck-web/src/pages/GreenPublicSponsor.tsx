@@ -939,7 +939,7 @@ export default function GreenPublicSponsor() {
       <footer className="gps-footer">
         <div className="gps-footer-inner">
           <div className="gps-footer-col gps-footer-brand">
-            <span className="gps-footer-brand-name"><GpsIcon name="leaf" className="gps-icon-inline" /> LandCheck Green</span>
+            <span className="gps-footer-brand-name">LandCheck Green</span>
             <p>GPS-verified tree sponsorship in Nigeria — no account required to get started.</p>
           </div>
           <div className="gps-footer-col">
