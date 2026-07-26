@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import {
+  buildOrgImpactPdfUrl,
+  buildOrgImpactShareUrl,
   fetchOrgImpact,
   fetchOrgImpactComments,
   postOrgImpactComment,
-  buildOrgImpactPdfUrl,
-  buildOrgImpactShareUrl,
-  type DonorImpactData,
-  type DonorImpactProject,
-  type DonorImpactPhoto,
   type DonorImpactComment,
+  type DonorImpactData,
+  type DonorImpactPhoto,
+  type DonorImpactProject,
 } from "../api/donorImpact";
 import { BACKEND_URL } from "../api/client";
 import { ProjectMap } from "../components/ProjectMap";
 import "../styles/green-impact.css";
+
+const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
 
 const resolveAssetUrl = (url: string | null | undefined): string => {
   const raw = String(url || "").trim();
@@ -22,59 +24,94 @@ const resolveAssetUrl = (url: string | null | undefined): string => {
   return raw;
 };
 
-const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
+const titleCase = (value: string) =>
+  value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
-const TASK_ICONS: Record<string, string> = {
-  watering: "💧",
-  weeding: "🌿",
-  protection: "🛡️",
-  inspection: "🔍",
-  replacement: "🔄",
-  supervision: "👁️",
-  field_capture: "📍",
-  planting: "🌱",
-  maintenance: "🔧",
-  assessment: "📋",
-  distribution: "📦",
-  follow_up: "🔁",
+const TASK_LABELS: Record<string, string> = {
+  watering: "Watering",
+  weeding: "Weeding",
+  protection: "Protection",
+  inspection: "Inspection",
+  replacement: "Replacement",
+  supervision: "Supervision",
+  field_capture: "Field Capture",
+  planting: "Planting",
+  maintenance: "Maintenance",
+  assessment: "Assessment",
+  distribution: "Distribution",
+  follow_up: "Follow Up",
 };
 
-const humanizeTask = (t: string) =>
-  (TASK_ICONS[t.toLowerCase()] ? TASK_ICONS[t.toLowerCase()] + " " : "") +
-  t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+const humanizeTask = (taskType: string) => TASK_LABELS[taskType.toLowerCase()] ?? titleCase(taskType);
+
+const taskShortCode = (taskType: string) =>
+  humanizeTask(taskType)
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word.charAt(0))
+    .join("")
+    .toUpperCase();
+
+const formatWebsiteUrl = (url?: string | null) =>
+  String(url || "").replace(/^https?:\/\//, "").replace(/\/$/, "");
 
 const formatDate = (iso?: string | null) => {
   if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso.slice(0, 10);
-  return d.toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso.slice(0, 10);
+  return date.toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
 };
 
 const formatDateShort = (iso?: string | null) => {
   if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso.slice(0, 10);
-  return d.toLocaleDateString("en-NG", { day: "numeric", month: "short" });
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso.slice(0, 10);
+  return date.toLocaleDateString("en-NG", { day: "numeric", month: "short" });
 };
 
-const animateCount = (el: HTMLElement | null, target: number, duration = 900) => {
-  if (!el) return;
-  const start = performance.now();
-  const from = 0;
+const animateCount = (element: HTMLElement | null, target: number, duration = 900) => {
+  if (!element) return;
+  const startedAt = performance.now();
   const step = (now: number) => {
-    const pct = Math.min((now - start) / duration, 1);
-    const ease = 1 - Math.pow(1 - pct, 3);
-    el.textContent = Math.round(from + (target - from) * ease).toLocaleString();
-    if (pct < 1) requestAnimationFrame(step);
+    const progress = Math.min((now - startedAt) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    element.textContent = Math.round(target * eased).toLocaleString();
+    if (progress < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
 };
 
-// ── Public endorsements section ──────────────────────────────────────────────
-function EndorsementSection({ orgSlug, projectName }: { orgSlug: string; projectName?: string | null }) {
+function AnimatedCount({ value, suffix = "" }: { value: number; suffix?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    animateCount(ref.current, value);
+  }, [value]);
+
+  return (
+    <>
+      <span ref={ref}>0</span>
+      {suffix}
+    </>
+  );
+}
+
+function EndorsementSection({
+  orgSlug,
+  projectName,
+}: {
+  orgSlug: string;
+  projectName?: string | null;
+}) {
   const [comments, setComments] = useState<DonorImpactComment[]>([]);
   const [commentsLoaded, setCommentsLoaded] = useState(false);
-  const [form, setForm] = useState({ commenter_name: "", commenter_rank: "", commenter_org: "", project_name: projectName || "", comment_body: "" });
+  const [form, setForm] = useState({
+    commenter_name: "",
+    commenter_rank: "",
+    commenter_org: "",
+    project_name: projectName || "",
+    comment_body: "",
+  });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -86,16 +123,29 @@ function EndorsementSection({ orgSlug, projectName }: { orgSlug: string; project
       .finally(() => setCommentsLoaded(true));
   }, [orgSlug]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setSubmitError(null);
-    if (!form.commenter_name.trim()) { setSubmitError("Your name is required."); return; }
-    if (!form.comment_body.trim()) { setSubmitError("Message is required."); return; }
+    if (!form.commenter_name.trim()) {
+      setSubmitError("Your name is required.");
+      return;
+    }
+    if (!form.comment_body.trim()) {
+      setSubmitError("Message is required.");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const newComment = await postOrgImpactComment(orgSlug, form);
-      setComments((prev) => [newComment, ...prev]);
-      setForm({ commenter_name: "", commenter_rank: "", commenter_org: "", project_name: projectName || "", comment_body: "" });
+      const comment = await postOrgImpactComment(orgSlug, form);
+      setComments((current) => [comment, ...current]);
+      setForm({
+        commenter_name: "",
+        commenter_rank: "",
+        commenter_org: "",
+        project_name: projectName || "",
+        comment_body: "",
+      });
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 4000);
     } catch {
@@ -108,25 +158,29 @@ function EndorsementSection({ orgSlug, projectName }: { orgSlug: string; project
   return (
     <section className="gi-endorsements">
       <div className="gi-endorsements-inner">
-        <div className="gi-section-heading" style={{ marginBottom: 20 }}>
+        <div className="gi-section-heading">
           <div className="gi-section-heading-bar" />
-          <div className="gi-section-heading-text">Endorsements & Comments</div>
+          <div className="gi-section-heading-text">Programme Endorsements</div>
         </div>
         <p className="gi-endorsements-intro">
-          Reviewing this programme? Leave a professional endorsement or public comment below.
-          Your name, position, and message will be visible on this page.
+          Reviewing this programme? Leave a professional comment or endorsement.
+          Published notes remain visible on this public report.
         </p>
 
         <form className="gi-endorsement-form" onSubmit={handleSubmit}>
           <div className="gi-endorsement-form-row">
             <div className="gi-form-group">
-              <label className="gi-form-label">Full Name <span style={{ color: "#e53e3e" }}>*</span></label>
+              <label className="gi-form-label">
+                Full Name <span className="gi-text-danger">*</span>
+              </label>
               <input
                 className="gi-form-input"
                 type="text"
                 placeholder="e.g. Dr. Amina Yusuf"
                 value={form.commenter_name}
-                onChange={(e) => setForm((f) => ({ ...f, commenter_name: e.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, commenter_name: event.target.value }))
+                }
                 maxLength={120}
               />
             </div>
@@ -137,7 +191,9 @@ function EndorsementSection({ orgSlug, projectName }: { orgSlug: string; project
                 type="text"
                 placeholder="e.g. Director of Programmes"
                 value={form.commenter_rank}
-                onChange={(e) => setForm((f) => ({ ...f, commenter_rank: e.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, commenter_rank: event.target.value }))
+                }
                 maxLength={120}
               />
             </div>
@@ -146,92 +202,91 @@ function EndorsementSection({ orgSlug, projectName }: { orgSlug: string; project
               <input
                 className="gi-form-input"
                 type="text"
-                placeholder="e.g. Federal Ministry of Agriculture"
+                placeholder="e.g. Environmental Care Foundation"
                 value={form.commenter_org}
-                onChange={(e) => setForm((f) => ({ ...f, commenter_org: e.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, commenter_org: event.target.value }))
+                }
                 maxLength={180}
               />
             </div>
           </div>
-          <div className="gi-form-group" style={{ marginTop: 12 }}>
+
+          <div className="gi-form-group gi-form-group-spaced">
             <label className="gi-form-label">Project (optional)</label>
             <input
               className="gi-form-input"
               type="text"
               placeholder="Which project are you commenting on?"
               value={form.project_name}
-              onChange={(e) => setForm((f) => ({ ...f, project_name: e.target.value }))}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, project_name: event.target.value }))
+              }
               maxLength={200}
             />
           </div>
-          <div className="gi-form-group" style={{ marginTop: 14 }}>
-            <label className="gi-form-label">Message <span style={{ color: "#e53e3e" }}>*</span></label>
+
+          <div className="gi-form-group gi-form-group-spaced">
+            <label className="gi-form-label">
+              Message <span className="gi-text-danger">*</span>
+            </label>
             <textarea
               className="gi-form-textarea"
-              placeholder="Share your professional assessment or endorsement of this programme…"
+              placeholder="Share your professional assessment or public endorsement of this programme."
               value={form.comment_body}
-              onChange={(e) => setForm((f) => ({ ...f, comment_body: e.target.value }))}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, comment_body: event.target.value }))
+              }
               rows={4}
               maxLength={1200}
             />
           </div>
+
           {submitError && <div className="gi-form-error">{submitError}</div>}
-          {submitted && <div className="gi-form-success">✓ Your endorsement has been submitted. Thank you.</div>}
+          {submitted && <div className="gi-form-success">Your endorsement has been submitted.</div>}
+
           <button
             type="submit"
+            className="gi-btn gi-btn-primary"
             disabled={submitting}
-            style={{
-              marginTop: 14,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 7,
-              background: submitting ? "#6b9e7a" : "linear-gradient(135deg,#1a5c2a,#2aa852)",
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: 14,
-              border: "none",
-              borderRadius: 10,
-              padding: "10px 22px",
-              cursor: submitting ? "not-allowed" : "pointer",
-              transition: "background 0.18s",
-            }}
           >
-            {submitting ? "Submitting…" : "Submit Endorsement"}
+            {submitting ? "Submitting..." : "Submit Endorsement"}
           </button>
         </form>
 
         {commentsLoaded && comments.length > 0 && (
           <div className="gi-comments-list">
-            <div style={{ fontWeight: 700, fontSize: 15, color: "var(--gi-text)", marginBottom: 4 }}>
-              {comments.length} {comments.length === 1 ? "Endorsement" : "Endorsements"}
-            </div>
-            {comments.map((c) => (
-              <div key={c.id} className="gi-comment-card">
+            {comments.map((comment) => (
+              <div key={comment.id} className="gi-comment-card">
                 <div className="gi-comment-meta">
-                  <div className="gi-comment-avatar">{c.commenter_name.slice(0, 1).toUpperCase()}</div>
-                  <div>
-                    <div className="gi-comment-name">{c.commenter_name}</div>
-                    {(c.commenter_rank || c.commenter_org) && (
+                  <div className="gi-comment-avatar">
+                    {comment.commenter_name.slice(0, 1).toUpperCase()}
+                  </div>
+                  <div className="gi-comment-meta-copy">
+                    <div className="gi-comment-name">{comment.commenter_name}</div>
+                    {(comment.commenter_rank || comment.commenter_org) && (
                       <div className="gi-comment-role">
-                        {[c.commenter_rank, c.commenter_org].filter(Boolean).join(" · ")}
+                        {[comment.commenter_rank, comment.commenter_org]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </div>
                     )}
                   </div>
-                  <div className="gi-comment-date">{formatDate(c.created_at)}</div>
+                  <div className="gi-comment-date">{formatDate(comment.created_at)}</div>
                 </div>
-                {c.project_name && (
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(22,163,74,0.1)", border: "1px solid rgba(22,163,74,0.25)", borderRadius: 6, padding: "2px 10px", fontSize: 12, color: "var(--gi-accent)", fontWeight: 600, marginBottom: 8 }}>
-                    📂 {c.project_name}
-                  </div>
+
+                {comment.project_name && (
+                  <div className="gi-comment-project-pill">{comment.project_name}</div>
                 )}
-                <div className="gi-comment-body">{c.comment_body}</div>
+
+                <div className="gi-comment-body">{comment.comment_body}</div>
               </div>
             ))}
           </div>
         )}
 
         {commentsLoaded && comments.length === 0 && (
-          <div className="gi-empty-section" style={{ marginTop: 24 }}>
+          <div className="gi-empty-section gi-endorsements-empty">
             No endorsements yet. Be the first to leave a comment.
           </div>
         )}
@@ -240,16 +295,6 @@ function EndorsementSection({ orgSlug, projectName }: { orgSlug: string; project
   );
 }
 
-// ── Animated metric value ────────────────────────────────────────────────────
-function AnimatedCount({ value, suffix = "" }: { value: number; suffix?: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    animateCount(ref.current, value);
-  }, [value]);
-  return <><span ref={ref}>0</span>{suffix}</>;
-}
-
-// ── Photo gallery ────────────────────────────────────────────────────────────
 function PhotoGallery({ photos }: { photos: DonorImpactPhoto[] }) {
   const [lightbox, setLightbox] = useState<DonorImpactPhoto | null>(null);
 
@@ -260,33 +305,50 @@ function PhotoGallery({ photos }: { photos: DonorImpactPhoto[] }) {
   return (
     <>
       <div className="gi-photos-grid">
-        {photos.map((ph, i) => (
-          <div key={i} className="gi-photo-item" onClick={() => setLightbox(ph)}>
+        {photos.map((photo, index) => (
+          <button
+            key={`${photo.url}-${index}`}
+            type="button"
+            className="gi-photo-item"
+            onClick={() => setLightbox(photo)}
+          >
             <img
-              src={resolveAssetUrl(ph.url)}
-              alt={ph.entity_label || "Field evidence"}
+              src={resolveAssetUrl(photo.url)}
+              alt={photo.entity_label || "Field evidence"}
               className="gi-photo-img"
               loading="lazy"
-              onLoad={(e) => (e.currentTarget as HTMLImageElement).classList.remove("loading")}
             />
             <div className="gi-photo-caption">
               <div className="gi-photo-caption-text">
-                {ph.entity_label && <div>{ph.entity_label}</div>}
-                {ph.created_by && <div style={{ opacity: 0.8 }}>by {ph.created_by}</div>}
-                {ph.captured_at && <div style={{ opacity: 0.7 }}>{formatDateShort(ph.captured_at)}</div>}
+                {photo.entity_label && <div>{photo.entity_label}</div>}
+                {photo.created_by && <div>Recorded by {photo.created_by}</div>}
+                {photo.captured_at && <div>{formatDateShort(photo.captured_at)}</div>}
               </div>
             </div>
-          </div>
+          </button>
         ))}
       </div>
+
       {lightbox && (
         <div className="gi-lightbox-backdrop" onClick={() => setLightbox(null)}>
-          <div className="gi-lightbox-inner" onClick={(e) => e.stopPropagation()}>
-            <img src={resolveAssetUrl(lightbox.url)} alt={lightbox.entity_label || "Evidence"} className="gi-lightbox-img" loading="lazy" decoding="async" />
-            <button className="gi-lightbox-close" onClick={() => setLightbox(null)}>✕</button>
+          <div className="gi-lightbox-inner" onClick={(event) => event.stopPropagation()}>
+            <img
+              src={resolveAssetUrl(lightbox.url)}
+              alt={lightbox.entity_label || "Evidence"}
+              className="gi-lightbox-img"
+              loading="lazy"
+              decoding="async"
+            />
+            <button
+              type="button"
+              className="gi-lightbox-close"
+              onClick={() => setLightbox(null)}
+            >
+              ×
+            </button>
             <div className="gi-lightbox-caption">
               {lightbox.entity_label && <span>{lightbox.entity_label}</span>}
-              {lightbox.created_by && <span> · by {lightbox.created_by}</span>}
+              {lightbox.created_by && <span> · Recorded by {lightbox.created_by}</span>}
               {lightbox.captured_at && <span> · {formatDate(lightbox.captured_at)}</span>}
               <span> · Supervisor approved</span>
             </div>
@@ -297,103 +359,123 @@ function PhotoGallery({ photos }: { photos: DonorImpactPhoto[] }) {
   );
 }
 
-// ── Project section ──────────────────────────────────────────────────────────
 function ProjectSection({ project }: { project: DonorImpactProject }) {
   const { stats, labels, workflow_profile: mode } = project;
-  const entityPl = labels.entity_plural;
-  const ownerPl = labels.owner_plural;
+  const entityPlural = labels.entity_plural;
+  const ownerPlural = labels.owner_plural;
   const modeLabel = labels.mode_label;
-
-  const modeIcon = mode === "agric" ? "🌾" : mode === "relief_recovery" ? "🏠" : "🌱";
-  const rateLabel = mode === "agric" ? "Activity Rate" : mode === "relief_recovery" ? "Activity Rate" : "Survival Rate";
+  const rateLabel =
+    mode === "green" ? "Survival Rate" : mode === "relief_recovery" ? "Activity Rate" : "Activity Rate";
   const rateValue = stats.survival_rate ?? 0;
 
-  const agricConfig = project.agric_config;
-  const reliefConfig = project.relief_config;
+  const programmeFacts = [
+    (project.agric_config?.program_type || project.relief_config?.program_type) && {
+      label: "Programme",
+      value: titleCase(project.agric_config?.program_type || project.relief_config?.program_type || ""),
+    },
+    project.agric_config?.focus_commodities && {
+      label: "Focus",
+      value: project.agric_config.focus_commodities,
+    },
+    project.relief_config?.intervention_focus && {
+      label: "Focus",
+      value: project.relief_config.intervention_focus,
+    },
+    project.agric_config?.season_label && {
+      label: "Season",
+      value: project.agric_config.season_label,
+    },
+    project.relief_config?.target_zone && {
+      label: "Target Zone",
+      value: project.relief_config.target_zone,
+    },
+  ].filter(Boolean) as Array<{ label: string; value: string }>;
+
+  const metricCards = [
+    {
+      kicker: "Registry",
+      value: <AnimatedCount value={stats.total_records} />,
+      label: `Total ${entityPlural}`,
+    },
+    {
+      kicker: "Status",
+      value: <AnimatedCount value={stats.active_records} />,
+      label: "Active records",
+    },
+    {
+      kicker: "Owners",
+      value: <AnimatedCount value={stats.total_custodians} />,
+      label: ownerPlural,
+    },
+    {
+      kicker: "Review",
+      value: <AnimatedCount value={stats.approved_tasks} />,
+      label: "Approved activities",
+    },
+    {
+      kicker: "Team",
+      value: <AnimatedCount value={stats.total_field_officers} />,
+      label: "Field officers",
+    },
+    ...(stats.last_activity_at
+      ? [
+          {
+            kicker: "Updated",
+            value: formatDate(stats.last_activity_at),
+            label: "Last recorded activity",
+          },
+        ]
+      : []),
+  ];
 
   return (
-    <div className="gi-project-card">
+    <article className="gi-project-card">
       <div className="gi-project-header">
         <div className="gi-project-header-top">
-          <div>
+          <div className="gi-project-header-copy">
+            <div className="gi-project-mode-chip">{modeLabel}</div>
             <div className="gi-project-name">{project.name}</div>
-            <div className="gi-project-meta">
-              {project.location_text && <span>📍 {project.location_text}</span>}
-            </div>
+            {project.location_text && <div className="gi-project-meta">{project.location_text}</div>}
           </div>
-          <div className="gi-project-mode-chip">{modeIcon} {modeLabel}</div>
+          <div className="gi-project-lead">
+            <span>Approved Workflow</span>
+            <strong>
+              {stats.approved_tasks.toLocaleString()} {stats.approved_tasks === 1 ? "activity" : "activities"}
+            </strong>
+          </div>
         </div>
       </div>
 
       <div className="gi-project-body">
-        {/* Programme info chips */}
-        {(agricConfig?.focus_commodities || agricConfig?.program_type || reliefConfig?.intervention_focus || reliefConfig?.program_type) && (
+        {programmeFacts.length > 0 && (
           <div className="gi-prog-chips">
-            {(agricConfig?.program_type || reliefConfig?.program_type) && (
-              <span className="gi-prog-chip">
-                🏷️ {(agricConfig?.program_type || reliefConfig?.program_type || "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
-              </span>
-            )}
-            {agricConfig?.focus_commodities && (
-              <span className="gi-prog-chip">🌾 {agricConfig.focus_commodities}</span>
-            )}
-            {reliefConfig?.intervention_focus && (
-              <span className="gi-prog-chip">🎯 {reliefConfig.intervention_focus}</span>
-            )}
-            {agricConfig?.season_label && (
-              <span className="gi-prog-chip">📅 {agricConfig.season_label}</span>
-            )}
-            {reliefConfig?.target_zone && (
-              <span className="gi-prog-chip">📍 {reliefConfig.target_zone}</span>
-            )}
+            {programmeFacts.map((fact) => (
+              <div key={`${fact.label}-${fact.value}`} className="gi-prog-chip">
+                <span className="gi-prog-chip-label">{fact.label}</span>
+                <span className="gi-prog-chip-value">{fact.value}</span>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Metric tiles */}
-        <div>
+        <section>
           <div className="gi-section-heading">
             <div className="gi-section-heading-bar" />
             <div className="gi-section-heading-text">Key Metrics</div>
           </div>
           <div className="gi-metrics-grid">
-            <div className="gi-metric-tile">
-              <div className="gi-metric-icon">{mode === "agric" ? "🌾" : mode === "relief_recovery" ? "🏠" : "🌳"}</div>
-              <div className="gi-metric-val"><AnimatedCount value={stats.total_records} /></div>
-              <div className="gi-metric-label">Total {entityPl}</div>
-            </div>
-            <div className="gi-metric-tile">
-              <div className="gi-metric-icon">✅</div>
-              <div className="gi-metric-val"><AnimatedCount value={stats.active_records} /></div>
-              <div className="gi-metric-label">Active</div>
-            </div>
-            <div className="gi-metric-tile">
-              <div className="gi-metric-icon">{mode === "agric" ? "👨‍🌾" : mode === "relief_recovery" ? "👤" : "🤝"}</div>
-              <div className="gi-metric-val"><AnimatedCount value={stats.total_custodians} /></div>
-              <div className="gi-metric-label">{ownerPl}</div>
-            </div>
-            <div className="gi-metric-tile">
-              <div className="gi-metric-icon">📋</div>
-              <div className="gi-metric-val"><AnimatedCount value={stats.approved_tasks} /></div>
-              <div className="gi-metric-label">Approved Activities</div>
-            </div>
-            <div className="gi-metric-tile">
-              <div className="gi-metric-icon">👷</div>
-              <div className="gi-metric-val"><AnimatedCount value={stats.total_field_officers} /></div>
-              <div className="gi-metric-label">Field Officers</div>
-            </div>
-            {stats.last_activity_at && (
-              <div className="gi-metric-tile">
-                <div className="gi-metric-icon">🕐</div>
-                <div className="gi-metric-val" style={{ fontSize: "15px" }}>{formatDate(stats.last_activity_at)}</div>
-                <div className="gi-metric-label">Last Activity</div>
+            {metricCards.map((metric) => (
+              <div key={`${metric.kicker}-${metric.label}`} className="gi-metric-tile">
+                <div className="gi-metric-kicker">{metric.kicker}</div>
+                <div className="gi-metric-val">{metric.value}</div>
+                <div className="gi-metric-label">{metric.label}</div>
               </div>
-            )}
+            ))}
           </div>
-        </div>
+        </section>
 
-        {/* Rate bar */}
         {rateValue > 0 && (
-          <div className="gi-rate-bar-wrap">
+          <section className="gi-rate-bar-wrap">
             <div className="gi-rate-bar-label">
               <span>{rateLabel}</span>
               <span className="gi-rate-bar-pct">{rateValue.toFixed(1)}%</span>
@@ -404,58 +486,64 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
                 style={{ width: `${Math.min(rateValue, 100)}%` }}
               />
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Breakdown bars */}
         {stats.species_breakdown.length > 0 && (
-          <div>
+          <section>
             <div className="gi-section-heading">
               <div className="gi-section-heading-bar" />
               <div className="gi-section-heading-text">
-                {mode === "agric" ? "Crop / Commodity Breakdown" : mode === "relief_recovery" ? "Site Type Breakdown" : "Species Breakdown"}
+                {mode === "agric"
+                  ? "Crop / Commodity Breakdown"
+                  : mode === "relief_recovery"
+                    ? "Site Type Breakdown"
+                    : "Species Breakdown"}
               </div>
             </div>
             <div className="gi-breakdown-list">
-              {stats.species_breakdown.slice(0, 8).map((row, i) => {
+              {stats.species_breakdown.slice(0, 8).map((row) => {
                 const maxCount = stats.species_breakdown[0]?.count || 1;
-                const pct = (row.count / maxCount) * 100;
+                const width = (row.count / maxCount) * 100;
                 return (
-                  <div key={i} className="gi-breakdown-row">
-                    <div className="gi-breakdown-label" title={row.label}>{row.label}</div>
+                  <div key={row.label} className="gi-breakdown-row">
+                    <div className="gi-breakdown-label" title={row.label}>
+                      {row.label}
+                    </div>
                     <div className="gi-breakdown-bar-track">
-                      <div className="gi-breakdown-bar-fill" style={{ width: `${pct}%` }} />
+                      <div className="gi-breakdown-bar-fill" style={{ width: `${width}%` }} />
                     </div>
                     <div className="gi-breakdown-count">{row.count.toLocaleString()}</div>
                   </div>
                 );
               })}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Map */}
         {(project.map_points.length > 0 || (project.map_features || []).length > 0) && (
-          <div>
+          <section>
             <div className="gi-section-heading">
               <div className="gi-section-heading-bar" />
-              <div className="gi-section-heading-text">Field Activity Map</div>
+              <div className="gi-section-heading-text">Verified Activity Map</div>
             </div>
-            <ProjectMap points={project.map_points} features={project.map_features || []} mode={mode} />
-          </div>
+            <ProjectMap
+              points={project.map_points}
+              features={project.map_features || []}
+              mode={mode}
+            />
+          </section>
         )}
 
-        {/* Photo gallery */}
-        <div>
+        <section>
           <div className="gi-section-heading">
             <div className="gi-section-heading-bar" />
-            <div className="gi-section-heading-text">Evidence Photos (Approved)</div>
+            <div className="gi-section-heading-text">Approved Evidence Gallery</div>
           </div>
           <PhotoGallery photos={project.recent_photos} />
-        </div>
+        </section>
 
-        {/* Activity timeline */}
-        <div>
+        <section>
           <div className="gi-section-heading">
             <div className="gi-section-heading-bar" />
             <div className="gi-section-heading-text">Recent Approved Activities</div>
@@ -464,29 +552,36 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
             <div className="gi-empty-section">No approved activities recorded yet.</div>
           ) : (
             <div className="gi-timeline">
-              {project.recent_activities.map((act, i) => {
-                const taskLabel = humanizeTask(act.task_type);
-                const who = act.custodian_name || act.assignee_name;
+              {project.recent_activities.map((activity, index) => {
+                const who = activity.custodian_name || activity.assignee_name;
                 return (
-                  <div key={i} className="gi-timeline-item">
+                  <div key={`${activity.task_type}-${activity.reviewed_at}-${index}`} className="gi-timeline-item">
                     <div className="gi-timeline-dot-col">
-                      <div className="gi-timeline-dot">{TASK_ICONS[act.task_type.toLowerCase()] || "📌"}</div>
+                      <div className="gi-timeline-dot">{taskShortCode(activity.task_type)}</div>
                       <div className="gi-timeline-line" />
                     </div>
                     <div className="gi-timeline-content">
-                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                        <div className="gi-timeline-title">{taskLabel.replace(/^[^ ]+ /, "")}</div>
-                        <div className="gi-timeline-date">{formatDateShort(act.reviewed_at)}</div>
+                      <div className="gi-timeline-head">
+                        <div className="gi-timeline-title">{humanizeTask(activity.task_type)}</div>
+                        <div className="gi-timeline-date">{formatDateShort(activity.reviewed_at)}</div>
                       </div>
                       <div className="gi-timeline-meta">
-                        {act.entity_ref && <span>{act.entity_ref}</span>}
-                        {who && <><div className="gi-timeline-meta-dot" /><span>by {who}</span></>}
-                        {act.assignee_name && act.assignee_name !== who && (
-                          <><div className="gi-timeline-meta-dot" /><span>field: {act.assignee_name}</span></>
+                        {activity.entity_ref && <span>{activity.entity_ref}</span>}
+                        {who && (
+                          <>
+                            <div className="gi-timeline-meta-dot" />
+                            <span>{who}</span>
+                          </>
+                        )}
+                        {activity.assignee_name && activity.assignee_name !== who && (
+                          <>
+                            <div className="gi-timeline-meta-dot" />
+                            <span>Field officer: {activity.assignee_name}</span>
+                          </>
                         )}
                       </div>
-                      {act.review_notes && (
-                        <div className="gi-timeline-notes">"{act.review_notes}"</div>
+                      {activity.review_notes && (
+                        <div className="gi-timeline-notes">{activity.review_notes}</div>
                       )}
                     </div>
                   </div>
@@ -494,53 +589,62 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
               })}
             </div>
           )}
-        </div>
+        </section>
       </div>
-    </div>
+    </article>
   );
 }
 
-// ── Main page ────────────────────────────────────────────────────────────────
 export default function DonorImpactPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
   const [searchParams] = useSearchParams();
   const projectFilter = searchParams.get("project") || null;
+
   const [data, setData] = useState<DonorImpactData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const totalRecRef = useRef<HTMLSpanElement>(null);
-  const totalActRef = useRef<HTMLSpanElement>(null);
-  const totalProjRef = useRef<HTMLSpanElement>(null);
+  const totalRecordsRef = useRef<HTMLSpanElement>(null);
+  const totalActivitiesRef = useRef<HTMLSpanElement>(null);
+  const totalProjectsRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     if (!orgSlug) return;
+
     setLoading(true);
     setError(null);
+
     fetchOrgImpact(orgSlug)
-      .then((res) => {
-        setData(res);
+      .then((response) => {
+        setData(response);
+        const filteredProjects = projectFilter
+          ? response.projects.filter((project) => String(project.id) === projectFilter)
+          : response.projects;
+
         setTimeout(() => {
-          const filtered = projectFilter ? res.projects.filter((p) => String(p.id) === projectFilter) : res.projects;
-          animateCount(totalRecRef.current, res.summary.total_records);
-          animateCount(totalActRef.current, res.summary.total_approved_activities);
-          animateCount(totalProjRef.current, filtered.length);
+          animateCount(totalRecordsRef.current, response.summary.total_records);
+          animateCount(totalActivitiesRef.current, response.summary.total_approved_activities);
+          animateCount(totalProjectsRef.current, filteredProjects.length);
         }, 120);
       })
-      .catch(() => setError("This impact page could not be found. The link may be incorrect or the organisation is not yet active."))
+      .catch(() =>
+        setError(
+          "This impact page could not be found. The link may be incorrect or the organisation is not yet active.",
+        ),
+      )
       .finally(() => setLoading(false));
-  }, [orgSlug]);
+  }, [orgSlug, projectFilter]);
 
   const handleCopyLink = useCallback(() => {
     const url = buildOrgImpactShareUrl(orgSlug || "");
     navigator.clipboard.writeText(url).catch(() => {
-      const ta = document.createElement("textarea");
-      ta.value = url;
-      document.body.appendChild(ta);
-      ta.select();
+      const textarea = document.createElement("textarea");
+      textarea.value = url;
+      document.body.appendChild(textarea);
+      textarea.select();
       document.execCommand("copy");
-      document.body.removeChild(ta);
+      document.body.removeChild(textarea);
     });
     setCopied(true);
     setTimeout(() => setCopied(false), 2400);
@@ -548,19 +652,19 @@ export default function DonorImpactPage() {
 
   const handleDownloadPdf = useCallback(() => {
     if (!orgSlug) return;
-    window.open(buildOrgImpactPdfUrl(orgSlug), "_blank");
+    window.open(buildOrgImpactPdfUrl(orgSlug), "_blank", "noopener,noreferrer");
   }, [orgSlug]);
 
-  // Determine dominant mode for page accent colour
   const dominantMode = data?.projects.find(Boolean)?.workflow_profile ?? "green";
-  const modeClass = dominantMode === "agric" ? "gi-mode-agric" : dominantMode === "relief_recovery" ? "gi-mode-relief" : "";
+  const modeClass =
+    dominantMode === "agric" ? "gi-mode-agric" : dominantMode === "relief_recovery" ? "gi-mode-relief" : "";
 
   if (loading) {
     return (
       <div className={`gi-page ${modeClass}`}>
         <div className="gi-loading-wrap">
           <div className="gi-spinner" />
-          <div className="gi-loading-text">Loading impact report…</div>
+          <div className="gi-loading-text">Loading impact report...</div>
         </div>
       </div>
     );
@@ -570,20 +674,34 @@ export default function DonorImpactPage() {
     return (
       <div className={`gi-page ${modeClass}`}>
         <div className="gi-error-wrap">
-          <div className="gi-error-icon">📊</div>
+          <div className="gi-error-icon">Report unavailable</div>
           <div className="gi-error-title">Impact page not found</div>
-          <div className="gi-error-text">{error || "Something went wrong loading this impact page."}</div>
+          <div className="gi-error-text">
+            {error || "Something went wrong loading this impact page."}
+          </div>
           {orgSlug && (
-            <div className="gi-error-text" style={{ marginTop: 8, fontSize: "0.8em", opacity: 0.65 }}>
-              Looked up: <code style={{ background: "rgba(0,0,0,0.08)", padding: "2px 6px", borderRadius: 4 }}>{orgSlug}</code>
-              {" — "} Ask your LandCheck administrator to confirm the organisation has a slug set.
+            <div className="gi-error-text gi-error-text-soft">
+              Looked up: <code>{orgSlug}</code>. Ask your LandCheck administrator to confirm the
+              organisation impact slug.
             </div>
           )}
         </div>
         <footer className="gi-footer">
           <div className="gi-footer-inner">
-            <a href="https://landcheck.online" className="gi-footer-brand" target="_blank" rel="noopener noreferrer">
-              <img src={GREEN_LOGO_SRC} alt="LandCheck" className="gi-footer-logo" width="80" height="24" loading="lazy" />
+            <a
+              href="https://landcheck.online"
+              className="gi-footer-brand"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                src={GREEN_LOGO_SRC}
+                alt="LandCheck"
+                className="gi-footer-logo"
+                width="80"
+                height="24"
+                loading="lazy"
+              />
             </a>
             <div className="gi-footer-text">Powered by LandCheck Geospatial Technologies</div>
           </div>
@@ -594,158 +712,175 @@ export default function DonorImpactPage() {
 
   const { org, projects: allProjects, summary } = data;
   const projects = projectFilter
-    ? allProjects.filter((p) => String(p.id) === projectFilter)
+    ? allProjects.filter((project) => String(project.id) === projectFilter)
     : allProjects;
-  const singleProjectName = projects.length === 1 && projectFilter ? projects[0]?.name : null;
+  const singleProjectName = projectFilter && projects.length === 1 ? projects[0]?.name : null;
   const orgLocation = [org.city, org.state_region, org.country].filter(Boolean).join(", ");
   const lastUpdated = summary.last_updated_at ? formatDate(summary.last_updated_at) : null;
+  const reportDescription = singleProjectName
+    ? `Verified field records, mapped evidence, and approved activities for ${singleProjectName}.`
+    : "Verified field records, mapped evidence, and approved activities across the published programme portfolio.";
 
   return (
     <div className={`gi-page ${modeClass}`}>
-      {/* Top nav */}
       <header className="gi-topbar">
-        <a href="https://landcheck.online" className="gi-topbar-brand" target="_blank" rel="noopener noreferrer">
+        <a
+          href="https://landcheck.online"
+          className="gi-topbar-brand"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <img src={GREEN_LOGO_SRC} alt="LandCheck" className="gi-topbar-logo" width="90" height="28" />
           <span className="gi-topbar-name">LandCheck</span>
         </a>
         <div className="gi-topbar-actions">
-          <button className="gi-btn gi-btn-ghost" onClick={handleCopyLink}>
-            <span className="gi-btn-icon">🔗</span>
-            {copied ? "Copied!" : "Copy link"}
+          <button type="button" className="gi-btn gi-btn-ghost" onClick={handleCopyLink}>
+            {copied ? "Copied" : "Copy report link"}
           </button>
-          <button className="gi-btn gi-btn-primary" onClick={handleDownloadPdf}>
-            <span className="gi-btn-icon">⬇</span>
-            PDF Report
+          <button type="button" className="gi-btn gi-btn-primary" onClick={handleDownloadPdf}>
+            Download PDF
           </button>
         </div>
       </header>
 
-      {/* Hero */}
       <section className="gi-hero">
         <div className="gi-hero-inner">
-          <div className="gi-hero-top">
-            <div className="gi-hero-logo-wrap">
-              {org.logo_url ? (
-                <img
-                  src={resolveAssetUrl(org.logo_url)}
-                  alt={org.name}
-                  className="gi-hero-logo"
-                  onError={(e) => {
-                    const el = e.currentTarget as HTMLImageElement;
-                    el.style.display = "none";
-                    const placeholder = el.nextElementSibling as HTMLElement | null;
-                    if (placeholder) placeholder.style.display = "flex";
-                  }}
-                />
-              ) : null}
-              <div
-                className="gi-hero-logo-placeholder"
-                style={{ display: org.logo_url ? "none" : "flex" }}
-              >
-                {org.short_name ? org.short_name.slice(0, 2).toUpperCase() : org.name.slice(0, 2).toUpperCase()}
-              </div>
-            </div>
-            <div>
-              <div className="gi-hero-org-name">{org.name}</div>
-              <div className="gi-hero-org-sub">
-                {orgLocation && <span>📍 {orgLocation}</span>}
-                {org.website_url && (
-                  <a
-                    href={org.website_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: "rgba(255,255,255,0.75)", textDecoration: "underline", textUnderlineOffset: 2 }}
+          <div className="gi-hero-grid">
+            <div className="gi-hero-copy">
+              <div className="gi-hero-kicker">LandCheck public report</div>
+              <div className="gi-hero-top">
+                <div className="gi-hero-logo-wrap">
+                  {org.logo_url ? (
+                    <img
+                      src={resolveAssetUrl(org.logo_url)}
+                      alt={org.name}
+                      className="gi-hero-logo"
+                      onError={(event) => {
+                        const image = event.currentTarget;
+                        image.style.display = "none";
+                        const placeholder = image.nextElementSibling as HTMLElement | null;
+                        if (placeholder) placeholder.style.display = "flex";
+                      }}
+                    />
+                  ) : null}
+                  <div
+                    className="gi-hero-logo-placeholder"
+                    style={{ display: org.logo_url ? "none" : "flex" }}
                   >
-                    {org.website_url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
-                  </a>
-                )}
+                    {(org.short_name ? org.short_name.slice(0, 2) : org.name.slice(0, 2)).toUpperCase()}
+                  </div>
+                </div>
+
+                <div className="gi-hero-title-block">
+                  <div className="gi-hero-org-name">{org.name}</div>
+                  <div className="gi-hero-org-sub">
+                    {orgLocation && <span className="gi-hero-sub-item">{orgLocation}</span>}
+                    {org.website_url && (
+                      <a
+                        href={org.website_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="gi-hero-sub-link"
+                      >
+                        {formatWebsiteUrl(org.website_url)}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <p className="gi-hero-description">{reportDescription}</p>
+
+              <div className="gi-hero-badges">
+                <div className="gi-hero-badge">Programme Impact Report</div>
+                {lastUpdated && <div className="gi-hero-badge">Updated {lastUpdated}</div>}
+                <div className="gi-hero-badge">{projects.length} {projects.length === 1 ? "Project" : "Projects"}</div>
               </div>
             </div>
-            <div style={{ marginLeft: "auto" }}>
-              <div className="gi-hero-verified-badge">✓ VERIFIED DATA</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <div className="gi-hero-badge">
-              <div className="gi-hero-badge-dot" />
-              Programme Impact Report
-            </div>
-            {lastUpdated && (
-              <div className="gi-hero-badge">Last updated: {lastUpdated}</div>
-            )}
-            {singleProjectName ? (
-              <div className="gi-hero-badge">{singleProjectName}</div>
-            ) : (
-              <div className="gi-hero-badge">
-                {projects.length} {projects.length === 1 ? "project" : "projects"}
+
+            <div className="gi-hero-highlights">
+              <div className="gi-hero-verified-badge">Verified Data</div>
+              <div className="gi-hero-highlight">
+                <span>Review basis</span>
+                <strong>Supervisor-approved records only</strong>
               </div>
-            )}
+              <div className="gi-hero-highlight">
+                <span>Coverage</span>
+                <strong>{projectFilter ? "Focused project view" : "Organisation-wide public view"}</strong>
+              </div>
+              <div className="gi-hero-highlight">
+                <span>Output</span>
+                <strong>Shareable report and PDF export</strong>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Summary strip */}
       <div className="gi-summary-strip">
         <div className="gi-summary-grid">
           <div className="gi-summary-cell">
-            <div className="gi-summary-val"><span ref={totalRecRef}>0</span></div>
-            <div className="gi-summary-label">Total Records</div>
+            <div className="gi-summary-context">Registry</div>
+            <div className="gi-summary-val"><span ref={totalRecordsRef}>0</span></div>
+            <div className="gi-summary-label">Total records</div>
           </div>
           <div className="gi-summary-cell">
-            <div className="gi-summary-val"><span ref={totalActRef}>0</span></div>
-            <div className="gi-summary-label">Approved Activities</div>
+            <div className="gi-summary-context">Review</div>
+            <div className="gi-summary-val"><span ref={totalActivitiesRef}>0</span></div>
+            <div className="gi-summary-label">Approved activities</div>
           </div>
           <div className="gi-summary-cell">
-            <div className="gi-summary-val"><span ref={totalProjRef}>0</span></div>
-            <div className="gi-summary-label">{projectFilter ? "Showing Project" : "Projects"}</div>
+            <div className="gi-summary-context">Scope</div>
+            <div className="gi-summary-val"><span ref={totalProjectsRef}>0</span></div>
+            <div className="gi-summary-label">{projectFilter ? "Showing project" : "Published projects"}</div>
           </div>
           <div className="gi-summary-cell">
-            <div className="gi-summary-val" style={{ fontSize: "clamp(15px,2vw,20px)" }}>
-              {lastUpdated || "—"}
-            </div>
-            <div className="gi-summary-label">Last Updated</div>
+            <div className="gi-summary-context">Freshness</div>
+            <div className="gi-summary-val gi-summary-val-date">{lastUpdated || "—"}</div>
+            <div className="gi-summary-label">Last updated</div>
           </div>
         </div>
       </div>
 
-      {/* Project sections */}
       <main className="gi-body">
         {projects.length === 0 ? (
-          <div className="gi-empty-section" style={{ padding: "48px 24px" }}>
+          <div className="gi-empty-section gi-empty-section-large">
             No projects with approved records are available for this organisation yet.
           </div>
         ) : (
-          projects.map((proj) => <ProjectSection key={proj.id} project={proj} />)
+          projects.map((project) => <ProjectSection key={project.id} project={project} />)
         )}
       </main>
 
-      {/* Endorsements */}
-      {orgSlug && <EndorsementSection orgSlug={orgSlug} projectName={singleProjectName} />}
+      <EndorsementSection orgSlug={orgSlug || ""} projectName={singleProjectName} />
 
-      {/* Footer */}
       <footer className="gi-footer">
         <div className="gi-footer-inner">
-          <a href="https://landcheck.online" className="gi-footer-brand" target="_blank" rel="noopener noreferrer">
+          <a
+            href="https://landcheck.online"
+            className="gi-footer-brand"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <img src={GREEN_LOGO_SRC} alt="LandCheck" className="gi-footer-logo" />
           </a>
           <div className="gi-footer-divider" />
           <div className="gi-footer-text">Powered by LandCheck Geospatial Technologies</div>
           <div className="gi-footer-divider" />
-          <div className="gi-footer-verified">✓ SUPERVISOR-VERIFIED DATA ONLY</div>
+          <div className="gi-footer-verified">Supervisor-verified public evidence only</div>
           <div className="gi-footer-divider" />
           <a
             href="https://landcheck.online/privacy"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: "rgba(255,255,255,0.45)", fontSize: 12, textDecoration: "none" }}
+            className="gi-footer-link"
           >
             Privacy Policy
           </a>
         </div>
       </footer>
 
-      {/* Copied toast */}
-      {copied && <div className="gi-copied-toast">🔗 Impact link copied to clipboard</div>}
+      {copied && <div className="gi-copied-toast">Impact link copied to clipboard</div>}
     </div>
   );
 }
