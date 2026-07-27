@@ -134,9 +134,9 @@ const DEFAULT_FEATURE_COLLECTIONS: FeatureCollectionState = {
   fence: EMPTY_FEATURE_COLLECTION,
 };
 
-const PLOTTING_VIEWPORT_WIDTH = 680;
-const PLOTTING_VIEWPORT_HEIGHT = 500;
 const PLOTTING_VIEWPORT_PADDING = 30;
+const PLOTTING_VIEWPORT_MARGIN = 16;
+const DEFAULT_PLOTTING_STAGE_SIZE = { width: 900, height: 700 };
 const DEFAULT_PLOTTING_CAMERA: PlottingCamera = {
   zoom: 1,
   offsetX: 0,
@@ -500,6 +500,8 @@ const buildPlottingViewport = (params: {
   featureCollections: FeatureCollectionState;
   selectedGeometry: any;
   draftGeometry: any;
+  viewportWidth: number;
+  viewportHeight: number;
 }) => {
   const coordinates: number[][] = [];
   if (Array.isArray(params.plotCoords)) {
@@ -541,8 +543,10 @@ const buildPlottingViewport = (params: {
   minY -= padY;
   maxY += padY;
 
-  const innerWidth = PLOTTING_VIEWPORT_WIDTH - PLOTTING_VIEWPORT_PADDING * 2;
-  const innerHeight = PLOTTING_VIEWPORT_HEIGHT - PLOTTING_VIEWPORT_PADDING * 2;
+  const viewportWidth = Math.max(params.viewportWidth, 100);
+  const viewportHeight = Math.max(params.viewportHeight, 100);
+  const innerWidth = viewportWidth - PLOTTING_VIEWPORT_PADDING * 2;
+  const innerHeight = viewportHeight - PLOTTING_VIEWPORT_PADDING * 2;
   const scale = Math.min(innerWidth / Math.max(maxX - minX, 1), innerHeight / Math.max(maxY - minY, 1));
 
   const project = (coord: number[]) => {
@@ -550,13 +554,13 @@ const buildPlottingViewport = (params: {
     const y = toRadians(coord[1] - referenceLat) * EARTH_RADIUS_M;
     return {
       x: PLOTTING_VIEWPORT_PADDING + (x - minX) * scale,
-      y: PLOTTING_VIEWPORT_HEIGHT - PLOTTING_VIEWPORT_PADDING - (y - minY) * scale,
+      y: viewportHeight - PLOTTING_VIEWPORT_PADDING - (y - minY) * scale,
     };
   };
 
   const unproject = (point: { x: number; y: number }) => {
     const xMeters = minX + (point.x - PLOTTING_VIEWPORT_PADDING) / scale;
-    const yMeters = minY + (PLOTTING_VIEWPORT_HEIGHT - PLOTTING_VIEWPORT_PADDING - point.y) / scale;
+    const yMeters = minY + (viewportHeight - PLOTTING_VIEWPORT_PADDING - point.y) / scale;
     return [
       referenceLng + (xMeters / (EARTH_RADIUS_M * cosLat)) * (180 / Math.PI),
       referenceLat + (yMeters / EARTH_RADIUS_M) * (180 / Math.PI),
@@ -564,8 +568,8 @@ const buildPlottingViewport = (params: {
   };
 
   return {
-    width: PLOTTING_VIEWPORT_WIDTH,
-    height: PLOTTING_VIEWPORT_HEIGHT,
+    width: viewportWidth,
+    height: viewportHeight,
     minX,
     maxX,
     minY,
@@ -767,6 +771,7 @@ export default function FeatureOverrideModal({
     lastY: 0,
     moved: false,
   });
+  const [plottingStageSize, setPlottingStageSize] = useState(DEFAULT_PLOTTING_STAGE_SIZE);
 
   const [menu, setMenu] = useState<{ x: number; y: number; visible: boolean }>({ x: 0, y: 0, visible: false });
   const [selectedGeometry, setSelectedGeometry] = useState<any>(null);
@@ -775,9 +780,44 @@ export default function FeatureOverrideModal({
   const [cursor, setCursor] = useState<{ lng: number; lat: number } | null>(null);
   const [activeTool, setActiveTool] = useState<EditorTool>("select");
   const [basemapMode, setBasemapMode] = useState<BasemapMode>("satellite");
+
+  useEffect(() => {
+    const stage = plottingStageRef.current;
+    if (!stage || basemapMode !== "plotting") return;
+    const applySize = (width: number, height: number) => {
+      setPlottingStageSize((previous) => {
+        const nextWidth = Math.max(Math.round(width), 320);
+        const nextHeight = Math.max(Math.round(height), 240);
+        if (previous.width === nextWidth && previous.height === nextHeight) return previous;
+        return { width: nextWidth, height: nextHeight };
+      });
+    };
+    applySize(stage.clientWidth, stage.clientHeight);
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const box = entry.contentBoxSize?.[0];
+      if (box) {
+        applySize(box.inlineSize, box.blockSize);
+      } else {
+        applySize(entry.contentRect.width, entry.contentRect.height);
+      }
+    });
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, [basemapMode, isOpen]);
+
+  const plottingPageWidth = plottingStageSize.width;
+  const plottingPageHeight = plottingStageSize.height;
+  const plottingViewportX = PLOTTING_VIEWPORT_MARGIN;
+  const plottingViewportY = PLOTTING_VIEWPORT_MARGIN;
+  const plottingViewportBoxWidth = Math.max(plottingPageWidth - PLOTTING_VIEWPORT_MARGIN * 2, 100);
+  const plottingViewportBoxHeight = Math.max(plottingPageHeight - PLOTTING_VIEWPORT_MARGIN * 2, 100);
+
   const [showLeftSidebar, setShowLeftSidebar] = useState(false);
   const [showRightSidebar, setShowRightSidebar] = useState(false);
   const [showTopToolbar, setShowTopToolbar] = useState(false);
+  const [showTraversePanel, setShowTraversePanel] = useState(false);
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>(DEFAULT_LAYER_VISIBILITY);
   const [featureInventory, setFeatureInventory] = useState<FeatureInventory>(DEFAULT_INVENTORY);
   const [featureCollections, setFeatureCollections] = useState<FeatureCollectionState>(DEFAULT_FEATURE_COLLECTIONS);
@@ -827,10 +867,37 @@ export default function FeatureOverrideModal({
         featureCollections,
         selectedGeometry,
         draftGeometry: plottingDraftGeometry,
+        viewportWidth: plottingViewportBoxWidth,
+        viewportHeight: plottingViewportBoxHeight,
     }),
-    [featureCollections, plotCoords, plottingDraftGeometry, selectedGeometry]
+    [featureCollections, plotCoords, plottingDraftGeometry, selectedGeometry, plottingViewportBoxWidth, plottingViewportBoxHeight]
   );
   const plottingZoomPercent = useMemo(() => `${Math.round(plottingCamera.zoom * 100)}%`, [plottingCamera.zoom]);
+  const traverseFirstCoordUtm = useMemo(() => {
+    const firstCoord = plotCoords?.[0];
+    if (!firstCoord) return { easting: "--", northing: "--" };
+    const [eA, nA] = fromWGS84(firstCoord[0], firstCoord[1], coordinateSystem || "utm_32n");
+    return { easting: `${eA.toFixed(3)}m`, northing: `${nA.toFixed(3)}m` };
+  }, [plotCoords, coordinateSystem]);
+  const traverseRows = useMemo(() => {
+    if (!plotCoords || plotCoords.length < 2) return [];
+    const cleanCoords = [...plotCoords];
+    if (cleanCoords.length >= 3) {
+      const first = cleanCoords[0];
+      const last = cleanCoords[cleanCoords.length - 1];
+      if (first[0] === last[0] && first[1] === last[1]) cleanCoords.pop();
+    }
+    return cleanCoords.map((start, i) => {
+      const end = cleanCoords[(i + 1) % cleanCoords.length];
+      return {
+        key: `tbl-row-${i}`,
+        from: getStationName(i),
+        to: getStationName((i + 1) % cleanCoords.length),
+        bearing: getSegmentBearing(start, end),
+        length: `${haversineDistanceMeters(start, end).toFixed(2)}m`,
+      };
+    });
+  }, [plotCoords]);
   const plottingPreviewPoints = useMemo(() => {
     if (basemapMode !== "plotting" || activeTool === "select" || !plottingHoverPoint) return plottingPoints;
     return [...plottingPoints, plottingHoverPoint];
@@ -1789,19 +1856,19 @@ export default function FeatureOverrideModal({
   const getPlottingPointer = useCallback(
     (target: SVGSVGElement, clientX: number, clientY: number) => {
       const rect = target.getBoundingClientRect();
-      const x = ((clientX - rect.left) / Math.max(rect.width, 1)) * plottingViewport.width;
-      const y = ((clientY - rect.top) / Math.max(rect.height, 1)) * plottingViewport.height;
+      const x = ((clientX - rect.left) / Math.max(rect.width, 1)) * plottingPageWidth;
+      const y = ((clientY - rect.top) / Math.max(rect.height, 1)) * plottingPageHeight;
       return { x, y };
     },
-    [plottingViewport.height, plottingViewport.width]
+    [plottingPageWidth, plottingPageHeight]
   );
 
   const plottingScreenToCanvasPoint = useCallback(
     (point: { x: number; y: number }) => ({
-      x: (point.x - 60 - plottingCamera.offsetX) / plottingCamera.zoom,
-      y: (point.y - 250 - plottingCamera.offsetY) / plottingCamera.zoom,
+      x: (point.x - plottingViewportX - plottingCamera.offsetX) / plottingCamera.zoom,
+      y: (point.y - plottingViewportY - plottingCamera.offsetY) / plottingCamera.zoom,
     }),
-    [plottingCamera.offsetX, plottingCamera.offsetY, plottingCamera.zoom]
+    [plottingCamera.offsetX, plottingCamera.offsetY, plottingCamera.zoom, plottingViewportX, plottingViewportY]
   );
 
   const getViewportCoordinateAtPixel = useCallback((xPx: number, yPx: number) => {
@@ -1912,12 +1979,12 @@ export default function FeatureOverrideModal({
         setPlottingHoverPoint([lng, lat]);
       }
 
-      // AutoCAD style screen cursor coordinate projection for snaps (offset by layout 60px / 250px)
-      const screenX = 60 + plottingCamera.offsetX + pointer.x * plottingCamera.zoom;
-      const screenY = 250 + plottingCamera.offsetY + pointer.y * plottingCamera.zoom;
+      // AutoCAD style screen cursor coordinate projection for snaps (offset by the viewport frame's page position)
+      const screenX = plottingViewportX + plottingCamera.offsetX + pointer.x * plottingCamera.zoom;
+      const screenY = plottingViewportY + plottingCamera.offsetY + pointer.y * plottingCamera.zoom;
       setScreenCursor({ x: screenX, y: screenY });
     },
-    [activeTool, basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport, resolvePlottingCanvasPoint, selectionDrag, plottingCamera.offsetX, plottingCamera.offsetY, plottingCamera.zoom]
+    [activeTool, basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport, resolvePlottingCanvasPoint, selectionDrag, plottingCamera.offsetX, plottingCamera.offsetY, plottingCamera.zoom, plottingViewportX, plottingViewportY]
   );
 
   const handlePlottingCanvasClick = useCallback(
@@ -1931,8 +1998,14 @@ export default function FeatureOverrideModal({
       if (selectionMode) return;
       event.preventDefault();
       const rawPointer = getPlottingPointer(event.currentTarget, event.clientX, event.clientY);
-      // Prevent drawing clicks outside the viewport bounds (60 to 740, 250 to 750)
-      if (rawPointer.x < 60 || rawPointer.x > 740 || rawPointer.y < 250 || rawPointer.y > 750) return;
+      // Prevent drawing clicks outside the map viewport frame
+      if (
+        rawPointer.x < plottingViewportX ||
+        rawPointer.x > plottingViewportX + plottingViewportBoxWidth ||
+        rawPointer.y < plottingViewportY ||
+        rawPointer.y > plottingViewportY + plottingViewportBoxHeight
+      )
+        return;
       const { point: pointer, label } = resolvePlottingCanvasPoint(
         plottingScreenToCanvasPoint(rawPointer)
       );
@@ -1941,7 +2014,19 @@ export default function FeatureOverrideModal({
       setPlottingHoverPoint([lng, lat]);
       setPlottingSnapLabel(label);
     },
-    [activeTool, basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport, resolvePlottingCanvasPoint, selectionMode]
+    [
+      activeTool,
+      basemapMode,
+      getPlottingPointer,
+      plottingScreenToCanvasPoint,
+      plottingViewport,
+      resolvePlottingCanvasPoint,
+      selectionMode,
+      plottingViewportX,
+      plottingViewportY,
+      plottingViewportBoxWidth,
+      plottingViewportBoxHeight,
+    ]
   );
 
   const handlePlottingCanvasDoubleClick = useCallback(
@@ -2822,8 +2907,27 @@ export default function FeatureOverrideModal({
                 <span className="cad-badge">{featureType}</span>
                 <span className="cad-badge cad-badge--ghost">{action}</span>
                 {selectionMode ? <span className="cad-badge cad-badge--ghost">{selectionMode} select</span> : null}
+                {basemapMode === "plotting" && (
+                  <button
+                    type="button"
+                    className={`cad-badge cad-badge--toggle${showTraversePanel ? " active" : ""}`}
+                    onClick={() => setShowTraversePanel((value) => !value)}
+                  >
+                    Traverse Table
+                  </button>
+                )}
               </div>
             </div>
+            {basemapMode === "plotting" && (
+              <div className="cad-plot-meta-bar" title="Survey plan title-block details">
+                <span className="cad-plot-meta-strong">R of O {meta.adamawa_rof_no || plotId || "590"}</span>
+                <span>{meta.adamawa_owner_name || meta.title_text || "Survey Plan"}</span>
+                <span>AT {meta.location_text || "Pilot Plot"}</span>
+                <span>Scale:- {meta.scale_text || "1 : 250"}</span>
+                <span>{meta.surveyor_rank || "Surveyor General"}</span>
+                <span>{new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
+              </div>
+            )}
             <div className="cad-canvas-workspace-wrapper" style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
               {basemapMode === "plotting" ? (
                 <div className="feature-override-map cad-plotting-stage" ref={plottingStageRef}>
@@ -2833,7 +2937,7 @@ export default function FeatureOverrideModal({
                 </div>
                 <svg
                   className={`cad-plotting-svg${plottingPanActive ? " is-panning" : ""}`}
-                  viewBox="0 0 800 1130"
+                  viewBox={`0 0 ${plottingPageWidth} ${plottingPageHeight}`}
                   onMouseMove={handlePlottingMouseMove}
                   onMouseDown={handlePlottingMouseDown}
                   onMouseUp={handlePlottingMouseUp}
@@ -2845,62 +2949,51 @@ export default function FeatureOverrideModal({
                 >
                   <defs>
                     <clipPath id="cad-viewport-clip">
-                      <rect x="0" y="0" width="680" height="500" />
+                      <rect x="0" y="0" width={plottingViewportBoxWidth} height={plottingViewportBoxHeight} />
                     </clipPath>
                   </defs>
-                  
-                  {/* Outer paper sheet grid background (White paper sheet) */}
-                  <rect x="0" y="0" width="800" height="1130" className="cad-plot-bg" />
-                  
-                  {/* Static double borders */}
-                  <rect x="20" y="20" width="760" height="1090" fill="none" stroke="#0f172a" strokeWidth="1.2" />
-                  <rect x="25" y="25" width="750" height="1080" fill="none" stroke="#475569" strokeWidth="2" />
-                  
-                  {/* Map viewport blue frame */}
-                  <rect x="60" y="250" width="680" height="500" fill="none" stroke="#2563eb" strokeWidth="1.5" />
-                  
-                  {/* Header Details (centered at x=400) */}
-                  <g textAnchor="middle" fill="#0f172a" fontFamily="monospace" letterSpacing="0.05em">
-                    <text x="400" y="65" fontSize="15" fontWeight="bold">R of O {meta.adamawa_rof_no || plotId || "590"}</text>
-                    <text x="400" y="95" fontSize="13" fontWeight="bold">SURVEY PLAN OF LAND BELONGING TO {meta.adamawa_owner_name || meta.title_text || "SURVEY PLAN"}</text>
-                    <text x="400" y="125" fontSize="12" fontWeight="bold">AT {meta.location_text || "PILOT PLOT"}</text>
-                    
-                    <text x="400" y="165" fontSize="12" fontWeight="bold">SCALE:- {meta.scale_text || "1 : 250"}</text>
-                    <text x="400" y="195" fontSize="12" fontWeight="bold">{meta.surveyor_rank || "SURVEYOR GENERAL"}</text>
-                    <text x="400" y="215" fontSize="11" fill="#475569">
-                      {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-                    </text>
-                  </g>
-                  
+
+                  {/* Full-bleed dark model-space background */}
+                  <rect x="0" y="0" width={plottingPageWidth} height={plottingPageHeight} className="cad-plot-bg" />
+
+                  {/* Map viewport frame */}
+                  <rect x={plottingViewportX} y={plottingViewportY} width={plottingViewportBoxWidth} height={plottingViewportBoxHeight} fill="none" stroke="#2563eb" strokeWidth="1.5" />
+
                   {/* Viewport Corner UTM Grid Coordinates Labels */}
                   {(() => {
                     const tl = getViewportCoordinateAtPixel(0, 0);
-                    const tr = getViewportCoordinateAtPixel(680, 0);
-                    const bl = getViewportCoordinateAtPixel(0, 500);
-                    const br = getViewportCoordinateAtPixel(680, 500);
+                    const tr = getViewportCoordinateAtPixel(plottingViewportBoxWidth, 0);
+                    const bl = getViewportCoordinateAtPixel(0, plottingViewportBoxHeight);
+                    const br = getViewportCoordinateAtPixel(plottingViewportBoxWidth, plottingViewportBoxHeight);
+                    const left = plottingViewportX + 8;
+                    const right = plottingViewportX + plottingViewportBoxWidth - 8;
+                    const top1 = plottingViewportY + 15;
+                    const top2 = plottingViewportY + 27;
+                    const bottom1 = plottingViewportY + plottingViewportBoxHeight - 18;
+                    const bottom2 = plottingViewportY + plottingViewportBoxHeight - 6;
                     return (
-                      <g fill="#2563eb" fontSize="9" fontFamily="monospace" fontWeight="bold">
+                      <g fill="#38bdf8" fontSize="9" fontFamily="monospace" fontWeight="bold">
                         {/* Top-left corner */}
-                        <text x="60" y="245" textAnchor="start">{tl.easting}</text>
-                        <text x="53" y="250" transform="rotate(-90 53 250)" textAnchor="end">{tl.northing}</text>
-                        
+                        <text x={left} y={top1} textAnchor="start">{tl.easting}</text>
+                        <text x={left} y={top2} textAnchor="start">{tl.northing}</text>
+
                         {/* Top-right corner */}
-                        <text x="740" y="245" textAnchor="end">{tr.easting}</text>
-                        <text x="747" y="250" transform="rotate(-90 747 250)" textAnchor="start">{tr.northing}</text>
-                        
+                        <text x={right} y={top1} textAnchor="end">{tr.easting}</text>
+                        <text x={right} y={top2} textAnchor="end">{tr.northing}</text>
+
                         {/* Bottom-left corner */}
-                        <text x="60" y="765" textAnchor="start">{bl.easting}</text>
-                        <text x="53" y="750" transform="rotate(-90 53 750)" textAnchor="end">{bl.northing}</text>
-                        
+                        <text x={left} y={bottom1} textAnchor="start">{bl.easting}</text>
+                        <text x={left} y={bottom2} textAnchor="start">{bl.northing}</text>
+
                         {/* Bottom-right corner */}
-                        <text x="740" y="765" textAnchor="end">{br.easting}</text>
-                        <text x="747" y="750" transform="rotate(-90 747 750)" textAnchor="start">{br.northing}</text>
+                        <text x={right} y={bottom1} textAnchor="end">{br.easting}</text>
+                        <text x={right} y={bottom2} textAnchor="end">{br.northing}</text>
                       </g>
                     );
                   })()}
-                  
+
                   {/* Clipped map viewport group */}
-                  <g transform="translate(60, 250)">
+                  <g transform={`translate(${plottingViewportX}, ${plottingViewportY})`}>
                     <g clipPath="url(#cad-viewport-clip)">
                       {/* Panned/zoomed group */}
                       <g transform={`translate(${plottingCamera.offsetX.toFixed(2)} ${plottingCamera.offsetY.toFixed(2)}) scale(${plottingCamera.zoom.toFixed(3)})`}>
@@ -2935,7 +3028,7 @@ export default function FeatureOverrideModal({
                               fontWeight="bold"
                               fontFamily="monospace"
                               textAnchor="middle"
-                              style={{ textShadow: "0 1px 1px rgba(255,255,255,0.85)" }}
+                              style={{ textShadow: "0 1px 2px rgba(0,0,0,0.85)" }}
                             >
                               {areaHec.toFixed(2)} Hectares
                             </text>
@@ -3000,7 +3093,7 @@ export default function FeatureOverrideModal({
                                   <line x1={projected.x - 7} y1={projected.y} x2={projected.x + 7} y2={projected.y} />
                                   <line x1={projected.x} y1={projected.y - 7} x2={projected.x} y2={projected.y + 7} />
                                 </g>
-                                <text x={projected.x + 8} y={projected.y - 8} fill="#0f172a" fontSize="11" fontWeight="bold" fontFamily="monospace">{station}</text>
+                                <text x={projected.x + 8} y={projected.y - 8} fill="#f8fafc" fontSize="11" fontWeight="bold" fontFamily="monospace">{station}</text>
                               </g>
                             );
                           });
@@ -3026,7 +3119,7 @@ export default function FeatureOverrideModal({
                                   />
                                 ) : null}
                                 {labelPoint ? (
-                                  <text x={labelPoint.x + 8} y={labelPoint.y - 8} className="cad-svg-label" fill="#0f172a">
+                                  <text x={labelPoint.x + 8} y={labelPoint.y - 8} className="cad-svg-label">
                                     {feature?.properties?.name || `Road ${index + 1}`}
                                   </text>
                                 ) : null}
@@ -3096,7 +3189,7 @@ export default function FeatureOverrideModal({
                                   />
                                 ) : null}
                                 {labelPoint ? (
-                                  <text x={labelPoint.x + 8} y={labelPoint.y - 8} className="cad-svg-label" fill="#0f172a">
+                                  <text x={labelPoint.x + 8} y={labelPoint.y - 8} className="cad-svg-label">
                                     BLD-{index + 1}
                                   </text>
                                 ) : null}
@@ -3213,7 +3306,7 @@ export default function FeatureOverrideModal({
                     </g> {/* Close viewport clip group */}
 
                     {/* AutoCAD UCS Coordinate Axis Icon (X-Y Axis) - fixed in map viewport bottom-left */}
-                    <g transform="translate(15, 485)" className="cad-svg-ucs">
+                    <g transform={`translate(22, ${plottingViewportBoxHeight - 22})`} className="cad-svg-ucs">
                       <line x1="0" y1="0" x2="35" y2="0" stroke="#94a3b8" strokeWidth="1.5" />
                       <line x1="0" y1="0" x2="0" y2="-35" stroke="#94a3b8" strokeWidth="1.5" />
                       <text x="39" y="3" fill="#64748b" fontSize="9" fontWeight="bold">X</text>
@@ -3222,123 +3315,13 @@ export default function FeatureOverrideModal({
                     </g>
 
                     {/* Static North Arrow Symbol inside map viewport */}
-                    <g transform="translate(640, 50)" className={`cad-north-arrow cad-north-arrow--${northArrowColor}`}>
-                      <line x1="0" y1="-25" x2="0" y2="25" stroke={northArrowColor === "blue" ? "#38bdf8" : "#0f172a"} strokeWidth="1.8" />
-                      <polygon points="0,-25 -5,-8 0,-13 5,-8" fill={northArrowColor === "blue" ? "#38bdf8" : "#0f172a"} />
-                      <text x="0" y="-29" textAnchor="middle" fill={northArrowColor === "blue" ? "#38bdf8" : "#0f172a"} fontSize="11" fontWeight="bold" fontFamily="monospace">N</text>
+                    <g transform={`translate(${plottingViewportBoxWidth - 40}, 45)`} className={`cad-north-arrow cad-north-arrow--${northArrowColor}`}>
+                      <line x1="0" y1="-25" x2="0" y2="25" strokeWidth="1.8" />
+                      <polygon points="0,-25 -5,-8 0,-13 5,-8" />
+                      <text x="0" y="-29" textAnchor="middle" fontSize="11" fontWeight="bold" fontFamily="monospace">N</text>
                     </g>
-                  </g> {/* Close translate(60, 250) group */}
+                  </g> {/* Close viewport frame translate group */}
 
-                  {/* Bottom section layout metadata and traverse table */}
-                  <g fill="#0f172a" fontFamily="monospace">
-                    {/* Left Column (Coordinates and notes) */}
-                    <g transform="translate(60, 785)">
-                      <text x="0" y="15" fill="#2563eb" fontSize="10.5" fontWeight="bold">UTM CO-ORDINATE OF A</text>
-                      {(() => {
-                        const firstCoord = plotCoords?.[0];
-                        let eastingVal = "--";
-                        let northingVal = "--";
-                        if (firstCoord) {
-                          const [eA, nA] = fromWGS84(firstCoord[0], firstCoord[1], coordinateSystem || "utm_32n");
-                          eastingVal = `${eA.toFixed(3)}m`;
-                          northingVal = `${nA.toFixed(3)}m`;
-                        }
-                        return (
-                          <g fill="#0f172a" fontSize="10">
-                            <text x="0" y="32">N {northingVal}</text>
-                            <text x="0" y="47">E {eastingVal}</text>
-                            <text x="0" y="62">Z -</text>
-                          </g>
-                        );
-                      })()}
-                      
-                      <text x="0" y="80" fontSize="9.5" fontWeight="bold">ORIGIN:- {getCoordinateSystemName(coordinateSystem)}</text>
-                      <text x="0" y="95" fontSize="9" fill="#475569">BASED ON {meta.adamawa_topo_sheet_text || "GIREI TOPO SHEET 197 NE"}</text>
-                      
-                      <g fontSize="8.5" fill="#64748b">
-                        <text x="0" y="115">Checked by OCX.........</text>
-                        <text x="0" y="130">Passed by Carto.........</text>
-                        <text x="0" y="145">Copy Right Reserved</text>
-                      </g>
-                      
-                      {/* Computation brace bracket */}
-                      <g transform="translate(0, 160)" fontSize="9">
-                        <text x="0" y="10">COMPUTATION</text>
-                        <text x="120" y="10">NO</text>
-                        <text x="0" y="28">PLAN</text>
-                        <text x="120" y="28">NO</text>
-                        {/* Brackets line path */}
-                        <path d="M 145,2 L 155,2 L 158,10 L 155,18 L 145,18" fill="none" stroke="#475569" strokeWidth="1.2" />
-                        <path d="M 158,10 L 168,10" fill="none" stroke="#475569" strokeWidth="1.2" />
-                        <text x="175" y="13" fontWeight="bold">{meta.adamawa_rof_no || plotId || "590"}</text>
-                      </g>
-                    </g>
-                    
-                    {/* Right Column (Traverse Table) */}
-                    <g transform="translate(440, 785)">
-                      {/* Grid Table */}
-                      <rect x="0" y="0" width="300" height="110" fill="none" stroke="#0f172a" strokeWidth="1.2" />
-                      {/* Table divider lines */}
-                      <line x1="0" y1="22" x2="300" y2="22" stroke="#0f172a" strokeWidth="1.2" />
-                      <line x1="50" y1="0" x2="50" y2="110" stroke="#0f172a" strokeWidth="1" />
-                      <line x1="150" y1="0" x2="150" y2="110" stroke="#0f172a" strokeWidth="1" />
-                      <line x1="250" y1="0" x2="250" y2="110" stroke="#0f172a" strokeWidth="1" />
-                      
-                      {/* Table Headers */}
-                      <g fontSize="9.5" fontWeight="bold" textAnchor="middle">
-                        <text x="25" y="15">FROM</text>
-                        <text x="100" y="15">BEARING</text>
-                        <text x="200" y="15">LENGTH</text>
-                        <text x="275" y="15">TO</text>
-                      </g>
-                      
-                      {/* Table rows */}
-                      {plotCoords && plotCoords.length >= 2 && (() => {
-                        const cleanCoords = [...plotCoords];
-                        if (cleanCoords.length >= 3) {
-                          const first = cleanCoords[0];
-                          const last = cleanCoords[cleanCoords.length - 1];
-                          if (first[0] === last[0] && first[1] === last[1]) {
-                            cleanCoords.pop();
-                          }
-                        }
-                        return cleanCoords.slice(0, 4).map((_, i) => {
-                          const start = cleanCoords[i];
-                          const end = cleanCoords[(i + 1) % cleanCoords.length];
-                          const stationFrom = getStationName(i);
-                          const stationTo = getStationName((i + 1) % cleanCoords.length);
-                          const dist = haversineDistanceMeters(start, end);
-                          const bearingStr = getSegmentBearing(start, end);
-                          const distStr = `${dist.toFixed(2)}m`;
-                          const rowY = 38 + i * 20;
-                          return (
-                            <g key={`tbl-row-${i}`} fontSize="9" textAnchor="middle">
-                              {/* Horizontal row divider */}
-                              {i > 0 && <line x1="0" y1={rowY - 11} x2="300" y2={rowY - 11} stroke="#e2e8f0" strokeWidth="0.8" />}
-                              <text x="25" y={rowY} fontWeight="bold">{stationFrom}</text>
-                              <text x="100" y={rowY}>{bearingStr}</text>
-                              <text x="200" y={rowY}>{distStr}</text>
-                              <text x="275" y={rowY} fontWeight="bold">{stationTo}</text>
-                            </g>
-                          );
-                        });
-                      })()}
-                      
-                      {/* Notes under table */}
-                      <g fontSize="8" fill="#475569" transform="translate(0, 122)">
-                        <text x="0" y="10">Detail shown met the result of accurate survey. All bearing and</text>
-                        <text x="0" y="20">distances shown on this plan have been computed from registered</text>
-                        <text x="0" y="30">Co-ordinates.</text>
-                        <text x="0" y="42" fill="#0f172a" fontWeight="bold">Surveyed by - {meta.surveyor_name || "STAFF SURVEYOR"}</text>
-                      </g>
-                    </g>
-                  </g>
-                  
-                  {/* Plan prepared by footer (centered at x=400) */}
-                  <text x="400" y="1075" textAnchor="middle" fill="#475569" fontSize="9.5" fontWeight="bold" fontFamily="monospace">
-                    Plan Prepared by Office of the Surveyor General {meta.state_text || "Adamawa"} State
-                  </text>
-                  
                   {selectionDrag?.mode === "box" ? (
                     <rect
                       x={normalizeSelectionRect(selectionDrag.start, selectionDrag.current).left}
@@ -3358,8 +3341,8 @@ export default function FeatureOverrideModal({
                   {/* AutoCAD Full-screen Snap-aligned Crosshairs constrained to map viewport */}
                   {screenCursor && basemapMode === "plotting" && (
                     <g className="cad-crosshair">
-                      <line x1="60" y1={screenCursor.y} x2="740" y2={screenCursor.y} />
-                      <line x1={screenCursor.x} y1="250" x2={screenCursor.x} y2="750" />
+                      <line x1={plottingViewportX} y1={screenCursor.y} x2={plottingViewportX + plottingViewportBoxWidth} y2={screenCursor.y} />
+                      <line x1={screenCursor.x} y1={plottingViewportY} x2={screenCursor.x} y2={plottingViewportY + plottingViewportBoxHeight} />
                       <rect x={screenCursor.x - 5} y={screenCursor.y - 5} width="10" height="10" />
                     </g>
                   )}
@@ -3398,6 +3381,57 @@ export default function FeatureOverrideModal({
                 className={`feature-override-map cad-drafting-map cad-drafting-map--${basemapMode}`}
                 ref={containerRef}
               />
+            )}
+
+            {basemapMode === "plotting" && showTraversePanel && (
+              <div className="cad-traverse-panel">
+                <div className="cad-traverse-panel-head">
+                  <strong>Traverse table &amp; coordinates</strong>
+                  <button type="button" onClick={() => setShowTraversePanel(false)} aria-label="Close traverse table">
+                    &times;
+                  </button>
+                </div>
+                <div className="cad-traverse-panel-body">
+                  <div className="cad-traverse-utm">
+                    <span className="cad-traverse-utm-label">UTM co-ordinate of A</span>
+                    <span>N {traverseFirstCoordUtm.northing}</span>
+                    <span>E {traverseFirstCoordUtm.easting}</span>
+                    <span>Origin:- {getCoordinateSystemName(coordinateSystem)}</span>
+                    <span className="cad-traverse-muted">Based on {meta.adamawa_topo_sheet_text || "Girei Topo Sheet 197 NE"}</span>
+                  </div>
+                  <table className="cad-traverse-table">
+                    <thead>
+                      <tr>
+                        <th>From</th>
+                        <th>Bearing</th>
+                        <th>Length</th>
+                        <th>To</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {traverseRows.length ? (
+                        traverseRows.map((row) => (
+                          <tr key={row.key}>
+                            <td>{row.from}</td>
+                            <td>{row.bearing}</td>
+                            <td>{row.length}</td>
+                            <td>{row.to}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="cad-traverse-muted">No boundary geometry yet</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                  <p className="cad-traverse-notes">
+                    Detail shown met the result of accurate survey. All bearings and distances shown have been computed from
+                    registered co-ordinates. Surveyed by - {meta.surveyor_name || "Staff Surveyor"}. Plan prepared by Office of
+                    the Surveyor General {meta.state_text || "Adamawa"} State.
+                  </p>
+                </div>
+              </div>
             )}
 
             {!showLeftSidebar && (
