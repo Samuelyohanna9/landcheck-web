@@ -7,6 +7,8 @@ import { isWorkAuthed } from "./auth/workAuth";
 import LandingPage from "./pages/LandingPage";
 import { CookieConsentProvider } from "./privacy/cookieConsent";
 
+import SessionTimeoutGate from "./components/SessionTimeoutGate";
+
 const SurveyPlan = lazy(() => import("./pages/SurveyPlan"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Feedback = lazy(() => import("./pages/Feedback"));
@@ -64,37 +66,39 @@ function GreenRouteSwitch() {
 export default function App() {
   return (
     <BrowserRouter>
-      <CookieConsentProvider>
-        <SeoRouteMeta />
-        <CookieConsentManager />
-        <Suspense fallback={null}>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/survey-plan" element={<SurveyPlan />} />
-            <Route path="/hazard-analysis" element={<HazardAnalysis />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} />
-            <Route path="/green/login" element={<GreenLogin />} />
-            <Route path="/green/login/:authRoute" element={<GreenLogin />} />
-            <Route path="/green" element={<GreenProtectedRoute element={<GreenRouteSwitch />} />} />
-            <Route path="/green-merchant/login" element={<GreenMerchantLogin />} />
-            <Route path="/green-merchant" element={<MerchantProtectedRoute element={<GreenMerchantDashboard />} />} />
-            <Route path="/green-work/login" element={<GreenWorkLogin />} />
-            <Route path="/green-work" element={<WorkProtectedRoute element={<GreenWork />} />} />
-            <Route path="/survey" element={<SurveyPlanLanding />} />
-            <Route path="/flood" element={<FloodAnalysisLanding />} />
-            <Route path="/career" element={<CareersPage />} />
-            <Route path="/news" element={<NewsPage />} />
-            <Route path="/news/:slug" element={<NewsArticlePage />} />
-            <Route path="/green-partners" element={<GreenPartnersLanding />} />
-            <Route path="/sponsor" element={<GreenPublicSponsor />} />
-            <Route path="/sponsor/calculator" element={<GreenFootprintCalculator />} />
-            <Route path="/impact/:orgSlug" element={<DonorImpactPage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/feedback" element={<Feedback />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-          </Routes>
-        </Suspense>
-      </CookieConsentProvider>
+      <SessionTimeoutGate>
+        <CookieConsentProvider>
+          <SeoRouteMeta />
+          <CookieConsentManager />
+          <Suspense fallback={null}>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/survey-plan" element={<SurveyPlan />} />
+              <Route path="/hazard-analysis" element={<HazardAnalysis />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/green/login" element={<GreenLogin />} />
+              <Route path="/green/login/:authRoute" element={<GreenLogin />} />
+              <Route path="/green" element={<GreenProtectedRoute element={<GreenRouteSwitch />} />} />
+              <Route path="/green-merchant/login" element={<GreenMerchantLogin />} />
+              <Route path="/green-merchant" element={<MerchantProtectedRoute element={<GreenMerchantDashboard />} />} />
+              <Route path="/green-work/login" element={<GreenWorkLogin />} />
+              <Route path="/green-work" element={<WorkProtectedRoute element={<GreenWork />} />} />
+              <Route path="/survey" element={<SurveyPlanLanding />} />
+              <Route path="/flood" element={<FloodAnalysisLanding />} />
+              <Route path="/career" element={<CareersPage />} />
+              <Route path="/news" element={<NewsPage />} />
+              <Route path="/news/:slug" element={<NewsArticlePage />} />
+              <Route path="/green-partners" element={<GreenPartnersLanding />} />
+              <Route path="/sponsor" element={<GreenPublicSponsor />} />
+              <Route path="/sponsor/calculator" element={<GreenFootprintCalculator />} />
+              <Route path="/impact/:orgSlug" element={<DonorImpactPage />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/feedback" element={<Feedback />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+            </Routes>
+          </Suspense>
+        </CookieConsentProvider>
+      </SessionTimeoutGate>
     </BrowserRouter>
   );
 }
