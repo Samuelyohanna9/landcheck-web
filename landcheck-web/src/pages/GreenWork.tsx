@@ -68,6 +68,58 @@ type ActivityLogEntry = {
   created_at?: string | null;
 };
 
+type ComplianceChecklistItem = {
+  id: number;
+  period_year: number;
+  period_month: number;
+  checklist_key: string;
+  category: string;
+  title: string;
+  description?: string | null;
+  status?: string | null;
+  owner_name?: string | null;
+  due_date?: string | null;
+  completed_at?: string | null;
+  completed_by?: string | null;
+  evidence_location?: string | null;
+  notes?: string | null;
+  automation_level?: string | null;
+};
+
+type ComplianceDashboard = {
+  period: {
+    year: number;
+    month: number;
+    label: string;
+    due_date?: string | null;
+  };
+  summary: {
+    total: number;
+    completed: number;
+    skipped: number;
+    pending: number;
+    completion_rate: number;
+  };
+  posture: Record<string, unknown>;
+  items: ComplianceChecklistItem[];
+};
+
+type ComplianceDraftValue = {
+  owner_name: string;
+  evidence_location: string;
+  notes: string;
+};
+
+const buildComplianceDrafts = (items: ComplianceChecklistItem[]) =>
+  items.reduce<Record<number, ComplianceDraftValue>>((acc, item) => {
+    acc[item.id] = {
+      owner_name: String(item.owner_name || ""),
+      evidence_location: String(item.evidence_location || ""),
+      notes: String(item.notes || ""),
+    };
+    return acc;
+  }, {});
+
 const normalizeActivityLogDetails = (details: unknown) => {
   if (details == null || details === "") return null;
   if (typeof details === "string") {
@@ -3368,11 +3420,11 @@ function ShareImpactPanel({
 
 export default function GreenWork() {
   const workAuthSession = getWorkAuthSession();
-  const canAccessSuperAdmin = workAuthSession?.auth_mode === "env_admin";
-  const canReviewSponsorPayoutClearance =
-    canAccessSuperAdmin ||
+  const canAccessSuperAdmin =
+    workAuthSession?.auth_mode === "env_admin" ||
     normalizeName(workAuthSession?.user?.role_key) === "super_admin" ||
     normalizeName(workAuthSession?.user?.role) === "super_admin";
+  const canReviewSponsorPayoutClearance = canAccessSuperAdmin;
   const isSuperAdminOnlyForm = (form: WorkForm | null | undefined) => form === "super_admin" || form === "logs" || form === "merchants";
   const isPartnerWorkSession = workAuthSession?.auth_mode === "partner_user";
   const normalizeOrgLifecycleStatus = (value: unknown) => String(value || "").trim().toLowerCase();
@@ -3419,6 +3471,17 @@ export default function GreenWork() {
     "share_impact",
   ];
 
+  const getComplianceStatusStyle = (status: string | null | undefined) => {
+    const normalized = String(status || "pending").trim().toLowerCase();
+    if (normalized === "completed") {
+      return { background: "#e8f7eb", border: "1px solid #b7e0c0", color: "#157347" };
+    }
+    if (normalized === "skipped") {
+      return { background: "#fff4db", border: "1px solid #f4d18c", color: "#9a6700" };
+    }
+    return { background: "#eef5ff", border: "1px solid #c7d9ff", color: "#205ecf" };
+  };
+
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const mapCardRef = useRef<HTMLDivElement | null>(null);
   const workPauseNoticeShownRef = useRef(false);
@@ -3440,6 +3503,26 @@ export default function GreenWork() {
   const [logsError, setLogsError] = useState<string | null>(null);
   const [selectedActivityLog, setSelectedActivityLog] = useState<ActivityLogEntry | null>(null);
   const [qrPrintsReport, setQrPrintsReport] = useState<any[]>([]);
+  const [complianceDashboard, setComplianceDashboard] = useState<ComplianceDashboard | null>(null);
+  const [complianceDrafts, setComplianceDrafts] = useState<Record<number, ComplianceDraftValue>>({});
+  const [complianceLoading, setComplianceLoading] = useState(false);
+  const [complianceError, setComplianceError] = useState<string | null>(null);
+  const [complianceSavingId, setComplianceSavingId] = useState<number | null>(null);
+  const [complianceEnsuring, setComplianceEnsuring] = useState(false);
+  const [securityMaintenanceRunning, setSecurityMaintenanceRunning] = useState(false);
+  const compliancePostureEntries = useMemo(() => {
+    const posture = complianceDashboard?.posture || {};
+    return [
+      { label: "Environment", value: String(posture.environment || "-").replace(/_/g, " ") },
+      { label: "Active sessions", value: Number(posture.active_sessions || 0).toLocaleString() },
+      { label: "MFA users", value: Number(posture.mfa_enabled_users || 0).toLocaleString() },
+      { label: "MFA sponsors", value: Number(posture.mfa_enabled_sponsors || 0).toLocaleString() },
+      { label: "Idle timeout", value: `${Number(posture.auth_session_idle_minutes || 0)} min` },
+      { label: "Log retention", value: `${Number(posture.activity_log_retention_days || 0)} days` },
+      { label: "Webhook signing", value: Boolean(posture.require_signed_flutterwave_webhooks) ? "Required" : "Optional" },
+      { label: "Log reset", value: Boolean(posture.allow_activity_log_reset) ? "Enabled" : "Disabled" },
+    ];
+  }, [complianceDashboard]);
   const [redemptions, setRedemptions] = useState<any[]>([]);
   const [followClaimNotes, setFollowClaimNotes] = useState<Record<number, string>>({});
   const [complaintNotes, setComplaintNotes] = useState<Record<number, string>>({});
@@ -6016,6 +6099,73 @@ export default function GreenWork() {
     }
   };
 
+  const loadComplianceDashboard = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setComplianceLoading(true);
+    setComplianceError(null);
+    try {
+      const res = await api.get("/green/admin/compliance/dashboard");
+      const dashboard = (res.data?.dashboard || null) as ComplianceDashboard | null;
+      setComplianceDashboard(dashboard);
+      setComplianceDrafts(buildComplianceDrafts(dashboard?.items || []));
+    } catch (err: any) {
+      setComplianceError(err?.response?.data?.detail || err?.message || "Failed to load compliance dashboard");
+    } finally {
+      setComplianceLoading(false);
+    }
+  }, []);
+
+  const ensureComplianceChecklist = useCallback(async () => {
+    try {
+      setComplianceEnsuring(true);
+      const res = await api.post("/green/admin/compliance/checklist/ensure", {});
+      const dashboard = (res.data?.dashboard || null) as ComplianceDashboard | null;
+      setComplianceDashboard(dashboard);
+      setComplianceDrafts(buildComplianceDrafts(dashboard?.items || []));
+      toast.success(res.data?.created ? "Monthly compliance checklist generated." : "Monthly compliance checklist is already ready.");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.message || "Failed to prepare compliance checklist");
+    } finally {
+      setComplianceEnsuring(false);
+    }
+  }, []);
+
+  const updateComplianceChecklistItem = useCallback(async (item: ComplianceChecklistItem, status: "pending" | "completed" | "skipped") => {
+    try {
+      setComplianceSavingId(item.id);
+      const draft = complianceDrafts[item.id] || { owner_name: "", evidence_location: "", notes: "" };
+      const res = await api.post(`/green/admin/compliance/checklist/${item.id}`, {
+        status,
+        owner_name: draft.owner_name,
+        evidence_location: draft.evidence_location,
+        notes: draft.notes,
+      });
+      const dashboard = (res.data?.dashboard || null) as ComplianceDashboard | null;
+      setComplianceDashboard(dashboard);
+      setComplianceDrafts(buildComplianceDrafts(dashboard?.items || []));
+      toast.success(status === "completed" ? "Checklist item marked complete." : "Checklist item reopened.");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.message || "Failed to update compliance checklist");
+    } finally {
+      setComplianceSavingId(null);
+    }
+  }, [complianceDrafts]);
+
+  const runSecurityMaintenance = useCallback(async () => {
+    try {
+      setSecurityMaintenanceRunning(true);
+      const res = await api.post("/green/admin/security/maintenance");
+      const cleanup = res.data?.cleanup || {};
+      await loadComplianceDashboard({ silent: true });
+      toast.success(
+        `Security maintenance complete. Sessions cleaned: ${Number(cleanup.deleted_sessions || 0)}. Logs cleaned: ${Number(cleanup.deleted_activity_logs || 0)}.`
+      );
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || err?.message || "Failed to run security maintenance");
+    } finally {
+      setSecurityMaintenanceRunning(false);
+    }
+  }, [loadComplianceDashboard]);
+
   const loadActivityLogs = useCallback(async (options?: { silent?: boolean }) => {
     if (!options?.silent) setLogsLoading(true);
     setLogsError(null);
@@ -7109,6 +7259,7 @@ export default function GreenWork() {
 
   useEffect(() => {
     if (!canAccessSuperAdmin || activeForm !== "logs") return;
+    void loadComplianceDashboard();
     void loadActivityLogs();
     void loadQrPrintsReport();
     const timer = window.setInterval(() => {
@@ -7116,7 +7267,7 @@ export default function GreenWork() {
       void loadQrPrintsReport();
     }, 15000);
     return () => window.clearInterval(timer);
-  }, [activeForm, canAccessSuperAdmin, loadActivityLogs, loadQrPrintsReport]);
+  }, [activeForm, canAccessSuperAdmin, loadActivityLogs, loadComplianceDashboard, loadQrPrintsReport]);
 
   useEffect(() => {
     if (activeForm === "logs") return;
@@ -15970,17 +16121,36 @@ export default function GreenWork() {
                 Monitor live API activity across Survey Plan, Flood, LandCheck Work, sponsor, and field capture surfaces,
                 plus tree tag QR printing statistics.
               </p>
-              
-              <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
                 <button
                   type="button"
                   onClick={() => {
+                    void loadComplianceDashboard();
                     void loadActivityLogs();
                     void loadQrPrintsReport();
                   }}
-                  disabled={logsLoading}
+                  disabled={logsLoading || complianceLoading}
                 >
-                  {logsLoading ? "Refreshing..." : "Refresh Logs & Reports"}
+                  {logsLoading || complianceLoading ? "Refreshing..." : "Refresh Logs & Reports"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void runSecurityMaintenance();
+                  }}
+                  disabled={securityMaintenanceRunning}
+                >
+                  {securityMaintenanceRunning ? "Running maintenance..." : "Run Security Maintenance"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void ensureComplianceChecklist();
+                  }}
+                  disabled={complianceEnsuring}
+                >
+                  {complianceEnsuring ? "Preparing checklist..." : "Prepare Monthly Checklist"}
                 </button>
                 <button
                   type="button"
@@ -15992,8 +16162,265 @@ export default function GreenWork() {
               </div>
 
               {logsError && <p className="green-work-error" style={{ color: 'red', marginBottom: 12 }}>{logsError}</p>}
+              {complianceError && <p className="green-work-error" style={{ color: "red", marginBottom: 12 }}>{complianceError}</p>}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <div
+                  style={{
+                    border: "1px solid #d9e9dd",
+                    borderRadius: 20,
+                    padding: 20,
+                    background: "linear-gradient(180deg, #fbfffc 0%, #f3fbf5 100%)",
+                    boxShadow: "0 18px 45px rgba(24, 72, 51, 0.08)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      justifyContent: "space-between",
+                      gap: 16,
+                      marginBottom: 18,
+                    }}
+                  >
+                    <div style={{ minWidth: 260 }}>
+                      <h4 style={{ margin: 0, fontSize: 22 }}>Security & Compliance Operations</h4>
+                      <p className="green-work-note" style={{ margin: "8px 0 0", marginLeft: 0, maxWidth: 760 }}>
+                        This is the super-admin operating board for monthly security evidence, privileged-review signoff,
+                        backup verification, audit review, and live security posture checks.
+                      </p>
+                    </div>
+                    {complianceDashboard && (
+                      <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
+                        <span className="green-work-live-pill success">
+                          {complianceDashboard.period.label} checklist
+                        </span>
+                        <span className="green-work-live-pill neutral">
+                          Due {new Date(complianceDashboard.period.due_date || "").toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {complianceLoading && !complianceDashboard ? (
+                    <p className="green-work-note" style={{ marginLeft: 0 }}>Loading compliance dashboard...</p>
+                  ) : complianceDashboard ? (
+                    <>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 18 }}>
+                        <span className="green-work-live-pill success">Completed: {complianceDashboard.summary.completed}</span>
+                        <span className="green-work-live-pill neutral">Pending: {complianceDashboard.summary.pending}</span>
+                        <span className="green-work-live-pill neutral">Skipped: {complianceDashboard.summary.skipped}</span>
+                        <span className="green-work-live-pill success">
+                          Completion rate: {Number(complianceDashboard.summary.completion_rate || 0).toFixed(1)}%
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                          gap: 12,
+                          marginBottom: 18,
+                        }}
+                      >
+                        {compliancePostureEntries.map((entry) => (
+                          <div
+                            key={`posture-${entry.label}`}
+                            style={{
+                              border: "1px solid #d8e8da",
+                              borderRadius: 16,
+                              padding: "14px 16px",
+                              background: "#ffffff",
+                              minHeight: 86,
+                            }}
+                          >
+                            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", color: "#6a8572" }}>
+                              {entry.label}
+                            </div>
+                            <div style={{ marginTop: 10, fontSize: 24, fontWeight: 800, color: "#103b28", lineHeight: 1.15 }}>
+                              {entry.value}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div
+                        style={{
+                          border: "1px solid #dce7de",
+                          borderRadius: 16,
+                          padding: 14,
+                          background: "#ffffff",
+                          marginBottom: 18,
+                        }}
+                      >
+                        <strong style={{ display: "block", marginBottom: 6 }}>Website-operated controls</strong>
+                        <span style={{ color: "#51685a", fontSize: 13 }}>
+                          LandCheck can track completion, evidence links, and ownership here. Backup restore, management
+                          review, vendor review, and access review still require real human confirmation before you mark
+                          them complete.
+                        </span>
+                      </div>
+
+                      <div style={{ display: "grid", gap: 14 }}>
+                        {complianceDashboard.items.map((item) => {
+                          const draft = complianceDrafts[item.id] || { owner_name: "", evidence_location: "", notes: "" };
+                          const normalizedStatus = String(item.status || "pending").trim().toLowerCase();
+                          const statusStyle = getComplianceStatusStyle(normalizedStatus);
+                          const isSaving = complianceSavingId === item.id;
+                          return (
+                            <div
+                              key={`compliance-item-${item.id}`}
+                              style={{
+                                border: "1px solid #dbe7dc",
+                                borderRadius: 18,
+                                padding: 18,
+                                background: "#ffffff",
+                                display: "grid",
+                                gap: 14,
+                              }}
+                            >
+                              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 12 }}>
+                                <div style={{ minWidth: 260, flex: 1 }}>
+                                  <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.8, color: "#5a7b67" }}>
+                                    {item.category}
+                                  </div>
+                                  <h5 style={{ margin: "6px 0 8px", fontSize: 20, color: "#123523" }}>{item.title}</h5>
+                                  <p className="green-work-note" style={{ margin: 0, marginLeft: 0, maxWidth: 880 }}>
+                                    {item.description}
+                                  </p>
+                                </div>
+                                <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
+                                  <span
+                                    style={{
+                                      ...statusStyle,
+                                      borderRadius: 999,
+                                      padding: "7px 12px",
+                                      fontSize: 12,
+                                      fontWeight: 800,
+                                      textTransform: "capitalize",
+                                    }}
+                                  >
+                                    {normalizedStatus}
+                                  </span>
+                                  <span className="green-work-live-pill neutral">
+                                    {item.automation_level === "automated" ? "Automation-backed" : "Human signoff"}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                                <span className="green-work-live-pill neutral">Due: {new Date(item.due_date || "").toLocaleDateString()}</span>
+                                <span className="green-work-live-pill neutral">Owner: {item.owner_name || "Not set"}</span>
+                                {item.completed_at ? (
+                                  <span className="green-work-live-pill success">
+                                    Completed by {item.completed_by || "-"} on {new Date(item.completed_at).toLocaleString()}
+                                  </span>
+                                ) : (
+                                  <span className="green-work-live-pill neutral">Awaiting completion</span>
+                                )}
+                              </div>
+
+                              <div
+                                style={{
+                                  display: "grid",
+                                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                                  gap: 12,
+                                }}
+                              >
+                                <label style={{ display: "grid", gap: 6 }}>
+                                  <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", color: "#587665" }}>Owner</span>
+                                  <input
+                                    value={draft.owner_name}
+                                    onChange={(event) =>
+                                      setComplianceDrafts((prev) => ({
+                                        ...prev,
+                                        [item.id]: {
+                                          ...prev[item.id],
+                                          owner_name: event.target.value,
+                                          evidence_location: prev[item.id]?.evidence_location ?? draft.evidence_location,
+                                          notes: prev[item.id]?.notes ?? draft.notes,
+                                        },
+                                      }))
+                                    }
+                                    placeholder="Super admin or control owner"
+                                    disabled={isSaving}
+                                  />
+                                </label>
+                                <label style={{ display: "grid", gap: 6 }}>
+                                  <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", color: "#587665" }}>Evidence link / path</span>
+                                  <input
+                                    value={draft.evidence_location}
+                                    onChange={(event) =>
+                                      setComplianceDrafts((prev) => ({
+                                        ...prev,
+                                        [item.id]: {
+                                          ...prev[item.id],
+                                          owner_name: prev[item.id]?.owner_name ?? draft.owner_name,
+                                          evidence_location: event.target.value,
+                                          notes: prev[item.id]?.notes ?? draft.notes,
+                                        },
+                                      }))
+                                    }
+                                    placeholder="Ticket, document path, export name, or storage URL"
+                                    disabled={isSaving}
+                                  />
+                                </label>
+                              </div>
+
+                              <label style={{ display: "grid", gap: 6 }}>
+                                <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", color: "#587665" }}>Review notes</span>
+                                <textarea
+                                  value={draft.notes}
+                                  onChange={(event) =>
+                                    setComplianceDrafts((prev) => ({
+                                      ...prev,
+                                      [item.id]: {
+                                        ...prev[item.id],
+                                        owner_name: prev[item.id]?.owner_name ?? draft.owner_name,
+                                        evidence_location: prev[item.id]?.evidence_location ?? draft.evidence_location,
+                                        notes: event.target.value,
+                                      },
+                                    }))
+                                  }
+                                  placeholder="Record what was reviewed, what changed, and any follow-up actions."
+                                  rows={3}
+                                  disabled={isSaving}
+                                />
+                              </label>
+
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    void updateComplianceChecklistItem(item, "completed");
+                                  }}
+                                  disabled={isSaving || normalizedStatus === "completed"}
+                                >
+                                  {isSaving && normalizedStatus !== "completed" ? "Saving..." : "Mark Complete"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    void updateComplianceChecklistItem(item, "pending");
+                                  }}
+                                  disabled={isSaving || normalizedStatus === "pending"}
+                                  style={{ background: "#f4f9f5", color: "#184a33", border: "1px solid #cfe2d3" }}
+                                >
+                                  Reopen
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="green-work-note" style={{ marginLeft: 0 }}>
+                      Compliance dashboard is not available yet. Use “Prepare Monthly Checklist” to seed the current month.
+                    </p>
+                  )}
+                </div>
+
                 {/* QR Code Prints Report */}
                 <div>
                   <h4>QR Tag Print Status Report</h4>

@@ -136,6 +136,11 @@ const DEFAULT_FEATURE_COLLECTIONS: FeatureCollectionState = {
 
 const PLOTTING_VIEWPORT_PADDING = 30;
 const PLOTTING_VIEWPORT_MARGIN = 16;
+// AutoCAD-style deep zoom: a small parcel can sit inside a much larger fitted extent
+// (roads, rivers spanning hundreds of metres), so the ceiling has to be high enough to
+// let a user zoom past that extent and into just the parcel's own boundary detail.
+const PLOTTING_ZOOM_MIN = 0.4;
+const PLOTTING_ZOOM_MAX = 80;
 const DEFAULT_PLOTTING_STAGE_SIZE = { width: 900, height: 700 };
 const DEFAULT_PLOTTING_CAMERA: PlottingCamera = {
   zoom: 1,
@@ -2180,19 +2185,24 @@ export default function FeatureOverrideModal({
       if (basemapMode !== "plotting") return;
       event.preventDefault();
       const rawPointer = getPlottingPointer(event.currentTarget, event.clientX, event.clientY);
+      // rawPointer is in full-page space; offsetX/offsetY operate in the viewport-local space
+      // (the frame sits at plottingViewportX/Y within the page), so the pointer must be
+      // translated into that same local space before it can anchor the zoom.
+      const localX = rawPointer.x - plottingViewportX;
+      const localY = rawPointer.y - plottingViewportY;
       setPlottingCamera((previous) => {
-        const nextZoom = Math.min(4, Math.max(0.55, previous.zoom * (event.deltaY > 0 ? 0.92 : 1.08)));
+        const nextZoom = Math.min(PLOTTING_ZOOM_MAX, Math.max(PLOTTING_ZOOM_MIN, previous.zoom * (event.deltaY > 0 ? 0.9 : 1.12)));
         if (Math.abs(nextZoom - previous.zoom) < 0.0001) return previous;
-        const worldX = (rawPointer.x - previous.offsetX) / previous.zoom;
-        const worldY = (rawPointer.y - previous.offsetY) / previous.zoom;
+        const worldX = (localX - previous.offsetX) / previous.zoom;
+        const worldY = (localY - previous.offsetY) / previous.zoom;
         return {
           zoom: nextZoom,
-          offsetX: rawPointer.x - worldX * nextZoom,
-          offsetY: rawPointer.y - worldY * nextZoom,
+          offsetX: localX - worldX * nextZoom,
+          offsetY: localY - worldY * nextZoom,
         };
       });
     },
-    [basemapMode, getPlottingPointer]
+    [basemapMode, getPlottingPointer, plottingViewportX, plottingViewportY]
   );
 
   const handlePlottingMouseLeave = useCallback(() => {
@@ -2209,8 +2219,8 @@ export default function FeatureOverrideModal({
 
   const zoomPlottingCamera = useCallback((direction: "in" | "out") => {
     setPlottingCamera((previous) => {
-      const factor = direction === "in" ? 1.12 : 0.9;
-      const nextZoom = Math.min(4, Math.max(0.55, previous.zoom * factor));
+      const factor = direction === "in" ? 1.3 : 1 / 1.3;
+      const nextZoom = Math.min(PLOTTING_ZOOM_MAX, Math.max(PLOTTING_ZOOM_MIN, previous.zoom * factor));
       if (Math.abs(nextZoom - previous.zoom) < 0.0001) return previous;
       const anchorX = plottingViewport.width / 2;
       const anchorY = plottingViewport.height / 2;
