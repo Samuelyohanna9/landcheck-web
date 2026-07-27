@@ -683,7 +683,7 @@ export const uploadSponsorProfilePhoto = async (
 };
 
 export const buildSponsorCertificateUrl = (session: GreenAuthSession, unitId: number) =>
-  `${BACKEND_URL}/green/sponsor/trees/${unitId}/certificate/pdf?sponsor_id=${session.user.id}`;
+  `${BACKEND_URL}/green/sponsor/trees/${unitId}/certificate/pdf?sponsor_id=${session.user.id}&access_token=${encodeURIComponent(session.access_token)}`;
 
 export const buildSponsorPublicTreeStoryUrl = (unitUid?: string | null) => {
   const normalized = encodeURIComponent(String(unitUid || "").trim());

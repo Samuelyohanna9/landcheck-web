@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, BACKEND_URL } from "../api/client";
+import { clearWorkAuthed, getWorkAuthSession } from "../auth/workAuth";
 import "../styles/admin-dashboard.css";
 
 type Analytics = {
@@ -62,11 +63,9 @@ type FeedbackEntry = {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || "";
-  const [password, setPassword] = useState("");
-  const [authError, setAuthError] = useState("");
   const [isAuthed, setIsAuthed] = useState(() => {
-    return localStorage.getItem("landcheck_admin_auth") === "1";
+    const session = getWorkAuthSession();
+    return Boolean(session && (session.auth_mode === "env_admin" || session.user?.role_key === "super_admin"));
   });
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [dailyData, setDailyData] = useState<DailyData[]>([]);
@@ -76,6 +75,12 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const session = getWorkAuthSession();
+    if (!session || (session.auth_mode !== "env_admin" && session.user?.role_key !== "super_admin")) {
+      setIsAuthed(false);
+      setLoading(false);
+      return;
+    }
     if (!isAuthed) {
       setLoading(false);
       return;
@@ -119,24 +124,8 @@ export default function AdminDashboard() {
     fetchData();
   }, [isAuthed]);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!adminPassword) {
-      setAuthError("Admin password is not configured.");
-      return;
-    }
-    if (password === adminPassword) {
-      localStorage.setItem("landcheck_admin_auth", "1");
-      setIsAuthed(true);
-      setPassword("");
-      setAuthError("");
-    } else {
-      setAuthError("Invalid password.");
-    }
-  };
-
   const handleLogout = () => {
-    localStorage.removeItem("landcheck_admin_auth");
+    clearWorkAuthed();
     setIsAuthed(false);
     setAnalytics(null);
     setDailyData([]);
@@ -204,19 +193,9 @@ export default function AdminDashboard() {
     return (
       <div className="admin-login">
         <div className="admin-login-card">
-          <h1>Admin Login</h1>
-          <p>Enter the admin password to continue.</p>
-          <form onSubmit={handleLogin}>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Admin password"
-              autoComplete="current-password"
-            />
-            {authError && <span className="auth-error">{authError}</span>}
-            <button type="submit">Sign In</button>
-          </form>
+          <h1>Authorized Work Session Required</h1>
+          <p>Sign in through LandCheck Work with a Super Admin account to access this dashboard.</p>
+          <button type="button" onClick={() => navigate("/green-work/login")}>Open LandCheck Work Login</button>
         </div>
       </div>
     );
