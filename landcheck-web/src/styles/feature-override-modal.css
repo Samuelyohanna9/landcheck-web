@@ -769,42 +769,53 @@
 
 .cad-grid-line {
   stroke-linecap: square;
+  vector-effect: non-scaling-stroke;
 }
 
 .cad-grid-line--minor {
-  stroke: rgba(148, 163, 184, 0.18);
-  stroke-width: 0.9;
+  stroke: rgba(148, 163, 184, 0.14);
+  stroke-width: 0.75;
 }
 
 .cad-grid-line--major {
-  stroke: rgba(148, 163, 184, 0.38);
-  stroke-width: 1.2;
+  stroke: rgba(148, 163, 184, 0.32);
+  stroke-width: 1;
 }
 
 .cad-svg-boundary {
   fill: rgba(15, 23, 42, 0.1);
   stroke: #ef4444;
-  stroke-width: 2.2;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
 }
 
 .cad-svg-feature {
   fill: none;
   cursor: pointer;
+  vector-effect: non-scaling-stroke;
 }
 
 .cad-svg-feature--road {
   stroke: #fde047;
-  stroke-width: 3;
+  stroke-width: 2.4;
 }
 
 .cad-svg-feature--river {
   stroke: #38bdf8;
-  stroke-width: 2.5;
+  stroke-width: 2.2;
 }
 
 .cad-svg-feature--fence {
   stroke: #fda4af;
-  stroke-width: 2;
+  stroke-width: 1.6;
+}
+
+/* Constant-screen-size annotation text (halo behind fill for legibility over busy geometry) */
+.cad-svg-halo-text {
+  paint-order: stroke;
+  stroke: #020617;
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
 }
 
 /* AutoCAD Layout Sheet & Title Block Column */
@@ -885,28 +896,31 @@
 .cad-svg-feature--building {
   fill: rgba(56, 189, 248, 0.12);
   stroke: #bae6fd;
-  stroke-width: 1.8;
+  stroke-width: 1.5;
 }
 
 .cad-svg-selected {
   fill: rgba(34, 197, 94, 0.08);
   stroke: #4ade80;
-  stroke-width: 3;
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
 }
 
 .cad-svg-multiselect {
   fill: rgba(56, 189, 248, 0.04);
   stroke: #67e8f9;
-  stroke-width: 2.2;
+  stroke-width: 2;
   stroke-dasharray: 8 6;
   pointer-events: none;
+  vector-effect: non-scaling-stroke;
 }
 
 .cad-svg-draft {
   fill: none;
   stroke: #f97316;
-  stroke-width: 2.8;
+  stroke-width: 2.2;
   stroke-dasharray: 10 7;
+  vector-effect: non-scaling-stroke;
 }
 
 .cad-svg-draft--polygon {
@@ -916,8 +930,9 @@
 .cad-svg-preview {
   fill: none;
   stroke: rgba(103, 232, 249, 0.88);
-  stroke-width: 1.8;
+  stroke-width: 1.6;
   stroke-dasharray: 6 5;
+  vector-effect: non-scaling-stroke;
 }
 
 .cad-svg-preview--polygon {
@@ -928,15 +943,22 @@
   fill: #67e8f9;
   stroke: #0f172a;
   stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
 }
 
 .cad-svg-label,
 .cad-axis-label {
-  fill: #cbd5e1;
-  font-size: 15px;
+  fill: #e2e8f0;
+  font-size: 11.5px;
+  font-family: "JetBrains Mono", "SFMono-Regular", monospace;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   user-select: none;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: #020617;
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
 }
 
 .cad-axis-line {

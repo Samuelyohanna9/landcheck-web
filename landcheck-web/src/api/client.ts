@@ -44,6 +44,7 @@ type StoredSessionUser = {
 type StoredSession = {
   auth_mode?: string | null;
   appMode?: string | null;
+  access_token?: string | null;
   user?: StoredSessionUser | null;
 };
 
@@ -87,6 +88,9 @@ const attachLandCheckHeaders = (config: InternalAxiosRequestConfig) => {
   config.headers = headers;
   headers.set("X-LC-Client", resolveWebClientLabel(pathname, greenSession));
   headers.set("X-LC-App-Route", pathname || "/");
+  if (activeSession?.access_token) {
+    headers.set("Authorization", `Bearer ${String(activeSession.access_token)}`);
+  }
   if (activeSession?.auth_mode) headers.set("X-LC-Auth-Mode", String(activeSession.auth_mode));
   if (activeSession?.appMode) headers.set("X-LC-Session-App-Mode", String(activeSession.appMode));
   if (activeSession?.user?.role_key || activeSession?.user?.role) {

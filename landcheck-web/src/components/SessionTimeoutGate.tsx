@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getGreenAuthSession, clearGreenAuthed } from "../auth/greenAuth";
-import { clearWorkAuthed } from "../auth/workAuth";
+import { clearWorkAuthed, getWorkAuthSession } from "../auth/workAuth";
 import { logSecurityEvent } from "../utils/securityLogger";
 
 interface SessionTimeoutGateProps {
@@ -26,19 +26,17 @@ export default function SessionTimeoutGate({
   const hasActiveSession = (): boolean => {
     if (typeof window === "undefined") return false;
     const greenSession = getGreenAuthSession();
-    const workSession = window.localStorage.getItem("landcheck_work_auth");
-    const adminSession = window.localStorage.getItem("landcheck_admin_auth") === "1";
-    return Boolean(greenSession || workSession || adminSession);
+    const workSession = getWorkAuthSession();
+    return Boolean(greenSession || workSession);
   };
 
   const getActiveUserIdentifier = (): string => {
     if (typeof window === "undefined") return "Guest";
     const greenSession = getGreenAuthSession();
     if (greenSession?.user?.full_name) return greenSession.user.full_name;
-    const workSession = window.localStorage.getItem("landcheck_work_auth");
+    const workSession = getWorkAuthSession();
+    if (workSession?.user?.full_name) return workSession.user.full_name;
     if (workSession) return "Green Work Officer";
-    const adminSession = window.localStorage.getItem("landcheck_admin_auth") === "1";
-    if (adminSession) return "Super Admin";
     return "Guest";
   };
 
@@ -51,7 +49,6 @@ export default function SessionTimeoutGate({
     clearGreenAuthed();
     clearWorkAuthed();
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem("landcheck_admin_auth");
       window.localStorage.removeItem("landcheck_green_active_user");
       window.localStorage.removeItem("landcheck_green_active_section");
       window.localStorage.removeItem("landcheck_green_active_project_id");

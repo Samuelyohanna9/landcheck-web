@@ -589,6 +589,14 @@ const pointsToSvg = (coords: number[][], project: (coord: number[]) => { x: numb
     })
     .join(" ");
 
+// Fans repeated labels out around their anchor point so features whose midpoints happen to
+// land close together (e.g. several roads crossing near the same parcel) don't stack their
+// name labels exactly on top of one another.
+const labelFanOffset = (index: number, distance = 13) => {
+  const angle = ((index * 47) % 360) * (Math.PI / 180);
+  return { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance };
+};
+
 const getFeatureLabelPoint = (geometry: any, project: (coord: number[]) => { x: number; y: number }) => {
   const coords: number[][] = [];
   collectGeometryCoordinates(geometry, coords);
@@ -873,6 +881,7 @@ export default function FeatureOverrideModal({
     [featureCollections, plotCoords, plottingDraftGeometry, selectedGeometry, plottingViewportBoxWidth, plottingViewportBoxHeight]
   );
   const plottingZoomPercent = useMemo(() => `${Math.round(plottingCamera.zoom * 100)}%`, [plottingCamera.zoom]);
+  const plottingInverseZoom = 1 / Math.max(plottingCamera.zoom, 0.0001);
   const traverseFirstCoordUtm = useMemo(() => {
     const firstCoord = plotCoords?.[0];
     if (!firstCoord) return { easting: "--", northing: "--" };
@@ -3014,28 +3023,30 @@ export default function FeatureOverrideModal({
                           />
                         ) : null}
 
-                        {/* Centroid Area in Hectares (centered in plot in red) */}
+                        {/* Centroid Area in Hectares (centered in plot in red, constant screen size regardless of zoom) */}
                         {layerVisibility.boundary && plotCoords && plotCoords.length >= 3 && (() => {
                           const centroid = getCentroid(plotCoords, plottingViewport.project);
                           const areaSqm = polygonAreaSqm([plotCoords]);
                           const areaHec = areaSqm / 10000;
                           return (
-                            <text
-                              x={centroid.x}
-                              y={centroid.y}
-                              fill="#ef4444"
-                              fontSize="11.5"
-                              fontWeight="bold"
-                              fontFamily="monospace"
-                              textAnchor="middle"
-                              style={{ textShadow: "0 1px 2px rgba(0,0,0,0.85)" }}
-                            >
-                              {areaHec.toFixed(2)} Hectares
-                            </text>
+                            <g transform={`translate(${centroid.x} ${centroid.y}) scale(${plottingInverseZoom})`}>
+                              <text
+                                x={0}
+                                y={0}
+                                fill="#ef4444"
+                                fontSize="11.5"
+                                fontWeight="bold"
+                                fontFamily="monospace"
+                                textAnchor="middle"
+                                className="cad-svg-halo-text"
+                              >
+                                {areaHec.toFixed(2)} Hectares
+                              </text>
+                            </g>
                           );
                         })()}
 
-                        {/* AutoCAD style geodesic Bearings and Distances labels parallel to boundary segments */}
+                        {/* AutoCAD style geodesic Bearings and Distances labels parallel to boundary segments, constant screen size */}
                         {layerVisibility.boundary && plotCoords && plotCoords.length >= 2 && (() => {
                           const labels: any[] = [];
                           const cleanCoords = [...plotCoords];
@@ -3056,24 +3067,24 @@ export default function FeatureOverrideModal({
                             const dist = haversineDistanceMeters(start, end);
                             const bearingStr = getSegmentBearing(start, end);
                             const distStr = `${dist.toFixed(2)}m`;
-                            
+
                             let angleRad = Math.atan2(pEnd.y - pStart.y, pEnd.x - pStart.x);
                             let angleDeg = (angleRad * 180) / Math.PI;
                             if (angleDeg > 90 || angleDeg < -90) {
                               angleDeg += 180;
                             }
-                            
+
                             labels.push(
-                              <g key={`lbl-${i}`} transform={`translate(${midX}, ${midY}) rotate(${angleDeg})`}>
-                                <text y="-5" fill="#ef4444" fontSize="9.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle">{bearingStr}</text>
-                                <text y="7" fill="#ef4444" fontSize="9.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle">{distStr}</text>
+                              <g key={`lbl-${i}`} transform={`translate(${midX}, ${midY}) rotate(${angleDeg}) scale(${plottingInverseZoom})`}>
+                                <text y="-5" fill="#ef4444" fontSize="9.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle" className="cad-svg-halo-text">{bearingStr}</text>
+                                <text y="7" fill="#ef4444" fontSize="9.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle" className="cad-svg-halo-text">{distStr}</text>
                               </g>
                             );
                           }
                           return labels;
                         })()}
 
-                        {/* Beacons and Station Names (A, B, C...) at vertices */}
+                        {/* Beacons and Station Names (A, B, C...) at vertices, constant screen size */}
                         {layerVisibility.boundary && plotCoords && (() => {
                           const cleanCoords = [...plotCoords];
                           if (cleanCoords.length >= 3) {
@@ -3087,13 +3098,17 @@ export default function FeatureOverrideModal({
                             const projected = plottingViewport.project(coord);
                             const station = getStationName(index);
                             return (
-                              <g key={`beacon-${index}`} className="cad-svg-beacon">
+                              <g
+                                key={`beacon-${index}`}
+                                className="cad-svg-beacon"
+                                transform={`translate(${projected.x} ${projected.y}) scale(${plottingInverseZoom})`}
+                              >
                                 {/* Cross mark at center */}
                                 <g stroke="#334155" strokeWidth="1.2">
-                                  <line x1={projected.x - 7} y1={projected.y} x2={projected.x + 7} y2={projected.y} />
-                                  <line x1={projected.x} y1={projected.y - 7} x2={projected.x} y2={projected.y + 7} />
+                                  <line x1={-7} y1={0} x2={7} y2={0} />
+                                  <line x1={0} y1={-7} x2={0} y2={7} />
                                 </g>
-                                <text x={projected.x + 8} y={projected.y - 8} fill="#f8fafc" fontSize="11" fontWeight="bold" fontFamily="monospace">{station}</text>
+                                <text x={8} y={-8} fill="#f8fafc" fontSize="11" fontWeight="bold" fontFamily="monospace" className="cad-svg-halo-text">{station}</text>
                               </g>
                             );
                           });
@@ -3118,11 +3133,16 @@ export default function FeatureOverrideModal({
                                     className="cad-svg-multiselect"
                                   />
                                 ) : null}
-                                {labelPoint ? (
-                                  <text x={labelPoint.x + 8} y={labelPoint.y - 8} className="cad-svg-label">
-                                    {feature?.properties?.name || `Road ${index + 1}`}
-                                  </text>
-                                ) : null}
+                                {labelPoint ? (() => {
+                                  const fan = labelFanOffset(index);
+                                  return (
+                                    <g transform={`translate(${labelPoint.x} ${labelPoint.y}) scale(${plottingInverseZoom})`}>
+                                      <text x={fan.x} y={fan.y} textAnchor="middle" className="cad-svg-label">
+                                        {feature?.properties?.name || `Road ${index + 1}`}
+                                      </text>
+                                    </g>
+                                  );
+                                })() : null}
                               </g>
                             );
                           })}
@@ -3188,11 +3208,16 @@ export default function FeatureOverrideModal({
                                     className="cad-svg-multiselect"
                                   />
                                 ) : null}
-                                {labelPoint ? (
-                                  <text x={labelPoint.x + 8} y={labelPoint.y - 8} className="cad-svg-label">
-                                    BLD-{index + 1}
-                                  </text>
-                                ) : null}
+                                {labelPoint ? (() => {
+                                  const fan = labelFanOffset(index);
+                                  return (
+                                    <g transform={`translate(${labelPoint.x} ${labelPoint.y}) scale(${plottingInverseZoom})`}>
+                                      <text x={fan.x} y={fan.y} textAnchor="middle" className="cad-svg-label">
+                                        BLD-{index + 1}
+                                      </text>
+                                    </g>
+                                  );
+                                })() : null}
                               </g>
                             );
                           })}
@@ -3222,7 +3247,11 @@ export default function FeatureOverrideModal({
                         ) : null}
                         {plottingPoints.map((point, index) => {
                           const projected = plottingViewport.project(point);
-                          return <circle key={`pt-${index}`} cx={projected.x} cy={projected.y} r="4.5" className="cad-svg-vertex" />;
+                          return (
+                            <g key={`pt-${index}`} transform={`translate(${projected.x} ${projected.y}) scale(${plottingInverseZoom})`}>
+                              <circle r="4.5" className="cad-svg-vertex" />
+                            </g>
+                          );
                         })}
                         {draftingAssist.ortho && plottingPoints.length > 0 && plottingHoverPoint && (
                           <line
@@ -3233,14 +3262,15 @@ export default function FeatureOverrideModal({
                             stroke="#9ca3af"
                             strokeDasharray="4,4"
                             strokeWidth="1.5"
+                            vectorEffect="non-scaling-stroke"
                           />
                         )}
                         {plottingSnapState && draftingAssist.snap && (
-                          <g className="cad-snap-marker">
+                          <g className="cad-snap-marker" transform={`translate(${plottingSnapState.x} ${plottingSnapState.y}) scale(${plottingInverseZoom})`}>
                             {plottingSnapState.type === "endpoint" && (
                               <rect
-                                x={plottingSnapState.x - 6}
-                                y={plottingSnapState.y - 6}
+                                x={-6}
+                                y={-6}
                                 width="12"
                                 height="12"
                                 fill="none"
@@ -3250,7 +3280,7 @@ export default function FeatureOverrideModal({
                             )}
                             {plottingSnapState.type === "midpoint" && (
                               <polygon
-                                points={`${plottingSnapState.x},${plottingSnapState.y - 7} ${plottingSnapState.x - 7},${plottingSnapState.y + 5} ${plottingSnapState.x + 7},${plottingSnapState.y + 5}`}
+                                points="0,-7 -7,5 7,5"
                                 fill="none"
                                 stroke="#22c55e"
                                 strokeWidth="2"
@@ -3258,18 +3288,17 @@ export default function FeatureOverrideModal({
                             )}
                             {plottingSnapState.type === "intersection" && (
                               <g stroke="#22c55e" strokeWidth="2">
-                                <line x1={plottingSnapState.x - 6} y1={plottingSnapState.y - 6} x2={plottingSnapState.x + 6} y2={plottingSnapState.y + 6} />
-                                <line x1={plottingSnapState.x + 6} y1={plottingSnapState.y - 6} x2={plottingSnapState.x - 6} y2={plottingSnapState.y + 6} />
+                                <line x1={-6} y1={-6} x2={6} y2={6} />
+                                <line x1={6} y1={-6} x2={-6} y2={6} />
                               </g>
                             )}
                             <text
-                              x={plottingSnapState.x + 10}
-                              y={plottingSnapState.y + 4}
-                              className="cad-snap-tooltip"
+                              x={10}
+                              y={4}
+                              className="cad-snap-tooltip cad-svg-halo-text"
                               fill="#22c55e"
                               fontSize="10"
                               fontWeight="bold"
-                              style={{ textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}
                             >
                               {plottingSnapState.label}
                             </text>
@@ -3288,16 +3317,19 @@ export default function FeatureOverrideModal({
                           />
                         ) : null}
                         {plottingMeasureSummary && draftingAssist.measure ? (
-                          <g className="cad-measure-callout">
+                          <g
+                            className="cad-measure-callout"
+                            transform={`translate(${plottingMeasureSummary.labelX} ${plottingMeasureSummary.labelY}) scale(${plottingInverseZoom})`}
+                          >
                             <rect
-                              x={plottingMeasureSummary.labelX - 58}
-                              y={plottingMeasureSummary.labelY - 18}
+                              x={-58}
+                              y={-18}
                               width="116"
                               height="24"
                               rx="12"
                               className="cad-measure-box"
                             />
-                            <text x={plottingMeasureSummary.labelX} y={plottingMeasureSummary.labelY - 2} textAnchor="middle" className="cad-measure-label">
+                            <text x={0} y={-2} textAnchor="middle" className="cad-measure-label">
                               {formatLength(plottingMeasureSummary.segment)}
                             </text>
                           </g>
