@@ -854,6 +854,8 @@ export default function GreenPublicSponsor() {
                       <div className="gps-tier-grid">
                         {TREE_QUANTITY_TIERS.map((tierQty) => {
                           const tierPrice = tierQty * Number(priceEntry?.amount || 0);
+                          const altEntry = priceEntries.find((entry) => entry.currency !== (priceEntry?.currency || form.checkoutCurrency));
+                          const altTierPrice = altEntry ? tierQty * Number(altEntry.amount || 0) : null;
                           const isActive = quantityNum === tierQty;
                           const iconCount = Math.min(tierQty, 16);
                           return (
@@ -872,6 +874,9 @@ export default function GreenPublicSponsor() {
                                 {tierQty > iconCount && <span className="gps-tier-more">+{tierQty - iconCount}</span>}
                               </span>
                               <span className="gps-tier-price">{formatCurrencyAmount(tierPrice, priceEntry?.currency || form.checkoutCurrency)}</span>
+                              {altTierPrice !== null && (
+                                <span className="gps-tier-price-alt">≈ {formatCurrencyAmount(altTierPrice, altEntry!.currency)}</span>
+                              )}
                             </button>
                           );
                         })}
@@ -885,11 +890,15 @@ export default function GreenPublicSponsor() {
                           <button type="button" onClick={() => bumpQuantity(1)} aria-label="Increase quantity">+</button>
                         </div>
                         {priceEntries.length > 1 && (
-                          <select className="gps-quantity-currency" value={form.checkoutCurrency} onChange={(e) => setForm((c) => ({ ...c, checkoutCurrency: e.target.value }))}>
-                            {priceEntries.map((entry) => (
-                              <option key={entry.currency} value={entry.currency}>{entry.currency} — {formatCurrencyAmount(entry.amount, entry.currency)} / tree</option>
-                            ))}
-                          </select>
+                          <div className="gps-currency-field">
+                            <span className="gps-currency-field-label">Pay in</span>
+                            <select className="gps-quantity-currency" value={form.checkoutCurrency} onChange={(e) => setForm((c) => ({ ...c, checkoutCurrency: e.target.value }))}>
+                              {priceEntries.map((entry) => (
+                                <option key={entry.currency} value={entry.currency}>{entry.currency} — {formatCurrencyAmount(entry.amount, entry.currency)} / tree</option>
+                              ))}
+                            </select>
+                            <span className="gps-currency-hint">Choose which currency you'd like to pay in</span>
+                          </div>
                         )}
                       </div>
 

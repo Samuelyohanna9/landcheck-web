@@ -739,6 +739,26 @@
 .gps-quantity-stepper input::-webkit-outer-spin-button,
 .gps-quantity-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
+.gps-currency-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.gps-currency-field-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gps-text-muted);
+}
+
+.gps-currency-hint {
+  font-size: 11.5px;
+  color: var(--gps-text-muted);
+  max-width: 220px;
+}
+
 .gps-quantity-currency {
   border: 1.5px solid var(--gps-border);
   border-radius: 999px;
@@ -746,6 +766,13 @@
   font-size: 13px;
   font-weight: 700;
   background: rgba(255, 255, 255, 0.05);
+  color: var(--gps-text);
+  color-scheme: dark;
+}
+
+.gps-quantity-currency:hover { border-color: var(--gps-brand); }
+.gps-quantity-currency option {
+  background: #0f231a;
   color: var(--gps-text);
 }
 
@@ -1486,7 +1513,9 @@
 .gps-tier-icon { width: 8px; height: 8px; color: var(--gps-brand); opacity: 0.8; }
 .gps-tier-more { font-size: 9px; font-weight: 700; color: var(--gps-text-muted); }
 .gps-tier-price { font-size: 0.76rem; font-weight: 700; color: var(--gps-text-muted); margin-top: 2px; }
+.gps-tier-price-alt { font-size: 0.66rem; font-weight: 600; color: var(--gps-text-muted); opacity: 0.7; }
 .gps-tier-card.active .gps-tier-price, .gps-tier-card.active .gps-tier-count { color: var(--gps-brand-mid); }
+.gps-tier-card.active .gps-tier-price-alt { opacity: 0.85; }
 
 /* ─── CO2 footprint calculator promo ───────────────────────────── */
 .gps-footprint-promo {
