@@ -144,7 +144,7 @@ export default function SessionTimeoutGate({
                 Session Timed Out
               </strong>
               <span style={{ fontSize: "0.82rem", opacity: 0.9, lineHeight: 1.4 }}>
-                You have been signed out due to 15 minutes of inactivity for SOC 2 security compliance.
+                You have been signed out due to 15 minutes of inactivitzy. Please log in again to continue using the application.
               </span>
               <button
                 type="button"

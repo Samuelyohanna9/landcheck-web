@@ -1,12 +1,10 @@
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import mapboxgl from "mapbox-gl";
 import { api } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
-import MapViewEnhanced from "../components/MapViewEnhanced";
 import CoordinateInput from "../components/CoordinateInput";
 import SurveyPreview from "../components/SurveyPreview";
-import FeatureOverrideModal from "../components/FeatureOverrideModal";
 import { fromWGS84, toWGS84 } from "../utils/coordinateConverter";
 import {
   clearSurveyPlanDraft,
@@ -14,6 +12,9 @@ import {
   saveSurveyPlanDraft,
 } from "../offline/surveyPlanDraft";
 import "../styles/survey-plan.css";
+
+const MapViewEnhanced = lazy(() => import("../components/MapViewEnhanced"));
+const FeatureOverrideModal = lazy(() => import("../components/FeatureOverrideModal"));
 
 type PlotMeta = {
   title_text: string;
@@ -99,6 +100,15 @@ type SubdivisionBatchItem = {
 type SubdivisionBatchDetailResponse = {
   batch: SubdivisionBatchRow;
   items: SubdivisionBatchItem[];
+};
+
+type PlotExportJob = {
+  id: string;
+  status: string;
+  file_name?: string | null;
+  local_path?: string | null;
+  error_text?: string | null;
+  download_url?: string | null;
 };
 
 type WorkflowMode = "survey" | "subdivision";
@@ -220,6 +230,18 @@ const parseFractionWeights = (value: string): number[] => {
 };
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+const normalizeApiDownloadPath = (value: string) => {
+  const rawValue = String(value || "").trim();
+  if (!rawValue) return "";
+  try {
+    const parsed = new URL(rawValue, window.location.origin);
+    return `${parsed.pathname}${parsed.search}`;
+  } catch {
+    return rawValue;
+  }
+};
 
 const sanitizeFractionBreaks = (raw: number[]): number[] => {
   if (!Array.isArray(raw)) return [];
@@ -2071,9 +2093,30 @@ export default function SurveyPlan() {
     if (subdivisionDownloadBatchId !== null) return;
     setSubdivisionDownloadBatchId(batchId);
     try {
-      const res = await api.get(`/plots/subdivision/batches/${batchId}/export/survey-plans.zip`, {
-        responseType: "blob",
-      });
+      const createJobRes = await api.post(`/plots/subdivision/batches/${batchId}/export-jobs/survey-plans`);
+      let job = createJobRes.data as PlotExportJob;
+      const maxAttempts = 80;
+      let attempt = 0;
+      while (String(job?.status || "").trim().toLowerCase() !== "completed") {
+        const statusValue = String(job?.status || "").trim().toLowerCase();
+        if (statusValue === "failed") {
+          throw new Error(String(job?.error_text || "Failed to prepare subdivision batch export."));
+        }
+        if (statusValue !== "queued" && statusValue !== "running") {
+          throw new Error("Subdivision batch export returned an unexpected status.");
+        }
+        if (attempt >= maxAttempts) {
+          throw new Error("Subdivision batch export is taking too long. Please try again.");
+        }
+        attempt += 1;
+        await sleep(1500);
+        const statusRes = await api.get(`/plots/export-jobs/${encodeURIComponent(String(job.id || ""))}`);
+        job = statusRes.data as PlotExportJob;
+      }
+      const downloadPath = normalizeApiDownloadPath(
+        String(job?.download_url || `/plots/export-jobs/${encodeURIComponent(String(job.id || ""))}/download`)
+      );
+      const res = await api.get(downloadPath, { responseType: "blob" });
       triggerBlobDownload(
         res.data,
         res.headers["content-type"],
@@ -2302,27 +2345,29 @@ export default function SurveyPlan() {
         )}
 
         {workflowMode && (
-          <FeatureOverrideModal
-            isOpen={showFeatureEditor}
-            onClose={() => setShowFeatureEditor(false)}
-            onSave={handleSaveOverride}
-            plotCoords={finalCoords}
-            featureType={featureType}
-            setFeatureType={setFeatureType}
-            action={featureAction}
-            setAction={setFeatureAction}
-            roadName={roadName}
-            setRoadName={setRoadName}
-            roadWidth={newRoadWidth}
-            setRoadWidth={setNewRoadWidth}
-            plotId={plotId}
-            meta={meta}
-            manualPoints={manualPoints}
-            beaconStyle={beaconStyle}
-            northArrowColor={northArrowColor}
-            coordinateSystem={coordinateSystem}
-            onBoundaryPointChange={handleBoundaryPointChange}
-          />
+          <Suspense fallback={null}>
+            <FeatureOverrideModal
+              isOpen={showFeatureEditor}
+              onClose={() => setShowFeatureEditor(false)}
+              onSave={handleSaveOverride}
+              plotCoords={finalCoords}
+              featureType={featureType}
+              setFeatureType={setFeatureType}
+              action={featureAction}
+              setAction={setFeatureAction}
+              roadName={roadName}
+              setRoadName={setRoadName}
+              roadWidth={newRoadWidth}
+              setRoadWidth={setNewRoadWidth}
+              plotId={plotId}
+              meta={meta}
+              manualPoints={manualPoints}
+              beaconStyle={beaconStyle}
+              northArrowColor={northArrowColor}
+              coordinateSystem={coordinateSystem}
+              onBoundaryPointChange={handleBoundaryPointChange}
+            />
+          </Suspense>
         )}
         {/* Step 1: Coordinate Input */}
         {workflowMode && currentStep === 1 && (
@@ -2362,11 +2407,13 @@ export default function SurveyPlan() {
               </div>
             </div>
             <div className="panel-right">
-              <MapViewEnhanced
-                coordinates={mapCoordinates}
-                onCoordinatesDrawn={handleCoordinatesFromMap}
-                disabled={loading}
-              />
+              <Suspense fallback={<div className="preview-card">Loading survey map...</div>}>
+                <MapViewEnhanced
+                  coordinates={mapCoordinates}
+                  onCoordinatesDrawn={handleCoordinatesFromMap}
+                  disabled={loading}
+                />
+              </Suspense>
             </div>
           </div>
         )}
