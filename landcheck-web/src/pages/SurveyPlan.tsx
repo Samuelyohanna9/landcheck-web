@@ -492,6 +492,21 @@ export default function SurveyPlan() {
     });
   };
 
+  // Boundary vertex dragged in the Feature CAD Editor: convert the WGS84 point back into
+  // whatever coordinate system the manual point table is currently using and update it in place.
+  const handleBoundaryPointChange = useCallback(
+    (index: number, lngLat: [number, number]) => {
+      const [x, y] = fromWGS84(lngLat[0], lngLat[1], coordinateSystem);
+      setManualPoints((prev) => {
+        if (index < 0 || index >= prev.length) return prev;
+        const copy = [...prev];
+        copy[index] = { ...copy[index], lng: x, lat: y };
+        return copy;
+      });
+    },
+    [coordinateSystem]
+  );
+
   // Generate station name: A, B, C, ... Z, AA, AB, ... AZ, BA, ... (unlimited)
   const getStationName = (index: number): string => {
     let name = "";
@@ -2306,6 +2321,7 @@ export default function SurveyPlan() {
             beaconStyle={beaconStyle}
             northArrowColor={northArrowColor}
             coordinateSystem={coordinateSystem}
+            onBoundaryPointChange={handleBoundaryPointChange}
           />
         )}
         {/* Step 1: Coordinate Input */}

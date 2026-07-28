@@ -108,6 +108,7 @@ type Props = {
   beaconStyle: BeaconStyle;
   northArrowColor: NorthArrowColor;
   coordinateSystem: string;
+  onBoundaryPointChange?: (index: number, lngLat: [number, number]) => void;
 };
 
 const DEFAULT_LAYER_VISIBILITY: LayerVisibility = {
@@ -594,6 +595,17 @@ const pointsToSvg = (coords: number[][], project: (coord: number[]) => { x: numb
     })
     .join(" ");
 
+// Boundary rings are stored closed (last point repeats the first); editing/labelling logic
+// works with the unique vertex list, so this strips that trailing duplicate when present.
+const getOpenRing = (coords: number[][] | null | undefined): number[][] => {
+  if (!coords || coords.length < 3) return coords || [];
+  const clean = [...coords];
+  const first = clean[0];
+  const last = clean[clean.length - 1];
+  if (first[0] === last[0] && first[1] === last[1]) clean.pop();
+  return clean;
+};
+
 // Fans repeated labels out around their anchor point so features whose midpoints happen to
 // land close together (e.g. several roads crossing near the same parcel) don't stack their
 // name labels exactly on top of one another.
@@ -772,6 +784,7 @@ export default function FeatureOverrideModal({
   beaconStyle: _beaconStyle,
   northArrowColor,
   coordinateSystem,
+  onBoundaryPointChange,
 }: Props) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
@@ -785,6 +798,20 @@ export default function FeatureOverrideModal({
     moved: false,
   });
   const [plottingStageSize, setPlottingStageSize] = useState(DEFAULT_PLOTTING_STAGE_SIZE);
+  const boundaryDragRef = useRef<number | null>(null);
+  const [boundaryDraft, setBoundaryDraft] = useState<number[][] | null>(null);
+  const [isDraggingBoundary, setIsDraggingBoundary] = useState(false);
+
+  useEffect(() => {
+    setBoundaryDraft(null);
+    boundaryDragRef.current = null;
+    setIsDraggingBoundary(false);
+  }, [plotId]);
+
+  // The live-edited boundary (falls back to the server copy when nothing is being dragged).
+  // Kept separate from `plotCoords` so the viewport's own scale/fit doesn't jump around
+  // mid-drag - only the boundary's own rendering reacts to it.
+  const boundaryCoords = boundaryDraft ?? plotCoords;
 
   const [menu, setMenu] = useState<{ x: number; y: number; visible: boolean }>({ x: 0, y: 0, visible: false });
   const [selectedGeometry, setSelectedGeometry] = useState<any>(null);
@@ -888,19 +915,14 @@ export default function FeatureOverrideModal({
   const plottingZoomPercent = useMemo(() => `${Math.round(plottingCamera.zoom * 100)}%`, [plottingCamera.zoom]);
   const plottingInverseZoom = 1 / Math.max(plottingCamera.zoom, 0.0001);
   const traverseFirstCoordUtm = useMemo(() => {
-    const firstCoord = plotCoords?.[0];
+    const firstCoord = boundaryCoords?.[0];
     if (!firstCoord) return { easting: "--", northing: "--" };
     const [eA, nA] = fromWGS84(firstCoord[0], firstCoord[1], coordinateSystem || "utm_32n");
     return { easting: `${eA.toFixed(3)}m`, northing: `${nA.toFixed(3)}m` };
-  }, [plotCoords, coordinateSystem]);
+  }, [boundaryCoords, coordinateSystem]);
   const traverseRows = useMemo(() => {
-    if (!plotCoords || plotCoords.length < 2) return [];
-    const cleanCoords = [...plotCoords];
-    if (cleanCoords.length >= 3) {
-      const first = cleanCoords[0];
-      const last = cleanCoords[cleanCoords.length - 1];
-      if (first[0] === last[0] && first[1] === last[1]) cleanCoords.pop();
-    }
+    if (!boundaryCoords || boundaryCoords.length < 2) return [];
+    const cleanCoords = getOpenRing(boundaryCoords);
     return cleanCoords.map((start, i) => {
       const end = cleanCoords[(i + 1) % cleanCoords.length];
       return {
@@ -911,7 +933,7 @@ export default function FeatureOverrideModal({
         length: `${haversineDistanceMeters(start, end).toFixed(2)}m`,
       };
     });
-  }, [plotCoords]);
+  }, [boundaryCoords]);
   const plottingPreviewPoints = useMemo(() => {
     if (basemapMode !== "plotting" || activeTool === "select" || !plottingHoverPoint) return plottingPoints;
     return [...plottingPoints, plottingHoverPoint];
@@ -968,13 +990,13 @@ export default function FeatureOverrideModal({
     };
     const visibleRecords = objectRecords.filter((record) => layerVisibility[record.type]);
     const segmentSets: Array<{ label: string; segments: Array<{ start: number[]; end: number[] }> }> = [];
-    if (osnapModes.endpoint && plotCoords?.length) {
-      plotCoords.forEach((coord, index) => pushCandidate(coord, `Boundary ${index + 1}`));
+    if (osnapModes.endpoint && boundaryCoords?.length) {
+      boundaryCoords.forEach((coord, index) => pushCandidate(coord, `Boundary ${index + 1}`));
     }
-    if (osnapModes.endpoint && plotCoords?.length) {
+    if (osnapModes.endpoint && boundaryCoords?.length) {
       segmentSets.push({
         label: "Boundary",
-        segments: getGeometrySegments({ type: "Polygon", coordinates: [plotCoords] }),
+        segments: getGeometrySegments({ type: "Polygon", coordinates: [boundaryCoords] }),
       });
     }
     visibleRecords.forEach((record) => {
@@ -989,8 +1011,8 @@ export default function FeatureOverrideModal({
         });
       }
     });
-    if (osnapModes.midpoint && plotCoords?.length) {
-      getGeometrySegments({ type: "Polygon", coordinates: [plotCoords] }).forEach((segment, index) => {
+    if (osnapModes.midpoint && boundaryCoords?.length) {
+      getGeometrySegments({ type: "Polygon", coordinates: [boundaryCoords] }).forEach((segment, index) => {
         pushCandidate(midpointCoordinate(segment.start, segment.end), `Boundary · mid ${index + 1}`);
       });
     }
@@ -1012,7 +1034,7 @@ export default function FeatureOverrideModal({
       }
     }
     return candidates;
-  }, [layerVisibility, objectRecords, osnapModes.endpoint, osnapModes.intersection, osnapModes.midpoint, plotCoords]);
+  }, [layerVisibility, objectRecords, osnapModes.endpoint, osnapModes.intersection, osnapModes.midpoint, boundaryCoords]);
   const plottingMeasureSummary = useMemo(() => {
     if (!draftingAssist.measure || activeTool === "select" || !plottingHoverPoint || !plottingPoints.length) return null;
     const segment = lineLengthMeters([plottingPoints[plottingPoints.length - 1], plottingHoverPoint]);
@@ -1943,6 +1965,18 @@ export default function FeatureOverrideModal({
     (event: ReactMouseEvent<SVGSVGElement>) => {
       if (basemapMode !== "plotting") return;
       const rawPointer = getPlottingPointer(event.currentTarget, event.clientX, event.clientY);
+      if (boundaryDragRef.current !== null) {
+        const canvasPoint = plottingScreenToCanvasPoint(rawPointer);
+        const [lng, lat] = plottingViewport.unproject(canvasPoint);
+        const index = boundaryDragRef.current;
+        setBoundaryDraft((previous) => {
+          const base = previous ?? getOpenRing(plotCoords);
+          const next = [...base];
+          next[index] = [lng, lat];
+          return next;
+        });
+        return;
+      }
       if (plottingPanRef.current.active) {
         const deltaX = rawPointer.x - plottingPanRef.current.lastX;
         const deltaY = rawPointer.y - plottingPanRef.current.lastY;
@@ -1998,7 +2032,7 @@ export default function FeatureOverrideModal({
       const screenY = plottingViewportY + plottingCamera.offsetY + pointer.y * plottingCamera.zoom;
       setScreenCursor({ x: screenX, y: screenY });
     },
-    [activeTool, basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport, resolvePlottingCanvasPoint, selectionDrag, plottingCamera.offsetX, plottingCamera.offsetY, plottingCamera.zoom, plottingViewportX, plottingViewportY]
+    [activeTool, basemapMode, getPlottingPointer, plottingScreenToCanvasPoint, plottingViewport, resolvePlottingCanvasPoint, selectionDrag, plottingCamera.offsetX, plottingCamera.offsetY, plottingCamera.zoom, plottingViewportX, plottingViewportY, plotCoords]
   );
 
   const handlePlottingCanvasClick = useCallback(
@@ -2135,6 +2169,32 @@ export default function FeatureOverrideModal({
         return;
       }
       if (event.button !== 0) return;
+      if (activeTool === "select" && !selectionMode && layerVisibility.boundary && boundaryCoords) {
+        // Pick whichever boundary vertex is nearest the click, in real screen pixels, rather
+        // than relying on per-vertex hit-testing - vertices close together (common on tight
+        // bends) would otherwise fight over whichever one happens to paint on top.
+        const localX = pointer.x - plottingViewportX;
+        const localY = pointer.y - plottingViewportY;
+        const cleanCoords = getOpenRing(boundaryCoords);
+        let nearestIndex = -1;
+        let nearestDistance = Infinity;
+        cleanCoords.forEach((coord, index) => {
+          const projected = plottingViewport.project(coord);
+          const screenX = plottingCamera.offsetX + projected.x * plottingCamera.zoom;
+          const screenY = plottingCamera.offsetY + projected.y * plottingCamera.zoom;
+          const distance = Math.hypot(localX - screenX, localY - screenY);
+          if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestIndex = index;
+          }
+        });
+        if (nearestIndex >= 0 && nearestDistance <= 14) {
+          event.preventDefault();
+          boundaryDragRef.current = nearestIndex;
+          setIsDraggingBoundary(true);
+          return;
+        }
+      }
       if (selectionMode) {
         event.preventDefault();
         setSelectionDrag(
@@ -2144,11 +2204,30 @@ export default function FeatureOverrideModal({
         );
       }
     },
-    [basemapMode, getPlottingPointer, selectionMode]
+    [basemapMode, getPlottingPointer, selectionMode, activeTool, layerVisibility.boundary, boundaryCoords, plottingViewport, plottingCamera.offsetX, plottingCamera.offsetY, plottingCamera.zoom, plottingViewportX, plottingViewportY]
   );
+
+  const commitBoundaryDrag = useCallback(() => {
+    const index = boundaryDragRef.current;
+    boundaryDragRef.current = null;
+    setIsDraggingBoundary(false);
+    if (index === null) return;
+    setBoundaryDraft((current) => {
+      const coords = current?.[index];
+      if (coords) {
+        onBoundaryPointChange?.(index, [coords[0], coords[1]]);
+      }
+      return current;
+    });
+  }, [onBoundaryPointChange]);
 
   const handlePlottingMouseUp = useCallback(
     (event?: ReactMouseEvent<SVGSVGElement>) => {
+      if (boundaryDragRef.current !== null) {
+        commitBoundaryDrag();
+        if (event) event.preventDefault();
+        return;
+      }
       if (selectionDrag) {
         const nextKeys = resolveSelectionKeysFromShape(selectionDrag);
         setMultiSelectedKeys(nextKeys);
@@ -2177,7 +2256,7 @@ export default function FeatureOverrideModal({
         event.preventDefault();
       }
     },
-    [importGeometryIntoEditor, objectRecords, resolveSelectionKeysFromShape, selectionDrag]
+    [importGeometryIntoEditor, objectRecords, resolveSelectionKeysFromShape, selectionDrag, commitBoundaryDrag]
   );
 
   const handlePlottingWheel = useCallback(
@@ -2206,6 +2285,9 @@ export default function FeatureOverrideModal({
   );
 
   const handlePlottingMouseLeave = useCallback(() => {
+    if (boundaryDragRef.current !== null) {
+      commitBoundaryDrag();
+    }
     plottingPanRef.current.active = false;
     plottingPanRef.current.moved = false;
     setPlottingPanActive(false);
@@ -2215,7 +2297,7 @@ export default function FeatureOverrideModal({
     setPlottingSnapState(null);
     setSelectionDrag(null);
     setScreenCursor(null);
-  }, []);
+  }, [commitBoundaryDrag]);
 
   const zoomPlottingCamera = useCallback((direction: "in" | "out") => {
     setPlottingCamera((previous) => {
@@ -3026,17 +3108,17 @@ export default function FeatureOverrideModal({
                             className={line.major ? "cad-grid-line cad-grid-line--major" : "cad-grid-line cad-grid-line--minor"}
                           />
                         ))}
-                        {layerVisibility.boundary && plotCoords?.length ? (
+                        {layerVisibility.boundary && boundaryCoords?.length ? (
                           <polygon
-                            points={pointsToSvg(closeRing(plotCoords), plottingViewport.project)}
-                            className="cad-svg-boundary"
+                            points={pointsToSvg(closeRing(boundaryCoords), plottingViewport.project)}
+                            className={`cad-svg-boundary${isDraggingBoundary ? " is-editing" : ""}`}
                           />
                         ) : null}
 
                         {/* Centroid Area in Hectares (centered in plot in red, constant screen size regardless of zoom) */}
-                        {layerVisibility.boundary && plotCoords && plotCoords.length >= 3 && (() => {
-                          const centroid = getCentroid(plotCoords, plottingViewport.project);
-                          const areaSqm = polygonAreaSqm([plotCoords]);
+                        {layerVisibility.boundary && boundaryCoords && boundaryCoords.length >= 3 && (() => {
+                          const centroid = getCentroid(boundaryCoords, plottingViewport.project);
+                          const areaSqm = polygonAreaSqm([boundaryCoords]);
                           const areaHec = areaSqm / 10000;
                           return (
                             <g transform={`translate(${centroid.x} ${centroid.y}) scale(${plottingInverseZoom})`}>
@@ -3057,16 +3139,9 @@ export default function FeatureOverrideModal({
                         })()}
 
                         {/* AutoCAD style geodesic Bearings and Distances labels parallel to boundary segments, constant screen size */}
-                        {layerVisibility.boundary && plotCoords && plotCoords.length >= 2 && (() => {
+                        {layerVisibility.boundary && boundaryCoords && boundaryCoords.length >= 2 && (() => {
                           const labels: any[] = [];
-                          const cleanCoords = [...plotCoords];
-                          if (cleanCoords.length >= 3) {
-                            const first = cleanCoords[0];
-                            const last = cleanCoords[cleanCoords.length - 1];
-                            if (first[0] === last[0] && first[1] === last[1]) {
-                              cleanCoords.pop();
-                            }
-                          }
+                          const cleanCoords = getOpenRing(boundaryCoords);
                           for (let i = 0; i < cleanCoords.length; i++) {
                             const start = cleanCoords[i];
                             const end = cleanCoords[(i + 1) % cleanCoords.length];
@@ -3094,25 +3169,22 @@ export default function FeatureOverrideModal({
                           return labels;
                         })()}
 
-                        {/* Beacons and Station Names (A, B, C...) at vertices, constant screen size */}
-                        {layerVisibility.boundary && plotCoords && (() => {
-                          const cleanCoords = [...plotCoords];
-                          if (cleanCoords.length >= 3) {
-                            const first = cleanCoords[0];
-                            const last = cleanCoords[cleanCoords.length - 1];
-                            if (first[0] === last[0] && first[1] === last[1]) {
-                              cleanCoords.pop();
-                            }
-                          }
+                        {/* Beacons and Station Names (A, B, C...) at vertices, constant screen size, draggable in Select mode */}
+                        {layerVisibility.boundary && boundaryCoords && (() => {
+                          const cleanCoords = getOpenRing(boundaryCoords);
                           return cleanCoords.map((coord, index) => {
                             const projected = plottingViewport.project(coord);
                             const station = getStationName(index);
+                            const isBeingDragged = isDraggingBoundary && boundaryDragRef.current === index;
                             return (
                               <g
                                 key={`beacon-${index}`}
-                                className="cad-svg-beacon"
+                                className={`cad-svg-beacon${isBeingDragged ? " is-dragging" : ""}${activeTool === "select" ? " is-draggable" : ""}`}
                                 transform={`translate(${projected.x} ${projected.y}) scale(${plottingInverseZoom})`}
                               >
+                                {/* Larger invisible hit target - hover/visual affordance only; the
+                                    actual pick uses nearest-vertex-wins logic in handlePlottingMouseDown */}
+                                <circle r="12" fill="transparent" className="cad-svg-beacon-hit" />
                                 {/* Cross mark at center */}
                                 <g stroke="#334155" strokeWidth="1.2">
                                   <line x1={-7} y1={0} x2={7} y2={0} />

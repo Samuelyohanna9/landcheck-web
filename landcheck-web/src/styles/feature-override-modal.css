@@ -789,6 +789,11 @@
   vector-effect: non-scaling-stroke;
 }
 
+.cad-svg-boundary.is-editing {
+  stroke: #4ade80;
+  stroke-dasharray: 6 4;
+}
+
 .cad-svg-feature {
   fill: none;
   cursor: pointer;
@@ -843,12 +848,30 @@
 }
 
 /* Beacon symbols at vertices */
-.cad-svg-beacon circle,
+.cad-svg-beacon circle:not(.cad-svg-beacon-hit),
 .cad-svg-beacon rect,
 .cad-svg-beacon polygon,
 .cad-svg-beacon line {
   stroke: #ef4444;
   vector-effect: non-scaling-stroke;
+}
+
+.cad-svg-beacon-hit {
+  stroke: none;
+}
+
+.cad-svg-beacon.is-draggable {
+  cursor: move;
+}
+
+.cad-svg-beacon.is-draggable:hover line {
+  stroke: #4ade80;
+  stroke-width: 1.8;
+}
+
+.cad-svg-beacon.is-dragging line {
+  stroke: #4ade80;
+  stroke-width: 2;
 }
 
 .cad-svg-beacon-text {
