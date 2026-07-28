@@ -1583,6 +1583,23 @@ export default function SurveyPlan() {
     return filename.replace(/plot_[^_]+/, `plot_${activePlotId}`);
   }, []);
 
+  const waitForPlotExportJob = useCallback(async (jobId: string, timeoutMs = 1000 * 60 * 20) => {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < timeoutMs) {
+      await new Promise((resolve) => window.setTimeout(resolve, 3000));
+      const statusRes = await api.get(`/plots/export-jobs/${jobId}`);
+      const job = statusRes?.data || {};
+      const status = String(job.status || "").toLowerCase();
+      if (status === "completed") {
+        return job;
+      }
+      if (status === "failed") {
+        throw new Error(String(job.error_text || "Export job failed"));
+      }
+    }
+    throw new Error("Export job is still preparing. Try again in a moment.");
+  }, []);
+
   // Download function for PDF endpoints that need JSON body
   const downloadWithJson = async (
     url: string,
@@ -1635,8 +1652,27 @@ export default function SurveyPlan() {
 
       const resolvedUrl = resolvePlotResourcePath(url, activePlotId);
       const resolvedFilename = resolvePlotFilename(filename, activePlotId);
-      const res = await api.post(resolvedUrl, payload, { responseType: "blob" });
-      triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
+      const exportJobPath = resolvedUrl.endsWith("/report/pdf")
+        ? resolvedUrl.replace("/report/pdf", "/export-jobs/survey-plan.pdf")
+        : resolvedUrl.endsWith("/orthophoto/pdf")
+          ? resolvedUrl.replace("/orthophoto/pdf", useTopoMap ? "/export-jobs/topomap.pdf" : "/export-jobs/orthophoto.pdf")
+          : "";
+      if (exportJobPath) {
+        const created = await api.post(exportJobPath, payload);
+        const jobId = String(created?.data?.id || "");
+        if (!jobId) {
+          throw new Error("Export job was not created");
+        }
+        const job = await waitForPlotExportJob(jobId);
+        if (!job.download_url) {
+          throw new Error("Export is ready but no download link was available");
+        }
+        const res = await api.get(String(job.download_url), { responseType: "blob" });
+        triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
+      } else {
+        const res = await api.post(resolvedUrl, payload, { responseType: "blob" });
+        triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
+      }
 
       markServerSynced();
       toast.success(`Downloaded ${resolvedFilename}`);
@@ -1656,8 +1692,27 @@ export default function SurveyPlan() {
       const activePlotId = await ensureServerPlot("Syncing draft before export...");
       const resolvedUrl = resolvePlotResourcePath(url, activePlotId);
       const resolvedFilename = resolvePlotFilename(filename, activePlotId);
-      const res = await api.get(resolvedUrl, { responseType: "blob" });
-      triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
+      const exportJobPath = resolvedUrl.endsWith("/survey-plan/dwg")
+        ? resolvedUrl.replace("/survey-plan/dwg", "/export-jobs/survey-plan.dxf")
+        : resolvedUrl.endsWith("/survey-plan/shapefile")
+          ? resolvedUrl.replace("/survey-plan/shapefile", "/export-jobs/survey-plan.shapefile")
+          : "";
+      if (exportJobPath) {
+        const created = await api.post(exportJobPath, {});
+        const jobId = String(created?.data?.id || "");
+        if (!jobId) {
+          throw new Error("Export job was not created");
+        }
+        const job = await waitForPlotExportJob(jobId);
+        if (!job.download_url) {
+          throw new Error("Export is ready but no download link was available");
+        }
+        const res = await api.get(String(job.download_url), { responseType: "blob" });
+        triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
+      } else {
+        const res = await api.get(resolvedUrl, { responseType: "blob" });
+        triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
+      }
       markServerSynced();
       toast.success(`Downloaded ${resolvedFilename}`);
     } catch (err) {
@@ -2160,9 +2215,30 @@ export default function SurveyPlan() {
           };
         }),
       };
-      const res = await api.post(`/plots/subdivision/batches/${batchId}/export/clean-copy.pdf`, payload, {
-        responseType: "blob",
-      });
+      const createJobRes = await api.post(`/plots/subdivision/batches/${batchId}/export-jobs/clean-copy.pdf`, payload);
+      let job = createJobRes.data as PlotExportJob;
+      const maxAttempts = 80;
+      let attempt = 0;
+      while (String(job?.status || "").trim().toLowerCase() !== "completed") {
+        const statusValue = String(job?.status || "").trim().toLowerCase();
+        if (statusValue === "failed") {
+          throw new Error(String(job?.error_text || "Failed to prepare clean copy PDF."));
+        }
+        if (statusValue !== "queued" && statusValue !== "running") {
+          throw new Error("Clean copy export returned an unexpected status.");
+        }
+        if (attempt >= maxAttempts) {
+          throw new Error("Clean copy export is taking too long. Please try again.");
+        }
+        attempt += 1;
+        await sleep(1500);
+        const statusRes = await api.get(`/plots/export-jobs/${encodeURIComponent(String(job.id || ""))}`);
+        job = statusRes.data as PlotExportJob;
+      }
+      const downloadPath = normalizeApiDownloadPath(
+        String(job?.download_url || `/plots/export-jobs/${encodeURIComponent(String(job.id || ""))}/download`)
+      );
+      const res = await api.get(downloadPath, { responseType: "blob" });
       triggerBlobDownload(
         res.data,
         res.headers["content-type"],

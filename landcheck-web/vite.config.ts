@@ -8,9 +8,14 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('node_modules/mapbox-gl')) return 'mapbox-gl'
+          if (id.includes('node_modules/mapbox-gl') || id.includes('node_modules/@mapbox/mapbox-gl-draw')) {
+            return 'mapbox-stack'
+          }
           if (id.includes('node_modules/proj4')) return 'proj4'
           if (id.includes('node_modules/xlsx')) return 'xlsx'
+          if (id.includes('node_modules/papaparse')) return 'papaparse'
+          if (id.includes('node_modules/axios')) return 'http-client'
+          if (id.includes('node_modules/react-hot-toast')) return 'toast'
           if (
             id.includes('node_modules/react/') ||
             id.includes('node_modules/react-dom/') ||

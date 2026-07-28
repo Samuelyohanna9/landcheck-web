@@ -1057,10 +1057,10 @@ export default function GreenSponsor() {
             <span className="gs-leaderboard-badge"><GreenGlyph name="trophy" className="green-sponsor-inline-icon" />Monthly Leaderboard</span>
             {displayPhotoUrl ? (
               <div className={`gs-header-avatar sm ${getAvatarBorderClass(displayBorder)}`}>
-                <img src={displayPhotoUrl} alt={getSponsorFirstName(session.user.full_name)} width="36" height="36" />
+                <img src={displayPhotoUrl} alt={getSponsorFirstName(session.user.full_name)} width="36" height="36" decoding="async" />
               </div>
             ) : (
-              <div className="green-sponsor-logo-tile sm"><img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="36" height="36" /></div>
+              <div className="green-sponsor-logo-tile sm"><img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="36" height="36" decoding="async" /></div>
             )}
             <button type="button" className="gs-header-refresh-btn" onClick={handleLogout} title="Log out" aria-label="Log out">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="16" height="16"><path d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1088,11 +1088,11 @@ export default function GreenSponsor() {
             {activeTab === "projects" && (
               displayPhotoUrl ? (
                 <div className={`gs-header-avatar ${getAvatarBorderClass(displayBorder)}`}>
-                  <img src={displayPhotoUrl} alt={getSponsorFirstName(session.user.full_name)} width="46" height="46" />
+                  <img src={displayPhotoUrl} alt={getSponsorFirstName(session.user.full_name)} width="46" height="46" decoding="async" />
                 </div>
               ) : (
                 <div className="green-sponsor-logo-tile">
-                  <img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="46" height="46" />
+                  <img src={GREEN_LOGO_SRC} alt="LandCheck Green" width="46" height="46" decoding="async" />
                 </div>
               )
             )}
@@ -1695,7 +1695,7 @@ export default function GreenSponsor() {
             <div className="gs-profile-avatar">
               <div className={`gs-profile-avatar-inner ${getAvatarBorderClass(displayBorder)}`}>
                 {displayPhotoUrl
-                  ? <img src={displayPhotoUrl} alt="Profile" width="80" height="80" loading="lazy" />
+                  ? <img src={displayPhotoUrl} alt="Profile" width="80" height="80" loading="lazy" decoding="async" />
                   : <div className="gs-profile-avatar-placeholder">{getSponsorFirstName(session.user.full_name).charAt(0).toUpperCase()}</div>}
               </div>
               <input ref={photoUploadRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handlePhotoUpload} disabled={uploadingPhoto} />

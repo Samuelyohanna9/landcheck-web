@@ -1,4 +1,4 @@
-import { Fragment, Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+﻿import { Fragment, Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { api, BACKEND_URL } from "../api/client";
@@ -18,7 +18,16 @@ import {
 } from "../offline/greenOffline";
 import "../styles/green-work.css";
 
-const TreeMap = lazy(() => import("../components/TreeMap"));
+const GreenWorkMapPanel = lazy(() => import("../components/green-work/GreenWorkMapPanel"));
+const GreenWorkRemoteMonitoringPanel = lazy(() => import("../components/green-work/GreenWorkRemoteMonitoringPanel"));
+const GreenWorkLogsPanel = lazy(() => import("../components/green-work/GreenWorkLogsPanel"));
+const GreenWorkSponsorPayoutsPanel = lazy(() => import("../components/green-work/GreenWorkSponsorPayoutsPanel"));
+const GreenWorkMerchantsPanel = lazy(() => import("../components/green-work/GreenWorkMerchantsPanel"));
+const GreenWorkReviewQueuePanel = lazy(() => import("../components/green-work/GreenWorkReviewQueuePanel"));
+const GreenWorkSponsorFeedbackPanel = lazy(() => import("../components/green-work/GreenWorkSponsorFeedbackPanel"));
+const GreenWorkVerraReportsPanel = lazy(() => import("../components/green-work/GreenWorkVerraReportsPanel"));
+const GreenWorkLiveTablePanel = lazy(() => import("../components/green-work/GreenWorkLiveTablePanel"));
+const GreenWorkExistingTreeIntakePanel = lazy(() => import("../components/green-work/GreenWorkExistingTreeIntakePanel"));
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
 const REMOTE_MONITORING_PROGRESS_STEPS = [
@@ -147,7 +156,7 @@ const summarizeActivityLogDetails = (details: unknown) => {
     if (!keys.length) return "No details";
     const namedKeys = keys.slice(0, 2).map((key) => key.replace(/_/g, " "));
     const suffix = keys.length === 1 ? "1 field" : `${keys.length} fields`;
-    return namedKeys.length ? `${namedKeys.join(" • ")} | ${suffix}` : suffix;
+    return namedKeys.length ? `${namedKeys.join(" â€¢ ")} | ${suffix}` : suffix;
   }
   const value = String(normalized).replace(/\s+/g, " ").trim();
   return value.length > 48 ? `${value.slice(0, 45)}...` : value;
@@ -1324,7 +1333,7 @@ const formatExistingTreeAreaLabel = (tree: Pick<Tree, "existing_area_sqm">, metr
   const sqm = Number(metric?.existing_area_sqm ?? tree.existing_area_sqm);
   if (!Number.isFinite(sqm) || sqm <= 0) return "-";
   if (sqm >= 10000) return `${(sqm / 10000).toFixed(3)} ha`;
-  return `${sqm.toFixed(1)} m²`;
+  return `${sqm.toFixed(1)} mÂ²`;
 };
 const formatTreeOriginLabel = (value: string | null | undefined) => {
   const key = normalizeName(value);
@@ -2308,7 +2317,7 @@ const getProjectSponsorPriceEntries = (project?: Pick<Project, "sponsor_price_pe
 const formatProjectSponsorPriceChoices = (project?: Pick<Project, "sponsor_price_per_tree_ngn" | "sponsor_price_per_tree_usd" | "sponsor_price_per_tree" | "sponsor_currency"> | null) => {
   const entries = getProjectSponsorPriceEntries(project);
   if (entries.length === 0) return "Pricing not set";
-  return entries.map((entry) => `${formatCurrencyAmount(entry.amount, entry.currency)} / tree`).join(" · ");
+  return entries.map((entry) => `${formatCurrencyAmount(entry.amount, entry.currency)} / tree`).join(" Â· ");
 };
 
 const formatCurrencyBreakdownMap = (value?: Record<string, number> | null) => {
@@ -2320,7 +2329,7 @@ const formatCurrencyBreakdownMap = (value?: Record<string, number> | null) => {
     .filter((entry) => Number.isFinite(entry.amount) && entry.amount > 0)
     .sort((a, b) => a.currency.localeCompare(b.currency));
   if (entries.length === 0) return formatCurrencyAmount(0, "NGN");
-  return entries.map((entry) => formatCurrencyAmount(entry.amount, entry.currency)).join(" · ");
+  return entries.map((entry) => formatCurrencyAmount(entry.amount, entry.currency)).join(" Â· ");
 };
 
 const getSponsorshipPaymentOutcomeGroup = (paymentStatus?: string | null) => {
@@ -3271,24 +3280,24 @@ function ShareImpactPanel({
 
   return (
     <div className="green-work-card" style={{ maxWidth: 760 }}>
-      <h3 style={{ marginBottom: 4 }}>🔗 Share Impact Page</h3>
+      <h3 style={{ marginBottom: 4 }}>ðŸ”— Share Impact Page</h3>
       <p className="green-work-note" style={{ marginTop: 0 }}>
-        Share a public, donor-ready impact page showing your verified {modeLabel} data — supervisor-approved records, GPS maps, evidence photos, and field activities.
+        Share a public, donor-ready impact page showing your verified {modeLabel} data â€” supervisor-approved records, GPS maps, evidence photos, and field activities.
       </p>
 
       {!orgSlug ? (
         <div className="green-work-note" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 8, padding: "12px 16px", color: "#92400e" }}>
-          ⚠️ This organisation does not have a public impact page slug configured. Contact LandCheck support to set one up before sharing with donors.
+          âš ï¸ This organisation does not have a public impact page slug configured. Contact LandCheck support to set one up before sharing with donors.
         </div>
       ) : (
         <>
-          {/* ─── Org-wide link ─── */}
+          {/* â”€â”€â”€ Org-wide link â”€â”€â”€ */}
           <div style={{ marginBottom: 28 }}>
             <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6, color: "#0c2b1a" }}>
               Organisation-wide Impact Page
             </div>
             <p className="green-work-note" style={{ marginTop: 0, marginBottom: 10 }}>
-              Shows all your organisation's approved {entityPl} across all projects — best for sharing with major donors who want the full picture.
+              Shows all your organisation's approved {entityPl} across all projects â€” best for sharing with major donors who want the full picture.
             </p>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 200, background: "#f4f7f4", border: "1px solid #d1e8d5", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#1a5c2a", fontFamily: "monospace", wordBreak: "break-all" }}>
@@ -3307,28 +3316,28 @@ function ShareImpactPanel({
                 rel="noopener noreferrer"
                 style={{ display: "flex", alignItems: "center", gap: 5, border: "1.5px solid #2aa852", color: "#1a5c2a", background: "#fff", fontWeight: 700, borderRadius: 8, padding: "7px 13px", textDecoration: "none", fontSize: 13, whiteSpace: "nowrap" }}
               >
-                ↗ Preview
+                â†— Preview
               </a>
             </div>
           </div>
 
-          {/* ─── Project-specific link ─── */}
+          {/* â”€â”€â”€ Project-specific link â”€â”€â”€ */}
           <div style={{ borderTop: "1.5px solid #e4ede6", paddingTop: 24 }}>
             <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6, color: "#0c2b1a" }}>
               Share a Specific Project
             </div>
             <p className="green-work-note" style={{ marginTop: 0, marginBottom: 10 }}>
-              Select a project to generate a focused link that only shows that project's data — useful when you want to update a specific donor on one programme.
+              Select a project to generate a focused link that only shows that project's data â€” useful when you want to update a specific donor on one programme.
             </p>
             <select
               value={shareProjectId}
               onChange={(e) => onProjectChange(e.target.value)}
               style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #d1e8d5", borderRadius: 8, fontSize: 14, background: "#fff", marginBottom: 12 }}
             >
-              <option value="">— Select a project —</option>
+              <option value="">â€” Select a project â€”</option>
               {orgProjects.map((p) => (
                 <option key={p.id} value={String(p.id)}>
-                  {p.name}{p.location_text ? ` · ${p.location_text}` : ""}
+                  {p.name}{p.location_text ? ` Â· ${p.location_text}` : ""}
                 </option>
               ))}
             </select>
@@ -3352,12 +3361,12 @@ function ShareImpactPanel({
                     rel="noopener noreferrer"
                     style={{ display: "flex", alignItems: "center", gap: 5, border: "1.5px solid #2aa852", color: "#1a5c2a", background: "#fff", fontWeight: 700, borderRadius: 8, padding: "7px 13px", textDecoration: "none", fontSize: 13, whiteSpace: "nowrap" }}
                   >
-                    ↗ Preview
+                    â†— Preview
                   </a>
                 </div>
                 <p className="green-work-note" style={{ marginTop: 8 }}>
                   Showing impact for: <strong>{selectedProject.name}</strong>
-                  {selectedProject.location_text ? ` · ${selectedProject.location_text}` : ""}
+                  {selectedProject.location_text ? ` Â· ${selectedProject.location_text}` : ""}
                 </p>
               </>
             ) : (
@@ -3369,7 +3378,7 @@ function ShareImpactPanel({
         </>
       )}
 
-      {/* ─── Endorsements received ─── */}
+      {/* â”€â”€â”€ Endorsements received â”€â”€â”€ */}
       {orgSlug && (
         <div style={{ borderTop: "1.5px solid #e4ede6", paddingTop: 28, marginTop: 28 }}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6, color: "#0c2b1a" }}>
@@ -3378,7 +3387,7 @@ function ShareImpactPanel({
           <p className="green-work-note" style={{ marginTop: 0, marginBottom: 14 }}>
             Public comments and endorsements left by donors, officials, and reviewers on your impact page.
           </p>
-          {commentsLoading && <p className="green-work-note">Loading endorsements…</p>}
+          {commentsLoading && <p className="green-work-note">Loading endorsementsâ€¦</p>}
           {commentsLoaded && comments.length === 0 && (
             <p className="green-work-note" style={{ fontStyle: "italic" }}>No endorsements yet. They will appear here once visitors leave comments on your impact page.</p>
           )}
@@ -3394,7 +3403,7 @@ function ShareImpactPanel({
                       <div style={{ fontWeight: 700, fontSize: 13, color: "#0c2b1a" }}>{c.commenter_name}</div>
                       {(c.commenter_rank || c.commenter_org) && (
                         <div style={{ fontSize: 12, color: "#5a7a63" }}>
-                          {[c.commenter_rank, c.commenter_org].filter(Boolean).join(" · ")}
+                          {[c.commenter_rank, c.commenter_org].filter(Boolean).join(" Â· ")}
                         </div>
                       )}
                     </div>
@@ -3406,7 +3415,7 @@ function ShareImpactPanel({
                   </div>
                   {c.project_name && (
                     <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(26,92,42,0.08)", border: "1px solid #c4ddc9", borderRadius: 6, padding: "2px 9px", fontSize: 11, color: "#1a5c2a", fontWeight: 600, marginBottom: 6 }}>
-                      📂 {c.project_name}
+                      ðŸ“‚ {c.project_name}
                     </div>
                   )}
                   <div style={{ fontSize: 13.5, color: "#2d4a35", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{c.comment_body}</div>
@@ -5093,6 +5102,23 @@ export default function GreenWork() {
     }, 900);
   }, [stopRemoteMonitoringProgress]);
 
+  const waitForGreenExportJob = useCallback(async (jobId: string, timeoutMs = 1000 * 60 * 20) => {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < timeoutMs) {
+      await new Promise((resolve) => window.setTimeout(resolve, 3000));
+      const statusRes = await api.get(`/green/export-jobs/${jobId}`);
+      const job = statusRes?.data || {};
+      const status = String(job.status || "").toLowerCase();
+      if (status === "completed") {
+        return job;
+      }
+      if (status === "failed") {
+        throw new Error(String(job.error_text || "Export job failed"));
+      }
+    }
+    throw new Error("Export job is still preparing. Try again in a moment.");
+  }, []);
+
   const loadRemoteMonitoringAnalysis = useCallback(async () => {
     if (!activeProjectId) return;
     const geometry = normalizeMapAreaGeometry(remoteMonitoringDraftGeometry);
@@ -5107,20 +5133,27 @@ export default function GreenWork() {
     setRemoteMonitoringLoading(true);
     startRemoteMonitoringProgress();
     try {
-      const res = await api.post(
-        `/green/vegetation-analysis?_ts=${Date.now()}`,
-        {
-          project_id: activeProjectId,
-          area_geojson: geometry,
-        },
-        { timeout: 180000 },
-      );
+      const created = await api.post("/green/remote-monitoring/jobs", {
+        project_id: activeProjectId,
+        area_geojson: geometry,
+        series_months: 6,
+        summary_window_days: 90,
+        refresh: false,
+      });
+      const jobId = String(created?.data?.id || "");
+      if (!jobId) {
+        throw new Error("Remote monitoring job was not created");
+      }
+      const job = await waitForGreenExportJob(jobId, 1000 * 60 * 10);
+      if (!job.result_payload) {
+        throw new Error("Remote monitoring finished without a report payload");
+      }
       stopRemoteMonitoringProgress();
       setRemoteMonitoringProgressStep(REMOTE_MONITORING_PROGRESS_STEPS.length - 1);
       setRemoteMonitoringProgressPct(100);
       setRemoteMonitoringFocusedTreeId(null);
       setRemoteMonitoringActionTreeId(null);
-      setRemoteMonitoringReport(res.data || null);
+      setRemoteMonitoringReport(job.result_payload || null);
     } catch (error: any) {
       stopRemoteMonitoringProgress();
       setRemoteMonitoringReport(null);
@@ -5129,13 +5162,13 @@ export default function GreenWork() {
       toast.error(
         error?.response?.data?.detail ||
           (isTimeout
-            ? `${defaultMessage} timed out. The satellite analysis is taking too long — try a smaller area or retry shortly.`
+            ? `${defaultMessage} timed out. The satellite analysis is taking too long â€” try a smaller area or retry shortly.`
             : `${defaultMessage} failed. Check your connection and try again.`),
       );
     } finally {
       setRemoteMonitoringLoading(false);
     }
-  }, [activeProjectId, draftWorkflowProfile, remoteMonitoringDraftGeometry, startRemoteMonitoringProgress, stopRemoteMonitoringProgress]);
+  }, [activeProjectId, draftWorkflowProfile, remoteMonitoringDraftGeometry, startRemoteMonitoringProgress, stopRemoteMonitoringProgress, waitForGreenExportJob]);
 
   const buildRemoteMonitoringInspectSeed = useCallback(
     (treeId: number, remoteTree?: RemoteMonitoringTreeAnalysis | null, loading = true): TreeInspectData | null => {
@@ -6257,7 +6290,7 @@ export default function GreenWork() {
         default_project_id: newMerchantProjectId ? Number(newMerchantProjectId) : null,
         agreed_price_per_tree: newMerchantPrice ? Number(newMerchantPrice) : null,
       });
-      toast.success("Merchant created — copy the API key now, it won't be shown again");
+      toast.success("Merchant created â€” copy the API key now, it won't be shown again");
       setRevealedMerchantCredentials(res.data);
       setNewMerchantOrgName("");
       setNewMerchantContactName("");
@@ -6279,7 +6312,7 @@ export default function GreenWork() {
     setRotatingMerchantKeyId(merchantId);
     try {
       const res = await api.post(`/green/admin/merchants/${merchantId}/rotate-key`, {});
-      toast.success("API key rotated — share the new key with the merchant now");
+      toast.success("API key rotated â€” share the new key with the merchant now");
       setRevealedMerchantCredentials({ id: merchantId, api_key: res.data?.api_key } as MerchantAccountRecord);
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || "Failed to rotate API key");
@@ -6294,7 +6327,7 @@ export default function GreenWork() {
     setRotatingMerchantWebhookSecretId(merchantId);
     try {
       const res = await api.post(`/green/admin/merchants/${merchantId}/rotate-webhook-secret`, {});
-      toast.success("Webhook secret regenerated — share the new secret with the merchant now");
+      toast.success("Webhook secret regenerated â€” share the new secret with the merchant now");
       setRevealedMerchantCredentials({
         id: merchantId,
         webhook_secret: res.data?.webhook_secret,
@@ -7200,7 +7233,7 @@ export default function GreenWork() {
     }
     if (activeForm !== "sponsor_feedback") return;
     void loadSponsorFeedback();
-    // Opening the tab clears the unread badge — mirrors an inbox "mark as read on open".
+    // Opening the tab clears the unread badge â€” mirrors an inbox "mark as read on open".
     setAssistantUnreadCount(0);
     api.post("/green/admin/assistant-escalations/mark-seen").catch(() => {});
     const timer = window.setInterval(() => {
@@ -8374,49 +8407,32 @@ export default function GreenWork() {
 
   const exportWorkPdf = async () => {
     if (!activeProjectId) return;
-    if (includePhotosInWorkPdf) {
-      const loadingId = toast.loading("Preparing report with photos. This can take a few minutes...");
-      try {
-        const requestBody = {
-          project_id: activeProjectId,
-          assignee_name: assigneeFilter !== "all" ? assigneeFilter : null,
-          include_photos: true,
-          requested_by: workAuthSession?.user?.full_name || "work-user",
-        };
-        const created = await api.post("/green/work-report/export-jobs", requestBody);
-        const jobId = String(created?.data?.id || "");
-        if (!jobId) {
-          throw new Error("Export job was not created");
-        }
-        const startedAt = Date.now();
-        const timeoutMs = 1000 * 60 * 20;
-        while (Date.now() - startedAt < timeoutMs) {
-          await new Promise((resolve) => window.setTimeout(resolve, 3000));
-          const statusRes = await api.get(`/green/export-jobs/${jobId}`);
-          const job = statusRes?.data || {};
-          const status = String(job.status || "").toLowerCase();
-          if (status === "completed" && job.download_url) {
-            toast.success("Report is ready. Download started.", { id: loadingId });
-            window.open(String(job.download_url), "_blank");
-            return;
-          }
-          if (status === "failed") {
-            throw new Error(String(job.error_text || "Report export failed"));
-          }
-        }
-        toast.error("Report is still preparing. Try again in a moment.", { id: loadingId });
-      } catch (error: any) {
-        toast.error(error?.response?.data?.detail || error?.message || "Failed to prepare report", { id: loadingId });
+    const loadingId = toast.loading(
+      includePhotosInWorkPdf
+        ? "Preparing report with photos. This can take a few minutes..."
+        : "Preparing report...",
+    );
+    try {
+      const requestBody = {
+        project_id: activeProjectId,
+        assignee_name: assigneeFilter !== "all" ? assigneeFilter : null,
+        include_photos: includePhotosInWorkPdf,
+        requested_by: workAuthSession?.user?.full_name || "work-user",
+      };
+      const created = await api.post("/green/work-report/export-jobs", requestBody);
+      const jobId = String(created?.data?.id || "");
+      if (!jobId) {
+        throw new Error("Export job was not created");
       }
-      return;
+      const job = await waitForGreenExportJob(jobId);
+      if (!job.download_url) {
+        throw new Error("Report is ready but no download link was returned");
+      }
+      toast.success("Report is ready. Download started.", { id: loadingId });
+      window.open(String(job.download_url), "_blank");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || error?.message || "Failed to prepare report", { id: loadingId });
     }
-    const params = new URLSearchParams({
-      project_id: String(activeProjectId),
-    });
-    if (assigneeFilter !== "all") {
-      params.set("assignee_name", assigneeFilter);
-    }
-    window.open(`${BACKEND_URL}/green/work-report/pdf?${params.toString()}`, "_blank");
   };
 
   const exportWorkVerra = () => {
@@ -8450,44 +8466,33 @@ export default function GreenWork() {
     if (fieldWorkflowMode) {
       const reportLabel = activeWorkflowProfile === "relief_recovery" ? "Relief & Recovery programme report" : "Agric programme report";
       const entityPluralLabel = activeWorkflowProfile === "relief_recovery" ? "site" : "plot";
-      if (includePhotosInCustodianPdf) {
-        const loadingId = toast.loading(`Preparing ${reportLabel} with ${entityPluralLabel} photos...`);
-        void (async () => {
-          try {
-            const created = await api.post("/green/work-report/export-jobs", {
-              project_id: activeProjectId,
-              assignee_name: null,
-              include_photos: true,
-              requested_by: workAuthSession?.user?.full_name || "work-user",
-            });
-            const jobId = String(created?.data?.id || "");
-            if (!jobId) {
-              throw new Error("Export job was not created");
-            }
-            const startedAt = Date.now();
-            const timeoutMs = 1000 * 60 * 20;
-            while (Date.now() - startedAt < timeoutMs) {
-              await new Promise((resolve) => window.setTimeout(resolve, 3000));
-              const statusRes = await api.get(`/green/export-jobs/${jobId}`);
-              const job = statusRes?.data || {};
-              const status = String(job.status || "").toLowerCase();
-              if (status === "completed" && job.download_url) {
-                toast.success(`${reportLabel} is ready. Download started.`, { id: loadingId });
-                window.open(String(job.download_url), "_blank");
-                return;
-              }
-              if (status === "failed") {
-                throw new Error(String(job.error_text || `${reportLabel} export failed`));
-              }
-            }
-            toast.error(`${reportLabel} is still preparing. Try again shortly.`, { id: loadingId });
-          } catch (error: any) {
-            toast.error(error?.response?.data?.detail || error?.message || `Failed to prepare ${reportLabel}`, { id: loadingId });
+      const loadingId = toast.loading(
+        includePhotosInCustodianPdf
+          ? `Preparing ${reportLabel} with ${entityPluralLabel} photos...`
+          : `Preparing ${reportLabel}...`,
+      );
+      void (async () => {
+        try {
+          const created = await api.post("/green/work-report/export-jobs", {
+            project_id: activeProjectId,
+            assignee_name: null,
+            include_photos: includePhotosInCustodianPdf,
+            requested_by: workAuthSession?.user?.full_name || "work-user",
+          });
+          const jobId = String(created?.data?.id || "");
+          if (!jobId) {
+            throw new Error("Export job was not created");
           }
-        })();
-        return;
-      }
-      window.open(`${BACKEND_URL}/green/work-report/pdf?project_id=${activeProjectId}`, "_blank");
+          const job = await waitForGreenExportJob(jobId);
+          if (!job.download_url) {
+            throw new Error(`${reportLabel} is ready but no download link was returned`);
+          }
+          toast.success(`${reportLabel} is ready. Download started.`, { id: loadingId });
+          window.open(String(job.download_url), "_blank");
+        } catch (error: any) {
+          toast.error(error?.response?.data?.detail || error?.message || `Failed to prepare ${reportLabel}`, { id: loadingId });
+        }
+      })();
       return;
     }
     const params = new URLSearchParams({
@@ -8509,13 +8514,33 @@ export default function GreenWork() {
     window.open(`${BACKEND_URL}/green/projects/${activeProjectId}/existing-trees/export/csv?${params.toString()}`, "_blank");
   };
 
-  const exportExistingTreesPdf = () => {
+  const exportExistingTreesPdf = async () => {
     if (!activeProjectId) return;
-    const params = new URLSearchParams({
-      _ts: String(Date.now()),
-      include_photos: includePhotosInExistingTreesPdf ? "true" : "false",
-    });
-    window.open(`${BACKEND_URL}/green/projects/${activeProjectId}/existing-trees/export/pdf?${params.toString()}`, "_blank");
+    const loadingId = toast.loading(
+      includePhotosInExistingTreesPdf
+        ? "Preparing programme report with photos..."
+        : "Preparing programme report...",
+    );
+    try {
+      const created = await api.post("/green/report-export-jobs", {
+        export_type: "green-existing-trees-report",
+        project_id: activeProjectId,
+        include_photos: includePhotosInExistingTreesPdf,
+        requested_by: workAuthSession?.user?.full_name || "work-user",
+      });
+      const jobId = String(created?.data?.id || "");
+      if (!jobId) {
+        throw new Error("Export job was not created");
+      }
+      const job = await waitForGreenExportJob(jobId);
+      if (!job.download_url) {
+        throw new Error("Programme report is ready but no download link was returned");
+      }
+      toast.success("Programme report is ready. Download started.", { id: loadingId });
+      window.open(String(job.download_url), "_blank");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || error?.message || "Failed to prepare programme report", { id: loadingId });
+    }
   };
 
   const exportVerraPackage = (
@@ -9891,7 +9916,7 @@ export default function GreenWork() {
             ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Cross-product activity + QR reports" }]
             : []),
           ...(activeProjectRecord?.organization_slug
-            ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links · endorsements" }]
+            ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links Â· endorsements" }]
             : []),
         ]
       : actionWorkflowProfile === "relief_recovery"
@@ -9908,7 +9933,7 @@ export default function GreenWork() {
               ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Cross-product activity + QR reports" }]
               : []),
             ...(activeProjectRecord?.organization_slug
-              ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links · endorsements" }]
+              ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links Â· endorsements" }]
               : []),
           ]
       : [
@@ -9938,7 +9963,7 @@ export default function GreenWork() {
             ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Activity logs + QR prints report" }]
             : []),
           ...(activeProjectRecord?.organization_slug
-            ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links · endorsements" }]
+            ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links Â· endorsements" }]
             : []),
         ];
   const displayedProjectActions: Array<{ form: WorkForm; title: string; note: string; isNew?: boolean }> = csrPartnerDashboardMode
@@ -14272,7 +14297,7 @@ export default function GreenWork() {
                               <strong>{sponsor.full_name}</strong>
                               <span>{formatTaskTypeLabel(sponsor.account_type || "individual")}</span>
                               {sponsor.is_guest ? (
-                                <span className="green-work-live-pill warning" title="Checked out without creating a password — hasn't claimed their account yet">
+                                <span className="green-work-live-pill warning" title="Checked out without creating a password â€” hasn't claimed their account yet">
                                   Guest (unclaimed)
                                 </span>
                               ) : sponsor.claimed_at ? (
@@ -14302,7 +14327,7 @@ export default function GreenWork() {
                             </div>
                             <div className="work-actions" style={{ margin: "0 0 6px", flexWrap: "wrap" }}>
                               <span className="green-work-live-pill info" style={{ backgroundColor: "#fbf7ee", border: "1px solid rgba(197, 160, 89, 0.35)", color: "#b8860b", fontWeight: "bold" }}>
-                                🏆 {sponsor.achievement_level || "Climate Contributor"}
+                                ðŸ† {sponsor.achievement_level || "Climate Contributor"}
                               </span>
                               <span className="green-work-live-pill neutral">
                                 Category: {sponsor.entity_category || "individual"}
@@ -14316,7 +14341,7 @@ export default function GreenWork() {
                             </div>
                             <div className="staff-row-meta" style={{ marginTop: 6, padding: '4px 8px', backgroundColor: '#f9fcf9', borderRadius: 4, border: '1px dashed #2aa852' }}>
                               <div><strong>Green Points Balance:</strong> {sponsor.green_points ?? 0} GP | <strong>Lifetime Points:</strong> {sponsor.lifetime_points ?? 0} GP</div>
-                              <div><strong>Referral Code:</strong> <code>{sponsor.referral_code || "None"}</code> | <strong>Rules Met:</strong> {sponsor.referral_rules_met ? "✅ Yes" : "❌ No"}</div>
+                              <div><strong>Referral Code:</strong> <code>{sponsor.referral_code || "None"}</code> | <strong>Rules Met:</strong> {sponsor.referral_rules_met ? "âœ… Yes" : "âŒ No"}</div>
                               <div style={{ fontSize: 11, color: '#555', marginTop: 2 }}>
                                 Criteria: Sponsored trees: {sponsor.personal_trees_sponsored ?? 0} (req &gt;= 1) | Referred signups: {sponsor.total_referred_users ?? 0} (Converted: {sponsor.converted_referred_users ?? 0}, Conv. Rate: {sponsor.referral_conversion_rate ? `${Math.round(sponsor.referral_conversion_rate * 100)}%` : "0%"} - req &gt;= 20%)
                               </div>
@@ -14798,727 +14823,135 @@ export default function GreenWork() {
           )}
 
           {activeForm === "sponsor_payouts" && (
-            <div className="green-work-card">
-              <h3>Public Sponsor Payouts</h3>
-              {!publicSponsorshipProject ? (
-                <p className="green-work-note">Switch this project to the Public Sponsorship access route first.</p>
-              ) : sponsorAgentPayoutLoading ? (
-                <p className="green-work-note">Loading sponsor-agent earnings and payout requests...</p>
-              ) : (
-                <>
-                  <div className="work-actions" style={{ marginBottom: 12 }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (activeProjectId) void loadSponsorAgentPayoutBoard(activeProjectId, { forceSync: true });
-                      }}
-                    >
-                      Refresh Payouts
-                    </button>
-                    <button type="button" onClick={() => openForm("users")}>
-                      Manage Sponsor Agents
-                    </button>
-                  </div>
-                  <p className="green-work-note">
-                    This is the live sponsor-agent wallet board. It rolls up what each selected public sponsor agent has earned
-                    from paid sponsor trees, which requests are pending, and whether bank details are ready for payout.
-                  </p>
-                  <div className="work-actions" style={{ marginBottom: 12, flexWrap: "wrap" }}>
-                    <span className="green-work-live-pill neutral">Agents: {sponsorAgentPayoutSummary.agentCount}</span>
-                    <span className="green-work-live-pill warning">Pending requests: {sponsorAgentPayoutSummary.pendingRequestCount}</span>
-                    <span className="green-work-live-pill ok">
-                      Minimum payout: {formatCurrencyAmount(sponsorAgentPayoutSummary.minimumAmount, sponsorAgentPayoutSummary.currency)}
-                    </span>
-                    <span className={`green-work-live-pill ${sponsorAgentPayoutSummary.autoPayoutAvailable ? "info" : "neutral"}`}>
-                      Auto payout: {sponsorAgentPayoutSummary.autoPayoutAvailable ? "available" : "manual only"}
-                    </span>
-                  </div>
-                  {sponsorAgentPayoutSummary.reconciliation ? (
-                    <div className="work-actions" style={{ marginBottom: 12, flexWrap: "wrap" }}>
-                      <span className="green-work-live-pill neutral">
-                        Assigned: {Number(sponsorAgentPayoutSummary.reconciliation.assigned_target_trees || 0)}
-                      </span>
-                      <span className="green-work-live-pill neutral">
-                        Saved: {Number(sponsorAgentPayoutSummary.reconciliation.saved_count || 0)}
-                      </span>
-                      <span className="green-work-live-pill info">
-                        Approved: {Number(sponsorAgentPayoutSummary.reconciliation.approved_count || 0)}
-                      </span>
-                      <span className="green-work-live-pill ok">
-                        Sponsor-linked: {Number(sponsorAgentPayoutSummary.reconciliation.sponsor_linked_count || 0)}
-                      </span>
-                      <span className="green-work-live-pill ok">
-                        Payable: {Number(sponsorAgentPayoutSummary.reconciliation.payable_count || 0)}
-                      </span>
-                      <span
-                        className={`green-work-live-pill ${
-                          Number(sponsorAgentPayoutSummary.reconciliation.unlinked_approved_count || 0) > 0 ? "danger" : "neutral"
-                        }`}
-                      >
-                        Approval gap: {Number(sponsorAgentPayoutSummary.reconciliation.unlinked_approved_count || 0)}
-                      </span>
-                    </div>
-                  ) : null}
-                  {sponsorAgentPayoutError ? <p className="green-work-note danger">{sponsorAgentPayoutError}</p> : null}
-                    <div className="green-work-payout-shell">
-                      <div className="green-work-payout-primary">
-                      <div className="work-actions" style={{ marginBottom: 10, flexWrap: "wrap" }}>
-                        <span className="green-work-live-pill ok">
-                          Available: {formatCurrencyAmount(sponsorAgentPayoutSummary.availableAmount, sponsorAgentPayoutSummary.currency)}
-                        </span>
-                        <span className="green-work-live-pill warning">
-                          Requested: {formatCurrencyAmount(sponsorAgentPayoutSummary.requestedAmount, sponsorAgentPayoutSummary.currency)}
-                        </span>
-                        <span className="green-work-live-pill info">
-                          Paid: {formatCurrencyAmount(sponsorAgentPayoutSummary.paidAmount, sponsorAgentPayoutSummary.currency)}
-                        </span>
-                      </div>
-                      {sponsorAgentPayoutAgents.length === 0 ? (
-                        <p className="green-work-note">No public sponsor agents are selected for this sponsor project yet.</p>
-                      ) : (
-                        <div className="staff-list">
-                          {sponsorAgentPayoutAgents.map((agent) => {
-                            const agentSummary = agent.summary || {};
-                            const bank = agent.bank_account;
-                            const recentEarnings = (agent.earnings || []).slice(0, 3);
-                            const reconciliation = agent.reconciliation || null;
-                            const clearanceBlockers = agent.payout_clearance_blockers || [];
-                            const projectApprovalGap = Number(reconciliation?.unlinked_approved_count || 0);
-                            const projectUnpaidGap = Number(reconciliation?.unpaid_linked_count || 0);
-                            const assignmentOverrun = Number(reconciliation?.approved_beyond_assignment_count || 0);
-                            const manualPayoutExceptionCount = Number(reconciliation?.manual_payout_exception_count || 0);
-                            const showPayoutClearanceReview =
-                              clearanceBlockers.length > 0 ||
-                              (canReviewSponsorPayoutClearance && (projectUnpaidGap > 0 || projectApprovalGap > 0 || assignmentOverrun > 0));
-                            return (
-                              <div key={`sponsor-agent-wallet-${agent.user?.id || agent.user?.user_uid || "agent"}`} className="staff-row">
-                                <div className="staff-row-head">
-                                  <strong>{agent.user?.full_name || "Sponsor Agent"}</strong>
-                                  <span>{agent.user?.user_uid || "-"}</span>
-                                </div>
-                                <div className="work-actions" style={{ margin: "8px 0 6px", flexWrap: "wrap" }}>
-                                  <span className="green-work-live-pill ok">
-                                    Available: {formatCurrencyAmount(Number(agentSummary.available_amount || 0), agent.currency || sponsorAgentPayoutSummary.currency)}
-                                  </span>
-                                  <span className="green-work-live-pill warning">
-                                    Requested: {formatCurrencyAmount(Number(agentSummary.requested_amount || 0), agent.currency || sponsorAgentPayoutSummary.currency)}
-                                  </span>
-                                  <span className="green-work-live-pill info">
-                                    Paid: {formatCurrencyAmount(Number(agentSummary.paid_amount || 0), agent.currency || sponsorAgentPayoutSummary.currency)}
-                                  </span>
-                                  <span className={`green-work-live-pill ${agentSummary.bank_verified ? "ok" : "danger"}`}>
-                                    {agentSummary.bank_verified ? "Bank verified" : "Bank setup needed"}
-                                  </span>
-                                </div>
-                                <div className="staff-row-meta">
-                                  Planting: {Number(agentSummary.planting_count || 0)} | Maintenance: {Number(agentSummary.maintenance_count || 0)} | Total earned:{" "}
-                                  {formatCurrencyAmount(Number(agentSummary.total_earnings_amount || 0), agent.currency || sponsorAgentPayoutSummary.currency)}
-                                </div>
-                                {reconciliation ? (
-                                  <>
-                                    <div className="work-actions" style={{ margin: "8px 0 6px", flexWrap: "wrap" }}>
-                                      <span className="green-work-live-pill neutral">
-                                        Project assigned: {Number(reconciliation.assigned_target_trees || 0)}
-                                      </span>
-                                      <span className="green-work-live-pill neutral">
-                                        Saved: {Number(reconciliation.saved_count || 0)}
-                                      </span>
-                                      <span className="green-work-live-pill info">
-                                        Approved: {Number(reconciliation.approved_count || 0)}
-                                      </span>
-                                      <span className="green-work-live-pill ok">
-                                        Linked: {Number(reconciliation.sponsor_linked_count || 0)}
-                                      </span>
-                                      <span className="green-work-live-pill ok">
-                                        Payable: {Number(reconciliation.payable_count || 0)}
-                                      </span>
-                                      <span className="green-work-live-pill neutral">
-                                        Manual cleared: {manualPayoutExceptionCount}
-                                      </span>
-                                      <span className="green-work-live-pill warning">
-                                        Remaining: {Number(reconciliation.remaining_target_trees || 0)}
-                                      </span>
-                                    </div>
-                                    {projectApprovalGap > 0 || projectUnpaidGap > 0 || assignmentOverrun > 0 ? (
-                                      <div className="green-work-note danger" style={{ marginTop: 4 }}>
-                                        Project reconciliation issue:
-                                        {projectApprovalGap > 0 ? ` ${projectApprovalGap} approved tree(s) are not yet sponsor-linked.` : ""}
-                                        {projectUnpaidGap > 0 ? ` ${projectUnpaidGap} linked tree(s) are not yet payable.` : ""}
-                                        {assignmentOverrun > 0 ? ` ${assignmentOverrun} approved tree(s) sit above the assigned target.` : ""}
-                                      </div>
-                                    ) : (
-                                      <div className="staff-row-meta" style={{ marginTop: 4 }}>
-                                        Project reconciliation is clean: approved sponsor trees are linked and payable.
-                                      </div>
-                                    )}
-                                  </>
-                                ) : null}
-                                {showPayoutClearanceReview ? (
-                                  <div className="staff-list" style={{ marginTop: 12 }}>
-                                    <div className="staff-row" style={{ margin: 0 }}>
-                                      <div className="staff-row-head">
-                                        <strong>Payout clearance review</strong>
-                                        <span>{clearanceBlockers.length > 0 ? clearanceBlockers.length : projectUnpaidGap}</span>
-                                      </div>
-                                      <div className="staff-row-meta">
-                                        These linked sponsor trees are not yet entering the payout wallet automatically. Review the reason below and clear only
-                                        if you have confirmed the sponsor payment is valid. Extra approved trees above the assigned target can also be manually cleared here.
-                                      </div>
-                                      {canReviewSponsorPayoutClearance && (projectApprovalGap > 0 || assignmentOverrun > 0) ? (
-                                        <div className="work-actions" style={{ marginTop: 10 }}>
-                                          <button
-                                            type="button"
-                                            className="btn-primary"
-                                            disabled={manuallyClearingSponsorAgentUserId === Number(agent.user?.id || 0) || !Number(agent.user?.id || 0)}
-                                            onClick={() =>
-                                              Number(agent.user?.id || 0)
-                                                ? void manuallyClearSponsorAgentExtraApprovedTree(
-                                                    Number(agent.user?.id || 0),
-                                                    agent.user?.full_name || undefined,
-                                                  )
-                                                : undefined
-                                            }
-                                          >
-                                            {manuallyClearingSponsorAgentUserId === Number(agent.user?.id || 0)
-                                              ? "Clearing..."
-                                              : "Manual Clear Extra Approved Tree"}
-                                          </button>
-                                        </div>
-                                      ) : null}
-                                      {canReviewSponsorPayoutClearance && clearanceBlockers.length === 0 ? (
-                                        <div className="work-actions" style={{ marginTop: 10 }}>
-                                          <button
-                                            type="button"
-                                            className="btn-primary"
-                                            disabled={reconcilingSponsorAgentUserId === Number(agent.user?.id || 0) || !Number(agent.user?.id || 0)}
-                                            onClick={() =>
-                                              Number(agent.user?.id || 0)
-                                                ? void autoReconcileSponsorAgentPayouts(Number(agent.user?.id || 0), agent.user?.full_name || undefined)
-                                                : undefined
-                                            }
-                                          >
-                                            {reconcilingSponsorAgentUserId === Number(agent.user?.id || 0) ? "Reconciling..." : "Auto Match Approved Trees"}
-                                          </button>
-                                        </div>
-                                      ) : null}
-                                    </div>
-                                    {clearanceBlockers.length > 0 ? clearanceBlockers.map((blocker) => (
-                                      <div key={`sponsor-agent-clearance-${blocker.unit_id}`} className="staff-row" style={{ margin: 0 }}>
-                                        <div className="staff-row-head">
-                                          <strong>{blocker.tree_label || `Tree #${blocker.tree_id || blocker.unit_id}`}</strong>
-                                          <span>{blocker.order_uid || blocker.unit_uid || `Unit #${blocker.unit_id}`}</span>
-                                        </div>
-                                        <div className="staff-row-meta">
-                                          {blocker.sponsor_name ? `Sponsor: ${blocker.sponsor_name}` : "Sponsor: -"}
-                                          {blocker.species ? ` | Species: ${blocker.species}` : ""}
-                                          {blocker.linked_at ? ` | Linked: ${formatDateLabel(blocker.linked_at)}` : ""}
-                                        </div>
-                                        <div className="staff-row-meta">
-                                          Payment: {formatTaskTypeLabel(blocker.payment_status || "pending")} | Order:{" "}
-                                          {formatTaskTypeLabel(blocker.order_status || "pending_payment")}
-                                        </div>
-                                        <div className="green-work-note danger" style={{ marginTop: 6 }}>
-                                          {blocker.blocker_reason || "Manual payout clearance review required."}
-                                        </div>
-                                        {canReviewSponsorPayoutClearance ? (
-                                          <div className="work-actions" style={{ marginTop: 10 }}>
-                                            <button
-                                              type="button"
-                                              className="btn-primary"
-                                              disabled={reviewingSponsorAgentClearanceUnitId === blocker.unit_id}
-                                              onClick={() =>
-                                                void reviewSponsorAgentPayoutClearance(blocker.unit_id, "clear", blocker.tree_label || undefined)
-                                              }
-                                            >
-                                              {reviewingSponsorAgentClearanceUnitId === blocker.unit_id ? "Clearing..." : "Clear For Payment"}
-                                            </button>
-                                          </div>
-                                        ) : null}
-                                      </div>
-                                    )) : (
-                                      <div className="staff-row" style={{ margin: 0 }}>
-                                        <div className="green-work-note danger" style={{ marginTop: 0 }}>
-                                          {projectUnpaidGap > 0
-                                            ? `${projectUnpaidGap} linked sponsor tree(s) are still marked as not payable, but the itemized clearance rows did not load in this response yet.`
-                                            : `${Math.max(projectApprovalGap, assignmentOverrun)} approved tree(s) still need manual payout review because they are not sponsor-linked or sit above the assigned target.`}
-                                        </div>
-                                        <div className="staff-row-meta" style={{ marginTop: 6 }}>
-                                          {projectUnpaidGap > 0 ? (
-                                            <>
-                                              This usually means paid sponsor units are linked to the wrong planted tree, or duplicate links are collapsing the payable
-                                              count. Use <strong>Auto Match Approved Trees</strong> first, then refresh the payout board again.
-                                            </>
-                                          ) : (
-                                            <>
-                                              Use <strong>Manual Clear Extra Approved Tree</strong> only after confirming the tree was genuinely planted and approved, even
-                                              though it sits outside the assigned sponsor target.
-                                            </>
-                                          )}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : null}
-                                <div className="staff-row-meta">
-                                  Pending requests: {Number(agentSummary.pending_request_count || 0)} | Paid requests: {Number(agentSummary.paid_request_count || 0)} | Projects:{" "}
-                                  {Array.isArray(agent.projects) ? agent.projects.length : 0}
-                                </div>
-                                {Number(agent.repaired_missing_links || 0) > 0 ? (
-                                  <div className="staff-row-meta">
-                                    Recovery: {Number(agent.repaired_missing_links || 0)} older sponsor tree link(s) were repaired automatically on refresh.
-                                  </div>
-                                ) : null}
-                                <div className="staff-row-meta">
-                                  Bank: {bank?.bank_name || "-"} | Code: {bank?.bank_code || "-"} | Account:{" "}
-                                  {bank?.account_number_masked || bank?.account_number || "-"}
-                                </div>
-                                <div className="staff-row-meta">
-                                  Account name: {bank?.account_name || "-"} | Verified: {bank?.verified_at ? formatDateLabel(bank.verified_at) : "Not yet"}
-                                </div>
-                                {Array.isArray(agent.projects) && agent.projects.length > 0 ? (
-                                  <div className="staff-row-meta">
-                                    Rates: {agent.projects
-                                      .map(
-                                        (project) =>
-                                          `${project.project_name || `Project #${project.project_id}`} (${formatCurrencyAmount(
-                                            Number(project.planting_fee || 0),
-                                            project.currency || sponsorAgentPayoutSummary.currency,
-                                          )} planting, ${formatCurrencyAmount(
-                                            Number(project.maintenance_fee || 0),
-                                            project.currency || sponsorAgentPayoutSummary.currency,
-                                          )} maintenance)`,
-                                      )
-                                      .join(" | ")}
-                                  </div>
-                                ) : null}
-                                {Array.isArray(agent.project_summaries) && agent.project_summaries.length > 0 ? (
-                                  <div className="staff-row-meta" style={{ marginTop: 4 }}>
-                                    Earnings: {agent.project_summaries
-                                      .map(
-                                        (ps) =>
-                                          `${ps.project_name || `Project #${ps.project_id}`}: ${formatCurrencyAmount(
-                                            Number(ps.available_amount || 0),
-                                            ps.currency || sponsorAgentPayoutSummary.currency,
-                                          )} available (Paid: ${formatCurrencyAmount(
-                                            Number(ps.paid_amount || 0),
-                                            ps.currency || sponsorAgentPayoutSummary.currency,
-                                          )})`
-                                      )
-                                      .join(" | ")}
-                                  </div>
-                                ) : null}
-                                {recentEarnings.length > 0 ? (
-                                  <div className="staff-list" style={{ marginTop: 12 }}>
-                                    {recentEarnings.map((earning) => (
-                                      <div key={earning.earning_key} className="staff-row" style={{ margin: 0 }}>
-                                        <div className="staff-row-head">
-                                          <strong>{earning.task_label || formatTaskTypeLabel(earning.work_type || "planting")}</strong>
-                                          <span>
-                                            {formatCurrencyAmount(Number(earning.amount || 0), earning.currency || sponsorAgentPayoutSummary.currency)}
-                                          </span>
-                                        </div>
-                                        <div className="staff-row-meta">
-                                          {earning.tree_label || "Tree record"}
-                                          {earning.sponsor_name ? ` | Sponsor: ${earning.sponsor_name}` : ""}
-                                          {earning.earned_at ? ` | ${formatDateLabel(earning.earned_at)}` : ""}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <div className="staff-row-meta" style={{ marginTop: 8 }}>
-                                    No verified sponsor-funded earnings recorded for this agent yet.
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-
-                      <div className="green-work-card green-work-payout-side">
-                      <h3>Accounting</h3>
-                      <p className="green-work-note">
-                        This board refreshes automatically from the live sponsor-agent payout feed. Standard flow: verified bank details,
-                        agent payout request, approve only or approve and auto pay, then retry auto payout or complete a manual settlement
-                        with an external reference if the gateway payout needs intervention.
-                      </p>
-                      <div className="work-actions" style={{ marginBottom: 12, flexWrap: "wrap" }}>
-                        <span className="green-work-live-pill neutral">Requests: {sponsorAgentPayoutSummary.requestCount}</span>
-                        <span className="green-work-live-pill warning">Awaiting: {sponsorAgentPayoutRequestBuckets.awaiting.length}</span>
-                        <span className="green-work-live-pill ok">Paid: {sponsorAgentPayoutRequestBuckets.paid.length}</span>
-                        <span className="green-work-live-pill danger">Issues: {sponsorAgentPayoutRequestBuckets.issue.length}</span>
-                        <span className="green-work-live-pill neutral">Manual fallback: always available</span>
-                      </div>
-                      <div className="staff-list">
-                        <div className="staff-row">
-                          <div className="staff-row-head">
-                            <strong>Available Liability</strong>
-                            <span>{formatCurrencyAmount(sponsorAgentPayoutSummary.availableAmount, sponsorAgentPayoutSummary.currency)}</span>
-                          </div>
-                          <div className="staff-row-meta">Earnings ready for agents to request.</div>
-                        </div>
-                        <div className="staff-row">
-                          <div className="staff-row-head">
-                            <strong>Requested Liability</strong>
-                            <span>{formatCurrencyAmount(sponsorAgentPayoutSummary.requestedAmount, sponsorAgentPayoutSummary.currency)}</span>
-                          </div>
-                          <div className="staff-row-meta">Already requested and waiting for review or transfer.</div>
-                        </div>
-                        <div className="staff-row">
-                          <div className="staff-row-head">
-                            <strong>Paid Out</strong>
-                            <span>{formatCurrencyAmount(sponsorAgentPayoutSummary.paidAmount, sponsorAgentPayoutSummary.currency)}</span>
-                          </div>
-                          <div className="staff-row-meta">Completed sponsor-agent payouts.</div>
-                        </div>
-                      </div>
-
-                      {([
-                        {
-                          key: "awaiting",
-                          title: "Awaiting Review / Transfer",
-                          tone: "warning",
-                          rows: sponsorAgentPayoutRequestBuckets.awaiting,
-                        },
-                        {
-                          key: "paid",
-                          title: "Paid Requests",
-                          tone: "ok",
-                          rows: sponsorAgentPayoutRequestBuckets.paid,
-                        },
-                        {
-                          key: "issue",
-                          title: "Flagged / Cancelled",
-                          tone: "danger",
-                          rows: sponsorAgentPayoutRequestBuckets.issue,
-                        },
-                      ] as Array<{
-                        key: string;
-                        title: string;
-                        tone: "ok" | "warning" | "danger";
-                        rows: SponsorAgentPayoutRequestRecord[];
-                      }>)
-                        .filter((section) => section.rows.length > 0)
-                        .map((section) => (
-                          <div key={`sponsor-payout-section-${section.key}`} style={{ marginTop: 18 }}>
-                            <div className="work-actions" style={{ marginBottom: 10, flexWrap: "wrap" }}>
-                              <span className={`green-work-live-pill ${section.tone}`}>{section.title}</span>
-                              <span className="green-work-live-pill neutral">
-                                {section.rows.length} request{section.rows.length === 1 ? "" : "s"}
-                              </span>
-                            </div>
-                            <div className="staff-list">
-                              {section.rows.map((request) => {
-                                const status = normalizeName(request.status);
-                                const terminal = ["paid", "rejected", "cancelled"].includes(status);
-                                const failedTransfer = status === "failed";
-                                const processingTransfer = status === "processing";
-                                return (
-                                  <div key={`sponsor-payout-request-${section.key}-${request.id}`} className="staff-row">
-                                    <div className="staff-row-head">
-                                      <strong>{request.user_name || `Agent #${request.user_id}`}</strong>
-                                      <span>{request.request_uid || `Request #${request.id}`}</span>
-                                    </div>
-                                    <div className="work-actions" style={{ margin: "8px 0 6px", flexWrap: "wrap" }}>
-                                      <span className={`green-work-live-pill ${section.tone}`}>{formatTaskTypeLabel(request.status || "requested")}</span>
-                                      <span className="green-work-live-pill neutral">
-                                        {formatCurrencyAmount(request.amount_total, request.currency || sponsorAgentPayoutSummary.currency)}
-                                      </span>
-                                      {request.transfer_status ? (
-                                        <span className="green-work-live-pill info">Transfer: {formatTaskTypeLabel(request.transfer_status)}</span>
-                                      ) : null}
-                                    </div>
-                                    <div className="staff-row-meta">
-                                      Bank: {request.bank_name || "-"} | Code: {request.bank_code || "-"} | Account:{" "}
-                                      {request.account_number_masked || request.account_number || "-"} | {request.account_name || "-"}
-                                    </div>
-                                    <div className="staff-row-meta">
-                                      Created: {request.created_at ? formatDateLabel(request.created_at) : "-"}
-                                      {request.paid_at ? ` | Paid: ${formatDateLabel(request.paid_at)}` : ""}
-                                    </div>
-                                    <div className="staff-row-meta">
-                                      Settlement: {request.settlement_channel ? formatTaskTypeLabel(request.settlement_channel) : "Pending"}
-                                      {request.settlement_reference ? ` | Ref: ${request.settlement_reference}` : ""}
-                                    </div>
-                                    {request.transfer_reference || request.transfer_id || request.transfer_status ? (
-                                      <div className="staff-row-meta">
-                                        Transfer ref: {request.transfer_reference || "-"}
-                                        {request.transfer_id ? ` | Transfer ID: ${request.transfer_id}` : ""}
-                                        {request.transfer_status ? ` | Gateway: ${formatTaskTypeLabel(request.transfer_status)}` : ""}
-                                      </div>
-                                    ) : null}
-                                    <div className="staff-row-meta">
-                                      Review: {request.reviewed_by || "-"}
-                                      {request.reviewed_at ? ` | ${formatDateLabel(request.reviewed_at)}` : ""}
-                                    </div>
-                                    {request.review_notes ? <div className="staff-row-meta">Note: {request.review_notes}</div> : null}
-                                    {failedTransfer ? (
-                                      <div className="green-work-note danger">
-                                        Automatic payout failed. Retry the gateway payout or complete a manual settlement with an external bank reference.
-                                      </div>
-                                    ) : null}
-                                    {!terminal ? (
-                                      <div className="work-actions">
-                                        {sponsorAgentPayoutSummary.autoPayoutAvailable ? (
-                                          <button
-                                            type="button"
-                                            className="btn-primary"
-                                            disabled={reviewingSponsorAgentPayoutId === request.id || processingTransfer}
-                                            onClick={() =>
-                                              void reviewSponsorAgentPayoutRequest(
-                                                request.id,
-                                                failedTransfer ? "retry_transfer" : "approve_and_pay",
-                                                { autoTransfer: true },
-                                              )
-                                            }
-                                          >
-                                            {reviewingSponsorAgentPayoutId === request.id
-                                              ? "Processing..."
-                                              : failedTransfer
-                                                ? "Retry Auto Payout"
-                                                : "Approve & Auto Pay"}
-                                          </button>
-                                        ) : null}
-                                        {!processingTransfer ? (
-                                          <button
-                                            type="button"
-                                            disabled={reviewingSponsorAgentPayoutId === request.id}
-                                            onClick={() => void reviewSponsorAgentPayoutRequest(request.id, "approve")}
-                                          >
-                                            Approve Only
-                                          </button>
-                                        ) : null}
-                                        <button
-                                          type="button"
-                                          disabled={reviewingSponsorAgentPayoutId === request.id || processingTransfer}
-                                          onClick={() => void reviewSponsorAgentPayoutRequest(request.id, "mark_paid")}
-                                        >
-                                          Manual Settlement Complete
-                                        </button>
-                                        <button
-                                          type="button"
-                                          disabled={reviewingSponsorAgentPayoutId === request.id}
-                                          onClick={() => void reviewSponsorAgentPayoutRequest(request.id, processingTransfer ? "cancel" : "reject")}
-                                        >
-                                          {processingTransfer ? "Cancel" : "Reject"}
-                                        </button>
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+            <Suspense
+              fallback={
+                <div className="green-work-card">
+                  <p className="green-work-note">Loading sponsor payout operations...</p>
+                </div>
+              }
+            >
+              <GreenWorkSponsorPayoutsPanel
+                publicSponsorshipProject={publicSponsorshipProject}
+                sponsorAgentPayoutLoading={sponsorAgentPayoutLoading}
+                activeProjectId={activeProjectId}
+                loadSponsorAgentPayoutBoard={loadSponsorAgentPayoutBoard}
+                openForm={openForm}
+                sponsorAgentPayoutSummary={sponsorAgentPayoutSummary}
+                sponsorAgentPayoutError={sponsorAgentPayoutError}
+                formatCurrencyAmount={formatCurrencyAmount}
+                sponsorAgentPayoutAgents={sponsorAgentPayoutAgents}
+                canReviewSponsorPayoutClearance={canReviewSponsorPayoutClearance}
+                manuallyClearingSponsorAgentUserId={manuallyClearingSponsorAgentUserId}
+                manuallyClearSponsorAgentExtraApprovedTree={manuallyClearSponsorAgentExtraApprovedTree}
+                reconcilingSponsorAgentUserId={reconcilingSponsorAgentUserId}
+                autoReconcileSponsorAgentPayouts={autoReconcileSponsorAgentPayouts}
+                reviewingSponsorAgentClearanceUnitId={reviewingSponsorAgentClearanceUnitId}
+                reviewSponsorAgentPayoutClearance={reviewSponsorAgentPayoutClearance}
+                formatDateLabel={formatDateLabel}
+                formatTaskTypeLabel={formatTaskTypeLabel}
+                sponsorAgentPayoutRequestBuckets={sponsorAgentPayoutRequestBuckets}
+                reviewingSponsorAgentPayoutId={reviewingSponsorAgentPayoutId}
+                reviewSponsorAgentPayoutRequest={reviewSponsorAgentPayoutRequest}
+              />
+            </Suspense>
           )}
 
           {activeForm === "merchants" && canAccessSuperAdmin && (
-            <div className="green-work-card">
-              <h3>Merchant Integrations</h3>
-              <p className="green-work-note">
-                Merchants sponsor trees automatically for their own customers via API or webhook — no manual order
-                entry. Provision a merchant here to get an API key and (for Shopify) a webhook URL; their integration
-                then creates sponsorship orders on its own, and shows up below for monitoring.
-              </p>
-              {!publicSponsorshipProject ? (
-                <p className="green-work-note">Switch this project to the Public Sponsorship access route first.</p>
-              ) : (
-                <>
-                  {revealedMerchantCredentials ? (
-                    <div className="green-work-card" style={{ marginBottom: 16, borderColor: "#c5a059" }}>
-                      <h4 style={{ marginTop: 0 }}>Save these credentials now — they won't be shown again</h4>
-                      {revealedMerchantCredentials.api_key ? (
-                        <p className="green-work-note" style={{ wordBreak: "break-all" }}>
-                          <strong>API key:</strong> {revealedMerchantCredentials.api_key}
-                        </p>
-                      ) : null}
-                      {revealedMerchantCredentials.webhook_secret ? (
-                        <p className="green-work-note" style={{ wordBreak: "break-all" }}>
-                          <strong>Webhook secret:</strong> {revealedMerchantCredentials.webhook_secret}
-                        </p>
-                      ) : null}
-                      {revealedMerchantCredentials.webhook_url_shopify ? (
-                        <p className="green-work-note" style={{ wordBreak: "break-all" }}>
-                          <strong>Shopify webhook URL:</strong> {revealedMerchantCredentials.webhook_url_shopify}
-                        </p>
-                      ) : null}
-                      <button type="button" onClick={() => setRevealedMerchantCredentials(null)}>
-                        I've saved this — dismiss
-                      </button>
-                    </div>
-                  ) : null}
-
-                  <div className="green-work-card" style={{ marginBottom: 16 }}>
-                    <h4 style={{ marginTop: 0 }}>Add Merchant</h4>
-                    <div className="work-actions" style={{ flexWrap: "wrap", gap: 8 }}>
-                      <input
-                        placeholder="Organization name (e.g. Kyalli)"
-                        value={newMerchantOrgName}
-                        onChange={(e) => setNewMerchantOrgName(e.target.value)}
-                      />
-                      <input
-                        placeholder="Contact name"
-                        value={newMerchantContactName}
-                        onChange={(e) => setNewMerchantContactName(e.target.value)}
-                      />
-                      <input
-                        placeholder="Contact email"
-                        value={newMerchantContactEmail}
-                        onChange={(e) => setNewMerchantContactEmail(e.target.value)}
-                      />
-                      <input
-                        placeholder="Contact phone (optional)"
-                        value={newMerchantContactPhone}
-                        onChange={(e) => setNewMerchantContactPhone(e.target.value)}
-                      />
-                      <select value={newMerchantProjectId} onChange={(e) => setNewMerchantProjectId(e.target.value)}>
-                        <option value="">Default project...</option>
-                        {projects
-                          .filter((p) => isPublicSponsorshipProject(p.access_model, p.public_sponsor_enabled))
-                          .map((p) => (
-                            <option key={`merchant-project-${p.id}`} value={p.id}>
-                              {p.name}
-                            </option>
-                          ))}
-                      </select>
-                      <input
-                        placeholder="Agreed price/tree (optional, overrides public price)"
-                        value={newMerchantPrice}
-                        onChange={(e) => setNewMerchantPrice(e.target.value.replace(/[^0-9.]/g, ""))}
-                      />
-                      <button type="button" onClick={() => void createMerchant()} disabled={creatingMerchant}>
-                        {creatingMerchant ? "Creating..." : "Add Merchant"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {merchantsError ? <p className="green-work-note danger">{merchantsError}</p> : null}
-                  {merchantsLoading ? (
-                    <p className="green-work-note">Loading merchants...</p>
-                  ) : merchants.length === 0 ? (
-                    <p className="green-work-note">No merchants provisioned yet.</p>
-                  ) : (
-                    <div className="staff-list">
-                      {merchants.map((merchant) => {
-                        const expanded = expandedMerchantId === merchant.id;
-                        return (
-                          <div key={`merchant-${merchant.id}`} className="staff-row">
-                            <div className="staff-row-head">
-                              <strong>{merchant.organization_name || "Merchant"}</strong>
-                              <span>{merchant.sponsor_uid || "-"}</span>
-                            </div>
-                            <div className="work-actions" style={{ margin: "8px 0 6px", flexWrap: "wrap" }}>
-                              <span className="green-work-live-pill neutral">Orders: {merchant.order_count ?? 0}</span>
-                              <span className="green-work-live-pill ok">Trees: {merchant.tree_count ?? 0}</span>
-                              <span className="green-work-live-pill info">Planted: {merchant.linked_count ?? 0}</span>
-                              <span className={`green-work-live-pill ${merchant.is_active ? "ok" : "danger"}`}>
-                                {merchant.is_active ? "Active" : "Disabled"}
-                              </span>
-                            </div>
-                            <div className="staff-row-meta">
-                              Contact: {merchant.contact_name || "-"} | {merchant.contact_email || "-"}
-                              {merchant.contact_phone ? ` | ${merchant.contact_phone}` : ""}
-                            </div>
-                            <div className="staff-row-meta">
-                              Agreed price/tree: {merchant.agreed_price_per_tree != null ? formatCurrencyAmount(merchant.agreed_price_per_tree, "NGN") : "Public project price"}
-                            </div>
-                            <div className="work-actions" style={{ marginTop: 8 }}>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (expanded) {
-                                    setExpandedMerchantId(null);
-                                    setMerchantDetail(null);
-                                    return;
-                                  }
-                                  setExpandedMerchantId(merchant.id);
-                                  void loadMerchantDetail(merchant.id);
-                                }}
-                              >
-                                {expanded ? "Hide details" : "View orders & webhook log"}
-                              </button>
-                              <button
-                                type="button"
-                                disabled={rotatingMerchantKeyId === merchant.id}
-                                onClick={() => void rotateMerchantKey(merchant.id)}
-                              >
-                                {rotatingMerchantKeyId === merchant.id ? "Rotating..." : "Rotate API Key"}
-                              </button>
-                              <button
-                                type="button"
-                                disabled={rotatingMerchantWebhookSecretId === merchant.id}
-                                onClick={() => void rotateMerchantWebhookSecret(merchant.id)}
-                              >
-                                {rotatingMerchantWebhookSecretId === merchant.id ? "Regenerating..." : "Regenerate Webhook Secret"}
-                              </button>
-                              <button type="button" onClick={() => void sendMerchantLoginInvite(merchant.contact_email)}>
-                                Send Login Invite
-                              </button>
-                            </div>
-                            <div className="staff-row-meta">
-                              Merchant dashboard: they log in at /green/login with their contact email — "Send Login
-                              Invite" emails them a link to set their password the first time.
-                            </div>
-                            {expanded ? (
-                              merchantDetailLoading ? (
-                                <p className="green-work-note">Loading details...</p>
-                              ) : merchantDetail ? (
-                                <div style={{ marginTop: 10 }}>
-                                  {merchantDetail.webhook_url_shopify ? (
-                                    <p className="green-work-note" style={{ wordBreak: "break-all" }}>
-                                      Shopify webhook URL: {merchantDetail.webhook_url_shopify}
-                                    </p>
-                                  ) : null}
-                                  <strong>Recent orders</strong>
-                                  {!merchantDetail.orders || merchantDetail.orders.length === 0 ? (
-                                    <p className="green-work-note">No orders yet — nothing has called the API/webhook for this merchant.</p>
-                                  ) : (
-                                    <div className="staff-list">
-                                      {merchantDetail.orders.map((order) => (
-                                        <div key={`merchant-order-${order.id}`} className="staff-row-meta">
-                                          {order.order_uid} | Ext: {order.external_order_id || "-"} | Source: {order.source || "-"} | Qty:{" "}
-                                          {order.quantity} | {formatCurrencyAmount(order.amount_total || 0, order.currency || "NGN")} | Status:{" "}
-                                          {order.order_status} | Planted: {order.linked_count ?? 0}/{order.quantity} |{" "}
-                                          {order.created_at ? formatDateLabel(order.created_at) : "-"}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                  <strong style={{ display: "block", marginTop: 10 }}>Recent webhook events</strong>
-                                  {merchantWebhookEvents.length === 0 ? (
-                                    <p className="green-work-note">No webhook deliveries recorded yet.</p>
-                                  ) : (
-                                    <div className="staff-list">
-                                      {merchantWebhookEvents.map((event) => (
-                                        <div key={`merchant-webhook-event-${event.id}`} className="staff-row-meta">
-                                          {event.platform} | {event.status}
-                                          {event.error_message ? ` | Error: ${event.error_message}` : ""} |{" "}
-                                          {event.created_at ? formatDateLabel(event.created_at) : "-"}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              ) : null
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+            <Suspense
+              fallback={
+                <div className="green-work-card">
+                  <p className="green-work-note">Loading merchant integrations...</p>
+                </div>
+              }
+            >
+              <GreenWorkMerchantsPanel
+                publicSponsorshipProject={publicSponsorshipProject}
+                revealedMerchantCredentials={revealedMerchantCredentials}
+                setRevealedMerchantCredentials={setRevealedMerchantCredentials}
+                newMerchantOrgName={newMerchantOrgName}
+                setNewMerchantOrgName={setNewMerchantOrgName}
+                newMerchantContactName={newMerchantContactName}
+                setNewMerchantContactName={setNewMerchantContactName}
+                newMerchantContactEmail={newMerchantContactEmail}
+                setNewMerchantContactEmail={setNewMerchantContactEmail}
+                newMerchantContactPhone={newMerchantContactPhone}
+                setNewMerchantContactPhone={setNewMerchantContactPhone}
+                newMerchantProjectId={newMerchantProjectId}
+                setNewMerchantProjectId={setNewMerchantProjectId}
+                projects={projects}
+                isPublicSponsorshipProject={isPublicSponsorshipProject}
+                newMerchantPrice={newMerchantPrice}
+                setNewMerchantPrice={setNewMerchantPrice}
+                createMerchant={createMerchant}
+                creatingMerchant={creatingMerchant}
+                merchantsError={merchantsError}
+                merchantsLoading={merchantsLoading}
+                merchants={merchants}
+                expandedMerchantId={expandedMerchantId}
+                setExpandedMerchantId={setExpandedMerchantId}
+                setMerchantDetail={setMerchantDetail}
+                loadMerchantDetail={loadMerchantDetail}
+                rotatingMerchantKeyId={rotatingMerchantKeyId}
+                rotateMerchantKey={rotateMerchantKey}
+                rotatingMerchantWebhookSecretId={rotatingMerchantWebhookSecretId}
+                rotateMerchantWebhookSecret={rotateMerchantWebhookSecret}
+                sendMerchantLoginInvite={sendMerchantLoginInvite}
+                merchantDetailLoading={merchantDetailLoading}
+                merchantDetail={merchantDetail}
+                merchantWebhookEvents={merchantWebhookEvents}
+                formatCurrencyAmount={formatCurrencyAmount}
+                formatDateLabel={formatDateLabel}
+              />
+            </Suspense>
           )}
 
           {activeForm === "sponsor_feedback" && (
+            <Suspense
+              fallback={
+                <div className="green-work-card">
+                  <p className="green-work-note">Loading sponsor feedback...</p>
+                </div>
+              }
+            >
+              <GreenWorkSponsorFeedbackPanel
+                publicSponsorshipProject={publicSponsorshipProject}
+                feedbackLoading={feedbackLoading}
+                socialFollowClaims={socialFollowClaims}
+                complaints={complaints}
+                schoolNominations={schoolNominations}
+                communityProjects={communityProjects}
+                redemptions={redemptions}
+                assistantEscalations={assistantEscalations}
+                loadSponsorFeedback={loadSponsorFeedback}
+                feedbackError={feedbackError}
+                canAccessSuperAdmin={canAccessSuperAdmin}
+                assistantEscalationReplies={assistantEscalationReplies}
+                setAssistantEscalationReplies={setAssistantEscalationReplies}
+                assistantEscalationNotes={assistantEscalationNotes}
+                setAssistantEscalationNotes={setAssistantEscalationNotes}
+                resolvingAssistantEscalationId={resolvingAssistantEscalationId}
+                handleResolveAssistantEscalation={handleResolveAssistantEscalation}
+                toDisplayPhotoUrl={toDisplayPhotoUrl}
+                followClaimNotes={followClaimNotes}
+                setFollowClaimNotes={setFollowClaimNotes}
+                handleReviewSocialFollowClaim={handleReviewSocialFollowClaim}
+                complaintNotes={complaintNotes}
+                setComplaintNotes={setComplaintNotes}
+                handleResolveComplaint={handleResolveComplaint}
+                nominationNotes={nominationNotes}
+                setNominationNotes={setNominationNotes}
+                handleReviewSchoolNomination={handleReviewSchoolNomination}
+                projectNotes={projectNotes}
+                setProjectNotes={setProjectNotes}
+                handleUpdateCommunityProjectStatus={handleUpdateCommunityProjectStatus}
+                redemptionNotes={redemptionNotes}
+                setRedemptionNotes={setRedemptionNotes}
+                handleReviewPointRedemption={handleReviewPointRedemption}
+              />
+            </Suspense>
+          )}
+
+          {false && activeForm === "sponsor_feedback" && (
             <div className="green-work-card">
               <h3>Sponsor Feedback & Nominations</h3>
               {!publicSponsorshipProject ? (
@@ -15606,11 +15039,11 @@ export default function GreenWork() {
                                         onClick={() => handleResolveAssistantEscalation(e.id, assistantEscalationNotes[e.id], assistantEscalationReplies[e.id])}
                                         style={{ padding: "4px 8px", fontSize: 11 }}
                                       >
-                                        {resolvingAssistantEscalationId === e.id ? "Sending…" : "Send Reply & Resolve"}
+                                        {resolvingAssistantEscalationId === e.id ? "Sendingâ€¦" : "Send Reply & Resolve"}
                                       </button>
                                     </div>
                                   ) : (
-                                    <span style={{ fontSize: 11, color: "#27ae60", fontWeight: "bold" }}>✓ Resolved</span>
+                                    <span style={{ fontSize: 11, color: "#27ae60", fontWeight: "bold" }}>âœ“ Resolved</span>
                                   )}
                                 </td>
                               </tr>
@@ -15847,7 +15280,7 @@ export default function GreenWork() {
                                     </button>
                                   </div>
                                 ) : (
-                                  <span style={{ fontSize: 11, color: '#27ae60', fontWeight: 'bold' }}>✓ Resolved</span>
+                                  <span style={{ fontSize: 11, color: '#27ae60', fontWeight: 'bold' }}>âœ“ Resolved</span>
                                 )}
                               </td>
                             </tr>
@@ -16054,11 +15487,11 @@ export default function GreenWork() {
                                   const method = details.delivery_method || '';
                                   const phone = details.phone || '';
                                   if (method === 'home_delivery') {
-                                    return `🏠 Home Delivery - Phone: ${phone} - Address: ${details.address || ''}, ${details.state || ''}, ${details.lga || ''}`;
+                                    return `ðŸ  Home Delivery - Phone: ${phone} - Address: ${details.address || ''}, ${details.state || ''}, ${details.lga || ''}`;
                                   } else if (method === 'office_pickup') {
-                                    return `🏢 Hub Pickup - Phone: ${phone} - Hub: ${details.hub || ''}`;
+                                    return `ðŸ¢ Hub Pickup - Phone: ${phone} - Hub: ${details.hub || ''}`;
                                   } else if (method === 'transport_terminal') {
-                                    return `🚌 Transport Park - Phone: ${phone} - Company: ${details.transport_company || ''}, Destination Park: ${details.destination_terminal || ''}`;
+                                    return `ðŸšŒ Transport Park - Phone: ${phone} - Company: ${details.transport_company || ''}, Destination Park: ${details.destination_terminal || ''}`;
                                   }
                                   return JSON.stringify(details);
                                 })()}
@@ -16117,400 +15550,44 @@ export default function GreenWork() {
           )}
 
           {activeForm === "logs" && canAccessSuperAdmin && (
-            <div className="green-work-card">
-              <h3>System Logs & Reports</h3>
-              <p className="green-work-note">
-                Monitor live API activity across Survey Plan, Flood, LandCheck Work, sponsor, and field capture surfaces,
-                plus tree tag QR printing statistics.
-              </p>
-
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void loadComplianceDashboard();
-                    void loadActivityLogs();
-                    void loadQrPrintsReport();
-                  }}
-                  disabled={logsLoading || complianceLoading}
-                >
-                  {logsLoading || complianceLoading ? "Refreshing..." : "Refresh Logs & Reports"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void runSecurityMaintenance();
-                  }}
-                  disabled={securityMaintenanceRunning}
-                >
-                  {securityMaintenanceRunning ? "Running maintenance..." : "Run Security Maintenance"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void ensureComplianceChecklist();
-                  }}
-                  disabled={complianceEnsuring}
-                >
-                  {complianceEnsuring ? "Preparing checklist..." : "Prepare Monthly Checklist"}
-                </button>
-                <button
-                  type="button"
-                  onClick={resetActivityLogs}
-                  style={{ backgroundColor: '#e74c3c', color: 'white', border: 'none' }}
-                >
-                  Reset Activity Logs
-                </button>
-              </div>
-
-              {logsError && <p className="green-work-error" style={{ color: 'red', marginBottom: 12 }}>{logsError}</p>}
-              {complianceError && <p className="green-work-error" style={{ color: "red", marginBottom: 12 }}>{complianceError}</p>}
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                <div
-                  style={{
-                    border: "1px solid #d9e9dd",
-                    borderRadius: 20,
-                    padding: 20,
-                    background: "linear-gradient(180deg, #fbfffc 0%, #f3fbf5 100%)",
-                    boxShadow: "0 18px 45px rgba(24, 72, 51, 0.08)",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      justifyContent: "space-between",
-                      gap: 16,
-                      marginBottom: 18,
-                    }}
-                  >
-                    <div style={{ minWidth: 260 }}>
-                      <h4 style={{ margin: 0, fontSize: 22 }}>Security & Compliance Operations</h4>
-                      <p className="green-work-note" style={{ margin: "8px 0 0", marginLeft: 0, maxWidth: 760 }}>
-                        This is the super-admin operating board for monthly security evidence, privileged-review signoff,
-                        backup verification, audit review, and live security posture checks.
-                      </p>
-                    </div>
-                    {complianceDashboard && (
-                      <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
-                        <span className="green-work-live-pill success">
-                          {complianceDashboard.period.label} checklist
-                        </span>
-                        <span className="green-work-live-pill neutral">
-                          Due {new Date(complianceDashboard.period.due_date || "").toLocaleDateString()}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {complianceLoading && !complianceDashboard ? (
-                    <p className="green-work-note" style={{ marginLeft: 0 }}>Loading compliance dashboard...</p>
-                  ) : complianceDashboard ? (
-                    <>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 18 }}>
-                        <span className="green-work-live-pill success">Completed: {complianceDashboard.summary.completed}</span>
-                        <span className="green-work-live-pill neutral">Pending: {complianceDashboard.summary.pending}</span>
-                        <span className="green-work-live-pill neutral">Skipped: {complianceDashboard.summary.skipped}</span>
-                        <span className="green-work-live-pill success">
-                          Completion rate: {Number(complianceDashboard.summary.completion_rate || 0).toFixed(1)}%
-                        </span>
-                      </div>
-
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-                          gap: 12,
-                          marginBottom: 18,
-                        }}
-                      >
-                        {compliancePostureEntries.map((entry) => (
-                          <div
-                            key={`posture-${entry.label}`}
-                            style={{
-                              border: "1px solid #d8e8da",
-                              borderRadius: 16,
-                              padding: "14px 16px",
-                              background: "#ffffff",
-                              minHeight: 86,
-                            }}
-                          >
-                            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", color: "#6a8572" }}>
-                              {entry.label}
-                            </div>
-                            <div style={{ marginTop: 10, fontSize: 24, fontWeight: 800, color: "#103b28", lineHeight: 1.15 }}>
-                              {entry.value}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div
-                        style={{
-                          border: "1px solid #dce7de",
-                          borderRadius: 16,
-                          padding: 14,
-                          background: "#ffffff",
-                          marginBottom: 18,
-                        }}
-                      >
-                        <strong style={{ display: "block", marginBottom: 6 }}>Website-operated controls</strong>
-                        <span style={{ color: "#51685a", fontSize: 13 }}>
-                          LandCheck can track completion, evidence links, and ownership here. Backup restore, management
-                          review, vendor review, and access review still require real human confirmation before you mark
-                          them complete.
-                        </span>
-                      </div>
-
-                      <div style={{ display: "grid", gap: 14 }}>
-                        {complianceDashboard.items.map((item) => {
-                          const draft = complianceDrafts[item.id] || { owner_name: "", evidence_location: "", notes: "" };
-                          const normalizedStatus = String(item.status || "pending").trim().toLowerCase();
-                          const statusStyle = getComplianceStatusStyle(normalizedStatus);
-                          const isSaving = complianceSavingId === item.id;
-                          return (
-                            <div
-                              key={`compliance-item-${item.id}`}
-                              style={{
-                                border: "1px solid #dbe7dc",
-                                borderRadius: 18,
-                                padding: 18,
-                                background: "#ffffff",
-                                display: "grid",
-                                gap: 14,
-                              }}
-                            >
-                              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 12 }}>
-                                <div style={{ minWidth: 260, flex: 1 }}>
-                                  <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.8, color: "#5a7b67" }}>
-                                    {item.category}
-                                  </div>
-                                  <h5 style={{ margin: "6px 0 8px", fontSize: 20, color: "#123523" }}>{item.title}</h5>
-                                  <p className="green-work-note" style={{ margin: 0, marginLeft: 0, maxWidth: 880 }}>
-                                    {item.description}
-                                  </p>
-                                </div>
-                                <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
-                                  <span
-                                    style={{
-                                      ...statusStyle,
-                                      borderRadius: 999,
-                                      padding: "7px 12px",
-                                      fontSize: 12,
-                                      fontWeight: 800,
-                                      textTransform: "capitalize",
-                                    }}
-                                  >
-                                    {normalizedStatus}
-                                  </span>
-                                  <span className="green-work-live-pill neutral">
-                                    {item.automation_level === "automated" ? "Automation-backed" : "Human signoff"}
-                                  </span>
-                                </div>
-                              </div>
-
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                                <span className="green-work-live-pill neutral">Due: {new Date(item.due_date || "").toLocaleDateString()}</span>
-                                <span className="green-work-live-pill neutral">Owner: {item.owner_name || "Not set"}</span>
-                                {item.completed_at ? (
-                                  <span className="green-work-live-pill success">
-                                    Completed by {item.completed_by || "-"} on {new Date(item.completed_at).toLocaleString()}
-                                  </span>
-                                ) : (
-                                  <span className="green-work-live-pill neutral">Awaiting completion</span>
-                                )}
-                              </div>
-
-                              <div
-                                style={{
-                                  display: "grid",
-                                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                                  gap: 12,
-                                }}
-                              >
-                                <label style={{ display: "grid", gap: 6 }}>
-                                  <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", color: "#587665" }}>Owner</span>
-                                  <input
-                                    value={draft.owner_name}
-                                    onChange={(event) =>
-                                      setComplianceDrafts((prev) => ({
-                                        ...prev,
-                                        [item.id]: {
-                                          ...prev[item.id],
-                                          owner_name: event.target.value,
-                                          evidence_location: prev[item.id]?.evidence_location ?? draft.evidence_location,
-                                          notes: prev[item.id]?.notes ?? draft.notes,
-                                        },
-                                      }))
-                                    }
-                                    placeholder="Super admin or control owner"
-                                    disabled={isSaving}
-                                  />
-                                </label>
-                                <label style={{ display: "grid", gap: 6 }}>
-                                  <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", color: "#587665" }}>Evidence link / path</span>
-                                  <input
-                                    value={draft.evidence_location}
-                                    onChange={(event) =>
-                                      setComplianceDrafts((prev) => ({
-                                        ...prev,
-                                        [item.id]: {
-                                          ...prev[item.id],
-                                          owner_name: prev[item.id]?.owner_name ?? draft.owner_name,
-                                          evidence_location: event.target.value,
-                                          notes: prev[item.id]?.notes ?? draft.notes,
-                                        },
-                                      }))
-                                    }
-                                    placeholder="Ticket, document path, export name, or storage URL"
-                                    disabled={isSaving}
-                                  />
-                                </label>
-                              </div>
-
-                              <label style={{ display: "grid", gap: 6 }}>
-                                <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", color: "#587665" }}>Review notes</span>
-                                <textarea
-                                  value={draft.notes}
-                                  onChange={(event) =>
-                                    setComplianceDrafts((prev) => ({
-                                      ...prev,
-                                      [item.id]: {
-                                        ...prev[item.id],
-                                        owner_name: prev[item.id]?.owner_name ?? draft.owner_name,
-                                        evidence_location: prev[item.id]?.evidence_location ?? draft.evidence_location,
-                                        notes: event.target.value,
-                                      },
-                                    }))
-                                  }
-                                  placeholder="Record what was reviewed, what changed, and any follow-up actions."
-                                  rows={3}
-                                  disabled={isSaving}
-                                />
-                              </label>
-
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    void updateComplianceChecklistItem(item, "completed");
-                                  }}
-                                  disabled={isSaving || normalizedStatus === "completed"}
-                                >
-                                  {isSaving && normalizedStatus !== "completed" ? "Saving..." : "Mark Complete"}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    void updateComplianceChecklistItem(item, "pending");
-                                  }}
-                                  disabled={isSaving || normalizedStatus === "pending"}
-                                  style={{ background: "#f4f9f5", color: "#184a33", border: "1px solid #cfe2d3" }}
-                                >
-                                  Reopen
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  ) : (
-                    <p className="green-work-note" style={{ marginLeft: 0 }}>
-                      Compliance dashboard is not available yet. Use “Prepare Monthly Checklist” to seed the current month.
-                    </p>
-                  )}
-                </div>
-
-                {/* QR Code Prints Report */}
-                <div>
-                  <h4>QR Tag Print Status Report</h4>
-                  {qrPrintsReport.length === 0 ? (
-                    <p className="green-work-note" style={{ marginLeft: 0 }}>No QR tag print logs recorded yet.</p>
-                  ) : (
-                    <table className="green-work-table">
-                      <thead>
-                        <tr>
-                          <th>Project</th>
-                          <th>Tree #</th>
-                          <th>Species</th>
-                          <th>Tree ID</th>
-                          <th>Print Count</th>
-                          <th>Last Printed At</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {qrPrintsReport.map((p: any) => (
-                          <tr key={`qrprint-${p.tree_id}`}>
-                            <td>{p.project_name}</td>
-                            <td>#{p.project_tree_no}</td>
-                            <td>{p.species}</td>
-                            <td>{p.tree_id}</td>
-                            <td style={{ fontWeight: 'bold' }}>{p.print_count} times</td>
-                            <td>{new Date(p.last_printed_at).toLocaleString()}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-
-                {/* System Activity Logs */}
-                <div>
-                  <h4>System Activity Logs (Capped at 10,000)</h4>
-                  {activityLogs.length === 0 ? (
-                    <p className="green-work-note" style={{ marginLeft: 0 }}>No system activity logs recorded yet.</p>
-                  ) : (
-                    <div style={{ maxHeight: 500, overflow: 'auto', border: '1px solid #dcdfdc', borderRadius: 4, padding: 12, backgroundColor: '#fcfcfc' }}>
-                      <table className="green-work-table" style={{ margin: 0 }}>
-                        <thead>
-                          <tr>
-                            <th>Time</th>
-                            <th>Source</th>
-                            <th>Event</th>
-                            <th>Actor</th>
-                            <th>Message</th>
-                            <th>Details</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {activityLogs.map((log) => {
-                            const hasDetails = hasActivityLogDetails(log.details);
-                            const detailsSummary = summarizeActivityLogDetails(log.details);
-                            return (
-                              <tr key={`log-${log.id}`} style={{ fontSize: 12 }}>
-                                <td style={{ whiteSpace: 'nowrap' }}>{new Date(log.created_at || "").toLocaleString()}</td>
-                                <td style={{ textTransform: 'capitalize' }}>{log.source}</td>
-                                <td><span className="green-work-live-pill neutral">{log.event_type}</span></td>
-                                <td>{resolveActivityLogActor(log)}</td>
-                                <td style={{ minWidth: 220 }}>{log.message}</td>
-                                <td className="green-work-log-details-cell">
-                                  {hasDetails ? (
-                                    <button
-                                      type="button"
-                                      className="green-work-log-details-trigger"
-                                      onClick={() => setSelectedActivityLog(log)}
-                                    >
-                                      <span className="green-work-log-details-trigger-label">View details</span>
-                                      <span className="green-work-log-details-trigger-meta">{detailsSummary}</span>
-                                    </button>
-                                  ) : (
-                                    <span className="green-work-log-details-empty">-</span>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <Suspense fallback={<div className="green-work-card"><p className="green-work-note">Loading system logs and compliance tools...</p></div>}>
+              <GreenWorkLogsPanel
+                refreshLogsAndReports={() => {
+                  void loadComplianceDashboard();
+                  void loadActivityLogs();
+                  void loadQrPrintsReport();
+                }}
+                logsLoading={logsLoading}
+                complianceLoading={complianceLoading}
+                runSecurityMaintenance={() => {
+                  void runSecurityMaintenance();
+                }}
+                securityMaintenanceRunning={securityMaintenanceRunning}
+                ensureComplianceChecklist={() => {
+                  void ensureComplianceChecklist();
+                }}
+                complianceEnsuring={complianceEnsuring}
+                resetActivityLogs={resetActivityLogs}
+                logsError={logsError}
+                complianceError={complianceError}
+                complianceDashboard={complianceDashboard}
+                compliancePostureEntries={compliancePostureEntries}
+                complianceDrafts={complianceDrafts}
+                setComplianceDrafts={setComplianceDrafts}
+                complianceSavingId={complianceSavingId}
+                getComplianceStatusStyle={getComplianceStatusStyle}
+                updateComplianceChecklistItem={updateComplianceChecklistItem}
+                qrPrintsReport={qrPrintsReport}
+                activityLogs={activityLogs}
+                hasActivityLogDetails={hasActivityLogDetails}
+                summarizeActivityLogDetails={summarizeActivityLogDetails}
+                resolveActivityLogActor={resolveActivityLogActor}
+                selectedActivityLog={selectedActivityLog}
+                setSelectedActivityLog={setSelectedActivityLog}
+                selectedActivityLogDetailsText={selectedActivityLogDetailsText}
+              />
+            </Suspense>
           )}
-
           {activeForm === "assign_work" && (
             <div className="green-work-card">
               <h3>Assign Tree Planting</h3>
@@ -16558,7 +15635,7 @@ export default function GreenWork() {
                                   <div style={{ display: "grid", gap: 6 }}>
                                     {(donor.assignments || []).map((a: any) => (
                                       <div key={`donor-${sponsorId}-agent-${a.agent_user_id || a.agent_name}`} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                                        <span>{a.agent_name} × {a.count}</span>
+                                        <span>{a.agent_name} Ã— {a.count}</span>
                                         <button
                                           type="button"
                                           style={{ fontSize: 11, padding: "2px 6px" }}
@@ -16662,7 +15739,7 @@ export default function GreenWork() {
                                               }
                                               disabled={assigningDonorSponsorId === sponsorId}
                                             >
-                                              ×
+                                              Ã—
                                             </button>
                                           </div>
                                         ))}
@@ -16705,7 +15782,7 @@ export default function GreenWork() {
                 <div className="green-work-card" style={{ marginBottom: 20 }}>
                   <h4 style={{ marginTop: 0 }}>Active Planting Orders</h4>
                   <p className="green-work-note" style={{ marginLeft: 0 }}>
-                    Cancel a stale or incorrect planting order here — for example, one assigned before sponsor-based
+                    Cancel a stale or incorrect planting order here â€” for example, one assigned before sponsor-based
                     assignment existed, whose quota no longer reflects real sponsored trees. Cancelling stops it from
                     counting toward the agent's "remaining" total in the app.
                   </p>
@@ -17627,220 +16704,53 @@ export default function GreenWork() {
           )}
 
           {activeForm === "review_queue" && (
-            <div className="green-work-card">
-              <div className="green-work-row">
-                <h3>Supervisor Review Queue</h3>
-                {activeProjectId && (
-                  <div className="work-actions">
-                    <button type="button" onClick={() => void loadProjectData(activeProjectId)}>
-                      Refresh
-                    </button>
-                  </div>
-                )}
-              </div>
-              {!activeProjectId && <p className="green-work-note">Select project first from Project Focus.</p>}
-              {activeProjectId && reviewQueue.length === 0 && <p className="green-work-note">No submitted tasks awaiting review.</p>}
-              <div className="staff-list">
-                {reviewQueue.map((task) => {
-                  const reviewTreeRecord = treeById.get(Number(task.tree_id)) || null;
-                  const fallbackTreeCoords = treeCoordinatesById.get(Number(task.tree_id));
-                  const originalTreeLng = toFiniteCoord(task.tree_lng) ?? toFiniteCoord(fallbackTreeCoords?.lng);
-                  const originalTreeLat = toFiniteCoord(task.tree_lat) ?? toFiniteCoord(fallbackTreeCoords?.lat);
-                  const maintenanceLng = toFiniteCoord(task.activity_lng);
-                  const maintenanceLat = toFiniteCoord(task.activity_lat);
-                  const reviewPhotoRenderOptions = getReviewPhotoRenderOptions();
-                  const evidencePhotos = getTaskPhotoUrls(task);
-                  const distanceFromTreeMeters = computeDistanceMeters(
-                    originalTreeLng,
-                    originalTreeLat,
-                    maintenanceLng,
-                    maintenanceLat,
-                  );
-                  let distanceToneClass = "is-unknown";
-                  if (distanceFromTreeMeters !== null) {
-                    if (distanceFromTreeMeters <= 10) distanceToneClass = "is-close";
-                    else if (distanceFromTreeMeters <= 30) distanceToneClass = "is-near";
-                    else distanceToneClass = "is-far";
-                  }
-                  const reviewWorkflowProfile = activeWorkflowProfile;
-                  const reviewTaskLabel = formatWorkflowTaskTypeLabel(task.task_type, reviewWorkflowProfile);
-                  const reviewEntityLabel = agricWorkflowMode
-                    ? reviewTreeRecord
-                      ? formatPlotRecordLabel(reviewTreeRecord)
-                      : formatProjectTreeLabelById(task.tree_id)
-                    : reliefWorkflowMode
-                      ? reviewTreeRecord
-                        ? formatReliefSiteLabel(reviewTreeRecord)
-                        : formatProjectTreeLabelById(task.tree_id)
-                    : formatProjectTreeLabelById(task.tree_id);
-                  const reviewCropLabel = reviewTreeRecord ? getPlotCommodityLabel(reviewTreeRecord) : task.tree_species || "-";
-                  const reviewPlotAreaLabel = reviewTreeRecord ? formatPlotAreaLabel(reviewTreeRecord) : "-";
-                  const reviewSeasonLabel = reviewTreeRecord ? formatPlotSeasonLabel(reviewTreeRecord) : "-";
-                  const reviewBoundaryLabel = formatBoundaryCaptureMethodLabel(
-                    reviewTreeRecord?.record_profile_data?.boundary_capture_method,
-                  );
-                  const reviewReliefAssetType = reviewTreeRecord?.record_profile_data?.asset_type
-                    ? formatTaskTypeLabel(reviewTreeRecord.record_profile_data.asset_type)
-                    : "-";
-                  const reviewReliefDamageLevel = reviewTreeRecord?.record_profile_data?.damage_level
-                    ? formatReliefDamageLevelLabel(reviewTreeRecord.record_profile_data.damage_level)
-                    : "-";
-                  const reviewReliefResponsePathway = reviewTreeRecord?.record_profile_data?.response_pathway
-                    ? formatTaskTypeLabel(reviewTreeRecord.record_profile_data.response_pathway)
-                    : "-";
-                  const reviewIrrigationLabel = reviewTreeRecord?.record_profile_data?.irrigation_type
-                    ? formatTaskTypeLabel(reviewTreeRecord.record_profile_data.irrigation_type)
-                    : "-";
-                  const reviewStageLabel = reviewTreeRecord?.record_profile_data?.production_stage
-                    ? formatTaskTypeLabel(reviewTreeRecord.record_profile_data.production_stage)
-                    : "-";
-                  return (
-                  <div key={task.id} className="staff-row">
-                    <div className="staff-row-head">
-                      <strong>
-                        Task #{task.id} - {reviewTaskLabel}
-                      </strong>
-                      <span>{task.assignee_name || "-"}</span>
-                    </div>
-                    <div className="staff-row-meta">
-                      {reviewEntityLabel} | Due: {formatDateLabel(task.due_date)} | Priority: {task.priority || "normal"}
-                    </div>
-                    <div className="staff-row-meta">
-                      Review: {task.review_state || "none"} | Submitted: {formatDateLabel(task.submitted_at || task.created_at)}
-                    </div>
-                    <div className="staff-row-meta">
-                      {fieldWorkflowMode ? "Observed / reference date" : "Planting / reference date"}: {formatDateLabel(task.tree_planting_date || task.due_date || task.created_at)}
-                    </div>
-                    {agricWorkflowMode ? (
-                      <>
-                        <div className="staff-row-meta">
-                          Farm details: Crop: {reviewCropLabel} | Area: {reviewPlotAreaLabel} | Boundary: {reviewBoundaryLabel} | Season: {reviewSeasonLabel}
-                        </div>
-                        <div className="staff-row-meta">
-                          Farm profile: Irrigation: {reviewIrrigationLabel} | Stage: {reviewStageLabel} | Status: {treeStatusLabel(task.tree_status)}
-                        </div>
-                        <div className="staff-row-meta">
-                          Farm GPS: {formatGpsPair(originalTreeLng, originalTreeLat)}
-                        </div>
-                        <div className="staff-row-meta">
-                          Field GPS: {formatGpsPair(maintenanceLng, maintenanceLat)}
-                          {task.activity_recorded_at ? ` | Captured: ${formatDateTimeLabel(task.activity_recorded_at)}` : ""}
-                        </div>
-                        <div className={`staff-row-meta green-work-review-distance ${distanceToneClass}`}>
-                          Distance from farm anchor: {formatDistanceMeters(distanceFromTreeMeters)}
-                        </div>
-                      </>
-                    ) : reliefWorkflowMode ? (
-                      <>
-                        <div className="staff-row-meta">
-                          Site details: Type: {reviewReliefAssetType} | Damage: {reviewReliefDamageLevel} | Area: {reviewPlotAreaLabel} | Boundary: {reviewBoundaryLabel}
-                        </div>
-                        <div className="staff-row-meta">
-                          Recovery profile: Response path: {reviewReliefResponsePathway} | Occupancy: {reviewTreeRecord?.record_profile_data?.occupancy_status || "-"} | Status: {treeStatusLabel(task.tree_status)}
-                        </div>
-                        <div className="staff-row-meta">
-                          Site GPS: {formatGpsPair(originalTreeLng, originalTreeLat)}
-                        </div>
-                        <div className="staff-row-meta">
-                          Visit GPS: {formatGpsPair(maintenanceLng, maintenanceLat)}
-                          {task.activity_recorded_at ? ` | Captured: ${formatDateTimeLabel(task.activity_recorded_at)}` : ""}
-                        </div>
-                        <div className={`staff-row-meta green-work-review-distance ${distanceToneClass}`}>
-                          Distance from site anchor: {formatDistanceMeters(distanceFromTreeMeters)}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="staff-row-meta">
-                          Tree metadata: Species: {task.tree_species || "-"} | Origin: {formatTreeOriginLabel(task.tree_origin)}
-                          {Number.isFinite(Number(task.tree_height_m)) ? ` | Height: ${formatTreeHeight(task.tree_height_m)}` : ""}
-                          {normalizeName(task.tree_origin) === "existing_inventory" &&
-                          Number.isFinite(Number(task.tree_age_months)) &&
-                          Number(task.tree_age_months) >= 0
-                            ? ` | Estimated age: ${Math.round(Number(task.tree_age_months))}m`
-                            : ""}
-                        </div>
-                        <div className="staff-row-meta">
-                          Tree GPS: {formatGpsPair(originalTreeLng, originalTreeLat)}
-                        </div>
-                        <div className="staff-row-meta">
-                          Maintenance GPS: {formatGpsPair(maintenanceLng, maintenanceLat)}
-                          {task.activity_recorded_at ? ` | Captured: ${formatDateTimeLabel(task.activity_recorded_at)}` : ""}
-                        </div>
-                        <div className={`staff-row-meta green-work-review-distance ${distanceToneClass}`}>
-                          Distance from tree: {formatDistanceMeters(distanceFromTreeMeters)}
-                        </div>
-                      </>
-                    )}
-                    {task.reported_tree_status && (
-                      <div className="staff-row-meta">
-                        {fieldWorkflowMode ? "Reported field condition" : "Reported condition"}: {formatTaskTypeLabel(task.reported_tree_status)}
-                      </div>
-                    )}
-                    {task.review_notes && (
-                      <div className="staff-row-meta">Latest supervisor note: {task.review_notes}</div>
-                    )}
-                    {(task.custodian_name || normalizeName(task.task_type) === "supervision") && (
-                      <div className="staff-row-meta">
-                        {fieldWorkflowMode ? activeWorkflowLabels.ownerSingular : "Custodian"}: {task.custodian_name || "-"} | Community: {task.custodian_community_name || "-"} | Contact:{" "}
-                        {task.custodian_phone || task.custodian_email || task.custodian_contact_person || "-"}
-                      </div>
-                    )}
-                    {normalizeName(task.task_type) === "supervision" && (
-                      <div className="staff-row-meta">
-                        {fieldWorkflowMode ? activeWorkflowLabels.supportVisitTitle.replace(/s$/, "") : "Supervision visit"}: {Number(task.supervision_visit_no || 0) || "-"} /{" "}
-                        {Number(task.supervision_total_visits || 0) || "-"}
-                      </div>
-                    )}
-                    <div className="staff-row-meta">
-                      Evidence: {evidencePhotos.length} photo{evidencePhotos.length === 1 ? "" : "s"} /{" "}
-                      {task.notes ? "notes" : "no-notes"}
-                    </div>
-                    {evidencePhotos.length > 0 && (
-                      <div className="green-work-review-photo">
-                        {evidencePhotos.map((photoUrl, photoIndex) => (
-                          <img
-                            key={`review-task-${task.id}-photo-${photoIndex}`}
-                            src={toDisplayPhotoUrl(photoUrl, reviewPhotoRenderOptions)}
-                            alt={`Task ${task.id} evidence ${photoIndex + 1}`}
-                            loading={photoIndex === 0 ? "eager" : "lazy"}
-                            decoding="async"
-                            width={reviewPhotoRenderOptions.w || 560}
-                            height={reviewPhotoRenderOptions.h || 420}
-                          />
-                        ))}
-                      </div>
-                    )}
-                    <textarea
-                      placeholder="Supervisor note (required for reject or metadata edit)"
-                      value={reviewNoteByTaskId[task.id] ?? task.review_notes ?? ""}
-                      onChange={(e) =>
-                        setReviewNoteByTaskId((prev) => ({
-                          ...prev,
-                          [task.id]: e.target.value,
-                        }))
-                      }
-                    />
-                    <div className="work-actions">
-                      <button type="button" onClick={() => void reviewSubmittedTask(task.id, "approve")}>
-                        Approve
-                      </button>
-                      <button type="button" onClick={() => void reviewSubmittedTask(task.id, "metadata_edit")}>
-                        Metadata Edit
-                      </button>
-                      <button type="button" onClick={() => void reviewSubmittedTask(task.id, "reject")}>
-                        Reject
-                      </button>
-                      {normalizeName(task.review_state) === "approved" && (
-                        <button type="button" onClick={() => void reopenApprovedTask(task.id)}>
-                          Reopen
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )})}
-              </div>
-            </div>
+            <Suspense
+              fallback={
+                <div className="green-work-card">
+                  <p className="green-work-note">Loading review queue...</p>
+                </div>
+              }
+            >
+              <GreenWorkReviewQueuePanel
+                activeProjectId={activeProjectId}
+                loadProjectData={loadProjectData}
+                reviewQueue={reviewQueue}
+                treeById={treeById}
+                treeCoordinatesById={treeCoordinatesById}
+                toFiniteCoord={toFiniteCoord}
+                getReviewPhotoRenderOptions={getReviewPhotoRenderOptions}
+                getTaskPhotoUrls={getTaskPhotoUrls}
+                computeDistanceMeters={computeDistanceMeters}
+                activeWorkflowProfile={activeWorkflowProfile}
+                formatWorkflowTaskTypeLabel={formatWorkflowTaskTypeLabel}
+                agricWorkflowMode={agricWorkflowMode}
+                formatPlotRecordLabel={formatPlotRecordLabel}
+                formatProjectTreeLabelById={formatProjectTreeLabelById}
+                reliefWorkflowMode={reliefWorkflowMode}
+                formatReliefSiteLabel={formatReliefSiteLabel}
+                getPlotCommodityLabel={getPlotCommodityLabel}
+                formatPlotAreaLabel={formatPlotAreaLabel}
+                formatPlotSeasonLabel={formatPlotSeasonLabel}
+                formatBoundaryCaptureMethodLabel={formatBoundaryCaptureMethodLabel}
+                formatTaskTypeLabel={formatTaskTypeLabel}
+                formatTreeOriginLabel={formatTreeOriginLabel}
+                formatTreeHeight={formatTreeHeight}
+                formatReliefDamageLevelLabel={formatReliefDamageLevelLabel}
+                treeStatusLabel={treeStatusLabel}
+                formatGpsPair={formatGpsPair}
+                formatDateTimeLabel={formatDateTimeLabel}
+                formatDistanceMeters={formatDistanceMeters}
+                fieldWorkflowMode={fieldWorkflowMode}
+                reviewNoteByTaskId={reviewNoteByTaskId}
+                setReviewNoteByTaskId={setReviewNoteByTaskId}
+                reviewSubmittedTask={reviewSubmittedTask}
+                reopenApprovedTask={reopenApprovedTask}
+                activeWorkflowLabels={activeWorkflowLabels}
+                toDisplayPhotoUrl={toDisplayPhotoUrl}
+                formatDateLabel={formatDateLabel}
+                normalizeName={normalizeName}
+              />
+            </Suspense>
           )}
         </aside>
 
@@ -18153,6 +17063,41 @@ export default function GreenWork() {
           )}
 
           {activeProjectId && activeForm === "verra_reports" && (
+            <Suspense
+              fallback={
+                <div className="green-work-card">
+                  <p className="green-work-note">Loading reporting tools...</p>
+                </div>
+              }
+            >
+              <GreenWorkVerraReportsPanel
+                activeProjectId={activeProjectId}
+                csrProjectMode={csrProjectMode}
+                exportExistingTreesCsv={exportExistingTreesCsv}
+                workPartnerOrgPaused={workPartnerOrgPaused}
+                exportExistingTreesPdf={exportExistingTreesPdf}
+                includePhotosInExistingTreesPdf={includePhotosInExistingTreesPdf}
+                setIncludePhotosInExistingTreesPdf={setIncludePhotosInExistingTreesPdf}
+                loadProjectData={loadProjectData}
+                loadExistingTreeMetrics={loadExistingTreeMetrics}
+                existingTreeIntakeRows={existingTreeIntakeRows}
+                visibleProjectTrees={visibleProjectTrees}
+                formatCsrProgramTypeLabel={formatCsrProgramTypeLabel}
+                activeProjectRecord={activeProjectRecord}
+                projectSettingsDraft={projectSettingsDraft}
+                exportVerraPackage={exportVerraPackage}
+                loadVerraHistory={loadVerraHistory}
+                verraFilters={verraFilters}
+                setVerraFilters={setVerraFilters}
+                assignees={assignees}
+                verraHistory={verraHistory}
+                formatDateLabel={formatDateLabel}
+                normalizeVerraExportFormat={normalizeVerraExportFormat}
+              />
+            </Suspense>
+          )}
+
+          {false && activeProjectId && activeForm === "verra_reports" && (
             <div className="green-work-card green-work-verra-card">
               {csrProjectMode ? (
                 <>
@@ -18182,8 +17127,8 @@ export default function GreenWork() {
                         type="button"
                         onClick={() =>
                           void Promise.all([
-                            loadProjectData(activeProjectId),
-                            loadExistingTreeMetrics(activeProjectId),
+                            loadProjectData(activeProjectId!),
+                            loadExistingTreeMetrics(activeProjectId!),
                           ])
                         }
                       >
@@ -18265,7 +17210,7 @@ export default function GreenWork() {
                       >
                         Export Verra DOCX
                       </button>
-                      <button type="button" onClick={() => void loadVerraHistory(activeProjectId)}>
+                      <button type="button" onClick={() => void loadVerraHistory(activeProjectId!)}>
                         Refresh History
                       </button>
                     </div>
@@ -18422,528 +17367,127 @@ export default function GreenWork() {
           )}
 
           {activeProjectId && activeForm === "live_table" && (
-            <div className="green-work-card green-work-live-card">
-              <div className="green-work-row">
-                <h3 className="green-work-live-title">
-                  <span className="green-work-live-title-text">Live Maintenance Table</span>
-                  <span className="green-work-live-title-indicator" aria-label="Live monitoring active">
-                    <span className="green-work-live-title-dot" aria-hidden="true" />
-                    <span className="green-work-live-title-wave" aria-hidden="true" />
-                    Live Monitoring
-                  </span>
-                </h3>
-                <div className="work-actions">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void Promise.all([
-                        loadProjectData(activeProjectId),
-                        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, "new_planting"),
-                        loadServerLiveMaintenance(activeProjectId, seasonMode, assigneeFilter, "existing_inventory"),
-                      ])
-                    }
-                  >
-                    Refresh
-                  </button>
-                  <select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}>
-                    {assignees.map((a) => (
-                      <option key={a} value={a}>
-                        {a === "all" ? "All staff" : a}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="green-work-live-scope-tabs" role="tablist" aria-label="Maintenance scope">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={!liveTableIsExistingScope}
-                  className={`green-work-live-scope-tab ${!liveTableIsExistingScope ? "active" : ""}`}
-                  onClick={() => setLiveTreeScopeTab("new_planting")}
-                >
-                  New Planting
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={liveTableIsExistingScope}
-                  className={`green-work-live-scope-tab ${liveTableIsExistingScope ? "active" : ""}`}
-                  onClick={() => setLiveTreeScopeTab("existing_inventory")}
-                >
-                  Existing Trees
-                </button>
-              </div>
-              <p className="green-work-chart-context">
-                {liveTableIsExistingScope
-                  ? "Context: existing-tree maintenance uses tree status, planting/reference date, captured age, replacement history, and approved maintenance completions for age-based scheduling."
-                  : "Context: live monitoring for newly planted trees from planting date through establishment cycles."}
-              </p>
-              <div className="green-work-live-season-row">
-                <label htmlFor="green-work-live-season-select">Season Model</label>
-                <select
-                  id="green-work-live-season-select"
-                  value={seasonMode}
-                  onChange={(e) => setSeasonMode(e.target.value as SeasonMode)}
-                >
-                  <option value="rainy">Rainy Season</option>
-                  <option value="dry">Dry Season</option>
-                </select>
-              </div>
-              {!liveTableIsExistingScope && (
-                <>
-                  <div className="green-work-live-maturity-row">
-                    <label htmlFor="green-work-live-species-select">Species</label>
-                    <select
-                      id="green-work-live-species-select"
-                      value={selectedMaturitySpecies}
-                      onChange={(e) => {
-                        const speciesKey = e.target.value;
-                        setSelectedMaturitySpecies(speciesKey);
-                        const currentYears = activeProjectMaturityMap[speciesKey];
-                        setSelectedMaturityYears(currentYears ? String(currentYears) : "3");
-                      }}
-                    >
-                      {projectSpeciesOptions.length === 0 ? (
-                        <option value="">No species in this project yet</option>
-                      ) : (
-                        projectSpeciesOptions.map((item) => (
-                          <option key={item.key} value={item.key}>
-                            {item.label}
-                          </option>
-                        ))
-                      )}
-                    </select>
-
-                    <label htmlFor="green-work-live-years-select">Peg Years</label>
-                    <select
-                      id="green-work-live-years-select"
-                      value={selectedMaturityYears}
-                      onChange={(e) => setSelectedMaturityYears(e.target.value)}
-                      disabled={!selectedMaturitySpecies}
-                    >
-                      {Array.from({ length: 15 }, (_, index) => index + 1).map((years) => (
-                        <option key={years} value={years}>
-                          {years} {years === 1 ? "Year" : "Years"}
-                        </option>
-                      ))}
-                    </select>
-
-                    <button
-                      type="button"
-                      className="green-work-live-years-btn"
-                      onClick={saveSpeciesMaturityYears}
-                      disabled={!selectedMaturitySpecies}
-                    >
-                      Save Peg
-                    </button>
-                  </div>
-                  <div className="green-work-live-maturity-list">
-                    {speciesMaturityRows.length === 0 ? (
-                      <span className="green-work-live-maturity-chip is-empty">Add trees with species to configure peg years.</span>
-                    ) : (
-                      speciesMaturityRows.map((item) => (
-                        <span
-                          key={item.key}
-                          className={`green-work-live-maturity-chip ${item.years ? "is-set" : "is-empty"}`}
-                        >
-                          {item.label}: {item.years ? `${item.years} years` : "Not set"}
-                        </span>
-                      ))
-                    )}
-                  </div>
-                </>
-              )}
-
-              <div className="green-work-live-summary">
-                <span className="green-work-live-pill neutral">Season: {SEASON_LABEL[seasonMode]}</span>
-                <span className="green-work-live-pill danger">Danger: {displayedLiveSummary.danger}</span>
-                <span className="green-work-live-pill warning">In Progress / Due Soon: {displayedLiveSummary.warning}</span>
-                <span className="green-work-live-pill ok">On Track: {displayedLiveSummary.ok}</span>
-                <span className="green-work-live-pill info">
-                  {liveTableIsExistingScope ? "Needs Age Data" : "Needs Planting Date"}: {displayedLiveSummary.info}
-                </span>
-                <span className="green-work-live-pill neutral">Rows: {displayedLiveSummary.total}</span>
-              </div>
-              <div className="green-work-live-filter-row">
-                <label htmlFor="green-work-live-attention-filter">Queue filter</label>
-                <select
-                  id="green-work-live-attention-filter"
-                  value={maintenanceAttentionFilter}
-                  onChange={(e) => setMaintenanceAttentionFilter(e.target.value as MaintenanceAttentionFilter)}
-                >
-                  <option value="all">All maintenance rows</option>
-                  <option value="needs_action">Needs attention now</option>
-                  <option value="no_open_task">No open task assigned</option>
-                  <option value="overdue">Overdue</option>
-                  <option value="due_soon">Due soon</option>
-                  <option value="replacement_required">Replacement required</option>
-                  <option value="inspection_flags">Inspection / condition flags</option>
-                </select>
-                <span>Filter the queue before selecting rows for dispatch.</span>
-              </div>
-
-              <div className="green-work-live-bulk-bar">
-                <div className="green-work-live-bulk-copy">
-                  <strong>
-                    {selectedMaintenanceRows.length} selected
-                    {hiddenMaintenanceSelectionCount > 0
-                      ? ` (${displayedMaintenanceSelectionCount} visible in this queue)`
-                      : ""}
-                  </strong>
-                  <span>
-                    {hiddenMaintenanceSelectionCount > 0
-                      ? `${hiddenMaintenanceSelectionCount} selected row${hiddenMaintenanceSelectionCount === 1 ? "" : "s"} are hidden by the current scope or queue filter.`
-                      : "Select rows to assign one tree, many trees, or distribute work across staff."}
-                  </span>
-                </div>
-                <div className="work-actions">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMaintenanceRowKeys((prev) => Array.from(new Set([...prev, ...displayedLiveRows.map((row) => row.key)])))}
-                    disabled={!displayedLiveRows.length}
-                  >
-                    Select visible
-                  </button>
-                  <button type="button" onClick={() => setSelectedMaintenanceRowKeys([])} disabled={!selectedMaintenanceRows.length}>
-                    Clear
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMaintenanceMapFocusEnabled(true);
-                      setActiveForm("map_view");
-                      setMenuOpen(false);
-                      setStaffMenu(null);
-                      setLiveTreeMenu(null);
-                    }}
-                    disabled={!selectedMaintenanceRows.length}
-                  >
-                    View selected on map
-                  </button>
-                  <button type="button" className="btn-primary" onClick={() => openAssignTaskForSelectedRows()} disabled={!selectedMaintenanceRows.length}>
-                    Assign selected
-                  </button>
-                </div>
-              </div>
-
-              <div className="green-work-live-table-wrap">
-                <table className="green-work-live-table">
-                  <thead>
-                    <tr>
-                      <th>Select</th>
-                      <th>Tree</th>
-                      <th>Staff</th>
-                      <th>Activity</th>
-                      <th>Tree Age</th>
-                      <th>Last Done</th>
-                      <th>Model Due</th>
-                      <th>Assigned Due</th>
-                      <th>Countdown</th>
-                      <th>Status</th>
-                      <th>Indicator</th>
-                      <th>Progress</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {displayedLiveRows.length === 0 ? (
-                      <tr>
-                        <td colSpan={12} className="green-work-live-empty">
-                          {liveTableIsExistingScope
-                            ? "No existing-tree maintenance rows available for this filter."
-                            : "No tree maintenance rows available for this filter."}
-                        </td>
-                      </tr>
-                    ) : (
-                      displayedLiveRows.map((row) => {
-                        const rowTree = trees.find((tree) => Number(tree.id) === Number(row.treeId));
-                        const isSelected = selectedMaintenanceRowKeys.includes(row.key);
-                        return (
-                        <tr key={row.key} className={`tone-${row.tone} ${isSelected ? "is-selected" : ""}`}>
-                          <td>
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleMaintenanceRowSelection(row.key)}
-                              aria-label={`Select ${formatProjectTreeLabelById(row.treeId)} ${row.activityLabel}`}
-                            />
-                          </td>
-                          <td>
-                            <div className="green-work-live-tree-cell">
-                              <button
-                                type="button"
-                                className="green-work-live-tree-link"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  setStaffMenu(null);
-                                  setLiveTreeMenu({ treeId: row.treeId, x: event.clientX, y: event.clientY, taskType: row.activity });
-                                }}
-                              >
-                                {formatProjectTreeLabelById(row.treeId)}
-                              </button>
-                              <span className="green-work-live-hint">
-                                {(rowTree?.species || "Species -")} | {treeStatusLabel(rowTree?.status)} | {formatTreeOriginLabel(row.treeOrigin)}
-                              </span>
-                              <button
-                                type="button"
-                                className="green-work-live-assign-link"
-                                onClick={() => openAssignTaskForSelectedRows([row])}
-                              >
-                                Assign this
-                              </button>
-                            </div>
-                          </td>
-                          <td>{row.assignee}</td>
-                          <td>
-                            <strong>{row.activityLabel}</strong>
-                            <span className="green-work-live-hint">{row.modelRationale}</span>
-                          </td>
-                          <td>{row.treeAgeDays === null ? "-" : `${row.treeAgeDays}d`}</td>
-                          <td>{formatDateLabel(row.lastDoneAt)}</td>
-                          <td>{formatDateLabel(row.modelDueDate)}</td>
-                          <td>{formatDateLabel(row.assignedDueDate)}</td>
-                          <td
-                            className={`green-work-live-countdown ${
-                              row.countdownDays !== null && row.countdownDays < 0 ? "overdue" : ""
-                            }`}
-                          >
-                            {row.countdownDays === null
-                              ? "-"
-                              : row.countdownDays < 0
-                                ? `${Math.abs(row.countdownDays)}d late`
-                                : row.countdownDays === 0
-                                  ? "Due today"
-                                  : `${row.countdownDays}d left`}
-                          </td>
-                          <td>{row.statusText}</td>
-                          <td>
-                            <span className={`green-work-live-indicator ${row.tone}`}>{row.indicator}</span>
-                          </td>
-                          <td>
-                            Done {row.doneCount} | Open {row.pendingCount} | Overdue {row.overdueCount}
-                          </td>
-                        </tr>
-                      )})
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="green-work-live-sources">
-                <h4>Schedule Sources</h4>
-                <p>
-                  {liveTableIsExistingScope
-                    ? "Existing-tree maintenance follows the same Nigeria-adapted field cadence, but tree age can be derived from planting/reference date or captured age metadata. Routine watering and weeding are suppressed once the tree is clearly beyond establishment unless a live task or condition trigger exists."
-                    : `Cadence is a Nigeria-adapted field model for live monitoring using ${SEASON_LABEL[seasonMode]} assumptions. Review intervals seasonally by state-level rainfall outlook.`}
-                </p>
-                <ul>
-                  {displayedLiveSources.map((source) => (
-                    <li key={source.url}>
-                      <a href={source.url} target="_blank" rel="noreferrer">
-                        {source.label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+            <Suspense fallback={<div className="green-work-card green-work-empty-state">Loading live maintenance...</div>}>
+              <GreenWorkLiveTablePanel
+                activeProjectId={activeProjectId}
+                loadProjectData={loadProjectData}
+                loadServerLiveMaintenance={loadServerLiveMaintenance}
+                seasonMode={seasonMode}
+                seasonLabel={SEASON_LABEL[seasonMode]}
+                setSeasonMode={(value) => setSeasonMode(value as SeasonMode)}
+                assigneeFilter={assigneeFilter}
+                setAssigneeFilter={setAssigneeFilter}
+                assignees={assignees}
+                liveTableIsExistingScope={liveTableIsExistingScope}
+                setLiveTreeScopeTab={setLiveTreeScopeTab}
+                selectedMaturitySpecies={selectedMaturitySpecies}
+                setSelectedMaturitySpecies={setSelectedMaturitySpecies}
+                activeProjectMaturityMap={activeProjectMaturityMap}
+                selectedMaturityYears={selectedMaturityYears}
+                setSelectedMaturityYears={setSelectedMaturityYears}
+                projectSpeciesOptions={projectSpeciesOptions}
+                saveSpeciesMaturityYears={saveSpeciesMaturityYears}
+                speciesMaturityRows={speciesMaturityRows}
+                displayedLiveSummary={displayedLiveSummary}
+                maintenanceAttentionFilter={maintenanceAttentionFilter}
+                setMaintenanceAttentionFilter={(value) => setMaintenanceAttentionFilter(value as MaintenanceAttentionFilter)}
+                selectedMaintenanceRows={selectedMaintenanceRows}
+                hiddenMaintenanceSelectionCount={hiddenMaintenanceSelectionCount}
+                displayedMaintenanceSelectionCount={displayedMaintenanceSelectionCount}
+                setSelectedMaintenanceRowKeys={setSelectedMaintenanceRowKeys}
+                displayedLiveRows={displayedLiveRows}
+                setMaintenanceMapFocusEnabled={setMaintenanceMapFocusEnabled}
+                setActiveForm={setActiveForm}
+                setMenuOpen={setMenuOpen}
+                setStaffMenu={setStaffMenu}
+                setLiveTreeMenu={setLiveTreeMenu}
+                openAssignTaskForSelectedRows={openAssignTaskForSelectedRows}
+                selectedMaintenanceRowKeys={selectedMaintenanceRowKeys}
+                trees={trees}
+                toggleMaintenanceRowSelection={toggleMaintenanceRowSelection}
+                formatProjectTreeLabelById={formatProjectTreeLabelById}
+                treeStatusLabel={treeStatusLabel}
+                formatTreeOriginLabel={formatTreeOriginLabel}
+                formatDateLabel={formatDateLabel}
+                displayedLiveSources={displayedLiveSources}
+              />
+            </Suspense>
           )}
 
           {activeProjectId && activeForm === "existing_tree_intake" && (
-            <div className="green-work-card">
-              <div className="green-work-row">
-                <h3>{agricWorkflowMode ? "Plot Records Inventory" : reliefWorkflowMode ? "Site Records Inventory" : csrProjectMode ? "CSR Implementation Inventory" : "Existing Trees Inventory"}</h3>
-                <div className="work-actions">
-                  <button
-                    type="button"
-                    onClick={exportExistingTreesCsv}
-                    disabled={workPartnerOrgPaused}
-                    title={workPartnerOrgPaused ? "Paused organizations can export PDF only" : undefined}
-                  >
-                    {agricWorkflowMode ? "Export Plot CSV" : reliefWorkflowMode ? "Export Site CSV" : csrProjectMode ? "Export Programme CSV" : "Export CSV"}
-                  </button>
-                  <button type="button" onClick={exportExistingTreesPdf}>
-                    {agricWorkflowMode ? "Export Plot PDF" : reliefWorkflowMode ? "Export Site PDF" : csrProjectMode ? "Export Programme PDF" : "Export PDF"}
-                  </button>
-                  <label className="green-work-export-photo-toggle">
-                    <input
-                      type="checkbox"
-                      checked={includePhotosInExistingTreesPdf}
-                      onChange={(e) => setIncludePhotosInExistingTreesPdf(e.target.checked)}
-                    />
-                    <span>Include photos (appendix)</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void Promise.all([
-                        loadProjectData(activeProjectId),
-                        loadExistingTreeMetrics(activeProjectId),
-                      ])
-                    }
-                  >
-                    Refresh
-                  </button>
-                </div>
-              </div>
-              <p className="green-work-chart-context">
-                {agricWorkflowMode
-                  ? "Context: mapped plot records captured in the Agric mobile workflow, including area, crop, season, and support-ready field metadata."
-                  : reliefWorkflowMode
-                    ? "Context: mapped site records captured in the Relief mobile workflow, including damage level, response pathway, boundary area, and field evidence."
-                    : csrProjectMode
-                      ? "Context: all verified CSR implementation trees captured in Green for this client project, including status, care history, carbon metrics, and field evidence."
-                      : "Context: trees tagged as Existing using origin, attribution scope, KPI scope, or source-project linkage."}
-              </p>
-              <div className="green-work-live-summary">
-                <span className="green-work-live-pill neutral">Rows: {existingTreeIntakeRows.length}</span>
-                {fieldWorkflowMode ? (
-                  <>
-                    <span className="green-work-live-pill ok">
-                      Mapped Area: {existingTreeIntakeAgricSummary.totalAreaHectares.toFixed(2)} ha
-                    </span>
-                    {agricWorkflowMode ? (
-                      <span className="green-work-live-pill neutral">
-                        Est. Yield: {existingTreeIntakeAgricSummary.totalEstimatedYieldKg.toFixed(0)} kg
-                      </span>
-                    ) : null}
-                  </>
-                ) : (
-                  <span className={`green-work-live-pill ${existingTreeMetricsLoading ? "warning" : "ok"}`}>
-                    CO2 Metrics: {existingTreeMetricsLoading ? "Loading..." : `${Object.keys(existingTreeMetricsById).length} rows`}
-                  </span>
-                )}
-              </div>
-              <div className="green-work-live-table-wrap">
-                <table className="green-work-live-table">
-                  <thead>
-                    {agricWorkflowMode ? (
-                      <tr>
-                        <th>Plot</th>
-                        <th>Farmer</th>
-                        <th>Crop</th>
-                        <th>Area</th>
-                        <th>Season</th>
-                        <th>Irrigation</th>
-                        <th>Stage</th>
-                        <th>Est. Yield</th>
-                        <th>Status</th>
-                        <th>Boundary</th>
-                        <th>Observed</th>
-                        <th>Captured By</th>
-                      </tr>
-                    ) : reliefWorkflowMode ? (
-                      <tr>
-                        <th>Site</th>
-                        <th>Beneficiary</th>
-                        <th>Asset Type</th>
-                        <th>Damage</th>
-                        <th>Area</th>
-                        <th>Response Path</th>
-                        <th>Occupancy</th>
-                        <th>Population Served</th>
-                        <th>Status</th>
-                        <th>Observed</th>
-                        <th>Captured By</th>
-                      </tr>
-                    ) : (
-                      <tr>
-                        <th>Tree</th>
-                        <th>Trees</th>
-                        <th>Area</th>
-                        <th>Species</th>
-                        <th>Date</th>
-                        <th>Origin</th>
-                        <th>Attribution</th>
-                        <th>Status</th>
-                        <th>Age</th>
-                        <th>Height</th>
-                        <th>CO2</th>
-                        <th>Custodian</th>
-                        <th>Tag</th>
-                        <th>Created By</th>
-                      </tr>
-                    )}
-                  </thead>
-                  <tbody>
-                    {existingTreeIntakeRows.length === 0 ? (
-                      <tr>
-                        <td colSpan={agricWorkflowMode ? 12 : reliefWorkflowMode ? 11 : 14} className="green-work-live-empty">
-                          {agricWorkflowMode
-                            ? "No plot records found in this project yet."
-                            : reliefWorkflowMode
-                              ? "No site records found in this project yet."
-                            : "No Existing Tree records found in this project yet."}
-                        </td>
-                      </tr>
-                    ) : (
-                      existingTreeIntakeRows.slice(0, 500).map((tree) => {
-                        const metric = existingTreeMetricsById[Number(tree.id)];
-                        return agricWorkflowMode ? (
-                          <tr key={`existing-main-${tree.id}`}>
-                            <td>{formatPlotRecordLabel(tree)}</td>
-                            <td>{tree.custodian_name || "-"}</td>
-                            <td>{getPlotCommodityLabel(tree)}</td>
-                            <td>{formatPlotAreaLabel(tree, metric)}</td>
-                            <td>{formatPlotSeasonLabel(tree)}</td>
-                            <td>{tree.record_profile_data?.irrigation_type ? formatTaskTypeLabel(tree.record_profile_data.irrigation_type) : "-"}</td>
-                            <td>{tree.record_profile_data?.production_stage ? formatTaskTypeLabel(tree.record_profile_data.production_stage) : "-"}</td>
-                            <td>
-                              {Number.isFinite(Number(tree.record_profile_data?.estimated_yield_kg))
-                                ? Number(tree.record_profile_data?.estimated_yield_kg).toFixed(0)
-                                : "-"}
-                            </td>
-                            <td>{formatTaskTypeLabel(tree.status)}</td>
-                            <td>{formatBoundaryCaptureMethodLabel(tree.record_profile_data?.boundary_capture_method)}</td>
-                            <td>{formatDateLabel(tree.planting_date)}</td>
-                            <td>{tree.created_by || "-"}</td>
-                          </tr>
-                        ) : reliefWorkflowMode ? (
-                          <tr key={`existing-main-${tree.id}`}>
-                            <td>{formatReliefSiteLabel(tree)}</td>
-                            <td>{tree.custodian_name || "-"}</td>
-                            <td>{tree.record_profile_data?.asset_type ? formatTaskTypeLabel(tree.record_profile_data.asset_type) : "-"}</td>
-                            <td>{formatReliefDamageLevelLabel(tree.record_profile_data?.damage_level)}</td>
-                            <td>{formatPlotAreaLabel(tree, metric)}</td>
-                            <td>{tree.record_profile_data?.response_pathway ? formatTaskTypeLabel(tree.record_profile_data.response_pathway) : "-"}</td>
-                            <td>{tree.record_profile_data?.occupancy_status ? formatTaskTypeLabel(tree.record_profile_data.occupancy_status) : "-"}</td>
-                            <td>{Number.isFinite(Number(tree.record_profile_data?.population_served)) ? Number(tree.record_profile_data?.population_served) : "-"}</td>
-                            <td>{formatTaskTypeLabel(tree.status)}</td>
-                            <td>{formatDateLabel(tree.planting_date)}</td>
-                            <td>{tree.created_by || "-"}</td>
-                          </tr>
-                        ) : (
-                          <tr key={`existing-main-${tree.id}`}>
-                            <td>{formatProjectTreeLabelById(tree.id).replace("Tree ", "")}</td>
-                            <td>{formatExistingTreeCountLabel(tree, metric)}</td>
-                            <td>{formatExistingTreeAreaLabel(tree, metric)}</td>
-                            <td>{tree.species || "-"}</td>
-                            <td>{formatDateLabel(tree.planting_date)}</td>
-                            <td>{formatTreeOriginLabel(tree.tree_origin)}</td>
-                            <td>{formatAttributionScopeLabel(tree.attribution_scope)}</td>
-                            <td>{formatTaskTypeLabel(tree.status)}</td>
-                            <td>{formatExistingTreeAgeLabel(tree, metric)}</td>
-                            <td>{formatTreeHeight(tree.tree_height_m)}</td>
-                            <td>{formatExistingTreeCo2Label(metric)}</td>
-                            <td>{tree.custodian_name || "-"}</td>
-                            <td>
-                              <button
-                                type="button"
-                                onClick={() => window.open(`${BACKEND_URL}/green/trees/${tree.id}/qr-tag/pdf`, "_blank")}
-                                style={{ padding: '2px 6px', fontSize: '11px', background: '#083e20', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                              >
-                                Print
-                              </button>
-                            </td>
-                            <td>{tree.created_by || "-"}</td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <Suspense fallback={<div className="green-work-card green-work-empty-state">Loading records inventory...</div>}>
+              <GreenWorkExistingTreeIntakePanel
+                activeProjectId={activeProjectId}
+                title={
+                  agricWorkflowMode
+                    ? "Plot Records Inventory"
+                    : reliefWorkflowMode
+                      ? "Site Records Inventory"
+                      : csrProjectMode
+                        ? "CSR Implementation Inventory"
+                        : "Existing Trees Inventory"
+                }
+                exportCsvLabel={
+                  agricWorkflowMode
+                    ? "Export Plot CSV"
+                    : reliefWorkflowMode
+                      ? "Export Site CSV"
+                      : csrProjectMode
+                        ? "Export Programme CSV"
+                        : "Export CSV"
+                }
+                exportPdfLabel={
+                  agricWorkflowMode
+                    ? "Export Plot PDF"
+                    : reliefWorkflowMode
+                      ? "Export Site PDF"
+                      : csrProjectMode
+                        ? "Export Programme PDF"
+                        : "Export PDF"
+                }
+                workPartnerOrgPaused={workPartnerOrgPaused}
+                exportExistingTreesCsv={exportExistingTreesCsv}
+                exportExistingTreesPdf={exportExistingTreesPdf}
+                includePhotosInExistingTreesPdf={includePhotosInExistingTreesPdf}
+                setIncludePhotosInExistingTreesPdf={setIncludePhotosInExistingTreesPdf}
+                loadProjectData={loadProjectData}
+                loadExistingTreeMetrics={loadExistingTreeMetrics}
+                contextCopy={
+                  agricWorkflowMode
+                    ? "Context: mapped plot records captured in the Agric mobile workflow, including area, crop, season, and support-ready field metadata."
+                    : reliefWorkflowMode
+                      ? "Context: mapped site records captured in the Relief mobile workflow, including damage level, response pathway, boundary area, and field evidence."
+                      : csrProjectMode
+                        ? "Context: all verified CSR implementation trees captured in Green for this client project, including status, care history, carbon metrics, and field evidence."
+                        : "Context: trees tagged as Existing using origin, attribution scope, KPI scope, or source-project linkage."
+                }
+                existingTreeIntakeRows={existingTreeIntakeRows}
+                fieldWorkflowMode={fieldWorkflowMode}
+                agricWorkflowMode={agricWorkflowMode}
+                reliefWorkflowMode={reliefWorkflowMode}
+                existingTreeIntakeAgricSummary={existingTreeIntakeAgricSummary}
+                existingTreeMetricsLoading={existingTreeMetricsLoading}
+                existingTreeMetricsById={existingTreeMetricsById}
+                formatPlotRecordLabel={formatPlotRecordLabel}
+                getPlotCommodityLabel={getPlotCommodityLabel}
+                formatPlotAreaLabel={formatPlotAreaLabel}
+                formatPlotSeasonLabel={formatPlotSeasonLabel}
+                formatTaskTypeLabel={formatTaskTypeLabel}
+                formatBoundaryCaptureMethodLabel={formatBoundaryCaptureMethodLabel}
+                formatDateLabel={formatDateLabel}
+                formatReliefSiteLabel={formatReliefSiteLabel}
+                formatReliefDamageLevelLabel={formatReliefDamageLevelLabel}
+                formatProjectTreeLabelById={formatProjectTreeLabelById}
+                formatExistingTreeCountLabel={formatExistingTreeCountLabel}
+                formatExistingTreeAreaLabel={formatExistingTreeAreaLabel}
+                formatTreeOriginLabel={formatTreeOriginLabel}
+                formatAttributionScopeLabel={formatAttributionScopeLabel}
+                formatExistingTreeAgeLabel={formatExistingTreeAgeLabel}
+                formatTreeHeight={formatTreeHeight}
+                formatExistingTreeCo2Label={formatExistingTreeCo2Label}
+                backendUrl={BACKEND_URL}
+              />
+            </Suspense>
           )}
 
           {activeProjectId &&
@@ -19275,698 +17819,83 @@ export default function GreenWork() {
           )}
 
           {activeProjectId && activeForm === "remote_monitoring" && (
-            <>
-              <div className="green-work-remote-shell">
-              <div className="green-work-remote-workspace">
-                <div className="green-work-card green-work-remote-card">
-                  <div className="green-work-row">
-                    <h3>{activeWorkflowProfile === "agric" ? "Farm Health Monitoring" : "Remote Monitoring"}</h3>
-                    <div className="work-actions">
-                      <button
-                        type="button"
-                        className="btn-primary"
-                        onClick={() => void loadRemoteMonitoringAnalysis()}
-                        disabled={!normalizeMapAreaGeometry(remoteMonitoringDraftGeometry) || remoteMonitoringLoading}
-                      >
-                        {remoteMonitoringLoading ? "Analyzing..." : activeWorkflowProfile === "agric" ? "Analyze Farm Health" : "Analyze Vegetation"}
-                      </button>
-                    </div>
-                  </div>
-                  <p className="green-work-note">
-                    {activeWorkflowProfile === "agric"
-                      ? "Choose an existing mapped farm boundary or draw a farm block on the map. NDVI, vegetation cover, stressed areas, drought watch, and crop-vigor trend are generated from recent satellite imagery."
-                      : "Choose an existing planting polygon or draw one on the map. Tree count comes from LandCheck tree records inside the polygon. NDVI is only used as a satellite vegetation proxy."}
-                  </p>
-
-                  <div className="green-work-remote-layout">
-                    <div className="green-work-remote-builder">
-                      <label>
-                        {activeWorkflowProfile === "agric" ? "Use mapped farm boundary" : "Use existing planting area"}
-                        <select
-                          value={remoteMonitoringDraft.source_order_id}
-                          onChange={(e) => applyMonitoringSourceArea(e.target.value)}
-                        >
-                          <option value="">{activeWorkflowProfile === "agric" ? "Draw a new farm block instead" : "Draw a new polygon instead"}</option>
-                          {monitoringSourceAreas.map((area) => (
-                            <option key={`remote-source-${area.id}`} value={area.id}>
-                              {activeWorkflowProfile === "agric"
-                                ? area.label
-                                : `${area.label} | ${area.assignee_name || "Unassigned"} | target ${area.target_trees}`}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <div className="work-actions">
-                        <button type="button" onClick={() => setRemoteMonitoringDrawActive((prev) => !prev)}>
-                          {remoteMonitoringDrawActive ? "Stop Polygon Draw" : activeWorkflowProfile === "agric" ? "Draw Farm Block On Map" : "Draw Polygon On Map"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setRemoteMonitoringDraftGeometry(null);
-                            setRemoteMonitoringDraft((prev) => ({ ...prev, source_order_id: "" }));
-                            setRemoteMonitoringDrawActive(false);
-                            setRemoteMonitoringFocusedTreeId(null);
-                            setRemoteMonitoringActionTreeId(null);
-                            setRemoteMonitoringReport(null);
-                          }}
-                        >
-                          Clear Polygon
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-primary"
-                          onClick={() => void loadRemoteMonitoringAnalysis()}
-                          disabled={!normalizeMapAreaGeometry(remoteMonitoringDraftGeometry) || remoteMonitoringLoading}
-                        >
-                          {remoteMonitoringLoading ? "Analyzing..." : activeWorkflowProfile === "agric" ? "Analyze Farm Health" : "Analyze Vegetation"}
-                        </button>
-                      </div>
-                      <div className="green-work-remote-draft-summary">
-                        <span className="green-work-flow-pill">
-                          {activeWorkflowProfile === "agric" ? "Plot rows" : "Tree rows"}: {remoteMonitoringDraftTreeSummary.tree_record_count}
-                        </span>
-                        <span className="green-work-flow-pill">
-                          {activeWorkflowProfile === "agric" ? "Plots in area" : "Trees in polygon"}: {remoteMonitoringDraftTreeSummary.tree_count}
-                        </span>
-                        <span className="green-work-flow-pill">
-                          {activeWorkflowProfile === "agric" ? "Mapped plots" : "New planting"}: {remoteMonitoringDraftTreeSummary.new_planting_tree_count}
-                        </span>
-                        <span className="green-work-flow-pill">
-                          {activeWorkflowProfile === "agric" ? "Existing plot batches" : "Existing inventory"}: {remoteMonitoringDraftTreeSummary.existing_inventory_tree_count}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  {remoteMonitoringLoading && (
-                    <div className="green-work-remote-progress-panel">
-                      <div className="green-work-remote-progress-head">
-                        <strong>{activeWorkflowProfile === "agric" ? "Farm-health calculation in progress" : "Vegetation calculation in progress"}</strong>
-                        <span>{Math.max(8, Math.min(100, Math.round(remoteMonitoringProgressPct || 0)))}%</span>
-                      </div>
-                      <div className="green-work-remote-progress-bar" aria-hidden="true">
-                        <span style={{ width: `${Math.max(8, Math.min(100, remoteMonitoringProgressPct || 0))}%` }} />
-                      </div>
-                      <div className="green-work-remote-progress-steps">
-                        {(activeWorkflowProfile === "agric" ? REMOTE_MONITORING_PROGRESS_STEPS_AGRIC : REMOTE_MONITORING_PROGRESS_STEPS).map((label, index) => {
-                          const isDone = index < remoteMonitoringProgressStep;
-                          const isActive = index === remoteMonitoringProgressStep;
-                          return (
-                            <div
-                              key={`remote-progress-step-${label}`}
-                              className={`green-work-remote-progress-step ${isDone ? "is-done" : ""} ${isActive ? "is-active" : ""}`}
-                            >
-                              <span>{index + 1}</span>
-                              <strong>{label}</strong>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div ref={mapCardRef} className="green-work-card green-work-map-card green-work-remote-map-card">
-                  <h3>
-                    {remoteMonitoringDrawActive
-                      ? activeWorkflowProfile === "agric"
-                        ? "Farm Health Map (Polygon Draw Enabled)"
-                        : "Remote Monitoring Map (Polygon Draw Enabled)"
-                      : activeWorkflowProfile === "agric"
-                        ? "Farm Health Map"
-                        : "Remote Monitoring Map"}
-                  </h3>
-                  <p className="green-work-note">
-                    {remoteMonitoringDrawActive
-                      ? activeWorkflowProfile === "agric"
-                        ? "Draw one polygon for the farm block. When draw is off, you can inspect mapped farm boundaries on the map."
-                        : "Draw one polygon for the monitoring block. When draw is off, you can inspect trees on the map."
-                      : activeWorkflowProfile === "agric"
-                        ? "Inspect mapped farm boundaries, select a farm block, and run NDVI-based health analysis."
-                        : "Inspect trees and planting polygons, then run satellite analysis for the selected polygon."}
-                  </p>
-                  <div className="green-work-map-layout">
-                    <div className="green-work-map-canvas">
-                      <Suspense fallback={<div className="green-work-empty-state">Loading monitoring map...</div>}>
-                        <TreeMap
-                          trees={visibleProjectTrees}
-                          onAddTree={() => {}}
-                          enableDraw={remoteMonitoringDrawActive}
-                          drawMode="polygon"
-                          drawActive={remoteMonitoringDrawActive}
-                          onPolygonChange={remoteMonitoringDrawActive ? (geometry) => {
-                            setRemoteMonitoringDraftGeometry(geometry);
-                            setRemoteMonitoringFocusedTreeId(null);
-                            setRemoteMonitoringActionTreeId(null);
-                            setRemoteMonitoringReport(null);
-                          } : undefined}
-                          minHeight={560}
-                          onTreeInspect={(detail) => {
-                            setInspectedTree(detail);
-                            setRemoteMonitoringFocusedTreeId(detail ? Number(detail.id || 0) : null);
-                            setRemoteMonitoringActionTreeId(null);
-                            if (detail) setMenuOpen(false);
-                          }}
-                          fitBounds={remoteMonitoringFitPoints}
-                          assignmentAreas={remoteMonitoringMapAreas}
-                          workflowMode={activeWorkflowProfile}
-                        />
-                      </Suspense>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="green-work-card green-work-remote-report-card">
-                <div className="green-work-remote-report-head">
-                  <div className="green-work-remote-report-copy">
-                    <p className="green-work-remote-kicker">{activeWorkflowProfile === "agric" ? "Farm Health Summary" : "Vegetation Summary"}</p>
-                    <h3>{remoteMonitoringAnalysisLabel}</h3>
-                    <p className="green-work-remote-subtitle">
-                      {activeWorkflowProfile === "agric"
-                        ? "Satellite NDVI, vegetation cover, stressed farm areas, drought-watch cues, and crop-vigor trend for the selected farm block."
-                        : "Satellite vegetation signal for the current polygon, normalized by stored tree count and broken down by tree buffer."}
-                    </p>
-                  </div>
-                  {remoteMonitoringReport?.summary?.signal && (
-                    <span className={`green-work-remote-signal is-${normalizeName(remoteMonitoringReport.summary.signal)}`}>
-                      {formatMonitoringSignalLabel(remoteMonitoringReport.summary.signal)}
-                    </span>
-                  )}
-                </div>
-                {!normalizeMapAreaGeometry(remoteMonitoringDraftGeometry) ? (
-                  <div className="green-work-remote-empty-state">
-                    <strong>No polygon selected yet</strong>
-                    <p>{activeWorkflowProfile === "agric" ? "Choose a mapped farm boundary or draw a farm block on the map, then run analysis." : "Choose an existing planting polygon or draw one on the map, then run analysis."}</p>
-                  </div>
-                ) : remoteMonitoringLoading ? (
-                  <div className="green-work-remote-progress-panel is-report-panel">
-                    <div className="green-work-remote-progress-head">
-                      <strong>{activeWorkflowProfile === "agric" ? "Calculating farm-health summary" : "Calculating vegetation summary"}</strong>
-                      <span>{Math.max(8, Math.min(100, Math.round(remoteMonitoringProgressPct || 0)))}%</span>
-                    </div>
-                    <div className="green-work-remote-progress-bar" aria-hidden="true">
-                      <span style={{ width: `${Math.max(8, Math.min(100, remoteMonitoringProgressPct || 0))}%` }} />
-                    </div>
-                    <div className="green-work-remote-progress-steps">
-                      {(activeWorkflowProfile === "agric" ? REMOTE_MONITORING_PROGRESS_STEPS_AGRIC : REMOTE_MONITORING_PROGRESS_STEPS).map((label, index) => {
-                        const isDone = index < remoteMonitoringProgressStep;
-                        const isActive = index === remoteMonitoringProgressStep;
-                        return (
-                          <div
-                            key={`remote-report-progress-step-${label}`}
-                            className={`green-work-remote-progress-step ${isDone ? "is-done" : ""} ${isActive ? "is-active" : ""}`}
-                          >
-                            <span>{index + 1}</span>
-                            <strong>{label}</strong>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : !remoteMonitoringReport ? (
-                  <div className="green-work-remote-empty-state">
-                    <strong>{activeWorkflowProfile === "agric" ? "No farm-health result yet" : "No monitoring result yet"}</strong>
-                    <p>{activeWorkflowProfile === "agric" ? "Run farm-health analysis to load NDVI, vegetation cover, drought watch, and per-plot proxy values." : "Run vegetation analysis to load polygon metrics and per-tree satellite proxy values."}</p>
-                  </div>
-                ) : (
-                  <>
-                    <p className="green-work-note green-work-remote-summary-note">
-                      {remoteMonitoringReport.summary.signal_message}
-                    </p>
-                    {activeWorkflowProfile === "agric" && remoteMonitoringAgricInsights.length ? (
-                      <div className="green-work-remote-insight-grid">
-                        {remoteMonitoringAgricInsights.map((item) => (
-                          <div key={`remote-insight-${item.title}`} className={`green-work-remote-insight-card is-${item.tone}`}>
-                            <span>{item.title}</span>
-                            <strong>{item.value}</strong>
-                            <small>{item.note}</small>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-                    {remoteMonitoringHealthCounts.length ? (
-                      <div className="green-work-remote-health-counts">
-                        {remoteMonitoringHealthCounts.map((item) => (
-                          <div key={`remote-health-count-${item.key}`} className={`green-work-remote-health-chip is-${normalizeName(item.key)}`}>
-                            <strong>{item.count}</strong>
-                            <span>{item.label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-                    {remoteMonitoringTopRiskTrees.length ? (
-                      <div className="green-work-remote-risk-strip">
-                        <strong>{activeWorkflowProfile === "agric" ? "Farms needing attention" : "Priority trees"}</strong>
-                        {activeWorkflowProfile === "agric" && (
-                          <small style={{ display: "block", marginBottom: 8, color: "var(--gw-muted, #888)", fontSize: 12 }}>
-                            These plots show stress signals. Tap to locate on map, then assign a support visit.
-                          </small>
-                        )}
-                        <div className="green-work-remote-risk-list">
-                          {remoteMonitoringTopRiskTrees.map((tree) => (
-                            <button
-                              key={`remote-risk-${tree.tree_id}`}
-                              type="button"
-                              className={`green-work-remote-risk-card is-${normalizeName(tree.satellite_health || "")}`}
-                              onClick={() => focusRemoteMonitoringTree(tree)}
-                            >
-                              <span>{tree.tree_label || formatProjectTreeLabelById(tree.tree_id)}</span>
-                              <strong>{tree.satellite_health_label || "No data"}</strong>
-                              {activeWorkflowProfile !== "agric" && (
-                                <small>{typeof tree.local_mean_ndvi === "number" ? `NDVI ${tree.local_mean_ndvi.toFixed(3)}` : "No NDVI"}</small>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    <div className="green-work-remote-tree-detail-wrap">
-                      <div className="green-work-remote-tree-table-head">
-                        <strong>{activeWorkflowProfile === "agric" ? "Farm health detail" : "Tree vegetation detail"}</strong>
-                        <span>{remoteMonitoringSortedTrees.length || 0} {activeWorkflowProfile === "agric" ? "plot row(s)" : "tree row(s)"}</span>
-                      </div>
-                      {remoteMonitoringSortedTrees.length ? (
-                        <div className="green-work-remote-tree-detail-list">
-                          {remoteMonitoringSortedTrees.map((tree) => {
-                            const treeId = Number(tree.tree_id || 0);
-                            const isFocused = Number(remoteMonitoringFocusedTreeId || 0) === treeId;
-                            const actionsOpen = Number(remoteMonitoringActionTreeId || 0) === treeId;
-                            return (
-                              <div
-                                key={`remote-tree-${tree.tree_id}`}
-                                className={`green-work-remote-tree-card ${isFocused ? "is-focused" : ""}`}
-                              >
-                                <div className="green-work-remote-tree-card-head">
-                                  <button
-                                    type="button"
-                                    className="green-work-remote-tree-link"
-                                    onClick={() => focusRemoteMonitoringTree(tree)}
-                                  >
-                                    {tree.tree_label || formatProjectTreeLabelById(tree.tree_id)}
-                                  </button>
-                                  <span className={`green-work-remote-tree-health is-${normalizeName(tree.satellite_health || "")}`}>
-                                    {tree.satellite_health_label || "No data"}
-                                  </span>
-                                </div>
-                                <div className="green-work-remote-tree-card-meta">
-                                  <span>{activeWorkflowProfile === "agric" ? getPlotCommodityLabel(treeById.get(Number(tree.tree_id || 0)) || ({ species: tree.species } as Tree)) : tree.species || "-"}</span>
-                                  <span>{treeStatusLabel(tree.status)}</span>
-                                  {tree.inventory_tree_count && tree.inventory_tree_count > 1 ? (
-                                    <span>{tree.inventory_tree_count} {activeWorkflowProfile === "agric" ? "plots" : "trees"}</span>
-                                  ) : null}
-                                </div>
-                                <p className="green-work-remote-tree-card-note">
-                                  {tree.satellite_health_note || (activeWorkflowProfile === "agric"
-                                    ? "Satellite farm-health signal is not available for this plot yet."
-                                    : "Satellite vegetation proxy not available for this tree yet.")}
-                                </p>
-                                <div className="green-work-remote-tree-card-metrics">
-                                  {activeWorkflowProfile === "agric" ? (
-                                    <div>
-                                      <span>Vegetation Signal</span>
-                                      <strong>
-                                        {typeof tree.local_mean_ndvi === "number"
-                                          ? tree.local_mean_ndvi >= 0.5 ? "Strong" : tree.local_mean_ndvi >= 0.35 ? "Moderate" : tree.local_mean_ndvi >= 0.2 ? "Weak" : "Very Low"
-                                          : "-"}
-                                      </strong>
-                                    </div>
-                                  ) : (
-                                    <div>
-                                      <span>NDVI</span>
-                                      <strong>{typeof tree.local_mean_ndvi === "number" ? tree.local_mean_ndvi.toFixed(3) : "-"}</strong>
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="green-work-remote-tree-actions-menu">
-                                  <button
-                                    type="button"
-                                    className="green-work-remote-tree-actions-toggle"
-                                    onClick={() =>
-                                      setRemoteMonitoringActionTreeId((prev) => (Number(prev || 0) === treeId ? null : treeId))
-                                    }
-                                  >
-                                    {actionsOpen ? "Hide Actions" : activeWorkflowProfile === "agric" ? "Farm Actions" : "Tree Actions"}
-                                  </button>
-                                  {actionsOpen ? (
-                                    <div className="green-work-context-menu green-work-remote-inline-menu">
-                                      <button type="button" onClick={() => focusRemoteMonitoringTree(tree)}>
-                                        View On Map
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setRemoteMonitoringActionTreeId(null);
-                                          if (activeWorkflowProfile === "agric") {
-                                            openForm("support_visit_assign");
-                                            openCustodianSupervisionAssign(Number(treeById.get(treeId)?.custodian_id || 0), "support_visit");
-                                            return;
-                                          }
-                                          openAssignTaskForTree(treeId, "inspection");
-                                        }}
-                                      >
-                                        {activeWorkflowProfile === "agric" ? "Assign Support Visit" : "Assign Maintenance"}
-                                      </button>
-                                    </div>
-                                  ) : null}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="green-work-remote-empty-state">
-                          <strong>{activeWorkflowProfile === "agric" ? "No mapped plots inside this block" : "No stored trees inside this polygon"}</strong>
-                          <p>{activeWorkflowProfile === "agric" ? "Choose another polygon or adjust the block so mapped farm anchors fall inside it." : "Choose another polygon or adjust the block so LandCheck trees fall inside it."}</p>
-                        </div>
-                      )}
-                    </div>
-                    {activeWorkflowProfile === "agric" ? (
-                      <details className="green-work-remote-tech-details">
-                        <summary>Technical details</summary>
-                        <div className="green-work-remote-summary-grid">
-                          <div className="green-work-remote-metric">
-                            <span>Plots In Block</span>
-                            <strong>{remoteMonitoringReport.area.tree_count || 0}</strong>
-                            <small>{remoteMonitoringReport.area.tree_record_count || 0} plot rows stored</small>
-                          </div>
-                          <div className="green-work-remote-metric">
-                            <span>Healthy Vegetation Area</span>
-                            <strong>{remoteMonitoringReport.summary.vegetation_area_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_sqm || 0} sqm</strong>
-                            <small>{remoteMonitoringReport.summary.vegetation_coverage_pct ?? 0}% of farm block</small>
-                          </div>
-                          <div className="green-work-remote-metric">
-                            <span>Vegetation sqm / Plot</span>
-                            <strong>{remoteMonitoringReport.summary.vegetation_area_per_tree_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_per_tree_sqm || 0} sqm</strong>
-                            <small>Uses mapped plots in block as denominator</small>
-                          </div>
-                          <div className="green-work-remote-metric">
-                            <span>Crop Vigor Index (NDVI)</span>
-                            <strong>{remoteMonitoringReport.summary.mean_ndvi?.toFixed?.(3) || remoteMonitoringReport.summary.mean_ndvi || "-"}</strong>
-                            <small>Latest composite window across the farm block</small>
-                          </div>
-                          <div className="green-work-remote-metric">
-                            <span>Latest Satellite Image</span>
-                            <strong>{formatDateLabel(remoteMonitoringReport.summary.latest_image_date || null)}</strong>
-                            <small>{remoteMonitoringReport.summary.image_count || 0} image(s) used</small>
-                          </div>
-                          <div className="green-work-remote-metric">
-                            <span>Block Mix</span>
-                            <strong>{remoteMonitoringReport.area.new_planting_tree_count || 0} new plots</strong>
-                            <small>{remoteMonitoringReport.area.existing_inventory_tree_count || 0} existing plot records</small>
-                          </div>
-                        </div>
-                        {remoteMonitoringReport.health_scale?.bands?.length ? (
-                          <div className="green-work-remote-health-scale">
-                            <div className="green-work-remote-health-scale-head">
-                              <strong>Farm-health signal bands</strong>
-                              {remoteMonitoringReport.health_scale?.buffer_meters ? (
-                                <span>{remoteMonitoringReport.health_scale.buffer_meters}m plot-anchor buffer</span>
-                              ) : null}
-                            </div>
-                            <div className="green-work-remote-health-scale-list">
-                              {remoteMonitoringReport.health_scale.bands.map((band) => (
-                                <div key={`remote-health-band-${band.key}`} className={`green-work-remote-health-band is-${normalizeName(band.key)}`}>
-                                  <strong>{band.label}</strong>
-                                  <span>{formatNdviBandLabel(band)}</span>
-                                  <small>{band.description || ""}</small>
-                                </div>
-                              ))}
-                            </div>
-                            {remoteMonitoringReport.health_scale?.note ? (
-                              <p className="green-work-note green-work-remote-summary-note">{remoteMonitoringReport.health_scale.note}</p>
-                            ) : null}
-                          </div>
-                        ) : null}
-                        <div className="green-work-remote-series-table-wrap">
-                          <table className="green-work-live-table green-work-remote-series-table">
-                            <thead>
-                              <tr>
-                                <th>Period</th>
-                                <th>Latest Image</th>
-                                <th>NDVI</th>
-                                <th>Healthy Area</th>
-                                <th>Cover %</th>
-                                <th>Vigor sqm / Plot</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {remoteMonitoringReport.series.length === 0 ? (
-                                <tr>
-                                  <td colSpan={6} className="green-work-live-empty">No monthly farm-health rows available yet.</td>
-                                </tr>
-                              ) : (
-                                remoteMonitoringReport.series.map((row) => (
-                                  <tr key={`remote-series-${row.label}`}>
-                                    <td>{row.label}</td>
-                                    <td>{formatDateLabel(row.latest_image_date || null)}</td>
-                                    <td>{row.mean_ndvi?.toFixed?.(3) || row.mean_ndvi || "-"}</td>
-                                    <td>{row.vegetation_area_sqm?.toFixed?.(2) || row.vegetation_area_sqm || "-"}</td>
-                                    <td>{row.vegetation_coverage_pct?.toFixed?.(1) || row.vegetation_coverage_pct || "-"}</td>
-                                    <td>{row.vegetation_area_per_tree_sqm?.toFixed?.(2) || row.vegetation_area_per_tree_sqm || "-"}</td>
-                                  </tr>
-                                ))
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                      </details>
-                    ) : (
-                      <>
-                        <div className="green-work-remote-summary-grid">
-                          <div className="green-work-remote-metric">
-                            <span>Trees In Polygon</span>
-                            <strong>{remoteMonitoringReport.area.tree_count || 0}</strong>
-                            <small>{remoteMonitoringReport.area.tree_record_count || 0} tree rows stored</small>
-                          </div>
-                          <div className="green-work-remote-metric">
-                            <span>Vegetation Signal Area</span>
-                            <strong>{remoteMonitoringReport.summary.vegetation_area_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_sqm || 0} sqm</strong>
-                            <small>{remoteMonitoringReport.summary.vegetation_coverage_pct ?? 0}% of polygon</small>
-                          </div>
-                          <div className="green-work-remote-metric">
-                            <span>Signal Per Tree</span>
-                            <strong>{remoteMonitoringReport.summary.vegetation_area_per_tree_sqm?.toFixed?.(2) || remoteMonitoringReport.summary.vegetation_area_per_tree_sqm || 0} sqm</strong>
-                            <small>Uses stored trees inside polygon as denominator</small>
-                          </div>
-                          <div className="green-work-remote-metric">
-                            <span>Mean NDVI</span>
-                            <strong>{remoteMonitoringReport.summary.mean_ndvi?.toFixed?.(3) || remoteMonitoringReport.summary.mean_ndvi || "-"}</strong>
-                            <small>Latest composite window across the polygon</small>
-                          </div>
-                          <div className="green-work-remote-metric">
-                            <span>Latest Image</span>
-                            <strong>{formatDateLabel(remoteMonitoringReport.summary.latest_image_date || null)}</strong>
-                            <small>{remoteMonitoringReport.summary.image_count || 0} image(s) used</small>
-                          </div>
-                          <div className="green-work-remote-metric">
-                            <span>Inventory Mix</span>
-                            <strong>{remoteMonitoringReport.area.new_planting_tree_count || 0} planted</strong>
-                            <small>{remoteMonitoringReport.area.existing_inventory_tree_count || 0} existing inventory</small>
-                          </div>
-                        </div>
-                        {remoteMonitoringReport.health_scale?.bands?.length ? (
-                          <div className="green-work-remote-health-scale">
-                            <div className="green-work-remote-health-scale-head">
-                              <strong>Satellite health bands</strong>
-                              {remoteMonitoringReport.health_scale?.buffer_meters ? (
-                                <span>{remoteMonitoringReport.health_scale.buffer_meters}m tree buffer</span>
-                              ) : null}
-                            </div>
-                            <div className="green-work-remote-health-scale-list">
-                              {remoteMonitoringReport.health_scale.bands.map((band) => (
-                                <div key={`remote-health-band-${band.key}`} className={`green-work-remote-health-band is-${normalizeName(band.key)}`}>
-                                  <strong>{band.label}</strong>
-                                  <span>{formatNdviBandLabel(band)}</span>
-                                  <small>{band.description || ""}</small>
-                                </div>
-                              ))}
-                            </div>
-                            {remoteMonitoringReport.health_scale?.note ? (
-                              <p className="green-work-note green-work-remote-summary-note">{remoteMonitoringReport.health_scale.note}</p>
-                            ) : null}
-                          </div>
-                        ) : null}
-                        <div className="green-work-remote-series-table-wrap">
-                          <table className="green-work-live-table green-work-remote-series-table">
-                            <thead>
-                              <tr>
-                                <th>Period</th>
-                                <th>Latest Image</th>
-                                <th>Mean NDVI</th>
-                                <th>Signal Area</th>
-                                <th>Cover %</th>
-                                <th>Signal sqm / Tree</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {remoteMonitoringReport.series.length === 0 ? (
-                                <tr>
-                                  <td colSpan={6} className="green-work-live-empty">No monthly monitoring rows available yet.</td>
-                                </tr>
-                              ) : (
-                                remoteMonitoringReport.series.map((row) => (
-                                  <tr key={`remote-series-${row.label}`}>
-                                    <td>{row.label}</td>
-                                    <td>{formatDateLabel(row.latest_image_date || null)}</td>
-                                    <td>{row.mean_ndvi?.toFixed?.(3) || row.mean_ndvi || "-"}</td>
-                                    <td>{row.vegetation_area_sqm?.toFixed?.(2) || row.vegetation_area_sqm || "-"}</td>
-                                    <td>{row.vegetation_coverage_pct?.toFixed?.(1) || row.vegetation_coverage_pct || "-"}</td>
-                                    <td>{row.vegetation_area_per_tree_sqm?.toFixed?.(2) || row.vegetation_area_per_tree_sqm || "-"}</td>
-                                  </tr>
-                                ))
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-              </div>
-
-            </>
+            <Suspense fallback={<div className="green-work-card green-work-empty-state">Loading remote monitoring...</div>}>
+              <GreenWorkRemoteMonitoringPanel
+                activeWorkflowProfile={activeWorkflowProfile}
+                loadRemoteMonitoringAnalysis={loadRemoteMonitoringAnalysis}
+                normalizeMapAreaGeometry={normalizeMapAreaGeometry}
+                remoteMonitoringDraftGeometry={remoteMonitoringDraftGeometry}
+                remoteMonitoringLoading={remoteMonitoringLoading}
+                remoteMonitoringDraft={remoteMonitoringDraft}
+                applyMonitoringSourceArea={applyMonitoringSourceArea}
+                monitoringSourceAreas={monitoringSourceAreas}
+                setRemoteMonitoringDrawActive={setRemoteMonitoringDrawActive}
+                remoteMonitoringDrawActive={remoteMonitoringDrawActive}
+                setRemoteMonitoringDraftGeometry={setRemoteMonitoringDraftGeometry}
+                setRemoteMonitoringDraft={setRemoteMonitoringDraft}
+                setRemoteMonitoringFocusedTreeId={setRemoteMonitoringFocusedTreeId}
+                setRemoteMonitoringActionTreeId={setRemoteMonitoringActionTreeId}
+                setRemoteMonitoringReport={setRemoteMonitoringReport}
+                remoteMonitoringDraftTreeSummary={remoteMonitoringDraftTreeSummary}
+                remoteMonitoringProgressPct={remoteMonitoringProgressPct}
+                remoteMonitoringProgressStep={remoteMonitoringProgressStep}
+                REMOTE_MONITORING_PROGRESS_STEPS={REMOTE_MONITORING_PROGRESS_STEPS}
+                REMOTE_MONITORING_PROGRESS_STEPS_AGRIC={REMOTE_MONITORING_PROGRESS_STEPS_AGRIC}
+                mapCardRef={mapCardRef}
+                visibleProjectTrees={visibleProjectTrees}
+                setInspectedTree={setInspectedTree}
+                remoteMonitoringFitPoints={remoteMonitoringFitPoints}
+                remoteMonitoringMapAreas={remoteMonitoringMapAreas}
+                setMenuOpen={setMenuOpen}
+                remoteMonitoringReport={remoteMonitoringReport}
+                remoteMonitoringAnalysisLabel={remoteMonitoringAnalysisLabel}
+                normalizeName={normalizeName}
+                formatMonitoringSignalLabel={formatMonitoringSignalLabel}
+                remoteMonitoringAgricInsights={remoteMonitoringAgricInsights}
+                remoteMonitoringHealthCounts={remoteMonitoringHealthCounts}
+                remoteMonitoringTopRiskTrees={remoteMonitoringTopRiskTrees}
+                focusRemoteMonitoringTree={focusRemoteMonitoringTree}
+                formatProjectTreeLabelById={formatProjectTreeLabelById}
+                remoteMonitoringSortedTrees={remoteMonitoringSortedTrees}
+                remoteMonitoringFocusedTreeId={remoteMonitoringFocusedTreeId}
+                remoteMonitoringActionTreeId={remoteMonitoringActionTreeId}
+                treeById={treeById}
+                getPlotCommodityLabel={getPlotCommodityLabel}
+                treeStatusLabel={treeStatusLabel}
+                openForm={openForm}
+                openCustodianSupervisionAssign={openCustodianSupervisionAssign}
+                openAssignTaskForTree={openAssignTaskForTree}
+                formatDateLabel={formatDateLabel}
+                formatNdviBandLabel={formatNdviBandLabel}
+              />
+            </Suspense>
           )}
 
           {activeProjectId && (activeForm === "map_view" || assignWorkAreaMode) && (
-            <div ref={mapCardRef} className="green-work-card green-work-map-card">
-              <h3>
-                {assignWorkAreaMode
-                  ? "Planting Area Map (Polygon Draw)"
-                  : mapAreaDrawMode
-                    ? "Map View (Polygon Draw Enabled)"
-                    : "Map View"}
-              </h3>
-              <p className="green-work-note">
-                {assignWorkAreaMode
-                  ? "Draw one polygon for this planting order in this tab, then click Assign Work."
-                  : mapAreaDrawMode
-                    ? "Planting-area draw is enabled from Assign Tree Planting. Draw polygon here, then return to assign work."
-                    : maintenanceMapFocusActive
-                      ? `Showing ${maintenanceFocusedTreeIds.length} selected maintenance tree${maintenanceFocusedTreeIds.length === 1 ? "" : "s"} from the queue. Clear focus to return to the full project map.`
-                      : activeWorkflowProfile === "agric"
-                        ? "Project farm map view. Inspect mapped farm boundaries and open farmer-linked plot details."
-                        : "Project tree map view. Inspect trees and monitor field positions."}
-              </p>
-              {(maintenanceMapFocusActive || (mapAreaDrawMode && !assignWorkAreaMode)) && (
-                <div className="work-actions">
-                  {maintenanceMapFocusActive && (
-                    <button type="button" onClick={() => setMaintenanceMapFocusEnabled(false)}>
-                      Clear Maintenance Focus
-                    </button>
-                  )}
-                  {mapAreaDrawMode && !assignWorkAreaMode && (
-                    <button type="button" onClick={() => openForm("assign_work")}>
-                      Back To Assign Tree Planting
-                    </button>
-                  )}
-                </div>
-              )}
-              <div className="green-work-map-layout">
-                <div className="green-work-map-canvas">
-                  <Suspense fallback={<div className="green-work-empty-state">Loading work map...</div>}>
-                    <TreeMap
-                      trees={mapTrees}
-                      draftPoint={
-                        treePositionDraft && inspectedTree && Number(treePositionDraft.treeId) === Number(inspectedTree.id)
-                          ? { lng: treePositionDraft.lng, lat: treePositionDraft.lat }
-                          : null
-                      }
-                      onDraftMove={
-                        treePositionDraft && inspectedTree && Number(treePositionDraft.treeId) === Number(inspectedTree.id)
-                          ? (lng, lat) => setTreePositionDraft((prev) => (prev ? { ...prev, lng, lat } : prev))
-                          : undefined
-                      }
-                      suspendFitBounds={Boolean(treePositionDraft && inspectedTree && Number(treePositionDraft.treeId) === Number(inspectedTree.id))}
-                      onAddTree={() => {}}
-                      enableDraw={mapAreaDrawMode}
-                      drawMode={mapAreaDrawMode ? "polygon" : "point"}
-                      drawActive={mapAreaDrawMode}
-                      onPolygonChange={mapAreaDrawMode ? (geometry) => setNewOrderAreaGeometry(geometry) : undefined}
-                      minHeight={mapAreaDrawMode ? 520 : 500}
-                      onTreeInspect={(detail) => {
-                        setInspectedTree(detail);
-                        if (detail) setMenuOpen(false);
-                      }}
-                      fitBounds={mapFitPoints}
-                      assignmentAreas={existingTreeMapAreas}
-                      workflowMode={activeWorkflowProfile}
-                    />
-                  </Suspense>
-                </div>
-              </div>
-            </div>
+            <Suspense fallback={<div className="green-work-card green-work-empty-state">Loading work map...</div>}>
+              <GreenWorkMapPanel
+                mapCardRef={mapCardRef}
+                assignWorkAreaMode={assignWorkAreaMode}
+                mapAreaDrawMode={mapAreaDrawMode}
+                maintenanceMapFocusActive={maintenanceMapFocusActive}
+                maintenanceFocusedTreeIds={maintenanceFocusedTreeIds}
+                setMaintenanceMapFocusEnabled={setMaintenanceMapFocusEnabled}
+                openForm={openForm}
+                activeWorkflowProfile={activeWorkflowProfile}
+                mapTrees={mapTrees}
+                treePositionDraft={treePositionDraft}
+                inspectedTree={inspectedTree}
+                setTreePositionDraft={setTreePositionDraft}
+                setNewOrderAreaGeometry={setNewOrderAreaGeometry}
+                setInspectedTree={setInspectedTree}
+                setMenuOpen={setMenuOpen}
+                mapFitPoints={mapFitPoints}
+                existingTreeMapAreas={existingTreeMapAreas}
+              />
+            </Suspense>
           )}
         </section>
       </div>
-
-      {selectedActivityLog && (
-        <>
-          <button
-            type="button"
-            className="green-work-log-detail-overlay"
-            onClick={() => setSelectedActivityLog(null)}
-            aria-label="Close activity log details"
-          />
-          <section
-            className="green-work-log-detail-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="green-work-log-detail-title"
-          >
-            <div className="green-work-log-detail-head">
-              <div>
-                <p className="green-work-log-detail-kicker">Activity log details</p>
-                <h3 id="green-work-log-detail-title">Log Entry #{selectedActivityLog.id}</h3>
-              </div>
-              <button
-                type="button"
-                className="green-work-log-detail-close"
-                onClick={() => setSelectedActivityLog(null)}
-                aria-label="Close activity log details"
-              >
-                X
-              </button>
-            </div>
-
-            <div className="green-work-log-detail-grid">
-              <div>
-                <span>Time</span>
-                <strong>{new Date(selectedActivityLog.created_at || "").toLocaleString()}</strong>
-              </div>
-              <div>
-                <span>Source</span>
-                <strong>{selectedActivityLog.source || "-"}</strong>
-              </div>
-              <div>
-                <span>Event</span>
-                <strong>{selectedActivityLog.event_type || "-"}</strong>
-              </div>
-              <div>
-                <span>Actor</span>
-                <strong>{resolveActivityLogActor(selectedActivityLog)}</strong>
-              </div>
-              <div className="green-work-log-detail-grid-wide">
-                <span>Message</span>
-                <strong>{selectedActivityLog.message || "-"}</strong>
-              </div>
-              <div className="green-work-log-detail-grid-wide">
-                <span>Details summary</span>
-                <strong>{summarizeActivityLogDetails(selectedActivityLog.details)}</strong>
-              </div>
-            </div>
-
-            <div className="green-work-log-detail-body">
-              <p className="green-work-note" style={{ marginLeft: 0, marginBottom: 0 }}>
-                Full request or event payload for this activity log entry.
-              </p>
-              <pre className="green-work-log-detail-json">{selectedActivityLogDetailsText}</pre>
-            </div>
-          </section>
-        </>
-      )}
 
       {inspectedTree && (
         <>
@@ -20339,7 +18268,7 @@ export default function GreenWork() {
                       cursor: "pointer"
                     }}
                   >
-                    🌳 Download QR Tree Tag (PDF)
+                    ðŸŒ³ Download QR Tree Tag (PDF)
                   </button>
                 </div>
               )}
