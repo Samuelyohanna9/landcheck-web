@@ -1,8 +1,8 @@
-import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { api, BACKEND_URL } from "../api/client";
-import TreeMap, { type TreeInspectData } from "../components/TreeMap";
+import type { TreeInspectData } from "../components/TreeMap";
 import { clearWorkAuthed, getWorkAuthSession } from "../auth/workAuth";
 import { usePrivacyConsentGate } from "../privacy/usePrivacyConsentGate";
 import {
@@ -17,6 +17,8 @@ import {
   isLikelyNetworkError,
 } from "../offline/greenOffline";
 import "../styles/green-work.css";
+
+const TreeMap = lazy(() => import("../components/TreeMap"));
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
 const REMOTE_MONITORING_PROGRESS_STEPS = [
@@ -19405,29 +19407,31 @@ export default function GreenWork() {
                   </p>
                   <div className="green-work-map-layout">
                     <div className="green-work-map-canvas">
-                      <TreeMap
-                        trees={visibleProjectTrees}
-                        onAddTree={() => {}}
-                        enableDraw={remoteMonitoringDrawActive}
-                        drawMode="polygon"
-                        drawActive={remoteMonitoringDrawActive}
-                        onPolygonChange={remoteMonitoringDrawActive ? (geometry) => {
-                          setRemoteMonitoringDraftGeometry(geometry);
-                          setRemoteMonitoringFocusedTreeId(null);
-                          setRemoteMonitoringActionTreeId(null);
-                          setRemoteMonitoringReport(null);
-                        } : undefined}
-                        minHeight={560}
-                        onTreeInspect={(detail) => {
-                          setInspectedTree(detail);
-                          setRemoteMonitoringFocusedTreeId(detail ? Number(detail.id || 0) : null);
-                          setRemoteMonitoringActionTreeId(null);
-                          if (detail) setMenuOpen(false);
-                        }}
-                        fitBounds={remoteMonitoringFitPoints}
-                        assignmentAreas={remoteMonitoringMapAreas}
-                        workflowMode={activeWorkflowProfile}
-                      />
+                      <Suspense fallback={<div className="green-work-empty-state">Loading monitoring map...</div>}>
+                        <TreeMap
+                          trees={visibleProjectTrees}
+                          onAddTree={() => {}}
+                          enableDraw={remoteMonitoringDrawActive}
+                          drawMode="polygon"
+                          drawActive={remoteMonitoringDrawActive}
+                          onPolygonChange={remoteMonitoringDrawActive ? (geometry) => {
+                            setRemoteMonitoringDraftGeometry(geometry);
+                            setRemoteMonitoringFocusedTreeId(null);
+                            setRemoteMonitoringActionTreeId(null);
+                            setRemoteMonitoringReport(null);
+                          } : undefined}
+                          minHeight={560}
+                          onTreeInspect={(detail) => {
+                            setInspectedTree(detail);
+                            setRemoteMonitoringFocusedTreeId(detail ? Number(detail.id || 0) : null);
+                            setRemoteMonitoringActionTreeId(null);
+                            if (detail) setMenuOpen(false);
+                          }}
+                          fitBounds={remoteMonitoringFitPoints}
+                          assignmentAreas={remoteMonitoringMapAreas}
+                          workflowMode={activeWorkflowProfile}
+                        />
+                      </Suspense>
                     </div>
                   </div>
                 </div>
@@ -19862,33 +19866,35 @@ export default function GreenWork() {
               )}
               <div className="green-work-map-layout">
                 <div className="green-work-map-canvas">
-                  <TreeMap
-                    trees={mapTrees}
-                    draftPoint={
-                      treePositionDraft && inspectedTree && Number(treePositionDraft.treeId) === Number(inspectedTree.id)
-                        ? { lng: treePositionDraft.lng, lat: treePositionDraft.lat }
-                        : null
-                    }
-                    onDraftMove={
-                      treePositionDraft && inspectedTree && Number(treePositionDraft.treeId) === Number(inspectedTree.id)
-                        ? (lng, lat) => setTreePositionDraft((prev) => (prev ? { ...prev, lng, lat } : prev))
-                        : undefined
-                    }
-                    suspendFitBounds={Boolean(treePositionDraft && inspectedTree && Number(treePositionDraft.treeId) === Number(inspectedTree.id))}
-                    onAddTree={() => {}}
-                    enableDraw={mapAreaDrawMode}
-                    drawMode={mapAreaDrawMode ? "polygon" : "point"}
-                    drawActive={mapAreaDrawMode}
-                    onPolygonChange={mapAreaDrawMode ? (geometry) => setNewOrderAreaGeometry(geometry) : undefined}
-                    minHeight={mapAreaDrawMode ? 520 : 500}
-                    onTreeInspect={(detail) => {
-                      setInspectedTree(detail);
-                      if (detail) setMenuOpen(false);
-                    }}
-                    fitBounds={mapFitPoints}
-                    assignmentAreas={existingTreeMapAreas}
-                    workflowMode={activeWorkflowProfile}
-                  />
+                  <Suspense fallback={<div className="green-work-empty-state">Loading work map...</div>}>
+                    <TreeMap
+                      trees={mapTrees}
+                      draftPoint={
+                        treePositionDraft && inspectedTree && Number(treePositionDraft.treeId) === Number(inspectedTree.id)
+                          ? { lng: treePositionDraft.lng, lat: treePositionDraft.lat }
+                          : null
+                      }
+                      onDraftMove={
+                        treePositionDraft && inspectedTree && Number(treePositionDraft.treeId) === Number(inspectedTree.id)
+                          ? (lng, lat) => setTreePositionDraft((prev) => (prev ? { ...prev, lng, lat } : prev))
+                          : undefined
+                      }
+                      suspendFitBounds={Boolean(treePositionDraft && inspectedTree && Number(treePositionDraft.treeId) === Number(inspectedTree.id))}
+                      onAddTree={() => {}}
+                      enableDraw={mapAreaDrawMode}
+                      drawMode={mapAreaDrawMode ? "polygon" : "point"}
+                      drawActive={mapAreaDrawMode}
+                      onPolygonChange={mapAreaDrawMode ? (geometry) => setNewOrderAreaGeometry(geometry) : undefined}
+                      minHeight={mapAreaDrawMode ? 520 : 500}
+                      onTreeInspect={(detail) => {
+                        setInspectedTree(detail);
+                        if (detail) setMenuOpen(false);
+                      }}
+                      fitBounds={mapFitPoints}
+                      assignmentAreas={existingTreeMapAreas}
+                      workflowMode={activeWorkflowProfile}
+                    />
+                  </Suspense>
                 </div>
               </div>
             </div>

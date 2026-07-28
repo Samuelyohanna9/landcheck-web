@@ -4,6 +4,7 @@ import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import toast from "react-hot-toast";
 import "../styles/feature-override-modal.css";
 import { fromWGS84 } from "../utils/coordinateConverter";
+import CadIcon from "./CadIcon";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -856,7 +857,6 @@ export default function FeatureOverrideModal({
 
   const [showLeftSidebar, setShowLeftSidebar] = useState(false);
   const [showRightSidebar, setShowRightSidebar] = useState(false);
-  const [showTopToolbar, setShowTopToolbar] = useState(false);
   const [showTraversePanel, setShowTraversePanel] = useState(false);
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>(DEFAULT_LAYER_VISIBILITY);
   const [featureInventory, setFeatureInventory] = useState<FeatureInventory>(DEFAULT_INVENTORY);
@@ -2686,182 +2686,181 @@ export default function FeatureOverrideModal({
 
   const suggestedTool = toolForFeatureType(featureType);
   const suggestedToolLabel = suggestedTool === "draw_polygon" ? "Polygon tool" : "Line tool";
+  const cadMetaTooltip = `R of O ${meta.adamawa_rof_no || plotId || "590"} · ${meta.adamawa_owner_name || meta.title_text || "Survey Plan"} · ${meta.location_text || "Pilot Plot"} · Scale ${meta.scale_text || "1 : 250"} · ${meta.surveyor_rank || "Surveyor General"}`;
 
   if (!isOpen) return null;
 
   return (
     <div className="feature-override-modal">
       <div className="feature-override-card cad-editor-card">
-        <div className="feature-override-header cad-editor-header">
-          <div>
-            <p className="feature-override-kicker">Survey Plan Drafting Workspace</p>
-            <h3>Feature CAD Editor</h3>
-            <p>Use the drafting tools to add, update, or remove detected roads, buildings, rivers, and fences.</p>
+        <div className="cad-toolbar">
+          <div className="cad-toolbar-brand" title="Feature CAD Editor — Survey Plan Drafting Workspace">
+            <CadIcon name="cad" className="cad-toolbar-brand-icon" />
           </div>
-          <div className="cad-header-actions" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <button
-              type="button"
-              className={`cad-header-toggle-btn${showLeftSidebar ? " active" : ""}`}
-              onClick={() => setShowLeftSidebar(!showLeftSidebar)}
-              title="Toggle Feature Setup & Layers Panel"
-            >
-              <span className="cad-indicator-dot" />
-              Setup &amp; Layers
-            </button>
-            <button
-              type="button"
-              className={`cad-header-toggle-btn${showTopToolbar ? " active" : ""}`}
-              onClick={() => setShowTopToolbar(!showTopToolbar)}
-              title="Toggle Top Toolbar"
-            >
-              <span className="cad-indicator-dot" />
-              Toolbar
-            </button>
-            <button
-              type="button"
-              className={`cad-header-toggle-btn${showRightSidebar ? " active" : ""}`}
-              onClick={() => setShowRightSidebar(!showRightSidebar)}
-              title="Toggle Properties &amp; Coordinates Panel"
-            >
-              <span className="cad-indicator-dot" />
-              Inspector
-            </button>
-            <button className="feature-override-close" onClick={onClose}>
-              Close
-            </button>
-          </div>
-        </div>
 
-        {showTopToolbar && (
-          <div className="cad-editor-toolbar">
           <div className="cad-toolbar-group">
-            <span className="cad-toolbar-label">Tools</span>
             <button
               type="button"
-              className={`cad-tool-btn ${activeTool === "select" ? "active" : ""}`}
+              className={`cad-icon-btn${activeTool === "select" ? " active" : ""}`}
+              title="Select"
               onClick={() => {
                 setEditorTool("select");
                 setSelectionMode(null);
               }}
             >
-              Select
+              <CadIcon name="select" />
             </button>
             <button
               type="button"
-              className={`cad-tool-btn ${selectionMode === "box" ? "active" : ""}`}
+              className={`cad-icon-btn${selectionMode === "box" ? " active" : ""}`}
+              title="Box select"
               onClick={() => activateSelectionMode("box")}
             >
-              Box
+              <CadIcon name="box-select" />
             </button>
             <button
               type="button"
-              className={`cad-tool-btn ${selectionMode === "lasso" ? "active" : ""}`}
+              className={`cad-icon-btn${selectionMode === "lasso" ? " active" : ""}`}
+              title="Lasso select"
               onClick={() => activateSelectionMode("lasso")}
             >
-              Lasso
+              <CadIcon name="lasso" />
             </button>
             <button
               type="button"
-              className={`cad-tool-btn ${activeTool === "draw_line_string" ? "active" : ""}`}
+              className={`cad-icon-btn${activeTool === "draw_line_string" ? " active" : ""}`}
+              title="Line"
               onClick={() => {
                 setSelectionMode(null);
                 setEditorTool("draw_line_string");
               }}
             >
-              Line
+              <CadIcon name="line" />
             </button>
             <button
               type="button"
-              className={`cad-tool-btn ${activeTool === "draw_polygon" ? "active" : ""}`}
+              className={`cad-icon-btn${activeTool === "draw_polygon" ? " active" : ""}`}
+              title="Polygon"
               onClick={() => {
                 setSelectionMode(null);
                 setEditorTool("draw_polygon");
               }}
             >
-              Polygon
+              <CadIcon name="polygon" />
             </button>
             <button
               type="button"
-              className="cad-tool-btn"
+              className="cad-icon-btn"
+              title={`Match ${suggestedToolLabel}`}
               onClick={() => {
                 setSelectionMode(null);
                 setEditorTool(suggestedTool);
               }}
             >
-              Match {suggestedToolLabel}
+              <CadIcon name="wand" />
             </button>
           </div>
 
+          <span className="cad-toolbar-divider" />
+
           <div className="cad-toolbar-group">
-            <span className="cad-toolbar-label">View</span>
-            <button type="button" className="cad-tool-btn" onClick={fitPlotBoundary}>
-              Fit Plot
+            <button type="button" className="cad-icon-btn" title="Fit Plot" onClick={fitPlotBoundary}>
+              <CadIcon name="fit" />
             </button>
             {basemapMode === "plotting" ? (
               <>
-                <button type="button" className="cad-tool-btn" onClick={() => zoomPlottingCamera("in")}>
-                  Zoom In
+                <button type="button" className="cad-icon-btn" title="Zoom In" onClick={() => zoomPlottingCamera("in")}>
+                  <CadIcon name="zoom-in" />
                 </button>
-                <button type="button" className="cad-tool-btn" onClick={() => zoomPlottingCamera("out")}>
-                  Zoom Out
+                <button type="button" className="cad-icon-btn" title="Zoom Out" onClick={() => zoomPlottingCamera("out")}>
+                  <CadIcon name="zoom-out" />
                 </button>
               </>
             ) : null}
-            <button type="button" className="cad-tool-btn" onClick={clearWorkingSelection}>
-              Clear Draft
+            <button type="button" className="cad-icon-btn" title="Clear Draft" onClick={clearWorkingSelection}>
+              <CadIcon name="clear" />
             </button>
           </div>
+
+          <span className="cad-toolbar-divider" />
 
           <div className="cad-toolbar-group">
-            <span className="cad-toolbar-label">Command</span>
-            <button
-              type="button"
-              className={`cad-tool-btn ${action === "add" ? "active" : ""}`}
-              onClick={startAddFlow}
+            <select
+              className="cad-toolbar-select"
+              value={featureType}
+              onChange={(event) => setFeatureType(event.target.value as FeatureType)}
+              title="Feature type"
             >
-              Add New
+              <option value="road">Road</option>
+              <option value="building">Building</option>
+              <option value="river">River</option>
+              <option value="fence">Fence</option>
+            </select>
+            <button type="button" className={`cad-icon-btn${action === "add" ? " active" : ""}`} title="Add New" onClick={startAddFlow}>
+              <CadIcon name="add" />
             </button>
-            <button
-              type="button"
-              className={`cad-tool-btn ${action === "update" ? "active" : ""}`}
-              onClick={startUpdateFlow}
-            >
-              Modify Selected
+            <button type="button" className={`cad-icon-btn${action === "update" ? " active" : ""}`} title="Modify Selected" onClick={startUpdateFlow}>
+              <CadIcon name="modify" />
             </button>
-            <button
-              type="button"
-              className={`cad-tool-btn danger ${action === "delete" ? "active" : ""}`}
-              onClick={startDeleteFlow}
-            >
-              Delete Selected
+            <button type="button" className={`cad-icon-btn danger${action === "delete" ? " active" : ""}`} title="Delete Selected" onClick={startDeleteFlow}>
+              <CadIcon name="delete" />
             </button>
           </div>
+
+          <span className="cad-toolbar-divider" />
 
           <div className="cad-toolbar-group">
-            <span className="cad-toolbar-label">Basemap</span>
-            <button
-              type="button"
-              className={`cad-tool-btn ${basemapMode === "satellite" ? "active" : ""}`}
-              onClick={() => setBasemapMode("satellite")}
+            <select
+              className="cad-toolbar-select"
+              value={basemapMode}
+              onChange={(event) => setBasemapMode(event.target.value as BasemapMode)}
+              title="Basemap"
             >
-              Satellite
+              <option value="satellite">Satellite</option>
+              <option value="plotting">Plotting</option>
+            </select>
+          </div>
+
+          <div className="cad-toolbar-spacer" />
+
+          <div className="cad-toolbar-group">
+            {basemapMode === "plotting" && (
+              <button
+                type="button"
+                className={`cad-icon-btn${showTraversePanel ? " active" : ""}`}
+                title="Traverse table"
+                onClick={() => setShowTraversePanel((value) => !value)}
+              >
+                <CadIcon name="table" />
+              </button>
+            )}
+            <button type="button" className="cad-icon-btn" title={cadMetaTooltip}>
+              <CadIcon name="info" />
             </button>
             <button
               type="button"
-              className={`cad-tool-btn ${basemapMode === "plotting" ? "active" : ""}`}
-              onClick={() => setBasemapMode("plotting")}
+              className={`cad-icon-btn${showLeftSidebar ? " active" : ""}`}
+              title="Toggle Setup & Layers panel"
+              onClick={() => setShowLeftSidebar(!showLeftSidebar)}
             >
-              Plotting
+              <CadIcon name="layers" />
+            </button>
+            <button
+              type="button"
+              className={`cad-icon-btn${showRightSidebar ? " active" : ""}`}
+              title="Toggle Inspector panel"
+              onClick={() => setShowRightSidebar(!showRightSidebar)}
+            >
+              <CadIcon name="inspector" />
             </button>
           </div>
 
-          <div className="cad-toolbar-group cad-toolbar-group--hint">
-            <span className="cad-toolbar-prompt">
-              {activeCommandLabel}: <strong>{featureType}</strong>. {editorPrompt}
-            </span>
-          </div>
+          <span className="cad-toolbar-divider" />
+
+          <button type="button" className="cad-icon-btn cad-icon-btn--close" title="Close editor" onClick={onClose}>
+            <CadIcon name="close" />
+          </button>
         </div>
-        )}
 
         <div
           className="cad-editor-body"
@@ -2994,41 +2993,6 @@ export default function FeatureOverrideModal({
           </aside>
 
           <div className={`cad-editor-canvas cad-editor-canvas--${basemapMode}`}>
-            <div className="cad-canvas-head">
-              <div>
-                <strong>Drafting Canvas</strong>
-                <span>
-                  {basemapMode === "plotting"
-                    ? "Dark plotting view with CAD grid and parcel drafting overlays"
-                    : "Satellite context with editable feature geometry"}
-                </span>
-              </div>
-              <div className="cad-canvas-badges">
-                <span className="cad-badge cad-badge--ghost">{basemapMode}</span>
-                <span className="cad-badge">{featureType}</span>
-                <span className="cad-badge cad-badge--ghost">{action}</span>
-                {selectionMode ? <span className="cad-badge cad-badge--ghost">{selectionMode} select</span> : null}
-                {basemapMode === "plotting" && (
-                  <button
-                    type="button"
-                    className={`cad-badge cad-badge--toggle${showTraversePanel ? " active" : ""}`}
-                    onClick={() => setShowTraversePanel((value) => !value)}
-                  >
-                    Traverse Table
-                  </button>
-                )}
-              </div>
-            </div>
-            {basemapMode === "plotting" && (
-              <div className="cad-plot-meta-bar" title="Survey plan title-block details">
-                <span className="cad-plot-meta-strong">R of O {meta.adamawa_rof_no || plotId || "590"}</span>
-                <span>{meta.adamawa_owner_name || meta.title_text || "Survey Plan"}</span>
-                <span>AT {meta.location_text || "Pilot Plot"}</span>
-                <span>Scale:- {meta.scale_text || "1 : 250"}</span>
-                <span>{meta.surveyor_rank || "Surveyor General"}</span>
-                <span>{new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
-              </div>
-            )}
             <div className="cad-canvas-workspace-wrapper" style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
               {basemapMode === "plotting" ? (
                 <div className="feature-override-map cad-plotting-stage" ref={plottingStageRef}>
@@ -3572,6 +3536,9 @@ export default function FeatureOverrideModal({
             )}
           </div>
             <div className="cad-status-bar">
+              <span className="cad-status-prompt">
+                {activeCommandLabel}: <strong>{featureType}</strong>. {editorPrompt}
+              </span>
               <span>
                 Cursor:{" "}
                 {cursor ? `${cursor.lng.toFixed(6)}, ${cursor.lat.toFixed(6)}` : "--"}

@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { api, BACKEND_URL } from "../api/client";
 import { clearGreenAuthed, getGreenAuthSession } from "../auth/greenAuth";
-import TreeMap, { type TreeInspectData } from "../components/TreeMap";
+import type { TreeInspectData } from "../components/TreeMap";
 import {
   cacheProjectDetailOffline,
   cacheProjectTreesOffline,
@@ -39,6 +39,8 @@ import {
 } from "../offline/greenOffline";
 import { usePrivacyConsentGate } from "../privacy/usePrivacyConsentGate";
 import "../styles/green.css";
+
+const TreeMap = lazy(() => import("../components/TreeMap"));
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
 
@@ -4264,33 +4266,35 @@ export default function Green() {
                     </span>
                   </div>
                 )}
-                <TreeMap
-                  trees={treePoints}
-                  draftPoint={
-                    existingTreeBatchCaptureActive
-                      ? null
-                      : newTree.lng && newTree.lat
-                        ? { lng: newTree.lng, lat: newTree.lat }
-                        : null
-                  }
-                  onDraftMove={
-                    existingTreeBatchCaptureActive
-                      ? undefined
-                      : (lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))
-                  }
-                  onAddTree={(lng, lat) => {
-                    if (existingTreeBatchCaptureActive) return;
-                    setNewTree((prev) => ({ ...prev, lng, lat }));
-                  }}
-                  drawActive={existingTreeBatchCaptureActive && useAssignedExistingTreeArea ? false : mapDrawMode}
-                  drawMode={existingTreeBatchCaptureActive ? "polygon" : "point"}
-                  onPolygonChange={existingTreeBatchCaptureActive ? (geometry) => setExistingTreeBatchAreaGeojson(geometry) : undefined}
-                  onSelectTree={(id) => loadTreeDetails(id)}
-                  onTreeInspect={(detail) => setInspectedTree(detail)}
-                  onViewChange={(view) => setMapView(view)}
-                  fitBounds={mapFitPoints}
-                  assignmentAreas={greenMapOverlayAreas}
-                />
+                <Suspense fallback={<div className="green-offline-banner">Loading map...</div>}>
+                  <TreeMap
+                    trees={treePoints}
+                    draftPoint={
+                      existingTreeBatchCaptureActive
+                        ? null
+                        : newTree.lng && newTree.lat
+                          ? { lng: newTree.lng, lat: newTree.lat }
+                          : null
+                    }
+                    onDraftMove={
+                      existingTreeBatchCaptureActive
+                        ? undefined
+                        : (lng, lat) => setNewTree((prev) => ({ ...prev, lng, lat }))
+                    }
+                    onAddTree={(lng, lat) => {
+                      if (existingTreeBatchCaptureActive) return;
+                      setNewTree((prev) => ({ ...prev, lng, lat }));
+                    }}
+                    drawActive={existingTreeBatchCaptureActive && useAssignedExistingTreeArea ? false : mapDrawMode}
+                    drawMode={existingTreeBatchCaptureActive ? "polygon" : "point"}
+                    onPolygonChange={existingTreeBatchCaptureActive ? (geometry) => setExistingTreeBatchAreaGeojson(geometry) : undefined}
+                    onSelectTree={(id) => loadTreeDetails(id)}
+                    onTreeInspect={(detail) => setInspectedTree(detail)}
+                    onViewChange={(view) => setMapView(view)}
+                    fitBounds={mapFitPoints}
+                    assignmentAreas={greenMapOverlayAreas}
+                  />
+                </Suspense>
               </div>
             </div>
 
