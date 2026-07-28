@@ -1,10 +1,8 @@
 import { useEffect, useRef, useCallback } from "react";
-import mapboxgl from "mapbox-gl";
-import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "mapbox-gl/dist/mapbox-gl.css";
+import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import "../styles/map-enhanced.css";
-
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
+import { loadMapboxDraw, loadMapboxGl } from "../utils/mapboxLoader";
 
 type Point = {
   station: string;
@@ -18,9 +16,7 @@ type Props = {
   disabled?: boolean;
 };
 
-// Custom styles for Mapbox Draw - RED color scheme
 const drawStyles = [
-  // Polygon fill - active
   {
     id: "gl-draw-polygon-fill-active",
     type: "fill",
@@ -30,7 +26,6 @@ const drawStyles = [
       "fill-opacity": 0.3,
     },
   },
-  // Polygon fill - inactive
   {
     id: "gl-draw-polygon-fill-inactive",
     type: "fill",
@@ -40,7 +35,6 @@ const drawStyles = [
       "fill-opacity": 0.2,
     },
   },
-  // Polygon stroke - active
   {
     id: "gl-draw-polygon-stroke-active",
     type: "line",
@@ -50,7 +44,6 @@ const drawStyles = [
       "line-width": 3,
     },
   },
-  // Polygon stroke - inactive
   {
     id: "gl-draw-polygon-stroke-inactive",
     type: "line",
@@ -60,7 +53,6 @@ const drawStyles = [
       "line-width": 3,
     },
   },
-  // Line (while drawing)
   {
     id: "gl-draw-line",
     type: "line",
@@ -71,7 +63,6 @@ const drawStyles = [
       "line-dasharray": [2, 2],
     },
   },
-  // Vertex points - active
   {
     id: "gl-draw-point-active",
     type: "circle",
@@ -83,7 +74,6 @@ const drawStyles = [
       "circle-stroke-width": 3,
     },
   },
-  // Vertex points - inactive
   {
     id: "gl-draw-point-inactive",
     type: "circle",
@@ -95,7 +85,6 @@ const drawStyles = [
       "circle-stroke-width": 2,
     },
   },
-  // Midpoints
   {
     id: "gl-draw-polygon-midpoint",
     type: "circle",
@@ -115,12 +104,12 @@ export default function MapViewEnhanced({
   disabled = false
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const drawRef = useRef<MapboxDraw | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const mapRef = useRef<any>(null);
+  const drawRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+  const mapboxglRef = useRef<any>(null);
   const isDrawingRef = useRef(false);
 
-  // Handle polygon drawn on map
   const handleDrawUpdate = useCallback(() => {
     if (!drawRef.current || !onCoordinatesDrawn) return;
 
@@ -135,7 +124,6 @@ export default function MapViewEnhanced({
     }
 
     const ring = geom.coordinates[0] as number[][];
-    // Remove closing coord if present
     const cleaned =
       ring.length > 3 &&
       ring[0][0] === ring[ring.length - 1][0] &&
@@ -143,7 +131,6 @@ export default function MapViewEnhanced({
         ? ring.slice(0, -1)
         : ring;
 
-    // Convert to Point array with station names
     const points: Point[] = cleaned.map((coord, index) => ({
       station: String.fromCharCode(65 + index),
       lng: coord[0],
@@ -153,101 +140,103 @@ export default function MapViewEnhanced({
     isDrawingRef.current = true;
     onCoordinatesDrawn(points);
 
-    // Reset flag after a short delay
     setTimeout(() => {
       isDrawingRef.current = false;
     }, 100);
   }, [onCoordinatesDrawn]);
 
-  // Initialize map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
     containerRef.current.innerHTML = "";
+    let disposed = false;
 
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: "mapbox://styles/mapbox/satellite-streets-v12",
-      center: [7.5, 9.0], // Nigeria center
-      zoom: 6,
-    });
+    void (async () => {
+      const [mapboxgl, MapboxDraw] = await Promise.all([loadMapboxGl(), loadMapboxDraw()]);
+      if (disposed || !containerRef.current || mapRef.current) return;
 
-    map.addControl(new mapboxgl.NavigationControl(), "top-right");
+      mapboxglRef.current = mapboxgl;
 
-    // Add draw control with custom RED styles
-    const draw = new MapboxDraw({
-      displayControlsDefault: false,
-      controls: {
-        polygon: true,
-        trash: true,
-      },
-      defaultMode: "simple_select",
-      styles: drawStyles,
-    });
+      const map = new mapboxgl.Map({
+        container: containerRef.current,
+        style: "mapbox://styles/mapbox/satellite-streets-v12",
+        center: [7.5, 9.0],
+        zoom: 6,
+      });
 
-    map.addControl(draw, "top-left");
+      map.addControl(new mapboxgl.NavigationControl(), "top-right");
 
-    map.on("load", () => {
-      // Add empty source for polygon (from manual coords) - RED color
-      map.addSource("plot-polygon", {
-        type: "geojson",
-        data: {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "Polygon",
-            coordinates: [[]],
+      const draw = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: {
+          polygon: true,
+          trash: true,
+        },
+        defaultMode: "simple_select",
+        styles: drawStyles,
+      });
+
+      map.addControl(draw, "top-left");
+
+      map.on("load", () => {
+        map.addSource("plot-polygon", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "Polygon",
+              coordinates: [[]],
+            },
           },
-        },
+        });
+
+        map.addLayer({
+          id: "plot-fill",
+          type: "fill",
+          source: "plot-polygon",
+          paint: {
+            "fill-color": "#ef4444",
+            "fill-opacity": 0.25,
+          },
+        });
+
+        map.addLayer({
+          id: "plot-outline",
+          type: "line",
+          source: "plot-polygon",
+          paint: {
+            "line-color": "#dc2626",
+            "line-width": 3,
+          },
+        });
       });
 
-      // Add polygon fill layer - RED
-      map.addLayer({
-        id: "plot-fill",
-        type: "fill",
-        source: "plot-polygon",
-        paint: {
-          "fill-color": "#ef4444",
-          "fill-opacity": 0.25,
-        },
+      map.on("draw.create", handleDrawUpdate);
+      map.on("draw.update", handleDrawUpdate);
+      map.on("draw.delete", () => {
+        if (onCoordinatesDrawn) {
+          onCoordinatesDrawn([
+            { station: "A", lng: 0, lat: 0 },
+            { station: "B", lng: 0, lat: 0 },
+            { station: "C", lng: 0, lat: 0 },
+          ]);
+        }
       });
 
-      // Add polygon outline layer - RED
-      map.addLayer({
-        id: "plot-outline",
-        type: "line",
-        source: "plot-polygon",
-        paint: {
-          "line-color": "#dc2626",
-          "line-width": 3,
-        },
-      });
-    });
-
-    // Draw event handlers
-    map.on("draw.create", handleDrawUpdate);
-    map.on("draw.update", handleDrawUpdate);
-    map.on("draw.delete", () => {
-      if (onCoordinatesDrawn) {
-        onCoordinatesDrawn([
-          { station: "A", lng: 0, lat: 0 },
-          { station: "B", lng: 0, lat: 0 },
-          { station: "C", lng: 0, lat: 0 },
-        ]);
-      }
-    });
-
-    mapRef.current = map;
-    drawRef.current = draw;
+      mapRef.current = map;
+      drawRef.current = draw;
+    })();
 
     return () => {
-      map.remove();
+      disposed = true;
+      mapRef.current?.remove();
       mapRef.current = null;
       drawRef.current = null;
+      mapboxglRef.current = null;
     };
   }, [handleDrawUpdate, onCoordinatesDrawn]);
 
-  // Disable/enable draw controls
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -259,7 +248,6 @@ export default function MapViewEnhanced({
     ctrl.style.opacity = disabled ? "0.5" : "1";
   }, [disabled]);
 
-  // Keep map canvas resized when layout changes (mobile stacking/scroll scenarios)
   useEffect(() => {
     const map = mapRef.current;
     const el = containerRef.current;
@@ -269,7 +257,6 @@ export default function MapViewEnhanced({
       try {
         map.resize();
       } catch {
-        // no-op: map may be mid-dispose during route changes
       }
     };
 
@@ -290,16 +277,14 @@ export default function MapViewEnhanced({
     };
   }, []);
 
-  // Update polygon and markers when coordinates change (from manual input)
   useEffect(() => {
     const map = mapRef.current;
     const draw = drawRef.current;
-    if (!map) return;
+    const mapboxgl = mapboxglRef.current;
+    if (!map || !mapboxgl) return;
 
-    // Skip if the change came from drawing
     if (isDrawingRef.current) return;
 
-    // Clear existing markers
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
@@ -307,7 +292,6 @@ export default function MapViewEnhanced({
       (c) => c.lng !== 0 || c.lat !== 0
     );
 
-    // Clear draw features when updating from manual input
     if (draw) {
       const features = draw.getAll();
       if (features.features.length > 0) {
@@ -316,8 +300,7 @@ export default function MapViewEnhanced({
     }
 
     if (validCoords.length === 0) {
-      // Reset polygon to empty
-      const source = map.getSource("plot-polygon") as mapboxgl.GeoJSONSource;
+      const source = map.getSource("plot-polygon") as any;
       if (source) {
         source.setData({
           type: "Feature",
@@ -331,7 +314,6 @@ export default function MapViewEnhanced({
       return;
     }
 
-    // Add markers for each point - RED markers
     validCoords.forEach((coord, index) => {
       const el = document.createElement("div");
       el.className = "map-marker";
@@ -344,13 +326,11 @@ export default function MapViewEnhanced({
       markersRef.current.push(marker);
     });
 
-    // Update polygon if 3+ points
     if (validCoords.length >= 3) {
       const ringCoords = validCoords.map((c) => [c.lng, c.lat]);
-      // Close the ring
       ringCoords.push(ringCoords[0]);
 
-      const source = map.getSource("plot-polygon") as mapboxgl.GeoJSONSource;
+      const source = map.getSource("plot-polygon") as any;
       if (source) {
         source.setData({
           type: "Feature",
@@ -362,7 +342,6 @@ export default function MapViewEnhanced({
         });
       }
 
-      // Fit bounds to polygon
       const bounds = new mapboxgl.LngLatBounds();
       validCoords.forEach((c) => bounds.extend([c.lng, c.lat]));
 
@@ -372,8 +351,7 @@ export default function MapViewEnhanced({
         duration: 1000,
       });
     } else {
-      // Clear polygon if less than 3 points
-      const source = map.getSource("plot-polygon") as mapboxgl.GeoJSONSource;
+      const source = map.getSource("plot-polygon") as any;
       if (source) {
         source.setData({
           type: "Feature",
@@ -385,7 +363,6 @@ export default function MapViewEnhanced({
         });
       }
 
-      // Still zoom to the points we have
       if (validCoords.length > 0) {
         const bounds = new mapboxgl.LngLatBounds();
         validCoords.forEach((c) => bounds.extend([c.lng, c.lat]));
@@ -404,8 +381,6 @@ export default function MapViewEnhanced({
     <div className={`map-enhanced-container ${disabled ? "disabled" : ""}`}>
       <div ref={containerRef} className="map-enhanced" />
 
-
-      {/* Warning for incomplete polygon */}
       {hasValidCoords && coordinates.filter(c => c.lng !== 0 || c.lat !== 0).length < 3 && (
         <div className="map-warning">
           <svg viewBox="0 0 20 20" fill="currentColor">

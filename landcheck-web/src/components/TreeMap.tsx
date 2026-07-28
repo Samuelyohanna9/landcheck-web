@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import mapboxgl from "mapbox-gl";
-import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import { api } from "../api/client";
 import {
   cacheTreeTasksOffline,
@@ -10,12 +8,10 @@ import {
   precacheMapTilesForBounds,
 } from "../offline/greenOffline";
 import "mapbox-gl/dist/mapbox-gl.css";
+import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import "../styles/tree-map.css";
-
-const MAPBOX_TOKEN = String(import.meta.env.VITE_MAPBOX_TOKEN || "").trim();
+import { loadMapboxDraw, loadMapboxGl, MAPBOX_TOKEN } from "../utils/mapboxLoader";
 const LIVE_MAP_STYLE = "mapbox://styles/mapbox/satellite-streets-v12";
-
-mapboxgl.accessToken = MAPBOX_TOKEN;
 
 const buildOfflineMapStyle = (): any => ({
   version: 8 as const,
@@ -751,10 +747,11 @@ export default function TreeMap({
 }: Props) {
   const hasMapboxToken = Boolean(MAPBOX_TOKEN);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const draftMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const mapRef = useRef<any>(null);
+  const mapboxglRef = useRef<any>(null);
+  const draftMarkerRef = useRef<any>(null);
   const draftMarkerDraggingRef = useRef(false);
-  const drawRef = useRef<MapboxDraw | null>(null);
+  const drawRef = useRef<any>(null);
   const onAddTreeRef = useRef(onAddTree);
   const onPolygonChangeRef = useRef(onPolygonChange);
   const onSelectTreeRef = useRef(onSelectTree);
@@ -763,8 +760,8 @@ export default function TreeMap({
   const workflowModeRef = useRef<"green" | "agric" | "relief_recovery" | "csr">(workflowMode);
   const mapReadyRef = useRef(false);
   const mapErrorRef = useRef<string | null>(null);
-  const hoverPopupRef = useRef<mapboxgl.Popup | null>(null);
-  const clickPopupRef = useRef<mapboxgl.Popup | null>(null);
+  const hoverPopupRef = useRef<any>(null);
+  const clickPopupRef = useRef<any>(null);
   const hoverTreeIdRef = useRef<number | null>(null);
   const clickTreeIdRef = useRef<number | null>(null);
   const suppressNextDrawDeleteRef = useRef(false);
@@ -787,7 +784,7 @@ export default function TreeMap({
     workflowModeRef.current = workflowMode;
   }, [workflowMode]);
 
-  const precacheViewportTiles = (map: mapboxgl.Map) => {
+  const precacheViewportTiles = (map: any) => {
     if (typeof navigator === "undefined" || !navigator.onLine) return;
     const zoom = Number(map.getZoom());
     if (!Number.isFinite(zoom) || zoom < 11) return;
@@ -823,7 +820,7 @@ export default function TreeMap({
     }
   };
 
-  const startHealthyBlink = (map: mapboxgl.Map) => {
+  const startHealthyBlink = (map: any) => {
     if (healthyBlinkActiveRef.current) return;
     healthyBlinkActiveRef.current = true;
     const animate = (ts: number) => {
@@ -967,10 +964,19 @@ export default function TreeMap({
       return;
     }
 
-    const initMap = () => {
+    let disposed = false;
+
+    const initMap = async () => {
       if (!containerRef.current || mapRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
+
+      const [mapboxgl, MapboxDraw] = await Promise.all([
+        loadMapboxGl(),
+        enableDraw ? loadMapboxDraw() : Promise.resolve(null),
+      ]);
+      if (disposed || !containerRef.current || mapRef.current) return;
+      mapboxglRef.current = mapboxgl;
 
       const map = new mapboxgl.Map({
         container: containerRef.current,
@@ -979,13 +985,12 @@ export default function TreeMap({
         zoom: 6,
       });
 
-      // Keep zoom interactions explicitly enabled across desktop/mobile embeds.
       map.scrollZoom.enable();
       map.boxZoom.enable();
       map.doubleClickZoom.enable();
       map.touchZoomRotate.enable();
       map.addControl(new mapboxgl.NavigationControl(), "top-right");
-      if (enableDraw) {
+      if (enableDraw && MapboxDraw) {
         const draw = new MapboxDraw({
           displayControlsDefault: false,
           controls: {
@@ -998,12 +1003,9 @@ export default function TreeMap({
         drawRef.current = draw;
       }
 
-      map.on("error", (e) => {
+      map.on("error", (e: any) => {
         // eslint-disable-next-line no-console
         console.warn("Map error:", e?.error || e);
-        // Only show fatal error if the map never managed to load at all.
-        // Tile/style loading errors when offline are expected and non-fatal.
-        // Cached tiles or PMTiles basemap data can still render the map.
         if (!mapReadyRef.current) {
           const msg = !navigator.onLine
             ? "Offline map running from cache. Uncached areas may appear blank."
@@ -1126,7 +1128,6 @@ export default function TreeMap({
             data: buildTreeFeatureCollection(trees, workflowMode),
           });
 
-          // Healthy/alive trees show a live blinking pulse marker.
           map.addLayer({
             id: TREE_OUTER_LAYER_ID,
             type: "circle",
@@ -1160,7 +1161,7 @@ export default function TreeMap({
 
           const openDetailPopup = (
             props: TreeFeatureProps,
-            lngLat: mapboxgl.LngLatLike,
+            lngLat: any,
             mode: "hover" | "click"
           ) => {
             const popupRef = mode === "hover" ? hoverPopupRef : clickPopupRef;
@@ -1194,7 +1195,7 @@ export default function TreeMap({
               });
           };
 
-          const inspectTreeFromProps = (props: TreeFeatureProps, lngLat: mapboxgl.LngLatLike) => {
+          const inspectTreeFromProps = (props: TreeFeatureProps, lngLat: any) => {
             onSelectTreeRef.current?.(props.id);
             const cachedDetail = detailCacheRef.current.get(props.id);
             if (onTreeInspectRef.current) {
@@ -1212,7 +1213,7 @@ export default function TreeMap({
           };
 
           if (supportsHover) {
-            map.on("mousemove", (event) => {
+            map.on("mousemove", (event: any) => {
               if (workflowModeRef.current !== "green") {
                 hoverTreeIdRef.current = null;
                 if (hoverPopupRef.current) {
@@ -1283,10 +1284,8 @@ export default function TreeMap({
             if (!props) return;
             inspectTreeFromProps(props, event.lngLat);
           });
-          // On touch devices, use click (which fires on tap) instead of touchstart
-          // to avoid interfering with map pan/zoom gestures
 
-          map.on("click", (event) => {
+          map.on("click", (event: any) => {
             const feature = map.queryRenderedFeatures(event.point, {
               layers:
                 workflowModeRef.current !== "green"
@@ -1300,7 +1299,6 @@ export default function TreeMap({
               clickPopupRef.current = null;
             }
             onTreeInspectRef.current?.(null);
-            // Only place a tree when draw mode is active
             if (enableDraw && drawActiveRef.current) {
               onAddTreeRef.current(event.lngLat.lng, event.lngLat.lat);
             }
@@ -1381,21 +1379,17 @@ export default function TreeMap({
       }
 
       mapRef.current = map;
-      return () => {
-        window.clearTimeout(timeout);
-        stopHealthyBlink();
-        map.remove();
-      };
     };
 
     const timer = window.setInterval(() => {
-      initMap();
+      void initMap();
       if (mapRef.current) {
         window.clearInterval(timer);
       }
     }, 200);
 
     return () => {
+      disposed = true;
       window.clearInterval(timer);
       stopHealthyBlink();
       if (mapRef.current) {
@@ -1417,6 +1411,7 @@ export default function TreeMap({
       if (drawRef.current) {
         drawRef.current = null;
       }
+      mapboxglRef.current = null;
     };
   }, [enableDraw, hasMapboxToken]);
 
@@ -1441,7 +1436,8 @@ export default function TreeMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !mapReady || suspendFitBounds || !fitBounds || fitBounds.length === 0) return;
+    const mapboxgl = mapboxglRef.current;
+    if (!map || !mapboxgl || !mapReady || suspendFitBounds || !fitBounds || fitBounds.length === 0) return;
     const signature = fitBounds
       .filter((p) => Number.isFinite(Number(p?.lng)) && Number.isFinite(Number(p?.lat)))
       .map((p) => `${Number(p.lng).toFixed(6)},${Number(p.lat).toFixed(6)}`)
@@ -1503,7 +1499,8 @@ export default function TreeMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    const mapboxgl = mapboxglRef.current;
+    if (!map || !mapboxgl) return;
 
     if (!draftPoint || (draftPoint.lng === 0 && draftPoint.lat === 0)) {
       if (draftMarkerRef.current) {

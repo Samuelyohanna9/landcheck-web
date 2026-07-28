@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   buildSponsorPrivacyUrl,
@@ -19,10 +19,12 @@ import {
 } from "../api/greenSponsor";
 import { claimGreenSponsorGuestAccount } from "../auth/greenAuth";
 import GpsIcon from "../components/GpsIcon";
-import PlantyAssistant from "../components/PlantyAssistant";
 import "../styles/green-public-sponsor.css";
+import { useDeferredMount } from "../hooks/useDeferredMount";
+import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
 
 const photoAsset = (fileName: string) => encodeURI(fileName);
+const PlantyAssistant = lazy(() => import("../components/PlantyAssistant"));
 
 const SPONSOR_BACKGROUND = "/sponsor_landing_page.jpg";
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=online.landcheck.mobile";
@@ -174,6 +176,8 @@ function readReturnStateFromUrl(): ReturnState | null {
 
 export default function GreenPublicSponsor() {
   const navigate = useNavigate();
+  const { isLowBandwidth } = useLowBandwidthMode();
+  const showAssistant = useDeferredMount(1600);
   const [projects, setProjects] = useState<SponsorProject[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
@@ -210,6 +214,14 @@ export default function GreenPublicSponsor() {
   const [activeProofIndex, setActiveProofIndex] = useState(0);
   const [openAccordions, setOpenAccordions] = useState<Set<string>>(() => new Set(["about", "approval"]));
   const [suggestedQuantityNote, setSuggestedQuantityNote] = useState<number | null>(null);
+  const visibleProofPhotos = useMemo(
+    () => (isLowBandwidth ? PROOF_PHOTOS.slice(0, 4) : PROOF_PHOTOS),
+    [isLowBandwidth],
+  );
+  const visibleGalleryImages = useMemo(
+    () => (isLowBandwidth ? GALLERY_IMAGES.slice(0, 2) : GALLERY_IMAGES),
+    [isLowBandwidth],
+  );
 
   const toggleAccordion = (key: string) => {
     setOpenAccordions((current) => {
@@ -223,6 +235,14 @@ export default function GreenPublicSponsor() {
       .then(setImpactStats)
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    setActiveProofIndex((current) => Math.min(current, Math.max(visibleProofPhotos.length - 1, 0)));
+  }, [visibleProofPhotos.length]);
+
+  useEffect(() => {
+    setGalleryIndex((current) => Math.min(current, Math.max(visibleGalleryImages.length - 1, 0)));
+  }, [visibleGalleryImages.length]);
 
   // Pre-fill quantity when arriving from the CO2 footprint calculator (?suggested_qty=N)
   useEffect(() => {
@@ -474,12 +494,14 @@ export default function GreenPublicSponsor() {
         <div className="gps-hero-media-wrap">
           <div
             className="gps-hero-media-panel gps-hero-media-panel--a"
-            style={{ backgroundImage: `url(${SPONSOR_BACKGROUND})` }}
+            style={{ backgroundImage: `url(${isLowBandwidth ? PROJECT_THUMBNAIL_SRC : SPONSOR_BACKGROUND})` }}
           />
-          <div
-            className="gps-hero-media-panel gps-hero-media-panel--b"
-            style={{ backgroundImage: `url(${photoAsset("seeds.JPG")})` }}
-          />
+          {!isLowBandwidth ? (
+            <div
+              className="gps-hero-media-panel gps-hero-media-panel--b"
+              style={{ backgroundImage: `url(${photoAsset("seeds.JPG")})` }}
+            />
+          ) : null}
         </div>
       </section>
       )}
@@ -492,7 +514,7 @@ export default function GreenPublicSponsor() {
             <span className="gps-proof-gallery-sub">photos speak louder than words</span>
           </div>
           <div className="gps-proof-strip">
-            {PROOF_PHOTOS.map((photo, index) => (
+            {visibleProofPhotos.map((photo, index) => (
               <button
                 key={photo.src}
                 type="button"
@@ -800,12 +822,12 @@ export default function GreenPublicSponsor() {
                     <div className="gps-pdp-gallery">
                       <div
                         className="gps-pdp-main-photo"
-                        style={{ backgroundImage: `url(${GALLERY_IMAGES[galleryIndex % GALLERY_IMAGES.length].src})` }}
+                        style={{ backgroundImage: `url(${visibleGalleryImages[galleryIndex % visibleGalleryImages.length].src})` }}
                         role="img"
-                        aria-label={GALLERY_IMAGES[galleryIndex % GALLERY_IMAGES.length].label}
+                        aria-label={visibleGalleryImages[galleryIndex % visibleGalleryImages.length].label}
                       />
                       <div className="gps-pdp-thumb-row">
-                        {GALLERY_IMAGES.map((image, index) => (
+                        {visibleGalleryImages.map((image, index) => (
                           <button
                             type="button"
                             key={image.src}
@@ -974,7 +996,11 @@ export default function GreenPublicSponsor() {
         </div>
       </footer>
 
-      <PlantyAssistant />
+      {showAssistant && !isLowBandwidth ? (
+        <Suspense fallback={null}>
+          <PlantyAssistant />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

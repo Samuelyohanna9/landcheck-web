@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import {
   buildOrgImpactPdfUrl,
@@ -12,8 +12,12 @@ import {
   type DonorImpactProject,
 } from "../api/donorImpact";
 import { BACKEND_URL } from "../api/client";
-import { ProjectMap } from "../components/ProjectMap";
+import { useInViewport } from "../hooks/useInViewport";
 import "../styles/green-impact.css";
+
+const ProjectMap = lazy(() =>
+  import("../components/ProjectMap").then((module) => ({ default: module.ProjectMap }))
+);
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
 
@@ -361,6 +365,7 @@ function PhotoGallery({ photos }: { photos: DonorImpactPhoto[] }) {
 
 function ProjectSection({ project }: { project: DonorImpactProject }) {
   const { stats, labels, workflow_profile: mode } = project;
+  const mapViewport = useInViewport<HTMLDivElement>({ rootMargin: "320px 0px" });
   const entityPlural = labels.entity_plural;
   const ownerPlural = labels.owner_plural;
   const modeLabel = labels.mode_label;
@@ -522,16 +527,22 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
         )}
 
         {(project.map_points.length > 0 || (project.map_features || []).length > 0) && (
-          <section>
+          <section ref={mapViewport.ref}>
             <div className="gi-section-heading">
               <div className="gi-section-heading-bar" />
               <div className="gi-section-heading-text">Field Activity Map</div>
             </div>
-            <ProjectMap
-              points={project.map_points}
-              features={project.map_features || []}
-              mode={mode}
-            />
+            {mapViewport.inView ? (
+              <Suspense fallback={<div className="gi-empty-section">Loading field activity map...</div>}>
+                <ProjectMap
+                  points={project.map_points}
+                  features={project.map_features || []}
+                  mode={mode}
+                />
+              </Suspense>
+            ) : (
+              <div className="gi-empty-section">Map will load when this section enters view.</div>
+            )}
           </section>
         )}
 

@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { getGreenAuthSession, clearGreenAuthed } from "../auth/greenAuth";
 import { GreenGlyph } from "../components/GreenGlyph";
-import { ProjectMap } from "../components/ProjectMap";
+import { useInViewport } from "../hooks/useInViewport";
 import "../styles/green-merchant.css";
+
+const ProjectMap = lazy(() =>
+  import("../components/ProjectMap").then((module) => ({ default: module.ProjectMap }))
+);
 
 type MerchantOrder = {
   id: number;
@@ -85,6 +89,7 @@ export default function GreenMerchantDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
+  const mapViewport = useInViewport<HTMLDivElement>({ rootMargin: "320px 0px" });
 
   useEffect(() => {
     if (!merchantId) return;
@@ -307,7 +312,7 @@ export default function GreenMerchantDashboard() {
           ) : (
             <>
               <div className="gm-section-label">Map View</div>
-              <section className="gm-card gm-map-card">
+              <section ref={mapViewport.ref} className="gm-card gm-map-card">
                 <div className="gm-card-body">
                   <div className="gm-card-heading">
                     <div className="gm-card-heading-icon">
@@ -323,7 +328,21 @@ export default function GreenMerchantDashboard() {
                     </div>
                   </div>
                   {mapPoints.length > 0 ? (
-                    <ProjectMap points={mapPoints} mode="green" />
+                    mapViewport.inView ? (
+                      <Suspense fallback={<div className="gm-empty-state gm-empty-state--map">Loading verified tree map...</div>}>
+                        <ProjectMap points={mapPoints} mode="green" />
+                      </Suspense>
+                    ) : (
+                      <div className="gm-empty-state gm-empty-state--map">
+                        <div className="gm-empty-icon">
+                          <GreenGlyph name="map" />
+                        </div>
+                        <p className="gm-empty-title">Map will load when you reach it</p>
+                        <p className="gm-empty-copy">
+                          Verified tree locations are ready. The interactive map will load as this section enters view.
+                        </p>
+                      </div>
+                    )
                   ) : (
                     <div className="gm-empty-state gm-empty-state--map">
                       <div className="gm-empty-icon">

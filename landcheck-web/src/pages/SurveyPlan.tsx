@@ -1,11 +1,11 @@
 import { Suspense, lazy, useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import mapboxgl from "mapbox-gl";
 import { api } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
 import CoordinateInput from "../components/CoordinateInput";
 import SurveyPreview from "../components/SurveyPreview";
 import { fromWGS84, toWGS84 } from "../utils/coordinateConverter";
+import { loadMapboxGl, MAPBOX_TOKEN } from "../utils/mapboxLoader";
 import {
   clearSurveyPlanDraft,
   loadSurveyPlanDraft,
@@ -168,11 +168,6 @@ const DEFAULT_ADAMAWA_ORIGIN_TEXT = "ORIGIN:- WGS 84 UTM ZONE 33N";
 const DEFAULT_ADAMAWA_TOPO_SHEET_TEXT = "BASED ON GIREI TOPO SHEET 197 NE";
 const DEFAULT_ADAMAWA_DISCLAIMER_TEXT =
   "Detail shewn not the result of accurate survey. All bearing and distances shewn on this plan have been computed from registered Co-ordinates.";
-const MAPBOX_TOKEN = String(import.meta.env.VITE_MAPBOX_TOKEN || "");
-if (MAPBOX_TOKEN) {
-  mapboxgl.accessToken = MAPBOX_TOKEN;
-}
-
 const ACTIVE_SURVEY_DRAFT_ID = "active";
 
 const buildDefaultManualPoints = (): ManualPoint[] => [
@@ -426,7 +421,8 @@ export default function SurveyPlan() {
   const subdivisionLivePreviewTimerRef = useRef<number | null>(null);
   const subdivisionLineCanvasRef = useRef<HTMLElement | null>(null);
   const subdivisionMapContainerRef = useRef<HTMLDivElement | null>(null);
-  const subdivisionMapRef = useRef<mapboxgl.Map | null>(null);
+  const subdivisionMapRef = useRef<any>(null);
+  const subdivisionMapboxRef = useRef<any>(null);
   const subdivisionMapReadyRef = useRef(false);
   const previewRequestId = useRef(0);
   const orthophotoRequestId = useRef(0);
@@ -948,8 +944,9 @@ export default function SurveyPlan() {
     };
   }, [subdivisionPreview, displayedSubdivisionLotNames]);
 
-  const fitSubdivisionMapToData = useCallback((map: mapboxgl.Map, fc: any) => {
-    if (!fc?.features?.length) return;
+  const fitSubdivisionMapToData = useCallback((map: any, fc: any) => {
+    const mapboxgl = subdivisionMapboxRef.current;
+    if (!mapboxgl || !fc?.features?.length) return;
     const bounds = new mapboxgl.LngLatBounds();
     let hasCoords = false;
     fc.features.forEach((feature: any) => {
@@ -996,101 +993,113 @@ export default function SurveyPlan() {
       subdivisionMapReadyRef.current = false;
     }
 
-    const map = new mapboxgl.Map({
-      container: subdivisionMapContainerRef.current,
-      style: "mapbox://styles/mapbox/satellite-streets-v12",
-      center: [7.5, 9.0],
-      zoom: 6,
-    });
-    map.addControl(new mapboxgl.NavigationControl(), "top-right");
-    map.on("load", () => {
-      subdivisionMapReadyRef.current = true;
+    let disposed = false;
 
-      map.addSource("subdivision-lots-src", {
-        type: "geojson",
-        data: (subdivisionMapPreviewData?.polygons || { type: "FeatureCollection", features: [] }) as any,
+    void (async () => {
+      const mapboxgl = await loadMapboxGl();
+      if (disposed || !subdivisionMapContainerRef.current) return;
+      subdivisionMapboxRef.current = mapboxgl;
+
+      const map = new mapboxgl.Map({
+        container: subdivisionMapContainerRef.current,
+        style: "mapbox://styles/mapbox/satellite-streets-v12",
+        center: [7.5, 9.0],
+        zoom: 6,
       });
-      map.addLayer({
-        id: "subdivision-lots-fill",
-        type: "fill",
-        source: "subdivision-lots-src",
-        paint: {
-          "fill-color": "#22c55e",
-          "fill-opacity": 0.18,
-        },
-      });
-      map.addLayer({
-        id: "subdivision-lots-line",
-        type: "line",
-        source: "subdivision-lots-src",
-        paint: {
-          "line-color": "#22c55e",
-          "line-width": 2.4,
-        },
+      map.addControl(new mapboxgl.NavigationControl(), "top-right");
+      map.on("load", () => {
+        subdivisionMapReadyRef.current = true;
+
+        map.addSource("subdivision-lots-src", {
+          type: "geojson",
+          data: (subdivisionMapPreviewData?.polygons || { type: "FeatureCollection", features: [] }) as any,
+        });
+        map.addLayer({
+          id: "subdivision-lots-fill",
+          type: "fill",
+          source: "subdivision-lots-src",
+          paint: {
+            "fill-color": "#22c55e",
+            "fill-opacity": 0.18,
+          },
+        });
+        map.addLayer({
+          id: "subdivision-lots-line",
+          type: "line",
+          source: "subdivision-lots-src",
+          paint: {
+            "line-color": "#22c55e",
+            "line-width": 2.4,
+          },
+        });
+
+        map.addSource("subdivision-lots-labels-src", {
+          type: "geojson",
+          data: (subdivisionMapPreviewData?.labels || { type: "FeatureCollection", features: [] }) as any,
+        });
+        map.addLayer({
+          id: "subdivision-lots-labels",
+          type: "symbol",
+          source: "subdivision-lots-labels-src",
+          layout: {
+            "text-field": ["get", "label"],
+            "text-size": 11,
+            "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+            "text-allow-overlap": true,
+            "text-anchor": "center",
+          },
+          paint: {
+            "text-color": "#ecfdf5",
+            "text-halo-color": "#0f172a",
+            "text-halo-width": 1.3,
+          },
+        });
+
+        map.addSource("subdivision-stations-src", {
+          type: "geojson",
+          data: (subdivisionMapPreviewData?.stations || { type: "FeatureCollection", features: [] }) as any,
+        });
+        map.addLayer({
+          id: "subdivision-stations-circle",
+          type: "circle",
+          source: "subdivision-stations-src",
+          paint: {
+            "circle-radius": 3.2,
+            "circle-color": "#ffffff",
+            "circle-stroke-color": "#0f172a",
+            "circle-stroke-width": 1.0,
+          },
+        });
+        map.addLayer({
+          id: "subdivision-stations-label",
+          type: "symbol",
+          source: "subdivision-stations-src",
+          layout: {
+            "text-field": ["get", "station"],
+            "text-size": 10,
+            "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+            "text-offset": [0, -1.1],
+            "text-anchor": "bottom",
+            "text-allow-overlap": true,
+          },
+          paint: {
+            "text-color": "#f8fafc",
+            "text-halo-color": "#0f172a",
+            "text-halo-width": 1.0,
+          },
+        });
+
+        if (subdivisionMapPreviewData?.polygons) {
+          fitSubdivisionMapToData(map, subdivisionMapPreviewData.polygons);
+        }
       });
 
-      map.addSource("subdivision-lots-labels-src", {
-        type: "geojson",
-        data: (subdivisionMapPreviewData?.labels || { type: "FeatureCollection", features: [] }) as any,
-      });
-      map.addLayer({
-        id: "subdivision-lots-labels",
-        type: "symbol",
-        source: "subdivision-lots-labels-src",
-        layout: {
-          "text-field": ["get", "label"],
-          "text-size": 11,
-          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
-          "text-allow-overlap": true,
-          "text-anchor": "center",
-        },
-        paint: {
-          "text-color": "#ecfdf5",
-          "text-halo-color": "#0f172a",
-          "text-halo-width": 1.3,
-        },
-      });
+      subdivisionMapRef.current = map;
+    })();
 
-      map.addSource("subdivision-stations-src", {
-        type: "geojson",
-        data: (subdivisionMapPreviewData?.stations || { type: "FeatureCollection", features: [] }) as any,
-      });
-      map.addLayer({
-        id: "subdivision-stations-circle",
-        type: "circle",
-        source: "subdivision-stations-src",
-        paint: {
-          "circle-radius": 3.2,
-          "circle-color": "#ffffff",
-          "circle-stroke-color": "#0f172a",
-          "circle-stroke-width": 1.0,
-        },
-      });
-      map.addLayer({
-        id: "subdivision-stations-label",
-        type: "symbol",
-        source: "subdivision-stations-src",
-        layout: {
-          "text-field": ["get", "station"],
-          "text-size": 10,
-          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
-          "text-offset": [0, -1.1],
-          "text-anchor": "bottom",
-          "text-allow-overlap": true,
-        },
-        paint: {
-          "text-color": "#f8fafc",
-          "text-halo-color": "#0f172a",
-          "text-halo-width": 1.0,
-        },
-      });
-
-      if (subdivisionMapPreviewData?.polygons) {
-        fitSubdivisionMapToData(map, subdivisionMapPreviewData.polygons);
-      }
-    });
-
-    subdivisionMapRef.current = map;
+    return () => {
+      disposed = true;
+    };
   }, [
     workflowMode,
     currentStep,
@@ -1102,9 +1111,9 @@ export default function SurveyPlan() {
   useEffect(() => {
     const map = subdivisionMapRef.current;
     if (!map || !subdivisionMapReadyRef.current) return;
-    const polySource = map.getSource("subdivision-lots-src") as mapboxgl.GeoJSONSource | undefined;
-    const labelSource = map.getSource("subdivision-lots-labels-src") as mapboxgl.GeoJSONSource | undefined;
-    const stationSource = map.getSource("subdivision-stations-src") as mapboxgl.GeoJSONSource | undefined;
+    const polySource = map.getSource("subdivision-lots-src") as any;
+    const labelSource = map.getSource("subdivision-lots-labels-src") as any;
+    const stationSource = map.getSource("subdivision-stations-src") as any;
     if (polySource && subdivisionMapPreviewData?.polygons) {
       polySource.setData(subdivisionMapPreviewData.polygons as any);
       fitSubdivisionMapToData(map, subdivisionMapPreviewData.polygons);
@@ -1131,6 +1140,7 @@ export default function SurveyPlan() {
         subdivisionMapRef.current.remove();
         subdivisionMapRef.current = null;
       }
+      subdivisionMapboxRef.current = null;
       subdivisionMapReadyRef.current = false;
     };
   }, []);

@@ -1,6 +1,4 @@
 import { useRef, useState } from "react";
-import * as XLSX from "xlsx";
-import Papa from "papaparse";
 import "../styles/coordinate-input.css";
 import CSVPreviewModal from "./CSVPreviewModal";
 
@@ -71,6 +69,7 @@ export default function CoordinateInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [rawFileData, setRawFileData] = useState<(string | number)[][]>([]);
+  const [uploadParsing, setUploadParsing] = useState(false);
   const isProjected = coordinateSystem !== "wgs84";
   const xLabel = isProjected ? "Easting (m)" : "Longitude";
   const yLabel = isProjected ? "Northing (m)" : "Latitude";
@@ -79,56 +78,83 @@ export default function CoordinateInput({
   const yPlaceholder = placeholders.y;
 
   // Parse uploaded file (CSV or Excel) and show preview modal
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const fileName = file.name.toLowerCase();
+    const resetFileInput = () => {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    };
 
     if (fileName.endsWith(".csv") || fileName.endsWith(".txt")) {
-      // Parse CSV and show preview modal
-      Papa.parse(file, {
-        complete: (results) => {
-          const data = results.data as (string | number)[][];
-          if (data.length > 0) {
-            setRawFileData(data);
-            setShowPreviewModal(true);
-          } else {
-            alert("No data found in file. Please check the format.");
-          }
-        },
-        error: (error) => {
-          alert(`Error parsing CSV: ${error.message}`);
-        },
-      });
+      setUploadParsing(true);
+      try {
+        const { default: Papa } = await import("papaparse");
+        Papa.parse(file, {
+          complete: (results) => {
+            const data = results.data as (string | number)[][];
+            if (data.length > 0) {
+              setRawFileData(data);
+              setShowPreviewModal(true);
+            } else {
+              alert("No data found in file. Please check the format.");
+            }
+            setUploadParsing(false);
+            resetFileInput();
+          },
+          error: (error) => {
+            alert(`Error parsing CSV: ${error.message}`);
+            setUploadParsing(false);
+            resetFileInput();
+          },
+        });
+      } catch (error) {
+        alert(`Error loading CSV parser: ${error}`);
+        setUploadParsing(false);
+        resetFileInput();
+      }
     } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
-      // Parse Excel and show preview modal
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: "array" });
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as (string | number)[][];
+      setUploadParsing(true);
+      try {
+        const XLSX = await import("xlsx");
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as (string | number)[][];
 
-          if (jsonData.length > 0) {
-            setRawFileData(jsonData);
-            setShowPreviewModal(true);
-          } else {
-            alert("No data found in file. Please check the format.");
+            if (jsonData.length > 0) {
+              setRawFileData(jsonData);
+              setShowPreviewModal(true);
+            } else {
+              alert("No data found in file. Please check the format.");
+            }
+          } catch (error) {
+            alert(`Error parsing Excel file: ${error}`);
+          } finally {
+            setUploadParsing(false);
+            resetFileInput();
           }
-        } catch (error) {
-          alert(`Error parsing Excel file: ${error}`);
-        }
-      };
-      reader.readAsArrayBuffer(file);
+        };
+        reader.onerror = () => {
+          alert("Could not read the Excel file. Please try again.");
+          setUploadParsing(false);
+          resetFileInput();
+        };
+        reader.readAsArrayBuffer(file);
+      } catch (error) {
+        alert(`Error loading Excel parser: ${error}`);
+        setUploadParsing(false);
+        resetFileInput();
+      }
     } else {
       alert("Please upload a CSV (.csv) or Excel (.xlsx, .xls) file");
-    }
-
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      resetFileInput();
     }
   };
 
@@ -171,15 +197,15 @@ export default function CoordinateInput({
           type="file"
           accept=".csv,.xlsx,.xls,.txt"
           onChange={handleFileUpload}
-          disabled={disabled}
+          disabled={disabled || uploadParsing}
           className="file-input-hidden"
           id="coord-file-upload"
         />
-        <label htmlFor="coord-file-upload" className={`upload-btn ${disabled ? 'disabled' : ''}`}>
+        <label htmlFor="coord-file-upload" className={`upload-btn ${disabled || uploadParsing ? 'disabled' : ''}`}>
           <svg viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
           </svg>
-          Upload CSV/Excel
+          {uploadParsing ? "Processing file..." : "Upload CSV/Excel"}
         </label>
         <span className="upload-hint">
           Format: Station, Easting, Northing (or just Easting, Northing)
