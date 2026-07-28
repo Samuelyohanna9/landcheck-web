@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState, type ReactElement } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import "../styles/green-partners.css";
 import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
-import FeaturedStorySpotlight from "../components/FeaturedStorySpotlight";
 import { getArticleBySlug } from "../data/newsArticles";
+import { useDeferredMount } from "../hooks/useDeferredMount";
+import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
 
 const greenPartnersFeaturedStory = getArticleBySlug("fufore-model-school-first-trees")!;
+const FeaturedStorySpotlight = lazy(() => import("../components/FeaturedStorySpotlight"));
 
 type PartnerOrg = { name: string; logo: string | null };
 type MediaFit = "cover" | "contain";
@@ -261,9 +263,15 @@ function renderListIcon(label: string) {
 }
 
 export default function GreenPartnersLanding() {
+  const { isLowBandwidth } = useLowBandwidthMode();
+  const showFeaturedStory = useDeferredMount(900);
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
   const [activeModelId, setActiveModelId] = useState(greenModels[0].id);
   const modelTrackRef = useRef<HTMLDivElement | null>(null);
+  const visiblePhotoMoments = useMemo(
+    () => (isLowBandwidth ? photoMoments.slice(0, 4) : photoMoments),
+    [isLowBandwidth],
+  );
 
   useEffect(() => {
     const track = modelTrackRef.current;
@@ -351,7 +359,7 @@ export default function GreenPartnersLanding() {
         ctaRoute="/green-work/login"
       />
 
-      <section className="gp-new-hero" style={{ backgroundImage: `url("${photoAsset("seeds.JPG")}")` }}>
+      <section className="gp-new-hero" style={{ backgroundImage: `url("${isLowBandwidth ? "/thumpnail_public.webp" : photoAsset("seeds.JPG")}")` }}>
         <div className="gp-new-hero-scrim" aria-hidden="true" />
         <div className="gp-shell gp-new-hero-inner">
           <div className="gp-new-hero-copy">
@@ -392,7 +400,11 @@ export default function GreenPartnersLanding() {
         </div>
       </section>
 
-      <FeaturedStorySpotlight article={greenPartnersFeaturedStory} />
+      {showFeaturedStory ? (
+        <Suspense fallback={null}>
+          <FeaturedStorySpotlight article={greenPartnersFeaturedStory} />
+        </Suspense>
+      ) : null}
 
       <section className="gp-social-proof" style={DEFERRED_SECTION_STYLE}>
         <div className="gp-shell">
@@ -779,7 +791,7 @@ export default function GreenPartnersLanding() {
                   ))}
                 </ul>
               </article>
-              {photoMoments.map((moment) => (
+              {visiblePhotoMoments.map((moment) => (
                 <article key={moment.title} className="gp-photo-card">
                   <div className="gp-photo-card__media">
                     <img src={moment.imageSrc} alt={moment.title} loading="lazy" decoding="async" />

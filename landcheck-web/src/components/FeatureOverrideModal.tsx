@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
-import mapboxgl from "mapbox-gl";
-import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import "mapbox-gl/dist/mapbox-gl.css";
+import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import toast from "react-hot-toast";
 import "../styles/feature-override-modal.css";
 import { fromWGS84 } from "../utils/coordinateConverter";
 import CadIcon from "./CadIcon";
-
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
+import { loadMapboxDraw, loadMapboxGl } from "../utils/mapboxLoader";
 
 type FeatureType = "road" | "building" | "river" | "fence";
 type FeatureAction = "add" | "delete" | "update";
@@ -729,7 +728,7 @@ const layerIds: Record<FeatureType | "boundary", string[]> = {
   boundary: ["plot-boundary-line"],
 };
 
-const EMPTY_EDITOR_STYLE: mapboxgl.Style = {
+const EMPTY_EDITOR_STYLE: any = {
   version: 8,
   name: "landcheck-cad-editor",
   sources: {},
@@ -745,7 +744,7 @@ const EMPTY_EDITOR_STYLE: mapboxgl.Style = {
   ],
 };
 
-const SATELLITE_EDITOR_STYLE: mapboxgl.Style = {
+const SATELLITE_EDITOR_STYLE: any = {
   version: 8,
   name: "landcheck-cad-editor-satellite",
   sources: {
@@ -787,8 +786,9 @@ export default function FeatureOverrideModal({
   coordinateSystem,
   onBoundaryPointChange,
 }: Props) {
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const drawRef = useRef<MapboxDraw | null>(null);
+  const mapRef = useRef<any>(null);
+  const drawRef = useRef<any>(null);
+  const mapboxglRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const plottingStageRef = useRef<HTMLDivElement>(null);
   const activeDrawFeatureId = useRef<string | null>(null);
@@ -1066,7 +1066,7 @@ export default function FeatureOverrideModal({
     setSelectionDrag(null);
   }, []);
 
-  const isStyleReady = useCallback((map: mapboxgl.Map | null) => {
+  const isStyleReady = useCallback((map: any) => {
     if (!map) return false;
     try {
       return map.isStyleLoaded();
@@ -1151,7 +1151,7 @@ export default function FeatureOverrideModal({
     [action, basemapMode, setAction, setFeatureType, setRoadName, setRoadWidth]
   );
 
-  const applyBasemapMode = useCallback((map: mapboxgl.Map, mode: BasemapMode) => {
+  const applyBasemapMode = useCallback((map: any, mode: BasemapMode) => {
     if (!isStyleReady(map)) return;
     const plotting = mode === "plotting";
 
@@ -1192,11 +1192,11 @@ export default function FeatureOverrideModal({
     }
   }, [isStyleReady]);
 
-  const ensureCadOverlay = useCallback((map: mapboxgl.Map) => {
+  const ensureCadOverlay = useCallback((map: any) => {
     if (!isStyleReady(map)) return;
     const beforeId = map
       .getStyle()
-      ?.layers?.find((layer) => String(layer.id || "").startsWith("gl-draw"))?.id;
+      ?.layers?.find((layer: any) => String(layer.id || "").startsWith("gl-draw"))?.id;
     const overlay = buildCadOverlayData(plotCoords);
 
     if (!map.getSource("cad-mask-src")) {
@@ -1214,7 +1214,7 @@ export default function FeatureOverrideModal({
         beforeId
       );
     } else {
-      (map.getSource("cad-mask-src") as mapboxgl.GeoJSONSource).setData(overlay.mask as any);
+      (map.getSource("cad-mask-src") as any).setData(overlay.mask as any);
     }
 
     if (!map.getSource("cad-grid-src")) {
@@ -1250,11 +1250,11 @@ export default function FeatureOverrideModal({
         beforeId
       );
     } else {
-      (map.getSource("cad-grid-src") as mapboxgl.GeoJSONSource).setData(overlay.grid as any);
+      (map.getSource("cad-grid-src") as any).setData(overlay.grid as any);
     }
   }, [isStyleReady, plotCoords]);
 
-  const applyLayerVisibility = useCallback((map: mapboxgl.Map, state: LayerVisibility) => {
+  const applyLayerVisibility = useCallback((map: any, state: LayerVisibility) => {
     if (!isStyleReady(map)) return;
     (Object.keys(layerIds) as Array<keyof typeof layerIds>).forEach((key) => {
       const visible = state[key];
@@ -1267,7 +1267,7 @@ export default function FeatureOverrideModal({
   }, [isStyleReady]);
 
   const syncMapFeatureSources = useCallback(
-    (map: mapboxgl.Map, collections: FeatureCollectionState) => {
+    (map: any, collections: FeatureCollectionState) => {
       if (!isStyleReady(map)) return;
 
       const roadsData = collections.road || EMPTY_FEATURE_COLLECTION;
@@ -1284,7 +1284,7 @@ export default function FeatureOverrideModal({
           paint: { "line-color": "#fde047", "line-width": 3, "line-opacity": 0.95 },
         });
       } else {
-        (map.getSource("roads-src") as mapboxgl.GeoJSONSource).setData(roadsData as any);
+        (map.getSource("roads-src") as any).setData(roadsData as any);
       }
 
       if (!map.getSource("buildings-src")) {
@@ -1302,7 +1302,7 @@ export default function FeatureOverrideModal({
           paint: { "line-color": "#bae6fd", "line-width": 2 },
         });
       } else {
-        (map.getSource("buildings-src") as mapboxgl.GeoJSONSource).setData(buildingsData as any);
+        (map.getSource("buildings-src") as any).setData(buildingsData as any);
       }
 
       if (!map.getSource("rivers-src")) {
@@ -1314,7 +1314,7 @@ export default function FeatureOverrideModal({
           paint: { "line-color": "#60a5fa", "line-width": 2.5, "line-opacity": 0.95 },
         });
       } else {
-        (map.getSource("rivers-src") as mapboxgl.GeoJSONSource).setData(riversData as any);
+        (map.getSource("rivers-src") as any).setData(riversData as any);
       }
 
       if (!map.getSource("fences-src")) {
@@ -1330,7 +1330,7 @@ export default function FeatureOverrideModal({
           },
         });
       } else {
-        (map.getSource("fences-src") as mapboxgl.GeoJSONSource).setData(fencesData as any);
+        (map.getSource("fences-src") as any).setData(fencesData as any);
       }
 
       applyLayerVisibility(map, layerVisibility);
@@ -1345,7 +1345,8 @@ export default function FeatureOverrideModal({
       return;
     }
     const map = mapRef.current;
-    if (!map || !plotCoords?.length) return;
+    const mapboxgl = mapboxglRef.current;
+    if (!map || !mapboxgl || !plotCoords?.length) return;
     const bounds = new mapboxgl.LngLatBounds();
     plotCoords.forEach(([lng, lat]) => bounds.extend([lng, lat]));
     map.fitBounds(bounds, { padding: 48, duration: 300 });
@@ -1543,125 +1544,141 @@ export default function FeatureOverrideModal({
 
   useEffect(() => {
     if (!isOpen || basemapMode !== "satellite" || mapRef.current || !containerRef.current) return;
+    let disposed = false;
+    const container = containerRef.current;
 
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: basemapMode === "satellite" ? SATELLITE_EDITOR_STYLE : EMPTY_EDITOR_STYLE,
-      center: [7.5, 9.0],
-      zoom: 12,
-      pitchWithRotate: false,
-      dragRotate: false,
-    });
+    void (async () => {
+      const [mapboxgl, MapboxDraw] = await Promise.all([loadMapboxGl(), loadMapboxDraw()]);
+      if (disposed || !container) return;
 
-    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: false }), "top-right");
-    map.addControl(new mapboxgl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-left");
+      mapboxglRef.current = mapboxgl;
 
-    const draw = new MapboxDraw({
-      displayControlsDefault: false,
-      controls: {},
-      defaultMode: "simple_select",
-    });
-    map.addControl(draw);
+      const map = new mapboxgl.Map({
+        container,
+        style: basemapMode === "satellite" ? SATELLITE_EDITOR_STYLE : EMPTY_EDITOR_STYLE,
+        center: [7.5, 9.0],
+        zoom: 12,
+        pitchWithRotate: false,
+        dragRotate: false,
+      });
 
-    const selectFeature = (nextFeatureType: FeatureType) => (event: mapboxgl.MapLayerMouseEvent) => {
-      if (!drawRef.current || !event.features?.length) return;
-      const sourceFeature = event.features[0];
-      if (!sourceFeature.geometry) return;
-      setActiveTool("select");
-      importGeometryIntoEditor(sourceFeature.geometry, nextFeatureType, sourceFeature.properties as Record<string, any>);
-    };
+      map.addControl(new mapboxgl.NavigationControl({ visualizePitch: false }), "top-right");
+      map.addControl(new mapboxgl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-left");
 
-    const contextMenu = (nextFeatureType: FeatureType) => (event: mapboxgl.MapLayerMouseEvent) => {
-      event.preventDefault();
-      if (!event.features?.length) return;
-      selectFeature(nextFeatureType)(event);
-      setMenu({ x: event.originalEvent.clientX, y: event.originalEvent.clientY, visible: true });
-    };
+      const draw = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: {},
+        defaultMode: "simple_select",
+      });
+      map.addControl(draw);
 
-    map.on("load", () => {
-      ensureCadOverlay(map);
-      if (plotCoords && plotCoords.length >= 3) {
-        const plotFeature = {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "Polygon",
-            coordinates: [plotCoords],
-          },
-        };
-        if (!map.getSource("plot-boundary")) {
-          map.addSource("plot-boundary", {
-            type: "geojson",
-            data: plotFeature as any,
-          });
-          map.addLayer({
-            id: "plot-boundary-line",
-            type: "line",
-            source: "plot-boundary",
-            paint: {
-              "line-color": "#f97316",
-              "line-width": 2.2,
-              "line-dasharray": [1.4, 1.2],
-            },
-          });
-        }
-        fitPlotBoundary();
-      }
-
-      syncMapFeatureSources(map, featureCollections);
-      applyBasemapMode(map, basemapMode);
-    });
-
-    map.on("draw.create", syncDraftFromDraw);
-    map.on("draw.update", syncDraftFromDraw);
-    map.on("draw.delete", () => {
-      activeDrawFeatureId.current = null;
-      setDraftMetrics(null);
-      if (action === "add") {
-        setSelectedGeometry(null);
-        setSelectedMetrics(null);
-      }
-    });
-    map.on("draw.selectionchange", syncDraftFromDraw);
-    map.on("draw.modechange", (event: any) => {
-      const nextMode = String(event?.mode || "simple_select");
-      if (nextMode === "draw_line_string" || nextMode === "draw_polygon") {
-        setActiveTool(nextMode);
-      } else {
+      const selectFeature = (nextFeatureType: FeatureType) => (event: any) => {
+        if (!drawRef.current || !event.features?.length) return;
+        const sourceFeature = event.features[0];
+        if (!sourceFeature.geometry) return;
         setActiveTool("select");
+        importGeometryIntoEditor(sourceFeature.geometry, nextFeatureType, sourceFeature.properties as Record<string, any>);
+      };
+
+      const contextMenu = (nextFeatureType: FeatureType) => (event: any) => {
+        event.preventDefault();
+        if (!event.features?.length) return;
+        selectFeature(nextFeatureType)(event);
+        setMenu({ x: event.originalEvent.clientX, y: event.originalEvent.clientY, visible: true });
+      };
+
+      map.on("load", () => {
+        ensureCadOverlay(map);
+        if (plotCoords && plotCoords.length >= 3) {
+          const plotFeature = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "Polygon",
+              coordinates: [plotCoords],
+            },
+          };
+          if (!map.getSource("plot-boundary")) {
+            map.addSource("plot-boundary", {
+              type: "geojson",
+              data: plotFeature as any,
+            });
+            map.addLayer({
+              id: "plot-boundary-line",
+              type: "line",
+              source: "plot-boundary",
+              paint: {
+                "line-color": "#f97316",
+                "line-width": 2.2,
+                "line-dasharray": [1.4, 1.2],
+              },
+            });
+          }
+          fitPlotBoundary();
+        }
+
+        syncMapFeatureSources(map, featureCollections);
+        applyBasemapMode(map, basemapMode);
+      });
+
+      map.on("draw.create", syncDraftFromDraw);
+      map.on("draw.update", syncDraftFromDraw);
+      map.on("draw.delete", () => {
+        activeDrawFeatureId.current = null;
+        setDraftMetrics(null);
+        if (action === "add") {
+          setSelectedGeometry(null);
+          setSelectedMetrics(null);
+        }
+      });
+      map.on("draw.selectionchange", syncDraftFromDraw);
+      map.on("draw.modechange", (event: any) => {
+        const nextMode = String(event?.mode || "simple_select");
+        if (nextMode === "draw_line_string" || nextMode === "draw_polygon") {
+          setActiveTool(nextMode);
+        } else {
+          setActiveTool("select");
+        }
+      });
+
+      map.on("mousemove", (event: any) => {
+        setCursor({ lng: event.lngLat.lng, lat: event.lngLat.lat });
+      });
+      map.on("mouseleave", () => setCursor(null));
+
+      const interactiveBindings: Array<[string, FeatureType]> = [
+        ["roads-line", "road"],
+        ["buildings-fill", "building"],
+        ["buildings-line", "building"],
+        ["rivers-line", "river"],
+        ["fences-line", "fence"],
+      ];
+
+      interactiveBindings.forEach(([layerId, nextFeatureType]) => {
+        map.on("click", layerId, selectFeature(nextFeatureType));
+        map.on("contextmenu", layerId, contextMenu(nextFeatureType));
+        map.on("mouseenter", layerId, () => {
+          map.getCanvas().style.cursor = "crosshair";
+        });
+        map.on("mouseleave", layerId, () => {
+          map.getCanvas().style.cursor = "";
+        });
+      });
+
+      if (disposed) {
+        map.remove();
+        return;
       }
-    });
 
-    map.on("mousemove", (event) => {
-      setCursor({ lng: event.lngLat.lng, lat: event.lngLat.lat });
-    });
-    map.on("mouseleave", () => setCursor(null));
-
-    const interactiveBindings: Array<[string, FeatureType]> = [
-      ["roads-line", "road"],
-      ["buildings-fill", "building"],
-      ["buildings-line", "building"],
-      ["rivers-line", "river"],
-      ["fences-line", "fence"],
-    ];
-
-    interactiveBindings.forEach(([layerId, nextFeatureType]) => {
-      map.on("click", layerId, selectFeature(nextFeatureType));
-      map.on("contextmenu", layerId, contextMenu(nextFeatureType));
-      map.on("mouseenter", layerId, () => {
-        map.getCanvas().style.cursor = "crosshair";
-      });
-      map.on("mouseleave", layerId, () => {
-        map.getCanvas().style.cursor = "";
-      });
-    });
-
-    mapRef.current = map;
-    drawRef.current = draw;
+      mapRef.current = map;
+      drawRef.current = draw;
+    })();
 
     return () => {
+      disposed = true;
       activeDrawFeatureId.current = null;
       drawRef.current = null;
+      mapboxglRef.current = null;
       mapRef.current?.remove();
       mapRef.current = null;
     };

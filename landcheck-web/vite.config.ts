@@ -8,9 +8,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('node_modules/mapbox-gl') || id.includes('node_modules/@mapbox/mapbox-gl-draw')) {
-            return 'mapbox-stack'
-          }
+          if (id.includes('node_modules/@mapbox/mapbox-gl-draw')) return 'mapbox-draw'
+          if (id.includes('node_modules/mapbox-gl')) return 'mapbox-gl-core'
           if (id.includes('node_modules/proj4')) return 'proj4'
           if (id.includes('node_modules/xlsx')) return 'xlsx'
           if (id.includes('node_modules/papaparse')) return 'papaparse'

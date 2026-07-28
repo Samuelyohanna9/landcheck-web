@@ -1,11 +1,12 @@
-import { useCallback, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { api } from "../api/client";
-import MapViewEnhanced from "../components/MapViewEnhanced";
 import CoordinateInput from "../components/CoordinateInput";
 import { fromWGS84, toWGS84 } from "../utils/coordinateConverter";
 import "../styles/hazard-analysis.css";
+
+const MapViewEnhanced = lazy(() => import("../components/MapViewEnhanced"));
 
 type ManualPoint = {
   station: string;
@@ -268,7 +269,9 @@ export default function HazardAnalysis() {
 
         <div className="hazard-right">
           <div className="hazard-map">
-            <MapViewEnhanced coordinates={mapCoordinates} onCoordinatesDrawn={handleCoordinatesFromMap} />
+            <Suspense fallback={<div className="hazard-empty">Loading flood map...</div>}>
+              <MapViewEnhanced coordinates={mapCoordinates} onCoordinatesDrawn={handleCoordinatesFromMap} />
+            </Suspense>
           </div>
           <div className="hazard-overlay">
             <h3>Flood Risk Overlay</h3>

@@ -4,11 +4,11 @@ import CookieConsentManager from "./components/CookieConsentManager";
 import SeoRouteMeta from "./components/SeoRouteMeta";
 import { getGreenAuthSession, isGreenAuthed, isSponsorGreenSession } from "./auth/greenAuth";
 import { isWorkAuthed } from "./auth/workAuth";
-import LandingPage from "./pages/LandingPage";
 import { CookieConsentProvider } from "./privacy/cookieConsent";
 
 import SessionTimeoutGate from "./components/SessionTimeoutGate";
 
+const LandingPage = lazy(() => import("./pages/LandingPage"));
 const SurveyPlan = lazy(() => import("./pages/SurveyPlan"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Feedback = lazy(() => import("./pages/Feedback"));

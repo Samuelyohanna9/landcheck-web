@@ -1,18 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/landing.css";
 import { fetchPublicImpactStats, fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
-import FeaturedStorySpotlight from "../components/FeaturedStorySpotlight";
 import { getArticleBySlug } from "../data/newsArticles";
 import { useCookieConsent } from "../privacy/cookieConsent";
+import { useDeferredMount } from "../hooks/useDeferredMount";
+import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
 
 const landingFeaturedStory = getArticleBySlug("yola-south-health-center-trees")!;
+const FeaturedStorySpotlight = lazy(() => import("../components/FeaturedStorySpotlight"));
 
 type PartnerOrg = { name: string; logo: string | null };
 
 const PILOT_ORG_NAMES = new Set(["Think Green Foundation"]);
 const HERO_VIDEO_SRC = "/make_it_ro_rotate_like_a_video.mp4";
+const HERO_VIDEO_POSTER = "/thumpnail_public.webp";
 const HERO_VIDEO_CROSSFADE_MS = 900;
 const HERO_VIDEO_CROSSFADE_SECONDS = 1.05;
 
@@ -50,6 +53,8 @@ const products = [
 export default function LandingPage() {
   const navigate = useNavigate();
   const { preferences, ready: cookieConsentReady } = useCookieConsent();
+  const { isLowBandwidth } = useLowBandwidthMode();
+  const showFeaturedStory = useDeferredMount(900);
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
   const [totalTrees, setTotalTrees] = useState<number | null>(null);
   const [heroVideoReady, setHeroVideoReady] = useState(false);
@@ -60,7 +65,7 @@ export default function LandingPage() {
   const heroVideoCrossfadeLockRef = useRef(false);
   const heroVideoRafRef = useRef<number | null>(null);
   const heroVideoSwapTimeoutRef = useRef<number | null>(null);
-  const heroVideoEnabled = cookieConsentReady && preferences.experience;
+  const heroVideoEnabled = cookieConsentReady && preferences.experience && !isLowBandwidth;
 
   useEffect(() => {
     let cancelled = false;
@@ -260,7 +265,8 @@ export default function LandingPage() {
                 autoPlay={index === 0}
                 muted
                 playsInline
-                preload="auto"
+                preload="metadata"
+                poster={HERO_VIDEO_POSTER}
                 disablePictureInPicture
                 disableRemotePlayback
                 onPlaying={() => setHeroVideoReady(true)}
@@ -305,7 +311,11 @@ export default function LandingPage() {
         </a>
       </section>
 
-      <FeaturedStorySpotlight article={landingFeaturedStory} />
+      {showFeaturedStory ? (
+        <Suspense fallback={null}>
+          <FeaturedStorySpotlight article={landingFeaturedStory} />
+        </Suspense>
+      ) : null}
 
       {/* Motto Band */}
       <div className="lp-motto-band">
