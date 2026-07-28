@@ -27,6 +27,7 @@ const photoAsset = (fileName: string) => encodeURI(fileName);
 const SPONSOR_BACKGROUND = "/sponsor_landing_page.jpg";
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=online.landcheck.mobile";
 const GUEST_CHECKOUT_STORAGE_KEY = "lc_guest_checkout_pending";
+const DEFERRED_SECTION_STYLE = { contentVisibility: "auto" as const, containIntrinsicSize: "900px" };
 
 const PROJECT_THUMBNAIL_SRC = "/thumpnail_public.webp";
 
@@ -392,7 +393,7 @@ export default function GreenPublicSponsor() {
           <GpsIcon name={mobileMenuOpen ? "close" : "menu"} className="gps-icon" />
         </button>
         <a href="/" className="gps-topbar-brand">
-          <img src="/logo.svg" alt="LandCheck" width="130" height="35" />
+          <img src="/logo.svg" alt="LandCheck" width="130" height="35" decoding="async" fetchPriority="high" />
           <span>LandCheck <strong>Green</strong></span>
         </a>
         <nav className="gps-topbar-links" aria-label="Sponsor navigation">
@@ -485,7 +486,7 @@ export default function GreenPublicSponsor() {
 
       {/* ─── Photo proof — real field evidence, not stock photography ─── */}
       {!selectedProject && !returnState && (
-        <section className="gps-proof-gallery">
+        <section className="gps-proof-gallery" style={DEFERRED_SECTION_STYLE}>
           <div className="gps-proof-gallery-intro">
             <h2>See how your support makes a difference</h2>
             <span className="gps-proof-gallery-sub">photos speak louder than words</span>
@@ -501,7 +502,7 @@ export default function GreenPublicSponsor() {
                 onClick={() => setActiveProofIndex(index)}
                 aria-expanded={index === activeProofIndex}
               >
-                <img src={photoAsset(photo.src)} alt={photo.description} loading="lazy" />
+                <img src={photoAsset(photo.src)} alt={photo.description} loading="lazy" decoding="async" />
                 <span className="gps-proof-panel-scrim" aria-hidden="true" />
                 <span className="gps-proof-panel-accent" aria-hidden="true" />
                 <span className="gps-proof-panel-body">
@@ -517,7 +518,7 @@ export default function GreenPublicSponsor() {
 
       {/* ─── How it works ─── */}
       {!selectedProject && !returnState && (
-        <section className="gps-how-it-works">
+        <section className="gps-how-it-works" style={DEFERRED_SECTION_STYLE}>
           <span className="gps-section-eyebrow">It's That Easy</span>
           <h2>How Sponsoring a Tree Works</h2>
           <div className="gps-how-it-works-grid">
@@ -537,7 +538,7 @@ export default function GreenPublicSponsor() {
           tiny numbers look worse publicly than no band at all. Raise/lower
           IMPACT_BAND_MIN_TREES as the program grows. ─── */}
       {!selectedProject && !returnState && impactStats && impactStats.total_trees_sponsored >= IMPACT_BAND_MIN_TREES && (
-        <section className="gps-impact-band">
+        <section className="gps-impact-band" style={DEFERRED_SECTION_STYLE}>
           <div className="gps-impact-band-inner">
             <div className="gps-impact-stat">
               <strong>{impactStats.total_trees_sponsored.toLocaleString()}</strong>
@@ -692,7 +693,7 @@ export default function GreenPublicSponsor() {
           <>
             {/* ─── CO2 footprint calculator promo ─── */}
             {!selectedProject && (
-              <section className="gps-footprint-promo">
+              <section className="gps-footprint-promo" style={DEFERRED_SECTION_STYLE}>
                 <span className="gps-footprint-promo-icon"><GpsIcon name="leaf" className="gps-icon" /></span>
                 <div className="gps-footprint-promo-body">
                   <strong>Find out how many trees suit you:</strong>
@@ -712,7 +713,7 @@ export default function GreenPublicSponsor() {
 
             {/* ─── Project grid ─── */}
             {!selectedProject && (
-            <section className="gps-projects-section" id="gps-projects">
+            <section className="gps-projects-section" id="gps-projects" style={DEFERRED_SECTION_STYLE}>
               <h2>Choose where your climate contribution will grow</h2>
               <p className="gps-section-sub">
                 Every public project is GPS-mapped, field-managed, and built to give you certificate, location proof,

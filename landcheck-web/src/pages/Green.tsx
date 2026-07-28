@@ -3068,14 +3068,42 @@ export default function Green() {
       toast.error("Offline now. Reconnect to export PDF.");
       return;
     }
-    const params = new URLSearchParams({
-      assignee_name: activeUser,
-      _ts: String(Date.now()),
-    });
-    if (includePhotosInReport) {
-      params.set("include_photos", "true");
+    const loadingId = toast.loading(
+      includePhotosInReport
+        ? "Preparing report with photos. This can take a few minutes..."
+        : "Preparing report...",
+    );
+    try {
+      const created = await api.post("/green/work-report/export-jobs", {
+        project_id: activeProject.id,
+        assignee_name: activeUser,
+        include_photos: includePhotosInReport,
+        requested_by: activeUser,
+      });
+      const jobId = String(created?.data?.id || "");
+      if (!jobId) {
+        throw new Error("Export job was not created");
+      }
+      const startedAt = Date.now();
+      const timeoutMs = 1000 * 60 * 20;
+      while (Date.now() - startedAt < timeoutMs) {
+        await new Promise((resolve) => window.setTimeout(resolve, 3000));
+        const statusRes = await api.get(`/green/export-jobs/${jobId}`);
+        const job = statusRes?.data || {};
+        const status = String(job.status || "").toLowerCase();
+        if (status === "completed" && job.download_url) {
+          toast.success("Report is ready. Download started.", { id: loadingId });
+          window.open(String(job.download_url), "_blank");
+          return;
+        }
+        if (status === "failed") {
+          throw new Error(String(job.error_text || "Report export failed"));
+        }
+      }
+      throw new Error("Report is still preparing. Try again in a moment.");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail || error?.message || "Failed to prepare report", { id: loadingId });
     }
-    window.open(`${BACKEND_URL}/green/projects/${activeProject.id}/donor-report/pdf?${params.toString()}`, "_blank");
   };
 
   const useGps = async () => {

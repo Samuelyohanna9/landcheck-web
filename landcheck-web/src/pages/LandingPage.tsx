@@ -556,8 +556,9 @@ export default function LandingPage() {
                 <div className="lp-sponsor-phone-screen">
                   <img
                     src="/sponsor-tree-app.jpeg"
-                    alt="LandCheck Green — Sponsor a Tree app screenshot"
+                    alt="LandCheck Green - Sponsor a Tree app screenshot"
                     loading="lazy"
+                    decoding="async"
                     width="280"
                     height="560"
                   />

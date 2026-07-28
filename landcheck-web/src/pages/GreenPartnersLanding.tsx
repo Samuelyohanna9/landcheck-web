@@ -38,6 +38,7 @@ type GreenModel = {
 const HERO_VIDEO_SRC = "/let_the_video_be_black_nigeria.mp4";
 const BROCHURE_PDF_SRC = "/lc-green-corporate-brochure.pdf";
 const PILOT_ORG_NAMES = new Set(["Think Green Foundation"]);
+const DEFERRED_SECTION_STYLE = { contentVisibility: "auto" as const, containIntrinsicSize: "960px" };
 
 const svgAsset = (fileName: string) => encodeURI(`/${fileName}`);
 const photoAsset = (fileName: string) => encodeURI(`/${fileName}`);
@@ -249,11 +250,11 @@ const dueDiligenceAssets = [
 function renderListIcon(label: string) {
   const iconFile = bulletIconMap[label];
   if (iconFile) {
-    return (
-      <span className="gp-list-icon" aria-hidden="true">
-        <img src={svgAsset(iconFile)} alt="" loading="lazy" />
-      </span>
-    );
+      return (
+        <span className="gp-list-icon" aria-hidden="true">
+          <img src={svgAsset(iconFile)} alt="" loading="lazy" decoding="async" />
+        </span>
+      );
   }
 
   return <span className="gp-list-icon gp-list-icon--fallback" aria-hidden="true" />;
@@ -393,7 +394,7 @@ export default function GreenPartnersLanding() {
 
       <FeaturedStorySpotlight article={greenPartnersFeaturedStory} />
 
-      <section className="gp-social-proof">
+      <section className="gp-social-proof" style={DEFERRED_SECTION_STYLE}>
         <div className="gp-shell">
           <span className="gp-social-label">USED BY LEADING ACTORS IN THE RESTORATION ECOSYSTEM</span>
           <div className="gp-social-logos">
@@ -431,7 +432,7 @@ export default function GreenPartnersLanding() {
         </div>
       </section>
 
-      <section className="gp-six-features">
+      <section className="gp-six-features" style={DEFERRED_SECTION_STYLE}>
         <div className="gp-shell">
           <div className="gp-section-intro gp-section-intro--center">
             <span className="gp-section-eyebrow">Platform Capabilities</span>
@@ -585,7 +586,7 @@ export default function GreenPartnersLanding() {
         </div>
       </section>
 
-      <section className="gp-how-it-works-saas">
+      <section className="gp-how-it-works-saas" style={DEFERRED_SECTION_STYLE}>
         <div className="gp-shell">
           <div className="gp-section-intro gp-section-intro--center">
             <span className="gp-section-eyebrow">The Verification Cycle</span>
@@ -627,7 +628,7 @@ export default function GreenPartnersLanding() {
         </div>
       </section>
 
-      <section id="platform-routes" className="gp-model-stage">
+      <section id="platform-routes" className="gp-model-stage" style={DEFERRED_SECTION_STYLE}>
         <div className="gp-shell">
           <div className="gp-section-intro gp-section-intro--center">
             <span className="gp-section-eyebrow">Choose your model</span>
@@ -710,6 +711,7 @@ export default function GreenPartnersLanding() {
                         width="1400"
                         height="900"
                         loading="lazy"
+                        decoding="async"
                       />
                     </div>
                   </div>
@@ -727,6 +729,7 @@ export default function GreenPartnersLanding() {
                         width="720"
                         height="1520"
                         loading="lazy"
+                        decoding="async"
                       />
                     </div>
                   </div>
@@ -750,7 +753,7 @@ export default function GreenPartnersLanding() {
         </div>
       </section>
 
-      <section className="gp-photo-stage">
+      <section className="gp-photo-stage" style={DEFERRED_SECTION_STYLE}>
         <div className="gp-shell">
           <div className="gp-photo-carousel">
             <button
@@ -779,7 +782,7 @@ export default function GreenPartnersLanding() {
               {photoMoments.map((moment) => (
                 <article key={moment.title} className="gp-photo-card">
                   <div className="gp-photo-card__media">
-                    <img src={moment.imageSrc} alt={moment.title} loading="lazy" />
+                    <img src={moment.imageSrc} alt={moment.title} loading="lazy" decoding="async" />
                   </div>
                   <div className="gp-photo-card__body">
                     <span>{moment.label}</span>
@@ -801,7 +804,7 @@ export default function GreenPartnersLanding() {
         </div>
       </section>
 
-      <section className="gp-proof-stage">
+      <section className="gp-proof-stage" style={DEFERRED_SECTION_STYLE}>
         <div className="gp-shell">
           <div className="gp-proof-showcase">
             <div className="gp-proof-content">
@@ -817,7 +820,7 @@ export default function GreenPartnersLanding() {
               </div>
             </div>
             <div className="gp-proof-media">
-              <video controls preload="metadata" poster="/thumpnail_public.jpg" className="gp-demo-video">
+              <video controls preload="none" poster="/thumpnail_public.jpg" className="gp-demo-video">
                 <source src={HERO_VIDEO_SRC} type="video/mp4" />
               </video>
             </div>
@@ -825,7 +828,7 @@ export default function GreenPartnersLanding() {
         </div>
       </section>
 
-      <section className="gp-budget-stage">
+      <section className="gp-budget-stage" style={DEFERRED_SECTION_STYLE}>
         <div className="gp-shell">
           <div className="gp-section-intro gp-section-intro--center">
             <span className="gp-section-eyebrow">DOCUMENTATION & DEMOS</span>
@@ -837,7 +840,7 @@ export default function GreenPartnersLanding() {
               <article key={asset.title} className="gp-asset-card">
                 {"imageSrc" in asset ? (
                   <div className="gp-asset-card__media">
-                    <img src={asset.imageSrc} alt={asset.title} loading="lazy" />
+                      <img src={asset.imageSrc} alt={asset.title} loading="lazy" decoding="async" />
                   </div>
                 ) : null}
                 <span className="gp-asset-card__eyebrow">{asset.eyebrow}</span>
@@ -853,7 +856,7 @@ export default function GreenPartnersLanding() {
       </section>
 
       {partners.length > 0 && (
-        <section className="gp-partners-stage">
+          <section className="gp-partners-stage" style={DEFERRED_SECTION_STYLE}>
           <div className="gp-shell">
             <div className="gp-section-intro gp-section-intro--center">
               <span className="gp-section-eyebrow">Partner organisations already in the ecosystem</span>
@@ -864,7 +867,7 @@ export default function GreenPartnersLanding() {
                 <article key={partner.name} className="gp-partner-card">
                   {PILOT_ORG_NAMES.has(partner.name) ? <span className="gp-partner-card__tag">Pilot</span> : null}
                   {partner.logo ? (
-                    <img src={partner.logo} alt={partner.name} width="96" height="96" loading="lazy" />
+                    <img src={partner.logo} alt={partner.name} width="96" height="96" loading="lazy" decoding="async" />
                   ) : (
                     <span className="gp-partner-card__fallback">
                       {partner.name
@@ -911,7 +914,7 @@ export default function GreenPartnersLanding() {
         <div className="gp-shell">
           <div className="gp-global-footer__top">
             <div className="gp-footer-brand">
-              <img src="/green-logo-cropped-700.png" alt="LandCheck Green" className="gp-footer-logo" />
+              <img src="/green-logo-cropped-700.png" alt="LandCheck Green" className="gp-footer-logo" loading="lazy" decoding="async" />
               <p className="gp-footer-brand-text">
                 Verifiably restoring forests through cryptographic site evidence, real-time tracking, and board-ready reporting.
               </p>
