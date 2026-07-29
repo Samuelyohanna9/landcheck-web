@@ -10,13 +10,12 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   </React.StrictMode>
 );
 
-const canRegisterGreenSw =
+const canRegisterSiteSw =
   typeof window !== "undefined" &&
   "serviceWorker" in navigator &&
-  isGreenSwRoute(window.location.pathname) &&
   (import.meta.env.PROD || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
-if (canRegisterGreenSw) {
+if (canRegisterSiteSw) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/sw.js", { scope: "/" })
@@ -54,6 +53,7 @@ function precacheBuildAssets() {
   // Also cache the logo
   urls.push("/green-logo-cropped-760.png");
   urls.push("/green-logo-cropped-700.png");
+  urls.push("/green-logo-cropped-820.png");
   urls.push("/background-sponsor.png");
 
   if (urls.length > 0 && navigator.serviceWorker.controller) {
@@ -62,15 +62,4 @@ function precacheBuildAssets() {
       urls,
     });
   }
-}
-
-function isGreenSwRoute(pathname: string) {
-  return (
-    pathname === "/green" ||
-    pathname === "/green/" ||
-    pathname === "/green-work" ||
-    pathname === "/green-work/" ||
-    pathname.startsWith("/green/") ||
-    pathname.startsWith("/green-work/")
-  );
 }
