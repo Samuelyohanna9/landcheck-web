@@ -6,6 +6,7 @@ import {
   fetchOrgImpact,
   fetchOrgImpactComments,
   postOrgImpactComment,
+  type DonorImpactActivity,
   type DonorImpactAgricSummary,
   type DonorImpactComment,
   type DonorImpactData,
@@ -99,6 +100,175 @@ function AnimatedCount({ value, suffix = "" }: { value: number; suffix?: string 
       <span ref={ref}>0</span>
       {suffix}
     </>
+  );
+}
+
+const clampPercent = (value: number) => {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, value));
+};
+
+type ActivityCadenceBucket = {
+  key: string;
+  label: string;
+  count: number;
+  timestamp: number;
+};
+
+const buildActivityCadence = (activities: DonorImpactActivity[]): ActivityCadenceBucket[] => {
+  const grouped = new Map<string, ActivityCadenceBucket>();
+  activities.forEach((activity) => {
+    const date = new Date(activity.reviewed_at);
+    if (Number.isNaN(date.getTime())) return;
+    const key = date.toISOString().slice(0, 10);
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.count += 1;
+      return;
+    }
+    grouped.set(key, {
+      key,
+      label: date.toLocaleDateString("en-NG", { day: "numeric", month: "short" }),
+      count: 1,
+      timestamp: date.getTime(),
+    });
+  });
+  return Array.from(grouped.values())
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .slice(-6);
+};
+
+function CircularMeter({
+  value,
+  overline,
+  label,
+  note,
+}: {
+  value: number;
+  overline: string;
+  label: string;
+  note?: string;
+}) {
+  const safeValue = clampPercent(value);
+  const radius = 50;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference - (safeValue / 100) * circumference;
+
+  return (
+    <div className="gi-meter-card-shell">
+      <div className="gi-meter-overline">{overline}</div>
+      <div className="gi-meter-visual">
+        <svg className="gi-meter-svg" viewBox="0 0 140 140" aria-hidden="true">
+          <circle className="gi-meter-track" cx="70" cy="70" r={radius} />
+          <circle
+            className="gi-meter-progress"
+            cx="70"
+            cy="70"
+            r={radius}
+            strokeDasharray={circumference}
+            strokeDashoffset={dashOffset}
+          />
+        </svg>
+        <div className="gi-meter-center">
+          <div className="gi-meter-value">{safeValue.toFixed(0)}%</div>
+          <div className="gi-meter-value-label">{label}</div>
+        </div>
+      </div>
+      {note && <div className="gi-meter-note">{note}</div>}
+    </div>
+  );
+}
+
+function ActivityCadenceCard({
+  activities,
+  title = "Activity cadence",
+  subtitle = "Approved review cadence from the latest verified field events.",
+}: {
+  activities: DonorImpactActivity[];
+  title?: string;
+  subtitle?: string;
+}) {
+  const cadence = buildActivityCadence(activities);
+  const maxCount = cadence.reduce((max, item) => Math.max(max, item.count), 0) || 1;
+
+  return (
+    <section className="gi-board-card gi-board-card-analytics">
+      <div className="gi-board-card-header">
+        <div>
+          <div className="gi-board-card-title">{title}</div>
+          <div className="gi-board-card-subtitle">{subtitle}</div>
+        </div>
+      </div>
+      {cadence.length === 0 ? (
+        <div className="gi-empty-section gi-empty-section-compact">No approved activity trend is visible yet.</div>
+      ) : (
+        <div className="gi-cadence-chart">
+          {cadence.map((bucket) => (
+            <div key={bucket.key} className="gi-cadence-bar-col">
+              <div className="gi-cadence-bar-count">{bucket.count}</div>
+              <div className="gi-cadence-bar-track">
+                <div
+                  className="gi-cadence-bar-fill"
+                  style={{ height: `${Math.max((bucket.count / maxCount) * 100, 12)}%` }}
+                />
+              </div>
+              <div className="gi-cadence-bar-label">{bucket.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PortfolioMixCard({ projects }: { projects: DonorImpactProject[] }) {
+  const mix = [
+    {
+      key: "green",
+      label: "Green delivery",
+      helper: "Trees, maintenance, survival",
+      count: projects.filter((project) => project.workflow_profile === "green").length,
+    },
+    {
+      key: "agric",
+      label: "Agric programme",
+      helper: "Farmers, plots, support",
+      count: projects.filter((project) => project.workflow_profile === "agric").length,
+    },
+    {
+      key: "relief",
+      label: "Relief / recovery",
+      helper: "Sites, response, follow-up",
+      count: projects.filter((project) => project.workflow_profile === "relief_recovery").length,
+    },
+  ].filter((item) => item.count > 0);
+
+  const total = mix.reduce((sum, item) => sum + item.count, 0) || 1;
+
+  return (
+    <div className="gi-hero-mix">
+      <div className="gi-hero-panel-title">Portfolio mix</div>
+      <div className="gi-hero-panel-copy">
+        Published programmes grouped by delivery model.
+      </div>
+      <div className="gi-hero-mix-list">
+        {mix.map((item) => (
+          <div key={item.key} className="gi-hero-mix-row">
+            <div className="gi-hero-mix-copy">
+              <div className="gi-hero-mix-label">{item.label}</div>
+              <div className="gi-hero-mix-helper">{item.helper}</div>
+            </div>
+            <div className="gi-hero-mix-meter">
+              <div
+                className="gi-hero-mix-fill"
+                style={{ width: `${(item.count / total) * 100}%` }}
+              />
+            </div>
+            <div className="gi-hero-mix-count">{item.count}</div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -386,6 +556,12 @@ function AgricRegistrySnapshot({ summary }: { summary: DonorImpactAgricSummary }
   const groupRate = summary.total_farmers > 0 ? (summary.group_member_farmers / summary.total_farmers) * 100 : 0;
   const avgHouseholdSize =
     summary.household_known_count > 0 ? summary.household_reach_total / summary.household_known_count : 0;
+  const fieldCoverageRate =
+    summary.field_capture_assigned > 0
+      ? (summary.field_capture_done / summary.field_capture_assigned) * 100
+      : summary.total_farmers > 0
+        ? (summary.field_capture_done / summary.total_farmers) * 100
+        : 0;
 
   const registryCards = [
     { kicker: "Registry", value: summary.total_farmers.toLocaleString(), label: "Farmers registered" },
@@ -420,73 +596,155 @@ function AgricRegistrySnapshot({ summary }: { summary: DonorImpactAgricSummary }
   const maxIrrigation = summary.irrigation_breakdown[0]?.count || 1;
 
   return (
-    <section>
+    <section className="gi-dashboard-section">
       <div className="gi-section-heading">
         <div className="gi-section-heading-bar" />
         <div className="gi-section-heading-text">Farmer Registry Snapshot</div>
       </div>
-      <div className="gi-metrics-grid">
-        {registryCards.map((card) => (
-          <div key={`${card.kicker}-${card.label}`} className="gi-metric-tile">
-            <div className="gi-metric-kicker">{card.kicker}</div>
-            <div className="gi-metric-val">{card.value}</div>
-            <div className="gi-metric-label">{card.label}</div>
+
+      <div className="gi-dashboard-shell">
+        <section className="gi-board-card gi-board-card-span-2">
+          <div className="gi-board-card-header">
+            <div>
+              <div className="gi-board-card-title">Registry overview</div>
+              <div className="gi-board-card-subtitle">
+                Executive summary of farmer onboarding, verification, support, and mapped field evidence.
+              </div>
+            </div>
           </div>
-        ))}
-      </div>
-
-      <div className="gi-rate-bar-wrap">
-        <div className="gi-rate-bar-label">
-          <span>Access to Finance</span>
-          <span className="gi-rate-bar-pct">{summary.finance_access_rate.toFixed(1)}%</span>
-        </div>
-        <div className="gi-rate-bar-track">
-          <div className="gi-rate-bar-fill" style={{ width: `${Math.min(summary.finance_access_rate, 100)}%` }} />
-        </div>
-      </div>
-      <div className="gi-rate-bar-wrap">
-        <div className="gi-rate-bar-label">
-          <span>Access to Insurance</span>
-          <span className="gi-rate-bar-pct">{summary.insurance_access_rate.toFixed(1)}%</span>
-        </div>
-        <div className="gi-rate-bar-track">
-          <div className="gi-rate-bar-fill" style={{ width: `${Math.min(summary.insurance_access_rate, 100)}%` }} />
-        </div>
-      </div>
-
-      {summary.tenure_breakdown.length > 0 && (
-        <div className="gi-breakdown-list gi-breakdown-list-spaced">
-          <div className="gi-breakdown-subheading">Land Tenure</div>
-          {summary.tenure_breakdown.map((row) => (
-            <div key={row.label} className="gi-breakdown-row">
-              <div className="gi-breakdown-label" title={row.label}>
-                {humanizeCategory(row.label, TENURE_LABELS)}
+          <div className="gi-metrics-grid">
+            {registryCards.map((card) => (
+              <div key={`${card.kicker}-${card.label}`} className="gi-metric-tile">
+                <div className="gi-metric-kicker">{card.kicker}</div>
+                <div className="gi-metric-val">{card.value}</div>
+                <div className="gi-metric-label">{card.label}</div>
               </div>
-              <div className="gi-breakdown-bar-track">
-                <div className="gi-breakdown-bar-fill" style={{ width: `${(row.count / maxTenure) * 100}%` }} />
+            ))}
+          </div>
+        </section>
+
+        <section className="gi-board-card">
+          <div className="gi-board-card-header">
+            <div>
+              <div className="gi-board-card-title">Field readiness</div>
+              <div className="gi-board-card-subtitle">
+                Verified farmers and captured plots driving implementation confidence.
               </div>
-              <div className="gi-breakdown-count">{row.count.toLocaleString()}</div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+          <div className="gi-meter-stack">
+            <CircularMeter
+              value={verifiedRate}
+              overline="Verified register"
+              label={`${summary.verified_farmers.toLocaleString()} farmers`}
+              note="Farmer records confirmed by the field team."
+            />
+            <CircularMeter
+              value={fieldCoverageRate}
+              overline="Field data"
+              label={`${summary.field_capture_done.toLocaleString()} plots`}
+              note={
+                summary.field_capture_assigned > 0
+                  ? `${summary.field_capture_done.toLocaleString()} of ${summary.field_capture_assigned.toLocaleString()} assigned captures completed.`
+                  : "Mapped plots already on record in this public view."
+              }
+            />
+          </div>
+        </section>
+      </div>
 
-      {summary.irrigation_breakdown.length > 0 && (
-        <div className="gi-breakdown-list gi-breakdown-list-spaced">
-          <div className="gi-breakdown-subheading">Irrigation Access</div>
-          {summary.irrigation_breakdown.map((row) => (
-            <div key={row.label} className="gi-breakdown-row">
-              <div className="gi-breakdown-label" title={row.label}>
-                {humanizeCategory(row.label, ACCESS_LABELS)}
+      <div className="gi-dashboard-shell gi-dashboard-shell-secondary">
+        <section className="gi-board-card gi-board-card-analytics">
+          <div className="gi-board-card-header">
+            <div>
+              <div className="gi-board-card-title">Farmer access indicators</div>
+              <div className="gi-board-card-subtitle">
+                Portfolio-level access signals that support programme planning and targeting.
               </div>
-              <div className="gi-breakdown-bar-track">
-                <div className="gi-breakdown-bar-fill" style={{ width: `${(row.count / maxIrrigation) * 100}%` }} />
-              </div>
-              <div className="gi-breakdown-count">{row.count.toLocaleString()}</div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+          <div className="gi-rate-bar-wrap">
+            <div className="gi-rate-bar-label">
+              <span>Access to Finance</span>
+              <span className="gi-rate-bar-pct">{summary.finance_access_rate.toFixed(1)}%</span>
+            </div>
+            <div className="gi-rate-bar-track">
+              <div className="gi-rate-bar-fill" style={{ width: `${clampPercent(summary.finance_access_rate)}%` }} />
+            </div>
+          </div>
+          <div className="gi-rate-bar-wrap">
+            <div className="gi-rate-bar-label">
+              <span>Access to Insurance</span>
+              <span className="gi-rate-bar-pct">{summary.insurance_access_rate.toFixed(1)}%</span>
+            </div>
+            <div className="gi-rate-bar-track">
+              <div className="gi-rate-bar-fill" style={{ width: `${clampPercent(summary.insurance_access_rate)}%` }} />
+            </div>
+          </div>
+          <div className="gi-insight-kpis">
+            <div className="gi-insight-kpi">
+              <span>Supported farmers</span>
+              <strong>{summary.supported_farmers.toLocaleString()}</strong>
+            </div>
+            <div className="gi-insight-kpi">
+              <span>Household reach</span>
+              <strong>{summary.household_reach_total.toLocaleString()}</strong>
+            </div>
+          </div>
+        </section>
+
+        {summary.tenure_breakdown.length > 0 && (
+          <section className="gi-board-card gi-board-card-analytics">
+            <div className="gi-board-card-header">
+              <div>
+                <div className="gi-board-card-title">Land tenure mix</div>
+                <div className="gi-board-card-subtitle">
+                  Distribution of current beneficiary plots by reported tenure arrangement.
+                </div>
+              </div>
+            </div>
+            <div className="gi-breakdown-list gi-breakdown-list-spaced">
+              {summary.tenure_breakdown.map((row) => (
+                <div key={row.label} className="gi-breakdown-row">
+                  <div className="gi-breakdown-label" title={row.label}>
+                    {humanizeCategory(row.label, TENURE_LABELS)}
+                  </div>
+                  <div className="gi-breakdown-bar-track">
+                    <div className="gi-breakdown-bar-fill" style={{ width: `${(row.count / maxTenure) * 100}%` }} />
+                  </div>
+                  <div className="gi-breakdown-count">{row.count.toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {summary.irrigation_breakdown.length > 0 && (
+          <section className="gi-board-card gi-board-card-analytics">
+            <div className="gi-board-card-header">
+              <div>
+                <div className="gi-board-card-title">Irrigation access</div>
+                <div className="gi-board-card-subtitle">
+                  Reported irrigation readiness across the current farmer registry.
+                </div>
+              </div>
+            </div>
+            <div className="gi-breakdown-list gi-breakdown-list-spaced">
+              {summary.irrigation_breakdown.map((row) => (
+                <div key={row.label} className="gi-breakdown-row">
+                  <div className="gi-breakdown-label" title={row.label}>
+                    {humanizeCategory(row.label, ACCESS_LABELS)}
+                  </div>
+                  <div className="gi-breakdown-bar-track">
+                    <div className="gi-breakdown-bar-fill" style={{ width: `${(row.count / maxIrrigation) * 100}%` }} />
+                  </div>
+                  <div className="gi-breakdown-count">{row.count.toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
 
       {summary.farmer_directory.length > 0 && <FarmerDirectory farmers={summary.farmer_directory} />}
     </section>
@@ -552,6 +810,13 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
     mode === "green" ? "Survival Rate" : mode === "agric" ? "Active Plot Rate" : "Activity Rate";
   const rateValue = stats.survival_rate ?? 0;
   const isAgricSnapshot = mode === "agric" && Boolean(project.agric_summary);
+  const activityCadence = buildActivityCadence(project.recent_activities);
+  const rateNote =
+    mode === "green"
+      ? "Share of mapped records still alive or active."
+      : mode === "relief_recovery"
+        ? "Share of visible site records still marked active."
+        : "Share of visible mapped plots still active.";
 
   const programmeFacts = [
     (project.agric_config?.program_type || project.relief_config?.program_type) && {
@@ -666,103 +931,188 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
           <AgricRegistrySnapshot summary={project.agric_summary!} />
         ) : (
           <>
-            <section>
-              <div className="gi-section-heading">
-                <div className="gi-section-heading-bar" />
-                <div className="gi-section-heading-text">Key Metrics</div>
-              </div>
-              <div className="gi-metrics-grid">
-                {metricCards.map((metric) => (
-                  <div key={`${metric.kicker}-${metric.label}`} className="gi-metric-tile">
-                    <div className="gi-metric-kicker">{metric.kicker}</div>
-                    <div className="gi-metric-val">{metric.value}</div>
-                    <div className="gi-metric-label">{metric.label}</div>
+            <div className="gi-dashboard-shell">
+              <section className="gi-board-card gi-board-card-span-2">
+                <div className="gi-board-card-header">
+                  <div>
+                    <div className="gi-board-card-title">Executive metrics</div>
+                    <div className="gi-board-card-subtitle">
+                      Board-level summary of approved records, field delivery, and verified coverage.
+                    </div>
                   </div>
-                ))}
-              </div>
-            </section>
-
-            {rateValue > 0 && (
-              <section className="gi-rate-bar-wrap">
-                <div className="gi-rate-bar-label">
-                  <span>{rateLabel}</span>
-                  <span className="gi-rate-bar-pct">{rateValue.toFixed(1)}%</span>
                 </div>
-                <div className="gi-rate-bar-track">
-                  <div
-                    className="gi-rate-bar-fill"
-                    style={{ width: `${Math.min(rateValue, 100)}%` }}
-                  />
+                <div className="gi-metrics-grid">
+                  {metricCards.map((metric) => (
+                    <div key={`${metric.kicker}-${metric.label}`} className="gi-metric-tile">
+                      <div className="gi-metric-kicker">{metric.kicker}</div>
+                      <div className="gi-metric-val">{metric.value}</div>
+                      <div className="gi-metric-label">{metric.label}</div>
+                    </div>
+                  ))}
                 </div>
               </section>
-            )}
+
+              <section className="gi-board-card">
+                <div className="gi-board-card-header">
+                  <div>
+                    <div className="gi-board-card-title">{rateLabel}</div>
+                    <div className="gi-board-card-subtitle">{rateNote}</div>
+                  </div>
+                </div>
+                <div className="gi-meter-stack gi-meter-stack-single">
+                  <CircularMeter
+                    value={rateValue}
+                    overline="Programme health"
+                    label={`${stats.active_records.toLocaleString()} active`}
+                    note={`${stats.dead_records.toLocaleString()} dead · ${stats.replaced_records.toLocaleString()} replaced`}
+                  />
+                </div>
+                {rateValue > 0 && (
+                  <section className="gi-rate-bar-wrap gi-rate-bar-wrap-board">
+                    <div className="gi-rate-bar-label">
+                      <span>{rateLabel}</span>
+                      <span className="gi-rate-bar-pct">{rateValue.toFixed(1)}%</span>
+                    </div>
+                    <div className="gi-rate-bar-track">
+                      <div
+                        className="gi-rate-bar-fill"
+                        style={{ width: `${clampPercent(rateValue)}%` }}
+                      />
+                    </div>
+                  </section>
+                )}
+              </section>
+
+              <ActivityCadenceCard
+                activities={project.recent_activities}
+                title="Activity cadence"
+                subtitle={
+                  activityCadence.length > 0
+                    ? "Most recent supervisor-approved events grouped by review date."
+                    : "No approved cadence is visible yet."
+                }
+              />
+            </div>
           </>
         )}
 
-        {stats.species_breakdown.length > 0 && (
-          <section>
-            <div className="gi-section-heading">
-              <div className="gi-section-heading-bar" />
-              <div className="gi-section-heading-text">
-                {mode === "agric"
-                  ? "Crop / Commodity Breakdown"
-                  : mode === "relief_recovery"
-                    ? "Site Type Breakdown"
-                    : "Species Breakdown"}
+        <div className="gi-dashboard-shell gi-dashboard-shell-secondary">
+          {stats.species_breakdown.length > 0 && (
+            <section className="gi-board-card gi-board-card-analytics">
+              <div className="gi-board-card-header">
+                <div>
+                  <div className="gi-board-card-title">
+                    {mode === "agric"
+                      ? "Crop / commodity mix"
+                      : mode === "relief_recovery"
+                        ? "Site type mix"
+                        : "Species composition"}
+                  </div>
+                  <div className="gi-board-card-subtitle">
+                    Distribution of the most visible verified records currently published.
+                  </div>
+                </div>
+              </div>
+              <div className="gi-breakdown-list">
+                {stats.species_breakdown.slice(0, 8).map((row) => {
+                  const maxCount = stats.species_breakdown[0]?.count || 1;
+                  const width = (row.count / maxCount) * 100;
+                  return (
+                    <div key={row.label} className="gi-breakdown-row">
+                      <div className="gi-breakdown-label" title={row.label}>
+                        {row.label}
+                      </div>
+                      <div className="gi-breakdown-bar-track">
+                        <div className="gi-breakdown-bar-fill" style={{ width: `${width}%` }} />
+                      </div>
+                      <div className="gi-breakdown-count">{row.count.toLocaleString()}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          <section className="gi-board-card gi-board-card-analytics">
+            <div className="gi-board-card-header">
+              <div>
+                <div className="gi-board-card-title">Programme brief</div>
+                <div className="gi-board-card-subtitle">
+                  Quick operational context for donor review and partner due diligence.
+                </div>
               </div>
             </div>
-            <div className="gi-breakdown-list">
-              {stats.species_breakdown.slice(0, 8).map((row) => {
-                const maxCount = stats.species_breakdown[0]?.count || 1;
-                const width = (row.count / maxCount) * 100;
-                return (
-                  <div key={row.label} className="gi-breakdown-row">
-                    <div className="gi-breakdown-label" title={row.label}>
-                      {row.label}
-                    </div>
-                    <div className="gi-breakdown-bar-track">
-                      <div className="gi-breakdown-bar-fill" style={{ width: `${width}%` }} />
-                    </div>
-                    <div className="gi-breakdown-count">{row.count.toLocaleString()}</div>
+            <div className="gi-insight-kpis gi-insight-kpis-brief">
+              <div className="gi-insight-kpi">
+                <span>Approved workflow</span>
+                <strong>{stats.approved_tasks.toLocaleString()} activities</strong>
+              </div>
+              <div className="gi-insight-kpi">
+                <span>Field team</span>
+                <strong>{stats.total_field_officers.toLocaleString()} officers</strong>
+              </div>
+              {project.location_text && (
+                <div className="gi-insight-kpi">
+                  <span>Project area</span>
+                  <strong>{project.location_text}</strong>
+                </div>
+              )}
+              {stats.last_activity_at && (
+                <div className="gi-insight-kpi">
+                  <span>Latest activity</span>
+                  <strong>{formatDate(stats.last_activity_at)}</strong>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+
+        <div className="gi-proof-grid">
+          {(project.map_points.length > 0 || (project.map_features || []).length > 0) && (
+            <section ref={mapViewport.ref} className="gi-board-card gi-board-card-proof">
+              <div className="gi-board-card-header">
+                <div>
+                  <div className="gi-board-card-title">Field activity map</div>
+                  <div className="gi-board-card-subtitle">
+                    Verified public footprint of approved field evidence in this programme.
                   </div>
-                );
-              })}
+                </div>
+              </div>
+              {mapViewport.inView ? (
+                <Suspense fallback={<div className="gi-empty-section">Loading field activity map...</div>}>
+                  <ProjectMap
+                    points={project.map_points}
+                    features={project.map_features || []}
+                    mode={mode}
+                  />
+                </Suspense>
+              ) : (
+                <div className="gi-empty-section">Map will load when this section enters view.</div>
+              )}
+            </section>
+          )}
+
+          <section className="gi-board-card gi-board-card-proof">
+            <div className="gi-board-card-header">
+              <div>
+                <div className="gi-board-card-title">Approved evidence gallery</div>
+                <div className="gi-board-card-subtitle">
+                  Supervisor-approved field photos linked to this public report.
+                </div>
+              </div>
             </div>
+            <PhotoGallery photos={project.recent_photos} />
           </section>
-        )}
+        </div>
 
-        {(project.map_points.length > 0 || (project.map_features || []).length > 0) && (
-          <section ref={mapViewport.ref}>
-            <div className="gi-section-heading">
-              <div className="gi-section-heading-bar" />
-              <div className="gi-section-heading-text">Field Activity Map</div>
+        <section className="gi-board-card gi-board-card-proof">
+          <div className="gi-board-card-header">
+            <div>
+              <div className="gi-board-card-title">Recent approved activities</div>
+              <div className="gi-board-card-subtitle">
+                Latest supervisor-cleared actions contributing to this public impact view.
+              </div>
             </div>
-            {mapViewport.inView ? (
-              <Suspense fallback={<div className="gi-empty-section">Loading field activity map...</div>}>
-                <ProjectMap
-                  points={project.map_points}
-                  features={project.map_features || []}
-                  mode={mode}
-                />
-              </Suspense>
-            ) : (
-              <div className="gi-empty-section">Map will load when this section enters view.</div>
-            )}
-          </section>
-        )}
-
-        <section>
-          <div className="gi-section-heading">
-            <div className="gi-section-heading-bar" />
-            <div className="gi-section-heading-text">Approved Evidence Gallery</div>
-          </div>
-          <PhotoGallery photos={project.recent_photos} />
-        </section>
-
-        <section>
-          <div className="gi-section-heading">
-            <div className="gi-section-heading-bar" />
-            <div className="gi-section-heading-text">Recent Approved Activities</div>
           </div>
           {project.recent_activities.length === 0 ? (
             <div className="gi-empty-section">No approved activities recorded yet.</div>
@@ -1016,18 +1366,29 @@ export default function DonorImpactPage() {
 
             <div className="gi-hero-highlights">
               <div className="gi-hero-verified-badge">Verified Data</div>
-              <div className="gi-hero-highlight">
-                <span>Review basis</span>
-                <strong>Supervisor-approved records only</strong>
+              <div className="gi-hero-panel-title">Assurance overview</div>
+              <div className="gi-hero-panel-copy">
+                Public-facing programme evidence prepared for donors, boards, partners, and reviewers.
               </div>
-              <div className="gi-hero-highlight">
-                <span>Coverage</span>
-                <strong>{projectFilter ? "Focused project view" : "Organisation-wide public view"}</strong>
+              <div className="gi-hero-highlight-grid">
+                <div className="gi-hero-highlight">
+                  <span>Review basis</span>
+                  <strong>Supervisor-approved records only</strong>
+                </div>
+                <div className="gi-hero-highlight">
+                  <span>Coverage</span>
+                  <strong>{projectFilter ? "Focused project view" : "Organisation-wide public view"}</strong>
+                </div>
+                <div className="gi-hero-highlight">
+                  <span>Output</span>
+                  <strong>Shareable report and PDF export</strong>
+                </div>
+                <div className="gi-hero-highlight">
+                  <span>Freshness</span>
+                  <strong>{lastUpdated || "Awaiting sync"}</strong>
+                </div>
               </div>
-              <div className="gi-hero-highlight">
-                <span>Output</span>
-                <strong>Shareable report and PDF export</strong>
-              </div>
+              <PortfolioMixCard projects={projects} />
             </div>
           </div>
         </div>

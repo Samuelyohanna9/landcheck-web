@@ -156,7 +156,7 @@ const summarizeActivityLogDetails = (details: unknown) => {
     if (!keys.length) return "No details";
     const namedKeys = keys.slice(0, 2).map((key) => key.replace(/_/g, " "));
     const suffix = keys.length === 1 ? "1 field" : `${keys.length} fields`;
-    return namedKeys.length ? `${namedKeys.join(" â€¢ ")} | ${suffix}` : suffix;
+    return namedKeys.length ? `${namedKeys.join(" • ")} | ${suffix}` : suffix;
   }
   const value = String(normalized).replace(/\s+/g, " ").trim();
   return value.length > 48 ? `${value.slice(0, 45)}...` : value;
@@ -2366,7 +2366,7 @@ const getProjectSponsorPriceEntries = (project?: Pick<Project, "sponsor_price_pe
 const formatProjectSponsorPriceChoices = (project?: Pick<Project, "sponsor_price_per_tree_ngn" | "sponsor_price_per_tree_usd" | "sponsor_price_per_tree" | "sponsor_currency"> | null) => {
   const entries = getProjectSponsorPriceEntries(project);
   if (entries.length === 0) return "Pricing not set";
-  return entries.map((entry) => `${formatCurrencyAmount(entry.amount, entry.currency)} / tree`).join(" Â· ");
+  return entries.map((entry) => `${formatCurrencyAmount(entry.amount, entry.currency)} / tree`).join(" · ");
 };
 
 const formatCurrencyBreakdownMap = (value?: Record<string, number> | null) => {
@@ -2378,7 +2378,7 @@ const formatCurrencyBreakdownMap = (value?: Record<string, number> | null) => {
     .filter((entry) => Number.isFinite(entry.amount) && entry.amount > 0)
     .sort((a, b) => a.currency.localeCompare(b.currency));
   if (entries.length === 0) return formatCurrencyAmount(0, "NGN");
-  return entries.map((entry) => formatCurrencyAmount(entry.amount, entry.currency)).join(" Â· ");
+  return entries.map((entry) => formatCurrencyAmount(entry.amount, entry.currency)).join(" · ");
 };
 
 const getSponsorshipPaymentOutcomeGroup = (paymentStatus?: string | null) => {
@@ -3329,9 +3329,9 @@ function ShareImpactPanel({
 
   return (
     <div className="green-work-card" style={{ maxWidth: 760 }}>
-      <h3 style={{ marginBottom: 4 }}>ðŸ”— Share Impact Page</h3>
+      <h3 style={{ marginBottom: 4 }}>🔗 Share Impact Page</h3>
       <p className="green-work-note" style={{ marginTop: 0 }}>
-        Share a public, donor-ready impact page showing your verified {modeLabel} data â€” supervisor-approved records, GPS maps, evidence photos, and field activities.
+        Share a public, donor-ready impact page showing your verified {modeLabel} data — supervisor-approved records, GPS maps, evidence photos, and field activities.
       </p>
 
       {!orgSlug ? (
@@ -3346,7 +3346,7 @@ function ShareImpactPanel({
               Organisation-wide Impact Page
             </div>
             <p className="green-work-note" style={{ marginTop: 0, marginBottom: 10 }}>
-              Shows all your organisation's approved {entityPl} across all projects â€” best for sharing with major donors who want the full picture.
+              Shows all your organisation's approved {entityPl} across all projects — best for sharing with major donors who want the full picture.
             </p>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 200, background: "#f4f7f4", border: "1px solid #d1e8d5", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#1a5c2a", fontFamily: "monospace", wordBreak: "break-all" }}>
@@ -3365,7 +3365,7 @@ function ShareImpactPanel({
                 rel="noopener noreferrer"
                 style={{ display: "flex", alignItems: "center", gap: 5, border: "1.5px solid #2aa852", color: "#1a5c2a", background: "#fff", fontWeight: 700, borderRadius: 8, padding: "7px 13px", textDecoration: "none", fontSize: 13, whiteSpace: "nowrap" }}
               >
-                â†— Preview
+                ↗ Preview
               </a>
             </div>
           </div>
@@ -3376,17 +3376,17 @@ function ShareImpactPanel({
               Share a Specific Project
             </div>
             <p className="green-work-note" style={{ marginTop: 0, marginBottom: 10 }}>
-              Select a project to generate a focused link that only shows that project's data â€” useful when you want to update a specific donor on one programme.
+              Select a project to generate a focused link that only shows that project's data — useful when you want to update a specific donor on one programme.
             </p>
             <select
               value={shareProjectId}
               onChange={(e) => onProjectChange(e.target.value)}
               style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #d1e8d5", borderRadius: 8, fontSize: 14, background: "#fff", marginBottom: 12 }}
             >
-              <option value="">â€” Select a project â€”</option>
+              <option value="">— Select a project —</option>
               {orgProjects.map((p) => (
                 <option key={p.id} value={String(p.id)}>
-                  {p.name}{p.location_text ? ` Â· ${p.location_text}` : ""}
+                  {p.name}{p.location_text ? ` · ${p.location_text}` : ""}
                 </option>
               ))}
             </select>
@@ -3410,12 +3410,12 @@ function ShareImpactPanel({
                     rel="noopener noreferrer"
                     style={{ display: "flex", alignItems: "center", gap: 5, border: "1.5px solid #2aa852", color: "#1a5c2a", background: "#fff", fontWeight: 700, borderRadius: 8, padding: "7px 13px", textDecoration: "none", fontSize: 13, whiteSpace: "nowrap" }}
                   >
-                    â†— Preview
+                    ↗ Preview
                   </a>
                 </div>
                 <p className="green-work-note" style={{ marginTop: 8 }}>
                   Showing impact for: <strong>{selectedProject.name}</strong>
-                  {selectedProject.location_text ? ` Â· ${selectedProject.location_text}` : ""}
+                  {selectedProject.location_text ? ` · ${selectedProject.location_text}` : ""}
                 </p>
               </>
             ) : (
@@ -3436,7 +3436,7 @@ function ShareImpactPanel({
           <p className="green-work-note" style={{ marginTop: 0, marginBottom: 14 }}>
             Public comments and endorsements left by donors, officials, and reviewers on your impact page.
           </p>
-          {commentsLoading && <p className="green-work-note">Loading endorsementsâ€¦</p>}
+          {commentsLoading && <p className="green-work-note">Loading endorsements…</p>}
           {commentsLoaded && comments.length === 0 && (
             <p className="green-work-note" style={{ fontStyle: "italic" }}>No endorsements yet. They will appear here once visitors leave comments on your impact page.</p>
           )}
@@ -3452,7 +3452,7 @@ function ShareImpactPanel({
                       <div style={{ fontWeight: 700, fontSize: 13, color: "#0c2b1a" }}>{c.commenter_name}</div>
                       {(c.commenter_rank || c.commenter_org) && (
                         <div style={{ fontSize: 12, color: "#5a7a63" }}>
-                          {[c.commenter_rank, c.commenter_org].filter(Boolean).join(" Â· ")}
+                          {[c.commenter_rank, c.commenter_org].filter(Boolean).join(" · ")}
                         </div>
                       )}
                     </div>
@@ -3464,7 +3464,7 @@ function ShareImpactPanel({
                   </div>
                   {c.project_name && (
                     <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(26,92,42,0.08)", border: "1px solid #c4ddc9", borderRadius: 6, padding: "2px 9px", fontSize: 11, color: "#1a5c2a", fontWeight: 600, marginBottom: 6 }}>
-                      ðŸ“‚ {c.project_name}
+                      📂 {c.project_name}
                     </div>
                   )}
                   <div style={{ fontSize: 13.5, color: "#2d4a35", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{c.comment_body}</div>
@@ -5212,7 +5212,7 @@ export default function GreenWork() {
       toast.error(
         error?.response?.data?.detail ||
           (isTimeout
-            ? `${defaultMessage} timed out. The satellite analysis is taking too long â€” try a smaller area or retry shortly.`
+            ? `${defaultMessage} timed out. The satellite analysis is taking too long — try a smaller area or retry shortly.`
             : `${defaultMessage} failed. Check your connection and try again.`),
       );
     } finally {
@@ -6340,7 +6340,7 @@ export default function GreenWork() {
         default_project_id: newMerchantProjectId ? Number(newMerchantProjectId) : null,
         agreed_price_per_tree: newMerchantPrice ? Number(newMerchantPrice) : null,
       });
-      toast.success("Merchant created â€” copy the API key now, it won't be shown again");
+      toast.success("Merchant created — copy the API key now, it won't be shown again");
       setRevealedMerchantCredentials(res.data);
       setNewMerchantOrgName("");
       setNewMerchantContactName("");
@@ -6362,7 +6362,7 @@ export default function GreenWork() {
     setRotatingMerchantKeyId(merchantId);
     try {
       const res = await api.post(`/green/admin/merchants/${merchantId}/rotate-key`, {});
-      toast.success("API key rotated â€” share the new key with the merchant now");
+      toast.success("API key rotated — share the new key with the merchant now");
       setRevealedMerchantCredentials({ id: merchantId, api_key: res.data?.api_key } as MerchantAccountRecord);
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || "Failed to rotate API key");
@@ -6377,7 +6377,7 @@ export default function GreenWork() {
     setRotatingMerchantWebhookSecretId(merchantId);
     try {
       const res = await api.post(`/green/admin/merchants/${merchantId}/rotate-webhook-secret`, {});
-      toast.success("Webhook secret regenerated â€” share the new secret with the merchant now");
+      toast.success("Webhook secret regenerated — share the new secret with the merchant now");
       setRevealedMerchantCredentials({
         id: merchantId,
         webhook_secret: res.data?.webhook_secret,
@@ -7283,7 +7283,7 @@ export default function GreenWork() {
     }
     if (activeForm !== "sponsor_feedback") return;
     void loadSponsorFeedback();
-    // Opening the tab clears the unread badge â€” mirrors an inbox "mark as read on open".
+    // Opening the tab clears the unread badge — mirrors an inbox "mark as read on open".
     setAssistantUnreadCount(0);
     api.post("/green/admin/assistant-escalations/mark-seen").catch(() => {});
     const timer = window.setInterval(() => {
@@ -9988,7 +9988,7 @@ export default function GreenWork() {
             ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Cross-product activity + QR reports" }]
             : []),
           ...(activeProjectRecord?.organization_slug
-            ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links Â· endorsements" }]
+            ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links · endorsements" }]
             : []),
         ]
       : actionWorkflowProfile === "relief_recovery"
@@ -10005,7 +10005,7 @@ export default function GreenWork() {
               ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Cross-product activity + QR reports" }]
               : []),
             ...(activeProjectRecord?.organization_slug
-              ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links Â· endorsements" }]
+              ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links · endorsements" }]
               : []),
           ]
       : [
@@ -10035,7 +10035,7 @@ export default function GreenWork() {
             ? [{ form: "logs" as WorkForm, title: "System Logs & Reports", note: "Activity logs + QR prints report" }]
             : []),
           ...(activeProjectRecord?.organization_slug
-            ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links Â· endorsements" }]
+            ? [{ form: "share_impact" as WorkForm, title: "Share Impact", note: "Donor links · endorsements" }]
             : []),
         ];
   const displayedProjectActions: Array<{ form: WorkForm; title: string; note: string; isNew?: boolean }> = csrPartnerDashboardMode
@@ -14369,7 +14369,7 @@ export default function GreenWork() {
                               <strong>{sponsor.full_name}</strong>
                               <span>{formatTaskTypeLabel(sponsor.account_type || "individual")}</span>
                               {sponsor.is_guest ? (
-                                <span className="green-work-live-pill warning" title="Checked out without creating a password â€” hasn't claimed their account yet">
+                                <span className="green-work-live-pill warning" title="Checked out without creating a password — hasn't claimed their account yet">
                                   Guest (unclaimed)
                                 </span>
                               ) : sponsor.claimed_at ? (
@@ -15111,7 +15111,7 @@ export default function GreenWork() {
                                         onClick={() => handleResolveAssistantEscalation(e.id, assistantEscalationNotes[e.id], assistantEscalationReplies[e.id])}
                                         style={{ padding: "4px 8px", fontSize: 11 }}
                                       >
-                                        {resolvingAssistantEscalationId === e.id ? "Sendingâ€¦" : "Send Reply & Resolve"}
+                                        {resolvingAssistantEscalationId === e.id ? "Sending…" : "Send Reply & Resolve"}
                                       </button>
                                     </div>
                                   ) : (
@@ -15854,7 +15854,7 @@ export default function GreenWork() {
                 <div className="green-work-card" style={{ marginBottom: 20 }}>
                   <h4 style={{ marginTop: 0 }}>Active Planting Orders</h4>
                   <p className="green-work-note" style={{ marginLeft: 0 }}>
-                    Cancel a stale or incorrect planting order here â€” for example, one assigned before sponsor-based
+                    Cancel a stale or incorrect planting order here — for example, one assigned before sponsor-based
                     assignment existed, whose quota no longer reflects real sponsored trees. Cancelling stops it from
                     counting toward the agent's "remaining" total in the app.
                   </p>
