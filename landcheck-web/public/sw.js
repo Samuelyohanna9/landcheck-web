@@ -1,9 +1,11 @@
-var CACHE_NAME = "green-shell-v12";
-var MAP_CACHE_NAME = "green-map-v6";
+var SHELL_CACHE_NAME = "landcheck-shell-v13";
+var STATIC_CACHE_NAME = "landcheck-static-v13";
+var IMAGE_CACHE_NAME = "landcheck-images-v3";
+var MAP_CACHE_NAME = "landcheck-map-v7";
 var SYNC_TAG = "green-sync-queue";
 
-/* ── Precache list ─────────────────────────────────────────────── */
 var PRECACHE_URLS = [
+  "/",
   "/green",
   "/green/manifest.webmanifest",
   "/green/icons/icon-192.png",
@@ -11,14 +13,13 @@ var PRECACHE_URLS = [
   "/green/icons/icon-512-maskable.png",
 ];
 
-/* ── Install ───────────────────────────────────────────────────── */
 self.addEventListener("install", function (event) {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(function (cache) {
+    caches.open(SHELL_CACHE_NAME).then(function (cache) {
       return Promise.allSettled(
         PRECACHE_URLS.map(function (url) {
-          return cache.add(url).catch(function (err) {
-            console.warn("[SW] precache skip:", url, err.message);
+          return cache.add(url).catch(function () {
+            return null;
           });
         })
       );
@@ -27,8 +28,14 @@ self.addEventListener("install", function (event) {
   self.skipWaiting();
 });
 
-/* ── Activate ──────────────────────────────────────────────────── */
 self.addEventListener("activate", function (event) {
+  var activeCacheNames = [
+    SHELL_CACHE_NAME,
+    STATIC_CACHE_NAME,
+    IMAGE_CACHE_NAME,
+    MAP_CACHE_NAME,
+  ];
+
   event.waitUntil(
     caches
       .keys()
@@ -36,11 +43,7 @@ self.addEventListener("activate", function (event) {
         return Promise.all(
           keys
             .filter(function (key) {
-              var isOldShell =
-                key.startsWith("green-shell-") && key !== CACHE_NAME;
-              var isOldMap =
-                key.startsWith("green-map-") && key !== MAP_CACHE_NAME;
-              return isOldShell || isOldMap;
+              return activeCacheNames.indexOf(key) === -1;
             })
             .map(function (key) {
               return caches.delete(key);
@@ -53,44 +56,42 @@ self.addEventListener("activate", function (event) {
   );
 });
 
-/* ── Background Sync ───────────────────────────────────────────── */
 self.addEventListener("sync", function (event) {
   if (event.tag !== SYNC_TAG) return;
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then(function (clients) {
-        if (clients.length === 0) return;
         clients.forEach(function (client) {
           client.postMessage({ type: "GREEN_SYNC_QUEUE" });
         });
       })
-      .catch(function () {})
+      .catch(function () {
+        return null;
+      })
   );
 });
 
-/* ── Message handler for tile pre-caching ──────────────────────── */
 self.addEventListener("message", function (event) {
   var data = event.data || {};
 
-  /* Pre-cache map tiles for a bounding box */
   if (data.type === "PRECACHE_MAP_TILES") {
     var urls = data.urls || [];
     if (urls.length === 0) return;
+
     event.waitUntil(
       caches.open(MAP_CACHE_NAME).then(function (cache) {
-        var done = 0;
+        var completed = 0;
         var total = urls.length;
-        var batchSize = 6; // Limit concurrent fetches
+        var batchSize = 6;
 
         function fetchBatch(startIndex) {
           var batch = urls.slice(startIndex, startIndex + batchSize);
           if (batch.length === 0) {
-            // Notify client we're done
             if (event.source) {
               event.source.postMessage({
                 type: "PRECACHE_MAP_TILES_DONE",
-                cached: done,
+                cached: completed,
                 total: total,
               });
             }
@@ -101,27 +102,27 @@ self.addEventListener("message", function (event) {
             batch.map(function (url) {
               return cache.match(url).then(function (existing) {
                 if (existing) {
-                  done++;
-                  return; // Already cached
+                  completed += 1;
+                  return null;
                 }
                 return fetch(url)
                   .then(function (resp) {
                     if (resp && resp.ok) {
-                      done++;
+                      completed += 1;
                       return cache.put(url, resp);
                     }
+                    return null;
                   })
                   .catch(function () {
-                    // Skip failed tiles silently
+                    return null;
                   });
               });
             })
           ).then(function () {
-            // Report progress
             if (event.source) {
               event.source.postMessage({
                 type: "PRECACHE_MAP_TILES_PROGRESS",
-                cached: done,
+                cached: completed,
                 total: total,
               });
             }
@@ -135,23 +136,26 @@ self.addEventListener("message", function (event) {
     return;
   }
 
-  /* Pre-cache Vite build assets (JS/CSS bundles) */
   if (data.type === "PRECACHE_BUILD_ASSETS") {
     var assetUrls = data.urls || [];
     if (assetUrls.length === 0) return;
+
     event.waitUntil(
-      caches.open(CACHE_NAME).then(function (cache) {
+      caches.open(STATIC_CACHE_NAME).then(function (cache) {
         return Promise.allSettled(
           assetUrls.map(function (url) {
             return cache.match(url).then(function (existing) {
-              if (existing) return;
+              if (existing) return null;
               return fetch(url)
                 .then(function (resp) {
                   if (resp && resp.ok && !isHtmlResponse(resp)) {
                     return cache.put(url, resp);
                   }
+                  return null;
                 })
-                .catch(function () {});
+                .catch(function () {
+                  return null;
+                });
             });
           })
         );
@@ -163,6 +167,7 @@ self.addEventListener("message", function (event) {
   if (data.type === "PRECACHE_PMTILES_ARCHIVE") {
     var pmtilesUrl = String(data.url || "");
     if (!pmtilesUrl) return;
+
     event.waitUntil(
       caches.open(MAP_CACHE_NAME).then(function (cache) {
         return cache.match(pmtilesUrl).then(function (existing) {
@@ -174,22 +179,23 @@ self.addEventListener("message", function (event) {
                 cached: true,
               });
             }
-            return;
+            return null;
           }
+
           return fetch(pmtilesUrl, { cache: "reload" })
             .then(function (resp) {
-              if (resp && resp.ok) {
-                return cache.put(pmtilesUrl, resp.clone()).then(function () {
-                  if (event.source) {
-                    event.source.postMessage({
-                      type: "PRECACHE_PMTILES_DONE",
-                      url: pmtilesUrl,
-                      cached: true,
-                    });
-                  }
-                });
+              if (!resp || !resp.ok) {
+                throw new Error("Failed to cache PMTiles archive");
               }
-              throw new Error("Failed to cache PMTiles archive");
+              return cache.put(pmtilesUrl, resp.clone()).then(function () {
+                if (event.source) {
+                  event.source.postMessage({
+                    type: "PRECACHE_PMTILES_DONE",
+                    url: pmtilesUrl,
+                    cached: true,
+                  });
+                }
+              });
             })
             .catch(function () {
               if (event.source) {
@@ -199,15 +205,19 @@ self.addEventListener("message", function (event) {
                   cached: false,
                 });
               }
+              return null;
             });
         });
       })
     );
-    return;
   }
 });
 
-/* ── Helpers ───────────────────────────────────────────────────── */
+function isHtmlResponse(resp) {
+  if (!resp) return false;
+  return String(resp.headers.get("Content-Type") || "").toLowerCase().includes("text/html");
+}
+
 function isMapboxRequest(url) {
   var host = String(url.hostname || "").toLowerCase();
   if (!host.endsWith(".mapbox.com") && host !== "mapbox.com") return false;
@@ -226,23 +236,17 @@ function isPmtilesRequest(url) {
   return String(url.pathname || "").toLowerCase().endsWith(".pmtiles");
 }
 
-function isLikelyGreenApiRequest(req, url) {
+function isLikelySameOriginApiRequest(request, url) {
   if (String(url.origin || "") !== String(self.location.origin || "")) return false;
-  var pathname = String(url.pathname || "");
-  if (!pathname.startsWith("/green/")) return false;
-  if (
-    pathname === "/green/" ||
-    pathname === "/green/manifest.webmanifest" ||
-    pathname.startsWith("/green/icons/")
-  ) {
-    return false;
-  }
-  var accept = String(req.headers.get("accept") || "").toLowerCase();
-  if (accept.includes("application/json")) return true;
-  if (accept.includes("application/pdf")) return true;
-  if (accept.includes("application/octet-stream")) return true;
-  if (accept.includes("text/csv")) return true;
-  return false;
+  if (String(url.pathname || "").startsWith("/api/")) return true;
+
+  var accept = String(request.headers.get("accept") || "").toLowerCase();
+  return (
+    accept.includes("application/json") ||
+    accept.includes("application/pdf") ||
+    accept.includes("application/octet-stream") ||
+    accept.includes("text/csv")
+  );
 }
 
 function parseRangeHeader(value, size) {
@@ -284,92 +288,121 @@ function responseWithRange(fullResponse, rangeHeader) {
   });
 }
 
-function isGreenRoute(pathname) {
-  return (
-    pathname === "/green" ||
-    pathname === "/green/" ||
-    pathname === "/green-work" ||
-    pathname === "/green-work/" ||
-    pathname.startsWith("/green/") ||
-    pathname.startsWith("/green-work/")
-  );
-}
-
-function isGreenAsset(pathname) {
-  return (
-    pathname.startsWith("/green/") ||
-    pathname.startsWith("/green-work/") ||
-    pathname === "/green" ||
-    pathname === "/green-work" ||
-    pathname === "/green-logo-cropped-760.png" ||
-    pathname === "/green-logo-cropped-700.png" ||
-    pathname === "/green%20logo.png"
-  );
-}
-
-function isHtmlResponse(resp) {
-  if (!resp) return false;
-  var contentType = String(resp.headers.get("Content-Type") || "").toLowerCase();
-  return contentType.includes("text/html");
-}
-
-/**
- * Try to find the SPA shell HTML in the cache.
- * iOS Safari may cache it under different keys depending on how the page was first loaded,
- * so we try multiple variants.
- */
-function findCachedShell() {
-  return caches.open(CACHE_NAME).then(function (cache) {
+function findCachedShell(request) {
+  return caches.open(SHELL_CACHE_NAME).then(function (cache) {
     return cache
-      .match("/green")
+      .match(request)
       .then(function (resp) {
         if (resp) return resp;
-        return cache.match("/green/");
+        return cache.match("/");
       })
       .then(function (resp) {
         if (resp) return resp;
-        // Last resort: look for any cached HTML response
-        return cache.match(new Request(self.registration.scope));
+        return cache.match("/green");
+      })
+      .then(function (resp) {
+        if (resp) return resp;
+        return cache.match(self.registration.scope);
       });
   });
 }
 
-/* ── Fetch handler ─────────────────────────────────────────────── */
+function isNavigationRequest(request, url) {
+  if (request.mode !== "navigate") return false;
+  if (url.origin !== self.location.origin) return false;
+  if (String(url.pathname || "").startsWith("/api/")) return false;
+  return true;
+}
+
+function isStaticAssetRequest(request, url) {
+  if (url.origin !== self.location.origin) return false;
+  return (
+    url.pathname.startsWith("/assets/") ||
+    request.destination === "script" ||
+    request.destination === "style" ||
+    request.destination === "worker" ||
+    request.destination === "font"
+  );
+}
+
+function isImageLikeRequest(request, url) {
+  if (url.origin !== self.location.origin) return false;
+  if (request.destination === "image" || request.destination === "video") return true;
+  return /\.(png|jpg|jpeg|webp|avif|gif|svg|mp4|webm)$/i.test(url.pathname);
+}
+
+function networkFirst(request, cacheName, options) {
+  return caches.open(cacheName).then(function (cache) {
+    return fetch(request)
+      .then(function (response) {
+        if (response && response.ok && (!options || !options.skipCache || !options.skipCache(response))) {
+          cache.put(request, response.clone());
+        }
+        return response;
+      })
+      .catch(function () {
+        return cache.match(request).then(function (cached) {
+          if (cached) return cached;
+          if (options && typeof options.fallback === "function") {
+            return options.fallback();
+          }
+          return new Response("Offline", { status: 503, statusText: "Offline" });
+        });
+      });
+  });
+}
+
+function staleWhileRevalidate(request, cacheName) {
+  return caches.open(cacheName).then(function (cache) {
+    return cache.match(request).then(function (cached) {
+      var networkFetch = fetch(request)
+        .then(function (response) {
+          if (response && response.ok && !isHtmlResponse(response)) {
+            cache.put(request, response.clone());
+          }
+          return response;
+        })
+        .catch(function () {
+          return null;
+        });
+
+      if (cached && !isHtmlResponse(cached)) {
+        return cached;
+      }
+
+      return networkFetch.then(function (response) {
+        return response || cached || new Response("Offline", { status: 503, statusText: "Offline" });
+      });
+    });
+  });
+}
+
 self.addEventListener("fetch", function (event) {
-  var req = event.request;
-  var url = new URL(req.url);
+  var request = event.request;
+  var url = new URL(request.url);
   var isSameOrigin = url.origin === self.location.origin;
 
-  // Only handle GET requests
-  if (req.method !== "GET") return;
-
-  // Never intercept same-origin Green API/data requests. Let them go straight to the network.
-  if (isLikelyGreenApiRequest(req, url)) return;
-
-  // Skip API calls – let them go straight to network
-  if (isSameOrigin && url.pathname.startsWith("/api/")) return;
+  if (request.method !== "GET") return;
+  if (isLikelySameOriginApiRequest(request, url)) return;
 
   if (isPmtilesRequest(url)) {
     event.respondWith(
       caches.open(MAP_CACHE_NAME).then(function (mapCache) {
         return mapCache.match(url.href).then(function (cachedArchive) {
           if (cachedArchive) {
-            var rangeHeader = req.headers.get("Range");
+            var rangeHeader = request.headers.get("Range");
             if (rangeHeader) {
               return responseWithRange(cachedArchive.clone(), rangeHeader);
             }
             return cachedArchive;
           }
 
-          return fetch(req)
-            .then(function (resp) {
-              if (!resp || !resp.ok) {
-                return resp;
+          return fetch(request)
+            .then(function (response) {
+              if (response && response.ok && !request.headers.get("Range")) {
+                event.waitUntil(mapCache.put(url.href, response.clone()));
               }
-              if (!req.headers.get("Range")) {
-                event.waitUntil(mapCache.put(url.href, resp.clone()));
-              }
-              return resp;
+              return response;
             })
             .catch(function () {
               return new Response("Offline PMTiles archive unavailable", {
@@ -383,32 +416,19 @@ self.addEventListener("fetch", function (event) {
     return;
   }
 
-  /* Mapbox tile / style / font caching (network-first, cache fallback) */
   if (isMapboxRequest(url)) {
     event.respondWith(
-      caches.open(MAP_CACHE_NAME).then(function (mapCache) {
-        return fetch(req)
-          .then(function (resp) {
-            if (resp && resp.ok) {
-              event.waitUntil(mapCache.put(req, resp.clone()));
-            }
-            return resp;
-          })
-          .catch(function () {
-            return mapCache.match(req).then(function (cached) {
+      networkFirst(request, MAP_CACHE_NAME, {
+        fallback: function () {
+          return caches.open(MAP_CACHE_NAME).then(function (mapCache) {
+            return mapCache.match(request).then(function (cached) {
               if (cached) return cached;
-              // Return transparent 1x1 PNG for missing raster tiles instead of error
-              if (
-                url.pathname.includes("/tiles/") ||
-                url.pathname.includes("/v4/")
-              ) {
+              if (url.pathname.includes("/tiles/") || url.pathname.includes("/v4/")) {
                 return new Response(
                   Uint8Array.from(
-                    atob(
-                      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAABJRUEFTkSuQmCC"
-                    ),
-                    function (c) {
-                      return c.charCodeAt(0);
+                    atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAABJRUEFTkSuQmCC"),
+                    function (char) {
+                      return char.charCodeAt(0);
                     }
                   ),
                   {
@@ -426,89 +446,42 @@ self.addEventListener("fetch", function (event) {
               });
             });
           });
+        },
       })
     );
     return;
   }
 
-  /* ── SPA navigation (network-first → cache → shell fallback) ────── */
-  var isAppNavigation =
-    req.mode === "navigate" && isSameOrigin && isGreenRoute(url.pathname);
+  if (!isSameOrigin) return;
 
-  if (isAppNavigation) {
+  if (isNavigationRequest(request, url)) {
     event.respondWith(
-      fetch(req)
-        .then(function (resp) {
-          if (resp.ok) {
-            var copy = resp.clone();
-            var greenShellCopy =
-              url.pathname === "/green" ||
-              url.pathname === "/green/"
-                ? resp.clone()
-                : null;
-            caches.open(CACHE_NAME).then(function (cache) {
-              cache.put(req, copy);
-              // Also store under /green key so offline fallback always works
-              if (greenShellCopy) {
-                cache.put("/green", greenShellCopy);
-              }
-            });
-          }
-          return resp;
-        })
-        .catch(function () {
-          // Offline: try to serve from cache
-          return caches
-            .match(req)
-            .then(function (resp) {
-              if (resp) return resp;
-              // SPA: any navigation can be served by the shell HTML
-              return findCachedShell();
-            })
-            .then(function (resp) {
-              return (
-                resp ||
-                new Response(
-                  '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LandCheck Green - Offline</title><style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#0b1f16;color:#efffec;text-align:center}h1{font-size:1.4rem}p{color:#a0c9a8;margin-top:0.5rem}</style></head><body><div><h1>You are offline</h1><p>Please reconnect to the internet and reload.</p></div></body></html>',
-                  {
-                    status: 200,
-                    headers: { "Content-Type": "text/html; charset=utf-8" },
-                  }
-                )
-              );
-            });
-        })
+      networkFirst(request, SHELL_CACHE_NAME, {
+        fallback: function () {
+          return findCachedShell(request).then(function (response) {
+            return (
+              response ||
+              new Response(
+                '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LandCheck - Offline</title><style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#0b1f16;color:#efffec;text-align:center}h1{font-size:1.4rem;margin-bottom:0.5rem}p{color:#a0c9a8}</style></head><body><div><h1>You are offline</h1><p>Please reconnect and reload.</p></div></body></html>',
+                {
+                  status: 200,
+                  headers: { "Content-Type": "text/html; charset=utf-8" },
+                }
+              )
+            );
+          });
+        },
+      })
     );
     return;
   }
 
-  /* ── Non-same-origin: pass through ── */
-  if (!isSameOrigin) return;
+  if (isStaticAssetRequest(request, url)) {
+    event.respondWith(staleWhileRevalidate(request, STATIC_CACHE_NAME));
+    return;
+  }
 
-  /* ── Static assets (cache-first) ── */
-  var isBuildAsset = url.pathname.startsWith("/assets/");
-  var isCacheableStatic = isGreenAsset(url.pathname) || isBuildAsset;
-  if (!isCacheableStatic) return;
-
-  event.respondWith(
-    caches.match(req).then(function (cached) {
-      if (cached && !isHtmlResponse(cached)) return cached;
-      if (cached && isHtmlResponse(cached)) {
-        event.waitUntil(
-          caches.open(CACHE_NAME).then(function (cache) {
-            return cache.delete(req);
-          })
-        );
-      }
-      return fetch(req).then(function (resp) {
-        if (resp.ok && !isHtmlResponse(resp)) {
-          var copy = resp.clone();
-          caches.open(CACHE_NAME).then(function (cache) {
-            cache.put(req, copy);
-          });
-        }
-        return resp;
-      });
-    })
-  );
+  if (isImageLikeRequest(request, url)) {
+    event.respondWith(staleWhileRevalidate(request, IMAGE_CACHE_NAME));
+  }
 });

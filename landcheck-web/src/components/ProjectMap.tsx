@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
-import "mapbox-gl/dist/mapbox-gl.css";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "../styles/green-impact.css";
-import { loadMapboxGl, MAPBOX_TOKEN } from "../utils/mapboxLoader";
+import { buildStaticProjectMapPreview } from "../utils/staticProjectMap";
+import { loadMapboxGl, loadMapboxGlCss, MAPBOX_TOKEN, prefetchMapboxCore } from "../utils/mapboxLoader";
 
 export type ProjectMapFeature = {
   type: "Feature";
@@ -20,14 +20,28 @@ export function ProjectMap({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
+  const [interactive, setInteractive] = useState(false);
+  const [staticPreviewFailed, setStaticPreviewFailed] = useState(false);
 
   const accentColor =
     mode === "agric" ? "#b45309" : mode === "relief_recovery" ? "#1d4ed8" : "#16a34a";
 
   const hasPolygons = features.length > 0;
   const totalLocations = hasPolygons ? features.length : points.length;
+  const staticPreview = useMemo(
+    () => buildStaticProjectMapPreview({ points, features, mode }),
+    [features, mode, points],
+  );
+  const showInteractiveMap = interactive || !staticPreview || staticPreviewFailed;
+
+  const openLiveMap = () => {
+    void prefetchMapboxCore();
+    setInteractive(true);
+  };
 
   useEffect(() => {
+    if (!showInteractiveMap) return;
+
     const hasPoints = points.length > 0;
     const hasFeats = features.length > 0;
     if (!containerRef.current || mapRef.current || !MAPBOX_TOKEN || (!hasPoints && !hasFeats)) return;
@@ -35,7 +49,7 @@ export function ProjectMap({
     let disposed = false;
 
     void (async () => {
-      const mapboxgl = await loadMapboxGl();
+      const [mapboxgl] = await Promise.all([loadMapboxGl(), loadMapboxGlCss()]);
       if (disposed || !containerRef.current || mapRef.current) return;
 
       const center: [number, number] = hasPoints
@@ -64,13 +78,19 @@ export function ProjectMap({
         if (hasPoints) {
           const pointGeoJson: GeoJSON.FeatureCollection = {
             type: "FeatureCollection",
-            features: points.map((p) => ({
+            features: points.map((point) => ({
               type: "Feature" as const,
-              geometry: { type: "Point" as const, coordinates: [p.lng, p.lat] },
+              geometry: { type: "Point" as const, coordinates: [point.lng, point.lat] },
               properties: {},
             })),
           };
-          map.addSource("impact-points", { type: "geojson", data: pointGeoJson, cluster: true, clusterMaxZoom: 14, clusterRadius: 40 });
+          map.addSource("impact-points", {
+            type: "geojson",
+            data: pointGeoJson,
+            cluster: true,
+            clusterMaxZoom: 14,
+            clusterRadius: 40,
+          });
 
           map.addLayer({
             id: "clusters",
@@ -114,11 +134,11 @@ export function ProjectMap({
         }
 
         if (hasFeats) {
-          const polyGeoJson: GeoJSON.FeatureCollection = {
+          const polygonGeoJson: GeoJSON.FeatureCollection = {
             type: "FeatureCollection",
             features: features as unknown as GeoJSON.Feature[],
           };
-          map.addSource("impact-polygons", { type: "geojson", data: polyGeoJson });
+          map.addSource("impact-polygons", { type: "geojson", data: polygonGeoJson });
           map.addLayer({
             id: "polygon-fill",
             type: "fill",
@@ -145,7 +165,7 @@ export function ProjectMap({
                 [
                   "case",
                   ["!=", ["get", "area_ha"], null],
-                  ["concat", "  ·  ", ["to-string", ["get", "area_ha"]], " ha"],
+                  ["concat", " - ", ["to-string", ["get", "area_ha"]], " ha"],
                   "",
                 ],
               ],
@@ -175,7 +195,7 @@ export function ProjectMap({
 
         if (points.length > 1) {
           const bounds = new mapboxgl.LngLatBounds();
-          points.forEach((p) => bounds.extend([p.lng, p.lat]));
+          points.forEach((point) => bounds.extend([point.lng, point.lat]));
           map.fitBounds(bounds, { padding: 44, maxZoom: 17, duration: 800 });
         }
       });
@@ -186,17 +206,45 @@ export function ProjectMap({
       mapRef.current?.remove();
       mapRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [accentColor, features, points, showInteractiveMap]);
 
   if (points.length === 0 && features.length === 0) return null;
 
   return (
     <div className="gi-map-wrap">
-      <div ref={containerRef} className="gi-map-canvas" />
+      {showInteractiveMap ? (
+        MAPBOX_TOKEN ? (
+          <div ref={containerRef} className="gi-map-canvas" />
+        ) : (
+          <div className="gi-map-fallback">
+            <strong>Map preview unavailable</strong>
+            <span>Add a Mapbox token to restore the live map.</span>
+          </div>
+        )
+      ) : (
+        <div className="gi-map-static">
+          <img
+            src={staticPreview.url}
+            alt="Verified project map preview"
+            className="gi-map-static-image"
+            loading="lazy"
+            decoding="async"
+            onError={() => setStaticPreviewFailed(true)}
+          />
+          <div className="gi-map-static-overlay">
+            <button type="button" className="gi-map-live-toggle" onClick={openLiveMap}>
+              Open Live Map
+            </button>
+          </div>
+        </div>
+      )}
       <div className="gi-map-badge">
         {totalLocations.toLocaleString()} verified GPS {totalLocations === 1 ? "location" : "locations"}
-        {hasPolygons ? " · click plot for details" : ""}
+        {showInteractiveMap
+          ? hasPolygons
+            ? " - click plot for details"
+            : ""
+          : ` - ${staticPreview?.badge || "open live map for details"}`}
       </div>
     </div>
   );

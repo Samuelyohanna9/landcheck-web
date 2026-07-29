@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import {
   cacheTreeTasksOffline,
@@ -7,10 +7,14 @@ import {
   getCachedTreeTimelineOffline,
   precacheMapTilesForBounds,
 } from "../offline/greenOffline";
-import "mapbox-gl/dist/mapbox-gl.css";
-import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import "../styles/tree-map.css";
-import { loadMapboxDraw, loadMapboxGl, MAPBOX_TOKEN } from "../utils/mapboxLoader";
+import {
+  loadMapboxDraw,
+  loadMapboxDrawCss,
+  loadMapboxGl,
+  loadMapboxGlCss,
+  MAPBOX_TOKEN,
+} from "../utils/mapboxLoader";
 const LIVE_MAP_STYLE = "mapbox://styles/mapbox/satellite-streets-v12";
 
 const buildOfflineMapStyle = (): any => ({
@@ -525,6 +529,75 @@ const buildAssignmentAreaFeatureCollection = (
   } as any;
 };
 
+const stableSerialize = (value: unknown) => {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "";
+  }
+};
+
+const buildTreeDataSignature = (
+  trees: TreePoint[],
+  workflowMode: "green" | "agric" | "relief_recovery" | "csr",
+) =>
+  `${workflowMode}::${trees
+    .map((tree) =>
+      stableSerialize([
+        tree.id,
+        tree.project_tree_no ?? null,
+        Number(tree.lng).toFixed(6),
+        Number(tree.lat).toFixed(6),
+        tree.status || "",
+        tree.species || "",
+        tree.planting_date || "",
+        tree.notes || "",
+        tree.photo_url || "",
+        tree.created_by || "",
+        tree.tree_height_m ?? null,
+        tree.tree_age_months ?? null,
+        tree.tree_origin || "",
+        tree.attribution_scope || "",
+        tree.count_in_planting_kpis ?? true,
+        tree.count_in_carbon_scope ?? true,
+        tree.custodian_name || "",
+        tree.inventory_tree_count ?? null,
+        tree.existing_area_sqm ?? null,
+        tree.existing_area_geojson || null,
+        tree.record_profile_data || null,
+      ]),
+    )
+    .join("||")}`;
+
+const buildAssignmentAreaSignature = (
+  areas: Array<{ id?: number | string; label?: string | null; treeId?: number | null; geojson: any }>,
+  trees: TreePoint[],
+  workflowMode: "green" | "agric" | "relief_recovery" | "csr",
+) => {
+  const areaSignature = areas
+    .map((area) => stableSerialize([area.id ?? null, area.label ?? "", area.treeId ?? null, area.geojson || null]))
+    .join("||");
+  const treeAreaSignature = trees
+    .filter((tree) => Boolean(tree.existing_area_geojson))
+    .map((tree) =>
+      stableSerialize([
+        tree.id,
+        tree.project_tree_no ?? null,
+        tree.inventory_tree_count ?? null,
+        tree.custodian_name || "",
+        tree.species || "",
+        tree.existing_area_sqm ?? null,
+        tree.existing_area_geojson || null,
+        tree.record_profile_data?.commodity || "",
+        tree.record_profile_data?.area_hectares ?? null,
+        tree.record_profile_data?.asset_type || "",
+      ]),
+    )
+    .join("||");
+
+  return `${workflowMode}::${areaSignature}::${treeAreaSignature}`;
+};
+
 const buildPopupHtml = (base: TreeFeatureProps, detail?: TreePopupDetail | null, loading = false, workflowMode: "green" | "agric" | "relief_recovery" | "csr" = "green") => {
   const tree = detail?.tree || {};
   const status = String(tree.status || base.status || "unknown");
@@ -775,6 +848,19 @@ export default function TreeMap({
   const healthyBlinkActiveRef = useRef(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const treeDataSignature = useMemo(() => buildTreeDataSignature(trees, workflowMode), [trees, workflowMode]);
+  const treeFeatureCollection = useMemo(
+    () => buildTreeFeatureCollection(trees, workflowMode),
+    [treeDataSignature],
+  );
+  const assignmentAreaSignature = useMemo(
+    () => buildAssignmentAreaSignature(assignmentAreas, trees, workflowMode),
+    [assignmentAreas, trees, workflowMode],
+  );
+  const assignmentAreaFeatureCollection = useMemo(
+    () => buildAssignmentAreaFeatureCollection(assignmentAreas, trees, workflowMode),
+    [assignmentAreaSignature],
+  );
 
   useEffect(() => {
     treesRef.current = trees;
@@ -971,10 +1057,7 @@ export default function TreeMap({
       const rect = containerRef.current.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
 
-      const [mapboxgl, MapboxDraw] = await Promise.all([
-        loadMapboxGl(),
-        enableDraw ? loadMapboxDraw() : Promise.resolve(null),
-      ]);
+      const [mapboxgl] = await Promise.all([loadMapboxGl(), loadMapboxGlCss()]);
       if (disposed || !containerRef.current || mapRef.current) return;
       mapboxglRef.current = mapboxgl;
 
@@ -990,7 +1073,11 @@ export default function TreeMap({
       map.doubleClickZoom.enable();
       map.touchZoomRotate.enable();
       map.addControl(new mapboxgl.NavigationControl(), "top-right");
-      if (enableDraw && MapboxDraw) {
+
+      const attachDrawControls = async () => {
+        if (!enableDraw || drawRef.current) return;
+        const [MapboxDraw] = await Promise.all([loadMapboxDraw(), loadMapboxDrawCss()]);
+        if (disposed || drawRef.current || mapRef.current !== map) return;
         const draw = new MapboxDraw({
           displayControlsDefault: false,
           controls: {
@@ -1001,7 +1088,19 @@ export default function TreeMap({
         });
         map.addControl(draw, "top-left");
         drawRef.current = draw;
-      }
+        try {
+          if (drawActiveRef.current) {
+            draw.changeMode(drawModeRef.current === "polygon" ? "draw_polygon" : "draw_point");
+          } else {
+            draw.changeMode("simple_select");
+            if (drawModeRef.current === "point") {
+              draw.deleteAll();
+            }
+          }
+        } catch {
+          // noop
+        }
+      };
 
       map.on("error", (e: any) => {
         // eslint-disable-next-line no-console
@@ -1068,7 +1167,7 @@ export default function TreeMap({
         if (!map.getSource(ASSIGNMENT_AREA_SOURCE_ID)) {
           map.addSource(ASSIGNMENT_AREA_SOURCE_ID, {
             type: "geojson",
-            data: buildAssignmentAreaFeatureCollection(assignmentAreas, trees, workflowMode),
+            data: assignmentAreaFeatureCollection,
           });
           map.addLayer({
             id: ASSIGNMENT_AREA_FILL_LAYER_ID,
@@ -1125,7 +1224,7 @@ export default function TreeMap({
         if (!map.getSource(TREE_SOURCE_ID)) {
           map.addSource(TREE_SOURCE_ID, {
             type: "geojson",
-            data: buildTreeFeatureCollection(trees, workflowMode),
+            data: treeFeatureCollection,
           });
 
           map.addLayer({
@@ -1379,6 +1478,7 @@ export default function TreeMap({
       }
 
       mapRef.current = map;
+      void attachDrawControls();
     };
 
     const timer = window.setInterval(() => {
@@ -1392,6 +1492,8 @@ export default function TreeMap({
       disposed = true;
       window.clearInterval(timer);
       stopHealthyBlink();
+      mapReadyRef.current = false;
+      mapErrorRef.current = null;
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -1460,16 +1562,16 @@ export default function TreeMap({
     // so sidebar/popup always reads the latest server state on next click.
     detailCacheRef.current.clear();
     pendingDetailRef.current.clear();
-    source.setData(buildTreeFeatureCollection(trees, workflowMode));
-  }, [trees, workflowMode, mapReady]);
+    source.setData(treeFeatureCollection);
+  }, [mapReady, treeDataSignature, treeFeatureCollection]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const source = map.getSource(ASSIGNMENT_AREA_SOURCE_ID) as any;
     if (!source) return;
-    source.setData(buildAssignmentAreaFeatureCollection(assignmentAreas, trees, workflowMode));
-  }, [assignmentAreas, trees, workflowMode, mapReady]);
+    source.setData(assignmentAreaFeatureCollection);
+  }, [assignmentAreaFeatureCollection, assignmentAreaSignature, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
