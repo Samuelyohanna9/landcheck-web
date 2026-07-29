@@ -9,6 +9,7 @@ import {
   type DonorImpactAgricSummary,
   type DonorImpactComment,
   type DonorImpactData,
+  type DonorImpactFarmerEntry,
   type DonorImpactPhoto,
   type DonorImpactProject,
 } from "../api/donorImpact";
@@ -486,7 +487,54 @@ function AgricRegistrySnapshot({ summary }: { summary: DonorImpactAgricSummary }
           ))}
         </div>
       )}
+
+      {summary.farmer_directory.length > 0 && <FarmerDirectory farmers={summary.farmer_directory} />}
     </section>
+  );
+}
+
+function FarmerDirectory({ farmers }: { farmers: DonorImpactFarmerEntry[] }) {
+  const [query, setQuery] = useState("");
+  const cleanQuery = query.trim().toLowerCase();
+  const filtered = cleanQuery
+    ? farmers.filter((farmer) => farmer.name.toLowerCase().includes(cleanQuery))
+    : farmers;
+
+  return (
+    <div className="gi-farmer-directory">
+      <div className="gi-farmer-directory-head">
+        <div className="gi-breakdown-subheading">Registered Farmers ({farmers.length.toLocaleString()})</div>
+        <input
+          type="text"
+          className="gi-farmer-search"
+          placeholder="Search by name..."
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </div>
+      <p className="gi-farmer-directory-note">
+        Names and general programme details only - contact information is kept private.
+      </p>
+      {filtered.length === 0 ? (
+        <div className="gi-empty-section">No farmers match "{query}".</div>
+      ) : (
+        <div className="gi-farmer-list">
+          {filtered.map((farmer, index) => (
+            <div key={`${farmer.name}-${index}`} className="gi-farmer-row">
+              <div className="gi-farmer-row-main">
+                <span className="gi-farmer-name">{farmer.name}</span>
+                {farmer.verified && <span className="gi-farmer-verified-badge">Verified</span>}
+              </div>
+              <div className="gi-farmer-row-meta">
+                {farmer.crop && <span>{farmer.crop}</span>}
+                {farmer.farmer_group && <span>{farmer.farmer_group}</span>}
+                {farmer.location && <span>{farmer.location}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -610,41 +658,45 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
         )}
 
         {/* For agric projects, the farmer registry (150+ people) is the headline number donors care
-            about - the generic Key Metrics grid below is built from the `trees` table, which for
-            agric represents individual mapped plots, not farmers, and lags far behind registration
-            (e.g. 5 plots mapped out of 150 registered farmers). Leading with "5 total plots" made
-            the whole project look inactive. Show the farmer snapshot first, then plot-level detail. */}
-        {isAgricSnapshot && <AgricRegistrySnapshot summary={project.agric_summary!} />}
-
-        <section>
-          <div className="gi-section-heading">
-            <div className="gi-section-heading-bar" />
-            <div className="gi-section-heading-text">{isAgricSnapshot ? "Mapped Plot Metrics" : "Key Metrics"}</div>
-          </div>
-          <div className="gi-metrics-grid">
-            {metricCards.map((metric) => (
-              <div key={`${metric.kicker}-${metric.label}`} className="gi-metric-tile">
-                <div className="gi-metric-kicker">{metric.kicker}</div>
-                <div className="gi-metric-val">{metric.value}</div>
-                <div className="gi-metric-label">{metric.label}</div>
+            about. The generic Key Metrics grid (and its plot-based rate bar) is built from the
+            `trees` table, which for agric represents individual mapped plots, not farmers, and
+            lags far behind registration (e.g. 5 plots mapped out of 150 registered farmers) - it
+            reads as noise next to the real farmer snapshot, so it's dropped entirely for agric. */}
+        {isAgricSnapshot ? (
+          <AgricRegistrySnapshot summary={project.agric_summary!} />
+        ) : (
+          <>
+            <section>
+              <div className="gi-section-heading">
+                <div className="gi-section-heading-bar" />
+                <div className="gi-section-heading-text">Key Metrics</div>
               </div>
-            ))}
-          </div>
-        </section>
+              <div className="gi-metrics-grid">
+                {metricCards.map((metric) => (
+                  <div key={`${metric.kicker}-${metric.label}`} className="gi-metric-tile">
+                    <div className="gi-metric-kicker">{metric.kicker}</div>
+                    <div className="gi-metric-val">{metric.value}</div>
+                    <div className="gi-metric-label">{metric.label}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
 
-        {rateValue > 0 && (
-          <section className="gi-rate-bar-wrap">
-            <div className="gi-rate-bar-label">
-              <span>{rateLabel}</span>
-              <span className="gi-rate-bar-pct">{rateValue.toFixed(1)}%</span>
-            </div>
-            <div className="gi-rate-bar-track">
-              <div
-                className="gi-rate-bar-fill"
-                style={{ width: `${Math.min(rateValue, 100)}%` }}
-              />
-            </div>
-          </section>
+            {rateValue > 0 && (
+              <section className="gi-rate-bar-wrap">
+                <div className="gi-rate-bar-label">
+                  <span>{rateLabel}</span>
+                  <span className="gi-rate-bar-pct">{rateValue.toFixed(1)}%</span>
+                </div>
+                <div className="gi-rate-bar-track">
+                  <div
+                    className="gi-rate-bar-fill"
+                    style={{ width: `${Math.min(rateValue, 100)}%` }}
+                  />
+                </div>
+              </section>
+            )}
+          </>
         )}
 
         {stats.species_breakdown.length > 0 && (
