@@ -100,14 +100,32 @@ export type ReliefConfig = {
   target_zone?: string | null;
 };
 
+export type DonorImpactAgricSummary = {
+  total_farmers: number;
+  verified_farmers: number;
+  group_member_farmers: number;
+  finance_access_rate: number;
+  insurance_access_rate: number;
+  household_reach_total: number;
+  household_known_count: number;
+  tenure_breakdown: Array<{ label: string; count: number }>;
+  irrigation_breakdown: Array<{ label: string; count: number }>;
+  allocated_units: number;
+  supported_farmers: number;
+  field_capture_assigned: number;
+  field_capture_done: number;
+};
+
 export type DonorImpactProject = {
   id: number;
   name: string;
   location_text: string;
+  sponsor?: string | null;
   workflow_profile: WorkflowProfile;
   labels: DonorImpactProjectLabels;
   agric_config?: AgricConfig | null;
   relief_config?: ReliefConfig | null;
+  agric_summary?: DonorImpactAgricSummary | null;
   stats: DonorImpactStats;
   recent_photos: DonorImpactPhoto[];
   map_points: DonorImpactMapPoint[];
