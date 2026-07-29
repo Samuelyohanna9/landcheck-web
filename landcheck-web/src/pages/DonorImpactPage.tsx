@@ -496,8 +496,12 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
   const entityPlural = labels.entity_plural;
   const ownerPlural = labels.owner_plural;
   const modeLabel = labels.mode_label;
+  // stats.survival_rate is active-records / total-records - i.e. how many registered records are
+  // NOT marked dead/replaced. Calling that "Activity Rate" for agric read as directly contradicting
+  // the "Approved activities" tile right above it (e.g. 100% "Activity Rate" next to 0 approved
+  // activities), since it has nothing to do with task/activity completion.
   const rateLabel =
-    mode === "green" ? "Survival Rate" : mode === "relief_recovery" ? "Activity Rate" : "Activity Rate";
+    mode === "green" ? "Survival Rate" : mode === "agric" ? "Active Plot Rate" : "Activity Rate";
   const rateValue = stats.survival_rate ?? 0;
 
   const programmeFacts = [
