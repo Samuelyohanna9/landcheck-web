@@ -503,6 +503,7 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
   const rateLabel =
     mode === "green" ? "Survival Rate" : mode === "agric" ? "Active Plot Rate" : "Activity Rate";
   const rateValue = stats.survival_rate ?? 0;
+  const isAgricSnapshot = mode === "agric" && Boolean(project.agric_summary);
 
   const programmeFacts = [
     (project.agric_config?.program_type || project.relief_config?.program_type) && {
@@ -532,7 +533,7 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
   // already have a mapped plot, which under-counts the registry and, shown as "Owners" right above
   // a much larger "Farmers registered" figure, reads as contradictory data rather than a different
   // metric. Drop it here for agric so there's one authoritative farmer count on the page.
-  const showOwnersTile = !(mode === "agric" && project.agric_summary);
+  const showOwnersTile = !isAgricSnapshot;
 
   const metricCards = [
     {
@@ -608,10 +609,17 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
           </div>
         )}
 
+        {/* For agric projects, the farmer registry (150+ people) is the headline number donors care
+            about - the generic Key Metrics grid below is built from the `trees` table, which for
+            agric represents individual mapped plots, not farmers, and lags far behind registration
+            (e.g. 5 plots mapped out of 150 registered farmers). Leading with "5 total plots" made
+            the whole project look inactive. Show the farmer snapshot first, then plot-level detail. */}
+        {isAgricSnapshot && <AgricRegistrySnapshot summary={project.agric_summary!} />}
+
         <section>
           <div className="gi-section-heading">
             <div className="gi-section-heading-bar" />
-            <div className="gi-section-heading-text">Key Metrics</div>
+            <div className="gi-section-heading-text">{isAgricSnapshot ? "Mapped Plot Metrics" : "Key Metrics"}</div>
           </div>
           <div className="gi-metrics-grid">
             {metricCards.map((metric) => (
@@ -637,10 +645,6 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
               />
             </div>
           </section>
-        )}
-
-        {mode === "agric" && project.agric_summary && (
-          <AgricRegistrySnapshot summary={project.agric_summary} />
         )}
 
         {stats.species_breakdown.length > 0 && (
