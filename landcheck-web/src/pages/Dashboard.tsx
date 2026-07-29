@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BACKEND_URL } from "../api/client";
 import "../styles/dashboard.css";
+import { prefetchSurveyPlanPreviewStep, prefetchSurveyPlanRoute } from "../utils/surveyPlanPrefetch";
 
 type SavedPlot = {
   id: number;
@@ -18,6 +19,11 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [plots, setPlots] = useState<SavedPlot[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const warmSurveyPlanEntry = () => {
+    void prefetchSurveyPlanRoute();
+    void prefetchSurveyPlanPreviewStep();
+  };
 
   // Load plots from localStorage
   useEffect(() => {
@@ -72,7 +78,13 @@ export default function Dashboard() {
           </button>
           <h1>My Dashboard</h1>
         </div>
-        <button className="new-plot-btn" onClick={() => navigate("/survey-plan")}>
+        <button
+          className="new-plot-btn"
+          onMouseEnter={warmSurveyPlanEntry}
+          onFocus={warmSurveyPlanEntry}
+          onTouchStart={warmSurveyPlanEntry}
+          onClick={() => navigate("/survey-plan")}
+        >
           <svg viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
           </svg>
@@ -146,7 +158,12 @@ export default function Dashboard() {
             </svg>
             <h3>No plots yet</h3>
             <p>Create your first survey plan to see it here</p>
-            <button onClick={() => navigate("/survey-plan")}>
+            <button
+              onMouseEnter={warmSurveyPlanEntry}
+              onFocus={warmSurveyPlanEntry}
+              onTouchStart={warmSurveyPlanEntry}
+              onClick={() => navigate("/survey-plan")}
+            >
               Create Survey Plan
             </button>
           </div>

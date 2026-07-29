@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { memo, useState, useRef, useEffect } from "react";
 import "../styles/survey-preview.css";
 
 type PreviewType = "survey" | "orthophoto" | "topomap";
@@ -28,7 +28,7 @@ type Props = {
   allowedPreviewTypes?: PreviewType[];
 };
 
-export default function SurveyPreview({
+function SurveyPreview({
   previewType,
   onPreviewTypeChange,
   topoSource,
@@ -374,3 +374,5 @@ export default function SurveyPreview({
     </div>
   );
 }
+
+export default memo(SurveyPreview);

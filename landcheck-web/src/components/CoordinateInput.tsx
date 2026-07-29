@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import "../styles/coordinate-input.css";
 import CSVPreviewModal from "./CSVPreviewModal";
 
@@ -56,7 +56,7 @@ const getPlaceholders = (system: string): { x: string; y: string } => {
   }
 };
 
-export default function CoordinateInput({
+function CoordinateInput({
   points,
   onUpdatePoint,
   onRemovePoint,
@@ -311,3 +311,5 @@ export default function CoordinateInput({
     </div>
   );
 }
+
+export default memo(CoordinateInput);

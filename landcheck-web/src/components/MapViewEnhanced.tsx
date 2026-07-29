@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { memo, useEffect, useRef, useCallback } from "react";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import "../styles/map-enhanced.css";
@@ -14,6 +14,7 @@ type Props = {
   coordinates: Point[];
   onCoordinatesDrawn?: (coords: Point[]) => void;
   disabled?: boolean;
+  lightweight?: boolean;
 };
 
 const drawStyles = [
@@ -98,10 +99,11 @@ const drawStyles = [
   },
 ];
 
-export default function MapViewEnhanced({
+function MapViewEnhanced({
   coordinates,
   onCoordinatesDrawn,
-  disabled = false
+  disabled = false,
+  lightweight = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -152,19 +154,25 @@ export default function MapViewEnhanced({
     let disposed = false;
 
     void (async () => {
-      const [mapboxgl, MapboxDraw] = await Promise.all([loadMapboxGl(), loadMapboxDraw()]);
+      const mapboxgl = await loadMapboxGl();
       if (disposed || !containerRef.current || mapRef.current) return;
 
       mapboxglRef.current = mapboxgl;
 
       const map = new mapboxgl.Map({
         container: containerRef.current,
-        style: "mapbox://styles/mapbox/satellite-streets-v12",
+        style: lightweight
+          ? "mapbox://styles/mapbox/streets-v12"
+          : "mapbox://styles/mapbox/satellite-streets-v12",
         center: [7.5, 9.0],
         zoom: 6,
       });
 
       map.addControl(new mapboxgl.NavigationControl(), "top-right");
+      mapRef.current = map;
+
+      const MapboxDraw = await loadMapboxDraw();
+      if (disposed || mapRef.current !== map) return;
 
       const draw = new MapboxDraw({
         displayControlsDefault: false,
@@ -224,7 +232,6 @@ export default function MapViewEnhanced({
         }
       });
 
-      mapRef.current = map;
       drawRef.current = draw;
     })();
 
@@ -235,7 +242,7 @@ export default function MapViewEnhanced({
       drawRef.current = null;
       mapboxglRef.current = null;
     };
-  }, [handleDrawUpdate, onCoordinatesDrawn]);
+  }, [handleDrawUpdate, lightweight, onCoordinatesDrawn]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -392,3 +399,5 @@ export default function MapViewEnhanced({
     </div>
   );
 }
+
+export default memo(MapViewEnhanced);

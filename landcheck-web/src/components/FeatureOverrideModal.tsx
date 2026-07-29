@@ -1548,7 +1548,7 @@ export default function FeatureOverrideModal({
     const container = containerRef.current;
 
     void (async () => {
-      const [mapboxgl, MapboxDraw] = await Promise.all([loadMapboxGl(), loadMapboxDraw()]);
+      const mapboxgl = await loadMapboxGl();
       if (disposed || !container) return;
 
       mapboxglRef.current = mapboxgl;
@@ -1564,6 +1564,10 @@ export default function FeatureOverrideModal({
 
       map.addControl(new mapboxgl.NavigationControl({ visualizePitch: false }), "top-right");
       map.addControl(new mapboxgl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-left");
+      mapRef.current = map;
+
+      const MapboxDraw = await loadMapboxDraw();
+      if (disposed || mapRef.current !== map) return;
 
       const draw = new MapboxDraw({
         displayControlsDefault: false,
@@ -1670,7 +1674,6 @@ export default function FeatureOverrideModal({
         return;
       }
 
-      mapRef.current = map;
       drawRef.current = draw;
     })();
 

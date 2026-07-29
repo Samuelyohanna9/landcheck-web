@@ -7,6 +7,11 @@ import planProduction4 from "./plan pruction 4.png";
 import planProduction5 from "./plan production5.png";
 import "../styles/survey-plan-landing.css";
 import NavBar from "../components/NavBar";
+import {
+  prefetchSurveyPlanPreviewStep,
+  prefetchSurveyPlanRoute,
+  scheduleSurveyPlanIdlePrefetch,
+} from "../utils/surveyPlanPrefetch";
 
 type LaptopShot = { src: string; label: string };
 
@@ -70,11 +75,20 @@ export default function SurveyPlanLanding() {
   const navigate = useNavigate();
   const [activeShot, setActiveShot] = useState(0);
 
+  const warmSurveyPlanEntry = () => {
+    void prefetchSurveyPlanRoute();
+    void prefetchSurveyPlanPreviewStep();
+  };
+
   useEffect(() => {
     const timer = window.setInterval(() => {
       setActiveShot((prev) => (prev + 1) % planShots.length);
     }, 3200);
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    scheduleSurveyPlanIdlePrefetch();
   }, []);
 
   return (
@@ -98,6 +112,9 @@ export default function SurveyPlanLanding() {
             <button
               type="button"
               className="spl-hero-btn-primary"
+              onMouseEnter={warmSurveyPlanEntry}
+              onFocus={warmSurveyPlanEntry}
+              onTouchStart={warmSurveyPlanEntry}
               onClick={() => navigate("/survey-plan")}
             >
               Open Survey Plan Tool
@@ -153,6 +170,9 @@ export default function SurveyPlanLanding() {
               <button
                 type="button"
                 className="spl-btn-primary"
+                onMouseEnter={warmSurveyPlanEntry}
+                onFocus={warmSurveyPlanEntry}
+                onTouchStart={warmSurveyPlanEntry}
                 onClick={() => navigate("/survey-plan")}
               >
                 Start Survey Plan →
@@ -236,6 +256,9 @@ export default function SurveyPlanLanding() {
           <button
             type="button"
             className="spl-audience-cta"
+            onMouseEnter={warmSurveyPlanEntry}
+            onFocus={warmSurveyPlanEntry}
+            onTouchStart={warmSurveyPlanEntry}
             onClick={() => navigate("/survey-plan")}
           >
             Start Generating Plans →
@@ -254,6 +277,9 @@ export default function SurveyPlanLanding() {
             <button
               type="button"
               className="spl-footer-primary-btn"
+              onMouseEnter={warmSurveyPlanEntry}
+              onFocus={warmSurveyPlanEntry}
+              onTouchStart={warmSurveyPlanEntry}
               onClick={() => navigate("/survey-plan")}
             >
               Open Survey Plan Tool
