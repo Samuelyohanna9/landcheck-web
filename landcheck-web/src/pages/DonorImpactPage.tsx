@@ -143,11 +143,13 @@ function CircularMeter({
   overline,
   label,
   note,
+  toneClass = "",
 }: {
   value: number;
   overline: string;
   label: string;
   note?: string;
+  toneClass?: string;
 }) {
   const safeValue = clampPercent(value);
   const radius = 50;
@@ -155,7 +157,7 @@ function CircularMeter({
   const dashOffset = circumference - (safeValue / 100) * circumference;
 
   return (
-    <div className="gi-meter-card-shell">
+    <div className={`gi-meter-card-shell ${toneClass}`.trim()}>
       <div className="gi-meter-overline">{overline}</div>
       <div className="gi-meter-visual">
         <svg className="gi-meter-svg" viewBox="0 0 140 140" aria-hidden="true">
@@ -636,18 +638,20 @@ function AgricRegistrySnapshot({ summary }: { summary: DonorImpactAgricSummary }
             <CircularMeter
               value={verifiedRate}
               overline="Verified register"
-              label={`${summary.verified_farmers.toLocaleString()} farmers`}
-              note="Farmer records confirmed by the field team."
+              label="Verified share"
+              note={`${summary.verified_farmers.toLocaleString()} of ${summary.total_farmers.toLocaleString()} farmers confirmed by the field team.`}
+              toneClass="gi-chart-tone-emerald"
             />
             <CircularMeter
               value={fieldCoverageRate}
               overline="Field data"
-              label={`${summary.field_capture_done.toLocaleString()} plots`}
+              label="Capture progress"
               note={
                 summary.field_capture_assigned > 0
                   ? `${summary.field_capture_done.toLocaleString()} of ${summary.field_capture_assigned.toLocaleString()} assigned captures completed.`
                   : "Mapped plots already on record in this public view."
               }
+              toneClass="gi-chart-tone-sky"
             />
           </div>
         </section>
@@ -663,7 +667,7 @@ function AgricRegistrySnapshot({ summary }: { summary: DonorImpactAgricSummary }
               </div>
             </div>
           </div>
-          <div className="gi-rate-bar-wrap">
+          <div className="gi-rate-bar-wrap gi-chart-tone-amber">
             <div className="gi-rate-bar-label">
               <span>Access to Finance</span>
               <span className="gi-rate-bar-pct">{summary.finance_access_rate.toFixed(1)}%</span>
@@ -672,7 +676,7 @@ function AgricRegistrySnapshot({ summary }: { summary: DonorImpactAgricSummary }
               <div className="gi-rate-bar-fill" style={{ width: `${clampPercent(summary.finance_access_rate)}%` }} />
             </div>
           </div>
-          <div className="gi-rate-bar-wrap">
+          <div className="gi-rate-bar-wrap gi-chart-tone-sky">
             <div className="gi-rate-bar-label">
               <span>Access to Insurance</span>
               <span className="gi-rate-bar-pct">{summary.insurance_access_rate.toFixed(1)}%</span>
@@ -703,7 +707,7 @@ function AgricRegistrySnapshot({ summary }: { summary: DonorImpactAgricSummary }
                 </div>
               </div>
             </div>
-            <div className="gi-breakdown-list gi-breakdown-list-spaced">
+            <div className="gi-breakdown-list gi-breakdown-list-spaced gi-chart-tone-plum">
               {summary.tenure_breakdown.map((row) => (
                 <div key={row.label} className="gi-breakdown-row">
                   <div className="gi-breakdown-label" title={row.label}>
@@ -729,7 +733,7 @@ function AgricRegistrySnapshot({ summary }: { summary: DonorImpactAgricSummary }
                 </div>
               </div>
             </div>
-            <div className="gi-breakdown-list gi-breakdown-list-spaced">
+            <div className="gi-breakdown-list gi-breakdown-list-spaced gi-chart-tone-teal">
               {summary.irrigation_breakdown.map((row) => (
                 <div key={row.label} className="gi-breakdown-row">
                   <div className="gi-breakdown-label" title={row.label}>
@@ -964,11 +968,16 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
                     value={rateValue}
                     overline="Programme health"
                     label={`${stats.active_records.toLocaleString()} active`}
+                    toneClass={mode === "relief_recovery" ? "gi-chart-tone-sky" : "gi-chart-tone-emerald"}
                     note={`${stats.dead_records.toLocaleString()} dead · ${stats.replaced_records.toLocaleString()} replaced`}
                   />
                 </div>
                 {rateValue > 0 && (
-                  <section className="gi-rate-bar-wrap gi-rate-bar-wrap-board">
+                  <section
+                    className={`gi-rate-bar-wrap gi-rate-bar-wrap-board ${
+                      mode === "relief_recovery" ? "gi-chart-tone-sky" : "gi-chart-tone-emerald"
+                    }`}
+                  >
                     <div className="gi-rate-bar-label">
                       <span>{rateLabel}</span>
                       <span className="gi-rate-bar-pct">{rateValue.toFixed(1)}%</span>
@@ -983,15 +992,17 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
                 )}
               </section>
 
-              <ActivityCadenceCard
-                activities={project.recent_activities}
-                title="Activity cadence"
-                subtitle={
-                  activityCadence.length > 0
-                    ? "Most recent supervisor-approved events grouped by review date."
-                    : "No approved cadence is visible yet."
-                }
-              />
+              <div className="gi-chart-tone-sky">
+                <ActivityCadenceCard
+                  activities={project.recent_activities}
+                  title="Activity cadence"
+                  subtitle={
+                    activityCadence.length > 0
+                      ? "Most recent supervisor-approved events grouped by review date."
+                      : "No approved cadence is visible yet."
+                  }
+                />
+              </div>
             </div>
           </>
         )}
@@ -1013,7 +1024,7 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
                   </div>
                 </div>
               </div>
-              <div className="gi-breakdown-list">
+              <div className="gi-breakdown-list gi-breakdown-list-contrast">
                 {stats.species_breakdown.slice(0, 8).map((row) => {
                   const maxCount = stats.species_breakdown[0]?.count || 1;
                   const width = (row.count / maxCount) * 100;
