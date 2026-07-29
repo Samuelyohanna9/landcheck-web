@@ -1,0 +1,421 @@
+import { memo, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import SurveyPreview from "../SurveyPreview";
+
+type PlotMeta = {
+  title_text: string;
+  location_text: string;
+  lga_text: string;
+  state_text: string;
+  surveyor_name: string;
+  surveyor_rank: string;
+  certification_statement: string;
+  scale_text: string;
+  paper_size: string;
+  template_name: "general" | "adamawa_osg";
+  adamawa_rof_no: string;
+  adamawa_owner_name: string;
+  adamawa_authority_title: string;
+  adamawa_authority_date_text: string;
+  adamawa_control_point_name: string;
+  adamawa_northing: string;
+  adamawa_easting: string;
+  adamawa_elevation: string;
+  adamawa_origin_text: string;
+  adamawa_topo_sheet_text: string;
+  adamawa_computation_no: string;
+  adamawa_cadastral_sheet_no: string;
+  adamawa_plan_no: string;
+  adamawa_surveyed_by_text: string;
+  adamawa_disclaimer_text: string;
+};
+
+type PreviewType = "survey" | "orthophoto" | "topomap";
+type TopoSource = "opentopomap" | "userdata";
+type NorthArrowStyle = "one_side_stem" | "stacked_4n" | "classic" | "triangle" | "compass" | "chevron" | "orienteering" | "star";
+type NorthArrowColor = "black" | "blue";
+type BeaconStyle = "circle" | "square" | "triangle" | "diamond" | "cross";
+type RoadWidthOption = "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
+
+type Props = {
+  sidebar: ReactNode;
+  featureCounts: { building: number; road: number; river: number } | null;
+  meta: PlotMeta;
+  setMeta: Dispatch<SetStateAction<PlotMeta>>;
+  defaultCertificationStatement: string;
+  defaultAdamawaAuthorityTitle: string;
+  defaultAdamawaAuthorityDate: string;
+  defaultAdamawaTopoSheetText: string;
+  defaultAdamawaDisclaimerText: string;
+  scaleDraft: string;
+  setScaleDraft: Dispatch<SetStateAction<string>>;
+  commitScaleDraft: () => void;
+  scalePresets: number[];
+  parseScaleDenominator: (scaleText: string) => number;
+  previewActionLabel: string;
+  refreshCurrentPreview: () => void | Promise<void>;
+  previewLoading: boolean;
+  orthophotoLoading: boolean;
+  topoMapLoading: boolean;
+  serverSyncing: boolean;
+  onOpenFeatureCadEditor: () => void | Promise<void>;
+  onPrefetchFeatureEditor: () => void;
+  plotId: number | null;
+  isOnline: boolean;
+  onBack: () => void;
+  onContinue: () => void;
+  previewType: PreviewType;
+  onPreviewTypeChange: (type: PreviewType) => void;
+  topoSource: TopoSource;
+  onTopoSourceChange: (source: TopoSource) => void;
+  northArrowStyle: NorthArrowStyle;
+  northArrowColor: NorthArrowColor;
+  beaconStyle: BeaconStyle;
+  roadWidth: RoadWidthOption;
+  onNorthArrowStyleChange: (value: string) => void;
+  onNorthArrowColorChange: (value: string) => void;
+  onBeaconStyleChange: (value: string) => void;
+  onRoadWidthChange: (value: string) => void;
+  surveyPreviewUrl: string | null;
+  orthophotoPreviewUrl: string | null;
+  topoMapPreviewUrl: string | null;
+  hasHeightData: boolean;
+};
+
+function SurveyPlanSurveyPreviewStep({
+  sidebar,
+  featureCounts,
+  meta,
+  setMeta,
+  defaultCertificationStatement,
+  defaultAdamawaAuthorityTitle,
+  defaultAdamawaAuthorityDate,
+  defaultAdamawaTopoSheetText,
+  defaultAdamawaDisclaimerText,
+  scaleDraft,
+  setScaleDraft,
+  commitScaleDraft,
+  scalePresets,
+  parseScaleDenominator,
+  previewActionLabel,
+  refreshCurrentPreview,
+  previewLoading,
+  orthophotoLoading,
+  topoMapLoading,
+  serverSyncing,
+  onOpenFeatureCadEditor,
+  onPrefetchFeatureEditor,
+  plotId,
+  isOnline,
+  onBack,
+  onContinue,
+  previewType,
+  onPreviewTypeChange,
+  topoSource,
+  onTopoSourceChange,
+  northArrowStyle,
+  northArrowColor,
+  beaconStyle,
+  roadWidth,
+  onNorthArrowStyleChange,
+  onNorthArrowColorChange,
+  onBeaconStyleChange,
+  onRoadWidthChange,
+  surveyPreviewUrl,
+  orthophotoPreviewUrl,
+  topoMapPreviewUrl,
+  hasHeightData,
+}: Props) {
+  const rendering = previewLoading || orthophotoLoading || topoMapLoading || serverSyncing;
+
+  return (
+    <div className="step-panel preview-panel">
+      <div className="panel-left">
+        {sidebar}
+        {featureCounts && (
+          <div className="features-bar">
+            <span className="features-bar-label">Detected:</span>
+            <div className="features-bar-items">
+              <div className="feature-chip building">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 21h18M5 21V7l8-4v18M13 21V3l6 3v15M9 9v.01M9 12v.01M9 15v.01M17 9v.01M17 12v.01M17 15v.01" />
+                </svg>
+                <span className="chip-count">{featureCounts.building}</span>
+                <span className="chip-label">Buildings</span>
+              </div>
+              <div className="feature-chip road">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 19L8 5M16 19L20 5M12 19V5M8 10H6M18 10h-2M8 14H6M18 14h-2" />
+                </svg>
+                <span className="chip-count">{featureCounts.road}</span>
+                <span className="chip-label">Roads</span>
+              </div>
+              <div className="feature-chip river">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 7c3-2 6-2 9 0s6 2 9 0M3 12c3-2 6-2 9 0s6 2 9 0M3 17c3-2 6-2 9 0s6 2 9 0" />
+                </svg>
+                <span className="chip-count">{featureCounts.river}</span>
+                <span className="chip-label">Rivers</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="form-section">
+          <h3 className="section-title">Survey Details</h3>
+          <div className="form-grid">
+            <div className="form-group full-width template-selector-group">
+              <label>Template</label>
+              <select
+                value={meta.template_name}
+                onChange={(e) =>
+                  setMeta((m) => ({
+                    ...m,
+                    template_name: e.target.value as PlotMeta["template_name"],
+                  }))
+                }
+              >
+                <option value="general">General</option>
+                <option value="adamawa_osg">Adamawa OSG</option>
+              </select>
+              {meta.template_name === "adamawa_osg" && <span className="template-hint">Adamawa OSG template</span>}
+            </div>
+            {meta.template_name === "general" ? (
+              <>
+                <div className="form-group">
+                  <label>Title</label>
+                  <input value={meta.title_text} onChange={(e) => setMeta((m) => ({ ...m, title_text: e.target.value }))} placeholder="SURVEY PLAN" />
+                </div>
+                <div className="form-group">
+                  <label>Location</label>
+                  <input value={meta.location_text} onChange={(e) => setMeta((m) => ({ ...m, location_text: e.target.value }))} placeholder="Enter location" />
+                </div>
+                <div className="form-group">
+                  <label>LGA</label>
+                  <input value={meta.lga_text} onChange={(e) => setMeta((m) => ({ ...m, lga_text: e.target.value }))} placeholder="Local Government Area" />
+                </div>
+                <div className="form-group">
+                  <label>State</label>
+                  <input value={meta.state_text} onChange={(e) => setMeta((m) => ({ ...m, state_text: e.target.value }))} placeholder="Enter state" />
+                </div>
+                <div className="form-group">
+                  <label>Surveyor Name</label>
+                  <input value={meta.surveyor_name} onChange={(e) => setMeta((m) => ({ ...m, surveyor_name: e.target.value }))} placeholder="Enter surveyor name" />
+                </div>
+                <div className="form-group">
+                  <label>Rank</label>
+                  <input value={meta.surveyor_rank} onChange={(e) => setMeta((m) => ({ ...m, surveyor_rank: e.target.value }))} placeholder="Surveyor rank" />
+                </div>
+                <div className="form-group full-width">
+                  <label>Certification Statement (Editable)</label>
+                  <textarea
+                    value={meta.certification_statement}
+                    onChange={(e) => setMeta((m) => ({ ...m, certification_statement: e.target.value }))}
+                    placeholder={defaultCertificationStatement}
+                    rows={3}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label>R of O Number</label>
+                  <input value={meta.adamawa_rof_no} onChange={(e) => setMeta((m) => ({ ...m, adamawa_rof_no: e.target.value }))} placeholder="E.G ADS50530" />
+                </div>
+                <div className="form-group">
+                  <label>Owner Name</label>
+                  <input value={meta.adamawa_owner_name} onChange={(e) => setMeta((m) => ({ ...m, adamawa_owner_name: e.target.value }))} placeholder="LAND OWNER NAME" />
+                </div>
+                <div className="form-group">
+                  <label>Location (AT)</label>
+                  <input value={meta.location_text} onChange={(e) => setMeta((m) => ({ ...m, location_text: e.target.value }))} placeholder="LOCATION" />
+                </div>
+                <div className="form-group">
+                  <label>Local Government</label>
+                  <input value={meta.lga_text} onChange={(e) => setMeta((m) => ({ ...m, lga_text: e.target.value }))} placeholder="LOCAL GOVERNMENT" />
+                </div>
+                <div className="form-group">
+                  <label>Authority Title</label>
+                  <input
+                    value={meta.adamawa_authority_title}
+                    onChange={(e) => setMeta((m) => ({ ...m, adamawa_authority_title: e.target.value }))}
+                    placeholder={defaultAdamawaAuthorityTitle}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Authority Date</label>
+                  <input
+                    value={meta.adamawa_authority_date_text}
+                    onChange={(e) => setMeta((m) => ({ ...m, adamawa_authority_date_text: e.target.value }))}
+                    placeholder={defaultAdamawaAuthorityDate}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Surveyor Name</label>
+                  <input value={meta.surveyor_name} onChange={(e) => setMeta((m) => ({ ...m, surveyor_name: e.target.value }))} placeholder="Survor Name" />
+                </div>
+                <div className="form-group full-width">
+                  <label>Control Data Source</label>
+                  <input value="Auto from plotted coordinates/stations (read-only)" readOnly />
+                </div>
+                <div className="form-group">
+                  <label>Cadastral Sheet No</label>
+                  <input
+                    value={meta.adamawa_cadastral_sheet_no}
+                    onChange={(e) => setMeta((m) => ({ ...m, adamawa_cadastral_sheet_no: e.target.value }))}
+                    placeholder="07"
+                  />
+                </div>
+                <div className="form-group full-width">
+                  <label>Topo Sheet Text</label>
+                  <input
+                    value={meta.adamawa_topo_sheet_text}
+                    onChange={(e) => setMeta((m) => ({ ...m, adamawa_topo_sheet_text: e.target.value }))}
+                    placeholder={defaultAdamawaTopoSheetText}
+                  />
+                </div>
+                <div className="form-group full-width">
+                  <label>Disclaimer Text</label>
+                  <textarea
+                    value={meta.adamawa_disclaimer_text}
+                    onChange={(e) => setMeta((m) => ({ ...m, adamawa_disclaimer_text: e.target.value }))}
+                    rows={2}
+                    placeholder={defaultAdamawaDisclaimerText}
+                  />
+                </div>
+              </>
+            )}
+            <div className="form-group scale-group">
+              <label>Scale</label>
+              <div className="scale-input-wrapper">
+                <span className="scale-prefix">1 :</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={scaleDraft}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, "");
+                    setScaleDraft(val);
+                  }}
+                  onBlur={commitScaleDraft}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      commitScaleDraft();
+                    }
+                  }}
+                  className="scale-number-input"
+                  placeholder="1000"
+                  aria-label="Scale denominator"
+                />
+              </div>
+              <span className="scale-helper">Type only the number after `1 :` (example: `1000`).</span>
+              <div className="scale-presets">
+                {scalePresets.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`scale-preset-btn ${parseScaleDenominator(meta.scale_text) === s ? "active" : ""}`}
+                    onClick={() => {
+                      setScaleDraft(String(s));
+                      setMeta((m) => ({ ...m, scale_text: `1 : ${s}` }));
+                    }}
+                  >
+                    1:{s}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="form-group paper-size-group">
+              <label>Paper Size</label>
+              <div className="paper-size-presets">
+                {["A4", "A3", "A2", "A1", "A0"].map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    className={`paper-size-btn ${meta.paper_size === size ? "active" : ""}`}
+                    onClick={() => setMeta((m) => ({ ...m, paper_size: size }))}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+              <span className="paper-size-hint">
+                {meta.paper_size === "A4" && "Standard (210 x 297 mm)"}
+                {meta.paper_size === "A3" && "Large (297 x 420 mm)"}
+                {meta.paper_size === "A2" && "Extra Large (420 x 594 mm)"}
+                {meta.paper_size === "A1" && "Poster (594 x 841 mm)"}
+                {meta.paper_size === "A0" && "Maximum (841 x 1189 mm)"}
+              </span>
+            </div>
+          </div>
+
+          <div className="edit-feature-bar">
+            <button className="btn-secondary" onClick={refreshCurrentPreview} disabled={rendering}>
+              {rendering ? "Rendering..." : previewActionLabel}
+            </button>
+            <button
+              className="btn-outline"
+              onClick={onOpenFeatureCadEditor}
+              onMouseEnter={onPrefetchFeatureEditor}
+              onFocus={onPrefetchFeatureEditor}
+              disabled={!plotId && (serverSyncing || !isOnline)}
+            >
+              Open Feature CAD Editor
+            </button>
+          </div>
+        </div>
+
+        <div className="action-bar">
+          <button className="btn-outline" onClick={onBack}>
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+            Back to Coordinates
+          </button>
+          <button className="btn-primary" onClick={onContinue}>
+            Continue to Export
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div className="panel-right preview-container">
+        <SurveyPreview
+          previewType={previewType}
+          onPreviewTypeChange={onPreviewTypeChange}
+          topoSource={topoSource}
+          onTopoSourceChange={onTopoSourceChange}
+          northArrowStyle={northArrowStyle}
+          northArrowColor={northArrowColor}
+          beaconStyle={beaconStyle}
+          roadWidth={roadWidth}
+          onNorthArrowStyleChange={onNorthArrowStyleChange}
+          onNorthArrowColorChange={onNorthArrowColorChange}
+          onBeaconStyleChange={onBeaconStyleChange}
+          onRoadWidthChange={onRoadWidthChange}
+          paperSize={meta.paper_size}
+          surveyPreviewUrl={surveyPreviewUrl}
+          orthophotoPreviewUrl={orthophotoPreviewUrl}
+          topoMapPreviewUrl={topoMapPreviewUrl}
+          loading={previewLoading}
+          orthophotoLoading={orthophotoLoading}
+          topoMapLoading={topoMapLoading}
+          hasHeightData={hasHeightData}
+        />
+      </div>
+    </div>
+  );
+}
+
+export default memo(SurveyPlanSurveyPreviewStep);

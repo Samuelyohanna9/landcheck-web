@@ -22,3 +22,11 @@ export const loadMapboxDraw = async () => {
   }
   return mapboxDrawPromise;
 };
+
+export const prefetchMapboxCore = async () => {
+  await loadMapboxGl();
+};
+
+export const prefetchMapboxDrawBundle = async () => {
+  await Promise.all([loadMapboxGl(), loadMapboxDraw()]);
+};

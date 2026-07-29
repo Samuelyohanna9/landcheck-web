@@ -21,7 +21,7 @@ export default function MapView({ onPolygonCreated, disabled = false, resetKey =
     let disposed = false;
 
     void (async () => {
-      const [mapboxgl, MapboxDraw] = await Promise.all([loadMapboxGl(), loadMapboxDraw()]);
+      const mapboxgl = await loadMapboxGl();
       if (disposed || !containerRef.current || mapRef.current) return;
 
       const map = new mapboxgl.Map({
@@ -32,6 +32,10 @@ export default function MapView({ onPolygonCreated, disabled = false, resetKey =
       });
 
       map.addControl(new mapboxgl.NavigationControl(), "top-right");
+      mapRef.current = map;
+
+      const MapboxDraw = await loadMapboxDraw();
+      if (disposed || mapRef.current !== map) return;
 
       const draw = new MapboxDraw({
         displayControlsDefault: false,
@@ -69,7 +73,6 @@ export default function MapView({ onPolygonCreated, disabled = false, resetKey =
       map.on("draw.update", updatePolygon);
       map.on("draw.delete", () => onPolygonCreated(null));
 
-      mapRef.current = map;
       drawRef.current = draw;
     })();
 

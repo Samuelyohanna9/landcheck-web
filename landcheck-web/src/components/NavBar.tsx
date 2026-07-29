@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { prefetchSurveyPlanPreviewStep, prefetchSurveyPlanRoute } from "../utils/surveyPlanPrefetch";
 import "../styles/navbar.css";
 
 const NAV_ITEMS = [
@@ -39,6 +40,11 @@ export default function NavBar({
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
+  const warmSurveyPlanEntry = () => {
+    void prefetchSurveyPlanRoute();
+    void prefetchSurveyPlanPreviewStep();
+  };
+
   const handleNav = (route: string) => {
     navigate(route);
     setOpen(false);
@@ -76,6 +82,8 @@ export default function NavBar({
               key={item.route}
               type="button"
               className={activeRoute === item.route ? "lc-nav-item-active" : undefined}
+              onMouseEnter={item.route === "/survey" ? warmSurveyPlanEntry : undefined}
+              onFocus={item.route === "/survey" ? warmSurveyPlanEntry : undefined}
               onClick={() => navigate(item.route)}
             >
               {item.label}
@@ -91,6 +99,8 @@ export default function NavBar({
             <button
               type="button"
               className="lc-nav-cta"
+              onMouseEnter={ctaRoute === "/survey-plan" ? warmSurveyPlanEntry : undefined}
+              onFocus={ctaRoute === "/survey-plan" ? warmSurveyPlanEntry : undefined}
               onClick={() => navigate(ctaRoute)}
             >
               {ctaLabel}
@@ -126,6 +136,8 @@ export default function NavBar({
               key={item.route}
               type="button"
               className={`lc-mobile-item${activeRoute === item.route ? " lc-mobile-item--active" : ""}`}
+              onFocus={item.route === "/survey" ? warmSurveyPlanEntry : undefined}
+              onTouchStart={item.route === "/survey" ? warmSurveyPlanEntry : undefined}
               onClick={() => handleNav(item.route)}
             >
               {item.label}
@@ -144,6 +156,8 @@ export default function NavBar({
             <button
               type="button"
               className="lc-mobile-cta"
+              onFocus={ctaRoute === "/survey-plan" ? warmSurveyPlanEntry : undefined}
+              onTouchStart={ctaRoute === "/survey-plan" ? warmSurveyPlanEntry : undefined}
               onClick={() => handleNav(ctaRoute)}
             >
               {ctaLabel}

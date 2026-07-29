@@ -7,6 +7,7 @@ import { getArticleBySlug } from "../data/newsArticles";
 import { useCookieConsent } from "../privacy/cookieConsent";
 import { useDeferredMount } from "../hooks/useDeferredMount";
 import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
+import { prefetchSurveyPlanPreviewStep, prefetchSurveyPlanRoute } from "../utils/surveyPlanPrefetch";
 
 const landingFeaturedStory = getArticleBySlug("yola-south-health-center-trees")!;
 const FeaturedStorySpotlight = lazy(() => import("../components/FeaturedStorySpotlight"));
@@ -652,7 +653,13 @@ export default function LandingPage() {
             <h3>Tools</h3>
             <ul>
               <li>
-                <button type="button" onClick={() => navigate("/survey-plan")}>
+                <button
+                  type="button"
+                  onMouseEnter={warmSurveyPlanEntry}
+                  onFocus={warmSurveyPlanEntry}
+                  onTouchStart={warmSurveyPlanEntry}
+                  onClick={() => navigate("/survey-plan")}
+                >
                   Survey Plan Tool
                 </button>
               </li>
@@ -719,3 +726,7 @@ export default function LandingPage() {
     </div>
   );
 }
+  const warmSurveyPlanEntry = () => {
+    void prefetchSurveyPlanRoute();
+    void prefetchSurveyPlanPreviewStep();
+  };

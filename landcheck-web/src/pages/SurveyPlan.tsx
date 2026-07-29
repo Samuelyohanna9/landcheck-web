@@ -1,11 +1,11 @@
-import { Suspense, lazy, useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { Suspense, lazy, startTransition, useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
-import CoordinateInput from "../components/CoordinateInput";
-import SurveyPreview from "../components/SurveyPreview";
 import { fromWGS84, toWGS84 } from "../utils/coordinateConverter";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../utils/mapboxLoader";
+import { useDeferredMount } from "../hooks/useDeferredMount";
+import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
 import {
   clearSurveyPlanDraft,
   loadSurveyPlanDraft,
@@ -13,8 +13,12 @@ import {
 } from "../offline/surveyPlanDraft";
 import "../styles/survey-plan.css";
 
-const MapViewEnhanced = lazy(() => import("../components/MapViewEnhanced"));
+const SurveyPreview = lazy(() => import("../components/SurveyPreview"));
 const FeatureOverrideModal = lazy(() => import("../components/FeatureOverrideModal"));
+const SurveyPlanStepOnePanel = lazy(() => import("../components/survey-plan/SurveyPlanStepOnePanel"));
+const SurveyPlanSurveyPreviewStep = lazy(() => import("../components/survey-plan/SurveyPlanSurveyPreviewStep"));
+const SurveyPlanSubdivisionPreviewStep = lazy(() => import("../components/survey-plan/SurveyPlanSubdivisionPreviewStep"));
+const SurveyPlanSubdivisionExportStep = lazy(() => import("../components/survey-plan/SurveyPlanSubdivisionExportStep"));
 
 type PlotMeta = {
   title_text: string;
@@ -350,8 +354,11 @@ const SUBDIVISION_STEPS = [
 
 export default function SurveyPlan() {
   const navigate = useNavigate();
+  const { isLowBandwidth } = useLowBandwidthMode();
+  const deferredDraftMap = useDeferredMount(isLowBandwidth ? 1400 : 250);
   const [workflowMode, setWorkflowMode] = useState<WorkflowMode | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const [forceShowDraftMap, setForceShowDraftMap] = useState(false);
   const activeSteps = workflowMode === "subdivision" ? SUBDIVISION_STEPS : SURVEY_STEPS;
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [isOnline, setIsOnline] = useState(() =>
@@ -424,6 +431,7 @@ export default function SurveyPlan() {
   const subdivisionMapRef = useRef<any>(null);
   const subdivisionMapboxRef = useRef<any>(null);
   const subdivisionMapReadyRef = useRef(false);
+  const showDraftMap = forceShowDraftMap || deferredDraftMap;
   const previewRequestId = useRef(0);
   const orthophotoRequestId = useRef(0);
   const topoRequestId = useRef(0);
@@ -502,13 +510,13 @@ export default function SurveyPlan() {
 
 
   // Coordinate helpers
-  const updatePoint = (index: number, key: keyof ManualPoint, value: string | number) => {
+  const updatePoint = useCallback((index: number, key: keyof ManualPoint, value: string | number) => {
     setManualPoints((prev) => {
       const copy = [...prev];
       copy[index] = { ...copy[index], [key]: value } as ManualPoint;
       return copy;
     });
-  };
+  }, []);
 
   // Boundary vertex dragged in the Feature CAD Editor: convert the WGS84 point back into
   // whatever coordinate system the manual point table is currently using and update it in place.
@@ -536,15 +544,17 @@ export default function SurveyPlan() {
     return name;
   };
 
-  const removePoint = (index: number) => {
-    if (manualPoints.length <= 3) {
-      toast.error("Minimum 3 points required");
-      return;
-    }
-    setManualPoints((prev) => prev.filter((_, i) => i !== index));
-  };
+  const removePoint = useCallback((index: number) => {
+    setManualPoints((prev) => {
+      if (prev.length <= 3) {
+        toast.error("Minimum 3 points required");
+        return prev;
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
 
-  const addPoint = () => {
+  const addPoint = useCallback(() => {
     setManualPoints((prev) => [
       ...prev,
       {
@@ -553,15 +563,16 @@ export default function SurveyPlan() {
         lat: 0,
       },
     ]);
-  };
+  }, []);
 
   // Handle bulk upload from CSV/Excel
-  const handleBulkUpload = (points: ManualPoint[]) => {
+  const handleBulkUpload = useCallback((points: ManualPoint[]) => {
     if (points.length < 3) {
       toast.error("Need at least 3 points for a valid plot boundary");
       return;
     }
     setManualPoints(points);
+    setForceShowDraftMap(true);
 
     // Check if points have height data
     const pointsWithHeight = points.filter(p => p.height !== undefined && p.height !== null);
@@ -572,7 +583,7 @@ export default function SurveyPlan() {
       setHasHeightData(false);
       toast.success(`Loaded ${points.length} coordinates from file`);
     }
-  };
+  }, []);
 
   // Handle coordinates drawn on map (always comes in WGS84)
   // Convert to selected coordinate system for display
@@ -1002,7 +1013,9 @@ export default function SurveyPlan() {
 
       const map = new mapboxgl.Map({
         container: subdivisionMapContainerRef.current,
-        style: "mapbox://styles/mapbox/satellite-streets-v12",
+        style: isLowBandwidth
+          ? "mapbox://styles/mapbox/streets-v12"
+          : "mapbox://styles/mapbox/satellite-streets-v12",
         center: [7.5, 9.0],
         zoom: 6,
       });
@@ -1105,6 +1118,7 @@ export default function SurveyPlan() {
     currentStep,
     subdivisionPreviewPanelTab,
     subdivisionMapPreviewData,
+    isLowBandwidth,
     fitSubdivisionMapToData,
   ]);
 
@@ -1275,7 +1289,7 @@ export default function SurveyPlan() {
     [fetchPlotFeatures, finalCoords, isOnline, markServerSynced, plotId, meta, coordinateSystem]
   );
 
-  const continueWithLocalDraft = () => {
+  const continueWithLocalDraft = useCallback(() => {
     if (!hasValidCoords) {
       toast.error("Enter at least 3 valid coordinate points");
       return;
@@ -1283,9 +1297,11 @@ export default function SurveyPlan() {
     if (workflowMode === "subdivision") {
       setSubdivisionPreviewPanelTab("survey_plan");
     }
-    setCurrentStep(2);
+    startTransition(() => {
+      setCurrentStep(2);
+    });
     toast.success("Draft saved locally. Official preview/export will sync only when you request it.");
-  };
+  }, [hasValidCoords, workflowMode]);
 
   function buildPlotMetaPayload() {
     return {
@@ -1483,6 +1499,82 @@ export default function SurveyPlan() {
       setPreviewType("survey");
     }
   }, [workflowMode, currentStep, previewType]);
+
+  const goToStep = useCallback((step: number) => {
+    startTransition(() => {
+      setCurrentStep(step);
+    });
+  }, []);
+
+  const handlePreviewTypeChange = useCallback((type: PreviewType) => {
+    startTransition(() => {
+      setPreviewType(type);
+    });
+  }, []);
+
+  const handleTopoSourceChange = useCallback((source: TopoSource) => {
+    setTopoSource(source);
+  }, []);
+
+  const handleNorthArrowStyleChange = useCallback((value: string) => {
+    setNorthArrowStyle(value as NorthArrowStyle);
+  }, []);
+
+  const handleNorthArrowColorChange = useCallback((value: string) => {
+    setNorthArrowColor(value as NorthArrowColor);
+  }, []);
+
+  const handleBeaconStyleChange = useCallback((value: string) => {
+    setBeaconStyle(value as BeaconStyle);
+  }, []);
+
+  const handleRoadWidthChange = useCallback((value: string) => {
+    setRoadWidth(value as RoadWidthOption);
+  }, []);
+
+  useEffect(() => {
+    if (!workflowMode) return undefined;
+
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let idleId: number | null = null;
+
+    const prewarm = () => {
+      if (cancelled) return;
+      if (currentStep === 1) {
+        void import("../components/survey-plan/SurveyPlanStepOnePanel");
+        return;
+      }
+      if (workflowMode === "survey" && currentStep === 2) {
+        void import("../components/survey-plan/SurveyPlanSurveyPreviewStep");
+      } else if (workflowMode === "subdivision" && currentStep === 2) {
+        void import("../components/survey-plan/SurveyPlanSubdivisionPreviewStep");
+      } else if (workflowMode === "subdivision" && currentStep === 3) {
+        void import("../components/survey-plan/SurveyPlanSubdivisionExportStep");
+      } else {
+        void import("../components/SurveyPreview");
+      }
+      if (workflowMode === "survey" && !isLowBandwidth) {
+        void import("../components/FeatureOverrideModal");
+      }
+    };
+
+    if (typeof window.requestIdleCallback === "function") {
+      idleId = window.requestIdleCallback(prewarm, { timeout: 1200 });
+    } else {
+      timeoutId = globalThis.setTimeout(prewarm, 500);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleId !== null && typeof window.cancelIdleCallback === "function") {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== null) {
+        globalThis.clearTimeout(timeoutId);
+      }
+    };
+  }, [currentStep, isLowBandwidth, workflowMode]);
 
   const previewActionLabel =
     previewType === "orthophoto"
@@ -2271,18 +2363,54 @@ export default function SurveyPlan() {
     return insideCount + bufferCount;
   };
 
+  const featureCounts = useMemo(
+    () =>
+      features
+        ? {
+            building: getFeatureCount("building"),
+            road: getFeatureCount("road"),
+            river: getFeatureCount("river"),
+          }
+        : null,
+    [features]
+  );
+
+  const prefetchFeatureEditor = useCallback(() => {
+    void import("../components/FeatureOverrideModal");
+  }, []);
+
   const openFeatureCadEditor = useCallback(async () => {
+    prefetchFeatureEditor();
+
+    if (plotId) {
+      startTransition(() => {
+        setShowFeatureEditor(true);
+      });
+      if (isOnline) {
+        void ensureServerPlot("Refreshing draft in background for Feature CAD Editor...", {
+          fetchFeatures: !features,
+        })
+          .then(() => {
+            markServerSynced();
+          })
+          .catch(() => {});
+      }
+      return;
+    }
+
     try {
       await ensureServerPlot("Syncing draft before opening Feature CAD Editor...", {
         fetchFeatures: true,
       });
       markServerSynced();
-      setShowFeatureEditor(true);
+      startTransition(() => {
+        setShowFeatureEditor(true);
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not open Feature CAD Editor.";
       toast.error(message);
     }
-  }, [ensureServerPlot, markServerSynced]);
+  }, [ensureServerPlot, features, isOnline, markServerSynced, plotId, prefetchFeatureEditor]);
 
   const handleSaveOverride = async (payload: { feature_type: "road" | "building" | "river" | "fence"; action: "add" | "delete" | "update"; name?: string; width_m?: number; geojson: any }) => {
     if (!plotId) {
@@ -2430,7 +2558,7 @@ export default function SurveyPlan() {
           </div>
         )}
 
-        {workflowMode && (
+        {workflowMode && showFeatureEditor && (
           <Suspense fallback={null}>
             <FeatureOverrideModal
               isOpen={showFeatureEditor}
@@ -2457,1172 +2585,182 @@ export default function SurveyPlan() {
         )}
         {/* Step 1: Coordinate Input */}
         {workflowMode && currentStep === 1 && (
-          <div className="step-panel">
-            <div className="panel-left">
-              {renderSidebarStepsCard()}
-              <CoordinateInput
-                points={manualPoints}
-                onUpdatePoint={updatePoint}
-                onRemovePoint={removePoint}
-                onAddPoint={addPoint}
-                onBulkUpload={handleBulkUpload}
-                disabled={loading}
-                coordinateSystem={coordinateSystem}
-                onCoordinateSystemChange={setCoordinateSystem}
-              />
-              <div className="action-bar">
-                <button
-                  className="btn-primary"
-                  disabled={!hasValidCoords || loading}
-                  onClick={continueWithLocalDraft}
-                >
-                  {loading ? (
-                    <>
-                      <span className="spinner" />
-                      Preparing Draft...
-                    </>
-                  ) : (
-                    <>
-                      {workflowMode === "subdivision" ? "Continue with Local Mother Parcel Draft" : "Continue with Local Draft"}
-                      <svg viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-            <div className="panel-right">
-              <Suspense fallback={<div className="preview-card">Loading survey map...</div>}>
-                <MapViewEnhanced
-                  coordinates={mapCoordinates}
-                  onCoordinatesDrawn={handleCoordinatesFromMap}
-                  disabled={loading}
-                />
-              </Suspense>
-            </div>
-          </div>
+          <Suspense fallback={<div className="preview-card">Loading survey draft workspace...</div>}>
+            <SurveyPlanStepOnePanel
+              sidebar={renderSidebarStepsCard()}
+              manualPoints={manualPoints}
+              onUpdatePoint={updatePoint}
+              onRemovePoint={removePoint}
+              onAddPoint={addPoint}
+              onBulkUpload={handleBulkUpload}
+              loading={loading}
+              coordinateSystem={coordinateSystem}
+              onCoordinateSystemChange={setCoordinateSystem}
+              hasValidCoords={hasValidCoords}
+              onContinue={continueWithLocalDraft}
+              workflowMode={workflowMode}
+              showDraftMap={showDraftMap}
+              onLoadMapNow={() => setForceShowDraftMap(true)}
+              mapCoordinates={mapCoordinates}
+              onCoordinatesDrawn={handleCoordinatesFromMap}
+              isLowBandwidth={isLowBandwidth}
+            />
+          </Suspense>
         )}
 
         {/* Step 2: Preview & Details (Survey Plan Production) */}
         {workflowMode === "survey" && currentStep === 2 && (
-          <div className="step-panel preview-panel">
-            <div className="panel-left">
-              {renderSidebarStepsCard()}
-              {/* Features Summary - Horizontal Compact Layout (moved to top) */}
-              {features && (
-                <div className="features-bar">
-                  <span className="features-bar-label">Detected:</span>
-                  <div className="features-bar-items">
-                    <div className="feature-chip building">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M3 21h18M5 21V7l8-4v18M13 21V3l6 3v15M9 9v.01M9 12v.01M9 15v.01M17 9v.01M17 12v.01M17 15v.01" />
-                      </svg>
-                      <span className="chip-count">{getFeatureCount("building")}</span>
-                      <span className="chip-label">Buildings</span>
-                    </div>
-                    <div className="feature-chip road">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M4 19L8 5M16 19L20 5M12 19V5M8 10H6M18 10h-2M8 14H6M18 14h-2" />
-                      </svg>
-                      <span className="chip-count">{getFeatureCount("road")}</span>
-                      <span className="chip-label">Roads</span>
-                    </div>
-                    <div className="feature-chip river">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M3 7c3-2 6-2 9 0s6 2 9 0M3 12c3-2 6-2 9 0s6 2 9 0M3 17c3-2 6-2 9 0s6 2 9 0" />
-                      </svg>
-                      <span className="chip-count">{getFeatureCount("river")}</span>
-                      <span className="chip-label">Rivers</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="form-section">
-                <h3 className="section-title">Survey Details</h3>
-                <div className="form-grid">
-                  <div className="form-group full-width template-selector-group">
-                    <label>Template</label>
-                    <select
-                      value={meta.template_name}
-                      onChange={(e) =>
-                        setMeta((m) => ({
-                          ...m,
-                          template_name: e.target.value as PlotMeta["template_name"],
-                        }))
-                      }
-                    >
-                      <option value="general">General</option>
-                      <option value="adamawa_osg">Adamawa OSG</option>
-                    </select>
-                    {meta.template_name === "adamawa_osg" && (
-                      <span className="template-hint">
-                        Adamawa OSG template 
-                      </span>
-                    )}
-                  </div>
-                  {meta.template_name === "general" ? (
-                    <>
-                      <div className="form-group">
-                        <label>Title</label>
-                        <input
-                          value={meta.title_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, title_text: e.target.value }))}
-                          placeholder="SURVEY PLAN"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Location</label>
-                        <input
-                          value={meta.location_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, location_text: e.target.value }))}
-                          placeholder="Enter location"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>LGA</label>
-                        <input
-                          value={meta.lga_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, lga_text: e.target.value }))}
-                          placeholder="Local Government Area"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>State</label>
-                        <input
-                          value={meta.state_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, state_text: e.target.value }))}
-                          placeholder="Enter state"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Surveyor Name</label>
-                        <input
-                          value={meta.surveyor_name}
-                          onChange={(e) => setMeta((m) => ({ ...m, surveyor_name: e.target.value }))}
-                          placeholder="Enter surveyor name"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Rank</label>
-                        <input
-                          value={meta.surveyor_rank}
-                          onChange={(e) => setMeta((m) => ({ ...m, surveyor_rank: e.target.value }))}
-                          placeholder="Surveyor rank"
-                        />
-                      </div>
-                      <div className="form-group full-width">
-                        <label>Certification Statement (Editable)</label>
-                        <textarea
-                          value={meta.certification_statement}
-                          onChange={(e) => setMeta((m) => ({ ...m, certification_statement: e.target.value }))}
-                          placeholder={DEFAULT_CERTIFICATION_STATEMENT}
-                          rows={3}
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="form-group">
-                        <label>R of O Number</label>
-                        <input
-                          value={meta.adamawa_rof_no}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_rof_no: e.target.value }))}
-                          placeholder="E.G ADS50530"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Owner Name</label>
-                        <input
-                          value={meta.adamawa_owner_name}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_owner_name: e.target.value }))}
-                          placeholder="LAND OWNER NAME"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Location (AT)</label>
-                        <input
-                          value={meta.location_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, location_text: e.target.value }))}
-                          placeholder="LOCATION"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Local Government</label>
-                        <input
-                          value={meta.lga_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, lga_text: e.target.value }))}
-                          placeholder="LOCAL GOVERNMENT"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Authority Title</label>
-                        <input
-                          value={meta.adamawa_authority_title}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_authority_title: e.target.value }))}
-                          placeholder={DEFAULT_ADAMAWA_AUTHORITY_TITLE}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Authority Date</label>
-                        <input
-                          value={meta.adamawa_authority_date_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_authority_date_text: e.target.value }))}
-                          placeholder={DEFAULT_ADAMAWA_AUTHORITY_DATE}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Surveyor Name</label>
-                        <input
-                          value={meta.surveyor_name}
-                          onChange={(e) => setMeta((m) => ({ ...m, surveyor_name: e.target.value }))}
-                          placeholder="Survor Name"
-                        />
-                      </div>
-                      <div className="form-group full-width">
-                        <label>Control Data Source</label>
-                        <input value="Auto from plotted coordinates/stations (read-only)" readOnly />
-                      </div>
-                      <div className="form-group">
-                        <label>Cadastral Sheet No</label>
-                        <input
-                          value={meta.adamawa_cadastral_sheet_no}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_cadastral_sheet_no: e.target.value }))}
-                          placeholder="07"
-                        />
-                      </div>
-                      <div className="form-group full-width">
-                        <label>Topo Sheet Text</label>
-                        <input
-                          value={meta.adamawa_topo_sheet_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_topo_sheet_text: e.target.value }))}
-                          placeholder={DEFAULT_ADAMAWA_TOPO_SHEET_TEXT}
-                        />
-                      </div>
-                      <div className="form-group full-width">
-                        <label>Disclaimer Text</label>
-                        <textarea
-                          value={meta.adamawa_disclaimer_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_disclaimer_text: e.target.value }))}
-                          rows={2}
-                          placeholder={DEFAULT_ADAMAWA_DISCLAIMER_TEXT}
-                        />
-                      </div>
-                    </>
-                  )}
-                  <div className="form-group scale-group">
-                    <label>Scale</label>
-                    <div className="scale-input-wrapper">
-                      <span className="scale-prefix">1 :</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={scaleDraft}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/[^0-9]/g, "");
-                          setScaleDraft(val);
-                        }}
-                        onBlur={commitScaleDraft}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            commitScaleDraft();
-                          }
-                        }}
-                        className="scale-number-input"
-                        placeholder="1000"
-                        aria-label="Scale denominator"
-                      />
-                    </div>
-                    <span className="scale-helper">Type only the number after `1 :` (example: `1000`).</span>
-                    <div className="scale-presets">
-                      {SCALE_PRESETS.map((s) => (
-                        <button
-                          key={s}
-                          type="button"
-                          className={`scale-preset-btn ${parseScaleDenominator(meta.scale_text) === s ? "active" : ""}`}
-                          onClick={() => {
-                            setScaleDraft(String(s));
-                            setMeta((m) => ({ ...m, scale_text: `1 : ${s}` }));
-                          }}
-                        >
-                          1:{s}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="form-group paper-size-group">
-                    <label>Paper Size</label>
-                    <div className="paper-size-presets">
-                      {["A4", "A3", "A2", "A1", "A0"].map((size) => (
-                        <button
-                          key={size}
-                          type="button"
-                          className={`paper-size-btn ${meta.paper_size === size ? "active" : ""}`}
-                          onClick={() => setMeta((m) => ({ ...m, paper_size: size }))}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
-                    <span className="paper-size-hint">
-                      {meta.paper_size === "A4" && "Standard (210 x 297 mm)"}
-                      {meta.paper_size === "A3" && "Large (297 x 420 mm)"}
-                      {meta.paper_size === "A2" && "Extra Large (420 x 594 mm)"}
-                      {meta.paper_size === "A1" && "Poster (594 x 841 mm)"}
-                      {meta.paper_size === "A0" && "Maximum (841 x 1189 mm)"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="edit-feature-bar">
-                  <button className="btn-secondary" onClick={refreshCurrentPreview} disabled={previewLoading || orthophotoLoading || topoMapLoading || serverSyncing}>
-                    {previewLoading || orthophotoLoading || topoMapLoading || serverSyncing ? "Rendering..." : previewActionLabel}
-                  </button>
-                  <button className="btn-outline" onClick={openFeatureCadEditor} disabled={serverSyncing || !isOnline}>
-                    Open Feature CAD Editor
-                  </button>
-                </div>
-              </div>
-              <div className="action-bar">
-                <button className="btn-outline" onClick={() => setCurrentStep(1)}>
-                  <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-                  </svg>
-                  Back to Coordinates
-                </button>
-                <button className="btn-primary" onClick={() => setCurrentStep(3)}>
-                  Continue to Export
-                  <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <div className="panel-right preview-container">
-              <SurveyPreview
-                previewType={previewType}
-                onPreviewTypeChange={setPreviewType}
-                topoSource={topoSource}
-                onTopoSourceChange={setTopoSource}
-                northArrowStyle={northArrowStyle}
-                northArrowColor={northArrowColor}
-                beaconStyle={beaconStyle}
-                roadWidth={roadWidth}
-                onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
-                onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
-                onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
-                onRoadWidthChange={(value) => setRoadWidth(value as RoadWidthOption)}
-                paperSize={meta.paper_size}
-                surveyPreviewUrl={previewUrl}
-                orthophotoPreviewUrl={orthophotoUrl}
-                topoMapPreviewUrl={topoMapUrl}
-                loading={previewLoading}
-                orthophotoLoading={orthophotoLoading}
-                topoMapLoading={topoMapLoading}
-                hasHeightData={hasHeightData}
-              />
-            </div>
-          </div>
+          <Suspense fallback={<div className="preview-card">Loading survey preview workspace...</div>}>
+            <SurveyPlanSurveyPreviewStep
+              sidebar={renderSidebarStepsCard()}
+              featureCounts={featureCounts}
+              meta={meta}
+              setMeta={setMeta}
+              defaultCertificationStatement={DEFAULT_CERTIFICATION_STATEMENT}
+              defaultAdamawaAuthorityTitle={DEFAULT_ADAMAWA_AUTHORITY_TITLE}
+              defaultAdamawaAuthorityDate={DEFAULT_ADAMAWA_AUTHORITY_DATE}
+              defaultAdamawaTopoSheetText={DEFAULT_ADAMAWA_TOPO_SHEET_TEXT}
+              defaultAdamawaDisclaimerText={DEFAULT_ADAMAWA_DISCLAIMER_TEXT}
+              scaleDraft={scaleDraft}
+              setScaleDraft={setScaleDraft}
+              commitScaleDraft={commitScaleDraft}
+              scalePresets={SCALE_PRESETS}
+              parseScaleDenominator={parseScaleDenominator}
+              previewActionLabel={previewActionLabel}
+              refreshCurrentPreview={refreshCurrentPreview}
+              previewLoading={previewLoading}
+              orthophotoLoading={orthophotoLoading}
+              topoMapLoading={topoMapLoading}
+              serverSyncing={serverSyncing}
+              onOpenFeatureCadEditor={openFeatureCadEditor}
+              onPrefetchFeatureEditor={prefetchFeatureEditor}
+              plotId={plotId}
+              isOnline={isOnline}
+              onBack={() => goToStep(1)}
+              onContinue={() => goToStep(3)}
+              previewType={previewType}
+              onPreviewTypeChange={handlePreviewTypeChange}
+              topoSource={topoSource}
+              onTopoSourceChange={handleTopoSourceChange}
+              northArrowStyle={northArrowStyle}
+              northArrowColor={northArrowColor}
+              beaconStyle={beaconStyle}
+              roadWidth={roadWidth}
+              onNorthArrowStyleChange={handleNorthArrowStyleChange}
+              onNorthArrowColorChange={handleNorthArrowColorChange}
+              onBeaconStyleChange={handleBeaconStyleChange}
+              onRoadWidthChange={handleRoadWidthChange}
+              surveyPreviewUrl={previewUrl}
+              orthophotoPreviewUrl={orthophotoUrl}
+              topoMapPreviewUrl={topoMapUrl}
+              hasHeightData={hasHeightData}
+            />
+          </Suspense>
         )}
 
         {/* Step 2: Subdivision Preview */}
         {workflowMode === "subdivision" && currentStep === 2 && (
-          <div className="step-panel preview-panel">
-            <div className="panel-left">
-              {renderSidebarStepsCard()}
-              <div className="form-section subdivision-section">
-                <h3 className="section-title">Plot Subdivision & Batch Plans</h3>
-                <p className="section-desc">
-                  Configure lot split for this mother parcel, preview output, then generate a batch.
-                </p>
-                <div className="form-grid">
-                  <div className="form-group full-width template-selector-group">
-                    <label>Template</label>
-                    <select
-                      value={meta.template_name}
-                      onChange={(e) =>
-                        setMeta((m) => ({
-                          ...m,
-                          template_name: e.target.value as PlotMeta["template_name"],
-                        }))
-                      }
-                    >
-                      <option value="general">General</option>
-                      <option value="adamawa_osg">Adamawa OSG</option>
-                    </select>
-                    {meta.template_name === "adamawa_osg" && (
-                      <span className="template-hint">
-                        Adamawa OSG template
-                      </span>
-                    )}
-                  </div>
-                  {meta.template_name === "general" ? (
-                    <>
-                      <div className="form-group">
-                        <label>Title</label>
-                        <input
-                          value={meta.title_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, title_text: e.target.value }))}
-                          placeholder="SURVEY PLAN"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Location</label>
-                        <input
-                          value={meta.location_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, location_text: e.target.value }))}
-                          placeholder="Enter location"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>LGA</label>
-                        <input
-                          value={meta.lga_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, lga_text: e.target.value }))}
-                          placeholder="Local Government Area"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>State</label>
-                        <input
-                          value={meta.state_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, state_text: e.target.value }))}
-                          placeholder="Enter state"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Surveyor Name</label>
-                        <input
-                          value={meta.surveyor_name}
-                          onChange={(e) => setMeta((m) => ({ ...m, surveyor_name: e.target.value }))}
-                          placeholder="Enter surveyor name"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Rank</label>
-                        <input
-                          value={meta.surveyor_rank}
-                          onChange={(e) => setMeta((m) => ({ ...m, surveyor_rank: e.target.value }))}
-                          placeholder="Surveyor rank"
-                        />
-                      </div>
-                      <div className="form-group full-width">
-                        <label>Certification Statement (Editable)</label>
-                        <textarea
-                          value={meta.certification_statement}
-                          onChange={(e) => setMeta((m) => ({ ...m, certification_statement: e.target.value }))}
-                          placeholder={DEFAULT_CERTIFICATION_STATEMENT}
-                          rows={3}
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="form-group">
-                        <label>R of O Number</label>
-                        <input
-                          value={meta.adamawa_rof_no}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_rof_no: e.target.value }))}
-                          placeholder="E.G ADS50530"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Owner Name</label>
-                        <input
-                          readOnly
-                          value="Auto from lot names in this subdivision batch"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Location (AT)</label>
-                        <input
-                          value={meta.location_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, location_text: e.target.value }))}
-                          placeholder="LOCATION"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Local Government</label>
-                        <input
-                          value={meta.lga_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, lga_text: e.target.value }))}
-                          placeholder="LOCAL GOVERNMENT"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Authority Title</label>
-                        <input
-                          value={meta.adamawa_authority_title}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_authority_title: e.target.value }))}
-                          placeholder={DEFAULT_ADAMAWA_AUTHORITY_TITLE}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Authority Date</label>
-                        <input
-                          value={meta.adamawa_authority_date_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_authority_date_text: e.target.value }))}
-                          placeholder={DEFAULT_ADAMAWA_AUTHORITY_DATE}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Surveyor Name</label>
-                        <input
-                          value={meta.surveyor_name}
-                          onChange={(e) => setMeta((m) => ({ ...m, surveyor_name: e.target.value }))}
-                          placeholder="Surveyor Name"
-                        />
-                      </div>
-                      <div className="form-group full-width">
-                        <label>Control Data Source</label>
-                        <input value="Auto from plotted coordinates/stations (read-only)" readOnly />
-                      </div>
-                      <div className="form-group">
-                        <label>Cadastral Sheet No</label>
-                        <input
-                          value={meta.adamawa_cadastral_sheet_no}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_cadastral_sheet_no: e.target.value }))}
-                          placeholder="07"
-                        />
-                      </div>
-                      <div className="form-group full-width">
-                        <label>Topo Sheet Text</label>
-                        <input
-                          value={meta.adamawa_topo_sheet_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_topo_sheet_text: e.target.value }))}
-                          placeholder={DEFAULT_ADAMAWA_TOPO_SHEET_TEXT}
-                        />
-                      </div>
-                      <div className="form-group full-width">
-                        <label>Disclaimer Text</label>
-                        <textarea
-                          value={meta.adamawa_disclaimer_text}
-                          onChange={(e) => setMeta((m) => ({ ...m, adamawa_disclaimer_text: e.target.value }))}
-                          rows={2}
-                          placeholder={DEFAULT_ADAMAWA_DISCLAIMER_TEXT}
-                        />
-                      </div>
-                    </>
-                  )}
-                  <div className="form-group scale-group">
-                    <label>Scale</label>
-                    <div className="scale-input-wrapper">
-                      <span className="scale-prefix">1 :</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={scaleDraft}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/[^0-9]/g, "");
-                          setScaleDraft(val);
-                        }}
-                        onBlur={commitScaleDraft}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            commitScaleDraft();
-                          }
-                        }}
-                        className="scale-number-input"
-                        placeholder="1000"
-                        aria-label="Scale denominator"
-                      />
-                    </div>
-                    <span className="scale-helper">Type only the number after `1 :` (example: `1000`).</span>
-                    <div className="scale-presets">
-                      {SCALE_PRESETS.map((s) => (
-                        <button
-                          key={`sub_scale_${s}`}
-                          type="button"
-                          className={`scale-preset-btn ${parseScaleDenominator(meta.scale_text) === s ? "active" : ""}`}
-                          onClick={() => {
-                            setScaleDraft(String(s));
-                            setMeta((m) => ({ ...m, scale_text: `1 : ${s}` }));
-                          }}
-                        >
-                          1:{s}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="form-group paper-size-group">
-                    <label>Paper Size</label>
-                    <div className="paper-size-presets">
-                      {["A4", "A3", "A2", "A1", "A0"].map((size) => (
-                        <button
-                          key={`sub_size_${size}`}
-                          type="button"
-                          className={`paper-size-btn ${meta.paper_size === size ? "active" : ""}`}
-                          onClick={() => setMeta((m) => ({ ...m, paper_size: size }))}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
-                    <span className="paper-size-hint">
-                      {meta.paper_size === "A4" && "Standard (210 x 297 mm)"}
-                      {meta.paper_size === "A3" && "Large (297 x 420 mm)"}
-                      {meta.paper_size === "A2" && "Extra Large (420 x 594 mm)"}
-                      {meta.paper_size === "A1" && "Poster (594 x 841 mm)"}
-                      {meta.paper_size === "A0" && "Maximum (841 x 1189 mm)"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="edit-feature-bar">
-                  <button className="btn-secondary" onClick={refreshCurrentPreview} disabled={previewLoading || orthophotoLoading || topoMapLoading || serverSyncing}>
-                    {previewLoading || orthophotoLoading || topoMapLoading || serverSyncing ? "Rendering..." : previewActionLabel}
-                  </button>
-                  <button className="btn-outline" onClick={openFeatureCadEditor} disabled={serverSyncing || !isOnline}>
-                    Open Feature CAD Editor
-                  </button>
-                </div>
-
-                <hr className="subdivision-divider" />
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>Subdivision Method</label>
-                    <select
-                      value={subdivisionMethod}
-                      onChange={(e) => {
-                        const nextMethod = e.target.value as SubdivisionMethod;
-                        setSubdivisionMethod(nextMethod);
-                        if (nextMethod === "by_fraction") {
-                          let weights = subdivisionFractionWeightsEffective;
-                          if (weights.length < 2) {
-                            const fallbackCount = Math.max(2, Number(subdivisionPreview?.resolved_count || 0) || 2);
-                            weights = Array.from({ length: fallbackCount }, () => 1);
-                          }
-                          const breaks = weightsToBreaks(weights);
-                          if (breaks.length) {
-                            setSubdivisionFractionBreaks(breaks);
-                          }
-                          setSubdivisionFractionDraft(formatWeightsDraft(weights));
-                        }
-                        if (nextMethod === "by_custom_area") {
-                          const fallbackCount = Math.max(2, parsePositiveInt(subdivisionCountDraft) ?? subdivisionPreview?.resolved_count ?? 2);
-                          setSubdivisionCountDraft(String(fallbackCount));
-                          setSubdivisionCustomAreaDrafts((prev) =>
-                            Array.from({ length: fallbackCount }, (_, idx) => prev[idx] ?? "")
-                          );
-                        }
-                      }}
-                    >
-                      <option value="by_count">Split by number of plots</option>
-                      <option value="by_area">Split by target plot area (sqm)</option>
-                      <option value="by_fraction">Split by fractions</option>
-                      <option value="by_custom_area">Split by custom lot areas</option>
-                    </select>
-                  </div>
-                  {subdivisionMethod === "by_count" ? (
-                    <div className="form-group">
-                      <label>Derived Plot Count</label>
-                      <input
-                        type="number"
-                        min={2}
-                        max={500}
-                        value={subdivisionCountDraft}
-                        onChange={(e) => setSubdivisionCountDraft(e.target.value)}
-                        placeholder="e.g. 20"
-                      />
-                    </div>
-                  ) : subdivisionMethod === "by_area" ? (
-                    <div className="form-group">
-                      <label>Target Plot Area (sqm)</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={subdivisionTargetAreaDraft}
-                        onChange={(e) => setSubdivisionTargetAreaDraft(e.target.value)}
-                        placeholder="e.g. 450"
-                      />
-                    </div>
-                  ) : subdivisionMethod === "by_fraction" ? (
-                    <div className="form-group full-width">
-                      <label>Fractions (comma separated)</label>
-                      <input
-                        value={subdivisionFractionDraft}
-                        onChange={(e) => setSubdivisionFractionDraft(e.target.value)}
-                        onBlur={commitSubdivisionFractionDraft}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            commitSubdivisionFractionDraft();
-                          }
-                        }}
-                        placeholder="e.g. 2, 3, 5"
-                      />
-                      <span className="scale-helper">
-                        Example `2,3,5` means 20%, 30%, 50%. Drag division lines directly in Subdivision Line Preview.
-                      </span>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="form-group">
-                        <label>Number of Lots</label>
-                        <input
-                          type="number"
-                          min={2}
-                          max={500}
-                          value={subdivisionCountDraft}
-                          onChange={(e) => setSubdivisionCountDraft(e.target.value)}
-                          placeholder="e.g. 5"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Mother Parcel Area (sqm)</label>
-                        <input
-                          readOnly
-                          value={
-                            subdivisionParentAreaLoading
-                              ? "Loading area..."
-                              : subdivisionParentAreaM2
-                              ? subdivisionParentAreaM2.toFixed(2)
-                              : "Area unavailable"
-                          }
-                        />
-                      </div>
-                      <div className="form-group full-width">
-                        <span className="scale-helper">
-                          Allocate area for each lot below. Total allocated area must not exceed the mother parcel area.
-                        </span>
-                      </div>
-                    </>
-                  )}
-                  <div className="form-group">
-                    <label>Orientation (degrees)</label>
-                    <input
-                      type="number"
-                      value={subdivisionOrientationDraft}
-                      onChange={(e) => setSubdivisionOrientationDraft(e.target.value)}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Lot Prefix</label>
-                    <input
-                      value={subdivisionLotPrefix}
-                      onChange={(e) => setSubdivisionLotPrefix(e.target.value.toUpperCase())}
-                      placeholder="LOT"
-                      maxLength={16}
-                    />
-                  </div>
-                  <div className="form-group full-width">
-                    <label>Estate / Layout Name (Optional)</label>
-                    <input
-                      value={subdivisionEstateName}
-                      onChange={(e) => setSubdivisionEstateName(e.target.value)}
-                      placeholder="e.g. Think Green Estate Phase 1"
-                    />
-                  </div>
-                </div>
-
-                {subdivisionMethod === "by_fraction" && (
-                  <p className="subdivision-note subdivision-break-hint">
-                    Division-line editing is now on-canvas: open <strong>Subdivision Line Preview</strong> and drag the vertical guides.
-                  </p>
-                )}
-
-                {subdivisionMethod === "by_custom_area" && subdivisionCustomLotCount >= 2 && (
-                  <div className="subdivision-custom-areas-wrap">
-                    <div className="subdivision-custom-areas-head">
-                      <h5>Custom Lot Area Allocation</h5>
-                      <span>
-                        Allocated: {subdivisionCustomAllocatedM2.toFixed(2)} sqm
-                        {subdivisionCustomRemainingM2 !== null && (
-                          <> | Remaining: {subdivisionCustomRemainingM2.toFixed(2)} sqm</>
-                        )}
-                      </span>
-                    </div>
-                    <div className="subdivision-table-wrap">
-                      <table className="subdivision-table">
-                        <thead>
-                          <tr>
-                            <th>Lot / Owner Name</th>
-                            <th>Custom Area (sqm)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {Array.from({ length: subdivisionCustomLotCount }).map((_, idx) => (
-                            <tr key={`custom_area_row_${idx}`}>
-                              <td>
-                                <input
-                                  className="subdivision-lot-name-input"
-                                  value={subdivisionLotNamesDraft[idx] ?? ""}
-                                  onChange={(e) => updateSubdivisionLotName(idx, e.target.value)}
-                                  placeholder={`Lot ${idx + 1} name`}
-                                />
-                              </td>
-                              <td>
-                                <input
-                                  className="subdivision-lot-name-input"
-                                  type="number"
-                                  min={0}
-                                  step="0.01"
-                                  value={subdivisionCustomAreaDrafts[idx] ?? ""}
-                                  onChange={(e) => updateSubdivisionCustomAreaDraft(idx, e.target.value)}
-                                  placeholder="0.00"
-                                />
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    {subdivisionCustomRemainingM2 !== null && subdivisionCustomRemainingM2 < -0.01 && (
-                      <p className="subdivision-validation-error">
-                        Allocated area exceeds mother parcel by {Math.abs(subdivisionCustomRemainingM2).toFixed(2)} sqm.
-                      </p>
-                    )}
-                    {subdivisionCustomRemainingM2 !== null && subdivisionCustomRemainingM2 > 0.01 && (
-                      <p className="subdivision-note">
-                        Remaining unallocated area: {subdivisionCustomRemainingM2.toFixed(2)} sqm. Allocate full area before preview.
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                <div className="subdivision-action-row">
-                  <button
-                    className="btn-secondary"
-                    onClick={() => {
-                      setSubdivisionPreviewPanelTab("subdivision_lines");
-                      previewSubdivision(false);
-                    }}
-                    disabled={!plotId || subdivisionPreviewLoading || subdivisionApplyLoading}
-                  >
-                    {subdivisionPreviewLoading ? (
-                      <>
-                        <span className="spinner" />
-                        Computing...
-                      </>
-                    ) : (
-                      "Preview Split"
-                    )}
-                  </button>
-                </div>
-
-                <div className="subdivision-help-card">
-                  <div className="subdivision-help-row">
-                    <strong>Orientation</strong>
-                    <span>
-                      {Number.isFinite(Number(subdivisionOrientationDraft)) ? Number(subdivisionOrientationDraft).toFixed(1) : "0.0"} deg
-                      {" - "}rotates split-line direction.
-                    </span>
-                  </div>
-                  <div className="subdivision-help-row">
-                    <strong>Target by area</strong>
-                    <span>
-                      {subdivisionMethod === "by_area"
-                        ? `${(parsePositiveFloat(subdivisionTargetAreaDraft) || 0).toLocaleString()} sqm per lot (approx).`
-                        : subdivisionMethod === "by_fraction"
-                        ? "Uses your fractions and draggable preview guides to control each lot share."
-                        : subdivisionMethod === "by_custom_area"
-                        ? "Uses exact per-lot areas you enter. Total must match mother parcel area."
-                        : "Not used in by-count mode; lots are balanced by area."}
-                    </span>
-                  </div>
-                  {subdivisionPreview && (
-                    <div className="subdivision-help-row">
-                      <strong>Computed output</strong>
-                      <span>
-                        {subdivisionPreview.resolved_count} plots, total {subdivisionPreview.derived_total_area_m2.toFixed(2)} sqm.
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {subdivisionPreview && (
-                  <div className="subdivision-preview-wrap">
-                    <div className="subdivision-kpis">
-                      <div className="subdivision-kpi">
-                        <span className="subdivision-kpi-label">Derived plots</span>
-                        <strong>{subdivisionPreview.resolved_count}</strong>
-                      </div>
-                      <div className="subdivision-kpi">
-                        <span className="subdivision-kpi-label">Mother parcel area</span>
-                        <strong>{subdivisionPreview.total_area_m2.toFixed(2)} sqm</strong>
-                      </div>
-                      <div className="subdivision-kpi">
-                        <span className="subdivision-kpi-label">Area imbalance</span>
-                        <strong>{Math.abs(subdivisionPreview.area_imbalance_m2).toFixed(4)} sqm</strong>
-                      </div>
-                    </div>
-                    <div className="subdivision-table-wrap">
-                      <table className="subdivision-table">
-                        <thead>
-                          <tr>
-                            <th>Lot / Owner Name</th>
-                            <th>Area (sqm)</th>
-                            <th>Area (ha)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {subdivisionPreview.plots.slice(0, 12).map((item) => (
-                            <tr key={`sub_lot_${item.index}`}>
-                              <td>
-                                <input
-                                  className="subdivision-lot-name-input"
-                                  value={subdivisionLotNamesDraft[item.index - 1] ?? item.lot_no}
-                                  onChange={(e) => updateSubdivisionLotName(item.index - 1, e.target.value)}
-                                  placeholder="Lot name / owner"
-                                />
-                              </td>
-                              <td>{item.area_m2.toFixed(2)}</td>
-                              <td>{item.area_hectares.toFixed(4)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    {subdivisionPreview.plots.length > 12 && (
-                      <p className="subdivision-note">
-                        Showing first 12 lots in preview. Total generated lots: {subdivisionPreview.plots.length}.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="subdivision-batch-wrap">
-                <div className="subdivision-batch-header">
-                  <h4>Generated Batches</h4>
-                  <button
-                    className="btn-outline btn-mini"
-                    onClick={() => loadSubdivisionBatches()}
-                    disabled={!plotId || subdivisionBatchLoading}
-                  >
-                    {subdivisionBatchLoading ? "Refreshing..." : "Refresh"}
-                  </button>
-                </div>
-                {subdivisionBatches.length === 0 ? (
-                  <p className="subdivision-note">No subdivision batches generated yet for this mother parcel.</p>
-                ) : (
-                  <div className="subdivision-batch-list">
-                    {subdivisionBatches.slice(0, 6).map((batch) => (
-                      <div key={batch.id} className="subdivision-batch-item">
-                        <div>
-                          <strong>Batch #{batch.id}</strong>
-                          <div className="subdivision-note">
-                            {batch.method} - {batch.generated_count} plots - {(batch.total_area_m2 ?? 0).toFixed(2)} sqm
-                          </div>
-                        </div>
-                        <button
-                          className="download-btn"
-                          disabled={subdivisionDownloadBatchId !== null}
-                          onClick={() => downloadSubdivisionBatch(batch.id)}
-                        >
-                          {subdivisionDownloadBatchId === batch.id ? "Downloading..." : "Export ZIP"}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="action-bar">
-                <button className="btn-outline" onClick={() => setCurrentStep(1)}>
-                  <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-                  </svg>
-                  Back to Mother Parcel
-                </button>
-                <button
-                  className="btn-secondary"
-                  onClick={applySubdivision}
-                  disabled={!plotId || subdivisionApplyLoading || subdivisionPreviewLoading}
-                >
-                  {subdivisionApplyLoading ? (
-                    <>
-                      <span className="spinner" />
-                      Generating...
-                    </>
-                  ) : (
-                    "Generate Batch"
-                  )}
-                </button>
-                <button
-                  className="btn-primary"
-                  onClick={() => setCurrentStep(3)}
-                  disabled={subdivisionBatches.length === 0}
-                >
-                  Continue to Batch Export
-                  <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <div className="panel-right preview-container">
-              <div className="subdivision-right-wrap">
-                <div className="subdivision-right-header">
-                  <h4>{subdivisionPreviewPanelTab === "survey_plan" ? "Survey Plan Preview" : "Subdivision Line Preview"}</h4>
-                  <span>
-                    {subdivisionPreviewPanelTab === "survey_plan"
-                      ? "Review the rendered survey plan before exporting."
-                      : subdivisionMethod === "by_fraction"
-                      ? "Drag vertical guides to adjust lot fractions live."
-                      : "Each lot boundary + area label"}
-                  </span>
-                  <div className="subdivision-right-tabs" role="tablist" aria-label="Subdivision preview tabs">
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={subdivisionPreviewPanelTab === "survey_plan"}
-                      className={`subdivision-right-tab ${subdivisionPreviewPanelTab === "survey_plan" ? "active" : ""}`}
-                      onClick={() => setSubdivisionPreviewPanelTab("survey_plan")}
-                    >
-                      Survey Plan Preview
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={subdivisionPreviewPanelTab === "subdivision_lines"}
-                      className={`subdivision-right-tab ${subdivisionPreviewPanelTab === "subdivision_lines" ? "active" : ""}`}
-                      onClick={() => setSubdivisionPreviewPanelTab("subdivision_lines")}
-                    >
-                      Subdivision Line Preview
-                    </button>
-                  </div>
-                </div>
-                {subdivisionPreviewPanelTab === "survey_plan" ? (
-                  <div className="subdivision-survey-wrap">
-                    <SurveyPreview
-                      previewType={previewType}
-                      onPreviewTypeChange={setPreviewType}
-                      topoSource={topoSource}
-                      onTopoSourceChange={setTopoSource}
-                      northArrowStyle={northArrowStyle}
-                      northArrowColor={northArrowColor}
-                      beaconStyle={beaconStyle}
-                      roadWidth={roadWidth}
-                      onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
-                      onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
-                      onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
-                      onRoadWidthChange={(value) => setRoadWidth(value as RoadWidthOption)}
-                      paperSize={meta.paper_size}
-                      surveyPreviewUrl={previewUrl}
-                      orthophotoPreviewUrl={orthophotoUrl}
-                      topoMapPreviewUrl={topoMapUrl}
-                      loading={previewLoading}
-                      orthophotoLoading={orthophotoLoading}
-                      topoMapLoading={topoMapLoading}
-                      hasHeightData={hasHeightData}
-                      allowedPreviewTypes={["survey"]}
-                    />
-                  </div>
-                ) : (
-                  <>
-                    {!subdivisionPreview && (
-                      <div className="preview-empty">
-                        <p>Click <strong>Preview Split</strong> to see lot lines and area labels here.</p>
-                      </div>
-                    )}
-                    {(subdivisionMapPreviewData || subdivisionSvgPreview) && (
-                      <div
-                        ref={(node) => {
-                          subdivisionLineCanvasRef.current = node;
-                        }}
-                        className="subdivision-map-wrap"
-                        onPointerUp={stopSubdivisionBreakDrag}
-                        onPointerCancel={stopSubdivisionBreakDrag}
-                      >
-                        {subdivisionMapPreviewData && MAPBOX_TOKEN ? (
-                          <div ref={subdivisionMapContainerRef} className="subdivision-map-canvas" />
-                        ) : (
-                          <div className="subdivision-svg-wrap">
-                            {subdivisionSvgPreview && (
-                              <svg
-                                viewBox={`0 0 ${subdivisionSvgPreview.width} ${subdivisionSvgPreview.height}`}
-                                className="subdivision-svg"
-                                role="img"
-                                aria-label="Subdivision lot preview"
-                              >
-                                <rect x="0" y="0" width={subdivisionSvgPreview.width} height={subdivisionSvgPreview.height} fill="#0f172a" />
-                                <g>
-                              {subdivisionSvgPreview.plots.map((plot) => (
-                                <path
-                                  key={`plot_path_${plot.idx}`}
-                                  d={plot.path}
-                                  fill="rgba(16,185,129,0.08)"
-                                  stroke={plot.stroke}
-                                  strokeWidth={2.4}
-                                />
-                                  ))}
-                                </g>
-                                <g>
-                              {subdivisionSvgPreview.plots.map((plot) => (
-                                <text
-                                  key={`plot_label_${plot.idx}`}
-                                  x={plot.labelX}
-                                  y={plot.labelY}
-                                  textAnchor="middle"
-                                  className="subdivision-svg-label"
-                                    >
-                                      <tspan x={plot.labelX} dy="0">{plot.lotNo}</tspan>
-                                      <tspan x={plot.labelX} dy="12">{plot.areaHa.toFixed(3)} ha</tspan>
-                                    </text>
-                                  ))}
-                                </g>
-                              </svg>
-                            )}
-                          </div>
-                        )}
-
-                        {subdivisionMethod === "by_fraction" && subdivisionFractionBreaksEffective.length > 0 && (
-                          <div className="subdivision-break-overlay">
-                            {subdivisionFractionBreaksEffective.map((value, idx) => {
-                              const isActive = subdivisionDraggingBreakIndex === idx;
-                              return (
-                                <div
-                                  key={`subdiv_guide_${idx}`}
-                                  className={`subdivision-break-guide-dom${isActive ? " active" : ""}`}
-                                  style={{ left: `${Math.max(2, Math.min(98, value * 100))}%` }}
-                                >
-                                  <div
-                                    className="subdivision-break-hitline-dom"
-                                    onPointerDown={(event) => {
-                                      event.preventDefault();
-                                      event.stopPropagation();
-                                      startSubdivisionBreakDrag(idx, event.clientX);
-                                    }}
-                                  />
-                                  <div className="subdivision-break-line-dom" />
-                                  <button
-                                    type="button"
-                                    className="subdivision-break-handle-dom"
-                                    onPointerDown={(event) => {
-                                      event.preventDefault();
-                                      event.stopPropagation();
-                                      startSubdivisionBreakDrag(idx, event.clientX);
-                                    }}
-                                  />
-                                  <span className="subdivision-break-value-dom">{(value * 100).toFixed(1)}%</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {subdivisionPreview && (
-                      <div className="subdivision-legend">
-                        <span>Resolved lots: <strong>{subdivisionPreview.resolved_count}</strong></span>
-                        <span>
-                          Target area: <strong>{subdivisionTargetDisplayM2 > 0 ? `${subdivisionTargetDisplayM2.toFixed(2)} sqm` : "n/a"}</strong>
-                        </span>
-                        <span>Orientation: <strong>{subdivisionOrientationDisplayDeg.toFixed(1)} deg</strong></span>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
+          <Suspense fallback={<div className="preview-card">Loading subdivision workspace...</div>}>
+            <SurveyPlanSubdivisionPreviewStep
+              sidebar={renderSidebarStepsCard()}
+              meta={meta}
+              setMeta={setMeta}
+              scaleDraft={scaleDraft}
+              setScaleDraft={setScaleDraft}
+              commitScaleDraft={commitScaleDraft}
+              parseScaleDenominator={parseScaleDenominator}
+              scalePresets={SCALE_PRESETS}
+              previewActionLabel={previewActionLabel}
+              refreshCurrentPreview={refreshCurrentPreview}
+              previewLoading={previewLoading}
+              orthophotoLoading={orthophotoLoading}
+              topoMapLoading={topoMapLoading}
+              serverSyncing={serverSyncing}
+              onOpenFeatureCadEditor={openFeatureCadEditor}
+              isOnline={isOnline}
+              plotId={plotId}
+              defaultCertificationStatement={DEFAULT_CERTIFICATION_STATEMENT}
+              defaultAdamawaAuthorityTitle={DEFAULT_ADAMAWA_AUTHORITY_TITLE}
+              defaultAdamawaAuthorityDate={DEFAULT_ADAMAWA_AUTHORITY_DATE}
+              defaultAdamawaTopoSheetText={DEFAULT_ADAMAWA_TOPO_SHEET_TEXT}
+              defaultAdamawaDisclaimerText={DEFAULT_ADAMAWA_DISCLAIMER_TEXT}
+              subdivisionMethod={subdivisionMethod}
+              setSubdivisionMethod={setSubdivisionMethod}
+              subdivisionFractionWeightsEffective={subdivisionFractionWeightsEffective}
+              subdivisionPreview={subdivisionPreview}
+              setSubdivisionFractionBreaks={setSubdivisionFractionBreaks}
+              setSubdivisionFractionDraft={setSubdivisionFractionDraft}
+              weightsToBreaks={weightsToBreaks}
+              formatWeightsDraft={formatWeightsDraft}
+              parsePositiveInt={parsePositiveInt}
+              subdivisionCountDraft={subdivisionCountDraft}
+              setSubdivisionCountDraft={setSubdivisionCountDraft}
+              subdivisionTargetAreaDraft={subdivisionTargetAreaDraft}
+              setSubdivisionTargetAreaDraft={setSubdivisionTargetAreaDraft}
+              subdivisionFractionDraft={subdivisionFractionDraft}
+              commitSubdivisionFractionDraft={commitSubdivisionFractionDraft}
+              subdivisionParentAreaLoading={subdivisionParentAreaLoading}
+              subdivisionParentAreaM2={subdivisionParentAreaM2}
+              subdivisionOrientationDraft={subdivisionOrientationDraft}
+              setSubdivisionOrientationDraft={setSubdivisionOrientationDraft}
+              subdivisionLotPrefix={subdivisionLotPrefix}
+              setSubdivisionLotPrefix={setSubdivisionLotPrefix}
+              subdivisionEstateName={subdivisionEstateName}
+              setSubdivisionEstateName={setSubdivisionEstateName}
+              subdivisionCustomLotCount={subdivisionCustomLotCount}
+              subdivisionCustomAllocatedM2={subdivisionCustomAllocatedM2}
+              subdivisionCustomRemainingM2={subdivisionCustomRemainingM2}
+              subdivisionLotNamesDraft={subdivisionLotNamesDraft}
+              updateSubdivisionLotName={updateSubdivisionLotName}
+              subdivisionCustomAreaDrafts={subdivisionCustomAreaDrafts}
+              updateSubdivisionCustomAreaDraft={updateSubdivisionCustomAreaDraft}
+              setSubdivisionPreviewPanelTab={setSubdivisionPreviewPanelTab}
+              previewSubdivision={previewSubdivision}
+              subdivisionPreviewLoading={subdivisionPreviewLoading}
+              subdivisionApplyLoading={subdivisionApplyLoading}
+              parsePositiveFloat={parsePositiveFloat}
+              loadSubdivisionBatches={loadSubdivisionBatches}
+              subdivisionBatchLoading={subdivisionBatchLoading}
+              subdivisionBatches={subdivisionBatches}
+              subdivisionDownloadBatchId={subdivisionDownloadBatchId}
+              downloadSubdivisionBatch={downloadSubdivisionBatch}
+              applySubdivision={applySubdivision}
+              onBack={() => goToStep(1)}
+              onContinue={() => goToStep(3)}
+              subdivisionPreviewPanelTab={subdivisionPreviewPanelTab}
+              previewType={previewType}
+              onPreviewTypeChange={handlePreviewTypeChange}
+              topoSource={topoSource}
+              onTopoSourceChange={handleTopoSourceChange}
+              northArrowStyle={northArrowStyle}
+              northArrowColor={northArrowColor}
+              beaconStyle={beaconStyle}
+              roadWidth={roadWidth}
+              onNorthArrowStyleChange={handleNorthArrowStyleChange}
+              onNorthArrowColorChange={handleNorthArrowColorChange}
+              onBeaconStyleChange={handleBeaconStyleChange}
+              onRoadWidthChange={handleRoadWidthChange}
+              surveyPreviewUrl={previewUrl}
+              orthophotoPreviewUrl={orthophotoUrl}
+              topoMapPreviewUrl={topoMapUrl}
+              hasHeightData={hasHeightData}
+              subdivisionMapPreviewData={subdivisionMapPreviewData}
+              subdivisionSvgPreview={subdivisionSvgPreview}
+              onSubdivisionLineCanvasRef={(node) => {
+                subdivisionLineCanvasRef.current = node as HTMLElement | null;
+              }}
+              onSubdivisionMapContainerRef={(node) => {
+                subdivisionMapContainerRef.current = node;
+              }}
+              stopSubdivisionBreakDrag={stopSubdivisionBreakDrag}
+              hasMapboxToken={Boolean(MAPBOX_TOKEN)}
+              subdivisionFractionBreaksEffective={subdivisionFractionBreaksEffective}
+              subdivisionDraggingBreakIndex={subdivisionDraggingBreakIndex}
+              startSubdivisionBreakDrag={startSubdivisionBreakDrag}
+              subdivisionTargetDisplayM2={subdivisionTargetDisplayM2}
+              subdivisionOrientationDisplayDeg={subdivisionOrientationDisplayDeg}
+            />
+          </Suspense>
         )}
 
         {/* Step 3: Export (Survey Plan Production) */}
@@ -3915,275 +3053,37 @@ export default function SurveyPlan() {
 
         {/* Step 3: Batch Export (Subdivision) */}
         {workflowMode === "subdivision" && currentStep === 3 && (
-          <div className="step-panel export-panel">
-            <div className="panel-left">
-              {renderSidebarStepsCard()}
-              <div className="export-section">
-                <h3 className="section-title">Subdivision Batch Export</h3>
-                <p className="section-desc">
-                  Export generated subdivision plans as one ZIP package. Preview the split before downloading.
-                </p>
-                <p className="section-desc">
-                  Output settings: Template <strong>{meta.template_name === "adamawa_osg" ? "Adamawa OSG" : "General"}</strong>,
-                  Scale <strong>{meta.scale_text}</strong>, Paper <strong>{meta.paper_size}</strong>.
-                </p>
-
-                <div className="export-grid">
-                  {(latestSubdivisionBatchId ?? subdivisionBatches[0]?.id) && (
-                    <div className="export-card">
-                      <div className="export-icon calc">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                          <path d="M4 4h16v4H4zM4 10h16v10H4z" />
-                          <path d="M8 14h8M8 18h5" />
-                        </svg>
-                      </div>
-                      <div className="export-info">
-                        <h4>Latest Batch ZIP</h4>
-                        <p>Download all generated lots from the latest subdivision batch</p>
-                      </div>
-                      <button
-                        className="download-btn"
-                        disabled={subdivisionDownloadBatchId !== null}
-                        onClick={() => downloadSubdivisionBatch((latestSubdivisionBatchId ?? subdivisionBatches[0]?.id) as number)}
-                      >
-                        {subdivisionDownloadBatchId === (latestSubdivisionBatchId ?? subdivisionBatches[0]?.id) ? (
-                          <>
-                            <span className="spinner download-spinner" />
-                            <span>Downloading...</span>
-                          </>
-                        ) : (
-                          <>
-                            <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                            <span>Download ZIP</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="export-card export-card--clean-copy">
-                    <div className="export-icon pdf">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path d="M6 2h9l5 5v15H6z" />
-                        <path d="M15 2v5h5M9 13h6M9 17h6" />
-                      </svg>
-                    </div>
-                    <div className="export-info">
-                      <h4>Clean Copy Plan PDF</h4>
-                      <p>Single-sheet clean copy of all split lots on one plot with editable displayed area labels.</p>
-                      <div className="subdivision-clean-copy-controls">
-                        <div className="subdivision-clean-copy-row">
-                          <label>Batch</label>
-                          <select
-                            value={subdivisionCleanCopyBatchId ?? ""}
-                            onChange={(event) => {
-                              const nextBatchId = Number(event.target.value || 0) || null;
-                              setSubdivisionCleanCopyBatchId(nextBatchId);
-                              if (nextBatchId) {
-                                loadSubdivisionCleanCopyBatchDetails(nextBatchId);
-                              } else {
-                                setSubdivisionCleanCopyItems([]);
-                              }
-                            }}
-                          >
-                            <option value="">Select batch</option>
-                            {subdivisionBatches.map((batch) => (
-                              <option key={`clean_copy_batch_${batch.id}`} value={batch.id}>
-                                Batch #{batch.id} - {batch.generated_count} lots
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="subdivision-clean-copy-row">
-                          <label>Plan title</label>
-                          <input
-                            type="text"
-                            value={subdivisionCleanCopyTitle}
-                            onChange={(event) => setSubdivisionCleanCopyTitle(event.target.value)}
-                            placeholder="Enter clean copy title"
-                          />
-                        </div>
-
-                        <div className="subdivision-clean-copy-areas">
-                          <div className="subdivision-clean-copy-areas-head">
-                            <strong>Displayed area labels (editable)</strong>
-                            <span>
-                              {subdivisionCleanCopyLoadingBatchId
-                                ? "Loading lots..."
-                                : `${subdivisionCleanCopyItems.length} lots`}
-                            </span>
-                          </div>
-                          {subdivisionCleanCopyItems.length === 0 ? (
-                            <p className="subdivision-note">
-                              Select a batch to edit displayed area text for each lot.
-                            </p>
-                          ) : (
-                            <div className="subdivision-clean-copy-table-wrap">
-                              <table className="subdivision-table subdivision-clean-copy-table">
-                                <thead>
-                                  <tr>
-                                    <th>Lot</th>
-                                    <th>Computed area</th>
-                                    <th>Displayed on plan</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {subdivisionCleanCopyItems.map((item) => (
-                                    <tr key={`clean_copy_item_${item.id}_${item.child_plot_id}`}>
-                                      <td>{item.lot_no}</td>
-                                      <td>{Number(item.area_m2 || 0).toFixed(2)} sqm</td>
-                                      <td>
-                                        <input
-                                          className="subdivision-lot-name-input"
-                                          value={getSubdivisionCleanCopyAreaDraftValue(item)}
-                                          onChange={(event) => updateSubdivisionCleanCopyAreaDraft(item, event.target.value)}
-                                          placeholder="e.g. 0.125 Hectares"
-                                        />
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        className="download-btn subdivision-clean-copy-download"
-                        disabled={
-                          subdivisionCleanCopyDownloadBatchId !== null ||
-                          !subdivisionCleanCopyBatchId ||
-                          subdivisionCleanCopyLoadingBatchId !== null
-                        }
-                        onClick={downloadSubdivisionCleanCopyPdf}
-                      >
-                        {subdivisionCleanCopyDownloadBatchId ? (
-                          <>
-                            <span className="spinner download-spinner" />
-                            <span>Downloading...</span>
-                          </>
-                        ) : (
-                          <>
-                            <svg viewBox="0 0 20 20" fill="currentColor">
-                              <path
-                                fillRule="evenodd"
-                                d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                            <span>Download Clean Copy PDF</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="form-section subdivision-section">
-                    <div className="subdivision-batch-header">
-                      <h4>All Batches</h4>
-                      <button
-                        className="btn-outline btn-mini"
-                        onClick={() => loadSubdivisionBatches()}
-                        disabled={!plotId || subdivisionBatchLoading}
-                      >
-                        {subdivisionBatchLoading ? "Refreshing..." : "Refresh"}
-                      </button>
-                    </div>
-                    {subdivisionBatches.length === 0 ? (
-                      <p className="subdivision-note">No batch generated yet. Go back and generate subdivision first.</p>
-                    ) : (
-                      <div className="subdivision-batch-list">
-                        {subdivisionBatches.map((batch) => (
-                          <div key={batch.id} className="subdivision-batch-item">
-                            <div>
-                              <strong>Batch #{batch.id}</strong>
-                              <div className="subdivision-note">
-                                {batch.method} - {batch.generated_count} plots - {(batch.total_area_m2 ?? 0).toFixed(2)} sqm
-                              </div>
-                            </div>
-                            <button
-                              className="download-btn"
-                              disabled={subdivisionDownloadBatchId !== null}
-                              onClick={() => downloadSubdivisionBatch(batch.id)}
-                            >
-                              {subdivisionDownloadBatchId === batch.id ? "Downloading..." : "Export ZIP"}
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="action-bar">
-                <button
-                  className="btn-outline"
-                  onClick={() => {
-                    setSubdivisionPreviewPanelTab("subdivision_lines");
-                    setCurrentStep(2);
-                  }}
-                >
-                  <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-                  </svg>
-                  Back to Subdivision Preview
-                </button>
-                <button className="btn-primary" onClick={() => navigate("/")}>
-                  <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Complete & Return Home
-                </button>
-              </div>
-            </div>
-            <div className="panel-right preview-container">
-              {subdivisionPreview ? (
-                <div className="subdivision-preview-wrap subdivision-preview-right">
-                  <h4 className="section-title">Subdivision Preview</h4>
-                  <div className="subdivision-kpis">
-                    <div className="subdivision-kpi">
-                      <span className="subdivision-kpi-label">Derived plots</span>
-                      <strong>{subdivisionPreview.resolved_count}</strong>
-                    </div>
-                    <div className="subdivision-kpi">
-                      <span className="subdivision-kpi-label">Mother parcel area</span>
-                      <strong>{subdivisionPreview.total_area_m2.toFixed(2)} sqm</strong>
-                    </div>
-                    <div className="subdivision-kpi">
-                      <span className="subdivision-kpi-label">Area imbalance</span>
-                      <strong>{Math.abs(subdivisionPreview.area_imbalance_m2).toFixed(4)} sqm</strong>
-                    </div>
-                  </div>
-                  <div className="subdivision-table-wrap">
-                    <table className="subdivision-table">
-                      <thead>
-                        <tr>
-                          <th>Lot</th>
-                          <th>Area (sqm)</th>
-                          <th>Area (ha)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {subdivisionPreview.plots.slice(0, 18).map((item) => (
-                          <tr key={item.lot_no}>
-                            <td>{item.lot_no}</td>
-                            <td>{item.area_m2.toFixed(2)}</td>
-                            <td>{item.area_hectares.toFixed(4)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ) : (
-                <div className="preview-empty">
-                  <p>No subdivision preview yet. Go back and click Preview Split.</p>
-                </div>
-              )}
-            </div>
-          </div>
+          <Suspense fallback={<div className="preview-card">Loading subdivision export workspace...</div>}>
+            <SurveyPlanSubdivisionExportStep
+              sidebar={renderSidebarStepsCard()}
+              meta={meta}
+              latestSubdivisionBatchId={latestSubdivisionBatchId}
+              subdivisionBatches={subdivisionBatches}
+              subdivisionDownloadBatchId={subdivisionDownloadBatchId}
+              downloadSubdivisionBatch={downloadSubdivisionBatch}
+              subdivisionCleanCopyBatchId={subdivisionCleanCopyBatchId}
+              setSubdivisionCleanCopyBatchId={setSubdivisionCleanCopyBatchId}
+              loadSubdivisionCleanCopyBatchDetails={loadSubdivisionCleanCopyBatchDetails}
+              setSubdivisionCleanCopyItems={setSubdivisionCleanCopyItems}
+              subdivisionCleanCopyTitle={subdivisionCleanCopyTitle}
+              setSubdivisionCleanCopyTitle={setSubdivisionCleanCopyTitle}
+              subdivisionCleanCopyItems={subdivisionCleanCopyItems}
+              subdivisionCleanCopyLoadingBatchId={subdivisionCleanCopyLoadingBatchId}
+              getSubdivisionCleanCopyAreaDraftValue={getSubdivisionCleanCopyAreaDraftValue}
+              updateSubdivisionCleanCopyAreaDraft={updateSubdivisionCleanCopyAreaDraft}
+              subdivisionCleanCopyDownloadBatchId={subdivisionCleanCopyDownloadBatchId}
+              downloadSubdivisionCleanCopyPdf={downloadSubdivisionCleanCopyPdf}
+              plotId={plotId}
+              subdivisionBatchLoading={subdivisionBatchLoading}
+              loadSubdivisionBatches={loadSubdivisionBatches}
+              onBack={() => {
+                setSubdivisionPreviewPanelTab("subdivision_lines");
+                setCurrentStep(2);
+              }}
+              onComplete={() => navigate("/")}
+              subdivisionPreview={subdivisionPreview}
+            />
+          </Suspense>
         )}
       </div>
     </div>
