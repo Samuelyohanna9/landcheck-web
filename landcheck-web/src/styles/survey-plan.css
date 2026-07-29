@@ -2003,17 +2003,18 @@
   font-size: 0.64rem;
 }
 
-.survey-container.has-workflow .coord-table-wrapper {
+.survey-container.has-workflow .coord-list-wrapper {
   max-height: 280px;
-}
-
-.survey-container.has-workflow .coord-table th {
-  font-size: 0.64rem;
   padding: 0.56rem 0.6rem;
+  gap: 0.5rem;
 }
 
-.survey-container.has-workflow .coord-table td {
-  padding: 0.4rem 0.6rem;
+.survey-container.has-workflow .coord-point-card {
+  padding: 0.5rem 0.6rem;
+}
+
+.survey-container.has-workflow .coord-field-label {
+  font-size: 0.64rem;
 }
 
 .survey-container.has-workflow .row-number {
@@ -2325,16 +2326,16 @@
     padding-right: 0.58rem;
   }
 
-  .survey-container.has-workflow .coord-table-wrapper {
+  .survey-container.has-workflow .coord-list-wrapper {
     max-height: 230px;
-  }
-
-  .survey-container.has-workflow .coord-table th {
-    font-size: 0.58rem;
     padding: 0.45rem;
   }
 
-  .survey-container.has-workflow .coord-table td {
+  .survey-container.has-workflow .coord-field-label {
+    font-size: 0.58rem;
+  }
+
+  .survey-container.has-workflow .coord-point-card {
     padding: 0.34rem 0.45rem;
   }
 }

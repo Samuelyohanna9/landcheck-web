@@ -212,72 +212,60 @@ function CoordinateInput({
         </span>
       </div>
 
-      <div className="coord-table-wrapper">
-        <table className="coord-table">
-          <thead>
-            <tr>
-              <th className="col-num">#</th>
-              <th className="col-station">Station</th>
-              <th className="col-coord">{xLabel}</th>
-              <th className="col-coord">{yLabel}</th>
-              <th className="col-action"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {points.map((point, index) => (
-              <tr key={index} className={disabled ? "disabled" : ""}>
-                <td className="col-num">
-                  <span className="row-number">{index + 1}</span>
-                </td>
-                <td className="col-station">
-                  <input
-                    type="text"
-                    value={point.station}
-                    onChange={(e) => onUpdatePoint(index, "station", e.target.value)}
-                    placeholder="A"
-                    disabled={disabled}
-                    className="station-input"
-                  />
-                </td>
-                <td className="col-coord">
-                  <input
-                    type="number"
-                    step="any"
-                    value={point.lng || ""}
-                    onChange={(e) => onUpdatePoint(index, "lng", parseFloat(e.target.value) || 0)}
-                    placeholder={xPlaceholder}
-                    disabled={disabled}
-                    className="coord-input"
-                  />
-                </td>
-                <td className="col-coord">
-                  <input
-                    type="number"
-                    step="any"
-                    value={point.lat || ""}
-                    onChange={(e) => onUpdatePoint(index, "lat", parseFloat(e.target.value) || 0)}
-                    placeholder={yPlaceholder}
-                    disabled={disabled}
-                    className="coord-input"
-                  />
-                </td>
-                <td className="col-action">
-                  <button
-                    type="button"
-                    onClick={() => onRemovePoint(index)}
-                    disabled={disabled || points.length <= 3}
-                    className="remove-btn"
-                    title="Remove point"
-                  >
-                    <svg viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="coord-list-wrapper">
+        {points.map((point, index) => (
+          <div key={index} className={`coord-point-card ${disabled ? "disabled" : ""}`}>
+            <div className="coord-point-header">
+              <span className="row-number">{index + 1}</span>
+              <input
+                type="text"
+                value={point.station}
+                onChange={(e) => onUpdatePoint(index, "station", e.target.value)}
+                placeholder="A"
+                disabled={disabled}
+                className="station-input"
+                aria-label={`Station name for point ${index + 1}`}
+              />
+              <button
+                type="button"
+                onClick={() => onRemovePoint(index)}
+                disabled={disabled || points.length <= 3}
+                className="remove-btn"
+                title="Remove point"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            <div className="coord-point-fields">
+              <label className="coord-field">
+                <span className="coord-field-label">{xLabel}</span>
+                <input
+                  type="number"
+                  step="any"
+                  value={point.lng || ""}
+                  onChange={(e) => onUpdatePoint(index, "lng", parseFloat(e.target.value) || 0)}
+                  placeholder={xPlaceholder}
+                  disabled={disabled}
+                  className="coord-input"
+                />
+              </label>
+              <label className="coord-field">
+                <span className="coord-field-label">{yLabel}</span>
+                <input
+                  type="number"
+                  step="any"
+                  value={point.lat || ""}
+                  onChange={(e) => onUpdatePoint(index, "lat", parseFloat(e.target.value) || 0)}
+                  placeholder={yPlaceholder}
+                  disabled={disabled}
+                  className="coord-input"
+                />
+              </label>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="coord-footer">
