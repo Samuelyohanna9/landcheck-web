@@ -766,6 +766,76 @@
   min-height: 100%;
 }
 
+.gi-board-card,
+.gi-meter-card-shell,
+.gi-rate-bar-wrap,
+.gi-breakdown-list,
+.gi-cadence-chart {
+  --gi-chart-track: var(--gi-accent-soft);
+  --gi-chart-fill: var(--gi-accent);
+  --gi-chart-fill-start: var(--gi-accent);
+  --gi-chart-fill-end: var(--gi-accent-mid);
+}
+
+.gi-chart-tone-emerald {
+  --gi-chart-track: rgba(42, 168, 82, 0.14);
+  --gi-chart-fill: #23924a;
+  --gi-chart-fill-start: #31b462;
+  --gi-chart-fill-end: #1f7f40;
+}
+
+.gi-chart-tone-sky {
+  --gi-chart-track: rgba(59, 130, 246, 0.14);
+  --gi-chart-fill: #2f6fdb;
+  --gi-chart-fill-start: #60a5fa;
+  --gi-chart-fill-end: #2d67d1;
+}
+
+.gi-chart-tone-amber {
+  --gi-chart-track: rgba(245, 158, 11, 0.16);
+  --gi-chart-fill: #c97a0f;
+  --gi-chart-fill-start: #f0b429;
+  --gi-chart-fill-end: #b96d0d;
+}
+
+.gi-chart-tone-plum {
+  --gi-chart-track: rgba(147, 51, 234, 0.14);
+  --gi-chart-fill: #8b5cf6;
+  --gi-chart-fill-start: #b794f4;
+  --gi-chart-fill-end: #7c3aed;
+}
+
+.gi-chart-tone-teal {
+  --gi-chart-track: rgba(13, 148, 136, 0.15);
+  --gi-chart-fill: #0f9b8e;
+  --gi-chart-fill-start: #2dd4bf;
+  --gi-chart-fill-end: #0f766e;
+}
+
+.gi-breakdown-list-contrast .gi-breakdown-row:nth-child(4n + 1) {
+  --gi-chart-track: rgba(42, 168, 82, 0.14);
+  --gi-chart-fill-start: #31b462;
+  --gi-chart-fill-end: #1f7f40;
+}
+
+.gi-breakdown-list-contrast .gi-breakdown-row:nth-child(4n + 2) {
+  --gi-chart-track: rgba(59, 130, 246, 0.14);
+  --gi-chart-fill-start: #60a5fa;
+  --gi-chart-fill-end: #2d67d1;
+}
+
+.gi-breakdown-list-contrast .gi-breakdown-row:nth-child(4n + 3) {
+  --gi-chart-track: rgba(245, 158, 11, 0.16);
+  --gi-chart-fill-start: #f0b429;
+  --gi-chart-fill-end: #b96d0d;
+}
+
+.gi-breakdown-list-contrast .gi-breakdown-row:nth-child(4n + 4) {
+  --gi-chart-track: rgba(13, 148, 136, 0.15);
+  --gi-chart-fill-start: #2dd4bf;
+  --gi-chart-fill-end: #0f766e;
+}
+
 .gi-meter-stack {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -812,14 +882,13 @@
 
 .gi-meter-track {
   fill: none;
-  stroke: rgba(47, 162, 85, 0.14);
+  stroke: var(--gi-chart-track);
   stroke-width: 14;
 }
 
 .gi-meter-progress {
   fill: none;
-  stroke: url(#gi-meter-gradient);
-  stroke: var(--gi-accent);
+  stroke: var(--gi-chart-fill);
   stroke-linecap: round;
   stroke-width: 14;
   transition: stroke-dashoffset 0.9s ease;
@@ -918,7 +987,7 @@
 }
 
 .gi-cadence-bar-count {
-  color: var(--gi-text);
+  color: var(--gi-chart-fill-end);
   font-size: 0.76rem;
   font-weight: 800;
 }
@@ -927,7 +996,7 @@
   width: 100%;
   height: 148px;
   border-radius: 18px;
-  background: linear-gradient(180deg, rgba(47, 162, 85, 0.08) 0%, rgba(47, 162, 85, 0.16) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gi-chart-track) 55%, white) 0%, var(--gi-chart-track) 100%);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -937,7 +1006,7 @@
 .gi-cadence-bar-fill {
   width: 100%;
   border-radius: 14px;
-  background: linear-gradient(180deg, var(--gi-accent) 0%, var(--gi-accent-mid) 100%);
+  background: linear-gradient(180deg, var(--gi-chart-fill-start) 0%, var(--gi-chart-fill-end) 100%);
   min-height: 14px;
 }
 
@@ -1045,21 +1114,21 @@
 }
 
 .gi-rate-bar-pct {
-  color: var(--gi-accent-mid);
+  color: var(--gi-chart-fill-end);
 }
 
 .gi-rate-bar-track {
   margin-top: 0.7rem;
   height: 12px;
   border-radius: 999px;
-  background: var(--gi-accent-soft);
+  background: var(--gi-chart-track);
   overflow: hidden;
 }
 
 .gi-rate-bar-fill {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--gi-accent) 0%, var(--gi-accent-mid) 100%);
+  background: linear-gradient(90deg, var(--gi-chart-fill-start) 0%, var(--gi-chart-fill-end) 100%);
   transition: width 1s ease;
 }
 
@@ -1203,18 +1272,18 @@
 .gi-breakdown-bar-track {
   height: 10px;
   border-radius: 999px;
-  background: var(--gi-accent-soft);
+  background: var(--gi-chart-track);
   overflow: hidden;
 }
 
 .gi-breakdown-bar-fill {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--gi-accent) 0%, var(--gi-accent-mid) 100%);
+  background: linear-gradient(90deg, var(--gi-chart-fill-start) 0%, var(--gi-chart-fill-end) 100%);
 }
 
 .gi-breakdown-count {
-  color: var(--gi-text-soft);
+  color: var(--gi-chart-fill-end);
   font-size: 0.8rem;
   font-weight: 800;
 }
