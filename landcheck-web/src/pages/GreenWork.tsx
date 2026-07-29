@@ -210,6 +210,55 @@ const formatActivityLogDetails = (details: unknown) => {
   }
 };
 
+const resolveDownloadFilename = (contentDisposition: string | undefined, fallback: string) => {
+  const raw = String(contentDisposition || "").trim();
+  if (!raw) return fallback;
+  const encodedMatch = raw.match(/filename\*=UTF-8''([^;]+)/i);
+  if (encodedMatch?.[1]) {
+    try {
+      const decoded = decodeURIComponent(encodedMatch[1].replace(/["']/g, "").trim());
+      if (decoded) return decoded;
+    } catch {
+      // ignore malformed encoded names and continue with basic parsing
+    }
+  }
+  const basicMatch = raw.match(/filename="?([^";]+)"?/i);
+  return String(basicMatch?.[1] || "").trim() || fallback;
+};
+
+const triggerBlobDownload = (blobData: BlobPart, contentType: string | undefined, filename: string) => {
+  const blob = new Blob([blobData], { type: contentType || "application/octet-stream" });
+  const downloadUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1200);
+};
+
+const resolveBlobErrorDetail = async (error: any, fallback: string) => {
+  const responseData = error?.response?.data;
+  if (responseData instanceof Blob) {
+    try {
+      const rawText = await responseData.text();
+      if (!rawText.trim()) return fallback;
+      try {
+        const parsed = JSON.parse(rawText);
+        const detail = parsed?.detail;
+        if (typeof detail === "string" && detail.trim()) return detail.trim();
+      } catch {
+        // ignore JSON parse error and fall back to raw text
+      }
+      return rawText.trim();
+    } catch {
+      return fallback;
+    }
+  }
+  return error?.response?.data?.detail || error?.message || fallback;
+};
+
 const normalizeWorkflowProfile = (value?: string | null): WorkflowProfile => {
   const normalized = String(value || "").trim().toLowerCase();
   if (normalized === "agric") return "agric";
@@ -4118,6 +4167,7 @@ export default function GreenWork() {
   const [includePhotosInWorkPdf, setIncludePhotosInWorkPdf] = useState(false);
   const [includePhotosInCustodianPdf, setIncludePhotosInCustodianPdf] = useState(true);
   const [includePhotosInExistingTreesPdf, setIncludePhotosInExistingTreesPdf] = useState(true);
+  const [downloadingAgricFarmerSheet, setDownloadingAgricFarmerSheet] = useState(false);
   const [existingTreeMetricsById, setExistingTreeMetricsById] = useState<Record<number, ExistingTreeMetric>>({});
   const [existingTreeMetricsLoading, setExistingTreeMetricsLoading] = useState(false);
   const [deletingTreeId, setDeletingTreeId] = useState<number | null>(null);
@@ -8540,6 +8590,28 @@ export default function GreenWork() {
       window.open(String(job.download_url), "_blank");
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || error?.message || "Failed to prepare programme report", { id: loadingId });
+    }
+  };
+
+  const downloadAgricFarmerSheet = async () => {
+    if (!activeProjectId || activeWorkflowProfile !== "agric") return;
+    setDownloadingAgricFarmerSheet(true);
+    const loadingId = toast.loading("Preparing farmers sheet...");
+    try {
+      const res = await api.get(`/green/projects/${activeProjectId}/agric/farmers-sheet/export/pdf?_ts=${Date.now()}`, {
+        responseType: "blob",
+      });
+      const filename = resolveDownloadFilename(
+        res.headers["content-disposition"],
+        `project_${activeProjectId}_agric_farmers_sheet.pdf`,
+      );
+      triggerBlobDownload(res.data, res.headers["content-type"], filename);
+      toast.success("Farmers sheet downloaded.", { id: loadingId });
+    } catch (error: any) {
+      const detail = await resolveBlobErrorDetail(error, "Failed to download farmers sheet");
+      toast.error(detail, { id: loadingId });
+    } finally {
+      setDownloadingAgricFarmerSheet(false);
     }
   };
 
@@ -17512,6 +17584,11 @@ export default function GreenWork() {
                     : "Custodian Live Results Table"}
                 </h3>
                 <div className="work-actions">
+                  {agricFieldCaptureMode && activeWorkflowProfile === "agric" && (
+                    <button type="button" onClick={() => void downloadAgricFarmerSheet()} disabled={downloadingAgricFarmerSheet}>
+                      {downloadingAgricFarmerSheet ? "Preparing Farmers Sheet..." : "Download Farmers Sheet"}
+                    </button>
+                  )}
                   <button type="button" onClick={() => void Promise.all([loadProjectData(activeProjectId), loadCommunityData(activeProjectId)])}>
                     Refresh
                   </button>
