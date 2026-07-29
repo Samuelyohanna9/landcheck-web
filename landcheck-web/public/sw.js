@@ -1,5 +1,5 @@
-var SHELL_CACHE_NAME = "landcheck-shell-v13";
-var STATIC_CACHE_NAME = "landcheck-static-v13";
+var SHELL_CACHE_NAME = "landcheck-shell-v14";
+var STATIC_CACHE_NAME = "landcheck-static-v14";
 var IMAGE_CACHE_NAME = "landcheck-images-v3";
 var MAP_CACHE_NAME = "landcheck-map-v7";
 var SYNC_TAG = "green-sync-queue";
@@ -359,19 +359,24 @@ function staleWhileRevalidate(request, cacheName) {
         .then(function (response) {
           if (response && response.ok && !isHtmlResponse(response)) {
             cache.put(request, response.clone());
+            return response;
           }
-          return response;
+          return null;
         })
         .catch(function () {
           return null;
         });
 
       if (cached && !isHtmlResponse(cached)) {
-        return cached;
+        return networkFetch.then(function () {
+          return cached;
+        });
       }
 
       return networkFetch.then(function (response) {
-        return response || cached || new Response("Offline", { status: 503, statusText: "Offline" });
+        if (response && !isHtmlResponse(response)) return response;
+        if (cached && !isHtmlResponse(cached)) return cached;
+        return new Response("Asset unavailable", { status: 503, statusText: "Asset unavailable" });
       });
     });
   });
