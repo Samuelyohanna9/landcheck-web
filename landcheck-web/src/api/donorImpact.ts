@@ -100,6 +100,14 @@ export type ReliefConfig = {
   target_zone?: string | null;
 };
 
+export type DonorImpactFarmerEntry = {
+  name: string;
+  location?: string | null;
+  crop?: string | null;
+  farmer_group?: string | null;
+  verified: boolean;
+};
+
 export type DonorImpactAgricSummary = {
   total_farmers: number;
   verified_farmers: number;
@@ -114,6 +122,7 @@ export type DonorImpactAgricSummary = {
   supported_farmers: number;
   field_capture_assigned: number;
   field_capture_done: number;
+  farmer_directory: DonorImpactFarmerEntry[];
 };
 
 export type DonorImpactProject = {
