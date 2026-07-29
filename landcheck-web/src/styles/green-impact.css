@@ -106,7 +106,9 @@
   min-height: 70px;
   padding: 0.85rem 1.25rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.18);
-  background: linear-gradient(132deg, rgba(14, 88, 40, 0.96) 0%, rgba(28, 132, 61, 0.95) 52%, rgba(16, 92, 42, 0.95) 100%);
+  /* Fully opaque - this bar is sticky, so a translucent background let scrolling page content
+     (e.g. a long project name) bleed through visibly behind it. */
+  background: linear-gradient(132deg, rgb(14, 88, 40) 0%, rgb(28, 132, 61) 52%, rgb(16, 92, 42) 100%);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, var(--gi-shadow-md);
 }
 

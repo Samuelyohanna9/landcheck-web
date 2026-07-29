@@ -523,9 +523,16 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
     },
   ].filter(Boolean) as Array<{ label: string; value: string }>;
 
+  // For agric projects, the Farmer Registry Snapshot below already reports the true farmer count
+  // (from the full green_custodians registry). stats.total_custodians only counts farmers who
+  // already have a mapped plot, which under-counts the registry and, shown as "Owners" right above
+  // a much larger "Farmers registered" figure, reads as contradictory data rather than a different
+  // metric. Drop it here for agric so there's one authoritative farmer count on the page.
+  const showOwnersTile = !(mode === "agric" && project.agric_summary);
+
   const metricCards = [
     {
-      kicker: "Registry",
+      kicker: "Records",
       value: <AnimatedCount value={stats.total_records} />,
       label: `Total ${entityPlural}`,
     },
@@ -534,11 +541,15 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
       value: <AnimatedCount value={stats.active_records} />,
       label: "Active records",
     },
-    {
-      kicker: "Owners",
-      value: <AnimatedCount value={stats.total_custodians} />,
-      label: ownerPlural,
-    },
+    ...(showOwnersTile
+      ? [
+          {
+            kicker: "Owners",
+            value: <AnimatedCount value={stats.total_custodians} />,
+            label: ownerPlural,
+          },
+        ]
+      : []),
     {
       kicker: "Review",
       value: <AnimatedCount value={stats.approved_tasks} />,
