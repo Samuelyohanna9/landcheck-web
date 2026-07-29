@@ -6,6 +6,7 @@ import {
   fetchOrgImpact,
   fetchOrgImpactComments,
   postOrgImpactComment,
+  type DonorImpactAgricSummary,
   type DonorImpactComment,
   type DonorImpactData,
   type DonorImpactPhoto,
@@ -363,6 +364,132 @@ function PhotoGallery({ photos }: { photos: DonorImpactPhoto[] }) {
   );
 }
 
+const TENURE_LABELS: Record<string, string> = {
+  owned: "Owned",
+  family_owned: "Family owned",
+  leased: "Leased",
+  communal: "Communal",
+};
+
+const ACCESS_LABELS: Record<string, string> = {
+  yes: "Full access",
+  seasonal: "Seasonal access",
+  no: "No access",
+};
+
+const humanizeCategory = (value: string, dictionary: Record<string, string>) =>
+  dictionary[value.toLowerCase()] ?? titleCase(value);
+
+function AgricRegistrySnapshot({ summary }: { summary: DonorImpactAgricSummary }) {
+  const verifiedRate = summary.total_farmers > 0 ? (summary.verified_farmers / summary.total_farmers) * 100 : 0;
+  const groupRate = summary.total_farmers > 0 ? (summary.group_member_farmers / summary.total_farmers) * 100 : 0;
+  const avgHouseholdSize =
+    summary.household_known_count > 0 ? summary.household_reach_total / summary.household_known_count : 0;
+
+  const registryCards = [
+    { kicker: "Registry", value: summary.total_farmers.toLocaleString(), label: "Farmers registered" },
+    {
+      kicker: "Verified",
+      value: `${summary.verified_farmers.toLocaleString()} (${verifiedRate.toFixed(0)}%)`,
+      label: "Field-verified farmers",
+    },
+    {
+      kicker: "Field Capture",
+      value: `${summary.field_capture_done.toLocaleString()}/${summary.field_capture_assigned.toLocaleString()}`,
+      label: "Farm plots captured",
+    },
+    {
+      kicker: "Support",
+      value: summary.allocated_units.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+      label: `Units allocated · ${summary.supported_farmers.toLocaleString()} farmers`,
+    },
+    {
+      kicker: "Household Reach",
+      value: summary.household_reach_total.toLocaleString(),
+      label: avgHouseholdSize > 0 ? `People · avg ${avgHouseholdSize.toFixed(1)}/household` : "Estimated people reached",
+    },
+    {
+      kicker: "Cooperative",
+      value: `${summary.group_member_farmers.toLocaleString()} (${groupRate.toFixed(0)}%)`,
+      label: "Farmers in a group",
+    },
+  ];
+
+  const maxTenure = summary.tenure_breakdown[0]?.count || 1;
+  const maxIrrigation = summary.irrigation_breakdown[0]?.count || 1;
+
+  return (
+    <section>
+      <div className="gi-section-heading">
+        <div className="gi-section-heading-bar" />
+        <div className="gi-section-heading-text">Farmer Registry Snapshot</div>
+      </div>
+      <div className="gi-metrics-grid">
+        {registryCards.map((card) => (
+          <div key={`${card.kicker}-${card.label}`} className="gi-metric-tile">
+            <div className="gi-metric-kicker">{card.kicker}</div>
+            <div className="gi-metric-val">{card.value}</div>
+            <div className="gi-metric-label">{card.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="gi-rate-bar-wrap">
+        <div className="gi-rate-bar-label">
+          <span>Access to Finance</span>
+          <span className="gi-rate-bar-pct">{summary.finance_access_rate.toFixed(1)}%</span>
+        </div>
+        <div className="gi-rate-bar-track">
+          <div className="gi-rate-bar-fill" style={{ width: `${Math.min(summary.finance_access_rate, 100)}%` }} />
+        </div>
+      </div>
+      <div className="gi-rate-bar-wrap">
+        <div className="gi-rate-bar-label">
+          <span>Access to Insurance</span>
+          <span className="gi-rate-bar-pct">{summary.insurance_access_rate.toFixed(1)}%</span>
+        </div>
+        <div className="gi-rate-bar-track">
+          <div className="gi-rate-bar-fill" style={{ width: `${Math.min(summary.insurance_access_rate, 100)}%` }} />
+        </div>
+      </div>
+
+      {summary.tenure_breakdown.length > 0 && (
+        <div className="gi-breakdown-list gi-breakdown-list-spaced">
+          <div className="gi-breakdown-subheading">Land Tenure</div>
+          {summary.tenure_breakdown.map((row) => (
+            <div key={row.label} className="gi-breakdown-row">
+              <div className="gi-breakdown-label" title={row.label}>
+                {humanizeCategory(row.label, TENURE_LABELS)}
+              </div>
+              <div className="gi-breakdown-bar-track">
+                <div className="gi-breakdown-bar-fill" style={{ width: `${(row.count / maxTenure) * 100}%` }} />
+              </div>
+              <div className="gi-breakdown-count">{row.count.toLocaleString()}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {summary.irrigation_breakdown.length > 0 && (
+        <div className="gi-breakdown-list gi-breakdown-list-spaced">
+          <div className="gi-breakdown-subheading">Irrigation Access</div>
+          {summary.irrigation_breakdown.map((row) => (
+            <div key={row.label} className="gi-breakdown-row">
+              <div className="gi-breakdown-label" title={row.label}>
+                {humanizeCategory(row.label, ACCESS_LABELS)}
+              </div>
+              <div className="gi-breakdown-bar-track">
+                <div className="gi-breakdown-bar-fill" style={{ width: `${(row.count / maxIrrigation) * 100}%` }} />
+              </div>
+              <div className="gi-breakdown-count">{row.count.toLocaleString()}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ProjectSection({ project }: { project: DonorImpactProject }) {
   const { stats, labels, workflow_profile: mode } = project;
   const mapViewport = useInViewport<HTMLDivElement>({ rootMargin: "320px 0px" });
@@ -439,7 +566,10 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
         <div className="gi-project-header-top">
           <div className="gi-project-header-copy">
             <div className="gi-project-mode-chip">{modeLabel}</div>
-            <div className="gi-project-name">{project.name}</div>
+            <div className="gi-project-name">
+              {project.name}
+              {project.sponsor ? <span className="gi-project-sponsor"> / {project.sponsor}</span> : null}
+            </div>
             {project.location_text && <div className="gi-project-meta">{project.location_text}</div>}
           </div>
           <div className="gi-project-lead">
@@ -492,6 +622,10 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
               />
             </div>
           </section>
+        )}
+
+        {mode === "agric" && project.agric_summary && (
+          <AgricRegistrySnapshot summary={project.agric_summary} />
         )}
 
         {stats.species_breakdown.length > 0 && (
