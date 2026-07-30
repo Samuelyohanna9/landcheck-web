@@ -2759,11 +2759,14 @@
 }
 
 .green-partners-page .gp-photo-points li {
-  color: #d7e7dd;
+  border-left-color: #5fd794;
+  background: rgba(255, 255, 255, 0.08);
+  color: #eef7f1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .green-partners-page .gp-photo-points li::before {
-  background: #5fd794;
+  content: none;
 }
 
 .green-partners-page .gp-photo-card__body h3 {
