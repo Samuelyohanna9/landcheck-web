@@ -28,12 +28,21 @@ const lazyWithChunkRecovery = <T extends ComponentType<any>>(
         const recoveredAlready = window.sessionStorage.getItem(recoveryKey) === "1";
         if (!recoveredAlready) {
           window.sessionStorage.setItem(recoveryKey, "1");
-          if ("serviceWorker" in navigator) {
-            navigator.serviceWorker.getRegistrations().then((registrations) => {
-              registrations.forEach((registration) => {
-                registration.update().catch(() => {});
-              });
-            }).catch(() => {});
+          // Clear Cache Storage (and nudge the service worker to check for an update) BEFORE
+          // reloading, not just after - a reload alone can still be served the same stale
+          // cached chunk by the service worker, making this one-shot recovery a no-op and
+          // pushing the user straight to the visible ChunkLoadBoundary card below.
+          try {
+            if ("caches" in window) {
+              const cacheKeys = await caches.keys();
+              await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+            }
+            if ("serviceWorker" in navigator) {
+              const registrations = await navigator.serviceWorker.getRegistrations();
+              await Promise.all(registrations.map((registration) => registration.update().catch(() => {})));
+            }
+          } catch {
+            // Best-effort cleanup - still reload even if clearing caches failed.
           }
           window.location.reload();
           return new Promise<{ default: T }>(() => {});
