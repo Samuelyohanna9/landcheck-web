@@ -555,7 +555,7 @@ export default function GreenPublicSponsor() {
           <div className="gps-how-it-works-grid">
             {HOW_IT_WORKS_STEPS.map((step, index) => (
               <div className="gps-how-step" key={step.title}>
-                <span className="gps-how-step-number">{String(index + 1).padStart(2, "0")}</span>
+                <span className="gps-how-step-index">Step {index + 1}</span>
                 <strong>{step.title}</strong>
                 <p>{step.body}</p>
               </div>
@@ -576,12 +576,8 @@ export default function GreenPublicSponsor() {
               <span>Trees Sponsored</span>
             </div>
             <div className="gps-impact-stat">
-              <strong>{impactStats.total_sponsors.toLocaleString()}</strong>
-              <span>Sponsors Worldwide</span>
-            </div>
-            <div className="gps-impact-stat">
               <strong>{(impactStats.total_co2_kg_per_year / 1000).toFixed(1)}t</strong>
-              <span>CO₂ Offset / Year</span>
+              <span>CO2 Offset / Year</span>
             </div>
             <div className="gps-impact-stat">
               <strong>{impactStats.total_projects.toLocaleString()}</strong>
