@@ -455,10 +455,17 @@
   align-items: center;
 }
 
+.gi-hero-mix-copy {
+  min-width: 0;
+}
+
 .gi-hero-mix-label {
   color: var(--gi-text);
   font-size: 0.84rem;
   font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .gi-hero-mix-helper {
