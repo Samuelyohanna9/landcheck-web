@@ -124,7 +124,7 @@ const greenModels: GreenModel[] = [
     desktopImage: "/info_web.webp",
     phoneImage: "/sponsor-tree-app.jpeg",
     desktopFit: "contain",
-    phoneFit: "cover",
+    phoneFit: "contain",
     accentLabel: "Public Portal",
   },
 ];
