@@ -1758,7 +1758,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 214px;
+  flex: 1 1 214px;
+  max-width: 280px;
   gap: 8px;
   border: 1px solid rgba(219, 245, 227, 0.16);
   border-radius: 999px;
