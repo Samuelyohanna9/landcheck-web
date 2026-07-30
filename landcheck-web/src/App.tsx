@@ -1,5 +1,5 @@
-import { Component, lazy, Suspense, useEffect, type ComponentType, type ErrorInfo, type ReactElement, type ReactNode } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Component, lazy, Suspense, useEffect, useLayoutEffect, type ComponentType, type ErrorInfo, type ReactElement, type ReactNode } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import CookieConsentManager from "./components/CookieConsentManager";
 import SeoRouteMeta from "./components/SeoRouteMeta";
 import { getGreenAuthSession, isGreenAuthed, isSponsorGreenSession } from "./auth/greenAuth";
@@ -208,6 +208,39 @@ function GreenRouteSwitch() {
   return <Green />;
 }
 
+function RouteScrollManager() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !("scrollRestoration" in window.history)) return;
+    const previous = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+    return () => {
+      window.history.scrollRestoration = previous;
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (location.hash) {
+      window.requestAnimationFrame(() => {
+        const target = document.querySelector(location.hash);
+        if (target instanceof HTMLElement) {
+          target.scrollIntoView({ block: "start" });
+          return;
+        }
+        window.scrollTo(0, 0);
+      });
+      return;
+    }
+
+    window.scrollTo(0, 0);
+  }, [location.pathname, location.search, location.hash]);
+
+  return null;
+}
+
 export default function App() {
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -219,6 +252,7 @@ export default function App() {
     <BrowserRouter>
       <SessionTimeoutGate>
         <CookieConsentProvider>
+          <RouteScrollManager />
           <SeoRouteMeta />
           <CookieConsentManager />
           <ChunkLoadBoundary>
