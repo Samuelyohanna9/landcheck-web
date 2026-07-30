@@ -692,7 +692,7 @@
   flex-direction: row;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.55rem 0.7rem;
+  padding: 0.72rem 0.9rem;
   border: 1px solid rgba(18, 62, 36, 0.08);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.9);
@@ -700,16 +700,20 @@
   font-size: 0.78rem;
   font-weight: 700;
   line-height: 1.32;
+  position: relative;
+  overflow: hidden;
 }
 
 .gp-model-showcase__footer li::before,
 .gp-story-card__copy li::before {
   content: "";
-  width: 7px;
-  height: 7px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
   border-radius: 999px;
-  background: #28a566;
-  flex-shrink: 0;
+  background: linear-gradient(90deg, rgba(40, 165, 102, 0.9) 0%, rgba(40, 165, 102, 0.08) 100%);
 }
 
 .gp-model-showcase__footer a,
@@ -805,7 +809,10 @@
 
 .gp-photo-points li {
   position: relative;
-  padding-left: 1.1rem;
+  padding: 0.78rem 0.9rem 0.78rem 1rem;
+  border-left: 3px solid rgba(39, 164, 98, 0.78);
+  border-radius: 0 14px 14px 0;
+  background: rgba(255, 255, 255, 0.74);
   color: #26463a;
   font-size: 0.92rem;
   font-weight: 700;
@@ -813,14 +820,7 @@
 }
 
 .gp-photo-points li::before {
-  content: "";
-  position: absolute;
-  top: 0.5rem;
-  left: 0;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #27a462;
+  content: none;
 }
 
 .gp-photo-card__media {
@@ -2255,7 +2255,7 @@
   flex: 1;
   border-radius: 28px;
   overflow: hidden;
-  background: #000000;
+  background: linear-gradient(180deg, #f6faf7 0%, #eaf4ee 100%);
 }
 
 .gp-phone-screen .gp-device--phone {
@@ -2264,6 +2264,18 @@
   box-shadow: none;
   border-radius: 0;
   height: 100%;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.gp-phone-screen .gp-device--phone img.fit-contain {
+  object-fit: contain;
+  object-position: center top;
+  background: #f4f8f5;
 }
 
 .gp-phone-home-indicator {
