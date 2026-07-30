@@ -50,21 +50,21 @@ const GALLERY_IMAGES = [
 
 const PROOF_PHOTOS: ProofPhoto[] = [
   {
-    src: "/song 4.jpeg",
+    src: "/song-4.jpeg",
     heading: "Pupils watched the new tree go into the ground in Song",
     location: "Song LGA, Adamawa",
     description:
       "On 27 July, LandCheck Green teams planted across school grounds in Song while pupils watched the protection basket being set around the new seedling.",
   },
   {
-    src: "/song 3.jpeg",
+    src: "/song-3.jpeg",
     heading: "Model School Song joined the latest planting round",
     location: "Model School Song",
     description:
       "One of the stops on the Song planting route was Model School Song, where field teams recorded another school-side planting with live evidence.",
   },
   {
-    src: "/song 1.jpeg",
+    src: "/song-1.jpeg",
     heading: "Teachers, pupils, and field staff closed the Song planting day together",
     location: "Song LGA, Adamawa",
     description:
@@ -450,7 +450,7 @@ export default function GreenPublicSponsor() {
           <GpsIcon name={mobileMenuOpen ? "close" : "menu"} className="gps-icon" />
         </button>
         <a href="/" className="gps-topbar-brand">
-          <img src="/logo.svg" alt="LandCheck" width="130" height="35" decoding="async" fetchPriority="high" />
+          <img src="/green-logo-cropped-70" alt="LandCheck" width="130" height="35" decoding="async" fetchPriority="high" />
           <span>LandCheck <strong>Green</strong></span>
         </a>
         <nav className="gps-topbar-links" aria-label="Sponsor navigation">
@@ -473,28 +473,71 @@ export default function GreenPublicSponsor() {
         <>
           <div className="gps-mobile-menu-backdrop" onClick={() => setMobileMenuOpen(false)} />
           <nav className="gps-mobile-menu" aria-label="Sponsor navigation (mobile)">
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedProjectId(null);
-                setMobileMenuOpen(false);
-                document.getElementById("gps-projects")?.scrollIntoView({ behavior: "smooth" });
-              }}
-            >
-              <GpsIcon name="tree" className="gps-icon" /> Shop Projects
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowOrderLookup(true); setMobileMenuOpen(false); }}
-            >
-              <GpsIcon name="search" className="gps-icon" /> Track Order
-            </button>
-            <a href="/green-partners" onClick={() => setMobileMenuOpen(false)}>
-              <GpsIcon name="package" className="gps-icon" /> For Organizations
-            </a>
-            <a href="/green/login/sponsor" onClick={() => setMobileMenuOpen(false)}>
-              <GpsIcon name="user" className="gps-icon" /> Sign In
-            </a>
+            <div className="gps-mobile-menu__header">
+              <a href="/" className="gps-mobile-menu__brand" onClick={() => setMobileMenuOpen(false)}>
+                <img src="/green-logo-cropped-70" alt="LandCheck Green" width="40" height="40" decoding="async" />
+                <div className="gps-mobile-menu__brand-copy">
+                  <strong>LandCheck Green</strong>
+                  <span>Public sponsorship</span>
+                </div>
+              </a>
+              <button
+                type="button"
+                className="gps-mobile-menu__close"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Close menu"
+              >
+                <GpsIcon name="close" className="gps-icon" />
+              </button>
+            </div>
+
+            <div className="gps-mobile-menu__body">
+              <button
+                type="button"
+                className="gps-mobile-menu__item"
+                onClick={() => {
+                  setSelectedProjectId(null);
+                  setMobileMenuOpen(false);
+                  document.getElementById("gps-projects")?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                <GpsIcon name="tree" className="gps-icon" />
+                <span>Shop Projects</span>
+              </button>
+              <button
+                type="button"
+                className="gps-mobile-menu__item"
+                onClick={() => {
+                  setShowOrderLookup(true);
+                  setMobileMenuOpen(false);
+                }}
+              >
+                <GpsIcon name="search" className="gps-icon" />
+                <span>Track Order</span>
+              </button>
+              <a className="gps-mobile-menu__item" href="/green-partners" onClick={() => setMobileMenuOpen(false)}>
+                <GpsIcon name="package" className="gps-icon" />
+                <span>For Organizations</span>
+              </a>
+              <a className="gps-mobile-menu__item" href="/green/login/sponsor" onClick={() => setMobileMenuOpen(false)}>
+                <GpsIcon name="user" className="gps-icon" />
+                <span>Sign In</span>
+              </a>
+            </div>
+
+            <div className="gps-mobile-menu__footer">
+              <button
+                type="button"
+                className="gps-mobile-menu__cta"
+                onClick={() => {
+                  setSelectedProjectId(null);
+                  setMobileMenuOpen(false);
+                  document.getElementById("gps-projects")?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                Choose a Project
+              </button>
+            </div>
           </nav>
         </>
       )}

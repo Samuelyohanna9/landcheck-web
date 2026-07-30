@@ -140,7 +140,10 @@
   align-self: flex-start;
   background: #ffffff;
   border: 1px solid var(--gps-border, #d4e2d2);
-  color: var(--gps-text, #13271d);
+  /* --gps-text is defined for light-on-dark use across the (dark) sponsor page - reusing it here
+     on a white bubble made the message text nearly invisible (light text on white). This bubble
+     needs its own dark, on-brand color regardless of what the page-level text variable means. */
+  color: var(--gps-brand-dark, #13271d);
   border-bottom-left-radius: 4px;
 }
 .planty-bubble--user {
@@ -149,7 +152,7 @@
   color: #ffffff;
   border-bottom-right-radius: 4px;
 }
-.planty-bubble--typing { color: var(--gps-text-muted, #5a6f63); font-style: italic; }
+.planty-bubble--typing { color: rgba(27, 58, 44, 0.62); font-style: italic; }
 .planty-ai-tag {
   display: block;
   margin-top: 6px;
@@ -157,8 +160,7 @@
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: var(--gps-text-muted, #5a6f63);
-  opacity: 0.75;
+  color: rgba(27, 58, 44, 0.55);
 }
 
 .planty-suggestions {

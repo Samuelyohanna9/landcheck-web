@@ -23,7 +23,7 @@ const HERO_VIDEO_CROSSFADE_SECONDS = 1.05;
 const targets = [
   "Licensed Surveyors",
   "Land Owners & Real Estate",
-  "Environmental Organisations & NGOs",
+  "Environmental, Corporate Organisations & NGOs",
   "Government Agencies",
 ];
 

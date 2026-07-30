@@ -19,15 +19,13 @@
   align-items: center;
   padding: 0 40px;
   height: 68px;
-  background: rgba(10, 22, 50, 0.42);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: background 0.3s;
+  background: #091929;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .lp-nav:hover,
 .lp-nav:focus-within {
-  background: rgba(10, 22, 50, 0.97);
+  background: #091929;
 }
 
 .lp-nav-brand {
@@ -509,10 +507,6 @@
 /* ── Who We Serve ── */
 .lp-targets-section {
   background-color: #0e2b4a;
-  background-image: url("/Digital-Land-Survey.jpg");
-  background-size: cover;
-  background-position: center;
-  background-blend-mode: multiply;
   position: relative;
   padding: 80px 0 0;
 }
