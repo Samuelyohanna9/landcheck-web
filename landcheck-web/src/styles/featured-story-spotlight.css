@@ -19,7 +19,9 @@
   overflow: hidden;
   background-color: #0e2017;
   background-size: cover;
-  background-position: center;
+  /* Faces in these field-story photos sit near the top of the source image - centering the
+     crop pushed them right to (or past) the top edge. Bias the crop upward instead. */
+  background-position: center 20%;
   text-align: left;
   font-family: inherit;
   box-shadow: 0 30px 64px rgba(10, 30, 20, 0.28);

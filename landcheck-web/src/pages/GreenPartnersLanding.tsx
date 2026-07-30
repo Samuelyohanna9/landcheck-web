@@ -7,7 +7,7 @@ import { getArticleBySlug } from "../data/newsArticles";
 import { useDeferredMount } from "../hooks/useDeferredMount";
 import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
 
-const greenPartnersFeaturedStory = getArticleBySlug("fufore-model-school-first-trees")!;
+const greenPartnersFeaturedStory = getArticleBySlug("song-school-planting-day")!;
 const FeaturedStorySpotlight = lazy(() => import("../components/FeaturedStorySpotlight"));
 
 type PartnerOrg = { name: string; logo: string | null };
@@ -139,6 +139,21 @@ const photoEvidencePoints = [
 ];
 
 const photoMoments: PhotoMoment[] = [
+  {
+    imageSrc: photoAsset("song 4.jpeg"),
+    label: "Song school planting",
+    title: "Pupils in Song watched the team secure a newly planted seedling inside the school grounds.",
+  },
+  {
+    imageSrc: photoAsset("song 3.jpeg"),
+    label: "Model School Song",
+    title: "The Song planting round included Model School Song as part of a multi-school field day on 27 July.",
+  },
+  {
+    imageSrc: photoAsset("song 1.jpeg"),
+    label: "School-side coordination",
+    title: "Teachers, pupils, and field staff gathered at the close of the Song Local Government planting round.",
+  },
   {
     imageSrc: photoAsset("seeds.JPG"),
     label: "Nursery preparation",
@@ -659,7 +674,7 @@ export default function GreenPartnersLanding() {
                 <h2>Real plantings. Real places. Real proof.</h2>
                 <p>
                   Every photo below is unedited field evidence from active LandCheck Green
-                  projects in Yola South, Fufore, and Girei, Adamawa State, not stock photography.
+                  projects in Song, Yola South, Fufore, and Girei, Adamawa State, not stock photography.
                 </p>
                 <ul className="gp-photo-points">
                   {photoEvidencePoints.map((point) => (

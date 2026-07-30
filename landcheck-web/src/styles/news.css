@@ -329,6 +329,63 @@
   object-fit: contain;
 }
 
+.np-story-gallery-shell {
+  max-width: 1180px;
+}
+
+.np-story-gallery {
+  padding: 28px;
+  border-radius: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.16);
+}
+
+.np-story-gallery__header h2 {
+  margin: 16px 0 0;
+  font-size: clamp(1.4rem, 2.2vw, 2rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  color: #f5fbf7;
+}
+
+.np-story-gallery__header p {
+  margin: 12px 0 0;
+  max-width: 62ch;
+  color: rgba(225, 240, 231, 0.74);
+  line-height: 1.7;
+}
+
+.np-story-gallery__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.np-story-gallery__item {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.np-story-gallery__item img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  display: block;
+  object-fit: cover;
+  background: #0a1a13;
+}
+
+.np-story-gallery__item figcaption {
+  padding: 14px 14px 16px;
+  color: rgba(225, 240, 231, 0.7);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
 .np-body h3 {
   margin: 32px 0 0;
   font-size: 1.18rem;
@@ -498,5 +555,14 @@
 
   .np-story-hero img {
     max-height: 420px;
+  }
+
+  .np-story-gallery {
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .np-story-gallery__grid {
+    grid-template-columns: 1fr;
   }
 }

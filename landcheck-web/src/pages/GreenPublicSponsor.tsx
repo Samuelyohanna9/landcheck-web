@@ -50,6 +50,27 @@ const GALLERY_IMAGES = [
 
 const PROOF_PHOTOS: ProofPhoto[] = [
   {
+    src: "/song 4.jpeg",
+    heading: "Pupils watched the new tree go into the ground in Song",
+    location: "Song LGA, Adamawa",
+    description:
+      "On 27 July, LandCheck Green teams planted across school grounds in Song while pupils watched the protection basket being set around the new seedling.",
+  },
+  {
+    src: "/song 3.jpeg",
+    heading: "Model School Song joined the latest planting round",
+    location: "Model School Song",
+    description:
+      "One of the stops on the Song planting route was Model School Song, where field teams recorded another school-side planting with live evidence.",
+  },
+  {
+    src: "/song 1.jpeg",
+    heading: "Teachers, pupils, and field staff closed the Song planting day together",
+    location: "Song LGA, Adamawa",
+    description:
+      "The Song planting round covered Model School Song, G.R.A. Nursery and Primary School, and Atiku Primary Secondary School on 27 July.",
+  },
+  {
     src: "/fufore.JPG",
     heading: "First trees planted at the new Fufore school campus",
     location: "Fufore, Adamawa",

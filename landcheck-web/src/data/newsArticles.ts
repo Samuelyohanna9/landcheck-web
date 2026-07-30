@@ -1,4 +1,5 @@
 export type NewsSection = { heading?: string; paragraphs: string[] };
+export type NewsGalleryItem = { src: string; alt: string; caption?: string };
 
 export type NewsArticle = {
   slug: string;
@@ -11,12 +12,87 @@ export type NewsArticle = {
   heroImage?: string;
   heroImageAlt?: string;
   sponsored?: boolean;
+  gallery?: NewsGalleryItem[];
   sections: NewsSection[];
 };
 
 const photoAsset = (fileName: string) => encodeURI(`/${fileName}`);
 
 export const newsArticles: NewsArticle[] = [
+  {
+    slug: "song-school-planting-day",
+    tag: "Sponsor story",
+    title: "A planting day across Song: new trees for three school grounds",
+    date: "2026-07-27",
+    location: "Song LGA, Adamawa State",
+    readMinutes: 6,
+    sponsored: true,
+    summary:
+      "On 27 July, LandCheck Green field teams planted across Song Local Government Area, covering Model School Song, G.R.A. Nursery and Primary School, and Atiku Primary Secondary School.",
+    heroImage: photoAsset("song 4.jpeg"),
+    heroImageAlt: "LandCheck Green field agent positions a protective basket around a newly planted tree while pupils watch in Song, Adamawa State",
+    gallery: [
+      {
+        src: photoAsset("song 1.jpeg"),
+        alt: "LandCheck Green field team, teachers, and pupils gathered at a school entrance in Song Local Government Area",
+        caption: "Field team, school staff, and pupils gathered after the Song planting round.",
+      },
+      {
+        src: photoAsset("song 2.jpeg"),
+        alt: "LandCheck Green field team and community members standing with a seedling and protective basket at a school in Song",
+        caption: "School and community representatives reviewed the seedling and protective guard before planting.",
+      },
+      {
+        src: photoAsset("song 3.jpeg"),
+        alt: "LandCheck Green team at the Model School Song signboard in Adamawa State",
+        caption: "One stop on the route was Model School Song, one of the public education sites now receiving tree cover.",
+      },
+      {
+        src: photoAsset("song 4.jpeg"),
+        alt: "Children watching as a LandCheck Green field agent lowers a protective basket over a newly planted seedling in Song",
+        caption: "Pupils watched the installation of the protective basket around the fresh planting.",
+      },
+      {
+        src: photoAsset("song 5.jpeg"),
+        alt: "LandCheck Green field staff checking capture details beside a protective basket at a school in Song",
+        caption: "The team checked field details on site so the record would remain traceable after planting day.",
+      },
+      {
+        src: photoAsset("song 6.jpeg"),
+        alt: "Close-up of a LandCheck Green field agent securing a protective basket around a planted tree in Song",
+        caption: "Each planting was protected immediately to improve early survival on active school grounds.",
+      },
+    ],
+    sections: [
+      {
+        paragraphs: [
+          "On Sunday, 27 July 2026, LandCheck Green field teams completed a coordinated school planting round across Song Local Government Area in Adamawa State. The day's work covered Model School Song, G.R.A. Nursery and Primary School, and Atiku Primary Secondary School in Song, with seedlings planted, protected, and recorded as part of the programme's live field evidence workflow.",
+          "This was not a ceremonial visit with photos only. It was a full implementation day: field agents moved with seedlings, protective baskets, school-side coordination, and on-site capture steps so that every planted tree could feed back into the LandCheck record trail.",
+        ],
+      },
+      {
+        heading: "Why Song matters",
+        paragraphs: [
+          "Song is one of Adamawa State's major local government areas, with Song Town serving as its administrative headquarters. Public datasets and state references place it among the larger LGAs in the state, with communities that depend heavily on public institutions such as schools for daily civic life.",
+          "That makes school compounds in Song the right kind of place for visible planting work. Trees planted there are not hidden inside private estates. They sit where pupils, teachers, guardians, and surrounding residents can see the value of shade, care, and environmental stewardship in everyday use.",
+        ],
+      },
+      {
+        heading: "Model-school investment meets live environmental evidence",
+        paragraphs: [
+          "Adamawa State's current model-school push has expanded attention to public education infrastructure across the state, with the government publicly framing the programme around one model basic education school for each local government area. The Federal Ministry of Education's Adamawa school listing also includes Model N/P School Song among the schools recorded for Song.",
+          "For LandCheck Green, that creates a practical opportunity: where public education infrastructure is being improved, tree cover should not remain an afterthought. The Song planting round connected that logic directly to the ground by adding trees to learning environments that children already use every day.",
+        ],
+      },
+      {
+        heading: "What today's record shows",
+        paragraphs: [
+          "The six Song field photos now added to LandCheck's public story layer show exactly what implementation should look like: staff presence, community presence, pupils witnessing the work, seedling protection, and field capture happening at the point of planting rather than afterward from memory.",
+          "That is the difference between a vague claim that trees were planted somewhere and a structured operational record that can support reporting, donor communication, and future follow-up visits. The work in Song is small in scale compared with a state-wide programme, but it demonstrates the discipline the platform is built to keep repeating.",
+        ],
+      },
+    ],
+  },
   {
     slug: "fufore-model-school-first-trees",
     tag: "Sponsor story",
@@ -274,4 +350,4 @@ export function getArticleBySlug(slug: string | undefined): NewsArticle | undefi
   return newsArticles.find((article) => article.slug === slug);
 }
 
-export const featuredSponsorStory = newsArticles.find((article) => article.slug === "fufore-model-school-first-trees")!;
+export const featuredSponsorStory = newsArticles.find((article) => article.slug === "song-school-planting-day")!;
