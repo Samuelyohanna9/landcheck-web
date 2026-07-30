@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import "../styles/inner-pages.css";
 import "../styles/news.css";
 import NavBar from "../components/NavBar";
+import SocialLinks from "../components/SocialLinks";
 import { getArticleBySlug, newsArticles } from "../data/newsArticles";
 
 function formatDate(iso: string) {
@@ -146,6 +147,7 @@ export default function NewsArticlePage() {
             <button type="button" onClick={() => navigate("/privacy")}>
               Privacy
             </button>
+            <SocialLinks className="ip-footer-social" />
           </div>
         </div>
       </footer>

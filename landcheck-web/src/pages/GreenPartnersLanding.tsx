@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import "../styles/green-partners.css";
 import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
+import SocialLinks from "../components/SocialLinks";
 import { getArticleBySlug } from "../data/newsArticles";
 import { useDeferredMount } from "../hooks/useDeferredMount";
 import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
@@ -37,9 +38,9 @@ type GreenModel = {
   accentLabel: string;
 };
 
-const HERO_VIDEO_SRC = "/let_the_video_be_black_nigeria.mp4";
+const INSTAGRAM_REEL_URL = "https://www.instagram.com/reels/DbPXG1RsLrY/";
+const INSTAGRAM_REEL_EMBED_URL = "https://www.instagram.com/reel/DbPXG1RsLrY/embed";
 const BROCHURE_PDF_SRC = "/lc-green-corporate-brochure.pdf";
-const PILOT_ORG_NAMES = new Set(["Think Green Foundation"]);
 const DEFERRED_SECTION_STYLE = { contentVisibility: "auto" as const, containIntrinsicSize: "960px" };
 
 const photoAsset = (fileName: string) => encodeURI(`/${fileName}`);
@@ -342,7 +343,45 @@ export default function GreenPartnersLanding() {
     };
   }, []);
 
+  const marqueePartners = useMemo(() => {
+    if (partners.length === 0) return [];
+    const minimumCardsPerLoop = 6;
+    const repeatCount = Math.max(1, Math.ceil(minimumCardsPerLoop / partners.length));
+    return Array.from({ length: repeatCount }, (_, repeatIndex) =>
+      partners.map((org, partnerIndex) => ({
+        ...org,
+        renderKey: `${org.name}-${repeatIndex}-${partnerIndex}`,
+      })),
+    ).flat();
+  }, [partners]);
+
   const activeModel = greenModels.find((model) => model.id === activeModelId) || greenModels[0];
+
+  const renderPartnerLogo = (
+    org: PartnerOrg & { renderKey: string },
+    duplicate = false,
+  ) => (
+    <div
+      key={`${org.renderKey}${duplicate ? "-duplicate" : ""}`}
+      className="gp-partner-logo-item"
+      aria-hidden={duplicate ? true : undefined}
+      aria-label={duplicate ? undefined : org.name}
+      title={org.name}
+    >
+      {org.logo ? (
+        <img src={org.logo} alt={org.name} width="132" height="88" loading="lazy" decoding="async" />
+      ) : (
+        <span className="gp-partner-logo-fallback">
+          {org.name
+            .split(" ")
+            .slice(0, 2)
+            .map((word) => word[0])
+            .join("")
+            .toUpperCase()}
+        </span>
+      )}
+    </div>
+  );
 
   return (
     <div className="green-partners-page">
@@ -670,17 +709,32 @@ export default function GreenPartnersLanding() {
             </div>
             <div className="gp-proof-media">
               {isLowBandwidth ? (
-                <img
-                  src="/thumpnail_public.jpg"
-                  alt="LandCheck Green field verification preview"
-                  className="gp-demo-poster"
-                  loading="lazy"
-                  decoding="async"
-                />
+                <div className="gp-demo-fallback">
+                  <img
+                    src="/thumpnail_public.jpg"
+                    alt="LandCheck Green field verification preview"
+                    className="gp-demo-poster"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <a href={INSTAGRAM_REEL_URL} target="_blank" rel="noreferrer" className="gp-demo-linkout">
+                    Watch on Instagram
+                  </a>
+                </div>
               ) : (
-                <video controls preload="none" poster="/thumpnail_public.jpg" className="gp-demo-video">
-                  <source src={HERO_VIDEO_SRC} type="video/mp4" />
-                </video>
+                <div className="gp-demo-embed">
+                  <iframe
+                    src={INSTAGRAM_REEL_EMBED_URL}
+                    title="LandCheck Green field verification reel"
+                    className="gp-demo-iframe"
+                    loading="lazy"
+                    allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                  <a href={INSTAGRAM_REEL_URL} target="_blank" rel="noreferrer" className="gp-demo-linkout">
+                    Open on Instagram
+                  </a>
+                </div>
               )}
             </div>
           </div>
@@ -715,31 +769,21 @@ export default function GreenPartnersLanding() {
       </section>
 
       {partners.length > 0 && (
-          <section className="gp-partners-stage" style={DEFERRED_SECTION_STYLE}>
+          <section id="partners" className="gp-partners-stage" style={DEFERRED_SECTION_STYLE}>
           <div className="gp-shell">
             <div className="gp-section-intro gp-section-intro--center">
               <span className="gp-section-eyebrow">Partner organisations already in the ecosystem</span>
               <h2>Real field actors already working with LandCheck</h2>
             </div>
-            <div className="gp-partner-grid">
-              {partners.map((partner) => (
-                <article key={partner.name} className="gp-partner-card">
-                  {PILOT_ORG_NAMES.has(partner.name) ? <span className="gp-partner-card__tag">Pilot</span> : null}
-                  {partner.logo ? (
-                    <img src={partner.logo} alt={partner.name} width="96" height="96" loading="lazy" decoding="async" />
-                  ) : (
-                    <span className="gp-partner-card__fallback">
-                      {partner.name
-                        .split(" ")
-                        .slice(0, 2)
-                        .map((word) => word[0])
-                        .join("")
-                        .toUpperCase()}
-                    </span>
-                  )}
-                  <strong>{partner.name}</strong>
-                </article>
-              ))}
+            <div className="gp-partners-marquee" aria-label="Partner organisations">
+              <div className="gp-partners-track">
+                <div className="gp-partners-logos">
+                  {marqueePartners.map((partner) => renderPartnerLogo(partner))}
+                </div>
+                <div className="gp-partners-logos gp-partners-logos-duplicate" aria-hidden="true">
+                  {marqueePartners.map((partner) => renderPartnerLogo(partner, true))}
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -781,6 +825,7 @@ export default function GreenPartnersLanding() {
                 <span className="gp-badge">GPS Geotagged</span>
                 <span className="gp-badge">Audit-Ready</span>
               </div>
+              <SocialLinks className="gp-footer-social" />
             </div>
             
             <div className="gp-footer-links-grid">

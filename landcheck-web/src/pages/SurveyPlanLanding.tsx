@@ -7,6 +7,7 @@ import planProduction4 from "./plan pruction 4.png";
 import planProduction5 from "./plan production5.png";
 import "../styles/survey-plan-landing.css";
 import NavBar from "../components/NavBar";
+import SocialLinks from "../components/SocialLinks";
 import {
   prefetchSurveyPlanPreviewStep,
   prefetchSurveyPlanRoute,
@@ -297,6 +298,7 @@ export default function SurveyPlanLanding() {
             Privacy Policy
           </button>
           <span>&copy; {new Date().getFullYear()} LandCheck Geospatial Technologies Limited</span>
+          <SocialLinks className="spl-footer-social" />
         </div>
       </footer>
       </main>

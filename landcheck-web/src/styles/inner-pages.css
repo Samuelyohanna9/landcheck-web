@@ -108,7 +108,22 @@
 
 .ip-footer-links {
   display: flex;
+  align-items: center;
   gap: 20px;
+}
+
+.ip-footer-social.social-links {
+  gap: 8px;
+}
+
+.ip-footer-social .social-links-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.ip-footer-social .social-links-icon svg {
+  width: 14px;
+  height: 14px;
 }
 
 .ip-footer-links button {

@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import "../styles/inner-pages.css";
 import "../styles/careers.css";
 import NavBar from "../components/NavBar";
+import SocialLinks from "../components/SocialLinks";
 
 export default function CareersPage() {
   const navigate = useNavigate();
@@ -107,6 +108,7 @@ export default function CareersPage() {
           <div className="ip-footer-links">
             <button type="button" onClick={() => navigate("/")}>Home</button>
             <button type="button" onClick={() => navigate("/privacy")}>Privacy</button>
+            <SocialLinks className="ip-footer-social" />
           </div>
         </div>
       </footer>
