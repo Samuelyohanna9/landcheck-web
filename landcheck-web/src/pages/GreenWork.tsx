@@ -28,6 +28,7 @@ const GreenWorkSponsorFeedbackPanel = lazy(() => import("../components/green-wor
 const GreenWorkVerraReportsPanel = lazy(() => import("../components/green-work/GreenWorkVerraReportsPanel"));
 const GreenWorkLiveTablePanel = lazy(() => import("../components/green-work/GreenWorkLiveTablePanel"));
 const GreenWorkExistingTreeIntakePanel = lazy(() => import("../components/green-work/GreenWorkExistingTreeIntakePanel"));
+const GreenWorkShareImpactPanel = lazy(() => import("../components/green-work/GreenWorkShareImpactPanel"));
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
 const REMOTE_MONITORING_PROGRESS_STEPS = [
@@ -47,7 +48,7 @@ const REMOTE_MONITORING_PROGRESS_STEPS_AGRIC = [
   "Preparing farm health summary",
 ];
 
-type WorkflowProfile = "green" | "agric" | "relief_recovery" | "csr";
+export type WorkflowProfile = "green" | "agric" | "relief_recovery" | "csr";
 type ProjectAccessModel = "partner_org" | "public_sponsorship" | "csr_programme";
 type OrganizationType = "standard" | "csr";
 type AgricConfig = {
@@ -353,7 +354,7 @@ const getWorkflowLabels = (profile?: string | null) =>
         recordTitle: "Existing Trees",
       };
 
-type Project = {
+export type Project = {
   id: number;
   organization_id?: number | null;
   organization_name?: string | null;
@@ -3252,231 +3253,6 @@ const SpeciesDailySurvivalChart = ({
     </div>
   );
 };
-
-const SI_COPY_ICON = (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-  </svg>
-);
-
-type ImpactComment = {
-  id: number;
-  commenter_name: string;
-  commenter_rank?: string | null;
-  commenter_org?: string | null;
-  project_name?: string | null;
-  comment_body: string;
-  created_at?: string | null;
-};
-
-function ShareImpactPanel({
-  orgSlug,
-  orgProjects,
-  shareProjectId,
-  onProjectChange,
-  workflowProfile,
-}: {
-  orgSlug: string | null;
-  orgProjects: Project[];
-  shareProjectId: string;
-  onProjectChange: (id: string) => void;
-  workflowProfile: WorkflowProfile;
-}) {
-  const [orgCopied, setOrgCopied] = useState(false);
-  const [projCopied, setProjCopied] = useState(false);
-  const [comments, setComments] = useState<ImpactComment[]>([]);
-  const [commentsLoading, setCommentsLoading] = useState(false);
-  const [commentsLoaded, setCommentsLoaded] = useState(false);
-
-  useEffect(() => {
-    if (!orgSlug) return;
-    setCommentsLoading(true);
-    api.get<ImpactComment[]>(`/green/public/impact/${encodeURIComponent(orgSlug)}/comments`)
-      .then((r) => setComments(r.data))
-      .catch(() => {})
-      .finally(() => { setCommentsLoading(false); setCommentsLoaded(true); });
-  }, [orgSlug]);
-
-  const orgImpactUrl = orgSlug ? `https://landcheck.online/impact/${encodeURIComponent(orgSlug)}` : null;
-  const selectedProject = orgProjects.find((p) => String(p.id) === shareProjectId) || null;
-  const projImpactUrl = orgSlug && shareProjectId
-    ? `https://landcheck.online/impact/${encodeURIComponent(orgSlug)}?project=${encodeURIComponent(shareProjectId)}`
-    : null;
-
-  const copyToClipboard = (url: string, setCopied: (v: boolean) => void) => {
-    navigator.clipboard.writeText(url).catch(() => {
-      const ta = document.createElement("textarea");
-      ta.value = url;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-    });
-    setCopied(true);
-    toast.success("Impact link copied to clipboard!", { duration: 3000 });
-    setTimeout(() => setCopied(false), 2200);
-  };
-
-  const modeLabel =
-    workflowProfile === "agric"
-      ? "Agric Programme"
-      : workflowProfile === "relief_recovery"
-        ? "Relief Programme"
-        : workflowProfile === "csr"
-          ? "CSR Programme"
-          : "Tree Planting Programme";
-  const entityPl = workflowProfile === "agric" ? "farms" : workflowProfile === "relief_recovery" ? "sites" : "trees";
-
-  return (
-    <div className="green-work-card" style={{ maxWidth: 760 }}>
-      <h3 style={{ marginBottom: 4 }}>🔗 Share Impact Page</h3>
-      <p className="green-work-note" style={{ marginTop: 0 }}>
-        Share a public, donor-ready impact page showing your verified {modeLabel} data — supervisor-approved records, GPS maps, evidence photos, and field activities.
-      </p>
-
-      {!orgSlug ? (
-        <div className="green-work-note" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 8, padding: "12px 16px", color: "#92400e" }}>
-          âš ï¸ This organisation does not have a public impact page slug configured. Contact LandCheck support to set one up before sharing with donors.
-        </div>
-      ) : (
-        <>
-          {/* â”€â”€â”€ Org-wide link â”€â”€â”€ */}
-          <div style={{ marginBottom: 28 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6, color: "#0c2b1a" }}>
-              Organisation-wide Impact Page
-            </div>
-            <p className="green-work-note" style={{ marginTop: 0, marginBottom: 10 }}>
-              Shows all your organisation's approved {entityPl} across all projects — best for sharing with major donors who want the full picture.
-            </p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <div style={{ flex: 1, minWidth: 200, background: "#f4f7f4", border: "1px solid #d1e8d5", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#1a5c2a", fontFamily: "monospace", wordBreak: "break-all" }}>
-                {orgImpactUrl}
-              </div>
-              <button
-                type="button"
-                onClick={() => copyToClipboard(orgImpactUrl!, setOrgCopied)}
-                style={{ display: "flex", alignItems: "center", gap: 6, background: orgCopied ? "#16a34a" : "linear-gradient(135deg,#1a5c2a,#2aa852)", color: "#fff", fontWeight: 700, border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer", whiteSpace: "nowrap", transition: "background 0.2s" }}
-              >
-                {SI_COPY_ICON} {orgCopied ? "Copied!" : "Copy Link"}
-              </button>
-              <a
-                href={orgImpactUrl!}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: "flex", alignItems: "center", gap: 5, border: "1.5px solid #2aa852", color: "#1a5c2a", background: "#fff", fontWeight: 700, borderRadius: 8, padding: "7px 13px", textDecoration: "none", fontSize: 13, whiteSpace: "nowrap" }}
-              >
-                ↗ Preview
-              </a>
-            </div>
-          </div>
-
-          {/* â”€â”€â”€ Project-specific link â”€â”€â”€ */}
-          <div style={{ borderTop: "1.5px solid #e4ede6", paddingTop: 24 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6, color: "#0c2b1a" }}>
-              Share a Specific Project
-            </div>
-            <p className="green-work-note" style={{ marginTop: 0, marginBottom: 10 }}>
-              Select a project to generate a focused link that only shows that project's data — useful when you want to update a specific donor on one programme.
-            </p>
-            <select
-              value={shareProjectId}
-              onChange={(e) => onProjectChange(e.target.value)}
-              style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #d1e8d5", borderRadius: 8, fontSize: 14, background: "#fff", marginBottom: 12 }}
-            >
-              <option value="">— Select a project —</option>
-              {orgProjects.map((p) => (
-                <option key={p.id} value={String(p.id)}>
-                  {p.name}{p.location_text ? ` · ${p.location_text}` : ""}
-                </option>
-              ))}
-            </select>
-
-            {projImpactUrl && selectedProject ? (
-              <>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-                  <div style={{ flex: 1, minWidth: 200, background: "#f4f7f4", border: "1px solid #d1e8d5", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#1a5c2a", fontFamily: "monospace", wordBreak: "break-all" }}>
-                    {projImpactUrl}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(projImpactUrl, setProjCopied)}
-                    style={{ display: "flex", alignItems: "center", gap: 6, background: projCopied ? "#16a34a" : "linear-gradient(135deg,#1a5c2a,#2aa852)", color: "#fff", fontWeight: 700, border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer", whiteSpace: "nowrap", transition: "background 0.2s" }}
-                  >
-                    {SI_COPY_ICON} {projCopied ? "Copied!" : "Copy Link"}
-                  </button>
-                  <a
-                    href={projImpactUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ display: "flex", alignItems: "center", gap: 5, border: "1.5px solid #2aa852", color: "#1a5c2a", background: "#fff", fontWeight: 700, borderRadius: 8, padding: "7px 13px", textDecoration: "none", fontSize: 13, whiteSpace: "nowrap" }}
-                  >
-                    ↗ Preview
-                  </a>
-                </div>
-                <p className="green-work-note" style={{ marginTop: 8 }}>
-                  Showing impact for: <strong>{selectedProject.name}</strong>
-                  {selectedProject.location_text ? ` · ${selectedProject.location_text}` : ""}
-                </p>
-              </>
-            ) : (
-              orgProjects.length === 0 && (
-                <p className="green-work-note">No projects available under this organisation.</p>
-              )
-            )}
-          </div>
-        </>
-      )}
-
-      {/* â”€â”€â”€ Endorsements received â”€â”€â”€ */}
-      {orgSlug && (
-        <div style={{ borderTop: "1.5px solid #e4ede6", paddingTop: 28, marginTop: 28 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6, color: "#0c2b1a" }}>
-            Endorsements Received
-          </div>
-          <p className="green-work-note" style={{ marginTop: 0, marginBottom: 14 }}>
-            Public comments and endorsements left by donors, officials, and reviewers on your impact page.
-          </p>
-          {commentsLoading && <p className="green-work-note">Loading endorsements…</p>}
-          {commentsLoaded && comments.length === 0 && (
-            <p className="green-work-note" style={{ fontStyle: "italic" }}>No endorsements yet. They will appear here once visitors leave comments on your impact page.</p>
-          )}
-          {commentsLoaded && comments.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 660 }}>
-              {comments.map((c) => (
-                <div key={c.id} style={{ background: "#f4f7f4", border: "1px solid #d1e8d5", borderRadius: 12, padding: "14px 16px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                    <div style={{ width: 34, height: 34, minWidth: 34, background: "#1a5c2a", color: "#fff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14 }}>
-                      {c.commenter_name.slice(0, 1).toUpperCase()}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: "#0c2b1a" }}>{c.commenter_name}</div>
-                      {(c.commenter_rank || c.commenter_org) && (
-                        <div style={{ fontSize: 12, color: "#5a7a63" }}>
-                          {[c.commenter_rank, c.commenter_org].filter(Boolean).join(" · ")}
-                        </div>
-                      )}
-                    </div>
-                    {c.created_at && (
-                      <div style={{ marginLeft: "auto", fontSize: 11, color: "#8aaa93", whiteSpace: "nowrap" }}>
-                        {new Date(c.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
-                      </div>
-                    )}
-                  </div>
-                  {c.project_name && (
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(26,92,42,0.08)", border: "1px solid #c4ddc9", borderRadius: 6, padding: "2px 9px", fontSize: 11, color: "#1a5c2a", fontWeight: 600, marginBottom: 6 }}>
-                      📂 {c.project_name}
-                    </div>
-                  )}
-                  <div style={{ fontSize: 13.5, color: "#2d4a35", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{c.comment_body}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function GreenWork() {
   const workAuthSession = getWorkAuthSession();
@@ -16828,15 +16604,17 @@ export default function GreenWork() {
 
         <section className={`green-work-main ${overviewMode || liveTableMode || verraMode || remoteMonitoringMode || agricFarmerLiveMode || agricFieldCaptureMode || agricSupportVisitMode || shareImpactMode ? "overview-mode" : "single-mode"} ${mapViewMode ? "map-view-mode" : ""}`}>
           {shareImpactMode && (
-            <ShareImpactPanel
-              orgSlug={activeProjectRecord?.organization_slug ?? null}
-              orgProjects={activeProjectRecord?.organization_id
-                ? projects.filter((p) => Number(p.organization_id || 0) === Number(activeProjectRecord.organization_id))
-                : activeProjectId ? projects.filter((p) => Number(p.id) === Number(activeProjectId)) : []}
-              shareProjectId={shareImpactProjectId}
-              onProjectChange={setShareImpactProjectId}
-              workflowProfile={activeWorkflowProfile}
-            />
+            <Suspense fallback={<div className="green-work-card green-work-empty-state">Loading share impact tools...</div>}>
+              <GreenWorkShareImpactPanel
+                orgSlug={activeProjectRecord?.organization_slug ?? null}
+                orgProjects={activeProjectRecord?.organization_id
+                  ? projects.filter((p) => Number(p.organization_id || 0) === Number(activeProjectRecord.organization_id))
+                  : activeProjectId ? projects.filter((p) => Number(p.id) === Number(activeProjectId)) : []}
+                shareProjectId={shareImpactProjectId}
+                onProjectChange={setShareImpactProjectId}
+                workflowProfile={activeWorkflowProfile}
+              />
+            </Suspense>
           )}
           {activeProjectId && activeForm === "overview" && (
             <div className="green-work-card green-work-overview-card">

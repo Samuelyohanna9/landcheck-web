@@ -104,10 +104,6 @@ const HOW_IT_WORKS_STEPS = [
   { title: "Track Your Tree", body: "Follow GPS location, maintenance updates, and photo evidence as your tree grows." },
 ] as const;
 
-const HERO_ASSURANCE_ITEMS = [
-  
-] as const;
-
 const DEDICATION_OPTIONS = [
   { value: "self", label: "Myself" },
   { value: "birthday", label: "Birthday" },
@@ -471,12 +467,6 @@ export default function GreenPublicSponsor() {
           <p className="gps-hero-summary">
             GPS location, photos, and care updates
           </p>
-
-          <div className="gps-hero-assurance" aria-label="Sponsor assurance">
-            {HERO_ASSURANCE_ITEMS.map((item) => (
-              <span key={item} className="gps-hero-assurance-item">{item}</span>
-            ))}
-          </div>
 
           <div className="gps-hero-ctas">
             <button type="button" className="gps-primary-btn" onClick={() => document.getElementById("gps-projects")?.scrollIntoView({ behavior: "smooth" })}>

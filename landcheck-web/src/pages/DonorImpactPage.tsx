@@ -1367,19 +1367,11 @@ export default function DonorImpactPage() {
               </div>
 
               <p className="gi-hero-description">{reportDescription}</p>
-
-              <div className="gi-hero-badges">
-                <div className="gi-hero-badge">Programme Impact Report</div>
-                {lastUpdated && <div className="gi-hero-badge">Updated {lastUpdated}</div>}
-                <div className="gi-hero-badge">{projects.length} {projects.length === 1 ? "Project" : "Projects"}</div>
-              </div>
             </div>
 
             <div className="gi-hero-highlights">
-              <div className="gi-hero-verified-badge">Verified Data</div>
-              <div className="gi-hero-panel-title">Assurance overview</div>
-              <div className="gi-hero-panel-copy">
-                Public-facing programme evidence prepared for donors, boards, partners, and reviewers.
+              <div className="gi-hero-panel-title">
+                <span className="gi-hero-verified-badge">Verified Data</span> Assurance overview
               </div>
               <div className="gi-hero-highlight-grid">
                 <div className="gi-hero-highlight">
@@ -1389,14 +1381,6 @@ export default function DonorImpactPage() {
                 <div className="gi-hero-highlight">
                   <span>Coverage</span>
                   <strong>{projectFilter ? "Focused project view" : "Organisation-wide public view"}</strong>
-                </div>
-                <div className="gi-hero-highlight">
-                  <span>Output</span>
-                  <strong>Shareable report and PDF export</strong>
-                </div>
-                <div className="gi-hero-highlight">
-                  <span>Freshness</span>
-                  <strong>{lastUpdated || "Awaiting sync"}</strong>
                 </div>
               </div>
               <PortfolioMixCard projects={projects} />

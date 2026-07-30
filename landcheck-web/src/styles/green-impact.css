@@ -339,26 +339,6 @@
   line-height: 1.7;
 }
 
-.gi-hero-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  margin-top: 1.05rem;
-}
-
-.gi-hero-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 34px;
-  padding: 0.38rem 0.8rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(248, 255, 249, 0.92);
-  font-size: 0.76rem;
-  font-weight: 800;
-}
-
 .gi-hero-highlights {
   padding: 1.15rem;
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.94) 0%, rgba(241, 249, 243, 0.9) 100%);
