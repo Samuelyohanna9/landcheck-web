@@ -3250,3 +3250,24 @@
   background: linear-gradient(135deg, #31bf6c 0%, #229c62 100%) !important;
   box-shadow: 0 20px 36px rgba(24, 97, 54, 0.3) !important;
 }
+
+.green-partners-page .gp-new-hero-actions .gp-btn--primary,
+.green-partners-page .gp-new-hero-actions .gp-btn--secondary,
+.green-partners-page .gp-footer-buttons .gp-btn--primary,
+.green-partners-page .gp-footer-buttons .gp-btn--secondary {
+  background: linear-gradient(135deg, #2ab061 0%, #1f8c58 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(217, 245, 228, 0.16) !important;
+  border-color: rgba(217, 245, 228, 0.16) !important;
+  box-shadow: 0 16px 32px rgba(24, 97, 54, 0.24) !important;
+}
+
+.green-partners-page .gp-new-hero-actions .gp-btn--primary:hover,
+.green-partners-page .gp-new-hero-actions .gp-btn--secondary:hover,
+.green-partners-page .gp-footer-buttons .gp-btn--primary:hover,
+.green-partners-page .gp-footer-buttons .gp-btn--secondary:hover {
+  background: linear-gradient(135deg, #31bf6c 0%, #229c62 100%) !important;
+  color: #ffffff !important;
+  border-color: rgba(233, 247, 238, 0.22) !important;
+  box-shadow: 0 20px 36px rgba(24, 97, 54, 0.3) !important;
+}
