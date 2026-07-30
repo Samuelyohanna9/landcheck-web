@@ -63,14 +63,14 @@ const formatWebsiteUrl = (url?: string | null) =>
   String(url || "").replace(/^https?:\/\//, "").replace(/\/$/, "");
 
 const formatDate = (iso?: string | null) => {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso.slice(0, 10);
   return date.toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
 };
 
 const formatDateShort = (iso?: string | null) => {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso.slice(0, 10);
   return date.toLocaleDateString("en-NG", { day: "numeric", month: "short" });
@@ -176,7 +176,7 @@ function CircularMeter({
           <div className="gi-meter-value-label">{label}</div>
         </div>
       </div>
-      {note && <div className="gi-meter-note">{note}</div>}
+      {note ? <div className="gi-meter-note">{note}</div> : null}
     </div>
   );
 }
@@ -250,9 +250,7 @@ function PortfolioMixCard({ projects }: { projects: DonorImpactProject[] }) {
   return (
     <div className="gi-hero-mix">
       <div className="gi-hero-panel-title">Portfolio mix</div>
-      <div className="gi-hero-panel-copy">
-        Published programmes grouped by delivery model.
-      </div>
+      <div className="gi-hero-panel-copy">Published programmes grouped by delivery model.</div>
       <div className="gi-hero-mix-list">
         {mix.map((item) => (
           <div key={item.key} className="gi-hero-mix-row">
@@ -261,10 +259,7 @@ function PortfolioMixCard({ projects }: { projects: DonorImpactProject[] }) {
               <div className="gi-hero-mix-helper">{item.helper}</div>
             </div>
             <div className="gi-hero-mix-meter">
-              <div
-                className="gi-hero-mix-fill"
-                style={{ width: `${(item.count / total) * 100}%` }}
-              />
+              <div className="gi-hero-mix-fill" style={{ width: `${(item.count / total) * 100}%` }} />
             </div>
             <div className="gi-hero-mix-count">{item.count}</div>
           </div>
@@ -556,6 +551,7 @@ const humanizeCategory = (value: string, dictionary: Record<string, string>) =>
 function AgricRegistrySnapshot({ summary }: { summary: DonorImpactAgricSummary }) {
   const verifiedRate = summary.total_farmers > 0 ? (summary.verified_farmers / summary.total_farmers) * 100 : 0;
   const groupRate = summary.total_farmers > 0 ? (summary.group_member_farmers / summary.total_farmers) * 100 : 0;
+  const supportedRate = summary.total_farmers > 0 ? (summary.supported_farmers / summary.total_farmers) * 100 : 0;
   const avgHouseholdSize =
     summary.household_known_count > 0 ? summary.household_reach_total / summary.household_known_count : 0;
   const fieldCoverageRate =
@@ -628,31 +624,45 @@ function AgricRegistrySnapshot({ summary }: { summary: DonorImpactAgricSummary }
         <section className="gi-board-card">
           <div className="gi-board-card-header">
             <div>
-              <div className="gi-board-card-title">Field readiness</div>
+              <div className="gi-board-card-title">Implementation confidence</div>
               <div className="gi-board-card-subtitle">
-                Verified farmers and captured plots driving implementation confidence.
+                Verification, capture, and support coverage from the published registry.
               </div>
             </div>
           </div>
-          <div className="gi-meter-stack">
-            <CircularMeter
-              value={verifiedRate}
-              overline="Verified register"
-              label="Verified share"
-              note={`${summary.verified_farmers.toLocaleString()} of ${summary.total_farmers.toLocaleString()} farmers confirmed by the field team.`}
-              toneClass="gi-chart-tone-emerald"
-            />
-            <CircularMeter
-              value={fieldCoverageRate}
-              overline="Field data"
-              label="Capture progress"
-              note={
-                summary.field_capture_assigned > 0
-                  ? `${summary.field_capture_done.toLocaleString()} of ${summary.field_capture_assigned.toLocaleString()} assigned captures completed.`
-                  : "Mapped plots already on record in this public view."
-              }
-              toneClass="gi-chart-tone-sky"
-            />
+          <div className="gi-readiness-grid">
+            <div className="gi-readiness-tile gi-chart-tone-emerald">
+              <div className="gi-readiness-kicker">Verification coverage</div>
+              <div className="gi-readiness-value">{verifiedRate.toFixed(0)}%</div>
+              <div className="gi-readiness-note">
+                {summary.verified_farmers.toLocaleString()} of {summary.total_farmers.toLocaleString()} farmer records verified
+              </div>
+            </div>
+            <div className="gi-readiness-tile gi-chart-tone-sky">
+              <div className="gi-readiness-kicker">Field data coverage</div>
+              <div className="gi-readiness-value">{fieldCoverageRate.toFixed(0)}%</div>
+              <div className="gi-readiness-note">
+                {summary.field_capture_assigned > 0
+                  ? `${summary.field_capture_done.toLocaleString()} of ${summary.field_capture_assigned.toLocaleString()} assigned captures completed`
+                  : "Mapped plots are not yet visible in this public view"}
+              </div>
+            </div>
+            <div className="gi-readiness-tile gi-chart-tone-amber">
+              <div className="gi-readiness-kicker">Support reach</div>
+              <div className="gi-readiness-value">{supportedRate.toFixed(0)}%</div>
+              <div className="gi-readiness-note">
+                {summary.supported_farmers.toLocaleString()} farmers reached with {summary.allocated_units.toLocaleString(undefined, { maximumFractionDigits: 0 })} support units
+              </div>
+            </div>
+          </div>
+          <div className="gi-readiness-progress">
+            <div className="gi-readiness-progress-head">
+              <span>Capture progress</span>
+              <strong>{fieldCoverageRate.toFixed(0)}%</strong>
+            </div>
+            <div className="gi-rate-bar-track">
+              <div className="gi-rate-bar-fill" style={{ width: `${clampPercent(fieldCoverageRate)}%` }} />
+            </div>
           </div>
         </section>
       </div>
@@ -1009,7 +1019,7 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
 
         <div className="gi-dashboard-shell gi-dashboard-shell-secondary">
           {stats.species_breakdown.length > 0 && (
-            <section className="gi-board-card gi-board-card-analytics">
+            <section className="gi-board-card gi-board-card-analytics gi-chart-tone-plum">
               <div className="gi-board-card-header">
                 <div>
                   <div className="gi-board-card-title">
@@ -1044,7 +1054,7 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
             </section>
           )}
 
-          <section className="gi-board-card gi-board-card-analytics">
+            <section className="gi-board-card gi-board-card-analytics gi-chart-tone-teal">
             <div className="gi-board-card-header">
               <div>
                 <div className="gi-board-card-title">Programme brief</div>
@@ -1080,7 +1090,7 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
 
         <div className="gi-proof-grid">
           {(project.map_points.length > 0 || (project.map_features || []).length > 0) && (
-            <section ref={mapViewport.ref} className="gi-board-card gi-board-card-proof">
+            <section ref={mapViewport.ref} className="gi-board-card gi-board-card-proof gi-chart-tone-sky">
               <div className="gi-board-card-header">
                 <div>
                   <div className="gi-board-card-title">Field activity map</div>
@@ -1103,7 +1113,7 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
             </section>
           )}
 
-          <section className="gi-board-card gi-board-card-proof">
+          <section className="gi-board-card gi-board-card-proof gi-chart-tone-amber">
             <div className="gi-board-card-header">
               <div>
                 <div className="gi-board-card-title">Approved evidence gallery</div>
@@ -1116,7 +1126,7 @@ function ProjectSection({ project }: { project: DonorImpactProject }) {
           </section>
         </div>
 
-        <section className="gi-board-card gi-board-card-proof">
+        <section className="gi-board-card gi-board-card-proof gi-chart-tone-emerald">
           <div className="gi-board-card-header">
             <div>
               <div className="gi-board-card-title">Recent approved activities</div>
@@ -1408,7 +1418,7 @@ export default function DonorImpactPage() {
           </div>
           <div className="gi-summary-cell">
             <div className="gi-summary-context">Freshness</div>
-            <div className="gi-summary-val gi-summary-val-date">{lastUpdated || "—"}</div>
+            <div className="gi-summary-val gi-summary-val-date">{lastUpdated || "-"}</div>
             <div className="gi-summary-label">Last updated</div>
           </div>
         </div>

@@ -151,14 +151,14 @@ export default function PlantyAssistant() {
       await escalateSponsorAssistantQuestion({ sessionId, name, email, question, transcript });
       pushMessage({
         role: "bot",
-        text: "Thanks! I've sent your question to our support team — they'll follow up by email soon.",
+        text: "Thanks. I've sent your question to our support team, and they'll follow up by email soon.",
       });
       setEscalationFormOpen(false);
       setPendingEscalationQuestion(null);
       setEscalationName("");
       setEscalationEmail("");
     } catch {
-      setEscalationError("Couldn't send that just now — please try again.");
+      setEscalationError("Couldn't send that just now. Please try again.");
     } finally {
       setEscalationSending(false);
     }
@@ -183,7 +183,7 @@ export default function PlantyAssistant() {
                 {msg.source === "llm" && <span className="planty-ai-tag">AI-assisted answer</span>}
               </div>
             ))}
-            {sending && <div className="planty-bubble planty-bubble--bot planty-bubble--typing">Planty is typing…</div>}
+            {sending && <div className="planty-bubble planty-bubble--bot planty-bubble--typing">Planty is typing...</div>}
 
             {showSuggestions && !pendingEscalationQuestion && !escalationFormOpen && suggestedQuestions.length > 0 && (
               <div className="planty-suggestions">
@@ -216,7 +216,7 @@ export default function PlantyAssistant() {
                 {escalationError && <span className="planty-escalate-error">{escalationError}</span>}
                 <div className="planty-escalate-form-actions">
                   <button type="button" onClick={handleEscalationSubmit} disabled={escalationSending}>
-                    {escalationSending ? "Sending…" : "Send to Support"}
+                    {escalationSending ? "Sending..." : "Send to Support"}
                   </button>
                   <button type="button" className="ghost" onClick={() => { setEscalationFormOpen(false); setPendingEscalationQuestion(null); }}>Cancel</button>
                 </div>
@@ -255,7 +255,7 @@ export default function PlantyAssistant() {
 
       {!open && showHint && (
         <div className="planty-hint" role="button" tabIndex={0} onClick={handleOpen} onKeyDown={(e) => { if (e.key === "Enter") handleOpen(); }}>
-          <span>Need Assistant?</span>
+          <span>Need help?</span>
           <button
             type="button"
             className="planty-hint-dismiss"
