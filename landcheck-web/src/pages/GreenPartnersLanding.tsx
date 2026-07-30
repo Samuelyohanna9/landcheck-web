@@ -121,7 +121,7 @@ const greenModels: GreenModel[] = [
     ],
     href: "/sponsor",
     cta: "Sponsor a tree now",
-    desktopImage: "/info.png",
+    desktopImage: "/info_web.webp",
     phoneImage: "/sponsor-tree-app.jpeg",
     desktopFit: "contain",
     phoneFit: "cover",
