@@ -19,6 +19,7 @@ import {
 } from "../api/greenSponsor";
 import { claimGreenSponsorGuestAccount } from "../auth/greenAuth";
 import GpsIcon from "../components/GpsIcon";
+import SocialLinks from "../components/SocialLinks";
 import "../styles/green-public-sponsor.css";
 import { useDeferredMount } from "../hooks/useDeferredMount";
 import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
@@ -986,6 +987,7 @@ export default function GreenPublicSponsor() {
           <div className="gps-footer-col gps-footer-brand">
             <span className="gps-footer-brand-name">LandCheck Green</span>
             <p>GPS-verified tree sponsorship in Nigeria. No account is required to get started.</p>
+            <SocialLinks className="gps-footer-social" />
           </div>
           <div className="gps-footer-col">
             <strong>Sponsor</strong>

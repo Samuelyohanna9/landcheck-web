@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../styles/landing.css";
 import { fetchPublicImpactStats, fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
+import SocialLinks from "../components/SocialLinks";
 import { getArticleBySlug } from "../data/newsArticles";
 import { useCookieConsent } from "../privacy/cookieConsent";
 import { useDeferredMount } from "../hooks/useDeferredMount";
@@ -14,7 +15,6 @@ const FeaturedStorySpotlight = lazy(() => import("../components/FeaturedStorySpo
 
 type PartnerOrg = { name: string; logo: string | null };
 
-const PILOT_ORG_NAMES = new Set(["Think Green Foundation"]);
 const HERO_VIDEO_SRC = "/make_it_ro_rotate_like_a_video.mp4";
 const HERO_VIDEO_POSTER = "/thumpnail_public.webp";
 const HERO_VIDEO_CROSSFADE_MS = 900;
@@ -224,15 +224,14 @@ export default function LandingPage() {
       className="lp-partner-badge"
       role="button"
       tabIndex={duplicate ? -1 : 0}
+      aria-label={duplicate ? undefined : org.name}
+      title={org.name}
       aria-hidden={duplicate ? true : undefined}
       onClick={() => navigate("/green-partners#partners")}
       onKeyDown={(e) => e.key === "Enter" && navigate("/green-partners#partners")}
     >
-      {PILOT_ORG_NAMES.has(org.name) && (
-        <span className="lp-partner-pilot-tag">Pilot</span>
-      )}
       {org.logo ? (
-        <img src={org.logo} alt={org.name} className="lp-partner-logo" width="80" height="58" loading="lazy" />
+        <img src={org.logo} alt={org.name} className="lp-partner-logo" width="132" height="88" loading="lazy" />
       ) : (
         <span className="lp-partner-initials">
           {org.name
@@ -243,7 +242,6 @@ export default function LandingPage() {
             .toUpperCase()}
         </span>
       )}
-      <span className="lp-partner-name">{org.name}</span>
     </div>
   );
 
@@ -623,6 +621,7 @@ export default function LandingPage() {
               </li>
               <li>LandCheck Geospatial Technologies Limited</li>
             </ul>
+            <SocialLinks className="lp-footer-social" />
           </div>
           <div className="lp-footer-col">
             <h3>Products</h3>

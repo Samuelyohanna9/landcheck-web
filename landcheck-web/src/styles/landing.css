@@ -730,9 +730,9 @@
 
 .lp-partners-track {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   width: max-content;
-  gap: 20px;
+  gap: 48px;
   animation: lpPartnersMarquee 28s linear infinite;
   will-change: transform;
 }
@@ -744,7 +744,7 @@
 .lp-partners-logos {
   display: flex;
   flex-wrap: nowrap;
-  gap: 20px;
+  gap: 48px;
   justify-content: flex-start;
   flex: 0 0 auto;
 }
@@ -754,67 +754,43 @@
 }
 
 .lp-partner-badge {
-  position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 18px 20px 14px;
-  background: #fff;
-  border: 1px solid #dce8f0;
-  border-radius: 8px;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  border: none;
   cursor: pointer;
-  min-width: 120px;
-  max-width: 158px;
-  transition: box-shadow 0.2s, transform 0.18s;
+  min-width: 148px;
+  min-height: 88px;
+  transition: transform 0.18s, opacity 0.18s;
   flex: 0 0 auto;
 }
 
 .lp-partner-badge:hover {
-  box-shadow: 0 6px 22px rgba(14, 43, 74, 0.12);
   transform: translateY(-2px);
-}
-
-.lp-partner-pilot-tag {
-  position: absolute;
-  top: -1px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #e07b00;
-  color: #fff;
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  padding: 2px 8px;
-  border-radius: 0 0 4px 4px;
-  white-space: nowrap;
+  opacity: 0.92;
 }
 
 .lp-partner-logo {
-  width: 80px;
-  height: 58px;
+  width: 132px;
+  height: 88px;
   object-fit: contain;
+  display: block;
+  filter: saturate(1.02) contrast(1.02);
 }
 
 .lp-partner-initials {
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  background: #e8eef6;
+  width: 132px;
+  height: 88px;
+  border-radius: 18px;
+  background: #eef4f9;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
+  font-size: 1.6rem;
   font-weight: 800;
   color: #0e2b4a;
-}
-
-.lp-partner-name {
-  font-size: 0.73rem;
-  font-weight: 600;
-  color: #4a6282;
-  text-align: center;
-  line-height: 1.3;
 }
 
 @keyframes lpPartnersMarquee {
@@ -1234,6 +1210,8 @@
 }
 
 .lp-footer-brand ul li a:hover { color: rgba(255, 255, 255, 0.88); }
+
+.lp-footer-social { margin-top: 18px; }
 
 .lp-footer-col h5 {
   font-size: 0.75rem;

@@ -1980,6 +1980,20 @@
   background: rgba(255, 255, 255, 0.18);
 }
 
+.gi-footer-social.social-links {
+  gap: 6px;
+}
+
+.gi-footer-social .social-links-icon {
+  width: 26px;
+  height: 26px;
+}
+
+.gi-footer-social .social-links-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
 .gi-copied-toast {
   position: fixed;
   left: 50%;

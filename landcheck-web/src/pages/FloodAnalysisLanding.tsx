@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import "../styles/flood-landing.css";
 import NavBar from "../components/NavBar";
+import SocialLinks from "../components/SocialLinks";
 
 const features = [
   {
@@ -303,6 +304,7 @@ export default function FloodAnalysisLanding() {
             Privacy Policy
           </button>
           <span>&copy; {new Date().getFullYear()} LandCheck Geospatial Technologies Limited</span>
+          <SocialLinks className="fal-footer-social" />
         </div>
       </footer>
       </main>

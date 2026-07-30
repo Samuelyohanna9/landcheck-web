@@ -1125,6 +1125,7 @@
 }
 .gps-footer-brand-name .gps-icon-inline { width: 18px; height: 18px; color: var(--gps-gold); }
 .gps-footer-brand p { font-size: 0.84rem; line-height: 1.55; max-width: 32ch; }
+.gps-footer-social { margin-top: 14px; }
 .gps-footer-bottom {
   border-top: 1px solid rgba(255,255,255,0.14);
   padding: 16px 24px;

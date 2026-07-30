@@ -15,6 +15,7 @@ import {
   type DonorImpactProject,
 } from "../api/donorImpact";
 import { BACKEND_URL } from "../api/client";
+import SocialLinks from "../components/SocialLinks";
 import { useInViewport } from "../hooks/useInViewport";
 import "../styles/green-impact.css";
 
@@ -1459,6 +1460,8 @@ export default function DonorImpactPage() {
           >
             Privacy Policy
           </a>
+          <div className="gi-footer-divider" />
+          <SocialLinks className="gi-footer-social" />
         </div>
       </footer>
 
