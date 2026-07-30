@@ -1751,3 +1751,31 @@
   .gps-hero-text-panel { padding: 32px 14px 36px; }
   .gps-hero { min-height: 500px; }
 }
+
+/* Equal CTA treatment in the sponsor hero so users can choose either path naturally */
+.gps-hero-ctas .gps-primary-btn,
+.gps-hero-ctas .gps-hero-secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 214px;
+  gap: 8px;
+  border: 1px solid rgba(219, 245, 227, 0.16);
+  border-radius: 999px;
+  padding: 14px 22px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #f5fbf7;
+  background: linear-gradient(135deg, #23985c 0%, #176f3f 100%);
+  box-shadow: 0 16px 32px rgba(10, 40, 24, 0.24);
+  transition: background 200ms ease, border-color 200ms ease, color 200ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.gps-hero-ctas .gps-primary-btn:hover,
+.gps-hero-ctas .gps-hero-secondary-btn:hover {
+  background: linear-gradient(135deg, #2cab69 0%, #1b8149 100%);
+  border-color: rgba(233, 247, 238, 0.22);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 18px 36px rgba(10, 40, 24, 0.3);
+}

@@ -647,3 +647,30 @@
   .spl-steps-section { padding: 56px 0; }
   .spl-audience-section { padding: 56px 0; }
 }
+
+/* Match hero route CTAs so no route is visually deprioritized */
+.spl-hero-btn-primary,
+.spl-hero-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 220px;
+  gap: 8px;
+  background: linear-gradient(135deg, #db7c10 0%, #bf6400 100%);
+  color: #fff;
+  border: 1px solid rgba(255, 228, 198, 0.22);
+  border-radius: 999px;
+  padding: 13px 26px;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 16px 34px rgba(117, 57, 6, 0.24);
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+
+.spl-hero-btn-primary:hover,
+.spl-hero-btn-outline:hover {
+  background: linear-gradient(135deg, #eb8b1c 0%, #cd6f06 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 20px 38px rgba(117, 57, 6, 0.3);
+}
