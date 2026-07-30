@@ -29,36 +29,36 @@ export const newsArticles: NewsArticle[] = [
     sponsored: true,
     summary:
       "On 27 July, LandCheck Green field teams planted across Song Local Government Area, covering Model School Song, G.R.A. Nursery and Primary School, and Atiku Primary Secondary School.",
-    heroImage: photoAsset("song 4.jpeg"),
+    heroImage: photoAsset("song-4.jpeg"),
     heroImageAlt: "LandCheck Green field agent positions a protective basket around a newly planted tree while pupils watch in Song, Adamawa State",
     gallery: [
       {
-        src: photoAsset("song 1.jpeg"),
+        src: photoAsset("song-1.jpeg"),
         alt: "LandCheck Green field team, teachers, and pupils gathered at a school entrance in Song Local Government Area",
         caption: "Field team, school staff, and pupils gathered after the Song planting round.",
       },
       {
-        src: photoAsset("song 2.jpeg"),
+        src: photoAsset("song-2.jpeg"),
         alt: "LandCheck Green field team and community members standing with a seedling and protective basket at a school in Song",
         caption: "School and community representatives reviewed the seedling and protective guard before planting.",
       },
       {
-        src: photoAsset("song 3.jpeg"),
+        src: photoAsset("song-3.jpeg"),
         alt: "LandCheck Green team at the Model School Song signboard in Adamawa State",
         caption: "One stop on the route was Model School Song, one of the public education sites now receiving tree cover.",
       },
       {
-        src: photoAsset("song 4.jpeg"),
+        src: photoAsset("song-4.jpeg"),
         alt: "Children watching as a LandCheck Green field agent lowers a protective basket over a newly planted seedling in Song",
         caption: "Pupils watched the installation of the protective basket around the fresh planting.",
       },
       {
-        src: photoAsset("song 5.jpeg"),
+        src: photoAsset("song-5.jpeg"),
         alt: "LandCheck Green field staff checking capture details beside a protective basket at a school in Song",
         caption: "The team checked field details on site so the record would remain traceable after planting day.",
       },
       {
-        src: photoAsset("song 6.jpeg"),
+        src: photoAsset("song-6.jpeg"),
         alt: "Close-up of a LandCheck Green field agent securing a protective basket around a planted tree in Song",
         caption: "Each planting was protected immediately to improve early survival on active school grounds.",
       },

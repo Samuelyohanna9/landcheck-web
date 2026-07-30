@@ -140,17 +140,17 @@ const photoEvidencePoints = [
 
 const photoMoments: PhotoMoment[] = [
   {
-    imageSrc: photoAsset("song 4.jpeg"),
+    imageSrc: photoAsset("song-4.jpeg"),
     label: "Song school planting",
     title: "Pupils in Song watched the team secure a newly planted seedling inside the school grounds.",
   },
   {
-    imageSrc: photoAsset("song 3.jpeg"),
+    imageSrc: photoAsset("song-3.jpeg"),
     label: "Model School Song",
     title: "The Song planting round included Model School Song as part of a multi-school field day on 27 July.",
   },
   {
-    imageSrc: photoAsset("song 1.jpeg"),
+    imageSrc: photoAsset("song-1.jpeg"),
     label: "School-side coordination",
     title: "Teachers, pupils, and field staff gathered at the close of the Song Local Government planting round.",
   },
