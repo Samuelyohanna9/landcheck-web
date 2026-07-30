@@ -38,7 +38,7 @@ const products = [
   {
     key: "survey",
     title: "Survey Plan",
-    description: "True-scale professional plans from coordinate input — PDF, DWG, orthophoto, and computation sheet exports.",
+    description: "Professional plans from coordinate input with PDF, DWG, orthophoto, and computation sheet exports.",
     route: "/survey",
     bgClass: "lp-prod-survey-bg",
   },
@@ -285,7 +285,7 @@ export default function LandingPage() {
             Geospatial Intelligence <br />for Development Projects
           </h1>
           <p className="lp-hero-lead">
-            Environmental monitoring, tree planting sponsorship, field operations, survey plans, and flood risk — all in one platform
+            Environmental monitoring, tree planting sponsorship, field operations, survey plans, and flood risk in one platform.
           </p>
           <div className="lp-hero-ctas">
             <button type="button" className="lp-hero-btn-primary" onClick={() => navigate("/green-partners")}>
@@ -330,7 +330,7 @@ export default function LandingPage() {
           <div className="lp-intro-lead-wrap">
             <p>
               LandCheck develops web and mobile tools for land documentation, flood hazard analysis, and
-              environmental field monitoring — providing cutting-edge solutions for surveyors, land owners,
+              environmental field monitoring, providing practical tools for surveyors, land owners,
               NGOs, and government agencies across Nigeria.
             </p>
           </div>

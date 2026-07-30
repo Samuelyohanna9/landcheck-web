@@ -50,44 +50,51 @@ const GALLERY_IMAGES = [
 const PROOF_PHOTOS: ProofPhoto[] = [
   {
     src: "/fufore.JPG",
-    heading: "A new school campus welcomes its first trees",
+    heading: "First trees planted at the new Fufore school campus",
+    location: "Fufore, Adamawa",
     description:
-      "The Principal of Model School Fufore welcomed the very first trees ever planted on this brand-new school campus — the first afforestation effort here since construction began.",
+      "The Principal of Model School Fufore welcomed the first trees ever planted on this new campus, the first afforestation effort there since construction began.",
   },
   {
     src: "/yola south planting2.JPG",
-    heading: "QR tags connect each seedling to its sponsor",
+    heading: "Sponsor QR tags are attached before planting",
+    location: "Yola South, Adamawa",
    
     description:
       "Each seedling carries a scannable QR tag linking it to your name and your contributions to climate action.",
   },
   {
     src: "/seeds.JPG",
-    heading: "Seedlings are prepared before field deployment",
+    heading: "Nursery seedlings are prepared for field deployment",
+    location: "Nursery staging",
     
     description: "Seedlings are staged and inspected at the nursery before field agents take them out for planting.",
   },
   {
     src: "/sangere girei 1.JPG",
-    heading: "Community members join the planting effort",
+    heading: "Community members take part in local restoration",
+    location: "Sangere, Girei",
     
     description: "Local community members participate in the planting of new trees.",
   },
   {
     src: "/fufore planting-New Model school fufore3.JPG",
-    heading: "Field agents plant directly on school grounds",
+    heading: "Field teams plant directly on school grounds",
+    location: "Model School Fufore",
     
     description: "Field agents plant new trees side by side on school grounds.",
   },
   {
     src: "/yola south plantin3.JPG",
-    heading: "Primary health centre grounds receive new trees",
+    heading: "Health facility grounds receive new tree cover",
+    location: "Jabbi PHC, Yola South",
    
     description: "Tree planting at Jabbi Primary Health Care Authority.",
   },
   {
     src: "/sabgere girei 2.JPG",
-    heading: "Local leadership is present during planting",
+    heading: "Traditional leadership joins the verification visit",
+    location: "Sangere, Girei",
     
     description: "The local chief and our agent during the planting of new trees.",
   },
@@ -97,9 +104,17 @@ const TREE_QUANTITY_TIERS = [1, 5, 10, 25, 50] as const;
 const POPULAR_TIER_QUANTITY = 10;
 const IMPACT_BAND_MIN_TREES = 100;
 
+const getTierSummary = (quantity: number): string => {
+  if (quantity === 1) return "Single tree";
+  if (quantity <= 5) return "Starter set";
+  if (quantity <= 10) return "Verified grove";
+  if (quantity <= 25) return "Impact block";
+  return "Programme batch";
+};
+
 const HOW_IT_WORKS_STEPS = [
-  { title: "Choose a Project", body: "Choose from the list of approved tree planting projects bellow." },
-  { title: "Sponsor Securely", body: "Pay in NGN or USD" },
+  { title: "Choose a Project", body: "Choose from approved public tree planting projects." },
+  { title: "Sponsor Securely", body: "Pay in NGN or USD through a secure checkout." },
   { title: "Get Your Certificate", body: "Receive your digital sponsorship certificate instantly by email." },
   { title: "Track Your Tree", body: "Follow GPS location, maintenance updates, and photo evidence as your tree grows." },
 ] as const;
@@ -211,11 +226,15 @@ export default function GreenPublicSponsor() {
   const [openAccordions, setOpenAccordions] = useState<Set<string>>(() => new Set(["about", "approval"]));
   const [suggestedQuantityNote, setSuggestedQuantityNote] = useState<number | null>(null);
   const visibleProofPhotos = useMemo(
-    () => (isLowBandwidth ? PROOF_PHOTOS.slice(0, 4) : PROOF_PHOTOS),
+    () => (isLowBandwidth ? PROOF_PHOTOS.slice(0, 3) : PROOF_PHOTOS),
     [isLowBandwidth],
   );
   const visibleGalleryImages = useMemo(
     () => (isLowBandwidth ? GALLERY_IMAGES.slice(0, 2) : GALLERY_IMAGES),
+    [isLowBandwidth],
+  );
+  const loadingProjectSkeletons = useMemo(
+    () => Array.from({ length: isLowBandwidth ? 2 : 3 }, (_, index) => index),
     [isLowBandwidth],
   );
 
@@ -462,10 +481,10 @@ export default function GreenPublicSponsor() {
       {!selectedProject && !returnState && (
       <section className="gps-hero">
         <div className="gps-hero-text-panel">
-          <h1>Sponsor a real tree, <span className="gps-hero-accent">follow its story</span> </h1>
+          <h1>Sponsor a real tree, <span className="gps-hero-accent">follow its story</span></h1>
 
           <p className="gps-hero-summary">
-            GPS location, photos, and care updates
+            Secure sponsorship with certificate delivery, verified map proof, and field updates from real planting projects.
           </p>
 
           <div className="gps-hero-ctas">
@@ -477,7 +496,7 @@ export default function GreenPublicSponsor() {
             </button>
           </div>
           <p className="gps-hero-support-note">
-            No account is required to sponsor
+            No account is required to sponsor. Pay first, then decide later if you want a full dashboard.
           </p>
         </div>
 
@@ -500,8 +519,8 @@ export default function GreenPublicSponsor() {
       {!selectedProject && !returnState && (
         <section className="gps-proof-gallery" style={DEFERRED_SECTION_STYLE}>
           <div className="gps-proof-gallery-intro">
-            <h2>See how your support makes a difference</h2>
-            <span className="gps-proof-gallery-sub">photos speak louder than words</span>
+            <h2>Field evidence from live planting work</h2>
+            <span className="gps-proof-gallery-sub">Every image below comes from a verified LandCheck project.</span>
           </div>
           <div className="gps-proof-strip">
             {visibleProofPhotos.map((photo, index) => (
@@ -583,7 +602,7 @@ export default function GreenPublicSponsor() {
             <label className="gps-field"><span>Email</span><input type="email" value={lookupEmail} onChange={(e) => setLookupEmail(e.target.value)} placeholder="you@example.com" /></label>
             {lookupError && <p className="gps-error">{lookupError}</p>}
             <button type="button" className="gps-primary-btn full" onClick={handleLookupOrders} disabled={lookupLoading}>
-              {lookupLoading ? "Looking up your orders…" : "Find My Orders"}
+              {lookupLoading ? "Looking up your orders..." : "Find My Orders"}
             </button>
 
             {lookupResult && (
@@ -616,7 +635,7 @@ export default function GreenPublicSponsor() {
             {checkingPayment ? (
               <div className="gps-return-status pending">
                 <div className="gps-spinner" />
-                <h2>Confirming your payment…</h2>
+                <h2>Confirming your payment...</h2>
                 <p>This only takes a moment.</p>
               </div>
             ) : paymentVerified ? (
@@ -624,12 +643,12 @@ export default function GreenPublicSponsor() {
                 <div className="gps-return-status success">
                   <div className="gps-return-icon"><GpsIcon name="sparkle" className="gps-icon" /></div>
                   <h2>You're all set!</h2>
-                  <p>Taking you to your sponsor dashboard…</p>
+                  <p>Taking you to your sponsor dashboard...</p>
                 </div>
               ) : pendingCheckout && !pendingCheckout.isGuest ? (
                 <div className="gps-return-status success">
                   <div className="gps-return-icon"><GpsIcon name="tree" className="gps-icon" /></div>
-                  <h2>Payment received — thank you!</h2>
+                  <h2>Payment received. Thank you.</h2>
                   <p>
                     Your sponsorship for <strong>{pendingCheckout.projectTitle}</strong> is confirmed. Since{" "}
                     <strong>{pendingCheckout.email}</strong> already has a sponsor account, sign in to see it on your dashboard.
@@ -639,7 +658,7 @@ export default function GreenPublicSponsor() {
               ) : (
                 <div className="gps-claim-card">
                   <div className="gps-return-icon"><GpsIcon name="tree" className="gps-icon" /></div>
-                  <h2>Payment received — thank you!</h2>
+                  <h2>Payment received. Thank you.</h2>
                   <p>
                     Your sponsorship for <strong>{pendingCheckout?.projectTitle || "your project"}</strong> is confirmed. We've emailed{" "}
                     <strong>{pendingCheckout?.email}</strong> your receipt and tracking link.
@@ -652,7 +671,7 @@ export default function GreenPublicSponsor() {
                   <label className="gps-field"><span>Confirm password</span><input type="password" value={claimConfirm} onChange={(e) => setClaimConfirm(e.target.value)} placeholder="Re-enter password" /></label>
                   {claimError && <p className="gps-error">{claimError}</p>}
                   <button type="button" className="gps-primary-btn full" onClick={handleClaim} disabled={claiming}>
-                    {claiming ? "Setting up your account…" : "Set Password & See My Dashboard"}
+                    {claiming ? "Setting up your account..." : "Set Password & See My Dashboard"}
                   </button>
                   <div className="gps-claim-skip">
                     <a href={PLAY_STORE_URL} target="_blank" rel="noreferrer">Get the Android app</a>
@@ -696,7 +715,7 @@ export default function GreenPublicSponsor() {
                   </button>
                 </div>
                 <p className="gps-return-note">
-                  This order will keep confirming in the background — check your email for a receipt once it clears.
+                  This order will keep confirming in the background. Check your email for a receipt once it clears.
                 </p>
               </div>
             )}
@@ -706,11 +725,10 @@ export default function GreenPublicSponsor() {
             {/* ─── CO2 footprint calculator promo ─── */}
             {!selectedProject && (
               <section className="gps-footprint-promo" style={DEFERRED_SECTION_STYLE}>
-                <span className="gps-footprint-promo-icon"><GpsIcon name="leaf" className="gps-icon" /></span>
                 <div className="gps-footprint-promo-body">
-                  <strong>Find out how many trees suit you:</strong>
+                  <strong>Need help deciding how many trees to sponsor?</strong>
                   <button type="button" className="gps-footprint-promo-btn" onClick={() => navigate("/sponsor/calculator")}>
-                    <GpsIcon name="calculator" className="gps-icon-inline" /> Calculate CO₂ footprint
+                    Calculate CO2 footprint
                   </button>
                 </div>
               </section>
@@ -718,24 +736,39 @@ export default function GreenPublicSponsor() {
 
             {suggestedQuantityNote && !selectedProject && (
               <div className="gps-suggested-qty-banner">
-                <GpsIcon name="sparkle" className="gps-icon-inline" />
-                Based on your footprint calculation, we've pre-filled <strong>{suggestedQuantityNote} tree{suggestedQuantityNote === 1 ? "" : "s"}</strong> below. Pick a project to continue — you can still adjust the quantity.
+                Based on your footprint calculation, we pre-filled <strong>{suggestedQuantityNote} tree{suggestedQuantityNote === 1 ? "" : "s"}</strong>. Pick a project to continue and adjust the quantity if needed.
               </div>
             )}
 
             {/* ─── Project grid ─── */}
             {!selectedProject && (
             <section className="gps-projects-section" id="gps-projects" style={DEFERRED_SECTION_STYLE}>
-              <h2>Choose where your climate contribution will grow</h2>
+              <h2>Choose the project you want to support</h2>
               <p className="gps-section-sub">
-                Every public project is GPS-mapped, field-managed, and built to give you certificate, location proof,
-                and progress updates after payment.
+                Every project below is field-managed, GPS-linked, and built to give you certificate delivery, map proof,
+                and follow-up updates after payment.
               </p>
               {error && !loadingProjects && projects.length === 0 && <p className="gps-error">{error}</p>}
               {loadingProjects ? (
-                <div className="gps-loading">Loading projects…</div>
+                <div className="gps-project-skeleton-grid" aria-hidden="true">
+                  {loadingProjectSkeletons.map((index) => (
+                    <div key={index} className="gps-project-skeleton-card">
+                      <div className="gps-project-skeleton-photo" />
+                      <div className="gps-project-skeleton-body">
+                        <div className="gps-project-skeleton-line gps-project-skeleton-line-title" />
+                        <div className="gps-project-skeleton-line" />
+                        <div className="gps-project-skeleton-line gps-project-skeleton-line-short" />
+                        <div className="gps-project-skeleton-tags">
+                          <span className="gps-project-skeleton-pill" />
+                          <span className="gps-project-skeleton-pill" />
+                        </div>
+                        <div className="gps-project-skeleton-button" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : projects.length === 0 ? (
-                <div className="gps-empty">No public projects are open for sponsorship right now — please check back soon.</div>
+                <div className="gps-empty">No public projects are open for sponsorship right now. Please check back soon.</div>
               ) : (
                 <div className="gps-project-grid">
                   {projects.map((project) => {
@@ -751,7 +784,7 @@ export default function GreenPublicSponsor() {
                         <div className="gps-project-card-body">
                           <h3>{project.public_sponsor_title || project.name}</h3>
                           <p>{project.public_sponsor_description || project.public_description || project.location_text || "Verified tree project"}</p>
-                          <div className="gps-project-card-proof">Includes digital certificate, GPS records, and field-photo updates.</div>
+                          <div className="gps-project-card-proof">Includes certificate delivery, GPS records, and field-photo updates.</div>
                           <div className="gps-project-card-price-row">
                             <span className="gps-project-card-price-label">from</span>
                             <span className="gps-project-card-price">{formatSponsorPriceChoices(project)}</span>
@@ -787,7 +820,7 @@ export default function GreenPublicSponsor() {
                 {
                   key: "certificate",
                   title: "How your certificate & tracking works",
-                  body: "The moment your payment is confirmed, we email you a digital sponsorship certificate. As your tree is planted and cared for, you'll get GPS map location, photo evidence, and maintenance updates — no account required to check on it.",
+                  body: "The moment your payment is confirmed, we email you a digital sponsorship certificate. As your tree is planted and cared for, you'll get GPS map location, photo evidence, and maintenance updates. No account is required to check on it.",
                 },
                 {
                   key: "impact",
@@ -870,7 +903,6 @@ export default function GreenPublicSponsor() {
                           const altEntry = priceEntries.find((entry) => entry.currency !== (priceEntry?.currency || form.checkoutCurrency));
                           const altTierPrice = altEntry ? tierQty * Number(altEntry.amount || 0) : null;
                           const isActive = quantityNum === tierQty;
-                          const iconCount = Math.min(tierQty, 16);
                           return (
                             <button
                               type="button"
@@ -880,15 +912,10 @@ export default function GreenPublicSponsor() {
                             >
                               {tierQty === POPULAR_TIER_QUANTITY && <span className="gps-tier-badge">Most Popular</span>}
                               <span className="gps-tier-count">{tierQty}</span>
-                              <span className="gps-tier-icons">
-                                {Array.from({ length: iconCount }).map((_, i) => (
-                                  <GpsIcon key={i} name="tree" className="gps-tier-icon" />
-                                ))}
-                                {tierQty > iconCount && <span className="gps-tier-more">+{tierQty - iconCount}</span>}
-                              </span>
+                              <span className="gps-tier-summary">{getTierSummary(tierQty)}</span>
                               <span className="gps-tier-price">{formatCurrencyAmount(tierPrice, priceEntry?.currency || form.checkoutCurrency)}</span>
                               {altTierPrice !== null && (
-                                <span className="gps-tier-price-alt">≈ {formatCurrencyAmount(altTierPrice, altEntry!.currency)}</span>
+                                <span className="gps-tier-price-alt">Approx. {formatCurrencyAmount(altTierPrice, altEntry!.currency)}</span>
                               )}
                             </button>
                           );
@@ -907,7 +934,7 @@ export default function GreenPublicSponsor() {
                             <span className="gps-currency-field-label">Pay in</span>
                             <select className="gps-quantity-currency" value={form.checkoutCurrency} onChange={(e) => setForm((c) => ({ ...c, checkoutCurrency: e.target.value }))}>
                               {priceEntries.map((entry) => (
-                                <option key={entry.currency} value={entry.currency}>{entry.currency} — {formatCurrencyAmount(entry.amount, entry.currency)} / tree</option>
+                                <option key={entry.currency} value={entry.currency}>{entry.currency} - {formatCurrencyAmount(entry.amount, entry.currency)} / tree</option>
                               ))}
                             </select>
                             <span className="gps-currency-hint">Choose which currency you'd like to pay in</span>
@@ -933,7 +960,7 @@ export default function GreenPublicSponsor() {
                       <label className="gps-field"><span>Message (optional)</span><textarea rows={2} value={form.purchaserNote} onChange={(e) => setForm((c) => ({ ...c, purchaserNote: e.target.value }))} placeholder="Note for the LandCheck Green team" /></label>
 
                       <p className="gps-total-note">
-                        {selectedProject.sponsor_max_per_order ? `Max ${selectedProject.sponsor_max_per_order} trees per order · ` : ""}
+                        {selectedProject.sponsor_max_per_order ? `Max ${selectedProject.sponsor_max_per_order} trees per order. ` : ""}
                         Total: <strong>{formatCurrencyAmount(total, priceEntry?.currency || form.checkoutCurrency)}</strong>
                       </p>
 
@@ -943,7 +970,7 @@ export default function GreenPublicSponsor() {
                       {error && <p className="gps-error">{error}</p>}
 
                       <button type="button" className="gps-primary-btn full" onClick={handleSubmit} disabled={submitting}>
-                        {submitting ? "Preparing secure payment…" : `Pay ${formatCurrencyAmount(total, priceEntry?.currency || form.checkoutCurrency)} & Sponsor`}
+                        {submitting ? "Preparing secure payment..." : `Pay ${formatCurrencyAmount(total, priceEntry?.currency || form.checkoutCurrency)} & Sponsor`}
                       </button>
                       <p className="gps-checkout-footnote">
                         Already have a sponsor dashboard? <a href="/green/login/sponsor">Sign in</a>, or{" "}
@@ -962,13 +989,13 @@ export default function GreenPublicSponsor() {
         <div className="gps-footer-inner">
           <div className="gps-footer-col gps-footer-brand">
             <span className="gps-footer-brand-name">LandCheck Green</span>
-            <p>GPS-verified tree sponsorship in Nigeria — no account required to get started.</p>
+            <p>GPS-verified tree sponsorship in Nigeria. No account is required to get started.</p>
           </div>
           <div className="gps-footer-col">
             <strong>Sponsor</strong>
             <button type="button" onClick={() => { setSelectedProjectId(null); document.getElementById("gps-projects")?.scrollIntoView({ behavior: "smooth" }); }}>Shop Projects</button>
             <button type="button" onClick={() => setShowOrderLookup(true)}>Track My Order</button>
-            <a href="/sponsor/calculator">CO₂ Footprint Calculator</a>
+            <a href="/sponsor/calculator">CO2 Footprint Calculator</a>
           </div>
           <div className="gps-footer-col">
             <strong>Company</strong>

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import "../styles/green-partners.css";
 import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
@@ -42,47 +42,7 @@ const BROCHURE_PDF_SRC = "/lc-green-corporate-brochure.pdf";
 const PILOT_ORG_NAMES = new Set(["Think Green Foundation"]);
 const DEFERRED_SECTION_STYLE = { contentVisibility: "auto" as const, containIntrinsicSize: "960px" };
 
-const svgAsset = (fileName: string) => encodeURI(`/${fileName}`);
 const photoAsset = (fileName: string) => encodeURI(`/${fileName}`);
-
-const bulletIconMap: Record<string, string> = {
-  // NGO
-  "Staff task assignment": "project_task.svg",
-  "Offline-first mobile sync": "Real-time_data.svg",
-  "Live maintenance updates": "maintenace_reminder.svg",
-  "Ready-made report exports": "Export-ready executive reports.svg",
-  // CSR
-  "Verified evidence dashboard": "verified_field_data.svg",
-  "Corporate CSR funding": "Impact reporting and analytics.svg",
-  "Quality assurance queue": "Review queue and quality control.svg",
-  // Public
-  "Instant sponsor checkouts": "Sponsor trees online instantly.svg",
-  "Personalized certificates": "Map, image, and certificate proof.svg",
-  "Green points & live updates": "Live impact updates.svg",
-};
-
-// statIconMap removed
-
-const modelRouteIcons: Record<string, ReactElement> = {
-  field: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="6" y="4" width="12" height="17" rx="2" />
-      <path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" />
-      <path d="M9 12.5l2 2 4-4.5" />
-    </svg>
-  ),
-  csr: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" />
-      <path d="M9.2 12.2l1.9 1.9 3.7-4" />
-    </svg>
-  ),
-  public: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 20s-7-4.35-9.5-8.5C.7 8.2 2 4.8 5.3 4.1 7.6 3.6 9.8 4.7 12 7c2.2-2.3 4.4-3.4 6.7-2.9 3.3.7 4.6 4.1 2.8 7.4C19 15.65 12 20 12 20z" />
-    </svg>
-  ),
-};
 
 const modelCarouselPrevIcon = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -225,6 +185,56 @@ const photoMoments: PhotoMoment[] = [
   },
 ];
 
+const premiumProofCards = [
+  {
+    eyebrow: "Field operations",
+    title: "We plant",
+    summary: "Partner teams assign work, capture evidence, and monitor survival from one controlled route.",
+    imageSrc: photoAsset("agent planting 1.JPG"),
+    href: "/green/login/field",
+    cta: "Explore route",
+  },
+  {
+    eyebrow: "Certified transparency",
+    title: "We verify",
+    summary: "Corporate and donor programmes get live records, review control, and premium reporting.",
+    imageSrc: "/ecf-partnership.jpeg",
+    href: "/green-work/login",
+    cta: "Explore route",
+  },
+  {
+    eyebrow: "Online supporters",
+    title: "We restore",
+    summary: "Sponsors fund real trees online and follow transparent impact as it grows.",
+    imageSrc: "/thumpnail_public.jpg",
+    href: "/sponsor",
+    cta: "Explore route",
+  },
+] as const;
+
+const workflowSteps = [
+  {
+    step: "01",
+    title: "Design the programme",
+    body: "Define the site, species mix, delivery targets, and reporting scope before planting starts.",
+  },
+  {
+    step: "02",
+    title: "Deploy field teams",
+    body: "Assign trained agents, push work to mobile, and keep capture structured even when connectivity is weak.",
+  },
+  {
+    step: "03",
+    title: "Verify and review",
+    body: "Check geotagged photos, mapped evidence, and supervisor approvals before records count toward impact.",
+  },
+  {
+    step: "04",
+    title: "Report with confidence",
+    body: "Share premium dashboards, export clean PDFs, and present evidence that boards and donors can trust.",
+  },
+] as const;
+
 
 const dueDiligenceAssets = [
   {
@@ -249,19 +259,6 @@ const dueDiligenceAssets = [
 
 
 
-function renderListIcon(label: string) {
-  const iconFile = bulletIconMap[label];
-  if (iconFile) {
-      return (
-        <span className="gp-list-icon" aria-hidden="true">
-          <img src={svgAsset(iconFile)} alt="" loading="lazy" decoding="async" />
-        </span>
-      );
-  }
-
-  return <span className="gp-list-icon gp-list-icon--fallback" aria-hidden="true" />;
-}
-
 export default function GreenPartnersLanding() {
   const { isLowBandwidth } = useLowBandwidthMode();
   const showFeaturedStory = useDeferredMount(900);
@@ -269,7 +266,7 @@ export default function GreenPartnersLanding() {
   const [activeModelId, setActiveModelId] = useState(greenModels[0].id);
   const modelTrackRef = useRef<HTMLDivElement | null>(null);
   const visiblePhotoMoments = useMemo(
-    () => (isLowBandwidth ? photoMoments.slice(0, 4) : photoMoments),
+    () => (isLowBandwidth ? photoMoments.slice(0, 3) : photoMoments),
     [isLowBandwidth],
   );
 
@@ -380,20 +377,20 @@ export default function GreenPartnersLanding() {
 
             <div className="gp-new-hero-stats">
               <div className="gp-new-hero-stat-item">
-                <strong>4,000+</strong>
-                <span>Trees Managed</span>
+                <strong>{greenModels.length}</strong>
+                <span>Delivery models</span>
               </div>
               <div className="gp-new-hero-stat-item">
-                <strong>15+</strong>
-                <span>Field Agents</span>
+                <strong>{partners.length > 0 ? partners.length.toLocaleString() : "Live"}</strong>
+                <span>Partner organisations</span>
               </div>
               <div className="gp-new-hero-stat-item">
-                <strong>Live</strong>
-                <span>Monitoring</span>
+                <strong>Offline-first</strong>
+                <span>Field capture</span>
               </div>
               <div className="gp-new-hero-stat-item">
-                <strong>GPS</strong>
-                <span>Verified</span>
+                <strong>NGN + USD</strong>
+                <span>Checkout ready</span>
               </div>
             </div>
           </div>
@@ -406,166 +403,79 @@ export default function GreenPartnersLanding() {
         </Suspense>
       ) : null}
 
-      <section className="gp-social-proof" style={DEFERRED_SECTION_STYLE}>
+      <section className="gp-proof-strip-stage" style={DEFERRED_SECTION_STYLE}>
         <div className="gp-shell">
-          <span className="gp-social-label">USED BY LEADING ACTORS IN THE RESTORATION ECOSYSTEM</span>
-          <div className="gp-social-logos">
-            <div className="gp-social-logo-item">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="gp-social-icon">
-                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-              </svg>
-              <span>CSR Teams</span>
-            </div>
-            
-            <div className="gp-social-logo-item">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="gp-social-icon">
-                <path d="M12 2a5 5 0 0 0-5 5v3H2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-9h-5V7a5 5 0 0 0-5-5z" />
-                <path d="M12 10V2" />
-              </svg>
-              <span>NGOs</span>
-            </div>
-            
-            <div className="gp-social-logo-item">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="gp-social-icon">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
-              <span>Foundations</span>
-            </div>
-            
-            <div className="gp-social-logo-item">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="gp-social-icon">
-                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-                <line x1="4" y1="22" x2="4" y2="15" />
-              </svg>
-              <span>Government Projects</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="gp-six-features" style={DEFERRED_SECTION_STYLE}>
-        <div className="gp-shell">
-          <div className="gp-section-intro gp-section-intro--center">
-            <span className="gp-section-eyebrow">Platform Capabilities</span>
-            <h2>Everything you need to prove environmental action</h2>
-            <p>Built for companies that value trust, auditability, and real-time verification.</p>
-          </div>
-          
-          <div className="gp-features-grid">
-            {/* Feature 1: Tree Management */}
-            <article className="gp-feature-card gp-feature-card-illustrated">
-              <div className="gp-feature-icon-wrapper">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="24" height="24" aria-hidden="true">
-                  <path d="M12 22v-7" />
-                  <path d="M12 15c-4 0-7-3-7-7 0-1 .1-2 .3-2.8C7 5 9 4 12 4s5 1 6.7 1.2c.2.8.3 1.8.3 2.8 0 4-3 7-7 7Z" />
-                </svg>
-              </div>
-              <h3>Tree Management</h3>
-              <p>Oversee every sponsored tree from initial seedling planting to full maturity.</p>
+          <div className="gp-proof-strip-grid">
+            <article className="gp-proof-strip-card">
+              <span className="gp-proof-strip-kicker">Delivery models</span>
+              <strong>{greenModels.length}</strong>
+              <p>Organisation, CSR, and public sponsorship routes from one platform.</p>
             </article>
-
-            {/* Feature 2: GPS Verification */}
-            <article className="gp-feature-card gp-feature-card-illustrated">
-              <div className="gp-feature-icon-wrapper">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="24" height="24" aria-hidden="true">
-                  <path d="M12 22s7-7.58 7-12A7 7 0 0 0 5 10c0 4.42 7 12 7 12Z" />
-                  <circle cx="12" cy="10" r="2.5" />
-                </svg>
-              </div>
-              <h3>GPS Verification</h3>
-              <p>Pinpoint the exact sub-meter satellite coordinates of each tree planted.</p>
+            <article className="gp-proof-strip-card">
+              <span className="gp-proof-strip-kicker">Partner organisations</span>
+              <strong>{partners.length > 0 ? partners.length.toLocaleString() : "Open"}</strong>
+              <p>Already operating inside the LandCheck ecosystem.</p>
             </article>
-
-            {/* Feature 3: Photo Evidence */}
-            <article className="gp-feature-card gp-feature-card-illustrated">
-              <div className="gp-feature-icon-wrapper">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="24" height="24" aria-hidden="true">
-                  <path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" />
-                  <circle cx="12" cy="14" r="3.5" />
-                </svg>
-              </div>
-              <h3>Photo Evidence</h3>
-              <p>Capture high-resolution site photographs for audit-ready field proof.</p>
+            <article className="gp-proof-strip-card">
+              <span className="gp-proof-strip-kicker">Field workflow</span>
+              <strong>Offline-first</strong>
+              <p>Mobile capture remains usable in weak-connectivity environments.</p>
             </article>
-
-            {/* Feature 4: CSR Reports */}
-            <article className="gp-feature-card gp-feature-card-illustrated">
-              <div className="gp-feature-icon-wrapper">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="24" height="24" aria-hidden="true">
-                  <path d="M7 3h7l4 4v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
-                  <path d="M9 17v-3M12.5 17v-5M16 17v-2" />
-                </svg>
-              </div>
-              <h3>CSR Reports</h3>
-              <p>Generate clean, board-ready sustainability reports for your ESG stakeholders.</p>
-            </article>
-
-            {/* Feature 5: Field App */}
-            <article className="gp-feature-card gp-feature-card-illustrated">
-              <div className="gp-feature-icon-wrapper">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="24" height="24" aria-hidden="true">
-                  <rect x="7" y="2" width="10" height="20" rx="2" />
-                  <path d="M11 18h2" />
-                </svg>
-              </div>
-              <h3>Field App</h3>
-              <p>Equip field teams with offline-first tracking tools that sync logs automatically.</p>
-            </article>
-
-            {/* Feature 6: Impact Analytics */}
-            <article className="gp-feature-card gp-feature-card-illustrated">
-              <div className="gp-feature-icon-wrapper">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="24" height="24" aria-hidden="true">
-                  <path d="M3 17l6-6 4 4 8-8" />
-                  <path d="M15 7h6v6" />
-                </svg>
-              </div>
-              <h3>Impact Analytics</h3>
-              <p>Monitor tree survival rates, carbon sequestration metrics, and canopy growth.</p>
+            <article className="gp-proof-strip-card">
+              <span className="gp-proof-strip-kicker">Evidence standard</span>
+              <strong>GPS + photo</strong>
+              <p>Mapped records, review control, and export-ready reporting.</p>
             </article>
           </div>
         </div>
       </section>
 
-      <section className="gp-how-it-works-saas" style={DEFERRED_SECTION_STYLE}>
+      <section className="gp-premium-proof-stage" style={DEFERRED_SECTION_STYLE}>
         <div className="gp-shell">
           <div className="gp-section-intro gp-section-intro--center">
-            <span className="gp-section-eyebrow">The Verification Cycle</span>
+            <span className="gp-section-eyebrow">Three delivery routes</span>
+            <h2>One platform. Three disciplined ways to deliver impact.</h2>
+            <p>Each route is built around a real operating need, not a generic feature checklist.</p>
           </div>
-          
-          <div className="gp-how-timeline">
-            <div className="gp-timeline-step">
-              <div className="gp-step-icon-wrap">
-                <span className="gp-step-circle"></span>
-              </div>
-              <h3>Create Project</h3>
-              <p>Define target planting zones, tree species, and carbon offsets inside the dashboard.</p>
-            </div>
-            
-            <div className="gp-timeline-step">
-              <div className="gp-step-icon-wrap">
-                <span className="gp-step-circle"></span>
-              </div>
-              <h3>Assign Field Team</h3>
-              <p>Delegate planting and routine care tasks to local forestry agents via the field app.</p>
-            </div>
-            
-            <div className="gp-timeline-step">
-              <div className="gp-step-icon-wrap">
-                <span className="gp-step-circle"></span>
-              </div>
-              <h3>Plant Trees</h3>
-              <p>Agents record geotags and upload high-resolution photos during physical planting.</p>
-            </div>
-            
-            <div className="gp-timeline-step">
-              <div className="gp-step-icon-wrap">
-                <span className="gp-step-circle"></span>
-              </div>
-              <h3>Receive Reports</h3>
-              <p>Access your live CSR dashboard and download audit-ready compliance summaries.</p>
-            </div>
+
+          <div className="gp-premium-proof-grid">
+            {premiumProofCards.map((card, index) => (
+              <article
+                key={card.title}
+                className={`gp-premium-proof-card${index === 0 ? " is-tall" : ""}`}
+                style={{ backgroundImage: `url("${card.imageSrc}")` }}
+              >
+                <a href={card.href} className="gp-premium-proof-link">
+                  <span className="gp-premium-proof-scrim" aria-hidden="true" />
+                  <div className="gp-premium-proof-body">
+                    <span className="gp-premium-proof-eyebrow">{card.eyebrow}</span>
+                    <h3>{card.title}</h3>
+                    <p>{card.summary}</p>
+                    <span className="gp-premium-proof-cta">{card.cta}</span>
+                  </div>
+                </a>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="gp-workflow-stage" style={DEFERRED_SECTION_STYLE}>
+        <div className="gp-shell">
+          <div className="gp-section-intro gp-section-intro--center">
+            <span className="gp-section-eyebrow">Operating flow</span>
+            <h2>From programme design to board-ready reporting</h2>
+            <p>Short steps, clear review gates, and evidence you can defend.</p>
+          </div>
+
+          <div className="gp-workflow-grid">
+            {workflowSteps.map((step) => (
+              <article key={step.step} className="gp-workflow-card">
+                <span className="gp-workflow-step">{step.step}</span>
+                <h3>{step.title}</h3>
+                <p>{step.body}</p>
+              </article>
+            ))}
           </div>
         </div>
       </section>
@@ -602,10 +512,8 @@ export default function GreenPartnersLanding() {
                     onClick={() => setActiveModelId(model.id)}
                   >
                     <span className="gp-model-carousel__overlay" aria-hidden="true" />
-                    <span className="gp-model-carousel__icon" aria-hidden="true">
-                      {modelRouteIcons[model.id]}
-                    </span>
                     <span className="gp-model-carousel__content">
+                      <span className="gp-model-carousel__eyebrow">{model.heroLabel}</span>
                       <strong>{model.heroStatement}</strong>
                       <span className="gp-model-carousel__rule" aria-hidden="true" />
                       <span className="gp-model-carousel__desc">{model.heroSupport}</span>
@@ -683,7 +591,6 @@ export default function GreenPartnersLanding() {
                 <ul>
                   {activeModel.bullets.map((bullet) => (
                     <li key={bullet}>
-                      {renderListIcon(bullet)}
                       <span>{bullet}</span>
                     </li>
                   ))}
@@ -713,7 +620,7 @@ export default function GreenPartnersLanding() {
                 <h2>Real plantings. Real places. Real proof.</h2>
                 <p>
                   Every photo below is unedited field evidence from active LandCheck Green
-                  projects in Yola South, Fufore, and Girei, Adamawa State — not stock photography.
+                  projects in Yola South, Fufore, and Girei, Adamawa State, not stock photography.
                 </p>
                 <ul className="gp-photo-points">
                   {photoEvidencePoints.map((point) => (
@@ -762,9 +669,19 @@ export default function GreenPartnersLanding() {
               </div>
             </div>
             <div className="gp-proof-media">
-              <video controls preload="none" poster="/thumpnail_public.jpg" className="gp-demo-video">
-                <source src={HERO_VIDEO_SRC} type="video/mp4" />
-              </video>
+              {isLowBandwidth ? (
+                <img
+                  src="/thumpnail_public.jpg"
+                  alt="LandCheck Green field verification preview"
+                  className="gp-demo-poster"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <video controls preload="none" poster="/thumpnail_public.jpg" className="gp-demo-video">
+                  <source src={HERO_VIDEO_SRC} type="video/mp4" />
+                </video>
+              )}
             </div>
           </div>
         </div>
