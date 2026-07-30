@@ -450,7 +450,7 @@ export default function GreenPublicSponsor() {
           <GpsIcon name={mobileMenuOpen ? "close" : "menu"} className="gps-icon" />
         </button>
         <a href="/" className="gps-topbar-brand">
-          <img src="/green-logo-cropped-70" alt="LandCheck" width="130" height="35" decoding="async" fetchPriority="high" />
+          <img src="/green-logo-cropped-700.png" alt="LandCheck" width="130" height="35" decoding="async" fetchPriority="high" />
           <span>LandCheck <strong>Green</strong></span>
         </a>
         <nav className="gps-topbar-links" aria-label="Sponsor navigation">
@@ -475,7 +475,7 @@ export default function GreenPublicSponsor() {
           <nav className="gps-mobile-menu" aria-label="Sponsor navigation (mobile)">
             <div className="gps-mobile-menu__header">
               <a href="/" className="gps-mobile-menu__brand" onClick={() => setMobileMenuOpen(false)}>
-                <img src="/green-logo-cropped-70" alt="LandCheck Green" width="40" height="40" decoding="async" />
+                <img src="/green-logo-cropped-700.png" alt="LandCheck Green" width="40" height="40" decoding="async" />
                 <div className="gps-mobile-menu__brand-copy">
                   <strong>LandCheck Green</strong>
                   <span>Public sponsorship</span>

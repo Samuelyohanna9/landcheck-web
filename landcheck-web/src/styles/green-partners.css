@@ -2431,6 +2431,38 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
+/* Mobile menu drawer override - NavBar's default is navy blue (matches the main landing page),
+   which clashed against this page's dark forest-green theme. Same green used everywhere else
+   on this page (footer, feature icons, nav bar above). */
+.green-partners-page .lc-mobile-drawer {
+  background: #0a1e14 !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.green-partners-page .lc-mobile-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+.green-partners-page .lc-mobile-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.green-partners-page .lc-mobile-item:hover {
+  background: rgba(95, 215, 148, 0.08) !important;
+}
+
+.green-partners-page .lc-mobile-item--active {
+  color: #5fd794 !important;
+}
+
+.green-partners-page .lc-mobile-cta {
+  background: #1f8c58 !important;
+}
+
+.green-partners-page .lc-mobile-cta:hover {
+  background: #197549 !important;
+}
+
 /* Secondary Button ("Sponsor a Tree") contrast correction on light backgrounds */
 .green-partners-page .gp-btn--secondary {
   background: rgba(31, 140, 88, 0.06) !important;
@@ -3202,4 +3234,19 @@
   .green-partners-page .gp-workflow-card h3 {
     font-size: 1.25rem;
   }
+}
+
+/* Unified public CTAs: equal emphasis for route choices across Green partner pages */
+.gp-btn--primary,
+.gp-btn--secondary {
+  background: linear-gradient(135deg, #2ab061 0%, #1f8c58 100%) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 16px 32px rgba(24, 97, 54, 0.24) !important;
+}
+
+.gp-btn--primary:hover,
+.gp-btn--secondary:hover {
+  background: linear-gradient(135deg, #31bf6c 0%, #229c62 100%) !important;
+  box-shadow: 0 20px 36px rgba(24, 97, 54, 0.3) !important;
 }
