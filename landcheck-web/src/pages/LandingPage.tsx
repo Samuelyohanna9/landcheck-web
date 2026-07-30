@@ -10,7 +10,7 @@ import { useDeferredMount } from "../hooks/useDeferredMount";
 import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
 import { prefetchSurveyPlanPreviewStep, prefetchSurveyPlanRoute } from "../utils/surveyPlanPrefetch";
 
-const landingFeaturedStory = getArticleBySlug("yola-south-health-center-trees")!;
+const landingFeaturedStory = getArticleBySlug("song-school-planting-day")!;
 const FeaturedStorySpotlight = lazy(() => import("../components/FeaturedStorySpotlight"));
 
 type PartnerOrg = { name: string; logo: string | null };

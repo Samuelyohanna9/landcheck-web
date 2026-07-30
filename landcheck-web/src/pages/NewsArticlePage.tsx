@@ -76,6 +76,26 @@ export default function NewsArticlePage() {
             </figure>
           ) : null}
 
+          {article.gallery && article.gallery.length > 0 ? (
+            <div className="ip-container np-story-gallery-shell">
+              <section className="np-story-gallery">
+                <div className="np-story-gallery__header">
+                  <span className="np-tag np-tag--light">Field photo record</span>
+                  <h2>Photo evidence from the site</h2>
+                  <p>These are the field images tied to this planting story and kept with the public record.</p>
+                </div>
+                <div className="np-story-gallery__grid">
+                  {article.gallery.map((item) => (
+                    <figure key={item.src} className="np-story-gallery__item">
+                      <img src={item.src} alt={item.alt} loading="lazy" decoding="async" />
+                      {item.caption ? <figcaption>{item.caption}</figcaption> : null}
+                    </figure>
+                  ))}
+                </div>
+              </section>
+            </div>
+          ) : null}
+
           <div className="ip-container np-story-container">
             <div className="np-body">
               {article.sections.map((section, index) => (
