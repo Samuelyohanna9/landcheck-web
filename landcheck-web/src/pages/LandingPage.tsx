@@ -318,17 +318,12 @@ export default function LandingPage() {
         </Suspense>
       ) : null}
 
-      {/* Motto Band */}
-      <div className="lp-motto-band">
-        <span className="lp-motto-label">Our Mission</span>
-        <p className="lp-motto-text">
-          From Mapping to <span className="lp-motto-accent">Impact</span>
-        </p>
-      </div>
-
       {/* We are LandCheck */}
       <section id="landcheck-intro" className="lp-intro-section">
         <div className="lp-intro-inner">
+          <span className="lp-intro-kicker">
+            From Mapping to <span className="lp-motto-accent">Impact</span>
+          </span>
           <h2>
             We are <strong>LandCheck</strong>
           </h2>

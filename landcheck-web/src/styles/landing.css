@@ -854,44 +854,15 @@
   }
 }
 
-/* ── Motto Band ── */
-.lp-motto-band {
-  background: #050d1c;
-  padding: 64px 40px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.lp-motto-band::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 56px;
-  height: 3px;
-  background: #e07b00;
-  border-radius: 0 0 2px 2px;
-}
-
-.lp-motto-label {
-  display: inline-block;
-  font-size: 0.7rem;
+/* ── Intro kicker (merged former Motto Band into the intro section) ── */
+.lp-intro-kicker {
+  display: block;
+  font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.14em;
-  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin-bottom: 16px;
-}
-
-.lp-motto-text {
-  font-size: clamp(2rem, 5vw, 3.6rem);
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: -0.025em;
-  margin: 0;
-  line-height: 1.1;
+  color: #6b7f9a;
+  margin-bottom: 14px;
 }
 
 .lp-motto-accent {
@@ -1478,8 +1449,6 @@
     max-height: 80px;
     opacity: 1;
   }
-
-  .lp-motto-band { padding: 52px 24px; }
 
   .lp-sponsor-section { padding: 64px 0; }
   .lp-sponsor-inner { padding: 0 24px; gap: 40px; }
