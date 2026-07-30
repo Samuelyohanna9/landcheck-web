@@ -29,7 +29,7 @@ export const newsArticles: NewsArticle[] = [
     sponsored: true,
     summary:
       "On 27 July, LandCheck Green field teams planted across Song Local Government Area, covering Model School Song, G.R.A. Nursery and Primary School, and Atiku Primary Secondary School.",
-    heroImage: photoAsset("song 4.jpeg"),
+    heroImage: photoAsset("song-4-safe.jpg"),
     heroImageAlt: "LandCheck Green field agent positions a protective basket around a newly planted tree while pupils watch in Song, Adamawa State",
     gallery: [
       {
@@ -48,7 +48,7 @@ export const newsArticles: NewsArticle[] = [
         caption: "One stop on the route was Model School Song, one of the public education sites now receiving tree cover.",
       },
       {
-        src: photoAsset("song 4.jpeg"),
+        src: photoAsset("song-4-safe.jpg"),
         alt: "Children watching as a LandCheck Green field agent lowers a protective basket over a newly planted seedling in Song",
         caption: "Pupils watched the installation of the protective basket around the fresh planting.",
       },
