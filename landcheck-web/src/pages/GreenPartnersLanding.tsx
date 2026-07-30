@@ -281,12 +281,21 @@ export default function GreenPartnersLanding() {
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
   const [activeModelId, setActiveModelId] = useState(greenModels[0].id);
   const modelTrackRef = useRef<HTMLDivElement | null>(null);
+  const isInitialModelScrollRef = useRef(true);
   const visiblePhotoMoments = useMemo(
     () => (isLowBandwidth ? photoMoments.slice(0, 3) : photoMoments),
     [isLowBandwidth],
   );
 
   useEffect(() => {
+    // This effect also fires once on initial mount (not just on user-driven selection changes).
+    // `block: "nearest"` then scrolls the whole page down to reveal this carousel - which sits
+    // mid-page - fighting the route-change scroll-to-top and leaving new visitors mid-page
+    // instead of at the top. Skip the very first run; only scroll on an actual selection change.
+    if (isInitialModelScrollRef.current) {
+      isInitialModelScrollRef.current = false;
+      return;
+    }
     const track = modelTrackRef.current;
     if (!track) return;
     const activeCard = track.querySelector<HTMLElement>(`[data-model-id="${activeModelId}"]`);
