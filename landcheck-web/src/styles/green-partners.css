@@ -3380,6 +3380,10 @@
   box-shadow: 0 14px 30px rgba(16, 34, 23, 0.12);
 }
 
+.green-partners-page .gp-model-carousel__arrow {
+  display: none;
+}
+
 .green-partners-page .gp-model-showcase,
 .green-partners-page .gp-photo-lead,
 .green-partners-page .gp-photo-card,
@@ -3827,11 +3831,11 @@
 }
 
 .green-partners-page .gp-photo-lead h2 {
-  color: #f7fcf8;
+  color: #102217;
 }
 
 .green-partners-page .gp-photo-lead p {
-  color: rgba(233, 242, 236, 0.86);
+  color: #4f6659;
 }
 
 .green-partners-page .gp-photo-feature figcaption span,
@@ -3878,9 +3882,9 @@
 .green-partners-page .gp-photo-points li {
   padding: 14px 0;
   border-top: 1px solid rgba(17, 53, 33, 0.08);
-  color: #eef7f1;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  color: #355244;
+  background: transparent;
+  box-shadow: none;
 }
 
 .green-partners-page .gp-photo-points li::before {
