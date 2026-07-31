@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import "../styles/green-partners.css";
 import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
@@ -278,9 +278,14 @@ const dueDiligenceAssets = [
 export default function GreenPartnersLanding() {
   const { isLowBandwidth } = useLowBandwidthMode();
   const showFeaturedStory = useDeferredMount(900);
+  const modelCarouselTrackRef = useRef<HTMLDivElement | null>(null);
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
   const [activeModelId, setActiveModelId] = useState(greenModels[0].id);
   const [isModelAutoCyclePaused, setIsModelAutoCyclePaused] = useState(false);
+  const [isCompactModelCarousel, setIsCompactModelCarousel] = useState(false);
+  const [modelSlideIndex, setModelSlideIndex] = useState(0);
+  const [modelSlideExtent, setModelSlideExtent] = useState(0);
+  const [isModelTrackTransitionEnabled, setIsModelTrackTransitionEnabled] = useState(true);
   const [photoStartIndex, setPhotoStartIndex] = useState(0);
   const availablePhotoMoments = useMemo(
     () => (isLowBandwidth ? photoMoments.slice(0, 4) : photoMoments),
@@ -291,9 +296,22 @@ export default function GreenPartnersLanding() {
       [...greenModels, ...greenModels].map((model, index) => ({
         ...model,
         renderKey: `${model.id}-${index}`,
+        baseIndex: index % greenModels.length,
         isDuplicate: index >= greenModels.length,
       })),
     [],
+  );
+  const visibleModelCards = useMemo(
+    () =>
+      isCompactModelCarousel
+        ? greenModels.map((model, index) => ({
+            ...model,
+            renderKey: `${model.id}-${index}`,
+            baseIndex: index,
+            isDuplicate: false,
+          }))
+        : loopedGreenModels,
+    [isCompactModelCarousel, loopedGreenModels],
   );
   const visiblePhotoMoments = useMemo(() => {
     if (availablePhotoMoments.length <= 4) return availablePhotoMoments;
@@ -304,19 +322,66 @@ export default function GreenPartnersLanding() {
   }, [availablePhotoMoments, photoStartIndex]);
 
   useEffect(() => {
-    if (isModelAutoCyclePaused || greenModels.length <= 1) return;
+    if (typeof window === "undefined") return;
+    const syncModelLayout = () => {
+      const isCompact = window.innerWidth <= 720;
+      setIsCompactModelCarousel(isCompact);
+      if (isCompact) {
+        setModelSlideExtent(0);
+        return;
+      }
+
+      const track = modelCarouselTrackRef.current;
+      const firstCard = track?.querySelector<HTMLElement>(".gp-model-carousel__card");
+      if (!track || !firstCard) return;
+      const trackStyles = window.getComputedStyle(track);
+      const gap = Number.parseFloat(trackStyles.gap || trackStyles.columnGap || "14") || 0;
+      setModelSlideExtent(firstCard.getBoundingClientRect().width + gap);
+    };
+
+    syncModelLayout();
+    window.addEventListener("resize", syncModelLayout);
+    return () => window.removeEventListener("resize", syncModelLayout);
+  }, []);
+
+  useEffect(() => {
+    const nextModel = greenModels[modelSlideIndex % greenModels.length];
+    if (nextModel && nextModel.id !== activeModelId) {
+      setActiveModelId(nextModel.id);
+    }
+  }, [activeModelId, modelSlideIndex]);
+
+  useEffect(() => {
+    if (isCompactModelCarousel || isModelAutoCyclePaused || greenModels.length <= 1) return;
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const cycleTimer = window.setInterval(() => {
-      setActiveModelId((currentId) => {
-        const currentIndex = greenModels.findIndex((model) => model.id === currentId);
-        const nextIndex = (currentIndex + 1 + greenModels.length) % greenModels.length;
-        return greenModels[nextIndex].id;
-      });
+      setIsModelTrackTransitionEnabled(true);
+      setModelSlideIndex((currentIndex) => currentIndex + 1);
     }, 4800);
 
     return () => window.clearInterval(cycleTimer);
-  }, [isModelAutoCyclePaused]);
+  }, [isCompactModelCarousel, isModelAutoCyclePaused]);
+
+  useEffect(() => {
+    if (isCompactModelCarousel || modelSlideIndex !== greenModels.length) return;
+    if (typeof window === "undefined") {
+      setIsModelTrackTransitionEnabled(false);
+      setModelSlideIndex(0);
+      setIsModelTrackTransitionEnabled(true);
+      return;
+    }
+
+    const resetTimer = window.setTimeout(() => {
+      setIsModelTrackTransitionEnabled(false);
+      setModelSlideIndex(0);
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => setIsModelTrackTransitionEnabled(true));
+      });
+    }, 880);
+
+    return () => window.clearTimeout(resetTimer);
+  }, [isCompactModelCarousel, modelSlideIndex]);
 
   useEffect(() => {
     setPhotoStartIndex(0);
@@ -360,8 +425,21 @@ export default function GreenPartnersLanding() {
   }, [partners]);
 
   const activeModel = greenModels.find((model) => model.id === activeModelId) || greenModels[0];
+  const modelTrackStyle =
+    !isCompactModelCarousel && modelSlideExtent > 0
+      ? {
+          transform: `translate3d(-${modelSlideIndex * modelSlideExtent}px, 0, 0)`,
+          transition: isModelTrackTransitionEnabled ? "transform 880ms cubic-bezier(0.22, 1, 0.36, 1)" : "none",
+        }
+      : undefined;
   const featuredPhotoMoment = visiblePhotoMoments[0];
   const supportingPhotoMoments = visiblePhotoMoments.slice(1);
+
+  function handleModelCardSelect(baseIndex: number) {
+    setIsModelTrackTransitionEnabled(true);
+    setModelSlideIndex(baseIndex);
+    setActiveModelId(greenModels[baseIndex].id);
+  }
 
   const renderPartnerLogo = (
     org: PartnerOrg & { renderKey: string },
@@ -525,15 +603,19 @@ export default function GreenPartnersLanding() {
             onBlurCapture={() => setIsModelAutoCyclePaused(false)}
           >
             <div className="gp-model-carousel">
-              <div className={`gp-model-carousel__track${isModelAutoCyclePaused ? " is-paused" : ""}`}>
-                {loopedGreenModels.map((model) => (
+              <div
+                ref={modelCarouselTrackRef}
+                className={`gp-model-carousel__track${isModelAutoCyclePaused ? " is-paused" : ""}`}
+                style={modelTrackStyle}
+              >
+                {visibleModelCards.map((model) => (
                   <button
                     key={model.renderKey}
                     type="button"
                     data-model-id={model.id}
                     className={`gp-model-carousel__card${model.id === activeModel.id ? " is-active" : ""}`}
                     style={{ backgroundImage: `url("${model.heroImage}")` }}
-                    onClick={() => setActiveModelId(model.id)}
+                    onClick={() => handleModelCardSelect(model.baseIndex)}
                     aria-hidden={model.isDuplicate ? true : undefined}
                     tabIndex={model.isDuplicate ? -1 : 0}
                   >

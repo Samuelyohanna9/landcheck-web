@@ -3371,29 +3371,28 @@
 }
 
 .green-partners-page .gp-model-carousel {
+  width: 100%;
   overflow: hidden;
 }
 
 .green-partners-page .gp-model-carousel__track {
-  --gp-model-gap: 14px;
-  --gp-model-card-width: calc((100% - (var(--gp-model-gap) * 2)) / 3);
-  width: calc((var(--gp-model-card-width) * 6) + (var(--gp-model-gap) * 5));
-  gap: var(--gp-model-gap);
+  width: max-content;
+  gap: 16px;
   overflow: visible;
   padding: 4px 0;
-  animation: gpModelRouteMarquee 14.4s linear infinite;
   will-change: transform;
 }
 
 .green-partners-page .gp-model-carousel__card {
-  flex: 0 0 var(--gp-model-card-width);
+  flex: 0 0 clamp(300px, 30vw, 372px);
+  width: clamp(300px, 30vw, 372px);
   border: none;
   border-radius: 22px;
   box-shadow: 0 14px 30px rgba(16, 34, 23, 0.12);
 }
 
 .green-partners-page .gp-model-carousel__track.is-paused {
-  animation-play-state: paused;
+  will-change: auto;
 }
 
 .green-partners-page .gp-model-carousel__arrow {
