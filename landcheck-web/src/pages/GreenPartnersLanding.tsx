@@ -323,6 +323,9 @@ export default function GreenPartnersLanding() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const track = modelCarouselTrackRef.current;
+    if (!track) return;
+
     const syncModelLayout = () => {
       const isCompact = window.innerWidth <= 720;
       setIsCompactModelCarousel(isCompact);
@@ -331,17 +334,36 @@ export default function GreenPartnersLanding() {
         return;
       }
 
-      const track = modelCarouselTrackRef.current;
-      const firstCard = track?.querySelector<HTMLElement>(".gp-model-carousel__card");
-      if (!track || !firstCard) return;
+      const firstCard = track.querySelector<HTMLElement>(".gp-model-carousel__card");
+      if (!firstCard) return;
       const trackStyles = window.getComputedStyle(track);
       const gap = Number.parseFloat(trackStyles.gap || trackStyles.columnGap || "14") || 0;
-      setModelSlideExtent(firstCard.getBoundingClientRect().width + gap);
+      const width = firstCard.getBoundingClientRect().width;
+      // This section renders with content-visibility: auto (DEFERRED_SECTION_STYLE), so it isn't
+      // actually laid out until it scrolls into view. Measuring on mount alone can catch it still
+      // collapsed/placeholder-sized, permanently baking a wrong slide distance into the carousel's
+      // transform - which showed up as the active card sliding almost entirely out of view,
+      // leaving just a sliver visible. Skip zero/garbage measurements here...
+      if (width > 0) {
+        setModelSlideExtent(width + gap);
+      }
     };
 
     syncModelLayout();
     window.addEventListener("resize", syncModelLayout);
-    return () => window.removeEventListener("resize", syncModelLayout);
+
+    // ...and re-measure via ResizeObserver, which fires again once content-visibility reveals
+    // the section and it gets its real layout - not just on window resize.
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      observer = new ResizeObserver(() => syncModelLayout());
+      observer.observe(track);
+    }
+
+    return () => {
+      window.removeEventListener("resize", syncModelLayout);
+      observer?.disconnect();
+    };
   }, []);
 
   useEffect(() => {
