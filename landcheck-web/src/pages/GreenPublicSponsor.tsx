@@ -135,10 +135,10 @@ const getTierSummary = (quantity: number): string => {
 };
 
 const HOW_IT_WORKS_STEPS = [
-  { title: "Choose a Project", body: "Choose from approved public tree planting projects." },
-  { title: "Sponsor Securely", body: "Pay in NGN or USD through a secure checkout." },
-  { title: "Get Your Certificate", body: "Receive your digital sponsorship certificate instantly by email." },
-  { title: "Track Your Tree", body: "Follow GPS location, maintenance updates, and photo evidence as your tree grows." },
+  { eyebrow: "Project selection", title: "Choose a project", body: "Select from approved public planting projects already open for sponsorship." },
+  { eyebrow: "Secure checkout", title: "Pay securely", body: "Complete your order in NGN or USD through secure checkout." },
+  { eyebrow: "Confirmation", title: "Receive confirmation", body: "Get your digital sponsorship certificate and order record by email." },
+  { eyebrow: "Field follow-up", title: "Follow the proof", body: "Track GPS location, maintenance updates, and photo evidence as the tree grows." },
 ] as const;
 
 const DEDICATION_OPTIONS = [
@@ -251,6 +251,7 @@ export default function GreenPublicSponsor() {
     () => (isLowBandwidth ? PROOF_PHOTOS.slice(0, 3) : PROOF_PHOTOS),
     [isLowBandwidth],
   );
+  const featuredProofPhoto = visibleProofPhotos[activeProofIndex] || visibleProofPhotos[0] || null;
   const visibleGalleryImages = useMemo(
     () => (isLowBandwidth ? GALLERY_IMAGES.slice(0, 2) : GALLERY_IMAGES),
     [isLowBandwidth],
@@ -548,10 +549,10 @@ export default function GreenPublicSponsor() {
       {!selectedProject && !returnState && (
       <section className="gps-hero">
         <div className="gps-hero-text-panel">
-          <h1>Sponsor a real tree, <span className="gps-hero-accent">follow its story</span></h1>
+          <h1>Sponsor a verified tree, <span className="gps-hero-accent">follow the proof</span></h1>
 
           <p className="gps-hero-summary">
-            Secure sponsorship with certificate delivery, verified map proof, and field updates from real planting projects.
+            Sponsor a real planting project and receive certificate delivery, verified map evidence, and field updates from the ground.
           </p>
 
           <div className="gps-hero-ctas">
@@ -585,31 +586,49 @@ export default function GreenPublicSponsor() {
       {/* ─── Photo proof — real field evidence, not stock photography ─── */}
       {!selectedProject && !returnState && (
         <section className="gps-proof-gallery" style={DEFERRED_SECTION_STYLE}>
-          <div className="gps-proof-gallery-intro">
-            <h2>Field evidence from live planting work</h2>
-            <span className="gps-proof-gallery-sub">Every image below comes from a verified LandCheck project.</span>
-          </div>
-          <div className="gps-proof-strip">
-            {visibleProofPhotos.map((photo, index) => (
-              <button
-                key={photo.src}
-                type="button"
-                className={`gps-proof-panel${index === activeProofIndex ? " is-active" : ""}`}
-                onMouseEnter={() => setActiveProofIndex(index)}
-                onFocus={() => setActiveProofIndex(index)}
-                onClick={() => setActiveProofIndex(index)}
-                aria-expanded={index === activeProofIndex}
-              >
-                <img src={photoAsset(photo.src)} alt={photo.description} loading="lazy" decoding="async" />
-                <span className="gps-proof-panel-scrim" aria-hidden="true" />
-                <span className="gps-proof-panel-accent" aria-hidden="true" />
-                <span className="gps-proof-panel-body">
-                  {photo.location ? <span className="gps-proof-panel-location">{photo.location}</span> : null}
-                  <span className="gps-proof-panel-heading">{photo.heading}</span>
-                  <span className="gps-proof-panel-desc">{photo.description}</span>
-                </span>
-              </button>
-            ))}
+          <div className="gps-proof-gallery-shell">
+            <div className="gps-proof-gallery-intro">
+              <h2>Field evidence from live planting work</h2>
+              <span className="gps-proof-gallery-sub">Real project images, verified from the field and linked to active planting records.</span>
+            </div>
+
+            {featuredProofPhoto ? (
+              <div className="gps-proof-editorial">
+                <figure className="gps-proof-feature">
+                  <img src={photoAsset(featuredProofPhoto.src)} alt={featuredProofPhoto.description} loading="lazy" decoding="async" />
+                  <figcaption>
+                    <div className="gps-proof-feature-meta">
+                      {featuredProofPhoto.location ? <span className="gps-proof-feature-chip">{featuredProofPhoto.location}</span> : null}
+                      <span className="gps-proof-feature-chip">Verified field record</span>
+                    </div>
+                    <h3>{featuredProofPhoto.heading}</h3>
+                    <p>{featuredProofPhoto.description}</p>
+                  </figcaption>
+                </figure>
+
+                <div className="gps-proof-selector" aria-label="Field photo evidence">
+                  {visibleProofPhotos.map((photo, index) => (
+                    <button
+                      key={photo.src}
+                      type="button"
+                      className={`gps-proof-selector-item${index === activeProofIndex ? " is-active" : ""}`}
+                      onMouseEnter={() => setActiveProofIndex(index)}
+                      onFocus={() => setActiveProofIndex(index)}
+                      onClick={() => setActiveProofIndex(index)}
+                      aria-pressed={index === activeProofIndex}
+                    >
+                      <span className="gps-proof-selector-thumb">
+                        <img src={photoAsset(photo.src)} alt={photo.heading} loading="lazy" decoding="async" />
+                      </span>
+                      <span className="gps-proof-selector-copy">
+                        {photo.location ? <span className="gps-proof-selector-location">{photo.location}</span> : null}
+                        <strong>{photo.heading}</strong>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         </section>
       )}
@@ -617,12 +636,12 @@ export default function GreenPublicSponsor() {
       {/* ─── How it works ─── */}
       {!selectedProject && !returnState && (
         <section className="gps-how-it-works" style={DEFERRED_SECTION_STYLE}>
-          <span className="gps-section-eyebrow">It's That Easy</span>
-          <h2>How Sponsoring a Tree Works</h2>
+          <span className="gps-section-eyebrow">Sponsorship flow</span>
+          <h2>How tree sponsorship works</h2>
           <div className="gps-how-it-works-grid">
-            {HOW_IT_WORKS_STEPS.map((step, index) => (
+            {HOW_IT_WORKS_STEPS.map((step) => (
               <div className="gps-how-step" key={step.title}>
-                <span className="gps-how-step-index">Step {index + 1}</span>
+                <span className="gps-how-step-index">{step.eyebrow}</span>
                 <strong>{step.title}</strong>
                 <p>{step.body}</p>
               </div>

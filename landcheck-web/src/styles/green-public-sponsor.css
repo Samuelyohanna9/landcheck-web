@@ -1800,3 +1800,341 @@
   transform: translateY(-1px);
   box-shadow: 0 18px 36px rgba(10, 40, 24, 0.3);
 }
+
+/* 2026 editorial simplification: cleaner sponsor presentation */
+.gps-hero {
+  align-items: flex-end;
+}
+
+.gps-hero-text-panel {
+  align-items: flex-start;
+  justify-content: flex-end;
+  margin: 0;
+  padding: 112px clamp(24px, 6vw, 64px) 88px;
+  text-align: left;
+}
+
+.gps-hero-text-panel h1,
+.gps-hero-summary,
+.gps-hero-support-note {
+  max-width: 34rem;
+}
+
+.gps-hero-ctas {
+  justify-content: flex-start;
+}
+
+.gps-proof-gallery {
+  background: transparent !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  padding: 72px 24px 0 !important;
+  margin-top: 0 !important;
+}
+
+.gps-proof-gallery-intro {
+  max-width: 700px;
+  margin: 0 0 28px;
+  text-align: left;
+}
+
+.gps-proof-strip {
+  gap: 8px;
+  border: none;
+  box-shadow: none;
+}
+
+.gps-proof-panel {
+  border-radius: 24px;
+}
+
+.gps-proof-panel-body {
+  padding: 20px;
+}
+
+.gps-proof-panel.is-active .gps-proof-panel-body {
+  padding-left: 20px;
+}
+
+.gps-how-it-works {
+  text-align: left;
+}
+
+.gps-how-it-works-grid {
+  gap: 20px;
+}
+
+.gps-how-step {
+  padding: 0;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.gps-how-step-index {
+  min-height: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: rgba(132, 227, 171, 0.82);
+  letter-spacing: 0.14em;
+}
+
+.gps-how-step strong {
+  font-size: 1.08rem;
+}
+
+.gps-how-step p {
+  max-width: 28ch;
+}
+
+.gps-impact-band {
+  background: transparent;
+  padding: 0 24px;
+}
+
+.gps-impact-band-inner {
+  background: var(--gps-brand-dark);
+  border-radius: 26px;
+  padding: 28px 32px;
+  box-shadow: 0 18px 40px rgba(10, 40, 24, 0.2);
+}
+
+@media (max-width: 900px) {
+  .gps-hero-text-panel {
+    padding: 84px 24px 56px;
+  }
+
+  .gps-proof-gallery {
+    padding: 56px 20px 0 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .gps-hero-text-panel {
+    align-items: flex-start;
+    padding: 72px 16px 44px;
+    text-align: left;
+  }
+
+  .gps-hero-ctas {
+    justify-content: flex-start;
+  }
+
+  .gps-proof-gallery {
+    padding: 36px 16px 0 !important;
+  }
+
+  .gps-proof-gallery-intro {
+    margin-bottom: 20px;
+  }
+
+  .gps-proof-strip {
+    gap: 4px;
+  }
+
+  .gps-proof-panel {
+    border-radius: 18px;
+  }
+
+  .gps-how-it-works {
+    text-align: left;
+  }
+
+  .gps-how-it-works-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .gps-how-step p {
+    max-width: none;
+  }
+
+  .gps-impact-band {
+    padding: 0 16px;
+  }
+
+  .gps-impact-band-inner {
+    padding: 24px 18px;
+  }
+}
+
+/* 2026 final editorial cleanup */
+.gps-proof-gallery-shell {
+  width: min(1240px, 100%);
+  margin: 0 auto;
+}
+
+.gps-proof-editorial {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.88fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.gps-proof-feature {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgba(219, 245, 227, 0.1);
+  border-radius: 30px;
+  background: rgba(9, 18, 14, 0.92);
+  box-shadow: 0 22px 42px rgba(4, 14, 8, 0.24);
+}
+
+.gps-proof-feature img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 11;
+  object-fit: cover;
+}
+
+.gps-proof-feature figcaption {
+  display: grid;
+  gap: 12px;
+  padding: 24px 26px 28px;
+}
+
+.gps-proof-feature-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gps-proof-feature-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(219, 245, 227, 0.14);
+  border-radius: 999px;
+  color: rgba(219, 245, 227, 0.86);
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.gps-proof-feature h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(1.65rem, 2vw, 2.2rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.gps-proof-feature p {
+  margin: 0;
+  max-width: 58ch;
+  color: rgba(226, 241, 231, 0.84);
+  font-size: 0.97rem;
+  line-height: 1.72;
+}
+
+.gps-proof-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gps-proof-selector-item {
+  display: grid;
+  grid-template-columns: 94px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(219, 245, 227, 0.08);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.03);
+  color: inherit;
+  text-align: left;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.gps-proof-selector-item:hover,
+.gps-proof-selector-item:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(132, 227, 171, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 16px 34px rgba(7, 16, 11, 0.18);
+}
+
+.gps-proof-selector-item.is-active {
+  border-color: rgba(132, 227, 171, 0.34);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 36px rgba(7, 16, 11, 0.2);
+}
+
+.gps-proof-selector-thumb {
+  display: block;
+  overflow: hidden;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  aspect-ratio: 4 / 5;
+}
+
+.gps-proof-selector-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gps-proof-selector-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.gps-proof-selector-location {
+  color: rgba(132, 227, 171, 0.82);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.gps-proof-selector-copy strong {
+  color: #ffffff;
+  font-size: 1rem;
+  line-height: 1.35;
+  text-wrap: balance;
+}
+
+.gps-how-step {
+  padding-top: 18px;
+}
+
+.gps-how-step-index {
+  color: rgba(132, 227, 171, 0.84);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.gps-how-step p {
+  max-width: none;
+}
+
+@media (max-width: 960px) {
+  .gps-proof-editorial {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .gps-proof-feature figcaption {
+    padding: 18px;
+  }
+
+  .gps-proof-selector-item {
+    grid-template-columns: 82px minmax(0, 1fr);
+    padding: 10px;
+  }
+
+  .gps-proof-feature h3 {
+    font-size: 1.45rem;
+  }
+}

@@ -133,9 +133,9 @@ const greenModels: GreenModel[] = [
 // whyPillars removed
 
 const photoEvidencePoints = [
-  "GPS-tagged the moment each seedling goes into the ground",
-  "QR Tag carrying the name of the tree sponsor and the seedling's unique ID",
-  "Logged by named field supervisors, not stock photography",
+  "Captured with GPS at the moment of planting.",
+  "Each seedling carries a sponsor-linked QR identity.",
+  "Reviewed by named field supervisors before approval.",
 ];
 
 const photoMoments: PhotoMoment[] = [
@@ -203,25 +203,25 @@ const photoMoments: PhotoMoment[] = [
 
 const premiumProofCards = [
   {
-    eyebrow: "Field operations",
-    title: "We plant",
-    summary: "Partner teams assign work, capture evidence, and monitor survival from one controlled route.",
+    eyebrow: "Partner organisations",
+    title: "Field delivery",
+    summary: "Assign work, capture field evidence, and keep planting operations disciplined from one route.",
     imageSrc: photoAsset("agent planting 1.JPG"),
     href: "/green/login/field",
     cta: "Explore route",
   },
   {
-    eyebrow: "Certified transparency",
-    title: "We verify",
-    summary: "Corporate and donor programmes get live records, review control, and premium reporting.",
+    eyebrow: "Corporate reporting",
+    title: "Verified reporting",
+    summary: "Give donor and CSR teams clean review control, live dashboards, and board-ready records.",
     imageSrc: "/ecf-partnership.jpeg",
     href: "/green-work/login",
     cta: "Explore route",
   },
   {
-    eyebrow: "Online supporters",
-    title: "We restore",
-    summary: "Sponsors fund real trees online and follow transparent impact as it grows.",
+    eyebrow: "Public sponsorship",
+    title: "Sponsor journeys",
+    summary: "Let supporters fund real trees online and follow credible field proof as each record grows.",
     imageSrc: "/thumpnail_public.jpg",
     href: "/sponsor",
     cta: "Explore route",
@@ -230,22 +230,22 @@ const premiumProofCards = [
 
 const workflowSteps = [
   {
-    step: "01",
+    step: "Plan",
     title: "Design the programme",
     body: "Define the site, species mix, delivery targets, and reporting scope before planting starts.",
   },
   {
-    step: "02",
+    step: "Deploy",
     title: "Deploy field teams",
     body: "Assign trained agents, push work to mobile, and keep capture structured even when connectivity is weak.",
   },
   {
-    step: "03",
+    step: "Verify",
     title: "Verify and review",
     body: "Check geotagged photos, mapped evidence, and supervisor approvals before records count toward impact.",
   },
   {
-    step: "04",
+    step: "Report",
     title: "Report with confidence",
     body: "Share premium dashboards, export clean PDFs, and present evidence that boards and donors can trust.",
   },
@@ -280,12 +280,20 @@ export default function GreenPartnersLanding() {
   const showFeaturedStory = useDeferredMount(900);
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
   const [activeModelId, setActiveModelId] = useState(greenModels[0].id);
+  const [photoStartIndex, setPhotoStartIndex] = useState(0);
   const modelTrackRef = useRef<HTMLDivElement | null>(null);
   const isInitialModelScrollRef = useRef(true);
-  const visiblePhotoMoments = useMemo(
-    () => (isLowBandwidth ? photoMoments.slice(0, 3) : photoMoments),
+  const availablePhotoMoments = useMemo(
+    () => (isLowBandwidth ? photoMoments.slice(0, 4) : photoMoments),
     [isLowBandwidth],
   );
+  const visiblePhotoMoments = useMemo(() => {
+    if (availablePhotoMoments.length <= 4) return availablePhotoMoments;
+    return Array.from(
+      { length: 4 },
+      (_, index) => availablePhotoMoments[(photoStartIndex + index) % availablePhotoMoments.length],
+    );
+  }, [availablePhotoMoments, photoStartIndex]);
 
   useEffect(() => {
     // This effect also fires once on initial mount (not just on user-driven selection changes).
@@ -308,47 +316,17 @@ export default function GreenPartnersLanding() {
     setActiveModelId(greenModels[nextIndex].id);
   }
 
-  const photoTrackRef = useRef<HTMLDivElement | null>(null);
-  const photoAutoplayPausedRef = useRef(false);
-
   useEffect(() => {
-    const track = photoTrackRef.current;
-    if (!track) return;
-
-    const mobileQuery = window.matchMedia("(max-width: 768px)");
-
-    const pauseAutoplay = () => {
-      photoAutoplayPausedRef.current = true;
-    };
-
-    const intervalId = window.setInterval(() => {
-      if (photoAutoplayPausedRef.current || !mobileQuery.matches) return;
-      const atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 8;
-      track.scrollTo({ left: atEnd ? 0 : track.scrollLeft + track.clientWidth, behavior: "smooth" });
-    }, 4000);
-
-    // Only a real user gesture should permanently stop the auto-slide — our own
-    // programmatic scrollTo() calls never fire pointerdown/wheel, so this can't
-    // self-cancel.
-    track.addEventListener("pointerdown", pauseAutoplay, { passive: true });
-    track.addEventListener("wheel", pauseAutoplay, { passive: true });
-
-    return () => {
-      window.clearInterval(intervalId);
-      track.removeEventListener("pointerdown", pauseAutoplay);
-      track.removeEventListener("wheel", pauseAutoplay);
-    };
-  }, []);
+    setPhotoStartIndex(0);
+  }, [availablePhotoMoments.length]);
 
   function goToPhotoOffset(offset: number) {
-    const track = photoTrackRef.current;
-    if (!track) return;
-    photoAutoplayPausedRef.current = true;
-    const maxScroll = track.scrollWidth - track.clientWidth;
-    let next = track.scrollLeft + offset * track.clientWidth;
-    if (next < 0) next = maxScroll;
-    if (next > maxScroll) next = 0;
-    track.scrollTo({ left: next, behavior: "smooth" });
+    if (availablePhotoMoments.length <= 4) return;
+    setPhotoStartIndex((current) => {
+      const total = availablePhotoMoments.length;
+      const next = current + offset;
+      return ((next % total) + total) % total;
+    });
   }
 
   useEffect(() => {
@@ -380,6 +358,8 @@ export default function GreenPartnersLanding() {
   }, [partners]);
 
   const activeModel = greenModels.find((model) => model.id === activeModelId) || greenModels[0];
+  const featuredPhotoMoment = visiblePhotoMoments[0];
+  const supportingPhotoMoments = visiblePhotoMoments.slice(1);
 
   const renderPartnerLogo = (
     org: PartnerOrg & { renderKey: string },
@@ -424,10 +404,10 @@ export default function GreenPartnersLanding() {
         <div className="gp-shell gp-new-hero-inner">
           <div className="gp-new-hero-copy">
             <h1>
-              Plant Trees, Prove Your Impact.
+              Tree programmes with proof built in.
             </h1>
             <p className="gp-new-hero-subheadline">
-              Manage every sponsored tree with GPS verification, maintenance tracking, CSR reports and live dashboards.
+              LandCheck Green gives NGOs, CSR teams, and sponsors one verified system for field delivery, GPS evidence, maintenance tracking, and export-ready reporting.
             </p>
             <div className="gp-new-hero-actions">
               <a className="gp-btn gp-btn--primary" href="/green-work/login">
@@ -466,59 +446,41 @@ export default function GreenPartnersLanding() {
         </Suspense>
       ) : null}
 
-      <section className="gp-proof-strip-stage" style={DEFERRED_SECTION_STYLE}>
-        <div className="gp-shell">
-          <div className="gp-proof-strip-grid">
-            <article className="gp-proof-strip-card">
-              <span className="gp-proof-strip-kicker">Delivery models</span>
-              <strong>{greenModels.length}</strong>
-              <p>Organisation, CSR, and public sponsorship routes from one platform.</p>
-            </article>
-            <article className="gp-proof-strip-card">
-              <span className="gp-proof-strip-kicker">Partner organisations</span>
-              <strong>{partners.length > 0 ? partners.length.toLocaleString() : "Open"}</strong>
-              <p>Already operating inside the LandCheck ecosystem.</p>
-            </article>
-            <article className="gp-proof-strip-card">
-              <span className="gp-proof-strip-kicker">Field workflow</span>
-              <strong>Offline-first</strong>
-              <p>Mobile capture remains usable in weak-connectivity environments.</p>
-            </article>
-            <article className="gp-proof-strip-card">
-              <span className="gp-proof-strip-kicker">Evidence standard</span>
-              <strong>GPS + photo</strong>
-              <p>Mapped records, review control, and export-ready reporting.</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
       <section className="gp-premium-proof-stage" style={DEFERRED_SECTION_STYLE}>
         <div className="gp-shell">
           <div className="gp-section-intro gp-section-intro--center">
             <span className="gp-section-eyebrow">Three delivery routes</span>
-            <h2>One platform. Three disciplined ways to deliver impact.</h2>
-            <p>Each route is built around a real operating need, not a generic feature checklist.</p>
+            <h2>One platform. Three clear ways to deliver impact.</h2>
+            <p>Each route is built around a real operating need, with less dashboard noise and more usable evidence.</p>
           </div>
 
-          <div className="gp-premium-proof-grid">
-            {premiumProofCards.map((card, index) => (
-              <article
-                key={card.title}
-                className={`gp-premium-proof-card${index === 0 ? " is-tall" : ""}`}
-                style={{ backgroundImage: `url("${card.imageSrc}")` }}
-              >
-                <a href={card.href} className="gp-premium-proof-link">
-                  <span className="gp-premium-proof-scrim" aria-hidden="true" />
-                  <div className="gp-premium-proof-body">
-                    <span className="gp-premium-proof-eyebrow">{card.eyebrow}</span>
-                    <h3>{card.title}</h3>
-                    <p>{card.summary}</p>
-                    <span className="gp-premium-proof-cta">{card.cta}</span>
-                  </div>
-                </a>
-              </article>
-            ))}
+          <div className="gp-premium-proof-editorial">
+            <figure className="gp-premium-proof-feature">
+              <img
+                src={photoAsset("tree_adamawa.JPG")}
+                alt="LandCheck Green field planting work in Adamawa"
+                loading="lazy"
+                decoding="async"
+              />
+              <figcaption>
+                <span className="gp-premium-proof-feature-kicker">Live field delivery in Adamawa</span>
+                <p>
+                  Real planting work, disciplined capture, and verified reporting in one operating system for NGOs,
+                  corporate programmes, and public supporters.
+                </p>
+              </figcaption>
+            </figure>
+
+            <div className="gp-premium-proof-list">
+              {premiumProofCards.map((card) => (
+                <article key={card.title} className="gp-premium-proof-item">
+                  <span className="gp-premium-proof-item-eyebrow">{card.eyebrow}</span>
+                  <h3>{card.title}</h3>
+                  <p>{card.summary}</p>
+                  <a href={card.href}>{card.cta}</a>
+                </article>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -528,7 +490,7 @@ export default function GreenPartnersLanding() {
           <div className="gp-section-intro gp-section-intro--center">
             <span className="gp-section-eyebrow">Operating flow</span>
             <h2>From programme design to board-ready reporting</h2>
-            <p>Short steps, clear review gates, and evidence you can defend.</p>
+            <p>A short operating sequence with clear review gates and evidence you can defend.</p>
           </div>
 
           <div className="gp-workflow-grid">
@@ -549,7 +511,7 @@ export default function GreenPartnersLanding() {
             <span className="gp-section-eyebrow">Choose your model</span>
             <h2>Choose the LC Green model that matches how you work</h2>
             <p>
-              One platform, three routes, each designed for a different job.
+              One platform, three routes, each designed for a specific operating job.
             </p>
           </div>
 
@@ -667,23 +629,14 @@ export default function GreenPartnersLanding() {
 
       <section className="gp-photo-stage" style={DEFERRED_SECTION_STYLE}>
         <div className="gp-shell">
-          <div className="gp-photo-carousel">
-            <button
-              type="button"
-              className="gp-photo-carousel__arrow gp-photo-carousel__arrow--prev"
-              onClick={() => goToPhotoOffset(-1)}
-              aria-label="Previous photo"
-            >
-              {modelCarouselPrevIcon}
-            </button>
-
-            <div className="gp-photo-grid" ref={photoTrackRef}>
+          <div className="gp-photo-stage-shell">
+            <div className="gp-photo-stage-head">
               <article className="gp-photo-lead">
                 <span className="gp-section-eyebrow">Field evidence</span>
                 <h2>Real plantings. Real places. Real proof.</h2>
                 <p>
-                  Every photo below is unedited field evidence from active LandCheck Green
-                  projects in Song, Yola South, Fufore, and Girei, Adamawa State, not stock photography.
+                  Every image below comes from active LandCheck Green planting work in Song, Yola South, Fufore, and
+                  Girei, Adamawa State.
                 </p>
                 <ul className="gp-photo-points">
                   {photoEvidencePoints.map((point) => (
@@ -691,27 +644,52 @@ export default function GreenPartnersLanding() {
                   ))}
                 </ul>
               </article>
-              {visiblePhotoMoments.map((moment) => (
-                <article key={moment.title} className="gp-photo-card">
-                  <div className="gp-photo-card__media">
-                    <img src={moment.imageSrc} alt={moment.title} loading="lazy" decoding="async" />
-                  </div>
-                  <div className="gp-photo-card__body">
-                    <span>{moment.label}</span>
-                    <h3>{moment.title}</h3>
-                  </div>
-                </article>
-              ))}
+
+              <div className="gp-photo-stage-controls">
+                <button
+                  type="button"
+                  className="gp-photo-carousel__arrow gp-photo-carousel__arrow--prev"
+                  onClick={() => goToPhotoOffset(-1)}
+                  aria-label="Previous photo"
+                >
+                  {modelCarouselPrevIcon}
+                </button>
+
+                <button
+                  type="button"
+                  className="gp-photo-carousel__arrow gp-photo-carousel__arrow--next"
+                  onClick={() => goToPhotoOffset(1)}
+                  aria-label="Next photo"
+                >
+                  {modelCarouselNextIcon}
+                </button>
+              </div>
             </div>
 
-            <button
-              type="button"
-              className="gp-photo-carousel__arrow gp-photo-carousel__arrow--next"
-              onClick={() => goToPhotoOffset(1)}
-              aria-label="Next photo"
-            >
-              {modelCarouselNextIcon}
-            </button>
+            <div className="gp-photo-editorial">
+              {featuredPhotoMoment ? (
+                <figure className="gp-photo-feature">
+                  <img src={featuredPhotoMoment.imageSrc} alt={featuredPhotoMoment.title} loading="lazy" decoding="async" />
+                  <figcaption>
+                    {featuredPhotoMoment.label ? <span>{featuredPhotoMoment.label}</span> : null}
+                    <h3>{featuredPhotoMoment.title}</h3>
+                  </figcaption>
+                </figure>
+              ) : null}
+
+              <div className="gp-photo-side-grid">
+                {supportingPhotoMoments.map((moment) => (
+                  <article key={moment.title} className="gp-photo-side-card">
+                    <img src={moment.imageSrc} alt={moment.title} loading="lazy" decoding="async" />
+                    <div className="gp-photo-side-card__overlay" />
+                    <div className="gp-photo-side-card__body">
+                      {moment.label ? <span>{moment.label}</span> : null}
+                      <h3>{moment.title}</h3>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -720,10 +698,10 @@ export default function GreenPartnersLanding() {
         <div className="gp-shell">
           <div className="gp-proof-showcase">
             <div className="gp-proof-content">
-              <span className="gp-section-eyebrow">FIELD DEMONSTRATION</span>
-              <h2>See how field planting is verified</h2>
+              <span className="gp-section-eyebrow">Field demonstration</span>
+              <h2>See how planting records are verified</h2>
               <p>
-                Watch how our partner foresters and field agents utilize the LandCheck Green mobile application to log sub-meter GPS coordinates, upload instant photo evidence, and register new growth.
+                Watch how field teams use LC Green mobile to log GPS coordinates, upload evidence, and submit records for review.
               </p>
               <div className="gp-proof-actions">
                 <a href="/green-work/login" className="gp-btn gp-btn--primary">
@@ -768,9 +746,9 @@ export default function GreenPartnersLanding() {
       <section className="gp-budget-stage" style={DEFERRED_SECTION_STYLE}>
         <div className="gp-shell">
           <div className="gp-section-intro gp-section-intro--center">
-            <span className="gp-section-eyebrow">DOCUMENTATION & DEMOS</span>
+            <span className="gp-section-eyebrow">Documentation and demos</span>
             <h2>Evaluate the LandCheck platform</h2>
-            <p>Download technical specs, preview verified ESG audit documents, or launch the interactive sponsor demo.</p>
+            <p>Review the core materials a partner, donor, or CSR manager needs before onboarding.</p>
           </div>
           <div className="gp-asset-grid">
             {dueDiligenceAssets.map((asset) => (
