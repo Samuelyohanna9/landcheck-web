@@ -280,6 +280,7 @@ export default function GreenPartnersLanding() {
   const showFeaturedStory = useDeferredMount(900);
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
   const [activeModelId, setActiveModelId] = useState(greenModels[0].id);
+  const [isModelAutoCyclePaused, setIsModelAutoCyclePaused] = useState(false);
   const [photoStartIndex, setPhotoStartIndex] = useState(0);
   const modelTrackRef = useRef<HTMLDivElement | null>(null);
   const isInitialModelScrollRef = useRef(true);
@@ -315,6 +316,21 @@ export default function GreenPartnersLanding() {
     const nextIndex = (currentIndex + offset + greenModels.length) % greenModels.length;
     setActiveModelId(greenModels[nextIndex].id);
   }
+
+  useEffect(() => {
+    if (isModelAutoCyclePaused || greenModels.length <= 1) return;
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const cycleTimer = window.setInterval(() => {
+      setActiveModelId((currentId) => {
+        const currentIndex = greenModels.findIndex((model) => model.id === currentId);
+        const nextIndex = (currentIndex + 1 + greenModels.length) % greenModels.length;
+        return greenModels[nextIndex].id;
+      });
+    }, 4800);
+
+    return () => window.clearInterval(cycleTimer);
+  }, [isModelAutoCyclePaused]);
 
   useEffect(() => {
     setPhotoStartIndex(0);
@@ -515,7 +531,13 @@ export default function GreenPartnersLanding() {
             </p>
           </div>
 
-          <div className="gp-model-grid">
+          <div
+            className="gp-model-grid"
+            onMouseEnter={() => setIsModelAutoCyclePaused(true)}
+            onMouseLeave={() => setIsModelAutoCyclePaused(false)}
+            onFocusCapture={() => setIsModelAutoCyclePaused(true)}
+            onBlurCapture={() => setIsModelAutoCyclePaused(false)}
+          >
             <div className="gp-model-carousel">
               <button
                 type="button"
