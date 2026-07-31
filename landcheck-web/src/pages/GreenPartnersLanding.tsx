@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import "../styles/green-partners.css";
 import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
@@ -282,11 +282,18 @@ export default function GreenPartnersLanding() {
   const [activeModelId, setActiveModelId] = useState(greenModels[0].id);
   const [isModelAutoCyclePaused, setIsModelAutoCyclePaused] = useState(false);
   const [photoStartIndex, setPhotoStartIndex] = useState(0);
-  const modelTrackRef = useRef<HTMLDivElement | null>(null);
-  const isInitialModelScrollRef = useRef(true);
   const availablePhotoMoments = useMemo(
     () => (isLowBandwidth ? photoMoments.slice(0, 4) : photoMoments),
     [isLowBandwidth],
+  );
+  const loopedGreenModels = useMemo(
+    () =>
+      [...greenModels, ...greenModels].map((model, index) => ({
+        ...model,
+        renderKey: `${model.id}-${index}`,
+        isDuplicate: index >= greenModels.length,
+      })),
+    [],
   );
   const visiblePhotoMoments = useMemo(() => {
     if (availablePhotoMoments.length <= 4) return availablePhotoMoments;
@@ -295,27 +302,6 @@ export default function GreenPartnersLanding() {
       (_, index) => availablePhotoMoments[(photoStartIndex + index) % availablePhotoMoments.length],
     );
   }, [availablePhotoMoments, photoStartIndex]);
-
-  useEffect(() => {
-    // This effect also fires once on initial mount (not just on user-driven selection changes).
-    // `block: "nearest"` then scrolls the whole page down to reveal this carousel - which sits
-    // mid-page - fighting the route-change scroll-to-top and leaving new visitors mid-page
-    // instead of at the top. Skip the very first run; only scroll on an actual selection change.
-    if (isInitialModelScrollRef.current) {
-      isInitialModelScrollRef.current = false;
-      return;
-    }
-    const track = modelTrackRef.current;
-    if (!track) return;
-    const activeCard = track.querySelector<HTMLElement>(`[data-model-id="${activeModelId}"]`);
-    activeCard?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-  }, [activeModelId]);
-
-  function goToModelOffset(offset: number) {
-    const currentIndex = greenModels.findIndex((model) => model.id === activeModelId);
-    const nextIndex = (currentIndex + offset + greenModels.length) % greenModels.length;
-    setActiveModelId(greenModels[nextIndex].id);
-  }
 
   useEffect(() => {
     if (isModelAutoCyclePaused || greenModels.length <= 1) return;
@@ -539,24 +525,17 @@ export default function GreenPartnersLanding() {
             onBlurCapture={() => setIsModelAutoCyclePaused(false)}
           >
             <div className="gp-model-carousel">
-              <button
-                type="button"
-                className="gp-model-carousel__arrow gp-model-carousel__arrow--prev"
-                onClick={() => goToModelOffset(-1)}
-                aria-label="Previous route"
-              >
-                {modelCarouselPrevIcon}
-              </button>
-
-              <div className="gp-model-carousel__track" ref={modelTrackRef}>
-                {greenModels.map((model) => (
+              <div className={`gp-model-carousel__track${isModelAutoCyclePaused ? " is-paused" : ""}`}>
+                {loopedGreenModels.map((model) => (
                   <button
-                    key={model.id}
+                    key={model.renderKey}
                     type="button"
                     data-model-id={model.id}
                     className={`gp-model-carousel__card${model.id === activeModel.id ? " is-active" : ""}`}
                     style={{ backgroundImage: `url("${model.heroImage}")` }}
                     onClick={() => setActiveModelId(model.id)}
+                    aria-hidden={model.isDuplicate ? true : undefined}
+                    tabIndex={model.isDuplicate ? -1 : 0}
                   >
                     <span className="gp-model-carousel__overlay" aria-hidden="true" />
                     <span className="gp-model-carousel__content">
@@ -568,15 +547,6 @@ export default function GreenPartnersLanding() {
                   </button>
                 ))}
               </div>
-
-              <button
-                type="button"
-                className="gp-model-carousel__arrow gp-model-carousel__arrow--next"
-                onClick={() => goToModelOffset(1)}
-                aria-label="Next route"
-              >
-                {modelCarouselNextIcon}
-              </button>
             </div>
 
             <div className="gp-model-showcase">
