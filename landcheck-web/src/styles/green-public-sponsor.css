@@ -1967,6 +1967,14 @@
   margin: 0 auto;
 }
 
+.gps-proof-gallery-intro h2 {
+  color: #f5fbf7 !important;
+}
+
+.gps-proof-gallery-sub {
+  color: #6fe09b !important;
+}
+
 .gps-proof-editorial {
   display: grid;
   grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.88fr);

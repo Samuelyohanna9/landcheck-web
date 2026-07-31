@@ -3826,6 +3826,14 @@
   color: #ffffff;
 }
 
+.green-partners-page .gp-photo-lead h2 {
+  color: #f7fcf8;
+}
+
+.green-partners-page .gp-photo-lead p {
+  color: rgba(233, 242, 236, 0.86);
+}
+
 .green-partners-page .gp-photo-feature figcaption span,
 .green-partners-page .gp-photo-side-card__body span {
   display: inline-flex;
@@ -3870,7 +3878,9 @@
 .green-partners-page .gp-photo-points li {
   padding: 14px 0;
   border-top: 1px solid rgba(17, 53, 33, 0.08);
-  color: #526b5d;
+  color: #eef7f1;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .green-partners-page .gp-photo-points li::before {
@@ -3915,5 +3925,31 @@
   .green-partners-page .gp-photo-feature figcaption,
   .green-partners-page .gp-photo-side-card__body {
     padding: 18px;
+  }
+
+  .green-partners-page .gp-model-carousel {
+    overflow: visible;
+  }
+
+  .green-partners-page .gp-model-carousel__track {
+    display: grid;
+    grid-template-columns: 1fr;
+    overflow: visible;
+    padding: 0;
+    gap: 16px;
+  }
+
+  .green-partners-page .gp-model-carousel__card {
+    flex: none;
+    width: 100%;
+    min-height: 232px;
+  }
+
+  .green-partners-page .gp-model-carousel__arrow {
+    display: none;
+  }
+
+  .green-partners-page .gp-model-showcase {
+    padding: 20px 18px;
   }
 }
