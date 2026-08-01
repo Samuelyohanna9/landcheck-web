@@ -616,14 +616,31 @@ export default function GreenPublicSponsor() {
                       onFocus={() => setActiveProofIndex(index)}
                       onClick={() => setActiveProofIndex(index)}
                       aria-pressed={index === activeProofIndex}
+                      aria-expanded={index === activeProofIndex}
                     >
-                      <span className="gps-proof-selector-thumb">
-                        <img src={photoAsset(photo.src)} alt={photo.heading} loading="lazy" decoding="async" />
+                      <span className="gps-proof-selector-summary">
+                        <span className="gps-proof-selector-thumb">
+                          <img src={photoAsset(photo.src)} alt={photo.heading} loading="lazy" decoding="async" />
+                        </span>
+                        <span className="gps-proof-selector-copy">
+                          {photo.location ? <span className="gps-proof-selector-location">{photo.location}</span> : null}
+                          <strong>{photo.heading}</strong>
+                        </span>
                       </span>
-                      <span className="gps-proof-selector-copy">
-                        {photo.location ? <span className="gps-proof-selector-location">{photo.location}</span> : null}
-                        <strong>{photo.heading}</strong>
-                      </span>
+                      {index === activeProofIndex ? (
+                        <span className="gps-proof-selector-inline-detail">
+                          <span className="gps-proof-selector-inline-image">
+                            <img src={photoAsset(photo.src)} alt={photo.description} loading="lazy" decoding="async" />
+                          </span>
+                          <span className="gps-proof-selector-inline-copy">
+                            <span className="gps-proof-feature-meta">
+                              {photo.location ? <span className="gps-proof-feature-chip">{photo.location}</span> : null}
+                              <span className="gps-proof-feature-chip">Verified field record</span>
+                            </span>
+                            <span className="gps-proof-selector-inline-desc">{photo.description}</span>
+                          </span>
+                        </span>
+                      ) : null}
                     </button>
                   ))}
                 </div>

@@ -473,8 +473,11 @@
   align-items: flex-start;
   gap: 10px;
   max-width: 300px;
-  background: var(--gps-surface);
-  border: 1px solid var(--gps-border);
+  /* Same fix as .gps-lookup-modal - --gps-surface is a subtle overlay tint, not a standalone
+     opaque background, and this toast floats over arbitrary page content with nothing solid
+     behind it. */
+  background: linear-gradient(180deg, rgba(12, 26, 18, 0.98) 0%, rgba(7, 16, 12, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   padding: 12px 14px;
   box-shadow: var(--gps-shadow-md);
@@ -1299,7 +1302,12 @@
   max-width: 480px;
   max-height: 88vh;
   overflow-y: auto;
-  background: var(--gps-surface);
+  /* --gps-surface is a subtle ~4.5%-opacity tint meant to sit on top of the page's own solid
+     background, not stand alone as a floating panel's entire background - using it here let the
+     page content behind the modal bleed straight through. Same solid dark treatment already used
+     for the mobile menu drawer (.gps-mobile-menu), for a consistent, properly opaque panel. */
+  background: linear-gradient(180deg, rgba(12, 26, 18, 0.98) 0%, rgba(7, 16, 12, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--gps-radius);
   padding: 28px;
   box-shadow: var(--gps-shadow-md);
@@ -2048,10 +2056,9 @@
 }
 
 .gps-proof-selector-item {
-  display: grid;
-  grid-template-columns: 94px minmax(0, 1fr);
-  gap: 14px;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   padding: 12px;
   border: 1px solid rgba(219, 245, 227, 0.08);
   border-radius: 24px;
@@ -2075,6 +2082,13 @@
   box-shadow: 0 18px 36px rgba(7, 16, 11, 0.2);
 }
 
+.gps-proof-selector-summary {
+  display: grid;
+  grid-template-columns: 94px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
 .gps-proof-selector-thumb {
   display: block;
   overflow: hidden;
@@ -2094,6 +2108,36 @@
   display: grid;
   gap: 6px;
   min-width: 0;
+}
+
+.gps-proof-selector-inline-detail {
+  display: none;
+}
+
+.gps-proof-selector-inline-image {
+  display: block;
+  overflow: hidden;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.06);
+  aspect-ratio: 16 / 10;
+}
+
+.gps-proof-selector-inline-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gps-proof-selector-inline-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.gps-proof-selector-inline-desc {
+  color: rgba(226, 241, 231, 0.84);
+  font-size: 0.94rem;
+  line-height: 1.65;
 }
 
 .gps-proof-selector-location {
@@ -2133,16 +2177,46 @@
 }
 
 @media (max-width: 640px) {
+  .gps-proof-feature {
+    display: none;
+  }
+
+  .gps-proof-editorial {
+    gap: 16px;
+  }
+
   .gps-proof-feature figcaption {
     padding: 18px;
   }
 
+  .gps-proof-selector {
+    gap: 14px;
+  }
+
   .gps-proof-selector-item {
+    padding: 12px;
+    border-radius: 26px;
+  }
+
+  .gps-proof-selector-summary {
     grid-template-columns: 82px minmax(0, 1fr);
-    padding: 10px;
+    gap: 12px;
   }
 
   .gps-proof-feature h3 {
     font-size: 1.45rem;
+  }
+
+  .gps-proof-selector-item.is-active .gps-proof-selector-inline-detail {
+    display: grid;
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(219, 245, 227, 0.1);
+  }
+
+  .gps-proof-selector-copy strong {
+    font-size: 1.18rem;
+    line-height: 1.28;
   }
 }
