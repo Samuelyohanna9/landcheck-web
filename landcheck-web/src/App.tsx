@@ -75,6 +75,7 @@ const NewsPage = lazyWithChunkRecovery(() => import("./pages/NewsPage"));
 const NewsArticlePage = lazyWithChunkRecovery(() => import("./pages/NewsArticlePage"));
 const PrivacyPolicy = lazyWithChunkRecovery(() => import("./pages/PrivacyPolicy"));
 const DonorImpactPage = lazyWithChunkRecovery(() => import("./pages/DonorImpactPage"));
+const AppClaimRedirect = lazyWithChunkRecovery(() => import("./pages/AppClaimRedirect"));
 
 type ChunkLoadBoundaryProps = {
   children: ReactNode;
@@ -278,6 +279,7 @@ export default function App() {
                 <Route path="/sponsor" element={<GreenPublicSponsor />} />
                 <Route path="/sponsor/calculator" element={<GreenFootprintCalculator />} />
                 <Route path="/impact/:orgSlug" element={<DonorImpactPage />} />
+                <Route path="/app/claim" element={<AppClaimRedirect />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/feedback" element={<Feedback />} />
                 <Route path="/admin" element={<AdminDashboard />} />

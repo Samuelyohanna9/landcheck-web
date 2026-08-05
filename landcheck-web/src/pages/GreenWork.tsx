@@ -3713,6 +3713,17 @@ export default function GreenWork() {
   const [reviewingSponsorAgentPayoutId, setReviewingSponsorAgentPayoutId] = useState<number | null>(null);
   const [savingPublicSponsorAgents, setSavingPublicSponsorAgents] = useState(false);
   const [fallbackSponsorAccounts, setFallbackSponsorAccounts] = useState<SponsorAccountSummary[]>([]);
+  const [birthdayGifts, setBirthdayGifts] = useState<any[]>([]);
+  const [birthdayGiftsLoading, setBirthdayGiftsLoading] = useState(false);
+  const [submittingBirthdayGift, setSubmittingBirthdayGift] = useState(false);
+  const [birthdayGiftForm, setBirthdayGiftForm] = useState({
+    fullName: "",
+    email: "",
+    dateOfBirth: "",
+    projectId: "",
+    quantity: "1",
+    dedicationMessage: "",
+  });
   const [custodians, setCustodians] = useState<Custodian[]>([]);
   const [newCustodian, setNewCustodian] = useState<{
     custodian_type: CustodianType;
@@ -5840,6 +5851,48 @@ export default function GreenWork() {
     }
   }, []);
 
+  const loadBirthdayGifts = useCallback(async () => {
+    setBirthdayGiftsLoading(true);
+    try {
+      const res = await api.get(`/green/admin/birthday-gifts?_ts=${Date.now()}`);
+      setBirthdayGifts(Array.isArray(res.data?.birthday_gifts) ? res.data.birthday_gifts : []);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || "Failed to load birthday gifts");
+    } finally {
+      setBirthdayGiftsLoading(false);
+    }
+  }, []);
+
+  const submitBirthdayGift = async () => {
+    const fullName = birthdayGiftForm.fullName.trim();
+    const email = birthdayGiftForm.email.trim();
+    const dateOfBirth = birthdayGiftForm.dateOfBirth.trim();
+    const projectId = Number(birthdayGiftForm.projectId || 0);
+    const quantity = Math.max(1, Number(birthdayGiftForm.quantity || 1));
+    if (!fullName || !email || !dateOfBirth || !projectId) {
+      toast.error("Full name, email, date of birth, and project are required");
+      return;
+    }
+    setSubmittingBirthdayGift(true);
+    try {
+      const res = await api.post(`/green/admin/sponsorship-orders/birthday-gift`, {
+        full_name: fullName,
+        email,
+        date_of_birth: dateOfBirth,
+        project_id: projectId,
+        quantity,
+        dedication_message: birthdayGiftForm.dedicationMessage.trim() || null,
+      });
+      toast.success(`Birthday gift added — celebration email scheduled for ${res.data?.birthday_send_date || "the recipient's birthday"}`);
+      setBirthdayGiftForm({ fullName: "", email: "", dateOfBirth: "", projectId: "", quantity: "1", dedicationMessage: "" });
+      void loadBirthdayGifts();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || "Failed to add birthday gift");
+    } finally {
+      setSubmittingBirthdayGift(false);
+    }
+  };
+
   const loadSponsorFeedback = useCallback(async (options?: { silent?: boolean }) => {
     const silent = Boolean(options?.silent);
     if (!silent) setFeedbackLoading(true);
@@ -7017,7 +7070,15 @@ export default function GreenWork() {
       void loadSponsorAccounts();
     }, 15000);
     return () => window.clearInterval(timer);
-  }, [activeProjectId, activeForm, loadSponsorAccounts, loadSponsorshipOrders, publicSponsorshipProject]);
+  }, [activeProjectId, activeForm, publicSponsorshipProject, loadSponsorshipOrders, loadSponsorAccounts]);
+
+  useEffect(() => {
+    // Birthday-gift admin tooling isn't scoped to the currently-active project (the superadmin
+    // picks the recipient's project inside the form itself), so this loads independently of the
+    // publicSponsorshipProject gate above.
+    if (activeForm !== "sponsors" || !canAccessSuperAdmin) return;
+    void loadBirthdayGifts();
+  }, [activeForm, canAccessSuperAdmin, loadBirthdayGifts]);
 
   useEffect(() => {
     if (!activeProjectId || !publicSponsorshipProject) {
@@ -14405,6 +14466,91 @@ export default function GreenWork() {
                     )}
                   </div>
                 </>
+              )}
+            </div>
+          )}
+
+          {activeForm === "sponsors" && canAccessSuperAdmin && (
+            <div className="green-work-card">
+              <h3>Birthday Gift Planting</h3>
+              <p className="green-work-note">
+                Register a social-media follower celebrating a birthday as a paid sponsor, free of charge — LandCheck covers
+                the cost. They'll get an email now, and a full birthday-morning celebration email (with an app link to claim
+                their account) automatically on their actual birthday.
+              </p>
+              <div className="work-actions" style={{ flexWrap: "wrap", gap: 12, marginBottom: 12 }}>
+                <input
+                  type="text"
+                  placeholder="Full name"
+                  value={birthdayGiftForm.fullName}
+                  onChange={(e) => setBirthdayGiftForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                />
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={birthdayGiftForm.email}
+                  onChange={(e) => setBirthdayGiftForm((prev) => ({ ...prev, email: e.target.value }))}
+                />
+                <input
+                  type="date"
+                  value={birthdayGiftForm.dateOfBirth}
+                  onChange={(e) => setBirthdayGiftForm((prev) => ({ ...prev, dateOfBirth: e.target.value }))}
+                />
+                <select
+                  value={birthdayGiftForm.projectId}
+                  onChange={(e) => setBirthdayGiftForm((prev) => ({ ...prev, projectId: e.target.value }))}
+                >
+                  <option value="">Select project...</option>
+                  {projects
+                    .filter((project) => isPublicSponsorshipProject(project.access_model, project.public_sponsor_enabled))
+                    .map((project) => (
+                      <option key={`birthday-gift-project-${project.id}`} value={project.id}>
+                        {project.name}
+                      </option>
+                    ))}
+                </select>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  placeholder="Trees"
+                  style={{ width: 80 }}
+                  value={birthdayGiftForm.quantity}
+                  onChange={(e) => setBirthdayGiftForm((prev) => ({ ...prev, quantity: e.target.value }))}
+                />
+                <input
+                  type="text"
+                  placeholder="Dedication message (optional)"
+                  style={{ minWidth: 220 }}
+                  value={birthdayGiftForm.dedicationMessage}
+                  onChange={(e) => setBirthdayGiftForm((prev) => ({ ...prev, dedicationMessage: e.target.value }))}
+                />
+                <button type="button" onClick={() => void submitBirthdayGift()} disabled={submittingBirthdayGift}>
+                  {submittingBirthdayGift ? "Adding..." : "Add Birthday Gift Sponsor"}
+                </button>
+              </div>
+              {birthdayGiftsLoading ? (
+                <p className="green-work-note">Loading birthday gifts...</p>
+              ) : birthdayGifts.length === 0 ? (
+                <p className="green-work-note">No birthday gifts added yet.</p>
+              ) : (
+                <div className="staff-list">
+                  {birthdayGifts.map((gift) => (
+                    <div key={`birthday-gift-${gift.order_id}`} className="staff-row">
+                      <div className="staff-row-head">
+                        <strong>{gift.full_name}</strong>
+                        <span>{gift.project_name}</span>
+                        <span className={`green-work-live-pill ${gift.birthday_email_sent_at ? "ok" : "neutral"}`}>
+                          {gift.birthday_email_sent_at ? "Celebration email sent" : "Pending"}
+                        </span>
+                      </div>
+                      <div className="staff-row-meta">
+                        Email: {gift.email} | Trees: {gift.quantity} | Linked: {gift.linked_units} | Awaiting: {gift.awaiting_units}
+                      </div>
+                      <div className="staff-row-meta">Scheduled for: {gift.birthday_send_date || "-"}</div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}
