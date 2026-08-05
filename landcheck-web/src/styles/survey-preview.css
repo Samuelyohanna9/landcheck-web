@@ -18,6 +18,7 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   gap: 0.36rem;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .preview-ribbon {
@@ -84,6 +85,7 @@
   border-radius: 7px;
   padding: 2px;
   gap: 2px;
+  min-width: 0;
 }
 
 .toggle-btn {
@@ -99,6 +101,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  min-width: 0;
 }
 
 .toggle-btn svg {
@@ -309,6 +312,7 @@
   border-bottom: 1px solid rgba(245, 158, 11, 0.15);
   flex-wrap: wrap;
   gap: 0.75rem;
+  min-width: 0;
 }
 
 .topo-source-label {
@@ -482,6 +486,10 @@
 }
 
 @media (max-width: 640px) {
+  .preview-header {
+    padding: 0.32rem 0.26rem;
+  }
+
   .preview-ribbon {
     gap: 0.2rem;
     padding: 0.14rem 0.2rem;
@@ -490,32 +498,123 @@
   }
 
   .ribbon-group {
-    flex: 1 1 160px;
+    flex: 1 1 100%;
     min-width: 0;
-    justify-content: space-between;
-    gap: 0.2rem;
+    justify-content: flex-start;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.22rem;
     padding: 0.12rem 0.18rem;
   }
 
+  .ribbon-label {
+    width: 100%;
+  }
+
   .ribbon-select {
+    flex: 1 1 120px;
     min-width: 0;
     max-width: 100%;
   }
 
-  .preview-toggle {
-    width: auto;
+  .preview-toggle,
+  .preview-toggle.three-tabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .toggle-btn {
-    justify-content: flex-start;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.15;
+    min-height: 40px;
+    padding: 0.4rem 0.28rem;
   }
 
-  .zoom-controls {
-    width: auto;
-    justify-content: flex-start;
+  .topo-source-bar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.5rem 0.58rem;
+    gap: 0.5rem;
+  }
+
+  .topo-source-label {
+    font-size: 0.74rem;
+  }
+
+  .topo-source-toggle {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .topo-source-btn {
+    justify-content: center;
+    min-height: 38px;
+    text-align: center;
+  }
+
+  .topo-source-hint {
+    margin-left: 0;
+    font-size: 0.68rem;
+    line-height: 1.35;
+  }
+
+  .preview-paper {
+    min-height: 320px;
+  }
+
+  .preview-zoom-overlay {
+    top: auto;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .preview-empty {
+    padding: 0 0.85rem;
+    gap: 0.7rem;
+  }
+
+  .preview-empty svg {
+    width: 48px;
+    height: 48px;
+  }
+
+  .preview-empty p {
+    font-size: 0.84rem;
+    line-height: 1.4;
   }
 
   .preview-image {
+    max-width: calc(100% - 0.6rem);
     max-height: 100%;
+  }
+
+  .preview-footer {
+    display: flex;
+    justify-content: center;
+    padding: 0.35rem 0.55rem 0.5rem;
+  }
+
+  .preview-tip {
+    font-size: 0.68rem;
+    line-height: 1.35;
+    text-align: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .preview-toggle.three-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .toggle-btn {
+    min-height: 36px;
+  }
+
+  .preview-paper {
+    min-height: 280px;
   }
 }
