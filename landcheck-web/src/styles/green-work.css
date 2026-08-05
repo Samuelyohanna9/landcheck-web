@@ -1576,6 +1576,495 @@
   line-height: 1.5;
 }
 
+.green-work-remote-report-card {
+  --gwr-accent: var(--green-600);
+  --gwr-accent-strong: var(--green-700);
+  --gwr-accent-soft: rgba(42, 168, 82, 0.12);
+  --gwr-accent-border: rgba(19, 83, 44, 0.12);
+  --gwr-accent-surface: rgba(245, 251, 246, 0.96);
+  --gwr-accent-surface-strong: rgba(242, 249, 244, 0.96);
+  --gwr-accent-glow: rgba(14, 74, 39, 0.06);
+  --gwr-accent-text: var(--green-800);
+  --gwr-gridline: rgba(23, 83, 45, 0.05);
+}
+
+.green-work-remote-report-card.is-agric {
+  --gwr-accent: #c78524;
+  --gwr-accent-strong: #8e5a11;
+  --gwr-accent-soft: rgba(199, 133, 36, 0.12);
+  --gwr-accent-border: rgba(160, 99, 18, 0.18);
+  --gwr-accent-surface: rgba(255, 249, 240, 0.98);
+  --gwr-accent-surface-strong: rgba(255, 244, 226, 0.98);
+  --gwr-accent-glow: rgba(140, 84, 11, 0.07);
+  --gwr-accent-text: #7d5418;
+  --gwr-gridline: rgba(160, 99, 18, 0.06);
+}
+
+.green-work-remote-report-card.is-green {
+  --gwr-accent: #1f9f56;
+  --gwr-accent-strong: #166534;
+  --gwr-accent-soft: rgba(42, 168, 82, 0.12);
+  --gwr-accent-border: rgba(19, 83, 44, 0.12);
+  --gwr-accent-surface: rgba(245, 251, 246, 0.96);
+  --gwr-accent-surface-strong: rgba(242, 249, 244, 0.96);
+  --gwr-accent-glow: rgba(14, 74, 39, 0.06);
+  --gwr-accent-text: var(--green-800);
+  --gwr-gridline: rgba(23, 83, 45, 0.05);
+}
+
+.green-work-remote-report-card .green-work-remote-summary-note {
+  background: var(--gwr-accent-soft);
+  border-color: var(--gwr-accent-border);
+  color: var(--gwr-accent-text);
+}
+
+.green-work-remote-overview-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.green-work-remote-overview-card {
+  position: relative;
+  border: 1px solid var(--gwr-accent-border);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), var(--gwr-accent-surface));
+  padding: 0.95rem 1rem;
+  display: grid;
+  gap: 0.2rem;
+  box-shadow: 0 14px 28px var(--gwr-accent-glow);
+}
+
+.green-work-remote-overview-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  background: linear-gradient(180deg, var(--gwr-accent), var(--gwr-accent-strong));
+}
+
+.green-work-remote-overview-card span {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--gwr-accent);
+}
+
+.green-work-remote-overview-card strong {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 1.2rem;
+  line-height: 1.1;
+  color: var(--green-950);
+}
+
+.green-work-remote-overview-card small {
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--gw-subtext);
+}
+
+.green-work-remote-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.32fr) minmax(300px, 0.92fr);
+  gap: 0.9rem;
+  margin-top: 1rem;
+  align-items: start;
+}
+
+.green-work-remote-dashboard-column {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.green-work-remote-dashboard-card {
+  border: 1px solid var(--gwr-accent-border);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), var(--gwr-accent-surface-strong));
+  padding: 1rem;
+  display: grid;
+  gap: 0.85rem;
+  box-shadow: 0 18px 34px var(--gwr-accent-glow);
+}
+
+.green-work-remote-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.green-work-remote-section-head > div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.green-work-remote-section-head strong {
+  font-size: 0.95rem;
+  color: var(--green-950);
+}
+
+.green-work-remote-section-head span {
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--gw-subtext);
+}
+
+.green-work-remote-trend-badge,
+.green-work-remote-priority-total {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0.38rem 0.7rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--gwr-accent-border);
+  background: rgba(255, 255, 255, 0.88);
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--gwr-accent-strong);
+  white-space: nowrap;
+}
+
+.green-work-remote-trend-badge.is-positive {
+  background: rgba(220, 252, 231, 0.96);
+  border-color: rgba(34, 197, 94, 0.24);
+  color: #166534;
+}
+
+.green-work-remote-trend-badge.is-negative {
+  background: rgba(254, 242, 242, 0.96);
+  border-color: rgba(239, 68, 68, 0.24);
+  color: #991b1b;
+}
+
+.green-work-remote-trend-chart {
+  border: 1px solid var(--gwr-accent-border);
+  border-radius: calc(var(--radius-md) - 2px);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), var(--gwr-accent-surface-strong)),
+    repeating-linear-gradient(
+      to top,
+      var(--gwr-gridline) 0,
+      var(--gwr-gridline) 1px,
+      transparent 1px,
+      transparent 42px
+    );
+  padding: 0.75rem 0.8rem 0.65rem;
+}
+
+.green-work-remote-trend-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.green-work-remote-trend-fill {
+  fill: url(#remoteMonitoringTrendFill);
+}
+
+.green-work-remote-trend-line {
+  fill: none;
+  stroke: var(--gwr-accent-strong);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.green-work-remote-trend-dot {
+  fill: #ffffff;
+  stroke: var(--gwr-accent-strong);
+  stroke-width: 2.5;
+}
+
+.green-work-remote-trend-axis {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-top: 0.35rem;
+}
+
+.green-work-remote-trend-axis span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--gwr-accent-strong);
+}
+
+.green-work-remote-trend-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.green-work-remote-trend-metric {
+  border: 1px solid var(--gwr-accent-border);
+  border-radius: calc(var(--radius-md) - 2px);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.75rem 0.8rem;
+  display: grid;
+  gap: 0.16rem;
+}
+
+.green-work-remote-trend-metric span {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--gwr-accent);
+}
+
+.green-work-remote-trend-metric strong {
+  font-size: 0.92rem;
+  color: var(--green-950);
+}
+
+.green-work-remote-insight-grid.is-dashboard {
+  margin-top: 0;
+}
+
+.green-work-remote-distribution-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.green-work-remote-distribution-row {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.green-work-remote-distribution-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.green-work-remote-distribution-top span {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--green-900);
+}
+
+.green-work-remote-distribution-top strong {
+  font-size: 0.78rem;
+  color: var(--green-700);
+}
+
+.green-work-remote-distribution-bar {
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(23, 83, 45, 0.08);
+  overflow: hidden;
+}
+
+.green-work-remote-distribution-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.green-work-remote-distribution-bar span.is-critical {
+  background: linear-gradient(90deg, rgba(248, 113, 113, 0.96), rgba(185, 28, 28, 0.92));
+}
+
+.green-work-remote-distribution-bar span.is-stressed {
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.96), rgba(217, 119, 6, 0.92));
+}
+
+.green-work-remote-distribution-bar span.is-fair {
+  background: linear-gradient(90deg, rgba(250, 204, 21, 0.9), rgba(202, 138, 4, 0.9));
+}
+
+.green-work-remote-distribution-bar span.is-healthy,
+.green-work-remote-distribution-bar span.is-vigorous {
+  background: linear-gradient(90deg, rgba(74, 222, 128, 0.95), rgba(22, 163, 74, 0.92));
+}
+
+.green-work-remote-distribution-bar span.is-no_data {
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.95), rgba(100, 116, 139, 0.92));
+}
+
+.green-work-remote-distribution-row small {
+  font-size: 0.72rem;
+  color: var(--gw-subtext);
+}
+
+.green-work-remote-priority-card {
+  height: 100%;
+  align-content: start;
+}
+
+.green-work-remote-priority-list {
+  display: grid;
+  gap: 0.75rem;
+  max-height: 720px;
+  overflow: auto;
+  padding-right: 0.1rem;
+}
+
+.green-work-remote-priority-item {
+  border: 1px solid var(--gwr-accent-border);
+  border-radius: calc(var(--radius-md) - 2px);
+  background: rgba(255, 255, 255, 0.94);
+  padding: 0.85rem 0.9rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.green-work-remote-priority-item.is-critical {
+  border-color: rgba(239, 68, 68, 0.24);
+  box-shadow: inset 4px 0 0 rgba(239, 68, 68, 0.85);
+}
+
+.green-work-remote-priority-item.is-stressed {
+  border-color: rgba(245, 158, 11, 0.24);
+  box-shadow: inset 4px 0 0 rgba(245, 158, 11, 0.82);
+}
+
+.green-work-remote-priority-item.is-fair {
+  border-color: rgba(234, 179, 8, 0.24);
+  box-shadow: inset 4px 0 0 rgba(234, 179, 8, 0.8);
+}
+
+.green-work-remote-priority-top,
+.green-work-remote-priority-bottom {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.green-work-remote-priority-metric {
+  min-width: 92px;
+  border: 1px solid var(--gwr-accent-border);
+  border-radius: var(--radius-sm);
+  background: var(--gwr-accent-surface);
+  padding: 0.56rem 0.62rem;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.green-work-remote-priority-metric span {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--gwr-accent);
+}
+
+.green-work-remote-priority-metric strong {
+  font-size: 0.84rem;
+  color: var(--green-950);
+}
+
+.green-work-remote-priority-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.green-work-remote-priority-actions button,
+.green-work-remote-record-actions button {
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--gwr-accent-border);
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--gwr-accent-strong);
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 0.46rem 0.82rem;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(14, 74, 39, 0.04);
+}
+
+.green-work-remote-priority-actions button.is-primary,
+.green-work-remote-record-actions button.is-primary {
+  background: linear-gradient(180deg, var(--gwr-accent), var(--gwr-accent-strong));
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.green-work-remote-record-board {
+  margin-top: 1rem;
+  overflow: hidden;
+  border: 1px solid var(--gwr-accent-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 34px var(--gwr-accent-glow);
+}
+
+.green-work-remote-record-grid {
+  display: grid;
+  gap: 0.8rem;
+  max-height: 580px;
+  overflow: auto;
+  padding: 0 0.95rem 0.95rem;
+}
+
+.green-work-remote-record-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 0.85rem;
+  border: 1px solid var(--gwr-accent-border);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), var(--gwr-accent-surface));
+  padding: 0.88rem 0.94rem;
+  box-shadow: 0 10px 22px var(--gwr-accent-glow);
+}
+
+.green-work-remote-record-row.is-focused {
+  border-color: rgba(42, 168, 82, 0.3);
+  box-shadow: 0 0 0 2px rgba(42, 168, 82, 0.12), 0 10px 24px rgba(14, 74, 39, 0.08);
+}
+
+.green-work-remote-record-main {
+  display: grid;
+  gap: 0.56rem;
+  min-width: 0;
+}
+
+.green-work-remote-record-side {
+  display: grid;
+  align-content: start;
+  gap: 0.68rem;
+}
+
+.green-work-remote-record-metric {
+  border: 1px solid var(--gwr-accent-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.92);
+  padding: 0.7rem 0.76rem;
+  display: grid;
+  gap: 0.14rem;
+}
+
+.green-work-remote-record-metric span {
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--gwr-accent);
+}
+
+.green-work-remote-record-metric strong {
+  font-size: 0.92rem;
+  color: var(--green-950);
+}
+
+.green-work-remote-record-metric small {
+  font-size: 0.72rem;
+  line-height: 1.42;
+  color: var(--gw-subtext);
+}
+
+.green-work-remote-record-actions {
+  display: grid;
+  gap: 0.48rem;
+}
+
 .green-work-remote-insight-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -2171,6 +2660,62 @@
   color: #475569;
   background: rgba(241, 245, 249, 0.98);
   border-color: rgba(148, 163, 184, 0.28);
+}
+
+@media (max-width: 1380px) {
+  .green-work-remote-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .green-work-remote-priority-list {
+    max-height: none;
+  }
+}
+
+@media (max-width: 920px) {
+  .green-work-remote-overview-strip,
+  .green-work-remote-trend-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .green-work-remote-record-row {
+    grid-template-columns: 1fr;
+  }
+
+  .green-work-remote-priority-bottom {
+    flex-direction: column;
+  }
+
+  .green-work-remote-priority-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .green-work-remote-priority-actions button,
+  .green-work-remote-record-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .green-work-remote-overview-strip,
+  .green-work-remote-trend-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .green-work-remote-section-head,
+  .green-work-remote-priority-top,
+  .green-work-remote-priority-bottom {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .green-work-remote-dashboard-card,
+  .green-work-remote-record-row,
+  .green-work-remote-overview-card {
+    padding-left: 0.88rem;
+    padding-right: 0.88rem;
+  }
 }
 
 /* ── Task Summary ── */

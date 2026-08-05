@@ -157,6 +157,7 @@ type SurveyPlanDraftState = {
   subdivisionEstateName: string;
   subdivisionLotNamesDraft: string[];
   lastServerSyncAt: string | null;
+  lastServerSyncSignature: string | null;
   hasUnsyncedServerChanges: boolean;
 };
 
@@ -365,6 +366,7 @@ export default function SurveyPlan() {
     typeof navigator === "undefined" ? true : navigator.onLine
   );
   const [lastServerSyncAt, setLastServerSyncAt] = useState<string | null>(null);
+  const [lastServerSyncSignature, setLastServerSyncSignature] = useState<string | null>(null);
   const [hasUnsyncedServerChanges, setHasUnsyncedServerChanges] = useState(false);
   const [serverSyncing, setServerSyncing] = useState(false);
   const pendingDraftWriteRef = useRef<number | null>(null);
@@ -455,13 +457,15 @@ export default function SurveyPlan() {
       .then((record) => {
         if (!active || !record?.state) return;
         const saved = record.state;
+        const restoredSyncSignature =
+          typeof saved.lastServerSyncSignature === "string" ? saved.lastServerSyncSignature : null;
         if (saved.workflowMode) setWorkflowMode(saved.workflowMode);
-        if (Number.isFinite(Number(saved.currentStep))) setCurrentStep(Math.max(1, Number(saved.currentStep || 1)));
+        setCurrentStep(1);
         if (Array.isArray(saved.manualPoints) && saved.manualPoints.length >= 3) setManualPoints(saved.manualPoints);
         if (saved.coordinateSystem) setCoordinateSystem(saved.coordinateSystem);
         if (typeof saved.plotId === "number") setPlotId(saved.plotId);
         setHasHeightData(Boolean(saved.hasHeightData));
-        if (saved.previewType) setPreviewType(saved.previewType);
+        setPreviewType("survey");
         if (saved.topoSource) setTopoSource(saved.topoSource);
         if (saved.northArrowStyle) setNorthArrowStyle(saved.northArrowStyle);
         if (saved.northArrowColor) setNorthArrowColor(saved.northArrowColor);
@@ -482,8 +486,9 @@ export default function SurveyPlan() {
         if (typeof saved.subdivisionEstateName === "string") setSubdivisionEstateName(saved.subdivisionEstateName);
         if (Array.isArray(saved.subdivisionLotNamesDraft)) setSubdivisionLotNamesDraft(saved.subdivisionLotNamesDraft);
         setLastServerSyncAt(saved.lastServerSyncAt || null);
-        setHasUnsyncedServerChanges(Boolean(saved.hasUnsyncedServerChanges));
-        toast.success("Local survey draft restored.");
+        setLastServerSyncSignature(restoredSyncSignature);
+        setHasUnsyncedServerChanges(Boolean(saved.hasUnsyncedServerChanges || (saved.plotId && !restoredSyncSignature)));
+        toast.success("Local survey draft restored in edit mode.");
       })
       .finally(() => {
         if (active) {
@@ -636,6 +641,47 @@ export default function SurveyPlan() {
     return null;
   }, [manualPoints, coordinateSystem]);
 
+  const plotMetaPayload = useMemo(
+    () => ({
+      title_text: meta.title_text,
+      location_text: meta.location_text,
+      lga_text: meta.lga_text,
+      state_text: meta.state_text,
+      scale_text: meta.scale_text,
+      surveyor_name: meta.surveyor_name,
+      surveyor_rank: meta.surveyor_rank,
+      certification_statement: meta.certification_statement,
+      coordinate_system: coordinateSystem,
+      paper_size: meta.paper_size,
+      template_name: meta.template_name,
+      adamawa_rof_no: meta.adamawa_rof_no,
+      adamawa_owner_name: meta.adamawa_owner_name,
+      adamawa_authority_title: meta.adamawa_authority_title,
+      adamawa_authority_date_text: meta.adamawa_authority_date_text,
+      adamawa_control_point_name: "",
+      adamawa_northing: "",
+      adamawa_easting: "",
+      adamawa_elevation: "",
+      adamawa_origin_text: "",
+      adamawa_topo_sheet_text: meta.adamawa_topo_sheet_text,
+      adamawa_computation_no: meta.adamawa_rof_no,
+      adamawa_cadastral_sheet_no: meta.adamawa_cadastral_sheet_no,
+      adamawa_plan_no: meta.adamawa_rof_no,
+      adamawa_surveyed_by_text: "",
+      adamawa_disclaimer_text: meta.adamawa_disclaimer_text,
+    }),
+    [coordinateSystem, meta]
+  );
+
+  const serverSyncSignature = useMemo(
+    () =>
+      JSON.stringify({
+        coordinates: finalCoords ?? null,
+        meta: plotMetaPayload,
+      }),
+    [finalCoords, plotMetaPayload]
+  );
+
   const stationNames = useMemo(() => {
     return manualPoints.map((p) => (p.station || "").trim());
   }, [manualPoints]);
@@ -644,12 +690,12 @@ export default function SurveyPlan() {
     if (!draftHydrated) return;
     const draftState: SurveyPlanDraftState = {
       workflowMode,
-      currentStep,
+      currentStep: 1,
       manualPoints,
       coordinateSystem,
       plotId,
       hasHeightData,
-      previewType,
+      previewType: "survey",
       topoSource,
       northArrowStyle,
       northArrowColor,
@@ -668,6 +714,7 @@ export default function SurveyPlan() {
       subdivisionEstateName,
       subdivisionLotNamesDraft,
       lastServerSyncAt,
+      lastServerSyncSignature,
       hasUnsyncedServerChanges,
     };
 
@@ -688,12 +735,10 @@ export default function SurveyPlan() {
   }, [
     draftHydrated,
     workflowMode,
-    currentStep,
     manualPoints,
     coordinateSystem,
     plotId,
     hasHeightData,
-    previewType,
     topoSource,
     northArrowStyle,
     northArrowColor,
@@ -712,6 +757,7 @@ export default function SurveyPlan() {
     subdivisionEstateName,
     subdivisionLotNamesDraft,
     lastServerSyncAt,
+    lastServerSyncSignature,
     hasUnsyncedServerChanges,
   ]);
 
@@ -722,28 +768,12 @@ export default function SurveyPlan() {
       return;
     }
     if (!plotId) return;
-    setHasUnsyncedServerChanges(true);
+    setHasUnsyncedServerChanges(lastServerSyncSignature !== serverSyncSignature);
   }, [
     draftHydrated,
     plotId,
-    workflowMode,
-    manualPoints,
-    coordinateSystem,
-    meta,
-    northArrowStyle,
-    northArrowColor,
-    beaconStyle,
-    roadWidth,
-    subdivisionMethod,
-    subdivisionCountDraft,
-    subdivisionTargetAreaDraft,
-    subdivisionFractionDraft,
-    subdivisionFractionBreaks,
-    subdivisionCustomAreaDrafts,
-    subdivisionOrientationDraft,
-    subdivisionLotPrefix,
-    subdivisionEstateName,
-    subdivisionLotNamesDraft,
+    lastServerSyncSignature,
+    serverSyncSignature,
   ]);
 
   const displayedSubdivisionLotNames = useMemo(() => {
@@ -1232,16 +1262,12 @@ export default function SurveyPlan() {
     setFeatures(featureRes.data);
   }, []);
 
-  useEffect(() => {
-    if (!plotId || !isOnline || features) return;
-    fetchPlotFeatures(plotId).catch(() => {});
-  }, [fetchPlotFeatures, features, isOnline, plotId]);
-
   const markServerSynced = useCallback(() => {
     const now = new Date().toISOString();
     setLastServerSyncAt(now);
+    setLastServerSyncSignature(serverSyncSignature);
     setHasUnsyncedServerChanges(false);
-  }, []);
+  }, [serverSyncSignature]);
 
   const ensureServerPlot = useCallback(
     async (_reason: string, options?: { fetchFeatures?: boolean }) => {
@@ -1256,27 +1282,32 @@ export default function SurveyPlan() {
 
       try {
         let activePlotId = plotId;
+        const serverDraftCurrent = Boolean(
+          activePlotId &&
+            lastServerSyncSignature &&
+            lastServerSyncSignature === serverSyncSignature
+        );
         if (!activePlotId) {
           const res = await api.post("/plots", {
             coordinates: finalCoords,
-            meta: buildPlotMetaPayload(),
+            meta: plotMetaPayload,
           });
           activePlotId = Number(res.data.plot_id ?? res.data.id);
-          await api.post(`/plots/${activePlotId}/meta`, buildPlotMetaPayload());
+          await api.post(`/plots/${activePlotId}/meta`, plotMetaPayload);
           setPlotId(activePlotId);
           savePlotToStorage(activePlotId);
           setSubdivisionPreview(null);
           setSubdivisionBatches([]);
           setLatestSubdivisionBatchId(null);
           toast.success("Server plot created from local draft.");
-        } else {
+        } else if (!serverDraftCurrent) {
           await api.post(`/plots/${activePlotId}/geometry`, {
             coordinates: finalCoords,
           });
-          await api.post(`/plots/${activePlotId}/meta`, buildPlotMetaPayload());
+          await api.post(`/plots/${activePlotId}/meta`, plotMetaPayload);
         }
 
-        if (options?.fetchFeatures) {
+        if (options?.fetchFeatures && !features) {
           await fetchPlotFeatures(activePlotId);
         }
 
@@ -1286,7 +1317,17 @@ export default function SurveyPlan() {
         setServerSyncing(false);
       }
     },
-    [fetchPlotFeatures, finalCoords, isOnline, markServerSynced, plotId, meta, coordinateSystem]
+    [
+      fetchPlotFeatures,
+      features,
+      finalCoords,
+      isOnline,
+      lastServerSyncSignature,
+      markServerSynced,
+      plotId,
+      plotMetaPayload,
+      serverSyncSignature,
+    ]
   );
 
   const continueWithLocalDraft = useCallback(() => {
@@ -1304,34 +1345,7 @@ export default function SurveyPlan() {
   }, [hasValidCoords, workflowMode]);
 
   function buildPlotMetaPayload() {
-    return {
-      title_text: meta.title_text,
-      location_text: meta.location_text,
-      lga_text: meta.lga_text,
-      state_text: meta.state_text,
-      scale_text: meta.scale_text,
-      surveyor_name: meta.surveyor_name,
-      surveyor_rank: meta.surveyor_rank,
-      certification_statement: meta.certification_statement,
-      coordinate_system: coordinateSystem,
-      paper_size: meta.paper_size,
-      template_name: meta.template_name,
-      adamawa_rof_no: meta.adamawa_rof_no,
-      adamawa_owner_name: meta.adamawa_owner_name,
-      adamawa_authority_title: meta.adamawa_authority_title,
-      adamawa_authority_date_text: meta.adamawa_authority_date_text,
-      adamawa_control_point_name: "",
-      adamawa_northing: "",
-      adamawa_easting: "",
-      adamawa_elevation: "",
-      adamawa_origin_text: "",
-      adamawa_topo_sheet_text: meta.adamawa_topo_sheet_text,
-      adamawa_computation_no: meta.adamawa_rof_no,
-      adamawa_cadastral_sheet_no: meta.adamawa_cadastral_sheet_no,
-      adamawa_plan_no: meta.adamawa_rof_no,
-      adamawa_surveyed_by_text: "",
-      adamawa_disclaimer_text: meta.adamawa_disclaimer_text,
-    };
+    return plotMetaPayload;
   }
 
   // Load preview image
@@ -1631,6 +1645,7 @@ export default function SurveyPlan() {
     setSubdivisionCleanCopyDownloadBatchId(null);
     setMeta(buildDefaultPlotMeta());
     setLastServerSyncAt(null);
+    setLastServerSyncSignature(null);
     setHasUnsyncedServerChanges(false);
     setServerSyncing(false);
     skipDirtyEffectRef.current = true;
