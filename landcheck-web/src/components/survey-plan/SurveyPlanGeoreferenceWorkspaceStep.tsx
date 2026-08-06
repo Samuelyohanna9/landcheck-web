@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { api } from "../../api/client";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
 import { isProjectedCoordinateSystem, mercatorToWGS84, toWGS84 } from "../../utils/coordinateConverter";
 import type { GeoreferenceFeature, GeoreferenceSession, GeoreferenceTransform } from "../../types/surveyGeoreference";
@@ -78,6 +79,9 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   const [imageZoom, setImageZoom] = useState(MIN_STAGE_ZOOM);
   const [imagePan, setImagePan] = useState({ x: 0, y: 0 });
   const [draggingStage, setDraggingStage] = useState(false);
+  const overlayRasterUrl = session?.overlay?.raster_url
+    ? (/^https?:\/\//i.test(session.overlay.raster_url) ? session.overlay.raster_url : `${api.defaults.baseURL || ""}${session.overlay.raster_url}`)
+    : rasterObjectUrl;
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
   const [cursorSample, setCursorSample] = useState<{
     pixelX: number;
@@ -290,10 +294,10 @@ function SurveyPlanGeoreferenceWorkspaceStep({
       });
       map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
       map.on("load", () => {
-        if (rasterObjectUrl && session.overlay?.corners?.length) {
+        if (overlayRasterUrl && session.overlay?.corners?.length) {
           map.addSource("georef-raster-workspace", {
             type: "image",
-            url: rasterObjectUrl,
+            url: overlayRasterUrl,
             coordinates: session.overlay.corners,
           } as any);
           map.addLayer({
@@ -359,16 +363,16 @@ function SurveyPlanGeoreferenceWorkspaceStep({
       }
       setMapReady(false);
     };
-  }, [rasterObjectUrl, session.overlay?.corners]);
+  }, [overlayRasterUrl, session.overlay?.corners]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!mapReady || !map) return;
     const rasterSource = map.getSource("georef-raster-workspace") as any;
-    if (!rasterSource && rasterObjectUrl && session.overlay?.corners?.length) {
+    if (!rasterSource && overlayRasterUrl && session.overlay?.corners?.length) {
       map.addSource("georef-raster-workspace", {
         type: "image",
-        url: rasterObjectUrl,
+        url: overlayRasterUrl,
         coordinates: session.overlay.corners,
       } as any);
       map.addLayer({
@@ -377,9 +381,9 @@ function SurveyPlanGeoreferenceWorkspaceStep({
         source: "georef-raster-workspace",
         paint: { "raster-opacity": 0.7, "raster-resampling": "linear" },
       });
-    } else if (rasterSource && rasterObjectUrl && session.overlay?.corners?.length) {
+    } else if (rasterSource && overlayRasterUrl && session.overlay?.corners?.length) {
       rasterSource.updateImage({
-        url: rasterObjectUrl,
+        url: overlayRasterUrl,
         coordinates: session.overlay.corners,
       });
     }
@@ -389,7 +393,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     if (polygonSource) polygonSource.setData(mapFeatureCollection.polygons as any);
     if (lineSource) lineSource.setData(mapFeatureCollection.lines as any);
     if (pointSource) pointSource.setData(mapFeatureCollection.points as any);
-  }, [mapFeatureCollection, mapReady, rasterObjectUrl, session.overlay?.corners]);
+  }, [mapFeatureCollection, mapReady, overlayRasterUrl, session.overlay?.corners]);
 
   const stageFeatures = useMemo(
     () =>

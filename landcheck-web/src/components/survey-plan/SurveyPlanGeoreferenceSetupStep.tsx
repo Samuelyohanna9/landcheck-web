@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { api } from "../../api/client";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
 import type { GeoreferenceSession } from "../../types/surveyGeoreference";
 import {
@@ -96,6 +97,9 @@ function SurveyPlanGeoreferenceSetupStep({
   const controlPoints = session?.ground_control_points || [];
   const activePoint =
     controlPoints.find((item) => item.id === selectedControlPointId) || controlPoints[controlPoints.length - 1] || null;
+  const overlayRasterUrl = session?.overlay?.raster_url
+    ? (/^https?:\/\//i.test(session.overlay.raster_url) ? session.overlay.raster_url : `${api.defaults.baseURL || ""}${session.overlay.raster_url}`)
+    : rasterObjectUrl;
   const projectedGroundSystem = isProjectedCoordinateSystem(targetCoordinateSystem);
   const coordinateXLabel = projectedGroundSystem ? "Easting (m)" : "Longitude";
   const coordinateYLabel = projectedGroundSystem ? "Northing (m)" : "Latitude";
@@ -338,10 +342,10 @@ function SurveyPlanGeoreferenceSetupStep({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!mapReady || !map || !session?.overlay?.corners?.length || !rasterObjectUrl) return;
+    if (!mapReady || !map || !session?.overlay?.corners?.length || !overlayRasterUrl) return;
     const corners = session.overlay.corners;
     const currentRaster = pendingRasterRef.current;
-    if (currentRaster && currentRaster !== rasterObjectUrl) {
+    if (currentRaster && currentRaster !== overlayRasterUrl) {
       try {
         if (map.getLayer("georef-raster-layer")) map.removeLayer("georef-raster-layer");
         if (map.getSource("georef-raster")) map.removeSource("georef-raster");
@@ -349,11 +353,11 @@ function SurveyPlanGeoreferenceSetupStep({
         // no-op
       }
     }
-    pendingRasterRef.current = rasterObjectUrl;
+    pendingRasterRef.current = overlayRasterUrl;
     if (!map.getSource("georef-raster")) {
       map.addSource("georef-raster", {
         type: "image",
-        url: rasterObjectUrl,
+        url: overlayRasterUrl,
         coordinates: [corners[0], corners[1], corners[2], corners[3]],
       } as any);
       map.addLayer({
@@ -365,7 +369,7 @@ function SurveyPlanGeoreferenceSetupStep({
     } else {
       try {
         (map.getSource("georef-raster") as any).updateImage({
-          url: rasterObjectUrl,
+          url: overlayRasterUrl,
           coordinates: [corners[0], corners[1], corners[2], corners[3]],
         });
       } catch {
@@ -373,7 +377,7 @@ function SurveyPlanGeoreferenceSetupStep({
         map.removeSource("georef-raster");
         map.addSource("georef-raster", {
           type: "image",
-          url: rasterObjectUrl,
+          url: overlayRasterUrl,
           coordinates: [corners[0], corners[1], corners[2], corners[3]],
         } as any);
         map.addLayer({
@@ -385,7 +389,7 @@ function SurveyPlanGeoreferenceSetupStep({
       }
     }
     map.fitBounds([corners[0], corners[2]], { padding: 48, duration: 800 });
-  }, [mapReady, rasterObjectUrl, session?.overlay?.corners, session?.id]);
+  }, [mapReady, overlayRasterUrl, session?.overlay?.corners, session?.id]);
 
   useEffect(() => {
     const handlePointerMove = (event: MouseEvent) => {
