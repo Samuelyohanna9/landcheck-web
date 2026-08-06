@@ -1,6 +1,12 @@
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
 import type { GeoreferenceSession } from "../../types/surveyGeoreference";
+import {
+  getRasterPixelFromStageClick,
+  getRasterStageMetrics,
+  projectRasterPixelToStage,
+  type RasterStageMetrics,
+} from "../../utils/georeferenceRasterStage";
 
 type Props = {
   sidebar: ReactNode;
@@ -58,12 +64,15 @@ function SurveyPlanGeoreferenceSetupStep({
   onDeleteSession,
 }: Props) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const imageStageRef = useRef<HTMLDivElement | null>(null);
+  const rasterImageRef = useRef<HTMLImageElement | null>(null);
   const mapRef = useRef<any>(null);
   const mapboxRef = useRef<any>(null);
   const pendingRasterRef = useRef<string | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftFile, setDraftFile] = useState<File | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [stageMetrics, setStageMetrics] = useState<RasterStageMetrics | null>(null);
 
   const controlPoints = session?.ground_control_points || [];
   const activePoint =
@@ -73,6 +82,30 @@ function SurveyPlanGeoreferenceSetupStep({
     if (!session?.title_text) return;
     setDraftTitle(session.title_text);
   }, [session?.title_text]);
+
+  useEffect(() => {
+    const measure = () => {
+      const nextMetrics = getRasterStageMetrics(
+        imageStageRef.current,
+        rasterImageRef.current,
+        session?.source_width || 0,
+        session?.source_height || 0,
+      );
+      setStageMetrics(nextMetrics);
+    };
+
+    measure();
+
+    const resizeObserver = new ResizeObserver(measure);
+    if (imageStageRef.current) resizeObserver.observe(imageStageRef.current);
+    if (rasterImageRef.current) resizeObserver.observe(rasterImageRef.current);
+    window.addEventListener("resize", measure);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [rasterObjectUrl, session?.id, session?.source_height, session?.source_width]);
 
   useEffect(() => {
     let cancelled = false;
@@ -143,7 +176,12 @@ function SurveyPlanGeoreferenceSetupStep({
     () => ({
       type: "FeatureCollection",
       features: controlPoints
-        .filter((item) => Number.isFinite(item.lng) && Number.isFinite(item.lat))
+        .filter(
+          (item) =>
+            Number.isFinite(item.lng) &&
+            Number.isFinite(item.lat) &&
+            (Math.abs(item.lng) > 1e-6 || Math.abs(item.lat) > 1e-6),
+        )
         .map((item) => ({
           type: "Feature",
           geometry: { type: "Point", coordinates: [item.lng, item.lat] },
@@ -224,27 +262,33 @@ function SurveyPlanGeoreferenceSetupStep({
 
   const handleRasterClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!activePoint) return;
-    const target = event.currentTarget;
-    const image = target.querySelector("img");
-    if (!image) return;
-    const bounds = image.getBoundingClientRect();
-    const naturalWidth = (image as HTMLImageElement).naturalWidth || session?.source_width || 0;
-    const naturalHeight = (image as HTMLImageElement).naturalHeight || session?.source_height || 0;
-    if (!naturalWidth || !naturalHeight || !bounds.width || !bounds.height) return;
-    const relativeX = Math.max(0, Math.min(bounds.width, event.clientX - bounds.left));
-    const relativeY = Math.max(0, Math.min(bounds.height, event.clientY - bounds.top));
-    const pixelX = (relativeX / bounds.width) * naturalWidth;
-    const pixelY = (relativeY / bounds.height) * naturalHeight;
-    onAssignImagePoint(pixelX, pixelY);
+    const pixel = getRasterPixelFromStageClick(
+      imageStageRef.current,
+      rasterImageRef.current,
+      session?.source_width || 0,
+      session?.source_height || 0,
+      event.clientX,
+      event.clientY,
+    );
+    if (!pixel) return;
+    onAssignImagePoint(pixel.pixelX, pixel.pixelY);
   };
 
   const stageMarkers = controlPoints
-    .filter((item) => Number.isFinite(item.image_x) && Number.isFinite(item.image_y))
-    .map((item) => ({
-      ...item,
-      left: session?.source_width ? `${(item.image_x / session.source_width) * 100}%` : "0%",
-      top: session?.source_height ? `${(item.image_y / session.source_height) * 100}%` : "0%",
-    }));
+    .filter(
+      (item) =>
+        Number.isFinite(item.image_x) &&
+        Number.isFinite(item.image_y) &&
+        (Math.abs(item.image_x) > 0.5 || Math.abs(item.image_y) > 0.5),
+    )
+    .map((item) => {
+      const stagePosition = projectRasterPixelToStage(item.image_x, item.image_y, stageMetrics);
+      return {
+        ...item,
+        left: stagePosition ? `${stagePosition.leftPercent}%` : "0%",
+        top: stagePosition ? `${stagePosition.topPercent}%` : "0%",
+      };
+    });
 
   return (
     <div className="step-panel georef-step-panel">
@@ -430,10 +474,24 @@ function SurveyPlanGeoreferenceSetupStep({
               <h4>Raster control stage</h4>
               <span>{activePoint ? `Selected: ${activePoint.label}` : "Add a control point first"}</span>
             </div>
-            <div className="georef-image-stage" onClick={handleRasterClick}>
+            <div className="georef-image-stage" ref={imageStageRef} onClick={handleRasterClick}>
               {rasterObjectUrl ? (
                 <>
-                  <img src={rasterObjectUrl} alt={session?.title_text || "Uploaded survey raster"} />
+                  <img
+                    ref={rasterImageRef}
+                    src={rasterObjectUrl}
+                    alt={session?.title_text || "Uploaded survey raster"}
+                    onLoad={() =>
+                      setStageMetrics(
+                        getRasterStageMetrics(
+                          imageStageRef.current,
+                          rasterImageRef.current,
+                          session?.source_width || 0,
+                          session?.source_height || 0,
+                        ),
+                      )
+                    }
+                  />
                   {stageMarkers.map((point) => (
                     <button
                       key={point.id}

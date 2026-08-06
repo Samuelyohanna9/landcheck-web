@@ -67,7 +67,8 @@ type Props = {
   orthophotoLoading: boolean;
   topoMapLoading: boolean;
   serverSyncing: boolean;
-  hasUnsyncedServerChanges: boolean;
+  previewNeedsRender: boolean;
+  hasRenderedCurrentPreview: boolean;
   onOpenFeatureCadEditor: () => void | Promise<void>;
   onPrefetchFeatureEditor: () => void;
   plotId: number | null;
@@ -113,7 +114,8 @@ function SurveyPlanSurveyPreviewStep({
   orthophotoLoading,
   topoMapLoading,
   serverSyncing,
-  hasUnsyncedServerChanges,
+  previewNeedsRender,
+  hasRenderedCurrentPreview,
   onOpenFeatureCadEditor,
   onPrefetchFeatureEditor,
   plotId,
@@ -364,11 +366,11 @@ function SurveyPlanSurveyPreviewStep({
 
           <div className="edit-feature-bar">
             <button
-              className={`btn-secondary${hasUnsyncedServerChanges && !rendering ? " needs-render" : ""}`}
+              className={`btn-secondary${previewNeedsRender && !rendering ? " needs-render" : ""}`}
               onClick={refreshCurrentPreview}
               disabled={rendering}
             >
-              {hasUnsyncedServerChanges && !rendering && <span className="needs-render-dot" aria-hidden="true" />}
+              {previewNeedsRender && !rendering && <span className="needs-render-dot" aria-hidden="true" />}
               {rendering ? "Rendering..." : previewActionLabel}
             </button>
             <button
@@ -381,9 +383,13 @@ function SurveyPlanSurveyPreviewStep({
               Open Feature CAD Editor
             </button>
           </div>
-          {hasUnsyncedServerChanges && !rendering && (
+          {previewNeedsRender && !rendering && (
             <p className="needs-render-hint">
-              You've made changes that aren't in the preview yet — click <strong>{previewActionLabel}</strong> to update it.
+              {hasRenderedCurrentPreview ? (
+                <>You've made changes that aren't in the preview yet — click <strong>{previewActionLabel}</strong> to update it.</>
+              ) : (
+                <>No preview has been generated yet — click <strong>{previewActionLabel}</strong> to see your survey plan.</>
+              )}
             </p>
           )}
         </div>
@@ -413,13 +419,17 @@ function SurveyPlanSurveyPreviewStep({
       </div>
 
       <div className="panel-right preview-container">
-        {hasUnsyncedServerChanges && !rendering && (
+        {previewNeedsRender && !rendering && (
           <div className="preview-stale-banner">
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l6.28 11.18c.75 1.334-.213 2.987-1.743 2.987H3.72c-1.53 0-2.493-1.653-1.743-2.987l6.28-11.18zM10 6a1 1 0 011 1v3a1 1 0 11-2 0V7a1 1 0 011-1zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
             </svg>
             <span>
-              Preview is out of date — click <strong>{previewActionLabel}</strong> to see your latest changes.
+              {hasRenderedCurrentPreview ? (
+                <>Preview is out of date — click <strong>{previewActionLabel}</strong> to see your latest changes.</>
+              ) : (
+                <>No preview yet — click <strong>{previewActionLabel}</strong> to generate your survey plan.</>
+              )}
             </span>
           </div>
         )}

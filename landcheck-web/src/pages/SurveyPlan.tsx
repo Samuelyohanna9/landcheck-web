@@ -469,6 +469,7 @@ export default function SurveyPlan() {
   const [scaleDraft, setScaleDraft] = useState<string>("1000");
   const [newRoadWidth, setNewRoadWidth] = useState<RoadWidthOption>("10");
   const [showFeatureEditor, setShowFeatureEditor] = useState(false);
+  const featureEditsPendingRef = useRef(false);
   const [featureType, setFeatureType] = useState<"road" | "building" | "river" | "fence">("road");
   const [featureAction, setFeatureAction] = useState<"add" | "delete" | "update">("add");
   const [roadName, setRoadName] = useState("");
@@ -1532,7 +1533,10 @@ export default function SurveyPlan() {
     startTransition(() => {
       setCurrentStep(2);
     });
-    toast.success("Draft saved locally. Official preview/export will sync only when you request it.");
+    toast.success(
+      "Draft saved locally. Click \"Render Official Preview\" below to generate and see your survey plan.",
+      { duration: 5000 }
+    );
   }, [hasValidCoords, workflowMode]);
 
   function buildPlotMetaPayload() {
@@ -1811,17 +1815,28 @@ export default function SurveyPlan() {
       field: "label" | "lng" | "lat" | "image_x" | "image_y",
       value: string | number
     ) => {
-      const nextPoints = (georefSession?.ground_control_points || []).map((item) => {
-        if (item.id !== controlPointId) return item;
-        if (field === "label") {
-          return { ...item, label: String(value || "").trim() || item.label };
-        }
-        const nextValue = Number.parseFloat(String(value));
-        return { ...item, [field]: Number.isFinite(nextValue) ? nextValue : 0 };
+      setGeorefSession((current) => {
+        if (!current) return current;
+        const nextPoints = (current.ground_control_points || []).map((item) => {
+          if (item.id !== controlPointId) return item;
+          if (field === "label") {
+            return { ...item, label: String(value || "").trim() || item.label };
+          }
+          const nextValue = Number.parseFloat(String(value));
+          return { ...item, [field]: Number.isFinite(nextValue) ? nextValue : 0 };
+        });
+        return {
+          ...current,
+          status: "draft",
+          ground_control_points: nextPoints,
+          transform: null,
+          overlay: null,
+          features: [],
+        };
       });
-      invalidateGeoreferenceSolve(nextPoints);
+      setGeorefFeatures([]);
     },
-    [georefSession?.ground_control_points, invalidateGeoreferenceSolve]
+    []
   );
 
   const handleAssignGeoreferenceImagePoint = useCallback(
@@ -2069,6 +2084,16 @@ export default function SurveyPlan() {
         : workflowMode === "subdivision"
           ? "Render Parcel Preview"
           : "Render Official Preview";
+
+  // Whether the currently-selected preview tab (survey/orthophoto/topomap) has ever been
+  // rendered at all - distinct from hasUnsyncedServerChanges, which only tracks a render going
+  // stale after an edit. A brand-new local-only draft (never synced, plotId is null) has no
+  // preview yet and hasUnsyncedServerChanges never fires for it (it requires a plotId), so this
+  // covers that case too.
+  const hasRenderedCurrentPreview = Boolean(
+    previewType === "orthophoto" ? orthophotoUrl : previewType === "topomap" ? topoMapUrl : previewUrl
+  );
+  const previewNeedsRender = !hasRenderedCurrentPreview || hasUnsyncedServerChanges;
 
   // Reset everything
   const resetAll = () => {
@@ -2956,26 +2981,38 @@ export default function SurveyPlan() {
     }
   }, [ensureServerPlot, features, isOnline, markServerSynced, plotId, prefetchFeatureEditor]);
 
-  const handleSaveOverride = async (payload: { feature_type: "road" | "building" | "river" | "fence"; action: "add" | "delete" | "update"; name?: string; width_m?: number; geojson: any }) => {
+  // Persists one feature edit and reports success/failure back to the CAD editor, which stays
+  // open and updates its own canvas locally instead of the editor closing after every action.
+  // The preview is only regenerated once, when the editor is actually closed (see
+  // handleCloseFeatureEditor) - not per edit, which used to force a close+reopen cycle for every
+  // single delete/add/update.
+  const handleSaveOverride = async (payload: { feature_type: "road" | "building" | "river" | "fence"; action: "add" | "delete" | "update"; name?: string; width_m?: number; geojson: any }): Promise<boolean> => {
     if (!plotId) {
       toast.error("Sync the draft to the server before saving feature edits.");
-      return;
+      return false;
     }
     try {
       await api.post(`/plots/${plotId}/feature-overrides`, payload);
-      toast.success("Feature saved");
-      setShowFeatureEditor(false);
-      setPreviewUrl(null);
-      setOrthophotoUrl(null);
-      setTopoMapUrl(null);
-      setTimeout(() => {
-        refreshCurrentPreview();
-      }, 250);
+      featureEditsPendingRef.current = true;
+      return true;
     } catch (err) {
       console.error(err);
       toast.error("Failed to save feature");
+      return false;
     }
   };
+
+  const handleCloseFeatureEditor = useCallback(() => {
+    setShowFeatureEditor(false);
+    if (!featureEditsPendingRef.current) return;
+    featureEditsPendingRef.current = false;
+    setPreviewUrl(null);
+    setOrthophotoUrl(null);
+    setTopoMapUrl(null);
+    window.setTimeout(() => {
+      void refreshCurrentPreview();
+    }, 250);
+  }, [refreshCurrentPreview]);
 
   const renderSidebarStepsCard = () => (
     <div className="workflow-inline-card workflow-inline-card--sidebar">
@@ -3141,7 +3178,7 @@ export default function SurveyPlan() {
           <Suspense fallback={null}>
             <FeatureOverrideModal
               isOpen={showFeatureEditor}
-              onClose={() => setShowFeatureEditor(false)}
+              onClose={handleCloseFeatureEditor}
               onSave={handleSaveOverride}
               plotCoords={finalCoords}
               featureType={featureType}
@@ -3264,7 +3301,8 @@ export default function SurveyPlan() {
               orthophotoLoading={orthophotoLoading}
               topoMapLoading={topoMapLoading}
               serverSyncing={serverSyncing}
-              hasUnsyncedServerChanges={hasUnsyncedServerChanges}
+              previewNeedsRender={previewNeedsRender}
+              hasRenderedCurrentPreview={hasRenderedCurrentPreview}
               onOpenFeatureCadEditor={openFeatureCadEditor}
               onPrefetchFeatureEditor={prefetchFeatureEditor}
               plotId={plotId}
@@ -3346,7 +3384,8 @@ export default function SurveyPlan() {
               orthophotoLoading={orthophotoLoading}
               topoMapLoading={topoMapLoading}
               serverSyncing={serverSyncing}
-              hasUnsyncedServerChanges={hasUnsyncedServerChanges}
+              previewNeedsRender={previewNeedsRender}
+              hasRenderedCurrentPreview={hasRenderedCurrentPreview}
               onOpenFeatureCadEditor={openFeatureCadEditor}
               isOnline={isOnline}
               plotId={plotId}
