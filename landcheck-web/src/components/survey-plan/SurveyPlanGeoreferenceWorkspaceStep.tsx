@@ -86,6 +86,8 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     targetY: number;
     lng: number;
     lat: number;
+    leftPercent: number;
+    topPercent: number;
   } | null>(null);
 
   const transform = session.transform as GeoreferenceTransform;
@@ -302,22 +304,6 @@ function SurveyPlanGeoreferenceWorkspaceStep({
             "circle-stroke-color": "#ffffff",
           },
         });
-        map.addLayer({
-          id: "georef-feature-labels",
-          type: "symbol",
-          source: "georef-points",
-          layout: {
-            "text-field": ["get", "label"],
-            "text-size": 11,
-            "text-offset": [0, 1.2],
-            "text-anchor": "top",
-          },
-          paint: {
-            "text-color": "#ffffff",
-            "text-halo-color": "#052e16",
-            "text-halo-width": 1.5,
-          },
-        });
         if (session.overlay?.corners?.[0] && session.overlay?.corners?.[2]) {
           map.fitBounds([session.overlay.corners[0], session.overlay.corners[2]], { padding: 52, duration: 900 });
         }
@@ -465,6 +451,13 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   );
 
   const handleStagePointerMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    const liveMetrics =
+      getRasterStageMetrics(
+        imageStageRef.current,
+        rasterImageRef.current,
+        session.source_width,
+        session.source_height,
+      ) || stageMetrics;
     const pixel = getRasterPixelFromStageClick(
       imageStageRef.current,
       rasterImageRef.current,
@@ -477,6 +470,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
       setCursorSample(null);
       return;
     }
+    const stagePosition = projectRasterPixelToStage(pixel.pixelX, pixel.pixelY, liveMetrics);
     const transformed = applyPixelTransform(pixel.pixelX, pixel.pixelY);
     setCursorSample({
       pixelX: pixel.pixelX,
@@ -485,6 +479,8 @@ function SurveyPlanGeoreferenceWorkspaceStep({
       targetY: transformed.target[1],
       lng: transformed.wgs84[0],
       lat: transformed.wgs84[1],
+      leftPercent: stagePosition?.leftPercent ?? 0,
+      topPercent: stagePosition?.topPercent ?? 0,
     });
   };
 
@@ -858,9 +854,32 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                         className={`georef-image-marker georef-image-marker--compact${marker.active ? " active" : ""}${marker.pointOnly ? " is-point" : ""}`}
                         style={{ left: marker.left, top: marker.top }}
                       >
-                        <span className="georef-image-marker-badge">{marker.label}</span>
+                        {marker.pointOnly ? (
+                          <span className="georef-image-marker-dot" aria-hidden="true" />
+                        ) : (
+                          <span className="georef-image-marker-badge">{marker.label}</span>
+                        )}
                       </span>
                     ))}
+                    {cursorSample ? (
+                      <span
+                        className="georef-cursor-probe"
+                        style={{ left: `${cursorSample.leftPercent}%`, top: `${cursorSample.topPercent}%` }}
+                        aria-hidden="true"
+                      >
+                        <span className="georef-cursor-probe-reticle">
+                          <span className="georef-cursor-probe-dot" />
+                        </span>
+                        <span className="georef-cursor-probe-label">
+                          <strong>
+                            X {formatGridCoordinate(cursorSample.targetX, projectedGroundSystem)}
+                          </strong>
+                          <span>
+                            Y {formatGridCoordinate(cursorSample.targetY, projectedGroundSystem)}
+                          </span>
+                        </span>
+                      </span>
+                    ) : null}
                   </>
                 ) : (
                   <div className="georef-empty-stage">
@@ -872,14 +891,14 @@ function SurveyPlanGeoreferenceWorkspaceStep({
             </div>
             <div className="georef-coordinate-strip">
               <article>
-                <span>Raster cursor</span>
+                <span>Raster X / Y</span>
                 <strong>{cursorSample ? `X ${cursorSample.pixelX.toFixed(1)} / Y ${cursorSample.pixelY.toFixed(1)}` : "Move over image"}</strong>
               </article>
               <article>
-                <span>{projectedGroundSystem ? "Projected grid" : "Selected grid"}</span>
+                <span>{projectedGroundSystem ? "Selected grid X / Y" : "Ground X / Y"}</span>
                 <strong>
                   {cursorSample
-                    ? `${coordinateXLabel.split(" ")[0]} ${formatGridCoordinate(cursorSample.targetX, projectedGroundSystem)} / ${coordinateYLabel.split(" ")[0]} ${formatGridCoordinate(cursorSample.targetY, projectedGroundSystem)}`
+                    ? `X ${formatGridCoordinate(cursorSample.targetX, projectedGroundSystem)} / Y ${formatGridCoordinate(cursorSample.targetY, projectedGroundSystem)}`
                     : "Waiting for cursor"}
                 </strong>
               </article>
