@@ -352,7 +352,12 @@ function SurveyPlanGeoreferenceWorkspaceStep({
             id: "georef-raster-workspace-layer",
             type: "raster",
             source: "georef-raster-workspace",
-            paint: { "raster-opacity": 0.7, "raster-resampling": "linear" },
+            paint: {
+              "raster-opacity": 0.82,
+              "raster-resampling": "linear",
+              "raster-saturation": -0.08,
+              "raster-contrast": 0.14,
+            },
           });
         }
         map.addSource("georef-polygons", { type: "geojson", data: mapFeatureCollection.polygons as any });
@@ -364,7 +369,17 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           source: "georef-polygons",
           paint: {
             "fill-color": ["case", ["==", ["get", "draft"], 1], "#f59e0b", "#10b981"],
-            "fill-opacity": 0.15,
+            "fill-opacity": 0.14,
+          },
+        });
+        map.addLayer({
+          id: "georef-polygons-line-shadow",
+          type: "line",
+          source: "georef-polygons",
+          paint: {
+            "line-color": "rgba(15, 23, 42, 0.94)",
+            "line-width": ["case", ["==", ["get", "draft"], 1], 5.4, ["==", ["get", "primary"], 1], 5, 4.2],
+            "line-blur": 0.6,
           },
         });
         map.addLayer({
@@ -372,8 +387,18 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           type: "line",
           source: "georef-polygons",
           paint: {
-            "line-color": ["case", ["==", ["get", "primary"], 1], "#f8fafc", "#86efac"],
-            "line-width": ["case", ["==", ["get", "draft"], 1], 3.2, 2.4],
+            "line-color": ["case", ["==", ["get", "draft"], 1], "#f59e0b", ["==", ["get", "primary"], 1], "#f8fafc", "#86efac"],
+            "line-width": ["case", ["==", ["get", "draft"], 1], 3.2, ["==", ["get", "primary"], 1], 2.8, 2.2],
+          },
+        });
+        map.addLayer({
+          id: "georef-lines-line-shadow",
+          type: "line",
+          source: "georef-lines",
+          paint: {
+            "line-color": "rgba(15, 23, 42, 0.94)",
+            "line-width": ["case", ["==", ["get", "draft"], 1], 5, 4.2],
+            "line-blur": 0.6,
           },
         });
         map.addLayer({
@@ -381,8 +406,19 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           type: "line",
           source: "georef-lines",
           paint: {
-            "line-color": ["case", ["==", ["get", "draft"], 1], "#fb7185", "#38bdf8"],
-            "line-width": ["case", ["==", ["get", "draft"], 1], 3, 2.2],
+            "line-color": ["case", ["==", ["get", "draft"], 1], "#f97316", "#38bdf8"],
+            "line-width": ["case", ["==", ["get", "draft"], 1], 2.6, 2.1],
+          },
+        });
+        map.addLayer({
+          id: "georef-points-halo",
+          type: "circle",
+          source: "georef-points",
+          paint: {
+            "circle-radius": ["case", ["==", ["get", "draft"], 1], 8, 7],
+            "circle-color": "rgba(15, 23, 42, 0.72)",
+            "circle-stroke-width": 1.6,
+            "circle-stroke-color": "rgba(226, 232, 240, 0.9)",
           },
         });
         map.addLayer({
@@ -390,10 +426,10 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           type: "circle",
           source: "georef-points",
           paint: {
-            "circle-radius": ["case", ["==", ["get", "draft"], 1], 8, 6],
-            "circle-color": ["case", ["==", ["get", "draft"], 1], "#f59e0b", "#0ea5e9"],
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#ffffff",
+            "circle-radius": ["case", ["==", ["get", "draft"], 1], 2.9, 2.4],
+            "circle-color": ["case", ["==", ["get", "draft"], 1], "#f59e0b", "#f8fafc"],
+            "circle-stroke-width": 0.8,
+            "circle-stroke-color": ["case", ["==", ["get", "draft"], 1], "#7c2d12", "#0f172a"],
           },
         });
         if (session.overlay?.corners?.[0] && session.overlay?.corners?.[2]) {
@@ -427,7 +463,12 @@ function SurveyPlanGeoreferenceWorkspaceStep({
         id: "georef-raster-workspace-layer",
         type: "raster",
         source: "georef-raster-workspace",
-        paint: { "raster-opacity": 0.7, "raster-resampling": "linear" },
+        paint: {
+          "raster-opacity": 0.82,
+          "raster-resampling": "linear",
+          "raster-saturation": -0.08,
+          "raster-contrast": 0.14,
+        },
       });
     } else if (rasterSource && overlayRasterUrl && session.overlay?.corners?.length) {
       rasterSource.updateImage({
@@ -947,7 +988,10 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                         style={{ left: marker.left, top: marker.top }}
                       >
                         {marker.pointOnly ? (
-                          <span className="georef-image-marker-dot" aria-hidden="true" />
+                          <>
+                            <span className="georef-image-marker-dot" aria-hidden="true" />
+                            <span className="georef-image-marker-hover">{marker.label}</span>
+                          </>
                         ) : (
                           <span className="georef-image-marker-badge">{marker.label}</span>
                         )}
@@ -980,6 +1024,46 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                   </div>
                 )}
               </div>
+              {selectedStageFeature ? (
+                <aside className="georef-coordinate-float">
+                  <div className="georef-coordinate-float-head">
+                    <div>
+                      <strong>{selectedStageFeature.label}</strong>
+                      <span>
+                        {selectedStageFeature.feature_type === "point"
+                          ? "Stake point coordinates"
+                          : `${selectedFeatureCoordinateRows.length} saved coordinate${selectedFeatureCoordinateRows.length === 1 ? "" : "s"}`}
+                      </span>
+                    </div>
+                    <span className="georef-quality-pill">
+                      {selectedStageFeature.feature_type === "point" ? "Dot" : selectedStageFeature.feature_type}
+                    </span>
+                  </div>
+                  <div className="georef-coordinate-mini-table-wrap">
+                    <table className="georef-coordinate-mini-table">
+                      <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>{coordinateXLabel}</th>
+                          <th>{coordinateYLabel}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedFeatureCoordinateRows.map((point) => (
+                          <tr
+                            key={`${selectedStageFeature.id}-mini-coord-${point.index}`}
+                            title={`Lon ${formatWgs84Coordinate(point.lng)} | Lat ${formatWgs84Coordinate(point.lat)}`}
+                          >
+                            <td>{selectedStageFeature.feature_type === "point" ? selectedStageFeature.label : `P${point.index + 1}`}</td>
+                            <td>{formatGridCoordinate(point.targetX, projectedGroundSystem)}</td>
+                            <td>{formatGridCoordinate(point.targetY, projectedGroundSystem)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </aside>
+              ) : null}
             </div>
             <div className="georef-coordinate-strip">
               <article>
@@ -998,50 +1082,6 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                 <span>WGS84 fallback</span>
                 <strong>{cursorSample ? `${formatWgs84Coordinate(cursorSample.lng)}, ${formatWgs84Coordinate(cursorSample.lat)}` : "Longitude / latitude"}</strong>
               </article>
-            </div>
-            <div className="georef-coordinate-register">
-              <div className="georef-card-head">
-                <div>
-                  <h4>{selectedStageFeature ? `${selectedStageFeature.label} coordinate register` : "Coordinate register"}</h4>
-                  <span>Every vertex is listed below in the selected working grid and in WGS84.</span>
-                </div>
-                {selectedStageFeature ? (
-                  <span className="georef-quality-pill">
-                    {selectedStageFeature.feature_type === "point" ? "Stake point" : `${selectedFeatureCoordinateRows.length} vertices`}
-                  </span>
-                ) : null}
-              </div>
-              {selectedStageFeature ? (
-                <div className="georef-coordinate-table-wrap">
-                  <table className="georef-coordinate-table">
-                    <thead>
-                      <tr>
-                        <th>Vertex</th>
-                        <th>{coordinateXLabel}</th>
-                        <th>{coordinateYLabel}</th>
-                        <th>Longitude</th>
-                        <th>Latitude</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedFeatureCoordinateRows.map((point) => (
-                        <tr key={`${selectedStageFeature.id}-coord-${point.index}`}>
-                          <td>{selectedStageFeature.feature_type === "point" ? selectedStageFeature.label : `P${point.index + 1}`}</td>
-                          <td>{formatGridCoordinate(point.targetX, projectedGroundSystem)}</td>
-                          <td>{formatGridCoordinate(point.targetY, projectedGroundSystem)}</td>
-                          <td>{formatWgs84Coordinate(point.lng)}</td>
-                          <td>{formatWgs84Coordinate(point.lat)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="georef-empty-list">
-                  <strong>No coordinate register yet</strong>
-                  <span>Digitize or select a feature to review its live coordinate rows.</span>
-                </div>
-              )}
             </div>
           </section>
 

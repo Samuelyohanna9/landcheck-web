@@ -907,6 +907,7 @@
 }
 
 .georef-image-stage-viewport {
+  position: relative;
   min-height: min(68vh, 720px);
   border-radius: 18px;
   overflow: hidden;
@@ -993,9 +994,9 @@
 }
 
 .georef-stage-point {
-  fill: rgba(245, 158, 11, 0.94);
-  stroke: #f8fafc;
-  stroke-width: 0.28;
+  fill: #f8fafc;
+  stroke: rgba(15, 23, 42, 0.98);
+  stroke-width: 0.3;
 }
 
 .georef-stage-shape.active .georef-stage-polygon-fill {
@@ -1026,6 +1027,10 @@
 
 .georef-image-marker--compact {
   transform: translate(-50%, -50%);
+}
+
+.georef-image-marker--compact.is-point {
+  pointer-events: auto;
 }
 
 .georef-image-marker-badge {
@@ -1062,22 +1067,48 @@
 
 .georef-image-marker-dot {
   display: inline-flex;
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 999px;
   background: rgba(248, 250, 252, 0.96);
-  border: 2px solid rgba(245, 158, 11, 0.98);
+  border: 2px solid rgba(15, 23, 42, 0.96);
   box-shadow:
-    0 0 0 3px rgba(245, 158, 11, 0.16),
-    0 8px 20px rgba(15, 23, 42, 0.28);
+    0 0 0 2px rgba(248, 250, 252, 0.18),
+    0 0 0 4px rgba(15, 23, 42, 0.24);
 }
 
 .georef-image-marker.active .georef-image-marker-dot {
   background: rgba(253, 224, 71, 0.98);
-  border-color: rgba(146, 64, 14, 0.98);
+  border-color: rgba(120, 53, 15, 0.98);
   box-shadow:
-    0 0 0 4px rgba(253, 224, 71, 0.18),
-    0 10px 22px rgba(15, 23, 42, 0.34);
+    0 0 0 2px rgba(253, 224, 71, 0.24),
+    0 0 0 5px rgba(245, 158, 11, 0.18);
+}
+
+.georef-image-marker-hover {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.45rem);
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  padding: 0.3rem 0.56rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(15, 23, 42, 0.94);
+  color: #f8fafc;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 12px 24px rgba(2, 6, 23, 0.34);
+  transition: opacity 0.14s ease;
+}
+
+.georef-image-marker--compact.is-point:hover .georef-image-marker-hover,
+.georef-image-marker--compact.is-point.active .georef-image-marker-hover {
+  opacity: 1;
 }
 
 .georef-cursor-probe {
@@ -1308,8 +1339,7 @@
   margin-top: 0.82rem;
 }
 
-.georef-coordinate-strip article,
-.georef-coordinate-register {
+.georef-coordinate-strip article {
   padding: 0.92rem;
   border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.14);
@@ -1333,8 +1363,80 @@
   line-height: 1.45;
 }
 
-.georef-coordinate-register {
-  margin-top: 0.82rem;
+.georef-coordinate-float {
+  position: absolute;
+  right: 0.9rem;
+  bottom: 0.9rem;
+  z-index: 4;
+  width: min(420px, calc(100% - 1.8rem));
+  padding: 0.82rem;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.82));
+  box-shadow: 0 20px 48px rgba(2, 6, 23, 0.34);
+  backdrop-filter: blur(14px);
+}
+
+.georef-coordinate-float-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.72rem;
+  margin-bottom: 0.72rem;
+}
+
+.georef-coordinate-float-head strong {
+  display: block;
+  color: #f8fafc;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.georef-coordinate-float-head span {
+  display: block;
+  margin-top: 0.18rem;
+  color: #94a3b8;
+  font-size: 0.74rem;
+}
+
+.georef-coordinate-mini-table-wrap {
+  overflow: auto;
+  max-height: 220px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.georef-coordinate-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 320px;
+}
+
+.georef-coordinate-mini-table th,
+.georef-coordinate-mini-table td {
+  padding: 0.62rem 0.68rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.georef-coordinate-mini-table th {
+  position: sticky;
+  top: 0;
+  background: rgba(15, 23, 42, 0.98);
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.georef-coordinate-mini-table td {
+  color: #f8fafc;
+  font-size: 0.78rem;
+}
+
+.georef-coordinate-mini-table tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 .georef-empty-stage {
@@ -3301,6 +3403,12 @@
 
   .georef-coordinate-strip {
     grid-template-columns: 1fr;
+  }
+
+  .georef-coordinate-float {
+    position: static;
+    width: 100%;
+    margin-top: 0.82rem;
   }
 
   .georef-feature-register-head {

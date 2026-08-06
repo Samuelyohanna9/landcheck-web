@@ -93,10 +93,12 @@ export function getRasterPixelFromStageClick(
 
   const normalizedX = Math.max(0, Math.min(1, (relativeX - metrics.offsetLeft) / metrics.displayWidth));
   const normalizedY = Math.max(0, Math.min(1, (relativeY - metrics.offsetTop) / metrics.displayHeight));
+  const pixelLimitX = Math.max(metrics.naturalWidth - 1, 1);
+  const pixelLimitY = Math.max(metrics.naturalHeight - 1, 1);
 
   return {
-    pixelX: normalizedX * metrics.naturalWidth,
-    pixelY: normalizedY * metrics.naturalHeight,
+    pixelX: normalizedX * pixelLimitX,
+    pixelY: normalizedY * pixelLimitY,
   };
 }
 
@@ -106,9 +108,11 @@ export function projectRasterPixelToStage(
   metrics: RasterStageMetrics | null,
 ): RasterStageProjection | null {
   if (!metrics || !metrics.containerWidth || !metrics.containerHeight) return null;
+  const pixelLimitX = Math.max(metrics.naturalWidth - 1, 1);
+  const pixelLimitY = Math.max(metrics.naturalHeight - 1, 1);
 
-  const normalizedX = pixelX / metrics.naturalWidth;
-  const normalizedY = pixelY / metrics.naturalHeight;
+  const normalizedX = Math.max(0, Math.min(1, pixelX / pixelLimitX));
+  const normalizedY = Math.max(0, Math.min(1, pixelY / pixelLimitY));
 
   const leftPx = metrics.offsetLeft + normalizedX * metrics.displayWidth;
   const topPx = metrics.offsetTop + normalizedY * metrics.displayHeight;
