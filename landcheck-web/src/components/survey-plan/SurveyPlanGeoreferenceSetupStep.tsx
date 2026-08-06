@@ -1,10 +1,11 @@
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "../../api/client";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
-import type { GeoreferenceSession } from "../../types/surveyGeoreference";
+import type { GeoreferenceSession, GeoreferenceTransform } from "../../types/surveyGeoreference";
 import {
   isProjectedCoordinateSystem,
   looksLikeProjected,
+  mercatorToWGS84,
   toWGS84,
 } from "../../utils/coordinateConverter";
 import {
@@ -93,10 +94,21 @@ function SurveyPlanGeoreferenceSetupStep({
   const [imageZoom, setImageZoom] = useState(MIN_STAGE_ZOOM);
   const [imagePan, setImagePan] = useState({ x: 0, y: 0 });
   const [draggingStage, setDraggingStage] = useState(false);
+  const [cursorSample, setCursorSample] = useState<{
+    pixelX: number;
+    pixelY: number;
+    leftPercent: number;
+    topPercent: number;
+    targetX: number | null;
+    targetY: number | null;
+    lng: number | null;
+    lat: number | null;
+  } | null>(null);
 
   const controlPoints = session?.ground_control_points || [];
   const activePoint =
     controlPoints.find((item) => item.id === selectedControlPointId) || controlPoints[controlPoints.length - 1] || null;
+  const solvedTransform = (session?.transform || null) as GeoreferenceTransform | null;
   const overlayRasterUrl = session?.overlay?.raster_url
     ? (/^https?:\/\//i.test(session.overlay.raster_url) ? session.overlay.raster_url : `${api.defaults.baseURL || ""}${session.overlay.raster_url}`)
     : rasterObjectUrl;
@@ -125,6 +137,107 @@ function SurveyPlanGeoreferenceSetupStep({
       setDraggingStage(false);
       dragStateRef.current = null;
     }
+  };
+
+  const updateStageZoomAtClientPoint = (nextZoom: number, clientX: number, clientY: number) => {
+    const normalizedZoom = Math.max(MIN_STAGE_ZOOM, Math.min(MAX_STAGE_ZOOM, Number(nextZoom.toFixed(2))));
+    if (
+      !stageMetrics ||
+      !imageStageRef.current ||
+      !rasterImageRef.current ||
+      !imageViewportRef.current
+    ) {
+      updateStageZoom(normalizedZoom);
+      return;
+    }
+    const pixel = getRasterPixelFromStageClick(
+      imageStageRef.current,
+      rasterImageRef.current,
+      session?.source_width || 0,
+      session?.source_height || 0,
+      clientX,
+      clientY,
+    );
+    if (!pixel) {
+      updateStageZoom(normalizedZoom);
+      return;
+    }
+    const stagePosition = projectRasterPixelToStage(pixel.pixelX, pixel.pixelY, stageMetrics);
+    if (!stagePosition) {
+      updateStageZoom(normalizedZoom);
+      return;
+    }
+    const viewportRect = imageViewportRef.current.getBoundingClientRect();
+    const screenX = clientX - viewportRect.left;
+    const screenY = clientY - viewportRect.top;
+    const centerX = stageMetrics.containerWidth / 2;
+    const centerY = stageMetrics.containerHeight / 2;
+    const nextPan = clampStagePan(
+      {
+        x: screenX - centerX - (stagePosition.leftPx - centerX) * normalizedZoom,
+        y: screenY - centerY - (stagePosition.topPx - centerY) * normalizedZoom,
+      },
+      normalizedZoom,
+    );
+    setImageZoom(normalizedZoom);
+    setImagePan(nextPan);
+    if (normalizedZoom <= MIN_STAGE_ZOOM) {
+      setDraggingStage(false);
+      dragStateRef.current = null;
+    }
+  };
+
+  const applyPixelTransform = (pixelX: number, pixelY: number) => {
+    if (!solvedTransform) return null;
+
+    const homography = Array.isArray(solvedTransform.homography) ? solvedTransform.homography : null;
+    const mapHomography = Array.isArray(solvedTransform.map_homography) ? solvedTransform.map_homography : null;
+    let targetX = 0;
+    let targetY = 0;
+    let usedHomography = false;
+
+    if (homography && homography.length === 9) {
+      const denominator = homography[6] * pixelX + homography[7] * pixelY + homography[8];
+      if (Math.abs(denominator) > 1e-9) {
+        targetX = (homography[0] * pixelX + homography[1] * pixelY + homography[2]) / denominator;
+        targetY = (homography[3] * pixelX + homography[4] * pixelY + homography[5]) / denominator;
+        usedHomography = Number.isFinite(targetX) && Number.isFinite(targetY);
+      }
+    }
+
+    if (!usedHomography) {
+      const coeffX = solvedTransform.coefficients.x;
+      const coeffY = solvedTransform.coefficients.y;
+      targetX = coeffX[0] + coeffX[1] * pixelX + coeffX[2] * pixelY;
+      targetY = coeffY[0] + coeffY[1] * pixelX + coeffY[2] * pixelY;
+    }
+
+    let lng = 0;
+    let lat = 0;
+    let usedMapTransform = false;
+
+    if (mapHomography && mapHomography.length === 9) {
+      const denominator = mapHomography[6] * pixelX + mapHomography[7] * pixelY + mapHomography[8];
+      if (Math.abs(denominator) > 1e-9) {
+        const mercatorX = (mapHomography[0] * pixelX + mapHomography[1] * pixelY + mapHomography[2]) / denominator;
+        const mercatorY = (mapHomography[3] * pixelX + mapHomography[4] * pixelY + mapHomography[5]) / denominator;
+        if (Number.isFinite(mercatorX) && Number.isFinite(mercatorY)) {
+          [lng, lat] = mercatorToWGS84(mercatorX, mercatorY);
+          usedMapTransform = Number.isFinite(lng) && Number.isFinite(lat);
+        }
+      }
+    }
+
+    if (!usedMapTransform) {
+      [lng, lat] = toWGS84(targetX, targetY, solvedTransform.target_coordinate_system);
+    }
+
+    return {
+      targetX,
+      targetY,
+      lng,
+      lat,
+    };
   };
 
   useEffect(() => {
@@ -436,7 +549,45 @@ function SurveyPlanGeoreferenceSetupStep({
   const handleStageWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     event.preventDefault();
     const direction = event.deltaY > 0 ? -STAGE_ZOOM_STEP : STAGE_ZOOM_STEP;
-    updateStageZoom(imageZoom + direction);
+    updateStageZoomAtClientPoint(imageZoom + direction, event.clientX, event.clientY);
+  };
+
+  const handleStagePointerMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    const liveMetrics =
+      getRasterStageMetrics(
+        imageStageRef.current,
+        rasterImageRef.current,
+        session?.source_width || 0,
+        session?.source_height || 0,
+      ) || stageMetrics;
+    const pixel = getRasterPixelFromStageClick(
+      imageStageRef.current,
+      rasterImageRef.current,
+      session?.source_width || 0,
+      session?.source_height || 0,
+      event.clientX,
+      event.clientY,
+    );
+    if (!pixel) {
+      setCursorSample(null);
+      return;
+    }
+    const stagePosition = projectRasterPixelToStage(pixel.pixelX, pixel.pixelY, liveMetrics);
+    if (!stagePosition) {
+      setCursorSample(null);
+      return;
+    }
+    const transformed = applyPixelTransform(pixel.pixelX, pixel.pixelY);
+    setCursorSample({
+      pixelX: pixel.pixelX,
+      pixelY: pixel.pixelY,
+      leftPercent: stagePosition.leftPercent,
+      topPercent: stagePosition.topPercent,
+      targetX: transformed ? Number(transformed.targetX.toFixed(projectedGroundSystem ? 3 : 6)) : null,
+      targetY: transformed ? Number(transformed.targetY.toFixed(projectedGroundSystem ? 3 : 6)) : null,
+      lng: transformed ? Number(transformed.lng.toFixed(8)) : null,
+      lat: transformed ? Number(transformed.lat.toFixed(8)) : null,
+    });
   };
 
   const handleRasterClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -725,6 +876,8 @@ function SurveyPlanGeoreferenceSetupStep({
                 ref={imageStageRef}
                 onClick={handleRasterClick}
                 onMouseDown={handleStageMouseDown}
+                onMouseMove={handleStagePointerMove}
+                onMouseLeave={() => setCursorSample(null)}
                 style={{ transform: `translate(${imagePan.x}px, ${imagePan.y}px) scale(${imageZoom})` }}
               >
                 {rasterObjectUrl ? (
@@ -764,6 +917,21 @@ function SurveyPlanGeoreferenceSetupStep({
                         </span>
                       </button>
                     ))}
+                    {cursorSample ? (
+                      <span
+                        className={`georef-cursor-probe${cursorSample.leftPercent > 76 ? " is-right-edge" : ""}${cursorSample.topPercent > 82 ? " is-bottom-edge" : ""}`}
+                        style={{ left: `${cursorSample.leftPercent}%`, top: `${cursorSample.topPercent}%` }}
+                        aria-hidden="true"
+                      >
+                        <span className="georef-cursor-probe-reticle">
+                          <span className="georef-cursor-probe-dot" />
+                        </span>
+                        <span className="georef-cursor-probe-label">
+                          <strong>PX {cursorSample.pixelX.toFixed(1)}</strong>
+                          <span>PY {cursorSample.pixelY.toFixed(1)}</span>
+                        </span>
+                      </span>
+                    ) : null}
                   </>
                 ) : (
                   <div className="georef-empty-stage">
@@ -772,6 +940,28 @@ function SurveyPlanGeoreferenceSetupStep({
                   </div>
                 )}
               </div>
+            </div>
+            <div className="georef-coordinate-strip">
+              <article>
+                <span>Raster X / Y</span>
+                <strong>{cursorSample ? `X ${cursorSample.pixelX.toFixed(1)} / Y ${cursorSample.pixelY.toFixed(1)}` : "Move over image"}</strong>
+              </article>
+              <article>
+                <span>Selected GCP target</span>
+                <strong>
+                  {activePoint
+                    ? `${coordinateXLabel.split(" ")[0]} ${Number(activePoint.ground_x).toLocaleString(undefined, { maximumFractionDigits: projectedGroundSystem ? 3 : 6 })} / ${coordinateYLabel.split(" ")[0]} ${Number(activePoint.ground_y).toLocaleString(undefined, { maximumFractionDigits: projectedGroundSystem ? 3 : 6 })}`
+                    : "Select a control point"}
+                </strong>
+              </article>
+              <article>
+                <span>{solvedTransform ? "Live solved preview" : "Ground preview"}</span>
+                <strong>
+                  {solvedTransform && cursorSample?.targetX != null && cursorSample?.targetY != null
+                    ? `${coordinateXLabel.split(" ")[0]} ${cursorSample.targetX.toLocaleString(undefined, { maximumFractionDigits: projectedGroundSystem ? 3 : 6 })} / ${coordinateYLabel.split(" ")[0]} ${cursorSample.targetY.toLocaleString(undefined, { maximumFractionDigits: projectedGroundSystem ? 3 : 6 })}`
+                    : "Solve georeference to preview grid values"}
+                </strong>
+              </article>
             </div>
           </section>
 

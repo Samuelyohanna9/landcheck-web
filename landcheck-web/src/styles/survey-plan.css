@@ -1160,6 +1160,17 @@
   color: #bfdbfe;
 }
 
+.georef-cursor-probe.is-right-edge .georef-cursor-probe-label {
+  left: auto;
+  right: calc(100% + 0.55rem);
+}
+
+.georef-cursor-probe.is-bottom-edge .georef-cursor-probe-label {
+  top: auto;
+  bottom: calc(100% + 0.45rem);
+  transform: none;
+}
+
 .georef-control-point-marker {
   width: 34px;
   height: 34px;

@@ -120,6 +120,54 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     }
   };
 
+  const updateStageZoomAtClientPoint = (nextZoom: number, clientX: number, clientY: number) => {
+    const normalizedZoom = Math.max(MIN_STAGE_ZOOM, Math.min(MAX_STAGE_ZOOM, Number(nextZoom.toFixed(2))));
+    if (
+      !stageMetrics ||
+      !imageStageRef.current ||
+      !rasterImageRef.current ||
+      !imageViewportRef.current
+    ) {
+      updateStageZoom(normalizedZoom);
+      return;
+    }
+    const pixel = getRasterPixelFromStageClick(
+      imageStageRef.current,
+      rasterImageRef.current,
+      session.source_width,
+      session.source_height,
+      clientX,
+      clientY,
+    );
+    if (!pixel) {
+      updateStageZoom(normalizedZoom);
+      return;
+    }
+    const stagePosition = projectRasterPixelToStage(pixel.pixelX, pixel.pixelY, stageMetrics);
+    if (!stagePosition) {
+      updateStageZoom(normalizedZoom);
+      return;
+    }
+    const viewportRect = imageViewportRef.current.getBoundingClientRect();
+    const screenX = clientX - viewportRect.left;
+    const screenY = clientY - viewportRect.top;
+    const centerX = stageMetrics.containerWidth / 2;
+    const centerY = stageMetrics.containerHeight / 2;
+    const nextPan = clampStagePan(
+      {
+        x: screenX - centerX - (stagePosition.leftPx - centerX) * normalizedZoom,
+        y: screenY - centerY - (stagePosition.topPx - centerY) * normalizedZoom,
+      },
+      normalizedZoom,
+    );
+    setImageZoom(normalizedZoom);
+    setImagePan(nextPan);
+    if (normalizedZoom <= MIN_STAGE_ZOOM) {
+      setDraggingStage(false);
+      dragStateRef.current = null;
+    }
+  };
+
   const applyPixelTransform = (pixelX: number, pixelY: number) => {
     const homography = Array.isArray(transform.homography) ? transform.homography : null;
     const mapHomography = Array.isArray(transform.map_homography) ? transform.map_homography : null;
@@ -484,7 +532,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
         return feature.points.map((point) => ({
           id: `${feature.id}-${point.index}`,
           featureId: feature.id,
-          label: feature.feature_type === "point" ? feature.label : `${point.index + 1}`,
+          label: feature.feature_type === "point" ? feature.label : `V${point.index + 1}`,
           left: `${point.leftPercent}%`,
           top: `${point.topPercent}%`,
           active: feature.id === selectedStageFeature?.id || feature.draft,
@@ -572,7 +620,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   const handleStageWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     event.preventDefault();
     const direction = event.deltaY > 0 ? -STAGE_ZOOM_STEP : STAGE_ZOOM_STEP;
-    updateStageZoom(imageZoom + direction);
+    updateStageZoomAtClientPoint(imageZoom + direction, event.clientX, event.clientY);
   };
 
   const handleStageClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -907,7 +955,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                     ))}
                     {cursorSample ? (
                       <span
-                        className="georef-cursor-probe"
+                        className={`georef-cursor-probe${cursorSample.leftPercent > 76 ? " is-right-edge" : ""}${cursorSample.topPercent > 82 ? " is-bottom-edge" : ""}`}
                         style={{ left: `${cursorSample.leftPercent}%`, top: `${cursorSample.topPercent}%` }}
                         aria-hidden="true"
                       >
@@ -916,10 +964,10 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                         </span>
                         <span className="georef-cursor-probe-label">
                           <strong>
-                            X {formatGridCoordinate(cursorSample.targetX, projectedGroundSystem)}
+                            {coordinateXLabel.split(" ")[0]} {formatGridCoordinate(cursorSample.targetX, projectedGroundSystem)}
                           </strong>
                           <span>
-                            Y {formatGridCoordinate(cursorSample.targetY, projectedGroundSystem)}
+                            {coordinateYLabel.split(" ")[0]} {formatGridCoordinate(cursorSample.targetY, projectedGroundSystem)}
                           </span>
                         </span>
                       </span>
