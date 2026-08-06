@@ -109,6 +109,7 @@ type Props = {
   northArrowColor: NorthArrowColor;
   coordinateSystem: string;
   onBoundaryPointChange?: (index: number, lngLat: [number, number]) => void;
+  isLowBandwidth?: boolean;
 };
 
 const DEFAULT_LAYER_VISIBILITY: LayerVisibility = {
@@ -785,6 +786,7 @@ export default function FeatureOverrideModal({
   northArrowColor,
   coordinateSystem,
   onBoundaryPointChange,
+  isLowBandwidth: _isLowBandwidth = false,
 }: Props) {
   const mapRef = useRef<any>(null);
   const drawRef = useRef<any>(null);
@@ -821,7 +823,7 @@ export default function FeatureOverrideModal({
   const [draftMetrics, setDraftMetrics] = useState<GeometryMetrics | null>(null);
   const [cursor, setCursor] = useState<{ lng: number; lat: number } | null>(null);
   const [activeTool, setActiveTool] = useState<EditorTool>("select");
-  const [basemapMode, setBasemapMode] = useState<BasemapMode>("satellite");
+  const [basemapMode, setBasemapMode] = useState<BasemapMode>(_isLowBandwidth ? "plotting" : "satellite");
 
   useEffect(() => {
     const stage = plottingStageRef.current;

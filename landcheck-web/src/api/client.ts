@@ -106,3 +106,37 @@ api.interceptors.request.use((config) => attachLandCheckHeaders(config));
 
 // Export the base URL for components that need direct links
 export const BACKEND_URL = API_URL;
+
+const isNetworkLevelFailure = (err: unknown) => {
+  if (!axios.isAxiosError(err)) return false;
+  // No `response` means the request never got a reply (timeout, dropped connection, DNS
+  // failure, etc.) - a real 4xx/5xx from the server is a rejection, not a network fault, and
+  // should surface immediately rather than being retried.
+  return !err.response;
+};
+
+/**
+ * Retries `fn` only on network-level failures (dropped connection, timeout) - never on a real
+ * HTTP error response, which should surface to the caller immediately. Intended for calls that
+ * are safe to repeat (idempotency-keyed writes, or reads/renders keyed by a stable signature).
+ */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  options?: { retries?: number; baseDelayMs?: number }
+): Promise<T> {
+  const retries = options?.retries ?? 2;
+  const baseDelayMs = options?.baseDelayMs ?? 800;
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (attempt >= retries || !isNetworkLevelFailure(err)) {
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, baseDelayMs * 2 ** attempt));
+    }
+  }
+  throw lastErr;
+}

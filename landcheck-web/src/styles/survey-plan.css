@@ -610,6 +610,16 @@
   text-transform: uppercase;
 }
 
+.georef-coordinate-hint {
+  padding: 0.68rem 0.82rem;
+  border-radius: 12px;
+  border: 1px solid rgba(96, 165, 250, 0.18);
+  background: rgba(15, 23, 42, 0.42);
+  color: #bfdbfe;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
 .georef-actions-row,
 .georef-tool-row,
 .georef-composer-actions,
@@ -772,14 +782,18 @@
 
 .georef-image-marker {
   position: absolute;
-  transform: translate(-50%, -50%);
   border: 0;
   padding: 0;
   background: transparent;
   cursor: pointer;
+  z-index: 2;
 }
 
-.georef-image-marker span {
+.georef-image-marker--compact {
+  transform: translate(-50%, -50%);
+}
+
+.georef-image-marker-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -794,17 +808,107 @@
   font-weight: 800;
 }
 
-.georef-image-marker.active span {
+.georef-image-marker.active .georef-image-marker-badge {
   background: rgba(245, 158, 11, 0.92);
   border-color: rgba(253, 224, 71, 0.46);
   color: #052e16;
 }
 
-.georef-image-marker.compact span {
+.georef-image-marker--compact .georef-image-marker-badge {
   min-width: 24px;
   height: 24px;
   padding: 0;
   font-size: 0.66rem;
+}
+
+.georef-control-point-marker {
+  width: 34px;
+  height: 34px;
+  transform: translate(-50%, -50%);
+}
+
+.georef-control-point-name {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translate(-50%, -0.45rem);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(94, 234, 212, 0.24);
+  background: rgba(15, 23, 42, 0.92);
+  color: #f8fafc;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 12px 24px rgba(2, 6, 23, 0.34);
+}
+
+.georef-control-point-marker.active .georef-control-point-name {
+  border-color: rgba(253, 224, 71, 0.54);
+  background: rgba(245, 158, 11, 0.92);
+  color: #052e16;
+}
+
+.georef-control-point-reticle {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 2px solid rgba(94, 234, 212, 0.95);
+  background: rgba(6, 95, 70, 0.2);
+  box-shadow:
+    0 0 0 1px rgba(2, 6, 23, 0.44),
+    0 10px 24px rgba(6, 95, 70, 0.22);
+}
+
+.georef-control-point-reticle::before,
+.georef-control-point-reticle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: rgba(94, 234, 212, 0.95);
+  transform: translate(-50%, -50%);
+}
+
+.georef-control-point-reticle::before {
+  width: 16px;
+  height: 2px;
+}
+
+.georef-control-point-reticle::after {
+  width: 2px;
+  height: 16px;
+}
+
+.georef-control-point-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 2px solid rgba(6, 95, 70, 0.95);
+  transform: translate(-50%, -50%);
+}
+
+.georef-control-point-marker.active .georef-control-point-reticle {
+  border-color: rgba(253, 224, 71, 0.95);
+  background: rgba(245, 158, 11, 0.18);
+}
+
+.georef-control-point-marker.active .georef-control-point-reticle::before,
+.georef-control-point-marker.active .georef-control-point-reticle::after {
+  background: rgba(253, 224, 71, 0.95);
+}
+
+.georef-control-point-marker.active .georef-control-point-dot {
+  border-color: rgba(245, 158, 11, 0.95);
 }
 
 .georef-map-surface {
@@ -1051,6 +1155,23 @@
 .btn-outline svg {
   width: 18px;
   height: 18px;
+}
+
+.low-bandwidth-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.875rem;
+  color: #94a3b8;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.low-bandwidth-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #38bdf8;
+  cursor: pointer;
 }
 
 .edit-feature-bar {

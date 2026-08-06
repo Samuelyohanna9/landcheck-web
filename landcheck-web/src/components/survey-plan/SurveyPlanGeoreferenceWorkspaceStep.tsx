@@ -499,10 +499,10 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                   {stageMarkers.map((marker, index) => (
                     <span
                       key={`${marker.featureId}-${index}`}
-                      className={`georef-image-marker compact${marker.draft ? " active" : ""}`}
+                      className={`georef-image-marker georef-image-marker--compact${marker.draft ? " active" : ""}`}
                       style={{ left: marker.left, top: marker.top }}
                     >
-                      <span>{index + 1}</span>
+                      <span className="georef-image-marker-badge">{index + 1}</span>
                     </span>
                   ))}
                 </>

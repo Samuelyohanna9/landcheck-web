@@ -279,16 +279,15 @@ function SurveyPreview({
               OpenTopoMap
             </button>
             <button
-              className={`topo-source-btn ${topoSource === "userdata" ? "active" : ""}`}
-              onClick={() => handleTopoSourceChange("userdata")}
-              disabled={!hasHeightData}
-              title={!hasHeightData ? "Upload CSV with height/elevation data to enable" : "Use your uploaded elevation data"}
+              className="topo-source-btn"
+              disabled
+              title="Rendering from your own uploaded elevation data isn't available yet - topo maps always use OpenTopoMap for now."
             >
               <svg viewBox="0 0 20 20" fill="currentColor" style={{ width: 14, height: 14 }}>
                 <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
               </svg>
               Your Data
-              {!hasHeightData && <span className="no-data-badge">No Data</span>}
+              <span className="no-data-badge">Coming Soon</span>
             </button>
           </div>
           <span className="topo-source-hint">

@@ -3,8 +3,10 @@ export type GeoreferenceControlPoint = {
   label: string;
   image_x: number;
   image_y: number;
-  lng: number;
-  lat: number;
+  ground_x: number;
+  ground_y: number;
+  lng?: number;
+  lat?: number;
   error_m?: number;
 };
 

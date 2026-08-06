@@ -1,6 +1,6 @@
 import { Suspense, lazy, startTransition, useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../api/client";
+import { api, withRetry } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
 import { fromWGS84, toWGS84 } from "../utils/coordinateConverter";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../utils/mapboxLoader";
@@ -266,7 +266,6 @@ const parseFractionWeights = (value: string): number[] => {
 };
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
-const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
 const normalizeApiDownloadPath = (value: string) => {
   const rawValue = String(value || "").trim();
@@ -344,6 +343,64 @@ const closeRingIfNeeded = (ring: number[][]): number[][] => {
   return [...ring, first];
 };
 
+const normalizeGeoreferenceNumber = (value: unknown, fallback = 0): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const normalizeGeoreferenceControlPoint = (
+  point: Partial<GeoreferenceControlPoint> & Record<string, unknown>,
+  index: number,
+): GeoreferenceControlPoint => {
+  const groundX = normalizeGeoreferenceNumber(point.ground_x ?? point.lng);
+  const groundY = normalizeGeoreferenceNumber(point.ground_y ?? point.lat);
+  const errorValue = point.error_m;
+  const normalized: GeoreferenceControlPoint = {
+    id: String(point.id || `gcp_${index + 1}`),
+    label: String(point.label || `GCP ${index + 1}`),
+    image_x: normalizeGeoreferenceNumber(point.image_x),
+    image_y: normalizeGeoreferenceNumber(point.image_y),
+    ground_x: groundX,
+    ground_y: groundY,
+    lng: groundX,
+    lat: groundY,
+  };
+  if (errorValue != null) {
+    const parsedError = Number(errorValue);
+    if (Number.isFinite(parsedError)) {
+      normalized.error_m = parsedError;
+    }
+  }
+  return normalized;
+};
+
+const normalizeGeoreferenceSessionPayload = (session: GeoreferenceSession): GeoreferenceSession => {
+  const controlPoints = Array.isArray(session.ground_control_points)
+    ? session.ground_control_points.map((point, index) =>
+        normalizeGeoreferenceControlPoint(point as Partial<GeoreferenceControlPoint> & Record<string, unknown>, index),
+      )
+    : [];
+  const transform = session.transform
+    ? {
+        ...session.transform,
+        residuals: Array.isArray(session.transform.residuals)
+          ? session.transform.residuals.map((point, index) =>
+              normalizeGeoreferenceControlPoint(
+                point as Partial<GeoreferenceControlPoint> & Record<string, unknown>,
+                index,
+              ),
+            )
+          : [],
+      }
+    : null;
+  return {
+    ...session,
+    ground_control_points: controlPoints,
+    transform,
+    features: Array.isArray(session.features) ? session.features : [],
+  };
+};
+
 const polygonCentroid = (ringRaw: number[][]): [number, number] => {
   const ring = closeRingIfNeeded(ringRaw);
   if (ring.length < 4) {
@@ -397,8 +454,8 @@ const GEOREFERENCE_STEPS = [
 
 export default function SurveyPlan() {
   const navigate = useNavigate();
-  const { isLowBandwidth } = useLowBandwidthMode();
-  const deferredDraftMap = useDeferredMount(isLowBandwidth ? 1400 : 250);
+  const { isLowBandwidth, manualLowBandwidth, setManualLowBandwidth } = useLowBandwidthMode();
+  const deferredDraftMap = useDeferredMount(250);
   const [workflowMode, setWorkflowMode] = useState<WorkflowMode | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const surveyContentRef = useRef<HTMLDivElement>(null);
@@ -506,10 +563,13 @@ export default function SurveyPlan() {
   const subdivisionMapRef = useRef<any>(null);
   const subdivisionMapboxRef = useRef<any>(null);
   const subdivisionMapReadyRef = useRef(false);
-  const showDraftMap = forceShowDraftMap || deferredDraftMap;
+  // On low-bandwidth connections the map should stay genuinely off (never just delayed) until
+  // the user explicitly asks for it via "Load Map Now".
+  const showDraftMap = forceShowDraftMap || (!isLowBandwidth && deferredDraftMap);
   const previewRequestId = useRef(0);
   const orthophotoRequestId = useRef(0);
   const topoRequestId = useRef(0);
+  const plotCreateRequestIdRef = useRef<{ signature: string; id: string } | null>(null);
   const [georefSession, setGeorefSession] = useState<GeoreferenceSession | null>(null);
   const [georefRasterObjectUrl, setGeorefRasterObjectUrl] = useState<string | null>(null);
   const [georefFeatures, setGeorefFeatures] = useState<GeoreferenceFeature[]>([]);
@@ -564,14 +624,15 @@ export default function SurveyPlan() {
 
   const applyGeoreferenceSession = useCallback(
     (session: GeoreferenceSession, preferredControlPointId?: string | null) => {
-      const controlPoints = Array.isArray(session.ground_control_points) ? session.ground_control_points : [];
+      const normalizedSession = normalizeGeoreferenceSessionPayload(session);
+      const controlPoints = normalizedSession.ground_control_points;
       const preferredId =
         preferredControlPointId && controlPoints.some((item) => item.id === preferredControlPointId)
           ? preferredControlPointId
           : controlPoints[controlPoints.length - 1]?.id || null;
-      setGeorefSession(session);
-      setGeorefFeatures(Array.isArray(session.features) ? session.features : []);
-      setGeorefTargetCoordinateSystem(session.target_coordinate_system || "wgs84");
+      setGeorefSession(normalizedSession);
+      setGeorefFeatures(normalizedSession.features);
+      setGeorefTargetCoordinateSystem(normalizedSession.target_coordinate_system || "wgs84");
       setGeorefSelectedControlPointId(preferredId);
     },
     []
@@ -1480,12 +1541,28 @@ export default function SurveyPlan() {
             lastServerSyncSignature === serverSyncSignature
         );
         if (!activePlotId) {
-          const res = await api.post("/plots", {
-            coordinates: finalCoords,
-            meta: plotMetaPayload,
-          });
+          // Reuse the same client_request_id across retries of creating THIS draft (so a lost
+          // response doesn't create a duplicate plot server-side), but mint a new one once the
+          // draft itself changes (a genuinely different logical attempt).
+          const draftSignature = JSON.stringify({ coords: finalCoords, meta: plotMetaPayload });
+          if (plotCreateRequestIdRef.current?.signature !== draftSignature) {
+            plotCreateRequestIdRef.current = {
+              signature: draftSignature,
+              id:
+                typeof window.crypto?.randomUUID === "function"
+                  ? window.crypto.randomUUID()
+                  : `${Date.now()}-${Math.random()}`,
+            };
+          }
+          const res = await withRetry(() =>
+            api.post("/plots", {
+              coordinates: finalCoords,
+              meta: plotMetaPayload,
+              client_request_id: plotCreateRequestIdRef.current!.id,
+            })
+          );
           activePlotId = Number(res.data.plot_id ?? res.data.id);
-          await api.post(`/plots/${activePlotId}/meta`, plotMetaPayload);
+          await withRetry(() => api.post(`/plots/${activePlotId}/meta`, plotMetaPayload));
           setPlotId(activePlotId);
           savePlotToStorage(activePlotId);
           setSubdivisionPreview(null);
@@ -1493,10 +1570,12 @@ export default function SurveyPlan() {
           setLatestSubdivisionBatchId(null);
           toast.success("Server plot created from local draft.");
         } else if (!serverDraftCurrent) {
-          await api.post(`/plots/${activePlotId}/geometry`, {
-            coordinates: finalCoords,
-          });
-          await api.post(`/plots/${activePlotId}/meta`, plotMetaPayload);
+          await withRetry(() =>
+            api.post(`/plots/${activePlotId}/geometry`, {
+              coordinates: finalCoords,
+            })
+          );
+          await withRetry(() => api.post(`/plots/${activePlotId}/meta`, plotMetaPayload));
         }
 
         if (options?.fetchFeatures && !features) {
@@ -1560,9 +1639,11 @@ export default function SurveyPlan() {
         road_width_m: Number(roadWidth),
       };
 
-      const res = await api.post(`/plots/${activePlotId}/report/preview`, payload, {
-        responseType: "blob",
-      });
+      const res = await withRetry(() =>
+        api.post(`/plots/${activePlotId}/report/preview`, payload, {
+          responseType: "blob",
+        })
+      );
 
       if (requestId !== previewRequestId.current) {
         return;
@@ -1599,17 +1680,19 @@ export default function SurveyPlan() {
     setOrthophotoLoading(true);
     try {
       const activePlotId = await ensureServerPlot("Syncing draft for official orthophoto preview...");
-      const res = await api.post(`/plots/${activePlotId}/orthophoto/preview`, {
-        scale_text: meta.scale_text,
-        station_names: stationNames,
-        coordinate_system: coordinateSystem,
-        paper_size: meta.paper_size,
-        use_topo_map: false, // Always satellite for orthophoto
-        north_arrow_style: northArrowStyle,
-        north_arrow_color: northArrowColor,
-      }, {
-        responseType: "blob",
-      });
+      const res = await withRetry(() =>
+        api.post(`/plots/${activePlotId}/orthophoto/preview`, {
+          scale_text: meta.scale_text,
+          station_names: stationNames,
+          coordinate_system: coordinateSystem,
+          paper_size: meta.paper_size,
+          use_topo_map: false, // Always satellite for orthophoto
+          north_arrow_style: northArrowStyle,
+          north_arrow_color: northArrowColor,
+        }, {
+          responseType: "blob",
+        })
+      );
 
       if (requestId !== orthophotoRequestId.current) {
         return;
@@ -1648,18 +1731,20 @@ export default function SurveyPlan() {
 
     try {
       const activePlotId = await ensureServerPlot("Syncing draft for official topo map preview...");
-      const res = await api.post(`/plots/${activePlotId}/orthophoto/preview`, {
-        scale_text: meta.scale_text,
-        station_names: stationNames,
-        coordinate_system: coordinateSystem,
-        paper_size: meta.paper_size,
-        use_topo_map: true, // Always topo for topo map
-        topo_source: source, // "opentopomap" or "userdata"
-        north_arrow_style: northArrowStyle,
-        north_arrow_color: northArrowColor,
-      }, {
-        responseType: "blob",
-      });
+      const res = await withRetry(() =>
+        api.post(`/plots/${activePlotId}/orthophoto/preview`, {
+          scale_text: meta.scale_text,
+          station_names: stationNames,
+          coordinate_system: coordinateSystem,
+          paper_size: meta.paper_size,
+          use_topo_map: true, // Always topo for topo map
+          topo_source: source, // "opentopomap" or "userdata"
+          north_arrow_style: northArrowStyle,
+          north_arrow_color: northArrowColor,
+        }, {
+          responseType: "blob",
+        })
+      );
 
       if (requestId !== topoRequestId.current) {
         return;
@@ -1788,6 +1873,8 @@ export default function SurveyPlan() {
       label: `GCP ${((georefSession?.ground_control_points?.length || 0) + 1).toString()}`,
       image_x: 0,
       image_y: 0,
+      ground_x: 0,
+      ground_y: 0,
       lng: 0,
       lat: 0,
     };
@@ -1812,7 +1899,7 @@ export default function SurveyPlan() {
   const handleUpdateGeoreferenceControlPoint = useCallback(
     (
       controlPointId: string,
-      field: "label" | "lng" | "lat" | "image_x" | "image_y",
+      field: "label" | "ground_x" | "ground_y" | "image_x" | "image_y",
       value: string | number
     ) => {
       setGeorefSession((current) => {
@@ -1823,7 +1910,14 @@ export default function SurveyPlan() {
             return { ...item, label: String(value || "").trim() || item.label };
           }
           const nextValue = Number.parseFloat(String(value));
-          return { ...item, [field]: Number.isFinite(nextValue) ? nextValue : 0 };
+          const safeValue = Number.isFinite(nextValue) ? nextValue : 0;
+          if (field === "ground_x") {
+            return { ...item, ground_x: safeValue, lng: safeValue };
+          }
+          if (field === "ground_y") {
+            return { ...item, ground_y: safeValue, lat: safeValue };
+          }
+          return { ...item, [field]: safeValue };
         });
         return {
           ...current,
@@ -1857,10 +1951,11 @@ export default function SurveyPlan() {
         toast.error("Select a control point first.");
         return;
       }
-      handleUpdateGeoreferenceControlPoint(georefSelectedControlPointId, "lng", lng);
-      handleUpdateGeoreferenceControlPoint(georefSelectedControlPointId, "lat", lat);
+      const [groundX, groundY] = fromWGS84(lng, lat, georefTargetCoordinateSystem || "wgs84");
+      handleUpdateGeoreferenceControlPoint(georefSelectedControlPointId, "ground_x", groundX);
+      handleUpdateGeoreferenceControlPoint(georefSelectedControlPointId, "ground_y", groundY);
     },
-    [georefSelectedControlPointId, handleUpdateGeoreferenceControlPoint]
+    [georefSelectedControlPointId, georefTargetCoordinateSystem, handleUpdateGeoreferenceControlPoint]
   );
 
   const handleSolveGeoreference = useCallback(async () => {
@@ -1873,8 +1968,10 @@ export default function SurveyPlan() {
       label: item.label,
       image_x: Number(item.image_x),
       image_y: Number(item.image_y),
-      lng: Number(item.lng),
-      lat: Number(item.lat),
+      ground_x: Number(item.ground_x),
+      ground_y: Number(item.ground_y),
+      lng: Number(item.ground_x),
+      lat: Number(item.ground_y),
     }));
     if (controlPoints.length < 3) {
       toast.error("Add at least 3 control points.");
@@ -2197,22 +2294,55 @@ export default function SurveyPlan() {
     return filename.replace(/plot_[^_]+/, `plot_${activePlotId}`);
   }, []);
 
-  const waitForPlotExportJob = useCallback(async (jobId: string, timeoutMs = 1000 * 60 * 20) => {
-    const startedAt = Date.now();
-    while (Date.now() - startedAt < timeoutMs) {
-      await new Promise((resolve) => window.setTimeout(resolve, 3000));
-      const statusRes = await api.get(`/plots/export-jobs/${jobId}`);
-      const job = statusRes?.data || {};
-      const status = String(job.status || "").toLowerCase();
-      if (status === "completed") {
-        return job;
+  const waitForPlotExportJob = useCallback(
+    async (
+      jobId: string,
+      options?: number | { timeoutMs?: number; intervalMs?: number; strictStatus?: boolean }
+    ) => {
+      // Back-compat: earlier call sites pass a bare timeoutMs number.
+      const opts = typeof options === "number" ? { timeoutMs: options } : options || {};
+      const timeoutMs = opts.timeoutMs ?? 1000 * 60 * 20;
+      const intervalMs = opts.intervalMs ?? 3000;
+      const strictStatus = Boolean(opts.strictStatus);
+
+      const startedAt = Date.now();
+      while (Date.now() - startedAt < timeoutMs) {
+        await new Promise((resolve) => window.setTimeout(resolve, intervalMs));
+
+        // A single dropped request over a flaky connection shouldn't throw away everything the
+        // user has already waited for - retry the status check itself a few times before giving
+        // up on it. The server-side render keeps going regardless of one missed check-in.
+        let statusRes: any = null;
+        for (let pollAttempt = 0; pollAttempt < 3; pollAttempt += 1) {
+          try {
+            statusRes = await api.get(`/plots/export-jobs/${encodeURIComponent(jobId)}`);
+            break;
+          } catch {
+            if (pollAttempt < 2) {
+              await new Promise((resolve) => window.setTimeout(resolve, 1000 * (pollAttempt + 1)));
+            }
+          }
+        }
+        if (!statusRes) {
+          continue;
+        }
+
+        const job = statusRes?.data || {};
+        const status = String(job.status || "").trim().toLowerCase();
+        if (status === "completed") {
+          return job;
+        }
+        if (status === "failed") {
+          throw new Error(String(job.error_text || "Export job failed"));
+        }
+        if (strictStatus && status !== "queued" && status !== "running") {
+          throw new Error("Export job returned an unexpected status.");
+        }
       }
-      if (status === "failed") {
-        throw new Error(String(job.error_text || "Export job failed"));
-      }
-    }
-    throw new Error("Export job is still preparing. Try again in a moment.");
-  }, []);
+      throw new Error("Export job is still preparing. Try again in a moment.");
+    },
+    []
+  );
 
   // Download function for PDF endpoints that need JSON body
   const downloadWithJson = async (
@@ -2819,25 +2949,19 @@ export default function SurveyPlan() {
     if (subdivisionDownloadBatchId !== null) return;
     setSubdivisionDownloadBatchId(batchId);
     try {
-      const createJobRes = await api.post(`/plots/subdivision/batches/${batchId}/export-jobs/survey-plans`);
+      const createJobRes = await withRetry(() =>
+        api.post(`/plots/subdivision/batches/${batchId}/export-jobs/survey-plans`)
+      );
       let job = createJobRes.data as PlotExportJob;
-      const maxAttempts = 80;
-      let attempt = 0;
-      while (String(job?.status || "").trim().toLowerCase() !== "completed") {
-        const statusValue = String(job?.status || "").trim().toLowerCase();
-        if (statusValue === "failed") {
-          throw new Error(String(job?.error_text || "Failed to prepare subdivision batch export."));
-        }
-        if (statusValue !== "queued" && statusValue !== "running") {
-          throw new Error("Subdivision batch export returned an unexpected status.");
-        }
-        if (attempt >= maxAttempts) {
-          throw new Error("Subdivision batch export is taking too long. Please try again.");
-        }
-        attempt += 1;
-        await sleep(1500);
-        const statusRes = await api.get(`/plots/export-jobs/${encodeURIComponent(String(job.id || ""))}`);
-        job = statusRes.data as PlotExportJob;
+      if (String(job?.status || "").trim().toLowerCase() === "failed") {
+        throw new Error(String(job?.error_text || "Failed to prepare subdivision batch export."));
+      }
+      if (String(job?.status || "").trim().toLowerCase() !== "completed") {
+        job = await waitForPlotExportJob(String(job.id || ""), {
+          timeoutMs: 1500 * 80,
+          intervalMs: 1500,
+          strictStatus: true,
+        });
       }
       const downloadPath = normalizeApiDownloadPath(
         String(job?.download_url || `/plots/export-jobs/${encodeURIComponent(String(job.id || ""))}/download`)
@@ -2886,25 +3010,19 @@ export default function SurveyPlan() {
           };
         }),
       };
-      const createJobRes = await api.post(`/plots/subdivision/batches/${batchId}/export-jobs/clean-copy.pdf`, payload);
+      const createJobRes = await withRetry(() =>
+        api.post(`/plots/subdivision/batches/${batchId}/export-jobs/clean-copy.pdf`, payload)
+      );
       let job = createJobRes.data as PlotExportJob;
-      const maxAttempts = 80;
-      let attempt = 0;
-      while (String(job?.status || "").trim().toLowerCase() !== "completed") {
-        const statusValue = String(job?.status || "").trim().toLowerCase();
-        if (statusValue === "failed") {
-          throw new Error(String(job?.error_text || "Failed to prepare clean copy PDF."));
-        }
-        if (statusValue !== "queued" && statusValue !== "running") {
-          throw new Error("Clean copy export returned an unexpected status.");
-        }
-        if (attempt >= maxAttempts) {
-          throw new Error("Clean copy export is taking too long. Please try again.");
-        }
-        attempt += 1;
-        await sleep(1500);
-        const statusRes = await api.get(`/plots/export-jobs/${encodeURIComponent(String(job.id || ""))}`);
-        job = statusRes.data as PlotExportJob;
+      if (String(job?.status || "").trim().toLowerCase() === "failed") {
+        throw new Error(String(job?.error_text || "Failed to prepare clean copy PDF."));
+      }
+      if (String(job?.status || "").trim().toLowerCase() !== "completed") {
+        job = await waitForPlotExportJob(String(job.id || ""), {
+          timeoutMs: 1500 * 80,
+          intervalMs: 1500,
+          strictStatus: true,
+        });
       }
       const downloadPath = normalizeApiDownloadPath(
         String(job?.download_url || `/plots/export-jobs/${encodeURIComponent(String(job.id || ""))}/download`)
@@ -2992,7 +3110,9 @@ export default function SurveyPlan() {
       return false;
     }
     try {
-      await api.post(`/plots/${plotId}/feature-overrides`, payload);
+      const client_request_id =
+        typeof window.crypto?.randomUUID === "function" ? window.crypto.randomUUID() : undefined;
+      await api.post(`/plots/${plotId}/feature-overrides`, { ...payload, client_request_id });
       featureEditsPendingRef.current = true;
       return true;
     } catch (err) {
@@ -3196,6 +3316,7 @@ export default function SurveyPlan() {
               northArrowColor={northArrowColor}
               coordinateSystem={coordinateSystem}
               onBoundaryPointChange={handleBoundaryPointChange}
+              isLowBandwidth={isLowBandwidth}
             />
           </Suspense>
         )}
@@ -3272,6 +3393,8 @@ export default function SurveyPlan() {
                 mapCoordinates={mapCoordinates}
                 onCoordinatesDrawn={handleCoordinatesFromMap}
                 isLowBandwidth={isLowBandwidth}
+                manualLowBandwidth={manualLowBandwidth}
+                onManualLowBandwidthChange={setManualLowBandwidth}
               />
             )}
           </Suspense>

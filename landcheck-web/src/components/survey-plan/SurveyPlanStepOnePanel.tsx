@@ -31,6 +31,8 @@ type Props = {
   mapCoordinates: ManualPoint[];
   onCoordinatesDrawn: (coords: ManualPoint[]) => void;
   isLowBandwidth: boolean;
+  manualLowBandwidth: boolean;
+  onManualLowBandwidthChange: (value: boolean) => void;
 };
 
 function SurveyPlanStepOnePanel({
@@ -51,6 +53,8 @@ function SurveyPlanStepOnePanel({
   mapCoordinates,
   onCoordinatesDrawn,
   isLowBandwidth,
+  manualLowBandwidth,
+  onManualLowBandwidthChange,
 }: Props) {
   const warmDraftMapTools = () => {
     void prefetchSurveyPlanDraftMapTools();
@@ -119,6 +123,14 @@ function SurveyPlanStepOnePanel({
             >
               Load Map Now
             </button>
+            <label className="low-bandwidth-toggle">
+              <input
+                type="checkbox"
+                checked={manualLowBandwidth}
+                onChange={(event) => onManualLowBandwidthChange(event.target.checked)}
+              />
+              I&apos;m on slow data - keep maps off until I ask for them
+            </label>
           </div>
         )}
       </div>
