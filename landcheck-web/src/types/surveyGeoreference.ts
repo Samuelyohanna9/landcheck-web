@@ -11,12 +11,20 @@ export type GeoreferenceControlPoint = {
 };
 
 export type GeoreferenceTransform = {
+  transform_type?: "affine" | "projective";
   target_coordinate_system: string;
   target_epsg: number;
   coefficients: {
     x: [number, number, number];
     y: [number, number, number];
   };
+  homography?: [number, number, number, number, number, number, number, number, number] | null;
+  map_transform_type?: "affine" | "projective";
+  map_coefficients?: {
+    x: [number, number, number];
+    y: [number, number, number];
+  };
+  map_homography?: [number, number, number, number, number, number, number, number, number] | null;
   rms_error_m: number;
   condition_number: number;
   quality: "strong" | "usable" | "weak";

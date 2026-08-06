@@ -48,6 +48,10 @@ const COORDINATE_OPTIONS = [
   { value: "minna_33", label: "Minna Zone 33" },
 ];
 
+const MIN_STAGE_ZOOM = 1;
+const MAX_STAGE_ZOOM = 4;
+const STAGE_ZOOM_STEP = 0.25;
+
 function SurveyPlanGeoreferenceSetupStep({
   sidebar,
   session,
@@ -69,6 +73,7 @@ function SurveyPlanGeoreferenceSetupStep({
   onDeleteSession,
 }: Props) {
   type NumericField = "ground_x" | "ground_y" | "image_x" | "image_y";
+  const imageViewportRef = useRef<HTMLDivElement | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const imageStageRef = useRef<HTMLDivElement | null>(null);
   const rasterImageRef = useRef<HTMLImageElement | null>(null);
@@ -76,11 +81,17 @@ function SurveyPlanGeoreferenceSetupStep({
   const mapboxRef = useRef<any>(null);
   const mapControlMarkerRefs = useRef<any[]>([]);
   const pendingRasterRef = useRef<string | null>(null);
+  const dragStateRef = useRef<{ startX: number; startY: number; panX: number; panY: number; moved: boolean } | null>(null);
+  const suppressNextImageClickRef = useRef(false);
+  const controlPointRefs = useRef<Record<string, HTMLElement | null>>({});
   const [draftTitle, setDraftTitle] = useState("");
   const [draftFile, setDraftFile] = useState<File | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [stageMetrics, setStageMetrics] = useState<RasterStageMetrics | null>(null);
   const [numericDrafts, setNumericDrafts] = useState<Record<string, Partial<Record<NumericField, string>>>>({});
+  const [imageZoom, setImageZoom] = useState(MIN_STAGE_ZOOM);
+  const [imagePan, setImagePan] = useState({ x: 0, y: 0 });
+  const [draggingStage, setDraggingStage] = useState(false);
 
   const controlPoints = session?.ground_control_points || [];
   const activePoint =
@@ -92,6 +103,26 @@ function SurveyPlanGeoreferenceSetupStep({
     ? "Ground control coordinates are stored in meters for the selected projected grid."
     : "Ground control coordinates are stored as WGS84 ground longitude and latitude.";
 
+  const clampStagePan = (pan: { x: number; y: number }, zoom = imageZoom) => {
+    if (!stageMetrics || zoom <= MIN_STAGE_ZOOM) return { x: 0, y: 0 };
+    const maxX = (stageMetrics.containerWidth * (zoom - 1)) / 2;
+    const maxY = (stageMetrics.containerHeight * (zoom - 1)) / 2;
+    return {
+      x: Math.max(-maxX, Math.min(maxX, pan.x)),
+      y: Math.max(-maxY, Math.min(maxY, pan.y)),
+    };
+  };
+
+  const updateStageZoom = (nextZoom: number) => {
+    const normalizedZoom = Math.max(MIN_STAGE_ZOOM, Math.min(MAX_STAGE_ZOOM, Number(nextZoom.toFixed(2))));
+    setImageZoom(normalizedZoom);
+    setImagePan((current) => clampStagePan(normalizedZoom <= MIN_STAGE_ZOOM ? { x: 0, y: 0 } : current, normalizedZoom));
+    if (normalizedZoom <= MIN_STAGE_ZOOM) {
+      setDraggingStage(false);
+      dragStateRef.current = null;
+    }
+  };
+
   useEffect(() => {
     if (!session?.title_text) return;
     setDraftTitle(session.title_text);
@@ -100,6 +131,14 @@ function SurveyPlanGeoreferenceSetupStep({
   useEffect(() => {
     setNumericDrafts({});
   }, [controlPoints]);
+
+  useEffect(() => {
+    setImageZoom(MIN_STAGE_ZOOM);
+    setImagePan({ x: 0, y: 0 });
+    setDraggingStage(false);
+    dragStateRef.current = null;
+    suppressNextImageClickRef.current = false;
+  }, [session?.id, rasterObjectUrl]);
 
   useEffect(() => {
     const measure = () => {
@@ -124,6 +163,11 @@ function SurveyPlanGeoreferenceSetupStep({
       window.removeEventListener("resize", measure);
     };
   }, [rasterObjectUrl, session?.id, session?.source_height, session?.source_width]);
+
+  useEffect(() => {
+    if (!activePoint?.id) return;
+    controlPointRefs.current[activePoint.id]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [activePoint?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -343,8 +387,56 @@ function SurveyPlanGeoreferenceSetupStep({
     map.fitBounds([corners[0], corners[2]], { padding: 48, duration: 800 });
   }, [mapReady, rasterObjectUrl, session?.overlay?.corners, session?.id]);
 
+  useEffect(() => {
+    const handlePointerMove = (event: MouseEvent) => {
+      if (!dragStateRef.current || imageZoom <= MIN_STAGE_ZOOM) return;
+      const deltaX = event.clientX - dragStateRef.current.startX;
+      const deltaY = event.clientY - dragStateRef.current.startY;
+      if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+        dragStateRef.current.moved = true;
+        suppressNextImageClickRef.current = true;
+      }
+      setDraggingStage(true);
+      setImagePan(clampStagePan({ x: dragStateRef.current.panX + deltaX, y: dragStateRef.current.panY + deltaY }));
+    };
+
+    const handlePointerUp = () => {
+      if (!dragStateRef.current) return;
+      dragStateRef.current = null;
+      setDraggingStage(false);
+      window.setTimeout(() => {
+        suppressNextImageClickRef.current = false;
+      }, 0);
+    };
+
+    window.addEventListener("mousemove", handlePointerMove);
+    window.addEventListener("mouseup", handlePointerUp);
+    return () => {
+      window.removeEventListener("mousemove", handlePointerMove);
+      window.removeEventListener("mouseup", handlePointerUp);
+    };
+  }, [clampStagePan, imageZoom]);
+
+  const handleStageMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || imageZoom <= MIN_STAGE_ZOOM) return;
+    event.preventDefault();
+    dragStateRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      panX: imagePan.x,
+      panY: imagePan.y,
+      moved: false,
+    };
+  };
+
+  const handleStageWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const direction = event.deltaY > 0 ? -STAGE_ZOOM_STEP : STAGE_ZOOM_STEP;
+    updateStageZoom(imageZoom + direction);
+  };
+
   const handleRasterClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!activePoint) return;
+    if (suppressNextImageClickRef.current || !activePoint) return;
     const pixel = getRasterPixelFromStageClick(
       imageStageRef.current,
       rasterImageRef.current,
@@ -459,9 +551,6 @@ function SurveyPlanGeoreferenceSetupStep({
               <div className="georef-coordinate-hint">{coordinateHint}</div>
 
               <div className="georef-actions-row">
-                <button type="button" className="btn-outline" onClick={onAddControlPoint}>
-                  Add Control Point
-                </button>
                 <button type="button" className="btn-primary" disabled={controlPoints.length < 3 || solving} onClick={onSolve}>
                   {solving ? "Anchoring raster..." : "Solve Georeference"}
                 </button>
@@ -474,6 +563,9 @@ function SurveyPlanGeoreferenceSetupStep({
                 {controlPoints.map((point) => (
                   <article
                     key={point.id}
+                    ref={(node) => {
+                      controlPointRefs.current[point.id] = node;
+                    }}
                     className={`georef-point-row${point.id === activePoint?.id ? " active" : ""}`}
                     onClick={() => onSelectControlPoint(point.id)}
                     onKeyDown={(event) => {
@@ -583,6 +675,17 @@ function SurveyPlanGeoreferenceSetupStep({
                   </article>
                 ))}
               </div>
+              <div className="georef-action-dock">
+                <button type="button" className="btn-primary" onClick={onAddControlPoint}>
+                  Add next GCP
+                </button>
+                <button type="button" className="btn-outline" disabled={controlPoints.length < 3 || solving} onClick={onSolve}>
+                  {solving ? "Anchoring raster..." : "Solve Georeference"}
+                </button>
+                <button type="button" className="btn-secondary" disabled={!session.transform} onClick={onContinue}>
+                  Continue to Digitize
+                </button>
+              </div>
             </>
           )}
         </section>
@@ -592,53 +695,79 @@ function SurveyPlanGeoreferenceSetupStep({
         <div className="georef-dual-stage">
           <section className="georef-image-card">
             <div className="georef-card-head">
-              <h4>Raster control stage</h4>
-              <span>{activePoint ? `Selected: ${activePoint.label}` : "Add a control point first"}</span>
+              <div>
+                <h4>Raster control stage</h4>
+                <span>{activePoint ? `Selected: ${activePoint.label}` : "Add a control point first"}</span>
+              </div>
+              <div className="georef-stage-toolbar">
+                <button type="button" className="btn-primary" onClick={onAddControlPoint} disabled={!session}>
+                  Add next GCP
+                </button>
+                <button type="button" className="btn-outline" onClick={() => updateStageZoom(imageZoom - STAGE_ZOOM_STEP)} disabled={!rasterObjectUrl || imageZoom <= MIN_STAGE_ZOOM}>
+                  -
+                </button>
+                <span className="georef-stage-zoom-pill">{Math.round(imageZoom * 100)}%</span>
+                <button type="button" className="btn-outline" onClick={() => updateStageZoom(imageZoom + STAGE_ZOOM_STEP)} disabled={!rasterObjectUrl || imageZoom >= MAX_STAGE_ZOOM}>
+                  +
+                </button>
+                <button type="button" className="btn-outline" onClick={() => updateStageZoom(MIN_STAGE_ZOOM)} disabled={!rasterObjectUrl || (imageZoom === MIN_STAGE_ZOOM && imagePan.x === 0 && imagePan.y === 0)}>
+                  Fit
+                </button>
+              </div>
             </div>
-            <div className="georef-image-stage" ref={imageStageRef} onClick={handleRasterClick}>
-              {rasterObjectUrl ? (
-                <>
-                  <img
-                    ref={rasterImageRef}
-                    src={rasterObjectUrl}
-                    alt={session?.title_text || "Uploaded survey raster"}
-                    onLoad={() =>
-                      setStageMetrics(
-                        getRasterStageMetrics(
-                          imageStageRef.current,
-                          rasterImageRef.current,
-                          session?.source_width || 0,
-                          session?.source_height || 0,
-                        ),
-                      )
-                    }
-                  />
-                  {stageMarkers.map((point) => (
-                    <button
-                      key={point.id}
-                      type="button"
-                      className={`georef-image-marker georef-control-point-marker${point.id === activePoint?.id ? " active" : ""}`}
-                      style={{ left: point.left, top: point.top }}
-                      aria-label={point.label}
-                      title={point.label}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onSelectControlPoint(point.id);
-                      }}
-                    >
-                      <span className="georef-control-point-name">{point.label}</span>
-                      <span className="georef-control-point-reticle" aria-hidden="true">
-                        <span className="georef-control-point-dot" />
-                      </span>
-                    </button>
-                  ))}
-                </>
-              ) : (
-                <div className="georef-empty-stage">
-                  <strong>Upload a raster to begin</strong>
-                  <span>The image will appear here for pixel control placement.</span>
-                </div>
-              )}
+            <div className="georef-image-stage-viewport" ref={imageViewportRef} onWheel={handleStageWheel}>
+              <div
+                className={`georef-image-stage georef-image-stage--zoomable${imageZoom > MIN_STAGE_ZOOM ? " is-zoomed" : ""}${draggingStage ? " is-dragging" : ""}`}
+                ref={imageStageRef}
+                onClick={handleRasterClick}
+                onMouseDown={handleStageMouseDown}
+                style={{ transform: `translate(${imagePan.x}px, ${imagePan.y}px) scale(${imageZoom})` }}
+              >
+                {rasterObjectUrl ? (
+                  <>
+                    <img
+                      ref={rasterImageRef}
+                      src={rasterObjectUrl}
+                      alt={session?.title_text || "Uploaded survey raster"}
+                      draggable={false}
+                      onLoad={() =>
+                        setStageMetrics(
+                          getRasterStageMetrics(
+                            imageStageRef.current,
+                            rasterImageRef.current,
+                            session?.source_width || 0,
+                            session?.source_height || 0,
+                          ),
+                        )
+                      }
+                    />
+                    {stageMarkers.map((point) => (
+                      <button
+                        key={point.id}
+                        type="button"
+                        className={`georef-image-marker georef-control-point-marker${point.id === activePoint?.id ? " active" : ""}`}
+                        style={{ left: point.left, top: point.top }}
+                        aria-label={point.label}
+                        title={point.label}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onSelectControlPoint(point.id);
+                        }}
+                      >
+                        <span className="georef-control-point-name">{point.label}</span>
+                        <span className="georef-control-point-reticle" aria-hidden="true">
+                          <span className="georef-control-point-dot" />
+                        </span>
+                      </button>
+                    ))}
+                  </>
+                ) : (
+                  <div className="georef-empty-stage">
+                    <strong>Upload a raster to begin</strong>
+                    <span>The image will appear here for pixel control placement.</span>
+                  </div>
+                )}
+              </div>
             </div>
           </section>
 

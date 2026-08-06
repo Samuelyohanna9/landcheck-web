@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
-import { isProjectedCoordinateSystem, toWGS84 } from "../../utils/coordinateConverter";
+import { isProjectedCoordinateSystem, mercatorToWGS84, toWGS84 } from "../../utils/coordinateConverter";
 import type { GeoreferenceFeature, GeoreferenceSession, GeoreferenceTransform } from "../../types/surveyGeoreference";
 import {
   getRasterPixelFromStageClick,
@@ -117,11 +117,51 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   };
 
   const applyPixelTransform = (pixelX: number, pixelY: number) => {
-    const coeffX = transform.coefficients.x;
-    const coeffY = transform.coefficients.y;
-    const targetX = coeffX[0] + coeffX[1] * pixelX + coeffX[2] * pixelY;
-    const targetY = coeffY[0] + coeffY[1] * pixelX + coeffY[2] * pixelY;
-    const [lng, lat] = toWGS84(targetX, targetY, transform.target_coordinate_system);
+    const homography = Array.isArray(transform.homography) ? transform.homography : null;
+    const mapHomography = Array.isArray(transform.map_homography) ? transform.map_homography : null;
+    let targetX = 0;
+    let targetY = 0;
+    let usedHomography = false;
+    if (homography && homography.length === 9) {
+      const denominator = homography[6] * pixelX + homography[7] * pixelY + homography[8];
+      if (Math.abs(denominator) > 1e-9) {
+        targetX = (homography[0] * pixelX + homography[1] * pixelY + homography[2]) / denominator;
+        targetY = (homography[3] * pixelX + homography[4] * pixelY + homography[5]) / denominator;
+        usedHomography = Number.isFinite(targetX) && Number.isFinite(targetY);
+      }
+    }
+    if (!usedHomography) {
+      const coeffX = transform.coefficients.x;
+      const coeffY = transform.coefficients.y;
+      targetX = coeffX[0] + coeffX[1] * pixelX + coeffX[2] * pixelY;
+      targetY = coeffY[0] + coeffY[1] * pixelX + coeffY[2] * pixelY;
+    }
+
+    let lng = 0;
+    let lat = 0;
+    let usedMapTransform = false;
+    if (mapHomography && mapHomography.length === 9) {
+      const denominator = mapHomography[6] * pixelX + mapHomography[7] * pixelY + mapHomography[8];
+      if (Math.abs(denominator) > 1e-9) {
+        const mercatorX = (mapHomography[0] * pixelX + mapHomography[1] * pixelY + mapHomography[2]) / denominator;
+        const mercatorY = (mapHomography[3] * pixelX + mapHomography[4] * pixelY + mapHomography[5]) / denominator;
+        if (Number.isFinite(mercatorX) && Number.isFinite(mercatorY)) {
+          [lng, lat] = mercatorToWGS84(mercatorX, mercatorY);
+          usedMapTransform = Number.isFinite(lng) && Number.isFinite(lat);
+        }
+      }
+    }
+    if (!usedMapTransform && transform.map_coefficients?.x?.length === 3 && transform.map_coefficients?.y?.length === 3) {
+      const coeffX = transform.map_coefficients.x;
+      const coeffY = transform.map_coefficients.y;
+      const mercatorX = coeffX[0] + coeffX[1] * pixelX + coeffX[2] * pixelY;
+      const mercatorY = coeffY[0] + coeffY[1] * pixelX + coeffY[2] * pixelY;
+      [lng, lat] = mercatorToWGS84(mercatorX, mercatorY);
+      usedMapTransform = Number.isFinite(lng) && Number.isFinite(lat);
+    }
+    if (!usedMapTransform) {
+      [lng, lat] = toWGS84(targetX, targetY, transform.target_coordinate_system);
+    }
     return {
       target: [Number(targetX.toFixed(6)), Number(targetY.toFixed(6))] as [number, number],
       wgs84: [Number(lng.toFixed(8)), Number(lat.toFixed(8))] as [number, number],

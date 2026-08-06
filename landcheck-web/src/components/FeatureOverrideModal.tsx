@@ -68,6 +68,18 @@ type SelectionDrag =
 type BeaconStyle = "circle" | "square" | "triangle" | "diamond" | "cross";
 type NorthArrowColor = "black" | "blue";
 
+type PendingSave =
+  | { kind: "delete"; targets: FeatureRecord[] }
+  | {
+      kind: "upsert";
+      featureType: FeatureType;
+      action: "add" | "update";
+      geometry: any;
+      name?: string;
+      width_m?: number;
+      replacedKey?: string;
+    };
+
 type ManualPoint = {
   station: string;
   lng: number;
@@ -109,7 +121,6 @@ type Props = {
   northArrowColor: NorthArrowColor;
   coordinateSystem: string;
   onBoundaryPointChange?: (index: number, lngLat: [number, number]) => void;
-  isLowBandwidth?: boolean;
 };
 
 const DEFAULT_LAYER_VISIBILITY: LayerVisibility = {
@@ -596,6 +607,41 @@ const pointsToSvg = (coords: number[][], project: (coord: number[]) => { x: numb
     })
     .join(" ");
 
+// Offsets a centerline (already projected to pixel space) into two parallel edges, halfWidth
+// pixels to either side - a live preview of the road's actual footprint while it's being drawn.
+// At interior vertices the two adjacent segments' perpendiculars are averaged (a simple,
+// unlimited miter) - fine for a draft preview, not meant to be exact join geometry.
+const buildParallelOffsetLines = (points: { x: number; y: number }[], halfWidth: number) => {
+  if (points.length < 2 || halfWidth <= 0) return null;
+  const segmentDirs: { x: number; y: number }[] = [];
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const dx = points[i + 1].x - points[i].x;
+    const dy = points[i + 1].y - points[i].y;
+    const len = Math.hypot(dx, dy) || 1;
+    segmentDirs.push({ x: dx / len, y: dy / len });
+  }
+  const left: { x: number; y: number }[] = [];
+  const right: { x: number; y: number }[] = [];
+  for (let i = 0; i < points.length; i += 1) {
+    const dirs = [segmentDirs[i - 1], segmentDirs[i]].filter(Boolean) as { x: number; y: number }[];
+    let nx = 0;
+    let ny = 0;
+    dirs.forEach((d) => {
+      nx += -d.y;
+      ny += d.x;
+    });
+    const len = Math.hypot(nx, ny) || 1;
+    nx /= len;
+    ny /= len;
+    left.push({ x: points[i].x + nx * halfWidth, y: points[i].y + ny * halfWidth });
+    right.push({ x: points[i].x - nx * halfWidth, y: points[i].y - ny * halfWidth });
+  }
+  return { left, right };
+};
+
+const offsetPointsToSvg = (points: { x: number; y: number }[]) =>
+  points.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
+
 // Boundary rings are stored closed (last point repeats the first); editing/labelling logic
 // works with the unique vertex list, so this strips that trailing duplicate when present.
 const getOpenRing = (coords: number[][] | null | undefined): number[][] => {
@@ -786,7 +832,6 @@ export default function FeatureOverrideModal({
   northArrowColor,
   coordinateSystem,
   onBoundaryPointChange,
-  isLowBandwidth: _isLowBandwidth = false,
 }: Props) {
   const mapRef = useRef<any>(null);
   const drawRef = useRef<any>(null);
@@ -823,7 +868,7 @@ export default function FeatureOverrideModal({
   const [draftMetrics, setDraftMetrics] = useState<GeometryMetrics | null>(null);
   const [cursor, setCursor] = useState<{ lng: number; lat: number } | null>(null);
   const [activeTool, setActiveTool] = useState<EditorTool>("select");
-  const [basemapMode, setBasemapMode] = useState<BasemapMode>(_isLowBandwidth ? "plotting" : "satellite");
+  const [basemapMode, setBasemapMode] = useState<BasemapMode>("plotting");
 
   useEffect(() => {
     const stage = plottingStageRef.current;
@@ -837,18 +882,29 @@ export default function FeatureOverrideModal({
       });
     };
     applySize(stage.clientWidth, stage.clientHeight);
+    // Coalesce bursts of resize notifications (e.g. the sidebar's own width transition) into at
+    // most one state update per animation frame, instead of one per observer callback - avoids
+    // driving a chain of renders that visibly jitters the plotting stage while it settles.
+    let rafId: number | null = null;
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
-      const box = entry.contentBoxSize?.[0];
-      if (box) {
-        applySize(box.inlineSize, box.blockSize);
-      } else {
-        applySize(entry.contentRect.width, entry.contentRect.height);
-      }
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        const box = entry.contentBoxSize?.[0];
+        if (box) {
+          applySize(box.inlineSize, box.blockSize);
+        } else {
+          applySize(entry.contentRect.width, entry.contentRect.height);
+        }
+      });
     });
     observer.observe(stage);
-    return () => observer.disconnect();
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      observer.disconnect();
+    };
   }, [basemapMode, isOpen]);
 
   const plottingPageWidth = plottingStageSize.width;
@@ -865,7 +921,7 @@ export default function FeatureOverrideModal({
   const [featureInventory, setFeatureInventory] = useState<FeatureInventory>(DEFAULT_INVENTORY);
   const [featureCollections, setFeatureCollections] = useState<FeatureCollectionState>(DEFAULT_FEATURE_COLLECTIONS);
   const [plottingPoints, setPlottingPoints] = useState<number[][]>([]);
-  const [deleteConfirmArmed, setDeleteConfirmArmed] = useState(false);
+  const [pendingSave, setPendingSave] = useState<PendingSave | null>(null);
   const [savingAction, setSavingAction] = useState(false);
   const [plottingCamera, setPlottingCamera] = useState<PlottingCamera>(DEFAULT_PLOTTING_CAMERA);
   const [plottingPanActive, setPlottingPanActive] = useState(false);
@@ -946,6 +1002,17 @@ export default function FeatureOverrideModal({
     () => (plottingPreviewPoints.length > plottingPoints.length ? buildGeometryFromPoints(plottingPreviewPoints, activeTool) : null),
     [activeTool, plottingPoints.length, plottingPreviewPoints]
   );
+  // While actively drawing a road, show its real-world width as two parallel edges around the
+  // centerline (instead of only a single line) so the drafted footprint matches the chosen
+  // road width before it's added.
+  const roadWidthPreviewLines = useMemo(() => {
+    if (featureType !== "road" || action === "delete" || activeTool === "select") return null;
+    if (plottingPreviewPoints.length < 2) return null;
+    const halfWidthPx = (Number(roadWidth) / 2) * plottingViewport.scale;
+    if (!Number.isFinite(halfWidthPx) || halfWidthPx <= 0) return null;
+    const projected = plottingPreviewPoints.map((point) => plottingViewport.project(point));
+    return buildParallelOffsetLines(projected, halfWidthPx);
+  }, [action, activeTool, featureType, plottingPreviewPoints, plottingViewport, roadWidth]);
   const hasSelectedGeometry = Boolean(selectedGeometry);
   const hasDraftGeometry =
     Boolean(plottingDraftGeometry) ||
@@ -1399,7 +1466,7 @@ export default function FeatureOverrideModal({
     setMultiSelectedKeys([]);
     setSelectionDrag(null);
     setSelectedMetrics(null);
-    setDeleteConfirmArmed(false);
+    setPendingSave(null);
     setActiveTool("select");
     drawRef.current?.changeMode("simple_select");
   }, []);
@@ -1426,7 +1493,7 @@ export default function FeatureOverrideModal({
   }, [pushCommandMessage]);
 
   const startAddFlow = useCallback(() => {
-    setDeleteConfirmArmed(false);
+    setPendingSave(null);
     setAction("add");
     drawRef.current?.deleteAll();
     activeDrawFeatureId.current = null;
@@ -1442,7 +1509,7 @@ export default function FeatureOverrideModal({
   }, [featureType, setAction, setEditorTool]);
 
   const startUpdateFlow = useCallback(() => {
-    setDeleteConfirmArmed(false);
+    setPendingSave(null);
     if (!selectedGeometry) {
       toast("Select a detected feature first, then modify it.");
       return;
@@ -1452,7 +1519,7 @@ export default function FeatureOverrideModal({
   }, [selectedGeometry, setAction, setEditorTool]);
 
   const startDeleteFlow = useCallback(() => {
-    setDeleteConfirmArmed(false);
+    setPendingSave(null);
     if (!selectedGeometry && multiSelectedKeys.length === 0) {
       toast("Select the feature(s) you want to remove first.");
       return;
@@ -1473,13 +1540,9 @@ export default function FeatureOverrideModal({
   const editorPrompt =
     action === "delete"
       ? deleteTargetCount > 0
-        ? deleteConfirmArmed
-          ? deleteTargetCount > 1
-            ? `Delete is armed for ${deleteTargetCount} features. Confirm to remove them.`
-            : "Delete is armed. Review the selected feature, then confirm delete."
-          : deleteTargetCount > 1
-            ? `${deleteTargetCount} features selected. Confirm to remove them.`
-            : "Delete mode is ready. Review the selected feature, then confirm delete."
+        ? deleteTargetCount > 1
+          ? `${deleteTargetCount} features selected. Confirm to remove them.`
+          : "Delete mode is ready. Review the selected feature, then confirm delete."
         : "Select an existing feature (or box/lasso select several) to remove."
       : action === "update"
         ? hasSelectedGeometry
@@ -1489,13 +1552,9 @@ export default function FeatureOverrideModal({
 
   const primaryActionLabel =
     action === "delete"
-      ? deleteConfirmArmed
-        ? deleteTargetCount > 1
-          ? `Confirm Delete (${deleteTargetCount})`
-          : "Confirm Delete"
-        : deleteTargetCount > 1
-          ? `Delete ${deleteTargetCount} Selected Features`
-          : "Delete Selected Feature"
+      ? deleteTargetCount > 1
+        ? `Delete ${deleteTargetCount} Selected Features`
+        : "Delete Selected Feature"
       : action === "update"
         ? "Apply Changes"
         : "Add Feature";
@@ -1508,7 +1567,7 @@ export default function FeatureOverrideModal({
         : hasDraftGeometry || hasSelectedGeometry;
 
   useEffect(() => {
-    setDeleteConfirmArmed(false);
+    setPendingSave(null);
   }, [action, selectedGeometry, featureType, multiSelectedKeys]);
 
   useEffect(() => {
@@ -2755,7 +2814,10 @@ export default function FeatureOverrideModal({
     });
   }, []);
 
-  const handleSave = async () => {
+  // Validates the current draft/selection and, if it's ready to save, hands the details to the
+  // confirm popup instead of saving right away - the actual mutation only happens once the user
+  // picks "Yes" there (see confirmPendingSave).
+  const handleSave = () => {
     if (action === "delete") {
       const targets: FeatureRecord[] =
         multiSelectedKeys.length > 0
@@ -2779,45 +2841,7 @@ export default function FeatureOverrideModal({
         toast.error("Select the feature(s) you want to remove first.");
         return;
       }
-      if (!deleteConfirmArmed) {
-        setDeleteConfirmArmed(true);
-        toast(
-          targets.length > 1
-            ? `Delete armed for ${targets.length} features. Click confirm again to remove them.`
-            : "Delete armed. Click confirm again to remove the selected feature."
-        );
-        return;
-      }
-
-      setSavingAction(true);
-      const removedKeys: string[] = [];
-      let successCount = 0;
-      try {
-        for (const target of targets) {
-          const ok = await onSave({
-            feature_type: target.type,
-            action: "delete",
-            geojson: target.geometry,
-          });
-          if (ok) {
-            successCount += 1;
-            removedKeys.push(target.key);
-          }
-        }
-      } finally {
-        setSavingAction(false);
-      }
-
-      if (removedKeys.length > 0) {
-        removeFeaturesByKeys(removedKeys);
-      }
-      if (successCount > 0) {
-        toast.success(successCount > 1 ? `${successCount} features deleted` : "Feature deleted");
-      }
-      if (successCount < targets.length) {
-        toast.error(`${targets.length - successCount} feature(s) failed to delete`);
-      }
-      clearWorkingSelection();
+      setPendingSave({ kind: "delete", targets });
       return;
     }
 
@@ -2855,39 +2879,104 @@ export default function FeatureOverrideModal({
     const savedWidth = savedFeatureType === "road" ? Number(roadWidth) : undefined;
     const replacedKey = savedAction === "update" ? selectedFeatureRecord?.key : undefined;
 
+    setPendingSave({
+      kind: "upsert",
+      featureType: savedFeatureType,
+      action: savedAction,
+      geometry: savedGeometry,
+      name: savedName,
+      width_m: savedWidth,
+      replacedKey,
+    });
+  };
+
+  const cancelPendingSave = useCallback(() => {
+    setPendingSave(null);
+  }, []);
+
+  const confirmPendingSave = useCallback(async () => {
+    const pending = pendingSave;
+    if (!pending) return;
+    setPendingSave(null);
+
+    if (pending.kind === "delete") {
+      setSavingAction(true);
+      const removedKeys: string[] = [];
+      let successCount = 0;
+      try {
+        for (const target of pending.targets) {
+          const ok = await onSave({
+            feature_type: target.type,
+            action: "delete",
+            geojson: target.geometry,
+          });
+          if (ok) {
+            successCount += 1;
+            removedKeys.push(target.key);
+          }
+        }
+      } finally {
+        setSavingAction(false);
+      }
+
+      if (removedKeys.length > 0) {
+        removeFeaturesByKeys(removedKeys);
+      }
+      if (successCount > 0) {
+        toast.success(successCount > 1 ? `${successCount} features deleted` : "Feature deleted");
+      }
+      if (successCount < pending.targets.length) {
+        toast.error(`${pending.targets.length - successCount} feature(s) failed to delete`);
+      }
+      clearWorkingSelection();
+      return;
+    }
+
     setSavingAction(true);
     let ok = false;
     try {
       ok = await onSave({
-        feature_type: savedFeatureType,
-        action: savedAction,
-        name: savedName,
-        width_m: savedWidth,
-        geojson: savedGeometry,
+        feature_type: pending.featureType,
+        action: pending.action,
+        name: pending.name,
+        width_m: pending.width_m,
+        geojson: pending.geometry,
       });
     } finally {
       setSavingAction(false);
     }
     if (!ok) return;
 
-    if (replacedKey) {
-      removeFeaturesByKeys([replacedKey]);
+    if (pending.replacedKey) {
+      removeFeaturesByKeys([pending.replacedKey]);
     }
     setFeatureCollections((previous) => {
-      const collection = previous[savedFeatureType];
+      const collection = previous[pending.featureType];
       const newFeature = {
         type: "Feature",
-        geometry: savedGeometry,
-        properties: { source: "override", name: savedName, width_m: savedWidth },
+        geometry: pending.geometry,
+        properties: { source: "override", name: pending.name, width_m: pending.width_m },
       };
       return {
         ...previous,
-        [savedFeatureType]: { ...collection, features: [...collection.features, newFeature] },
+        [pending.featureType]: { ...collection, features: [...collection.features, newFeature] },
       };
     });
-    toast.success(savedAction === "add" ? "Feature added" : "Feature updated");
+    toast.success(pending.action === "add" ? "Feature added" : "Feature updated");
     clearWorkingSelection();
-  };
+  }, [pendingSave, onSave, removeFeaturesByKeys, clearWorkingSelection]);
+
+  const pendingSaveDescription = (() => {
+    if (!pendingSave) return "";
+    if (pendingSave.kind === "delete") {
+      return pendingSave.targets.length > 1
+        ? `delete ${pendingSave.targets.length} selected features (${pendingSave.targets.map((t) => t.type).join(", ")})`
+        : `delete the selected ${pendingSave.targets[0]?.type || "feature"}`;
+    }
+    return pendingSave.action === "add"
+      ? `add this new ${pendingSave.featureType}`
+      : `apply the change to the selected ${pendingSave.featureType}`;
+  })();
 
   const suggestedTool = toolForFeatureType(featureType);
   const suggestedToolLabel = suggestedTool === "draw_polygon" ? "Polygon tool" : "Line tool";
@@ -2989,7 +3078,8 @@ export default function FeatureOverrideModal({
 
           <span className="cad-toolbar-divider" />
 
-          <div className="cad-toolbar-group">
+          <div className="cad-toolbar-group cad-toolbar-group--editing" title="Pick a feature type, then Add, Modify, or Delete it in the plotting area below.">
+            <CadIcon name="info" className="cad-toolbar-group-cue" />
             <select
               className="cad-toolbar-select"
               value={featureType}
@@ -3565,6 +3655,12 @@ export default function FeatureOverrideModal({
                             className="cad-svg-preview"
                           />
                         ) : null}
+                        {roadWidthPreviewLines ? (
+                          <g className="cad-svg-road-width-preview">
+                            <polyline points={offsetPointsToSvg(roadWidthPreviewLines.left)} className="cad-svg-road-width-edge" />
+                            <polyline points={offsetPointsToSvg(roadWidthPreviewLines.right)} className="cad-svg-road-width-edge" />
+                          </g>
+                        ) : null}
                         {plottingPreviewGeometry?.type === "Polygon" && Array.isArray(plottingPreviewGeometry.coordinates?.[0]) && draftingAssist.measure ? (
                           <polygon
                             points={pointsToSvg(plottingPreviewGeometry.coordinates[0] as number[][], plottingViewport.project)}
@@ -3887,13 +3983,9 @@ export default function FeatureOverrideModal({
                 </div>
               ) : null}
               {action === "delete" ? (
-                <div className={`cad-warning${deleteConfirmArmed ? " armed" : ""}`}>
-                  <strong>{deleteConfirmArmed ? "Delete confirmation required" : "Delete mode"}</strong>
-                  <span>
-                    {deleteConfirmArmed
-                      ? "Confirm delete in the footer to commit removal of the selected feature."
-                      : "Delete does not happen immediately. The selected feature must be confirmed before it is removed."}
-                  </span>
+                <div className="cad-warning">
+                  <strong>Delete mode</strong>
+                  <span>Delete does not happen immediately. You will be asked to confirm before anything is removed.</span>
                 </div>
               ) : null}
             </section>
@@ -3973,16 +4065,7 @@ export default function FeatureOverrideModal({
           </div>
         </div>
 
-        <div className="feature-override-actions cad-editor-actions">
-          <div className="cad-editor-actions-left">
-            {action === "delete"
-              ? deleteConfirmArmed
-                ? "Delete is armed. Confirm to remove the selected feature."
-                : "Delete requires an explicit confirmation before anything is removed."
-              : action === "update"
-                ? "Modify the selected feature, then apply the change."
-                : "Draw a new feature, then apply it."}
-          </div>
+        <div className="feature-override-actions cad-editor-actions cad-editor-actions--compact">
           <div className="cad-editor-actions-right">
             <button className="btn-outline" onClick={clearWorkingSelection}>
               Clear
@@ -4000,6 +4083,39 @@ export default function FeatureOverrideModal({
           </div>
         </div>
       </div>
+
+      {pendingSave && (
+        <div className="cad-confirm-overlay" role="dialog" aria-modal="true" onClick={cancelPendingSave}>
+          <div className="cad-confirm-dialog" onClick={(event) => event.stopPropagation()}>
+            <h3>
+              {pendingSave.kind === "delete"
+                ? "Delete feature?"
+                : pendingSave.action === "add"
+                  ? "Add feature?"
+                  : "Apply change?"}
+            </h3>
+            <p>
+              Do you want to {pendingSaveDescription}
+              {pendingSave.kind === "upsert" && pendingSave.featureType === "road" && pendingSave.name
+                ? ` "${pendingSave.name}"`
+                : ""}
+              ?
+            </p>
+            <div className="cad-confirm-dialog-actions">
+              <button type="button" className="btn-outline" onClick={cancelPendingSave} autoFocus>
+                No
+              </button>
+              <button
+                type="button"
+                className={`btn-primary${pendingSave.kind === "delete" ? " danger" : ""}`}
+                onClick={confirmPendingSave}
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {menu.visible && (
         <div

@@ -629,6 +629,21 @@
   gap: 0.62rem;
 }
 
+.georef-action-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.62rem;
+  padding: 0.78rem;
+  margin-top: 0.82rem;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.88));
+  box-shadow: 0 -14px 28px rgba(2, 6, 23, 0.28);
+}
+
 .georef-tool-pill,
 .georef-mini-action {
   border: 1px solid rgba(148, 163, 184, 0.2);
@@ -864,6 +879,10 @@
   justify-content: space-between;
   gap: 0.8rem;
   margin-bottom: 0.7rem;
+}
+
+.georef-card-head > div:first-child {
+  min-width: 0;
 }
 
 .georef-stage-toolbar {
@@ -3413,6 +3432,14 @@
   .georef-tool-row > *,
   .georef-composer-actions > *,
   .georef-feature-actions > * {
+    width: 100%;
+  }
+
+  .georef-action-dock {
+    grid-template-columns: 1fr;
+  }
+
+  .georef-action-dock > * {
     width: 100%;
   }
 
