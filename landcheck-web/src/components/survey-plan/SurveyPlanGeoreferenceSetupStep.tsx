@@ -2,6 +2,11 @@ import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "reac
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
 import type { GeoreferenceSession } from "../../types/surveyGeoreference";
 import {
+  isProjectedCoordinateSystem,
+  looksLikeProjected,
+  toWGS84,
+} from "../../utils/coordinateConverter";
+import {
   getRasterPixelFromStageClick,
   getRasterStageMetrics,
   projectRasterPixelToStage,
@@ -23,7 +28,7 @@ type Props = {
   onRemoveControlPoint: (controlPointId: string) => void;
   onUpdateControlPoint: (
     controlPointId: string,
-    field: "label" | "lng" | "lat" | "image_x" | "image_y",
+    field: "label" | "ground_x" | "ground_y" | "image_x" | "image_y",
     value: string | number,
   ) => void;
   onAssignImagePoint: (pixelX: number, pixelY: number) => void;
@@ -63,6 +68,7 @@ function SurveyPlanGeoreferenceSetupStep({
   onContinue,
   onDeleteSession,
 }: Props) {
+  type NumericField = "ground_x" | "ground_y" | "image_x" | "image_y";
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const imageStageRef = useRef<HTMLDivElement | null>(null);
   const rasterImageRef = useRef<HTMLImageElement | null>(null);
@@ -73,15 +79,26 @@ function SurveyPlanGeoreferenceSetupStep({
   const [draftFile, setDraftFile] = useState<File | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [stageMetrics, setStageMetrics] = useState<RasterStageMetrics | null>(null);
+  const [numericDrafts, setNumericDrafts] = useState<Record<string, Partial<Record<NumericField, string>>>>({});
 
   const controlPoints = session?.ground_control_points || [];
   const activePoint =
     controlPoints.find((item) => item.id === selectedControlPointId) || controlPoints[controlPoints.length - 1] || null;
+  const projectedGroundSystem = isProjectedCoordinateSystem(targetCoordinateSystem);
+  const coordinateXLabel = projectedGroundSystem ? "Easting (m)" : "Longitude";
+  const coordinateYLabel = projectedGroundSystem ? "Northing (m)" : "Latitude";
+  const coordinateHint = projectedGroundSystem
+    ? "Ground control coordinates are stored in meters for the selected projected grid."
+    : "Ground control coordinates are stored as WGS84 ground longitude and latitude.";
 
   useEffect(() => {
     if (!session?.title_text) return;
     setDraftTitle(session.title_text);
   }, [session?.title_text]);
+
+  useEffect(() => {
+    setNumericDrafts({});
+  }, [controlPoints]);
 
   useEffect(() => {
     const measure = () => {
@@ -178,21 +195,75 @@ function SurveyPlanGeoreferenceSetupStep({
       features: controlPoints
         .filter(
           (item) =>
-            Number.isFinite(item.lng) &&
-            Number.isFinite(item.lat) &&
-            (Math.abs(item.lng) > 1e-6 || Math.abs(item.lat) > 1e-6),
+            Number.isFinite(item.ground_x) &&
+            Number.isFinite(item.ground_y) &&
+            (Math.abs(item.ground_x) > 1e-6 || Math.abs(item.ground_y) > 1e-6),
         )
-        .map((item) => ({
-          type: "Feature",
-          geometry: { type: "Point", coordinates: [item.lng, item.lat] },
-          properties: {
-            label: item.label,
-            active: item.id === activePoint?.id ? 1 : 0,
-          },
-        })),
+        .map((item) => {
+          const shouldConvertToWgs84 =
+            projectedGroundSystem && looksLikeProjected(Number(item.ground_x), Number(item.ground_y));
+          const [mapLng, mapLat] = shouldConvertToWgs84
+            ? toWGS84(Number(item.ground_x), Number(item.ground_y), targetCoordinateSystem)
+            : [Number(item.ground_x), Number(item.ground_y)];
+          if (!Number.isFinite(mapLng) || !Number.isFinite(mapLat)) {
+            return null;
+          }
+          if (mapLng < -180 || mapLng > 180 || mapLat < -90 || mapLat > 90) {
+            return null;
+          }
+          return {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [mapLng, mapLat] },
+            properties: {
+              label: item.label,
+              active: item.id === activePoint?.id ? 1 : 0,
+            },
+          };
+        })
+        .filter(Boolean),
     }),
-    [activePoint?.id, controlPoints],
+    [activePoint?.id, controlPoints, projectedGroundSystem, targetCoordinateSystem],
   );
+
+  const handleNumericDraftChange = (controlPointId: string, field: NumericField, rawValue: string) => {
+    setNumericDrafts((current) => ({
+      ...current,
+      [controlPointId]: {
+        ...(current[controlPointId] || {}),
+        [field]: rawValue,
+      },
+    }));
+  };
+
+  const commitNumericDraft = (controlPointId: string, field: NumericField) => {
+    const rawValue = numericDrafts[controlPointId]?.[field];
+    if (rawValue == null) return;
+    const normalized = String(rawValue).trim().replace(",", ".");
+    const parsed = Number.parseFloat(normalized);
+    if (Number.isFinite(parsed)) {
+      onUpdateControlPoint(controlPointId, field, parsed);
+    }
+    setNumericDrafts((current) => {
+      if (!current[controlPointId]) return current;
+      const nextFields = { ...(current[controlPointId] || {}) };
+      delete nextFields[field];
+      if (Object.keys(nextFields).length === 0) {
+        const nextState = { ...current };
+        delete nextState[controlPointId];
+        return nextState;
+      }
+      return {
+        ...current,
+        [controlPointId]: nextFields,
+      };
+    });
+  };
+
+  const getNumericInputValue = (controlPointId: string, field: NumericField, fallbackValue: number) => {
+    const draftValue = numericDrafts[controlPointId]?.[field];
+    if (draftValue != null) return draftValue;
+    return Number.isFinite(fallbackValue) ? String(fallbackValue) : "";
+  };
 
   useEffect(() => {
     const map = mapRef.current;
@@ -373,6 +444,8 @@ function SurveyPlanGeoreferenceSetupStep({
                 </article>
               </div>
 
+              <div className="georef-coordinate-hint">{coordinateHint}</div>
+
               <div className="georef-actions-row">
                 <button type="button" className="btn-outline" onClick={onAddControlPoint}>
                   Add Control Point
@@ -414,34 +487,70 @@ function SurveyPlanGeoreferenceSetupStep({
                         />
                       </label>
                       <label>
-                        Longitude
+                        {coordinateXLabel}
                         <input
-                          value={Number.isFinite(point.lng) ? point.lng : ""}
-                          onChange={(event) => onUpdateControlPoint(point.id, "lng", event.target.value)}
+                          type="text"
+                          inputMode="decimal"
+                          value={getNumericInputValue(point.id, "ground_x", Number(point.ground_x))}
+                          onChange={(event) => handleNumericDraftChange(point.id, "ground_x", event.target.value)}
+                          onBlur={() => commitNumericDraft(point.id, "ground_x")}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitNumericDraft(point.id, "ground_x");
+                            }
+                          }}
                           onClick={(event) => event.stopPropagation()}
                         />
                       </label>
                       <label>
-                        Latitude
+                        {coordinateYLabel}
                         <input
-                          value={Number.isFinite(point.lat) ? point.lat : ""}
-                          onChange={(event) => onUpdateControlPoint(point.id, "lat", event.target.value)}
+                          type="text"
+                          inputMode="decimal"
+                          value={getNumericInputValue(point.id, "ground_y", Number(point.ground_y))}
+                          onChange={(event) => handleNumericDraftChange(point.id, "ground_y", event.target.value)}
+                          onBlur={() => commitNumericDraft(point.id, "ground_y")}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitNumericDraft(point.id, "ground_y");
+                            }
+                          }}
                           onClick={(event) => event.stopPropagation()}
                         />
                       </label>
                       <label>
                         Pixel X
                         <input
-                          value={Number.isFinite(point.image_x) ? Math.round(point.image_x) : ""}
-                          onChange={(event) => onUpdateControlPoint(point.id, "image_x", event.target.value)}
+                          type="text"
+                          inputMode="decimal"
+                          value={getNumericInputValue(point.id, "image_x", Number(point.image_x))}
+                          onChange={(event) => handleNumericDraftChange(point.id, "image_x", event.target.value)}
+                          onBlur={() => commitNumericDraft(point.id, "image_x")}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitNumericDraft(point.id, "image_x");
+                            }
+                          }}
                           onClick={(event) => event.stopPropagation()}
                         />
                       </label>
                       <label>
                         Pixel Y
                         <input
-                          value={Number.isFinite(point.image_y) ? Math.round(point.image_y) : ""}
-                          onChange={(event) => onUpdateControlPoint(point.id, "image_y", event.target.value)}
+                          type="text"
+                          inputMode="decimal"
+                          value={getNumericInputValue(point.id, "image_y", Number(point.image_y))}
+                          onChange={(event) => handleNumericDraftChange(point.id, "image_y", event.target.value)}
+                          onBlur={() => commitNumericDraft(point.id, "image_y")}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitNumericDraft(point.id, "image_y");
+                            }
+                          }}
                           onClick={(event) => event.stopPropagation()}
                         />
                       </label>
@@ -496,14 +605,19 @@ function SurveyPlanGeoreferenceSetupStep({
                     <button
                       key={point.id}
                       type="button"
-                      className={`georef-image-marker${point.id === activePoint?.id ? " active" : ""}`}
+                      className={`georef-image-marker georef-control-point-marker${point.id === activePoint?.id ? " active" : ""}`}
                       style={{ left: point.left, top: point.top }}
+                      aria-label={point.label}
+                      title={point.label}
                       onClick={(event) => {
                         event.stopPropagation();
                         onSelectControlPoint(point.id);
                       }}
                     >
-                      <span>{point.label}</span>
+                      <span className="georef-control-point-name">{point.label}</span>
+                      <span className="georef-control-point-reticle" aria-hidden="true">
+                        <span className="georef-control-point-dot" />
+                      </span>
                     </button>
                   ))}
                 </>

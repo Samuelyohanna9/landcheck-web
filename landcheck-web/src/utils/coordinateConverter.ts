@@ -25,6 +25,10 @@ const SYSTEM_TO_EPSG: Record<string, string> = {
   minna_33: "EPSG:26333",
 };
 
+export function isProjectedCoordinateSystem(system: string): boolean {
+  return String(system || "").trim().toLowerCase() !== "wgs84";
+}
+
 /**
  * Convert coordinates from WGS84 (lng, lat) to a projected system
  * @param lng Longitude in WGS84

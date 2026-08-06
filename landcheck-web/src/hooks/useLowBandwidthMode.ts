@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type ConnectionLike = {
   effectiveType?: string;
@@ -15,6 +15,10 @@ declare global {
   }
 }
 
+// navigator.connection is Chromium-only (Safari/iOS never reports it), so this manual,
+// persisted opt-in is the only way those users can ever get low-bandwidth behavior.
+const MANUAL_LOW_BANDWIDTH_STORAGE_KEY = "lc_manual_low_bandwidth";
+
 function getConnection() {
   if (typeof navigator === "undefined") return null;
   return navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
@@ -26,14 +30,24 @@ function detectLowBandwidth(connection: ConnectionLike | null) {
   return ["slow-2g", "2g", "3g"].includes(String(connection.effectiveType || "").toLowerCase());
 }
 
+function readManualLowBandwidth() {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(MANUAL_LOW_BANDWIDTH_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 export function useLowBandwidthMode() {
-  const [isLowBandwidth, setIsLowBandwidth] = useState(false);
+  const [autoLowBandwidth, setAutoLowBandwidth] = useState(false);
+  const [manualLowBandwidth, setManualLowBandwidthState] = useState(readManualLowBandwidth);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
 
     const connection = getConnection();
-    const update = () => setIsLowBandwidth(detectLowBandwidth(connection));
+    const update = () => setAutoLowBandwidth(detectLowBandwidth(connection));
 
     update();
 
@@ -47,5 +61,24 @@ export function useLowBandwidthMode() {
     };
   }, []);
 
-  return { isLowBandwidth };
+  const setManualLowBandwidth = useCallback((value: boolean) => {
+    setManualLowBandwidthState(value);
+    if (typeof window === "undefined") return;
+    try {
+      if (value) {
+        window.localStorage.setItem(MANUAL_LOW_BANDWIDTH_STORAGE_KEY, "1");
+      } else {
+        window.localStorage.removeItem(MANUAL_LOW_BANDWIDTH_STORAGE_KEY);
+      }
+    } catch {
+      // Storage unavailable (private browsing, quota) - the in-memory state still applies
+      // for the rest of this session, it just won't persist across reloads.
+    }
+  }, []);
+
+  return {
+    isLowBandwidth: autoLowBandwidth || manualLowBandwidth,
+    manualLowBandwidth,
+    setManualLowBandwidth,
+  };
 }
