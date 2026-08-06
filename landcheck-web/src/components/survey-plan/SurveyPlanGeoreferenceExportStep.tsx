@@ -1,6 +1,32 @@
 import { memo, type ReactNode } from "react";
 import type { GeoreferenceFeature, GeoreferenceSession } from "../../types/surveyGeoreference";
 
+type StakingPreviewRow = {
+  station: string;
+  feature: string;
+  coordinateSystem: string;
+  easting: number;
+  northing: number;
+  longitude: number;
+  latitude: number;
+};
+
+const alphaStation = (index: number) => {
+  let base = "";
+  let value = Number(index);
+  while (true) {
+    base = String.fromCharCode(65 + (value % 26)) + base;
+    value = Math.floor(value / 26) - 1;
+    if (value < 0) break;
+  }
+  return base;
+};
+
+const formatCoordinateValue = (value: number, decimals: number) =>
+  Number.isFinite(value)
+    ? value.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+    : "--";
+
 type Props = {
   sidebar: ReactNode;
   session: GeoreferenceSession;
@@ -26,6 +52,40 @@ function SurveyPlanGeoreferenceExportStep({
   const pointCount = features.filter((feature) => feature.feature_type === "point").length;
   const lineCount = features.filter((feature) => feature.feature_type === "line").length;
   const primaryPolygon = features.find((feature) => feature.feature_type === "polygon" && feature.is_primary) || features.find((feature) => feature.feature_type === "polygon") || null;
+  const readyCoordinateSystem = session.transform?.target_coordinate_system?.toUpperCase() || session.target_coordinate_system?.toUpperCase() || "WGS84";
+  const stakingPreviewRows: StakingPreviewRow[] = (() => {
+    if (primaryPolygon) {
+      return primaryPolygon.target_coordinates
+        .slice(0, primaryPolygon.pixels.length)
+        .map((target, index) => {
+          const wgs84 = primaryPolygon.wgs84_coordinates[index] || [0, 0];
+          return {
+            station: alphaStation(index),
+            feature: primaryPolygon.label || "Primary parcel",
+            coordinateSystem: readyCoordinateSystem,
+            easting: Number(target[0]),
+            northing: Number(target[1]),
+            longitude: Number(wgs84[0]),
+            latitude: Number(wgs84[1]),
+          };
+        });
+    }
+    return features
+      .filter((feature) => feature.feature_type === "point")
+      .map((feature, index) => {
+        const target = feature.target_coordinates[0] || [0, 0];
+        const wgs84 = feature.wgs84_coordinates[0] || [0, 0];
+        return {
+          station: `P${index + 1}`,
+          feature: feature.label || `Stake point ${index + 1}`,
+          coordinateSystem: readyCoordinateSystem,
+          easting: Number(target[0]),
+          northing: Number(target[1]),
+          longitude: Number(wgs84[0]),
+          latitude: Number(wgs84[1]),
+        };
+      });
+  })();
 
   return (
     <div className="step-panel georef-step-panel export-panel">
@@ -35,46 +95,50 @@ function SurveyPlanGeoreferenceExportStep({
           <div className="georef-control-head">
             <div>
               <span className="georef-kicker">Export & Continue</span>
-              <h3>Use the georeferenced work in Survey Plan and DGPS workflows</h3>
+              <h3>Prepare the staking sheet and move the parcel straight into Survey Plan</h3>
               <p>
-                Download the DGPS CSV if needed, then continue straight into Survey Plan. Once you continue,
-                the temporary raster session is released from storage, with timed cleanup still running as a
-                fallback.
+                Review the final parcel package, download the staking sheet for DGPS work, then continue with
+                a cleaner Survey Plan handoff.
               </p>
             </div>
-            <div className="georef-quality-pill">{session.transform?.target_coordinate_system?.toUpperCase()} ready</div>
+            <div className="georef-quality-pill">{readyCoordinateSystem} ready</div>
           </div>
 
           <div className="georef-stat-grid">
             <article className="georef-stat-card">
               <span className="georef-stat-label">Primary parcel</span>
               <strong>{primaryPolygon ? `${primaryPolygon.pixels.length} vertices` : "Not set"}</strong>
-              <small>{primaryPolygon?.label || "Choose a primary polygon in the workspace"}</small>
+              <small>{primaryPolygon?.label || "Select one boundary as the parcel to continue"}</small>
             </article>
             <article className="georef-stat-card">
               <span className="georef-stat-label">Stake points</span>
               <strong>{pointCount}</strong>
-              <small>CSV export will include these or the primary polygon vertices</small>
+              <small>The staking sheet will export these or the parcel vertices automatically</small>
             </article>
             <article className="georef-stat-card">
-              <span className="georef-stat-label">Saved session</span>
-              <strong>{session.status}</strong>
-              <small>{session.delete_after_at ? `Auto cleanup: ${new Date(session.delete_after_at).toLocaleDateString()}` : "Retention not set"}</small>
+              <span className="georef-stat-label">Working grid</span>
+              <strong>{readyCoordinateSystem}</strong>
+              <small>Coordinate values are ready for field setting-out and Survey Plan continuation</small>
+            </article>
+            <article className="georef-stat-card">
+              <span className="georef-stat-label">Saved layers</span>
+              <strong>{polygonCount + lineCount + pointCount}</strong>
+              <small>{polygonCount} boundary, {lineCount} line, {pointCount} point layer(s)</small>
             </article>
           </div>
 
           <div className="georef-export-checklist">
             <article>
-              <strong>{polygonCount}</strong>
-              <span>polygon layer(s)</span>
+              <strong>Excel-ready</strong>
+              <span>CSV columns open cleanly for DGPS use and office review.</span>
             </article>
             <article>
-              <strong>{lineCount}</strong>
-              <span>line layer(s)</span>
+              <strong>Survey ready</strong>
+              <span>The primary parcel continues directly into the Survey Plan editor.</span>
             </article>
             <article>
-              <strong>{pointCount}</strong>
-              <span>point layer(s)</span>
+              <strong>Field ready</strong>
+              <span>Coordinate rows are already structured for staking and checking on site.</span>
             </article>
           </div>
 
@@ -83,7 +147,7 @@ function SurveyPlanGeoreferenceExportStep({
               Back to Workspace
             </button>
             <button type="button" className="btn-primary" disabled={downloadingCsv || features.length === 0} onClick={onDownloadCsv}>
-              {downloadingCsv ? "Preparing CSV..." : "Download DGPS CSV"}
+              {downloadingCsv ? "Preparing staking sheet..." : "Download Staking Sheet"}
             </button>
             <button type="button" className="btn-secondary" disabled={!primaryPolygon || continuing} onClick={onContinueToSurvey}>
               {continuing ? "Continuing..." : "Continue as Survey Plan"}
@@ -94,12 +158,58 @@ function SurveyPlanGeoreferenceExportStep({
 
       <div className="panel-right georef-export-summary">
         <section className="georef-export-card">
-          <h4>What happens next</h4>
+          <div className="georef-card-head">
+            <div>
+              <h4>Staking sheet preview</h4>
+              <span>Review the first rows exactly as they will leave the workspace.</span>
+            </div>
+            <span className="georef-quality-pill">{stakingPreviewRows.length} row(s)</span>
+          </div>
+          {stakingPreviewRows.length ? (
+            <div className="georef-coordinate-table-wrap">
+              <table className="georef-coordinate-table georef-export-table">
+                <thead>
+                  <tr>
+                    <th>Station</th>
+                    <th>Feature</th>
+                    <th>Easting</th>
+                    <th>Northing</th>
+                    <th>Longitude</th>
+                    <th>Latitude</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stakingPreviewRows.slice(0, 8).map((row) => (
+                    <tr key={`${row.station}-${row.feature}`}>
+                      <td>{row.station}</td>
+                      <td>{row.feature}</td>
+                      <td>{formatCoordinateValue(row.easting, 4)}</td>
+                      <td>{formatCoordinateValue(row.northing, 4)}</td>
+                      <td>{formatCoordinateValue(row.longitude, 6)}</td>
+                      <td>{formatCoordinateValue(row.latitude, 6)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="georef-empty-list">
+              <strong>No staking rows available yet</strong>
+              <span>Save at least one point or one parcel boundary before exporting the sheet.</span>
+            </div>
+          )}
+        </section>
+        <section className="georef-export-card">
+          <div className="georef-card-head">
+            <div>
+              <h4>What continues into Survey Plan</h4>
+              <span>A concise handoff summary for the next drafting stage.</span>
+            </div>
+          </div>
           <ul className="georef-export-list">
-            <li>The primary polygon becomes the parcel boundary in Survey Plan.</li>
-            <li>Station names are generated from the digitized polygon vertices.</li>
-            <li>Stake points stay available in the CSV for DGPS setting out.</li>
-            <li>The uploaded raster is released from R2 when you continue, with retention cleanup still protecting storage.</li>
+            <li>The primary parcel becomes the working parcel boundary in Survey Plan.</li>
+            <li>Each parcel vertex is already named and ready for coordinate-based drafting.</li>
+            <li>Stake points remain available in the staking sheet for DGPS field setting out.</li>
           </ul>
         </section>
       </div>
