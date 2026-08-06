@@ -103,7 +103,8 @@ type Props = {
   orthophotoLoading: boolean;
   topoMapLoading: boolean;
   serverSyncing: boolean;
-  hasUnsyncedServerChanges: boolean;
+  previewNeedsRender: boolean;
+  hasRenderedCurrentPreview: boolean;
   onOpenFeatureCadEditor: () => void | Promise<void>;
   isOnline: boolean;
   plotId: number | null;
@@ -382,20 +383,24 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
 
           <div className="edit-feature-bar">
             <button
-              className={`btn-secondary${props.hasUnsyncedServerChanges && !rendering ? " needs-render" : ""}`}
+              className={`btn-secondary${props.previewNeedsRender && !rendering ? " needs-render" : ""}`}
               onClick={props.refreshCurrentPreview}
               disabled={rendering}
             >
-              {props.hasUnsyncedServerChanges && !rendering && <span className="needs-render-dot" aria-hidden="true" />}
+              {props.previewNeedsRender && !rendering && <span className="needs-render-dot" aria-hidden="true" />}
               {rendering ? "Rendering..." : props.previewActionLabel}
             </button>
             <button className="btn-outline" onClick={props.onOpenFeatureCadEditor} disabled={props.serverSyncing || !props.isOnline}>
               Open Feature CAD Editor
             </button>
           </div>
-          {props.hasUnsyncedServerChanges && !rendering && (
+          {props.previewNeedsRender && !rendering && (
             <p className="needs-render-hint">
-              You've made changes that aren't in the preview yet — click <strong>{props.previewActionLabel}</strong> to update it.
+              {props.hasRenderedCurrentPreview ? (
+                <>You've made changes that aren't in the preview yet — click <strong>{props.previewActionLabel}</strong> to update it.</>
+              ) : (
+                <>No preview has been generated yet — click <strong>{props.previewActionLabel}</strong> to see your survey plan.</>
+              )}
             </p>
           )}
 
@@ -747,13 +752,17 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
           </div>
           {props.subdivisionPreviewPanelTab === "survey_plan" ? (
             <div className="subdivision-survey-wrap">
-              {props.hasUnsyncedServerChanges && !rendering && (
+              {props.previewNeedsRender && !rendering && (
                 <div className="preview-stale-banner">
                   <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l6.28 11.18c.75 1.334-.213 2.987-1.743 2.987H3.72c-1.53 0-2.493-1.653-1.743-2.987l6.28-11.18zM10 6a1 1 0 011 1v3a1 1 0 11-2 0V7a1 1 0 011-1zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
                   </svg>
                   <span>
-                    Preview is out of date — click <strong>{props.previewActionLabel}</strong> to see your latest changes.
+                    {props.hasRenderedCurrentPreview ? (
+                      <>Preview is out of date — click <strong>{props.previewActionLabel}</strong> to see your latest changes.</>
+                    ) : (
+                      <>No preview yet — click <strong>{props.previewActionLabel}</strong> to generate your survey plan.</>
+                    )}
                   </span>
                 </div>
               )}

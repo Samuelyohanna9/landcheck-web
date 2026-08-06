@@ -92,7 +92,7 @@ type PlotMeta = {
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (payload: { feature_type: FeatureType; action: FeatureAction; name?: string; width_m?: number; geojson: any }) => void;
+  onSave: (payload: { feature_type: FeatureType; action: FeatureAction; name?: string; width_m?: number; geojson: any }) => Promise<boolean>;
   plotCoords: number[][] | null;
   featureType: FeatureType;
   setFeatureType: (t: FeatureType) => void;
@@ -864,6 +864,7 @@ export default function FeatureOverrideModal({
   const [featureCollections, setFeatureCollections] = useState<FeatureCollectionState>(DEFAULT_FEATURE_COLLECTIONS);
   const [plottingPoints, setPlottingPoints] = useState<number[][]>([]);
   const [deleteConfirmArmed, setDeleteConfirmArmed] = useState(false);
+  const [savingAction, setSavingAction] = useState(false);
   const [plottingCamera, setPlottingCamera] = useState<PlottingCamera>(DEFAULT_PLOTTING_CAMERA);
   const [plottingPanActive, setPlottingPanActive] = useState(false);
   const [selectedFeatureRecord, setSelectedFeatureRecord] = useState<FeatureRecord | null>(null);
@@ -1450,13 +1451,13 @@ export default function FeatureOverrideModal({
 
   const startDeleteFlow = useCallback(() => {
     setDeleteConfirmArmed(false);
-    if (!selectedGeometry) {
-      toast("Select the feature you want to remove first.");
+    if (!selectedGeometry && multiSelectedKeys.length === 0) {
+      toast("Select the feature(s) you want to remove first.");
       return;
     }
     setAction("delete");
     setEditorTool("select");
-  }, [selectedGeometry, setAction, setEditorTool]);
+  }, [selectedGeometry, multiSelectedKeys, setAction, setEditorTool]);
 
   const activeCommandLabel =
     action === "delete"
@@ -1465,13 +1466,19 @@ export default function FeatureOverrideModal({
         ? "Modify selected feature"
         : "Add new feature";
 
+  const deleteTargetCount = multiSelectedKeys.length > 0 ? multiSelectedKeys.length : hasSelectedGeometry ? 1 : 0;
+
   const editorPrompt =
     action === "delete"
-      ? hasSelectedGeometry
+      ? deleteTargetCount > 0
         ? deleteConfirmArmed
-          ? "Delete is armed. Review the selected feature, then confirm delete."
-          : "Delete mode is ready. Review the selected feature, then confirm delete."
-        : "Select an existing feature to remove."
+          ? deleteTargetCount > 1
+            ? `Delete is armed for ${deleteTargetCount} features. Confirm to remove them.`
+            : "Delete is armed. Review the selected feature, then confirm delete."
+          : deleteTargetCount > 1
+            ? `${deleteTargetCount} features selected. Confirm to remove them.`
+            : "Delete mode is ready. Review the selected feature, then confirm delete."
+        : "Select an existing feature (or box/lasso select several) to remove."
       : action === "update"
         ? hasSelectedGeometry
           ? "Selected feature is ready for editing. Adjust geometry, then apply changes."
@@ -1481,22 +1488,26 @@ export default function FeatureOverrideModal({
   const primaryActionLabel =
     action === "delete"
       ? deleteConfirmArmed
-        ? "Confirm Delete"
-        : "Delete Selected Feature"
+        ? deleteTargetCount > 1
+          ? `Confirm Delete (${deleteTargetCount})`
+          : "Confirm Delete"
+        : deleteTargetCount > 1
+          ? `Delete ${deleteTargetCount} Selected Features`
+          : "Delete Selected Feature"
       : action === "update"
         ? "Apply Changes"
         : "Add Feature";
 
   const canSave =
     action === "delete"
-      ? hasSelectedGeometry
+      ? deleteTargetCount > 0
       : action === "update"
         ? hasSelectedGeometry
         : hasDraftGeometry || hasSelectedGeometry;
 
   useEffect(() => {
     setDeleteConfirmArmed(false);
-  }, [action, selectedGeometry, featureType]);
+  }, [action, selectedGeometry, featureType, multiSelectedKeys]);
 
   useEffect(() => {
     if (!isOpen || !plotId) return;
@@ -2713,22 +2724,98 @@ export default function FeatureOverrideModal({
     return lines;
   }, [plottingViewport]);
 
-  const handleSave = () => {
+  // Removes features from local state by their objectRecords key (`${type}-${index}`) so the
+  // editor reflects a save immediately without waiting on a refetch of /features/geojson. Indices
+  // to remove are resolved from the pre-mutation snapshot and grouped per type so removing several
+  // features from the same collection in one batch doesn't shift indices out from under itself.
+  const removeFeaturesByKeys = useCallback((keys: string[]) => {
+    if (keys.length === 0) return;
+    const indicesByType = new Map<FeatureType, Set<number>>();
+    keys.forEach((key) => {
+      const [type, indexStr] = key.split("-");
+      const index = Number(indexStr);
+      if (!type || Number.isNaN(index)) return;
+      const set = indicesByType.get(type as FeatureType) || new Set<number>();
+      set.add(index);
+      indicesByType.set(type as FeatureType, set);
+    });
+    setFeatureCollections((previous) => {
+      const next = { ...previous };
+      indicesByType.forEach((indices, type) => {
+        const collection = previous[type];
+        if (!collection) return;
+        next[type] = {
+          ...collection,
+          features: collection.features.filter((_: any, i: number) => !indices.has(i)),
+        };
+      });
+      return next;
+    });
+  }, []);
+
+  const handleSave = async () => {
     if (action === "delete") {
-      if (!selectedGeometry) {
-        toast.error("Select the feature you want to remove first.");
+      const targets: FeatureRecord[] =
+        multiSelectedKeys.length > 0
+          ? objectRecords.filter((r) => multiSelectedKeys.includes(r.key))
+          : selectedFeatureRecord
+            ? [selectedFeatureRecord]
+            : selectedGeometry
+              ? [
+                  {
+                    key: `${featureType}-selection`,
+                    type: featureType,
+                    label: "Selected feature",
+                    properties: {},
+                    geometry: selectedGeometry,
+                    metrics: null,
+                    coordinates: [],
+                  },
+                ]
+              : [];
+      if (targets.length === 0) {
+        toast.error("Select the feature(s) you want to remove first.");
         return;
       }
       if (!deleteConfirmArmed) {
         setDeleteConfirmArmed(true);
-        toast("Delete armed. Click confirm again to remove the selected feature.");
+        toast(
+          targets.length > 1
+            ? `Delete armed for ${targets.length} features. Click confirm again to remove them.`
+            : "Delete armed. Click confirm again to remove the selected feature."
+        );
         return;
       }
-      onSave({
-        feature_type: featureType,
-        action: "delete",
-        geojson: selectedGeometry,
-      });
+
+      setSavingAction(true);
+      const removedKeys: string[] = [];
+      let successCount = 0;
+      try {
+        for (const target of targets) {
+          const ok = await onSave({
+            feature_type: target.type,
+            action: "delete",
+            geojson: target.geometry,
+          });
+          if (ok) {
+            successCount += 1;
+            removedKeys.push(target.key);
+          }
+        }
+      } finally {
+        setSavingAction(false);
+      }
+
+      if (removedKeys.length > 0) {
+        removeFeaturesByKeys(removedKeys);
+      }
+      if (successCount > 0) {
+        toast.success(successCount > 1 ? `${successCount} features deleted` : "Feature deleted");
+      }
+      if (successCount < targets.length) {
+        toast.error(`${targets.length - successCount} feature(s) failed to delete`);
+      }
+      clearWorkingSelection();
       return;
     }
 
@@ -2758,13 +2845,46 @@ export default function FeatureOverrideModal({
       toast.error(action === "add" ? "Draw the new feature first." : "No geometry is ready to save.");
       return;
     }
-    onSave({
-      feature_type: featureType,
-      action,
-      name: featureType === "road" ? roadName : undefined,
-      width_m: featureType === "road" ? Number(roadWidth) : undefined,
-      geojson: feature.geometry,
+
+    const savedFeatureType = featureType;
+    const savedAction = action;
+    const savedGeometry = feature.geometry;
+    const savedName = savedFeatureType === "road" ? roadName : undefined;
+    const savedWidth = savedFeatureType === "road" ? Number(roadWidth) : undefined;
+    const replacedKey = savedAction === "update" ? selectedFeatureRecord?.key : undefined;
+
+    setSavingAction(true);
+    let ok = false;
+    try {
+      ok = await onSave({
+        feature_type: savedFeatureType,
+        action: savedAction,
+        name: savedName,
+        width_m: savedWidth,
+        geojson: savedGeometry,
+      });
+    } finally {
+      setSavingAction(false);
+    }
+    if (!ok) return;
+
+    if (replacedKey) {
+      removeFeaturesByKeys([replacedKey]);
+    }
+    setFeatureCollections((previous) => {
+      const collection = previous[savedFeatureType];
+      const newFeature = {
+        type: "Feature",
+        geometry: savedGeometry,
+        properties: { source: "override", name: savedName, width_m: savedWidth },
+      };
+      return {
+        ...previous,
+        [savedFeatureType]: { ...collection, features: [...collection.features, newFeature] },
+      };
     });
+    toast.success(savedAction === "add" ? "Feature added" : "Feature updated");
+    clearWorkingSelection();
   };
 
   const suggestedTool = toolForFeatureType(featureType);
@@ -3871,9 +3991,9 @@ export default function FeatureOverrideModal({
             <button
               className={`btn-primary${action === "delete" ? " danger" : ""}`}
               onClick={handleSave}
-              disabled={!canSave}
+              disabled={!canSave || savingAction}
             >
-              {primaryActionLabel}
+              {savingAction ? "Saving..." : primaryActionLabel}
             </button>
           </div>
         </div>

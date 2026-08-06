@@ -2,6 +2,12 @@ import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "reac
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
 import { toWGS84 } from "../../utils/coordinateConverter";
 import type { GeoreferenceFeature, GeoreferenceSession, GeoreferenceTransform } from "../../types/surveyGeoreference";
+import {
+  getRasterPixelFromStageClick,
+  getRasterStageMetrics,
+  projectRasterPixelToStage,
+  type RasterStageMetrics,
+} from "../../utils/georeferenceRasterStage";
 
 type DraftTool = "point" | "line" | "polygon";
 
@@ -41,12 +47,15 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   onBack,
   onContinue,
 }: Props) {
+  const imageStageRef = useRef<HTMLDivElement | null>(null);
+  const rasterImageRef = useRef<HTMLImageElement | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const [mapReady, setMapReady] = useState(false);
   const [tool, setTool] = useState<DraftTool>("polygon");
   const [draftLabel, setDraftLabel] = useState("Primary parcel");
   const [draftPixels, setDraftPixels] = useState<{ x: number; y: number }[]>([]);
+  const [stageMetrics, setStageMetrics] = useState<RasterStageMetrics | null>(null);
 
   const transform = session.transform as GeoreferenceTransform;
   type PreviewFeature = GeoreferenceFeature & { source: "draft" | "saved" };
@@ -128,6 +137,30 @@ function SurveyPlanGeoreferenceWorkspaceStep({
       polygons: { type: "FeatureCollection", features: polygonFeatures },
     };
   }, [previewFeatures]);
+
+  useEffect(() => {
+    const measure = () => {
+      const nextMetrics = getRasterStageMetrics(
+        imageStageRef.current,
+        rasterImageRef.current,
+        session.source_width,
+        session.source_height,
+      );
+      setStageMetrics(nextMetrics);
+    };
+
+    measure();
+
+    const resizeObserver = new ResizeObserver(measure);
+    if (imageStageRef.current) resizeObserver.observe(imageStageRef.current);
+    if (rasterImageRef.current) resizeObserver.observe(rasterImageRef.current);
+    window.addEventListener("resize", measure);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [rasterObjectUrl, session.id, session.source_height, session.source_width]);
 
   useEffect(() => {
     let cancelled = false;
@@ -261,24 +294,30 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   }, [mapFeatureCollection, mapReady, rasterObjectUrl, session.overlay?.corners]);
 
   const stageMarkers = previewFeatures.flatMap((feature) =>
-    feature.pixels.map((point, index) => ({
-      featureId: feature.id,
-      label: feature.feature_type === "polygon" ? `${feature.label} ${index + 1}` : feature.label,
-      left: session.source_width ? `${(point.x / session.source_width) * 100}%` : "0%",
-      top: session.source_height ? `${(point.y / session.source_height) * 100}%` : "0%",
-      draft: feature.id === "draft",
-    })),
+    feature.pixels.map((point, index) => {
+      const stagePosition = projectRasterPixelToStage(point.x, point.y, stageMetrics);
+      return {
+        featureId: feature.id,
+        label: feature.feature_type === "polygon" ? `${feature.label} ${index + 1}` : feature.label,
+        left: stagePosition ? `${stagePosition.leftPercent}%` : "0%",
+        top: stagePosition ? `${stagePosition.topPercent}%` : "0%",
+        draft: feature.id === "draft",
+      };
+    }),
   );
 
   const handleStageClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    const image = event.currentTarget.querySelector("img");
-    if (!image) return;
-    const bounds = image.getBoundingClientRect();
-    const naturalWidth = (image as HTMLImageElement).naturalWidth || session.source_width;
-    const naturalHeight = (image as HTMLImageElement).naturalHeight || session.source_height;
-    if (!naturalWidth || !naturalHeight || !bounds.width || !bounds.height) return;
-    const pixelX = ((event.clientX - bounds.left) / bounds.width) * naturalWidth;
-    const pixelY = ((event.clientY - bounds.top) / bounds.height) * naturalHeight;
+    const pixel = getRasterPixelFromStageClick(
+      imageStageRef.current,
+      rasterImageRef.current,
+      session.source_width,
+      session.source_height,
+      event.clientX,
+      event.clientY,
+    );
+    if (!pixel) return;
+    const pixelX = pixel.pixelX;
+    const pixelY = pixel.pixelY;
     if (tool === "point") {
       const transformed = applyPixelTransform(pixelX, pixelY);
       onFeaturesChange([
@@ -439,10 +478,24 @@ function SurveyPlanGeoreferenceWorkspaceStep({
               <h4>Digitizing surface</h4>
               <span>{tool === "point" ? "Each click saves a point immediately." : "Click to add vertices in order."}</span>
             </div>
-            <div className="georef-image-stage" onClick={handleStageClick}>
+            <div className="georef-image-stage" ref={imageStageRef} onClick={handleStageClick}>
               {rasterObjectUrl ? (
                 <>
-                  <img src={rasterObjectUrl} alt={session.title_text || "Georeferenced raster"} />
+                  <img
+                    ref={rasterImageRef}
+                    src={rasterObjectUrl}
+                    alt={session.title_text || "Georeferenced raster"}
+                    onLoad={() =>
+                      setStageMetrics(
+                        getRasterStageMetrics(
+                          imageStageRef.current,
+                          rasterImageRef.current,
+                          session.source_width,
+                          session.source_height,
+                        ),
+                      )
+                    }
+                  />
                   {stageMarkers.map((marker, index) => (
                     <span
                       key={`${marker.featureId}-${index}`}
