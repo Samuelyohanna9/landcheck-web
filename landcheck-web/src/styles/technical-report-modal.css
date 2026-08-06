@@ -1,0 +1,121 @@
+/* Technical Report Modal — additive styles layered on top of csv-preview-modal.css */
+
+.tr-modal-intro {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.tr-section {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tr-section:last-of-type {
+  border-bottom: none;
+}
+
+.tr-section h4 {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.tr-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  padding: 0.3rem 0;
+  cursor: pointer;
+}
+
+.tr-dgps-row {
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.tr-instrument-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.1rem 1rem;
+  margin: 0.4rem 0 0.6rem;
+}
+
+.tr-text-input,
+.tr-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.85rem;
+  color: #f1f5f9;
+  margin-top: 0.3rem;
+}
+
+.tr-dgps-input {
+  margin-bottom: 0.6rem;
+}
+
+.tr-textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.tr-personnel-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.tr-personnel-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  flex: 1;
+  min-width: 120px;
+}
+
+.tr-personnel-row input {
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.9rem;
+  color: #f1f5f9;
+}
+
+.tr-field-hint {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.tr-field-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-bottom: 0.8rem;
+}
+
+.tr-advanced-toggle {
+  background: none;
+  border: none;
+  color: #38bdf8;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0.3rem 0;
+  margin-bottom: 0.6rem;
+}
+
+.tr-advanced-toggle:hover {
+  text-decoration: underline;
+}

@@ -27,6 +27,16 @@ type PlotMeta = {
   adamawa_plan_no: string;
   adamawa_surveyed_by_text: string;
   adamawa_disclaimer_text: string;
+  technical_report_instruments: string[];
+  technical_report_dgps_type: string;
+  technical_report_num_surveyors: number | null;
+  technical_report_num_technical_officers: number | null;
+  technical_report_num_labourers: number | null;
+  technical_report_recce_text: string;
+  technical_report_demarcation_text: string;
+  technical_report_computation_software_text: string;
+  technical_report_plotting_software_text: string;
+  technical_report_general_observation_text: string;
 };
 
 type SubdivisionMethod = "by_count" | "by_area" | "by_fraction" | "by_custom_area";
@@ -93,6 +103,7 @@ type Props = {
   orthophotoLoading: boolean;
   topoMapLoading: boolean;
   serverSyncing: boolean;
+  hasUnsyncedServerChanges: boolean;
   onOpenFeatureCadEditor: () => void | Promise<void>;
   isOnline: boolean;
   plotId: number | null;
@@ -370,13 +381,23 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
           </div>
 
           <div className="edit-feature-bar">
-            <button className="btn-secondary" onClick={props.refreshCurrentPreview} disabled={rendering}>
+            <button
+              className={`btn-secondary${props.hasUnsyncedServerChanges && !rendering ? " needs-render" : ""}`}
+              onClick={props.refreshCurrentPreview}
+              disabled={rendering}
+            >
+              {props.hasUnsyncedServerChanges && !rendering && <span className="needs-render-dot" aria-hidden="true" />}
               {rendering ? "Rendering..." : props.previewActionLabel}
             </button>
             <button className="btn-outline" onClick={props.onOpenFeatureCadEditor} disabled={props.serverSyncing || !props.isOnline}>
               Open Feature CAD Editor
             </button>
           </div>
+          {props.hasUnsyncedServerChanges && !rendering && (
+            <p className="needs-render-hint">
+              You've made changes that aren't in the preview yet — click <strong>{props.previewActionLabel}</strong> to update it.
+            </p>
+          )}
 
           <hr className="subdivision-divider" />
           <div className="form-grid">
@@ -726,6 +747,16 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
           </div>
           {props.subdivisionPreviewPanelTab === "survey_plan" ? (
             <div className="subdivision-survey-wrap">
+              {props.hasUnsyncedServerChanges && !rendering && (
+                <div className="preview-stale-banner">
+                  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l6.28 11.18c.75 1.334-.213 2.987-1.743 2.987H3.72c-1.53 0-2.493-1.653-1.743-2.987l6.28-11.18zM10 6a1 1 0 011 1v3a1 1 0 11-2 0V7a1 1 0 011-1zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                  </svg>
+                  <span>
+                    Preview is out of date — click <strong>{props.previewActionLabel}</strong> to see your latest changes.
+                  </span>
+                </div>
+              )}
               <SurveyPreview
                 previewType={props.previewType}
                 onPreviewTypeChange={props.onPreviewTypeChange}
