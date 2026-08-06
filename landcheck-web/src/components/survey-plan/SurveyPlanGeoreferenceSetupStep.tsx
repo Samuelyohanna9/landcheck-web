@@ -74,6 +74,7 @@ function SurveyPlanGeoreferenceSetupStep({
   const rasterImageRef = useRef<HTMLImageElement | null>(null);
   const mapRef = useRef<any>(null);
   const mapboxRef = useRef<any>(null);
+  const mapControlMarkerRefs = useRef<any[]>([]);
   const pendingRasterRef = useRef<string | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftFile, setDraftFile] = useState<File | null>(null);
@@ -140,37 +141,6 @@ function SurveyPlanGeoreferenceSetupStep({
       mapRef.current.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
       mapRef.current.on("load", () => {
         if (!mapRef.current) return;
-        mapRef.current.addSource("georef-control-points", {
-          type: "geojson",
-          data: { type: "FeatureCollection", features: [] },
-        });
-        mapRef.current.addLayer({
-          id: "georef-control-points-circles",
-          type: "circle",
-          source: "georef-control-points",
-          paint: {
-            "circle-radius": ["case", ["==", ["get", "active"], 1], 9, 6],
-            "circle-color": ["case", ["==", ["get", "active"], 1], "#f59e0b", "#10b981"],
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#f8fafc",
-          },
-        });
-        mapRef.current.addLayer({
-          id: "georef-control-points-labels",
-          type: "symbol",
-          source: "georef-control-points",
-          layout: {
-            "text-field": ["get", "label"],
-            "text-size": 11,
-            "text-offset": [0, 1.25],
-            "text-anchor": "top",
-          },
-          paint: {
-            "text-color": "#f8fafc",
-            "text-halo-color": "#052e16",
-            "text-halo-width": 1.5,
-          },
-        });
         mapRef.current.on("click", (event: any) => {
           onAssignMapPoint(Number(event.lngLat.lng), Number(event.lngLat.lat));
         });
@@ -180,6 +150,8 @@ function SurveyPlanGeoreferenceSetupStep({
 
     return () => {
       cancelled = true;
+      mapControlMarkerRefs.current.forEach((marker) => marker.remove());
+      mapControlMarkerRefs.current = [];
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -215,6 +187,7 @@ function SurveyPlanGeoreferenceSetupStep({
             type: "Feature",
             geometry: { type: "Point", coordinates: [mapLng, mapLat] },
             properties: {
+              id: item.id,
               label: item.label,
               active: item.id === activePoint?.id ? 1 : 0,
             },
@@ -267,11 +240,50 @@ function SurveyPlanGeoreferenceSetupStep({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!mapReady || !map) return;
-    const source = map.getSource("georef-control-points") as any;
-    if (source) {
-      source.setData(pointSource as any);
-    }
+    const mapboxgl = mapboxRef.current;
+    if (!mapReady || !map || !mapboxgl) return;
+    mapControlMarkerRefs.current.forEach((marker) => marker.remove());
+    mapControlMarkerRefs.current = [];
+
+    pointSource.features.forEach((feature: any) => {
+      if (feature?.geometry?.type !== "Point" || !Array.isArray(feature.geometry.coordinates)) return;
+      const markerButton = document.createElement("button");
+      markerButton.type = "button";
+      markerButton.className = `georef-map-gcp-marker${feature.properties?.active === 1 ? " active" : ""}`;
+      markerButton.setAttribute("aria-label", String(feature.properties?.label || "Control point"));
+      markerButton.title = String(feature.properties?.label || "Control point");
+
+      const name = document.createElement("span");
+      name.className = "georef-control-point-name";
+      name.textContent = String(feature.properties?.label || "GCP");
+
+      const reticle = document.createElement("span");
+      reticle.className = "georef-control-point-reticle";
+      reticle.setAttribute("aria-hidden", "true");
+
+      const dot = document.createElement("span");
+      dot.className = "georef-control-point-dot";
+      reticle.appendChild(dot);
+
+      markerButton.appendChild(name);
+      markerButton.appendChild(reticle);
+      markerButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const nextId = String(feature.properties?.id || "");
+        if (nextId) onSelectControlPoint(nextId);
+      });
+
+      const marker = new mapboxgl.Marker({
+        element: markerButton,
+        anchor: "center",
+      })
+        .setLngLat(feature.geometry.coordinates as [number, number])
+        .addTo(map);
+
+      mapControlMarkerRefs.current.push(marker);
+    });
+
     if (pointSource.features.length) {
       const first = pointSource.features[0];
       if (first?.geometry?.type === "Point") {

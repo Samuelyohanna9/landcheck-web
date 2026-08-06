@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
-import { toWGS84 } from "../../utils/coordinateConverter";
+import { isProjectedCoordinateSystem, toWGS84 } from "../../utils/coordinateConverter";
 import type { GeoreferenceFeature, GeoreferenceSession, GeoreferenceTransform } from "../../types/surveyGeoreference";
 import {
   getRasterPixelFromStageClick,
@@ -29,11 +29,27 @@ const toolLabels: Record<DraftTool, string> = {
   polygon: "Parcel boundary",
 };
 
+const MIN_STAGE_ZOOM = 1;
+const MAX_STAGE_ZOOM = 4;
+const STAGE_ZOOM_STEP = 0.25;
+
 const buildFeatureId = () => {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
   return `georef_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const formatGridCoordinate = (value: number, projected: boolean) =>
+  Number.isFinite(value) ? value.toLocaleString(undefined, { minimumFractionDigits: projected ? 3 : 6, maximumFractionDigits: projected ? 3 : 6 }) : "--";
+
+const formatWgs84Coordinate = (value: number) =>
+  Number.isFinite(value) ? value.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 }) : "--";
+
+const describeFeatureGeometry = (feature: GeoreferenceFeature) => {
+  if (feature.feature_type === "point") return "Point";
+  if (feature.feature_type === "line") return `${feature.pixels.length} vertices`;
+  return `${feature.pixels.length} boundary vertices`;
 };
 
 function SurveyPlanGeoreferenceWorkspaceStep({
@@ -47,18 +63,56 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   onBack,
   onContinue,
 }: Props) {
+  const imageViewportRef = useRef<HTMLDivElement | null>(null);
   const imageStageRef = useRef<HTMLDivElement | null>(null);
   const rasterImageRef = useRef<HTMLImageElement | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
+  const dragStateRef = useRef<{ startX: number; startY: number; panX: number; panY: number; moved: boolean } | null>(null);
+  const suppressNextStageClickRef = useRef(false);
   const [mapReady, setMapReady] = useState(false);
   const [tool, setTool] = useState<DraftTool>("polygon");
   const [draftLabel, setDraftLabel] = useState("Primary parcel");
   const [draftPixels, setDraftPixels] = useState<{ x: number; y: number }[]>([]);
   const [stageMetrics, setStageMetrics] = useState<RasterStageMetrics | null>(null);
+  const [imageZoom, setImageZoom] = useState(MIN_STAGE_ZOOM);
+  const [imagePan, setImagePan] = useState({ x: 0, y: 0 });
+  const [draggingStage, setDraggingStage] = useState(false);
+  const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
+  const [cursorSample, setCursorSample] = useState<{
+    pixelX: number;
+    pixelY: number;
+    targetX: number;
+    targetY: number;
+    lng: number;
+    lat: number;
+  } | null>(null);
 
   const transform = session.transform as GeoreferenceTransform;
   type PreviewFeature = GeoreferenceFeature & { source: "draft" | "saved" };
+  const projectedGroundSystem = isProjectedCoordinateSystem(transform.target_coordinate_system);
+  const coordinateXLabel = projectedGroundSystem ? "Easting (m)" : "Longitude";
+  const coordinateYLabel = projectedGroundSystem ? "Northing (m)" : "Latitude";
+
+  const clampStagePan = (pan: { x: number; y: number }, zoom = imageZoom) => {
+    if (!stageMetrics || zoom <= MIN_STAGE_ZOOM) return { x: 0, y: 0 };
+    const maxX = (stageMetrics.containerWidth * (zoom - 1)) / 2;
+    const maxY = (stageMetrics.containerHeight * (zoom - 1)) / 2;
+    return {
+      x: Math.max(-maxX, Math.min(maxX, pan.x)),
+      y: Math.max(-maxY, Math.min(maxY, pan.y)),
+    };
+  };
+
+  const updateStageZoom = (nextZoom: number) => {
+    const normalizedZoom = Math.max(MIN_STAGE_ZOOM, Math.min(MAX_STAGE_ZOOM, Number(nextZoom.toFixed(2))));
+    setImageZoom(normalizedZoom);
+    setImagePan((current) => clampStagePan(normalizedZoom <= MIN_STAGE_ZOOM ? { x: 0, y: 0 } : current, normalizedZoom));
+    if (normalizedZoom <= MIN_STAGE_ZOOM) {
+      setDraggingStage(false);
+      dragStateRef.current = null;
+    }
+  };
 
   const applyPixelTransform = (pixelX: number, pixelY: number) => {
     const coeffX = transform.coefficients.x;
@@ -101,6 +155,24 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     });
     return live;
   }, [draftLabel, draftPixels, features, tool]);
+
+  useEffect(() => {
+    if (!previewFeatures.length) {
+      setSelectedFeatureId(null);
+      return;
+    }
+    if (selectedFeatureId && previewFeatures.some((feature) => feature.id === selectedFeatureId)) return;
+    const draftFeature = previewFeatures.find((feature) => feature.source === "draft");
+    setSelectedFeatureId(draftFeature?.id || previewFeatures[0]?.id || null);
+  }, [previewFeatures, selectedFeatureId]);
+
+  useEffect(() => {
+    setImageZoom(MIN_STAGE_ZOOM);
+    setImagePan({ x: 0, y: 0 });
+    setDraggingStage(false);
+    dragStateRef.current = null;
+    suppressNextStageClickRef.current = false;
+  }, [session.id, rasterObjectUrl]);
 
   const mapFeatureCollection = useMemo(() => {
     const pointFeatures: any[] = [];
@@ -293,20 +365,178 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     if (pointSource) pointSource.setData(mapFeatureCollection.points as any);
   }, [mapFeatureCollection, mapReady, rasterObjectUrl, session.overlay?.corners]);
 
-  const stageMarkers = previewFeatures.flatMap((feature) =>
-    feature.pixels.map((point, index) => {
-      const stagePosition = projectRasterPixelToStage(point.x, point.y, stageMetrics);
-      return {
-        featureId: feature.id,
-        label: feature.feature_type === "polygon" ? `${feature.label} ${index + 1}` : feature.label,
-        left: stagePosition ? `${stagePosition.leftPercent}%` : "0%",
-        top: stagePosition ? `${stagePosition.topPercent}%` : "0%",
-        draft: feature.id === "draft",
-      };
-    }),
+  const stageFeatures = useMemo(
+    () =>
+      previewFeatures
+        .map((feature) => {
+          const points = feature.pixels
+            .map((point, index) => {
+              const stagePosition = projectRasterPixelToStage(point.x, point.y, stageMetrics);
+              if (!stagePosition) return null;
+              const transformed = applyPixelTransform(point.x, point.y);
+              return {
+                index,
+                pixelX: point.x,
+                pixelY: point.y,
+                targetX: transformed.target[0],
+                targetY: transformed.target[1],
+                lng: transformed.wgs84[0],
+                lat: transformed.wgs84[1],
+                leftPercent: stagePosition.leftPercent,
+                topPercent: stagePosition.topPercent,
+              };
+            })
+            .filter(Boolean) as Array<{
+            index: number;
+            pixelX: number;
+            pixelY: number;
+            targetX: number;
+            targetY: number;
+            lng: number;
+            lat: number;
+            leftPercent: number;
+            topPercent: number;
+          }>;
+          if (!points.length) return null;
+          const anchor = points.reduce(
+            (acc, point) => ({
+              leftPercent: acc.leftPercent + point.leftPercent / points.length,
+              topPercent: acc.topPercent + point.topPercent / points.length,
+            }),
+            { leftPercent: 0, topPercent: 0 },
+          );
+          return {
+            ...feature,
+            draft: feature.id === "draft",
+            points,
+            anchor,
+            pathPoints: points.map((point) => `${point.leftPercent},${point.topPercent}`).join(" "),
+          };
+        })
+        .filter(Boolean) as Array<
+        PreviewFeature & {
+          draft: boolean;
+          points: Array<{
+            index: number;
+            pixelX: number;
+            pixelY: number;
+            targetX: number;
+            targetY: number;
+            lng: number;
+            lat: number;
+            leftPercent: number;
+            topPercent: number;
+          }>;
+          anchor: {
+            leftPercent: number;
+            topPercent: number;
+          };
+          pathPoints: string;
+        }
+      >,
+    [previewFeatures, stageMetrics],
   );
 
+  const selectedStageFeature =
+    stageFeatures.find((feature) => feature.id === selectedFeatureId) ||
+    stageFeatures.find((feature) => feature.draft) ||
+    stageFeatures[0] ||
+    null;
+
+  const selectedFeatureCoordinateRows = selectedStageFeature?.points || [];
+
+  const stageMarkers = useMemo(
+    () =>
+      stageFeatures.flatMap((feature) => {
+        const showVertexMarkers =
+          feature.feature_type === "point" || feature.id === selectedStageFeature?.id || feature.draft;
+        if (!showVertexMarkers) return [];
+        return feature.points.map((point) => ({
+          id: `${feature.id}-${point.index}`,
+          featureId: feature.id,
+          label: feature.feature_type === "point" ? feature.label : `${point.index + 1}`,
+          left: `${point.leftPercent}%`,
+          top: `${point.topPercent}%`,
+          active: feature.id === selectedStageFeature?.id || feature.draft,
+          pointOnly: feature.feature_type === "point",
+        }));
+      }),
+    [selectedStageFeature?.id, stageFeatures],
+  );
+
+  const handleStagePointerMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    const pixel = getRasterPixelFromStageClick(
+      imageStageRef.current,
+      rasterImageRef.current,
+      session.source_width,
+      session.source_height,
+      event.clientX,
+      event.clientY,
+    );
+    if (!pixel) {
+      setCursorSample(null);
+      return;
+    }
+    const transformed = applyPixelTransform(pixel.pixelX, pixel.pixelY);
+    setCursorSample({
+      pixelX: pixel.pixelX,
+      pixelY: pixel.pixelY,
+      targetX: transformed.target[0],
+      targetY: transformed.target[1],
+      lng: transformed.wgs84[0],
+      lat: transformed.wgs84[1],
+    });
+  };
+
+  useEffect(() => {
+    const handlePointerMove = (event: MouseEvent) => {
+      if (!dragStateRef.current || imageZoom <= MIN_STAGE_ZOOM) return;
+      const deltaX = event.clientX - dragStateRef.current.startX;
+      const deltaY = event.clientY - dragStateRef.current.startY;
+      if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+        dragStateRef.current.moved = true;
+        suppressNextStageClickRef.current = true;
+      }
+      setDraggingStage(true);
+      setImagePan(clampStagePan({ x: dragStateRef.current.panX + deltaX, y: dragStateRef.current.panY + deltaY }));
+    };
+
+    const handlePointerUp = () => {
+      if (!dragStateRef.current) return;
+      dragStateRef.current = null;
+      setDraggingStage(false);
+      window.setTimeout(() => {
+        suppressNextStageClickRef.current = false;
+      }, 0);
+    };
+
+    window.addEventListener("mousemove", handlePointerMove);
+    window.addEventListener("mouseup", handlePointerUp);
+    return () => {
+      window.removeEventListener("mousemove", handlePointerMove);
+      window.removeEventListener("mouseup", handlePointerUp);
+    };
+  }, [clampStagePan, imageZoom]);
+
+  const handleStageMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || imageZoom <= MIN_STAGE_ZOOM) return;
+    dragStateRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      panX: imagePan.x,
+      panY: imagePan.y,
+      moved: false,
+    };
+  };
+
+  const handleStageWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const direction = event.deltaY > 0 ? -STAGE_ZOOM_STEP : STAGE_ZOOM_STEP;
+    updateStageZoom(imageZoom + direction);
+  };
+
   const handleStageClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (suppressNextStageClickRef.current) return;
     const pixel = getRasterPixelFromStageClick(
       imageStageRef.current,
       rasterImageRef.current,
@@ -320,10 +550,11 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     const pixelY = pixel.pixelY;
     if (tool === "point") {
       const transformed = applyPixelTransform(pixelX, pixelY);
+      const nextFeatureId = buildFeatureId();
       onFeaturesChange([
         ...features,
         {
-          id: buildFeatureId(),
+          id: nextFeatureId,
           label: draftLabel || `Stake point ${features.filter((item) => item.feature_type === "point").length + 1}`,
           feature_type: "point",
           pixels: [{ x: pixelX, y: pixelY }],
@@ -331,9 +562,11 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           wgs84_coordinates: [transformed.wgs84],
         },
       ]);
+      setSelectedFeatureId(nextFeatureId);
       return;
     }
     setDraftPixels((current) => [...current, { x: pixelX, y: pixelY }]);
+    setSelectedFeatureId("draft");
   };
 
   const completeDraftFeature = () => {
@@ -345,6 +578,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
       nextCoordinatesTarget.push(transformed.target);
       nextCoordinatesWgs84.push(transformed.wgs84);
     });
+    const nextFeatureId = buildFeatureId();
     if (tool === "polygon") {
       nextCoordinatesTarget.push(nextCoordinatesTarget[0]);
       nextCoordinatesWgs84.push(nextCoordinatesWgs84[0]);
@@ -352,7 +586,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     onFeaturesChange([
       ...features,
       {
-        id: buildFeatureId(),
+        id: nextFeatureId,
         label: draftLabel || toolLabels[tool],
         feature_type: tool,
         is_primary: tool === "polygon" && !features.some((item) => item.feature_type === "polygon" && item.is_primary),
@@ -362,6 +596,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
       },
     ]);
     setDraftPixels([]);
+    setSelectedFeatureId(nextFeatureId);
   };
 
   const togglePrimaryPolygon = (featureId: string) => {
@@ -372,10 +607,14 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           : feature,
       ),
     );
+    setSelectedFeatureId(featureId);
   };
 
   const removeFeature = (featureId: string) => {
     onFeaturesChange(features.filter((feature) => feature.id !== featureId));
+    if (selectedFeatureId === featureId) {
+      setSelectedFeatureId(null);
+    }
   };
 
   return (
@@ -386,8 +625,8 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           <div className="georef-control-head">
             <div>
               <span className="georef-kicker">Digitize & Validate</span>
-              <h3>Trace what matters and keep the map proof live</h3>
-              <p>The raster is anchored. Add parcel boundaries, stake points, and alignment lines before exporting DGPS-ready CSV.</p>
+              <h3>Digitize the final survey features on top of the calibrated raster</h3>
+              <p>Trace boundaries, staking points, and alignment lines, then review the coordinate register before export.</p>
             </div>
             <div className="georef-quality-pill">{transform.quality} fit, {transform.rms_error_m}m RMS</div>
           </div>
@@ -429,31 +668,94 @@ function SurveyPlanGeoreferenceWorkspaceStep({
             </div>
           </div>
 
-          <div className="georef-feature-list">
+          <div className="georef-feature-register">
+            <div className="georef-feature-register-head">
+              <div>
+                <strong>Digitized layers</strong>
+                <span>Review saved features, set the primary parcel, and keep the export clean.</span>
+              </div>
+              <div className="georef-feature-register-metrics">
+                <span>{features.filter((feature) => feature.feature_type === "polygon").length} boundary</span>
+                <span>{features.filter((feature) => feature.feature_type === "line").length} line</span>
+                <span>{features.filter((feature) => feature.feature_type === "point").length} point</span>
+              </div>
+            </div>
             {features.length === 0 ? (
               <div className="georef-empty-list">
                 <strong>No digitized features yet</strong>
-                <span>Click the raster to place geometry, then save the session.</span>
+                <span>Click the raster to place geometry, then save the working layer.</span>
               </div>
             ) : (
-              features.map((feature) => (
-                <article key={feature.id} className="georef-feature-card">
-                  <div>
-                    <strong>{feature.label}</strong>
-                    <p>{feature.feature_type}, {feature.pixels.length} pixel point(s)</p>
-                  </div>
-                  <div className="georef-feature-actions">
-                    {feature.feature_type === "polygon" && (
-                      <button type="button" className={`georef-mini-action${feature.is_primary ? " active" : ""}`} onClick={() => togglePrimaryPolygon(feature.id)}>
-                        {feature.is_primary ? "Primary parcel" : "Make primary"}
-                      </button>
-                    )}
-                    <button type="button" className="georef-mini-action danger" onClick={() => removeFeature(feature.id)}>
-                      Remove
-                    </button>
-                  </div>
-                </article>
-              ))
+              <div className="georef-feature-table-wrap">
+                <table className="georef-feature-table">
+                  <thead>
+                    <tr>
+                      <th>Feature</th>
+                      <th>Geometry</th>
+                      <th>{projectedGroundSystem ? "Grid reference" : "Coordinate reference"}</th>
+                      <th>Role</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {features.map((feature) => {
+                      const firstCoordinate = feature.target_coordinates[0];
+                      const rowIsActive = selectedFeatureId === feature.id;
+                      return (
+                        <tr
+                          key={feature.id}
+                          className={rowIsActive ? "is-selected" : ""}
+                          onClick={() => setSelectedFeatureId(feature.id)}
+                        >
+                          <td>
+                            <strong>{feature.label}</strong>
+                            <span>{feature.feature_type === "point" ? "Stake control" : feature.feature_type === "line" ? "Alignment" : "Boundary"}</span>
+                          </td>
+                          <td>{describeFeatureGeometry(feature)}</td>
+                          <td>
+                            {firstCoordinate
+                              ? `${coordinateXLabel.split(" ")[0]} ${formatGridCoordinate(firstCoordinate[0], projectedGroundSystem)} / ${coordinateYLabel.split(" ")[0]} ${formatGridCoordinate(firstCoordinate[1], projectedGroundSystem)}`
+                              : "--"}
+                          </td>
+                          <td>
+                            {feature.feature_type === "polygon" && feature.is_primary ? (
+                              <span className="georef-table-badge active">Primary parcel</span>
+                            ) : (
+                              <span className="georef-table-badge">Saved layer</span>
+                            )}
+                          </td>
+                          <td>
+                            <div className="georef-feature-actions">
+                              {feature.feature_type === "polygon" && (
+                                <button
+                                  type="button"
+                                  className={`georef-mini-action${feature.is_primary ? " active" : ""}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    togglePrimaryPolygon(feature.id);
+                                  }}
+                                >
+                                  {feature.is_primary ? "Primary parcel" : "Make primary"}
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                className="georef-mini-action danger"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  removeFeature(feature.id);
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
@@ -475,41 +777,158 @@ function SurveyPlanGeoreferenceWorkspaceStep({
         <div className="georef-dual-stage">
           <section className="georef-image-card">
             <div className="georef-card-head">
-              <h4>Digitizing surface</h4>
-              <span>{tool === "point" ? "Each click saves a point immediately." : "Click to add vertices in order."}</span>
+              <div>
+                <h4>Digitizing surface</h4>
+                <span>{tool === "point" ? "Each click saves a stake point immediately." : "Click to place vertices in order, then finish the layer."}</span>
+              </div>
+              <div className="georef-stage-toolbar">
+                <button type="button" className="btn-outline" onClick={() => updateStageZoom(imageZoom - STAGE_ZOOM_STEP)} disabled={imageZoom <= MIN_STAGE_ZOOM}>
+                  -
+                </button>
+                <span className="georef-stage-zoom-pill">{Math.round(imageZoom * 100)}%</span>
+                <button type="button" className="btn-outline" onClick={() => updateStageZoom(imageZoom + STAGE_ZOOM_STEP)} disabled={imageZoom >= MAX_STAGE_ZOOM}>
+                  +
+                </button>
+                <button type="button" className="btn-outline" onClick={() => updateStageZoom(MIN_STAGE_ZOOM)} disabled={imageZoom === MIN_STAGE_ZOOM && imagePan.x === 0 && imagePan.y === 0}>
+                  Fit
+                </button>
+              </div>
             </div>
-            <div className="georef-image-stage" ref={imageStageRef} onClick={handleStageClick}>
-              {rasterObjectUrl ? (
-                <>
-                  <img
-                    ref={rasterImageRef}
-                    src={rasterObjectUrl}
-                    alt={session.title_text || "Georeferenced raster"}
-                    onLoad={() =>
-                      setStageMetrics(
-                        getRasterStageMetrics(
-                          imageStageRef.current,
-                          rasterImageRef.current,
-                          session.source_width,
-                          session.source_height,
-                        ),
-                      )
-                    }
-                  />
-                  {stageMarkers.map((marker, index) => (
-                    <span
-                      key={`${marker.featureId}-${index}`}
-                      className={`georef-image-marker georef-image-marker--compact${marker.draft ? " active" : ""}`}
-                      style={{ left: marker.left, top: marker.top }}
-                    >
-                      <span className="georef-image-marker-badge">{index + 1}</span>
-                    </span>
-                  ))}
-                </>
+            <div className="georef-image-stage-viewport" ref={imageViewportRef} onWheel={handleStageWheel}>
+              <div
+                className={`georef-image-stage georef-image-stage--zoomable${imageZoom > MIN_STAGE_ZOOM ? " is-zoomed" : ""}${draggingStage ? " is-dragging" : ""}`}
+                ref={imageStageRef}
+                onClick={handleStageClick}
+                onMouseDown={handleStageMouseDown}
+                onMouseMove={handleStagePointerMove}
+                onMouseLeave={() => setCursorSample(null)}
+                style={{ transform: `translate(${imagePan.x}px, ${imagePan.y}px) scale(${imageZoom})` }}
+              >
+                {rasterObjectUrl ? (
+                  <>
+                    <img
+                      ref={rasterImageRef}
+                      src={rasterObjectUrl}
+                      alt={session.title_text || "Georeferenced raster"}
+                      onLoad={() =>
+                        setStageMetrics(
+                          getRasterStageMetrics(
+                            imageStageRef.current,
+                            rasterImageRef.current,
+                            session.source_width,
+                            session.source_height,
+                          ),
+                        )
+                      }
+                    />
+                    <svg className="georef-image-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                      {stageFeatures.map((feature) => {
+                        const isActive = feature.id === selectedStageFeature?.id || feature.draft;
+                        if (feature.feature_type === "polygon") {
+                          return (
+                            <g key={feature.id} className={`georef-stage-shape${isActive ? " active" : ""}`}>
+                              <polygon className="georef-stage-polygon-fill" points={feature.pathPoints} />
+                              <polyline className="georef-stage-polygon-line" points={`${feature.pathPoints} ${feature.points[0]?.leftPercent},${feature.points[0]?.topPercent}`} />
+                              {feature.points.map((point) => (
+                                <circle key={`${feature.id}-vertex-${point.index}`} className="georef-stage-vertex" cx={point.leftPercent} cy={point.topPercent} r={0.95} />
+                              ))}
+                            </g>
+                          );
+                        }
+                        if (feature.feature_type === "line") {
+                          return (
+                            <g key={feature.id} className={`georef-stage-shape${isActive ? " active" : ""}`}>
+                              <polyline className="georef-stage-line" points={feature.pathPoints} />
+                              {feature.points.map((point) => (
+                                <circle key={`${feature.id}-vertex-${point.index}`} className="georef-stage-vertex" cx={point.leftPercent} cy={point.topPercent} r={0.95} />
+                              ))}
+                            </g>
+                          );
+                        }
+                        return (
+                          <g key={feature.id} className={`georef-stage-shape${isActive ? " active" : ""}`}>
+                            <circle className="georef-stage-point" cx={feature.points[0]?.leftPercent} cy={feature.points[0]?.topPercent} r={1.18} />
+                          </g>
+                        );
+                      })}
+                    </svg>
+                    {stageMarkers.map((marker) => (
+                      <span
+                        key={marker.id}
+                        className={`georef-image-marker georef-image-marker--compact${marker.active ? " active" : ""}${marker.pointOnly ? " is-point" : ""}`}
+                        style={{ left: marker.left, top: marker.top }}
+                      >
+                        <span className="georef-image-marker-badge">{marker.label}</span>
+                      </span>
+                    ))}
+                  </>
+                ) : (
+                  <div className="georef-empty-stage">
+                    <strong>Raster preview unavailable</strong>
+                    <span>Reload the session to continue digitizing.</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="georef-coordinate-strip">
+              <article>
+                <span>Raster cursor</span>
+                <strong>{cursorSample ? `X ${cursorSample.pixelX.toFixed(1)} / Y ${cursorSample.pixelY.toFixed(1)}` : "Move over image"}</strong>
+              </article>
+              <article>
+                <span>{projectedGroundSystem ? "Projected grid" : "Selected grid"}</span>
+                <strong>
+                  {cursorSample
+                    ? `${coordinateXLabel.split(" ")[0]} ${formatGridCoordinate(cursorSample.targetX, projectedGroundSystem)} / ${coordinateYLabel.split(" ")[0]} ${formatGridCoordinate(cursorSample.targetY, projectedGroundSystem)}`
+                    : "Waiting for cursor"}
+                </strong>
+              </article>
+              <article>
+                <span>WGS84 fallback</span>
+                <strong>{cursorSample ? `${formatWgs84Coordinate(cursorSample.lng)}, ${formatWgs84Coordinate(cursorSample.lat)}` : "Longitude / latitude"}</strong>
+              </article>
+            </div>
+            <div className="georef-coordinate-register">
+              <div className="georef-card-head">
+                <div>
+                  <h4>{selectedStageFeature ? `${selectedStageFeature.label} coordinate register` : "Coordinate register"}</h4>
+                  <span>Every vertex is listed below in the selected working grid and in WGS84.</span>
+                </div>
+                {selectedStageFeature ? (
+                  <span className="georef-quality-pill">
+                    {selectedStageFeature.feature_type === "point" ? "Stake point" : `${selectedFeatureCoordinateRows.length} vertices`}
+                  </span>
+                ) : null}
+              </div>
+              {selectedStageFeature ? (
+                <div className="georef-coordinate-table-wrap">
+                  <table className="georef-coordinate-table">
+                    <thead>
+                      <tr>
+                        <th>Vertex</th>
+                        <th>{coordinateXLabel}</th>
+                        <th>{coordinateYLabel}</th>
+                        <th>Longitude</th>
+                        <th>Latitude</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedFeatureCoordinateRows.map((point) => (
+                        <tr key={`${selectedStageFeature.id}-coord-${point.index}`}>
+                          <td>{selectedStageFeature.feature_type === "point" ? selectedStageFeature.label : `P${point.index + 1}`}</td>
+                          <td>{formatGridCoordinate(point.targetX, projectedGroundSystem)}</td>
+                          <td>{formatGridCoordinate(point.targetY, projectedGroundSystem)}</td>
+                          <td>{formatWgs84Coordinate(point.lng)}</td>
+                          <td>{formatWgs84Coordinate(point.lat)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
-                <div className="georef-empty-stage">
-                  <strong>Raster preview unavailable</strong>
-                  <span>Reload the session to continue digitizing.</span>
+                <div className="georef-empty-list">
+                  <strong>No coordinate register yet</strong>
+                  <span>Digitize or select a feature to review its live coordinate rows.</span>
                 </div>
               )}
             </div>
@@ -518,7 +937,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           <section className="georef-map-card">
             <div className="georef-card-head">
               <h4>Anchored map proof</h4>
-              <span>Every saved feature is plotted over the real-world image footprint.</span>
+              <span>The raster footprint and every saved layer remain visible in the real map context.</span>
             </div>
             <div className="georef-map-surface" ref={mapContainerRef} />
           </section>

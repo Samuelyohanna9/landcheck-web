@@ -70,8 +70,10 @@ export function getRasterPixelFromStageClick(
   if (!metrics) return null;
 
   const stageRect = stageEl.getBoundingClientRect();
-  const relativeX = clientX - stageRect.left - stageEl.clientLeft;
-  const relativeY = clientY - stageRect.top - stageEl.clientTop;
+  const scaleX = stageEl.clientWidth > 0 ? stageRect.width / stageEl.clientWidth : 1;
+  const scaleY = stageEl.clientHeight > 0 ? stageRect.height / stageEl.clientHeight : 1;
+  const relativeX = (clientX - stageRect.left - stageEl.clientLeft) / (scaleX || 1);
+  const relativeY = (clientY - stageRect.top - stageEl.clientTop) / (scaleY || 1);
 
   if (
     relativeX < metrics.offsetLeft ||
