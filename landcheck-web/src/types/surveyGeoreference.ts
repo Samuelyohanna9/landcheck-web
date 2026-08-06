@@ -35,6 +35,8 @@ export type GeoreferenceTransform = {
 
 export type GeoreferenceOverlay = {
   corners: [number, number][];
+  raster_url?: string | null;
+  is_warped_preview?: boolean;
 };
 
 export type GeoreferenceFeature = {
