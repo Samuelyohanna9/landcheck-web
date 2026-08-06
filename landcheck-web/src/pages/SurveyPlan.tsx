@@ -2,7 +2,7 @@ import { Suspense, lazy, startTransition, useEffect, useMemo, useState, useCallb
 import { useNavigate } from "react-router-dom";
 import { api, withRetry } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
-import { fromWGS84, toWGS84 } from "../utils/coordinateConverter";
+import { fromWGS84, isProjectedCoordinateSystem, toWGS84 } from "../utils/coordinateConverter";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../utils/mapboxLoader";
 import { useDeferredMount } from "../hooks/useDeferredMount";
 import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
@@ -346,6 +346,74 @@ const closeRingIfNeeded = (ring: number[][]): number[][] => {
 const normalizeGeoreferenceNumber = (value: unknown, fallback = 0): number => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const clampGeoreferenceNumber = (value: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, value));
+
+const estimateNextGeoreferenceControlPoint = (
+  controlPoints: GeoreferenceControlPoint[],
+  sourceWidth: number,
+  sourceHeight: number,
+  targetCoordinateSystem: string,
+) => {
+  const meaningfulImagePoints = controlPoints.filter(
+    (point) =>
+      Number.isFinite(point.image_x) &&
+      Number.isFinite(point.image_y) &&
+      (Math.abs(point.image_x) > 0.5 || Math.abs(point.image_y) > 0.5),
+  );
+  const meaningfulGroundPoints = controlPoints.filter(
+    (point) =>
+      Number.isFinite(point.ground_x) &&
+      Number.isFinite(point.ground_y) &&
+      (Math.abs(point.ground_x) > 1e-6 || Math.abs(point.ground_y) > 1e-6),
+  );
+
+  const defaultImageStepX = Math.max(36, Math.min((sourceWidth || 900) * 0.08, 120));
+  const defaultImageStepY = Math.max(36, Math.min((sourceHeight || 900) * 0.08, 120));
+  const projectedGroundSystem = isProjectedCoordinateSystem(targetCoordinateSystem);
+  const defaultGroundStep = projectedGroundSystem ? 25 : 0.00025;
+
+  const estimateImageAxis = (axis: "image_x" | "image_y", fallbackStep: number, upperBound: number) => {
+    if (!meaningfulImagePoints.length) {
+      const centerValue = upperBound > 0 ? upperBound / 2 : fallbackStep;
+      return Number(centerValue.toFixed(4));
+    }
+    const last = meaningfulImagePoints[meaningfulImagePoints.length - 1];
+    if (meaningfulImagePoints.length >= 2) {
+      const prev = meaningfulImagePoints[meaningfulImagePoints.length - 2];
+      const delta = Number(last[axis]) - Number(prev[axis]);
+      const nextValue = Number(last[axis]) + (Math.abs(delta) > 0.1 ? delta : fallbackStep);
+      return Number(clampGeoreferenceNumber(nextValue, 0, Math.max(upperBound, 0)).toFixed(4));
+    }
+    return Number(clampGeoreferenceNumber(Number(last[axis]) + fallbackStep, 0, Math.max(upperBound, 0)).toFixed(4));
+  };
+
+  const estimateGroundAxis = (axis: "ground_x" | "ground_y") => {
+    if (!meaningfulGroundPoints.length) return 0;
+    const last = meaningfulGroundPoints[meaningfulGroundPoints.length - 1];
+    if (meaningfulGroundPoints.length >= 2) {
+      const prev = meaningfulGroundPoints[meaningfulGroundPoints.length - 2];
+      const delta = Number(last[axis]) - Number(prev[axis]);
+      return Number((Number(last[axis]) + (Math.abs(delta) > 1e-6 ? delta : defaultGroundStep)).toFixed(projectedGroundSystem ? 3 : 6));
+    }
+    return Number((Number(last[axis]) + defaultGroundStep).toFixed(projectedGroundSystem ? 3 : 6));
+  };
+
+  const imageX = estimateImageAxis("image_x", defaultImageStepX, Math.max((sourceWidth || 1) - 1, 1));
+  const imageY = estimateImageAxis("image_y", defaultImageStepY, Math.max((sourceHeight || 1) - 1, 1));
+  const groundX = estimateGroundAxis("ground_x");
+  const groundY = estimateGroundAxis("ground_y");
+
+  return {
+    image_x: imageX,
+    image_y: imageY,
+    ground_x: groundX,
+    ground_y: groundY,
+    lng: groundX,
+    lat: groundY,
+  };
 };
 
 const normalizeGeoreferenceControlPoint = (
@@ -924,8 +992,17 @@ export default function SurveyPlan() {
       JSON.stringify({
         coordinates: finalCoords ?? null,
         meta: plotMetaPayload,
+        // These don't change the plot geometry/meta stored server-side, but they do change what
+        // the next render looks like - without them here, tweaking e.g. road width after a
+        // preview was already rendered left the "changes aren't in the preview yet" banner off.
+        renderOptions: {
+          northArrowStyle,
+          northArrowColor,
+          beaconStyle,
+          roadWidth,
+        },
       }),
-    [finalCoords, plotMetaPayload]
+    [finalCoords, plotMetaPayload, northArrowStyle, northArrowColor, beaconStyle, roadWidth]
   );
 
   const stationNames = useMemo(() => {
@@ -1868,20 +1945,32 @@ export default function SurveyPlan() {
 
   const handleAddGeoreferenceControlPoint = useCallback(() => {
     const nextId = `gcp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const estimated = estimateNextGeoreferenceControlPoint(
+      georefSession?.ground_control_points || [],
+      georefSession?.source_width || 0,
+      georefSession?.source_height || 0,
+      georefTargetCoordinateSystem,
+    );
     const nextPoint: GeoreferenceControlPoint = {
       id: nextId,
       label: `GCP ${((georefSession?.ground_control_points?.length || 0) + 1).toString()}`,
-      image_x: 0,
-      image_y: 0,
-      ground_x: 0,
-      ground_y: 0,
-      lng: 0,
-      lat: 0,
+      image_x: estimated.image_x,
+      image_y: estimated.image_y,
+      ground_x: estimated.ground_x,
+      ground_y: estimated.ground_y,
+      lng: estimated.lng,
+      lat: estimated.lat,
     };
     const nextPoints = [...(georefSession?.ground_control_points || []), nextPoint];
     invalidateGeoreferenceSolve(nextPoints);
     setGeorefSelectedControlPointId(nextId);
-  }, [georefSession?.ground_control_points, invalidateGeoreferenceSolve]);
+  }, [
+    georefSession?.ground_control_points,
+    georefSession?.source_height,
+    georefSession?.source_width,
+    georefTargetCoordinateSystem,
+    invalidateGeoreferenceSolve,
+  ]);
 
   const handleSelectGeoreferenceControlPoint = useCallback((controlPointId: string) => {
     setGeorefSelectedControlPointId(controlPointId);
@@ -3316,7 +3405,6 @@ export default function SurveyPlan() {
               northArrowColor={northArrowColor}
               coordinateSystem={coordinateSystem}
               onBoundaryPointChange={handleBoundaryPointChange}
-              isLowBandwidth={isLowBandwidth}
             />
           </Suspense>
         )}
