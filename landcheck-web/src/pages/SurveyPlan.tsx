@@ -2047,9 +2047,9 @@ export default function SurveyPlan() {
     [georefSelectedControlPointId, georefTargetCoordinateSystem, handleUpdateGeoreferenceControlPoint]
   );
 
-  const handleSolveGeoreference = useCallback(async () => {
+  const handleSolveGeoreference = useCallback(async (options?: { silent?: boolean }) => {
     if (!georefSession?.id) {
-      toast.error("Upload a raster first.");
+      if (!options?.silent) toast.error("Upload a raster first.");
       return;
     }
     const controlPoints = (georefSession.ground_control_points || []).map((item) => ({
@@ -2063,7 +2063,7 @@ export default function SurveyPlan() {
       lat: Number(item.ground_y),
     }));
     if (controlPoints.length < 3) {
-      toast.error("Add at least 3 control points.");
+      if (!options?.silent) toast.error("Add at least 3 control points.");
       return;
     }
     setGeorefSolving(true);
@@ -2074,14 +2074,49 @@ export default function SurveyPlan() {
       });
       const session = res.data?.session as GeoreferenceSession;
       applyGeoreferenceSession(session, georefSelectedControlPointId);
-      toast.success("Raster anchored. You can now digitize boundaries and points.");
+      if (!options?.silent) toast.success("Raster anchored. You can now digitize boundaries and points.");
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      toast.error(typeof detail === "string" ? detail : "Unable to solve the georeference transform.");
+      if (!options?.silent) toast.error(typeof detail === "string" ? detail : "Unable to solve the georeference transform.");
     } finally {
       setGeorefSolving(false);
     }
   }, [applyGeoreferenceSession, georefSelectedControlPointId, georefSession, georefTargetCoordinateSystem]);
+
+  // Editing/adding a control point clears the previous transform (it's now stale - see
+  // invalidateGeoreferenceSolve) so the map overlay correctly stops showing an outdated raster
+  // footprint. Left alone, the user would have to remember to click "Solve Georeference" after
+  // every single point edit just to see where things actually stand. Auto re-solving (debounced,
+  // and silent so it doesn't spam a toast per keystroke) keeps the ground-control map's raster
+  // and GCP markers in sync with whatever points are currently on screen.
+  const georefAutoSolveTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (georefAutoSolveTimerRef.current !== null) {
+      window.clearTimeout(georefAutoSolveTimerRef.current);
+      georefAutoSolveTimerRef.current = null;
+    }
+    if (!georefSession?.id || georefSession.status !== "draft" || georefSolving) return;
+    const completePoints = (georefSession.ground_control_points || []).filter(
+      (item) =>
+        Number.isFinite(item.image_x) &&
+        Number.isFinite(item.image_y) &&
+        Number.isFinite(item.ground_x) &&
+        Number.isFinite(item.ground_y) &&
+        (Math.abs(item.image_x) > 0.5 || Math.abs(item.image_y) > 0.5) &&
+        (Math.abs(item.ground_x) > 1e-6 || Math.abs(item.ground_y) > 1e-6)
+    );
+    if (completePoints.length < 3) return;
+    georefAutoSolveTimerRef.current = window.setTimeout(() => {
+      georefAutoSolveTimerRef.current = null;
+      void handleSolveGeoreference({ silent: true });
+    }, 900);
+    return () => {
+      if (georefAutoSolveTimerRef.current !== null) {
+        window.clearTimeout(georefAutoSolveTimerRef.current);
+        georefAutoSolveTimerRef.current = null;
+      }
+    };
+  }, [georefSession?.id, georefSession?.status, georefSession?.ground_control_points, georefSolving, handleSolveGeoreference]);
 
   const handleDeleteGeoreferenceSession = useCallback(async () => {
     if (!georefSession?.id) {
