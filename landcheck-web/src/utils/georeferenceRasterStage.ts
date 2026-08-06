@@ -9,6 +9,13 @@ export type RasterStageMetrics = {
   naturalHeight: number;
 };
 
+export type RasterStageProjection = {
+  leftPx: number;
+  topPx: number;
+  leftPercent: number;
+  topPercent: number;
+};
+
 export function getRasterStageMetrics(
   stageEl: HTMLElement | null,
   imageEl: HTMLImageElement | null,
@@ -97,7 +104,7 @@ export function projectRasterPixelToStage(
   pixelX: number,
   pixelY: number,
   metrics: RasterStageMetrics | null,
-): { leftPercent: number; topPercent: number } | null {
+): RasterStageProjection | null {
   if (!metrics || !metrics.containerWidth || !metrics.containerHeight) return null;
 
   const normalizedX = pixelX / metrics.naturalWidth;
@@ -107,6 +114,8 @@ export function projectRasterPixelToStage(
   const topPx = metrics.offsetTop + normalizedY * metrics.displayHeight;
 
   return {
+    leftPx,
+    topPx,
     leftPercent: (leftPx / metrics.containerWidth) * 100,
     topPercent: (topPx / metrics.containerHeight) * 100,
   };
