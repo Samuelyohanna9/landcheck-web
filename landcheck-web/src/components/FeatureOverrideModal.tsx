@@ -798,6 +798,7 @@ export default function FeatureOverrideModal({
     lastY: 0,
     moved: false,
   });
+  const plottingPinchRef = useRef<{ dist: number; zoom: number; worldX: number; worldY: number } | null>(null);
   const [plottingStageSize, setPlottingStageSize] = useState(DEFAULT_PLOTTING_STAGE_SIZE);
   const boundaryDragRef = useRef<number | null>(null);
   const [boundaryDraft, setBoundaryDraft] = useState<number[][] | null>(null);
@@ -2304,6 +2305,68 @@ export default function FeatureOverrideModal({
     [basemapMode, getPlottingPointer, plottingViewportX, plottingViewportY]
   );
 
+  // Two-finger pinch-to-zoom for touch devices. `touch-action: none` on the SVG (needed so a
+  // single drafting finger doesn't trigger the browser's own scroll/zoom) also disables native
+  // pinch-zoom, so it has to be reimplemented here using the same zoom-around-a-point math as
+  // handlePlottingWheel. The pinch's starting distance/zoom/world-anchor are captured once at
+  // touchstart and kept fixed for the gesture, so zoom scales smoothly off that baseline instead
+  // of compounding per-frame, while the anchor point is re-projected under the moving two-finger
+  // midpoint each move - giving combined pinch-zoom + two-finger pan, like a mobile map.
+  const getPlottingTouchMidpoint = useCallback(
+    (target: SVGSVGElement, touches: React.TouchList) => {
+      const [t1, t2] = [touches[0], touches[1]];
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const rawPointer = getPlottingPointer(target, (t1.clientX + t2.clientX) / 2, (t1.clientY + t2.clientY) / 2);
+      return {
+        dist,
+        localX: rawPointer.x - plottingViewportX,
+        localY: rawPointer.y - plottingViewportY,
+      };
+    },
+    [getPlottingPointer, plottingViewportX, plottingViewportY]
+  );
+
+  const handlePlottingTouchStart = useCallback(
+    (event: React.TouchEvent<SVGSVGElement>) => {
+      if (basemapMode !== "plotting" || event.touches.length !== 2) return;
+      const { dist, localX, localY } = getPlottingTouchMidpoint(event.currentTarget, event.touches);
+      plottingPanRef.current.active = false;
+      setPlottingPanActive(false);
+      setPlottingCamera((previous) => {
+        plottingPinchRef.current = {
+          dist,
+          zoom: previous.zoom,
+          worldX: (localX - previous.offsetX) / previous.zoom,
+          worldY: (localY - previous.offsetY) / previous.zoom,
+        };
+        return previous;
+      });
+    },
+    [basemapMode, getPlottingTouchMidpoint]
+  );
+
+  const handlePlottingTouchMove = useCallback(
+    (event: React.TouchEvent<SVGSVGElement>) => {
+      if (basemapMode !== "plotting" || event.touches.length !== 2 || !plottingPinchRef.current) return;
+      const pinch = plottingPinchRef.current;
+      if (pinch.dist <= 0) return;
+      const { dist, localX, localY } = getPlottingTouchMidpoint(event.currentTarget, event.touches);
+      const nextZoom = Math.min(PLOTTING_ZOOM_MAX, Math.max(PLOTTING_ZOOM_MIN, pinch.zoom * (dist / pinch.dist)));
+      setPlottingCamera({
+        zoom: nextZoom,
+        offsetX: localX - pinch.worldX * nextZoom,
+        offsetY: localY - pinch.worldY * nextZoom,
+      });
+    },
+    [basemapMode, getPlottingTouchMidpoint]
+  );
+
+  const handlePlottingTouchEnd = useCallback((event: React.TouchEvent<SVGSVGElement>) => {
+    if (event.touches.length < 2) {
+      plottingPinchRef.current = null;
+    }
+  }, []);
+
   const handlePlottingMouseLeave = useCallback(() => {
     if (boundaryDragRef.current !== null) {
       commitBoundaryDrag();
@@ -3028,6 +3091,10 @@ export default function FeatureOverrideModal({
                   onMouseUp={handlePlottingMouseUp}
                   onMouseLeave={handlePlottingMouseLeave}
                   onWheel={handlePlottingWheel}
+                  onTouchStart={handlePlottingTouchStart}
+                  onTouchMove={handlePlottingTouchMove}
+                  onTouchEnd={handlePlottingTouchEnd}
+                  onTouchCancel={handlePlottingTouchEnd}
                   onClick={handlePlottingCanvasClick}
                   onDoubleClick={handlePlottingCanvasDoubleClick}
                   onAuxClick={(event) => event.preventDefault()}

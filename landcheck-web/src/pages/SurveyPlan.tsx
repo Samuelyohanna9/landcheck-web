@@ -6,6 +6,12 @@ import { fromWGS84, toWGS84 } from "../utils/coordinateConverter";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../utils/mapboxLoader";
 import { useDeferredMount } from "../hooks/useDeferredMount";
 import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
+import type {
+  GeoreferenceControlPoint,
+  GeoreferenceFeature,
+  GeoreferenceSession,
+} from "../types/surveyGeoreference";
+import type { TechnicalReportFields } from "../components/survey-plan/TechnicalReportModal";
 import {
   clearSurveyPlanDraft,
   loadSurveyPlanDraft,
@@ -15,10 +21,14 @@ import "../styles/survey-plan.css";
 
 const SurveyPreview = lazy(() => import("../components/SurveyPreview"));
 const FeatureOverrideModal = lazy(() => import("../components/FeatureOverrideModal"));
+const TechnicalReportModal = lazy(() => import("../components/survey-plan/TechnicalReportModal"));
 const SurveyPlanStepOnePanel = lazy(() => import("../components/survey-plan/SurveyPlanStepOnePanel"));
 const SurveyPlanSurveyPreviewStep = lazy(() => import("../components/survey-plan/SurveyPlanSurveyPreviewStep"));
 const SurveyPlanSubdivisionPreviewStep = lazy(() => import("../components/survey-plan/SurveyPlanSubdivisionPreviewStep"));
 const SurveyPlanSubdivisionExportStep = lazy(() => import("../components/survey-plan/SurveyPlanSubdivisionExportStep"));
+const SurveyPlanGeoreferenceSetupStep = lazy(() => import("../components/survey-plan/SurveyPlanGeoreferenceSetupStep"));
+const SurveyPlanGeoreferenceWorkspaceStep = lazy(() => import("../components/survey-plan/SurveyPlanGeoreferenceWorkspaceStep"));
+const SurveyPlanGeoreferenceExportStep = lazy(() => import("../components/survey-plan/SurveyPlanGeoreferenceExportStep"));
 
 type PlotMeta = {
   title_text: string;
@@ -46,6 +56,16 @@ type PlotMeta = {
   adamawa_plan_no: string;
   adamawa_surveyed_by_text: string;
   adamawa_disclaimer_text: string;
+  technical_report_instruments: string[];
+  technical_report_dgps_type: string;
+  technical_report_num_surveyors: number | null;
+  technical_report_num_technical_officers: number | null;
+  technical_report_num_labourers: number | null;
+  technical_report_recce_text: string;
+  technical_report_demarcation_text: string;
+  technical_report_computation_software_text: string;
+  technical_report_plotting_software_text: string;
+  technical_report_general_observation_text: string;
 };
 
 type SubdivisionMethod = "by_count" | "by_area" | "by_fraction" | "by_custom_area";
@@ -115,7 +135,7 @@ type PlotExportJob = {
   download_url?: string | null;
 };
 
-type WorkflowMode = "survey" | "subdivision";
+type WorkflowMode = "survey" | "subdivision" | "georeference";
 
 type ManualPoint = {
   station: string;
@@ -159,6 +179,9 @@ type SurveyPlanDraftState = {
   lastServerSyncAt: string | null;
   lastServerSyncSignature: string | null;
   hasUnsyncedServerChanges: boolean;
+  georefSessionId: string | null;
+  georefTargetCoordinateSystem: string;
+  georefSelectedControlPointId: string | null;
 };
 
 const DEFAULT_CERTIFICATION_STATEMENT =
@@ -173,6 +196,9 @@ const DEFAULT_ADAMAWA_ORIGIN_TEXT = "ORIGIN:- WGS 84 UTM ZONE 33N";
 const DEFAULT_ADAMAWA_TOPO_SHEET_TEXT = "BASED ON GIREI TOPO SHEET 197 NE";
 const DEFAULT_ADAMAWA_DISCLAIMER_TEXT =
   "Detail shewn not the result of accurate survey. All bearing and distances shewn on this plan have been computed from registered Co-ordinates.";
+const DEFAULT_TECHNICAL_REPORT_COMPUTATION_SOFTWARE = "AutoCAD software";
+const DEFAULT_TECHNICAL_REPORT_PLOTTING_SOFTWARE = "AutoCAD software";
+const DEFAULT_TECHNICAL_REPORT_GENERAL_OBSERVATION = "The work was hitch-free.";
 const ACTIVE_SURVEY_DRAFT_ID = "active";
 
 const buildDefaultManualPoints = (): ManualPoint[] => [
@@ -207,6 +233,16 @@ const buildDefaultPlotMeta = (): PlotMeta => ({
   adamawa_plan_no: "",
   adamawa_surveyed_by_text: "",
   adamawa_disclaimer_text: DEFAULT_ADAMAWA_DISCLAIMER_TEXT,
+  technical_report_instruments: [],
+  technical_report_dgps_type: "",
+  technical_report_num_surveyors: null,
+  technical_report_num_technical_officers: null,
+  technical_report_num_labourers: null,
+  technical_report_recce_text: "",
+  technical_report_demarcation_text: "",
+  technical_report_computation_software_text: DEFAULT_TECHNICAL_REPORT_COMPUTATION_SOFTWARE,
+  technical_report_plotting_software_text: DEFAULT_TECHNICAL_REPORT_PLOTTING_SOFTWARE,
+  technical_report_general_observation_text: DEFAULT_TECHNICAL_REPORT_GENERAL_OBSERVATION,
 });
 
 const parsePositiveInt = (value: string): number | null => {
@@ -353,18 +389,52 @@ const SUBDIVISION_STEPS = [
   { id: 3, title: "Batch Export", description: "Export generated subdivision plans as ZIP" },
 ];
 
+const GEOREFERENCE_STEPS = [
+  { id: 1, title: "Upload & Control Points", description: "Anchor the raster against real coordinates" },
+  { id: 2, title: "Digitize Workspace", description: "Trace parcels, stake points, and lines" },
+  { id: 3, title: "Export & Continue", description: "Download DGPS CSV and continue into Survey Plan" },
+];
+
 export default function SurveyPlan() {
   const navigate = useNavigate();
   const { isLowBandwidth } = useLowBandwidthMode();
   const deferredDraftMap = useDeferredMount(isLowBandwidth ? 1400 : 250);
   const [workflowMode, setWorkflowMode] = useState<WorkflowMode | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const surveyContentRef = useRef<HTMLDivElement>(null);
+  const [showScrollHint, setShowScrollHint] = useState(false);
   const [forceShowDraftMap, setForceShowDraftMap] = useState(false);
-  const activeSteps = workflowMode === "subdivision" ? SUBDIVISION_STEPS : SURVEY_STEPS;
+  const activeSteps =
+    workflowMode === "subdivision"
+      ? SUBDIVISION_STEPS
+      : workflowMode === "georeference"
+        ? GEOREFERENCE_STEPS
+        : SURVEY_STEPS;
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === "undefined" ? true : navigator.onLine
   );
+  useEffect(() => {
+    const el = surveyContentRef.current;
+    if (!el) return;
+    const SCROLL_HINT_THRESHOLD_PX = 24;
+    const evaluate = () => {
+      const remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
+      setShowScrollHint(remaining > SCROLL_HINT_THRESHOLD_PX);
+    };
+    evaluate();
+    el.addEventListener("scroll", evaluate, { passive: true });
+    window.addEventListener("resize", evaluate);
+    // Content height often changes without a scroll/resize event (preview images loading,
+    // feature counts arriving, step switching), so also watch the container's own size.
+    const resizeObserver = new ResizeObserver(evaluate);
+    resizeObserver.observe(el);
+    return () => {
+      el.removeEventListener("scroll", evaluate);
+      window.removeEventListener("resize", evaluate);
+      resizeObserver.disconnect();
+    };
+  }, [workflowMode, currentStep]);
   const [lastServerSyncAt, setLastServerSyncAt] = useState<string | null>(null);
   const [lastServerSyncSignature, setLastServerSyncSignature] = useState<string | null>(null);
   const [hasUnsyncedServerChanges, setHasUnsyncedServerChanges] = useState(false);
@@ -387,6 +457,8 @@ export default function SurveyPlan() {
   const [topoMapUrl, setTopoMapUrl] = useState<string | null>(null);
   const [topoMapLoading, setTopoMapLoading] = useState(false);
   const [downloadLoadingKey, setDownloadLoadingKey] = useState<string | null>(null);
+  const [showTechnicalReportModal, setShowTechnicalReportModal] = useState(false);
+  const [generatingTechnicalReport, setGeneratingTechnicalReport] = useState(false);
   const [hasHeightData, setHasHeightData] = useState(false);
   const [previewType, setPreviewType] = useState<PreviewType>("survey");
   const [topoSource, setTopoSource] = useState<TopoSource>("opentopomap");
@@ -437,6 +509,17 @@ export default function SurveyPlan() {
   const previewRequestId = useRef(0);
   const orthophotoRequestId = useRef(0);
   const topoRequestId = useRef(0);
+  const [georefSession, setGeorefSession] = useState<GeoreferenceSession | null>(null);
+  const [georefRasterObjectUrl, setGeorefRasterObjectUrl] = useState<string | null>(null);
+  const [georefFeatures, setGeorefFeatures] = useState<GeoreferenceFeature[]>([]);
+  const [georefTargetCoordinateSystem, setGeorefTargetCoordinateSystem] = useState("wgs84");
+  const [georefSelectedControlPointId, setGeorefSelectedControlPointId] = useState<string | null>(null);
+  const [georefSessionLoading, setGeorefSessionLoading] = useState(false);
+  const [georefUploading, setGeorefUploading] = useState(false);
+  const [georefSolving, setGeorefSolving] = useState(false);
+  const [georefSavingFeatures, setGeorefSavingFeatures] = useState(false);
+  const [georefDownloadingCsv, setGeorefDownloadingCsv] = useState(false);
+  const [georefContinuing, setGeorefContinuing] = useState(false);
 
   // Survey metadata
   const [meta, setMeta] = useState<PlotMeta>(buildDefaultPlotMeta);
@@ -451,16 +534,97 @@ export default function SurveyPlan() {
     setMeta((m) => ({ ...m, scale_text: `1 : ${parsed}` }));
   }, [scaleDraft]);
 
+  const clearGeorefLocalState = useCallback(() => {
+    setGeorefSession(null);
+    setGeorefRasterObjectUrl((current) => {
+      if (current) {
+        URL.revokeObjectURL(current);
+      }
+      return null;
+    });
+    setGeorefFeatures([]);
+    setGeorefTargetCoordinateSystem("wgs84");
+    setGeorefSelectedControlPointId(null);
+    setGeorefSessionLoading(false);
+    setGeorefUploading(false);
+    setGeorefSolving(false);
+    setGeorefSavingFeatures(false);
+    setGeorefDownloadingCsv(false);
+    setGeorefContinuing(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (georefRasterObjectUrl) {
+        URL.revokeObjectURL(georefRasterObjectUrl);
+      }
+    };
+  }, [georefRasterObjectUrl]);
+
+  const applyGeoreferenceSession = useCallback(
+    (session: GeoreferenceSession, preferredControlPointId?: string | null) => {
+      const controlPoints = Array.isArray(session.ground_control_points) ? session.ground_control_points : [];
+      const preferredId =
+        preferredControlPointId && controlPoints.some((item) => item.id === preferredControlPointId)
+          ? preferredControlPointId
+          : controlPoints[controlPoints.length - 1]?.id || null;
+      setGeorefSession(session);
+      setGeorefFeatures(Array.isArray(session.features) ? session.features : []);
+      setGeorefTargetCoordinateSystem(session.target_coordinate_system || "wgs84");
+      setGeorefSelectedControlPointId(preferredId);
+    },
+    []
+  );
+
+  const loadGeoreferenceRaster = useCallback(async (sessionId: string) => {
+    const res = await api.get(`/survey-georeference/sessions/${encodeURIComponent(sessionId)}/raster`, {
+      responseType: "blob",
+    });
+    const nextObjectUrl = URL.createObjectURL(res.data);
+    setGeorefRasterObjectUrl((current) => {
+      if (current) {
+        URL.revokeObjectURL(current);
+      }
+      return nextObjectUrl;
+    });
+  }, []);
+
+  const loadGeoreferenceSession = useCallback(
+    async (sessionId: string, options?: { preferredControlPointId?: string | null; silent?: boolean }) => {
+      setGeorefSessionLoading(true);
+      try {
+        const res = await api.get(`/survey-georeference/sessions/${encodeURIComponent(sessionId)}`);
+        const session = res.data?.session as GeoreferenceSession;
+        applyGeoreferenceSession(session, options?.preferredControlPointId);
+        await loadGeoreferenceRaster(sessionId);
+        return session;
+      } catch (err: any) {
+        if (!options?.silent) {
+          const detail = err?.response?.data?.detail;
+          toast.error(typeof detail === "string" ? detail : "Unable to load the georeference workspace.");
+        }
+        throw err;
+      } finally {
+        setGeorefSessionLoading(false);
+      }
+    },
+    [applyGeoreferenceSession, loadGeoreferenceRaster]
+  );
+
   useEffect(() => {
     let active = true;
     loadSurveyPlanDraft<SurveyPlanDraftState>(ACTIVE_SURVEY_DRAFT_ID)
-      .then((record) => {
+      .then(async (record) => {
         if (!active || !record?.state) return;
         const saved = record.state;
         const restoredSyncSignature =
           typeof saved.lastServerSyncSignature === "string" ? saved.lastServerSyncSignature : null;
         if (saved.workflowMode) setWorkflowMode(saved.workflowMode);
-        setCurrentStep(1);
+        setCurrentStep(
+          saved.workflowMode === "georeference"
+            ? Math.min(Math.max(Number(saved.currentStep || 1), 1), 3)
+            : 1
+        );
         if (Array.isArray(saved.manualPoints) && saved.manualPoints.length >= 3) setManualPoints(saved.manualPoints);
         if (saved.coordinateSystem) setCoordinateSystem(saved.coordinateSystem);
         if (typeof saved.plotId === "number") setPlotId(saved.plotId);
@@ -485,9 +649,29 @@ export default function SurveyPlan() {
         if (typeof saved.subdivisionLotPrefix === "string") setSubdivisionLotPrefix(saved.subdivisionLotPrefix);
         if (typeof saved.subdivisionEstateName === "string") setSubdivisionEstateName(saved.subdivisionEstateName);
         if (Array.isArray(saved.subdivisionLotNamesDraft)) setSubdivisionLotNamesDraft(saved.subdivisionLotNamesDraft);
+        if (typeof saved.georefTargetCoordinateSystem === "string" && saved.georefTargetCoordinateSystem.trim()) {
+          setGeorefTargetCoordinateSystem(saved.georefTargetCoordinateSystem.trim());
+        }
+        if (typeof saved.georefSelectedControlPointId === "string" && saved.georefSelectedControlPointId.trim()) {
+          setGeorefSelectedControlPointId(saved.georefSelectedControlPointId.trim());
+        }
         setLastServerSyncAt(saved.lastServerSyncAt || null);
         setLastServerSyncSignature(restoredSyncSignature);
         setHasUnsyncedServerChanges(Boolean(saved.hasUnsyncedServerChanges || (saved.plotId && !restoredSyncSignature)));
+        const savedGeorefSessionId =
+          typeof saved.georefSessionId === "string" ? saved.georefSessionId.trim() : "";
+        if (savedGeorefSessionId) {
+          try {
+            await loadGeoreferenceSession(savedGeorefSessionId, {
+              preferredControlPointId: saved.georefSelectedControlPointId || null,
+              silent: true,
+            });
+          } catch {
+            if (active) {
+              clearGeorefLocalState();
+            }
+          }
+        }
         toast.success("Local survey draft restored in edit mode.");
       })
       .finally(() => {
@@ -500,7 +684,7 @@ export default function SurveyPlan() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [clearGeorefLocalState, loadGeoreferenceSession]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -690,7 +874,7 @@ export default function SurveyPlan() {
     if (!draftHydrated) return;
     const draftState: SurveyPlanDraftState = {
       workflowMode,
-      currentStep: 1,
+      currentStep,
       manualPoints,
       coordinateSystem,
       plotId,
@@ -716,6 +900,9 @@ export default function SurveyPlan() {
       lastServerSyncAt,
       lastServerSyncSignature,
       hasUnsyncedServerChanges,
+      georefSessionId: georefSession?.id || null,
+      georefTargetCoordinateSystem,
+      georefSelectedControlPointId,
     };
 
     if (pendingDraftWriteRef.current !== null) {
@@ -735,6 +922,7 @@ export default function SurveyPlan() {
   }, [
     draftHydrated,
     workflowMode,
+    currentStep,
     manualPoints,
     coordinateSystem,
     plotId,
@@ -759,6 +947,9 @@ export default function SurveyPlan() {
     lastServerSyncAt,
     lastServerSyncSignature,
     hasUnsyncedServerChanges,
+    georefSession?.id,
+    georefTargetCoordinateSystem,
+    georefSelectedControlPointId,
   ]);
 
   useEffect(() => {
@@ -1546,6 +1737,278 @@ export default function SurveyPlan() {
     setRoadWidth(value as RoadWidthOption);
   }, []);
 
+  const handleCreateGeoreferenceSession = useCallback(
+    async (file: File, titleText: string, targetCoordinateSystem: string) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("title_text", String(titleText || "").trim() || file.name || "Scanned raster");
+      formData.append("target_coordinate_system", targetCoordinateSystem);
+      setGeorefUploading(true);
+      try {
+        const res = await api.post("/survey-georeference/sessions", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        const session = res.data?.session as GeoreferenceSession;
+        applyGeoreferenceSession(session);
+        await loadGeoreferenceRaster(session.id);
+        toast.success("Raster uploaded. Add matching control points to anchor it.");
+      } catch (err: any) {
+        const detail = err?.response?.data?.detail;
+        toast.error(typeof detail === "string" ? detail : "Unable to upload this raster.");
+      } finally {
+        setGeorefUploading(false);
+      }
+    },
+    [applyGeoreferenceSession, loadGeoreferenceRaster]
+  );
+
+  const invalidateGeoreferenceSolve = useCallback((nextPoints: GeoreferenceControlPoint[]) => {
+    setGeorefSession((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        status: "draft",
+        ground_control_points: nextPoints,
+        transform: null,
+        overlay: null,
+        features: [],
+      };
+    });
+    setGeorefFeatures([]);
+  }, []);
+
+  const handleAddGeoreferenceControlPoint = useCallback(() => {
+    const nextId = `gcp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const nextPoint: GeoreferenceControlPoint = {
+      id: nextId,
+      label: `GCP ${((georefSession?.ground_control_points?.length || 0) + 1).toString()}`,
+      image_x: 0,
+      image_y: 0,
+      lng: 0,
+      lat: 0,
+    };
+    const nextPoints = [...(georefSession?.ground_control_points || []), nextPoint];
+    invalidateGeoreferenceSolve(nextPoints);
+    setGeorefSelectedControlPointId(nextId);
+  }, [georefSession?.ground_control_points, invalidateGeoreferenceSolve]);
+
+  const handleSelectGeoreferenceControlPoint = useCallback((controlPointId: string) => {
+    setGeorefSelectedControlPointId(controlPointId);
+  }, []);
+
+  const handleRemoveGeoreferenceControlPoint = useCallback(
+    (controlPointId: string) => {
+      const nextPoints = (georefSession?.ground_control_points || []).filter((item) => item.id !== controlPointId);
+      invalidateGeoreferenceSolve(nextPoints);
+      setGeorefSelectedControlPointId(nextPoints[nextPoints.length - 1]?.id || null);
+    },
+    [georefSession?.ground_control_points, invalidateGeoreferenceSolve]
+  );
+
+  const handleUpdateGeoreferenceControlPoint = useCallback(
+    (
+      controlPointId: string,
+      field: "label" | "lng" | "lat" | "image_x" | "image_y",
+      value: string | number
+    ) => {
+      const nextPoints = (georefSession?.ground_control_points || []).map((item) => {
+        if (item.id !== controlPointId) return item;
+        if (field === "label") {
+          return { ...item, label: String(value || "").trim() || item.label };
+        }
+        const nextValue = Number.parseFloat(String(value));
+        return { ...item, [field]: Number.isFinite(nextValue) ? nextValue : 0 };
+      });
+      invalidateGeoreferenceSolve(nextPoints);
+    },
+    [georefSession?.ground_control_points, invalidateGeoreferenceSolve]
+  );
+
+  const handleAssignGeoreferenceImagePoint = useCallback(
+    (pixelX: number, pixelY: number) => {
+      if (!georefSelectedControlPointId) {
+        toast.error("Select a control point first.");
+        return;
+      }
+      handleUpdateGeoreferenceControlPoint(georefSelectedControlPointId, "image_x", pixelX);
+      handleUpdateGeoreferenceControlPoint(georefSelectedControlPointId, "image_y", pixelY);
+    },
+    [georefSelectedControlPointId, handleUpdateGeoreferenceControlPoint]
+  );
+
+  const handleAssignGeoreferenceMapPoint = useCallback(
+    (lng: number, lat: number) => {
+      if (!georefSelectedControlPointId) {
+        toast.error("Select a control point first.");
+        return;
+      }
+      handleUpdateGeoreferenceControlPoint(georefSelectedControlPointId, "lng", lng);
+      handleUpdateGeoreferenceControlPoint(georefSelectedControlPointId, "lat", lat);
+    },
+    [georefSelectedControlPointId, handleUpdateGeoreferenceControlPoint]
+  );
+
+  const handleSolveGeoreference = useCallback(async () => {
+    if (!georefSession?.id) {
+      toast.error("Upload a raster first.");
+      return;
+    }
+    const controlPoints = (georefSession.ground_control_points || []).map((item) => ({
+      id: item.id,
+      label: item.label,
+      image_x: Number(item.image_x),
+      image_y: Number(item.image_y),
+      lng: Number(item.lng),
+      lat: Number(item.lat),
+    }));
+    if (controlPoints.length < 3) {
+      toast.error("Add at least 3 control points.");
+      return;
+    }
+    setGeorefSolving(true);
+    try {
+      const res = await api.post(`/survey-georeference/sessions/${encodeURIComponent(georefSession.id)}/solve`, {
+        target_coordinate_system: georefTargetCoordinateSystem,
+        ground_control_points: controlPoints,
+      });
+      const session = res.data?.session as GeoreferenceSession;
+      applyGeoreferenceSession(session, georefSelectedControlPointId);
+      toast.success("Raster anchored. You can now digitize boundaries and points.");
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      toast.error(typeof detail === "string" ? detail : "Unable to solve the georeference transform.");
+    } finally {
+      setGeorefSolving(false);
+    }
+  }, [applyGeoreferenceSession, georefSelectedControlPointId, georefSession, georefTargetCoordinateSystem]);
+
+  const handleDeleteGeoreferenceSession = useCallback(async () => {
+    if (!georefSession?.id) {
+      clearGeorefLocalState();
+      return;
+    }
+    try {
+      await api.delete(`/survey-georeference/sessions/${encodeURIComponent(georefSession.id)}`);
+      clearGeorefLocalState();
+      toast.success("Georeference session removed.");
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      toast.error(typeof detail === "string" ? detail : "Unable to delete this session.");
+    }
+  }, [clearGeorefLocalState, georefSession?.id]);
+
+  const handleSaveGeoreferenceFeatures = useCallback(async () => {
+    if (!georefSession?.id) {
+      toast.error("Open a georeference session first.");
+      return;
+    }
+    if (!georefFeatures.length) {
+      toast.error("Digitize at least one feature before saving.");
+      return;
+    }
+    setGeorefSavingFeatures(true);
+    try {
+      const res = await api.post(`/survey-georeference/sessions/${encodeURIComponent(georefSession.id)}/features`, {
+        features: georefFeatures,
+      });
+      const session = res.data?.session as GeoreferenceSession;
+      applyGeoreferenceSession(session, georefSelectedControlPointId);
+      toast.success("Digitized features saved.");
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      toast.error(typeof detail === "string" ? detail : "Unable to save digitized features.");
+    } finally {
+      setGeorefSavingFeatures(false);
+    }
+  }, [applyGeoreferenceSession, georefFeatures, georefSelectedControlPointId, georefSession?.id]);
+
+  const handleDownloadGeoreferenceCsv = useCallback(async () => {
+    if (!georefSession?.id) {
+      toast.error("Open a georeference session first.");
+      return;
+    }
+    setGeorefDownloadingCsv(true);
+    try {
+      const res = await api.get(`/survey-georeference/sessions/${encodeURIComponent(georefSession.id)}/exports/staking.csv`, {
+        responseType: "blob",
+      });
+      triggerBlobDownload(res.data, res.headers["content-type"], `georeference_${georefSession.id}_staking.csv`);
+      toast.success("DGPS CSV downloaded.");
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      toast.error(typeof detail === "string" ? detail : "Unable to download the DGPS CSV.");
+    } finally {
+      setGeorefDownloadingCsv(false);
+    }
+  }, [georefSession?.id]);
+
+  const handleContinueGeoreferenceToSurvey = useCallback(async () => {
+    const sourceFeatures = georefFeatures.length ? georefFeatures : georefSession?.features || [];
+    const primaryPolygon =
+      sourceFeatures.find((item) => item.feature_type === "polygon" && item.is_primary) ||
+      sourceFeatures.find((item) => item.feature_type === "polygon") ||
+      null;
+    if (!primaryPolygon?.target_coordinates?.length) {
+      toast.error("Set and save a primary polygon before continuing.");
+      return;
+    }
+    const openCoordinates = [...primaryPolygon.target_coordinates];
+    if (openCoordinates.length > 1) {
+      const first = openCoordinates[0];
+      const last = openCoordinates[openCoordinates.length - 1];
+      if (first[0] === last[0] && first[1] === last[1]) {
+        openCoordinates.pop();
+      }
+    }
+    if (openCoordinates.length < 3) {
+      toast.error("The primary polygon needs at least 3 vertices.");
+      return;
+    }
+    const sessionId = georefSession?.id || null;
+    const nextCoordinateSystem = georefSession?.target_coordinate_system || georefTargetCoordinateSystem || "wgs84";
+    setGeorefContinuing(true);
+    setManualPoints(
+      openCoordinates.map((point, index) => ({
+        station: getStationName(index),
+        lng: Number(point[0]),
+        lat: Number(point[1]),
+      }))
+    );
+    setCoordinateSystem(nextCoordinateSystem);
+    setPlotId(null);
+    setFeatures(null);
+    setPreviewUrl(null);
+    setOrthophotoUrl(null);
+    setTopoMapUrl(null);
+    setHasHeightData(false);
+    setLastServerSyncAt(null);
+    setLastServerSyncSignature(null);
+    setHasUnsyncedServerChanges(false);
+    clearGeorefLocalState();
+    setWorkflowMode("survey");
+    setPreviewType("survey");
+    startTransition(() => {
+      setCurrentStep(1);
+    });
+    try {
+      if (sessionId) {
+        await api.delete(`/survey-georeference/sessions/${encodeURIComponent(sessionId)}`);
+      }
+      toast.success("Primary polygon moved into Survey Plan. Temporary raster released from storage.");
+    } catch {
+      toast.success("Primary polygon moved into Survey Plan. Temporary raster will still auto-expire.");
+    } finally {
+      setGeorefContinuing(false);
+    }
+  }, [
+    clearGeorefLocalState,
+    georefFeatures,
+    georefSession?.id,
+    georefSession?.features,
+    georefSession?.target_coordinate_system,
+    georefTargetCoordinateSystem,
+  ]);
+
   useEffect(() => {
     if (!workflowMode) return undefined;
 
@@ -1555,7 +2018,11 @@ export default function SurveyPlan() {
 
     const prewarm = () => {
       if (cancelled) return;
-      if (currentStep === 1) {
+      if (workflowMode === "georeference" && currentStep === 1) {
+        void import("../components/survey-plan/SurveyPlanGeoreferenceSetupStep");
+        return;
+      }
+      if ((workflowMode === "survey" || workflowMode === "subdivision") && currentStep === 1) {
         void import("../components/survey-plan/SurveyPlanStepOnePanel");
         return;
       }
@@ -1563,6 +2030,10 @@ export default function SurveyPlan() {
         void import("../components/survey-plan/SurveyPlanSurveyPreviewStep");
       } else if (workflowMode === "subdivision" && currentStep === 2) {
         void import("../components/survey-plan/SurveyPlanSubdivisionPreviewStep");
+      } else if (workflowMode === "georeference" && currentStep === 2) {
+        void import("../components/survey-plan/SurveyPlanGeoreferenceWorkspaceStep");
+      } else if (workflowMode === "georeference" && currentStep === 3) {
+        void import("../components/survey-plan/SurveyPlanGeoreferenceExportStep");
       } else if (workflowMode === "subdivision" && currentStep === 3) {
         void import("../components/survey-plan/SurveyPlanSubdivisionExportStep");
       } else {
@@ -1602,6 +2073,7 @@ export default function SurveyPlan() {
   // Reset everything
   const resetAll = () => {
     clearSurveyPlanDraft(ACTIVE_SURVEY_DRAFT_ID).catch(() => {});
+    clearGeorefLocalState();
     setWorkflowMode(null);
     setManualPoints(buildDefaultManualPoints());
     setCoordinateSystem("wgs84");
@@ -1799,6 +2271,63 @@ export default function SurveyPlan() {
       toast.error(message);
     } finally {
       setDownloadLoadingKey((prev) => (prev === loadingKey ? null : prev));
+    }
+  };
+
+  const downloadTechnicalReport = async (fields: TechnicalReportFields) => {
+    setGeneratingTechnicalReport(true);
+    try {
+      const activePlotId = await ensureServerPlot("Syncing draft before export...");
+      const payload = {
+        title_text: meta.title_text,
+        location_text: meta.location_text,
+        lga_text: meta.lga_text,
+        state_text: meta.state_text,
+        surveyor_name: meta.surveyor_name,
+        surveyor_rank: meta.surveyor_rank,
+        template_name: meta.template_name,
+        adamawa_rof_no: meta.adamawa_rof_no,
+        adamawa_owner_name: meta.adamawa_owner_name,
+        adamawa_authority_title: meta.adamawa_authority_title,
+        adamawa_authority_date_text: meta.adamawa_authority_date_text,
+        adamawa_control_point_name: meta.adamawa_control_point_name,
+        adamawa_northing: meta.adamawa_northing,
+        adamawa_easting: meta.adamawa_easting,
+        adamawa_elevation: meta.adamawa_elevation,
+        adamawa_origin_text: meta.adamawa_origin_text,
+        adamawa_topo_sheet_text: meta.adamawa_topo_sheet_text,
+        adamawa_computation_no: meta.adamawa_computation_no,
+        adamawa_cadastral_sheet_no: meta.adamawa_cadastral_sheet_no,
+        adamawa_plan_no: meta.adamawa_plan_no,
+        adamawa_surveyed_by_text: meta.adamawa_surveyed_by_text,
+        adamawa_disclaimer_text: meta.adamawa_disclaimer_text,
+        ...fields,
+      };
+      setMeta((prev) => ({ ...prev, ...fields }));
+
+      const resolvedUrl = resolvePlotResourcePath(`/plots/${plotId}/export-jobs/technical-report.docx`, activePlotId);
+      const resolvedFilename = resolvePlotFilename(`plot_${plotId}_technical_report.docx`, activePlotId);
+      const created = await api.post(resolvedUrl, payload);
+      const jobId = String(created?.data?.id || "");
+      if (!jobId) {
+        throw new Error("Export job was not created");
+      }
+      const job = await waitForPlotExportJob(jobId);
+      if (!job.download_url) {
+        throw new Error("Export is ready but no download link was available");
+      }
+      const res = await api.get(String(job.download_url), { responseType: "blob" });
+      triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
+
+      markServerSynced();
+      toast.success(`Downloaded ${resolvedFilename}`);
+      setShowTechnicalReportModal(false);
+    } catch (err) {
+      console.error("Technical report download error:", err);
+      const message = err instanceof Error ? err.message : "Failed to generate technical report";
+      toast.error(message);
+    } finally {
+      setGeneratingTechnicalReport(false);
     }
   };
 
@@ -2451,7 +2980,11 @@ export default function SurveyPlan() {
   const renderSidebarStepsCard = () => (
     <div className="workflow-inline-card workflow-inline-card--sidebar">
       <div className="workflow-inline-title">
-        {workflowMode === "survey" ? "Survey Plan Production" : "Plot Subdivision"}
+        {workflowMode === "survey"
+          ? "Survey Plan Production"
+          : workflowMode === "subdivision"
+            ? "Plot Subdivision"
+            : "Raster Georeferencing"}
       </div>
       <div className="workflow-inline-steps workflow-inline-steps--stack">
         {activeSteps.map((step) => {
@@ -2485,6 +3018,7 @@ export default function SurveyPlan() {
         workflowMode && currentStep === 2 ? " is-preview-step" : ""
       }${workflowMode === "subdivision" ? " is-subdivision-flow" : ""}${
         workflowMode === "survey" ? " is-survey-flow" : ""
+      }${workflowMode === "georeference" ? " is-georeference-flow" : ""
       }`}
     >
       <Toaster position="top-right" />
@@ -2498,7 +3032,13 @@ export default function SurveyPlan() {
           Back
         </button>
         <h1 className="survey-title">
-          {workflowMode === "survey" ? "Survey Plan Production" : workflowMode === "subdivision" ? "Plot Subdivision" : "Survey Plan"}
+          {workflowMode === "survey"
+            ? "Survey Plan Production"
+            : workflowMode === "subdivision"
+              ? "Plot Subdivision"
+              : workflowMode === "georeference"
+                ? "Raster Georeferencing"
+                : "Survey Plan"}
         </h1>
         <button className="reset-btn" onClick={resetAll}>
           <svg viewBox="0 0 20 20" fill="currentColor">
@@ -2509,7 +3049,7 @@ export default function SurveyPlan() {
       </header>
 
       {/* Main Content */}
-      <div className="survey-content">
+      <div className="survey-content" ref={surveyContentRef}>
         {!workflowMode && (
           <div className="mode-select-shell">
             <div className="mode-select-head">
@@ -2569,6 +3109,30 @@ export default function SurveyPlan() {
                 <p>Split a mother parcel into multiple lots, preview lot outputs, then export batch survey plans.</p>
                 <span className="mode-card-cta">Open Workflow</span>
               </button>
+              <button
+                type="button"
+                className="mode-card"
+                onClick={() => {
+                  setWorkflowMode("georeference");
+                  setPreviewType("survey");
+                  setCurrentStep(1);
+                }}
+              >
+                <div className="mode-card-icon-wrap" aria-hidden="true">
+                  <div className="mode-card-icon-float">
+                    <svg className="mode-svg georeference" viewBox="0 0 120 120" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="18" y="20" width="84" height="64" rx="10" strokeWidth="4" />
+                      <path d="M34 36h52M34 50h32M34 64h22" strokeWidth="3.5" />
+                      <path d="M82 72l10 10" strokeWidth="4" />
+                      <circle cx="76" cy="66" r="14" strokeWidth="4" />
+                      <path d="M76 56v20M66 66h20" strokeWidth="3.5" />
+                    </svg>
+                  </div>
+                </div>
+                <h3>Raster Georeferencing</h3>
+                <p>Upload a scanned plan, match control points, digitize parcels, and carry the result into Survey Plan.</p>
+                <span className="mode-card-cta">Open Workflow</span>
+              </button>
             </div>
           </div>
         )}
@@ -2598,28 +3162,81 @@ export default function SurveyPlan() {
             />
           </Suspense>
         )}
+
+        {showTechnicalReportModal && (
+          <Suspense fallback={null}>
+            <TechnicalReportModal
+              isOpen={showTechnicalReportModal}
+              onClose={() => setShowTechnicalReportModal(false)}
+              initial={{
+                technical_report_instruments: meta.technical_report_instruments,
+                technical_report_dgps_type: meta.technical_report_dgps_type,
+                technical_report_num_surveyors: meta.technical_report_num_surveyors,
+                technical_report_num_technical_officers: meta.technical_report_num_technical_officers,
+                technical_report_num_labourers: meta.technical_report_num_labourers,
+                technical_report_recce_text: meta.technical_report_recce_text,
+                technical_report_demarcation_text: meta.technical_report_demarcation_text,
+                technical_report_computation_software_text: meta.technical_report_computation_software_text,
+                technical_report_plotting_software_text: meta.technical_report_plotting_software_text,
+                technical_report_general_observation_text: meta.technical_report_general_observation_text,
+              }}
+              controlPointName={meta.adamawa_control_point_name}
+              generating={generatingTechnicalReport}
+              onGenerate={downloadTechnicalReport}
+            />
+          </Suspense>
+        )}
         {/* Step 1: Coordinate Input */}
         {workflowMode && currentStep === 1 && (
           <Suspense fallback={<div className="preview-card">Loading survey draft workspace...</div>}>
-            <SurveyPlanStepOnePanel
-              sidebar={renderSidebarStepsCard()}
-              manualPoints={manualPoints}
-              onUpdatePoint={updatePoint}
-              onRemovePoint={removePoint}
-              onAddPoint={addPoint}
-              onBulkUpload={handleBulkUpload}
-              loading={loading}
-              coordinateSystem={coordinateSystem}
-              onCoordinateSystemChange={setCoordinateSystem}
-              hasValidCoords={hasValidCoords}
-              onContinue={continueWithLocalDraft}
-              workflowMode={workflowMode}
-              showDraftMap={showDraftMap}
-              onLoadMapNow={() => setForceShowDraftMap(true)}
-              mapCoordinates={mapCoordinates}
-              onCoordinatesDrawn={handleCoordinatesFromMap}
-              isLowBandwidth={isLowBandwidth}
-            />
+            {workflowMode === "georeference" ? (
+              <SurveyPlanGeoreferenceSetupStep
+                sidebar={renderSidebarStepsCard()}
+                session={georefSession}
+                rasterObjectUrl={georefRasterObjectUrl}
+                selectedControlPointId={georefSelectedControlPointId}
+                targetCoordinateSystem={georefTargetCoordinateSystem}
+                creatingSession={georefUploading || georefSessionLoading}
+                solving={georefSolving}
+                onCreateSession={handleCreateGeoreferenceSession}
+                onTargetCoordinateSystemChange={setGeorefTargetCoordinateSystem}
+                onSelectControlPoint={handleSelectGeoreferenceControlPoint}
+                onAddControlPoint={handleAddGeoreferenceControlPoint}
+                onRemoveControlPoint={handleRemoveGeoreferenceControlPoint}
+                onUpdateControlPoint={handleUpdateGeoreferenceControlPoint}
+                onAssignImagePoint={handleAssignGeoreferenceImagePoint}
+                onAssignMapPoint={handleAssignGeoreferenceMapPoint}
+                onSolve={handleSolveGeoreference}
+                onContinue={() => {
+                  if (!georefSession?.transform) {
+                    toast.error("Solve the georeference first before digitizing.");
+                    return;
+                  }
+                  goToStep(2);
+                }}
+                onDeleteSession={handleDeleteGeoreferenceSession}
+              />
+            ) : (
+              <SurveyPlanStepOnePanel
+                sidebar={renderSidebarStepsCard()}
+                manualPoints={manualPoints}
+                onUpdatePoint={updatePoint}
+                onRemovePoint={removePoint}
+                onAddPoint={addPoint}
+                onBulkUpload={handleBulkUpload}
+                loading={loading}
+                coordinateSystem={coordinateSystem}
+                onCoordinateSystemChange={setCoordinateSystem}
+                hasValidCoords={hasValidCoords}
+                onContinue={continueWithLocalDraft}
+                workflowMode={workflowMode}
+                showDraftMap={showDraftMap}
+                onLoadMapNow={() => setForceShowDraftMap(true)}
+                mapCoordinates={mapCoordinates}
+                onCoordinatesDrawn={handleCoordinatesFromMap}
+                isLowBandwidth={isLowBandwidth}
+              />
+            )}
           </Suspense>
         )}
 
@@ -2647,6 +3264,7 @@ export default function SurveyPlan() {
               orthophotoLoading={orthophotoLoading}
               topoMapLoading={topoMapLoading}
               serverSyncing={serverSyncing}
+              hasUnsyncedServerChanges={hasUnsyncedServerChanges}
               onOpenFeatureCadEditor={openFeatureCadEditor}
               onPrefetchFeatureEditor={prefetchFeatureEditor}
               plotId={plotId}
@@ -2673,6 +3291,43 @@ export default function SurveyPlan() {
           </Suspense>
         )}
 
+        {workflowMode === "georeference" && currentStep === 2 && georefSession?.transform && (
+          <Suspense fallback={<div className="preview-card">Loading georeference digitizing workspace...</div>}>
+            <SurveyPlanGeoreferenceWorkspaceStep
+              sidebar={renderSidebarStepsCard()}
+              session={georefSession}
+              rasterObjectUrl={georefRasterObjectUrl}
+              features={georefFeatures}
+              saving={georefSavingFeatures}
+              onFeaturesChange={setGeorefFeatures}
+              onSaveFeatures={handleSaveGeoreferenceFeatures}
+              onBack={() => goToStep(1)}
+              onContinue={() => {
+                if (!georefFeatures.length) {
+                  toast.error("Save at least one digitized feature first.");
+                  return;
+                }
+                goToStep(3);
+              }}
+            />
+          </Suspense>
+        )}
+
+        {workflowMode === "georeference" && currentStep === 2 && !georefSession?.transform && (
+          <div className="preview-card">
+            <h3>Digitizing workspace not ready yet</h3>
+            <p>
+              Solve the georeference transform first, or wait for the saved session to finish loading before
+              moving into digitizing.
+            </p>
+            <div className="preview-actions">
+              <button className="btn-outline" onClick={() => goToStep(1)}>
+                Back to Control Points
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Step 2: Subdivision Preview */}
         {workflowMode === "subdivision" && currentStep === 2 && (
           <Suspense fallback={<div className="preview-card">Loading subdivision workspace...</div>}>
@@ -2691,6 +3346,7 @@ export default function SurveyPlan() {
               orthophotoLoading={orthophotoLoading}
               topoMapLoading={topoMapLoading}
               serverSyncing={serverSyncing}
+              hasUnsyncedServerChanges={hasUnsyncedServerChanges}
               onOpenFeatureCadEditor={openFeatureCadEditor}
               isOnline={isOnline}
               plotId={plotId}
@@ -3021,6 +3677,31 @@ export default function SurveyPlan() {
                       )}
                     </button>
                   </div>
+
+                  {/* Technical Report (Word) — Adamawa OSG template only */}
+                  {meta.template_name === "adamawa_osg" && (
+                    <div className="export-card">
+                      <div className="export-icon calc">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path d="M7 21h10a2 2 0 002-2V9l-5-5H7a2 2 0 00-2 2v13a2 2 0 002 2z" />
+                          <path d="M14 4v5h5" />
+                          <path d="M9 13h6M9 17h4" />
+                        </svg>
+                      </div>
+                      <div className="export-info">
+                        <h4>Technical Report</h4>
+                        <p>Survey demarcation narrative report (Word)</p>
+                      </div>
+                      <button
+                        className="download-btn"
+                        disabled={Boolean(downloadLoadingKey) || generatingTechnicalReport}
+                        onClick={() => setShowTechnicalReportModal(true)}
+                      >
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                        <span>Download DOCX</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -3066,6 +3747,33 @@ export default function SurveyPlan() {
           </div>
         )}
 
+        {workflowMode === "georeference" && currentStep === 3 && georefSession && (
+          <Suspense fallback={<div className="preview-card">Loading georeference exports...</div>}>
+            <SurveyPlanGeoreferenceExportStep
+              sidebar={renderSidebarStepsCard()}
+              session={georefSession}
+              features={georefFeatures.length ? georefFeatures : georefSession.features}
+              downloadingCsv={georefDownloadingCsv}
+              continuing={georefContinuing}
+              onBack={() => goToStep(2)}
+              onDownloadCsv={handleDownloadGeoreferenceCsv}
+              onContinueToSurvey={handleContinueGeoreferenceToSurvey}
+            />
+          </Suspense>
+        )}
+
+        {workflowMode === "georeference" && currentStep === 3 && !georefSession && (
+          <div className="preview-card">
+            <h3>Georeference export session not available</h3>
+            <p>Reload the raster workspace first, then save the digitized output again before exporting.</p>
+            <div className="preview-actions">
+              <button className="btn-outline" onClick={() => goToStep(1)}>
+                Return to Setup
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Step 3: Batch Export (Subdivision) */}
         {workflowMode === "subdivision" && currentStep === 3 && (
           <Suspense fallback={<div className="preview-card">Loading subdivision export workspace...</div>}>
@@ -3101,6 +3809,14 @@ export default function SurveyPlan() {
           </Suspense>
         )}
       </div>
+      {showScrollHint && (
+        <div className="survey-scroll-hint" aria-hidden="true">
+          <span>Scroll for more</span>
+          <svg viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+          </svg>
+        </div>
+      )}
     </div>
   );
 }
