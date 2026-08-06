@@ -455,7 +455,20 @@ function SurveyPlanGeoreferenceSetupStep({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!mapReady || !map || !session?.overlay?.corners?.length || !overlayRasterUrl) return;
+    if (!mapReady || !map) return;
+    if (!session?.overlay?.corners?.length || !overlayRasterUrl) {
+      // The transform went stale (a control point was edited/added since the last solve) - drop
+      // the old raster image instead of leaving it on the map, where it would silently keep
+      // showing a footprint that no longer matches the current control points.
+      try {
+        if (map.getLayer("georef-raster-layer")) map.removeLayer("georef-raster-layer");
+        if (map.getSource("georef-raster")) map.removeSource("georef-raster");
+      } catch {
+        // no-op
+      }
+      pendingRasterRef.current = null;
+      return;
+    }
     const corners = session.overlay.corners;
     const currentRaster = pendingRasterRef.current;
     if (currentRaster && currentRaster !== overlayRasterUrl) {
