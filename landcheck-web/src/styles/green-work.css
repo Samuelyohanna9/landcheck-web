@@ -3471,6 +3471,10 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.work-actions button.green-work-verra-disclosure-btn {
+  background: linear-gradient(180deg, #b38a44, #8a6a2f);
+}
+
 .green-work-brand-preview {
   display: flex;
   align-items: center;

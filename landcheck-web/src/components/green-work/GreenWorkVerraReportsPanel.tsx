@@ -4,6 +4,7 @@ type GreenWorkVerraReportsPanelProps = {
   exportExistingTreesCsv: () => void | Promise<void>;
   workPartnerOrgPaused: boolean;
   exportExistingTreesPdf: () => void | Promise<void>;
+  exportSustainabilityDisclosurePdf: () => void | Promise<void>;
   includePhotosInExistingTreesPdf: boolean;
   setIncludePhotosInExistingTreesPdf: (value: boolean) => void;
   loadProjectData: (projectId: number) => void | Promise<void>;
@@ -29,6 +30,7 @@ export default function GreenWorkVerraReportsPanel({
   exportExistingTreesCsv,
   workPartnerOrgPaused,
   exportExistingTreesPdf,
+  exportSustainabilityDisclosurePdf,
   includePhotosInExistingTreesPdf,
   setIncludePhotosInExistingTreesPdf,
   loadProjectData,
@@ -75,6 +77,14 @@ export default function GreenWorkVerraReportsPanel({
               </label>
               <button
                 type="button"
+                className="green-work-verra-disclosure-btn"
+                onClick={() => void exportSustainabilityDisclosurePdf()}
+                title="IFRS S2 / GRI-mapped environmental data export, formatted for the client's own sustainability disclosure"
+              >
+                Export Sustainability Disclosure Data
+              </button>
+              <button
+                type="button"
                 onClick={() => void Promise.all([loadProjectData(activeProjectId), loadExistingTreeMetrics(activeProjectId)])}
               >
                 Refresh
@@ -86,6 +96,12 @@ export default function GreenWorkVerraReportsPanel({
             Client-ready CSR report download. The PDF now packages executive summary, programme scope,
             implementation footprint, field evidence coverage, field-team readiness, carbon impact, and the
             detailed implementation register.
+          </p>
+          <p className="green-work-chart-context">
+            <strong>Sustainability Disclosure Data</strong> is a separate export: the same verified figures,
+            relabeled against IFRS S2.29 climate-related metric categories and GRI 304/305, with an SRG1-mapped
+            governance section. It is evidence to support the client's own IFRS S1/S2 filing, not a report to
+            send to donors or the public.
           </p>
 
           <div className="green-work-live-summary">
