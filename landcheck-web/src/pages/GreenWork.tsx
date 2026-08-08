@@ -8401,6 +8401,15 @@ export default function GreenWork() {
     window.open(`${BACKEND_URL}/green/projects/${activeProjectId}/existing-trees/export/csv?${params.toString()}`, "_blank");
   };
 
+  const exportSustainabilityDisclosurePdf = () => {
+    if (!activeProjectId) return;
+    const params = new URLSearchParams({ _ts: String(Date.now()) });
+    window.open(
+      `${BACKEND_URL}/green/projects/${activeProjectId}/sustainability-disclosure/pdf?${params.toString()}`,
+      "_blank",
+    );
+  };
+
   const exportExistingTreesPdf = async () => {
     if (!activeProjectId) return;
     const loadingId = toast.loading(
@@ -17072,6 +17081,7 @@ export default function GreenWork() {
                 exportExistingTreesCsv={exportExistingTreesCsv}
                 workPartnerOrgPaused={workPartnerOrgPaused}
                 exportExistingTreesPdf={exportExistingTreesPdf}
+                exportSustainabilityDisclosurePdf={exportSustainabilityDisclosurePdf}
                 includePhotosInExistingTreesPdf={includePhotosInExistingTreesPdf}
                 setIncludePhotosInExistingTreesPdf={setIncludePhotosInExistingTreesPdf}
                 loadProjectData={loadProjectData}
