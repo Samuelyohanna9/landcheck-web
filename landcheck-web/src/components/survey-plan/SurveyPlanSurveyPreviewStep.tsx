@@ -83,10 +83,24 @@ type Props = {
   northArrowColor: NorthArrowColor;
   beaconStyle: BeaconStyle;
   roadWidth: RoadWidthOption;
+  boundaryColor: string;
+  gridColor: string;
+  textColor: string;
+  roadColor: string;
+  riverColor: string;
+  buildingColor: string;
+  buildingHatchType: string;
   onNorthArrowStyleChange: (value: string) => void;
   onNorthArrowColorChange: (value: string) => void;
   onBeaconStyleChange: (value: string) => void;
   onRoadWidthChange: (value: string) => void;
+  onBoundaryColorChange: (value: string) => void;
+  onGridColorChange: (value: string) => void;
+  onTextColorChange: (value: string) => void;
+  onRoadColorChange: (value: string) => void;
+  onRiverColorChange: (value: string) => void;
+  onBuildingColorChange: (value: string) => void;
+  onBuildingHatchTypeChange: (value: string) => void;
   surveyPreviewUrl: string | null;
   orthophotoPreviewUrl: string | null;
   topoMapPreviewUrl: string | null;
@@ -130,10 +144,24 @@ function SurveyPlanSurveyPreviewStep({
   northArrowColor,
   beaconStyle,
   roadWidth,
+  boundaryColor,
+  gridColor,
+  textColor,
+  roadColor,
+  riverColor,
+  buildingColor,
+  buildingHatchType,
   onNorthArrowStyleChange,
   onNorthArrowColorChange,
   onBeaconStyleChange,
   onRoadWidthChange,
+  onBoundaryColorChange,
+  onGridColorChange,
+  onTextColorChange,
+  onRoadColorChange,
+  onRiverColorChange,
+  onBuildingColorChange,
+  onBuildingHatchTypeChange,
   surveyPreviewUrl,
   orthophotoPreviewUrl,
   topoMapPreviewUrl,
@@ -442,10 +470,24 @@ function SurveyPlanSurveyPreviewStep({
           northArrowColor={northArrowColor}
           beaconStyle={beaconStyle}
           roadWidth={roadWidth}
+          boundaryColor={boundaryColor}
+          gridColor={gridColor}
+          textColor={textColor}
+          roadColor={roadColor}
+          riverColor={riverColor}
+          buildingColor={buildingColor}
+          buildingHatchType={buildingHatchType}
           onNorthArrowStyleChange={onNorthArrowStyleChange}
           onNorthArrowColorChange={onNorthArrowColorChange}
           onBeaconStyleChange={onBeaconStyleChange}
           onRoadWidthChange={onRoadWidthChange}
+          onBoundaryColorChange={onBoundaryColorChange}
+          onGridColorChange={onGridColorChange}
+          onTextColorChange={onTextColorChange}
+          onRoadColorChange={onRoadColorChange}
+          onRiverColorChange={onRiverColorChange}
+          onBuildingColorChange={onBuildingColorChange}
+          onBuildingHatchTypeChange={onBuildingHatchTypeChange}
           paperSize={meta.paper_size}
           surveyPreviewUrl={surveyPreviewUrl}
           orthophotoPreviewUrl={orthophotoPreviewUrl}

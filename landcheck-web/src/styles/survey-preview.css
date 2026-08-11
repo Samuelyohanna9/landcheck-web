@@ -78,6 +78,106 @@
   cursor: not-allowed;
 }
 
+.ribbon-group--colors {
+  gap: 0.28rem;
+}
+
+.color-swatch-picker {
+  position: relative;
+  display: inline-flex;
+}
+
+.ribbon-color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.ribbon-color-swatch:hover {
+  transform: scale(1.08);
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+.ribbon-color-swatch:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.color-palette-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.55rem;
+  min-width: 168px;
+  background: linear-gradient(135deg, #16213a, #101a2e);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.color-palette-popover-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #86efac;
+  font-weight: 700;
+}
+
+.color-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.3rem;
+}
+
+.color-palette-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.color-palette-swatch:hover {
+  transform: scale(1.1);
+}
+
+.color-palette-swatch.active {
+  border-color: #34d399;
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.4);
+}
+
+.color-palette-custom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: #e2e8f0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 0.45rem;
+}
+
+.color-palette-custom input[type="color"] {
+  width: 32px;
+  height: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 5px;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
 /* Preview Type Toggle */
 .preview-toggle {
   display: flex;

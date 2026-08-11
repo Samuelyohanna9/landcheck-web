@@ -165,10 +165,24 @@ type Props = {
   northArrowColor: NorthArrowColor;
   beaconStyle: BeaconStyle;
   roadWidth: RoadWidthOption;
+  boundaryColor: string;
+  gridColor: string;
+  textColor: string;
+  roadColor: string;
+  riverColor: string;
+  buildingColor: string;
+  buildingHatchType: string;
   onNorthArrowStyleChange: (value: string) => void;
   onNorthArrowColorChange: (value: string) => void;
   onBeaconStyleChange: (value: string) => void;
   onRoadWidthChange: (value: string) => void;
+  onBoundaryColorChange: (value: string) => void;
+  onGridColorChange: (value: string) => void;
+  onTextColorChange: (value: string) => void;
+  onRoadColorChange: (value: string) => void;
+  onRiverColorChange: (value: string) => void;
+  onBuildingColorChange: (value: string) => void;
+  onBuildingHatchTypeChange: (value: string) => void;
   surveyPreviewUrl: string | null;
   orthophotoPreviewUrl: string | null;
   topoMapPreviewUrl: string | null;
@@ -775,10 +789,24 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                 northArrowColor={props.northArrowColor}
                 beaconStyle={props.beaconStyle}
                 roadWidth={props.roadWidth}
+                boundaryColor={props.boundaryColor}
+                gridColor={props.gridColor}
+                textColor={props.textColor}
+                roadColor={props.roadColor}
+                riverColor={props.riverColor}
+                buildingColor={props.buildingColor}
+                buildingHatchType={props.buildingHatchType}
                 onNorthArrowStyleChange={props.onNorthArrowStyleChange}
                 onNorthArrowColorChange={props.onNorthArrowColorChange}
                 onBeaconStyleChange={props.onBeaconStyleChange}
                 onRoadWidthChange={props.onRoadWidthChange}
+                onBoundaryColorChange={props.onBoundaryColorChange}
+                onGridColorChange={props.onGridColorChange}
+                onTextColorChange={props.onTextColorChange}
+                onRoadColorChange={props.onRoadColorChange}
+                onRiverColorChange={props.onRiverColorChange}
+                onBuildingColorChange={props.onBuildingColorChange}
+                onBuildingHatchTypeChange={props.onBuildingHatchTypeChange}
                 paperSize={props.meta.paper_size}
                 surveyPreviewUrl={props.surveyPreviewUrl}
                 orthophotoPreviewUrl={props.orthophotoPreviewUrl}

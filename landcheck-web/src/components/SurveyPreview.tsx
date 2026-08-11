@@ -1,4 +1,5 @@
 import { memo, useState, useRef, useEffect } from "react";
+import ColorSwatchPicker from "./ColorSwatchPicker";
 import "../styles/survey-preview.css";
 
 type PreviewType = "survey" | "orthophoto" | "topomap";
@@ -13,10 +14,24 @@ type Props = {
   northArrowColor: string;
   beaconStyle: string;
   roadWidth: string;
+  boundaryColor: string;
+  gridColor: string;
+  textColor: string;
+  roadColor: string;
+  riverColor: string;
+  buildingColor: string;
+  buildingHatchType: string;
   onNorthArrowStyleChange: (value: string) => void;
   onNorthArrowColorChange: (value: string) => void;
   onBeaconStyleChange: (value: string) => void;
   onRoadWidthChange: (value: string) => void;
+  onBoundaryColorChange: (value: string) => void;
+  onGridColorChange: (value: string) => void;
+  onTextColorChange: (value: string) => void;
+  onRoadColorChange: (value: string) => void;
+  onRiverColorChange: (value: string) => void;
+  onBuildingColorChange: (value: string) => void;
+  onBuildingHatchTypeChange: (value: string) => void;
   paperSize: string;
   surveyPreviewUrl: string | null;
   orthophotoPreviewUrl: string | null;
@@ -37,10 +52,24 @@ function SurveyPreview({
   northArrowColor,
   beaconStyle,
   roadWidth,
+  boundaryColor,
+  gridColor,
+  textColor,
+  roadColor,
+  riverColor,
+  buildingColor,
+  buildingHatchType,
   onNorthArrowStyleChange,
   onNorthArrowColorChange,
   onBeaconStyleChange,
   onRoadWidthChange,
+  onBoundaryColorChange,
+  onGridColorChange,
+  onTextColorChange,
+  onRoadColorChange,
+  onRiverColorChange,
+  onBuildingColorChange,
+  onBuildingHatchTypeChange,
   paperSize,
   surveyPreviewUrl,
   orthophotoPreviewUrl,
@@ -220,6 +249,33 @@ function SurveyPreview({
             <option value="15">15</option>
             <option value="20">20</option>
             <option value="30">30</option>
+          </select>
+        </div>
+        <div className="ribbon-group ribbon-group--colors">
+          <span className="ribbon-label">Colors</span>
+          <ColorSwatchPicker label="Boundary" value={boundaryColor} onChange={onBoundaryColorChange} />
+          <ColorSwatchPicker label="Grid" value={gridColor} onChange={onGridColorChange} />
+          <ColorSwatchPicker label="Text" value={textColor} onChange={onTextColorChange} />
+          <ColorSwatchPicker
+            label="Roads"
+            value={roadColor}
+            onChange={onRoadColorChange}
+            disabled={previewType !== "survey"}
+          />
+          <ColorSwatchPicker label="Rivers" value={riverColor} onChange={onRiverColorChange} />
+          <ColorSwatchPicker label="Building" value={buildingColor} onChange={onBuildingColorChange} />
+        </div>
+        <div className="ribbon-group">
+          <span className="ribbon-label">Building Hatch</span>
+          <select
+            className="ribbon-select"
+            value={buildingHatchType}
+            onChange={(e) => onBuildingHatchTypeChange(e.target.value)}
+          >
+            <option value="horizontal">Horizontal</option>
+            <option value="vertical">Vertical</option>
+            <option value="diagonal">Diagonal</option>
+            <option value="cross">Cross-hatch</option>
           </select>
         </div>
       </div>
