@@ -1161,15 +1161,15 @@
 }
 
 .georef-stage-vertex {
-  fill: #f8fafc;
-  stroke: rgba(5, 46, 22, 0.85);
-  stroke-width: 0.18;
+  fill: #ef4444;
+  stroke: #ffffff;
+  stroke-width: 0.12;
 }
 
 .georef-stage-point {
-  fill: #f8fafc;
-  stroke: rgba(15, 23, 42, 0.98);
-  stroke-width: 0.3;
+  fill: #ef4444;
+  stroke: #ffffff;
+  stroke-width: 0.16;
 }
 
 .georef-stage-shape.active .georef-stage-polygon-fill {
@@ -1240,22 +1240,18 @@
 
 .georef-image-marker-dot {
   display: inline-flex;
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
   border-radius: 999px;
-  background: rgba(248, 250, 252, 0.96);
-  border: 2px solid rgba(15, 23, 42, 0.96);
-  box-shadow:
-    0 0 0 2px rgba(248, 250, 252, 0.18),
-    0 0 0 4px rgba(15, 23, 42, 0.24);
+  background: #ef4444;
+  border: 1px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(2, 6, 23, 0.5);
 }
 
 .georef-image-marker.active .georef-image-marker-dot {
-  background: rgba(253, 224, 71, 0.98);
-  border-color: rgba(120, 53, 15, 0.98);
-  box-shadow:
-    0 0 0 2px rgba(253, 224, 71, 0.24),
-    0 0 0 5px rgba(245, 158, 11, 0.18);
+  background: #facc15;
+  border-color: #052e16;
+  box-shadow: 0 0 0 1px rgba(2, 6, 23, 0.5);
 }
 
 .georef-image-marker-hover {

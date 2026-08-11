@@ -415,10 +415,10 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           type: "circle",
           source: "georef-points",
           paint: {
-            "circle-radius": ["case", ["==", ["get", "draft"], 1], 8, 7],
-            "circle-color": "rgba(15, 23, 42, 0.72)",
-            "circle-stroke-width": 1.6,
-            "circle-stroke-color": "rgba(226, 232, 240, 0.9)",
+            "circle-radius": ["case", ["==", ["get", "draft"], 1], 4, 3.5],
+            "circle-color": "rgba(15, 23, 42, 0.35)",
+            "circle-stroke-width": 1,
+            "circle-stroke-color": "rgba(226, 232, 240, 0.6)",
           },
         });
         map.addLayer({
@@ -426,10 +426,10 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           type: "circle",
           source: "georef-points",
           paint: {
-            "circle-radius": ["case", ["==", ["get", "draft"], 1], 2.9, 2.4],
-            "circle-color": ["case", ["==", ["get", "draft"], 1], "#f59e0b", "#f8fafc"],
-            "circle-stroke-width": 0.8,
-            "circle-stroke-color": ["case", ["==", ["get", "draft"], 1], "#7c2d12", "#0f172a"],
+            "circle-radius": ["case", ["==", ["get", "draft"], 1], 1.9, 1.6],
+            "circle-color": ["case", ["==", ["get", "draft"], 1], "#facc15", "#ef4444"],
+            "circle-stroke-width": 0.6,
+            "circle-stroke-color": "#ffffff",
           },
         });
         if (session.overlay?.corners?.[0] && session.overlay?.corners?.[2]) {
@@ -959,7 +959,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                               <polygon className="georef-stage-polygon-fill" points={feature.pathPoints} />
                               <polyline className="georef-stage-polygon-line" points={`${feature.pathPoints} ${feature.points[0]?.leftPercent},${feature.points[0]?.topPercent}`} />
                               {feature.points.map((point) => (
-                                <circle key={`${feature.id}-vertex-${point.index}`} className="georef-stage-vertex" cx={point.leftPercent} cy={point.topPercent} r={0.95} />
+                                <circle key={`${feature.id}-vertex-${point.index}`} className="georef-stage-vertex" cx={point.leftPercent} cy={point.topPercent} r={0.45} />
                               ))}
                             </g>
                           );
@@ -969,14 +969,14 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                             <g key={feature.id} className={`georef-stage-shape${isActive ? " active" : ""}`}>
                               <polyline className="georef-stage-line" points={feature.pathPoints} />
                               {feature.points.map((point) => (
-                                <circle key={`${feature.id}-vertex-${point.index}`} className="georef-stage-vertex" cx={point.leftPercent} cy={point.topPercent} r={0.95} />
+                                <circle key={`${feature.id}-vertex-${point.index}`} className="georef-stage-vertex" cx={point.leftPercent} cy={point.topPercent} r={0.45} />
                               ))}
                             </g>
                           );
                         }
                         return (
                           <g key={feature.id} className={`georef-stage-shape${isActive ? " active" : ""}`}>
-                            <circle className="georef-stage-point" cx={feature.points[0]?.leftPercent} cy={feature.points[0]?.topPercent} r={1.18} />
+                            <circle className="georef-stage-point" cx={feature.points[0]?.leftPercent} cy={feature.points[0]?.topPercent} r={0.55} />
                           </g>
                         );
                       })}
