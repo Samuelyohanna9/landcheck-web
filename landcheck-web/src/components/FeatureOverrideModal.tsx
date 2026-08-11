@@ -605,19 +605,23 @@ const buildPlottingViewport = (params: {
   const innerWidth = viewportWidth - PLOTTING_VIEWPORT_PADDING * 2;
   const innerHeight = viewportHeight - PLOTTING_VIEWPORT_PADDING * 2;
   const scale = Math.min(innerWidth / Math.max(maxX - minX, 1), innerHeight / Math.max(maxY - minY, 1));
+  const fittedWidth = Math.max((maxX - minX) * scale, 0);
+  const fittedHeight = Math.max((maxY - minY) * scale, 0);
+  const originX = PLOTTING_VIEWPORT_PADDING + Math.max((innerWidth - fittedWidth) / 2, 0);
+  const originY = PLOTTING_VIEWPORT_PADDING + Math.max((innerHeight - fittedHeight) / 2, 0);
 
   const project = (coord: number[]) => {
     const x = toRadians(coord[0] - referenceLng) * EARTH_RADIUS_M * cosLat;
     const y = toRadians(coord[1] - referenceLat) * EARTH_RADIUS_M;
     return {
-      x: PLOTTING_VIEWPORT_PADDING + (x - minX) * scale,
-      y: viewportHeight - PLOTTING_VIEWPORT_PADDING - (y - minY) * scale,
+      x: originX + (x - minX) * scale,
+      y: viewportHeight - originY - (y - minY) * scale,
     };
   };
 
   const unproject = (point: { x: number; y: number }) => {
-    const xMeters = minX + (point.x - PLOTTING_VIEWPORT_PADDING) / scale;
-    const yMeters = minY + (viewportHeight - PLOTTING_VIEWPORT_PADDING - point.y) / scale;
+    const xMeters = minX + (point.x - originX) / scale;
+    const yMeters = minY + (viewportHeight - originY - point.y) / scale;
     return [
       referenceLng + (xMeters / (EARTH_RADIUS_M * cosLat)) * (180 / Math.PI),
       referenceLat + (yMeters / EARTH_RADIUS_M) * (180 / Math.PI),
@@ -632,6 +636,8 @@ const buildPlottingViewport = (params: {
     minY,
     maxY,
     scale,
+    originX,
+    originY,
     project,
     unproject,
     gridStepMeters: chooseCadGridStepMeters(Math.max(maxX - minX, maxY - minY)),
@@ -2971,13 +2977,13 @@ export default function FeatureOverrideModal({
     let index = 0;
     const startX = Math.floor(plottingViewport.minX / plottingViewport.gridStepMeters) * plottingViewport.gridStepMeters;
     for (let x = startX; x <= plottingViewport.maxX + plottingViewport.gridStepMeters; x += plottingViewport.gridStepMeters) {
-      const screenX = PLOTTING_VIEWPORT_PADDING + (x - plottingViewport.minX) * plottingViewport.scale;
+      const screenX = plottingViewport.originX + (x - plottingViewport.minX) * plottingViewport.scale;
       lines.push({
         key: `x-${x}`,
         x1: screenX,
-        y1: PLOTTING_VIEWPORT_PADDING / 2,
+        y1: Math.max(plottingViewport.originY - PLOTTING_VIEWPORT_PADDING / 2, 0),
         x2: screenX,
-        y2: plottingViewport.height - PLOTTING_VIEWPORT_PADDING / 2,
+        y2: Math.min(plottingViewport.height - plottingViewport.originY + PLOTTING_VIEWPORT_PADDING / 2, plottingViewport.height),
         major: index % majorEvery === 0,
       });
       index += 1;
@@ -2985,12 +2991,12 @@ export default function FeatureOverrideModal({
     index = 0;
     const startY = Math.floor(plottingViewport.minY / plottingViewport.gridStepMeters) * plottingViewport.gridStepMeters;
     for (let y = startY; y <= plottingViewport.maxY + plottingViewport.gridStepMeters; y += plottingViewport.gridStepMeters) {
-      const screenY = plottingViewport.height - PLOTTING_VIEWPORT_PADDING - (y - plottingViewport.minY) * plottingViewport.scale;
+      const screenY = plottingViewport.height - plottingViewport.originY - (y - plottingViewport.minY) * plottingViewport.scale;
       lines.push({
         key: `y-${y}`,
-        x1: PLOTTING_VIEWPORT_PADDING / 2,
+        x1: Math.max(plottingViewport.originX - PLOTTING_VIEWPORT_PADDING / 2, 0),
         y1: screenY,
-        x2: plottingViewport.width - PLOTTING_VIEWPORT_PADDING / 2,
+        x2: Math.min(plottingViewport.width - plottingViewport.originX + PLOTTING_VIEWPORT_PADDING / 2, plottingViewport.width),
         y2: screenY,
         major: index % majorEvery === 0,
       });
