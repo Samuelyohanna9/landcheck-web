@@ -79,11 +79,11 @@ function SurveyPlanStepOnePanel({
             {loading ? (
               <>
                 <span className="spinner" />
-                Preparing Draft...
+                  Opening Draft...
               </>
             ) : (
               <>
-                {workflowMode === "subdivision" ? "Continue with Local Mother Parcel Draft" : "Continue with Local Draft"}
+                  {workflowMode === "subdivision" ? "Open Mother Parcel Draft" : "Open Local Draft"}
                 <svg viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fillRule="evenodd"
@@ -107,12 +107,9 @@ function SurveyPlanStepOnePanel({
             />
           </Suspense>
         ) : (
-          <div className="preview-card">
-            <h3>Map preview ready</h3>
-            <p>
-              We are keeping the first step lighter for slower networks. Load the draft map only when you need to inspect
-              or adjust the boundary visually.
-            </p>
+            <div className="preview-card">
+              <h3>Draft map on demand</h3>
+              <p>Keep this first step light on slower networks and open the map only when you need it.</p>
             <button
               className="btn-outline"
               type="button"
@@ -121,7 +118,7 @@ function SurveyPlanStepOnePanel({
               onFocus={warmDraftMapTools}
               onTouchStart={warmDraftMapTools}
             >
-              Load Map Now
+                Load Draft Map
             </button>
             <label className="low-bandwidth-toggle">
               <input
@@ -129,9 +126,9 @@ function SurveyPlanStepOnePanel({
                 checked={manualLowBandwidth}
                 onChange={(event) => onManualLowBandwidthChange(event.target.checked)}
               />
-              I&apos;m on slow data - keep maps off until I ask for them
-            </label>
-          </div>
+               Slow connection - keep the map off until I ask for it
+              </label>
+            </div>
         )}
       </div>
     </div>

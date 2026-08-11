@@ -165,10 +165,10 @@ function CoordinateInput({
 
   return (
     <div className="coord-input-container">
-      <div className="coord-header">
-        <h3 className="coord-title">Plot Coordinates</h3>
-        <p className="coord-subtitle">Enter at least 3 boundary points or upload a file</p>
-      </div>
+        <div className="coord-header">
+          <h3 className="coord-title">Boundary Coordinates</h3>
+          <p className="coord-subtitle">Add the parcel points directly or import a prepared sheet.</p>
+        </div>
 
       {/* Coordinate System Selector */}
       <div className="coord-system-selector">
@@ -205,12 +205,10 @@ function CoordinateInput({
           <svg viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
           </svg>
-          {uploadParsing ? "Processing file..." : "Upload CSV/Excel"}
+          {uploadParsing ? "Processing file..." : "Import Sheet"}
         </label>
-        <span className="upload-hint">
-          Format: Station, Easting, Northing (or just Easting, Northing)
-        </span>
-      </div>
+          <span className="upload-hint">CSV or Excel · station, easting, northing</span>
+        </div>
 
       <div className="coord-list-wrapper">
         {points.map((point, index) => (

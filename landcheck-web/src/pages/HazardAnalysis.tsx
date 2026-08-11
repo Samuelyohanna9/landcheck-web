@@ -37,6 +37,10 @@ type FloodResult = {
   legend: LegendItem[];
   return_period: number;
   data_available?: boolean;
+  local_elevation_used?: boolean;
+  relative_elevation_m?: number | null;
+  buildings_total?: number;
+  buildings_threatened?: number;
 };
 
 type ErosionResult = {
@@ -56,6 +60,9 @@ type ErosionResult = {
   method: string;
   legend: LegendItem[];
   data_available?: boolean;
+  slope_source?: "local_survey" | "global_dem" | "unavailable";
+  buildings_total?: number;
+  buildings_threatened?: number;
 };
 
 const riskChipClass = (riskClass: string) => {
@@ -167,6 +174,23 @@ export default function HazardAnalysis() {
     });
   }, [manualPoints, coordinateSystem]);
 
+  // Local elevation points from a CSV upload with a height/elevation column (same upload flow
+  // CoordinateInput already supports) - when present, erosion recomputes slope directly from
+  // these instead of the global 30m DEM, and flood surfaces a relative-elevation data point.
+  const localElevationPoints = useMemo(() => {
+    const withHeight = manualPoints.filter(
+      (p) => (p.lng !== 0 || p.lat !== 0) && p.height !== undefined && p.height !== null && Number.isFinite(Number(p.height)),
+    );
+    if (withHeight.length < 3) return [];
+    return withHeight.map((p) => {
+      if (coordinateSystem === "wgs84") {
+        return { lng: Number(p.lng), lat: Number(p.lat), elevation_m: Number(p.height) };
+      }
+      const [lng, lat] = toWGS84(Number(p.lng), Number(p.lat), coordinateSystem);
+      return { lng, lat, elevation_m: Number(p.height) };
+    });
+  }, [manualPoints, coordinateSystem]);
+
   const runAnalysis = async () => {
     if (!finalCoords) {
       toast.error("Enter at least 3 valid coordinate points");
@@ -180,6 +204,7 @@ export default function HazardAnalysis() {
           geometry: boundary,
           show_raster: showRaster,
           return_period: returnPeriod,
+          local_elevation_points: localElevationPoints,
         });
         setFloodResult(res.data);
         toast.success("Flood risk analysis complete");
@@ -187,6 +212,7 @@ export default function HazardAnalysis() {
         const res = await api.post("/hazards/erosion/preview", {
           geometry: boundary,
           show_raster: showRaster,
+          local_elevation_points: localElevationPoints,
         });
         setErosionResult(res.data);
         toast.success("Erosion risk analysis complete");
@@ -207,8 +233,8 @@ export default function HazardAnalysis() {
       const endpoint = hazardType === "flood" ? "/hazards/flood/pdf" : "/hazards/erosion/pdf";
       const body =
         hazardType === "flood"
-          ? { geometry: boundary, show_raster: showRaster, return_period: returnPeriod }
-          : { geometry: boundary, show_raster: showRaster };
+          ? { geometry: boundary, show_raster: showRaster, return_period: returnPeriod, local_elevation_points: localElevationPoints }
+          : { geometry: boundary, show_raster: showRaster, local_elevation_points: localElevationPoints };
       const res = await api.post(endpoint, body, { responseType: "blob" });
       const blob = new Blob([res.data], { type: res.headers["content-type"] });
       const url = URL.createObjectURL(blob);
@@ -288,6 +314,12 @@ export default function HazardAnalysis() {
               coordinateSystem={coordinateSystem}
               onCoordinateSystemChange={setCoordinateSystem}
             />
+            {localElevationPoints.length > 0 && (
+              <p className="hazard-elevation-hint">
+                {localElevationPoints.length} surveyed elevation points detected — will be used for{" "}
+                {hazardType === "erosion" ? "local slope calculation" : "a site elevation comparison"} instead of global data only.
+              </p>
+            )}
           </div>
 
           <div className="hazard-actions">
@@ -330,6 +362,12 @@ export default function HazardAnalysis() {
                 </div>
                 <span className={`risk-chip ${riskChipClass(floodResult.risk_class)}`}>{floodResult.risk_class}</span>
               </div>
+              {!!floodResult.buildings_total && (
+                <div className="hazard-buildings-callout">
+                  <strong>{floodResult.buildings_threatened}</strong> of <strong>{floodResult.buildings_total}</strong> buildings
+                  {" "}sit in the flood zone
+                </div>
+              )}
               <div className="risk-stat-grid">
                 <div className="risk-stat-card">
                   <strong>{floodResult.mean_depth_m}</strong>
@@ -360,6 +398,15 @@ export default function HazardAnalysis() {
                   No flood depth data was found for this plot at the selected return period.
                 </p>
               )}
+              {floodResult.local_elevation_used && floodResult.relative_elevation_m != null && (
+                <p className="hazard-insight">
+                  Site elevation note: your surveyed points average{" "}
+                  {Math.abs(floodResult.relative_elevation_m).toFixed(1)} m{" "}
+                  {floodResult.relative_elevation_m < -0.3 ? "below" : floodResult.relative_elevation_m > 0.3 ? "above" : "close to"}{" "}
+                  the surrounding terrain
+                  {floodResult.relative_elevation_m < -0.3 ? " — low-lying sites are more prone to ponding and slow drainage." : "."}
+                </p>
+              )}
               <div className="hazard-method">
                 <h4>How this is computed</h4>
                 <p>{floodResult.method}</p>
@@ -383,6 +430,12 @@ export default function HazardAnalysis() {
                 </div>
                 <span className={`risk-chip ${riskChipClass(erosionResult.risk_class)}`}>{erosionResult.risk_class}</span>
               </div>
+              {!!erosionResult.buildings_total && (
+                <div className="hazard-buildings-callout">
+                  <strong>{erosionResult.buildings_threatened}</strong> of <strong>{erosionResult.buildings_total}</strong> buildings
+                  {" "}sit on erosion-prone slopes
+                </div>
+              )}
               <div className="risk-stat-grid">
                 <div className="risk-stat-card">
                   <strong>{erosionResult.mean_slope_deg}°</strong>
@@ -408,6 +461,16 @@ export default function HazardAnalysis() {
                 </>
               )}
               <p className="hazard-note">{erosionResult.note}</p>
+              {erosionResult.slope_source === "local_survey" && (
+                <p className="hazard-insight">
+                  Slope computed from your uploaded survey points — a more accurate local measurement than the global elevation model.
+                </p>
+              )}
+              {erosionResult.slope_source === "global_dem" && (
+                <p className="hazard-insight hazard-insight--muted">
+                  Slope estimated from a global 30m elevation model. Upload your own surveyed elevation points (with a height column) for a more precise measurement.
+                </p>
+              )}
               {erosionResult.data_available === false && (
                 <p className="hazard-warning">
                   No elevation data was found for this location.
@@ -437,19 +500,8 @@ export default function HazardAnalysis() {
             {result?.overlay ? (
               <>
                 <img src={result.overlay} alt={`${hazardType} risk overlay`} width="600" height="600" loading="lazy" decoding="async" />
-                <div className="hazard-north" aria-hidden="true">
-                  <div className="north-arrow" />
-                  <span>N</span>
-                </div>
-                <div className="hazard-legend">
-                  <div className="legend-title">Legend</div>
-                  {result.legend?.map((item, index) => (
-                    <div key={`${item.label}-${index}`} className="legend-row">
-                      <span className="legend-swatch" style={{ background: item.color }} />
-                      <span>{item.label}</span>
-                    </div>
-                  ))}
-                </div>
+                {/* Both hazard maps now bake their own legend, scale bar, and north arrow into
+                    the rendered image, so the separate CSS/JSON-driven ones are no longer shown. */}
                 <div className="hazard-buffer">Buffer: {result.buffer_m} m</div>
               </>
             ) : (

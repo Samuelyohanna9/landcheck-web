@@ -3630,20 +3630,32 @@ export default function SurveyPlan() {
       </header>
 
       {/* Main Content */}
-      <div className="survey-content" ref={surveyContentRef}>
-        {showDraftRecoveryBanner && restoredDraftUpdatedAt && workflowMode && (
-          <div className={`survey-sync-banner survey-draft-banner${!isOnline ? " offline" : ""}`}>
-            <div className="survey-sync-banner-copy">
-              <strong>Saved draft restored</strong>
-              <span>
-                Continuing your {workflowMode === "survey" ? "survey plan" : workflowMode === "subdivision" ? "subdivision" : "georeference"} draft at
-                {" "}
-                {currentStepTitle}. Saved on this device {formatDraftUpdatedAt(restoredDraftUpdatedAt)}. Use
-                {" "}
-                <strong>Start New Plan</strong> when you want to begin another job.
-              </span>
+        <div className="survey-content" ref={surveyContentRef}>
+          {!draftHydrated ? (
+            <div className="survey-restore-shell" role="status" aria-live="polite">
+              <div className="survey-restore-card">
+                <span className="survey-restore-kicker">Restoring local draft</span>
+                <h2 className="survey-restore-title">Opening your last Survey Plan workspace</h2>
+                <p className="survey-restore-copy">
+                  Loading the saved drafting state for this browser so you can continue from the same step.
+                </p>
+              </div>
             </div>
-            <div className="survey-sync-banner-actions">
+          ) : (
+            <>
+          {showDraftRecoveryBanner && restoredDraftUpdatedAt && workflowMode && (
+            <div className={`survey-sync-banner survey-draft-banner${!isOnline ? " offline" : ""}`}>
+              <div className="survey-sync-banner-copy">
+                <strong>Draft restored</strong>
+                <span>
+                  Continuing your {workflowMode === "survey" ? "survey plan" : workflowMode === "subdivision" ? "subdivision" : "georeference"} draft at
+                  {" "}
+                  {currentStepTitle}. Saved on this device {formatDraftUpdatedAt(restoredDraftUpdatedAt)}. Use
+                  {" "}
+                  <strong>Start New Plan</strong> only when you want to begin another job.
+                </span>
+              </div>
+              <div className="survey-sync-banner-actions">
               <button type="button" className="draft-banner-btn draft-banner-btn--ghost" onClick={() => setShowDraftRecoveryBanner(false)}>
                 Dismiss
               </button>
@@ -3652,15 +3664,15 @@ export default function SurveyPlan() {
               </button>
             </div>
           </div>
-        )}
-        {!workflowMode && (
-          <div className="mode-select-shell">
-            <div className="mode-select-head">
-              <span className="mode-select-kicker">Drafting workspace</span>
-              <h2>Choose the production route for this session</h2>
-              <p>Each route keeps the same LandCheck drafting engine but opens a different output workflow.</p>
-            </div>
-            <div className="mode-card-grid">
+          )}
+          {!workflowMode && (
+            <div className="mode-select-shell">
+              <div className="mode-select-head">
+                <span className="mode-select-kicker">Survey plan suite</span>
+                <h2>Choose the route for this job</h2>
+                <p>Three focused workflows cover direct drafting, subdivision, and scanned-plan recovery.</p>
+              </div>
+              <div className="mode-card-grid">
               <button
                 type="button"
                 className="mode-card"
@@ -3670,6 +3682,8 @@ export default function SurveyPlan() {
                   setCurrentStep(1);
                 }}
               >
+                <div className="mode-card-top">
+                  <span className="mode-card-route">Survey workflow</span>
                 <div className="mode-card-icon-wrap" aria-hidden="true">
                   <div className="mode-card-icon-float">
                     <svg className="mode-svg survey" viewBox="0 0 120 120" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
@@ -3684,10 +3698,15 @@ export default function SurveyPlan() {
                     </svg>
                   </div>
                 </div>
-                <h3>Survey Plan Production</h3>
-                <p>Prepare a single parcel sheet, inspect the layout live, and export the full package.</p>
-                <span className="mode-card-cta">Open survey workflow</span>
-              </button>
+                </div>
+                  <h3>Survey Plan</h3>
+                  <p>Draft one parcel, review the sheet, and export the final plan package.</p>
+                  <div className="mode-card-meta">
+                    <span className="mode-card-pill">Single parcel</span>
+                    <span className="mode-card-pill">PDF + CAD</span>
+                  </div>
+                  <span className="mode-card-cta">Open route</span>
+                </button>
               <button
                 type="button"
                 className="mode-card"
@@ -3698,6 +3717,8 @@ export default function SurveyPlan() {
                   setCurrentStep(1);
                 }}
               >
+                <div className="mode-card-top">
+                  <span className="mode-card-route">Subdivision workflow</span>
                 <div className="mode-card-icon-wrap" aria-hidden="true">
                   <div className="mode-card-icon-float">
                     <svg className="mode-svg subdivision" viewBox="0 0 120 120" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
@@ -3709,10 +3730,15 @@ export default function SurveyPlan() {
                     </svg>
                   </div>
                 </div>
-                <h3>Plot Subdivision</h3>
-                <p>Split a parent parcel into multiple lots, review the result, and export batch-ready sheets.</p>
-                <span className="mode-card-cta">Open subdivision workflow</span>
-              </button>
+                </div>
+                  <h3>Plot Subdivision</h3>
+                  <p>Split a mother parcel into ready-to-issue lots with review and export controls.</p>
+                  <div className="mode-card-meta">
+                    <span className="mode-card-pill">Lot layouts</span>
+                    <span className="mode-card-pill">Batch exports</span>
+                  </div>
+                  <span className="mode-card-cta">Open route</span>
+                </button>
               <button
                 type="button"
                 className="mode-card"
@@ -3722,6 +3748,8 @@ export default function SurveyPlan() {
                   setCurrentStep(1);
                 }}
               >
+                <div className="mode-card-top">
+                  <span className="mode-card-route">Georeference workflow</span>
                 <div className="mode-card-icon-wrap" aria-hidden="true">
                   <div className="mode-card-icon-float">
                     <svg className="mode-svg georeference" viewBox="0 0 120 120" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
@@ -3733,13 +3761,18 @@ export default function SurveyPlan() {
                     </svg>
                   </div>
                 </div>
-                <h3>Raster Georeferencing</h3>
-                <p>Anchor a scanned plan to real coordinates, digitize features, and continue into Survey Plan.</p>
-                <span className="mode-card-cta">Open georeference workflow</span>
-              </button>
+                </div>
+                  <h3>Raster Georeferencing</h3>
+                  <p>Anchor a scanned plan to real coordinates, digitize it, and continue into drafting.</p>
+                  <div className="mode-card-meta">
+                    <span className="mode-card-pill">Control points</span>
+                    <span className="mode-card-pill">DGPS CSV</span>
+                  </div>
+                  <span className="mode-card-cta">Open route</span>
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {workflowMode && showFeatureEditor && (
           <Suspense fallback={null}>
@@ -3763,9 +3796,11 @@ export default function SurveyPlan() {
               northArrowColor={northArrowColor}
               coordinateSystem={coordinateSystem}
               onBoundaryPointChange={handleBoundaryPointChange}
-            />
-          </Suspense>
-        )}
+              />
+            </Suspense>
+          )}
+            </>
+          )}
 
         {showTechnicalReportModal && (
           <Suspense fallback={null}>

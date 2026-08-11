@@ -663,11 +663,11 @@ function SurveyPlanGeoreferenceSetupStep({
         {sidebar}
         <section className="georef-control-card">
           <div className="georef-control-head">
-            <div>
-              <span className="georef-kicker">Georeference Workspace</span>
-              <h3>Calibrate a scanned image against real coordinates</h3>
-              <p>Upload a survey scan, place matching control points on the image and map, then anchor it for digitizing.</p>
-            </div>
+              <div>
+                <span className="georef-kicker">Georeference Workspace</span>
+                <h3>Anchor a scanned plan to site coordinates</h3>
+                <p>Upload the scan, match the control points, then lock it in for digitizing.</p>
+              </div>
             {session ? (
               <button type="button" className="btn-outline georef-delete-btn" onClick={onDeleteSession}>
                 Clear Session
@@ -687,11 +687,11 @@ function SurveyPlanGeoreferenceSetupStep({
                 <span>JPEG, PNG, or WEBP scanned plans</span>
               </label>
               <div className="georef-upload-fields">
-                <label>
-                  Session title
-                  <input
-                    value={draftTitle}
-                    onChange={(event) => setDraftTitle(event.target.value)}
+                  <label>
+                    Image title
+                    <input
+                      value={draftTitle}
+                      onChange={(event) => setDraftTitle(event.target.value)}
                     placeholder="Fufore layout scan - July 2026"
                   />
                 </label>
@@ -713,11 +713,11 @@ function SurveyPlanGeoreferenceSetupStep({
                     if (!draftFile) return;
                     void onCreateSession(draftFile, draftTitle, targetCoordinateSystem);
                   }}
-                >
-                  {creatingSession ? "Uploading raster..." : "Upload & Open"}
-                </button>
+                  >
+                    {creatingSession ? "Uploading raster..." : "Open Workspace"}
+                  </button>
+                </div>
               </div>
-            </div>
           )}
 
           {session && (
@@ -728,11 +728,11 @@ function SurveyPlanGeoreferenceSetupStep({
                   <strong>{session.source_width} x {session.source_height}</strong>
                   <small>{session.source_file_name}</small>
                 </article>
-                <article className="georef-stat-card">
-                  <span className="georef-stat-label">Controls</span>
-                  <strong>{controlPoints.length}</strong>
-                  <small>Need at least 3 matched points</small>
-                </article>
+                  <article className="georef-stat-card">
+                    <span className="georef-stat-label">Controls</span>
+                    <strong>{controlPoints.length}</strong>
+                    <small>Match at least three points</small>
+                  </article>
                 <article className="georef-stat-card">
                   <span className="georef-stat-label">Fit quality</span>
                   <strong>{session.transform ? session.transform.quality : "Pending"}</strong>
@@ -743,20 +743,20 @@ function SurveyPlanGeoreferenceSetupStep({
               <div className="georef-coordinate-hint">{coordinateHint}</div>
 
               <div className="georef-actions-row">
-                <button type="button" className="btn-primary" disabled={controlPoints.length < 3 || solving} onClick={onSolve}>
-                  {solving ? "Anchoring raster..." : "Solve Georeference"}
-                </button>
-                <button type="button" className="btn-secondary" disabled={!session.transform} onClick={onContinue}>
-                  Continue to Digitize
+                  <button type="button" className="btn-primary" disabled={controlPoints.length < 3 || solving} onClick={onSolve}>
+                    {solving ? "Anchoring raster..." : "Anchor Raster"}
+                  </button>
+                  <button type="button" className="btn-secondary" disabled={!session.transform} onClick={onContinue}>
+                    Continue to Digitize
                 </button>
               </div>
 
-              <div className="georef-control-list-head">
-                <strong>Ground Control Points</strong>
-                <span>
-                  {controlPoints.filter((point) => pointIsReady(point)).length}/{controlPoints.length} ready
-                </span>
-              </div>
+                <div className="georef-control-list-head">
+                  <strong>Control Register</strong>
+                  <span>
+                    {controlPoints.filter((point) => pointIsReady(point)).length}/{controlPoints.length} ready
+                  </span>
+                </div>
               <div className="georef-control-list">
                 {controlPoints.map((point) => (
                   <article
@@ -879,14 +879,14 @@ function SurveyPlanGeoreferenceSetupStep({
                 ))}
               </div>
               <div className="georef-action-dock">
-                <button type="button" className="btn-primary" onClick={() => setAddPointMenuOpen(true)}>
-                  Add next GCP
-                </button>
-                <button type="button" className="btn-outline" disabled={controlPoints.length < 3 || solving} onClick={onSolve}>
-                  {solving ? "Anchoring raster..." : "Solve Georeference"}
-                </button>
-                <button type="button" className="btn-secondary" disabled={!session.transform} onClick={onContinue}>
-                  Continue to Digitize
+                  <button type="button" className="btn-primary" onClick={() => setAddPointMenuOpen(true)}>
+                    Add Next GCP
+                  </button>
+                  <button type="button" className="btn-outline" disabled={controlPoints.length < 3 || solving} onClick={onSolve}>
+                    {solving ? "Anchoring raster..." : "Anchor Raster"}
+                  </button>
+                  <button type="button" className="btn-secondary" disabled={!session.transform} onClick={onContinue}>
+                    Continue to Digitize
                 </button>
               </div>
             </>
@@ -898,15 +898,15 @@ function SurveyPlanGeoreferenceSetupStep({
         <div className="georef-dual-stage">
           <section className="georef-image-card">
             <div className="georef-card-head">
-              <div>
-                <span className="georef-stage-eyebrow">1. Source image</span>
-                <h4>Raster control stage</h4>
-                <span>{activePoint ? `Selected: ${activePoint.label}` : "Add a control point first"}</span>
-              </div>
+                <div>
+                  <span className="georef-stage-eyebrow">1. Raster</span>
+                  <h4>Raster control stage</h4>
+                  <span>{activePoint ? `Selected: ${activePoint.label}` : "Add a control point first"}</span>
+                </div>
               <div className="georef-stage-toolbar">
-                <button type="button" className="btn-primary" onClick={() => setAddPointMenuOpen(true)} disabled={!session}>
-                  Add next GCP
-                </button>
+                  <button type="button" className="btn-primary" onClick={() => setAddPointMenuOpen(true)} disabled={!session}>
+                    Add Next GCP
+                  </button>
                 <button type="button" className="btn-outline" onClick={() => updateStageZoom(imageZoom - STAGE_ZOOM_STEP)} disabled={!rasterObjectUrl || imageZoom <= MIN_STAGE_ZOOM}>
                   -
                 </button>
