@@ -916,6 +916,123 @@
   margin-bottom: 0.2rem;
 }
 
+.georef-control-list-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.georef-control-list-head strong {
+  color: #f8fafc;
+  font-size: 0.86rem;
+}
+
+.georef-control-list-head span {
+  color: #94a3b8;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.georef-point-status {
+  border-radius: 999px;
+  padding: 0.16rem 0.56rem;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background: rgba(148, 163, 184, 0.16);
+  color: #cbd5e1;
+}
+
+.georef-point-status--pending {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+}
+
+.georef-point-status--ready {
+  background: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
+}
+
+.georef-stage-eyebrow {
+  display: block;
+  color: #5eead4;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 0.18rem;
+}
+
+.georef-guidance-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  background: rgba(120, 53, 15, 0.28);
+  color: #fde68a;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.georef-guidance-banner button {
+  flex-shrink: 0;
+  border: 1px solid rgba(253, 224, 71, 0.4);
+  background: rgba(245, 158, 11, 0.92);
+  color: #052e16;
+  border-radius: 999px;
+  padding: 0.32rem 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.georef-add-point-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+}
+
+.georef-add-point-menu {
+  width: min(340px, 92vw);
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: #0f172a;
+  padding: 1.1rem;
+  box-shadow: 0 24px 48px rgba(2, 6, 23, 0.5);
+}
+
+.georef-add-point-menu h4 {
+  margin: 0 0 0.3rem;
+  color: #f8fafc;
+  font-size: 1rem;
+}
+
+.georef-add-point-menu p {
+  margin: 0 0 0.9rem;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.georef-add-point-menu-actions {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.georef-add-point-menu-actions button {
+  width: 100%;
+}
+
 .georef-dual-stage {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1177,14 +1294,8 @@
 .georef-cursor-probe-reticle {
   position: relative;
   display: inline-flex;
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  border: 2px solid rgba(94, 234, 212, 0.95);
-  background: rgba(6, 95, 70, 0.14);
-  box-shadow:
-    0 0 0 1px rgba(2, 6, 23, 0.42),
-    0 8px 20px rgba(6, 95, 70, 0.22);
+  width: 12px;
+  height: 12px;
 }
 
 .georef-cursor-probe-reticle::before,
@@ -1193,29 +1304,30 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  background: rgba(94, 234, 212, 0.96);
+  background: rgba(239, 68, 68, 0.85);
   transform: translate(-50%, -50%);
 }
 
 .georef-cursor-probe-reticle::before {
-  width: 18px;
-  height: 2px;
+  width: 12px;
+  height: 1px;
 }
 
 .georef-cursor-probe-reticle::after {
-  width: 2px;
-  height: 18px;
+  width: 1px;
+  height: 12px;
 }
 
 .georef-cursor-probe-dot {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 8px;
-  height: 8px;
+  width: 5px;
+  height: 5px;
   border-radius: 999px;
-  background: #f8fafc;
-  border: 2px solid rgba(6, 95, 70, 0.95);
+  background: #ef4444;
+  border: 1px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(2, 6, 23, 0.5);
   transform: translate(-50%, -50%);
 }
 
@@ -1259,8 +1371,8 @@
 }
 
 .georef-control-point-marker {
-  width: 34px;
-  height: 34px;
+  width: 22px;
+  height: 22px;
   transform: translate(-50%, -50%);
 }
 
@@ -1294,12 +1406,6 @@
 .georef-control-point-reticle {
   position: absolute;
   inset: 0;
-  border-radius: 999px;
-  border: 2px solid rgba(94, 234, 212, 0.95);
-  background: rgba(6, 95, 70, 0.2);
-  box-shadow:
-    0 0 0 1px rgba(2, 6, 23, 0.44),
-    0 10px 24px rgba(6, 95, 70, 0.22);
 }
 
 .georef-control-point-reticle::before,
@@ -1308,35 +1414,31 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  background: rgba(94, 234, 212, 0.95);
+  background: rgba(239, 68, 68, 0.85);
   transform: translate(-50%, -50%);
 }
 
 .georef-control-point-reticle::before {
-  width: 16px;
-  height: 2px;
+  width: 13px;
+  height: 1px;
 }
 
 .georef-control-point-reticle::after {
-  width: 2px;
-  height: 16px;
+  width: 1px;
+  height: 13px;
 }
 
 .georef-control-point-dot {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 999px;
-  background: #f8fafc;
-  border: 2px solid rgba(6, 95, 70, 0.95);
+  background: #ef4444;
+  border: 1px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(2, 6, 23, 0.55);
   transform: translate(-50%, -50%);
-}
-
-.georef-control-point-marker.active .georef-control-point-reticle {
-  border-color: rgba(253, 224, 71, 0.95);
-  background: rgba(245, 158, 11, 0.18);
 }
 
 .georef-control-point-marker.active .georef-control-point-reticle::before,
@@ -1345,13 +1447,14 @@
 }
 
 .georef-control-point-marker.active .georef-control-point-dot {
-  border-color: rgba(245, 158, 11, 0.95);
+  background: #facc15;
+  border-color: #052e16;
 }
 
 .georef-map-gcp-marker {
   position: relative;
-  width: 34px;
-  height: 34px;
+  width: 22px;
+  height: 22px;
   border: 0;
   padding: 0;
   background: transparent;
@@ -1368,18 +1471,14 @@
   color: #052e16;
 }
 
-.georef-map-gcp-marker.active .georef-control-point-reticle {
-  border-color: rgba(253, 224, 71, 0.95);
-  background: rgba(245, 158, 11, 0.18);
-}
-
 .georef-map-gcp-marker.active .georef-control-point-reticle::before,
 .georef-map-gcp-marker.active .georef-control-point-reticle::after {
   background: rgba(253, 224, 71, 0.95);
 }
 
 .georef-map-gcp-marker.active .georef-control-point-dot {
-  border-color: rgba(245, 158, 11, 0.95);
+  background: #facc15;
+  border-color: #052e16;
 }
 
 .georef-map-surface {
