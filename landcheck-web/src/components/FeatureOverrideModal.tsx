@@ -281,6 +281,37 @@ const getCoordinateSystemName = (sys: string) => {
   return sys.toUpperCase();
 };
 
+const getCoordinateSystemCompactName = (sys: string) => {
+  if (sys === "wgs84") return "WGS 84";
+  if (sys === "utm_31n") return "UTM 31N";
+  if (sys === "utm_32n") return "UTM 32N";
+  if (sys === "utm_33n") return "UTM 33N";
+  if (sys === "minna_31") return "Minna 31";
+  if (sys === "minna_32") return "Minna 32";
+  if (sys === "minna_33") return "Minna 33";
+  return sys.toUpperCase();
+};
+
+const getProjectedBounds = (coords: number[][], project: (coord: number[]) => { x: number; y: number }) => {
+  const source = getOpenRing(coords);
+  if (!source.length) return null;
+  const projected = source.map((coord) => project(coord));
+  const minX = Math.min(...projected.map((point) => point.x));
+  const maxX = Math.max(...projected.map((point) => point.x));
+  const minY = Math.min(...projected.map((point) => point.y));
+  const maxY = Math.max(...projected.map((point) => point.y));
+  return {
+    minX,
+    maxX,
+    minY,
+    maxY,
+    width: Math.max(maxX - minX, 1),
+    height: Math.max(maxY - minY, 1),
+    centerX: (minX + maxX) / 2,
+    centerY: (minY + maxY) / 2,
+  };
+};
+
 const formatEditorCoordinateValue = (value: number, coordinateSystem: string) =>
   coordinateSystem === "wgs84" ? value.toFixed(6) : value.toFixed(2);
 
@@ -561,9 +592,14 @@ const buildPlottingViewport = (params: {
   viewportHeight: number;
 }) => {
   const coordinates: number[][] = [];
+  const focusCoordinates: number[][] = [];
   if (Array.isArray(params.plotCoords)) {
     params.plotCoords.forEach((point) => {
-      if (Array.isArray(point) && point.length >= 2) coordinates.push([Number(point[0]), Number(point[1])]);
+      if (Array.isArray(point) && point.length >= 2) {
+        const normalized: number[] = [Number(point[0]), Number(point[1])];
+        coordinates.push(normalized);
+        focusCoordinates.push(normalized);
+      }
     });
   }
   (Object.values(params.featureCollections) || []).forEach((collection) => {
@@ -576,15 +612,17 @@ const buildPlottingViewport = (params: {
     coordinates.push([7.5, 9.0], [7.505, 9.005]);
   }
 
-  const avgLat = coordinates.reduce((sum, [, lat]) => sum + lat, 0) / coordinates.length;
+  const extentCoordinates = focusCoordinates.length ? focusCoordinates : coordinates;
+  const avgLat = extentCoordinates.reduce((sum, [, lat]) => sum + lat, 0) / extentCoordinates.length;
   const cosLat = Math.max(Math.cos(toRadians(avgLat)), 0.2);
-  const referenceLng = coordinates[0][0];
-  const referenceLat = coordinates[0][1];
+  const referenceLng = extentCoordinates[0][0];
+  const referenceLat = extentCoordinates[0][1];
 
-  const projected = coordinates.map(([lng, lat]) => ({
+  const projectToMeters = ([lng, lat]: number[]) => ({
     x: toRadians(lng - referenceLng) * EARTH_RADIUS_M * cosLat,
     y: toRadians(lat - referenceLat) * EARTH_RADIUS_M,
-  }));
+  });
+  const projected = extentCoordinates.map(projectToMeters);
 
   let minX = Math.min(...projected.map((point) => point.x));
   let maxX = Math.max(...projected.map((point) => point.x));
@@ -611,8 +649,7 @@ const buildPlottingViewport = (params: {
   const originY = PLOTTING_VIEWPORT_PADDING + Math.max((innerHeight - fittedHeight) / 2, 0);
 
   const project = (coord: number[]) => {
-    const x = toRadians(coord[0] - referenceLng) * EARTH_RADIUS_M * cosLat;
-    const y = toRadians(coord[1] - referenceLat) * EARTH_RADIUS_M;
+    const { x, y } = projectToMeters(coord);
     return {
       x: originX + (x - minX) * scale,
       y: viewportHeight - originY - (y - minY) * scale,
@@ -978,6 +1015,7 @@ export default function FeatureOverrideModal({
   const [savingAction, setSavingAction] = useState(false);
   const [plottingCamera, setPlottingCamera] = useState<PlottingCamera>(DEFAULT_PLOTTING_CAMERA);
   const [plottingPanActive, setPlottingPanActive] = useState(false);
+  const autoFitPlottedViewRef = useRef(false);
   const [selectedFeatureRecord, setSelectedFeatureRecord] = useState<FeatureRecord | null>(null);
   const [draftingAssist, setDraftingAssist] = useState<DraftingAssistState>(DEFAULT_DRAFTING_ASSIST);
   const [plottingHoverPoint, setPlottingHoverPoint] = useState<number[] | null>(null);
@@ -994,7 +1032,7 @@ export default function FeatureOverrideModal({
   const [multiSelectedKeys, setMultiSelectedKeys] = useState<string[]>([]);
   const [commandInput, setCommandInput] = useState("");
   const [commandMessages, setCommandMessages] = useState<string[]>([
-    "Type HELP for editor commands. Use BOX or LASSO to multi-select in plotting view.",
+    "HELP lists drawing commands. Use BOX or LASSO to select multiple objects.",
   ]);
   const [screenCursor, setScreenCursor] = useState<{ x: number; y: number } | null>(null);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
@@ -1141,11 +1179,11 @@ export default function FeatureOverrideModal({
   const workspaceSummary = useMemo(
     () => [
       {
-        label: "Coordinate system",
+        label: "Coord system",
         value: getCoordinateSystemName(coordinateSystem || "wgs84"),
       },
       {
-        label: "Visible objects",
+        label: "Visible",
         value: `${visibleObjectRecords.length}`,
       },
       {
@@ -1153,7 +1191,7 @@ export default function FeatureOverrideModal({
         value: selectedObjectCount > 1 ? `${selectedObjectCount} set` : selectedFeatureRecord?.label || "None",
       },
       {
-        label: "Workspace",
+        label: "View",
         value: basemapMode === "plotting" ? "Plotting view" : "Satellite view",
       },
     ],
@@ -1166,8 +1204,8 @@ export default function FeatureOverrideModal({
         value: meta.scale_text || "1 : 250",
       },
       {
-        label: "Coord system",
-        value: getCoordinateSystemName(coordinateSystem || "wgs84"),
+        label: "Coords",
+        value: getCoordinateSystemCompactName(coordinateSystem || "wgs84"),
       },
       {
         label: "View",
@@ -1551,7 +1589,30 @@ export default function FeatureOverrideModal({
 
   const fitPlotBoundary = useCallback(() => {
     if (basemapMode === "plotting") {
-      setPlottingCamera(DEFAULT_PLOTTING_CAMERA);
+      if (!boundaryCoords?.length) {
+        setPlottingCamera(DEFAULT_PLOTTING_CAMERA);
+        return;
+      }
+      const bounds = getProjectedBounds(boundaryCoords, plottingViewport.project);
+      if (!bounds) {
+        setPlottingCamera(DEFAULT_PLOTTING_CAMERA);
+        return;
+      }
+      const fitPadding = Math.min(84, Math.max(48, Math.min(plottingViewportBoxWidth, plottingViewportBoxHeight) * 0.08));
+      const availableWidth = Math.max(plottingViewportBoxWidth - fitPadding * 2, 40);
+      const availableHeight = Math.max(plottingViewportBoxHeight - fitPadding * 2, 40);
+      const fitZoom = Math.min(
+        PLOTTING_ZOOM_MAX,
+        Math.max(
+          PLOTTING_ZOOM_MIN,
+          Math.min(availableWidth / bounds.width, availableHeight / bounds.height),
+        ),
+      );
+      setPlottingCamera({
+        zoom: fitZoom,
+        offsetX: plottingViewportBoxWidth / 2 - bounds.centerX * fitZoom,
+        offsetY: plottingViewportBoxHeight / 2 - bounds.centerY * fitZoom,
+      });
       return;
     }
     const map = mapRef.current;
@@ -1559,8 +1620,42 @@ export default function FeatureOverrideModal({
     if (!map || !mapboxgl || !plotCoords?.length) return;
     const bounds = new mapboxgl.LngLatBounds();
     plotCoords.forEach(([lng, lat]) => bounds.extend([lng, lat]));
-    map.fitBounds(bounds, { padding: 48, duration: 300 });
-  }, [basemapMode, plotCoords]);
+      map.fitBounds(bounds, { padding: 48, duration: 300 });
+    }, [basemapMode, boundaryCoords, plotCoords, plottingViewport, plottingViewportBoxHeight, plottingViewportBoxWidth]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setShowLeftSidebar(false);
+    setShowRightSidebar(false);
+    setShowTraversePanel(false);
+    setShowEditorHelp(false);
+    setSelectionMode(null);
+    setShowSuggestions(false);
+    setActiveSuggestionIndex(0);
+    setPlottingCamera(DEFAULT_PLOTTING_CAMERA);
+    autoFitPlottedViewRef.current = false;
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      autoFitPlottedViewRef.current = false;
+      return;
+    }
+    if (basemapMode !== "plotting") {
+      autoFitPlottedViewRef.current = false;
+      return;
+    }
+    if (!boundaryCoords?.length) {
+      autoFitPlottedViewRef.current = false;
+      return;
+    }
+    if (autoFitPlottedViewRef.current) return;
+    const frame = requestAnimationFrame(() => {
+      fitPlotBoundary();
+      autoFitPlottedViewRef.current = true;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [basemapMode, boundaryCoords, fitPlotBoundary, isOpen]);
 
   const syncDraftFromDraw = useCallback(() => {
     const draw = drawRef.current;
@@ -1735,21 +1830,6 @@ export default function FeatureOverrideModal({
 
   const deleteTargetCount = multiSelectedKeys.length > 0 ? multiSelectedKeys.length : hasSelectedGeometry ? 1 : 0;
 
-  const editorPrompt =
-    editorTarget === "boundary"
-      ? "Boundary mode is active. Drag only the parcel vertices you intend to change in the plotting view."
-      : action === "delete"
-      ? deleteTargetCount > 0
-        ? deleteTargetCount > 1
-          ? `${deleteTargetCount} features selected. Confirm to remove them.`
-          : "Delete mode is ready. Review the selected feature, then confirm delete."
-        : "Select an existing feature (or box/lasso select several) to remove."
-      : action === "update"
-        ? hasSelectedGeometry
-          ? "Selected feature is ready for editing. Adjust geometry, then apply changes."
-          : "Select an existing feature to modify."
-        : `Choose the ${toolForEditorTarget(editorTarget) === "draw_polygon" ? "polygon" : "line"} tool and draw a new ${editorTarget}.`;
-
   const primaryActionLabel =
     editorTarget === "boundary"
       ? "Boundary editing active"
@@ -1769,18 +1849,6 @@ export default function FeatureOverrideModal({
       : action === "update"
         ? hasSelectedGeometry
         : hasDraftGeometry || hasSelectedGeometry;
-  const statusPromptCompact =
-    editorTarget === "boundary"
-      ? "Boundary vertices only"
-      : action === "delete"
-      ? deleteTargetCount > 0
-        ? "Delete pending confirmation"
-        : "Select feature(s) to remove"
-      : action === "update"
-        ? hasSelectedGeometry
-          ? "Modify geometry, then apply"
-          : "Select a feature to edit"
-        : `Draw new ${formatEditorTargetLabel(editorTarget).toLowerCase()}`;
   const selectionHeadline =
     selectedObjectCount > 1 ? `${selectedObjectCount} objects selected` : selectedFeatureRecord?.label || "No active selection";
 
@@ -3230,7 +3298,7 @@ export default function FeatureOverrideModal({
   const suggestedTool = toolForEditorTarget(editorTarget);
   const suggestedToolLabel =
     suggestedTool === "draw_polygon" ? "Polygon tool" : suggestedTool === "draw_line_string" ? "Line tool" : "Select tool";
-  const cadMetaTooltip = `R of O ${meta.adamawa_rof_no || plotId || "590"} · ${meta.adamawa_owner_name || meta.title_text || "Survey Plan"} · ${meta.location_text || "Pilot Plot"} · Scale ${meta.scale_text || "1 : 250"} · ${meta.surveyor_rank || "Surveyor General"}`;
+  const cadMetaTooltip = `R of O ${meta.adamawa_rof_no || plotId || "590"} | ${meta.adamawa_owner_name || meta.title_text || "Survey Plan"} | ${meta.location_text || "Pilot Plot"} | Scale ${meta.scale_text || "1 : 250"} | ${meta.surveyor_rank || "Surveyor General"}`;
 
   if (!isOpen) return null;
 
@@ -3396,12 +3464,12 @@ export default function FeatureOverrideModal({
 
           <div className="cad-toolbar-meta" title={cadMetaTooltip}>
             {toolbarMetaItems.map((item) => (
-              <div key={item.label} className="cad-toolbar-meta-chip">
+              <div key={item.label} className="cad-toolbar-meta-chip" title={`${item.label}: ${item.value}`}>
                 <span>{item.label}</span>
                 <strong>{item.value}</strong>
               </div>
             ))}
-            <div className="cad-toolbar-meta-chip cad-toolbar-meta-chip--selection">
+            <div className="cad-toolbar-meta-chip cad-toolbar-meta-chip--selection" title={`Selection: ${selectionHeadline}`}>
               <span>Selection</span>
               <strong>{selectionHeadline}</strong>
             </div>
@@ -3458,7 +3526,7 @@ export default function FeatureOverrideModal({
             <section className="cad-panel cad-panel--workspace">
               <div className="cad-panel-head" style={{ position: "relative" }}>
                 <strong>Workspace</strong>
-                <span>Survey drafting context and current selection</span>
+                <span>Quick survey context</span>
                 <button
                   type="button"
                   className="cad-panel-close-btn"
@@ -3481,7 +3549,7 @@ export default function FeatureOverrideModal({
             <section className="cad-panel">
               <div className="cad-panel-head">
                 <strong>Feature Setup</strong>
-                <span>Choose what you are drafting before editing the sheet</span>
+                <span>Choose the layer you want to work on.</span>
               </div>
               <div className="feature-override-controls cad-form-grid">
                 <div className="field">
@@ -3515,7 +3583,7 @@ export default function FeatureOverrideModal({
                   </div>
                 )}
                 <div className="hint">
-                  Roads, rivers, and fences use line drafting. Buildings use polygon drafting. Boundary edits only activate when Boundary is the selected target.
+                  Roads, rivers, and fences use lines. Buildings use polygons. Boundary stays locked until you intentionally select it.
                 </div>
               </div>
             </section>
@@ -3523,7 +3591,7 @@ export default function FeatureOverrideModal({
             <section className="cad-panel">
               <div className="cad-panel-head">
                 <strong>Feature Register</strong>
-                <span>Select a detected feature to review or edit it on the sheet</span>
+                <span>Pick an object to review or edit.</span>
               </div>
               <div className="cad-object-list">
                 {visibleObjectRecords.length ? (
@@ -3550,7 +3618,7 @@ export default function FeatureOverrideModal({
             <section className="cad-panel">
               <div className="cad-panel-head">
                 <strong>Layer Visibility</strong>
-                <span>Keep only the references you need on screen</span>
+                <span>Show only the references you need.</span>
               </div>
               <div className="cad-layer-list">
                 {([
@@ -4159,10 +4227,10 @@ export default function FeatureOverrideModal({
                 type="button"
                 className="cad-floating-tab cad-floating-tab--left"
                 onClick={() => setShowLeftSidebar(true)}
-                title="Show tools"
+                title="Show setup tools"
               >
                 <span className="cad-floating-tab-arrow">&gt;</span>
-                <span className="cad-floating-tab-text">Tools</span>
+                <span className="cad-floating-tab-text">Setup</span>
               </button>
             )}
             {!showRightSidebar && (
@@ -4170,19 +4238,16 @@ export default function FeatureOverrideModal({
                 type="button"
                 className="cad-floating-tab cad-floating-tab--right"
                 onClick={() => setShowRightSidebar(true)}
-                title="Show inspector"
+                title="Show review inspector"
               >
                 <span className="cad-floating-tab-arrow">&lt;</span>
-                <span className="cad-floating-tab-text">Inspect</span>
+                <span className="cad-floating-tab-text">Review</span>
               </button>
             )}
           </div>
             <div className="cad-status-bar">
               <span className="cad-status-chip cad-status-chip--prompt">
-                <strong>{activeCommandLabel}</strong> · {formatEditorTargetLabel(editorTarget)}
-              </span>
-              <span className="cad-status-prompt">
-                {statusPromptCompact}
+                <strong>{activeCommandLabel}</strong> | {formatEditorTargetLabel(editorTarget)}
               </span>
               <span className="cad-status-chip">
                 {cursorDisplay?.compact || "Cursor unavailable"}
@@ -4192,7 +4257,7 @@ export default function FeatureOverrideModal({
               </span>
               {activeMetrics ? (
                 <span className="cad-status-chip">
-                  {activeMetrics.geometryType} · {activeMetrics.vertices} pts · {formatLength(activeMetrics.lengthM || activeMetrics.perimeterM)}
+                  {activeMetrics.geometryType} | {activeMetrics.vertices} pts | {formatLength(activeMetrics.lengthM || activeMetrics.perimeterM)}
                 </span>
               ) : null}
               <button type="button" className={`cad-status-toggle${draftingAssist.snap ? " active" : ""}`} onClick={() => toggleDraftingAssist("snap")}>
@@ -4204,15 +4269,15 @@ export default function FeatureOverrideModal({
               <button type="button" className={`cad-status-toggle${draftingAssist.measure ? " active" : ""}`} onClick={() => toggleDraftingAssist("measure")}>
                 Measure {draftingAssist.measure ? "On" : "Off"}
               </button>
-              {basemapMode === "plotting" && plottingSnapLabel ? <span className="cad-status-chip">Snap target · {plottingSnapLabel}</span> : null}
+              {basemapMode === "plotting" && plottingSnapLabel ? <span className="cad-status-chip">Snap target | {plottingSnapLabel}</span> : null}
             </div>
           </div>
 
           <aside className="cad-editor-inspector" style={{ display: showRightSidebar ? "block" : "none" }}>
             <section className="cad-panel cad-panel--command">
               <div className="cad-panel-head" style={{ position: "relative" }}>
-                <strong>Command Center</strong>
-                <span>{editorPrompt}</span>
+                <strong>Command</strong>
+                <span>Open the review tools only when you need them.</span>
                 <button
                   type="button"
                   className="cad-panel-close-btn"
@@ -4278,7 +4343,7 @@ export default function FeatureOverrideModal({
               </div>
               {editorTarget === "boundary" ? (
                 <div className="cad-command-center-note">
-                  Boundary geometry is protected from add and delete commands. Use boundary mode only when you intend to adjust parcel vertices.
+                  Boundary geometry is protected from add and delete commands. Switch to Boundary only when you intend to adjust parcel vertices.
                 </div>
               ) : null}
               <div className="cad-command-center-primary">
@@ -4495,7 +4560,7 @@ export default function FeatureOverrideModal({
                 value={commandInput}
                 onChange={(event) => handleCommandInputChange(event.target.value)}
                 onKeyDown={handleCommandKeyDown}
-                placeholder="Type HELP, L, PL, M, E, GRID, SNAP, ORTHO, OSNAP..."
+                placeholder="HELP, L, PL, M, E, SNAP, ORTHO..."
                 autoComplete="off"
                 spellCheck="false"
               />

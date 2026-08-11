@@ -253,6 +253,21 @@
   border: 1px solid rgba(148, 163, 184, 0.35);
 }
 
+.hazard-buildings-callout {
+  margin: 0.7rem 0 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  color: #fecaca;
+  font-size: 0.85rem;
+}
+
+.hazard-buildings-callout strong {
+  color: #f8fafc;
+  font-size: 1rem;
+}
+
 .risk-stat-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -333,6 +348,34 @@
   margin: -0.5rem 0 0.75rem;
   font-size: 0.8rem;
   color: #f59e0b;
+}
+
+.hazard-elevation-hint {
+  margin: 0.6rem 0 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  color: #7dd3fc;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.hazard-insight {
+  margin: -0.35rem 0 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  color: #93c5fd;
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.hazard-insight--muted {
+  background: rgba(148, 163, 184, 0.1);
+  border-color: rgba(148, 163, 184, 0.25);
+  color: #94a3b8;
 }
 
 .hazard-method {

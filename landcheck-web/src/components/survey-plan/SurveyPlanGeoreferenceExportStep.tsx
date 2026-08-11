@@ -93,14 +93,11 @@ function SurveyPlanGeoreferenceExportStep({
         {sidebar}
         <section className="georef-control-card">
           <div className="georef-control-head">
-            <div>
-              <span className="georef-kicker">Export & Continue</span>
-              <h3>Prepare the staking sheet and move the parcel straight into Survey Plan</h3>
-              <p>
-                Review the final parcel package, download the staking sheet for DGPS work, then continue with
-                a cleaner Survey Plan handoff.
-              </p>
-            </div>
+              <div>
+                <span className="georef-kicker">Export & Continue</span>
+                <h3>Finish the staking sheet and continue into Survey Plan</h3>
+                <p>Review the parcel package, download the DGPS-ready sheet, then continue drafting.</p>
+              </div>
             <div className="georef-quality-pill">{readyCoordinateSystem} ready</div>
           </div>
 
@@ -115,42 +112,42 @@ function SurveyPlanGeoreferenceExportStep({
               <strong>{pointCount}</strong>
               <small>The staking sheet will export these or the parcel vertices automatically</small>
             </article>
-            <article className="georef-stat-card">
-              <span className="georef-stat-label">Working grid</span>
-              <strong>{readyCoordinateSystem}</strong>
-              <small>Coordinate values are ready for field setting-out and Survey Plan continuation</small>
-            </article>
-            <article className="georef-stat-card">
-              <span className="georef-stat-label">Saved layers</span>
-              <strong>{polygonCount + lineCount + pointCount}</strong>
-              <small>{polygonCount} boundary, {lineCount} line, {pointCount} point layer(s)</small>
-            </article>
+              <article className="georef-stat-card">
+                <span className="georef-stat-label">Working grid</span>
+                <strong>{readyCoordinateSystem}</strong>
+                <small>Coordinate values are ready for field setting-out and editor continuation</small>
+              </article>
+              <article className="georef-stat-card">
+                <span className="georef-stat-label">Saved features</span>
+                <strong>{polygonCount + lineCount + pointCount}</strong>
+                <small>{polygonCount} boundary, {lineCount} line, {pointCount} point layer(s)</small>
+              </article>
           </div>
 
           <div className="georef-export-checklist">
-            <article>
-              <strong>Excel-ready</strong>
-              <span>CSV columns open cleanly for DGPS use and office review.</span>
-            </article>
-            <article>
-              <strong>Survey ready</strong>
-              <span>The primary parcel continues directly into the Survey Plan editor.</span>
-            </article>
-            <article>
-              <strong>Field ready</strong>
-              <span>Coordinate rows are already structured for staking and checking on site.</span>
-            </article>
+              <article>
+                <strong>Excel-ready</strong>
+                <span>CSV columns open cleanly for DGPS use and office review.</span>
+              </article>
+              <article>
+                <strong>Editor ready</strong>
+                <span>The primary parcel continues directly into the Survey Plan editor.</span>
+              </article>
+              <article>
+                <strong>Field ready</strong>
+                <span>Coordinate rows are already structured for staking and checking on site.</span>
+              </article>
           </div>
 
           <div className="georef-actions-row">
             <button type="button" className="btn-outline" onClick={onBack}>
               Back to Workspace
             </button>
-            <button type="button" className="btn-primary" disabled={downloadingCsv || features.length === 0} onClick={onDownloadCsv}>
-              {downloadingCsv ? "Preparing staking sheet..." : "Download Staking Sheet"}
-            </button>
-            <button type="button" className="btn-secondary" disabled={!primaryPolygon || continuing} onClick={onContinueToSurvey}>
-              {continuing ? "Continuing..." : "Continue as Survey Plan"}
+              <button type="button" className="btn-primary" disabled={downloadingCsv || features.length === 0} onClick={onDownloadCsv}>
+                {downloadingCsv ? "Preparing DGPS CSV..." : "Download DGPS CSV"}
+              </button>
+              <button type="button" className="btn-secondary" disabled={!primaryPolygon || continuing} onClick={onContinueToSurvey}>
+                {continuing ? "Continuing..." : "Continue as Survey Plan"}
             </button>
           </div>
         </section>
@@ -159,12 +156,12 @@ function SurveyPlanGeoreferenceExportStep({
       <div className="panel-right georef-export-summary">
         <section className="georef-export-card">
           <div className="georef-card-head">
-            <div>
-              <h4>Staking sheet preview</h4>
-              <span>Review the first rows exactly as they will leave the workspace.</span>
+              <div>
+                <h4>DGPS sheet preview</h4>
+                <span>Preview the first exported rows before download.</span>
+              </div>
+              <span className="georef-quality-pill">{stakingPreviewRows.length} row(s)</span>
             </div>
-            <span className="georef-quality-pill">{stakingPreviewRows.length} row(s)</span>
-          </div>
           {stakingPreviewRows.length ? (
             <div className="georef-coordinate-table-wrap">
               <table className="georef-coordinate-table georef-export-table">
@@ -201,15 +198,15 @@ function SurveyPlanGeoreferenceExportStep({
         </section>
         <section className="georef-export-card">
           <div className="georef-card-head">
-            <div>
-              <h4>What continues into Survey Plan</h4>
-              <span>A concise handoff summary for the next drafting stage.</span>
+              <div>
+                <h4>Survey handoff</h4>
+                <span>What moves forward into the drafting stage.</span>
+              </div>
             </div>
-          </div>
-          <ul className="georef-export-list">
-            <li>The primary parcel becomes the working parcel boundary in Survey Plan.</li>
-            <li>Each parcel vertex is already named and ready for coordinate-based drafting.</li>
-            <li>Stake points remain available in the staking sheet for DGPS field setting out.</li>
+            <ul className="georef-export-list">
+              <li>The primary parcel becomes the working parcel boundary in Survey Plan.</li>
+              <li>Each parcel vertex is already named and ready for coordinate-based drafting.</li>
+              <li>Stake points remain available in the staking sheet for DGPS field setting out.</li>
           </ul>
         </section>
       </div>
