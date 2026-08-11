@@ -42,8 +42,9 @@ type SurveyAppearancePanelProps = {
 
 const FONT_OPTIONS = [
   { value: "", label: "Default" },
-  { value: "DejaVu Sans", label: "Sans-serif" },
+  { value: "Times New Roman", label: "Times New Roman" },
   { value: "DejaVu Serif", label: "Serif" },
+  { value: "DejaVu Sans", label: "Sans-serif" },
   { value: "DejaVu Sans Mono", label: "Monospace" },
 ];
 
