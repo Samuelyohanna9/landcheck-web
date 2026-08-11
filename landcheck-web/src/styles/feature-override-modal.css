@@ -18,7 +18,7 @@
   overflow: hidden;
   border-radius: 0;
   border: 0;
-  background: #090f1a;
+  background: linear-gradient(180deg, #0d1420 0%, #0b111c 100%);
   box-shadow: 0 32px 80px rgba(0, 0, 0, 0.55);
 }
 
@@ -32,7 +32,7 @@
   gap: 0.35rem;
   padding: 0.4rem 0.6rem;
   border-bottom: 1px solid rgba(148, 163, 184, 0.12);
-  background: #0b1220;
+  background: linear-gradient(180deg, rgba(14, 23, 37, 0.98), rgba(11, 18, 32, 0.98));
   min-height: 46px;
 }
 
@@ -241,7 +241,9 @@
   /* Locks the row to exactly the available height regardless of what either sidebar renders, so
      the middle (plotting) column can never be nudged by a sidebar's content changing size. */
   grid-template-rows: minmax(0, 1fr);
-  background: #050a12;
+  background:
+    radial-gradient(circle at top left, rgba(22, 78, 99, 0.08), transparent 18%),
+    linear-gradient(180deg, #08111b 0%, #050a12 100%);
   transition: grid-template-columns 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -250,7 +252,7 @@
   overflow: auto;
   padding: 1rem 0.9rem;
   border-right: 1px solid rgba(148, 163, 184, 0.12);
-  background: linear-gradient(180deg, rgba(7, 11, 20, 0.98), rgba(9, 15, 26, 0.98));
+  background: linear-gradient(180deg, rgba(10, 17, 29, 0.98), rgba(11, 18, 30, 0.98));
   /* Layout containment keeps this panel's own reflows (hover states, selection summaries, etc.)
      from ever being able to affect the shared grid row's height. */
   contain: layout paint;
@@ -261,7 +263,7 @@
   overflow: auto;
   padding: 1rem 0.9rem;
   border-left: 1px solid rgba(148, 163, 184, 0.12);
-  background: linear-gradient(180deg, rgba(7, 11, 20, 0.96), rgba(11, 18, 32, 0.98));
+  background: linear-gradient(180deg, rgba(10, 17, 29, 0.96), rgba(12, 20, 34, 0.98));
   contain: layout paint;
 }
 
@@ -269,8 +271,9 @@
   margin-bottom: 0.9rem;
   border: 1px solid rgba(148, 163, 184, 0.12);
   border-radius: 14px;
-  background: rgba(15, 23, 42, 0.9);
+  background: linear-gradient(180deg, rgba(17, 27, 43, 0.92), rgba(12, 19, 31, 0.92));
   overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
 }
 
 .cad-panel-head {
@@ -280,6 +283,46 @@
   padding: 0.85rem 0.95rem;
   border-bottom: 1px solid rgba(148, 163, 184, 0.1);
   background: rgba(2, 6, 23, 0.55);
+}
+
+.cad-panel--workspace {
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.cad-panel--command {
+  border-color: rgba(56, 189, 248, 0.18);
+  background: linear-gradient(180deg, rgba(12, 24, 38, 0.96), rgba(11, 18, 30, 0.96));
+}
+
+.cad-workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding: 0.95rem;
+}
+
+.cad-workspace-card {
+  padding: 0.82rem 0.88rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(5, 10, 18, 0.46);
+}
+
+.cad-workspace-card span {
+  display: block;
+  margin-bottom: 0.38rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+}
+
+.cad-workspace-card strong {
+  display: block;
+  color: #f8fafc;
+  font-size: 0.88rem;
+  line-height: 1.4;
 }
 
 .cad-panel-head strong {
@@ -357,7 +400,7 @@
   width: 100%;
   border: 1px solid rgba(148, 163, 184, 0.12);
   border-radius: 12px;
-  background: rgba(2, 6, 23, 0.5);
+  background: rgba(6, 11, 20, 0.58);
   color: #e2e8f0;
   padding: 0.72rem 0.78rem;
   text-align: left;
@@ -459,7 +502,7 @@
 .cad-metric {
   padding: 0.78rem 0.85rem;
   border-radius: 12px;
-  background: rgba(2, 6, 23, 0.64);
+  background: rgba(5, 10, 18, 0.58);
   border: 1px solid rgba(148, 163, 184, 0.1);
 }
 
@@ -486,6 +529,130 @@
   line-height: 1.6;
 }
 
+.cad-command-center-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding: 0.95rem 0.95rem 0;
+}
+
+.cad-command-center-card {
+  padding: 0.88rem 0.92rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(5, 10, 18, 0.54);
+}
+
+.cad-command-center-card span {
+  display: block;
+  margin-bottom: 0.32rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #67e8f9;
+}
+
+.cad-command-center-card strong {
+  display: block;
+  color: #f8fafc;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.cad-command-center-card small {
+  display: block;
+  margin-top: 0.22rem;
+  color: #94a3b8;
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.cad-command-center-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  padding: 0.95rem 0.95rem 0;
+}
+
+.cad-command-center-actions--secondary {
+  padding-top: 0.65rem;
+}
+
+.cad-command-action,
+.cad-command-primary {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 12px;
+  background: rgba(5, 10, 18, 0.72);
+  color: #e2e8f0;
+  padding: 0.68rem 0.82rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.cad-command-action:hover,
+.cad-command-primary:hover {
+  border-color: rgba(34, 197, 94, 0.36);
+  background: rgba(15, 23, 42, 0.88);
+  color: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.cad-command-action.active {
+  border-color: rgba(34, 197, 94, 0.5);
+  background: linear-gradient(180deg, rgba(22, 163, 74, 0.24), rgba(20, 83, 45, 0.58));
+  color: #ecfdf5;
+}
+
+.cad-command-action--danger:hover,
+.cad-command-action--danger.active {
+  border-color: rgba(248, 113, 113, 0.46);
+  background: rgba(69, 10, 10, 0.68);
+  color: #fecaca;
+}
+
+.cad-command-action:disabled,
+.cad-command-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cad-command-center-note {
+  margin: 0.9rem 0.95rem 0;
+  padding: 0.82rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(250, 204, 21, 0.24);
+  background: rgba(66, 32, 6, 0.28);
+  color: #fef3c7;
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.cad-command-center-primary {
+  padding: 0.95rem;
+}
+
+.cad-command-primary {
+  width: 100%;
+  border-color: rgba(34, 197, 94, 0.45);
+  background: linear-gradient(180deg, rgba(22, 163, 74, 0.88), rgba(21, 128, 61, 0.98));
+  color: #f8fafc;
+  box-shadow: 0 14px 28px rgba(22, 163, 74, 0.16);
+}
+
+.cad-command-primary.danger {
+  border-color: rgba(248, 113, 113, 0.42);
+  background: linear-gradient(180deg, rgba(220, 38, 38, 0.88), rgba(153, 27, 27, 0.98));
+  box-shadow: 0 14px 28px rgba(220, 38, 38, 0.18);
+}
+
+.cad-command-primary:disabled {
+  box-shadow: none;
+}
+
 .cad-selection-summary,
 .cad-warning {
   margin: 0.9rem 0.95rem 0.95rem;
@@ -501,6 +668,44 @@
   flex-direction: column;
   gap: 0.55rem;
   padding: 0.95rem;
+}
+
+.cad-coordinate-table-wrap {
+  padding: 0.95rem;
+}
+
+.cad-coordinate-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  font-size: 0.78rem;
+}
+
+.cad-coordinate-table thead th {
+  padding: 0.68rem 0.75rem;
+  text-align: left;
+  background: rgba(5, 10, 18, 0.78);
+  color: #7dd3fc;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cad-coordinate-table tbody td {
+  padding: 0.7rem 0.75rem;
+  color: #e2e8f0;
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+  background: rgba(12, 18, 30, 0.52);
+  font-family: "JetBrains Mono", "SFMono-Regular", monospace;
+}
+
+.cad-coordinate-table tbody td:first-child {
+  color: #f8fafc;
+  font-weight: 700;
+  font-family: "Outfit", "Inter", sans-serif;
 }
 
 .cad-osnap-list {
@@ -534,7 +739,7 @@
   align-items: center;
   padding: 0.72rem 0.78rem;
   border-radius: 12px;
-  background: rgba(2, 6, 23, 0.58);
+  background: rgba(5, 10, 18, 0.58);
   border: 1px solid rgba(148, 163, 184, 0.1);
 }
 
@@ -604,8 +809,8 @@
   overflow: hidden;
   contain: layout paint;
   background:
-    linear-gradient(0deg, rgba(2, 6, 23, 0.24), rgba(2, 6, 23, 0.24)),
-    #000;
+    radial-gradient(circle at top center, rgba(56, 189, 248, 0.04), transparent 22%),
+    linear-gradient(180deg, rgba(7, 12, 22, 0.98), rgba(5, 10, 18, 0.98));
 }
 
 .cad-editor-canvas--satellite {
@@ -614,8 +819,8 @@
 
 .cad-editor-canvas--plotting {
   background:
-    linear-gradient(0deg, rgba(2, 6, 23, 0.24), rgba(2, 6, 23, 0.24)),
-    #000;
+    radial-gradient(circle at top center, rgba(56, 189, 248, 0.04), transparent 22%),
+    linear-gradient(180deg, rgba(7, 12, 22, 0.98), rgba(5, 10, 18, 0.98));
 }
 
 .cad-traverse-panel {
@@ -743,8 +948,9 @@
   border: 1px solid rgba(51, 65, 85, 0.85);
   border-radius: 18px;
   background:
-    radial-gradient(circle at top left, rgba(8, 47, 73, 0.32), transparent 22%),
-    linear-gradient(180deg, #020617 0%, #040b16 100%);
+    radial-gradient(circle at top left, rgba(14, 116, 144, 0.18), transparent 18%),
+    radial-gradient(circle at bottom right, rgba(20, 83, 45, 0.12), transparent 20%),
+    linear-gradient(180deg, #0a111b 0%, #0c1420 100%);
   box-shadow:
     inset 0 0 0 1px rgba(15, 23, 42, 0.9),
     inset 0 0 24px rgba(15, 23, 42, 0.45);
@@ -759,7 +965,7 @@
   cursor: crosshair;
   touch-action: none;
   user-select: none;
-  background: #05070d;
+  background: #0c121b;
 }
 
 .cad-plotting-svg.is-panning {
@@ -767,7 +973,7 @@
 }
 
 .cad-plot-bg {
-  fill: #05070d;
+  fill: #0c121b;
 }
 
 .cad-grid-line {
@@ -776,18 +982,18 @@
 }
 
 .cad-grid-line--minor {
-  stroke: rgba(148, 163, 184, 0.14);
+  stroke: rgba(100, 116, 139, 0.12);
   stroke-width: 0.75;
 }
 
 .cad-grid-line--major {
-  stroke: rgba(148, 163, 184, 0.32);
+  stroke: rgba(71, 85, 105, 0.28);
   stroke-width: 1;
 }
 
 .cad-svg-boundary {
-  fill: rgba(15, 23, 42, 0.1);
-  stroke: #ef4444;
+  fill: rgba(18, 36, 24, 0.14);
+  stroke: #fb7185;
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
 }
@@ -804,12 +1010,12 @@
 }
 
 .cad-svg-feature--road {
-  stroke: #fde047;
+  stroke: #facc15;
   stroke-width: 2.4;
 }
 
 .cad-svg-feature--river {
-  stroke: #38bdf8;
+  stroke: #60a5fa;
   stroke-width: 2.2;
 }
 
@@ -983,10 +1189,10 @@
 
 .cad-svg-label,
 .cad-axis-label {
-  fill: #e2e8f0;
-  font-size: 11.5px;
+  fill: #dbe7f5;
+  font-size: 10.5px;
   font-family: "JetBrains Mono", "SFMono-Regular", monospace;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.02em;
   user-select: none;
   pointer-events: none;
@@ -1026,9 +1232,27 @@
   gap: 0.8rem 1.2rem;
   padding: 0.72rem 1rem;
   border-top: 1px solid rgba(148, 163, 184, 0.12);
-  background: rgba(7, 11, 20, 0.96);
+  background: rgba(8, 13, 22, 0.98);
   color: #cbd5e1;
   font-size: 0.76rem;
+  align-items: center;
+}
+
+.cad-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.72rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.7);
+  color: #d7e4f4;
+}
+
+.cad-status-chip--prompt {
+  border-color: rgba(34, 197, 94, 0.22);
+  background: rgba(20, 83, 45, 0.28);
+  color: #ecfdf5;
 }
 
 .cad-status-toggle {
@@ -1062,6 +1286,123 @@
   font-size: 0.74rem;
   letter-spacing: 0.02em;
   backdrop-filter: blur(10px);
+}
+
+.cad-plotting-ribbon {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  width: min(calc(100% - 2rem), 1040px);
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(8, 14, 26, 0.92), rgba(8, 14, 26, 0.82));
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.34);
+}
+
+.cad-plotting-ribbon-main {
+  min-width: 0;
+  flex: 1 1 320px;
+}
+
+.cad-plotting-ribbon-main span {
+  display: block;
+  margin-bottom: 0.28rem;
+  color: #7dd3fc;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cad-plotting-ribbon-main strong {
+  display: block;
+  color: #f8fafc;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.cad-plotting-ribbon-main small {
+  display: block;
+  margin-top: 0.22rem;
+  color: #94a3b8;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.cad-plotting-ribbon-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 0.65rem;
+  flex: 1 1 420px;
+}
+
+.cad-plotting-ribbon-chip {
+  padding: 0.62rem 0.72rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.56);
+}
+
+.cad-plotting-ribbon-chip span {
+  display: block;
+  margin-bottom: 0.26rem;
+  color: #67e8f9;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cad-plotting-ribbon-chip strong {
+  display: block;
+  color: #f8fafc;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.cad-plotting-hud {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  width: min(560px, calc(100% - 2rem));
+  pointer-events: none;
+}
+
+.cad-plotting-hud-card {
+  padding: 0.68rem 0.78rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(7, 12, 22, 0.88);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.34);
+}
+
+.cad-plotting-hud-card span {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+}
+
+.cad-plotting-hud-card strong {
+  display: block;
+  color: #f8fafc;
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
 
 .cad-measure-box {
@@ -1100,7 +1441,7 @@
   padding: 0.75rem 1rem;
   border-top: 1px solid rgba(148, 163, 184, 0.12);
   border-bottom: 1px solid rgba(148, 163, 184, 0.12);
-  background: rgba(6, 10, 18, 0.98);
+  background: rgba(8, 13, 22, 0.98);
 }
 
 .cad-command-log {
@@ -1258,6 +1599,22 @@
     border-left: 0;
     border-bottom: 1px solid rgba(148, 163, 184, 0.12);
   }
+
+  .cad-plotting-hud {
+    grid-template-columns: 1fr;
+  }
+
+  .cad-command-center-grid,
+  .cad-command-center-actions,
+  .cad-plotting-ribbon-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .cad-plotting-ribbon {
+    flex-direction: column;
+    align-items: stretch;
+    width: min(calc(100% - 2rem), 680px);
+  }
 }
 
 @media (max-width: 640px) {
@@ -1281,6 +1638,17 @@
 
   .cad-editor-actions-right > * {
     flex: 1;
+  }
+
+  .cad-plotting-ribbon {
+    top: 0.75rem;
+    left: 0.75rem;
+    width: calc(100% - 1.5rem);
+    padding: 0.8rem 0.85rem;
+  }
+
+  .cad-plotting-ribbon-main strong {
+    font-size: 0.9rem;
   }
 }
 
