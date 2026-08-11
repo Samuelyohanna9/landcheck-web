@@ -174,6 +174,54 @@
   font-size: 0.86rem;
 }
 
+.survey-sync-banner-copy {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.survey-draft-banner {
+  border-color: rgba(16, 185, 129, 0.32);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(17, 24, 39, 0.92));
+}
+
+.survey-sync-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.draft-banner-btn {
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  padding: 0.72rem 1rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.draft-banner-btn--ghost {
+  background: rgba(255, 255, 255, 0.04);
+  color: #dbeafe;
+}
+
+.draft-banner-btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.draft-banner-btn--primary {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-color: rgba(16, 185, 129, 0.38);
+  color: #f8fafc;
+  box-shadow: 0 12px 24px rgba(5, 150, 105, 0.18);
+}
+
+.draft-banner-btn--primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(5, 150, 105, 0.24);
+}
+
 .survey-sync-banner.syncing {
   border-color: rgba(59, 130, 246, 0.35);
   background: rgba(15, 23, 42, 0.88);
@@ -220,6 +268,14 @@
   .draft-status-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .survey-sync-banner-actions {
+    width: 100%;
+  }
+
+  .draft-banner-btn {
+    flex: 1 1 180px;
   }
 
   .draft-status-row span {

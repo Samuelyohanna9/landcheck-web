@@ -155,6 +155,7 @@ type BuildingHatchType = "horizontal" | "vertical" | "diagonal" | "cross";
 type SurveyPlanDraftState = {
   workflowMode: WorkflowMode | null;
   currentStep: number;
+  featureEditorOpen: boolean;
   manualPoints: ManualPoint[];
   coordinateSystem: string;
   plotId: number | null;
@@ -293,6 +294,18 @@ const normalizeApiDownloadPath = (value: string) => {
     return `${parsed.pathname}${parsed.search}`;
   } catch {
     return rawValue;
+  }
+};
+
+const formatDraftUpdatedAt = (value: string | null) => {
+  if (!value) return "";
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(value));
+  } catch {
+    return value;
   }
 };
 
@@ -554,6 +567,9 @@ export default function SurveyPlan() {
         ? GEOREFERENCE_STEPS
         : SURVEY_STEPS;
   const [draftHydrated, setDraftHydrated] = useState(false);
+  const [restoredDraftUpdatedAt, setRestoredDraftUpdatedAt] = useState<string | null>(null);
+  const [showDraftRecoveryBanner, setShowDraftRecoveryBanner] = useState(false);
+  const [pendingFeatureEditorRestore, setPendingFeatureEditorRestore] = useState(false);
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === "undefined" ? true : navigator.onLine
   );
@@ -584,6 +600,7 @@ export default function SurveyPlan() {
   const [serverSyncing, setServerSyncing] = useState(false);
   const pendingDraftWriteRef = useRef<number | null>(null);
   const skipDirtyEffectRef = useRef(true);
+  const restoreActionsAppliedRef = useRef(false);
 
   // Coordinates state
   const [manualPoints, setManualPoints] = useState<ManualPoint[]>(buildDefaultManualPoints);
@@ -696,6 +713,7 @@ export default function SurveyPlan() {
   const [georefSavingFeatures, setGeorefSavingFeatures] = useState(false);
   const [georefDownloadingCsv, setGeorefDownloadingCsv] = useState(false);
   const [georefContinuing, setGeorefContinuing] = useState(false);
+  const currentStepTitle = activeSteps.find((step) => step.id === currentStep)?.title || "current step";
 
   // Survey metadata
   const [meta, setMeta] = useState<PlotMeta>(buildDefaultPlotMeta);
@@ -796,17 +814,35 @@ export default function SurveyPlan() {
         const saved = record.state;
         const restoredSyncSignature =
           typeof saved.lastServerSyncSignature === "string" ? saved.lastServerSyncSignature : null;
+        const restoredWorkflowMode = saved.workflowMode || null;
+        const maxStep =
+          restoredWorkflowMode === "georeference"
+            ? 3
+            : restoredWorkflowMode === "subdivision"
+              ? 3
+              : restoredWorkflowMode === "survey"
+                ? 3
+                : 1;
+        const restoredStep = Math.min(Math.max(Number(saved.currentStep || 1), 1), maxStep);
+        const shouldRestoreFeatureEditor =
+          Boolean(saved.featureEditorOpen) &&
+          (restoredWorkflowMode === "survey" || restoredWorkflowMode === "subdivision") &&
+          restoredStep >= 2;
+        setRestoredDraftUpdatedAt(record.updatedAt || null);
+        setShowDraftRecoveryBanner(true);
+        restoreActionsAppliedRef.current = false;
         if (saved.workflowMode) setWorkflowMode(saved.workflowMode);
-        setCurrentStep(
-          saved.workflowMode === "georeference"
-            ? Math.min(Math.max(Number(saved.currentStep || 1), 1), 3)
-            : 1
-        );
+        setCurrentStep(restoredStep);
+        setPendingFeatureEditorRestore(shouldRestoreFeatureEditor);
         if (Array.isArray(saved.manualPoints) && saved.manualPoints.length >= 3) setManualPoints(saved.manualPoints);
         if (saved.coordinateSystem) setCoordinateSystem(saved.coordinateSystem);
         if (typeof saved.plotId === "number") setPlotId(saved.plotId);
         setHasHeightData(Boolean(saved.hasHeightData));
-        setPreviewType("survey");
+        if (saved.previewType === "orthophoto" || saved.previewType === "topomap" || saved.previewType === "survey") {
+          setPreviewType(saved.previewType);
+        } else {
+          setPreviewType("survey");
+        }
         if (saved.topoSource) setTopoSource(saved.topoSource);
         if (saved.northArrowStyle) setNorthArrowStyle(saved.northArrowStyle);
         if (saved.northArrowColor) setNorthArrowColor(saved.northArrowColor);
@@ -866,7 +902,6 @@ export default function SurveyPlan() {
             }
           }
         }
-        toast.success("Local survey draft restored in edit mode.");
       })
       .finally(() => {
         if (active) {
@@ -1119,11 +1154,12 @@ export default function SurveyPlan() {
     const draftState: SurveyPlanDraftState = {
       workflowMode,
       currentStep,
+      featureEditorOpen: showFeatureEditor,
       manualPoints,
       coordinateSystem,
       plotId,
       hasHeightData,
-      previewType: "survey",
+      previewType,
       topoSource,
       northArrowStyle,
       northArrowColor,
@@ -1184,10 +1220,12 @@ export default function SurveyPlan() {
     draftHydrated,
     workflowMode,
     currentStep,
+    showFeatureEditor,
     manualPoints,
     coordinateSystem,
     plotId,
     hasHeightData,
+    previewType,
     topoSource,
     northArrowStyle,
     northArrowColor,
@@ -2488,6 +2526,11 @@ export default function SurveyPlan() {
   const resetAll = () => {
     clearSurveyPlanDraft(ACTIVE_SURVEY_DRAFT_ID).catch(() => {});
     clearGeorefLocalState();
+    restoreActionsAppliedRef.current = false;
+    setRestoredDraftUpdatedAt(null);
+    setShowDraftRecoveryBanner(false);
+    setPendingFeatureEditorRestore(false);
+    setShowFeatureEditor(false);
     setWorkflowMode(null);
     setManualPoints(buildDefaultManualPoints());
     setCoordinateSystem("wgs84");
@@ -2535,8 +2578,16 @@ export default function SurveyPlan() {
     setHasUnsyncedServerChanges(false);
     setServerSyncing(false);
     skipDirtyEffectRef.current = true;
-    toast("Reset completed");
+    toast.success("Ready for a new survey plan.");
   };
+
+  const handleStartNewPlan = useCallback(() => {
+    const shouldReset = window.confirm(
+      "Start a new survey plan? Your saved local draft for this browser will be cleared."
+    );
+    if (!shouldReset) return;
+    resetAll();
+  }, []);
 
   const triggerBlobDownload = (blobData: BlobPart, contentType: string | undefined, filename: string) => {
     const blob = new Blob([blobData], { type: contentType || "application/octet-stream" });
@@ -3407,6 +3458,41 @@ export default function SurveyPlan() {
     }
   }, [ensureServerPlot, features, isOnline, markServerSynced, plotId, prefetchFeatureEditor]);
 
+  useEffect(() => {
+    if (!draftHydrated || restoreActionsAppliedRef.current || !workflowMode) return;
+    restoreActionsAppliedRef.current = true;
+
+    if (
+      (workflowMode === "survey" || workflowMode === "subdivision") &&
+      currentStep >= 2 &&
+      !showFeatureEditor &&
+      isOnline &&
+      hasValidCoords
+    ) {
+      void refreshCurrentPreview().catch(() => {});
+    }
+
+    if (
+      pendingFeatureEditorRestore &&
+      (workflowMode === "survey" || workflowMode === "subdivision")
+    ) {
+      window.setTimeout(() => {
+        void openFeatureCadEditor();
+        setPendingFeatureEditorRestore(false);
+      }, 120);
+    }
+  }, [
+    currentStep,
+    draftHydrated,
+    hasValidCoords,
+    isOnline,
+    openFeatureCadEditor,
+    pendingFeatureEditorRestore,
+    refreshCurrentPreview,
+    showFeatureEditor,
+    workflowMode,
+  ]);
+
   // Persists one feature edit and reports success/failure back to the CAD editor, which stays
   // open and updates its own canvas locally instead of the editor closing after every action.
   // The preview is only regenerated once, when the editor is actually closed (see
@@ -3505,16 +3591,38 @@ export default function SurveyPlan() {
                 ? "Raster Georeferencing"
                 : "Survey Plan"}
         </h1>
-        <button className="reset-btn" onClick={resetAll}>
+        <button className="reset-btn" onClick={handleStartNewPlan}>
           <svg viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
           </svg>
-          Reset
+          Start New Plan
         </button>
       </header>
 
       {/* Main Content */}
       <div className="survey-content" ref={surveyContentRef}>
+        {showDraftRecoveryBanner && restoredDraftUpdatedAt && workflowMode && (
+          <div className={`survey-sync-banner survey-draft-banner${!isOnline ? " offline" : ""}`}>
+            <div className="survey-sync-banner-copy">
+              <strong>Saved draft restored</strong>
+              <span>
+                Continuing your {workflowMode === "survey" ? "survey plan" : workflowMode === "subdivision" ? "subdivision" : "georeference"} draft at
+                {" "}
+                {currentStepTitle}. Saved on this device {formatDraftUpdatedAt(restoredDraftUpdatedAt)}. Use
+                {" "}
+                <strong>Start New Plan</strong> when you want to begin another job.
+              </span>
+            </div>
+            <div className="survey-sync-banner-actions">
+              <button type="button" className="draft-banner-btn draft-banner-btn--ghost" onClick={() => setShowDraftRecoveryBanner(false)}>
+                Dismiss
+              </button>
+              <button type="button" className="draft-banner-btn draft-banner-btn--primary" onClick={handleStartNewPlan}>
+                Start New Plan
+              </button>
+            </div>
+          </div>
+        )}
         {!workflowMode && (
           <div className="mode-select-shell">
             <div className="mode-select-head">
