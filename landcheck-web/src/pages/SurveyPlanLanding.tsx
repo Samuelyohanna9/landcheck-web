@@ -1,11 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import planProduction1 from "./plan production1.png";
-import planProduction2 from "./plan production 2.png";
-import planProduction3 from "./plan production 3.png";
-import planProduction4 from "./plan pruction 4.png";
-import planProduction5 from "./plan production5.png";
-import "../styles/survey-plan-landing.css";
 import NavBar from "../components/NavBar";
 import SocialLinks from "../components/SocialLinks";
 import {
@@ -13,318 +7,289 @@ import {
   prefetchSurveyPlanRoute,
   scheduleSurveyPlanIdlePrefetch,
 } from "../utils/surveyPlanPrefetch";
+import "../styles/survey-plan-landing.css";
 
-type LaptopShot = { src: string; label: string };
-type HeroHighlight = { title: string; detail: string };
-type FeatureItem = { title: string; detail: string };
-type StepItem = { title: string; detail: string };
+type WorkflowPanel = {
+  title: string;
+  detail: string;
+  caption: string;
+};
 
-const planShots: LaptopShot[] = [
-  { src: planProduction1, label: "Survey plan production workspace" },
-  { src: planProduction2, label: "Coordinate workflow and boundary plotting" },
-  { src: planProduction3, label: "Plan drafting and output preparation" },
-  { src: planProduction4, label: "Map-driven survey editing and review" },
-  { src: planProduction5, label: "Final report and export-ready view" },
+const capabilityStrip = [
+  "Survey plan drafting",
+  "Raster georeferencing",
+  "Plot subdivision",
+  "Interactive CAD editor",
+  "PDF, CSV, and CAD exports",
 ];
 
-const laptopKeys = Array.from({ length: 56 }, (_, i) => i);
-
-const features: FeatureItem[] = [
+const workflowPanels: WorkflowPanel[] = [
   {
-    title: "Coordinate intake",
-    detail:
-      "Capture survey jobs in WGS84, UTM, or Minna systems from manual entry or spreadsheet upload.",
+    title: "Survey plan production",
+    detail: "Capture raw parcel coordinates, set presentation details, and render a formal plan sheet from the browser.",
+    caption: "Coordinate intake to official preview",
   },
   {
-    title: "Sheet preview",
-    detail:
-      "Review the draft plan visually before printing so changes happen on the right sheet, not after export.",
+    title: "Georeference scanned plans",
+    detail: "Anchor JPEG or PNG survey sheets against real control points, then continue into digitizing and staking exports.",
+    caption: "Ground control pairing and anchored raster review",
   },
   {
-    title: "Export package",
-    detail: "Deliver PDF, DWG, and orthophoto outputs in one controlled browser workflow.",
+    title: "Subdivision workspace",
+    detail: "Split a parent parcel by count, area, fraction, or custom allocation and keep every resulting lot traceable.",
+    caption: "Subdivision logic with controlled lot outputs",
   },
   {
-    title: "Satellite context",
-    detail:
-      "Pull roads, rivers, and nearby structures into the production workflow where context matters.",
-  },
-];
-
-const steps: StepItem[] = [
-  {
-    title: "Load the job",
-    detail:
-      "Enter points manually or bring them in from CSV and Excel using the coordinate system that matches the field record.",
+    title: "Interactive CAD editor",
+    detail: "Refine roads, buildings, rivers, fences, and boundary intent inside a drafting environment built for survey review.",
+    caption: "Browser CAD editing without desktop overhead",
   },
   {
-    title: "Review the draft",
-    detail:
-      "Check the parcel on the live preview, refine the context, and confirm the layout before final output.",
-  },
-  {
-    title: "Export the package",
-    detail:
-      "Produce the plan sheet and supporting outputs with the final typography, scale, and presentation settings applied.",
+    title: "Final export package",
+    detail: "Issue plan PDFs, orthophoto sheets, topographic outputs, CSV stakeout files, and DWG or DXF handoff files.",
+    caption: "Client-ready and field-ready exports",
   },
 ];
 
-const heroHighlights: HeroHighlight[] = [
+const coreCapabilities = [
   {
-    title: "Nigerian coordinate workflows",
-    detail: "WGS84, UTM, and Minna-ready input and output handling.",
+    title: "Survey plan drafting",
+    detail: "Move from coordinate entry to a finished parcel sheet with formal metadata, paper sizing, and plot preview control.",
   },
   {
-    title: "Browser-based production",
-    detail: "Draft, preview, and export without moving between desktop tools.",
+    title: "Subdivision engine",
+    detail: "Generate new lots from one parent parcel using count-based, area-based, fractional, or custom allocation rules.",
   },
   {
-    title: "Print-grade outputs",
-    detail: "Professional sheets, orthophotos, and export files from one job record.",
+    title: "Raster georeferencing",
+    detail: "Upload scanned plans, place control points, solve the transform, digitize features, and continue the job in one flow.",
+  },
+  {
+    title: "Interactive CAD editor",
+    detail: "Adjust boundary-aware linework, inspect geometry, and prepare cleaner outputs without leaving the browser session.",
+  },
+  {
+    title: "Export pack",
+    detail: "Deliver survey plan PDFs, orthophoto PDFs, topographic sheets, staking CSVs, and CAD handoff files from the same job.",
   },
 ];
 
-const audience = [
-  "Licensed surveyors",
-  "Land consultancies",
-  "Layout reviewers",
-  "Property developers",
-  "Government agencies",
-  "Legal land teams",
+const productionRoutes = [
+  {
+    title: "Survey Plan",
+    detail: "Standard parcel drafting and official sheet generation from entered coordinates.",
+    action: "Open survey plan",
+  },
+  {
+    title: "Subdivision",
+    detail: "Parent-plot splitting with batch review, lot naming, and clean-copy outputs.",
+    action: "Open subdivision",
+  },
+  {
+    title: "Georeference",
+    detail: "Scanned raster control, digitizing, and CSV export for field staking workflows.",
+    action: "Open georeference",
+  },
+];
+
+const exportOutputs = [
+  "Plan sheet PDF",
+  "Orthophoto PDF",
+  "Topographic PDF",
+  "Computation sheet",
+  "CSV stakeout",
+  "DWG / DXF",
 ];
 
 export default function SurveyPlanLanding() {
   const navigate = useNavigate();
-  const [activeShot, setActiveShot] = useState(0);
-
-  const warmSurveyPlanEntry = () => {
-    void prefetchSurveyPlanRoute();
-    void prefetchSurveyPlanPreviewStep();
-  };
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setActiveShot((prev) => (prev + 1) % planShots.length);
-    }, 3200);
-    return () => window.clearInterval(timer);
-  }, []);
+  const [activePanel, setActivePanel] = useState(0);
 
   useEffect(() => {
     scheduleSurveyPlanIdlePrefetch();
   }, []);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActivePanel((current) => (current + 1) % workflowPanels.length);
+    }, 4200);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const warmSurveyEntry = () => {
+    void prefetchSurveyPlanRoute();
+    void prefetchSurveyPlanPreviewStep();
+  };
+
+  const openSurvey = () => {
+    warmSurveyEntry();
+    navigate("/survey-plan");
+  };
+
+  const activeWorkflow = workflowPanels[activePanel];
+
   return (
     <div className="spl-page">
-      <NavBar fixed activeRoute="/survey" ctaLabel="Open Survey Plan" ctaRoute="/survey-plan" />
+      <NavBar fixed overlay activeRoute="/survey" ctaLabel="Open Survey Plan" ctaRoute="/survey-plan" />
+
       <main>
         <section className="spl-hero">
           <div className="spl-hero-overlay" />
-          <div className="spl-hero-content">
-            <span className="spl-hero-eyebrow">LANDCHECK SURVEY PLAN</span>
-            <h1>
-              Survey drafting,
-              <br />
-              review, and export
-              <br />
-              in one browser studio
-            </h1>
-            <p>
-              Load field coordinates, inspect the parcel visually, refine the presentation,
-              and deliver clean survey sheets without moving between disconnected desktop tools.
-            </p>
-            <div className="spl-hero-ctas">
-              <button
-                type="button"
-                className="spl-hero-btn-primary"
-                onMouseEnter={warmSurveyPlanEntry}
-                onFocus={warmSurveyPlanEntry}
-                onTouchStart={warmSurveyPlanEntry}
-                onClick={() => navigate("/survey-plan")}
-              >
-                Launch Survey Studio
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="16" height="16">
-                  <path
-                    d="M5 12h14M12 5l7 7-7 7"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-              <a href="#features" className="spl-hero-btn-outline">
-                Review Capabilities
-              </a>
-            </div>
-            <div className="spl-hero-proof">
-              {heroHighlights.map((item) => (
-                <article key={item.title} className="spl-hero-proof-card">
-                  <h3>{item.title}</h3>
-                  <p>{item.detail}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-          <a href="#features" className="spl-scroll-indicator" aria-label="Scroll to features">
-            <svg viewBox="0 0 24 24" fill="none" width="38" height="38">
-              <path
-                d="M6 9l6 6 6-6"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </a>
-        </section>
-
-        <section id="features" className="spl-showcase-section">
-          <div className="spl-showcase-inner">
-            <div className="spl-showcase-copy">
-              <span className="spl-eyebrow">THE PLATFORM</span>
-              <h2>A production-grade survey workflow for Nigerian field teams</h2>
+          <div className="spl-shell spl-hero-shell">
+            <div className="spl-hero-copy">
+              <span className="spl-kicker">LandCheck Survey Plan</span>
+              <h1>Survey drafting, georeferencing, and export in one web workflow.</h1>
               <p>
-                Built for surveyors, land consultants, developers, and review teams that need clean
-                coordinate intake, reliable preview, and export-ready outputs from one controlled workspace.
+                Build clean parcel sheets, run subdivisions, georeference scanned plans, and issue field-ready outputs
+                without moving between disconnected tools.
               </p>
-
-              <div className="spl-feature-grid">
-                {features.map((item) => (
-                  <article key={item.title} className="spl-feature-card">
-                    <h3>{item.title}</h3>
-                    <p>{item.detail}</p>
-                  </article>
-                ))}
-              </div>
-
-              <div className="spl-showcase-ctas">
+              <div className="spl-hero-actions">
                 <button
                   type="button"
                   className="spl-btn-primary"
-                  onMouseEnter={warmSurveyPlanEntry}
-                  onFocus={warmSurveyPlanEntry}
-                  onTouchStart={warmSurveyPlanEntry}
-                  onClick={() => navigate("/survey-plan")}
+                  onMouseEnter={warmSurveyEntry}
+                  onFocus={warmSurveyEntry}
+                  onClick={openSurvey}
                 >
-                  Open Survey Workflow
+                  Open Survey Plan
                 </button>
-                <button
-                  type="button"
-                  className="spl-btn-secondary"
-                  onClick={() => navigate("/hazard-analysis")}
-                >
-                  Explore Flood Analysis
-                </button>
+                <a className="spl-btn-secondary" href="#survey-capabilities">
+                  View Capabilities
+                </a>
+              </div>
+              <div className="spl-capability-strip" aria-label="Survey plan capabilities">
+                {capabilityStrip.map((item) => (
+                  <span key={item} className="spl-capability-pill">
+                    {item}
+                  </span>
+                ))}
               </div>
             </div>
 
-            <div className="spl-showcase-demo">
-              <div className="spl-laptop">
-                <div className="spl-laptop-screen">
-                  {planShots.map((shot, index) => (
-                    <img
-                      key={shot.label}
-                      src={shot.src}
-                      alt={shot.label}
-                      className={`spl-laptop-shot fit-contain ${index === activeShot ? "active" : ""}`}
-                      loading="lazy"
-                      width="440"
-                      height="275"
-                    />
-                  ))}
+            <div className="spl-hero-visual" aria-live="polite">
+              <div className="spl-screen-frame">
+                <div className="spl-screen-topline">
+                  <span className="spl-screen-dot" />
+                  <span>Survey workflow</span>
                 </div>
-                <div className="spl-laptop-hinge" />
-                <div className="spl-laptop-base" />
-                <div className="spl-laptop-deck">
-                  <div className="spl-laptop-keys">
-                    {laptopKeys.map((k) => (
-                      <span key={k} className="spl-key" />
+                <div className="spl-screen-body">
+                  <div className="spl-screen-stage">
+                    <span className="spl-screen-stage-label">Current focus</span>
+                    <h2>{activeWorkflow.title}</h2>
+                    <p>{activeWorkflow.detail}</p>
+                  </div>
+                  <div className="spl-screen-rail" aria-hidden="true">
+                    {workflowPanels.map((panel, index) => (
+                      <div
+                        key={panel.title}
+                        className={`spl-screen-rail-item${index === activePanel ? " is-active" : ""}`}
+                      >
+                        <span>{String(index + 1).padStart(2, "0")}</span>
+                        <strong>{panel.title}</strong>
+                      </div>
                     ))}
                   </div>
-                  <div className="spl-laptop-trackpad" />
+                </div>
+                <div className="spl-screen-footer">
+                  <strong>{activeWorkflow.caption}</strong>
+                  <span>Designed for reliable field outputs on poor or unstable networks.</span>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section id="how-it-works" className="spl-steps-section">
-          <div className="spl-steps-inner">
-            <div className="spl-section-head">
-              <span className="spl-eyebrow">SIMPLE PROCESS</span>
-              <h2>A controlled route from field coordinates to final sheet</h2>
-              <p>Three production stages, with preview and export checks built in.</p>
+        <section id="survey-capabilities" className="spl-section spl-section--light">
+          <div className="spl-shell spl-section-shell">
+            <div className="spl-section-intro">
+              <span className="spl-section-kicker">Core capabilities</span>
+              <h2>Everything needed for a professional survey job, kept in a cleaner flow.</h2>
+              <p>
+                The platform covers drafting, scanned-plan recovery, subdivision logic, browser editing, and final
+                delivery without loading the page with unnecessary interface noise.
+              </p>
             </div>
-            <div className="spl-steps-grid">
-              {steps.map((step, index) => (
-                <article key={step.title} className="spl-step-card">
-                  <span className="spl-step-no">0{index + 1}</span>
-                  <h3>{step.title}</h3>
-                  <p>{step.detail}</p>
+
+            <div className="spl-capability-list">
+              {coreCapabilities.map((item, index) => (
+                <article key={item.title} className="spl-capability-row">
+                  <span className="spl-capability-index">{String(index + 1).padStart(2, "0")}</span>
+                  <div>
+                    <h3>{item.title}</h3>
+                    <p>{item.detail}</p>
+                  </div>
                 </article>
               ))}
             </div>
           </div>
         </section>
 
-        <section id="who-its-for" className="spl-audience-section">
-          <div className="spl-audience-inner">
-            <div className="spl-section-head">
-              <span className="spl-eyebrow spl-eyebrow--light">BUILT FOR</span>
-              <h2>Used by survey and land delivery teams</h2>
+        <section className="spl-section spl-section--paper">
+          <div className="spl-shell spl-section-shell">
+            <div className="spl-section-intro spl-section-intro--narrow">
+              <span className="spl-section-kicker">Production routes</span>
+              <h2>Choose the route that matches the job.</h2>
             </div>
-            <div className="spl-audience-grid">
-              {audience.map((item) => (
-                <div key={item} className="spl-audience-tag">
-                  {item}
-                </div>
+
+            <div className="spl-routes-grid">
+              {productionRoutes.map((route) => (
+                <article key={route.title} className="spl-route-column">
+                  <h3>{route.title}</h3>
+                  <p>{route.detail}</p>
+                  <button
+                    type="button"
+                    className="spl-route-link"
+                    onMouseEnter={warmSurveyEntry}
+                    onFocus={warmSurveyEntry}
+                    onClick={openSurvey}
+                  >
+                    {route.action}
+                  </button>
+                </article>
               ))}
             </div>
-            <button
-              type="button"
-              className="spl-audience-cta"
-              onMouseEnter={warmSurveyPlanEntry}
-              onFocus={warmSurveyPlanEntry}
-              onTouchStart={warmSurveyPlanEntry}
-              onClick={() => navigate("/survey-plan")}
-            >
-              Start a Survey Session
-            </button>
+
+            <div className="spl-export-strip">
+              <span className="spl-export-label">Exports</span>
+              <div className="spl-export-pills">
+                {exportOutputs.map((item) => (
+                  <span key={item} className="spl-export-pill">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 
         <footer className="spl-footer">
-          <div className="spl-footer-inner">
+          <div className="spl-shell spl-footer-shell">
             <div className="spl-footer-copy">
-              <h2>Open Survey Plan when the job is ready for production.</h2>
+              <span className="spl-section-kicker">Ready to draft</span>
+              <h2>Open Survey Plan and start the next job.</h2>
               <p>
-                Coordinate intake, review, and export stay together in one browser-based workflow.
+                Enter coordinates, preview the parcel, refine the sheet, and issue the export package from one browser
+                session.
               </p>
             </div>
             <div className="spl-footer-actions">
               <button
                 type="button"
-                className="spl-footer-primary-btn"
-                onMouseEnter={warmSurveyPlanEntry}
-                onFocus={warmSurveyPlanEntry}
-                onTouchStart={warmSurveyPlanEntry}
-                onClick={() => navigate("/survey-plan")}
+                className="spl-btn-primary"
+                onMouseEnter={warmSurveyEntry}
+                onFocus={warmSurveyEntry}
+                onClick={openSurvey}
               >
-                Launch Survey Studio
+                Launch Survey Plan
               </button>
-              <a
-                className="spl-footer-email-btn"
-                href="mailto:landchecktech@gmail.com?subject=LandCheck%20Survey%20Plan%20Enquiry"
-              >
-                landchecktech@gmail.com
+              <a className="spl-footer-email" href="mailto:landchecktech@gmail.com?subject=Survey%20Plan%20Support">
+                Contact support
               </a>
             </div>
           </div>
-          <div className="spl-footer-bottom">
-            <button type="button" onClick={() => navigate("/privacy")}>
-              Privacy Policy
-            </button>
-            <span>&copy; {new Date().getFullYear()} LandCheck Geospatial Technologies Limited</span>
+
+          <div className="spl-shell spl-footer-bottom">
+            <span>LandCheck Survey Plan for parcel drafting, subdivision, and georeferencing.</span>
             <SocialLinks className="spl-footer-social" />
           </div>
         </footer>
