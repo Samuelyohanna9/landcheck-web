@@ -1,6 +1,5 @@
 import { memo, useState, useRef, useEffect } from "react";
-import ColorSwatchPicker from "./ColorSwatchPicker";
-import TextStylePopover from "./TextStylePopover";
+import SurveyAppearancePanel from "./SurveyAppearancePanel";
 import "../styles/survey-preview.css";
 
 type PreviewType = "survey" | "orthophoto" | "topomap";
@@ -125,6 +124,7 @@ function SurveyPreview({
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const MIN_ZOOM = 25;
@@ -292,56 +292,53 @@ function SurveyPreview({
             <option value="30">30</option>
           </select>
         </div>
-        <div className="ribbon-group ribbon-group--colors">
-          <span className="ribbon-label">Colors</span>
-          <ColorSwatchPicker label="Boundary" value={boundaryColor} onChange={onBoundaryColorChange} />
-          <ColorSwatchPicker label="Grid" value={gridColor} onChange={onGridColorChange} />
-          <ColorSwatchPicker label="Text" value={textColor} onChange={onTextColorChange} />
-          <ColorSwatchPicker
-            label="Roads"
-            value={roadColor}
-            onChange={onRoadColorChange}
-            disabled={previewType !== "survey"}
-          />
-          <ColorSwatchPicker label="Rivers" value={riverColor} onChange={onRiverColorChange} />
-          <ColorSwatchPicker label="Building" value={buildingColor} onChange={onBuildingColorChange} />
-        </div>
-        <div className="ribbon-group">
-          <span className="ribbon-label">Building Hatch</span>
-          <select
-            className="ribbon-select"
-            value={buildingHatchType}
-            onChange={(e) => onBuildingHatchTypeChange(e.target.value)}
-          >
-            <option value="horizontal">Horizontal</option>
-            <option value="vertical">Vertical</option>
-            <option value="diagonal">Diagonal</option>
-            <option value="cross">Cross-hatch</option>
-          </select>
-        </div>
-        <TextStylePopover
-          titleFont={titleFont}
-          titleSize={titleSize}
-          onTitleFontChange={onTitleFontChange}
-          onTitleSizeChange={onTitleSizeChange}
-          gridFont={gridFont}
-          gridSize={gridSize}
-          onGridFontChange={onGridFontChange}
-          onGridSizeChange={onGridSizeChange}
-          stationFont={stationFont}
-          stationSize={stationSize}
-          onStationFontChange={onStationFontChange}
-          onStationSizeChange={onStationSizeChange}
-          bearingFont={bearingFont}
-          bearingSize={bearingSize}
-          onBearingFontChange={onBearingFontChange}
-          onBearingSizeChange={onBearingSizeChange}
-          areaFont={areaFont}
-          areaSize={areaSize}
-          onAreaFontChange={onAreaFontChange}
-          onAreaSizeChange={onAreaSizeChange}
-        />
+        <button type="button" className="ribbon-appearance-btn" onClick={() => setAppearanceOpen(true)}>
+          <svg viewBox="0 0 20 20" fill="currentColor" style={{ width: 13, height: 13 }}>
+            <path d="M10 2a1 1 0 011 1v1.09a6.01 6.01 0 014.91 4.91H17a1 1 0 110 2h-1.09a6.01 6.01 0 01-4.91 4.91V17a1 1 0 11-2 0v-1.09a6.01 6.01 0 01-4.91-4.91H3a1 1 0 110-2h1.09A6.01 6.01 0 019 4.09V3a1 1 0 011-1zm0 4a4 4 0 100 8 4 4 0 000-8z" />
+          </svg>
+          Appearance
+        </button>
       </div>
+
+      <SurveyAppearancePanel
+        open={appearanceOpen}
+        onClose={() => setAppearanceOpen(false)}
+        restrictRoadColor={previewType !== "survey"}
+        boundaryColor={boundaryColor}
+        gridColor={gridColor}
+        textColor={textColor}
+        roadColor={roadColor}
+        riverColor={riverColor}
+        buildingColor={buildingColor}
+        buildingHatchType={buildingHatchType}
+        onBoundaryColorChange={onBoundaryColorChange}
+        onGridColorChange={onGridColorChange}
+        onTextColorChange={onTextColorChange}
+        onRoadColorChange={onRoadColorChange}
+        onRiverColorChange={onRiverColorChange}
+        onBuildingColorChange={onBuildingColorChange}
+        onBuildingHatchTypeChange={onBuildingHatchTypeChange}
+        titleFont={titleFont}
+        titleSize={titleSize}
+        onTitleFontChange={onTitleFontChange}
+        onTitleSizeChange={onTitleSizeChange}
+        gridFont={gridFont}
+        gridSize={gridSize}
+        onGridFontChange={onGridFontChange}
+        onGridSizeChange={onGridSizeChange}
+        stationFont={stationFont}
+        stationSize={stationSize}
+        onStationFontChange={onStationFontChange}
+        onStationSizeChange={onStationSizeChange}
+        bearingFont={bearingFont}
+        bearingSize={bearingSize}
+        onBearingFontChange={onBearingFontChange}
+        onBearingSizeChange={onBearingSizeChange}
+        areaFont={areaFont}
+        areaSize={areaSize}
+        onAreaFontChange={onAreaFontChange}
+        onAreaSizeChange={onAreaSizeChange}
+      />
       <div className="preview-header">
         {/* Preview Type Toggle - 3 Tabs */}
         {!onlySurveyMode && (
