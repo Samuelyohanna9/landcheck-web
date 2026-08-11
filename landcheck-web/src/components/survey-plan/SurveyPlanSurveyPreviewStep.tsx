@@ -101,6 +101,26 @@ type Props = {
   onRiverColorChange: (value: string) => void;
   onBuildingColorChange: (value: string) => void;
   onBuildingHatchTypeChange: (value: string) => void;
+  titleFont: string;
+  titleSize: string;
+  gridFont: string;
+  gridSize: string;
+  stationFont: string;
+  stationSize: string;
+  bearingFont: string;
+  bearingSize: string;
+  areaFont: string;
+  areaSize: string;
+  onTitleFontChange: (value: string) => void;
+  onTitleSizeChange: (value: string) => void;
+  onGridFontChange: (value: string) => void;
+  onGridSizeChange: (value: string) => void;
+  onStationFontChange: (value: string) => void;
+  onStationSizeChange: (value: string) => void;
+  onBearingFontChange: (value: string) => void;
+  onBearingSizeChange: (value: string) => void;
+  onAreaFontChange: (value: string) => void;
+  onAreaSizeChange: (value: string) => void;
   surveyPreviewUrl: string | null;
   orthophotoPreviewUrl: string | null;
   topoMapPreviewUrl: string | null;
@@ -162,6 +182,26 @@ function SurveyPlanSurveyPreviewStep({
   onRiverColorChange,
   onBuildingColorChange,
   onBuildingHatchTypeChange,
+  titleFont,
+  titleSize,
+  gridFont,
+  gridSize,
+  stationFont,
+  stationSize,
+  bearingFont,
+  bearingSize,
+  areaFont,
+  areaSize,
+  onTitleFontChange,
+  onTitleSizeChange,
+  onGridFontChange,
+  onGridSizeChange,
+  onStationFontChange,
+  onStationSizeChange,
+  onBearingFontChange,
+  onBearingSizeChange,
+  onAreaFontChange,
+  onAreaSizeChange,
   surveyPreviewUrl,
   orthophotoPreviewUrl,
   topoMapPreviewUrl,
@@ -488,6 +528,26 @@ function SurveyPlanSurveyPreviewStep({
           onRiverColorChange={onRiverColorChange}
           onBuildingColorChange={onBuildingColorChange}
           onBuildingHatchTypeChange={onBuildingHatchTypeChange}
+          titleFont={titleFont}
+          titleSize={titleSize}
+          gridFont={gridFont}
+          gridSize={gridSize}
+          stationFont={stationFont}
+          stationSize={stationSize}
+          bearingFont={bearingFont}
+          bearingSize={bearingSize}
+          areaFont={areaFont}
+          areaSize={areaSize}
+          onTitleFontChange={onTitleFontChange}
+          onTitleSizeChange={onTitleSizeChange}
+          onGridFontChange={onGridFontChange}
+          onGridSizeChange={onGridSizeChange}
+          onStationFontChange={onStationFontChange}
+          onStationSizeChange={onStationSizeChange}
+          onBearingFontChange={onBearingFontChange}
+          onBearingSizeChange={onBearingSizeChange}
+          onAreaFontChange={onAreaFontChange}
+          onAreaSizeChange={onAreaSizeChange}
           paperSize={meta.paper_size}
           surveyPreviewUrl={surveyPreviewUrl}
           orthophotoPreviewUrl={orthophotoPreviewUrl}

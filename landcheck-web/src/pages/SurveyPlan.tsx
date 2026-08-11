@@ -172,6 +172,16 @@ type SurveyPlanDraftState = {
   riverColor: string;
   buildingColor: string;
   buildingHatchType: BuildingHatchType;
+  titleFont: string;
+  titleSize: string;
+  gridFont: string;
+  gridSize: string;
+  stationFont: string;
+  stationSize: string;
+  bearingFont: string;
+  bearingSize: string;
+  areaFont: string;
+  areaSize: string;
   meta: PlotMeta;
   subdivisionMethod: SubdivisionMethod;
   subdivisionCountDraft: string;
@@ -605,9 +615,31 @@ export default function SurveyPlan() {
   const [roadColor, setRoadColor] = useState<string>("#000000");
   const [riverColor, setRiverColor] = useState<string>("#0000ff");
   const [buildingColor, setBuildingColor] = useState<string>("#000000");
-  const [buildingHatchType, setBuildingHatchType] = useState<BuildingHatchType>("horizontal");
+  const [buildingHatchType, setBuildingHatchType] = useState<BuildingHatchType>("diagonal");
+  const [titleFont, setTitleFont] = useState<string>("");
+  const [titleSize, setTitleSize] = useState<string>("");
+  const [gridFont, setGridFont] = useState<string>("");
+  const [gridSize, setGridSize] = useState<string>("");
+  const [stationFont, setStationFont] = useState<string>("");
+  const [stationSize, setStationSize] = useState<string>("");
+  const [bearingFont, setBearingFont] = useState<string>("");
+  const [bearingSize, setBearingSize] = useState<string>("");
+  const [areaFont, setAreaFont] = useState<string>("");
+  const [areaSize, setAreaSize] = useState<string>("");
+  const textStylePayload = {
+    title_font: titleFont || undefined,
+    title_size: titleSize ? Number(titleSize) : undefined,
+    grid_font: gridFont || undefined,
+    grid_size: gridSize ? Number(gridSize) : undefined,
+    station_font: stationFont || undefined,
+    station_size: stationSize ? Number(stationSize) : undefined,
+    bearing_font: bearingFont || undefined,
+    bearing_size: bearingSize ? Number(bearingSize) : undefined,
+    area_font: areaFont || undefined,
+    area_size: areaSize ? Number(areaSize) : undefined,
+  };
   const [scaleDraft, setScaleDraft] = useState<string>("1000");
-  const [newRoadWidth, setNewRoadWidth] = useState<RoadWidthOption>("10");
+  const [newRoadWidth, setNewRoadWidth] = useState<string>("10");
   const [showFeatureEditor, setShowFeatureEditor] = useState(false);
   const featureEditsPendingRef = useRef(false);
   const [featureType, setFeatureType] = useState<"road" | "building" | "river" | "fence">("road");
@@ -787,6 +819,16 @@ export default function SurveyPlan() {
         if (saved.riverColor) setRiverColor(saved.riverColor);
         if (saved.buildingColor) setBuildingColor(saved.buildingColor);
         if (saved.buildingHatchType) setBuildingHatchType(saved.buildingHatchType);
+        if (saved.titleFont) setTitleFont(saved.titleFont);
+        if (saved.titleSize) setTitleSize(saved.titleSize);
+        if (saved.gridFont) setGridFont(saved.gridFont);
+        if (saved.gridSize) setGridSize(saved.gridSize);
+        if (saved.stationFont) setStationFont(saved.stationFont);
+        if (saved.stationSize) setStationSize(saved.stationSize);
+        if (saved.bearingFont) setBearingFont(saved.bearingFont);
+        if (saved.bearingSize) setBearingSize(saved.bearingSize);
+        if (saved.areaFont) setAreaFont(saved.areaFont);
+        if (saved.areaSize) setAreaSize(saved.areaSize);
         if (saved.meta) setMeta({ ...buildDefaultPlotMeta(), ...saved.meta });
         if (saved.subdivisionMethod) setSubdivisionMethod(saved.subdivisionMethod);
         if (typeof saved.subdivisionCountDraft === "string") setSubdivisionCountDraft(saved.subdivisionCountDraft);
@@ -1029,6 +1071,16 @@ export default function SurveyPlan() {
           riverColor,
           buildingColor,
           buildingHatchType,
+          titleFont,
+          titleSize,
+          gridFont,
+          gridSize,
+          stationFont,
+          stationSize,
+          bearingFont,
+          bearingSize,
+          areaFont,
+          areaSize,
         },
       }),
     [
@@ -1045,6 +1097,16 @@ export default function SurveyPlan() {
       riverColor,
       buildingColor,
       buildingHatchType,
+      titleFont,
+      titleSize,
+      gridFont,
+      gridSize,
+      stationFont,
+      stationSize,
+      bearingFont,
+      bearingSize,
+      areaFont,
+      areaSize,
     ]
   );
 
@@ -1074,6 +1136,16 @@ export default function SurveyPlan() {
       riverColor,
       buildingColor,
       buildingHatchType,
+      titleFont,
+      titleSize,
+      gridFont,
+      gridSize,
+      stationFont,
+      stationSize,
+      bearingFont,
+      bearingSize,
+      areaFont,
+      areaSize,
       meta,
       subdivisionMethod,
       subdivisionCountDraft,
@@ -1128,6 +1200,16 @@ export default function SurveyPlan() {
     riverColor,
     buildingColor,
     buildingHatchType,
+    titleFont,
+    titleSize,
+    gridFont,
+    gridSize,
+    stationFont,
+    stationSize,
+    bearingFont,
+    bearingSize,
+    areaFont,
+    areaSize,
     meta,
     subdivisionMethod,
     subdivisionCountDraft,
@@ -1778,6 +1860,7 @@ export default function SurveyPlan() {
         river_color: riverColor,
         building_color: buildingColor,
         building_hatch_type: buildingHatchType,
+        ...textStylePayload,
       };
 
       const res = await withRetry(() =>
@@ -1811,6 +1894,23 @@ export default function SurveyPlan() {
     northArrowColor,
     beaconStyle,
     roadWidth,
+    boundaryColor,
+    gridColor,
+    textColor,
+    roadColor,
+    riverColor,
+    buildingColor,
+    buildingHatchType,
+    titleFont,
+    titleSize,
+    gridFont,
+    gridSize,
+    stationFont,
+    stationSize,
+    bearingFont,
+    bearingSize,
+    areaFont,
+    areaSize,
     ensureServerPlot,
     markServerSynced,
   ]);
@@ -2575,6 +2675,7 @@ export default function SurveyPlan() {
         river_color: riverColor,
         building_color: buildingColor,
         building_hatch_type: buildingHatchType,
+        ...textStylePayload,
         template_name: meta.template_name,
         adamawa_rof_no: meta.adamawa_rof_no,
         adamawa_owner_name: meta.adamawa_owner_name,
@@ -3207,6 +3308,7 @@ export default function SurveyPlan() {
         river_color: riverColor,
         building_color: buildingColor,
         building_hatch_type: buildingHatchType,
+        ...textStylePayload,
         area_labels: subdivisionCleanCopyItems.map((item) => {
           const key = subdivisionAreaDraftKey(item);
           return {
@@ -3663,6 +3765,26 @@ export default function SurveyPlan() {
               onRiverColorChange={setRiverColor}
               onBuildingColorChange={setBuildingColor}
               onBuildingHatchTypeChange={handleBuildingHatchTypeChange}
+              titleFont={titleFont}
+              titleSize={titleSize}
+              gridFont={gridFont}
+              gridSize={gridSize}
+              stationFont={stationFont}
+              stationSize={stationSize}
+              bearingFont={bearingFont}
+              bearingSize={bearingSize}
+              areaFont={areaFont}
+              areaSize={areaSize}
+              onTitleFontChange={setTitleFont}
+              onTitleSizeChange={setTitleSize}
+              onGridFontChange={setGridFont}
+              onGridSizeChange={setGridSize}
+              onStationFontChange={setStationFont}
+              onStationSizeChange={setStationSize}
+              onBearingFontChange={setBearingFont}
+              onBearingSizeChange={setBearingSize}
+              onAreaFontChange={setAreaFont}
+              onAreaSizeChange={setAreaSize}
               surveyPreviewUrl={previewUrl}
               orthophotoPreviewUrl={orthophotoUrl}
               topoMapPreviewUrl={topoMapUrl}
@@ -3806,6 +3928,26 @@ export default function SurveyPlan() {
               onRiverColorChange={setRiverColor}
               onBuildingColorChange={setBuildingColor}
               onBuildingHatchTypeChange={handleBuildingHatchTypeChange}
+              titleFont={titleFont}
+              titleSize={titleSize}
+              gridFont={gridFont}
+              gridSize={gridSize}
+              stationFont={stationFont}
+              stationSize={stationSize}
+              bearingFont={bearingFont}
+              bearingSize={bearingSize}
+              areaFont={areaFont}
+              areaSize={areaSize}
+              onTitleFontChange={setTitleFont}
+              onTitleSizeChange={setTitleSize}
+              onGridFontChange={setGridFont}
+              onGridSizeChange={setGridSize}
+              onStationFontChange={setStationFont}
+              onStationSizeChange={setStationSize}
+              onBearingFontChange={setBearingFont}
+              onBearingSizeChange={setBearingSize}
+              onAreaFontChange={setAreaFont}
+              onAreaSizeChange={setAreaSize}
               surveyPreviewUrl={previewUrl}
               orthophotoPreviewUrl={orthophotoUrl}
               topoMapPreviewUrl={topoMapUrl}
@@ -4143,6 +4285,26 @@ export default function SurveyPlan() {
                 onRiverColorChange={setRiverColor}
                 onBuildingColorChange={setBuildingColor}
                 onBuildingHatchTypeChange={(value) => setBuildingHatchType(value as BuildingHatchType)}
+                titleFont={titleFont}
+                titleSize={titleSize}
+                gridFont={gridFont}
+                gridSize={gridSize}
+                stationFont={stationFont}
+                stationSize={stationSize}
+                bearingFont={bearingFont}
+                bearingSize={bearingSize}
+                areaFont={areaFont}
+                areaSize={areaSize}
+                onTitleFontChange={setTitleFont}
+                onTitleSizeChange={setTitleSize}
+                onGridFontChange={setGridFont}
+                onGridSizeChange={setGridSize}
+                onStationFontChange={setStationFont}
+                onStationSizeChange={setStationSize}
+                onBearingFontChange={setBearingFont}
+                onBearingSizeChange={setBearingSize}
+                onAreaFontChange={setAreaFont}
+                onAreaSizeChange={setAreaSize}
                 paperSize={meta.paper_size}
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}

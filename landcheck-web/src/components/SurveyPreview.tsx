@@ -1,5 +1,6 @@
 import { memo, useState, useRef, useEffect } from "react";
 import ColorSwatchPicker from "./ColorSwatchPicker";
+import TextStylePopover from "./TextStylePopover";
 import "../styles/survey-preview.css";
 
 type PreviewType = "survey" | "orthophoto" | "topomap";
@@ -32,6 +33,26 @@ type Props = {
   onRiverColorChange: (value: string) => void;
   onBuildingColorChange: (value: string) => void;
   onBuildingHatchTypeChange: (value: string) => void;
+  titleFont: string;
+  titleSize: string;
+  gridFont: string;
+  gridSize: string;
+  stationFont: string;
+  stationSize: string;
+  bearingFont: string;
+  bearingSize: string;
+  areaFont: string;
+  areaSize: string;
+  onTitleFontChange: (value: string) => void;
+  onTitleSizeChange: (value: string) => void;
+  onGridFontChange: (value: string) => void;
+  onGridSizeChange: (value: string) => void;
+  onStationFontChange: (value: string) => void;
+  onStationSizeChange: (value: string) => void;
+  onBearingFontChange: (value: string) => void;
+  onBearingSizeChange: (value: string) => void;
+  onAreaFontChange: (value: string) => void;
+  onAreaSizeChange: (value: string) => void;
   paperSize: string;
   surveyPreviewUrl: string | null;
   orthophotoPreviewUrl: string | null;
@@ -70,6 +91,26 @@ function SurveyPreview({
   onRiverColorChange,
   onBuildingColorChange,
   onBuildingHatchTypeChange,
+  titleFont,
+  titleSize,
+  gridFont,
+  gridSize,
+  stationFont,
+  stationSize,
+  bearingFont,
+  bearingSize,
+  areaFont,
+  areaSize,
+  onTitleFontChange,
+  onTitleSizeChange,
+  onGridFontChange,
+  onGridSizeChange,
+  onStationFontChange,
+  onStationSizeChange,
+  onBearingFontChange,
+  onBearingSizeChange,
+  onAreaFontChange,
+  onAreaSizeChange,
   paperSize,
   surveyPreviewUrl,
   orthophotoPreviewUrl,
@@ -278,6 +319,28 @@ function SurveyPreview({
             <option value="cross">Cross-hatch</option>
           </select>
         </div>
+        <TextStylePopover
+          titleFont={titleFont}
+          titleSize={titleSize}
+          onTitleFontChange={onTitleFontChange}
+          onTitleSizeChange={onTitleSizeChange}
+          gridFont={gridFont}
+          gridSize={gridSize}
+          onGridFontChange={onGridFontChange}
+          onGridSizeChange={onGridSizeChange}
+          stationFont={stationFont}
+          stationSize={stationSize}
+          onStationFontChange={onStationFontChange}
+          onStationSizeChange={onStationSizeChange}
+          bearingFont={bearingFont}
+          bearingSize={bearingSize}
+          onBearingFontChange={onBearingFontChange}
+          onBearingSizeChange={onBearingSizeChange}
+          areaFont={areaFont}
+          areaSize={areaSize}
+          onAreaFontChange={onAreaFontChange}
+          onAreaSizeChange={onAreaSizeChange}
+        />
       </div>
       <div className="preview-header">
         {/* Preview Type Toggle - 3 Tabs */}

@@ -183,6 +183,26 @@ type Props = {
   onRiverColorChange: (value: string) => void;
   onBuildingColorChange: (value: string) => void;
   onBuildingHatchTypeChange: (value: string) => void;
+  titleFont: string;
+  titleSize: string;
+  gridFont: string;
+  gridSize: string;
+  stationFont: string;
+  stationSize: string;
+  bearingFont: string;
+  bearingSize: string;
+  areaFont: string;
+  areaSize: string;
+  onTitleFontChange: (value: string) => void;
+  onTitleSizeChange: (value: string) => void;
+  onGridFontChange: (value: string) => void;
+  onGridSizeChange: (value: string) => void;
+  onStationFontChange: (value: string) => void;
+  onStationSizeChange: (value: string) => void;
+  onBearingFontChange: (value: string) => void;
+  onBearingSizeChange: (value: string) => void;
+  onAreaFontChange: (value: string) => void;
+  onAreaSizeChange: (value: string) => void;
   surveyPreviewUrl: string | null;
   orthophotoPreviewUrl: string | null;
   topoMapPreviewUrl: string | null;
@@ -807,6 +827,26 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                 onRiverColorChange={props.onRiverColorChange}
                 onBuildingColorChange={props.onBuildingColorChange}
                 onBuildingHatchTypeChange={props.onBuildingHatchTypeChange}
+                titleFont={props.titleFont}
+                titleSize={props.titleSize}
+                gridFont={props.gridFont}
+                gridSize={props.gridSize}
+                stationFont={props.stationFont}
+                stationSize={props.stationSize}
+                bearingFont={props.bearingFont}
+                bearingSize={props.bearingSize}
+                areaFont={props.areaFont}
+                areaSize={props.areaSize}
+                onTitleFontChange={props.onTitleFontChange}
+                onTitleSizeChange={props.onTitleSizeChange}
+                onGridFontChange={props.onGridFontChange}
+                onGridSizeChange={props.onGridSizeChange}
+                onStationFontChange={props.onStationFontChange}
+                onStationSizeChange={props.onStationSizeChange}
+                onBearingFontChange={props.onBearingFontChange}
+                onBearingSizeChange={props.onBearingSizeChange}
+                onAreaFontChange={props.onAreaFontChange}
+                onAreaSizeChange={props.onAreaSizeChange}
                 paperSize={props.meta.paper_size}
                 surveyPreviewUrl={props.surveyPreviewUrl}
                 orthophotoPreviewUrl={props.orthophotoPreviewUrl}
