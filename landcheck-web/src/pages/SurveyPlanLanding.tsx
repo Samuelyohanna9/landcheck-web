@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import planProduction1 from "./plan production1.png";
 import planProduction2 from "./plan production 2.png";
@@ -15,6 +15,9 @@ import {
 } from "../utils/surveyPlanPrefetch";
 
 type LaptopShot = { src: string; label: string };
+type HeroHighlight = { title: string; detail: string };
+type FeatureItem = { title: string; detail: string };
+type StepItem = { title: string; detail: string };
 
 const planShots: LaptopShot[] = [
   { src: planProduction1, label: "Survey plan production workspace" },
@@ -26,50 +29,68 @@ const planShots: LaptopShot[] = [
 
 const laptopKeys = Array.from({ length: 56 }, (_, i) => i);
 
-const features = [
+const features: FeatureItem[] = [
   {
-    title: "Coordinate Input",
-    detail: "Enter manually, upload CSV/Excel, or use WGS84, UTM, or Minna Datum values with back-computation support.",
+    title: "Coordinate intake",
+    detail:
+      "Capture survey jobs in WGS84, UTM, or Minna systems from manual entry or spreadsheet upload.",
   },
   {
-    title: "Interactive Map Editing",
-    detail: "View and refine your survey boundary on a live interactive map before generating the final plan.",
+    title: "Sheet preview",
+    detail:
+      "Review the draft plan visually before printing so changes happen on the right sheet, not after export.",
   },
   {
-    title: "Professional Export",
-    detail: "Export as PDF or DWG with orthophoto maps, computation sheets, and topographic overlays.",
+    title: "Export package",
+    detail: "Deliver PDF, DWG, and orthophoto outputs in one controlled browser workflow.",
   },
   {
-    title: "Auto Feature Detection",
-    detail: "Automatic detection of buildings, roads, and rivers anywhere in Nigeria using satellite data.",
+    title: "Satellite context",
+    detail:
+      "Pull roads, rivers, and nearby structures into the production workflow where context matters.",
   },
 ];
 
-const steps = [
+const steps: StepItem[] = [
   {
-    title: "Enter Your Coordinates",
+    title: "Load the job",
     detail:
-      "Paste, upload CSV/Excel, or type coordinates in WGS84, UTM, or Minna Datum. Back-computation supported.",
+      "Enter points manually or bring them in from CSV and Excel using the coordinate system that matches the field record.",
   },
   {
-    title: "Plot on the Interactive Map",
+    title: "Review the draft",
     detail:
-      "See your boundary rendered on a live map. Satellite features are detected and overlaid automatically.",
+      "Check the parcel on the live preview, refine the context, and confirm the layout before final output.",
   },
   {
-    title: "Generate and Export",
+    title: "Export the package",
     detail:
-      "One click generates a true-scale plan with title block, north arrow, and scale bar. Download PDF, DWG, or orthophoto.",
+      "Produce the plan sheet and supporting outputs with the final typography, scale, and presentation settings applied.",
+  },
+];
+
+const heroHighlights: HeroHighlight[] = [
+  {
+    title: "Nigerian coordinate workflows",
+    detail: "WGS84, UTM, and Minna-ready input and output handling.",
+  },
+  {
+    title: "Browser-based production",
+    detail: "Draft, preview, and export without moving between desktop tools.",
+  },
+  {
+    title: "Print-grade outputs",
+    detail: "Professional sheets, orthophotos, and export files from one job record.",
   },
 ];
 
 const audience = [
-  "Licensed Surveyors",
-  "Land Owners",
-  "Real Estate Firms",
-  "Government Agencies",
-  "Legal Professionals",
-  "Property Developers",
+  "Licensed surveyors",
+  "Land consultancies",
+  "Layout reviewers",
+  "Property developers",
+  "Government agencies",
+  "Legal land teams",
 ];
 
 export default function SurveyPlanLanding() {
@@ -94,213 +115,219 @@ export default function SurveyPlanLanding() {
 
   return (
     <div className="spl-page">
-      {/* Navigation */}
       <NavBar fixed activeRoute="/survey" ctaLabel="Open Survey Plan" ctaRoute="/survey-plan" />
       <main>
-
-      {/* Hero */}
-      <section className="spl-hero">
-        <div className="spl-hero-overlay" />
-        <div className="spl-hero-content">
-          <span className="spl-hero-eyebrow">LANDCHECK SURVEY PLAN</span>
-          <h1>
-            Professional Survey Plans
-            <br />
-            from Coordinate Input
-          </h1>
-          <p>Nigeria's first web-based survey plan production system. No CAD software required.</p>
-          <div className="spl-hero-ctas">
-            <button
-              type="button"
-              className="spl-hero-btn-primary"
-              onMouseEnter={warmSurveyPlanEntry}
-              onFocus={warmSurveyPlanEntry}
-              onTouchStart={warmSurveyPlanEntry}
-              onClick={() => navigate("/survey-plan")}
-            >
-              Open Survey Plan Tool
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="16" height="16">
-                <path
-                  d="M5 12h14M12 5l7 7-7 7"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-            <a href="#features" className="spl-hero-btn-outline">
-              See Features
-            </a>
-          </div>
-        </div>
-        <a href="#features" className="spl-scroll-indicator" aria-label="Scroll to features">
-          <svg viewBox="0 0 24 24" fill="none" width="38" height="38">
-            <path
-              d="M6 9l6 6 6-6"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </a>
-      </section>
-
-      {/* Features + Device Showcase */}
-      <section id="features" className="spl-showcase-section">
-        <div className="spl-showcase-inner">
-          <div className="spl-showcase-copy">
-            <span className="spl-eyebrow">THE PLATFORM</span>
-            <h2>Survey Plan Production Software</h2>
+        <section className="spl-hero">
+          <div className="spl-hero-overlay" />
+          <div className="spl-hero-content">
+            <span className="spl-hero-eyebrow">LANDCHECK SURVEY PLAN</span>
+            <h1>
+              Survey drafting,
+              <br />
+              review, and export
+              <br />
+              in one browser studio
+            </h1>
             <p>
-              A powerful web application that reduces hours of CAD work to minutes of clicks. Built for
-              surveyors, planners, developers, and land owners in Nigeria.
+              Load field coordinates, inspect the parcel visually, refine the presentation,
+              and deliver clean survey sheets without moving between disconnected desktop tools.
             </p>
-
-            <div className="spl-feature-grid">
-              {features.map((item) => (
-                <article key={item.title} className="spl-feature-card">
-                  <h3>{item.title}</h3>
-                  <p>{item.detail}</p>
-                </article>
-              ))}
-            </div>
-
-            <div className="spl-showcase-ctas">
+            <div className="spl-hero-ctas">
               <button
                 type="button"
-                className="spl-btn-primary"
+                className="spl-hero-btn-primary"
                 onMouseEnter={warmSurveyPlanEntry}
                 onFocus={warmSurveyPlanEntry}
                 onTouchStart={warmSurveyPlanEntry}
                 onClick={() => navigate("/survey-plan")}
               >
-                Start Survey Plan →
+                Launch Survey Studio
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="16" height="16">
+                  <path
+                    d="M5 12h14M12 5l7 7-7 7"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </button>
-              <button
-                type="button"
-                className="spl-btn-secondary"
-                onClick={() => navigate("/hazard-analysis")}
-              >
-                Try Flood Analysis
-              </button>
+              <a href="#features" className="spl-hero-btn-outline">
+                Review Capabilities
+              </a>
+            </div>
+            <div className="spl-hero-proof">
+              {heroHighlights.map((item) => (
+                <article key={item.title} className="spl-hero-proof-card">
+                  <h3>{item.title}</h3>
+                  <p>{item.detail}</p>
+                </article>
+              ))}
             </div>
           </div>
+          <a href="#features" className="spl-scroll-indicator" aria-label="Scroll to features">
+            <svg viewBox="0 0 24 24" fill="none" width="38" height="38">
+              <path
+                d="M6 9l6 6 6-6"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </a>
+        </section>
 
-          <div className="spl-showcase-demo">
-            <div className="spl-laptop">
-              <div className="spl-laptop-screen">
-                {planShots.map((shot, index) => (
-                  <img
-                    key={shot.label}
-                    src={shot.src}
-                    alt={shot.label}
-                    className={`spl-laptop-shot fit-contain ${index === activeShot ? "active" : ""}`}
-                    loading="lazy"
-                    width="440"
-                    height="275"
-                  />
+        <section id="features" className="spl-showcase-section">
+          <div className="spl-showcase-inner">
+            <div className="spl-showcase-copy">
+              <span className="spl-eyebrow">THE PLATFORM</span>
+              <h2>A production-grade survey workflow for Nigerian field teams</h2>
+              <p>
+                Built for surveyors, land consultants, developers, and review teams that need clean
+                coordinate intake, reliable preview, and export-ready outputs from one controlled workspace.
+              </p>
+
+              <div className="spl-feature-grid">
+                {features.map((item) => (
+                  <article key={item.title} className="spl-feature-card">
+                    <h3>{item.title}</h3>
+                    <p>{item.detail}</p>
+                  </article>
                 ))}
               </div>
-              <div className="spl-laptop-hinge" />
-              <div className="spl-laptop-base" />
-              <div className="spl-laptop-deck">
-                <div className="spl-laptop-keys">
-                  {laptopKeys.map((k) => (
-                    <span key={k} className="spl-key" />
+
+              <div className="spl-showcase-ctas">
+                <button
+                  type="button"
+                  className="spl-btn-primary"
+                  onMouseEnter={warmSurveyPlanEntry}
+                  onFocus={warmSurveyPlanEntry}
+                  onTouchStart={warmSurveyPlanEntry}
+                  onClick={() => navigate("/survey-plan")}
+                >
+                  Open Survey Workflow
+                </button>
+                <button
+                  type="button"
+                  className="spl-btn-secondary"
+                  onClick={() => navigate("/hazard-analysis")}
+                >
+                  Explore Flood Analysis
+                </button>
+              </div>
+            </div>
+
+            <div className="spl-showcase-demo">
+              <div className="spl-laptop">
+                <div className="spl-laptop-screen">
+                  {planShots.map((shot, index) => (
+                    <img
+                      key={shot.label}
+                      src={shot.src}
+                      alt={shot.label}
+                      className={`spl-laptop-shot fit-contain ${index === activeShot ? "active" : ""}`}
+                      loading="lazy"
+                      width="440"
+                      height="275"
+                    />
                   ))}
                 </div>
-                <div className="spl-laptop-trackpad" />
+                <div className="spl-laptop-hinge" />
+                <div className="spl-laptop-base" />
+                <div className="spl-laptop-deck">
+                  <div className="spl-laptop-keys">
+                    {laptopKeys.map((k) => (
+                      <span key={k} className="spl-key" />
+                    ))}
+                  </div>
+                  <div className="spl-laptop-trackpad" />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* How It Works */}
-      <section id="how-it-works" className="spl-steps-section">
-        <div className="spl-steps-inner">
-          <div className="spl-section-head">
-            <span className="spl-eyebrow">SIMPLE PROCESS</span>
-            <h2>How It Works</h2>
-            <p>From coordinates to export-ready plan in three steps</p>
+        <section id="how-it-works" className="spl-steps-section">
+          <div className="spl-steps-inner">
+            <div className="spl-section-head">
+              <span className="spl-eyebrow">SIMPLE PROCESS</span>
+              <h2>A controlled route from field coordinates to final sheet</h2>
+              <p>Three production stages, with preview and export checks built in.</p>
+            </div>
+            <div className="spl-steps-grid">
+              {steps.map((step, index) => (
+                <article key={step.title} className="spl-step-card">
+                  <span className="spl-step-no">0{index + 1}</span>
+                  <h3>{step.title}</h3>
+                  <p>{step.detail}</p>
+                </article>
+              ))}
+            </div>
           </div>
-          <div className="spl-steps-grid">
-            {steps.map((s) => (
-              <article key={s.title} className="spl-step-card">
-                <div className="spl-step-icon-dot">
-                  <span className="spl-step-dot"></span>
+        </section>
+
+        <section id="who-its-for" className="spl-audience-section">
+          <div className="spl-audience-inner">
+            <div className="spl-section-head">
+              <span className="spl-eyebrow spl-eyebrow--light">BUILT FOR</span>
+              <h2>Used by survey and land delivery teams</h2>
+            </div>
+            <div className="spl-audience-grid">
+              {audience.map((item) => (
+                <div key={item} className="spl-audience-tag">
+                  {item}
                 </div>
-                <h3>{s.title}</h3>
-                <p>{s.detail}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Who It's For */}
-      <section id="who-its-for" className="spl-audience-section">
-        <div className="spl-audience-inner">
-          <div className="spl-section-head">
-            <span className="spl-eyebrow spl-eyebrow--light">BUILT FOR</span>
-            <h2>Who Uses LandCheck Survey Plan</h2>
-          </div>
-          <div className="spl-audience-grid">
-            {audience.map((item) => (
-              <div key={item} className="spl-audience-tag">
-                {item}
-              </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="spl-audience-cta"
-            onMouseEnter={warmSurveyPlanEntry}
-            onFocus={warmSurveyPlanEntry}
-            onTouchStart={warmSurveyPlanEntry}
-            onClick={() => navigate("/survey-plan")}
-          >
-            Start Generating Plans →
-          </button>
-        </div>
-      </section>
-
-      {/* Footer CTA */}
-      <footer className="spl-footer">
-        <div className="spl-footer-inner">
-          <div className="spl-footer-copy">
-            <h2>Start Generating Professional Survey Plans</h2>
-            <p>No CAD software required. Works entirely in your browser.</p>
-          </div>
-          <div className="spl-footer-actions">
+              ))}
+            </div>
             <button
               type="button"
-              className="spl-footer-primary-btn"
+              className="spl-audience-cta"
               onMouseEnter={warmSurveyPlanEntry}
               onFocus={warmSurveyPlanEntry}
               onTouchStart={warmSurveyPlanEntry}
               onClick={() => navigate("/survey-plan")}
             >
-              Open Survey Plan Tool
+              Start a Survey Session
             </button>
-            <a
-              className="spl-footer-email-btn"
-              href="mailto:landchecktech@gmail.com?subject=LandCheck%20Survey%20Plan%20Enquiry"
-            >
-              landchecktech@gmail.com
-            </a>
           </div>
-        </div>
-        <div className="spl-footer-bottom">
-          <button type="button" onClick={() => navigate("/privacy")}>
-            Privacy Policy
-          </button>
-          <span>&copy; {new Date().getFullYear()} LandCheck Geospatial Technologies Limited</span>
-          <SocialLinks className="spl-footer-social" />
-        </div>
-      </footer>
+        </section>
+
+        <footer className="spl-footer">
+          <div className="spl-footer-inner">
+            <div className="spl-footer-copy">
+              <h2>Open Survey Plan when the job is ready for production.</h2>
+              <p>
+                Coordinate intake, review, and export stay together in one browser-based workflow.
+              </p>
+            </div>
+            <div className="spl-footer-actions">
+              <button
+                type="button"
+                className="spl-footer-primary-btn"
+                onMouseEnter={warmSurveyPlanEntry}
+                onFocus={warmSurveyPlanEntry}
+                onTouchStart={warmSurveyPlanEntry}
+                onClick={() => navigate("/survey-plan")}
+              >
+                Launch Survey Studio
+              </button>
+              <a
+                className="spl-footer-email-btn"
+                href="mailto:landchecktech@gmail.com?subject=LandCheck%20Survey%20Plan%20Enquiry"
+              >
+                landchecktech@gmail.com
+              </a>
+            </div>
+          </div>
+          <div className="spl-footer-bottom">
+            <button type="button" onClick={() => navigate("/privacy")}>
+              Privacy Policy
+            </button>
+            <span>&copy; {new Date().getFullYear()} LandCheck Geospatial Technologies Limited</span>
+            <SocialLinks className="spl-footer-social" />
+          </div>
+        </footer>
       </main>
     </div>
   );

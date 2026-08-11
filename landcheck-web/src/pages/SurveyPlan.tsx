@@ -1054,6 +1054,22 @@ export default function SurveyPlan() {
     return null;
   }, [manualPoints, coordinateSystem]);
 
+  // Elevation samples for the "Your Data" topo map mode - same WGS84 conversion as finalCoords,
+  // but keeping the uploaded height value alongside each point instead of just the boundary ring.
+  const elevationPointsPayload = useMemo(() => {
+    const withHeight = manualPoints.filter(
+      (p) => (p.lng !== 0 || p.lat !== 0) && p.height !== undefined && p.height !== null && Number.isFinite(Number(p.height)),
+    );
+    if (withHeight.length < 3) return [];
+    return withHeight.map((p) => {
+      if (coordinateSystem === "wgs84") {
+        return { lng: Number(p.lng), lat: Number(p.lat), elevation_m: Number(p.height) };
+      }
+      const [lng, lat] = toWGS84(Number(p.lng), Number(p.lat), coordinateSystem);
+      return { lng, lat, elevation_m: Number(p.height) };
+    });
+  }, [manualPoints, coordinateSystem]);
+
   const plotMetaPayload = useMemo(
     () => ({
       title_text: meta.title_text,
@@ -2018,6 +2034,7 @@ export default function SurveyPlan() {
           paper_size: meta.paper_size,
           use_topo_map: true, // Always topo for topo map
           topo_source: source, // "opentopomap" or "userdata"
+          elevation_points: source === "userdata" ? elevationPointsPayload : [],
           north_arrow_style: northArrowStyle,
           north_arrow_color: northArrowColor,
         }, {
@@ -2049,6 +2066,7 @@ export default function SurveyPlan() {
     stationNames,
     coordinateSystem,
     meta.paper_size,
+    elevationPointsPayload,
     northArrowStyle,
     northArrowColor,
     ensureServerPlot,
@@ -3582,15 +3600,27 @@ export default function SurveyPlan() {
           </svg>
           Back
         </button>
-        <h1 className="survey-title">
-          {workflowMode === "survey"
-            ? "Survey Plan Production"
-            : workflowMode === "subdivision"
-              ? "Plot Subdivision"
-              : workflowMode === "georeference"
-                ? "Raster Georeferencing"
-                : "Survey Plan"}
-        </h1>
+        <div className="survey-header-copy">
+          <span className="survey-kicker">LandCheck Survey Studio</span>
+          <h1 className="survey-title">
+            {workflowMode === "survey"
+              ? "Survey Plan Production"
+              : workflowMode === "subdivision"
+                ? "Plot Subdivision"
+                : workflowMode === "georeference"
+                  ? "Raster Georeferencing"
+                  : "Survey Plan"}
+          </h1>
+          <p className="survey-subtitle">
+            {workflowMode === "survey"
+              ? "Coordinate intake, preview, editing, and export in one controlled drafting workflow."
+              : workflowMode === "subdivision"
+                ? "Break a parent parcel into production-ready lots with live review before export."
+                : workflowMode === "georeference"
+                  ? "Anchor scanned sheets to real coordinates, digitize cleanly, and continue into Survey Plan."
+                  : "Choose the workflow that matches the production job you want to run."}
+          </p>
+        </div>
         <button className="reset-btn" onClick={handleStartNewPlan}>
           <svg viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
@@ -3626,8 +3656,9 @@ export default function SurveyPlan() {
         {!workflowMode && (
           <div className="mode-select-shell">
             <div className="mode-select-head">
-              <h2>Choose Workflow</h2>
-              <p>Select how you want to use Survey Plan in this session.</p>
+              <span className="mode-select-kicker">Drafting workspace</span>
+              <h2>Choose the production route for this session</h2>
+              <p>Each route keeps the same LandCheck drafting engine but opens a different output workflow.</p>
             </div>
             <div className="mode-card-grid">
               <button
@@ -3654,8 +3685,8 @@ export default function SurveyPlan() {
                   </div>
                 </div>
                 <h3>Survey Plan Production</h3>
-                <p>Create one parcel plan, preview map layout, and export all standard documents.</p>
-                <span className="mode-card-cta">Open Workflow</span>
+                <p>Prepare a single parcel sheet, inspect the layout live, and export the full package.</p>
+                <span className="mode-card-cta">Open survey workflow</span>
               </button>
               <button
                 type="button"
@@ -3679,8 +3710,8 @@ export default function SurveyPlan() {
                   </div>
                 </div>
                 <h3>Plot Subdivision</h3>
-                <p>Split a mother parcel into multiple lots, preview lot outputs, then export batch survey plans.</p>
-                <span className="mode-card-cta">Open Workflow</span>
+                <p>Split a parent parcel into multiple lots, review the result, and export batch-ready sheets.</p>
+                <span className="mode-card-cta">Open subdivision workflow</span>
               </button>
               <button
                 type="button"
@@ -3703,8 +3734,8 @@ export default function SurveyPlan() {
                   </div>
                 </div>
                 <h3>Raster Georeferencing</h3>
-                <p>Upload a scanned plan, match control points, digitize parcels, and carry the result into Survey Plan.</p>
-                <span className="mode-card-cta">Open Workflow</span>
+                <p>Anchor a scanned plan to real coordinates, digitize features, and continue into Survey Plan.</p>
+                <span className="mode-card-cta">Open georeference workflow</span>
               </button>
             </div>
           </div>
