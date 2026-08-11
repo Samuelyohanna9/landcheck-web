@@ -35,13 +35,15 @@ function ColorSwatchPicker({ label, value, onChange, disabled }: ColorSwatchPick
     <div className="color-swatch-picker" ref={containerRef}>
       <button
         type="button"
-        className="ribbon-color-swatch"
-        style={{ backgroundColor: value }}
+        className="ribbon-color-swatch-btn"
         title={`${label}: ${value}`}
         disabled={disabled}
         onClick={() => setOpen((prev) => !prev)}
         aria-label={`${label} color`}
-      />
+      >
+        <span className="ribbon-color-swatch" style={{ backgroundColor: value }} />
+        <span className="ribbon-color-swatch-label">{label}</span>
+      </button>
       {open ? (
         <div className="color-palette-popover">
           <span className="color-palette-popover-label">{label}</span>

@@ -113,8 +113,8 @@ type Props = {
   setAction: (a: FeatureAction) => void;
   roadName: string;
   setRoadName: (v: string) => void;
-  roadWidth: "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
-  setRoadWidth: (v: "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30") => void;
+  roadWidth: string;
+  setRoadWidth: (v: string) => void;
   plotId: number | null;
   meta: PlotMeta;
   manualPoints: ManualPoint[];
@@ -250,6 +250,14 @@ const getCoordinateSystemName = (sys: string) => {
   if (sys === "minna_33") return "MINNA UTM ZONE 33N";
   return sys.toUpperCase();
 };
+
+const formatEditorCoordinateValue = (value: number, coordinateSystem: string) =>
+  coordinateSystem === "wgs84" ? value.toFixed(6) : value.toFixed(2);
+
+const getCoordinateAxisLabels = (coordinateSystem: string) =>
+  coordinateSystem === "wgs84"
+    ? { x: "Longitude", y: "Latitude", xShort: "Lon", yShort: "Lat", units: "" }
+    : { x: "Easting", y: "Northing", xShort: "E", yShort: "N", units: " m" };
 
 const haversineDistanceMeters = (start: number[], end: number[]) => {
   const [lng1, lat1] = start;
@@ -959,6 +967,19 @@ export default function FeatureOverrideModal({
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState<number>(0);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
 
+  const cursorDisplay = useMemo(() => {
+    if (!cursor) return null;
+    const activeSystem = coordinateSystem || "wgs84";
+    const [x, y] = fromWGS84(cursor.lng, cursor.lat, activeSystem);
+    const labels = getCoordinateAxisLabels(activeSystem);
+    const formattedX = formatEditorCoordinateValue(x, activeSystem);
+    const formattedY = formatEditorCoordinateValue(y, activeSystem);
+    return {
+      compact: `${labels.xShort} ${formattedX}${labels.units} | ${labels.yShort} ${formattedY}${labels.units}`,
+      full: `${labels.x}: ${formattedX}${labels.units}, ${labels.y}: ${formattedY}${labels.units}`,
+    };
+  }, [coordinateSystem, cursor]);
+
   const suggestions = useMemo(() => {
     const input = commandInput.trim().toUpperCase();
     if (!input) return [];
@@ -1012,17 +1033,21 @@ export default function FeatureOverrideModal({
     () => (plottingPreviewPoints.length > plottingPoints.length ? buildGeometryFromPoints(plottingPreviewPoints, activeTool) : null),
     [activeTool, plottingPoints.length, plottingPreviewPoints]
   );
+  const roadWidthMeters = useMemo(() => {
+    const parsed = Number(String(roadWidth || "").trim());
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }, [roadWidth]);
   // While actively drawing a road, show its real-world width as two parallel edges around the
   // centerline (instead of only a single line) so the drafted footprint matches the chosen
   // road width before it's added.
   const roadWidthPreviewLines = useMemo(() => {
     if (editorTarget !== "road" || action === "delete" || activeTool === "select") return null;
     if (plottingPreviewPoints.length < 2) return null;
-    const halfWidthPx = (Number(roadWidth) / 2) * plottingViewport.scale;
+    const halfWidthPx = ((roadWidthMeters ?? 0) / 2) * plottingViewport.scale;
     if (!Number.isFinite(halfWidthPx) || halfWidthPx <= 0) return null;
     const projected = plottingPreviewPoints.map((point) => plottingViewport.project(point));
     return buildParallelOffsetLines(projected, halfWidthPx);
-  }, [action, activeTool, editorTarget, plottingPreviewPoints, plottingViewport, roadWidth]);
+  }, [action, activeTool, editorTarget, plottingPreviewPoints, plottingViewport, roadWidthMeters]);
   const hasSelectedGeometry = Boolean(selectedGeometry);
   const hasDraftGeometry =
     Boolean(plottingDraftGeometry) ||
@@ -1194,8 +1219,8 @@ export default function FeatureOverrideModal({
         const nextName = typeof properties?.name === "string" ? String(properties.name) : "";
         const nextWidth = String(properties?.width_m || "");
         setRoadName(nextName);
-        if (nextWidth && ["2", "4", "6", "8", "10", "12", "15", "20", "30"].includes(nextWidth)) {
-          setRoadWidth(nextWidth as Props["roadWidth"]);
+        if (nextWidth) {
+          setRoadWidth(nextWidth);
         }
       }
 
@@ -2931,7 +2956,12 @@ export default function FeatureOverrideModal({
     const draw = drawRef.current;
     const data = draw?.getAll();
     let feature = data?.features?.[data.features.length - 1];
-    if (!feature && plottingDraftGeometry) {
+    // plottingDraftGeometry is only trustworthy while a draw tool is still active - it's a
+    // memo of buildGeometryFromPoints(plottingPoints, activeTool), and finishing a shape (Enter
+    // or double-click) resets activeTool to "select" while leaving plottingPoints in place, which
+    // silently recomputes it as a LineString regardless of what was actually drawn. Once the tool
+    // is "select", the just-finished/just-selected geometry lives in selectedGeometry instead.
+    if (!feature && activeTool !== "select" && plottingDraftGeometry) {
       feature = {
         type: "Feature",
         properties: {},
@@ -2943,6 +2973,13 @@ export default function FeatureOverrideModal({
         type: "Feature",
         properties: {},
         geometry: selectedGeometry,
+      } as any;
+    }
+    if (!feature && plottingDraftGeometry) {
+      feature = {
+        type: "Feature",
+        properties: {},
+        geometry: plottingDraftGeometry,
       } as any;
     }
     if (!feature) {
@@ -2967,7 +3004,11 @@ export default function FeatureOverrideModal({
     }
 
     const savedName = savedFeatureType === "road" ? roadName : undefined;
-    const savedWidth = savedFeatureType === "road" ? Number(roadWidth) : undefined;
+    const savedWidth = savedFeatureType === "road" ? roadWidthMeters ?? undefined : undefined;
+    if (savedFeatureType === "road" && (!savedWidth || savedWidth <= 0)) {
+      toast.error("Enter a valid road width in meters before saving this road.");
+      return;
+    }
     const replacedKey = savedAction === "update" ? selectedFeatureRecord?.key : undefined;
 
     setPendingSave({
@@ -3184,6 +3225,21 @@ export default function FeatureOverrideModal({
               <option value="fence">Fence</option>
               <option value="boundary">Boundary</option>
             </select>
+            {editorTarget === "road" && action !== "delete" ? (
+              <label className="cad-toolbar-inline-field" title="Road width in meters">
+                <span>Width (m)</span>
+                <input
+                  className="cad-toolbar-input"
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  inputMode="decimal"
+                  value={roadWidth}
+                  onChange={(event) => setRoadWidth(event.target.value)}
+                  placeholder="10"
+                />
+              </label>
+            ) : null}
             <button
               type="button"
               className={`cad-icon-btn${action === "add" ? " active" : ""}`}
@@ -3302,17 +3358,15 @@ export default function FeatureOverrideModal({
                 {editorTarget === "road" && action !== "delete" && (
                   <div className="field">
                     <label>Road Width (m)</label>
-                    <select value={roadWidth} onChange={(event) => setRoadWidth(event.target.value as Props["roadWidth"])}>
-                      <option value="2">2</option>
-                      <option value="4">4</option>
-                      <option value="6">6</option>
-                      <option value="8">8</option>
-                      <option value="10">10</option>
-                      <option value="12">12</option>
-                      <option value="15">15</option>
-                      <option value="20">20</option>
-                      <option value="30">30</option>
-                    </select>
+                    <input
+                      type="number"
+                      min="0.1"
+                      step="0.1"
+                      inputMode="decimal"
+                      value={roadWidth}
+                      onChange={(event) => setRoadWidth(event.target.value)}
+                      placeholder="Enter road width in meters"
+                    />
                   </div>
                 )}
                 <div className="hint">
@@ -3845,7 +3899,7 @@ export default function FeatureOverrideModal({
                   {/* AutoCAD Dynamic Input Tooltip near cursor */}
                   {screenCursor && basemapMode === "plotting" && (
                     <g className="cad-dynamic-input" transform={`translate(${screenCursor.x + 14}, ${screenCursor.y + 14})`}>
-                      <rect x="0" y="0" width="138" height="42" rx="4" className="cad-dyn-bg" />
+                      <rect x="0" y="0" width="208" height="42" rx="4" className="cad-dyn-bg" />
                       <text x="8" y="16" className="cad-dyn-text">
                         {plottingPoints.length > 0 && plottingHoverPoint
                           ? `Len: ${formatLength(lineLengthMeters([plottingPoints[plottingPoints.length - 1], plottingHoverPoint]))}`
@@ -3864,7 +3918,7 @@ export default function FeatureOverrideModal({
                               if (angleDeg < 0) angleDeg += 360;
                               return angleDeg.toFixed(1);
                             })()}°`
-                          : `${cursor ? `${cursor.lng.toFixed(6)}, ${cursor.lat.toFixed(6)}` : ""}`}
+                          : `${cursorDisplay?.compact || ""}`}
                       </text>
                     </g>
                   )}
@@ -3958,7 +4012,7 @@ export default function FeatureOverrideModal({
               </span>
               <span>
                 Cursor:{" "}
-                {cursor ? `${cursor.lng.toFixed(6)}, ${cursor.lat.toFixed(6)}` : "--"}
+                {cursorDisplay?.full || "--"}
               </span>
               <span>Basemap: {basemapMode === "plotting" ? "Plotting" : "Satellite"}</span>
               <span>Tool: {activeTool === "select" ? "Select" : activeTool === "draw_polygon" ? "Polygon" : "Line"}</span>
