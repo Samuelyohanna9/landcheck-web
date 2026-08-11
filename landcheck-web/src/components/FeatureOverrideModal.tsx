@@ -169,6 +169,29 @@ const DEFAULT_PLOTTING_CAMERA: PlottingCamera = {
   offsetY: 0,
 };
 
+const CAD_EDITOR_HELP_SECTIONS = [
+  {
+    title: "Add features",
+    description:
+      "Choose a feature type first. Roads, rivers, and fences use the line tool. Buildings use the polygon tool. Boundary editing only activates when Boundary is selected.",
+  },
+  {
+    title: "Modify or delete safely",
+    description:
+      "Select an existing object on the sheet or from the register, then use Modify or Delete. Boundary edits stay protected until you intentionally switch the feature type to Boundary.",
+  },
+  {
+    title: "Work accurately",
+    description:
+      "Use Snap, Ortho, and Measure for cleaner drafting. Fit Plot recenters the parcel, while Box and Lasso help you review multiple objects quickly.",
+  },
+  {
+    title: "Mobile workflow",
+    description:
+      "On smaller screens, keep the plot open and pull in Tools or Inspector only when needed. The drawing surface stays primary while you work.",
+  },
+] as const;
+
 const DEFAULT_DRAFTING_ASSIST: DraftingAssistState = {
   snap: true,
   ortho: false,
@@ -937,8 +960,9 @@ export default function FeatureOverrideModal({
   const plottingViewportBoxWidth = Math.max(plottingPageWidth - PLOTTING_VIEWPORT_MARGIN * 2, 100);
   const plottingViewportBoxHeight = Math.max(plottingPageHeight - PLOTTING_VIEWPORT_MARGIN * 2, 100);
 
-  const [showLeftSidebar, setShowLeftSidebar] = useState(() => (typeof window === "undefined" ? true : window.innerWidth >= 1280));
-  const [showRightSidebar, setShowRightSidebar] = useState(() => (typeof window === "undefined" ? true : window.innerWidth >= 1280));
+  const [showLeftSidebar, setShowLeftSidebar] = useState(false);
+  const [showRightSidebar, setShowRightSidebar] = useState(false);
+  const [showEditorHelp, setShowEditorHelp] = useState(false);
   const [showTraversePanel, setShowTraversePanel] = useState(false);
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>(DEFAULT_LAYER_VISIBILITY);
   const [featureInventory, setFeatureInventory] = useState<FeatureInventory>(DEFAULT_INVENTORY);
@@ -1129,7 +1153,7 @@ export default function FeatureOverrideModal({
     ],
     [basemapMode, coordinateSystem, selectedFeatureRecord?.label, selectedObjectCount, visibleObjectRecords.length]
   );
-  const plottingRibbonItems = useMemo(
+  const toolbarMetaItems = useMemo(
     () => [
       {
         label: "Scale",
@@ -1143,15 +1167,8 @@ export default function FeatureOverrideModal({
         label: "View",
         value: basemapMode === "plotting" ? `Plotting ${plottingZoomPercent}` : "Satellite review",
       },
-      {
-        label: "Selection",
-        value:
-          selectedObjectCount > 1
-            ? `${selectedObjectCount} objects`
-            : selectedFeatureRecord?.label || "No active feature",
-      },
     ],
-    [basemapMode, coordinateSystem, meta.scale_text, plottingZoomPercent, selectedFeatureRecord?.label, selectedObjectCount]
+    [basemapMode, coordinateSystem, meta.scale_text, plottingZoomPercent]
   );
   const plottingAnnotationState = useMemo(() => {
     const zoom = plottingCamera.zoom;
@@ -3371,6 +3388,19 @@ export default function FeatureOverrideModal({
             </select>
           </div>
 
+          <div className="cad-toolbar-meta" title={cadMetaTooltip}>
+            {toolbarMetaItems.map((item) => (
+              <div key={item.label} className="cad-toolbar-meta-chip">
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+              </div>
+            ))}
+            <div className="cad-toolbar-meta-chip cad-toolbar-meta-chip--selection">
+              <span>Selection</span>
+              <strong>{selectionHeadline}</strong>
+            </div>
+          </div>
+
           <div className="cad-toolbar-spacer" />
 
           <div className="cad-toolbar-group">
@@ -3384,7 +3414,12 @@ export default function FeatureOverrideModal({
                 <CadIcon name="table" />
               </button>
             )}
-            <button type="button" className="cad-icon-btn" title={cadMetaTooltip}>
+            <button
+              type="button"
+              className={`cad-icon-btn${showEditorHelp ? " active" : ""}`}
+              title="Editor help"
+              onClick={() => setShowEditorHelp(true)}
+            >
               <CadIcon name="info" />
             </button>
             <button
@@ -3412,12 +3447,7 @@ export default function FeatureOverrideModal({
           </button>
         </div>
 
-        <div
-          className="cad-editor-body"
-          style={{
-            gridTemplateColumns: `${showLeftSidebar ? "320px" : "0px"} minmax(0, 1fr) ${showRightSidebar ? "320px" : "0px"}`,
-          }}
-        >
+        <div className="cad-editor-body">
           <aside className="cad-editor-sidebar" style={{ display: showLeftSidebar ? "block" : "none" }}>
             <section className="cad-panel cad-panel--workspace">
               <div className="cad-panel-head" style={{ position: "relative" }}>
@@ -3547,7 +3577,7 @@ export default function FeatureOverrideModal({
             <div className="cad-canvas-workspace-wrapper" style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
               {basemapMode === "plotting" ? (
                 <div className="feature-override-map cad-plotting-stage" ref={plottingStageRef}>
-                <div className="cad-plotting-ribbon">
+                {false ? <div className="cad-plotting-ribbon">
                   <div className="cad-plotting-ribbon-main">
                     <span>{meta.template_name === "adamawa_osg" ? "Survey plan layout" : "Drafting sheet"}</span>
                     <strong>{meta.adamawa_owner_name || meta.title_text || "Survey drafting workspace"}</strong>
@@ -3556,14 +3586,14 @@ export default function FeatureOverrideModal({
                     </small>
                   </div>
                   <div className="cad-plotting-ribbon-meta">
-                    {plottingRibbonItems.map((item) => (
+                    {toolbarMetaItems.map((item) => (
                       <div key={item.label} className="cad-plotting-ribbon-chip">
                         <span>{item.label}</span>
                         <strong>{item.value}</strong>
                       </div>
                     ))}
                   </div>
-                </div>
+                </div> : null}
                 <div className="cad-plotting-help">
                   Wheel to zoom. Hold middle mouse and drag to pan.
                   {selectionMode ? ` ${selectionMode === "box" ? "Drag a window to select multiple objects." : "Trace a lasso to select multiple objects."}` : ""}
@@ -4036,7 +4066,7 @@ export default function FeatureOverrideModal({
                     </g>
                   )}
                 </svg>
-                <div className="cad-plotting-hud" aria-hidden="true">
+                {false ? <div className="cad-plotting-hud" aria-hidden="true">
                   <div className="cad-plotting-hud-card">
                     <span>Coordinate system</span>
                     <strong>{getCoordinateSystemName(coordinateSystem || "wgs84")}</strong>
@@ -4057,7 +4087,7 @@ export default function FeatureOverrideModal({
                         : "Draft or select a feature"}
                     </strong>
                   </div>
-                </div>
+                </div> : null}
               </div>
             ) : (
               <div
@@ -4123,10 +4153,10 @@ export default function FeatureOverrideModal({
                 type="button"
                 className="cad-floating-tab cad-floating-tab--left"
                 onClick={() => setShowLeftSidebar(true)}
-                title="Show Setup &amp; Layers"
+                title="Show tools"
               >
                 <span className="cad-floating-tab-arrow">&gt;</span>
-                <span className="cad-floating-tab-text">Setup &amp; Layers</span>
+                <span className="cad-floating-tab-text">Tools</span>
               </button>
             )}
             {!showRightSidebar && (
@@ -4134,10 +4164,10 @@ export default function FeatureOverrideModal({
                 type="button"
                 className="cad-floating-tab cad-floating-tab--right"
                 onClick={() => setShowRightSidebar(true)}
-                title="Show Properties &amp; Inspector"
+                title="Show inspector"
               >
                 <span className="cad-floating-tab-arrow">&lt;</span>
-                <span className="cad-floating-tab-text">Inspector</span>
+                <span className="cad-floating-tab-text">Inspect</span>
               </button>
             )}
           </div>
@@ -4488,6 +4518,34 @@ export default function FeatureOverrideModal({
           </div>
         </div>
       </div>
+
+      {showEditorHelp && (
+        <div className="cad-confirm-overlay cad-help-overlay" role="dialog" aria-modal="true" onClick={() => setShowEditorHelp(false)}>
+          <div className="cad-help-dialog" onClick={(event) => event.stopPropagation()}>
+            <div className="cad-help-head">
+              <div>
+                <span>Editor help</span>
+                <h3>Use the drawing tools without covering the plot.</h3>
+              </div>
+              <button type="button" className="cad-icon-btn" onClick={() => setShowEditorHelp(false)} title="Close help">
+                <CadIcon name="close" />
+              </button>
+            </div>
+            <div className="cad-help-grid">
+              {CAD_EDITOR_HELP_SECTIONS.map((section, index) => (
+                <article key={section.title} className="cad-help-card">
+                  <span>{`0${index + 1}`}</span>
+                  <strong>{section.title}</strong>
+                  <p>{section.description}</p>
+                </article>
+              ))}
+            </div>
+            <div className="cad-help-footer">
+              <strong>Tip:</strong> Keep the plot open, pull in Tools only when needed, and use Inspector only when reviewing a selected object.
+            </div>
+          </div>
+        </div>
+      )}
 
       {pendingSave && (
         <div className="cad-confirm-overlay" role="dialog" aria-modal="true" onClick={cancelPendingSave}>
