@@ -86,9 +86,12 @@ function SurveyPlanGeoreferenceSetupStep({
   const dragStateRef = useRef<{ startX: number; startY: number; panX: number; panY: number; moved: boolean } | null>(null);
   const suppressNextImageClickRef = useRef(false);
   const controlPointRefs = useRef<Record<string, HTMLElement | null>>({});
+  const groundXInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [draftTitle, setDraftTitle] = useState("");
   const [draftFile, setDraftFile] = useState<File | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [addPointMenuOpen, setAddPointMenuOpen] = useState(false);
+  const [pendingPlacementMode, setPendingPlacementMode] = useState<"manual" | "map" | null>(null);
   const [stageMetrics, setStageMetrics] = useState<RasterStageMetrics | null>(null);
   const [numericDrafts, setNumericDrafts] = useState<Record<string, Partial<Record<NumericField, string>>>>({});
   const [imageZoom, setImageZoom] = useState(MIN_STAGE_ZOOM);
@@ -106,6 +109,11 @@ function SurveyPlanGeoreferenceSetupStep({
   } | null>(null);
 
   const controlPoints = session?.ground_control_points || [];
+  const pointIsReady = (point: (typeof controlPoints)[number]) => {
+    const hasImage = Number.isFinite(point.image_x) && Number.isFinite(point.image_y) && (Math.abs(point.image_x) > 0.5 || Math.abs(point.image_y) > 0.5);
+    const hasGround = Number.isFinite(point.ground_x) && Number.isFinite(point.ground_y) && (Math.abs(point.ground_x) > 0.0001 || Math.abs(point.ground_y) > 0.0001);
+    return hasImage && hasGround;
+  };
   const activePoint =
     controlPoints.find((item) => item.id === selectedControlPointId) || controlPoints[controlPoints.length - 1] || null;
   const solvedTransform = (session?.transform || null) as GeoreferenceTransform | null;
@@ -287,6 +295,22 @@ function SurveyPlanGeoreferenceSetupStep({
   }, [activePoint?.id]);
 
   useEffect(() => {
+    if (pendingPlacementMode !== "manual" || !activePoint?.id) return;
+    groundXInputRefs.current[activePoint.id]?.focus();
+  }, [pendingPlacementMode, activePoint?.id]);
+
+  const selectControlPoint = (controlPointId: string) => {
+    setPendingPlacementMode(null);
+    onSelectControlPoint(controlPointId);
+  };
+
+  const startAddPoint = (mode: "manual" | "map") => {
+    setAddPointMenuOpen(false);
+    setPendingPlacementMode(mode);
+    onAddControlPoint();
+  };
+
+  useEffect(() => {
     let cancelled = false;
     if (!mapContainerRef.current || mapRef.current) return;
     loadMapboxGl().then((mapboxgl) => {
@@ -432,7 +456,7 @@ function SurveyPlanGeoreferenceSetupStep({
         event.preventDefault();
         event.stopPropagation();
         const nextId = String(feature.properties?.id || "");
-        if (nextId) onSelectControlPoint(nextId);
+        if (nextId) selectControlPoint(nextId);
       });
 
       const marker = new mapboxgl.Marker({
@@ -727,6 +751,12 @@ function SurveyPlanGeoreferenceSetupStep({
                 </button>
               </div>
 
+              <div className="georef-control-list-head">
+                <strong>Ground Control Points</strong>
+                <span>
+                  {controlPoints.filter((point) => pointIsReady(point)).length}/{controlPoints.length} ready
+                </span>
+              </div>
               <div className="georef-control-list">
                 {controlPoints.map((point) => (
                   <article
@@ -735,11 +765,11 @@ function SurveyPlanGeoreferenceSetupStep({
                       controlPointRefs.current[point.id] = node;
                     }}
                     className={`georef-point-row${point.id === activePoint?.id ? " active" : ""}`}
-                    onClick={() => onSelectControlPoint(point.id)}
+                    onClick={() => selectControlPoint(point.id)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
-                        onSelectControlPoint(point.id);
+                        selectControlPoint(point.id);
                       }
                     }}
                     role="button"
@@ -747,7 +777,9 @@ function SurveyPlanGeoreferenceSetupStep({
                   >
                     <div className="georef-point-row-head">
                       <strong>{point.label}</strong>
-                      <span>{point.error_m != null ? `${point.error_m}m error` : "Pending match"}</span>
+                      <span className={`georef-point-status georef-point-status--${pointIsReady(point) ? "ready" : "pending"}`}>
+                        {point.error_m != null ? `${point.error_m}m error` : pointIsReady(point) ? "Ready" : "Needs input"}
+                      </span>
                     </div>
                     <div className="georef-point-row-grid">
                       <label>
@@ -761,6 +793,9 @@ function SurveyPlanGeoreferenceSetupStep({
                       <label>
                         {coordinateXLabel}
                         <input
+                          ref={(node) => {
+                            groundXInputRefs.current[point.id] = node;
+                          }}
                           type="text"
                           inputMode="decimal"
                           value={getNumericInputValue(point.id, "ground_x", Number(point.ground_x))}
@@ -844,7 +879,7 @@ function SurveyPlanGeoreferenceSetupStep({
                 ))}
               </div>
               <div className="georef-action-dock">
-                <button type="button" className="btn-primary" onClick={onAddControlPoint}>
+                <button type="button" className="btn-primary" onClick={() => setAddPointMenuOpen(true)}>
                   Add next GCP
                 </button>
                 <button type="button" className="btn-outline" disabled={controlPoints.length < 3 || solving} onClick={onSolve}>
@@ -864,11 +899,12 @@ function SurveyPlanGeoreferenceSetupStep({
           <section className="georef-image-card">
             <div className="georef-card-head">
               <div>
+                <span className="georef-stage-eyebrow">1. Source image</span>
                 <h4>Raster control stage</h4>
                 <span>{activePoint ? `Selected: ${activePoint.label}` : "Add a control point first"}</span>
               </div>
               <div className="georef-stage-toolbar">
-                <button type="button" className="btn-primary" onClick={onAddControlPoint} disabled={!session}>
+                <button type="button" className="btn-primary" onClick={() => setAddPointMenuOpen(true)} disabled={!session}>
                   Add next GCP
                 </button>
                 <button type="button" className="btn-outline" onClick={() => updateStageZoom(imageZoom - STAGE_ZOOM_STEP)} disabled={!rasterObjectUrl || imageZoom <= MIN_STAGE_ZOOM}>
@@ -883,6 +919,18 @@ function SurveyPlanGeoreferenceSetupStep({
                 </button>
               </div>
             </div>
+            {pendingPlacementMode && activePoint && !pointIsReady(activePoint) ? (
+              <div className="georef-guidance-banner">
+                <span>
+                  {pendingPlacementMode === "manual"
+                    ? `Type the pixel position and ground coordinate for "${activePoint.label}" in the fields on the left.`
+                    : `Click the matching point on the raster image, then click the same location on the reference map for "${activePoint.label}".`}
+                </span>
+                <button type="button" onClick={() => setPendingPlacementMode(null)}>
+                  Done
+                </button>
+              </div>
+            ) : null}
             <div className="georef-image-stage-viewport" ref={imageViewportRef} onWheel={handleStageWheel}>
               <div
                 className={`georef-image-stage georef-image-stage--zoomable${imageZoom > MIN_STAGE_ZOOM ? " is-zoomed" : ""}${draggingStage ? " is-dragging" : ""}`}
@@ -921,7 +969,7 @@ function SurveyPlanGeoreferenceSetupStep({
                         title={point.label}
                         onClick={(event) => {
                           event.stopPropagation();
-                          onSelectControlPoint(point.id);
+                          selectControlPoint(point.id);
                         }}
                       >
                         <span className="georef-control-point-name">{point.label}</span>
@@ -980,13 +1028,44 @@ function SurveyPlanGeoreferenceSetupStep({
 
           <section className="georef-map-card">
             <div className="georef-card-head">
-              <h4>Ground control map</h4>
-              <span>Click the map to pair the selected point with a real coordinate.</span>
+              <div>
+                <span className="georef-stage-eyebrow">2. Reference map</span>
+                <h4>Ground control map</h4>
+                <span>Click the map to pair the selected point with a real coordinate.</span>
+              </div>
             </div>
+            {pendingPlacementMode === "map" && activePoint && !pointIsReady(activePoint) ? (
+              <div className="georef-guidance-banner">
+                <span>Now click the matching location on the map for "{activePoint.label}".</span>
+                <button type="button" onClick={() => setPendingPlacementMode(null)}>
+                  Done
+                </button>
+              </div>
+            ) : null}
             <div className="georef-map-surface" ref={mapContainerRef} />
           </section>
         </div>
       </div>
+
+      {addPointMenuOpen ? (
+        <div className="georef-add-point-backdrop" onClick={() => setAddPointMenuOpen(false)}>
+          <div className="georef-add-point-menu" onClick={(event) => event.stopPropagation()}>
+            <h4>Add ground control point</h4>
+            <p>How do you want to set this point's coordinates?</p>
+            <div className="georef-add-point-menu-actions">
+              <button type="button" className="btn-primary" onClick={() => startAddPoint("manual")}>
+                Add manually
+              </button>
+              <button type="button" className="btn-outline" onClick={() => startAddPoint("map")}>
+                Choose point on map
+              </button>
+              <button type="button" className="btn-outline" onClick={() => setAddPointMenuOpen(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
