@@ -4083,7 +4083,7 @@ export default function FeatureOverrideModal({
                     <span>Geometry</span>
                     <strong>
                       {activeMetrics
-                        ? `${activeMetrics.geometryType} · ${activeMetrics.vertices} pts`
+                        ? `${activeMetrics?.geometryType ?? "Geometry"} · ${activeMetrics?.vertices ?? 0} pts`
                         : "Draft or select a feature"}
                     </strong>
                   </div>
