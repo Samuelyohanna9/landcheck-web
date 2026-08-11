@@ -11363,6 +11363,15 @@ export default function GreenWork() {
             Super Admin
           </button>
         )}
+        {canAccessSuperAdmin && (
+          <button
+            className="green-work-menu-item"
+            type="button"
+            onClick={() => navigate("/admin")}
+          >
+            Survey Admin
+          </button>
+        )}
         <button
           className={`green-work-menu-item ${activeForm === "project_focus" ? "active" : ""}`}
           type="button"
