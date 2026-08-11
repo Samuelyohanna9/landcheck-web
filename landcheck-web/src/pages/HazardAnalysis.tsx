@@ -15,31 +15,85 @@ type ManualPoint = {
   height?: number;
 };
 
+type HazardType = "flood" | "erosion";
+
+type LegendItem = { label: string; color: string };
+
 type FloodResult = {
   risk_score: number;
   risk_class: string;
+  class_color?: string;
   mean_depth_m: number;
   max_depth_m: number;
   inundation_percent: number;
   distance_to_river_m?: number;
+  depth_score?: number;
+  inundation_score?: number;
+  river_proximity_score?: number;
   overlay: string;
   note: string;
   buffer_m: number;
   method: string;
-  legend: { label: string; color: string }[];
+  legend: LegendItem[];
   return_period: number;
   data_available?: boolean;
 };
 
+type ErosionResult = {
+  risk_score: number;
+  risk_class: string;
+  class_color?: string;
+  mean_slope_deg: number;
+  max_slope_deg: number;
+  mean_ndvi: number;
+  distance_to_drainage_m: number;
+  slope_score?: number;
+  vegetation_score?: number;
+  drainage_score?: number;
+  overlay: string;
+  note: string;
+  buffer_m: number;
+  method: string;
+  legend: LegendItem[];
+  data_available?: boolean;
+};
+
+const riskChipClass = (riskClass: string) => {
+  const normalized = riskClass.toLowerCase();
+  if (normalized === "no data") return "no-data";
+  return normalized;
+};
+
+function ComponentBars({ items }: { items: { label: string; value: number; color: string }[] }) {
+  return (
+    <div className="risk-components">
+      {items.map((item) => (
+        <div key={item.label} className="risk-component-row">
+          <span className="risk-component-label">{item.label}</span>
+          <div className="risk-component-track">
+            <div
+              className="risk-component-fill"
+              style={{ width: `${Math.max(2, Math.min(100, item.value * 100))}%`, background: item.color }}
+            />
+          </div>
+          <span className="risk-component-value">{Math.round(item.value * 100)}%</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function HazardAnalysis() {
   const navigate = useNavigate();
+  const [hazardType, setHazardType] = useState<HazardType>("flood");
   const [manualPoints, setManualPoints] = useState<ManualPoint[]>([
     { station: "A", lng: 0, lat: 0 },
     { station: "B", lng: 0, lat: 0 },
     { station: "C", lng: 0, lat: 0 },
   ]);
   const [coordinateSystem, setCoordinateSystem] = useState("wgs84");
-  const [result, setResult] = useState<FloodResult | null>(null);
+  const [floodResult, setFloodResult] = useState<FloodResult | null>(null);
+  const [erosionResult, setErosionResult] = useState<ErosionResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [showRaster, setShowRaster] = useState(false);
@@ -113,7 +167,7 @@ export default function HazardAnalysis() {
     });
   }, [manualPoints, coordinateSystem]);
 
-  const runFloodAnalysis = async () => {
+  const runAnalysis = async () => {
     if (!finalCoords) {
       toast.error("Enter at least 3 valid coordinate points");
       return;
@@ -121,16 +175,25 @@ export default function HazardAnalysis() {
     try {
       setLoading(true);
       const boundary = { type: "Polygon", coordinates: [finalCoords] };
-      const res = await api.post("/hazards/flood/preview", {
-        geometry: boundary,
-        show_raster: showRaster,
-        return_period: returnPeriod,
-      });
-      setResult(res.data);
-      toast.success("Flood risk analysis complete");
+      if (hazardType === "flood") {
+        const res = await api.post("/hazards/flood/preview", {
+          geometry: boundary,
+          show_raster: showRaster,
+          return_period: returnPeriod,
+        });
+        setFloodResult(res.data);
+        toast.success("Flood risk analysis complete");
+      } else {
+        const res = await api.post("/hazards/erosion/preview", {
+          geometry: boundary,
+          show_raster: showRaster,
+        });
+        setErosionResult(res.data);
+        toast.success("Erosion risk analysis complete");
+      }
     } catch (err) {
       console.error(err);
-      toast.error("Failed to run flood analysis");
+      toast.error(`Failed to run ${hazardType} analysis`);
     } finally {
       setLoading(false);
     }
@@ -141,16 +204,17 @@ export default function HazardAnalysis() {
     try {
       setPdfLoading(true);
       const boundary = { type: "Polygon", coordinates: [finalCoords] };
-      const res = await api.post(
-        "/hazards/flood/pdf",
-        { geometry: boundary, show_raster: showRaster, return_period: returnPeriod },
-        { responseType: "blob" },
-      );
+      const endpoint = hazardType === "flood" ? "/hazards/flood/pdf" : "/hazards/erosion/pdf";
+      const body =
+        hazardType === "flood"
+          ? { geometry: boundary, show_raster: showRaster, return_period: returnPeriod }
+          : { geometry: boundary, show_raster: showRaster };
+      const res = await api.post(endpoint, body, { responseType: "blob" });
       const blob = new Blob([res.data], { type: res.headers["content-type"] });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "flood_risk_report.pdf";
+      link.download = hazardType === "flood" ? "flood_risk_report.pdf" : "erosion_risk_report.pdf";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -163,14 +227,49 @@ export default function HazardAnalysis() {
     }
   };
 
+  const result = hazardType === "flood" ? floodResult : erosionResult;
+
+  const componentItems = useMemo(() => {
+    if (hazardType === "flood" && floodResult) {
+      return [
+        { label: "Depth", value: floodResult.depth_score ?? 0, color: "#1d4ed8" },
+        { label: "Inundation", value: floodResult.inundation_score ?? 0, color: "#0ea5e9" },
+        { label: "River proximity", value: floodResult.river_proximity_score ?? 0, color: "#38bdf8" },
+      ];
+    }
+    if (hazardType === "erosion" && erosionResult) {
+      return [
+        { label: "Slope", value: erosionResult.slope_score ?? 0, color: "#f97316" },
+        { label: "Bare ground", value: erosionResult.vegetation_score ?? 0, color: "#eab308" },
+        { label: "Drainage concentration", value: erosionResult.drainage_score ?? 0, color: "#dc2626" },
+      ];
+    }
+    return [];
+  }, [hazardType, floodResult, erosionResult]);
+
   return (
     <div className="hazard-container">
       <Toaster position="top-right" />
 
       <header className="hazard-header">
         <button className="back-btn" onClick={() => navigate("/")}>Back</button>
-        <h1 className="hazard-title">Flood Hazard Analysis</h1>
-        <div className="hazard-badge">Beta</div>
+        <h1 className="hazard-title">Hazard Risk Analysis</h1>
+        <div className="hazard-type-tabs">
+          <button
+            type="button"
+            className={`hazard-type-tab ${hazardType === "flood" ? "active" : ""}`}
+            onClick={() => setHazardType("flood")}
+          >
+            Flood Risk
+          </button>
+          <button
+            type="button"
+            className={`hazard-type-tab ${hazardType === "erosion" ? "active" : ""}`}
+            onClick={() => setHazardType("erosion")}
+          >
+            Erosion Risk
+          </button>
+        </div>
       </header>
 
       <div className="hazard-content">
@@ -178,7 +277,7 @@ export default function HazardAnalysis() {
           <div className="hazard-card">
             <h3>Plot Boundary</h3>
             <p className="hazard-subtext">
-              Draw or input coordinates to analyze flood risk. Screening-level only.
+              Draw or input coordinates to analyze {hazardType === "flood" ? "flood" : "erosion"} risk. Screening-level only.
             </p>
             <CoordinateInput
               points={manualPoints}
@@ -192,23 +291,25 @@ export default function HazardAnalysis() {
           </div>
 
           <div className="hazard-actions">
-            <button className="btn-primary" onClick={runFloodAnalysis} disabled={loading}>
-              {loading ? "Running..." : "Run Flood Analysis"}
+            <button className="btn-primary" onClick={runAnalysis} disabled={loading}>
+              {loading ? "Running..." : `Run ${hazardType === "flood" ? "Flood" : "Erosion"} Analysis`}
             </button>
-            <label className="hazard-select">
-              Return Period
-              <select
-                value={returnPeriod}
-                onChange={(e) => setReturnPeriod(Number(e.target.value))}
-              >
-                <option value={10}>RP10</option>
-                <option value={20}>RP20</option>
-                <option value={50}>RP50</option>
-                <option value={100}>RP100</option>
-                <option value={200}>RP200</option>
-                <option value={500}>RP500</option>
-              </select>
-            </label>
+            {hazardType === "flood" && (
+              <label className="hazard-select">
+                Return Period
+                <select
+                  value={returnPeriod}
+                  onChange={(e) => setReturnPeriod(Number(e.target.value))}
+                >
+                  <option value={10}>RP10</option>
+                  <option value={20}>RP20</option>
+                  <option value={50}>RP50</option>
+                  <option value={100}>RP100</option>
+                  <option value={200}>RP200</option>
+                  <option value={500}>RP500</option>
+                </select>
+              </label>
+            )}
             <label className="hazard-toggle">
               <input
                 type="checkbox"
@@ -219,46 +320,104 @@ export default function HazardAnalysis() {
             </label>
           </div>
 
-          {result && (
+          {hazardType === "flood" && floodResult && (
             <div className="hazard-card">
-              <h3>Risk Summary</h3>
+              <h3>Flood Risk Summary</h3>
               <div className="risk-score">
                 <div>
                   <span className="risk-label">Risk Score</span>
-                  <span className="risk-value">{result.risk_score}%</span>
+                  <span className="risk-value">{floodResult.risk_score}%</span>
                 </div>
-                <span className={`risk-chip ${result.risk_class.toLowerCase()}`}>{result.risk_class}</span>
+                <span className={`risk-chip ${riskChipClass(floodResult.risk_class)}`}>{floodResult.risk_class}</span>
               </div>
-              <div className="risk-breakdown">
-                <div>
+              <div className="risk-stat-grid">
+                <div className="risk-stat-card">
+                  <strong>{floodResult.mean_depth_m}</strong>
                   <span>Mean Depth (m)</span>
-                  <strong>{result.mean_depth_m}</strong>
                 </div>
-                <div>
+                <div className="risk-stat-card">
+                  <strong>{floodResult.max_depth_m}</strong>
                   <span>Max Depth (m)</span>
-                  <strong>{result.max_depth_m}</strong>
                 </div>
-                <div>
-                  <span>Inundation (%)</span>
-                  <strong>{result.inundation_percent}%</strong>
+                <div className="risk-stat-card">
+                  <strong>{floodResult.inundation_percent}%</strong>
+                  <span>Inundation</span>
                 </div>
-                <div>
-                  <span>Distance to River (m)</span>
-                  <strong>{result.distance_to_river_m ?? "N/A"}</strong>
+                <div className="risk-stat-card">
+                  <strong>{floodResult.distance_to_river_m ?? "N/A"}</strong>
+                  <span>Dist. to River (m)</span>
                 </div>
               </div>
-              <p className="hazard-note">{result.note}</p>
-              {result.data_available === false && (
+              {floodResult.data_available !== false && componentItems.length > 0 && (
+                <>
+                  <h4 className="risk-components-title">Score components</h4>
+                  <ComponentBars items={componentItems} />
+                </>
+              )}
+              <p className="hazard-note">{floodResult.note}</p>
+              {floodResult.data_available === false && (
                 <p className="hazard-warning">
                   No flood depth data was found for this plot at the selected return period.
                 </p>
               )}
               <div className="hazard-method">
                 <h4>How this is computed</h4>
-                <p>{result.method}</p>
-                <p>Return period: {result.return_period} years.</p>
-                <p>Analysis buffer: {result.buffer_m} m around the plot.</p>
+                <p>{floodResult.method}</p>
+                <p>Return period: {floodResult.return_period} years.</p>
+                <p>Analysis buffer: {floodResult.buffer_m} m around the plot.</p>
                 <p>Screening only — verify with local surveys and authorities.</p>
+              </div>
+              <button className="btn-outline" onClick={downloadPdf} disabled={pdfLoading}>
+                {pdfLoading ? "Preparing..." : "Download PDF Report"}
+              </button>
+            </div>
+          )}
+
+          {hazardType === "erosion" && erosionResult && (
+            <div className="hazard-card">
+              <h3>Erosion Risk Summary</h3>
+              <div className="risk-score">
+                <div>
+                  <span className="risk-label">Risk Score</span>
+                  <span className="risk-value">{erosionResult.risk_score}%</span>
+                </div>
+                <span className={`risk-chip ${riskChipClass(erosionResult.risk_class)}`}>{erosionResult.risk_class}</span>
+              </div>
+              <div className="risk-stat-grid">
+                <div className="risk-stat-card">
+                  <strong>{erosionResult.mean_slope_deg}°</strong>
+                  <span>Mean Slope</span>
+                </div>
+                <div className="risk-stat-card">
+                  <strong>{erosionResult.max_slope_deg}°</strong>
+                  <span>Max Slope</span>
+                </div>
+                <div className="risk-stat-card">
+                  <strong>{erosionResult.mean_ndvi}</strong>
+                  <span>Vegetation (NDVI)</span>
+                </div>
+                <div className="risk-stat-card">
+                  <strong>{erosionResult.distance_to_drainage_m}</strong>
+                  <span>Dist. to Drainage (m)</span>
+                </div>
+              </div>
+              {erosionResult.data_available !== false && componentItems.length > 0 && (
+                <>
+                  <h4 className="risk-components-title">Score components</h4>
+                  <ComponentBars items={componentItems} />
+                </>
+              )}
+              <p className="hazard-note">{erosionResult.note}</p>
+              {erosionResult.data_available === false && (
+                <p className="hazard-warning">
+                  No elevation data was found for this location.
+                </p>
+              )}
+              <div className="hazard-method">
+                <h4>How this is computed</h4>
+                <p>{erosionResult.method}</p>
+                <p>Analysis buffer: {erosionResult.buffer_m} m around the plot.</p>
+                <p>Screening only — verify with a geotechnical survey before development.</p>
               </div>
               <button className="btn-outline" onClick={downloadPdf} disabled={pdfLoading}>
                 {pdfLoading ? "Preparing..." : "Download PDF Report"}
@@ -269,23 +428,23 @@ export default function HazardAnalysis() {
 
         <div className="hazard-right">
           <div className="hazard-map">
-            <Suspense fallback={<div className="hazard-empty">Loading flood map...</div>}>
+            <Suspense fallback={<div className="hazard-empty">Loading map...</div>}>
               <MapViewEnhanced coordinates={mapCoordinates} onCoordinatesDrawn={handleCoordinatesFromMap} />
             </Suspense>
           </div>
           <div className="hazard-overlay">
-            <h3>Flood Risk Overlay</h3>
+            <h3>{hazardType === "flood" ? "Flood Risk Overlay" : "Erosion Risk Overlay"}</h3>
             {result?.overlay ? (
               <>
-                <img src={result.overlay} alt="Flood risk overlay" width="600" height="600" loading="lazy" decoding="async" />
+                <img src={result.overlay} alt={`${hazardType} risk overlay`} width="600" height="600" loading="lazy" decoding="async" />
                 <div className="hazard-north" aria-hidden="true">
                   <div className="north-arrow" />
                   <span>N</span>
                 </div>
                 <div className="hazard-legend">
                   <div className="legend-title">Legend</div>
-                  {result.legend?.map((item) => (
-                    <div key={item.label} className="legend-row">
+                  {result.legend?.map((item, index) => (
+                    <div key={`${item.label}-${index}`} className="legend-row">
                       <span className="legend-swatch" style={{ background: item.color }} />
                       <span>{item.label}</span>
                     </div>
