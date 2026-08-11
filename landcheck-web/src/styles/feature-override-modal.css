@@ -192,6 +192,51 @@
   box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.14);
 }
 
+.cad-toolbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  flex: 1 1 360px;
+  overflow-x: auto;
+  padding-inline: 0.15rem;
+  scrollbar-width: none;
+}
+
+.cad-toolbar-meta::-webkit-scrollbar {
+  display: none;
+}
+
+.cad-toolbar-meta-chip {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  min-width: 104px;
+  padding: 0.38rem 0.58rem;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.58);
+  white-space: nowrap;
+}
+
+.cad-toolbar-meta-chip span {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+}
+
+.cad-toolbar-meta-chip strong {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.cad-toolbar-meta-chip--selection {
+  min-width: 150px;
+}
+
 .cad-status-prompt {
   color: #94a3b8;
 }
@@ -236,34 +281,47 @@
 .cad-editor-body {
   flex: 1;
   min-height: 0;
-  display: grid;
-  grid-template-columns: 320px minmax(0, 1fr) 320px;
-  /* Locks the row to exactly the available height regardless of what either sidebar renders, so
-     the middle (plotting) column can never be nudged by a sidebar's content changing size. */
-  grid-template-rows: minmax(0, 1fr);
+  position: relative;
+  display: block;
+  overflow: hidden;
   background:
     radial-gradient(circle at top left, rgba(22, 78, 99, 0.08), transparent 18%),
     linear-gradient(180deg, #08111b 0%, #050a12 100%);
-  transition: grid-template-columns 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .cad-editor-sidebar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 8;
+  width: min(320px, calc(100% - 1rem));
   min-height: 0;
   overflow: auto;
   padding: 1rem 0.9rem;
   border-right: 1px solid rgba(148, 163, 184, 0.12);
   background: linear-gradient(180deg, rgba(10, 17, 29, 0.98), rgba(11, 18, 30, 0.98));
+  border-radius: 0 18px 18px 0;
+  box-shadow: 20px 0 40px rgba(2, 6, 23, 0.42);
   /* Layout containment keeps this panel's own reflows (hover states, selection summaries, etc.)
      from ever being able to affect the shared grid row's height. */
   contain: layout paint;
 }
 
 .cad-editor-inspector {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 8;
+  width: min(320px, calc(100% - 1rem));
   min-height: 0;
   overflow: auto;
   padding: 1rem 0.9rem;
   border-left: 1px solid rgba(148, 163, 184, 0.12);
   background: linear-gradient(180deg, rgba(10, 17, 29, 0.96), rgba(12, 20, 34, 0.98));
+  border-radius: 18px 0 0 18px;
+  box-shadow: -20px 0 40px rgba(2, 6, 23, 0.42);
   contain: layout paint;
 }
 
@@ -802,8 +860,8 @@
 }
 
 .cad-editor-canvas {
-  grid-column: 2;
   min-width: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1548,6 +1606,95 @@
   gap: 0.65rem;
 }
 
+.cad-help-dialog {
+  width: min(760px, 94vw);
+  max-height: min(88vh, 860px);
+  overflow: auto;
+  padding: 1.35rem;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: linear-gradient(180deg, rgba(10, 17, 29, 0.98), rgba(12, 20, 34, 0.98));
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.52);
+}
+
+.cad-help-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.cad-help-head span {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: #7dd3fc;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cad-help-head h3 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 1.3rem;
+  line-height: 1.3;
+}
+
+.cad-help-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.cad-help-card {
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.62);
+}
+
+.cad-help-card span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 0.7rem;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.14);
+  color: #86efac;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.cad-help-card strong {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: #f8fafc;
+  font-size: 0.94rem;
+}
+
+.cad-help-card p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.cad-help-footer {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(34, 197, 94, 0.16);
+  background: rgba(20, 83, 45, 0.2);
+  color: #dcfce7;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
 .feature-context-menu {
   position: fixed;
   z-index: 3000;
@@ -1576,50 +1723,90 @@
   background: rgba(21, 128, 61, 0.2);
 }
 
-@media (max-width: 1180px) {
-  .cad-editor-body {
-    grid-template-columns: 290px minmax(0, 1fr) 280px;
-  }
-}
-
 @media (max-width: 980px) {
   .feature-override-card {
     width: 100%;
     height: 100vh;
   }
 
-  .cad-editor-body {
-    grid-template-columns: 1fr;
-  }
-
   .cad-editor-sidebar,
   .cad-editor-inspector {
-    max-height: 38vh;
-    border-right: 0;
-    border-left: 0;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    width: min(340px, calc(100% - 1rem));
+    padding: 0.85rem 0.75rem;
   }
 
-  .cad-plotting-hud {
+  .cad-help-grid {
     grid-template-columns: 1fr;
   }
 
   .cad-command-center-grid,
-  .cad-command-center-actions,
-  .cad-plotting-ribbon-meta {
+  .cad-command-center-actions {
     grid-template-columns: 1fr;
   }
 
-  .cad-plotting-ribbon {
-    flex-direction: column;
-    align-items: stretch;
-    width: min(calc(100% - 2rem), 680px);
+  .cad-floating-tab {
+    top: auto;
+    bottom: 7.15rem;
+    transform: none;
+    flex-direction: row;
+    gap: 0.5rem;
+    padding: 0.7rem 0.8rem;
+    border-radius: 999px;
+  }
+
+  .cad-floating-tab--left {
+    left: 0.7rem;
+    border-left: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+  }
+
+  .cad-floating-tab--right {
+    right: 0.7rem;
+    border-right: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+  }
+
+  .cad-floating-tab:hover,
+  .cad-floating-tab--left:hover,
+  .cad-floating-tab--right:hover {
+    transform: translateY(-1px);
+  }
+
+  .cad-floating-tab-text {
+    writing-mode: initial;
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+  }
+
+  .cad-status-bar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+
+  .cad-status-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cad-status-prompt {
+    display: none;
+  }
+
+  .cad-toolbar-meta {
+    flex-basis: 100%;
+    order: 20;
+    padding-bottom: 0.1rem;
+  }
+
+  .cad-toolbar-meta-chip {
+    min-width: 118px;
   }
 }
 
 @media (max-width: 640px) {
   .cad-toolbar {
     flex-wrap: wrap;
+    align-items: stretch;
   }
 
   .cad-metrics-grid {
@@ -1640,15 +1827,32 @@
     flex: 1;
   }
 
-  .cad-plotting-ribbon {
-    top: 0.75rem;
-    left: 0.75rem;
-    width: calc(100% - 1.5rem);
-    padding: 0.8rem 0.85rem;
+  .cad-toolbar-group--editing {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
-  .cad-plotting-ribbon-main strong {
-    font-size: 0.9rem;
+  .cad-toolbar-inline-field {
+    flex: 1 1 100%;
+    justify-content: space-between;
+    padding-inline: 0;
+  }
+
+  .cad-toolbar-input {
+    width: 100%;
+    max-width: 96px;
+  }
+
+  .cad-editor-sidebar,
+  .cad-editor-inspector {
+    width: calc(100% - 0.8rem);
+    padding: 0.75rem 0.65rem;
+  }
+
+  .cad-help-dialog {
+    width: min(94vw, 520px);
+    padding: 1rem;
   }
 }
 
