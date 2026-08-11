@@ -52,8 +52,6 @@ const parseIsoDate = (value: unknown) => {
 };
 
 const isWorkSessionExpired = (session: Partial<WorkAuthSession> | null | undefined) => {
-  const idleExpiry = parseIsoDate(session?.idle_timeout_at);
-  if (idleExpiry && idleExpiry.getTime() <= Date.now()) return true;
   const hardExpiry = parseIsoDate(session?.expires_at);
   if (hardExpiry && hardExpiry.getTime() <= Date.now()) return true;
   return false;

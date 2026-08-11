@@ -150,6 +150,7 @@ type NorthArrowStyle = "one_side_stem" | "stacked_4n" | "classic" | "triangle" |
 type NorthArrowColor = "black" | "blue";
 type BeaconStyle = "circle" | "square" | "triangle" | "diamond" | "cross";
 type RoadWidthOption = "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
+type BuildingHatchType = "horizontal" | "vertical" | "diagonal" | "cross";
 
 type SurveyPlanDraftState = {
   workflowMode: WorkflowMode | null;
@@ -164,6 +165,13 @@ type SurveyPlanDraftState = {
   northArrowColor: NorthArrowColor;
   beaconStyle: BeaconStyle;
   roadWidth: RoadWidthOption;
+  boundaryColor: string;
+  gridColor: string;
+  textColor: string;
+  roadColor: string;
+  riverColor: string;
+  buildingColor: string;
+  buildingHatchType: BuildingHatchType;
   meta: PlotMeta;
   subdivisionMethod: SubdivisionMethod;
   subdivisionCountDraft: string;
@@ -591,6 +599,13 @@ export default function SurveyPlan() {
   const [northArrowColor, setNorthArrowColor] = useState<NorthArrowColor>("blue");
   const [beaconStyle, setBeaconStyle] = useState<BeaconStyle>("cross");
   const [roadWidth, setRoadWidth] = useState<RoadWidthOption>("10");
+  const [boundaryColor, setBoundaryColor] = useState<string>("#ff0000");
+  const [gridColor, setGridColor] = useState<string>("#0000ff");
+  const [textColor, setTextColor] = useState<string>("#000000");
+  const [roadColor, setRoadColor] = useState<string>("#000000");
+  const [riverColor, setRiverColor] = useState<string>("#0000ff");
+  const [buildingColor, setBuildingColor] = useState<string>("#000000");
+  const [buildingHatchType, setBuildingHatchType] = useState<BuildingHatchType>("horizontal");
   const [scaleDraft, setScaleDraft] = useState<string>("1000");
   const [newRoadWidth, setNewRoadWidth] = useState<RoadWidthOption>("10");
   const [showFeatureEditor, setShowFeatureEditor] = useState(false);
@@ -765,6 +780,13 @@ export default function SurveyPlan() {
         if (saved.northArrowColor) setNorthArrowColor(saved.northArrowColor);
         if (saved.beaconStyle) setBeaconStyle(saved.beaconStyle);
         if (saved.roadWidth) setRoadWidth(saved.roadWidth);
+        if (saved.boundaryColor) setBoundaryColor(saved.boundaryColor);
+        if (saved.gridColor) setGridColor(saved.gridColor);
+        if (saved.textColor) setTextColor(saved.textColor);
+        if (saved.roadColor) setRoadColor(saved.roadColor);
+        if (saved.riverColor) setRiverColor(saved.riverColor);
+        if (saved.buildingColor) setBuildingColor(saved.buildingColor);
+        if (saved.buildingHatchType) setBuildingHatchType(saved.buildingHatchType);
         if (saved.meta) setMeta({ ...buildDefaultPlotMeta(), ...saved.meta });
         if (saved.subdivisionMethod) setSubdivisionMethod(saved.subdivisionMethod);
         if (typeof saved.subdivisionCountDraft === "string") setSubdivisionCountDraft(saved.subdivisionCountDraft);
@@ -1000,9 +1022,30 @@ export default function SurveyPlan() {
           northArrowColor,
           beaconStyle,
           roadWidth,
+          boundaryColor,
+          gridColor,
+          textColor,
+          roadColor,
+          riverColor,
+          buildingColor,
+          buildingHatchType,
         },
       }),
-    [finalCoords, plotMetaPayload, northArrowStyle, northArrowColor, beaconStyle, roadWidth]
+    [
+      finalCoords,
+      plotMetaPayload,
+      northArrowStyle,
+      northArrowColor,
+      beaconStyle,
+      roadWidth,
+      boundaryColor,
+      gridColor,
+      textColor,
+      roadColor,
+      riverColor,
+      buildingColor,
+      buildingHatchType,
+    ]
   );
 
   const stationNames = useMemo(() => {
@@ -1024,6 +1067,13 @@ export default function SurveyPlan() {
       northArrowColor,
       beaconStyle,
       roadWidth,
+      boundaryColor,
+      gridColor,
+      textColor,
+      roadColor,
+      riverColor,
+      buildingColor,
+      buildingHatchType,
       meta,
       subdivisionMethod,
       subdivisionCountDraft,
@@ -1071,6 +1121,13 @@ export default function SurveyPlan() {
     northArrowColor,
     beaconStyle,
     roadWidth,
+    boundaryColor,
+    gridColor,
+    textColor,
+    roadColor,
+    riverColor,
+    buildingColor,
+    buildingHatchType,
     meta,
     subdivisionMethod,
     subdivisionCountDraft,
@@ -1714,6 +1771,13 @@ export default function SurveyPlan() {
         north_arrow_color: northArrowColor,
         beacon_style: beaconStyle,
         road_width_m: Number(roadWidth),
+        boundary_color: boundaryColor,
+        grid_color: gridColor,
+        text_color: textColor,
+        road_color: roadColor,
+        river_color: riverColor,
+        building_color: buildingColor,
+        building_hatch_type: buildingHatchType,
       };
 
       const res = await withRetry(() =>
@@ -1901,6 +1965,10 @@ export default function SurveyPlan() {
 
   const handleRoadWidthChange = useCallback((value: string) => {
     setRoadWidth(value as RoadWidthOption);
+  }, []);
+
+  const handleBuildingHatchTypeChange = useCallback((value: string) => {
+    setBuildingHatchType(value as BuildingHatchType);
   }, []);
 
   const handleCreateGeoreferenceSession = useCallback(
@@ -2500,6 +2568,13 @@ export default function SurveyPlan() {
         north_arrow_color: northArrowColor,
         beacon_style: beaconStyle,
         road_width_m: Number(roadWidth),
+        boundary_color: boundaryColor,
+        grid_color: gridColor,
+        text_color: textColor,
+        road_color: roadColor,
+        river_color: riverColor,
+        building_color: buildingColor,
+        building_hatch_type: buildingHatchType,
         template_name: meta.template_name,
         adamawa_rof_no: meta.adamawa_rof_no,
         adamawa_owner_name: meta.adamawa_owner_name,
@@ -3125,6 +3200,13 @@ export default function SurveyPlan() {
         north_arrow_color: northArrowColor,
         beacon_style: beaconStyle,
         road_width_m: Number(roadWidth),
+        boundary_color: boundaryColor,
+        grid_color: gridColor,
+        text_color: textColor,
+        road_color: roadColor,
+        river_color: riverColor,
+        building_color: buildingColor,
+        building_hatch_type: buildingHatchType,
         area_labels: subdivisionCleanCopyItems.map((item) => {
           const key = subdivisionAreaDraftKey(item);
           return {
@@ -3563,10 +3645,24 @@ export default function SurveyPlan() {
               northArrowColor={northArrowColor}
               beaconStyle={beaconStyle}
               roadWidth={roadWidth}
+              boundaryColor={boundaryColor}
+              gridColor={gridColor}
+              textColor={textColor}
+              roadColor={roadColor}
+              riverColor={riverColor}
+              buildingColor={buildingColor}
+              buildingHatchType={buildingHatchType}
               onNorthArrowStyleChange={handleNorthArrowStyleChange}
               onNorthArrowColorChange={handleNorthArrowColorChange}
               onBeaconStyleChange={handleBeaconStyleChange}
               onRoadWidthChange={handleRoadWidthChange}
+              onBoundaryColorChange={setBoundaryColor}
+              onGridColorChange={setGridColor}
+              onTextColorChange={setTextColor}
+              onRoadColorChange={setRoadColor}
+              onRiverColorChange={setRiverColor}
+              onBuildingColorChange={setBuildingColor}
+              onBuildingHatchTypeChange={handleBuildingHatchTypeChange}
               surveyPreviewUrl={previewUrl}
               orthophotoPreviewUrl={orthophotoUrl}
               topoMapPreviewUrl={topoMapUrl}
@@ -3692,10 +3788,24 @@ export default function SurveyPlan() {
               northArrowColor={northArrowColor}
               beaconStyle={beaconStyle}
               roadWidth={roadWidth}
+              boundaryColor={boundaryColor}
+              gridColor={gridColor}
+              textColor={textColor}
+              roadColor={roadColor}
+              riverColor={riverColor}
+              buildingColor={buildingColor}
+              buildingHatchType={buildingHatchType}
               onNorthArrowStyleChange={handleNorthArrowStyleChange}
               onNorthArrowColorChange={handleNorthArrowColorChange}
               onBeaconStyleChange={handleBeaconStyleChange}
               onRoadWidthChange={handleRoadWidthChange}
+              onBoundaryColorChange={setBoundaryColor}
+              onGridColorChange={setGridColor}
+              onTextColorChange={setTextColor}
+              onRoadColorChange={setRoadColor}
+              onRiverColorChange={setRiverColor}
+              onBuildingColorChange={setBuildingColor}
+              onBuildingHatchTypeChange={handleBuildingHatchTypeChange}
               surveyPreviewUrl={previewUrl}
               orthophotoPreviewUrl={orthophotoUrl}
               topoMapPreviewUrl={topoMapUrl}
@@ -4015,10 +4125,24 @@ export default function SurveyPlan() {
                 northArrowColor={northArrowColor}
                 beaconStyle={beaconStyle}
                 roadWidth={roadWidth}
+                boundaryColor={boundaryColor}
+                gridColor={gridColor}
+                textColor={textColor}
+                roadColor={roadColor}
+                riverColor={riverColor}
+                buildingColor={buildingColor}
+                buildingHatchType={buildingHatchType}
                 onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
                 onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
                 onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
                 onRoadWidthChange={(value) => setRoadWidth(value as RoadWidthOption)}
+                onBoundaryColorChange={setBoundaryColor}
+                onGridColorChange={setGridColor}
+                onTextColorChange={setTextColor}
+                onRoadColorChange={setRoadColor}
+                onRiverColorChange={setRiverColor}
+                onBuildingColorChange={setBuildingColor}
+                onBuildingHatchTypeChange={(value) => setBuildingHatchType(value as BuildingHatchType)}
                 paperSize={meta.paper_size}
                 surveyPreviewUrl={previewUrl}
                 orthophotoPreviewUrl={orthophotoUrl}

@@ -8,6 +8,7 @@ import CadIcon from "./CadIcon";
 import { loadMapboxDraw, loadMapboxGl } from "../utils/mapboxLoader";
 
 type FeatureType = "road" | "building" | "river" | "fence";
+type EditableFeatureTarget = FeatureType | "boundary";
 type FeatureAction = "add" | "delete" | "update";
 type EditorTool = "select" | "draw_line_string" | "draw_polygon";
 type BasemapMode = "satellite" | "plotting";
@@ -766,6 +767,10 @@ const buildFeatureLabel = (type: FeatureType, properties?: Record<string, any>, 
 };
 
 const toolForFeatureType = (type: FeatureType): EditorTool => (type === "building" ? "draw_polygon" : "draw_line_string");
+const toolForEditorTarget = (target: EditableFeatureTarget): EditorTool => (target === "boundary" ? "select" : toolForFeatureType(target));
+const isFeatureType = (value: EditableFeatureTarget): value is FeatureType => value !== "boundary";
+const formatEditorTargetLabel = (target: EditableFeatureTarget) =>
+  target === "boundary" ? "Boundary" : `${target.charAt(0).toUpperCase()}${target.slice(1)}`;
 
 const layerIds: Record<FeatureType | "boundary", string[]> = {
   road: ["roads-line"],
@@ -869,6 +874,11 @@ export default function FeatureOverrideModal({
   const [cursor, setCursor] = useState<{ lng: number; lat: number } | null>(null);
   const [activeTool, setActiveTool] = useState<EditorTool>("select");
   const [basemapMode, setBasemapMode] = useState<BasemapMode>("plotting");
+  const [editorTarget, setEditorTarget] = useState<EditableFeatureTarget>(featureType);
+
+  useEffect(() => {
+    setEditorTarget((current) => (current === "boundary" ? current : featureType));
+  }, [featureType]);
 
   useEffect(() => {
     const stage = plottingStageRef.current;
@@ -1006,13 +1016,13 @@ export default function FeatureOverrideModal({
   // centerline (instead of only a single line) so the drafted footprint matches the chosen
   // road width before it's added.
   const roadWidthPreviewLines = useMemo(() => {
-    if (featureType !== "road" || action === "delete" || activeTool === "select") return null;
+    if (editorTarget !== "road" || action === "delete" || activeTool === "select") return null;
     if (plottingPreviewPoints.length < 2) return null;
     const halfWidthPx = (Number(roadWidth) / 2) * plottingViewport.scale;
     if (!Number.isFinite(halfWidthPx) || halfWidthPx <= 0) return null;
     const projected = plottingPreviewPoints.map((point) => plottingViewport.project(point));
     return buildParallelOffsetLines(projected, halfWidthPx);
-  }, [action, activeTool, featureType, plottingPreviewPoints, plottingViewport, roadWidth]);
+  }, [action, activeTool, editorTarget, plottingPreviewPoints, plottingViewport, roadWidth]);
   const hasSelectedGeometry = Boolean(selectedGeometry);
   const hasDraftGeometry =
     Boolean(plottingDraftGeometry) ||
@@ -1153,6 +1163,7 @@ export default function FeatureOverrideModal({
       setSelectedGeometry(geometry);
       setSelectedMetrics(getGeometryMetrics(geometry));
       setDraftMetrics(getGeometryMetrics(geometry));
+      setEditorTarget(nextFeatureType);
       setFeatureType(nextFeatureType);
       setSelectedFeatureRecord(
         descriptor?.key || descriptor?.label
@@ -1219,7 +1230,7 @@ export default function FeatureOverrideModal({
         }
       }
     },
-    [action, basemapMode, setAction, setFeatureType, setRoadName, setRoadWidth]
+    [action, basemapMode, setAction, setEditorTarget, setFeatureType, setRoadName, setRoadWidth]
   );
 
   const applyBasemapMode = useCallback((map: any, mode: BasemapMode) => {
@@ -1493,6 +1504,10 @@ export default function FeatureOverrideModal({
   }, [pushCommandMessage]);
 
   const startAddFlow = useCallback(() => {
+    if (editorTarget === "boundary") {
+      toast("Boundary is protected. Switch to Road, Building, River, or Fence to add a new feature.");
+      return;
+    }
     setPendingSave(null);
     setAction("add");
     drawRef.current?.deleteAll();
@@ -1505,31 +1520,86 @@ export default function FeatureOverrideModal({
     setPlottingPoints([]);
     setPlottingHoverPoint(null);
     setPlottingSnapLabel(null);
-    setEditorTool(toolForFeatureType(featureType));
-  }, [featureType, setAction, setEditorTool]);
+    setEditorTool(toolForEditorTarget(editorTarget));
+  }, [editorTarget, setAction, setEditorTool]);
+
+  // Switching the Feature Type dropdown (e.g. Road -> Building) must also resync the active
+  // drawing tool (line vs polygon), or the points already placed keep building whatever geometry
+  // the old tool produces while getting saved tagged as the new type - e.g. a 2-point line saved
+  // as a "building", which then renders as a degenerate sliver instead of a proper building block.
+  // Safest fix is to clear any in-progress draft on a type change during "add", since a line draft
+  // can't be reinterpreted as a polygon draft (and vice versa) - the user re-draws in the new tool.
+  const handleFeatureTypeChange = useCallback(
+    (next: EditableFeatureTarget) => {
+      if (next === editorTarget) return;
+      const hadDraftInProgress = action === "add" && plottingPoints.length > 0;
+      setEditorTarget(next);
+      setPendingSave(null);
+      drawRef.current?.deleteAll();
+      activeDrawFeatureId.current = null;
+      setPlottingPoints([]);
+      setPlottingHoverPoint(null);
+      setPlottingSnapLabel(null);
+      setDraftMetrics(null);
+      setSelectedGeometry(null);
+      setSelectedFeatureRecord(null);
+      setSelectedMetrics(null);
+      setMultiSelectedKeys([]);
+
+      if (next === "boundary") {
+        setAction("update");
+        setEditorTool("select");
+        toast("Boundary editing armed. Drag a boundary vertex in plotting view to adjust the parcel outline.");
+        return;
+      }
+
+      setFeatureType(next);
+      if (action === "add") {
+        setEditorTool(toolForFeatureType(next));
+        if (hadDraftInProgress) {
+          toast(`Switched to ${next} - restart the drawing (feature type changed mid-draw).`);
+        }
+      } else if (isFeatureType(next)) {
+        setEditorTool("select");
+      }
+    },
+    [action, editorTarget, plottingPoints.length, setAction, setEditorTool, setFeatureType]
+  );
 
   const startUpdateFlow = useCallback(() => {
     setPendingSave(null);
+    if (editorTarget === "boundary") {
+      setAction("update");
+      setEditorTool("select");
+      toast("Boundary editing is active. Drag the parcel vertices directly in plotting view.");
+      return;
+    }
     if (!selectedGeometry) {
       toast("Select a detected feature first, then modify it.");
       return;
     }
     setAction("update");
     setEditorTool("select");
-  }, [selectedGeometry, setAction, setEditorTool]);
+  }, [editorTarget, selectedGeometry, setAction, setEditorTool]);
 
   const startDeleteFlow = useCallback(() => {
     setPendingSave(null);
+    if (editorTarget === "boundary") {
+      toast("Boundary delete is locked. Switch back to another feature type if you want to remove a saved feature.");
+      return;
+    }
     if (!selectedGeometry && multiSelectedKeys.length === 0) {
       toast("Select the feature(s) you want to remove first.");
       return;
     }
     setAction("delete");
     setEditorTool("select");
-  }, [selectedGeometry, multiSelectedKeys, setAction, setEditorTool]);
+  }, [editorTarget, selectedGeometry, multiSelectedKeys, setAction, setEditorTool]);
 
   const activeCommandLabel =
-    action === "delete"
+    editorTarget === "boundary"
+      ? "Adjust boundary"
+      : action === "delete"
       ? "Delete selected feature"
       : action === "update"
         ? "Modify selected feature"
@@ -1538,7 +1608,9 @@ export default function FeatureOverrideModal({
   const deleteTargetCount = multiSelectedKeys.length > 0 ? multiSelectedKeys.length : hasSelectedGeometry ? 1 : 0;
 
   const editorPrompt =
-    action === "delete"
+    editorTarget === "boundary"
+      ? "Boundary mode is active. Drag only the parcel vertices you intend to change in the plotting view."
+      : action === "delete"
       ? deleteTargetCount > 0
         ? deleteTargetCount > 1
           ? `${deleteTargetCount} features selected. Confirm to remove them.`
@@ -1548,10 +1620,12 @@ export default function FeatureOverrideModal({
         ? hasSelectedGeometry
           ? "Selected feature is ready for editing. Adjust geometry, then apply changes."
           : "Select an existing feature to modify."
-        : `Choose the ${toolForFeatureType(featureType) === "draw_polygon" ? "polygon" : "line"} tool and draw a new ${featureType}.`;
+        : `Choose the ${toolForEditorTarget(editorTarget) === "draw_polygon" ? "polygon" : "line"} tool and draw a new ${editorTarget}.`;
 
   const primaryActionLabel =
-    action === "delete"
+    editorTarget === "boundary"
+      ? "Boundary editing active"
+      : action === "delete"
       ? deleteTargetCount > 1
         ? `Delete ${deleteTargetCount} Selected Features`
         : "Delete Selected Feature"
@@ -1560,7 +1634,9 @@ export default function FeatureOverrideModal({
         : "Add Feature";
 
   const canSave =
-    action === "delete"
+    editorTarget === "boundary"
+      ? false
+      : action === "delete"
       ? deleteTargetCount > 0
       : action === "update"
         ? hasSelectedGeometry
@@ -1568,7 +1644,7 @@ export default function FeatureOverrideModal({
 
   useEffect(() => {
     setPendingSave(null);
-  }, [action, selectedGeometry, featureType, multiSelectedKeys]);
+  }, [action, selectedGeometry, featureType, editorTarget, multiSelectedKeys]);
 
   useEffect(() => {
     if (!isOpen || !plotId) return;
@@ -2262,7 +2338,7 @@ export default function FeatureOverrideModal({
         return;
       }
       if (event.button !== 0) return;
-      if (activeTool === "select" && !selectionMode && layerVisibility.boundary && boundaryCoords) {
+      if (activeTool === "select" && !selectionMode && editorTarget === "boundary" && layerVisibility.boundary && boundaryCoords) {
         // Pick whichever boundary vertex is nearest the click, in real screen pixels, rather
         // than relying on per-vertex hit-testing - vertices close together (common on tight
         // bends) would otherwise fight over whichever one happens to paint on top.
@@ -2297,7 +2373,7 @@ export default function FeatureOverrideModal({
         );
       }
     },
-    [basemapMode, getPlottingPointer, selectionMode, activeTool, layerVisibility.boundary, boundaryCoords, plottingViewport, plottingCamera.offsetX, plottingCamera.offsetY, plottingCamera.zoom, plottingViewportX, plottingViewportY]
+    [basemapMode, getPlottingPointer, selectionMode, activeTool, editorTarget, layerVisibility.boundary, boundaryCoords, plottingViewport, plottingCamera.offsetX, plottingCamera.offsetY, plottingCamera.zoom, plottingViewportX, plottingViewportY]
   );
 
   const commitBoundaryDrag = useCallback(() => {
@@ -2523,21 +2599,21 @@ export default function FeatureOverrideModal({
       }
       if (cmd === "add") {
         startAddFlow();
-        pushCommandMessage("Add command active.");
+        pushCommandMessage(editorTarget === "boundary" ? "Boundary is protected from add commands." : "Add command active.");
         return;
       }
       if (cmd === "modify") {
         startUpdateFlow();
-        pushCommandMessage("Modify command active.");
+        pushCommandMessage(editorTarget === "boundary" ? "Boundary edit is active. Drag parcel vertices in plotting view." : "Modify command active.");
         return;
       }
       if (cmd === "delete") {
         startDeleteFlow();
-        pushCommandMessage("Delete command active.");
+        pushCommandMessage(editorTarget === "boundary" ? "Boundary is protected from delete commands." : "Delete command active.");
         return;
       }
-      if (cmd === "road" || cmd === "building" || cmd === "river" || cmd === "fence") {
-        setFeatureType(cmd as FeatureType);
+      if (cmd === "road" || cmd === "building" || cmd === "river" || cmd === "fence" || cmd === "boundary") {
+        handleFeatureTypeChange(cmd as EditableFeatureTarget);
         pushCommandMessage(`Feature type set to ${cmd}.`);
         return;
       }
@@ -2637,6 +2713,7 @@ export default function FeatureOverrideModal({
       activateSelectionMode,
       clearWorkingSelection,
       fitPlotBoundary,
+      handleFeatureTypeChange,
       pushCommandMessage,
       setEditorTool,
       startAddFlow,
@@ -2645,6 +2722,7 @@ export default function FeatureOverrideModal({
       toggleOsnapMode,
       zoomPlottingCamera,
       activeTool,
+      editorTarget,
       plottingPoints.length,
       undoLastVertex,
     ]
@@ -2875,6 +2953,19 @@ export default function FeatureOverrideModal({
     const savedFeatureType = featureType;
     const savedAction = action;
     const savedGeometry = feature.geometry;
+
+    // Belt-and-braces: a building must save as a Polygon and every other feature type as a
+    // LineString. If the drawing tool and the Feature Type dropdown ever fall out of sync (e.g.
+    // the type was switched mid-draw before this state existed), this stops a degenerate geometry
+    // being saved and silently rendering as a broken sliver instead of a proper feature.
+    const expectedGeometryType = savedFeatureType === "building" ? "Polygon" : "LineString";
+    if (savedGeometry?.type !== expectedGeometryType) {
+      toast.error(
+        `The drawn shape doesn't match "${savedFeatureType}" (expected a ${expectedGeometryType.toLowerCase()}). Please redraw it.`
+      );
+      return;
+    }
+
     const savedName = savedFeatureType === "road" ? roadName : undefined;
     const savedWidth = savedFeatureType === "road" ? Number(roadWidth) : undefined;
     const replacedKey = savedAction === "update" ? selectedFeatureRecord?.key : undefined;
@@ -2978,8 +3069,9 @@ export default function FeatureOverrideModal({
       : `apply the change to the selected ${pendingSave.featureType}`;
   })();
 
-  const suggestedTool = toolForFeatureType(featureType);
-  const suggestedToolLabel = suggestedTool === "draw_polygon" ? "Polygon tool" : "Line tool";
+  const suggestedTool = toolForEditorTarget(editorTarget);
+  const suggestedToolLabel =
+    suggestedTool === "draw_polygon" ? "Polygon tool" : suggestedTool === "draw_line_string" ? "Line tool" : "Select tool";
   const cadMetaTooltip = `R of O ${meta.adamawa_rof_no || plotId || "590"} · ${meta.adamawa_owner_name || meta.title_text || "Survey Plan"} · ${meta.location_text || "Pilot Plot"} · Scale ${meta.scale_text || "1 : 250"} · ${meta.surveyor_rank || "Surveyor General"}`;
 
   if (!isOpen) return null;
@@ -3082,22 +3174,35 @@ export default function FeatureOverrideModal({
             <CadIcon name="info" className="cad-toolbar-group-cue" />
             <select
               className="cad-toolbar-select"
-              value={featureType}
-              onChange={(event) => setFeatureType(event.target.value as FeatureType)}
+              value={editorTarget}
+              onChange={(event) => handleFeatureTypeChange(event.target.value as EditableFeatureTarget)}
               title="Feature type"
             >
               <option value="road">Road</option>
               <option value="building">Building</option>
               <option value="river">River</option>
               <option value="fence">Fence</option>
+              <option value="boundary">Boundary</option>
             </select>
-            <button type="button" className={`cad-icon-btn${action === "add" ? " active" : ""}`} title="Add New" onClick={startAddFlow}>
+            <button
+              type="button"
+              className={`cad-icon-btn${action === "add" ? " active" : ""}`}
+              title={editorTarget === "boundary" ? "Boundary is protected from add commands" : "Add New"}
+              onClick={startAddFlow}
+              disabled={editorTarget === "boundary"}
+            >
               <CadIcon name="add" />
             </button>
             <button type="button" className={`cad-icon-btn${action === "update" ? " active" : ""}`} title="Modify Selected" onClick={startUpdateFlow}>
               <CadIcon name="modify" />
             </button>
-            <button type="button" className={`cad-icon-btn danger${action === "delete" ? " active" : ""}`} title="Delete Selected" onClick={startDeleteFlow}>
+            <button
+              type="button"
+              className={`cad-icon-btn danger${action === "delete" ? " active" : ""}`}
+              title={editorTarget === "boundary" ? "Boundary is protected from delete commands" : "Delete Selected"}
+              onClick={startDeleteFlow}
+              disabled={editorTarget === "boundary"}
+            >
               <CadIcon name="delete" />
             </button>
           </div>
@@ -3180,20 +3285,21 @@ export default function FeatureOverrideModal({
               <div className="feature-override-controls cad-form-grid">
                 <div className="field">
                   <label>Feature Type</label>
-                  <select value={featureType} onChange={(event) => setFeatureType(event.target.value as FeatureType)}>
+                  <select value={editorTarget} onChange={(event) => handleFeatureTypeChange(event.target.value as EditableFeatureTarget)}>
                     <option value="road">Road</option>
                     <option value="building">Building</option>
                     <option value="river">River</option>
                     <option value="fence">Fence</option>
+                    <option value="boundary">Boundary</option>
                   </select>
                 </div>
-                {featureType === "road" && action !== "delete" && (
+                {editorTarget === "road" && action !== "delete" && (
                   <div className="field wide">
                     <label>Road Name</label>
                     <input value={roadName} onChange={(event) => setRoadName(event.target.value)} placeholder="e.g. Access Road A" />
                   </div>
                 )}
-                {featureType === "road" && action !== "delete" && (
+                {editorTarget === "road" && action !== "delete" && (
                   <div className="field">
                     <label>Road Width (m)</label>
                     <select value={roadWidth} onChange={(event) => setRoadWidth(event.target.value as Props["roadWidth"])}>
@@ -3536,7 +3642,13 @@ export default function FeatureOverrideModal({
                         {layerVisibility.building &&
                           featureCollections.building.features.map((feature, index) => {
                             const geometry = feature?.geometry;
-                            const ring = Array.isArray(geometry?.coordinates?.[0]) ? geometry.coordinates[0] : null;
+                            // A valid building ring needs a Polygon with >=3 real coordinate pairs.
+                            // A LineString's coordinates[0] is a single [lng, lat] pair, which also
+                            // passes Array.isArray() - guard that case explicitly so a mistagged
+                            // non-polygon geometry (see handleFeatureTypeChange/handleSave) fails
+                            // safely instead of rendering as a garbled sliver.
+                            const rawRing = geometry?.type === "Polygon" && Array.isArray(geometry?.coordinates?.[0]) ? geometry.coordinates[0] : null;
+                            const ring = Array.isArray(rawRing) && rawRing.length >= 3 && rawRing.every((pt: any) => Array.isArray(pt) && pt.length >= 2) ? rawRing : null;
                             if (!ring) return null;
                             const labelPoint = getFeatureLabelPoint(geometry, plottingViewport.project);
                             const descriptor = objectRecords.find((record) => record.key === `building-${index}`);
@@ -3842,7 +3954,7 @@ export default function FeatureOverrideModal({
           </div>
             <div className="cad-status-bar">
               <span className="cad-status-prompt">
-                {activeCommandLabel}: <strong>{featureType}</strong>. {editorPrompt}
+                {activeCommandLabel}: <strong>{formatEditorTargetLabel(editorTarget)}</strong>. {editorPrompt}
               </span>
               <span>
                 Cursor:{" "}
@@ -3970,7 +4082,11 @@ export default function FeatureOverrideModal({
               {hasSelectedGeometry ? (
                 <div className="cad-selection-summary">
                   <strong>Selected target</strong>
-                  <span>{featureType} selected. Use Modify Selected to adjust it or Delete Selected to remove it.</span>
+                  <span>
+                    {editorTarget === "boundary"
+                      ? "Boundary selected. Drag a parcel vertex in plotting view to update the boundary."
+                      : `${formatEditorTargetLabel(editorTarget)} selected. Use Modify Selected to adjust it or Delete Selected to remove it.`}
+                  </span>
                 </div>
               ) : null}
               {selectedObjectCount > 1 ? (
