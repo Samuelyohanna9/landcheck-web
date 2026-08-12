@@ -11,7 +11,7 @@ type PlotMeta = {
   certification_statement: string;
   scale_text: string;
   paper_size: string;
-  template_name: "general" | "adamawa_osg";
+  template_name: "general" | "adamawa_osg" | "akwa_ibom_osg" | "rivers_osg" | "cross_river_osg";
   adamawa_rof_no: string;
   adamawa_owner_name: string;
   adamawa_authority_title: string;
@@ -27,6 +27,10 @@ type PlotMeta = {
   adamawa_plan_no: string;
   adamawa_surveyed_by_text: string;
   adamawa_disclaimer_text: string;
+  cadastral_plan_no: string;
+  cadastral_area_name: string;
+  cadastral_datum_text: string;
+  cadastral_firm_block_text: string;
   technical_report_instruments: string[];
   technical_report_dgps_type: string;
   technical_report_num_surveyors: number | null;
@@ -45,6 +49,18 @@ type NorthArrowStyle = "one_side_stem" | "stacked_4n" | "classic" | "triangle" |
 type NorthArrowColor = "black" | "blue";
 type BeaconStyle = "circle" | "square" | "triangle" | "diamond" | "cross";
 type RoadWidthOption = "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
+
+const CADASTRAL_STATE_TEMPLATES: PlotMeta["template_name"][] = ["akwa_ibom_osg", "rivers_osg", "cross_river_osg"];
+const CADASTRAL_STATE_HINTS: Record<string, string> = {
+  akwa_ibom_osg: "Akwa Ibom State cadastral template",
+  rivers_osg: "Rivers State cadastral template",
+  cross_river_osg: "Cross River State cadastral template",
+};
+const CADASTRAL_STATE_LABELS: Record<string, string> = {
+  akwa_ibom_osg: "AKWA IBOM STATE",
+  rivers_osg: "RIVERS STATE",
+  cross_river_osg: "CROSS RIVER STATE",
+};
 
 type Props = {
   sidebar: ReactNode;
@@ -258,8 +274,14 @@ function SurveyPlanSurveyPreviewStep({
               >
                 <option value="general">General</option>
                 <option value="adamawa_osg">Adamawa OSG</option>
+                <option value="akwa_ibom_osg">Akwa Ibom State (Cadastral)</option>
+                <option value="rivers_osg">Rivers State (Cadastral)</option>
+                <option value="cross_river_osg">Cross River State (Cadastral)</option>
               </select>
               {meta.template_name === "adamawa_osg" && <span className="template-hint">Adamawa OSG template</span>}
+              {CADASTRAL_STATE_TEMPLATES.includes(meta.template_name) && (
+                <span className="template-hint">{CADASTRAL_STATE_HINTS[meta.template_name]}</span>
+              )}
             </div>
             {meta.template_name === "general" ? (
               <>
@@ -295,6 +317,63 @@ function SurveyPlanSurveyPreviewStep({
                     placeholder={defaultCertificationStatement}
                     rows={3}
                   />
+                </div>
+              </>
+            ) : CADASTRAL_STATE_TEMPLATES.includes(meta.template_name) ? (
+              <>
+                <div className="form-group">
+                  <label>Applicant Name</label>
+                  <input value={meta.title_text} onChange={(e) => setMeta((m) => ({ ...m, title_text: e.target.value }))} placeholder="LINUS EFFIONG UDOH" />
+                </div>
+                <div className="form-group">
+                  <label>Road / Street Name</label>
+                  <input value={meta.location_text} onChange={(e) => setMeta((m) => ({ ...m, location_text: e.target.value }))} placeholder="OLD ORON ROAD" />
+                </div>
+                <div className="form-group">
+                  <label>Locality / Area Name</label>
+                  <input value={meta.cadastral_area_name} onChange={(e) => setMeta((m) => ({ ...m, cadastral_area_name: e.target.value }))} placeholder="NDON EBOM" />
+                </div>
+                <div className="form-group">
+                  <label>LGA</label>
+                  <input value={meta.lga_text} onChange={(e) => setMeta((m) => ({ ...m, lga_text: e.target.value }))} placeholder="URUAN LOCAL GOVT. AREA" />
+                </div>
+                <div className="form-group">
+                  <label>State</label>
+                  <input
+                    value={meta.state_text}
+                    onChange={(e) => setMeta((m) => ({ ...m, state_text: e.target.value }))}
+                    placeholder={CADASTRAL_STATE_LABELS[meta.template_name]}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Plan Number</label>
+                  <input value={meta.cadastral_plan_no} onChange={(e) => setMeta((m) => ({ ...m, cadastral_plan_no: e.target.value }))} placeholder="AK 12345" />
+                </div>
+                <div className="form-group">
+                  <label>Surveyor Name</label>
+                  <input value={meta.surveyor_name} onChange={(e) => setMeta((m) => ({ ...m, surveyor_name: e.target.value }))} placeholder="Enter surveyor name" />
+                </div>
+                <div className="form-group">
+                  <label>Surveyor Credential</label>
+                  <input value={meta.surveyor_rank} onChange={(e) => setMeta((m) => ({ ...m, surveyor_rank: e.target.value }))} placeholder="MNIS" />
+                </div>
+                <div className="form-group">
+                  <label>Datum</label>
+                  <input value={meta.cadastral_datum_text} onChange={(e) => setMeta((m) => ({ ...m, cadastral_datum_text: e.target.value }))} placeholder="MINNA DATUM" />
+                </div>
+                <div className="form-group full-width">
+                  <label>Surveyor's Firm (name, address, email, phone)</label>
+                  <textarea
+                    value={meta.cadastral_firm_block_text}
+                    onChange={(e) => setMeta((m) => ({ ...m, cadastral_firm_block_text: e.target.value }))}
+                    rows={3}
+                    placeholder={"SURVEYOR NAME & CO.\nNo. 1 Example Street, Uyo, Akwa Ibom State\nemail@example.com | 0800 000 0000"}
+                  />
+                </div>
+                <div className="form-group full-width">
+                  <span className="template-hint">
+                    Enter each beacon's reference number (e.g. SC/AK/L 72723) into the "Station" field for its coordinate point in the list above.
+                  </span>
                 </div>
               </>
             ) : (
