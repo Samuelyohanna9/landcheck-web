@@ -54,6 +54,12 @@ type FloodResult = {
   buildings_total?: number;
   buildings_threatened?: number;
   interactive?: HazardInteractiveMeta | null;
+  flood_data_source?: "glofas" | "local_terrain_proxy";
+  terrain_slope_deg?: number | null;
+  terrain_depression_m?: number | null;
+  terrain_flatness_score?: number | null;
+  terrain_drainage_score?: number | null;
+  terrain_depression_score?: number | null;
 };
 
 type ErosionResult = {
@@ -313,6 +319,13 @@ export default function HazardAnalysis() {
 
   const componentItems = useMemo(() => {
     if (hazardType === "flood" && floodResult) {
+      if (floodResult.flood_data_source === "local_terrain_proxy") {
+        return [
+          { label: "Low-lying terrain", value: floodResult.terrain_depression_score ?? 0, color: "#b45309" },
+          { label: "Flatness", value: floodResult.terrain_flatness_score ?? 0, color: "#f59e0b" },
+          { label: "Drainage proximity", value: floodResult.terrain_drainage_score ?? 0, color: "#fbbf24" },
+        ];
+      }
       return [
         { label: "Depth", value: floodResult.depth_score ?? 0, color: "#1d4ed8" },
         { label: "Inundation", value: floodResult.inundation_score ?? 0, color: "#0ea5e9" },
@@ -428,10 +441,26 @@ export default function HazardAnalysis() {
               {!!floodResult.buildings_total && floodResult.data_available !== false && (
                 <div className="hazard-buildings-callout">
                   <strong>{floodResult.buildings_threatened}</strong> of <strong>{floodResult.buildings_total}</strong> buildings
-                  {" "}sit in the flood zone
+                  {" "}{floodResult.flood_data_source === "local_terrain_proxy" ? "sit on susceptible ground" : "sit in the flood zone"}
                 </div>
               )}
-              {floodResult.data_available !== false && (
+              {floodResult.data_available !== false && floodResult.flood_data_source === "local_terrain_proxy" && (
+                <div className="risk-stat-grid">
+                  <div className="risk-stat-card">
+                    <strong>{floodResult.terrain_slope_deg ?? "N/A"}°</strong>
+                    <span>Slope</span>
+                  </div>
+                  <div className="risk-stat-card">
+                    <strong>{floodResult.terrain_depression_m ?? "N/A"}</strong>
+                    <span>Rel. Elevation (m)</span>
+                  </div>
+                  <div className="risk-stat-card">
+                    <strong>{floodResult.distance_to_river_m ?? "N/A"}</strong>
+                    <span>Dist. to Drainage (m)</span>
+                  </div>
+                </div>
+              )}
+              {floodResult.data_available !== false && floodResult.flood_data_source !== "local_terrain_proxy" && (
                 <div className="risk-stat-grid">
                   <div className="risk-stat-card">
                     <strong>{floodResult.mean_depth_m}</strong>
@@ -457,10 +486,12 @@ export default function HazardAnalysis() {
                   <ComponentBars items={componentItems} />
                 </>
               )}
-              <p className="hazard-note">{floodResult.note}</p>
+              <p className={floodResult.flood_data_source === "local_terrain_proxy" ? "hazard-note hazard-note--proxy" : "hazard-note"}>
+                {floodResult.note}
+              </p>
               {floodResult.data_available === false && (
                 <p className="hazard-warning">
-                  No river flood extent is modeled at this plot for RP{floodResult.return_period} — it sits outside GloFAS's simulated floodplain, most likely because it's too far from a major river channel. This does not rule out local/pluvial flooding, which this model doesn't cover.
+                  No flood hazard data is available for this location — both GloFAS river flood modeling and the local terrain-based estimate were unable to produce a result here.
                 </p>
               )}
               {floodResult.local_elevation_used && floodResult.relative_elevation_m != null && (
