@@ -3,8 +3,19 @@ import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { api } from "../api/client";
 import CoordinateInput from "../components/CoordinateInput";
+import HazardProgressOverlay from "../components/HazardProgressOverlay";
 import { fromWGS84, toWGS84 } from "../utils/coordinateConverter";
 import "../styles/hazard-analysis.css";
+
+type HazardJobStatus = {
+  id: string;
+  status: "queued" | "running" | "completed" | "failed";
+  stage: string | null;
+  progress_pct: number | null;
+  error_text: string | null;
+  result: any;
+  download_url: string | null;
+};
 
 const MapViewEnhanced = lazy(() => import("../components/MapViewEnhanced"));
 
@@ -106,6 +117,25 @@ export default function HazardAnalysis() {
   const [gisLoading, setGisLoading] = useState(false);
   const [showRaster, setShowRaster] = useState(false);
   const [returnPeriod, setReturnPeriod] = useState(100);
+  const [jobProgress, setJobProgress] = useState<{ pct: number; stage: string } | null>(null);
+
+  // Analysis runs as a background job (see hazards.py's async job endpoints) rather than one long
+  // synchronous request, since the real work (several Earth Engine calls + local rendering) can
+  // take longer than a client request timeout allows - this polls for status/progress instead.
+  const pollHazardJob = useCallback(async (jobId: string): Promise<HazardJobStatus> => {
+    const startedAt = Date.now();
+    const timeoutMs = 3 * 60 * 1000;
+    const pollIntervalMs = 1200;
+    while (Date.now() - startedAt < timeoutMs) {
+      await new Promise((resolve) => window.setTimeout(resolve, pollIntervalMs));
+      const res = await api.get<HazardJobStatus>(`/hazards/jobs/${jobId}`);
+      const data = res.data;
+      setJobProgress({ pct: data.progress_pct ?? 0, stage: data.stage || "" });
+      if (data.status === "completed") return data;
+      if (data.status === "failed") throw new Error(data.error_text || "Analysis failed");
+    }
+    throw new Error("Analysis is taking longer than expected. Please try again.");
+  }, []);
 
   const updatePoint = (index: number, key: keyof ManualPoint, value: string | number) => {
     setManualPoints((prev) => {
@@ -192,6 +222,28 @@ export default function HazardAnalysis() {
     });
   }, [manualPoints, coordinateSystem]);
 
+  const buildHazardJobBody = (outputType: "preview" | "pdf" | "gis-export") => {
+    const boundary = { type: "Polygon", coordinates: [finalCoords] };
+    return {
+      geometry: boundary,
+      show_raster: showRaster,
+      return_period: returnPeriod,
+      local_elevation_points: localElevationPoints,
+      output_type: outputType,
+    };
+  };
+
+  const triggerBrowserDownload = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const runAnalysis = async () => {
     if (!finalCoords) {
       toast.error("Enter at least 3 valid coordinate points");
@@ -199,34 +251,18 @@ export default function HazardAnalysis() {
     }
     try {
       setLoading(true);
-      const boundary = { type: "Polygon", coordinates: [finalCoords] };
-      // These endpoints run several Earth Engine calls plus local raster/vector rendering in a
-      // single request - comfortably under a minute in practice, but well past the shared
-      // client's default 30s timeout, so give this call more room specifically.
-      const hazardTimeout = { timeout: 90000 };
-      if (hazardType === "flood") {
-        const res = await api.post("/hazards/flood/preview", {
-          geometry: boundary,
-          show_raster: showRaster,
-          return_period: returnPeriod,
-          local_elevation_points: localElevationPoints,
-        }, hazardTimeout);
-        setFloodResult(res.data);
-        toast.success("Flood risk analysis complete");
-      } else {
-        const res = await api.post("/hazards/erosion/preview", {
-          geometry: boundary,
-          show_raster: showRaster,
-          local_elevation_points: localElevationPoints,
-        }, hazardTimeout);
-        setErosionResult(res.data);
-        toast.success("Erosion risk analysis complete");
-      }
+      setJobProgress({ pct: 0, stage: "Starting analysis..." });
+      const created = await api.post<HazardJobStatus>(`/hazards/${hazardType}/analyze`, buildHazardJobBody("preview"));
+      const job = await pollHazardJob(created.data.id);
+      if (hazardType === "flood") setFloodResult(job.result);
+      else setErosionResult(job.result);
+      toast.success(`${hazardType === "flood" ? "Flood" : "Erosion"} risk analysis complete`);
     } catch (err) {
       console.error(err);
-      toast.error(`Failed to run ${hazardType} analysis`);
+      toast.error(err instanceof Error ? err.message : `Failed to run ${hazardType} analysis`);
     } finally {
       setLoading(false);
+      setJobProgress(null);
     }
   };
 
@@ -234,27 +270,19 @@ export default function HazardAnalysis() {
     if (!finalCoords) return;
     try {
       setPdfLoading(true);
-      const boundary = { type: "Polygon", coordinates: [finalCoords] };
-      const endpoint = hazardType === "flood" ? "/hazards/flood/pdf" : "/hazards/erosion/pdf";
-      const body =
-        hazardType === "flood"
-          ? { geometry: boundary, show_raster: showRaster, return_period: returnPeriod, local_elevation_points: localElevationPoints }
-          : { geometry: boundary, show_raster: showRaster, local_elevation_points: localElevationPoints };
-      const res = await api.post(endpoint, body, { responseType: "blob", timeout: 90000 });
-      const blob = new Blob([res.data], { type: res.headers["content-type"] });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = hazardType === "flood" ? "flood_risk_report.pdf" : "erosion_risk_report.pdf";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      setJobProgress({ pct: 0, stage: "Starting report..." });
+      const created = await api.post<HazardJobStatus>(`/hazards/${hazardType}/analyze`, buildHazardJobBody("pdf"));
+      const job = await pollHazardJob(created.data.id);
+      if (!job.download_url) throw new Error("Report finished but no file was returned.");
+      const fileRes = await api.get(job.download_url, { responseType: "blob" });
+      const blob = new Blob([fileRes.data], { type: fileRes.headers["content-type"] || "application/pdf" });
+      triggerBrowserDownload(blob, hazardType === "flood" ? "flood_risk_report.pdf" : "erosion_risk_report.pdf");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to download PDF");
+      toast.error(err instanceof Error ? err.message : "Failed to download PDF");
     } finally {
       setPdfLoading(false);
+      setJobProgress(null);
     }
   };
 
@@ -262,27 +290,19 @@ export default function HazardAnalysis() {
     if (!finalCoords) return;
     try {
       setGisLoading(true);
-      const boundary = { type: "Polygon", coordinates: [finalCoords] };
-      const endpoint = hazardType === "flood" ? "/hazards/flood/gis-export" : "/hazards/erosion/gis-export";
-      const body =
-        hazardType === "flood"
-          ? { geometry: boundary, return_period: returnPeriod, local_elevation_points: localElevationPoints }
-          : { geometry: boundary, local_elevation_points: localElevationPoints };
-      const res = await api.post(endpoint, body, { responseType: "blob", timeout: 90000 });
-      const blob = new Blob([res.data], { type: res.headers["content-type"] || "application/zip" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = hazardType === "flood" ? "flood_hazard_gis_export.zip" : "erosion_hazard_gis_export.zip";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      setJobProgress({ pct: 0, stage: "Starting export..." });
+      const created = await api.post<HazardJobStatus>(`/hazards/${hazardType}/analyze`, buildHazardJobBody("gis-export"));
+      const job = await pollHazardJob(created.data.id);
+      if (!job.download_url) throw new Error("Export finished but no file was returned.");
+      const fileRes = await api.get(job.download_url, { responseType: "blob" });
+      const blob = new Blob([fileRes.data], { type: fileRes.headers["content-type"] || "application/zip" });
+      triggerBrowserDownload(blob, hazardType === "flood" ? "flood_hazard_gis_export.zip" : "erosion_hazard_gis_export.zip");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to export GIS data");
+      toast.error(err instanceof Error ? err.message : "Failed to export GIS data");
     } finally {
       setGisLoading(false);
+      setJobProgress(null);
     }
   };
 
@@ -309,6 +329,13 @@ export default function HazardAnalysis() {
   return (
     <div className="hazard-container">
       <Toaster position="top-right" />
+
+      <HazardProgressOverlay
+        visible={loading || pdfLoading || gisLoading}
+        progressPct={jobProgress?.pct ?? 0}
+        stageText={jobProgress?.stage ?? ""}
+        hazardType={hazardType}
+      />
 
       <header className="hazard-header">
         <button className="back-btn" onClick={() => navigate("/")}>Back</button>
