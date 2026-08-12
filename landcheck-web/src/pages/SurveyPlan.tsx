@@ -3550,6 +3550,15 @@ export default function SurveyPlan() {
     }
   };
 
+  const handleRoadNamesSaved = useCallback(() => {
+    setPreviewUrl(null);
+    setOrthophotoUrl(null);
+    setTopoMapUrl(null);
+    window.setTimeout(() => {
+      void refreshCurrentPreview();
+    }, 250);
+  }, [refreshCurrentPreview]);
+
   const handleCloseFeatureEditor = useCallback(() => {
     setShowFeatureEditor(false);
     if (!featureEditsPendingRef.current) return;
@@ -3926,6 +3935,8 @@ export default function SurveyPlan() {
               onOpenFeatureCadEditor={openFeatureCadEditor}
               onPrefetchFeatureEditor={prefetchFeatureEditor}
               plotId={plotId}
+              onSaveFeatureOverride={handleSaveOverride}
+              onRoadNamesSaved={handleRoadNamesSaved}
               isOnline={isOnline}
               onBack={() => goToStep(1)}
               onContinue={() => goToStep(3)}
@@ -4043,6 +4054,8 @@ export default function SurveyPlan() {
               onOpenFeatureCadEditor={openFeatureCadEditor}
               isOnline={isOnline}
               plotId={plotId}
+              onSaveFeatureOverride={handleSaveOverride}
+              onRoadNamesSaved={handleRoadNamesSaved}
               defaultCertificationStatement={DEFAULT_CERTIFICATION_STATEMENT}
               defaultAdamawaAuthorityTitle={DEFAULT_ADAMAWA_AUTHORITY_TITLE}
               defaultAdamawaAuthorityDate={DEFAULT_ADAMAWA_AUTHORITY_DATE}
@@ -4503,6 +4516,9 @@ export default function SurveyPlan() {
                 orthophotoLoading={orthophotoLoading}
                 topoMapLoading={topoMapLoading}
                 hasHeightData={hasHeightData}
+                plotId={plotId}
+                onSaveFeatureOverride={handleSaveOverride}
+                onRoadNamesSaved={handleRoadNamesSaved}
               />
             </div>
           </div>

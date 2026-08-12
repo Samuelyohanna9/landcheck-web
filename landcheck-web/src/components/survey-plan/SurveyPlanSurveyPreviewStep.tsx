@@ -88,6 +88,14 @@ type Props = {
   onOpenFeatureCadEditor: () => void | Promise<void>;
   onPrefetchFeatureEditor: () => void;
   plotId: number | null;
+  onSaveFeatureOverride: (payload: {
+    feature_type: "road" | "river";
+    action: "add" | "delete" | "update";
+    name?: string;
+    width_m?: number;
+    geojson: any;
+  }) => Promise<boolean>;
+  onRoadNamesSaved?: () => void;
   isOnline: boolean;
   onBack: () => void;
   onContinue: () => void;
@@ -169,6 +177,8 @@ function SurveyPlanSurveyPreviewStep({
   onOpenFeatureCadEditor,
   onPrefetchFeatureEditor,
   plotId,
+  onSaveFeatureOverride,
+  onRoadNamesSaved,
   isOnline,
   onBack,
   onContinue,
@@ -635,6 +645,9 @@ function SurveyPlanSurveyPreviewStep({
           orthophotoLoading={orthophotoLoading}
           topoMapLoading={topoMapLoading}
           hasHeightData={hasHeightData}
+          plotId={plotId}
+          onSaveFeatureOverride={onSaveFeatureOverride}
+          onRoadNamesSaved={onRoadNamesSaved}
         />
       </div>
     </div>

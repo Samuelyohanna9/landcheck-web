@@ -124,6 +124,14 @@ type Props = {
   onOpenFeatureCadEditor: () => void | Promise<void>;
   isOnline: boolean;
   plotId: number | null;
+  onSaveFeatureOverride: (payload: {
+    feature_type: "road" | "river";
+    action: "add" | "delete" | "update";
+    name?: string;
+    width_m?: number;
+    geojson: any;
+  }) => Promise<boolean>;
+  onRoadNamesSaved?: () => void;
   defaultCertificationStatement: string;
   defaultAdamawaAuthorityTitle: string;
   defaultAdamawaAuthorityDate: string;
@@ -935,6 +943,9 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                 topoMapLoading={props.topoMapLoading}
                 hasHeightData={props.hasHeightData}
                 allowedPreviewTypes={["survey"]}
+                plotId={props.plotId}
+                onSaveFeatureOverride={props.onSaveFeatureOverride}
+                onRoadNamesSaved={props.onRoadNamesSaved}
               />
             </div>
           ) : (
