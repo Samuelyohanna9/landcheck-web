@@ -238,9 +238,9 @@
 .spl-laptop-display {
   position: absolute;
   left: 21.5%;
-  top: 6.5%;
-  width: 63%;
-  height: 63.3%;
+  top: 9%;
+  width: 60%;
+  height: 60%;
   overflow: hidden;
   border-radius: 12px;
   background: #0f141a;
