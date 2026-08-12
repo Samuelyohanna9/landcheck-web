@@ -163,6 +163,45 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.hazard-interactive-wrap {
+  position: relative;
+}
+
+.hazard-interactive-img {
+  width: 100%;
+  display: block;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: crosshair;
+}
+
+.hazard-interactive-tooltip {
+  position: absolute;
+  transform: translate(14px, -50%);
+  background: rgba(15, 23, 42, 0.95);
+  color: #f8fafc;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.4rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 5;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.hazard-interactive-tooltip--pinned {
+  border-color: #38bdf8;
+}
+
+.hazard-interactive-hint {
+  margin-top: 0.5rem;
+  font-size: 0.7rem;
+  color: rgba(226, 232, 240, 0.55);
+  text-align: center;
+}
+
 .hazard-north {
   position: absolute;
   top: 22px;
