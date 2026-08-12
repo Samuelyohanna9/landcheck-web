@@ -1644,26 +1644,26 @@
 
 .step-panel {
   display: grid;
-  grid-template-columns: clamp(340px, 25vw, 400px) minmax(0, 1fr);
-  gap: 0.7rem;
+  grid-template-columns: minmax(380px, 430px) minmax(0, 1fr);
+  gap: 0.85rem;
   height: calc(100dvh - 112px);
 }
 
 .preview-panel {
-  grid-template-columns: clamp(340px, 25vw, 400px) minmax(0, 1fr);
-  gap: 0.7rem;
+  grid-template-columns: minmax(380px, 430px) minmax(0, 1fr);
+  gap: 0.85rem;
   height: calc(100dvh - 112px);
 }
 
 .survey-container.is-preview-step .preview-panel {
-  grid-template-columns: clamp(340px, 25vw, 400px) minmax(0, 1fr);
-  gap: 0.7rem;
+  grid-template-columns: minmax(380px, 430px) minmax(0, 1fr);
+  gap: 0.85rem;
   height: calc(100dvh - 86px);
 }
 
 .export-panel {
-  grid-template-columns: clamp(340px, 25vw, 400px) minmax(0, 1fr);
-  gap: 0.7rem;
+  grid-template-columns: minmax(380px, 430px) minmax(0, 1fr);
+  gap: 0.85rem;
 }
 
 .preview-panel .panel-right {
@@ -3410,7 +3410,7 @@
   .survey-container.has-workflow .preview-panel,
   .survey-container.has-workflow .export-panel,
   .survey-container.has-workflow .step-panel {
-    grid-template-columns: clamp(320px, 28vw, 370px) minmax(0, 1fr);
+    grid-template-columns: minmax(340px, 390px) minmax(0, 1fr);
   }
 
   .survey-container.has-workflow .form-grid {
@@ -4187,9 +4187,16 @@
 }
 
 .survey-content {
-  padding: 1.35rem;
-  width: min(1600px, 100%);
+  padding: 1rem;
+  width: min(1860px, calc(100% - 0.6rem));
   margin: 0 auto;
+}
+
+.survey-container select,
+.survey-container select option {
+  color-scheme: dark;
+  background-color: #152332;
+  color: #f5f7f1;
 }
 
 .survey-sync-banner,
@@ -4570,7 +4577,8 @@
   }
 
   .survey-content {
-    padding: 1rem;
+    width: calc(100% - 0.4rem);
+    padding: 0.75rem;
   }
 
   .mode-select-shell {
@@ -4593,6 +4601,42 @@
 
   .mode-card-top {
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 1024px) {
+  .survey-container.has-workflow .step-panel,
+  .survey-container.has-workflow .preview-panel,
+  .survey-container.has-workflow .export-panel {
+    gap: 0.75rem;
+  }
+
+  .survey-container.has-workflow .step-panel .panel-right,
+  .survey-container.has-workflow .preview-panel .panel-right,
+  .survey-container.has-workflow .export-panel .panel-right {
+    min-height: clamp(420px, 58vh, 680px);
+  }
+}
+
+@media (max-width: 720px) {
+  .survey-header {
+    padding: 0.7rem 0.8rem;
+  }
+
+  .survey-content {
+    width: calc(100% - 0.2rem);
+    padding: 0.5rem;
+  }
+
+  .step-panel,
+  .preview-panel,
+  .export-panel {
+    border-radius: 22px;
+  }
+
+  .panel-left,
+  .panel-right {
+    border-radius: 20px;
   }
 }
 

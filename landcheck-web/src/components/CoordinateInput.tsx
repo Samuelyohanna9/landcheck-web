@@ -1,4 +1,4 @@
-import { memo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import "../styles/coordinate-input.css";
 import CSVPreviewModal from "./CSVPreviewModal";
 
@@ -67,15 +67,40 @@ function CoordinateInput({
   onCoordinateSystemChange,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coordMenuRef = useRef<HTMLDivElement>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [rawFileData, setRawFileData] = useState<(string | number)[][]>([]);
   const [uploadParsing, setUploadParsing] = useState(false);
+  const [coordMenuOpen, setCoordMenuOpen] = useState(false);
   const isProjected = coordinateSystem !== "wgs84";
   const xLabel = isProjected ? "Easting (m)" : "Longitude";
   const yLabel = isProjected ? "Northing (m)" : "Latitude";
   const placeholders = getPlaceholders(coordinateSystem);
   const xPlaceholder = placeholders.x;
   const yPlaceholder = placeholders.y;
+  const selectedCoordinateSystem = useMemo(
+    () => COORDINATE_SYSTEMS.find((sys) => sys.key === coordinateSystem) ?? COORDINATE_SYSTEMS[0],
+    [coordinateSystem]
+  );
+
+  useEffect(() => {
+    if (!coordMenuOpen) return undefined;
+    const handleOutsidePointer = (event: MouseEvent) => {
+      if (coordMenuRef.current?.contains(event.target as Node)) return;
+      setCoordMenuOpen(false);
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setCoordMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsidePointer);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsidePointer);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [coordMenuOpen]);
 
   // Parse uploaded file (CSV or Excel) and show preview modal
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,20 +198,52 @@ function CoordinateInput({
       {/* Coordinate System Selector */}
       <div className="coord-system-selector">
         <label className="coord-system-label">Coordinate System:</label>
-        <select
-          value={coordinateSystem}
-          onChange={(e) => onCoordinateSystemChange(e.target.value)}
-          disabled={disabled}
-          className="coord-system-select"
-        >
-          {COORDINATE_SYSTEMS.map((sys) => (
-            <option key={sys.key} value={sys.key}>
-              {sys.name}
-            </option>
-          ))}
-        </select>
+        <div className="coord-system-picker" ref={coordMenuRef}>
+          <button
+            type="button"
+            className={`coord-system-trigger${coordMenuOpen ? " is-open" : ""}`}
+            disabled={disabled}
+            aria-haspopup="listbox"
+            aria-expanded={coordMenuOpen}
+            onClick={() => setCoordMenuOpen((open) => !open)}
+          >
+            <span className="coord-system-trigger-copy">
+              <strong>{selectedCoordinateSystem.name}</strong>
+              <span>EPSG:{selectedCoordinateSystem.epsg}</span>
+            </span>
+            <span className="coord-system-trigger-chevron" aria-hidden="true">
+              ▾
+            </span>
+          </button>
+          {coordMenuOpen ? (
+            <div className="coord-system-menu" role="listbox" aria-label="Coordinate system">
+              {COORDINATE_SYSTEMS.map((sys) => {
+                const isActive = sys.key === coordinateSystem;
+                return (
+                  <button
+                    key={sys.key}
+                    type="button"
+                    role="option"
+                    aria-selected={isActive}
+                    className={`coord-system-option${isActive ? " is-active" : ""}`}
+                    onClick={() => {
+                      onCoordinateSystemChange(sys.key);
+                      setCoordMenuOpen(false);
+                    }}
+                  >
+                    <span className="coord-system-option-copy">
+                      <strong>{sys.name}</strong>
+                      <span>{sys.description}</span>
+                    </span>
+                    <span className="coord-system-option-epsg">EPSG:{sys.epsg}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
         <span className="coord-system-desc">
-          {COORDINATE_SYSTEMS.find(s => s.key === coordinateSystem)?.description}
+          {selectedCoordinateSystem.description}
         </span>
       </div>
 
