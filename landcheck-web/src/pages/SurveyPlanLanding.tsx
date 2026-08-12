@@ -9,97 +9,167 @@ import {
 } from "../utils/surveyPlanPrefetch";
 import "../styles/survey-plan-landing.css";
 
-type WorkflowPanel = {
+type PreviewMode = {
+  id: "survey" | "georeference" | "subdivision";
   title: string;
-  detail: string;
-  caption: string;
+  summary: string;
+  strap: string;
+  metrics: Array<{ label: string; value: string }>;
 };
 
-const capabilityStrip = [
-  "Survey plan drafting",
-  "Raster georeferencing",
-  "Plot subdivision",
-  "Interactive CAD editor",
-  "PDF, CSV, and CAD exports",
-];
+const heroTerms = ["Survey plan", "Georeference", "Plot subdivision"];
 
-const workflowPanels: WorkflowPanel[] = [
+const previewModes: PreviewMode[] = [
   {
-    title: "Survey plan production",
-    detail: "Capture raw parcel coordinates, set presentation details, and render a formal plan sheet from the browser.",
-    caption: "Coordinate intake to official preview",
+    id: "survey",
+    title: "Survey plan",
+    summary: "Coordinate to sheet.",
+    strap: "Parcel preview",
+    metrics: [
+      { label: "Paper", value: "A1 / A3" },
+      { label: "Boundary", value: "Ready" },
+      { label: "Export", value: "PDF" },
+    ],
   },
   {
-    title: "Georeference scanned plans",
-    detail: "Anchor JPEG or PNG survey sheets against real control points, then continue into digitizing and staking exports.",
-    caption: "Ground control pairing and anchored raster review",
+    id: "georeference",
+    title: "Georeference",
+    summary: "Control to raster.",
+    strap: "Anchored image",
+    metrics: [
+      { label: "GCPs", value: "3+" },
+      { label: "Output", value: "CSV" },
+      { label: "Stage", value: "Digitize" },
+    ],
   },
   {
-    title: "Subdivision workspace",
-    detail: "Split a parent parcel by count, area, fraction, or custom allocation and keep every resulting lot traceable.",
-    caption: "Subdivision logic with controlled lot outputs",
-  },
-  {
-    title: "Interactive CAD editor",
-    detail: "Refine roads, buildings, rivers, fences, and boundary intent inside a drafting environment built for survey review.",
-    caption: "Browser CAD editing without desktop overhead",
-  },
-  {
-    title: "Final export package",
-    detail: "Issue plan PDFs, orthophoto sheets, topographic outputs, CSV stakeout files, and DWG or DXF handoff files.",
-    caption: "Client-ready and field-ready exports",
+    id: "subdivision",
+    title: "Plot subdivision",
+    summary: "Parent to lots.",
+    strap: "Lot allocation",
+    metrics: [
+      { label: "Split", value: "Count / Area" },
+      { label: "Balance", value: "Checked" },
+      { label: "Export", value: "Batch" },
+    ],
   },
 ];
 
 const coreCapabilities = [
-  {
-    title: "Survey plan drafting",
-    detail: "Move from coordinate entry to a finished parcel sheet with formal metadata, paper sizing, and plot preview control.",
-  },
-  {
-    title: "Subdivision engine",
-    detail: "Generate new lots from one parent parcel using count-based, area-based, fractional, or custom allocation rules.",
-  },
-  {
-    title: "Raster georeferencing",
-    detail: "Upload scanned plans, place control points, solve the transform, digitize features, and continue the job in one flow.",
-  },
-  {
-    title: "Interactive CAD editor",
-    detail: "Adjust boundary-aware linework, inspect geometry, and prepare cleaner outputs without leaving the browser session.",
-  },
-  {
-    title: "Export pack",
-    detail: "Deliver survey plan PDFs, orthophoto PDFs, topographic sheets, staking CSVs, and CAD handoff files from the same job.",
-  },
+  { title: "Coordinate intake", detail: "Manual or sheet import." },
+  { title: "CAD editor", detail: "Roads, buildings, fences." },
+  { title: "Georeference", detail: "Raster control and digitize." },
+  { title: "Subdivision", detail: "Count, area, fraction." },
+  { title: "Exports", detail: "PDF, CSV, DXF, DWG." },
 ];
 
 const productionRoutes = [
   {
     title: "Survey Plan",
-    detail: "Standard parcel drafting and official sheet generation from entered coordinates.",
-    action: "Open survey plan",
-  },
-  {
-    title: "Subdivision",
-    detail: "Parent-plot splitting with batch review, lot naming, and clean-copy outputs.",
-    action: "Open subdivision",
+    detail: "Formal parcel drafting.",
+    action: "Open drafting workspace",
   },
   {
     title: "Georeference",
-    detail: "Scanned raster control, digitizing, and CSV export for field staking workflows.",
-    action: "Open georeference",
+    detail: "Scanned plan recovery.",
+    action: "Open raster workspace",
+  },
+  {
+    title: "Subdivision",
+    detail: "Batch lot production.",
+    action: "Open subdivision workspace",
   },
 ];
 
-const exportOutputs = [
-  "Plan sheet PDF",
-  "Orthophoto PDF",
-  "Topographic PDF",
-  "Computation sheet",
-  "CSV stakeout",
-  "DWG / DXF",
-];
+const exportOutputs = ["Plan PDF", "Orthophoto PDF", "Computation sheet", "Stakeout CSV", "DXF", "DWG"];
+
+function SurveyPreviewScene({ mode }: { mode: PreviewMode }) {
+  if (mode.id === "survey") {
+    return (
+      <div className="spl-scene spl-scene--survey">
+        <div className="spl-scene-top">
+          <span>Plan sheet preview</span>
+          <span>Live parcel view</span>
+        </div>
+        <div className="spl-scene-paper">
+          <div className="spl-scene-polygon">
+            <span className="spl-scene-vertex spl-scene-vertex--a">A</span>
+            <span className="spl-scene-vertex spl-scene-vertex--b">B</span>
+            <span className="spl-scene-vertex spl-scene-vertex--c">C</span>
+            <span className="spl-scene-vertex spl-scene-vertex--d">D</span>
+            <span className="spl-scene-area">2.98 ha</span>
+          </div>
+          <div className="spl-scene-sidebar">
+            {mode.metrics.map((metric) => (
+              <div key={metric.label} className="spl-scene-metric">
+                <span>{metric.label}</span>
+                <strong>{metric.value}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode.id === "georeference") {
+    return (
+      <div className="spl-scene spl-scene--georeference">
+        <div className="spl-scene-top">
+          <span>Raster control</span>
+          <span>Ground map pairing</span>
+        </div>
+        <div className="spl-scene-split">
+          <div className="spl-raster-panel">
+            <div className="spl-raster-grid" />
+            <span className="spl-gcp spl-gcp--one">GCP 1</span>
+            <span className="spl-gcp spl-gcp--two">GCP 2</span>
+            <span className="spl-gcp spl-gcp--three">GCP 3</span>
+          </div>
+          <div className="spl-map-panel">
+            <div className="spl-map-panel-grid" />
+            <span className="spl-map-cross spl-map-cross--one" />
+            <span className="spl-map-cross spl-map-cross--two" />
+            <span className="spl-map-cross spl-map-cross--three" />
+          </div>
+        </div>
+        <div className="spl-scene-foot-metrics">
+          {mode.metrics.map((metric) => (
+            <div key={metric.label} className="spl-foot-metric">
+              <span>{metric.label}</span>
+              <strong>{metric.value}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="spl-scene spl-scene--subdivision">
+      <div className="spl-scene-top">
+        <span>Subdivision preview</span>
+        <span>Lot balance checked</span>
+      </div>
+      <div className="spl-subdivision-panel">
+        <div className="spl-parent-lot">
+          <div className="spl-child-lot spl-child-lot--one">Lot A</div>
+          <div className="spl-child-lot spl-child-lot--two">Lot B</div>
+          <div className="spl-child-lot spl-child-lot--three">Lot C</div>
+          <div className="spl-child-lot spl-child-lot--four">Lot D</div>
+        </div>
+        <div className="spl-scene-sidebar">
+          {mode.metrics.map((metric) => (
+            <div key={metric.label} className="spl-scene-metric">
+              <span>{metric.label}</span>
+              <strong>{metric.value}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function SurveyPlanLanding() {
   const navigate = useNavigate();
@@ -111,7 +181,7 @@ export default function SurveyPlanLanding() {
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setActivePanel((current) => (current + 1) % workflowPanels.length);
+      setActivePanel((current) => (current + 1) % previewModes.length);
     }, 4200);
     return () => window.clearInterval(timer);
   }, []);
@@ -126,7 +196,7 @@ export default function SurveyPlanLanding() {
     navigate("/survey-plan");
   };
 
-  const activeWorkflow = workflowPanels[activePanel];
+  const activePreview = previewModes[activePanel];
 
   return (
     <div className="spl-page">
@@ -137,12 +207,9 @@ export default function SurveyPlanLanding() {
           <div className="spl-hero-overlay" />
           <div className="spl-shell spl-hero-shell">
             <div className="spl-hero-copy">
-              <span className="spl-kicker">LandCheck Survey Plan</span>
-              <h1>Survey drafting, georeferencing, and export in one web workflow.</h1>
-              <p>
-                Build clean parcel sheets, run subdivisions, georeference scanned plans, and issue field-ready outputs
-                without moving between disconnected tools.
-              </p>
+              <span className="spl-kicker">LandCheck Survey Studio</span>
+              <h1>Survey plan. Georeference. Plot subdivision.</h1>
+              <p>One browser workspace for parcel production.</p>
               <div className="spl-hero-actions">
                 <button
                   type="button"
@@ -154,46 +221,49 @@ export default function SurveyPlanLanding() {
                   Open Survey Plan
                 </button>
                 <a className="spl-btn-secondary" href="#survey-capabilities">
-                  View Capabilities
+                  View Features
                 </a>
               </div>
-              <div className="spl-capability-strip" aria-label="Survey plan capabilities">
-                {capabilityStrip.map((item) => (
-                  <span key={item} className="spl-capability-pill">
-                    {item}
+              <div className="spl-hero-terms" aria-label="Survey capabilities">
+                {heroTerms.map((term) => (
+                  <span key={term} className="spl-hero-term">
+                    {term}
                   </span>
                 ))}
               </div>
             </div>
+          </div>
+        </section>
 
-            <div className="spl-hero-visual" aria-live="polite">
-              <div className="spl-screen-frame">
-                <div className="spl-screen-topline">
-                  <span className="spl-screen-dot" />
-                  <span>Survey workflow</span>
+        <section className="spl-device-band">
+          <div className="spl-shell">
+            <div className="spl-device-shell">
+              <div className="spl-device-copy">
+                <span className="spl-section-kicker">Live preview</span>
+                <h2>{activePreview.title}</h2>
+                <p>{activePreview.summary}</p>
+                <div className="spl-device-labels" aria-hidden="true">
+                  {previewModes.map((mode, index) => (
+                    <span
+                      key={mode.id}
+                      className={`spl-device-label${index === activePanel ? " is-active" : ""}`}
+                    >
+                      {mode.title}
+                    </span>
+                  ))}
                 </div>
-                <div className="spl-screen-body">
-                  <div className="spl-screen-stage">
-                    <span className="spl-screen-stage-label">Current focus</span>
-                    <h2>{activeWorkflow.title}</h2>
-                    <p>{activeWorkflow.detail}</p>
+              </div>
+
+              <div className="spl-computer" aria-live="polite">
+                <div className="spl-computer-screen">
+                  <div className="spl-computer-bar">
+                    <span>{activePreview.strap}</span>
+                    <strong>{activePreview.title}</strong>
                   </div>
-                  <div className="spl-screen-rail" aria-hidden="true">
-                    {workflowPanels.map((panel, index) => (
-                      <div
-                        key={panel.title}
-                        className={`spl-screen-rail-item${index === activePanel ? " is-active" : ""}`}
-                      >
-                        <span>{String(index + 1).padStart(2, "0")}</span>
-                        <strong>{panel.title}</strong>
-                      </div>
-                    ))}
-                  </div>
+                  <SurveyPreviewScene mode={activePreview} />
                 </div>
-                <div className="spl-screen-footer">
-                  <strong>{activeWorkflow.caption}</strong>
-                  <span>Designed for reliable field outputs on poor or unstable networks.</span>
-                </div>
+                <div className="spl-computer-stand" />
+                <div className="spl-computer-base" />
               </div>
             </div>
           </div>
@@ -202,22 +272,15 @@ export default function SurveyPlanLanding() {
         <section id="survey-capabilities" className="spl-section spl-section--light">
           <div className="spl-shell spl-section-shell">
             <div className="spl-section-intro">
-              <span className="spl-section-kicker">Core capabilities</span>
-              <h2>Everything needed for a professional survey job, kept in a cleaner flow.</h2>
-              <p>
-                The platform covers drafting, scanned-plan recovery, subdivision logic, browser editing, and final
-                delivery without loading the page with unnecessary interface noise.
-              </p>
+              <span className="spl-section-kicker">What it covers</span>
+              <h2>Built for survey production.</h2>
             </div>
 
             <div className="spl-capability-list">
-              {coreCapabilities.map((item, index) => (
+              {coreCapabilities.map((item) => (
                 <article key={item.title} className="spl-capability-row">
-                  <span className="spl-capability-index">{String(index + 1).padStart(2, "0")}</span>
-                  <div>
-                    <h3>{item.title}</h3>
-                    <p>{item.detail}</p>
-                  </div>
+                  <h3>{item.title}</h3>
+                  <p>{item.detail}</p>
                 </article>
               ))}
             </div>
@@ -227,14 +290,14 @@ export default function SurveyPlanLanding() {
         <section className="spl-section spl-section--paper">
           <div className="spl-shell spl-section-shell">
             <div className="spl-section-intro spl-section-intro--narrow">
-              <span className="spl-section-kicker">Production routes</span>
-              <h2>Choose the route that matches the job.</h2>
+              <span className="spl-section-kicker">Routes</span>
+              <h2>Choose the job.</h2>
             </div>
 
             <div className="spl-routes-grid">
               {productionRoutes.map((route) => (
                 <article key={route.title} className="spl-route-column">
-                  <h3>{route.title}</h3>
+                  <span className="spl-route-kicker">{route.title}</span>
                   <p>{route.detail}</p>
                   <button
                     type="button"
@@ -250,10 +313,10 @@ export default function SurveyPlanLanding() {
             </div>
 
             <div className="spl-export-strip">
-              <span className="spl-export-label">Exports</span>
-              <div className="spl-export-pills">
+              <span className="spl-export-label">Outputs</span>
+              <div className="spl-export-list">
                 {exportOutputs.map((item) => (
-                  <span key={item} className="spl-export-pill">
+                  <span key={item} className="spl-export-item">
                     {item}
                   </span>
                 ))}
@@ -265,12 +328,8 @@ export default function SurveyPlanLanding() {
         <footer className="spl-footer">
           <div className="spl-shell spl-footer-shell">
             <div className="spl-footer-copy">
-              <span className="spl-section-kicker">Ready to draft</span>
-              <h2>Open Survey Plan and start the next job.</h2>
-              <p>
-                Enter coordinates, preview the parcel, refine the sheet, and issue the export package from one browser
-                session.
-              </p>
+              <span className="spl-section-kicker">Ready</span>
+              <h2>Start the next survey job.</h2>
             </div>
             <div className="spl-footer-actions">
               <button
@@ -289,7 +348,7 @@ export default function SurveyPlanLanding() {
           </div>
 
           <div className="spl-shell spl-footer-bottom">
-            <span>LandCheck Survey Plan for parcel drafting, subdivision, and georeferencing.</span>
+            <span>LandCheck Survey Plan for drafting, georeferencing, and subdivision.</span>
             <SocialLinks className="spl-footer-social" />
           </div>
         </footer>
