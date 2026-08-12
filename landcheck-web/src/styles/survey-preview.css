@@ -347,6 +347,88 @@
   white-space: nowrap;
 }
 
+/* ---------- Road/River Names side panel ---------- */
+
+.road-names-panel {
+  width: min(380px, 92vw);
+}
+
+.road-name-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.road-name-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.road-name-row-label {
+  flex: 1 1 100%;
+  font-size: 0.68rem;
+  color: #8ec7a9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.road-name-input {
+  display: flex;
+  min-height: 34px;
+  background: rgba(6, 12, 22, 0.85);
+  border: 1px solid rgba(223, 232, 217, 0.14);
+  border-radius: 8px;
+  color: #f7f8f3;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.6rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.road-name-input:focus {
+  outline: none;
+  border-color: rgba(16, 185, 129, 0.55);
+}
+
+.road-name-save-btn {
+  min-height: 34px;
+  padding: 0.3rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.14);
+  color: #9bd2b2;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.road-name-save-btn:hover:not(:disabled) {
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+.road-name-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.road-names-empty {
+  font-size: 0.75rem;
+  color: #9aa7ad;
+  margin: 0;
+}
+
+.road-names-hint {
+  font-size: 0.68rem;
+  color: #8ec7a9;
+  line-height: 1.4;
+  margin: 0 0.1rem;
+}
+
 /* Preview Type Toggle */
 .preview-toggle {
   display: flex;

@@ -1,5 +1,6 @@
 import { memo, useState, useRef, useEffect } from "react";
 import SurveyAppearancePanel from "./SurveyAppearancePanel";
+import RoadNamesPanel from "./RoadNamesPanel";
 import "../styles/survey-preview.css";
 
 type PreviewType = "survey" | "orthophoto" | "topomap";
@@ -61,6 +62,15 @@ type Props = {
   topoMapLoading: boolean;
   hasHeightData?: boolean;
   allowedPreviewTypes?: PreviewType[];
+  plotId: number | null;
+  onSaveFeatureOverride: (payload: {
+    feature_type: "road" | "river";
+    action: "add" | "delete" | "update";
+    name?: string;
+    width_m?: number;
+    geojson: any;
+  }) => Promise<boolean>;
+  onRoadNamesSaved?: () => void;
 };
 
 function SurveyPreview({
@@ -119,12 +129,16 @@ function SurveyPreview({
   topoMapLoading,
   hasHeightData = false,
   allowedPreviewTypes = ["survey", "orthophoto", "topomap"],
+  plotId,
+  onSaveFeatureOverride,
+  onRoadNamesSaved,
 }: Props) {
   const [zoom, setZoom] = useState(100);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [appearanceOpen, setAppearanceOpen] = useState(false);
+  const [roadNamesOpen, setRoadNamesOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const MIN_ZOOM = 25;
@@ -292,6 +306,12 @@ function SurveyPreview({
             <option value="30">30</option>
           </select>
         </div>
+        <button type="button" className="ribbon-appearance-btn" onClick={() => setRoadNamesOpen(true)}>
+          <svg viewBox="0 0 20 20" fill="currentColor" style={{ width: 13, height: 13 }}>
+            <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h8a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+          </svg>
+          Road Names
+        </button>
         <button type="button" className="ribbon-appearance-btn" onClick={() => setAppearanceOpen(true)}>
           <svg viewBox="0 0 20 20" fill="currentColor" style={{ width: 13, height: 13 }}>
             <path d="M10 2a1 1 0 011 1v1.09a6.01 6.01 0 014.91 4.91H17a1 1 0 110 2h-1.09a6.01 6.01 0 01-4.91 4.91V17a1 1 0 11-2 0v-1.09a6.01 6.01 0 01-4.91-4.91H3a1 1 0 110-2h1.09A6.01 6.01 0 019 4.09V3a1 1 0 011-1zm0 4a4 4 0 100 8 4 4 0 000-8z" />
@@ -299,6 +319,14 @@ function SurveyPreview({
           Appearance
         </button>
       </div>
+
+      <RoadNamesPanel
+        open={roadNamesOpen}
+        onClose={() => setRoadNamesOpen(false)}
+        plotId={plotId}
+        onSaveOverride={onSaveFeatureOverride}
+        onSaved={onRoadNamesSaved}
+      />
 
       <SurveyAppearancePanel
         open={appearanceOpen}

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="1400" viewBox="0 0 420 1400">
+  <rect width="100%" height="100%" fill="white"/>
+
+  <!-- North arrow / survey symbol -->
+  <g fill="none" stroke="#0000ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <!-- central vertical line -->
+    <line x1="210" y1="25" x2="210" y2="1365"/>
+
+    <!-- long narrow triangular arrow -->
+    <path d="M210 25 L162 585 L210 565"/>
+
+    <!-- circular/open loop -->
+    <path d="M162 585
+             C185 568, 222 562, 252 575
+             C292 592, 313 627, 313 665
+             C313 720, 268 765, 212 765
+             C158 765, 116 729, 116 680"/>
+  </g>
+
+  <!-- U.N. -->
+  <g fill="#0000ff" font-family="Times New Roman, Times, serif" font-size="78">
+    <text x="98" y="855">U.</text>
+    <text x="228" y="855">N.</text>
+  </g>
+</svg>
