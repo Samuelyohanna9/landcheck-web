@@ -38,8 +38,8 @@ export default function HazardProgressOverlay({ visible, progressPct, stageText,
           <svg className="hazard-progress-ring" viewBox="0 0 120 120">
             <defs>
               <linearGradient id="hazard-progress-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#0ea5e9" />
-                <stop offset="100%" stopColor="#38bdf8" />
+                <stop offset="0%" stopColor="#e07b00" />
+                <stop offset="100%" stopColor="#fb923c" />
               </linearGradient>
             </defs>
             <circle className="hazard-progress-ring-track" cx="60" cy="60" r={radius} />

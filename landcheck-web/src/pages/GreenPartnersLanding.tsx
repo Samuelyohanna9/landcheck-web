@@ -661,50 +661,31 @@ export default function GreenPartnersLanding() {
               </div>
 
               <div className="gp-device-stage">
-                {/* Safari-style Browser Mockup */}
-                <div className="gp-browser-frame">
-                  <div className="gp-browser-header">
-                    <span className="gp-browser-dots">
-                      <span className="gp-dot gp-dot--red"></span>
-                      <span className="gp-dot gp-dot--yellow"></span>
-                      <span className="gp-dot gp-dot--green"></span>
-                    </span>
-                    <span className="gp-browser-address">
-                      landcheck.online/green/{activeModel.id}-workspace
-                    </span>
-                  </div>
-                  <div className="gp-browser-content">
-                    <div className={`gp-device gp-device--desktop gp-device--desktop-${activeModel.id}`}>
+                <div className="gp-laptop-showcase" aria-label={`${activeModel.selectorTitle} preview`}>
+                  <img
+                    className="gp-laptop-showcase__shell"
+                    src="/survey-laptop-hand.png"
+                    alt="Laptop displaying a LandCheck Green workspace preview"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div className="gp-laptop-showcase__screen">
+                    <figure className={`gp-laptop-preview-frame gp-laptop-preview-frame--${activeModel.id}`}>
                       <img
                         src={activeModel.desktopImage}
                         alt={activeModel.selectorTitle}
-                        className={activeModel.desktopFit === "contain" ? "fit-contain" : "fit-cover"}
+                        className={`gp-laptop-preview-image ${
+                          activeModel.desktopFit === "contain"
+                            ? "gp-laptop-preview-image--contain"
+                            : "gp-laptop-preview-image--cover"
+                        }`}
                         width="1400"
                         height="900"
                         loading="lazy"
                         decoding="async"
                       />
-                    </div>
+                    </figure>
                   </div>
-                </div>
-
-                {/* iPhone-style Mobile Mockup */}
-                <div className="gp-phone-frame">
-                  <div className="gp-phone-notch"></div>
-                  <div className="gp-phone-screen">
-                    <div className={`gp-device gp-device--phone gp-device--phone-${activeModel.id}`}>
-                      <img
-                        src={activeModel.phoneImage}
-                        alt={`${activeModel.selectorTitle} mobile preview`}
-                        className={activeModel.phoneFit === "contain" ? "fit-contain" : "fit-cover"}
-                        width="720"
-                        height="1520"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    </div>
-                  </div>
-                  <div className="gp-phone-home-indicator"></div>
                 </div>
               </div>
 

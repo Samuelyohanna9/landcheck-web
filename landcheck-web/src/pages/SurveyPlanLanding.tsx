@@ -91,7 +91,13 @@ function SurveyPreviewScene({ mode }: { mode: PreviewMode }) {
       />
       <div className="spl-laptop-display">
         <figure className="spl-laptop-display-frame">
-          <img key={activeAsset.src} src={activeAsset.src} alt={activeAsset.alt} loading="eager" />
+          <img
+            key={activeAsset.src}
+            src={activeAsset.src}
+            alt={activeAsset.alt}
+            className={`spl-laptop-preview spl-laptop-preview--${mode.id}`}
+            loading="eager"
+          />
         </figure>
       </div>
     </div>
