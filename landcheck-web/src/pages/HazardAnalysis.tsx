@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { api } from "../api/client";
 import CoordinateInput from "../components/CoordinateInput";
+import HazardInteractiveOverlay, { type HazardInteractiveMeta } from "../components/HazardInteractiveOverlay";
 import HazardProgressOverlay from "../components/HazardProgressOverlay";
 import { fromWGS84, toWGS84 } from "../utils/coordinateConverter";
 import "../styles/hazard-analysis.css";
@@ -52,6 +53,7 @@ type FloodResult = {
   relative_elevation_m?: number | null;
   buildings_total?: number;
   buildings_threatened?: number;
+  interactive?: HazardInteractiveMeta | null;
 };
 
 type ErosionResult = {
@@ -74,6 +76,7 @@ type ErosionResult = {
   slope_source?: "local_survey" | "global_dem" | "unavailable";
   buildings_total?: number;
   buildings_threatened?: number;
+  interactive?: HazardInteractiveMeta | null;
 };
 
 const riskChipClass = (riskClass: string) => {
@@ -573,9 +576,13 @@ export default function HazardAnalysis() {
             <h3>{hazardType === "flood" ? "Flood Risk Overlay" : "Erosion Risk Overlay"}</h3>
             {result?.overlay ? (
               <>
-                <img src={result.overlay} alt={`${hazardType} risk overlay`} width="600" height="600" loading="lazy" decoding="async" />
                 {/* Both hazard maps now bake their own legend, scale bar, and north arrow into
                     the rendered image, so the separate CSS/JSON-driven ones are no longer shown. */}
+                <HazardInteractiveOverlay
+                  src={result.overlay}
+                  alt={`${hazardType} risk overlay`}
+                  interactive={result.interactive}
+                />
                 <div className="hazard-buffer">Buffer: {result.buffer_m} m</div>
               </>
             ) : (
