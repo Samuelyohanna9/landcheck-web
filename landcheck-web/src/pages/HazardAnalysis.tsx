@@ -31,6 +31,8 @@ type HazardType = "flood" | "erosion";
 
 type LegendItem = { label: string; color: string };
 
+type HazardReference = { short?: string; citation: string; url?: string };
+
 type FloodResult = {
   risk_score: number;
   risk_class: string;
@@ -60,6 +62,7 @@ type FloodResult = {
   terrain_flatness_score?: number | null;
   terrain_drainage_score?: number | null;
   terrain_depression_score?: number | null;
+  references?: HazardReference[];
 };
 
 type ErosionResult = {
@@ -83,6 +86,7 @@ type ErosionResult = {
   buildings_total?: number;
   buildings_threatened?: number;
   interactive?: HazardInteractiveMeta | null;
+  references?: HazardReference[];
 };
 
 const riskChipClass = (riskClass: string) => {
@@ -106,6 +110,28 @@ function ComponentBars({ items }: { items: { label: string; value: number; color
           <span className="risk-component-value">{Math.round(item.value * 100)}%</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+function HazardSources({ references }: { references?: HazardReference[] }) {
+  if (!references || references.length === 0) return null;
+  return (
+    <div className="hazard-sources">
+      <h5>Sources</h5>
+      <ol>
+        {references.map((ref) => (
+          <li key={ref.citation}>
+            {ref.url ? (
+              <a href={ref.url} target="_blank" rel="noopener noreferrer">
+                {ref.citation}
+              </a>
+            ) : (
+              ref.citation
+            )}
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
@@ -509,6 +535,7 @@ export default function HazardAnalysis() {
                 <p>Return period: {floodResult.return_period} years.</p>
                 <p>Analysis buffer: {floodResult.buffer_m} m around the plot.</p>
                 <p>Screening only — verify with local surveys and authorities.</p>
+                <HazardSources references={floodResult.references} />
               </div>
               <div className="hazard-export-row">
                 <button className="btn-outline" onClick={downloadPdf} disabled={pdfLoading}>
@@ -584,6 +611,7 @@ export default function HazardAnalysis() {
                 <p>{erosionResult.method}</p>
                 <p>Analysis buffer: {erosionResult.buffer_m} m around the plot.</p>
                 <p>Screening only — verify with a geotechnical survey before development.</p>
+                <HazardSources references={erosionResult.references} />
               </div>
               <div className="hazard-export-row">
                 <button className="btn-outline" onClick={downloadPdf} disabled={pdfLoading}>

@@ -97,7 +97,7 @@ export default function HazardInteractiveOverlay({ src, alt, interactive }: Prop
   const imgRef = useRef<HTMLImageElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; lines: string[] } | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; lines: string[]; flip: boolean } | null>(null);
   const [pinned, setPinned] = useState(false);
 
   const indexedBuildings = useMemo(
@@ -105,7 +105,7 @@ export default function HazardInteractiveOverlay({ src, alt, interactive }: Prop
     [interactive],
   );
 
-  const resolveAt = useCallback((clientX: number, clientY: number): { x: number; y: number; lines: string[] } | null => {
+  const resolveAt = useCallback((clientX: number, clientY: number): { x: number; y: number; lines: string[]; flip: boolean } | null => {
     if (!interactive || !imgRef.current || !wrapRef.current) return null;
     const imgRect = imgRef.current.getBoundingClientRect();
     const wrapRect = wrapRef.current.getBoundingClientRect();
@@ -138,7 +138,13 @@ export default function HazardInteractiveOverlay({ src, alt, interactive }: Prop
     const building = findBuilding(lng, lat, indexedBuildings);
     if (building) lines.push(building.threatened ? "Building: threatened" : "Building: not threatened");
 
-    return { x: clientX - wrapRect.left, y: clientY - wrapRect.top, lines };
+    // Near the right edge (common on narrow phone screens), anchor the tooltip to the left of the
+    // cursor instead of the right - otherwise it renders partly off-screen and forces the page to
+    // scroll horizontally.
+    const relX = clientX - wrapRect.left;
+    const flip = relX > wrapRect.width * 0.62;
+
+    return { x: relX, y: clientY - wrapRect.top, lines, flip };
   }, [interactive, indexedBuildings]);
 
   const handleMove = (e: ReactMouseEvent<HTMLImageElement>) => {
@@ -177,7 +183,7 @@ export default function HazardInteractiveOverlay({ src, alt, interactive }: Prop
       />
       {tooltip && (
         <div
-          className={`hazard-interactive-tooltip ${pinned ? "hazard-interactive-tooltip--pinned" : ""}`}
+          className={`hazard-interactive-tooltip ${pinned ? "hazard-interactive-tooltip--pinned" : ""} ${tooltip.flip ? "hazard-interactive-tooltip--flip" : ""}`}
           style={{ left: tooltip.x, top: tooltip.y }}
         >
           {tooltip.lines.map((line, i) => (
