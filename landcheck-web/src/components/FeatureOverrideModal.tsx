@@ -105,7 +105,7 @@ type PlotMeta = {
   certification_statement: string;
   scale_text: string;
   paper_size: string;
-  template_name: "general" | "adamawa_osg";
+  template_name: "general" | "adamawa_osg" | "akwa_ibom_osg" | "rivers_osg" | "cross_river_osg";
   [key: string]: any;
 };
 

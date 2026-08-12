@@ -40,7 +40,7 @@ type PlotMeta = {
   certification_statement: string;
   scale_text: string;
   paper_size: string;
-  template_name: "general" | "adamawa_osg";
+  template_name: "general" | "adamawa_osg" | "akwa_ibom_osg" | "rivers_osg" | "cross_river_osg";
   adamawa_rof_no: string;
   adamawa_owner_name: string;
   adamawa_authority_title: string;
@@ -56,6 +56,10 @@ type PlotMeta = {
   adamawa_plan_no: string;
   adamawa_surveyed_by_text: string;
   adamawa_disclaimer_text: string;
+  cadastral_plan_no: string;
+  cadastral_area_name: string;
+  cadastral_datum_text: string;
+  cadastral_firm_block_text: string;
   technical_report_instruments: string[];
   technical_report_dgps_type: string;
   technical_report_num_surveyors: number | null;
@@ -252,6 +256,10 @@ const buildDefaultPlotMeta = (): PlotMeta => ({
   adamawa_plan_no: "",
   adamawa_surveyed_by_text: "",
   adamawa_disclaimer_text: DEFAULT_ADAMAWA_DISCLAIMER_TEXT,
+  cadastral_plan_no: "",
+  cadastral_area_name: "",
+  cadastral_datum_text: "",
+  cadastral_firm_block_text: "",
   technical_report_instruments: [],
   technical_report_dgps_type: "",
   technical_report_num_surveyors: null,
@@ -1098,6 +1106,10 @@ export default function SurveyPlan() {
       adamawa_plan_no: meta.adamawa_rof_no,
       adamawa_surveyed_by_text: "",
       adamawa_disclaimer_text: meta.adamawa_disclaimer_text,
+      cadastral_plan_no: meta.cadastral_plan_no,
+      cadastral_area_name: meta.cadastral_area_name,
+      cadastral_datum_text: meta.cadastral_datum_text,
+      cadastral_firm_block_text: meta.cadastral_firm_block_text,
     }),
     [coordinateSystem, meta]
   );
@@ -2761,6 +2773,10 @@ export default function SurveyPlan() {
         adamawa_plan_no: meta.adamawa_rof_no,
         adamawa_surveyed_by_text: "",
         adamawa_disclaimer_text: meta.adamawa_disclaimer_text,
+        cadastral_plan_no: meta.cadastral_plan_no,
+        cadastral_area_name: meta.cadastral_area_name,
+        cadastral_datum_text: meta.cadastral_datum_text,
+        cadastral_firm_block_text: meta.cadastral_firm_block_text,
       };
 
       const resolvedUrl = resolvePlotResourcePath(url, activePlotId);
