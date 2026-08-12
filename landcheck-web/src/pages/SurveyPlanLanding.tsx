@@ -83,29 +83,57 @@ const productionRoutes = [
 
 const exportOutputs = ["Plan PDF", "Orthophoto PDF", "Computation sheet", "Stakeout CSV", "DXF", "DWG"];
 
+const computationPreviewRows = [
+  { station: "A-B", bearing: "46°18'20\"", distance: "43.82 m" },
+  { station: "B-C", bearing: "153°47'31\"", distance: "52.67 m" },
+  { station: "C-D", bearing: "262°11'08\"", distance: "48.09 m" },
+  { station: "D-A", bearing: "332°05'42\"", distance: "39.41 m" },
+];
+
+const subdivisionPreviewRows = [
+  { lot: "Lot A", area: "701 sqm", status: "Issued" },
+  { lot: "Lot B", area: "684 sqm", status: "Reviewed" },
+  { lot: "Lot C", area: "712 sqm", status: "Issued" },
+  { lot: "Lot D", area: "689 sqm", status: "Ready" },
+];
+
 function SurveyPreviewScene({ mode }: { mode: PreviewMode }) {
   if (mode.id === "survey") {
     return (
       <div className="spl-scene spl-scene--survey">
         <div className="spl-scene-top">
           <span>Plan sheet preview</span>
-          <span>Live parcel view</span>
+          <span>Back computation sheet</span>
         </div>
-        <div className="spl-scene-paper">
-          <div className="spl-scene-polygon">
-            <span className="spl-scene-vertex spl-scene-vertex--a">A</span>
-            <span className="spl-scene-vertex spl-scene-vertex--b">B</span>
-            <span className="spl-scene-vertex spl-scene-vertex--c">C</span>
-            <span className="spl-scene-vertex spl-scene-vertex--d">D</span>
-            <span className="spl-scene-area">2.98 ha</span>
-          </div>
-          <div className="spl-scene-sidebar">
-            {mode.metrics.map((metric) => (
-              <div key={metric.label} className="spl-scene-metric">
-                <span>{metric.label}</span>
-                <strong>{metric.value}</strong>
+        <div className="spl-deliverable-grid spl-deliverable-grid--survey">
+          <figure className="spl-output-preview spl-output-preview--plan">
+            <img src="/survey-preview-plan.png" alt="Preview of plotted survey plan output" loading="lazy" />
+            <figcaption>Plotted plan preview</figcaption>
+          </figure>
+          <div className="spl-output-stack">
+            <article className="spl-document-sheet">
+              <header>
+                <span>Back computation</span>
+                <strong>Traverse ready</strong>
+              </header>
+              <div className="spl-computation-table">
+                {computationPreviewRows.map((row) => (
+                  <div key={row.station} className="spl-computation-row">
+                    <span>{row.station}</span>
+                    <span>{row.bearing}</span>
+                    <strong>{row.distance}</strong>
+                  </div>
+                ))}
               </div>
-            ))}
+            </article>
+            <div className="spl-scene-sidebar">
+              {mode.metrics.map((metric) => (
+                <div key={metric.label} className="spl-scene-metric">
+                  <span>{metric.label}</span>
+                  <strong>{metric.value}</strong>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -116,22 +144,18 @@ function SurveyPreviewScene({ mode }: { mode: PreviewMode }) {
     return (
       <div className="spl-scene spl-scene--georeference">
         <div className="spl-scene-top">
-          <span>Raster control</span>
+          <span>Anchored image</span>
           <span>Ground map pairing</span>
         </div>
-        <div className="spl-scene-split">
-          <div className="spl-raster-panel">
-            <div className="spl-raster-grid" />
-            <span className="spl-gcp spl-gcp--one">GCP 1</span>
-            <span className="spl-gcp spl-gcp--two">GCP 2</span>
-            <span className="spl-gcp spl-gcp--three">GCP 3</span>
-          </div>
-          <div className="spl-map-panel">
-            <div className="spl-map-panel-grid" />
-            <span className="spl-map-cross spl-map-cross--one" />
-            <span className="spl-map-cross spl-map-cross--two" />
-            <span className="spl-map-cross spl-map-cross--three" />
-          </div>
+        <div className="spl-scene-split spl-scene-split--imagery">
+          <figure className="spl-output-preview spl-output-preview--raster">
+            <img src="/survey-preview-plan.png" alt="Anchored raster control image preview" loading="lazy" />
+            <figcaption>Raster control</figcaption>
+          </figure>
+          <figure className="spl-output-preview spl-output-preview--orthophoto">
+            <img src="/survey-preview-orthophoto.png" alt="Orthophoto and parcel proof preview" loading="lazy" />
+            <figcaption>Georeferenced map proof</figcaption>
+          </figure>
         </div>
         <div className="spl-scene-foot-metrics">
           {mode.metrics.map((metric) => (
@@ -149,22 +173,51 @@ function SurveyPreviewScene({ mode }: { mode: PreviewMode }) {
     <div className="spl-scene spl-scene--subdivision">
       <div className="spl-scene-top">
         <span>Subdivision preview</span>
-        <span>Lot balance checked</span>
+        <span>Allocation schedule</span>
       </div>
-      <div className="spl-subdivision-panel">
-        <div className="spl-parent-lot">
-          <div className="spl-child-lot spl-child-lot--one">Lot A</div>
-          <div className="spl-child-lot spl-child-lot--two">Lot B</div>
-          <div className="spl-child-lot spl-child-lot--three">Lot C</div>
-          <div className="spl-child-lot spl-child-lot--four">Lot D</div>
-        </div>
-        <div className="spl-scene-sidebar">
-          {mode.metrics.map((metric) => (
-            <div key={metric.label} className="spl-scene-metric">
-              <span>{metric.label}</span>
-              <strong>{metric.value}</strong>
+      <div className="spl-deliverable-grid spl-deliverable-grid--subdivision">
+        <figure className="spl-output-preview spl-output-preview--plan">
+          <img src="/survey-preview-plan.png" alt="Subdivision and plan-sheet preview" loading="lazy" />
+          <figcaption>Subdivision plan sheet</figcaption>
+        </figure>
+        <div className="spl-output-stack">
+          <article className="spl-document-sheet spl-document-sheet--lots">
+            <header>
+              <span>Lot schedule</span>
+              <strong>Balanced</strong>
+            </header>
+            <div className="spl-lot-table">
+              {subdivisionPreviewRows.map((row) => (
+                <div key={row.lot} className="spl-lot-row">
+                  <span>{row.lot}</span>
+                  <span>{row.area}</span>
+                  <strong>{row.status}</strong>
+                </div>
+              ))}
             </div>
-          ))}
+          </article>
+          <div className="spl-scene-sidebar">
+            {mode.metrics.map((metric) => (
+              <div key={metric.label} className="spl-scene-metric">
+                <span>{metric.label}</span>
+                <strong>{metric.value}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="spl-scene-foot-metrics">
+        <div className="spl-foot-metric">
+          <span>Primary parcel</span>
+          <strong>4 sides</strong>
+        </div>
+        <div className="spl-foot-metric">
+          <span>Split basis</span>
+          <strong>Area / count</strong>
+        </div>
+        <div className="spl-foot-metric">
+          <span>Deliverable</span>
+          <strong>Batch export</strong>
         </div>
       </div>
     </div>

@@ -418,34 +418,36 @@ export default function HazardAnalysis() {
               <div className="risk-score">
                 <div>
                   <span className="risk-label">Risk Score</span>
-                  <span className="risk-value">{floodResult.risk_score}%</span>
+                  <span className="risk-value">{floodResult.data_available === false ? "—" : `${floodResult.risk_score}%`}</span>
                 </div>
                 <span className={`risk-chip ${riskChipClass(floodResult.risk_class)}`}>{floodResult.risk_class}</span>
               </div>
-              {!!floodResult.buildings_total && (
+              {!!floodResult.buildings_total && floodResult.data_available !== false && (
                 <div className="hazard-buildings-callout">
                   <strong>{floodResult.buildings_threatened}</strong> of <strong>{floodResult.buildings_total}</strong> buildings
                   {" "}sit in the flood zone
                 </div>
               )}
-              <div className="risk-stat-grid">
-                <div className="risk-stat-card">
-                  <strong>{floodResult.mean_depth_m}</strong>
-                  <span>Mean Depth (m)</span>
+              {floodResult.data_available !== false && (
+                <div className="risk-stat-grid">
+                  <div className="risk-stat-card">
+                    <strong>{floodResult.mean_depth_m}</strong>
+                    <span>Mean Depth (m)</span>
+                  </div>
+                  <div className="risk-stat-card">
+                    <strong>{floodResult.max_depth_m}</strong>
+                    <span>Max Depth (m)</span>
+                  </div>
+                  <div className="risk-stat-card">
+                    <strong>{floodResult.inundation_percent}%</strong>
+                    <span>Inundation</span>
+                  </div>
+                  <div className="risk-stat-card">
+                    <strong>{floodResult.distance_to_river_m ?? "N/A"}</strong>
+                    <span>Dist. to River (m)</span>
+                  </div>
                 </div>
-                <div className="risk-stat-card">
-                  <strong>{floodResult.max_depth_m}</strong>
-                  <span>Max Depth (m)</span>
-                </div>
-                <div className="risk-stat-card">
-                  <strong>{floodResult.inundation_percent}%</strong>
-                  <span>Inundation</span>
-                </div>
-                <div className="risk-stat-card">
-                  <strong>{floodResult.distance_to_river_m ?? "N/A"}</strong>
-                  <span>Dist. to River (m)</span>
-                </div>
-              </div>
+              )}
               {floodResult.data_available !== false && componentItems.length > 0 && (
                 <>
                   <h4 className="risk-components-title">Score components</h4>
@@ -455,7 +457,7 @@ export default function HazardAnalysis() {
               <p className="hazard-note">{floodResult.note}</p>
               {floodResult.data_available === false && (
                 <p className="hazard-warning">
-                  No flood depth data was found for this plot at the selected return period.
+                  No river flood extent is modeled at this plot for RP{floodResult.return_period} — it sits outside GloFAS's simulated floodplain, most likely because it's too far from a major river channel. This does not rule out local/pluvial flooding, which this model doesn't cover.
                 </p>
               )}
               {floodResult.local_elevation_used && floodResult.relative_elevation_m != null && (
@@ -491,34 +493,36 @@ export default function HazardAnalysis() {
               <div className="risk-score">
                 <div>
                   <span className="risk-label">Risk Score</span>
-                  <span className="risk-value">{erosionResult.risk_score}%</span>
+                  <span className="risk-value">{erosionResult.data_available === false ? "—" : `${erosionResult.risk_score}%`}</span>
                 </div>
                 <span className={`risk-chip ${riskChipClass(erosionResult.risk_class)}`}>{erosionResult.risk_class}</span>
               </div>
-              {!!erosionResult.buildings_total && (
+              {!!erosionResult.buildings_total && erosionResult.data_available !== false && (
                 <div className="hazard-buildings-callout">
                   <strong>{erosionResult.buildings_threatened}</strong> of <strong>{erosionResult.buildings_total}</strong> buildings
                   {" "}sit on erosion-prone slopes
                 </div>
               )}
-              <div className="risk-stat-grid">
-                <div className="risk-stat-card">
-                  <strong>{erosionResult.mean_slope_deg}°</strong>
-                  <span>Mean Slope</span>
+              {erosionResult.data_available !== false && (
+                <div className="risk-stat-grid">
+                  <div className="risk-stat-card">
+                    <strong>{erosionResult.mean_slope_deg}°</strong>
+                    <span>Mean Slope</span>
+                  </div>
+                  <div className="risk-stat-card">
+                    <strong>{erosionResult.max_slope_deg}°</strong>
+                    <span>Max Slope</span>
+                  </div>
+                  <div className="risk-stat-card">
+                    <strong>{erosionResult.mean_ndvi}</strong>
+                    <span>Vegetation (NDVI)</span>
+                  </div>
+                  <div className="risk-stat-card">
+                    <strong>{erosionResult.distance_to_drainage_m}</strong>
+                    <span>Dist. to Drainage (m)</span>
+                  </div>
                 </div>
-                <div className="risk-stat-card">
-                  <strong>{erosionResult.max_slope_deg}°</strong>
-                  <span>Max Slope</span>
-                </div>
-                <div className="risk-stat-card">
-                  <strong>{erosionResult.mean_ndvi}</strong>
-                  <span>Vegetation (NDVI)</span>
-                </div>
-                <div className="risk-stat-card">
-                  <strong>{erosionResult.distance_to_drainage_m}</strong>
-                  <span>Dist. to Drainage (m)</span>
-                </div>
-              </div>
+              )}
               {erosionResult.data_available !== false && componentItems.length > 0 && (
                 <>
                   <h4 className="risk-components-title">Score components</h4>
