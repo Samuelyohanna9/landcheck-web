@@ -26,6 +26,9 @@ type RoadNamesPanelProps = {
   plotId: number | null;
   onSaveOverride: (payload: OverridePayload) => Promise<boolean>;
   onSaved?: () => void;
+  scaleText?: string;
+  paperSize?: string;
+  templateName?: string;
 };
 
 function toMultiLineString(features: any[]): { type: "MultiLineString"; coordinates: number[][][] } {
@@ -80,7 +83,16 @@ function groupFeatures(features: any[], kind: FeatureKind): FeatureGroup[] {
   return groups;
 }
 
-function RoadNamesPanel({ open, onClose, plotId, onSaveOverride, onSaved }: RoadNamesPanelProps) {
+function RoadNamesPanel({
+  open,
+  onClose,
+  plotId,
+  onSaveOverride,
+  onSaved,
+  scaleText,
+  paperSize,
+  templateName,
+}: RoadNamesPanelProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [roadGroups, setRoadGroups] = useState<FeatureGroup[]>([]);
@@ -95,7 +107,13 @@ function RoadNamesPanel({ open, onClose, plotId, onSaveOverride, onSaved }: Road
     setLoading(true);
     setError(null);
     api
-      .get(`/plots/${plotId}/features/geojson`)
+      .get(`/plots/${plotId}/features/geojson`, {
+        params: {
+          scale_text: scaleText || undefined,
+          paper_size: paperSize || undefined,
+          template_name: templateName || undefined,
+        },
+      })
       .then((res) => {
         if (cancelled) return;
         const roads = groupFeatures(res.data?.roads?.features || [], "road");
@@ -118,7 +136,12 @@ function RoadNamesPanel({ open, onClose, plotId, onSaveOverride, onSaved }: Road
     return () => {
       cancelled = true;
     };
-  }, [open, plotId]);
+  }, [open, plotId, scaleText, paperSize, templateName]);
+
+  const applyGroupUpdate = (key: string, updater: (g: FeatureGroup) => FeatureGroup) => {
+    setRoadGroups((prev) => prev.map((g) => (g.key === key ? updater(g) : g)));
+    setRiverGroups((prev) => prev.map((g) => (g.key === key ? updater(g) : g)));
+  };
 
   const handleSave = async (group: FeatureGroup) => {
     const name = (drafts[group.key] || "").trim();
@@ -133,7 +156,27 @@ function RoadNamesPanel({ open, onClose, plotId, onSaveOverride, onSaved }: Road
     });
     setSavingKey(null);
     if (ok) {
+      applyGroupUpdate(group.key, (g) => ({ ...g, currentName: name }));
       setSavedKeys((prev) => ({ ...prev, [group.key]: true }));
+      onSaved?.();
+    }
+  };
+
+  const handleClear = async (group: FeatureGroup) => {
+    if (!group.currentName) return;
+    setSavingKey(group.key);
+    const ok = await onSaveOverride({
+      feature_type: group.kind,
+      action: "update",
+      name: "",
+      width_m: group.widthM ?? undefined,
+      geojson: group.geojson,
+    });
+    setSavingKey(null);
+    if (ok) {
+      setDrafts((prev) => ({ ...prev, [group.key]: "" }));
+      applyGroupUpdate(group.key, (g) => ({ ...g, currentName: "" }));
+      setSavedKeys((prev) => ({ ...prev, [group.key]: false }));
       onSaved?.();
     }
   };
@@ -163,6 +206,18 @@ function RoadNamesPanel({ open, onClose, plotId, onSaveOverride, onSaved }: Road
       >
         {savingKey === group.key ? "..." : savedKeys[group.key] ? "Saved" : "Save"}
       </button>
+      {group.currentName && (
+        <button
+          type="button"
+          className="road-name-clear-btn"
+          onClick={() => void handleClear(group)}
+          disabled={savingKey === group.key}
+          title="Remove this name"
+          aria-label="Remove this name"
+        >
+          &times;
+        </button>
+      )}
     </div>
   );
 
@@ -206,8 +261,9 @@ function RoadNamesPanel({ open, onClose, plotId, onSaveOverride, onSaved }: Road
                 )}
               </section>
               <p className="road-names-hint">
-                Saved names are written along the road or river's own path on the plan.
-                Re-render the preview afterward to see them on the sheet.
+                Only roads/rivers that will actually print at the current scale and paper size are
+                listed here. Saved names are written along the road or river's own path on the
+                plan - re-render the preview afterward to see them on the sheet.
               </p>
             </>
           )}

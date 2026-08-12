@@ -120,6 +120,8 @@ type Props = {
   setAction: (a: FeatureAction) => void;
   roadName: string;
   setRoadName: (v: string) => void;
+  riverName: string;
+  setRiverName: (v: string) => void;
   roadWidth: string;
   setRoadWidth: (v: string) => void;
   plotId: number | null;
@@ -907,6 +909,8 @@ export default function FeatureOverrideModal({
   setAction,
   roadName,
   setRoadName,
+  riverName,
+  setRiverName,
   roadWidth,
   setRoadWidth,
   plotId,
@@ -1363,6 +1367,11 @@ export default function FeatureOverrideModal({
         if (nextWidth) {
           setRoadWidth(nextWidth);
         }
+      }
+
+      if (nextFeatureType === "river") {
+        const nextName = typeof properties?.name === "string" ? String(properties.name) : "";
+        setRiverName(nextName);
       }
 
       if (action === "add") {
@@ -3188,7 +3197,8 @@ export default function FeatureOverrideModal({
       return;
     }
 
-    const savedName = savedFeatureType === "road" ? roadName : undefined;
+    const savedName =
+      savedFeatureType === "road" ? roadName : savedFeatureType === "river" ? riverName : undefined;
     const savedWidth = savedFeatureType === "road" ? roadWidthMeters ?? undefined : undefined;
     if (savedFeatureType === "road" && (!savedWidth || savedWidth <= 0)) {
       toast.error("Enter a valid road width in meters before saving this road.");
@@ -3566,6 +3576,12 @@ export default function FeatureOverrideModal({
                   <div className="field wide">
                     <label>Road Name</label>
                     <input value={roadName} onChange={(event) => setRoadName(event.target.value)} placeholder="e.g. Access Road A" />
+                  </div>
+                )}
+                {editorTarget === "river" && action !== "delete" && (
+                  <div className="field wide">
+                    <label>River Name</label>
+                    <input value={riverName} onChange={(event) => setRiverName(event.target.value)} placeholder="e.g. Ikpa River" />
                   </div>
                 )}
                 {editorTarget === "road" && action !== "delete" && (
