@@ -253,6 +253,16 @@
   border: 1px solid rgba(148, 163, 184, 0.35);
 }
 
+.hazard-export-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.hazard-export-row .btn-outline {
+  flex: 1 1 auto;
+}
+
 .hazard-buildings-callout {
   margin: 0.7rem 0 0;
   padding: 0.6rem 0.8rem;

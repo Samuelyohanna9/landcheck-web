@@ -103,6 +103,7 @@ export default function HazardAnalysis() {
   const [erosionResult, setErosionResult] = useState<ErosionResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [gisLoading, setGisLoading] = useState(false);
   const [showRaster, setShowRaster] = useState(false);
   const [returnPeriod, setReturnPeriod] = useState(100);
 
@@ -250,6 +251,34 @@ export default function HazardAnalysis() {
       toast.error("Failed to download PDF");
     } finally {
       setPdfLoading(false);
+    }
+  };
+
+  const downloadGis = async () => {
+    if (!finalCoords) return;
+    try {
+      setGisLoading(true);
+      const boundary = { type: "Polygon", coordinates: [finalCoords] };
+      const endpoint = hazardType === "flood" ? "/hazards/flood/gis-export" : "/hazards/erosion/gis-export";
+      const body =
+        hazardType === "flood"
+          ? { geometry: boundary, return_period: returnPeriod, local_elevation_points: localElevationPoints }
+          : { geometry: boundary, local_elevation_points: localElevationPoints };
+      const res = await api.post(endpoint, body, { responseType: "blob" });
+      const blob = new Blob([res.data], { type: res.headers["content-type"] || "application/zip" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = hazardType === "flood" ? "flood_hazard_gis_export.zip" : "erosion_hazard_gis_export.zip";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to export GIS data");
+    } finally {
+      setGisLoading(false);
     }
   };
 
@@ -414,9 +443,14 @@ export default function HazardAnalysis() {
                 <p>Analysis buffer: {floodResult.buffer_m} m around the plot.</p>
                 <p>Screening only — verify with local surveys and authorities.</p>
               </div>
-              <button className="btn-outline" onClick={downloadPdf} disabled={pdfLoading}>
-                {pdfLoading ? "Preparing..." : "Download PDF Report"}
-              </button>
+              <div className="hazard-export-row">
+                <button className="btn-outline" onClick={downloadPdf} disabled={pdfLoading}>
+                  {pdfLoading ? "Preparing..." : "Download PDF Report"}
+                </button>
+                <button className="btn-outline" onClick={downloadGis} disabled={gisLoading}>
+                  {gisLoading ? "Preparing..." : "Export GIS Data"}
+                </button>
+              </div>
             </div>
           )}
 
@@ -482,9 +516,14 @@ export default function HazardAnalysis() {
                 <p>Analysis buffer: {erosionResult.buffer_m} m around the plot.</p>
                 <p>Screening only — verify with a geotechnical survey before development.</p>
               </div>
-              <button className="btn-outline" onClick={downloadPdf} disabled={pdfLoading}>
-                {pdfLoading ? "Preparing..." : "Download PDF Report"}
-              </button>
+              <div className="hazard-export-row">
+                <button className="btn-outline" onClick={downloadPdf} disabled={pdfLoading}>
+                  {pdfLoading ? "Preparing..." : "Download PDF Report"}
+                </button>
+                <button className="btn-outline" onClick={downloadGis} disabled={gisLoading}>
+                  {gisLoading ? "Preparing..." : "Export GIS Data"}
+                </button>
+              </div>
             </div>
           )}
         </div>
