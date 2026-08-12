@@ -260,6 +260,7 @@ function SurveyPreview({
             <option value="chevron">Chevron</option>
             <option value="orienteering">Orienteering</option>
             <option value="star">Star</option>
+            <option value="un_marker">U.N. Marker</option>
           </select>
           <select
             className="ribbon-select"

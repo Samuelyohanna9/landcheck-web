@@ -259,12 +259,16 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
               <label>Template</label>
               <select
                 value={props.meta.template_name}
-                onChange={(e) =>
-                  props.setMeta((m) => ({
-                    ...m,
-                    template_name: e.target.value as PlotMeta["template_name"],
-                  }))
-                }
+                onChange={(e) => {
+                  const nextTemplate = e.target.value as PlotMeta["template_name"];
+                  const wasCadastral = CADASTRAL_STATE_TEMPLATES.includes(props.meta.template_name);
+                  const nowCadastral = CADASTRAL_STATE_TEMPLATES.includes(nextTemplate);
+                  props.setMeta((m) => ({ ...m, template_name: nextTemplate }));
+                  if (nowCadastral && !wasCadastral) {
+                    props.onNorthArrowStyleChange("un_marker");
+                    props.onNorthArrowColorChange("blue");
+                  }
+                }}
               >
                 <option value="general">General</option>
                 <option value="adamawa_osg">Adamawa OSG</option>

@@ -275,12 +275,16 @@ function SurveyPlanSurveyPreviewStep({
               <label>Template</label>
               <select
                 value={meta.template_name}
-                onChange={(e) =>
-                  setMeta((m) => ({
-                    ...m,
-                    template_name: e.target.value as PlotMeta["template_name"],
-                  }))
-                }
+                onChange={(e) => {
+                  const nextTemplate = e.target.value as PlotMeta["template_name"];
+                  const wasCadastral = CADASTRAL_STATE_TEMPLATES.includes(meta.template_name);
+                  const nowCadastral = CADASTRAL_STATE_TEMPLATES.includes(nextTemplate);
+                  setMeta((m) => ({ ...m, template_name: nextTemplate }));
+                  if (nowCadastral && !wasCadastral) {
+                    onNorthArrowStyleChange("un_marker");
+                    onNorthArrowColorChange("blue");
+                  }
+                }}
               >
                 <option value="general">General</option>
                 <option value="adamawa_osg">Adamawa OSG</option>
