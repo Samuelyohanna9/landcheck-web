@@ -200,13 +200,17 @@ export default function HazardAnalysis() {
     try {
       setLoading(true);
       const boundary = { type: "Polygon", coordinates: [finalCoords] };
+      // These endpoints run several Earth Engine calls plus local raster/vector rendering in a
+      // single request - comfortably under a minute in practice, but well past the shared
+      // client's default 30s timeout, so give this call more room specifically.
+      const hazardTimeout = { timeout: 90000 };
       if (hazardType === "flood") {
         const res = await api.post("/hazards/flood/preview", {
           geometry: boundary,
           show_raster: showRaster,
           return_period: returnPeriod,
           local_elevation_points: localElevationPoints,
-        });
+        }, hazardTimeout);
         setFloodResult(res.data);
         toast.success("Flood risk analysis complete");
       } else {
@@ -214,7 +218,7 @@ export default function HazardAnalysis() {
           geometry: boundary,
           show_raster: showRaster,
           local_elevation_points: localElevationPoints,
-        });
+        }, hazardTimeout);
         setErosionResult(res.data);
         toast.success("Erosion risk analysis complete");
       }
@@ -236,7 +240,7 @@ export default function HazardAnalysis() {
         hazardType === "flood"
           ? { geometry: boundary, show_raster: showRaster, return_period: returnPeriod, local_elevation_points: localElevationPoints }
           : { geometry: boundary, show_raster: showRaster, local_elevation_points: localElevationPoints };
-      const res = await api.post(endpoint, body, { responseType: "blob" });
+      const res = await api.post(endpoint, body, { responseType: "blob", timeout: 90000 });
       const blob = new Blob([res.data], { type: res.headers["content-type"] });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -264,7 +268,7 @@ export default function HazardAnalysis() {
         hazardType === "flood"
           ? { geometry: boundary, return_period: returnPeriod, local_elevation_points: localElevationPoints }
           : { geometry: boundary, local_elevation_points: localElevationPoints };
-      const res = await api.post(endpoint, body, { responseType: "blob" });
+      const res = await api.post(endpoint, body, { responseType: "blob", timeout: 90000 });
       const blob = new Blob([res.data], { type: res.headers["content-type"] || "application/zip" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
