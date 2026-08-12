@@ -1,6 +1,6 @@
 .hazard-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  background: linear-gradient(150deg, #050b24 0%, #0d1b3d 55%, #0a1530 100%);
   color: #e2e8f0;
   display: flex;
   flex-direction: column;
@@ -9,13 +9,93 @@
   text-rendering: optimizeLegibility;
 }
 
+/* Scoped so these always win over same-named .btn-primary/.btn-outline/.back-btn rules from
+   other pages (e.g. survey-plan.css's green) that can still be present in the document after an
+   in-app SPA navigation - without this, this page's buttons visually depend on which other page
+   was last visited instead of always carrying LandCheck's flood-risk brand (navy + orange, same
+   as the flood landing page hero) instead of Survey Plan's green. */
+.hazard-container .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.4rem;
+  background: linear-gradient(135deg, #e07b00 0%, #c96e00 100%);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 10px 24px rgba(224, 123, 0, 0.28);
+}
+
+.hazard-container .btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(224, 123, 0, 0.35);
+}
+
+.hazard-container .btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.hazard-container .btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.1rem;
+  background: rgba(224, 123, 0, 0.08);
+  border: 1px solid rgba(224, 123, 0, 0.4);
+  border-radius: 10px;
+  color: #fdba74;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.hazard-container .btn-outline:hover:not(:disabled) {
+  background: rgba(224, 123, 0, 0.16);
+  border-color: rgba(224, 123, 0, 0.6);
+  color: #fff;
+}
+
+.hazard-container .btn-outline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hazard-container .back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  color: #cbd5f5;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.hazard-container .back-btn:hover {
+  background: rgba(224, 123, 0, 0.14);
+  border-color: rgba(224, 123, 0, 0.4);
+  color: #fff;
+}
+
 .hazard-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.5rem;
-  background: rgba(15, 23, 42, 0.8);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(5, 11, 36, 0.85);
+  border-bottom: 1px solid rgba(224, 123, 0, 0.15);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -59,9 +139,9 @@
 }
 
 .hazard-type-tab.active {
-  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
-  color: #04121f;
-  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.35);
+  background: linear-gradient(135deg, #e07b00, #fb923c);
+  color: #1a0a00;
+  box-shadow: 0 4px 14px rgba(224, 123, 0, 0.4);
 }
 
 .hazard-content {
@@ -129,7 +209,7 @@
 }
 
 .hazard-toggle input {
-  accent-color: #38bdf8;
+  accent-color: #e07b00;
 }
 
 .hazard-map {
@@ -204,7 +284,7 @@
 }
 
 .hazard-interactive-tooltip--pinned {
-  border-color: #38bdf8;
+  border-color: #e07b00;
 }
 
 .hazard-interactive-hint {
@@ -423,9 +503,9 @@
   margin: 0.6rem 0 0;
   padding: 0.5rem 0.65rem;
   border-radius: 8px;
-  background: rgba(56, 189, 248, 0.1);
-  border: 1px solid rgba(56, 189, 248, 0.28);
-  color: #7dd3fc;
+  background: rgba(224, 123, 0, 0.1);
+  border: 1px solid rgba(224, 123, 0, 0.28);
+  color: #fdba74;
   font-size: 0.75rem;
   line-height: 1.4;
 }
@@ -434,9 +514,9 @@
   margin: -0.35rem 0 0.75rem;
   padding: 0.5rem 0.65rem;
   border-radius: 8px;
-  background: rgba(56, 189, 248, 0.1);
-  border: 1px solid rgba(56, 189, 248, 0.28);
-  color: #93c5fd;
+  background: rgba(224, 123, 0, 0.1);
+  border: 1px solid rgba(224, 123, 0, 0.28);
+  color: #fdba74;
   font-size: 0.76rem;
   line-height: 1.4;
 }
@@ -543,8 +623,8 @@
   width: min(380px, 92vw);
   padding: 1.8rem 1.6rem 1.6rem;
   border-radius: 18px;
-  background: linear-gradient(165deg, #111827 0%, #0b1120 100%);
-  border: 1px solid rgba(56, 189, 248, 0.22);
+  background: linear-gradient(165deg, #0d1730 0%, #050b24 100%);
+  border: 1px solid rgba(224, 123, 0, 0.25);
   box-shadow: 0 24px 60px rgba(2, 6, 23, 0.6);
   display: flex;
   flex-direction: column;
@@ -565,8 +645,8 @@
   width: 26px;
   height: 26px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
-  color: #04121f;
+  background: linear-gradient(135deg, #e07b00, #fb923c);
+  color: #1a0a00;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -628,7 +708,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #7dd3fc;
+  color: #fdba74;
 }
 
 .hazard-progress-stage {
@@ -674,9 +754,9 @@
 }
 
 .hazard-progress-step--active .hazard-progress-step-dot {
-  border-color: #38bdf8;
-  background: rgba(56, 189, 248, 0.18);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.14);
+  border-color: #e07b00;
+  background: rgba(224, 123, 0, 0.2);
+  box-shadow: 0 0 0 3px rgba(224, 123, 0, 0.16);
   animation: hazardPulseSoft 1.4s ease-in-out infinite;
 }
 
