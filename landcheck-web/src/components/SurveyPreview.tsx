@@ -71,6 +71,8 @@ type Props = {
     geojson: any;
   }) => Promise<boolean>;
   onRoadNamesSaved?: () => void;
+  scaleText?: string;
+  templateName?: string;
 };
 
 function SurveyPreview({
@@ -132,6 +134,8 @@ function SurveyPreview({
   plotId,
   onSaveFeatureOverride,
   onRoadNamesSaved,
+  scaleText,
+  templateName,
 }: Props) {
   const [zoom, setZoom] = useState(100);
   const [isDragging, setIsDragging] = useState(false);
@@ -327,6 +331,9 @@ function SurveyPreview({
         plotId={plotId}
         onSaveOverride={onSaveFeatureOverride}
         onSaved={onRoadNamesSaved}
+        scaleText={scaleText}
+        paperSize={paperSize}
+        templateName={templateName}
       />
 
       <SurveyAppearancePanel

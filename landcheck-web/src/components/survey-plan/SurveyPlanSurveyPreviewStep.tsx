@@ -652,6 +652,8 @@ function SurveyPlanSurveyPreviewStep({
           plotId={plotId}
           onSaveFeatureOverride={onSaveFeatureOverride}
           onRoadNamesSaved={onRoadNamesSaved}
+          scaleText={meta.scale_text}
+          templateName={meta.template_name}
         />
       </div>
     </div>

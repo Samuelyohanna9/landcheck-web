@@ -670,6 +670,7 @@ export default function SurveyPlan() {
   const [featureType, setFeatureType] = useState<"road" | "building" | "river" | "fence">("road");
   const [featureAction, setFeatureAction] = useState<"add" | "delete" | "update">("add");
   const [roadName, setRoadName] = useState("");
+  const [riverName, setRiverName] = useState("");
   const [subdivisionMethod, setSubdivisionMethod] = useState<SubdivisionMethod>("by_count");
   const [subdivisionCountDraft, setSubdivisionCountDraft] = useState("4");
   const [subdivisionTargetAreaDraft, setSubdivisionTargetAreaDraft] = useState("");
@@ -3812,6 +3813,8 @@ export default function SurveyPlan() {
               setAction={setFeatureAction}
               roadName={roadName}
               setRoadName={setRoadName}
+              riverName={riverName}
+              setRiverName={setRiverName}
               roadWidth={newRoadWidth}
               setRoadWidth={setNewRoadWidth}
               plotId={plotId}
@@ -4519,6 +4522,8 @@ export default function SurveyPlan() {
                 plotId={plotId}
                 onSaveFeatureOverride={handleSaveOverride}
                 onRoadNamesSaved={handleRoadNamesSaved}
+                scaleText={meta.scale_text}
+                templateName={meta.template_name}
               />
             </div>
           </div>

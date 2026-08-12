@@ -950,6 +950,8 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                 plotId={props.plotId}
                 onSaveFeatureOverride={props.onSaveFeatureOverride}
                 onRoadNamesSaved={props.onRoadNamesSaved}
+                scaleText={props.meta.scale_text}
+                templateName={props.meta.template_name}
               />
             </div>
           ) : (
