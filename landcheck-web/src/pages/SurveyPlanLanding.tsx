@@ -78,24 +78,21 @@ const screenPreviewAssets: Record<PreviewMode["id"], { src: string; alt: string 
   },
 };
 
-const screenPreviewOrder: PreviewMode["id"][] = ["survey", "georeference", "subdivision"];
-
 function SurveyPreviewScene({ mode }: { mode: PreviewMode }) {
-  const orderedAssets = [mode.id, ...screenPreviewOrder.filter((id) => id !== mode.id)].map(
-    (id) => screenPreviewAssets[id],
-  );
+  const activeAsset = screenPreviewAssets[mode.id];
 
   return (
-    <div className="spl-screen-gallery" aria-label={`${mode.title} preview gallery`}>
-      <figure className="spl-screen-gallery-main">
-        <img src={orderedAssets[0].src} alt={orderedAssets[0].alt} loading="eager" />
-      </figure>
-      <div className="spl-screen-gallery-stack" aria-hidden="true">
-        {orderedAssets.slice(1).map((asset) => (
-          <figure key={asset.src} className="spl-screen-gallery-thumb">
-            <img src={asset.src} alt="" loading="lazy" />
-          </figure>
-        ))}
+    <div className="spl-laptop-stage" aria-label={`${mode.title} preview`}>
+      <img
+        className="spl-laptop-shell"
+        src="/survey-laptop-hand.png"
+        alt="Laptop displaying a survey preview"
+        loading="eager"
+      />
+      <div className="spl-laptop-display">
+        <figure className="spl-laptop-display-frame">
+          <img key={activeAsset.src} src={activeAsset.src} alt={activeAsset.alt} loading="eager" />
+        </figure>
       </div>
     </div>
   );
@@ -188,8 +185,6 @@ export default function SurveyPlanLanding() {
                 <div className="spl-computer-screen">
                   <SurveyPreviewScene mode={activePreview} />
                 </div>
-                <div className="spl-computer-stand" />
-                <div className="spl-computer-base" />
               </div>
             </div>
           </div>

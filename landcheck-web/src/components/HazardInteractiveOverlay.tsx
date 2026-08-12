@@ -1,6 +1,7 @@
-import { useCallback, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useCallback, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 
 export type HazardValuePoint = { lng: number; lat: number; [key: string]: number };
+export type HazardBuildingFootprint = { threatened: boolean; rings: [number, number][][] };
 
 export type HazardInteractiveMeta = {
   image_width: number;
@@ -10,6 +11,9 @@ export type HazardInteractiveMeta = {
   value_points: HazardValuePoint[];
   value_key: string;
   snap_threshold_m: number;
+  contour_points?: HazardValuePoint[];
+  contour_snap_threshold_m?: number;
+  buildings?: HazardBuildingFootprint[];
 };
 
 type Props = {
@@ -22,6 +26,7 @@ const VALUE_LABELS: Record<string, { label: string; unit: string; decimals: numb
   depth_m: { label: "Flood depth", unit: " m", decimals: 2 },
   slope_deg: { label: "Slope", unit: "°", decimals: 1 },
   elevation_m: { label: "Elevation", unit: " m", decimals: 1 },
+  flood_susceptibility_pct: { label: "Flood susceptibility", unit: "%", decimals: 0 },
 };
 
 // Small enough analysis extents (a few hundred metres to a couple km) that an equirectangular
@@ -49,14 +54,58 @@ function nearestValue(
   return typeof value === "number" ? value : null;
 }
 
+function pointInRing(lng: number, lat: number, ring: [number, number][]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    const intersect = yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+type IndexedBuilding = HazardBuildingFootprint & { bbox: [number, number, number, number] };
+
+function indexBuildings(buildings: HazardBuildingFootprint[]): IndexedBuilding[] {
+  return buildings.map((b) => {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const ring of b.rings) {
+      for (const [x, y] of ring) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+    return { ...b, bbox: [minX, minY, maxX, maxY] };
+  });
+}
+
+function findBuilding(lng: number, lat: number, buildings: IndexedBuilding[]): HazardBuildingFootprint | null {
+  for (const b of buildings) {
+    const [minX, minY, maxX, maxY] = b.bbox;
+    if (lng < minX || lng > maxX || lat < minY || lat > maxY) continue;
+    for (const ring of b.rings) {
+      if (pointInRing(lng, lat, ring)) return b;
+    }
+  }
+  return null;
+}
+
 export default function HazardInteractiveOverlay({ src, alt, interactive }: Props) {
   const imgRef = useRef<HTMLImageElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; lines: string[] } | null>(null);
   const [pinned, setPinned] = useState(false);
 
-  const resolveAt = useCallback((clientX: number, clientY: number): { x: number; y: number; text: string } | null => {
+  const indexedBuildings = useMemo(
+    () => indexBuildings(interactive?.buildings || []),
+    [interactive],
+  );
+
+  const resolveAt = useCallback((clientX: number, clientY: number): { x: number; y: number; lines: string[] } | null => {
     if (!interactive || !imgRef.current || !wrapRef.current) return null;
     const imgRect = imgRef.current.getBoundingClientRect();
     const wrapRect = wrapRef.current.getBoundingClientRect();
@@ -73,14 +122,24 @@ export default function HazardInteractiveOverlay({ src, alt, interactive }: Prop
     const lng = west + fx * (east - west);
     const lat = north - fy * (north - south);
 
+    const lines: string[] = [];
+
     const value = nearestValue(lng, lat, interactive.value_points, interactive.value_key, interactive.snap_threshold_m);
     const meta = VALUE_LABELS[interactive.value_key] || { label: interactive.value_key, unit: "", decimals: 2 };
-    const text = value != null
-      ? `${meta.label}: ${value.toFixed(meta.decimals)}${meta.unit}`
-      : "No data at this point";
+    lines.push(value != null ? `${meta.label}: ${value.toFixed(meta.decimals)}${meta.unit}` : "No hazard data at this point");
 
-    return { x: clientX - wrapRect.left, y: clientY - wrapRect.top, text };
-  }, [interactive]);
+    if (interactive.contour_points?.length) {
+      const elevation = nearestValue(
+        lng, lat, interactive.contour_points, "elevation_m", interactive.contour_snap_threshold_m ?? 150,
+      );
+      if (elevation != null) lines.push(`Elevation: ${elevation.toFixed(0)} m`);
+    }
+
+    const building = findBuilding(lng, lat, indexedBuildings);
+    if (building) lines.push(building.threatened ? "Building: threatened" : "Building: not threatened");
+
+    return { x: clientX - wrapRect.left, y: clientY - wrapRect.top, lines };
+  }, [interactive, indexedBuildings]);
 
   const handleMove = (e: ReactMouseEvent<HTMLImageElement>) => {
     if (!interactive || pinned) return;
@@ -121,7 +180,11 @@ export default function HazardInteractiveOverlay({ src, alt, interactive }: Prop
           className={`hazard-interactive-tooltip ${pinned ? "hazard-interactive-tooltip--pinned" : ""}`}
           style={{ left: tooltip.x, top: tooltip.y }}
         >
-          {tooltip.text}
+          {tooltip.lines.map((line, i) => (
+            <div key={i} className={i === 0 ? "hazard-interactive-tooltip-primary" : "hazard-interactive-tooltip-secondary"}>
+              {line}
+            </div>
+          ))}
         </div>
       )}
       {interactive && (
