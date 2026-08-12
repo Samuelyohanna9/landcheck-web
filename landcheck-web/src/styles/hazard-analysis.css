@@ -465,3 +465,195 @@
     flex-wrap: wrap;
   }
 }
+
+/* ---------------- Progress overlay ---------------- */
+
+.hazard-progress-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 10, 22, 0.82);
+  backdrop-filter: blur(3px);
+  animation: hazardFadeIn 0.2s ease;
+}
+
+.hazard-progress-card {
+  width: min(380px, 92vw);
+  padding: 1.8rem 1.6rem 1.6rem;
+  border-radius: 18px;
+  background: linear-gradient(165deg, #111827 0%, #0b1120 100%);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+.hazard-progress-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hazard-progress-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+  color: #04121f;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  animation: hazardPulseSoft 2.2s ease-in-out infinite;
+}
+
+.hazard-progress-brand-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  letter-spacing: 0.01em;
+}
+
+.hazard-progress-ring-wrap {
+  position: relative;
+  width: 132px;
+  height: 132px;
+}
+
+.hazard-progress-ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.hazard-progress-ring-track {
+  fill: none;
+  stroke: rgba(148, 163, 184, 0.16);
+  stroke-width: 8;
+}
+
+.hazard-progress-ring-fill {
+  fill: none;
+  stroke: url(#hazard-progress-gradient);
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hazard-progress-ring-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+}
+
+.hazard-progress-pct {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #f8fafc;
+  font-variant-numeric: tabular-nums;
+}
+
+.hazard-progress-type {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+}
+
+.hazard-progress-stage {
+  margin: 0;
+  min-height: 1.1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #cbd5f5;
+  text-align: center;
+}
+
+.hazard-progress-steps {
+  width: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hazard-progress-step {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.76rem;
+  color: #64748b;
+  transition: color 0.25s ease;
+}
+
+.hazard-progress-step-dot {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(100, 116, 139, 0.4);
+  font-size: 0.6rem;
+  color: #04121f;
+  transition: all 0.25s ease;
+}
+
+.hazard-progress-step--active .hazard-progress-step-dot {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.18);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.14);
+  animation: hazardPulseSoft 1.4s ease-in-out infinite;
+}
+
+.hazard-progress-step--active .hazard-progress-step-label {
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+.hazard-progress-step--done .hazard-progress-step-dot {
+  border-color: #22c55e;
+  background: #22c55e;
+  color: #052e16;
+}
+
+.hazard-progress-step--done .hazard-progress-step-label {
+  color: #94a3b8;
+  text-decoration: line-through;
+  text-decoration-color: rgba(148, 163, 184, 0.35);
+}
+
+@keyframes hazardFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes hazardPulseSoft {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hazard-progress-brand-mark,
+  .hazard-progress-step--active .hazard-progress-step-dot {
+    animation: none;
+  }
+  .hazard-progress-ring-fill {
+    transition: none;
+  }
+}

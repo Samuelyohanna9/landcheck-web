@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import "../styles/coordinate-input.css";
 import CSVPreviewModal from "./CSVPreviewModal";
 
@@ -36,23 +36,22 @@ const COORDINATE_SYSTEMS: CoordinateSystem[] = [
   { key: "minna_33", name: "Minna Datum Zone 33", epsg: 26333, description: "Nigerian Grid - East" },
 ];
 
-// Get example coordinates based on coordinate system (Nigerian examples)
 const getPlaceholders = (system: string): { x: string; y: string } => {
   switch (system) {
     case "utm_31n":
-      return { x: "e.g. 340250.45", y: "e.g. 998450.32" }; // Lagos area
+      return { x: "e.g. 340250.45", y: "e.g. 998450.32" };
     case "utm_32n":
-      return { x: "e.g. 538120.78", y: "e.g. 1012340.56" }; // Abuja area
+      return { x: "e.g. 538120.78", y: "e.g. 1012340.56" };
     case "utm_33n":
-      return { x: "e.g. 285670.23", y: "e.g. 1245890.45" }; // Maiduguri area
+      return { x: "e.g. 285670.23", y: "e.g. 1245890.45" };
     case "minna_31":
-      return { x: "e.g. 340250.45", y: "e.g. 998450.32" }; // Lagos area (Minna)
+      return { x: "e.g. 340250.45", y: "e.g. 998450.32" };
     case "minna_32":
-      return { x: "e.g. 538120.78", y: "e.g. 1012340.56" }; // Abuja area (Minna)
+      return { x: "e.g. 538120.78", y: "e.g. 1012340.56" };
     case "minna_33":
-      return { x: "e.g. 285670.23", y: "e.g. 1245890.45" }; // Maiduguri area (Minna)
+      return { x: "e.g. 285670.23", y: "e.g. 1245890.45" };
     default:
-      return { x: "e.g. 7.4951", y: "e.g. 9.0579" }; // WGS84
+      return { x: "e.g. 7.4951", y: "e.g. 9.0579" };
   }
 };
 
@@ -67,42 +66,18 @@ function CoordinateInput({
   onCoordinateSystemChange,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const coordMenuRef = useRef<HTMLDivElement>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [rawFileData, setRawFileData] = useState<(string | number)[][]>([]);
   const [uploadParsing, setUploadParsing] = useState(false);
-  const [coordMenuOpen, setCoordMenuOpen] = useState(false);
   const isProjected = coordinateSystem !== "wgs84";
   const xLabel = isProjected ? "Easting (m)" : "Longitude";
   const yLabel = isProjected ? "Northing (m)" : "Latitude";
   const placeholders = getPlaceholders(coordinateSystem);
-  const xPlaceholder = placeholders.x;
-  const yPlaceholder = placeholders.y;
   const selectedCoordinateSystem = useMemo(
     () => COORDINATE_SYSTEMS.find((sys) => sys.key === coordinateSystem) ?? COORDINATE_SYSTEMS[0],
     [coordinateSystem]
   );
 
-  useEffect(() => {
-    if (!coordMenuOpen) return undefined;
-    const handleOutsidePointer = (event: MouseEvent) => {
-      if (coordMenuRef.current?.contains(event.target as Node)) return;
-      setCoordMenuOpen(false);
-    };
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setCoordMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleOutsidePointer);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleOutsidePointer);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [coordMenuOpen]);
-
-  // Parse uploaded file (CSV or Excel) and show preview modal
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -146,9 +121,9 @@ function CoordinateInput({
       try {
         const XLSX = await import("xlsx");
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = (loadEvent) => {
           try {
-            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+            const data = new Uint8Array(loadEvent.target?.result as ArrayBuffer);
             const workbook = XLSX.read(data, { type: "array" });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as (string | number)[][];
@@ -183,71 +158,44 @@ function CoordinateInput({
     }
   };
 
-  // Handle confirmed points from preview modal
   const handlePreviewConfirm = (parsedPoints: ManualPoint[]) => {
     onBulkUpload(parsedPoints);
   };
 
   return (
     <div className="coord-input-container">
-        <div className="coord-header">
-          <h3 className="coord-title">Boundary Coordinates</h3>
-          <p className="coord-subtitle">Add the parcel points directly or import a prepared sheet.</p>
-        </div>
-
-      {/* Coordinate System Selector */}
-      <div className="coord-system-selector">
-        <label className="coord-system-label">Coordinate System:</label>
-        <div className="coord-system-picker" ref={coordMenuRef}>
-          <button
-            type="button"
-            className={`coord-system-trigger${coordMenuOpen ? " is-open" : ""}`}
-            disabled={disabled}
-            aria-haspopup="listbox"
-            aria-expanded={coordMenuOpen}
-            onClick={() => setCoordMenuOpen((open) => !open)}
-          >
-            <span className="coord-system-trigger-copy">
-              <strong>{selectedCoordinateSystem.name}</strong>
-              <span>EPSG:{selectedCoordinateSystem.epsg}</span>
-            </span>
-            <span className="coord-system-trigger-chevron" aria-hidden="true">
-              ▾
-            </span>
-          </button>
-          {coordMenuOpen ? (
-            <div className="coord-system-menu" role="listbox" aria-label="Coordinate system">
-              {COORDINATE_SYSTEMS.map((sys) => {
-                const isActive = sys.key === coordinateSystem;
-                return (
-                  <button
-                    key={sys.key}
-                    type="button"
-                    role="option"
-                    aria-selected={isActive}
-                    className={`coord-system-option${isActive ? " is-active" : ""}`}
-                    onClick={() => {
-                      onCoordinateSystemChange(sys.key);
-                      setCoordMenuOpen(false);
-                    }}
-                  >
-                    <span className="coord-system-option-copy">
-                      <strong>{sys.name}</strong>
-                      <span>{sys.description}</span>
-                    </span>
-                    <span className="coord-system-option-epsg">EPSG:{sys.epsg}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
-        </div>
-        <span className="coord-system-desc">
-          {selectedCoordinateSystem.description}
-        </span>
+      <div className="coord-header">
+        <h3 className="coord-title">Boundary Coordinates</h3>
+        <p className="coord-subtitle">Add parcel points directly or import a prepared sheet.</p>
       </div>
 
-      {/* File Upload Section */}
+      <div className="coord-system-selector">
+        <label className="coord-system-label" htmlFor="coord-system-select">
+          Coordinate System
+        </label>
+        <div className="coord-system-field">
+          <select
+            id="coord-system-select"
+            className="coord-system-select"
+            value={coordinateSystem}
+            onChange={(event) => onCoordinateSystemChange(event.target.value)}
+            disabled={disabled}
+            aria-describedby="coord-system-help"
+          >
+            {COORDINATE_SYSTEMS.map((sys) => (
+              <option key={sys.key} value={sys.key}>
+                {sys.name}
+              </option>
+            ))}
+          </select>
+          <div className="coord-system-meta" id="coord-system-help" aria-live="polite">
+            <strong>{selectedCoordinateSystem.name}</strong>
+            <span>{selectedCoordinateSystem.description}</span>
+            <em>EPSG:{selectedCoordinateSystem.epsg}</em>
+          </div>
+        </div>
+      </div>
+
       <div className="coord-upload-section">
         <input
           ref={fileInputRef}
@@ -258,14 +206,18 @@ function CoordinateInput({
           className="file-input-hidden"
           id="coord-file-upload"
         />
-        <label htmlFor="coord-file-upload" className={`upload-btn ${disabled || uploadParsing ? 'disabled' : ''}`}>
+        <label htmlFor="coord-file-upload" className={`upload-btn ${disabled || uploadParsing ? "disabled" : ""}`}>
           <svg viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
+              clipRule="evenodd"
+            />
           </svg>
           {uploadParsing ? "Processing file..." : "Import Sheet"}
         </label>
-          <span className="upload-hint">CSV or Excel · station, easting, northing</span>
-        </div>
+        <span className="upload-hint">CSV or Excel · station, easting, northing</span>
+      </div>
 
       <div className="coord-list-wrapper">
         {points.map((point, index) => (
@@ -275,7 +227,7 @@ function CoordinateInput({
               <input
                 type="text"
                 value={point.station}
-                onChange={(e) => onUpdatePoint(index, "station", e.target.value)}
+                onChange={(event) => onUpdatePoint(index, "station", event.target.value)}
                 placeholder="A"
                 disabled={disabled}
                 className="station-input"
@@ -289,7 +241,11 @@ function CoordinateInput({
                 title="Remove point"
               >
                 <svg viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                  <path
+                    fillRule="evenodd"
+                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </button>
             </div>
@@ -300,8 +256,8 @@ function CoordinateInput({
                   type="number"
                   step="any"
                   value={point.lng || ""}
-                  onChange={(e) => onUpdatePoint(index, "lng", parseFloat(e.target.value) || 0)}
-                  placeholder={xPlaceholder}
+                  onChange={(event) => onUpdatePoint(index, "lng", parseFloat(event.target.value) || 0)}
+                  placeholder={placeholders.x}
                   disabled={disabled}
                   className="coord-input"
                 />
@@ -312,8 +268,8 @@ function CoordinateInput({
                   type="number"
                   step="any"
                   value={point.lat || ""}
-                  onChange={(e) => onUpdatePoint(index, "lat", parseFloat(e.target.value) || 0)}
-                  placeholder={yPlaceholder}
+                  onChange={(event) => onUpdatePoint(index, "lat", parseFloat(event.target.value) || 0)}
+                  placeholder={placeholders.y}
                   disabled={disabled}
                   className="coord-input"
                 />
@@ -324,26 +280,21 @@ function CoordinateInput({
       </div>
 
       <div className="coord-footer">
-        <button
-          type="button"
-          onClick={onAddPoint}
-          disabled={disabled}
-          className="add-point-btn"
-        >
+        <button type="button" onClick={onAddPoint} disabled={disabled} className="add-point-btn">
           <svg viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+              clipRule="evenodd"
+            />
           </svg>
           Add Point
         </button>
         <span className="coord-tip">
-          {isProjected
-            ? "Coordinates will be converted to WGS84 for processing"
-            : "Ring will auto-close on creation"
-          }
+          {isProjected ? "Projected coordinates convert to WGS84 automatically for processing." : "Ring will auto-close on creation."}
         </span>
       </div>
 
-      {/* CSV Preview Modal */}
       <CSVPreviewModal
         isOpen={showPreviewModal}
         onClose={() => setShowPreviewModal(false)}
