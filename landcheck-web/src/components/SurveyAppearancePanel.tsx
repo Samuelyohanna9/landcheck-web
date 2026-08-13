@@ -1,4 +1,5 @@
 import ColorSwatchPicker from "./ColorSwatchPicker";
+import HatchPatternPicker from "./HatchPatternPicker";
 
 type SurveyAppearancePanelProps = {
   open: boolean;
@@ -120,16 +121,7 @@ function SurveyAppearancePanel(props: SurveyAppearancePanelProps) {
 
           <section className="appearance-section">
             <h4>Building Hatch</h4>
-            <select
-              className="ribbon-select appearance-full-width-select"
-              value={props.buildingHatchType}
-              onChange={(e) => props.onBuildingHatchTypeChange(e.target.value)}
-            >
-              <option value="horizontal">Horizontal</option>
-              <option value="vertical">Vertical</option>
-              <option value="diagonal">Diagonal</option>
-              <option value="cross">Cross-hatch</option>
-            </select>
+            <HatchPatternPicker value={props.buildingHatchType} onChange={props.onBuildingHatchTypeChange} />
           </section>
 
           <section className="appearance-section">

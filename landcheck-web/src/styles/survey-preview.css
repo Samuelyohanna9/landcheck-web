@@ -375,9 +375,110 @@
   gap: 0.7rem 0.55rem;
 }
 
-.appearance-full-width-select {
+.hatch-pattern-picker {
+  position: relative;
   width: 100%;
-  min-height: 40px;
+}
+
+.hatch-pattern-picker-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.4rem 0.6rem;
+  background: rgba(8, 13, 24, 0.85);
+  color: #e2e8f0;
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  border-radius: 7px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hatch-pattern-picker-btn:hover {
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.hatch-pattern-picker-btn:focus-visible {
+  outline: none;
+  border-color: rgba(16, 185, 129, 0.55);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.hatch-pattern-picker-label {
+  flex: 1 1 auto;
+  text-align: left;
+}
+
+.hatch-pattern-picker-chevron {
+  color: #9bd2b2;
+  font-size: 0.7rem;
+  transition: transform 0.15s ease;
+}
+
+.hatch-pattern-picker-chevron.open {
+  transform: rotate(180deg);
+}
+
+.hatch-pattern-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  background: linear-gradient(135deg, #16213a, #101a2e);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.hatch-pattern-option {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hatch-pattern-option:hover {
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.hatch-pattern-option.active {
+  background: rgba(59, 130, 246, 0.28);
+  color: #ffffff;
+}
+
+.hatch-swatch {
+  flex-shrink: 0;
+  width: 34px;
+  height: 24px;
+}
+
+.hatch-swatch-bg {
+  fill: #f8fafc;
+}
+
+.hatch-swatch-border {
+  fill: none;
+  stroke: rgba(15, 23, 42, 0.4);
+  stroke-width: 1;
+}
+
+.hatch-swatch-lines line {
+  stroke: #0f172a;
+  stroke-width: 1;
 }
 
 .appearance-text-header,
