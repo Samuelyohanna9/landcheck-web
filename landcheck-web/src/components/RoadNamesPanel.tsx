@@ -9,7 +9,11 @@ type FeatureGroup = {
   label: string;
   currentName: string;
   widthM: number | null;
-  geojson: { type: "MultiLineString"; coordinates: number[][][] };
+  geojson: any;
+  positionHint: string;
+  lengthM: number | null;
+  segmentIndex: number | null;
+  sourceHint: string;
 };
 
 type OverridePayload = {
@@ -31,56 +35,49 @@ type RoadNamesPanelProps = {
   templateName?: string;
 };
 
-function toMultiLineString(features: any[]): { type: "MultiLineString"; coordinates: number[][][] } {
-  const coords: number[][][] = [];
-  for (const f of features) {
-    const geom = f?.geometry;
-    if (!geom) continue;
-    if (geom.type === "LineString" && Array.isArray(geom.coordinates)) {
-      coords.push(geom.coordinates);
-    } else if (geom.type === "MultiLineString" && Array.isArray(geom.coordinates)) {
-      coords.push(...geom.coordinates);
-    }
-  }
-  return { type: "MultiLineString", coordinates: coords };
+function titleCase(value: string): string {
+  return value
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1).toLowerCase())
+    .join(" ");
 }
 
-function groupFeatures(features: any[], kind: FeatureKind): FeatureGroup[] {
-  const byName = new Map<string, any[]>();
-  const unnamed: any[] = [];
-  for (const f of features || []) {
-    const name = String(f?.properties?.name || "").trim();
-    if (name) {
-      if (!byName.has(name)) byName.set(name, []);
-      byName.get(name)!.push(f);
-    } else {
-      unnamed.push(f);
-    }
-  }
-  const groups: FeatureGroup[] = [];
-  for (const [name, feats] of byName.entries()) {
-    const widthEntry = feats.map((f) => f?.properties?.width_m).find((w) => typeof w === "number");
-    groups.push({
-      key: `${kind}-named-${name}`,
+function describeFeature(features: any[], kind: FeatureKind): FeatureGroup[] {
+  return (features || []).map((feature: any, idx: number) => {
+    const props = feature?.properties || {};
+    const currentName = String(props.name || "").trim();
+    const widthM = typeof props.width_m === "number" ? props.width_m : null;
+    const positionHint = String(props.position_hint || "").trim();
+    const lengthM = typeof props.length_m === "number" ? props.length_m : null;
+    const sourceHint = String(props.source || "").trim() || "detected";
+    const segmentIndex = Number.isFinite(Number(props.segment_index))
+      ? Number(props.segment_index)
+      : idx + 1;
+    const baseLabel = `${kind === "road" ? "Road" : "River"} ${segmentIndex}`;
+    const detailBits = [
+      positionHint ? titleCase(positionHint) : "",
+      lengthM && Number.isFinite(lengthM) ? `${lengthM.toFixed(1)} m` : "",
+      sourceHint === "manual-add"
+        ? "Manual"
+        : sourceHint === "override"
+          ? "Edited"
+          : "Detected",
+    ].filter(Boolean);
+
+    return {
+      key: String(props.segment_key || `${kind}-${segmentIndex}-${idx + 1}`),
       kind,
-      label: name,
-      currentName: name,
-      widthM: typeof widthEntry === "number" ? widthEntry : null,
-      geojson: toMultiLineString(feats),
-    });
-  }
-  unnamed.forEach((f, idx) => {
-    const widthM = typeof f?.properties?.width_m === "number" ? f.properties.width_m : null;
-    groups.push({
-      key: `${kind}-unnamed-${idx + 1}`,
-      kind,
-      label: `${kind === "road" ? "Road" : "River"} segment ${idx + 1}`,
-      currentName: "",
+      label: currentName || `${baseLabel}${detailBits.length ? ` · ${detailBits.join(" · ")}` : ""}`,
+      currentName,
       widthM,
-      geojson: toMultiLineString([f]),
-    });
+      geojson: feature?.geometry,
+      positionHint,
+      lengthM,
+      segmentIndex,
+      sourceHint,
+    };
   });
-  return groups;
 }
 
 function RoadNamesPanel({
@@ -116,8 +113,8 @@ function RoadNamesPanel({
       })
       .then((res) => {
         if (cancelled) return;
-        const roads = groupFeatures(res.data?.roads?.features || [], "road");
-        const rivers = groupFeatures(res.data?.rivers?.features || [], "river");
+        const roads = describeFeature(res.data?.roads?.features || [], "road");
+        const rivers = describeFeature(res.data?.rivers?.features || [], "river");
         setRoadGroups(roads);
         setRiverGroups(rivers);
         const initialDrafts: Record<string, string> = {};
@@ -183,12 +180,31 @@ function RoadNamesPanel({
 
   const renderGroup = (group: FeatureGroup) => (
     <div className="road-name-row" key={group.key}>
-      <span className="road-name-row-label">{group.currentName || group.label}</span>
+      <div className="road-name-row-header">
+        <span className="road-name-row-label">{group.currentName || group.label}</span>
+        <div className="road-name-row-meta">
+          {group.positionHint && (
+            <span className="road-name-row-chip">{titleCase(group.positionHint)}</span>
+          )}
+          {group.lengthM && Number.isFinite(group.lengthM) && (
+            <span className="road-name-row-chip">{group.lengthM.toFixed(1)} m</span>
+          )}
+          {group.sourceHint && (
+            <span className="road-name-row-chip">
+              {group.sourceHint === "manual-add"
+                ? "Manual"
+                : group.sourceHint === "override"
+                  ? "Edited"
+                  : "Detected"}
+            </span>
+          )}
+        </div>
+      </div>
       <input
         type="text"
         className="road-name-input"
         value={drafts[group.key] ?? ""}
-        placeholder="Enter name"
+        placeholder={`Name ${group.kind === "road" ? "road" : "river"} on plan`}
         onChange={(e) => {
           const value = e.target.value;
           setDrafts((prev) => ({ ...prev, [group.key]: value }));
@@ -261,9 +277,9 @@ function RoadNamesPanel({
                 )}
               </section>
               <p className="road-names-hint">
-                Only roads/rivers that will actually print at the current scale and paper size are
-                listed here. Saved names are written along the road or river's own path on the
-                plan - re-render the preview afterward to see them on the sheet.
+                Only segments that are visible on the current printed sheet are listed here.
+                Each row represents one visible road or river path on the plan, so names stay
+                attached to that exact segment when you reopen the panel.
               </p>
             </>
           )}
