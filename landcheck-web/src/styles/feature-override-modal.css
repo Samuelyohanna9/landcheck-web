@@ -1251,6 +1251,16 @@
   vector-effect: non-scaling-stroke;
 }
 
+.cad-svg-vertex--editable {
+  cursor: grab;
+  filter: drop-shadow(0 0 8px rgba(103, 232, 249, 0.35));
+}
+
+.cad-svg-vertex--dragging {
+  fill: #facc15;
+  stroke: #78350f;
+}
+
 .cad-svg-label,
 .cad-axis-label {
   fill: #dbe7f5;

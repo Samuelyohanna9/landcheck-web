@@ -737,6 +737,36 @@ const getOpenRing = (coords: number[][] | null | undefined): number[][] => {
   return clean;
 };
 
+const getEditableGeometryPoints = (geometry: any): number[][] => {
+  if (!geometry?.type) return [];
+  if (geometry.type === "LineString" && Array.isArray(geometry.coordinates)) {
+    return geometry.coordinates
+      .filter((point: any) => Array.isArray(point) && point.length >= 2)
+      .map((point: number[]) => [Number(point[0]), Number(point[1])]);
+  }
+  if (geometry.type === "Polygon" && Array.isArray(geometry.coordinates?.[0])) {
+    return getOpenRing(geometry.coordinates[0]).map((point) => [Number(point[0]), Number(point[1])]);
+  }
+  return [];
+};
+
+const rebuildGeometryFromEditablePoints = (geometry: any, points: number[][]) => {
+  if (!geometry?.type) return geometry;
+  if (geometry.type === "Polygon") {
+    return {
+      ...geometry,
+      coordinates: [closeRing(points)],
+    };
+  }
+  if (geometry.type === "LineString") {
+    return {
+      ...geometry,
+      coordinates: points,
+    };
+  }
+  return geometry;
+};
+
 // Fans repeated labels out around their anchor point so features whose midpoints happen to
 // land close together (e.g. several roads crossing near the same parcel) don't stack their
 // name labels exactly on top of one another.
@@ -936,13 +966,17 @@ export default function FeatureOverrideModal({
   const plottingPinchRef = useRef<{ dist: number; zoom: number; worldX: number; worldY: number } | null>(null);
   const [plottingStageSize, setPlottingStageSize] = useState(DEFAULT_PLOTTING_STAGE_SIZE);
   const boundaryDragRef = useRef<number | null>(null);
+  const selectedVertexDragRef = useRef<number | null>(null);
   const [boundaryDraft, setBoundaryDraft] = useState<number[][] | null>(null);
   const [isDraggingBoundary, setIsDraggingBoundary] = useState(false);
+  const [isDraggingSelectedVertex, setIsDraggingSelectedVertex] = useState(false);
 
   useEffect(() => {
     setBoundaryDraft(null);
     boundaryDragRef.current = null;
+    selectedVertexDragRef.current = null;
     setIsDraggingBoundary(false);
+    setIsDraggingSelectedVertex(false);
   }, [plotId]);
 
   // The live-edited boundary (falls back to the server copy when nothing is being dragged).
@@ -2365,6 +2399,33 @@ export default function FeatureOverrideModal({
         });
         return;
       }
+      if (selectedVertexDragRef.current !== null && selectedGeometry) {
+        const canvasPoint = plottingScreenToCanvasPoint(rawPointer);
+        const [lng, lat] = plottingViewport.unproject(canvasPoint);
+        const index = selectedVertexDragRef.current;
+        const basePoints = getEditableGeometryPoints(selectedGeometry);
+        if (index >= 0 && index < basePoints.length) {
+          const nextPoints = [...basePoints];
+          nextPoints[index] = [lng, lat];
+          const nextGeometry = rebuildGeometryFromEditablePoints(selectedGeometry, nextPoints);
+          const nextMetrics = getGeometryMetrics(nextGeometry);
+          setSelectedGeometry(nextGeometry);
+          setSelectedMetrics(nextMetrics);
+          setDraftMetrics(nextMetrics);
+          setPlottingPoints(nextPoints);
+          setSelectedFeatureRecord((previous) =>
+            previous
+              ? {
+                  ...previous,
+                  geometry: nextGeometry,
+                  metrics: nextMetrics,
+                  coordinates: geometryToCoordinateList(nextGeometry),
+                }
+              : previous
+          );
+        }
+        return;
+      }
       if (plottingPanRef.current.active) {
         const deltaX = rawPointer.x - plottingPanRef.current.lastX;
         const deltaY = rawPointer.y - plottingPanRef.current.lastY;
@@ -2583,6 +2644,35 @@ export default function FeatureOverrideModal({
           return;
         }
       }
+      if (
+        activeTool === "select" &&
+        !selectionMode &&
+        action === "update" &&
+        editorTarget !== "boundary" &&
+        selectedGeometry
+      ) {
+        const localX = pointer.x - plottingViewportX;
+        const localY = pointer.y - plottingViewportY;
+        const editablePoints = getEditableGeometryPoints(selectedGeometry);
+        let nearestIndex = -1;
+        let nearestDistance = Infinity;
+        editablePoints.forEach((coord, index) => {
+          const projected = plottingViewport.project(coord);
+          const screenX = plottingCamera.offsetX + projected.x * plottingCamera.zoom;
+          const screenY = plottingCamera.offsetY + projected.y * plottingCamera.zoom;
+          const distance = Math.hypot(localX - screenX, localY - screenY);
+          if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestIndex = index;
+          }
+        });
+        if (nearestIndex >= 0 && nearestDistance <= 14) {
+          event.preventDefault();
+          selectedVertexDragRef.current = nearestIndex;
+          setIsDraggingSelectedVertex(true);
+          return;
+        }
+      }
       if (selectionMode) {
         event.preventDefault();
         setSelectionDrag(
@@ -2592,7 +2682,23 @@ export default function FeatureOverrideModal({
         );
       }
     },
-    [basemapMode, getPlottingPointer, selectionMode, activeTool, editorTarget, layerVisibility.boundary, boundaryCoords, plottingViewport, plottingCamera.offsetX, plottingCamera.offsetY, plottingCamera.zoom, plottingViewportX, plottingViewportY]
+    [
+      basemapMode,
+      getPlottingPointer,
+      selectionMode,
+      activeTool,
+      action,
+      editorTarget,
+      layerVisibility.boundary,
+      boundaryCoords,
+      selectedGeometry,
+      plottingViewport,
+      plottingCamera.offsetX,
+      plottingCamera.offsetY,
+      plottingCamera.zoom,
+      plottingViewportX,
+      plottingViewportY,
+    ]
   );
 
   const commitBoundaryDrag = useCallback(() => {
@@ -2609,10 +2715,20 @@ export default function FeatureOverrideModal({
     });
   }, [onBoundaryPointChange]);
 
+  const commitSelectedVertexDrag = useCallback(() => {
+    selectedVertexDragRef.current = null;
+    setIsDraggingSelectedVertex(false);
+  }, []);
+
   const handlePlottingMouseUp = useCallback(
     (event?: ReactMouseEvent<SVGSVGElement>) => {
       if (boundaryDragRef.current !== null) {
         commitBoundaryDrag();
+        if (event) event.preventDefault();
+        return;
+      }
+      if (selectedVertexDragRef.current !== null) {
+        commitSelectedVertexDrag();
         if (event) event.preventDefault();
         return;
       }
@@ -2644,7 +2760,14 @@ export default function FeatureOverrideModal({
         event.preventDefault();
       }
     },
-    [importGeometryIntoEditor, objectRecords, resolveSelectionKeysFromShape, selectionDrag, commitBoundaryDrag]
+    [
+      importGeometryIntoEditor,
+      objectRecords,
+      resolveSelectionKeysFromShape,
+      selectionDrag,
+      commitBoundaryDrag,
+      commitSelectedVertexDrag,
+    ]
   );
 
   const handlePlottingWheel = useCallback(
@@ -2738,6 +2861,9 @@ export default function FeatureOverrideModal({
     if (boundaryDragRef.current !== null) {
       commitBoundaryDrag();
     }
+    if (selectedVertexDragRef.current !== null) {
+      commitSelectedVertexDrag();
+    }
     plottingPanRef.current.active = false;
     plottingPanRef.current.moved = false;
     setPlottingPanActive(false);
@@ -2747,7 +2873,7 @@ export default function FeatureOverrideModal({
     setPlottingSnapState(null);
     setSelectionDrag(null);
     setScreenCursor(null);
-  }, [commitBoundaryDrag]);
+  }, [commitBoundaryDrag, commitSelectedVertexDrag]);
 
   const zoomPlottingCamera = useCallback((direction: "in" | "out") => {
     setPlottingCamera((previous) => {
@@ -3991,9 +4117,18 @@ export default function FeatureOverrideModal({
                         ) : null}
                         {plottingPoints.map((point, index) => {
                           const projected = plottingViewport.project(point);
+                          const selectedVertexEditable =
+                            activeTool === "select" &&
+                            action === "update" &&
+                            editorTarget !== "boundary" &&
+                            Boolean(selectedGeometry);
+                          const selectedVertexDragging = selectedVertexDragRef.current === index && isDraggingSelectedVertex;
                           return (
                             <g key={`pt-${index}`} transform={`translate(${projected.x} ${projected.y}) scale(${plottingInverseZoom})`}>
-                              <circle r="4.5" className="cad-svg-vertex" />
+                              <circle
+                                r="4.5"
+                                className={`cad-svg-vertex${selectedVertexEditable ? " cad-svg-vertex--editable" : ""}${selectedVertexDragging ? " cad-svg-vertex--dragging" : ""}`}
+                              />
                             </g>
                           );
                         })}
