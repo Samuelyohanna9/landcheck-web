@@ -287,7 +287,17 @@ function SurveyPlanSurveyPreviewStep({
                   const nowCadastral = CADASTRAL_STATE_TEMPLATES.includes(nextTemplate);
                   const wasFct = FCT_TEMPLATES.includes(meta.template_name);
                   const nowFct = FCT_TEMPLATES.includes(nextTemplate);
-                  setMeta((m) => ({ ...m, template_name: nextTemplate }));
+                  const enteringApplicantNameStyle = (nowCadastral || nowFct) && !wasCadastral && !wasFct;
+                  setMeta((m) => ({
+                    ...m,
+                    template_name: nextTemplate,
+                    // Cadastral/FCT templates use this same field as "Applicant Name" (a
+                    // person), not the generic plan "Title" the general template shows - don't
+                    // carry over the untouched generic default so the person-name placeholder
+                    // actually guides the user instead of hiding behind stale text.
+                    title_text:
+                      enteringApplicantNameStyle && m.title_text.trim().toUpperCase() === "SURVEY PLAN" ? "" : m.title_text,
+                  }));
                   if (nowCadastral && !wasCadastral) {
                     onNorthArrowStyleChange("un_marker");
                     onNorthArrowColorChange("blue");
