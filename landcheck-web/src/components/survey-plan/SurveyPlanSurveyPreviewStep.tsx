@@ -1,4 +1,4 @@
-import { memo, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { memo, useRef, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import SurveyPreview from "../SurveyPreview";
 
 type PlotMeta = {
@@ -243,6 +243,7 @@ function SurveyPlanSurveyPreviewStep({
   hasHeightData,
 }: Props) {
   const rendering = previewLoading || orthophotoLoading || topoMapLoading || serverSyncing;
+  const templateSelectRef = useRef<HTMLSelectElement>(null);
 
   return (
     <div className="step-panel preview-panel">
@@ -281,8 +282,18 @@ function SurveyPlanSurveyPreviewStep({
           <h3 className="section-title">Survey Details</h3>
           <div className="form-grid">
             <div className="form-group full-width template-selector-group">
-              <label>Template</label>
+              <div className="template-label-row">
+                <label>Template</label>
+                <button
+                  type="button"
+                  className="template-picker-badge"
+                  onClick={() => templateSelectRef.current?.focus()}
+                >
+                  6 templates available — click here to choose
+                </button>
+              </div>
               <select
+                ref={templateSelectRef}
                 value={meta.template_name}
                 onChange={(e) => {
                   const nextTemplate = e.target.value as PlotMeta["template_name"];
