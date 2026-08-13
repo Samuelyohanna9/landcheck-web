@@ -17,6 +17,7 @@ type PlotMeta = {
   fct_cadastral_zone: string;
   fct_origin_beacon_text: string;
   fct_cadastral_map_ref: string;
+  fct_title_prefix: string;
   adamawa_rof_no: string;
   adamawa_owner_name: string;
   adamawa_authority_title: string;
@@ -118,6 +119,7 @@ type Props = {
   setScaleDraft: Dispatch<SetStateAction<string>>;
   commitScaleDraft: () => void;
   parseScaleDenominator: (value: string) => number;
+  isAutoScaleText: (value: string) => boolean;
   scalePresets: number[];
   previewActionLabel: string;
   refreshCurrentPreview: () => void | Promise<void>;
@@ -400,6 +402,14 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
             ) : props.meta.template_name === "fct_abuja_osg" ? (
               <>
                 <div className="form-group">
+                  <label>Title</label>
+                  <input
+                    value={props.meta.fct_title_prefix}
+                    onChange={(e) => props.setMeta((m) => ({ ...m, fct_title_prefix: e.target.value }))}
+                    placeholder="SURVEY PLAN FOR"
+                  />
+                </div>
+                <div className="form-group">
                   <label>Applicant Name</label>
                   <input value={props.meta.title_text} onChange={(e) => props.setMeta((m) => ({ ...m, title_text: e.target.value }))} placeholder="NUHU LABBO ALIYU" />
                 </div>
@@ -533,13 +543,15 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                   aria-label="Scale denominator"
                 />
               </div>
-              <span className="scale-helper">Type only the number after `1 :` (example: `1000`).</span>
+              <span className="scale-helper">
+                Leave blank for auto-fit on first render, or type only the number after `1 :` (example: `1000`).
+              </span>
               <div className="scale-presets">
                 {props.scalePresets.map((s) => (
                   <button
                     key={`sub_scale_${s}`}
                     type="button"
-                    className={`scale-preset-btn ${props.parseScaleDenominator(props.meta.scale_text) === s ? "active" : ""}`}
+                    className={`scale-preset-btn ${!props.isAutoScaleText(props.meta.scale_text) && props.parseScaleDenominator(props.meta.scale_text) === s ? "active" : ""}`}
                     onClick={() => {
                       props.setScaleDraft(String(s));
                       props.setMeta((m) => ({ ...m, scale_text: `1 : ${s}` }));

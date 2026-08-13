@@ -65,6 +65,7 @@ type PlotMeta = {
   fct_cadastral_zone: string;
   fct_origin_beacon_text: string;
   fct_cadastral_map_ref: string;
+  fct_title_prefix: string;
   technical_report_instruments: string[];
   technical_report_dgps_type: string;
   technical_report_num_surveyors: number | null;
@@ -243,7 +244,7 @@ const buildDefaultPlotMeta = (): PlotMeta => ({
   surveyor_name: "",
   surveyor_rank: "",
   certification_statement: DEFAULT_CERTIFICATION_STATEMENT,
-  scale_text: "1 : 1000",
+  scale_text: "auto",
   paper_size: "A4",
   template_name: DEFAULT_TEMPLATE_NAME,
   adamawa_rof_no: "",
@@ -270,6 +271,7 @@ const buildDefaultPlotMeta = (): PlotMeta => ({
   fct_cadastral_zone: "",
   fct_origin_beacon_text: "",
   fct_cadastral_map_ref: "",
+  fct_title_prefix: "",
   technical_report_instruments: [],
   technical_report_dgps_type: "",
   technical_report_num_surveyors: null,
@@ -382,6 +384,14 @@ const parseScaleDenominator = (scaleText: string): number => {
   const parsed = Number.parseInt(digits || "1000", 10);
   if (!Number.isFinite(parsed)) return 1000;
   return Math.min(MAX_SCALE_DENOMINATOR, Math.max(MIN_SCALE_DENOMINATOR, parsed));
+};
+
+const isAutoScaleText = (scaleText: string): boolean => {
+  const normalized = String(scaleText || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "");
+  return !normalized || ["auto", "fit", "autofit", "1:auto", "1:fit", "1:autofit"].includes(normalized);
 };
 
 const closeRingIfNeeded = (ring: number[][]): number[][] => {
@@ -673,7 +683,7 @@ export default function SurveyPlan() {
     area_font: areaFont || undefined,
     area_size: areaSize ? Number(areaSize) : undefined,
   };
-  const [scaleDraft, setScaleDraft] = useState<string>("1000");
+  const [scaleDraft, setScaleDraft] = useState<string>("");
   const [newRoadWidth, setNewRoadWidth] = useState<string>("10");
   const [showFeatureEditor, setShowFeatureEditor] = useState(false);
   const featureEditsPendingRef = useRef(false);
@@ -738,10 +748,18 @@ export default function SurveyPlan() {
   const [meta, setMeta] = useState<PlotMeta>(buildDefaultPlotMeta);
 
   useEffect(() => {
+    if (isAutoScaleText(meta.scale_text)) {
+      setScaleDraft("");
+      return;
+    }
     setScaleDraft(String(parseScaleDenominator(meta.scale_text)));
   }, [meta.scale_text]);
 
   const commitScaleDraft = useCallback(() => {
+    if (!String(scaleDraft || "").trim()) {
+      setMeta((m) => ({ ...m, scale_text: "auto" }));
+      return;
+    }
     const parsed = parseScaleDenominator(scaleDraft);
     setScaleDraft(String(parsed));
     setMeta((m) => ({ ...m, scale_text: `1 : ${parsed}` }));
@@ -1126,6 +1144,7 @@ export default function SurveyPlan() {
       fct_cadastral_zone: meta.fct_cadastral_zone,
       fct_origin_beacon_text: meta.fct_origin_beacon_text,
       fct_cadastral_map_ref: meta.fct_cadastral_map_ref,
+      fct_title_prefix: meta.fct_title_prefix,
     }),
     [coordinateSystem, meta]
   );
@@ -1956,10 +1975,14 @@ export default function SurveyPlan() {
       }
 
       const url = URL.createObjectURL(res.data);
+      const resolvedScale = String(res.headers["x-landcheck-resolved-scale"] || "").trim();
       setPreviewUrl((prev) => {
         if (prev) URL.revokeObjectURL(prev);
         return url;
       });
+      if (resolvedScale) {
+        setMeta((prev) => (prev.scale_text === resolvedScale ? prev : { ...prev, scale_text: resolvedScale }));
+      }
       markServerSynced();
     } catch (err) {
       console.error("Preview error:", err);
@@ -2798,6 +2821,7 @@ export default function SurveyPlan() {
         fct_cadastral_zone: meta.fct_cadastral_zone,
         fct_origin_beacon_text: meta.fct_origin_beacon_text,
         fct_cadastral_map_ref: meta.fct_cadastral_map_ref,
+      fct_title_prefix: meta.fct_title_prefix,
       };
 
       const resolvedUrl = resolvePlotResourcePath(url, activePlotId);
@@ -3947,6 +3971,7 @@ export default function SurveyPlan() {
               commitScaleDraft={commitScaleDraft}
               scalePresets={SCALE_PRESETS}
               parseScaleDenominator={parseScaleDenominator}
+              isAutoScaleText={isAutoScaleText}
               previewActionLabel={previewActionLabel}
               refreshCurrentPreview={refreshCurrentPreview}
               previewLoading={previewLoading}
@@ -4065,6 +4090,7 @@ export default function SurveyPlan() {
               setScaleDraft={setScaleDraft}
               commitScaleDraft={commitScaleDraft}
               parseScaleDenominator={parseScaleDenominator}
+              isAutoScaleText={isAutoScaleText}
               scalePresets={SCALE_PRESETS}
               previewActionLabel={previewActionLabel}
               refreshCurrentPreview={refreshCurrentPreview}
