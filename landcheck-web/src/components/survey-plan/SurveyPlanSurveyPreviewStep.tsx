@@ -50,7 +50,7 @@ type PlotMeta = {
 
 type PreviewType = "survey" | "orthophoto" | "topomap";
 type TopoSource = "opentopomap" | "userdata";
-type NorthArrowStyle = "one_side_stem" | "stacked_4n" | "classic" | "triangle" | "compass" | "chevron" | "orienteering" | "star" | "un_marker";
+type NorthArrowStyle = "one_side_stem" | "stacked_4n" | "classic" | "triangle" | "compass" | "chevron" | "orienteering" | "star" | "un_marker" | "nn_arrow";
 type NorthArrowColor = "black" | "blue";
 type BeaconStyle = "circle" | "square" | "triangle" | "diamond" | "cross";
 type RoadWidthOption = "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
@@ -292,7 +292,7 @@ function SurveyPlanSurveyPreviewStep({
                     onNorthArrowStyleChange("un_marker");
                     onNorthArrowColorChange("blue");
                   } else if (nowFct && !wasFct) {
-                    onNorthArrowStyleChange("triangle");
+                    onNorthArrowStyleChange("nn_arrow");
                     onNorthArrowColorChange("black");
                   }
                 }}
@@ -434,14 +434,6 @@ function SurveyPlanSurveyPreviewStep({
                   <input value={meta.surveyor_rank} onChange={(e) => setMeta((m) => ({ ...m, surveyor_rank: e.target.value }))} placeholder="Registered Surveyors" />
                 </div>
                 <div className="form-group full-width">
-                  <label>Reference Beacon (Full Beacon Number)</label>
-                  <input
-                    value={meta.fct_origin_beacon_text}
-                    onChange={(e) => setMeta((m) => ({ ...m, fct_origin_beacon_text: e.target.value }))}
-                    placeholder="FCT A07 PB 2706"
-                  />
-                </div>
-                <div className="form-group full-width">
                   <label>Cadastral Map Reference</label>
                   <input
                     value={meta.fct_cadastral_map_ref}
@@ -452,6 +444,7 @@ function SurveyPlanSurveyPreviewStep({
                 <div className="form-group full-width">
                   <span className="template-hint">
                     Enter each beacon's number (e.g. PB 2854) into the "Station" field for its coordinate point in the list above.
+                    The first point's beacon number and coordinates are used automatically as the plan's reference beacon in the NOTE box.
                   </span>
                 </div>
               </>

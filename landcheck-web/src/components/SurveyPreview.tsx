@@ -265,6 +265,7 @@ function SurveyPreview({
             <option value="orienteering">Orienteering</option>
             <option value="star">Star</option>
             <option value="un_marker">U.N. Marker</option>
+            <option value="nn_arrow">N.N. Arrow</option>
           </select>
           <select
             className="ribbon-select"

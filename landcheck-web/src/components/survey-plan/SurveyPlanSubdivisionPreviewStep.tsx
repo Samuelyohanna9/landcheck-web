@@ -52,7 +52,7 @@ type SubdivisionMethod = "by_count" | "by_area" | "by_fraction" | "by_custom_are
 type SubdivisionPanelTab = "survey_plan" | "subdivision_lines";
 type PreviewType = "survey" | "orthophoto" | "topomap";
 type TopoSource = "opentopomap" | "userdata";
-type NorthArrowStyle = "one_side_stem" | "stacked_4n" | "classic" | "triangle" | "compass" | "chevron" | "orienteering" | "star" | "un_marker";
+type NorthArrowStyle = "one_side_stem" | "stacked_4n" | "classic" | "triangle" | "compass" | "chevron" | "orienteering" | "star" | "un_marker" | "nn_arrow";
 type NorthArrowColor = "black" | "blue";
 type BeaconStyle = "circle" | "square" | "triangle" | "diamond" | "cross";
 type RoadWidthOption = "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
@@ -276,7 +276,7 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                     props.onNorthArrowStyleChange("un_marker");
                     props.onNorthArrowColorChange("blue");
                   } else if (nowFct && !wasFct) {
-                    props.onNorthArrowStyleChange("triangle");
+                    props.onNorthArrowStyleChange("nn_arrow");
                     props.onNorthArrowColorChange("black");
                   }
                 }}
@@ -418,14 +418,6 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                   <input value={props.meta.surveyor_rank} onChange={(e) => props.setMeta((m) => ({ ...m, surveyor_rank: e.target.value }))} placeholder="Registered Surveyors" />
                 </div>
                 <div className="form-group full-width">
-                  <label>Reference Beacon (Full Beacon Number)</label>
-                  <input
-                    value={props.meta.fct_origin_beacon_text}
-                    onChange={(e) => props.setMeta((m) => ({ ...m, fct_origin_beacon_text: e.target.value }))}
-                    placeholder="FCT A07 PB 2706"
-                  />
-                </div>
-                <div className="form-group full-width">
                   <label>Cadastral Map Reference</label>
                   <input
                     value={props.meta.fct_cadastral_map_ref}
@@ -436,6 +428,7 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                 <div className="form-group full-width">
                   <span className="template-hint">
                     Enter each beacon's number (e.g. PB 2854) into the lot's "Station" field for each coordinate point.
+                    The first point's beacon number and coordinates are used automatically as the plan's reference beacon in the NOTE box.
                   </span>
                 </div>
               </>
