@@ -17,6 +17,7 @@ type PlotMeta = {
   fct_cadastral_zone: string;
   fct_origin_beacon_text: string;
   fct_cadastral_map_ref: string;
+  fct_title_prefix: string;
   adamawa_rof_no: string;
   adamawa_owner_name: string;
   adamawa_authority_title: string;
@@ -83,6 +84,7 @@ type Props = {
   commitScaleDraft: () => void;
   scalePresets: number[];
   parseScaleDenominator: (scaleText: string) => number;
+  isAutoScaleText: (scaleText: string) => boolean;
   previewActionLabel: string;
   refreshCurrentPreview: () => void | Promise<void>;
   previewLoading: boolean;
@@ -172,6 +174,7 @@ function SurveyPlanSurveyPreviewStep({
   commitScaleDraft,
   scalePresets,
   parseScaleDenominator,
+  isAutoScaleText,
   previewActionLabel,
   refreshCurrentPreview,
   previewLoading,
@@ -416,6 +419,14 @@ function SurveyPlanSurveyPreviewStep({
             ) : meta.template_name === "fct_abuja_osg" ? (
               <>
                 <div className="form-group">
+                  <label>Title</label>
+                  <input
+                    value={meta.fct_title_prefix}
+                    onChange={(e) => setMeta((m) => ({ ...m, fct_title_prefix: e.target.value }))}
+                    placeholder="SURVEY PLAN FOR"
+                  />
+                </div>
+                <div className="form-group">
                   <label>Applicant Name</label>
                   <input value={meta.title_text} onChange={(e) => setMeta((m) => ({ ...m, title_text: e.target.value }))} placeholder="NUHU LABBO ALIYU" />
                 </div>
@@ -552,13 +563,15 @@ function SurveyPlanSurveyPreviewStep({
                   aria-label="Scale denominator"
                 />
               </div>
-              <span className="scale-helper">Type only the number after `1 :` (example: `1000`).</span>
+              <span className="scale-helper">
+                Leave blank for auto-fit on first render, or type only the number after `1 :` (example: `1000`).
+              </span>
               <div className="scale-presets">
                 {scalePresets.map((s) => (
                   <button
                     key={s}
                     type="button"
-                    className={`scale-preset-btn ${parseScaleDenominator(meta.scale_text) === s ? "active" : ""}`}
+                    className={`scale-preset-btn ${!isAutoScaleText(meta.scale_text) && parseScaleDenominator(meta.scale_text) === s ? "active" : ""}`}
                     onClick={() => {
                       setScaleDraft(String(s));
                       setMeta((m) => ({ ...m, scale_text: `1 : ${s}` }));
