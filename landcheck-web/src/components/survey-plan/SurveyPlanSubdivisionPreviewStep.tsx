@@ -1,4 +1,4 @@
-import { memo, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { memo, useRef, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import SurveyPreview from "../SurveyPreview";
 
 type PlotMeta = {
@@ -254,6 +254,7 @@ type Props = {
 
 function SurveyPlanSubdivisionPreviewStep(props: Props) {
   const rendering = props.previewLoading || props.orthophotoLoading || props.topoMapLoading || props.serverSyncing;
+  const templateSelectRef = useRef<HTMLSelectElement>(null);
 
   return (
     <div className="step-panel preview-panel">
@@ -264,8 +265,18 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
           <p className="section-desc">Configure lot split for this mother parcel, preview output, then generate a batch.</p>
           <div className="form-grid">
             <div className="form-group full-width template-selector-group">
-              <label>Template</label>
+              <div className="template-label-row">
+                <label>Template</label>
+                <button
+                  type="button"
+                  className="template-picker-badge"
+                  onClick={() => templateSelectRef.current?.focus()}
+                >
+                  6 templates available — click here to choose
+                </button>
+              </div>
               <select
+                ref={templateSelectRef}
                 value={props.meta.template_name}
                 onChange={(e) => {
                   const nextTemplate = e.target.value as PlotMeta["template_name"];
