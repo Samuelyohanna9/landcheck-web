@@ -10,6 +10,70 @@
   text-rendering: optimizeLegibility;
 }
 
+/* ---------- Template announcement ticker ---------- */
+
+.template-news-ticker {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #dc2626;
+  color: #fff;
+  padding: 0.32rem 0.6rem;
+  flex-shrink: 0;
+}
+
+.template-news-ticker-track {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 1.1rem;
+  overflow: hidden;
+}
+
+.template-news-ticker-text {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  white-space: nowrap;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  animation: template-news-ticker-scroll 20s linear infinite;
+}
+
+@keyframes template-news-ticker-scroll {
+  from {
+    left: -100%;
+  }
+  to {
+    left: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .template-news-ticker-text {
+    animation: none;
+    position: static;
+  }
+}
+
+.template-news-ticker-contact {
+  flex-shrink: 0;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.template-news-ticker-contact:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
 .preview-header {
   display: flex;
   align-items: center;
