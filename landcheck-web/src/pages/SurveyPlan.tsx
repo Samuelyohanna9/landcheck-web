@@ -40,7 +40,7 @@ type PlotMeta = {
   certification_statement: string;
   scale_text: string;
   paper_size: string;
-  template_name: "general" | "adamawa_osg" | "akwa_ibom_osg" | "rivers_osg" | "cross_river_osg";
+  template_name: "general" | "adamawa_osg" | "akwa_ibom_osg" | "rivers_osg" | "cross_river_osg" | "fct_abuja_osg";
   adamawa_rof_no: string;
   adamawa_owner_name: string;
   adamawa_authority_title: string;
@@ -60,6 +60,11 @@ type PlotMeta = {
   cadastral_area_name: string;
   cadastral_datum_text: string;
   cadastral_firm_block_text: string;
+  fct_file_no: string;
+  fct_district: string;
+  fct_cadastral_zone: string;
+  fct_origin_beacon_text: string;
+  fct_cadastral_map_ref: string;
   technical_report_instruments: string[];
   technical_report_dgps_type: string;
   technical_report_num_surveyors: number | null;
@@ -260,6 +265,11 @@ const buildDefaultPlotMeta = (): PlotMeta => ({
   cadastral_area_name: "",
   cadastral_datum_text: "",
   cadastral_firm_block_text: "",
+  fct_file_no: "",
+  fct_district: "",
+  fct_cadastral_zone: "",
+  fct_origin_beacon_text: "",
+  fct_cadastral_map_ref: "",
   technical_report_instruments: [],
   technical_report_dgps_type: "",
   technical_report_num_surveyors: null,
@@ -1111,6 +1121,11 @@ export default function SurveyPlan() {
       cadastral_area_name: meta.cadastral_area_name,
       cadastral_datum_text: meta.cadastral_datum_text,
       cadastral_firm_block_text: meta.cadastral_firm_block_text,
+      fct_file_no: meta.fct_file_no,
+      fct_district: meta.fct_district,
+      fct_cadastral_zone: meta.fct_cadastral_zone,
+      fct_origin_beacon_text: meta.fct_origin_beacon_text,
+      fct_cadastral_map_ref: meta.fct_cadastral_map_ref,
     }),
     [coordinateSystem, meta]
   );
@@ -2778,6 +2793,11 @@ export default function SurveyPlan() {
         cadastral_area_name: meta.cadastral_area_name,
         cadastral_datum_text: meta.cadastral_datum_text,
         cadastral_firm_block_text: meta.cadastral_firm_block_text,
+        fct_file_no: meta.fct_file_no,
+        fct_district: meta.fct_district,
+        fct_cadastral_zone: meta.fct_cadastral_zone,
+        fct_origin_beacon_text: meta.fct_origin_beacon_text,
+        fct_cadastral_map_ref: meta.fct_cadastral_map_ref,
       };
 
       const resolvedUrl = resolvePlotResourcePath(url, activePlotId);
