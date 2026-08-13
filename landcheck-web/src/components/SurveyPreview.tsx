@@ -1,6 +1,8 @@
 import { memo, useState, useRef, useEffect } from "react";
 import SurveyAppearancePanel from "./SurveyAppearancePanel";
 import RoadNamesPanel from "./RoadNamesPanel";
+import BeaconStylePicker from "./BeaconStylePicker";
+import NorthArrowStylePicker from "./NorthArrowStylePicker";
 import "../styles/survey-preview.css";
 
 type PreviewType = "survey" | "orthophoto" | "topomap";
@@ -265,21 +267,7 @@ function SurveyPreview({
       <div className="preview-ribbon">
         <div className="ribbon-group">
           <span className="ribbon-label">North Arrow</span>
-          <select
-            className="ribbon-select"
-            value={northArrowStyle}
-            onChange={(e) => onNorthArrowStyleChange(e.target.value)}
-          >
-            <option value="one_side_stem">One-Side Stem</option>
-            <option value="classic">Classic</option>
-            <option value="triangle">Triangle</option>
-            <option value="compass">Compass</option>
-            <option value="chevron">Chevron</option>
-            <option value="orienteering">Orienteering</option>
-            <option value="star">Star</option>
-            <option value="un_marker">U.N. Marker</option>
-            <option value="nn_arrow">N.N. Arrow</option>
-          </select>
+          <NorthArrowStylePicker value={northArrowStyle} onChange={onNorthArrowStyleChange} />
           <select
             className="ribbon-select"
             value={northArrowColor}
@@ -291,19 +279,12 @@ function SurveyPreview({
         </div>
         <div className="ribbon-group">
           <span className="ribbon-label">Beacon Style</span>
-          <select
-            className="ribbon-select"
+          <BeaconStylePicker
             value={beaconStyle}
-            onChange={(e) => onBeaconStyleChange(e.target.value)}
+            onChange={onBeaconStyleChange}
             disabled={previewType !== "survey"}
             title={previewType !== "survey" ? "Beacon style applies to Survey Plan only" : undefined}
-          >
-            <option value="circle">Circle</option>
-            <option value="square">Square</option>
-            <option value="triangle">Triangle</option>
-            <option value="diamond">Diamond</option>
-            <option value="cross">Cross</option>
-          </select>
+          />
         </div>
         <div className="ribbon-group">
           <span className="ribbon-label">Road Width (m)</span>
