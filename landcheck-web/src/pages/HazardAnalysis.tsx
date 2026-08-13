@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { api } from "../api/client";
@@ -29,9 +29,130 @@ type ManualPoint = {
 
 type HazardType = "flood" | "erosion";
 
+type AnalysisMode = "satellite" | "local" | "hybrid";
+
+const ANALYSIS_MODES: { value: AnalysisMode; label: string; description: string }[] = [
+  { value: "satellite", label: "Satellite / DEM", description: "Fully automatic — satellite imagery and global elevation data only, no upload needed." },
+  { value: "local", label: "Local Data", description: "Runs primarily off your uploaded survey/geotechnical data, falling back to satellite/DEM only for what's missing." },
+  { value: "hybrid", label: "Hybrid", description: "Tell us what local data you have — we'll use satellite/DEM to fill in the rest, combined into one result." },
+];
+
+type ConfidenceInfo = {
+  score: number;
+  tier: "Low" | "Moderate" | "High" | "Very High" | string;
+  factor_sources: Record<string, string>;
+  notes: string[];
+};
+
+const SOURCE_LABELS: Record<string, string> = {
+  local_survey: "Your survey points",
+  user_input: "Your input",
+  glofas: "GloFAS (global flood model)",
+  local_terrain_proxy: "Local terrain proxy (DEM)",
+  satellite_ndvi: "Satellite (vegetation)",
+  satellite_hydrosheds: "Satellite (drainage network)",
+  global_dem: "Global elevation model (30m)",
+  not_available: "Not available",
+};
+
+const FACTOR_LABELS: Record<string, string> = {
+  slope: "Slope", vegetation: "Vegetation cover", drainage: "Drainage proximity", gully: "Gully susceptibility",
+  depth: "Flood depth", inundation: "Inundation extent", river_proximity: "River proximity",
+  depression: "Low-lying terrain", flatness: "Flatness", runoff: "Runoff",
+};
+
+function confidenceChipClass(tier: string) {
+  const normalized = tier.toLowerCase().replace(/\s+/g, "-");
+  return normalized;
+}
+
+function ConfidencePanel({ confidence, dataGaps }: { confidence?: ConfidenceInfo | null; dataGaps?: string[] }) {
+  if (!confidence) return null;
+  return (
+    <div className="hazard-confidence">
+      <div className="hazard-confidence-header">
+        <span>Input Data Confidence</span>
+        <span className={`confidence-chip ${confidenceChipClass(confidence.tier)}`}>
+          {confidence.score}% · {confidence.tier}
+        </span>
+      </div>
+      <p className="hazard-confidence-hint">
+        Reflects how direct and well-sampled the inputs behind this score are — not a claim of accuracy against real-world
+        outcomes, since there's no measured dataset to validate against.
+      </p>
+      <ul className="hazard-source-list">
+        {Object.entries(confidence.factor_sources).map(([factor, source]) => (
+          <li key={factor}>
+            <span>{FACTOR_LABELS[factor] ?? factor}</span>
+            <span className="hazard-source-value">{SOURCE_LABELS[source] ?? source}</span>
+          </li>
+        ))}
+      </ul>
+      {confidence.notes.map((note) => (
+        <p key={note} className="hazard-confidence-hint">{note}</p>
+      ))}
+      {!!dataGaps?.length && (
+        <div className="hazard-data-gaps">
+          <h5>Filled from satellite/DEM</h5>
+          <ul>
+            {dataGaps.map((gap) => (
+              <li key={gap}>{gap}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 type LegendItem = { label: string; color: string };
 
 type HazardReference = { short?: string; citation: string; url?: string };
+
+type ScsRunoff = {
+  curve_number: number;
+  hydrologic_soil_group: string;
+  site_type: string;
+  potential_retention_mm: number;
+  initial_abstraction_mm: number;
+  design_rainfall_mm: number;
+  runoff_mm: number;
+  runoff_coefficient: number;
+};
+
+type SoilData = {
+  siltVfsPct?: number;
+  clayPct?: number;
+  sandPct?: number;
+  organicMatterPct?: number;
+  soilStructureCode?: number;
+  soilPermeabilityCode?: number;
+  cohesionKpa?: number;
+  frictionAngleDeg?: number;
+  plasticityIndex?: number;
+};
+
+// Maps this component's camelCase soil-data state to the snake_case field names the /hazards
+// endpoints read off each uploaded point (see hazards.py's _OPTIONAL_SOIL_FIELDS).
+const SOIL_FIELD_KEY_MAP: Record<keyof SoilData, string> = {
+  siltVfsPct: "silt_vfs_pct",
+  clayPct: "clay_pct",
+  sandPct: "sand_pct",
+  organicMatterPct: "organic_matter_pct",
+  soilStructureCode: "soil_structure_code",
+  soilPermeabilityCode: "soil_permeability_code",
+  cohesionKpa: "cohesion_kpa",
+  frictionAngleDeg: "friction_angle_deg",
+  plasticityIndex: "plasticity_index",
+};
+
+const SITE_TYPES: { value: string; label: string }[] = [
+  { value: "bare_soil", label: "Bare / cleared soil" },
+  { value: "agricultural", label: "Agricultural / farmland" },
+  { value: "residential_low_density", label: "Residential (low density)" },
+  { value: "residential_high_density", label: "Residential (high density)" },
+  { value: "commercial_paved", label: "Commercial / paved" },
+];
 
 type FloodResult = {
   risk_score: number;
@@ -62,6 +183,11 @@ type FloodResult = {
   terrain_flatness_score?: number | null;
   terrain_drainage_score?: number | null;
   terrain_depression_score?: number | null;
+  scs_runoff?: ScsRunoff | null;
+  analysis_mode?: AnalysisMode;
+  data_sources?: Record<string, string>;
+  confidence?: ConfidenceInfo | null;
+  local_data_gaps?: string[];
   references?: HazardReference[];
 };
 
@@ -86,6 +212,13 @@ type ErosionResult = {
   buildings_total?: number;
   buildings_threatened?: number;
   interactive?: HazardInteractiveMeta | null;
+  local_soil_data_available?: boolean;
+  gully_susceptibility_index?: number | null;
+  k_factor?: number | null;
+  analysis_mode?: AnalysisMode;
+  data_sources?: Record<string, string>;
+  confidence?: ConfidenceInfo | null;
+  local_data_gaps?: string[];
   references?: HazardReference[];
 };
 
@@ -153,6 +286,14 @@ export default function HazardAnalysis() {
   const [showRaster, setShowRaster] = useState(false);
   const [returnPeriod, setReturnPeriod] = useState(100);
   const [jobProgress, setJobProgress] = useState<{ pct: number; stage: string } | null>(null);
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("hybrid");
+  const [hybridFlags, setHybridFlags] = useState({ elevation: false, soilTexture: false, geotechnical: false, siteRainfall: false });
+  const [showLocalData, setShowLocalData] = useState(false);
+  const [soilData, setSoilData] = useState<SoilData>({});
+  const [siteType, setSiteType] = useState("residential_low_density");
+  const [designRainfallMm, setDesignRainfallMm] = useState<string>("");
+  const [shapefileLoading, setShapefileLoading] = useState(false);
+  const shapefileInputRef = useRef<HTMLInputElement>(null);
 
   // Analysis runs as a background job (see hazards.py's async job endpoints) rather than one long
   // synchronous request, since the real work (several Earth Engine calls + local rendering) can
@@ -240,22 +381,83 @@ export default function HazardAnalysis() {
     });
   }, [manualPoints, coordinateSystem]);
 
-  // Local elevation points from a CSV upload with a height/elevation column (same upload flow
-  // CoordinateInput already supports) - when present, erosion recomputes slope directly from
-  // these instead of the global 30m DEM, and flood surfaces a relative-elevation data point.
+  const hasSoilData = useMemo(
+    () => Object.values(soilData).some((v) => v !== undefined && Number.isFinite(v)),
+    [soilData],
+  );
+
+  // Elevation-carrying points still need >=3 to triangulate a local slope surface, so the hint
+  // below only counts those. Below that threshold, elevation still rides along per-point (see
+  // localElevationPoints) - it just won't drive local-slope/TIN, matching the backend's fallback.
+  const elevationSurveyPointCount = useMemo(
+    () =>
+      manualPoints.filter(
+        (p) => (p.lng !== 0 || p.lat !== 0) && p.height !== undefined && p.height !== null && Number.isFinite(Number(p.height)),
+      ).length,
+    [manualPoints],
+  );
+
+  // Every valid boundary point, carrying whatever it has: a surveyed elevation (from a CSV height
+  // column), and/or the site-level soil/geotechnical reading below (same value attached to every
+  // point, since it's one reading for the whole site, not per-station) - the backend picks up
+  // whichever optional fields are present per point rather than requiring a fixed shape.
   const localElevationPoints = useMemo(() => {
-    const withHeight = manualPoints.filter(
-      (p) => (p.lng !== 0 || p.lat !== 0) && p.height !== undefined && p.height !== null && Number.isFinite(Number(p.height)),
-    );
-    if (withHeight.length < 3) return [];
-    return withHeight.map((p) => {
-      if (coordinateSystem === "wgs84") {
-        return { lng: Number(p.lng), lat: Number(p.lat), elevation_m: Number(p.height) };
+    const valid = manualPoints.filter((p) => p.lng !== 0 || p.lat !== 0);
+    if (valid.length === 0) return [];
+    return valid.map((p) => {
+      const [lng, lat] =
+        coordinateSystem === "wgs84" ? [Number(p.lng), Number(p.lat)] : toWGS84(Number(p.lng), Number(p.lat), coordinateSystem);
+      const entry: Record<string, number> = { lng, lat };
+      if (p.height !== undefined && p.height !== null && Number.isFinite(Number(p.height))) {
+        entry.elevation_m = Number(p.height);
       }
-      const [lng, lat] = toWGS84(Number(p.lng), Number(p.lat), coordinateSystem);
-      return { lng, lat, elevation_m: Number(p.height) };
+      if (hasSoilData) {
+        (Object.keys(soilData) as (keyof SoilData)[]).forEach((key) => {
+          const value = soilData[key];
+          if (value === undefined || !Number.isFinite(value)) return;
+          entry[SOIL_FIELD_KEY_MAP[key]] = value;
+        });
+      }
+      return entry;
     });
-  }, [manualPoints, coordinateSystem]);
+  }, [manualPoints, coordinateSystem, soilData, hasSoilData]);
+
+  const updateSoilField = (key: keyof SoilData, raw: string) => {
+    setSoilData((prev) => ({ ...prev, [key]: raw === "" ? undefined : Number(raw) }));
+  };
+
+  const handleShapefileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      setShapefileLoading(true);
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await api.post<{ boundary: any }>("/hazards/upload-boundary", formData);
+      const geom = res.data?.boundary;
+      const ring: number[][] | null =
+        geom?.type === "Polygon" ? geom.coordinates?.[0] : geom?.type === "MultiPolygon" ? geom.coordinates?.[0]?.[0] : null;
+      if (!ring || ring.length < 3) throw new Error("No usable polygon found in the uploaded file.");
+      const first = ring[0];
+      const last = ring[ring.length - 1];
+      const isClosed = ring.length > 1 && first[0] === last[0] && first[1] === last[1];
+      const openRing = isClosed ? ring.slice(0, -1) : ring;
+      const imported: ManualPoint[] = openRing.map(([lng, lat], index) => {
+        const station = String.fromCharCode(65 + (index % 26));
+        if (coordinateSystem === "wgs84") return { station, lng, lat };
+        const [x, y] = fromWGS84(lng, lat, coordinateSystem);
+        return { station, lng: x, lat: y };
+      });
+      setManualPoints(imported);
+      toast.success(`Imported ${imported.length} boundary points from ${file.name}`);
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Failed to parse the uploaded boundary file");
+    } finally {
+      setShapefileLoading(false);
+      if (shapefileInputRef.current) shapefileInputRef.current.value = "";
+    }
+  };
 
   const buildHazardJobBody = (outputType: "preview" | "pdf" | "gis-export") => {
     const boundary = { type: "Polygon", coordinates: [finalCoords] };
@@ -263,7 +465,11 @@ export default function HazardAnalysis() {
       geometry: boundary,
       show_raster: showRaster,
       return_period: returnPeriod,
-      local_elevation_points: localElevationPoints,
+      local_elevation_points: analysisMode === "satellite" ? [] : localElevationPoints,
+      site_type: hazardType === "flood" && analysisMode !== "satellite" ? siteType : undefined,
+      design_rainfall_mm:
+        hazardType === "flood" && analysisMode !== "satellite" && designRainfallMm !== "" ? Number(designRainfallMm) : undefined,
+      analysis_mode: analysisMode,
       output_type: outputType,
     };
   };
@@ -403,6 +609,23 @@ export default function HazardAnalysis() {
       <div className="hazard-content">
         <div className="hazard-left">
           <div className="hazard-card">
+            <h3>Analysis Mode</h3>
+            <div className="hazard-mode-tabs">
+              {ANALYSIS_MODES.map((mode) => (
+                <button
+                  key={mode.value}
+                  type="button"
+                  className={`hazard-mode-tab ${analysisMode === mode.value ? "active" : ""}`}
+                  onClick={() => setAnalysisMode(mode.value)}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
+            <p className="hazard-subtext">{ANALYSIS_MODES.find((m) => m.value === analysisMode)?.description}</p>
+          </div>
+
+          <div className="hazard-card">
             <h3>Plot Boundary</h3>
             <p className="hazard-subtext">
               Draw or input coordinates to analyze {hazardType === "flood" ? "flood" : "erosion"} risk. Screening-level only.
@@ -416,13 +639,171 @@ export default function HazardAnalysis() {
               coordinateSystem={coordinateSystem}
               onCoordinateSystemChange={setCoordinateSystem}
             />
-            {localElevationPoints.length > 0 && (
+            {elevationSurveyPointCount >= 3 && (
               <p className="hazard-elevation-hint">
-                {localElevationPoints.length} surveyed elevation points detected — will be used for{" "}
+                {elevationSurveyPointCount} surveyed elevation points detected — will be used for{" "}
                 {hazardType === "erosion" ? "local slope calculation" : "a site elevation comparison"} instead of global data only.
               </p>
             )}
           </div>
+
+          {analysisMode !== "satellite" && (
+            <div className="hazard-card">
+              <div className="hazard-local-data-header">
+                <div>
+                  <h3>Local Ground Data</h3>
+                  <p className="hazard-subtext">
+                    {analysisMode === "hybrid"
+                      ? "Check off which local data you have — whatever's left unchecked is filled in automatically from satellite/DEM."
+                      : "Upload a shapefile boundary and/or add a geotechnical or soil survey reading for this site — the analysis runs primarily off this data."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="hazard-upload-section">
+                <input
+                  ref={shapefileInputRef}
+                  type="file"
+                  accept=".zip,.geojson,.json,.kml"
+                  onChange={handleShapefileUpload}
+                  disabled={shapefileLoading}
+                  className="file-input-hidden"
+                  id="hazard-shapefile-upload"
+                />
+                <label htmlFor="hazard-shapefile-upload" className={`hazard-upload-btn ${shapefileLoading ? "disabled" : ""}`}>
+                  {shapefileLoading ? "Importing..." : "Upload Shapefile / GeoJSON / KML"}
+                </label>
+                <span className="hazard-upload-hint">Replaces the points above with the uploaded boundary</span>
+              </div>
+
+              {analysisMode === "hybrid" && (
+                <div className="hazard-checklist">
+                  <label className="hazard-checklist-item">
+                    <input type="checkbox" checked={hybridFlags.elevation} onChange={(e) => setHybridFlags((f) => ({ ...f, elevation: e.target.checked }))} />
+                    <span>I have an elevation survey</span>
+                    {!hybridFlags.elevation && <em>→ will use global 30m DEM</em>}
+                  </label>
+                  <label className="hazard-checklist-item">
+                    <input type="checkbox" checked={hybridFlags.soilTexture} onChange={(e) => setHybridFlags((f) => ({ ...f, soilTexture: e.target.checked }))} />
+                    <span>I have soil texture data</span>
+                    {!hybridFlags.soilTexture && <em>→ K-factor/HSG skipped</em>}
+                  </label>
+                  <label className="hazard-checklist-item">
+                    <input type="checkbox" checked={hybridFlags.geotechnical} onChange={(e) => setHybridFlags((f) => ({ ...f, geotechnical: e.target.checked }))} />
+                    <span>I have a geotechnical survey</span>
+                    {!hybridFlags.geotechnical && <em>→ gully factor skipped</em>}
+                  </label>
+                  {hazardType === "flood" && (
+                    <label className="hazard-checklist-item">
+                      <input type="checkbox" checked={hybridFlags.siteRainfall} onChange={(e) => setHybridFlags((f) => ({ ...f, siteRainfall: e.target.checked }))} />
+                      <span>I have site rainfall data</span>
+                      {!hybridFlags.siteRainfall && <em>→ runoff estimate skipped</em>}
+                    </label>
+                  )}
+                </div>
+              )}
+
+              {hybridFlags.elevation && analysisMode === "hybrid" && (
+                <p className="hazard-elevation-hint">
+                  Upload a CSV with a height/elevation column above (Plot Boundary card) to provide your elevation survey.
+                </p>
+              )}
+
+              {(analysisMode === "local" || hybridFlags.soilTexture || hybridFlags.geotechnical) && (
+                <button type="button" className="hazard-local-data-toggle" onClick={() => setShowLocalData((v) => !v)}>
+                  {showLocalData ? "Hide" : "Add"} soil / geotechnical reading {hasSoilData ? "(added)" : ""}
+                  <span className={`hazard-chevron ${showLocalData ? "open" : ""}`}>▾</span>
+                </button>
+              )}
+
+              {showLocalData && (analysisMode === "local" || hybridFlags.soilTexture || hybridFlags.geotechnical) && (
+                <div className="hazard-local-data-grid">
+                  {(analysisMode === "local" || hybridFlags.soilTexture) && (
+                    <>
+                      <label className="hazard-field">
+                        <span>Silt + V.Fine Sand (%)</span>
+                        <input type="number" step="any" min={0} max={100} value={soilData.siltVfsPct ?? ""} onChange={(e) => updateSoilField("siltVfsPct", e.target.value)} />
+                      </label>
+                      <label className="hazard-field">
+                        <span>Clay (%)</span>
+                        <input type="number" step="any" min={0} max={100} value={soilData.clayPct ?? ""} onChange={(e) => updateSoilField("clayPct", e.target.value)} />
+                      </label>
+                      <label className="hazard-field">
+                        <span>Sand (%)</span>
+                        <input type="number" step="any" min={0} max={100} value={soilData.sandPct ?? ""} onChange={(e) => updateSoilField("sandPct", e.target.value)} />
+                      </label>
+                      <label className="hazard-field">
+                        <span>Organic Matter (%)</span>
+                        <input type="number" step="any" min={0} max={12} value={soilData.organicMatterPct ?? ""} onChange={(e) => updateSoilField("organicMatterPct", e.target.value)} />
+                      </label>
+                      <label className="hazard-field">
+                        <span>Soil Structure (1-4)</span>
+                        <select value={soilData.soilStructureCode ?? ""} onChange={(e) => updateSoilField("soilStructureCode", e.target.value)}>
+                          <option value="">—</option>
+                          <option value={1}>1 - Very fine granular</option>
+                          <option value={2}>2 - Fine granular</option>
+                          <option value={3}>3 - Coarse granular</option>
+                          <option value={4}>4 - Blocky / platy / massive</option>
+                        </select>
+                      </label>
+                      <label className="hazard-field">
+                        <span>Permeability (1-6)</span>
+                        <select value={soilData.soilPermeabilityCode ?? ""} onChange={(e) => updateSoilField("soilPermeabilityCode", e.target.value)}>
+                          <option value="">—</option>
+                          <option value={1}>1 - Rapid</option>
+                          <option value={2}>2 - Moderate to rapid</option>
+                          <option value={3}>3 - Moderate</option>
+                          <option value={4}>4 - Slow to moderate</option>
+                          <option value={5}>5 - Slow</option>
+                          <option value={6}>6 - Very slow</option>
+                        </select>
+                      </label>
+                    </>
+                  )}
+                  {(analysisMode === "local" || hybridFlags.geotechnical) && (
+                    <>
+                      <label className="hazard-field">
+                        <span>Cohesion (kPa)</span>
+                        <input type="number" step="any" min={0} value={soilData.cohesionKpa ?? ""} onChange={(e) => updateSoilField("cohesionKpa", e.target.value)} />
+                      </label>
+                      <label className="hazard-field">
+                        <span>Friction Angle (°)</span>
+                        <input type="number" step="any" min={0} max={45} value={soilData.frictionAngleDeg ?? ""} onChange={(e) => updateSoilField("frictionAngleDeg", e.target.value)} />
+                      </label>
+                      <label className="hazard-field">
+                        <span>Plasticity Index</span>
+                        <input type="number" step="any" min={0} value={soilData.plasticityIndex ?? ""} onChange={(e) => updateSoilField("plasticityIndex", e.target.value)} />
+                      </label>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {hazardType === "flood" && (analysisMode === "local" || hybridFlags.siteRainfall) && (
+                <div className="hazard-local-data-grid hazard-local-data-grid--flood">
+                  <label className="hazard-field">
+                    <span>Site Type</span>
+                    <select value={siteType} onChange={(e) => setSiteType(e.target.value)}>
+                      {SITE_TYPES.map((s) => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="hazard-field">
+                    <span>Design Rainfall (mm)</span>
+                    <input
+                      type="number"
+                      step="any"
+                      min={0}
+                      placeholder="e.g. 100"
+                      value={designRainfallMm}
+                      onChange={(e) => setDesignRainfallMm(e.target.value)}
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="hazard-actions">
             <button className="btn-primary" onClick={runAnalysis} disabled={loading}>
@@ -512,6 +893,31 @@ export default function HazardAnalysis() {
                   <ComponentBars items={componentItems} />
                 </>
               )}
+              {floodResult.scs_runoff && (
+                <>
+                  <div className="risk-stat-grid">
+                    <div className="risk-stat-card">
+                      <strong>{floodResult.scs_runoff.curve_number}</strong>
+                      <span>Curve Number (HSG {floodResult.scs_runoff.hydrologic_soil_group})</span>
+                    </div>
+                    <div className="risk-stat-card">
+                      <strong>{floodResult.scs_runoff.runoff_mm}</strong>
+                      <span>Runoff (mm)</span>
+                    </div>
+                    <div className="risk-stat-card">
+                      <strong>{Math.round(floodResult.scs_runoff.runoff_coefficient * 100)}%</strong>
+                      <span>Runoff Coefficient</span>
+                    </div>
+                  </div>
+                  <p className="hazard-insight">
+                    A site-specific SCS/NRCS runoff estimate for a {floodResult.scs_runoff.design_rainfall_mm}mm storm on this{" "}
+                    {floodResult.scs_runoff.site_type.replace(/_/g, " ")} site{" "}
+                    {floodResult.flood_data_source === "local_terrain_proxy"
+                      ? "was blended into the risk score above."
+                      : "is shown for reference — the risk score above still reflects the GloFAS river-flood simulation."}
+                  </p>
+                </>
+              )}
               <p className={floodResult.flood_data_source === "local_terrain_proxy" ? "hazard-note hazard-note--proxy" : "hazard-note"}>
                 {floodResult.note}
               </p>
@@ -529,6 +935,7 @@ export default function HazardAnalysis() {
                   {floodResult.relative_elevation_m < -0.3 ? " — low-lying sites are more prone to ponding and slow drainage." : "."}
                 </p>
               )}
+              <ConfidencePanel confidence={floodResult.confidence} dataGaps={floodResult.local_data_gaps} />
               <div className="hazard-method">
                 <h4>How this is computed</h4>
                 <p>{floodResult.method}</p>
@@ -590,6 +997,28 @@ export default function HazardAnalysis() {
                   <ComponentBars items={componentItems} />
                 </>
               )}
+              {erosionResult.local_soil_data_available && (
+                <div className="risk-stat-grid">
+                  {erosionResult.gully_susceptibility_index != null && (
+                    <div className="risk-stat-card">
+                      <strong>{Math.round(erosionResult.gully_susceptibility_index * 100)}%</strong>
+                      <span>Gully Susceptibility</span>
+                    </div>
+                  )}
+                  {erosionResult.k_factor != null && (
+                    <div className="risk-stat-card">
+                      <strong>{erosionResult.k_factor}</strong>
+                      <span>Soil Erodibility (K-factor)</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              {erosionResult.local_soil_data_available && (
+                <p className="hazard-insight">
+                  Your uploaded geotechnical/soil reading was used to refine this score — a Nigeria-calibrated gully-susceptibility
+                  factor {erosionResult.gully_susceptibility_index != null ? "was blended into the risk score above" : "and/or K-factor was computed"}.
+                </p>
+              )}
               <p className="hazard-note">{erosionResult.note}</p>
               {erosionResult.slope_source === "local_survey" && (
                 <p className="hazard-insight">
@@ -606,6 +1035,7 @@ export default function HazardAnalysis() {
                   No elevation data was found for this location.
                 </p>
               )}
+              <ConfidencePanel confidence={erosionResult.confidence} dataGaps={erosionResult.local_data_gaps} />
               <div className="hazard-method">
                 <h4>How this is computed</h4>
                 <p>{erosionResult.method}</p>
