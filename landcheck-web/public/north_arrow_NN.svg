@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="478" viewBox="0 0 72 478">
+  <rect width="72" height="478" fill="#ffffff"/>
+
+  <!-- Arrow: exact proportions from reference -->
+  <polygon points="34,24 8,168 34,168"
+           fill="#ffffff" stroke="#000000" stroke-width="1.2" stroke-linejoin="miter"/>
+  <polygon points="34,24 59,168 34,168"
+           fill="#000000" stroke="#000000" stroke-width="1.2" stroke-linejoin="miter"/>
+
+  <!-- Vertical stem -->
+  <line x1="33.5" y1="168" x2="33.5" y2="405"
+        stroke="#000000" stroke-width="1.2"/>
+
+  <!-- N labels -->
+  <text x="9" y="285"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="20"
+        font-weight="700"
+        fill="#000000">N</text>
+  <text x="42" y="285"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="20"
+        font-weight="700"
+        fill="#000000">N</text>
+
+  <!-- Baseline matching reference -->
+  <line x1="8" y1="285.5" x2="58" y2="285.5"
+        stroke="#000000" stroke-width="1"/>
+</svg>
