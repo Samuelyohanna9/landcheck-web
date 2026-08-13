@@ -38,6 +38,7 @@ type PlotDetail = {
   scale_text: string | null;
   paper_size: string | null;
   coordinate_system: string | null;
+  template_name: string | null;
   geometry: { type: string; coordinates: number[][][] } | null;
   coords: number[][];
   detected_features: {
@@ -45,7 +46,19 @@ type PlotDetail = {
     buffer: Record<string, number>;
   };
   reports_generated: Record<string, boolean>;
+  meta_created_at: string | null;
   meta_updated_at: string | null;
+  export_summary: {
+    total_jobs: number;
+    completed_jobs: number;
+    failed_jobs: number;
+    queued_jobs: number;
+    running_jobs: number;
+    last_export_type?: string | null;
+    last_export_status?: string | null;
+    last_export_at?: string | null;
+    export_types: string[];
+  };
 };
 
 type FeedbackEntry = {
@@ -180,6 +193,167 @@ export default function AdminDashboard() {
     dwg: "DWG/DXF",
     back_computation_pdf: "Back Computation PDF",
   };
+
+  const formatTemplateName = (value?: string | null) => {
+    const normalized = String(value || "").trim().toLowerCase();
+    if (!normalized) return "General";
+    const map: Record<string, string> = {
+      general: "General",
+      adamawa_osg: "Adamawa OSG",
+      akwa_ibom_osg: "Akwa Ibom OSG",
+      rivers_osg: "Rivers OSG",
+      cross_river_osg: "Cross River OSG",
+      fct_abuja_osg: "FCT Abuja OSG",
+    };
+    return map[normalized] || normalized.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  const formatCoordinateSystem = (value?: string | null) => {
+    const normalized = String(value || "").trim();
+    if (!normalized) return "WGS84";
+    const labelMap: Record<string, string> = {
+      wgs84: "WGS84",
+      "WGS84 (Lat/Lon)": "WGS84 (Lat/Lon)",
+      utm_31n: "UTM Zone 31N",
+      utm_32n: "UTM Zone 32N",
+      utm_33n: "UTM Zone 33N",
+      minna_31: "Minna Zone 31",
+      minna_32: "Minna Zone 32",
+      minna_33: "Minna Zone 33",
+    };
+    return labelMap[normalized] || normalized;
+  };
+
+  const formatExportType = (value?: string | null) => {
+    if (!value) return "None";
+    const cleaned = String(value).trim().toLowerCase();
+    const map: Record<string, string> = {
+      "survey-plan.pdf": "Survey Plan PDF",
+      "orthophoto.pdf": "Orthophoto PDF",
+      "topomap.pdf": "Topo Map PDF",
+      "survey-plan.dxf": "DXF Export",
+      "survey-plan.shapefile": "Shapefile Export",
+      "back-computation.pdf": "Back Computation PDF",
+      "technical-report.docx": "Technical Report DOCX",
+      "subdivision-clean-copy.pdf": "Subdivision Clean Copy PDF",
+    };
+    return map[cleaned] || cleaned.replace(/[-.]/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  const formatStatus = (value?: string | null) => {
+    const normalized = String(value || "").trim().toLowerCase();
+    if (!normalized) return "Unknown";
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  };
+
+  const userMonitoring = plotDetails.reduce<
+    Array<{
+      key: string;
+      surveyorName: string;
+      surveyorRank: string;
+      plotsCount: number;
+      templates: string[];
+      paperSizes: string[];
+      coordinateSystems: string[];
+      firstActivity: string | null;
+      lastActivity: string | null;
+      totalExportJobs: number;
+      completedExportJobs: number;
+      failedExportJobs: number;
+      lastExportType: string | null;
+      latestPlotId: number | null;
+    }>
+  >((acc, plot) => {
+    const surveyorName = String(plot.surveyor_name || "").trim() || "Unknown surveyor";
+    const surveyorRank = String(plot.surveyor_rank || "").trim() || "Unspecified";
+    const key = `${surveyorName}::${surveyorRank}`;
+    let item = acc.find((entry) => entry.key === key);
+    if (!item) {
+      item = {
+        key,
+        surveyorName,
+        surveyorRank,
+        plotsCount: 0,
+        templates: [],
+        paperSizes: [],
+        coordinateSystems: [],
+        firstActivity: null,
+        lastActivity: null,
+        totalExportJobs: 0,
+        completedExportJobs: 0,
+        failedExportJobs: 0,
+        lastExportType: null,
+        latestPlotId: null,
+      };
+      acc.push(item);
+    }
+
+    item.plotsCount += 1;
+    const templateLabel = formatTemplateName(plot.template_name);
+    if (templateLabel && !item.templates.includes(templateLabel)) item.templates.push(templateLabel);
+    const paperLabel = String(plot.paper_size || "").trim() || "A4";
+    if (!item.paperSizes.includes(paperLabel)) item.paperSizes.push(paperLabel);
+    const coordLabel = formatCoordinateSystem(plot.coordinate_system);
+    if (coordLabel && !item.coordinateSystems.includes(coordLabel)) item.coordinateSystems.push(coordLabel);
+
+    const activityCandidates = [
+      plot.created_at,
+      plot.meta_created_at,
+      plot.meta_updated_at,
+      plot.export_summary?.last_export_at || null,
+    ].filter(Boolean) as string[];
+
+    const firstActivity = activityCandidates.length > 0
+      ? activityCandidates.reduce((lowest, current) =>
+          new Date(current).getTime() < new Date(lowest).getTime() ? current : lowest
+        )
+      : null;
+    const lastActivity = activityCandidates.length > 0
+      ? activityCandidates.reduce((highest, current) =>
+          new Date(current).getTime() > new Date(highest).getTime() ? current : highest
+        )
+      : null;
+
+    if (firstActivity && (!item.firstActivity || new Date(firstActivity).getTime() < new Date(item.firstActivity).getTime())) {
+      item.firstActivity = firstActivity;
+    }
+    if (lastActivity && (!item.lastActivity || new Date(lastActivity).getTime() > new Date(item.lastActivity).getTime())) {
+      item.lastActivity = lastActivity;
+      item.latestPlotId = plot.plot_id;
+      item.lastExportType = plot.export_summary?.last_export_type || item.lastExportType;
+    }
+
+    item.totalExportJobs += Number(plot.export_summary?.total_jobs || 0);
+    item.completedExportJobs += Number(plot.export_summary?.completed_jobs || 0);
+    item.failedExportJobs += Number(plot.export_summary?.failed_jobs || 0);
+    return acc;
+  }, []).sort((a, b) => {
+    const aTime = a.lastActivity ? new Date(a.lastActivity).getTime() : 0;
+    const bTime = b.lastActivity ? new Date(b.lastActivity).getTime() : 0;
+    return bTime - aTime;
+  });
+
+  const templateUsage = plotDetails.reduce<Record<string, number>>((acc, plot) => {
+    const key = formatTemplateName(plot.template_name);
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  const templateUsageRows = Object.entries(templateUsage)
+    .sort((a, b) => b[1] - a[1])
+    .map(([template, count]) => ({ template, count }));
+
+  const exportTotals = plotDetails.reduce(
+    (acc, plot) => {
+      acc.total += Number(plot.export_summary?.total_jobs || 0);
+      acc.completed += Number(plot.export_summary?.completed_jobs || 0);
+      acc.failed += Number(plot.export_summary?.failed_jobs || 0);
+      acc.running += Number(plot.export_summary?.running_jobs || 0);
+      acc.queued += Number(plot.export_summary?.queued_jobs || 0);
+      return acc;
+    },
+    { total: 0, completed: 0, failed: 0, running: 0, queued: 0 }
+  );
 
   const reportLinks = (plotId: number) => ({
     survey_plan_pdf: `${BACKEND_URL}/plots/${plotId}/reports/survey-plan?refresh=1`,
@@ -388,6 +562,141 @@ export default function AdminDashboard() {
           </section>
 
           {/* Plot Details */}
+          <section className="usage-monitor-section">
+            <div className="section-head">
+              <div>
+                <h2>Survey Usage Monitoring</h2>
+                <p>Track who is creating plans, which templates they use, and how export activity is moving.</p>
+              </div>
+            </div>
+
+            <div className="usage-summary-grid">
+              <div className="usage-stat-card">
+                <span className="usage-stat-label">Surveyors observed</span>
+                <span className="usage-stat-value">{userMonitoring.length}</span>
+              </div>
+              <div className="usage-stat-card">
+                <span className="usage-stat-label">Templates in use</span>
+                <span className="usage-stat-value">{templateUsageRows.length}</span>
+              </div>
+              <div className="usage-stat-card">
+                <span className="usage-stat-label">Export jobs</span>
+                <span className="usage-stat-value">{exportTotals.total}</span>
+              </div>
+              <div className="usage-stat-card">
+                <span className="usage-stat-label">Completed exports</span>
+                <span className="usage-stat-value">{exportTotals.completed}</span>
+              </div>
+            </div>
+
+            <div className="usage-monitor-grid">
+              <div className="usage-panel">
+                <div className="usage-panel-head">
+                  <h3>Surveyor activity</h3>
+                  <span>{userMonitoring.length} active profile(s)</span>
+                </div>
+                {userMonitoring.length === 0 ? (
+                  <div className="usage-empty">No survey activity has been captured yet.</div>
+                ) : (
+                  <div className="usage-user-list">
+                    {userMonitoring.map((entry) => (
+                      <article key={entry.key} className="usage-user-card">
+                        <div className="usage-user-top">
+                          <div>
+                            <h4>{entry.surveyorName}</h4>
+                            <p>{entry.surveyorRank}</p>
+                          </div>
+                          <div className="usage-user-metric">
+                            <strong>{entry.plotsCount}</strong>
+                            <span>plots</span>
+                          </div>
+                        </div>
+                        <div className="usage-user-grid">
+                          <div className="usage-user-kv">
+                            <span>Templates</span>
+                            <strong>{entry.templates.join(", ") || "General"}</strong>
+                          </div>
+                          <div className="usage-user-kv">
+                            <span>Paper sizes</span>
+                            <strong>{entry.paperSizes.join(", ") || "A4"}</strong>
+                          </div>
+                          <div className="usage-user-kv">
+                            <span>Coordinate systems</span>
+                            <strong>{entry.coordinateSystems.join(", ") || "WGS84"}</strong>
+                          </div>
+                          <div className="usage-user-kv">
+                            <span>Last activity</span>
+                            <strong>{formatDateTime(entry.lastActivity)}</strong>
+                          </div>
+                          <div className="usage-user-kv">
+                            <span>Export jobs</span>
+                            <strong>
+                              {entry.completedExportJobs}/{entry.totalExportJobs} completed
+                            </strong>
+                          </div>
+                          <div className="usage-user-kv">
+                            <span>Last export</span>
+                            <strong>{formatExportType(entry.lastExportType)}</strong>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="usage-side-stack">
+                <div className="usage-panel compact">
+                  <div className="usage-panel-head">
+                    <h3>Template choice</h3>
+                    <span>Real selections</span>
+                  </div>
+                  {templateUsageRows.length === 0 ? (
+                    <div className="usage-empty">No saved templates yet.</div>
+                  ) : (
+                    <div className="template-usage-list">
+                      {templateUsageRows.map((row) => (
+                        <div key={row.template} className="template-usage-row">
+                          <span>{row.template}</span>
+                          <strong>{row.count}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="usage-panel compact">
+                  <div className="usage-panel-head">
+                    <h3>Export queue health</h3>
+                    <span>Across all plots</span>
+                  </div>
+                  <div className="export-health-grid">
+                    <div className="export-health-item">
+                      <span>Total</span>
+                      <strong>{exportTotals.total}</strong>
+                    </div>
+                    <div className="export-health-item good">
+                      <span>Completed</span>
+                      <strong>{exportTotals.completed}</strong>
+                    </div>
+                    <div className="export-health-item muted">
+                      <span>Queued</span>
+                      <strong>{exportTotals.queued}</strong>
+                    </div>
+                    <div className="export-health-item accent">
+                      <span>Running</span>
+                      <strong>{exportTotals.running}</strong>
+                    </div>
+                    <div className="export-health-item bad">
+                      <span>Failed</span>
+                      <strong>{exportTotals.failed}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section className="plots-detail-section">
             <h2>Plot Details</h2>
             {plotDetails.length === 0 ? (
@@ -404,9 +713,10 @@ export default function AdminDashboard() {
                         <span className="plot-detail-date">{formatDateTime(plot.created_at)}</span>
                       </div>
                       <div className="plot-detail-badges">
+                        <span className="plot-badge template">{formatTemplateName(plot.template_name)}</span>
                         <span className="plot-badge">{plot.scale_text || "Scale N/A"}</span>
                         <span className="plot-badge">{plot.paper_size || "A4"}</span>
-                        <span className="plot-badge">{plot.coordinate_system || "WGS84"}</span>
+                        <span className="plot-badge">{formatCoordinateSystem(plot.coordinate_system)}</span>
                       </div>
                     </div>
 
@@ -445,11 +755,43 @@ export default function AdminDashboard() {
                           <span>Last Updated</span>
                           <span>{formatDateTime(plot.meta_updated_at)}</span>
                         </div>
+                        <div className="plot-kv">
+                          <span>Template</span>
+                          <span>{formatTemplateName(plot.template_name)}</span>
+                        </div>
                       </div>
 
                       <div className="plot-detail-block">
                         <h4>Detected Features</h4>
                         {renderFeatureSummary(plot)}
+                      </div>
+
+                      <div className="plot-detail-block">
+                        <h4>Usage Monitoring</h4>
+                        <div className="plot-kv">
+                          <span>Exports</span>
+                          <span>{plot.export_summary?.total_jobs || 0}</span>
+                        </div>
+                        <div className="plot-kv">
+                          <span>Completed</span>
+                          <span>{plot.export_summary?.completed_jobs || 0}</span>
+                        </div>
+                        <div className="plot-kv">
+                          <span>Failed</span>
+                          <span>{plot.export_summary?.failed_jobs || 0}</span>
+                        </div>
+                        <div className="plot-kv">
+                          <span>Latest Export</span>
+                          <span>{formatExportType(plot.export_summary?.last_export_type)}</span>
+                        </div>
+                        <div className="plot-kv">
+                          <span>Latest Status</span>
+                          <span>{formatStatus(plot.export_summary?.last_export_status)}</span>
+                        </div>
+                        <div className="plot-kv">
+                          <span>Last Export At</span>
+                          <span>{formatDateTime(plot.export_summary?.last_export_at)}</span>
+                        </div>
                       </div>
 
                       <div className="plot-detail-block">
