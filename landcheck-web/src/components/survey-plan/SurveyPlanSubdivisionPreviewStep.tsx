@@ -11,7 +11,12 @@ type PlotMeta = {
   certification_statement: string;
   scale_text: string;
   paper_size: string;
-  template_name: "general" | "adamawa_osg" | "akwa_ibom_osg" | "rivers_osg" | "cross_river_osg";
+  template_name: "general" | "adamawa_osg" | "akwa_ibom_osg" | "rivers_osg" | "cross_river_osg" | "fct_abuja_osg";
+  fct_file_no: string;
+  fct_district: string;
+  fct_cadastral_zone: string;
+  fct_origin_beacon_text: string;
+  fct_cadastral_map_ref: string;
   adamawa_rof_no: string;
   adamawa_owner_name: string;
   adamawa_authority_title: string;
@@ -63,6 +68,7 @@ const CADASTRAL_STATE_LABELS: Record<string, string> = {
   rivers_osg: "RIVERS STATE",
   cross_river_osg: "CROSS RIVER STATE",
 };
+const FCT_TEMPLATES: PlotMeta["template_name"][] = ["fct_abuja_osg"];
 
 type SubdivisionPreviewPlot = {
   index: number;
@@ -263,10 +269,15 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                   const nextTemplate = e.target.value as PlotMeta["template_name"];
                   const wasCadastral = CADASTRAL_STATE_TEMPLATES.includes(props.meta.template_name);
                   const nowCadastral = CADASTRAL_STATE_TEMPLATES.includes(nextTemplate);
+                  const wasFct = FCT_TEMPLATES.includes(props.meta.template_name);
+                  const nowFct = FCT_TEMPLATES.includes(nextTemplate);
                   props.setMeta((m) => ({ ...m, template_name: nextTemplate }));
                   if (nowCadastral && !wasCadastral) {
                     props.onNorthArrowStyleChange("un_marker");
                     props.onNorthArrowColorChange("blue");
+                  } else if (nowFct && !wasFct) {
+                    props.onNorthArrowStyleChange("triangle");
+                    props.onNorthArrowColorChange("black");
                   }
                 }}
               >
@@ -275,11 +286,13 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                 <option value="akwa_ibom_osg">Akwa Ibom State (Cadastral)</option>
                 <option value="rivers_osg">Rivers State (Cadastral)</option>
                 <option value="cross_river_osg">Cross River State (Cadastral)</option>
+                <option value="fct_abuja_osg">FCT Abuja (Cadastral)</option>
               </select>
               {props.meta.template_name === "adamawa_osg" && <span className="template-hint">Adamawa OSG template</span>}
               {CADASTRAL_STATE_TEMPLATES.includes(props.meta.template_name) && (
                 <span className="template-hint">{CADASTRAL_STATE_HINTS[props.meta.template_name]}</span>
               )}
+              {props.meta.template_name === "fct_abuja_osg" && <span className="template-hint">FCT Abuja cadastral template</span>}
             </div>
             {props.meta.template_name === "general" ? (
               <>
@@ -371,6 +384,58 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                 <div className="form-group full-width">
                   <span className="template-hint">
                     Enter each beacon's reference number (e.g. SC/AK/L 72723) into the lot's "Station" field for each coordinate point.
+                  </span>
+                </div>
+              </>
+            ) : props.meta.template_name === "fct_abuja_osg" ? (
+              <>
+                <div className="form-group">
+                  <label>Applicant Name</label>
+                  <input value={props.meta.title_text} onChange={(e) => props.setMeta((m) => ({ ...m, title_text: e.target.value }))} placeholder="NUHU LABBO ALIYU" />
+                </div>
+                <div className="form-group">
+                  <label>File No</label>
+                  <input value={props.meta.fct_file_no} onChange={(e) => props.setMeta((m) => ({ ...m, fct_file_no: e.target.value }))} placeholder="NG 10222" />
+                </div>
+                <div className="form-group">
+                  <label>District</label>
+                  <input value={props.meta.fct_district} onChange={(e) => props.setMeta((m) => ({ ...m, fct_district: e.target.value }))} placeholder="WUSE II" />
+                </div>
+                <div className="form-group">
+                  <label>Cadastral Zone</label>
+                  <input value={props.meta.fct_cadastral_zone} onChange={(e) => props.setMeta((m) => ({ ...m, fct_cadastral_zone: e.target.value }))} placeholder="A07" />
+                </div>
+                <div className="form-group">
+                  <label>Plot No</label>
+                  <input value={props.meta.cadastral_plan_no} onChange={(e) => props.setMeta((m) => ({ ...m, cadastral_plan_no: e.target.value }))} placeholder="976" />
+                </div>
+                <div className="form-group">
+                  <label>Surveyor Name</label>
+                  <input value={props.meta.surveyor_name} onChange={(e) => props.setMeta((m) => ({ ...m, surveyor_name: e.target.value }))} placeholder="Geodata Ltd." />
+                </div>
+                <div className="form-group">
+                  <label>Surveyor Credential</label>
+                  <input value={props.meta.surveyor_rank} onChange={(e) => props.setMeta((m) => ({ ...m, surveyor_rank: e.target.value }))} placeholder="Registered Surveyors" />
+                </div>
+                <div className="form-group full-width">
+                  <label>Reference Beacon (Full Beacon Number)</label>
+                  <input
+                    value={props.meta.fct_origin_beacon_text}
+                    onChange={(e) => props.setMeta((m) => ({ ...m, fct_origin_beacon_text: e.target.value }))}
+                    placeholder="FCT A07 PB 2706"
+                  />
+                </div>
+                <div className="form-group full-width">
+                  <label>Cadastral Map Reference</label>
+                  <input
+                    value={props.meta.fct_cadastral_map_ref}
+                    onChange={(e) => props.setMeta((m) => ({ ...m, fct_cadastral_map_ref: e.target.value }))}
+                    placeholder="330/1002/SE2"
+                  />
+                </div>
+                <div className="form-group full-width">
+                  <span className="template-hint">
+                    Enter each beacon's number (e.g. PB 2854) into the lot's "Station" field for each coordinate point.
                   </span>
                 </div>
               </>
