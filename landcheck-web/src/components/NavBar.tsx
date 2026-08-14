@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { prefetchSurveyPlanPreviewStep, prefetchSurveyPlanRoute } from "../utils/surveyPlanPrefetch";
 import { isSurveyAuthed } from "../auth/surveyAuth";
 import "../styles/navbar.css";
+
+const SignupGateModal = lazy(() => import("./SignupGateModal"));
 
 const NAV_ITEMS = [
   { label: "LandCheck Green", route: "/green-partners" },
@@ -40,7 +42,11 @@ export default function NavBar({
 }: NavBarProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [signInOpen, setSignInOpen] = useState(false);
   const showDashboardLink = isSurveyAuthed();
+  // Only surfaced on Survey-related pages - Survey has its own separate account system from
+  // Green/Work, so a "Sign in" link here would be out of place on the Green/Flood nav bars.
+  const showSignInLink = !showDashboardLink && ctaRoute === "/survey-plan";
 
   const warmSurveyPlanEntry = () => {
     void prefetchSurveyPlanRoute();
@@ -104,6 +110,11 @@ export default function NavBar({
               onClick={() => navigate("/dashboard")}
             >
               My Dashboard
+            </button>
+          )}
+          {showSignInLink && (
+            <button type="button" onClick={() => setSignInOpen(true)}>
+              Sign in
             </button>
           )}
           {ctaLabel && ctaRoute && (
@@ -173,6 +184,19 @@ export default function NavBar({
             </button>
           )}
 
+          {showSignInLink && (
+            <button
+              type="button"
+              className="lc-mobile-item"
+              onClick={() => {
+                setOpen(false);
+                setSignInOpen(true);
+              }}
+            >
+              Sign in
+            </button>
+          )}
+
           {ctaLabel && ctaRoute && (
             <button
               type="button"
@@ -186,6 +210,12 @@ export default function NavBar({
           )}
         </nav>
       </div>
+
+      {signInOpen && (
+        <Suspense fallback={null}>
+          <SignupGateModal isOpen={signInOpen} onClose={() => setSignInOpen(false)} />
+        </Suspense>
+      )}
     </>
   );
 }
