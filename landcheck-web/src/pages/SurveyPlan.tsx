@@ -200,6 +200,7 @@ type SurveyPlanDraftState = {
   areaFont: string;
   areaSize: string;
   meta: PlotMeta;
+  hasManualScaleOverride: boolean;
   subdivisionMethod: SubdivisionMethod;
   subdivisionCountDraft: string;
   subdivisionTargetAreaDraft: string;
@@ -759,22 +760,25 @@ export default function SurveyPlan() {
 
   // Survey metadata
   const [meta, setMeta] = useState<PlotMeta>(buildDefaultPlotMeta);
+  const [hasManualScaleOverride, setHasManualScaleOverride] = useState(false);
 
   useEffect(() => {
-    if (isAutoScaleText(meta.scale_text)) {
+    if (!hasManualScaleOverride || isAutoScaleText(meta.scale_text)) {
       setScaleDraft("");
       return;
     }
     setScaleDraft(String(parseScaleDenominator(meta.scale_text)));
-  }, [meta.scale_text]);
+  }, [hasManualScaleOverride, meta.scale_text]);
 
   const commitScaleDraft = useCallback(() => {
     if (!String(scaleDraft || "").trim()) {
+      setHasManualScaleOverride(false);
       setMeta((m) => ({ ...m, scale_text: "auto" }));
       return;
     }
     const parsed = parseScaleDenominator(scaleDraft);
     setScaleDraft(String(parsed));
+    setHasManualScaleOverride(true);
     setMeta((m) => ({ ...m, scale_text: `1 : ${parsed}` }));
   }, [scaleDraft]);
 
@@ -916,6 +920,7 @@ export default function SurveyPlan() {
         if (saved.areaFont) setAreaFont(saved.areaFont);
         if (saved.areaSize) setAreaSize(saved.areaSize);
         if (saved.meta) setMeta({ ...buildDefaultPlotMeta(), ...saved.meta });
+        setHasManualScaleOverride(Boolean(saved.hasManualScaleOverride));
         if (saved.subdivisionMethod) setSubdivisionMethod(saved.subdivisionMethod);
         if (typeof saved.subdivisionCountDraft === "string") setSubdivisionCountDraft(saved.subdivisionCountDraft);
         if (typeof saved.subdivisionTargetAreaDraft === "string") setSubdivisionTargetAreaDraft(saved.subdivisionTargetAreaDraft);
@@ -1131,13 +1136,18 @@ export default function SurveyPlan() {
     });
   }, [manualPoints, coordinateSystem]);
 
+  const effectiveRenderScaleText = useMemo(
+    () => (hasManualScaleOverride ? meta.scale_text : "auto"),
+    [hasManualScaleOverride, meta.scale_text]
+  );
+
   const plotMetaPayload = useMemo(
     () => ({
       title_text: meta.title_text,
       location_text: meta.location_text,
       lga_text: meta.lga_text,
       state_text: meta.state_text,
-      scale_text: meta.scale_text,
+      scale_text: effectiveRenderScaleText,
       surveyor_name: meta.surveyor_name,
       surveyor_rank: meta.surveyor_rank,
       certification_statement: meta.certification_statement,
@@ -1170,7 +1180,7 @@ export default function SurveyPlan() {
       fct_cadastral_map_ref: meta.fct_cadastral_map_ref,
       fct_title_prefix: meta.fct_title_prefix,
     }),
-    [coordinateSystem, meta]
+    [coordinateSystem, effectiveRenderScaleText, meta]
   );
 
   const serverSyncSignature = useMemo(
@@ -1270,6 +1280,7 @@ export default function SurveyPlan() {
       areaFont,
       areaSize,
       meta,
+      hasManualScaleOverride,
       subdivisionMethod,
       subdivisionCountDraft,
       subdivisionTargetAreaDraft,
@@ -1336,6 +1347,7 @@ export default function SurveyPlan() {
     areaFont,
     areaSize,
     meta,
+    hasManualScaleOverride,
     subdivisionMethod,
     subdivisionCountDraft,
     subdivisionTargetAreaDraft,
@@ -2052,7 +2064,7 @@ export default function SurveyPlan() {
       const activePlotId = await ensureServerPlot("Syncing draft for official orthophoto preview...");
       const res = await withRetry(() =>
         api.post(`/plots/${activePlotId}/orthophoto/preview`, {
-          scale_text: meta.scale_text,
+          scale_text: effectiveRenderScaleText,
           station_names: stationNames,
           coordinate_system: coordinateSystem,
           paper_size: meta.paper_size,
@@ -2084,7 +2096,7 @@ export default function SurveyPlan() {
       }
     }
   }, [
-    meta.scale_text,
+    effectiveRenderScaleText,
     stationNames,
     coordinateSystem,
     meta.paper_size,
@@ -2103,7 +2115,7 @@ export default function SurveyPlan() {
       const activePlotId = await ensureServerPlot("Syncing draft for official topo map preview...");
       const res = await withRetry(() =>
         api.post(`/plots/${activePlotId}/orthophoto/preview`, {
-          scale_text: meta.scale_text,
+          scale_text: effectiveRenderScaleText,
           station_names: stationNames,
           coordinate_system: coordinateSystem,
           paper_size: meta.paper_size,
@@ -2137,7 +2149,7 @@ export default function SurveyPlan() {
       }
     }
   }, [
-    meta.scale_text,
+    effectiveRenderScaleText,
     stationNames,
     coordinateSystem,
     meta.paper_size,
@@ -2670,6 +2682,7 @@ export default function SurveyPlan() {
     setSubdivisionCleanCopyLoadingBatchId(null);
     setSubdivisionCleanCopyDownloadBatchId(null);
     setMeta(buildDefaultPlotMeta());
+    setHasManualScaleOverride(false);
     setLastServerSyncAt(null);
     setLastServerSyncSignature(null);
     setHasUnsyncedServerChanges(false);
@@ -2808,7 +2821,7 @@ export default function SurveyPlan() {
         location_text: meta.location_text,
         lga_text: meta.lga_text,
         state_text: meta.state_text,
-        scale_text: meta.scale_text,
+        scale_text: effectiveRenderScaleText,
         surveyor_name: meta.surveyor_name,
         surveyor_rank: meta.surveyor_rank,
         certification_statement: meta.certification_statement,
@@ -3472,7 +3485,7 @@ export default function SurveyPlan() {
       const payload = {
         title_text: String(subdivisionCleanCopyTitle || "").trim(),
         paper_size: meta.paper_size,
-        scale_text: meta.scale_text,
+        scale_text: effectiveRenderScaleText,
         coordinate_system: coordinateSystem,
         station_names: stationNames,
         north_arrow_style: northArrowStyle,
