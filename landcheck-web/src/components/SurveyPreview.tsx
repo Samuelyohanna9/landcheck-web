@@ -314,7 +314,7 @@ function SurveyPreview({
           <svg viewBox="0 0 20 20" fill="currentColor" style={{ width: 13, height: 13 }}>
             <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h8a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
           </svg>
-          Road Names &amp; Style
+          Road &amp; River Names &amp; Style
         </button>
         <button type="button" className="ribbon-appearance-btn" onClick={() => setAppearanceOpen(true)}>
           <svg viewBox="0 0 20 20" fill="currentColor" style={{ width: 13, height: 13 }}>

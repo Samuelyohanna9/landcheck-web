@@ -1,5 +1,6 @@
 import { memo, type ReactNode } from "react";
 import type { GeoreferenceFeature, GeoreferenceSession } from "../../types/surveyGeoreference";
+import { getCoordinateSystemLabel } from "../../utils/coordinateConverter";
 
 type StakingPreviewRow = {
   station: string;
@@ -52,7 +53,12 @@ function SurveyPlanGeoreferenceExportStep({
   const pointCount = features.filter((feature) => feature.feature_type === "point").length;
   const lineCount = features.filter((feature) => feature.feature_type === "line").length;
   const primaryPolygon = features.find((feature) => feature.feature_type === "polygon" && feature.is_primary) || features.find((feature) => feature.feature_type === "polygon") || null;
-  const readyCoordinateSystem = session.transform?.target_coordinate_system?.toUpperCase() || session.target_coordinate_system?.toUpperCase() || "WGS84";
+  const readyCoordinateSystemKey =
+    session.transform?.resolved_coordinate_system ||
+    session.transform?.target_coordinate_system ||
+    session.target_coordinate_system ||
+    "wgs84";
+  const readyCoordinateSystem = getCoordinateSystemLabel(readyCoordinateSystemKey);
   const stakingPreviewRows: StakingPreviewRow[] = (() => {
     if (primaryPolygon) {
       return primaryPolygon.target_coordinates

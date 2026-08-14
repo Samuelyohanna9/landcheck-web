@@ -3,10 +3,12 @@ import { api } from "../../api/client";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
 import type { GeoreferenceSession, GeoreferenceTransform } from "../../types/surveyGeoreference";
 import {
+  getCoordinateSystemLabel,
   isProjectedCoordinateSystem,
   looksLikeProjected,
   mercatorToWGS84,
   toWGS84,
+  WGS84_NIGERIA_METERS,
 } from "../../utils/coordinateConverter";
 import {
   getRasterPixelFromStageClick,
@@ -42,6 +44,7 @@ type Props = {
 
 const COORDINATE_OPTIONS = [
   { value: "wgs84", label: "WGS84 (Lat / Lon)" },
+  { value: WGS84_NIGERIA_METERS, label: "WGS84 Nigeria Metres (Auto UTM)" },
   { value: "utm_31n", label: "UTM Zone 31N" },
   { value: "utm_32n", label: "UTM Zone 32N" },
   { value: "utm_33n", label: "UTM Zone 33N" },
@@ -125,11 +128,15 @@ function SurveyPlanGeoreferenceSetupStep({
     ? (/^https?:\/\//i.test(session.overlay.raster_url) ? session.overlay.raster_url : `${api.defaults.baseURL || ""}${session.overlay.raster_url}`)
     : rasterObjectUrl;
   const projectedGroundSystem = isProjectedCoordinateSystem(effectiveTransformSystem);
+  const effectiveCoordinateLabel = getCoordinateSystemLabel(effectiveTransformSystem || targetCoordinateSystem || "wgs84");
   const coordinateXLabel = projectedGroundSystem ? "Easting (m)" : "Longitude";
   const coordinateYLabel = projectedGroundSystem ? "Northing (m)" : "Latitude";
-  const coordinateHint = projectedGroundSystem
-    ? "Ground control coordinates are stored in meters for the selected projected grid."
-    : "Ground control coordinates are stored as WGS84 ground longitude and latitude.";
+  const coordinateHint =
+    String(targetCoordinateSystem || "").trim().toLowerCase() === WGS84_NIGERIA_METERS
+      ? "Nigeria metres auto-resolves the correct WGS84 / UTM zone from your control locations while keeping values in metres."
+      : projectedGroundSystem
+        ? `Ground control coordinates are stored in meters for ${effectiveCoordinateLabel}.`
+        : "Ground control coordinates are stored as WGS84 ground longitude and latitude.";
 
   const clampStagePan = (pan: { x: number; y: number }, zoom = imageZoom) => {
     if (!stageMetrics || zoom <= MIN_STAGE_ZOOM) return { x: 0, y: 0 };
