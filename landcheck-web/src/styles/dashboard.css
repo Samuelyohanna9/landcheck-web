@@ -110,13 +110,23 @@
 }
 
 /* Quick tools */
+.workspace-quick-tools-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem 2rem;
+}
+
+.workspace-quick-tools-section h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 1.25rem;
+  color: #f1f5f9;
+}
+
 .workspace-quick-tools {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1.5rem 2rem 0;
 }
 
 .workspace-quick-tool {
@@ -299,8 +309,8 @@
     justify-content: center;
   }
 
-  .workspace-quick-tools {
-    padding: 1rem 1rem 0;
+  .workspace-quick-tools-section {
+    padding: 0 1rem 1.5rem;
   }
 
   .plots-section {

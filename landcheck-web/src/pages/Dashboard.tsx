@@ -16,7 +16,7 @@ type MyPlot = {
 
 const QUICK_TOOLS: { mode: "survey" | "subdivision" | "georeference"; label: string }[] = [
   { mode: "survey", label: "Survey Plan" },
-  { mode: "subdivision", label: "Land Subdivision" },
+  { mode: "subdivision", label: "Subdivision" },
   { mode: "georeference", label: "Georeference Plan" },
 ];
 
@@ -94,20 +94,6 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="workspace-quick-tools">
-        {QUICK_TOOLS.map((tool) => (
-          <button
-            key={tool.mode}
-            className="workspace-quick-tool"
-            onMouseEnter={warmSurveyPlanEntry}
-            onFocus={warmSurveyPlanEntry}
-            onClick={() => navigate(`/survey-plan?mode=${tool.mode}`)}
-          >
-            {tool.label}
-          </button>
-        ))}
-      </div>
-
       <div className="plots-section">
         <h2>Recent Projects</h2>
 
@@ -160,6 +146,23 @@ export default function Dashboard() {
             ))}
           </div>
         )}
+      </div>
+
+      <div className="workspace-quick-tools-section">
+        <h2>Quick Tools</h2>
+        <div className="workspace-quick-tools">
+          {QUICK_TOOLS.map((tool) => (
+            <button
+              key={tool.mode}
+              className="workspace-quick-tool"
+              onMouseEnter={warmSurveyPlanEntry}
+              onFocus={warmSurveyPlanEntry}
+              onClick={() => navigate(`/survey-plan?mode=${tool.mode}`)}
+            >
+              {tool.label}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
