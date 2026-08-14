@@ -3782,12 +3782,22 @@ export default function SurveyPlan() {
           </svg>
           Back
         </button>
-        {isSurveyAuthed() && (
+        {isSurveyAuthed() ? (
           <button className="dashboard-link-btn" onClick={() => navigate("/dashboard")}>
             <svg viewBox="0 0 20 20" fill="currentColor">
               <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
             </svg>
             My Dashboard
+          </button>
+        ) : (
+          <button
+            className="dashboard-link-btn"
+            onClick={() => {
+              setPendingGateDownload(null);
+              setSignupGateOpen(true);
+            }}
+          >
+            Sign in
           </button>
         )}
         <div className="survey-header-copy">
@@ -4017,12 +4027,12 @@ export default function SurveyPlan() {
             />
           </Suspense>
         )}
-        {signupGateOpen && pendingGateDownload && (
+        {signupGateOpen && (
           <Suspense fallback={null}>
             <SignupGateModal
               isOpen={signupGateOpen}
               onClose={() => setSignupGateOpen(false)}
-              pendingDownload={pendingGateDownload}
+              pendingDownload={pendingGateDownload ?? undefined}
             />
           </Suspense>
         )}
