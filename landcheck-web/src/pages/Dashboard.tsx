@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { clearSurveyAuthSession, getSurveyAuthSession } from "../auth/surveyAuth";
+import ProfileAvatarMenu from "../components/ProfileAvatarMenu";
 import "../styles/dashboard.css";
 import { prefetchSurveyPlanPreviewStep, prefetchSurveyPlanRoute } from "../utils/surveyPlanPrefetch";
 
@@ -88,9 +89,13 @@ export default function Dashboard() {
             </svg>
             New Survey Plan
           </button>
-          <button className="workspace-signout-btn" onClick={handleSignOut}>
-            Sign out
-          </button>
+          {session?.user && (
+            <ProfileAvatarMenu
+              email={session.user.email}
+              fullName={session.user.full_name}
+              onSignOut={handleSignOut}
+            />
+          )}
         </div>
       </header>
 

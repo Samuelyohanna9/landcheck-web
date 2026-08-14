@@ -92,23 +92,6 @@
   height: 18px;
 }
 
-.workspace-signout-btn {
-  padding: 0.625rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: #94a3b8;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.workspace-signout-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #e2e8f0;
-}
-
 /* Quick tools */
 .workspace-quick-tools-section {
   max-width: 1200px;
