@@ -1,10 +1,15 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../styles/csv-preview-modal.css";
 import "../styles/signup-gate-modal.css";
+import OtpBoxInput from "./OtpBoxInput";
 import {
+  claimDraftSurveyPlots,
+  hasPendingSurveyDownload,
   requestSurveyMagicLink,
   setPendingSurveyDownload,
   startSurveyGoogleSignIn,
+  verifySurveyOtp,
   type PendingSurveyDownload,
 } from "../auth/surveyAuth";
 
@@ -19,10 +24,14 @@ type Props = {
 };
 
 export default function SignupGateModal({ isOpen, onClose, pendingDownload }: Props) {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [otp, setOtp] = useState("");
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -51,6 +60,31 @@ export default function SignupGateModal({ isOpen, onClose, pendingDownload }: Pr
     }
   };
 
+  const finishSignIn = async () => {
+    await claimDraftSurveyPlots();
+    onClose();
+    navigate(hasPendingSurveyDownload() ? "/survey-plan?resume=1" : "/dashboard");
+  };
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otp.length !== 6) {
+      setOtpError("Enter the 6-digit code.");
+      return;
+    }
+    setOtpError(null);
+    setVerifyingOtp(true);
+    try {
+      await verifySurveyOtp(email, otp);
+      await finishSignIn();
+    } catch {
+      setOtpError("That code is invalid or has expired.");
+      setOtp("");
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
   return (
     <div className="csv-modal-overlay" onClick={onClose}>
       <div className="csv-modal signup-gate-modal" onClick={(e) => e.stopPropagation()}>
@@ -65,9 +99,18 @@ export default function SignupGateModal({ isOpen, onClose, pendingDownload }: Pr
           {sent ? (
             <div className="signup-gate-sent">
               <p>
-                We sent a sign-in link to <strong>{email.trim()}</strong>. Open it to continue
-                {pendingDownload ? " — your download will pick up right where you left off." : "."}
+                We sent a link and a 6-digit code to <strong>{email.trim()}</strong>. Click the link, or enter the
+                code below
+                {pendingDownload ? " — either one picks up right where you left off." : "."}
               </p>
+
+              <form className="otp-form" onSubmit={handleOtpSubmit}>
+                <OtpBoxInput value={otp} onChange={setOtp} disabled={verifyingOtp} autoFocus />
+                {otpError && <div className="csv-error">{otpError}</div>}
+                <button type="submit" className="signup-gate-email-btn" disabled={verifyingOtp || otp.length !== 6}>
+                  {verifyingOtp ? "Verifying..." : "Verify code"}
+                </button>
+              </form>
             </div>
           ) : (
             <>
