@@ -278,7 +278,7 @@ function RoadNamesPanel({
       />
       <aside className={`appearance-panel road-names-panel${open ? " open" : ""}`} aria-hidden={!open}>
         <div className="appearance-panel-header">
-          <span>Road Names &amp; Style</span>
+          <span>Road &amp; River Names &amp; Style</span>
           <button type="button" className="appearance-panel-close" onClick={onClose} aria-label="Close">
             &times;
           </button>
@@ -303,7 +303,10 @@ function RoadNamesPanel({
           {!plotId ? (
             <p className="road-names-empty">Sync this draft to the server first to name its roads/rivers.</p>
           ) : loading ? (
-            <p className="road-names-empty">Loading detected roads and rivers...</p>
+            <div className="road-names-loading">
+              <span className="road-names-spinner" aria-hidden="true" />
+              <p className="road-names-empty">Loading detected roads and rivers... this can take a moment on a slow connection.</p>
+            </div>
           ) : error ? (
             <p className="road-names-empty">{error}</p>
           ) : (
