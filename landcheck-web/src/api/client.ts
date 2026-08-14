@@ -6,6 +6,7 @@ const isLocalHost = (value: string) =>
 
 const GREEN_AUTH_STORAGE_KEY = "landcheck_green_auth";
 const WORK_AUTH_STORAGE_KEY = "landcheck_work_auth";
+const SURVEY_AUTH_STORAGE_KEY = "landcheck_survey_auth";
 
 const configuredApiUrl = String(import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
 let configuredApiHost = "";
@@ -79,11 +80,18 @@ const attachLandCheckHeaders = (config: InternalAxiosRequestConfig) => {
   const cleanPathname = pathname.toLowerCase();
   const greenSession = readStoredSession(GREEN_AUTH_STORAGE_KEY);
   const workSession = readStoredSession(WORK_AUTH_STORAGE_KEY);
-  const activeSession = cleanPathname.startsWith("/green-work")
-    ? workSession || greenSession
-    : cleanPathname.startsWith("/green")
-      ? greenSession || workSession
-      : workSession || greenSession;
+  const surveySession = readStoredSession(SURVEY_AUTH_STORAGE_KEY);
+  const isSurveyRoute =
+    cleanPathname.startsWith("/survey-plan") ||
+    cleanPathname.startsWith("/survey") ||
+    cleanPathname.startsWith("/dashboard");
+  const activeSession = isSurveyRoute
+    ? surveySession
+    : cleanPathname.startsWith("/green-work")
+      ? workSession || greenSession
+      : cleanPathname.startsWith("/green")
+        ? greenSession || workSession
+        : workSession || greenSession;
   const headers = config.headers instanceof AxiosHeaders ? config.headers : new AxiosHeaders(config.headers);
   config.headers = headers;
   headers.set("X-LC-Client", resolveWebClientLabel(pathname, greenSession));
