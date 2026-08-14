@@ -13,6 +13,7 @@ export type GeoreferenceControlPoint = {
 export type GeoreferenceTransform = {
   transform_type?: "affine" | "projective";
   target_coordinate_system: string;
+  resolved_coordinate_system?: string;
   target_epsg: number;
   coefficients: {
     x: [number, number, number];

@@ -118,6 +118,8 @@ type Props = {
   scaleDraft: string;
   setScaleDraft: Dispatch<SetStateAction<string>>;
   commitScaleDraft: () => void;
+  applyScalePreset: (scale: number) => void;
+  currentScaleText: string;
   parseScaleDenominator: (value: string) => number;
   isAutoScaleText: (value: string) => boolean;
   scalePresets: number[];
@@ -562,11 +564,8 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                   <button
                     key={`sub_scale_${s}`}
                     type="button"
-                    className={`scale-preset-btn ${!props.isAutoScaleText(props.meta.scale_text) && props.parseScaleDenominator(props.meta.scale_text) === s ? "active" : ""}`}
-                    onClick={() => {
-                      props.setScaleDraft(String(s));
-                      props.setMeta((m) => ({ ...m, scale_text: `1 : ${s}` }));
-                    }}
+                    className={`scale-preset-btn ${!props.isAutoScaleText(props.currentScaleText) && props.parseScaleDenominator(props.currentScaleText) === s ? "active" : ""}`}
+                    onClick={() => props.applyScalePreset(s)}
                   >
                     1:{s}
                   </button>

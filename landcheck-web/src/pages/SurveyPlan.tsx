@@ -1,4 +1,4 @@
-import { Suspense, lazy, startTransition, useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { Suspense, lazy, startTransition, useEffect, useMemo, useState, useCallback, useRef, type SetStateAction } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, withRetry } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
@@ -7,7 +7,12 @@ import {
   isSurveyAuthed,
   type PendingSurveyDownload,
 } from "../auth/surveyAuth";
-import { fromWGS84, isProjectedCoordinateSystem, toWGS84 } from "../utils/coordinateConverter";
+import {
+  fromWGS84,
+  isProjectedCoordinateSystem,
+  resolveCoordinateSystemKey,
+  toWGS84,
+} from "../utils/coordinateConverter";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../utils/mapboxLoader";
 import { useDeferredMount } from "../hooks/useDeferredMount";
 import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
@@ -698,6 +703,7 @@ export default function SurveyPlan() {
     area_size: areaSize ? Number(areaSize) : undefined,
   };
   const [scaleDraft, setScaleDraft] = useState<string>("");
+  const [scaleDraftDirty, setScaleDraftDirty] = useState(false);
   const [newRoadWidth, setNewRoadWidth] = useState<string>("10");
   const [showFeatureEditor, setShowFeatureEditor] = useState(false);
   const featureEditsPendingRef = useRef(false);
@@ -756,31 +762,90 @@ export default function SurveyPlan() {
   const [georefSavingFeatures, setGeorefSavingFeatures] = useState(false);
   const [georefDownloadingCsv, setGeorefDownloadingCsv] = useState(false);
   const [georefContinuing, setGeorefContinuing] = useState(false);
+  const effectiveCoordinateSystem = useMemo(() => {
+    const sample = manualPoints.find(
+      (point) =>
+        (point.lng !== 0 || point.lat !== 0) &&
+        Number.isFinite(Number(point.lng)) &&
+        Number.isFinite(Number(point.lat))
+    );
+    return resolveCoordinateSystemKey(
+      coordinateSystem,
+      sample ? Number(sample.lng) : undefined,
+      sample ? Number(sample.lat) : undefined
+    );
+  }, [coordinateSystem, manualPoints]);
   const currentStepTitle = activeSteps.find((step) => step.id === currentStep)?.title || "current step";
 
   // Survey metadata
   const [meta, setMeta] = useState<PlotMeta>(buildDefaultPlotMeta);
   const [hasManualScaleOverride, setHasManualScaleOverride] = useState(false);
 
+  const handleScaleDraftChange = useCallback((value: SetStateAction<string>) => {
+    setScaleDraft((prev) => (typeof value === "function" ? value(prev) : value));
+    setScaleDraftDirty(true);
+  }, []);
+
   useEffect(() => {
     if (!hasManualScaleOverride || isAutoScaleText(meta.scale_text)) {
       setScaleDraft("");
+      setScaleDraftDirty(false);
       return;
     }
     setScaleDraft(String(parseScaleDenominator(meta.scale_text)));
+    setScaleDraftDirty(false);
   }, [hasManualScaleOverride, meta.scale_text]);
 
-  const commitScaleDraft = useCallback(() => {
-    if (!String(scaleDraft || "").trim()) {
-      setHasManualScaleOverride(false);
-      setMeta((m) => ({ ...m, scale_text: "auto" }));
-      return;
+  const resolveScaleDraftState = useCallback(() => {
+    if (!scaleDraftDirty) {
+      const manualOverride = hasManualScaleOverride && !isAutoScaleText(meta.scale_text);
+      return {
+        scaleText: manualOverride ? meta.scale_text : "auto",
+        nextDraft: manualOverride ? String(parseScaleDenominator(meta.scale_text)) : "",
+        manualOverride,
+      };
     }
-    const parsed = parseScaleDenominator(scaleDraft);
-    setScaleDraft(String(parsed));
-    setHasManualScaleOverride(true);
-    setMeta((m) => ({ ...m, scale_text: `1 : ${parsed}` }));
-  }, [scaleDraft]);
+    const trimmed = String(scaleDraft || "").trim();
+    if (!trimmed) {
+      return {
+        scaleText: "auto",
+        nextDraft: "",
+        manualOverride: false,
+      };
+    }
+    const parsed = parseScaleDenominator(trimmed);
+    return {
+      scaleText: `1 : ${parsed}`,
+      nextDraft: String(parsed),
+      manualOverride: true,
+    };
+  }, [hasManualScaleOverride, meta.scale_text, scaleDraft, scaleDraftDirty]);
+
+  const applyResolvedScaleState = useCallback(
+    (resolved: { scaleText: string; nextDraft: string; manualOverride: boolean }) => {
+      setScaleDraftDirty(false);
+      setScaleDraft((prev) => (prev === resolved.nextDraft ? prev : resolved.nextDraft));
+      setHasManualScaleOverride(resolved.manualOverride);
+      setMeta((m) => (m.scale_text === resolved.scaleText ? m : { ...m, scale_text: resolved.scaleText }));
+    },
+    []
+  );
+
+  const commitScaleDraft = useCallback(() => {
+    applyResolvedScaleState(resolveScaleDraftState());
+  }, [applyResolvedScaleState, resolveScaleDraftState]);
+
+  const applyScalePreset = useCallback(
+    (scale: number) => {
+      const parsed = parseScaleDenominator(String(scale));
+      applyResolvedScaleState({
+        scaleText: `1 : ${parsed}`,
+        nextDraft: String(parsed),
+        manualOverride: true,
+      });
+    },
+    [applyResolvedScaleState]
+  );
 
   const clearGeorefLocalState = useCallback(() => {
     setGeorefSession(null);
@@ -1108,17 +1173,17 @@ export default function SurveyPlan() {
     if (validPoints.length >= 3) {
       // Convert to WGS84 if using projected coordinate system
       const pts = validPoints.map((p) => {
-        if (coordinateSystem === "wgs84") {
+        if (effectiveCoordinateSystem === "wgs84") {
           return [Number(p.lng), Number(p.lat)];
         }
         // Convert from projected to WGS84
-        const [lng, lat] = toWGS84(Number(p.lng), Number(p.lat), coordinateSystem);
+        const [lng, lat] = toWGS84(Number(p.lng), Number(p.lat), effectiveCoordinateSystem);
         return [lng, lat];
       });
       return closeRing(pts);
     }
     return null;
-  }, [manualPoints, coordinateSystem]);
+  }, [manualPoints, effectiveCoordinateSystem]);
 
   // Elevation samples for the "Your Data" topo map mode - same WGS84 conversion as finalCoords,
   // but keeping the uploaded height value alongside each point instead of just the boundary ring.
@@ -1128,18 +1193,15 @@ export default function SurveyPlan() {
     );
     if (withHeight.length < 3) return [];
     return withHeight.map((p) => {
-      if (coordinateSystem === "wgs84") {
+      if (effectiveCoordinateSystem === "wgs84") {
         return { lng: Number(p.lng), lat: Number(p.lat), elevation_m: Number(p.height) };
       }
-      const [lng, lat] = toWGS84(Number(p.lng), Number(p.lat), coordinateSystem);
+      const [lng, lat] = toWGS84(Number(p.lng), Number(p.lat), effectiveCoordinateSystem);
       return { lng, lat, elevation_m: Number(p.height) };
     });
-  }, [manualPoints, coordinateSystem]);
+  }, [manualPoints, effectiveCoordinateSystem]);
 
-  const effectiveRenderScaleText = useMemo(
-    () => (hasManualScaleOverride ? meta.scale_text : "auto"),
-    [hasManualScaleOverride, meta.scale_text]
-  );
+  const effectiveRenderScaleText = useMemo(() => resolveScaleDraftState().scaleText, [resolveScaleDraftState]);
 
   const plotMetaPayload = useMemo(
     () => ({
@@ -1151,7 +1213,7 @@ export default function SurveyPlan() {
       surveyor_name: meta.surveyor_name,
       surveyor_rank: meta.surveyor_rank,
       certification_statement: meta.certification_statement,
-      coordinate_system: coordinateSystem,
+      coordinate_system: effectiveCoordinateSystem,
       paper_size: meta.paper_size,
       template_name: meta.template_name,
       adamawa_rof_no: meta.adamawa_rof_no,
@@ -1180,7 +1242,7 @@ export default function SurveyPlan() {
       fct_cadastral_map_ref: meta.fct_cadastral_map_ref,
       fct_title_prefix: meta.fct_title_prefix,
     }),
-    [coordinateSystem, effectiveRenderScaleText, meta]
+    [effectiveCoordinateSystem, effectiveRenderScaleText, meta]
   );
 
   const serverSyncSignature = useMemo(
@@ -1820,7 +1882,7 @@ export default function SurveyPlan() {
 
   // Convert form coordinates to WGS84 for map display
   const mapCoordinates = useMemo(() => {
-    if (coordinateSystem === "wgs84") {
+    if (effectiveCoordinateSystem === "wgs84") {
       return manualPoints;
     }
     // Convert projected coordinates to WGS84 for map
@@ -1828,14 +1890,14 @@ export default function SurveyPlan() {
       if (p.lng === 0 && p.lat === 0) {
         return p;
       }
-      const [lng, lat] = toWGS84(p.lng, p.lat, coordinateSystem);
+      const [lng, lat] = toWGS84(p.lng, p.lat, effectiveCoordinateSystem);
       return {
         station: p.station,
         lng,
         lat,
       };
     });
-  }, [manualPoints, coordinateSystem]);
+  }, [manualPoints, effectiveCoordinateSystem]);
 
   // Save plot to localStorage for dashboard
   const savePlotToStorage = (id: number) => {
@@ -2066,7 +2128,7 @@ export default function SurveyPlan() {
         api.post(`/plots/${activePlotId}/orthophoto/preview`, {
           scale_text: effectiveRenderScaleText,
           station_names: stationNames,
-          coordinate_system: coordinateSystem,
+          coordinate_system: effectiveCoordinateSystem,
           paper_size: meta.paper_size,
           use_topo_map: false, // Always satellite for orthophoto
           north_arrow_style: northArrowStyle,
@@ -2098,7 +2160,7 @@ export default function SurveyPlan() {
   }, [
     effectiveRenderScaleText,
     stationNames,
-    coordinateSystem,
+    effectiveCoordinateSystem,
     meta.paper_size,
     northArrowStyle,
     northArrowColor,
@@ -2117,7 +2179,7 @@ export default function SurveyPlan() {
         api.post(`/plots/${activePlotId}/orthophoto/preview`, {
           scale_text: effectiveRenderScaleText,
           station_names: stationNames,
-          coordinate_system: coordinateSystem,
+          coordinate_system: effectiveCoordinateSystem,
           paper_size: meta.paper_size,
           use_topo_map: true, // Always topo for topo map
           topo_source: source, // "opentopomap" or "userdata"
@@ -2151,7 +2213,7 @@ export default function SurveyPlan() {
   }, [
     effectiveRenderScaleText,
     stationNames,
-    coordinateSystem,
+    effectiveCoordinateSystem,
     meta.paper_size,
     elevationPointsPayload,
     northArrowStyle,
@@ -2161,6 +2223,9 @@ export default function SurveyPlan() {
   ]);
 
   const refreshCurrentPreview = useCallback(async () => {
+    if (scaleDraftDirty) {
+      applyResolvedScaleState(resolveScaleDraftState());
+    }
     if (previewType === "orthophoto") {
       await loadOrthophoto();
       return;
@@ -2170,7 +2235,16 @@ export default function SurveyPlan() {
       return;
     }
     await loadPreview();
-  }, [loadOrthophoto, loadPreview, loadTopoMap, previewType, topoSource]);
+  }, [
+    applyResolvedScaleState,
+    loadOrthophoto,
+    loadPreview,
+    loadTopoMap,
+    previewType,
+    resolveScaleDraftState,
+    scaleDraftDirty,
+    topoSource,
+  ]);
 
   useEffect(() => {
     if (workflowMode === "subdivision" && currentStep === 2 && previewType !== "survey") {
@@ -2826,7 +2900,7 @@ export default function SurveyPlan() {
         surveyor_rank: meta.surveyor_rank,
         certification_statement: meta.certification_statement,
         station_names: stationNames,
-        coordinate_system: coordinateSystem,
+        coordinate_system: effectiveCoordinateSystem,
         paper_size: meta.paper_size,
         use_topo_map: useTopoMap,
         north_arrow_style: northArrowStyle,
@@ -3486,7 +3560,7 @@ export default function SurveyPlan() {
         title_text: String(subdivisionCleanCopyTitle || "").trim(),
         paper_size: meta.paper_size,
         scale_text: effectiveRenderScaleText,
-        coordinate_system: coordinateSystem,
+        coordinate_system: effectiveCoordinateSystem,
         station_names: stationNames,
         north_arrow_style: northArrowStyle,
         north_arrow_color: northArrowColor,
@@ -4119,8 +4193,10 @@ export default function SurveyPlan() {
               defaultAdamawaTopoSheetText={DEFAULT_ADAMAWA_TOPO_SHEET_TEXT}
               defaultAdamawaDisclaimerText={DEFAULT_ADAMAWA_DISCLAIMER_TEXT}
               scaleDraft={scaleDraft}
-              setScaleDraft={setScaleDraft}
+              setScaleDraft={handleScaleDraftChange}
               commitScaleDraft={commitScaleDraft}
+              applyScalePreset={applyScalePreset}
+              currentScaleText={effectiveRenderScaleText}
               scalePresets={SCALE_PRESETS}
               parseScaleDenominator={parseScaleDenominator}
               isAutoScaleText={isAutoScaleText}
@@ -4239,8 +4315,10 @@ export default function SurveyPlan() {
               meta={meta}
               setMeta={setMeta}
               scaleDraft={scaleDraft}
-              setScaleDraft={setScaleDraft}
+              setScaleDraft={handleScaleDraftChange}
               commitScaleDraft={commitScaleDraft}
+              applyScalePreset={applyScalePreset}
+              currentScaleText={effectiveRenderScaleText}
               parseScaleDenominator={parseScaleDenominator}
               isAutoScaleText={isAutoScaleText}
               scalePresets={SCALE_PRESETS}

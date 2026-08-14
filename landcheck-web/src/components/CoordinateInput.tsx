@@ -1,6 +1,11 @@
 import { memo, useMemo, useRef, useState } from "react";
 import "../styles/coordinate-input.css";
 import CSVPreviewModal from "./CSVPreviewModal";
+import {
+  getCoordinateSystemEpsgLabel,
+  isProjectedCoordinateSystem,
+  WGS84_NIGERIA_METERS,
+} from "../utils/coordinateConverter";
 
 type ManualPoint = {
   station: string;
@@ -11,7 +16,7 @@ type ManualPoint = {
 type CoordinateSystem = {
   key: string;
   name: string;
-  epsg: number;
+  epsgLabel: string;
   description: string;
 };
 
@@ -27,17 +32,25 @@ type Props = {
 };
 
 const COORDINATE_SYSTEMS: CoordinateSystem[] = [
-  { key: "wgs84", name: "WGS84 (Lat/Lon)", epsg: 4326, description: "Global GPS coordinates" },
-  { key: "utm_31n", name: "UTM Zone 31N", epsg: 32631, description: "Western Nigeria" },
-  { key: "utm_32n", name: "UTM Zone 32N", epsg: 32632, description: "Central Nigeria" },
-  { key: "utm_33n", name: "UTM Zone 33N", epsg: 32633, description: "Eastern Nigeria" },
-  { key: "minna_31", name: "Minna Datum Zone 31", epsg: 26331, description: "Nigerian Grid - West" },
-  { key: "minna_32", name: "Minna Datum Zone 32", epsg: 26332, description: "Nigerian Grid - Central" },
-  { key: "minna_33", name: "Minna Datum Zone 33", epsg: 26333, description: "Nigerian Grid - East" },
+  { key: "wgs84", name: "WGS84 (Lat/Lon)", epsgLabel: "EPSG:4326", description: "Global GPS coordinates" },
+  {
+    key: WGS84_NIGERIA_METERS,
+    name: "WGS84 Nigeria Metres",
+    epsgLabel: "EPSG:32631/32632/32633",
+    description: "Auto-UTM metres for Nigeria. Best for map-picked or georeferenced jobs.",
+  },
+  { key: "utm_31n", name: "UTM Zone 31N", epsgLabel: "EPSG:32631", description: "Western Nigeria" },
+  { key: "utm_32n", name: "UTM Zone 32N", epsgLabel: "EPSG:32632", description: "Central Nigeria" },
+  { key: "utm_33n", name: "UTM Zone 33N", epsgLabel: "EPSG:32633", description: "Eastern Nigeria" },
+  { key: "minna_31", name: "Minna Datum Zone 31", epsgLabel: "EPSG:26331", description: "Nigerian Grid - West" },
+  { key: "minna_32", name: "Minna Datum Zone 32", epsgLabel: "EPSG:26332", description: "Nigerian Grid - Central" },
+  { key: "minna_33", name: "Minna Datum Zone 33", epsgLabel: "EPSG:26333", description: "Nigerian Grid - East" },
 ];
 
 const getPlaceholders = (system: string): { x: string; y: string } => {
   switch (system) {
+    case WGS84_NIGERIA_METERS:
+      return { x: "e.g. 538120.78", y: "e.g. 1012340.56" };
     case "utm_31n":
       return { x: "e.g. 340250.45", y: "e.g. 998450.32" };
     case "utm_32n":
@@ -69,7 +82,7 @@ function CoordinateInput({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [rawFileData, setRawFileData] = useState<(string | number)[][]>([]);
   const [uploadParsing, setUploadParsing] = useState(false);
-  const isProjected = coordinateSystem !== "wgs84";
+  const isProjected = isProjectedCoordinateSystem(coordinateSystem);
   const xLabel = isProjected ? "Easting (m)" : "Longitude";
   const yLabel = isProjected ? "Northing (m)" : "Latitude";
   const placeholders = getPlaceholders(coordinateSystem);
@@ -191,7 +204,7 @@ function CoordinateInput({
           <div className="coord-system-meta" id="coord-system-help" aria-live="polite">
             <strong>{selectedCoordinateSystem.name}</strong>
             <span>{selectedCoordinateSystem.description}</span>
-            <em>EPSG:{selectedCoordinateSystem.epsg}</em>
+            <em>{selectedCoordinateSystem.epsgLabel || getCoordinateSystemEpsgLabel(selectedCoordinateSystem.key)}</em>
           </div>
         </div>
       </div>
@@ -291,7 +304,11 @@ function CoordinateInput({
           Add Point
         </button>
         <span className="coord-tip">
-          {isProjected ? "Projected coordinates convert to WGS84 automatically for processing." : "Ring will auto-close on creation."}
+          {coordinateSystem === WGS84_NIGERIA_METERS
+            ? "Auto-UTM resolves the Nigeria metre zone from map-picked or georeferenced locations. For direct imported metre sheets, use the exact UTM zone."
+            : isProjected
+              ? "Projected coordinates convert to WGS84 automatically for processing."
+              : "Ring will auto-close on creation."}
         </span>
       </div>
 

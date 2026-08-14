@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getCoordinateSystemLabel } from "../utils/coordinateConverter";
 import "../styles/csv-preview-modal.css";
 
 type ManualPoint = {
@@ -19,6 +20,7 @@ type Props = {
 // Coordinate system ranges for validation
 const COORDINATE_RANGES: Record<string, { x: [number, number]; y: [number, number] }> = {
   wgs84: { x: [-180, 180], y: [-90, 90] },
+  wgs84_nigeria_meters: { x: [100000, 900000], y: [0, 10000000] },
   utm_31n: { x: [100000, 900000], y: [0, 10000000] },
   utm_32n: { x: [100000, 900000], y: [0, 10000000] },
   utm_33n: { x: [100000, 900000], y: [0, 10000000] },
@@ -210,7 +212,7 @@ export default function CSVPreviewModal({
 
     // Warn about out of range coordinates
     if (outOfRangeCount > points.length / 2) {
-      const systemName = coordinateSystem === "wgs84" ? "WGS84 (Lat/Lon)" : coordinateSystem.toUpperCase();
+      const systemName = getCoordinateSystemLabel(coordinateSystem);
       setError(
         `Warning: ${outOfRangeCount} of ${points.length} coordinates appear to be outside the expected range for ${systemName}. Please verify you selected the correct coordinate system.`
       );

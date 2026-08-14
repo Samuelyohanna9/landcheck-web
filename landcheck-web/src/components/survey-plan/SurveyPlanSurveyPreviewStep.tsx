@@ -82,6 +82,8 @@ type Props = {
   scaleDraft: string;
   setScaleDraft: Dispatch<SetStateAction<string>>;
   commitScaleDraft: () => void;
+  applyScalePreset: (scale: number) => void;
+  currentScaleText: string;
   scalePresets: number[];
   parseScaleDenominator: (scaleText: string) => number;
   isAutoScaleText: (scaleText: string) => boolean;
@@ -172,6 +174,8 @@ function SurveyPlanSurveyPreviewStep({
   scaleDraft,
   setScaleDraft,
   commitScaleDraft,
+  applyScalePreset,
+  currentScaleText,
   scalePresets,
   parseScaleDenominator,
   isAutoScaleText,
@@ -582,11 +586,8 @@ function SurveyPlanSurveyPreviewStep({
                   <button
                     key={s}
                     type="button"
-                    className={`scale-preset-btn ${!isAutoScaleText(meta.scale_text) && parseScaleDenominator(meta.scale_text) === s ? "active" : ""}`}
-                    onClick={() => {
-                      setScaleDraft(String(s));
-                      setMeta((m) => ({ ...m, scale_text: `1 : ${s}` }));
-                    }}
+                    className={`scale-preset-btn ${!isAutoScaleText(currentScaleText) && parseScaleDenominator(currentScaleText) === s ? "active" : ""}`}
+                    onClick={() => applyScalePreset(s)}
                   >
                     1:{s}
                   </button>

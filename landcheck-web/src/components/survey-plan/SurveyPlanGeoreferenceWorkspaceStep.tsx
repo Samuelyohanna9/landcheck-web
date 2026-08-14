@@ -96,7 +96,9 @@ function SurveyPlanGeoreferenceWorkspaceStep({
 
   const transform = session.transform as GeoreferenceTransform;
   type PreviewFeature = GeoreferenceFeature & { source: "draft" | "saved" };
-  const projectedGroundSystem = isProjectedCoordinateSystem(transform.target_coordinate_system);
+  const effectiveTransformSystem =
+    transform.resolved_coordinate_system ?? transform.target_coordinate_system;
+  const projectedGroundSystem = isProjectedCoordinateSystem(effectiveTransformSystem);
   const coordinateXLabel = projectedGroundSystem ? "Easting (m)" : "Longitude";
   const coordinateYLabel = projectedGroundSystem ? "Northing (m)" : "Latitude";
 
@@ -212,7 +214,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
       usedMapTransform = Number.isFinite(lng) && Number.isFinite(lat);
     }
     if (!usedMapTransform) {
-      [lng, lat] = toWGS84(targetX, targetY, transform.target_coordinate_system);
+      [lng, lat] = toWGS84(targetX, targetY, effectiveTransformSystem);
     }
     return {
       target: [Number(targetX.toFixed(6)), Number(targetY.toFixed(6))] as [number, number],
