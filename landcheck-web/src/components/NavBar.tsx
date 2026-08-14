@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { prefetchSurveyPlanPreviewStep, prefetchSurveyPlanRoute } from "../utils/surveyPlanPrefetch";
+import { isSurveyAuthed } from "../auth/surveyAuth";
 import "../styles/navbar.css";
 
 const NAV_ITEMS = [
@@ -39,6 +40,7 @@ export default function NavBar({
 }: NavBarProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const showDashboardLink = isSurveyAuthed();
 
   const warmSurveyPlanEntry = () => {
     void prefetchSurveyPlanRoute();
@@ -95,6 +97,15 @@ export default function NavBar({
           >
             Support
           </a>
+          {showDashboardLink && (
+            <button
+              type="button"
+              className={activeRoute === "/dashboard" ? "lc-nav-item-active" : undefined}
+              onClick={() => navigate("/dashboard")}
+            >
+              My Dashboard
+            </button>
+          )}
           {ctaLabel && ctaRoute && (
             <button
               type="button"
@@ -151,6 +162,16 @@ export default function NavBar({
           >
             Support
           </a>
+
+          {showDashboardLink && (
+            <button
+              type="button"
+              className={`lc-mobile-item${activeRoute === "/dashboard" ? " lc-mobile-item--active" : ""}`}
+              onClick={() => handleNav("/dashboard")}
+            >
+              My Dashboard
+            </button>
+          )}
 
           {ctaLabel && ctaRoute && (
             <button
