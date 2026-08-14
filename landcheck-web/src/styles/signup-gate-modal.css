@@ -1,0 +1,92 @@
+.signup-gate-modal {
+  width: min(440px, 100%);
+}
+
+.signup-gate-intro {
+  margin: 0 0 20px;
+  color: #d3dacf;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.signup-gate-sent p {
+  margin: 0;
+  color: #d3dacf;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.signup-gate-google-btn {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(214, 223, 210, 0.16);
+  background: #fcfaf4;
+  color: #111d2a;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.signup-gate-google-btn:hover {
+  background: #ffffff;
+}
+
+.signup-gate-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: #7f8c85;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.signup-gate-divider::before,
+.signup-gate-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(214, 223, 210, 0.12);
+}
+
+.signup-gate-email-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.signup-gate-email-form input {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(214, 223, 210, 0.16);
+  background: rgba(247, 245, 238, 0.04);
+  color: #fcfaf4;
+  font-size: 0.95rem;
+}
+
+.signup-gate-email-form input::placeholder {
+  color: #7f8c85;
+}
+
+.signup-gate-email-btn {
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(45, 138, 78, 0.5);
+  background: #1d8a49;
+  color: #fcfaf4;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.signup-gate-email-btn:hover {
+  background: #21994f;
+}
+
+.signup-gate-email-btn:disabled,
+.signup-gate-google-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

@@ -1,7 +1,12 @@
 import { Suspense, lazy, startTransition, useEffect, useMemo, useState, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, withRetry } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
+import {
+  consumePendingSurveyDownload,
+  isSurveyAuthed,
+  type PendingSurveyDownload,
+} from "../auth/surveyAuth";
 import { fromWGS84, isProjectedCoordinateSystem, toWGS84 } from "../utils/coordinateConverter";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../utils/mapboxLoader";
 import { useDeferredMount } from "../hooks/useDeferredMount";
@@ -20,6 +25,7 @@ import {
 import "../styles/survey-plan.css";
 
 const SurveyPreview = lazy(() => import("../components/SurveyPreview"));
+const SignupGateModal = lazy(() => import("../components/SignupGateModal"));
 const FeatureOverrideModal = lazy(() => import("../components/FeatureOverrideModal"));
 const TechnicalReportModal = lazy(() => import("../components/survey-plan/TechnicalReportModal"));
 const SurveyPlanStepOnePanel = lazy(() => import("../components/survey-plan/SurveyPlanStepOnePanel"));
@@ -581,9 +587,16 @@ const GEOREFERENCE_STEPS = [
 
 export default function SurveyPlan() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isLowBandwidth, manualLowBandwidth, setManualLowBandwidth } = useLowBandwidthMode();
   const deferredDraftMap = useDeferredMount(250);
   const [workflowMode, setWorkflowMode] = useState<WorkflowMode | null>(null);
+  const [signupGateOpen, setSignupGateOpen] = useState(false);
+  const [pendingGateDownload, setPendingGateDownload] = useState<PendingSurveyDownload | null>(null);
+  const openSignupGate = useCallback((download: PendingSurveyDownload) => {
+    setPendingGateDownload(download);
+    setSignupGateOpen(true);
+  }, []);
   const [currentStep, setCurrentStep] = useState(1);
   const surveyContentRef = useRef<HTMLDivElement>(null);
   const [showScrollHint, setShowScrollHint] = useState(false);
@@ -951,6 +964,17 @@ export default function SurveyPlan() {
       active = false;
     };
   }, [clearGeorefLocalState, loadGeoreferenceSession]);
+
+  // Dashboard's quick-tools row links here with ?mode=survey|subdivision|georeference - only
+  // applied once a restored draft (if any) has had a chance to set its own mode first, so a
+  // returning user's in-progress work always wins over the link that got them here.
+  useEffect(() => {
+    if (!draftHydrated || workflowMode) return;
+    const modeParam = searchParams.get("mode");
+    if (modeParam === "survey" || modeParam === "subdivision" || modeParam === "georeference") {
+      setWorkflowMode(modeParam);
+    }
+  }, [draftHydrated, workflowMode, searchParams]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -2434,6 +2458,10 @@ export default function SurveyPlan() {
   }, [applyGeoreferenceSession, georefFeatures, georefSelectedControlPointId, georefSession?.id]);
 
   const handleDownloadGeoreferenceCsv = useCallback(async () => {
+    if (!isSurveyAuthed()) {
+      openSignupGate({ type: "georeference-csv" });
+      return;
+    }
     if (!georefSession?.id) {
       toast.error("Open a georeference session first.");
       return;
@@ -2451,7 +2479,7 @@ export default function SurveyPlan() {
     } finally {
       setGeorefDownloadingCsv(false);
     }
-  }, [georefSession?.id]);
+  }, [georefSession?.id, openSignupGate]);
 
   const handleContinueGeoreferenceToSurvey = useCallback(async () => {
     const sourceFeatures = georefFeatures.length ? georefFeatures : georefSession?.features || [];
@@ -2764,6 +2792,10 @@ export default function SurveyPlan() {
     useTopoMap = false,
     customTitle?: string
   ) => {
+    if (!isSurveyAuthed()) {
+      openSignupGate({ type: "download-json", url, filename, loadingKey, useTopoMap, customTitle });
+      return;
+    }
     if (downloadLoadingKey) return;
     setDownloadLoadingKey(loadingKey);
     try {
@@ -2860,6 +2892,10 @@ export default function SurveyPlan() {
   };
 
   const downloadTechnicalReport = async (fields: TechnicalReportFields) => {
+    if (!isSurveyAuthed()) {
+      openSignupGate({ type: "technical-report", fields });
+      return;
+    }
     setGeneratingTechnicalReport(true);
     try {
       const activePlotId = await ensureServerPlot("Syncing draft before export...");
@@ -2917,6 +2953,10 @@ export default function SurveyPlan() {
   };
 
   const downloadWithGet = async (url: string, filename: string, loadingKey: string) => {
+    if (!isSurveyAuthed()) {
+      openSignupGate({ type: "download-get", url, filename, loadingKey });
+      return;
+    }
     if (downloadLoadingKey) return;
     setDownloadLoadingKey(loadingKey);
     try {
@@ -3376,6 +3416,10 @@ export default function SurveyPlan() {
   ]);
 
   const downloadSubdivisionBatch = async (batchId: number) => {
+    if (!isSurveyAuthed()) {
+      openSignupGate({ type: "subdivision-batch", batchId });
+      return;
+    }
     if (subdivisionDownloadBatchId !== null) return;
     setSubdivisionDownloadBatchId(batchId);
     try {
@@ -3412,6 +3456,10 @@ export default function SurveyPlan() {
   };
 
   const downloadSubdivisionCleanCopyPdf = async () => {
+    if (!isSurveyAuthed()) {
+      openSignupGate({ type: "subdivision-clean-copy" });
+      return;
+    }
     const batchId = Number(subdivisionCleanCopyBatchId || 0);
     if (!batchId) {
       toast.error("Select a subdivision batch first.");
@@ -3479,6 +3527,60 @@ export default function SurveyPlan() {
       setSubdivisionCleanCopyDownloadBatchId(null);
     }
   };
+
+  // Landing back here after completing sign-in from the download gate - replays the exact
+  // download that was interrupted (see openSignupGate / PendingSurveyDownload) using the real
+  // arguments it was called with, so a newly-registered user actually gets their file instead of
+  // having to find and re-click the same button. Declared after all six download handlers so the
+  // dependency array below can reference them without a temporal-dead-zone error (the array is
+  // evaluated eagerly on every render, unlike the effect body).
+  const resumeDispatchedRef = useRef(false);
+  useEffect(() => {
+    if (!draftHydrated) return;
+    if (!searchParams.get("resume")) return;
+    if (resumeDispatchedRef.current) return;
+    resumeDispatchedRef.current = true;
+
+    const next = new URLSearchParams(searchParams);
+    next.delete("resume");
+    setSearchParams(next, { replace: true });
+
+    const pending = consumePendingSurveyDownload();
+    if (!pending) {
+      toast.success("You're signed in.");
+      return;
+    }
+    switch (pending.type) {
+      case "georeference-csv":
+        void handleDownloadGeoreferenceCsv();
+        break;
+      case "download-json":
+        void downloadWithJson(pending.url, pending.filename, pending.loadingKey, pending.useTopoMap, pending.customTitle);
+        break;
+      case "download-get":
+        void downloadWithGet(pending.url, pending.filename, pending.loadingKey);
+        break;
+      case "technical-report":
+        void downloadTechnicalReport(pending.fields as unknown as TechnicalReportFields);
+        break;
+      case "subdivision-batch":
+        void downloadSubdivisionBatch(pending.batchId);
+        break;
+      case "subdivision-clean-copy":
+        void downloadSubdivisionCleanCopyPdf();
+        break;
+    }
+  }, [
+    draftHydrated,
+    searchParams,
+    setSearchParams,
+    handleDownloadGeoreferenceCsv,
+    downloadWithJson,
+    downloadWithGet,
+    downloadTechnicalReport,
+    downloadSubdivisionBatch,
+    downloadSubdivisionCleanCopyPdf,
+  ]);
 
   // Get feature counts from nested response structure
   const getFeatureCount = (type: string) => {
@@ -3894,6 +3996,15 @@ export default function SurveyPlan() {
               controlPointName={meta.adamawa_control_point_name}
               generating={generatingTechnicalReport}
               onGenerate={downloadTechnicalReport}
+            />
+          </Suspense>
+        )}
+        {signupGateOpen && pendingGateDownload && (
+          <Suspense fallback={null}>
+            <SignupGateModal
+              isOpen={signupGateOpen}
+              onClose={() => setSignupGateOpen(false)}
+              pendingDownload={pendingGateDownload}
             />
           </Suspense>
         )}

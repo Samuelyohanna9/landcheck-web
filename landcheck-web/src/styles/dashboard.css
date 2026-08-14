@@ -1,4 +1,4 @@
-/* Dashboard Styles */
+/* Dashboard Styles - "workspace, not a complicated SaaS dashboard" */
 .dashboard-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -35,6 +35,12 @@
   font-weight: 700;
   margin: 0;
   color: #f1f5f9;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .back-btn {
@@ -86,109 +92,48 @@
   height: 18px;
 }
 
-/* Stats Row */
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
-  padding: 1.5rem 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.stat-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.25rem;
-  background: rgba(30, 41, 59, 0.5);
+.workspace-signout-btn {
+  padding: 0.625rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.stat-icon svg {
-  width: 24px;
-  height: 24px;
-}
-
-.plots-icon {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
-}
-
-.recent-icon {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-}
-
-.storage-icon {
-  background: rgba(168, 85, 247, 0.15);
-  color: #a855f7;
-}
-
-.stat-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.stat-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #f1f5f9;
-  line-height: 1.2;
-}
-
-.stat-label {
-  font-size: 0.8125rem;
-  color: #64748b;
-}
-
-/* Search Bar */
-.search-bar {
-  position: relative;
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 0 2rem;
-}
-
-.search-bar input {
-  width: 100%;
-  padding: 0.875rem 1rem 0.875rem 2.75rem;
-  background: rgba(30, 41, 59, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  color: #e2e8f0;
-  font-size: 0.9375rem;
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.search-bar input:focus {
-  outline: none;
-  border-color: rgba(16, 185, 129, 0.5);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+.workspace-signout-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
 }
 
-.search-bar input::placeholder {
-  color: #64748b;
+/* Quick tools */
+.workspace-quick-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem 0;
 }
 
-.search-icon {
-  position: absolute;
-  left: 2.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 18px;
-  height: 18px;
-  color: #64748b;
+.workspace-quick-tool {
+  padding: 0.625rem 1.1rem;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.workspace-quick-tool:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #f1f5f9;
 }
 
 /* Plots Section */
@@ -249,163 +194,87 @@
   transform: translateY(-1px);
 }
 
-/* Plots Grid */
-.plots-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.25rem;
-}
-
-/* Plot Card */
-.plot-card {
-  background: rgba(30, 41, 59, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 1.25rem;
-  transition: all 0.2s ease;
-}
-
-.plot-card:hover {
-  border-color: rgba(16, 185, 129, 0.3);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-.plot-header {
+/* Recent projects list */
+.workspace-project-list {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
-}
-
-.plot-id {
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.5rem;
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
-  border-radius: 4px;
-}
-
-.plot-date {
-  font-size: 0.75rem;
-  color: #64748b;
-}
-
-.plot-title {
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0 0 0.875rem;
-  color: #f1f5f9;
-}
-
-.plot-details {
-  display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.75rem;
-  margin-bottom: 1rem;
 }
 
-.detail-item {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 0.8125rem;
-  color: #94a3b8;
-}
-
-.detail-item svg {
-  width: 14px;
-  height: 14px;
-  color: #64748b;
-}
-
-.plot-actions {
-  display: flex;
-  gap: 0.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: #94a3b8;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-decoration: none;
-}
-
-.action-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
-.action-btn.view-btn:hover {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: #3b82f6;
-}
-
-.action-btn.download-btn:hover {
-  background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(16, 185, 129, 0.3);
-  color: #10b981;
-}
-
-.action-btn.delete-btn:hover {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #ef4444;
-}
-
-/* Info Banner */
-.info-banner {
+.workspace-project-row {
   display: flex;
   align-items: center;
   gap: 1rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem 1.5rem;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 10px;
-  margin-left: 2rem;
-  margin-right: 2rem;
+  padding: 1rem 1.25rem;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  transition: all 0.2s ease;
 }
 
-.info-banner > svg {
-  width: 20px;
-  height: 20px;
-  color: #3b82f6;
-  flex-shrink: 0;
+.workspace-project-row:hover {
+  border-color: rgba(16, 185, 129, 0.3);
 }
 
-.info-banner p {
+.workspace-project-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
   flex: 1;
-  margin: 0;
-  font-size: 0.875rem;
+  min-width: 0;
+}
+
+.workspace-project-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-project-location {
+  font-size: 0.8rem;
   color: #94a3b8;
 }
 
-.info-banner strong {
-  color: #e2e8f0;
+.workspace-status-pill {
+  flex-shrink: 0;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
-.coming-soon-tag {
-  padding: 0.375rem 0.75rem;
+.workspace-status-completed {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.workspace-status-draft {
   background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  border-radius: 6px;
   color: #f59e0b;
-  font-size: 0.75rem;
+}
+
+.workspace-project-action {
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 0.825rem;
   font-weight: 600;
-  cursor: not-allowed;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.workspace-project-action:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #10b981;
 }
 
 /* Responsive */
@@ -421,49 +290,30 @@
     justify-content: space-between;
   }
 
-  .new-plot-btn {
+  .header-right {
+    justify-content: stretch;
+  }
+
+  .header-right .new-plot-btn {
+    flex: 1;
     justify-content: center;
   }
 
-  .stats-row {
-    padding: 1rem;
-    grid-template-columns: 1fr;
-  }
-
-  .search-bar {
-    padding: 0 1rem;
+  .workspace-quick-tools {
+    padding: 1rem 1rem 0;
   }
 
   .plots-section {
     padding: 1.5rem 1rem;
   }
 
-  .plots-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .info-banner {
-    flex-direction: column;
-    text-align: center;
-    margin: 0 1rem;
+  .workspace-project-row {
+    flex-wrap: wrap;
   }
 }
 
 @media (max-width: 640px) {
   .header-left h1 {
     font-size: 1.125rem;
-  }
-
-  .new-plot-btn {
-    width: 100%;
-  }
-
-  .plot-actions {
-    flex-wrap: wrap;
-    justify-content: space-between;
-  }
-
-  .plots-section {
-    padding: 1rem;
   }
 }

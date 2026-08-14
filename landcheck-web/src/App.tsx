@@ -4,6 +4,7 @@ import CookieConsentManager from "./components/CookieConsentManager";
 import SeoRouteMeta from "./components/SeoRouteMeta";
 import { getGreenAuthSession, isGreenAuthed, isSponsorGreenSession } from "./auth/greenAuth";
 import { isWorkAuthed } from "./auth/workAuth";
+import { isSurveyAuthed } from "./auth/surveyAuth";
 import { CookieConsentProvider } from "./privacy/cookieConsent";
 
 const CHUNK_RECOVERY_STORAGE_KEY = "landcheck.chunk-recovery";
@@ -74,6 +75,8 @@ const NewsArticlePage = lazyWithChunkRecovery(() => import("./pages/NewsArticleP
 const PrivacyPolicy = lazyWithChunkRecovery(() => import("./pages/PrivacyPolicy"));
 const DonorImpactPage = lazyWithChunkRecovery(() => import("./pages/DonorImpactPage"));
 const AppClaimRedirect = lazyWithChunkRecovery(() => import("./pages/AppClaimRedirect"));
+const SurveyAuthVerify = lazyWithChunkRecovery(() => import("./pages/SurveyAuthVerify"));
+const SurveyAuthCallback = lazyWithChunkRecovery(() => import("./pages/SurveyAuthCallback"));
 
 type ChunkLoadBoundaryProps = {
   children: ReactNode;
@@ -184,6 +187,10 @@ function GreenProtectedRoute({ element }: { element: ReactElement }) {
   return isGreenAuthed() ? element : <Navigate to="/green/login" replace />;
 }
 
+function SurveyProtectedRoute({ element }: { element: ReactElement }) {
+  return isSurveyAuthed() ? element : <Navigate to="/survey" replace />;
+}
+
 function MerchantProtectedRoute({ element }: { element: ReactElement }) {
   const session = getGreenAuthSession();
   if (!session || !isSponsorGreenSession(session)) {
@@ -268,6 +275,8 @@ export default function App() {
               <Route path="/green-work/login" element={<GreenWorkLogin />} />
               <Route path="/green-work" element={<WorkProtectedRoute element={<GreenWork />} />} />
               <Route path="/survey" element={<SurveyPlanLanding />} />
+              <Route path="/survey/auth/verify" element={<SurveyAuthVerify />} />
+              <Route path="/survey/auth/callback" element={<SurveyAuthCallback />} />
               <Route path="/flood" element={<FloodAnalysisLanding />} />
               <Route path="/career" element={<CareersPage />} />
               <Route path="/news" element={<NewsPage />} />
@@ -277,7 +286,7 @@ export default function App() {
               <Route path="/sponsor/calculator" element={<GreenFootprintCalculator />} />
               <Route path="/impact/:orgSlug" element={<DonorImpactPage />} />
               <Route path="/app/claim" element={<AppClaimRedirect />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard" element={<SurveyProtectedRoute element={<Dashboard />} />} />
               <Route path="/feedback" element={<Feedback />} />
               <Route path="/admin" element={<AdminDashboard />} />
             </Routes>
