@@ -18,6 +18,7 @@ proj4.defs([
 // Map coordinate system keys to EPSG codes
 const SYSTEM_TO_EPSG: Record<string, string> = {
   wgs84: "EPSG:4326",
+  wgs84_nigeria_meters: "EPSG:32632",
   utm_31n: "EPSG:32631",
   utm_32n: "EPSG:32632",
   utm_33n: "EPSG:32633",
@@ -26,8 +27,116 @@ const SYSTEM_TO_EPSG: Record<string, string> = {
   minna_33: "EPSG:26333",
 };
 
+export const WGS84_NIGERIA_METERS = "wgs84_nigeria_meters";
+
+const SYSTEM_DISPLAY_NAMES: Record<string, string> = {
+  wgs84: "WGS84 (Lat/Lon)",
+  wgs84_nigeria_meters: "WGS84 Nigeria Metres",
+  utm_31n: "UTM Zone 31N",
+  utm_32n: "UTM Zone 32N",
+  utm_33n: "UTM Zone 33N",
+  minna_31: "Minna Datum Zone 31",
+  minna_32: "Minna Datum Zone 32",
+  minna_33: "Minna Datum Zone 33",
+};
+
+const SYSTEM_EPSG_LABELS: Record<string, string> = {
+  wgs84: "EPSG:4326",
+  wgs84_nigeria_meters: "EPSG:32631/32632/32633",
+  utm_31n: "EPSG:32631",
+  utm_32n: "EPSG:32632",
+  utm_33n: "EPSG:32633",
+  minna_31: "EPSG:26331",
+  minna_32: "EPSG:26332",
+  minna_33: "EPSG:26333",
+};
+
+const NIGERIA_BOUNDS = {
+  minLng: 2.5,
+  maxLng: 14.7,
+  minLat: 4.0,
+  maxLat: 14.1,
+} as const;
+
+const NIGERIA_UTM_ZONES = ["utm_31n", "utm_32n", "utm_33n"] as const;
+
+export function isNigeriaAutoUtmCoordinateSystem(system: string): boolean {
+  return String(system || "").trim().toLowerCase() === WGS84_NIGERIA_METERS;
+}
+
+export function resolveNigeriaWgs84MetersZone(lng: number): "utm_31n" | "utm_32n" | "utm_33n" {
+  if (!Number.isFinite(lng)) {
+    return "utm_32n";
+  }
+  if (lng < 6) return "utm_31n";
+  if (lng < 12) return "utm_32n";
+  return "utm_33n";
+}
+
+function isWithinNigeriaBounds(lng: number, lat: number): boolean {
+  return (
+    Number.isFinite(lng) &&
+    Number.isFinite(lat) &&
+    lng >= NIGERIA_BOUNDS.minLng &&
+    lng <= NIGERIA_BOUNDS.maxLng &&
+    lat >= NIGERIA_BOUNDS.minLat &&
+    lat <= NIGERIA_BOUNDS.maxLat
+  );
+}
+
+function inferNigeriaWgs84MetersZoneFromProjected(
+  x: number,
+  y: number
+): "utm_31n" | "utm_32n" | "utm_33n" {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    return "utm_32n";
+  }
+
+  const candidates = NIGERIA_UTM_ZONES.flatMap((zone) => {
+    const epsg = SYSTEM_TO_EPSG[zone];
+    if (!epsg) return [];
+    try {
+      const [lng, lat] = proj4(epsg, "EPSG:4326", [x, y]);
+      if (!isWithinNigeriaBounds(lng, lat)) return [];
+      return [{ zone, lng, lat }];
+    } catch {
+      return [];
+    }
+  });
+
+  if (candidates.length === 1) {
+    return candidates[0].zone;
+  }
+
+  if (candidates.length > 1) {
+    const best = candidates.find((candidate) => resolveNigeriaWgs84MetersZone(candidate.lng) === candidate.zone);
+    return best?.zone || candidates[0].zone;
+  }
+
+  return "utm_32n";
+}
+
+export function resolveCoordinateSystemKey(system: string, xOrLng?: number | null, yOrLat?: number | null): string {
+  const clean = String(system || "wgs84").trim().toLowerCase();
+  if (clean === WGS84_NIGERIA_METERS) {
+    if (Number.isFinite(Number(xOrLng)) && Number.isFinite(Number(yOrLat)) && looksLikeProjected(Number(xOrLng), Number(yOrLat))) {
+      return inferNigeriaWgs84MetersZoneFromProjected(Number(xOrLng), Number(yOrLat));
+    }
+    return resolveNigeriaWgs84MetersZone(Number(xOrLng));
+  }
+  return clean;
+}
+
+export function getCoordinateSystemLabel(system: string): string {
+  return SYSTEM_DISPLAY_NAMES[String(system || "wgs84").trim().toLowerCase()] || "WGS84 (Lat/Lon)";
+}
+
+export function getCoordinateSystemEpsgLabel(system: string): string {
+  return SYSTEM_EPSG_LABELS[String(system || "wgs84").trim().toLowerCase()] || "EPSG:4326";
+}
+
 export function isProjectedCoordinateSystem(system: string): boolean {
-  return String(system || "").trim().toLowerCase() !== "wgs84";
+  return resolveCoordinateSystemKey(system) !== "wgs84";
 }
 
 /**
@@ -42,13 +151,14 @@ export function fromWGS84(
   lat: number,
   targetSystem: string
 ): [number, number] {
-  if (targetSystem === "wgs84") {
+  const resolvedTargetSystem = resolveCoordinateSystemKey(targetSystem, lng);
+  if (resolvedTargetSystem === "wgs84") {
     return [lng, lat];
   }
 
-  const targetEpsg = SYSTEM_TO_EPSG[targetSystem];
+  const targetEpsg = SYSTEM_TO_EPSG[resolvedTargetSystem];
   if (!targetEpsg) {
-    console.warn(`Unknown coordinate system: ${targetSystem}`);
+    console.warn(`Unknown coordinate system: ${resolvedTargetSystem}`);
     return [lng, lat];
   }
 
@@ -74,13 +184,14 @@ export function toWGS84(
   y: number,
   sourceSystem: string
 ): [number, number] {
-  if (sourceSystem === "wgs84") {
+  const resolvedSourceSystem = resolveCoordinateSystemKey(sourceSystem, x, y);
+  if (resolvedSourceSystem === "wgs84") {
     return [x, y];
   }
 
-  const sourceEpsg = SYSTEM_TO_EPSG[sourceSystem];
+  const sourceEpsg = SYSTEM_TO_EPSG[resolvedSourceSystem];
   if (!sourceEpsg) {
-    console.warn(`Unknown coordinate system: ${sourceSystem}`);
+    console.warn(`Unknown coordinate system: ${resolvedSourceSystem}`);
     return [x, y];
   }
 

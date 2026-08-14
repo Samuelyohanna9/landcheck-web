@@ -117,10 +117,14 @@ function SurveyPlanGeoreferenceSetupStep({
   const activePoint =
     controlPoints.find((item) => item.id === selectedControlPointId) || controlPoints[controlPoints.length - 1] || null;
   const solvedTransform = (session?.transform || null) as GeoreferenceTransform | null;
+  const effectiveTransformSystem =
+    solvedTransform?.resolved_coordinate_system ||
+    solvedTransform?.target_coordinate_system ||
+    targetCoordinateSystem;
   const overlayRasterUrl = session?.overlay?.raster_url
     ? (/^https?:\/\//i.test(session.overlay.raster_url) ? session.overlay.raster_url : `${api.defaults.baseURL || ""}${session.overlay.raster_url}`)
     : rasterObjectUrl;
-  const projectedGroundSystem = isProjectedCoordinateSystem(targetCoordinateSystem);
+  const projectedGroundSystem = isProjectedCoordinateSystem(effectiveTransformSystem);
   const coordinateXLabel = projectedGroundSystem ? "Easting (m)" : "Longitude";
   const coordinateYLabel = projectedGroundSystem ? "Northing (m)" : "Latitude";
   const coordinateHint = projectedGroundSystem
@@ -237,7 +241,7 @@ function SurveyPlanGeoreferenceSetupStep({
     }
 
     if (!usedMapTransform) {
-      [lng, lat] = toWGS84(targetX, targetY, solvedTransform.target_coordinate_system);
+      [lng, lat] = toWGS84(targetX, targetY, effectiveTransformSystem);
     }
 
     return {
@@ -359,9 +363,9 @@ function SurveyPlanGeoreferenceSetupStep({
         .map((item) => {
           const shouldConvertToWgs84 =
             projectedGroundSystem && looksLikeProjected(Number(item.ground_x), Number(item.ground_y));
-          const [mapLng, mapLat] = shouldConvertToWgs84
-            ? toWGS84(Number(item.ground_x), Number(item.ground_y), targetCoordinateSystem)
-            : [Number(item.ground_x), Number(item.ground_y)];
+              const [mapLng, mapLat] = shouldConvertToWgs84
+                ? toWGS84(Number(item.ground_x), Number(item.ground_y), effectiveTransformSystem)
+                : [Number(item.ground_x), Number(item.ground_y)];
           if (!Number.isFinite(mapLng) || !Number.isFinite(mapLat)) {
             return null;
           }
