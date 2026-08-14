@@ -43,28 +43,25 @@
   gap: 0.75rem;
 }
 
-.back-btn {
+.dashboard-logo-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: #94a3b8;
+  padding: 0;
+  background: none;
+  border: none;
   cursor: pointer;
-  transition: all 0.2s ease;
+  opacity: 0.95;
+  transition: opacity 0.2s ease;
 }
 
-.back-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #e2e8f0;
+.dashboard-logo-btn:hover {
+  opacity: 1;
 }
 
-.back-btn svg {
-  width: 18px;
-  height: 18px;
+.dashboard-logo-btn img {
+  display: block;
+  height: 36px;
+  width: auto;
 }
 
 .new-plot-btn {
