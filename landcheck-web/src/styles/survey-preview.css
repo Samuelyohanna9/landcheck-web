@@ -191,10 +191,11 @@
 }
 
 .beacon-style-popover {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 60;
+  /* top/left are set inline from useFloatingPopoverPosition (real viewport coordinates, via a
+     portal into document.body) - position: fixed here escapes the ribbon's own overflow
+     clipping entirely, rather than being clipped by it under position: absolute. */
+  position: fixed;
+  z-index: 200;
   margin: 0;
   padding: 0.35rem;
   min-width: 150px;
@@ -292,10 +293,11 @@
 }
 
 .north-arrow-style-popover {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 60;
+  /* top/left are set inline from useFloatingPopoverPosition (real viewport coordinates, via a
+     portal into document.body) - position: fixed here escapes the ribbon's own overflow
+     clipping entirely, rather than being clipped by it under position: absolute. */
+  position: fixed;
+  z-index: 200;
   margin: 0;
   padding: 0.35rem;
   min-width: 170px;
@@ -636,11 +638,11 @@
 }
 
 .hatch-pattern-popover {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
-  z-index: 60;
+  /* top/left/width are set inline from useFloatingPopoverPosition (real viewport coordinates,
+     via a portal into document.body) - position: fixed here escapes the ribbon/panel's own
+     overflow clipping entirely, rather than being clipped by it under position: absolute. */
+  position: fixed;
+  z-index: 200;
   margin: 0;
   padding: 0.35rem;
   list-style: none;
