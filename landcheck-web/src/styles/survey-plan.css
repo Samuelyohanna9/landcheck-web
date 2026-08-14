@@ -35,7 +35,8 @@
 }
 
 .back-btn,
-.reset-btn {
+.reset-btn,
+.dashboard-link-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -50,13 +51,15 @@
 }
 
 .back-btn:hover,
-.reset-btn:hover {
+.reset-btn:hover,
+.dashboard-link-btn:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #e2e8f0;
 }
 
 .back-btn svg,
-.reset-btn svg {
+.reset-btn svg,
+.dashboard-link-btn svg {
   width: 16px;
   height: 16px;
 }
@@ -296,7 +299,8 @@
 }
 
 .survey-container.is-preview-step .back-btn,
-.survey-container.is-preview-step .reset-btn {
+.survey-container.is-preview-step .reset-btn,
+.survey-container.is-preview-step .dashboard-link-btn {
   padding: 0.38rem 0.72rem;
   font-size: 0.8rem;
   border-radius: 7px;
@@ -3661,7 +3665,8 @@
   }
 
   .back-btn,
-  .reset-btn {
+  .reset-btn,
+  .dashboard-link-btn {
     padding: 0.34rem 0.58rem;
     font-size: 0.74rem;
   }
@@ -4292,21 +4297,24 @@
 
 .draft-banner-btn,
 .back-btn,
-.reset-btn {
+.reset-btn,
+.dashboard-link-btn {
   border-radius: 999px;
   min-height: 40px;
   padding: 0 16px;
 }
 
 .back-btn,
-.reset-btn {
+.reset-btn,
+.dashboard-link-btn {
   border: 1px solid rgba(215, 224, 210, 0.12);
   background: rgba(247, 244, 235, 0.05);
   color: #e7ece4;
 }
 
 .back-btn:hover,
-.reset-btn:hover {
+.reset-btn:hover,
+.dashboard-link-btn:hover {
   background: rgba(247, 244, 235, 0.1);
 }
 
