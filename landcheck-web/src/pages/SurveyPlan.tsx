@@ -3548,32 +3548,42 @@ export default function SurveyPlan() {
     const pending = consumePendingSurveyDownload();
     if (!pending) {
       toast.success("You're signed in.");
+      navigate("/dashboard");
       return;
     }
-    switch (pending.type) {
-      case "georeference-csv":
-        void handleDownloadGeoreferenceCsv();
-        break;
-      case "download-json":
-        void downloadWithJson(pending.url, pending.filename, pending.loadingKey, pending.useTopoMap, pending.customTitle);
-        break;
-      case "download-get":
-        void downloadWithGet(pending.url, pending.filename, pending.loadingKey);
-        break;
-      case "technical-report":
-        void downloadTechnicalReport(pending.fields as unknown as TechnicalReportFields);
-        break;
-      case "subdivision-batch":
-        void downloadSubdivisionBatch(pending.batchId);
-        break;
-      case "subdivision-clean-copy":
-        void downloadSubdivisionCleanCopyPdf();
-        break;
-    }
+
+    // Each handler already swallows its own errors internally (toast.error + finally, never a
+    // rejected promise), so this always settles - the user lands on their dashboard with either
+    // the file in hand or the failure toast still visible, never stuck waiting.
+    const runResumedDownload = async () => {
+      switch (pending.type) {
+        case "georeference-csv":
+          await handleDownloadGeoreferenceCsv();
+          break;
+        case "download-json":
+          await downloadWithJson(pending.url, pending.filename, pending.loadingKey, pending.useTopoMap, pending.customTitle);
+          break;
+        case "download-get":
+          await downloadWithGet(pending.url, pending.filename, pending.loadingKey);
+          break;
+        case "technical-report":
+          await downloadTechnicalReport(pending.fields as unknown as TechnicalReportFields);
+          break;
+        case "subdivision-batch":
+          await downloadSubdivisionBatch(pending.batchId);
+          break;
+        case "subdivision-clean-copy":
+          await downloadSubdivisionCleanCopyPdf();
+          break;
+      }
+      navigate("/dashboard");
+    };
+    void runResumedDownload();
   }, [
     draftHydrated,
     searchParams,
     setSearchParams,
+    navigate,
     handleDownloadGeoreferenceCsv,
     downloadWithJson,
     downloadWithGet,
