@@ -899,6 +899,42 @@
   color: #cbd5f5;
 }
 
+.survey-users-empty {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.survey-users-table-wrap {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: auto;
+}
+
+.survey-users-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.survey-users-table thead {
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.survey-users-table th,
+.survey-users-table td {
+  padding: 0.75rem;
+  text-align: left;
+  font-size: 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+}
+
+.survey-users-table th {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .admin-header {

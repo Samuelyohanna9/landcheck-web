@@ -61,6 +61,15 @@ type PlotDetail = {
   };
 };
 
+type SurveyUser = {
+  id: number;
+  email: string;
+  full_name: string | null;
+  created_at: string | null;
+  last_login_at: string | null;
+  plot_count: number;
+};
+
 type FeedbackEntry = {
   id: number;
   profession: string;
@@ -85,6 +94,7 @@ export default function AdminDashboard() {
   const [feedbackData, setFeedbackData] = useState<FeedbackSummary | null>(null);
   const [plotDetails, setPlotDetails] = useState<PlotDetail[]>([]);
   const [feedbackEntries, setFeedbackEntries] = useState<FeedbackEntry[]>([]);
+  const [surveyUsers, setSurveyUsers] = useState<SurveyUser[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -107,9 +117,10 @@ export default function AdminDashboard() {
           api.get("/analytics/feedback"),
           api.get("/analytics/plots/details"),
           api.get("/feedback"),
+          api.get("/analytics/survey-users"),
         ]);
 
-        const [analyticsRes, dailyRes, feedbackRes, plotsRes, feedbackListRes] = results;
+        const [analyticsRes, dailyRes, feedbackRes, plotsRes, feedbackListRes, surveyUsersRes] = results;
 
         if (analyticsRes.status === "fulfilled") {
           setAnalytics(analyticsRes.value.data);
@@ -128,6 +139,10 @@ export default function AdminDashboard() {
           const data = feedbackListRes.value.data;
           setFeedbackEntries(Array.isArray(data) ? data : []);
         }
+        if (surveyUsersRes.status === "fulfilled") {
+          const data = surveyUsersRes.value.data;
+          setSurveyUsers(Array.isArray(data) ? data : []);
+        }
       } catch (err) {
         console.error("Failed to fetch analytics:", err);
       } finally {
@@ -145,6 +160,7 @@ export default function AdminDashboard() {
     setFeedbackData(null);
     setPlotDetails([]);
     setFeedbackEntries([]);
+    setSurveyUsers([]);
     setLoading(false);
   };
 
@@ -456,6 +472,39 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
+          </section>
+
+          {/* Survey Users */}
+          <section className="survey-users-section">
+            <h2>Survey Users ({surveyUsers.length})</h2>
+            {surveyUsers.length === 0 ? (
+              <p className="survey-users-empty">No registered Survey users yet.</p>
+            ) : (
+              <div className="survey-users-table-wrap">
+                <table className="survey-users-table">
+                  <thead>
+                    <tr>
+                      <th>Email</th>
+                      <th>Name</th>
+                      <th>Joined</th>
+                      <th>Last Login</th>
+                      <th>Plots</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {surveyUsers.map((user) => (
+                      <tr key={user.id}>
+                        <td>{user.email}</td>
+                        <td>{user.full_name || "—"}</td>
+                        <td>{formatDateTime(user.created_at)}</td>
+                        <td>{formatDateTime(user.last_login_at)}</td>
+                        <td>{user.plot_count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
 
           {/* Daily Chart */}
