@@ -103,6 +103,16 @@ export const verifySurveyMagicLink = async (token: string) => {
   return session;
 };
 
+export const verifySurveyOtp = async (email: string, code: string) => {
+  const res = await api.post<SurveySessionResponse>("/survey/auth/otp/verify", {
+    email: email.trim().toLowerCase(),
+    code: code.trim(),
+  });
+  const session = normalizeSurveySession(res.data || {});
+  setSurveyAuthSession(session);
+  return session;
+};
+
 export const exchangeSurveyGoogleCode = async (code: string) => {
   const res = await api.post<SurveySessionResponse>("/survey/auth/google/exchange", { code });
   const session = normalizeSurveySession(res.data || {});
@@ -187,3 +197,21 @@ export const claimSurveyPlots = async (plotIds: number[]) => {
     return [] as number[];
   }
 };
+
+const PLOTS_DRAFT_STORAGE_KEY = "landcheck_plots";
+
+const readDraftPlotIds = (): number[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(PLOTS_DRAFT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as { id?: number }[];
+    return parsed.map((p) => Number(p.id)).filter((id) => Number.isFinite(id));
+  } catch {
+    return [];
+  }
+};
+
+// Convenience wrapper used by every sign-in completion path (magic-link verify, OTP verify,
+// Google callback) - claims whatever's in this browser's local draft.
+export const claimDraftSurveyPlots = () => claimSurveyPlots(readDraftPlotIds());

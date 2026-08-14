@@ -1,20 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { claimSurveyPlots, hasPendingSurveyDownload, verifySurveyMagicLink } from "../auth/surveyAuth";
+import { claimDraftSurveyPlots, hasPendingSurveyDownload, verifySurveyMagicLink } from "../auth/surveyAuth";
 import "../styles/signup-gate-modal.css";
-
-const PLOTS_STORAGE_KEY = "landcheck_plots";
-
-const readDraftPlotIds = (): number[] => {
-  try {
-    const raw = localStorage.getItem(PLOTS_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as { id?: number }[];
-    return parsed.map((p) => Number(p.id)).filter((id) => Number.isFinite(id));
-  } catch {
-    return [];
-  }
-};
 
 export default function SurveyAuthVerify() {
   const [searchParams] = useSearchParams();
@@ -33,7 +20,7 @@ export default function SurveyAuthVerify() {
     (async () => {
       try {
         await verifySurveyMagicLink(token);
-        await claimSurveyPlots(readDraftPlotIds());
+        await claimDraftSurveyPlots();
         navigate(hasPendingSurveyDownload() ? "/survey-plan?resume=1" : "/dashboard", { replace: true });
       } catch {
         setStatus("error");

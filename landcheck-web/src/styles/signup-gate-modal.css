@@ -90,3 +90,39 @@
   opacity: 0.6;
   cursor: default;
 }
+
+.otp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.otp-box-input {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.otp-box {
+  width: 44px;
+  height: 52px;
+  border-radius: 10px;
+  border: 1px solid rgba(214, 223, 210, 0.16);
+  background: rgba(247, 245, 238, 0.04);
+  color: #fcfaf4;
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-align: center;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.otp-box:focus {
+  outline: none;
+  border-color: rgba(45, 138, 78, 0.7);
+  box-shadow: 0 0 0 3px rgba(29, 138, 73, 0.18);
+}
+
+.otp-box:disabled {
+  opacity: 0.5;
+}
