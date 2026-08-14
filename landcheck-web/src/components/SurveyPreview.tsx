@@ -24,6 +24,7 @@ type Props = {
   riverColor: string;
   buildingColor: string;
   buildingHatchType: string;
+  roadStyle: string;
   onNorthArrowStyleChange: (value: string) => void;
   onNorthArrowColorChange: (value: string) => void;
   onBeaconStyleChange: (value: string) => void;
@@ -35,6 +36,7 @@ type Props = {
   onRiverColorChange: (value: string) => void;
   onBuildingColorChange: (value: string) => void;
   onBuildingHatchTypeChange: (value: string) => void;
+  onRoadStyleChange: (value: string) => void;
   titleFont: string;
   titleSize: string;
   gridFont: string;
@@ -93,6 +95,7 @@ function SurveyPreview({
   riverColor,
   buildingColor,
   buildingHatchType,
+  roadStyle,
   onNorthArrowStyleChange,
   onNorthArrowColorChange,
   onBeaconStyleChange,
@@ -104,6 +107,7 @@ function SurveyPreview({
   onRiverColorChange,
   onBuildingColorChange,
   onBuildingHatchTypeChange,
+  onRoadStyleChange,
   titleFont,
   titleSize,
   gridFont,
@@ -310,7 +314,7 @@ function SurveyPreview({
           <svg viewBox="0 0 20 20" fill="currentColor" style={{ width: 13, height: 13 }}>
             <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h8a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
           </svg>
-          Road Names
+          Road Names &amp; Style
         </button>
         <button type="button" className="ribbon-appearance-btn" onClick={() => setAppearanceOpen(true)}>
           <svg viewBox="0 0 20 20" fill="currentColor" style={{ width: 13, height: 13 }}>
@@ -329,6 +333,8 @@ function SurveyPreview({
         scaleText={scaleText}
         paperSize={paperSize}
         templateName={templateName}
+        roadStyle={roadStyle}
+        onRoadStyleChange={onRoadStyleChange}
       />
 
       <SurveyAppearancePanel

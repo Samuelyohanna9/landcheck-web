@@ -124,6 +124,7 @@ type Props = {
   riverColor: string;
   buildingColor: string;
   buildingHatchType: string;
+  roadStyle: string;
   onNorthArrowStyleChange: (value: string) => void;
   onNorthArrowColorChange: (value: string) => void;
   onBeaconStyleChange: (value: string) => void;
@@ -135,6 +136,7 @@ type Props = {
   onRiverColorChange: (value: string) => void;
   onBuildingColorChange: (value: string) => void;
   onBuildingHatchTypeChange: (value: string) => void;
+  onRoadStyleChange: (value: string) => void;
   titleFont: string;
   titleSize: string;
   gridFont: string;
@@ -210,6 +212,7 @@ function SurveyPlanSurveyPreviewStep({
   riverColor,
   buildingColor,
   buildingHatchType,
+  roadStyle,
   onNorthArrowStyleChange,
   onNorthArrowColorChange,
   onBeaconStyleChange,
@@ -221,6 +224,7 @@ function SurveyPlanSurveyPreviewStep({
   onRiverColorChange,
   onBuildingColorChange,
   onBuildingHatchTypeChange,
+  onRoadStyleChange,
   titleFont,
   titleSize,
   gridFont,
@@ -703,6 +707,7 @@ function SurveyPlanSurveyPreviewStep({
           riverColor={riverColor}
           buildingColor={buildingColor}
           buildingHatchType={buildingHatchType}
+          roadStyle={roadStyle}
           onNorthArrowStyleChange={onNorthArrowStyleChange}
           onNorthArrowColorChange={onNorthArrowColorChange}
           onBeaconStyleChange={onBeaconStyleChange}
@@ -714,6 +719,7 @@ function SurveyPlanSurveyPreviewStep({
           onRiverColorChange={onRiverColorChange}
           onBuildingColorChange={onBuildingColorChange}
           onBuildingHatchTypeChange={onBuildingHatchTypeChange}
+          onRoadStyleChange={onRoadStyleChange}
           titleFont={titleFont}
           titleSize={titleSize}
           gridFont={gridFont}

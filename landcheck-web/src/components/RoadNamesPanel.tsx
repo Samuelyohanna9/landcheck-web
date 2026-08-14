@@ -33,7 +33,37 @@ type RoadNamesPanelProps = {
   scaleText?: string;
   paperSize?: string;
   templateName?: string;
+  roadStyle: string;
+  onRoadStyleChange: (value: string) => void;
 };
+
+const ROAD_STYLE_OPTIONS: { value: string; label: string }[] = [
+  { value: "", label: "Template Default" },
+  { value: "solid", label: "Solid" },
+  { value: "dashed_symbol", label: "Dashed + Symbols" },
+];
+
+// Small preview matching how each style actually renders on the plan: a plain line, or a dashed
+// line with the periodic cross-tie ticks map_renderer_layout.py's dashed_symbol style draws.
+function RoadStyleSwatch({ value }: { value: string }) {
+  return (
+    <svg className="road-style-swatch" viewBox="0 0 64 18" aria-hidden="true">
+      {value === "dashed_symbol" ? (
+        <>
+          <line x1="4" y1="9" x2="60" y2="9" strokeDasharray="7,4" />
+          <line x1="11" y1="5" x2="11" y2="13" />
+          <line x1="25" y1="5" x2="25" y2="13" />
+          <line x1="39" y1="5" x2="39" y2="13" />
+          <line x1="53" y1="5" x2="53" y2="13" />
+        </>
+      ) : value === "solid" ? (
+        <line x1="4" y1="9" x2="60" y2="9" />
+      ) : (
+        <line x1="4" y1="9" x2="60" y2="9" strokeDasharray="2,3" />
+      )}
+    </svg>
+  );
+}
 
 function titleCase(value: string): string {
   return value
@@ -89,6 +119,8 @@ function RoadNamesPanel({
   scaleText,
   paperSize,
   templateName,
+  roadStyle,
+  onRoadStyleChange,
 }: RoadNamesPanelProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -246,12 +278,28 @@ function RoadNamesPanel({
       />
       <aside className={`appearance-panel road-names-panel${open ? " open" : ""}`} aria-hidden={!open}>
         <div className="appearance-panel-header">
-          <span>Road &amp; River Names</span>
+          <span>Road Names &amp; Style</span>
           <button type="button" className="appearance-panel-close" onClick={onClose} aria-label="Close">
             &times;
           </button>
         </div>
         <div className="appearance-panel-body">
+          <section className="appearance-section road-style-section">
+            <h4>Road Style</h4>
+            <div className="road-style-options">
+              {ROAD_STYLE_OPTIONS.map((opt) => (
+                <button
+                  type="button"
+                  key={opt.value || "default"}
+                  className={`road-style-option${roadStyle === opt.value ? " active" : ""}`}
+                  onClick={() => onRoadStyleChange(opt.value)}
+                >
+                  <RoadStyleSwatch value={opt.value} />
+                  <span>{opt.label}</span>
+                </button>
+              ))}
+            </div>
+          </section>
           {!plotId ? (
             <p className="road-names-empty">Sync this draft to the server first to name its roads/rivers.</p>
           ) : loading ? (
