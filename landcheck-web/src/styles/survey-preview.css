@@ -697,6 +697,48 @@
   stroke-width: 1;
 }
 
+.road-style-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.road-style-option {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.road-style-option:hover {
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.road-style-option.active {
+  background: rgba(59, 130, 246, 0.28);
+  color: #ffffff;
+}
+
+.road-style-swatch {
+  flex-shrink: 0;
+  width: 56px;
+  height: 16px;
+}
+
+.road-style-swatch line {
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
 .appearance-text-header,
 .appearance-text-row {
   display: grid;

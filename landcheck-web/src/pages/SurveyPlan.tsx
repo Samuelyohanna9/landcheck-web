@@ -172,6 +172,9 @@ type NorthArrowColor = "black" | "blue";
 type BeaconStyle = "circle" | "square" | "triangle" | "diamond" | "cross";
 type RoadWidthOption = "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
 type BuildingHatchType = "horizontal" | "vertical" | "diagonal" | "cross";
+// "" = this template's own existing default (solid for general/Adamawa, dashed for cadastral/FCT) -
+// left unset unless the user explicitly picks one, so existing plans keep looking exactly as they do.
+type RoadStyleOption = "" | "solid" | "dashed_symbol";
 
 type SurveyPlanDraftState = {
   workflowMode: WorkflowMode | null;
@@ -194,6 +197,7 @@ type SurveyPlanDraftState = {
   riverColor: string;
   buildingColor: string;
   buildingHatchType: BuildingHatchType;
+  roadStyle: RoadStyleOption;
   titleFont: string;
   titleSize: string;
   gridFont: string;
@@ -680,6 +684,7 @@ export default function SurveyPlan() {
   const [riverColor, setRiverColor] = useState<string>("#0000ff");
   const [buildingColor, setBuildingColor] = useState<string>("#000000");
   const [buildingHatchType, setBuildingHatchType] = useState<BuildingHatchType>("diagonal");
+  const [roadStyle, setRoadStyle] = useState<RoadStyleOption>("");
   const [titleFont, setTitleFont] = useState<string>("");
   const [titleSize, setTitleSize] = useState<string>("");
   const [gridFont, setGridFont] = useState<string>("");
@@ -974,6 +979,7 @@ export default function SurveyPlan() {
         if (saved.riverColor) setRiverColor(saved.riverColor);
         if (saved.buildingColor) setBuildingColor(saved.buildingColor);
         if (saved.buildingHatchType) setBuildingHatchType(saved.buildingHatchType);
+        if (saved.roadStyle) setRoadStyle(saved.roadStyle);
         if (saved.titleFont) setTitleFont(saved.titleFont);
         if (saved.titleSize) setTitleSize(saved.titleSize);
         if (saved.gridFont) setGridFont(saved.gridFont);
@@ -1265,6 +1271,7 @@ export default function SurveyPlan() {
           riverColor,
           buildingColor,
           buildingHatchType,
+          roadStyle,
           titleFont,
           titleSize,
           gridFont,
@@ -1291,6 +1298,7 @@ export default function SurveyPlan() {
       riverColor,
       buildingColor,
       buildingHatchType,
+      roadStyle,
       titleFont,
       titleSize,
       gridFont,
@@ -1331,6 +1339,7 @@ export default function SurveyPlan() {
       riverColor,
       buildingColor,
       buildingHatchType,
+      roadStyle,
       titleFont,
       titleSize,
       gridFont,
@@ -1398,6 +1407,7 @@ export default function SurveyPlan() {
     riverColor,
     buildingColor,
     buildingHatchType,
+    roadStyle,
     titleFont,
     titleSize,
     gridFont,
@@ -2059,6 +2069,7 @@ export default function SurveyPlan() {
         river_color: riverColor,
         building_color: buildingColor,
         building_hatch_type: buildingHatchType,
+        road_style: roadStyle,
         ...textStylePayload,
       };
 
@@ -2104,6 +2115,7 @@ export default function SurveyPlan() {
     riverColor,
     buildingColor,
     buildingHatchType,
+    roadStyle,
     titleFont,
     titleSize,
     gridFont,
@@ -2286,6 +2298,10 @@ export default function SurveyPlan() {
 
   const handleBuildingHatchTypeChange = useCallback((value: string) => {
     setBuildingHatchType(value as BuildingHatchType);
+  }, []);
+
+  const handleRoadStyleChange = useCallback((value: string) => {
+    setRoadStyle(value as RoadStyleOption);
   }, []);
 
   const handleCreateGeoreferenceSession = useCallback(
@@ -2914,6 +2930,7 @@ export default function SurveyPlan() {
         river_color: riverColor,
         building_color: buildingColor,
         building_hatch_type: buildingHatchType,
+        road_style: roadStyle,
         ...textStylePayload,
         template_name: meta.template_name,
         adamawa_rof_no: meta.adamawa_rof_no,
@@ -3573,6 +3590,7 @@ export default function SurveyPlan() {
         river_color: riverColor,
         building_color: buildingColor,
         building_hatch_type: buildingHatchType,
+        road_style: roadStyle,
         ...textStylePayload,
         area_labels: subdivisionCleanCopyItems.map((item) => {
           const key = subdivisionAreaDraftKey(item);
@@ -4231,6 +4249,7 @@ export default function SurveyPlan() {
               riverColor={riverColor}
               buildingColor={buildingColor}
               buildingHatchType={buildingHatchType}
+              roadStyle={roadStyle}
               onNorthArrowStyleChange={handleNorthArrowStyleChange}
               onNorthArrowColorChange={handleNorthArrowColorChange}
               onBeaconStyleChange={handleBeaconStyleChange}
@@ -4242,6 +4261,7 @@ export default function SurveyPlan() {
               onRiverColorChange={setRiverColor}
               onBuildingColorChange={setBuildingColor}
               onBuildingHatchTypeChange={handleBuildingHatchTypeChange}
+              onRoadStyleChange={handleRoadStyleChange}
               titleFont={titleFont}
               titleSize={titleSize}
               gridFont={gridFont}
@@ -4399,6 +4419,7 @@ export default function SurveyPlan() {
               riverColor={riverColor}
               buildingColor={buildingColor}
               buildingHatchType={buildingHatchType}
+              roadStyle={roadStyle}
               onNorthArrowStyleChange={handleNorthArrowStyleChange}
               onNorthArrowColorChange={handleNorthArrowColorChange}
               onBeaconStyleChange={handleBeaconStyleChange}
@@ -4410,6 +4431,7 @@ export default function SurveyPlan() {
               onRiverColorChange={setRiverColor}
               onBuildingColorChange={setBuildingColor}
               onBuildingHatchTypeChange={handleBuildingHatchTypeChange}
+              onRoadStyleChange={handleRoadStyleChange}
               titleFont={titleFont}
               titleSize={titleSize}
               gridFont={gridFont}
@@ -4756,6 +4778,7 @@ export default function SurveyPlan() {
                 riverColor={riverColor}
                 buildingColor={buildingColor}
                 buildingHatchType={buildingHatchType}
+                roadStyle={roadStyle}
                 onNorthArrowStyleChange={(value) => setNorthArrowStyle(value as NorthArrowStyle)}
                 onNorthArrowColorChange={(value) => setNorthArrowColor(value as NorthArrowColor)}
                 onBeaconStyleChange={(value) => setBeaconStyle(value as BeaconStyle)}
@@ -4767,6 +4790,7 @@ export default function SurveyPlan() {
                 onRiverColorChange={setRiverColor}
                 onBuildingColorChange={setBuildingColor}
                 onBuildingHatchTypeChange={(value) => setBuildingHatchType(value as BuildingHatchType)}
+                onRoadStyleChange={(value) => setRoadStyle(value as RoadStyleOption)}
                 titleFont={titleFont}
                 titleSize={titleSize}
                 gridFont={gridFont}
