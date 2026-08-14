@@ -1,4 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useFloatingPopoverPosition } from "../utils/useFloatingPopoverPosition";
 
 type HatchType = "horizontal" | "vertical" | "diagonal" | "cross";
 
@@ -53,12 +55,19 @@ function HatchSwatch({ type }: { type: HatchType }) {
 function HatchPatternPicker({ value, onChange }: HatchPatternPickerProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLUListElement>(null);
   const current = HATCH_OPTIONS.find((opt) => opt.value === value) ?? HATCH_OPTIONS[2];
+  const position = useFloatingPopoverPosition(triggerRef, popoverRef, open);
 
   useEffect(() => {
     if (!open) return;
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        containerRef.current && !containerRef.current.contains(target) &&
+        popoverRef.current && !popoverRef.current.contains(target)
+      ) {
         setOpen(false);
       }
     };
@@ -70,6 +79,7 @@ function HatchPatternPicker({ value, onChange }: HatchPatternPickerProps) {
     <div className="hatch-pattern-picker" ref={containerRef}>
       <button
         type="button"
+        ref={triggerRef}
         className="hatch-pattern-picker-btn"
         onClick={() => setOpen((prev) => !prev)}
         aria-haspopup="listbox"
@@ -81,27 +91,35 @@ function HatchPatternPicker({ value, onChange }: HatchPatternPickerProps) {
           &#9662;
         </span>
       </button>
-      {open ? (
-        <ul className="hatch-pattern-popover" role="listbox">
-          {HATCH_OPTIONS.map((opt) => (
-            <li key={opt.value}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={opt.value === value}
-                className={`hatch-pattern-option${opt.value === value ? " active" : ""}`}
-                onClick={() => {
-                  onChange(opt.value);
-                  setOpen(false);
-                }}
-              >
-                <HatchSwatch type={opt.value} />
-                <span>{opt.label}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      {open && position
+        ? createPortal(
+            <ul
+              ref={popoverRef}
+              className="hatch-pattern-popover"
+              role="listbox"
+              style={{ top: position.top, left: position.left, width: position.triggerWidth }}
+            >
+              {HATCH_OPTIONS.map((opt) => (
+                <li key={opt.value}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={opt.value === value}
+                    className={`hatch-pattern-option${opt.value === value ? " active" : ""}`}
+                    onClick={() => {
+                      onChange(opt.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <HatchSwatch type={opt.value} />
+                    <span>{opt.label}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

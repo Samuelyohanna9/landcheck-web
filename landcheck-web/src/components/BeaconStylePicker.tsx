@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useFloatingPopoverPosition } from "../utils/useFloatingPopoverPosition";
 
 type BeaconType = "circle" | "square" | "triangle" | "diamond" | "cross";
 
@@ -39,12 +41,19 @@ function BeaconSwatch({ type }: { type: BeaconType }) {
 function BeaconStylePicker({ value, onChange, disabled, title }: BeaconStylePickerProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLUListElement>(null);
   const current = BEACON_OPTIONS.find((opt) => opt.value === value) ?? BEACON_OPTIONS[0];
+  const position = useFloatingPopoverPosition(triggerRef, popoverRef, open);
 
   useEffect(() => {
     if (!open) return;
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        containerRef.current && !containerRef.current.contains(target) &&
+        popoverRef.current && !popoverRef.current.contains(target)
+      ) {
         setOpen(false);
       }
     };
@@ -60,6 +69,7 @@ function BeaconStylePicker({ value, onChange, disabled, title }: BeaconStylePick
     <div className="beacon-style-picker" ref={containerRef} title={title}>
       <button
         type="button"
+        ref={triggerRef}
         className="beacon-style-picker-btn"
         onClick={() => setOpen((prev) => !prev)}
         disabled={disabled}
@@ -72,27 +82,35 @@ function BeaconStylePicker({ value, onChange, disabled, title }: BeaconStylePick
           &#9662;
         </span>
       </button>
-      {open ? (
-        <ul className="beacon-style-popover" role="listbox">
-          {BEACON_OPTIONS.map((opt) => (
-            <li key={opt.value}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={opt.value === value}
-                className={`beacon-style-option${opt.value === value ? " active" : ""}`}
-                onClick={() => {
-                  onChange(opt.value);
-                  setOpen(false);
-                }}
-              >
-                <BeaconSwatch type={opt.value} />
-                <span>{opt.label}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      {open && position
+        ? createPortal(
+            <ul
+              ref={popoverRef}
+              className="beacon-style-popover"
+              role="listbox"
+              style={{ top: position.top, left: position.left }}
+            >
+              {BEACON_OPTIONS.map((opt) => (
+                <li key={opt.value}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={opt.value === value}
+                    className={`beacon-style-option${opt.value === value ? " active" : ""}`}
+                    onClick={() => {
+                      onChange(opt.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <BeaconSwatch type={opt.value} />
+                    <span>{opt.label}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
