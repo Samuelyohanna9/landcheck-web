@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, BACKEND_URL } from "../api/client";
 import { clearWorkAuthed, getWorkAuthSession } from "../auth/workAuth";
+import { isProjectedCoordinateSystem } from "../utils/coordinateConverter";
 import "../styles/admin-dashboard.css";
 
 type Analytics = {
@@ -61,12 +62,21 @@ type PlotDetail = {
   };
 };
 
+type SurveyUserInputPoint = {
+  station: string | null;
+  x: number | null;
+  y: number | null;
+  height: number | null;
+};
+
 type SurveyUserPlot = {
   plot_id: number;
   title_text: string | null;
   location_text: string | null;
   template_name: string | null;
   created_at: string | null;
+  coordinate_system: string | null;
+  survey_input_coordinates: SurveyUserInputPoint[];
 };
 
 type SurveyUser = {
@@ -529,33 +539,65 @@ export default function AdminDashboard() {
                             <tr className="survey-user-plots-row">
                               <td colSpan={6}>
                                 <div className="survey-user-plots">
-                                  {user.plots.map((plot) => (
-                                    <div key={plot.plot_id} className="survey-user-plot-card">
-                                      <div className="survey-user-plot-info">
-                                        <span className="survey-user-plot-title">
-                                          {plot.title_text || `Plot #${plot.plot_id}`}
-                                        </span>
-                                        <span className="survey-user-plot-meta">
-                                          {plot.location_text || "No location"} · {formatTemplateName(plot.template_name)} ·{" "}
-                                          {formatDateTime(plot.created_at)}
-                                        </span>
+                                  {user.plots.map((plot) => {
+                                    const plotIsProjected = isProjectedCoordinateSystem(plot.coordinate_system || "wgs84");
+                                    return (
+                                      <div key={plot.plot_id} className="survey-user-plot-card">
+                                        <div className="survey-user-plot-card-header">
+                                          <div className="survey-user-plot-info">
+                                            <span className="survey-user-plot-title">
+                                              {plot.title_text || `Plot #${plot.plot_id}`}
+                                            </span>
+                                            <span className="survey-user-plot-meta">
+                                              {plot.location_text || "No location"} · {formatTemplateName(plot.template_name)} ·{" "}
+                                              {formatDateTime(plot.created_at)}
+                                            </span>
+                                          </div>
+                                          <div className="survey-user-plot-downloads">
+                                            {Object.entries(reportLinks(plot.plot_id)).map(([key, href]) => (
+                                              <a
+                                                key={key}
+                                                className="survey-user-download-btn"
+                                                href={href}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                onClick={(event) => event.stopPropagation()}
+                                              >
+                                                {reportLabels[key] || key}
+                                              </a>
+                                            ))}
+                                          </div>
+                                        </div>
+                                        {plot.survey_input_coordinates.length > 0 && (
+                                          <div className="survey-user-plot-coords">
+                                            <div className="survey-user-plot-coords-label">
+                                              As entered by the user · {formatCoordinateSystem(plot.coordinate_system)}
+                                            </div>
+                                            <div className="survey-user-coords-table-wrap">
+                                              <table className="survey-user-coords-table">
+                                                <thead>
+                                                  <tr>
+                                                    <th>Station</th>
+                                                    <th>{plotIsProjected ? "Easting (m)" : "Longitude"}</th>
+                                                    <th>{plotIsProjected ? "Northing (m)" : "Latitude"}</th>
+                                                  </tr>
+                                                </thead>
+                                                <tbody>
+                                                  {plot.survey_input_coordinates.map((pt, idx) => (
+                                                    <tr key={idx}>
+                                                      <td>{pt.station || `P${idx + 1}`}</td>
+                                                      <td>{pt.x != null ? pt.x.toFixed(plotIsProjected ? 3 : 6) : "—"}</td>
+                                                      <td>{pt.y != null ? pt.y.toFixed(plotIsProjected ? 3 : 6) : "—"}</td>
+                                                    </tr>
+                                                  ))}
+                                                </tbody>
+                                              </table>
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
-                                      <div className="survey-user-plot-downloads">
-                                        {Object.entries(reportLinks(plot.plot_id)).map(([key, href]) => (
-                                          <a
-                                            key={key}
-                                            className="survey-user-download-btn"
-                                            href={href}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            onClick={(event) => event.stopPropagation()}
-                                          >
-                                            {reportLabels[key] || key}
-                                          </a>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               </td>
                             </tr>
