@@ -160,13 +160,14 @@ export default function CSVPreviewModal({
   // column selected - nothing to distinguish, every row stays a boundary point exactly as
   // before) or show the boundary-marking step so the user can flag which rows are boundary
   // corners vs. spot-height-only samples, since every row counts as a spot height either way.
+  // Boundary points are usually a small subset of a job file (the corners, out of many spot
+  // heights), so the marking step starts with nothing checked rather than everything.
   const proceedWithPoints = (pts: ManualPoint[]) => {
-    const withDefaults = pts.map((p) => ({ ...p, is_boundary: true }));
     if (heightCol !== null) {
-      setParsedPoints(withDefaults);
+      setParsedPoints(pts.map((p) => ({ ...p, is_boundary: false })));
       setStep("boundary");
     } else {
-      onConfirm(withDefaults);
+      onConfirm(pts.map((p) => ({ ...p, is_boundary: true })));
       onClose();
     }
   };
@@ -299,8 +300,8 @@ export default function CSVPreviewModal({
           <>
             <div className="csv-modal-body">
               <p className="csv-boundary-intro">
-                Every point below is used as a spot-height sample for the topo map. Check which ones also
-                form your plot boundary - leave everything checked if every row is a boundary corner.
+                Every point below is used as a spot-height sample for the topo map. Check the ones that
+                also form your plot boundary - usually just the corners, out of everything else in the file.
               </p>
               <div className="csv-boundary-actions">
                 <button type="button" className="csv-boundary-action-btn" onClick={boundarySelectAll}>
