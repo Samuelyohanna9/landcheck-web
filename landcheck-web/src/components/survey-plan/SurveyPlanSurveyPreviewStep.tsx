@@ -11,7 +11,7 @@ type PlotMeta = {
   certification_statement: string;
   scale_text: string;
   paper_size: string;
-  template_name: "general" | "adamawa_osg" | "akwa_ibom_osg" | "rivers_osg" | "cross_river_osg" | "fct_abuja_osg";
+  template_name: "general" | "site_plan" | "adamawa_osg" | "akwa_ibom_osg" | "rivers_osg" | "cross_river_osg" | "fct_abuja_osg";
   fct_file_no: string;
   fct_district: string;
   fct_cadastral_zone: string;
@@ -68,6 +68,7 @@ const CADASTRAL_STATE_LABELS: Record<string, string> = {
   cross_river_osg: "CROSS RIVER STATE",
 };
 const FCT_TEMPLATES: PlotMeta["template_name"][] = ["fct_abuja_osg"];
+const SITE_PLAN_TEMPLATES: PlotMeta["template_name"][] = ["site_plan"];
 
 type Props = {
   sidebar: ReactNode;
@@ -297,7 +298,7 @@ function SurveyPlanSurveyPreviewStep({
                   className="template-picker-badge"
                   onClick={() => templateSelectRef.current?.focus()}
                 >
-                  6 templates available — click here to choose
+                  7 templates available — click here to choose
                 </button>
               </div>
               <select
@@ -309,7 +310,10 @@ function SurveyPlanSurveyPreviewStep({
                   const nowCadastral = CADASTRAL_STATE_TEMPLATES.includes(nextTemplate);
                   const wasFct = FCT_TEMPLATES.includes(meta.template_name);
                   const nowFct = FCT_TEMPLATES.includes(nextTemplate);
-                  const enteringApplicantNameStyle = (nowCadastral || nowFct) && !wasCadastral && !wasFct;
+                  const wasSitePlan = SITE_PLAN_TEMPLATES.includes(meta.template_name);
+                  const nowSitePlan = SITE_PLAN_TEMPLATES.includes(nextTemplate);
+                  const enteringApplicantNameStyle =
+                    (nowCadastral || nowFct || nowSitePlan) && !wasCadastral && !wasFct && !wasSitePlan;
                   setMeta((m) => ({
                     ...m,
                     template_name: nextTemplate,
@@ -326,16 +330,21 @@ function SurveyPlanSurveyPreviewStep({
                   } else if (nowFct && !wasFct) {
                     onNorthArrowStyleChange("nn_arrow");
                     onNorthArrowColorChange("black");
+                  } else if (nowSitePlan && !wasSitePlan) {
+                    onNorthArrowStyleChange("one_side_stem");
+                    onNorthArrowColorChange("blue");
                   }
                 }}
               >
                 <option value="general">General</option>
+                <option value="site_plan">Site Plan</option>
                 <option value="adamawa_osg">Adamawa OSG</option>
                 <option value="akwa_ibom_osg">Akwa Ibom State (Cadastral)</option>
                 <option value="rivers_osg">Rivers State (Cadastral)</option>
                 <option value="cross_river_osg">Cross River State (Cadastral)</option>
                 <option value="fct_abuja_osg">FCT Abuja (Cadastral)</option>
               </select>
+              {meta.template_name === "site_plan" && <span className="template-hint">Site Plan template</span>}
               {meta.template_name === "adamawa_osg" && <span className="template-hint">Adamawa OSG template</span>}
               {CADASTRAL_STATE_TEMPLATES.includes(meta.template_name) && (
                 <span className="template-hint">{CADASTRAL_STATE_HINTS[meta.template_name]}</span>
@@ -376,6 +385,38 @@ function SurveyPlanSurveyPreviewStep({
                     placeholder={defaultCertificationStatement}
                     rows={3}
                   />
+                </div>
+              </>
+            ) : meta.template_name === "site_plan" ? (
+              <>
+                <div className="form-group">
+                  <label>Applicant Name</label>
+                  <input value={meta.title_text} onChange={(e) => setMeta((m) => ({ ...m, title_text: e.target.value }))} placeholder="CHINEDU TIMOTHY OKEY" />
+                </div>
+                <div className="form-group">
+                  <label>Location</label>
+                  <input value={meta.location_text} onChange={(e) => setMeta((m) => ({ ...m, location_text: e.target.value }))} placeholder="Enter location" />
+                </div>
+                <div className="form-group">
+                  <label>LGA</label>
+                  <input value={meta.lga_text} onChange={(e) => setMeta((m) => ({ ...m, lga_text: e.target.value }))} placeholder="Local Government Area" />
+                </div>
+                <div className="form-group">
+                  <label>State</label>
+                  <input value={meta.state_text} onChange={(e) => setMeta((m) => ({ ...m, state_text: e.target.value }))} placeholder="Enter state" />
+                </div>
+                <div className="form-group">
+                  <label>Surveyor Name</label>
+                  <input value={meta.surveyor_name} onChange={(e) => setMeta((m) => ({ ...m, surveyor_name: e.target.value }))} placeholder="Enter surveyor name" />
+                </div>
+                <div className="form-group">
+                  <label>Rank</label>
+                  <input value={meta.surveyor_rank} onChange={(e) => setMeta((m) => ({ ...m, surveyor_rank: e.target.value }))} placeholder="Surveyor rank" />
+                </div>
+                <div className="form-group full-width">
+                  <span className="template-hint">
+                    The photo panel reuses your plot's orthophoto imagery automatically - no separate upload needed.
+                  </span>
                 </div>
               </>
             ) : CADASTRAL_STATE_TEMPLATES.includes(meta.template_name) ? (
