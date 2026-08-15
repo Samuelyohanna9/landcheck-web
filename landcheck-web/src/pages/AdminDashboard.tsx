@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, BACKEND_URL } from "../api/client";
 import { clearWorkAuthed, getWorkAuthSession } from "../auth/workAuth";
@@ -61,6 +61,14 @@ type PlotDetail = {
   };
 };
 
+type SurveyUserPlot = {
+  plot_id: number;
+  title_text: string | null;
+  location_text: string | null;
+  template_name: string | null;
+  created_at: string | null;
+};
+
 type SurveyUser = {
   id: number;
   email: string;
@@ -68,6 +76,7 @@ type SurveyUser = {
   created_at: string | null;
   last_login_at: string | null;
   plot_count: number;
+  plots: SurveyUserPlot[];
 };
 
 type FeedbackEntry = {
@@ -95,6 +104,7 @@ export default function AdminDashboard() {
   const [plotDetails, setPlotDetails] = useState<PlotDetail[]>([]);
   const [feedbackEntries, setFeedbackEntries] = useState<FeedbackEntry[]>([]);
   const [surveyUsers, setSurveyUsers] = useState<SurveyUser[]>([]);
+  const [expandedSurveyUserId, setExpandedSurveyUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -484,6 +494,7 @@ export default function AdminDashboard() {
                 <table className="survey-users-table">
                   <thead>
                     <tr>
+                      <th></th>
                       <th>Email</th>
                       <th>Name</th>
                       <th>Joined</th>
@@ -492,15 +503,66 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {surveyUsers.map((user) => (
-                      <tr key={user.id}>
-                        <td>{user.email}</td>
-                        <td>{user.full_name || "—"}</td>
-                        <td>{formatDateTime(user.created_at)}</td>
-                        <td>{formatDateTime(user.last_login_at)}</td>
-                        <td>{user.plot_count}</td>
-                      </tr>
-                    ))}
+                    {surveyUsers.map((user) => {
+                      const isExpanded = expandedSurveyUserId === user.id;
+                      return (
+                        <Fragment key={user.id}>
+                          <tr
+                            className={`survey-user-row ${user.plot_count > 0 ? "clickable" : ""}`}
+                            onClick={() => {
+                              if (user.plot_count === 0) return;
+                              setExpandedSurveyUserId((prev) => (prev === user.id ? null : user.id));
+                            }}
+                          >
+                            <td className="survey-user-expand-cell">
+                              {user.plot_count > 0 && (
+                                <span className={`survey-user-caret ${isExpanded ? "open" : ""}`}>▶</span>
+                              )}
+                            </td>
+                            <td>{user.email}</td>
+                            <td>{user.full_name || "—"}</td>
+                            <td>{formatDateTime(user.created_at)}</td>
+                            <td>{formatDateTime(user.last_login_at)}</td>
+                            <td>{user.plot_count}</td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className="survey-user-plots-row">
+                              <td colSpan={6}>
+                                <div className="survey-user-plots">
+                                  {user.plots.map((plot) => (
+                                    <div key={plot.plot_id} className="survey-user-plot-card">
+                                      <div className="survey-user-plot-info">
+                                        <span className="survey-user-plot-title">
+                                          {plot.title_text || `Plot #${plot.plot_id}`}
+                                        </span>
+                                        <span className="survey-user-plot-meta">
+                                          {plot.location_text || "No location"} · {formatTemplateName(plot.template_name)} ·{" "}
+                                          {formatDateTime(plot.created_at)}
+                                        </span>
+                                      </div>
+                                      <div className="survey-user-plot-downloads">
+                                        {Object.entries(reportLinks(plot.plot_id)).map(([key, href]) => (
+                                          <a
+                                            key={key}
+                                            className="survey-user-download-btn"
+                                            href={href}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            onClick={(event) => event.stopPropagation()}
+                                          >
+                                            {reportLabels[key] || key}
+                                          </a>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

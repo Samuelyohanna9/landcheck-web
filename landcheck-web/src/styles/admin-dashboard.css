@@ -935,6 +935,96 @@
   font-weight: 600;
 }
 
+.survey-user-row.clickable {
+  cursor: pointer;
+}
+
+.survey-user-row.clickable:hover {
+  background: rgba(148, 163, 184, 0.06);
+}
+
+.survey-user-expand-cell {
+  width: 1.5rem;
+  padding-right: 0 !important;
+}
+
+.survey-user-caret {
+  display: inline-block;
+  color: #64748b;
+  font-size: 0.65rem;
+  transition: transform 0.15s ease;
+}
+
+.survey-user-caret.open {
+  transform: rotate(90deg);
+  color: #38bdf8;
+}
+
+.survey-user-plots-row td {
+  padding: 0;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.survey-user-plots {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem 0.9rem 2.5rem;
+}
+
+.survey-user-plot-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(30, 41, 59, 0.5);
+}
+
+.survey-user-plot-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.survey-user-plot-title {
+  color: #e2e8f0;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.survey-user-plot-meta {
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+.survey-user-plot-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.survey-user-download-btn {
+  padding: 0.32rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  background: rgba(56, 189, 248, 0.08);
+  color: #7dd3fc;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.survey-user-download-btn:hover {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .admin-header {
