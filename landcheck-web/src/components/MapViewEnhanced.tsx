@@ -15,6 +15,42 @@ type Props = {
   onCoordinatesDrawn?: (coords: Point[]) => void;
   disabled?: boolean;
   lightweight?: boolean;
+  coordinateSystem?: string;
+};
+
+// Nigeria spans UTM zones 31N-33N, split at fixed meridians - picking the wrong zone for a
+// location is a real, easy-to-make mistake, so show the selected zone's boundary on the map as
+// soon as it's chosen, before a single point is even entered. Only meaningful for a projected
+// system (UTM or Minna Datum, which is UTM on a different reference ellipsoid/datum shift but the
+// same zone boundaries) - WGS84 has no zone concept, so nothing is drawn for it.
+const UTM_ZONE_BOUNDARIES: Record<string, { label: string; westLng: number; eastLng: number }> = {
+  utm_31n: { label: "UTM Zone 31N", westLng: 0, eastLng: 6 },
+  minna_31: { label: "Minna Datum Zone 31", westLng: 0, eastLng: 6 },
+  utm_32n: { label: "UTM Zone 32N", westLng: 6, eastLng: 12 },
+  minna_32: { label: "Minna Datum Zone 32", westLng: 6, eastLng: 12 },
+  utm_33n: { label: "UTM Zone 33N", westLng: 12, eastLng: 18 },
+  minna_33: { label: "Minna Datum Zone 33", westLng: 12, eastLng: 18 },
+};
+const ZONE_BOUNDARY_LAT_SPAN: [number, number] = [-2, 16]; // generous margin around Nigeria's real 4°N-14°N extent
+
+const emptyZoneCollection = () => ({
+  type: "FeatureCollection" as const,
+  features: [] as any[],
+});
+
+const zoneBoundaryCollection = (system: string | undefined) => {
+  const zone = system ? UTM_ZONE_BOUNDARIES[system] : undefined;
+  if (!zone) return emptyZoneCollection();
+  const [southLat, northLat] = ZONE_BOUNDARY_LAT_SPAN;
+  const meridian = (lng: number) => ({
+    type: "Feature" as const,
+    properties: {},
+    geometry: { type: "LineString" as const, coordinates: [[lng, southLat], [lng, northLat]] },
+  });
+  return {
+    type: "FeatureCollection" as const,
+    features: [meridian(zone.westLng), meridian(zone.eastLng)],
+  };
 };
 
 const drawStyles = [
@@ -104,6 +140,7 @@ function MapViewEnhanced({
   onCoordinatesDrawn,
   disabled = false,
   lightweight = false,
+  coordinateSystem,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -218,6 +255,22 @@ function MapViewEnhanced({
             "line-width": 3,
           },
         });
+
+        map.addSource("utm-zone-boundary", {
+          type: "geojson",
+          data: zoneBoundaryCollection(coordinateSystem),
+        });
+
+        map.addLayer({
+          id: "utm-zone-boundary-line",
+          type: "line",
+          source: "utm-zone-boundary",
+          paint: {
+            "line-color": "#f59e0b",
+            "line-width": 2,
+            "line-dasharray": [3, 2],
+          },
+        });
       });
 
       map.on("draw.create", handleDrawUpdate);
@@ -254,6 +307,20 @@ function MapViewEnhanced({
     ctrl.style.pointerEvents = disabled ? "none" : "auto";
     ctrl.style.opacity = disabled ? "0.5" : "1";
   }, [disabled]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const applyZoneData = () => {
+      const source = map.getSource("utm-zone-boundary") as any;
+      if (source) source.setData(zoneBoundaryCollection(coordinateSystem));
+    };
+    if (map.isStyleLoaded() && map.getSource("utm-zone-boundary")) {
+      applyZoneData();
+    } else {
+      map.once("load", applyZoneData);
+    }
+  }, [coordinateSystem]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -383,10 +450,18 @@ function MapViewEnhanced({
   }, [coordinates]);
 
   const hasValidCoords = coordinates.filter(c => c.lng !== 0 || c.lat !== 0).length > 0;
+  const activeZone = coordinateSystem ? UTM_ZONE_BOUNDARIES[coordinateSystem] : undefined;
 
   return (
     <div className={`map-enhanced-container ${disabled ? "disabled" : ""}`}>
       <div ref={containerRef} className="map-enhanced" />
+
+      {activeZone && (
+        <div className="map-zone-badge">
+          <span className="map-zone-badge-swatch" aria-hidden="true" />
+          <span>{activeZone.label} boundary</span>
+        </div>
+      )}
 
       {hasValidCoords && coordinates.filter(c => c.lng !== 0 || c.lat !== 0).length < 3 && (
         <div className="map-warning">
