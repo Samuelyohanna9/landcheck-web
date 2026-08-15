@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useCallback } from "react";
+import { memo, useEffect, useRef, useCallback, useState } from "react";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import "../styles/map-enhanced.css";
@@ -148,6 +148,32 @@ function MapViewEnhanced({
   const markersRef = useRef<any[]>([]);
   const mapboxglRef = useRef<any>(null);
   const isDrawingRef = useRef(false);
+  const activeZoneRef = useRef<{ label: string; westLng: number; eastLng: number } | undefined>(undefined);
+  const [zoneBadge, setZoneBadge] = useState<{ left: number; top: number; label: string } | null>(null);
+
+  // Keeps the badge attached to whichever boundary meridian is actually on screen right now,
+  // instead of sitting in a fixed corner unrelated to where the line is - recomputed on every
+  // pan/zoom/resize (registered once below) plus whenever the selected zone itself changes.
+  const updateZoneBadgePosition = useCallback(() => {
+    const map = mapRef.current;
+    const zone = activeZoneRef.current;
+    if (!map || !zone || typeof map.getBounds !== "function") {
+      setZoneBadge(null);
+      return;
+    }
+    const bounds = map.getBounds();
+    const west = bounds.getWest();
+    const east = bounds.getEast();
+    const visibleLng = [zone.westLng, zone.eastLng].find((lng) => lng > west && lng < east);
+    if (visibleLng === undefined) {
+      setZoneBadge(null);
+      return;
+    }
+    const south = bounds.getSouth();
+    const north = bounds.getNorth();
+    const point = map.project([visibleLng, south + (north - south) * 0.14]);
+    setZoneBadge({ left: point.x, top: point.y, label: `${zone.label} boundary` });
+  }, []);
 
   const handleDrawUpdate = useCallback(() => {
     if (!drawRef.current || !onCoordinatesDrawn) return;
@@ -266,12 +292,18 @@ function MapViewEnhanced({
           type: "line",
           source: "utm-zone-boundary",
           paint: {
-            "line-color": "#f59e0b",
+            "line-color": "#ef4444",
             "line-width": 2,
             "line-dasharray": [3, 2],
           },
         });
+
+        updateZoneBadgePosition();
       });
+
+      map.on("move", updateZoneBadgePosition);
+      map.on("zoom", updateZoneBadgePosition);
+      map.on("resize", updateZoneBadgePosition);
 
       map.on("draw.create", handleDrawUpdate);
       map.on("draw.update", handleDrawUpdate);
@@ -295,7 +327,7 @@ function MapViewEnhanced({
       drawRef.current = null;
       mapboxglRef.current = null;
     };
-  }, [handleDrawUpdate, lightweight, onCoordinatesDrawn]);
+  }, [handleDrawUpdate, lightweight, onCoordinatesDrawn, updateZoneBadgePosition]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -309,18 +341,20 @@ function MapViewEnhanced({
   }, [disabled]);
 
   useEffect(() => {
+    activeZoneRef.current = coordinateSystem ? UTM_ZONE_BOUNDARIES[coordinateSystem] : undefined;
     const map = mapRef.current;
     if (!map) return;
     const applyZoneData = () => {
       const source = map.getSource("utm-zone-boundary") as any;
       if (source) source.setData(zoneBoundaryCollection(coordinateSystem));
+      updateZoneBadgePosition();
     };
     if (map.isStyleLoaded() && map.getSource("utm-zone-boundary")) {
       applyZoneData();
     } else {
       map.once("load", applyZoneData);
     }
-  }, [coordinateSystem]);
+  }, [coordinateSystem, updateZoneBadgePosition]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -450,16 +484,18 @@ function MapViewEnhanced({
   }, [coordinates]);
 
   const hasValidCoords = coordinates.filter(c => c.lng !== 0 || c.lat !== 0).length > 0;
-  const activeZone = coordinateSystem ? UTM_ZONE_BOUNDARIES[coordinateSystem] : undefined;
 
   return (
     <div className={`map-enhanced-container ${disabled ? "disabled" : ""}`}>
       <div ref={containerRef} className="map-enhanced" />
 
-      {activeZone && (
-        <div className="map-zone-badge">
+      {zoneBadge && (
+        <div
+          className="map-zone-badge"
+          style={{ left: zoneBadge.left, top: zoneBadge.top }}
+        >
           <span className="map-zone-badge-swatch" aria-hidden="true" />
-          <span>{activeZone.label} boundary</span>
+          <span>{zoneBadge.label}</span>
         </div>
       )}
 
