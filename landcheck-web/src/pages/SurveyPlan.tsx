@@ -246,6 +246,12 @@ const DEFAULT_TECHNICAL_REPORT_PLOTTING_SOFTWARE = "AutoCAD software";
 const DEFAULT_TECHNICAL_REPORT_GENERAL_OBSERVATION = "The work was hitch-free.";
 const ACTIVE_SURVEY_DRAFT_ID = "active";
 
+// The shared `api` client's default timeout (30s) suits quick calls, but anything that renders a
+// plan (which, for templates like Site Plan, chains through several satellite-imagery fallback
+// fetches server-side) or transfers an actual file is a different class of request - Nigerian
+// networks make both legitimately slower than 30s even when nothing is actually stuck.
+const SLOW_NETWORK_TIMEOUT_MS = 180000;
+
 const buildDefaultManualPoints = (): ManualPoint[] => [
   { station: "A", lng: 0, lat: 0 },
   { station: "B", lng: 0, lat: 0 },
@@ -934,6 +940,7 @@ export default function SurveyPlan() {
   const loadGeoreferenceRaster = useCallback(async (sessionId: string) => {
     const res = await api.get(`/survey-georeference/sessions/${encodeURIComponent(sessionId)}/raster`, {
       responseType: "blob",
+      timeout: SLOW_NETWORK_TIMEOUT_MS,
     });
     const nextObjectUrl = URL.createObjectURL(res.data);
     setGeorefRasterObjectUrl((current) => {
@@ -2112,6 +2119,7 @@ export default function SurveyPlan() {
       const res = await withRetry(() =>
         api.post(`/plots/${activePlotId}/report/preview`, payload, {
           responseType: "blob",
+          timeout: SLOW_NETWORK_TIMEOUT_MS,
         })
       );
 
@@ -2183,6 +2191,7 @@ export default function SurveyPlan() {
           north_arrow_color: northArrowColor,
         }, {
           responseType: "blob",
+          timeout: SLOW_NETWORK_TIMEOUT_MS,
         })
       );
 
@@ -2236,6 +2245,7 @@ export default function SurveyPlan() {
           north_arrow_color: northArrowColor,
         }, {
           responseType: "blob",
+          timeout: SLOW_NETWORK_TIMEOUT_MS,
         })
       );
 
@@ -2608,6 +2618,7 @@ export default function SurveyPlan() {
     try {
       const res = await api.get(`/survey-georeference/sessions/${encodeURIComponent(georefSession.id)}/exports/staking.csv`, {
         responseType: "blob",
+        timeout: SLOW_NETWORK_TIMEOUT_MS,
       });
       const georefIdentity =
         georefSession.title_text?.trim() ||
@@ -3027,7 +3038,7 @@ export default function SurveyPlan() {
           ? resolvedUrl.replace("/orthophoto/pdf", useTopoMap ? "/export-jobs/topomap.pdf" : "/export-jobs/orthophoto.pdf")
           : "";
       if (exportJobPath) {
-        const created = await api.post(exportJobPath, payload);
+        const created = await api.post(exportJobPath, payload, { timeout: SLOW_NETWORK_TIMEOUT_MS });
         const jobId = String(created?.data?.id || "");
         if (!jobId) {
           throw new Error("Export job was not created");
@@ -3040,6 +3051,7 @@ export default function SurveyPlan() {
         }
         const res = await api.get(String(job.download_url), {
           responseType: "blob",
+          timeout: SLOW_NETWORK_TIMEOUT_MS,
           onDownloadProgress: (evt) => {
             if (evt.total) {
               setDownloadProgress(90 + (evt.loaded / evt.total) * 10);
@@ -3051,6 +3063,7 @@ export default function SurveyPlan() {
         let rampStopped = false;
         const res = await api.post(resolvedUrl, payload, {
           responseType: "blob",
+          timeout: SLOW_NETWORK_TIMEOUT_MS,
           onDownloadProgress: (evt) => {
             // Real bytes are now flowing - stop the ramp so it can't fight with (jump ahead of or
             // behind) the actual transfer percentage once it starts arriving.
@@ -3120,7 +3133,7 @@ export default function SurveyPlan() {
 
       const resolvedUrl = resolvePlotResourcePath(`/plots/${plotId}/export-jobs/technical-report.docx`, activePlotId);
       const resolvedFilename = buildExportFilename(surveyPlanIdentitySegments(), "Technical_Report", "docx");
-      const created = await api.post(resolvedUrl, payload);
+      const created = await api.post(resolvedUrl, payload, { timeout: SLOW_NETWORK_TIMEOUT_MS });
       const jobId = String(created?.data?.id || "");
       if (!jobId) {
         throw new Error("Export job was not created");
@@ -3133,6 +3146,7 @@ export default function SurveyPlan() {
       }
       const res = await api.get(String(job.download_url), {
         responseType: "blob",
+        timeout: SLOW_NETWORK_TIMEOUT_MS,
         onDownloadProgress: (evt) => {
           if (evt.total) {
             setDownloadProgress(90 + (evt.loaded / evt.total) * 10);
@@ -3175,7 +3189,7 @@ export default function SurveyPlan() {
           ? resolvedUrl.replace("/survey-plan/shapefile", "/export-jobs/survey-plan.shapefile")
           : "";
       if (exportJobPath) {
-        const created = await api.post(exportJobPath, {});
+        const created = await api.post(exportJobPath, {}, { timeout: SLOW_NETWORK_TIMEOUT_MS });
         const jobId = String(created?.data?.id || "");
         if (!jobId) {
           throw new Error("Export job was not created");
@@ -3188,6 +3202,7 @@ export default function SurveyPlan() {
         }
         const res = await api.get(String(job.download_url), {
           responseType: "blob",
+          timeout: SLOW_NETWORK_TIMEOUT_MS,
           onDownloadProgress: (evt) => {
             if (evt.total) {
               setDownloadProgress(90 + (evt.loaded / evt.total) * 10);
@@ -3199,6 +3214,7 @@ export default function SurveyPlan() {
         let rampStopped = false;
         const res = await api.get(resolvedUrl, {
           responseType: "blob",
+          timeout: SLOW_NETWORK_TIMEOUT_MS,
           onDownloadProgress: (evt) => {
             if (!rampStopped) {
               rampStopped = true;
@@ -3678,7 +3694,9 @@ export default function SurveyPlan() {
     setSubdivisionDownloadBatchId(batchId);
     try {
       const createJobRes = await withRetry(() =>
-        api.post(`/plots/subdivision/batches/${batchId}/export-jobs/survey-plans`)
+        api.post(`/plots/subdivision/batches/${batchId}/export-jobs/survey-plans`, undefined, {
+          timeout: SLOW_NETWORK_TIMEOUT_MS,
+        })
       );
       let job = createJobRes.data as PlotExportJob;
       if (String(job?.status || "").trim().toLowerCase() === "failed") {
@@ -3694,7 +3712,7 @@ export default function SurveyPlan() {
       const downloadPath = normalizeApiDownloadPath(
         String(job?.download_url || `/plots/export-jobs/${encodeURIComponent(String(job.id || ""))}/download`)
       );
-      const res = await api.get(downloadPath, { responseType: "blob" });
+      const res = await api.get(downloadPath, { responseType: "blob", timeout: SLOW_NETWORK_TIMEOUT_MS });
       triggerBlobDownload(
         res.data,
         res.headers["content-type"],
@@ -3752,7 +3770,9 @@ export default function SurveyPlan() {
         }),
       };
       const createJobRes = await withRetry(() =>
-        api.post(`/plots/subdivision/batches/${batchId}/export-jobs/clean-copy.pdf`, payload)
+        api.post(`/plots/subdivision/batches/${batchId}/export-jobs/clean-copy.pdf`, payload, {
+          timeout: SLOW_NETWORK_TIMEOUT_MS,
+        })
       );
       let job = createJobRes.data as PlotExportJob;
       if (String(job?.status || "").trim().toLowerCase() === "failed") {
@@ -3768,7 +3788,7 @@ export default function SurveyPlan() {
       const downloadPath = normalizeApiDownloadPath(
         String(job?.download_url || `/plots/export-jobs/${encodeURIComponent(String(job.id || ""))}/download`)
       );
-      const res = await api.get(downloadPath, { responseType: "blob" });
+      const res = await api.get(downloadPath, { responseType: "blob", timeout: SLOW_NETWORK_TIMEOUT_MS });
       triggerBlobDownload(
         res.data,
         res.headers["content-type"],
