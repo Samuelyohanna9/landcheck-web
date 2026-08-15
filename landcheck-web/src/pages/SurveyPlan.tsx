@@ -27,6 +27,7 @@ import {
   loadSurveyPlanDraft,
   saveSurveyPlanDraft,
 } from "../offline/surveyPlanDraft";
+import "../styles/survey-tokens.css";
 import "../styles/survey-plan.css";
 
 const SurveyPreview = lazy(() => import("../components/SurveyPreview"));

@@ -9,9 +9,10 @@
   width: 40px;
   height: 40px;
   border-radius: 999px;
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #ffffff;
+  border: 1px solid var(--survey-copper-500);
+  background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
+  color: #1c1104;
+  font-family: var(--survey-font-body);
   font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -21,7 +22,7 @@
 
 .profile-avatar-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 12px rgba(193, 122, 63, 0.35);
 }
 
 .profile-avatar-popover {
@@ -29,10 +30,10 @@
   z-index: 200;
   width: 260px;
   padding: 0.9rem;
-  background: #1e293b;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--survey-ink-800);
+  border: 1px solid var(--survey-ink-border-strong);
   border-radius: 14px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -52,8 +53,9 @@
   width: 42px;
   height: 42px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
+  color: #1c1104;
+  font-family: var(--survey-font-body);
   font-size: 0.9rem;
   font-weight: 700;
 }
@@ -66,9 +68,10 @@
 }
 
 .profile-avatar-popover-name {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #f1f5f9;
+  font-family: var(--survey-font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--survey-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -76,7 +79,7 @@
 
 .profile-avatar-popover-email {
   font-size: 0.78rem;
-  color: #94a3b8;
+  color: var(--survey-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -87,24 +90,26 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.6rem 0.75rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--survey-ink-border);
   border-radius: 10px;
   font-size: 0.82rem;
-  color: #cbd5e1;
+  color: var(--survey-text-secondary);
 }
 
 .profile-avatar-popover-credits {
+  font-family: var(--survey-font-mono);
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--survey-copper-300);
 }
 
 .profile-avatar-signout-btn {
   padding: 0.55rem 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--survey-ink-border);
   border-radius: 10px;
-  color: #e2e8f0;
+  color: var(--survey-text-primary);
+  font-family: var(--survey-font-body);
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;

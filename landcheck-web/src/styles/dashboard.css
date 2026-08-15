@@ -1,8 +1,12 @@
 /* Dashboard Styles - "workspace, not a complicated SaaS dashboard" */
 .dashboard-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  color: #e2e8f0;
+  background:
+    repeating-linear-gradient(0deg, var(--survey-grid-line) 0, var(--survey-grid-line) 1px, transparent 1px, transparent 32px),
+    repeating-linear-gradient(90deg, var(--survey-grid-line) 0, var(--survey-grid-line) 1px, transparent 1px, transparent 32px),
+    linear-gradient(160deg, var(--survey-ink-900) 0%, var(--survey-ink-800) 100%);
+  color: var(--survey-text-primary);
+  font-family: var(--survey-font-body);
   padding: 0 0 2rem;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -15,8 +19,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 1.25rem 2rem;
-  background: rgba(15, 23, 42, 0.8);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(11, 20, 32, 0.82);
+  border-bottom: 1px solid var(--survey-ink-border);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -31,10 +35,12 @@
 }
 
 .header-left h1 {
-  font-size: 1.375rem;
-  font-weight: 700;
+  font-family: var(--survey-font-display);
+  font-size: 1.45rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   margin: 0;
-  color: #f1f5f9;
+  color: var(--survey-text-primary);
 }
 
 .header-right {
@@ -69,19 +75,20 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.625rem 1.25rem;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
   border: none;
   border-radius: 8px;
-  color: white;
+  color: #1c1104;
+  font-family: var(--survey-font-body);
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .new-plot-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 14px rgba(193, 122, 63, 0.38);
 }
 
 .new-plot-btn svg {
@@ -97,10 +104,11 @@
 }
 
 .workspace-quick-tools-section h2 {
-  font-size: 1.125rem;
+  font-family: var(--survey-font-display);
+  font-size: 1.2rem;
   font-weight: 600;
   margin: 0 0 1.25rem;
-  color: #f1f5f9;
+  color: var(--survey-text-primary);
 }
 
 .workspace-quick-tools {
@@ -111,10 +119,10 @@
 
 .workspace-quick-tool {
   padding: 0.625rem 1.1rem;
-  background: rgba(30, 41, 59, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(22, 40, 58, 0.55);
+  border: 1px solid var(--survey-ink-border);
   border-radius: 999px;
-  color: #cbd5e1;
+  color: var(--survey-text-secondary);
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -122,8 +130,8 @@
 }
 
 .workspace-quick-tool:hover {
-  border-color: rgba(16, 185, 129, 0.4);
-  color: #f1f5f9;
+  border-color: var(--survey-ink-border-strong);
+  color: var(--survey-copper-300);
 }
 
 /* Plots Section */
@@ -141,19 +149,32 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-size: 1.125rem;
+  font-family: var(--survey-font-display);
+  font-size: 1.2rem;
   font-weight: 600;
   margin: 0 0 1rem;
-  color: #f1f5f9;
+  color: var(--survey-text-primary);
 }
 
 .plots-count-badge {
-  padding: 0.15rem 0.55rem;
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  padding: 0.15rem 0.6rem 0.15rem 0.5rem;
+  background: var(--survey-copper-glow);
+  color: var(--survey-copper-300);
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 700;
+}
+
+.plots-count-badge::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 2px rgba(224, 168, 104, 0.25);
 }
 
 .workspace-toolbar {
@@ -176,37 +197,38 @@
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  color: #64748b;
+  color: var(--survey-text-muted);
   pointer-events: none;
 }
 
 .workspace-search input {
   width: 100%;
   padding: 0.65rem 0.9rem 0.65rem 2.5rem;
-  background: rgba(30, 41, 59, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(22, 40, 58, 0.55);
+  border: 1px solid var(--survey-ink-border);
   border-radius: 10px;
-  color: #e2e8f0;
+  color: var(--survey-text-primary);
+  font-family: var(--survey-font-body);
   font-size: 0.875rem;
   transition: all 0.2s ease;
 }
 
 .workspace-search input:focus {
   outline: none;
-  border-color: rgba(16, 185, 129, 0.5);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  border-color: var(--survey-copper-500);
+  box-shadow: 0 0 0 3px var(--survey-copper-glow);
 }
 
 .workspace-search input::placeholder {
-  color: #64748b;
+  color: var(--survey-text-muted);
 }
 
 .workspace-status-filter {
   display: flex;
   gap: 0.3rem;
   padding: 0.25rem;
-  background: rgba(30, 41, 59, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(22, 40, 58, 0.55);
+  border: 1px solid var(--survey-ink-border);
   border-radius: 10px;
 }
 
@@ -215,7 +237,7 @@
   background: none;
   border: none;
   border-radius: 7px;
-  color: #94a3b8;
+  color: var(--survey-text-secondary);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -224,50 +246,52 @@
 }
 
 .workspace-status-filter-btn:hover {
-  color: #e2e8f0;
+  color: var(--survey-text-primary);
 }
 
 .workspace-status-filter-btn.is-active {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  background: var(--survey-copper-glow);
+  color: var(--survey-copper-300);
 }
 
 /* Empty State */
 .empty-state {
   text-align: center;
   padding: 4rem 2rem;
-  background: rgba(30, 41, 59, 0.3);
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  background: rgba(22, 40, 58, 0.3);
+  border: 1px dashed var(--survey-ink-border-strong);
   border-radius: 12px;
 }
 
 .empty-state svg {
   width: 64px;
   height: 64px;
-  color: #64748b;
+  color: var(--survey-text-muted);
   margin-bottom: 1rem;
 }
 
 .empty-state h3 {
-  font-size: 1.125rem;
+  font-family: var(--survey-font-display);
+  font-size: 1.2rem;
   font-weight: 600;
   margin: 0 0 0.5rem;
-  color: #f1f5f9;
+  color: var(--survey-text-primary);
 }
 
 .empty-state p {
-  color: #94a3b8;
+  color: var(--survey-text-secondary);
   margin: 0 0 1.5rem;
 }
 
 .empty-state button {
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
   border: none;
   border-radius: 8px;
-  color: white;
+  color: #1c1104;
+  font-family: var(--survey-font-body);
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -285,7 +309,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  color: #94a3b8;
+  color: var(--survey-text-secondary);
   font-size: 0.8rem;
   cursor: pointer;
   user-select: none;
@@ -294,7 +318,7 @@
 .workspace-checkbox input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: #10b981;
+  accent-color: var(--survey-copper-500);
   cursor: pointer;
 }
 
@@ -314,21 +338,21 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  background: rgba(30, 41, 59, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(22, 40, 58, 0.55);
+  border: 1px solid var(--survey-ink-border);
   border-radius: 12px;
   transition: all 0.2s ease;
 }
 
 .workspace-project-row:hover {
-  border-color: rgba(16, 185, 129, 0.3);
+  border-color: var(--survey-ink-border-strong);
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
 }
 
 .workspace-project-row.is-selected {
-  border-color: rgba(16, 185, 129, 0.5);
-  background: rgba(16, 185, 129, 0.06);
+  border-color: var(--survey-copper-500);
+  background: var(--survey-copper-glow);
 }
 
 .workspace-project-info {
@@ -342,7 +366,7 @@
 .workspace-project-title {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--survey-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -352,27 +376,39 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-size: 0.78rem;
-  color: #94a3b8;
+  font-family: var(--survey-font-mono);
+  font-size: 0.75rem;
+  color: var(--survey-text-secondary);
 }
 
 .workspace-project-meta span:not(:last-child)::after {
   content: "\2022";
   margin-left: 0.6rem;
-  color: #475569;
+  color: var(--survey-text-muted);
 }
 
 .workspace-status-pill {
   flex-shrink: 0;
-  padding: 0.3rem 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  padding: 0.3rem 0.7rem 0.3rem 0.6rem;
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 700;
 }
 
+.workspace-status-pill::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 .workspace-status-completed {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  background: var(--survey-forest-glow);
+  color: var(--survey-forest-400);
 }
 
 .workspace-status-draft {
@@ -383,10 +419,10 @@
 .workspace-project-action {
   flex-shrink: 0;
   padding: 0.5rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--survey-ink-border);
   border-radius: 8px;
-  color: #e2e8f0;
+  color: var(--survey-text-primary);
   font-size: 0.825rem;
   font-weight: 600;
   cursor: pointer;
@@ -396,9 +432,9 @@
 }
 
 .workspace-project-action:hover {
-  background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(16, 185, 129, 0.3);
-  color: #10b981;
+  background: var(--survey-copper-glow);
+  border-color: var(--survey-copper-500);
+  color: var(--survey-copper-300);
 }
 
 /* Pagination */
@@ -412,10 +448,10 @@
 
 .workspace-pagination button {
   padding: 0.5rem 1rem;
-  background: rgba(30, 41, 59, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(22, 40, 58, 0.55);
+  border: 1px solid var(--survey-ink-border);
   border-radius: 8px;
-  color: #e2e8f0;
+  color: var(--survey-text-primary);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -423,8 +459,8 @@
 }
 
 .workspace-pagination button:hover:not(:disabled) {
-  border-color: rgba(16, 185, 129, 0.4);
-  color: #10b981;
+  border-color: var(--survey-copper-500);
+  color: var(--survey-copper-300);
 }
 
 .workspace-pagination button:disabled {
@@ -433,8 +469,9 @@
 }
 
 .workspace-pagination-status {
-  font-size: 0.8rem;
-  color: #94a3b8;
+  font-family: var(--survey-font-mono);
+  font-size: 0.78rem;
+  color: var(--survey-text-secondary);
 }
 
 /* Floating bulk-action bar */
@@ -448,11 +485,11 @@
   align-items: center;
   gap: 1.25rem;
   padding: 0.85rem 1.1rem 0.85rem 1.4rem;
-  background: #1e293b;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--survey-ink-800);
+  border: 1px solid var(--survey-ink-border-strong);
   border-radius: 14px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
-  color: #f1f5f9;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  color: var(--survey-text-primary);
   font-size: 0.875rem;
   font-weight: 600;
 }
@@ -464,17 +501,17 @@
 
 .workspace-bulk-cancel {
   padding: 0.5rem 0.9rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--survey-ink-border);
   border-radius: 8px;
-  color: #cbd5e1;
+  color: var(--survey-text-secondary);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
 }
 
 .workspace-bulk-cancel:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .workspace-bulk-delete {
