@@ -22,6 +22,7 @@ import type {
   GeoreferenceSession,
 } from "../types/surveyGeoreference";
 import type { TechnicalReportFields } from "../components/survey-plan/TechnicalReportModal";
+import SurveyNetworkMotif from "../components/survey-plan/SurveyNetworkMotif";
 import {
   clearSurveyPlanDraft,
   loadSurveyPlanDraft,
@@ -4114,6 +4115,7 @@ export default function SurveyPlan() {
 
       {/* Header */}
       <header className="survey-header">
+        <SurveyNetworkMotif className="survey-header-motif" />
         <button className="back-btn" onClick={() => navigate("/")}>
           <svg viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
@@ -4139,7 +4141,14 @@ export default function SurveyPlan() {
           </button>
         )}
         <div className="survey-header-copy">
-          <span className="survey-kicker">LandCheck Survey Studio</span>
+          <span className="survey-kicker survey-chip-solid">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="10" cy="10" r="7" />
+              <path d="M10 3v2M10 15v2M3 10h2M15 10h2" />
+              <circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none" />
+            </svg>
+            LandCheck Survey Studio
+          </span>
           <h1 className="survey-title">
             {workflowMode === "survey"
               ? "Survey Plan Production"
@@ -4205,8 +4214,16 @@ export default function SurveyPlan() {
           )}
           {!workflowMode && (
             <div className="mode-select-shell">
+              <SurveyNetworkMotif className="mode-select-motif" />
               <div className="mode-select-head">
-                <span className="mode-select-kicker">Survey plan suite</span>
+                <span className="mode-select-kicker survey-chip-solid">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="10" cy="10" r="7" />
+                    <path d="M10 3v2M10 15v2M3 10h2M15 10h2" />
+                    <circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none" />
+                  </svg>
+                  Survey plan suite
+                </span>
                 <h2>Choose the route for this job</h2>
                 <p>Three focused workflows cover direct drafting, subdivision, and scanned-plan recovery.</p>
               </div>

@@ -186,7 +186,16 @@ function CoordinateInput({
   return (
     <div className="coord-input-container">
       <div className="coord-header">
-        <h3 className="coord-title">Boundary Coordinates</h3>
+        <h3 className="coord-title">
+          {showPointRoles && (
+            <svg className="coord-title-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="10" cy="10" r="7" />
+              <circle cx="10" cy="10" r="2.2" fill="currentColor" stroke="none" />
+              <path d="M10 1.6v2.4M10 16v2.4M1.6 10h2.4M16 10h2.4" />
+            </svg>
+          )}
+          Boundary Coordinates
+        </h3>
         <p className="coord-subtitle">Add parcel points directly or import a prepared sheet.</p>
       </div>
 

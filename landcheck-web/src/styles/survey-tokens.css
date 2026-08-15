@@ -68,3 +68,26 @@
   border: none;
   border-top: 1px dashed var(--survey-ink-border-strong);
 }
+
+/* Decorative control-point network graphic (see SurveyNetworkMotif.tsx) - positioned to fill its
+   nearest `position: relative` ancestor, sits behind content, never intercepts clicks. */
+.survey-network-motif {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* A solid (non-translucent) flat badge, for the few spots that should read as a stamped chip
+   rather than glass-on-ink - e.g. the studio kicker, workflow-suite eyebrow. */
+.survey-chip-solid {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
+  color: #1c1104;
+  font-weight: 800;
+}
