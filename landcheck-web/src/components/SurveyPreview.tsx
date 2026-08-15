@@ -258,7 +258,7 @@ function SurveyPreview({
       <div className="template-news-ticker" role="status">
         <div className="template-news-ticker-track">
           <span className="template-news-ticker-text">
-            Available templates: General &bull; Adamawa OSG &bull; Akwa Ibom State &bull; Rivers State &bull; Cross River State &bull; FCT Abuja &mdash; more state templates are on the way!
+            Available templates: General &bull; Site Plan &bull; Adamawa OSG &bull; Akwa Ibom State &bull; Rivers State &bull; Cross River State &bull; FCT Abuja &mdash; more state templates are on the way!
           </span>
         </div>
         <a

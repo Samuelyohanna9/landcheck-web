@@ -1,4 +1,4 @@
-import { Suspense, lazy, startTransition, useEffect, useMemo, useState, useCallback, useRef, type SetStateAction } from "react";
+import { Suspense, lazy, startTransition, useEffect, useMemo, useState, useCallback, useRef, type SetStateAction, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, withRetry } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
@@ -668,6 +668,7 @@ export default function SurveyPlan() {
   const [topoMapUrl, setTopoMapUrl] = useState<string | null>(null);
   const [topoMapLoading, setTopoMapLoading] = useState(false);
   const [downloadLoadingKey, setDownloadLoadingKey] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
   const [showTechnicalReportModal, setShowTechnicalReportModal] = useState(false);
   const [generatingTechnicalReport, setGeneratingTechnicalReport] = useState(false);
   const [hasHeightData, setHasHeightData] = useState(false);
@@ -785,6 +786,41 @@ export default function SurveyPlan() {
   // Survey metadata
   const [meta, setMeta] = useState<PlotMeta>(buildDefaultPlotMeta);
   const [hasManualScaleOverride, setHasManualScaleOverride] = useState(false);
+
+  // Turns free text (an applicant's name, a location) into a filesystem-safe filename segment -
+  // spaces/punctuation become underscores, and it's capped so a long address doesn't blow past
+  // typical filename length limits.
+  const sanitizeFilenameSegment = useCallback((value: string | null | undefined): string => {
+    const cleaned = String(value || "")
+      .trim()
+      .replace(/[\\/:*?"<>|]+/g, " ")
+      .replace(/\s+/g, "_")
+      .replace(/_{2,}/g, "_")
+      .replace(/^_+|_+$/g, "");
+    return cleaned.length > 60 ? cleaned.slice(0, 60).replace(/_+$/g, "") : cleaned;
+  }, []);
+
+  // Builds a human-readable download filename from whichever identity fields the current draft
+  // actually has (applicant/title, location, estate name, ...) instead of the opaque
+  // "plot_<id>_..." names these exports used before - falls back to the plot id only when the
+  // user hasn't filled in anything identifying yet.
+  const buildExportFilename = useCallback(
+    (identityParts: (string | null | undefined)[], docLabel: string, ext: string) => {
+      const cleanParts = identityParts.map((part) => sanitizeFilenameSegment(part)).filter(Boolean);
+      const identity = cleanParts.join("_") || (plotId ? `Plot_${plotId}` : "Untitled_Plot");
+      return `${identity}_${docLabel}.${ext}`;
+    },
+    [plotId, sanitizeFilenameSegment]
+  );
+
+  // The "Title" field defaults to the literal placeholder "SURVEY PLAN" on the general template
+  // (not a real identifying name), so that default shouldn't itself become part of the filename -
+  // fall through to location-only naming in that case.
+  const surveyPlanIdentitySegments = useCallback((): (string | null)[] => {
+    const rawTitle = meta.title_text.trim();
+    const isPlaceholderTitle = !rawTitle || rawTitle.toUpperCase() === "SURVEY PLAN";
+    return [isPlaceholderTitle ? null : rawTitle, meta.location_text];
+  }, [meta.title_text, meta.location_text]);
 
   const handleScaleDraftChange = useCallback((value: SetStateAction<string>) => {
     setScaleDraft((prev) => (typeof value === "function" ? value(prev) : value));
@@ -2573,7 +2609,15 @@ export default function SurveyPlan() {
       const res = await api.get(`/survey-georeference/sessions/${encodeURIComponent(georefSession.id)}/exports/staking.csv`, {
         responseType: "blob",
       });
-      triggerBlobDownload(res.data, res.headers["content-type"], `georeference_${georefSession.id}_staking.csv`);
+      const georefIdentity =
+        georefSession.title_text?.trim() ||
+        (georefSession.source_file_name ? georefSession.source_file_name.replace(/\.[^./]+$/, "") : "") ||
+        `Session_${georefSession.id.slice(0, 8)}`;
+      triggerBlobDownload(
+        res.data,
+        res.headers["content-type"],
+        buildExportFilename([georefIdentity], "DGPS_Staking", "csv")
+      );
       toast.success("DGPS CSV downloaded.");
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
@@ -2581,7 +2625,7 @@ export default function SurveyPlan() {
     } finally {
       setGeorefDownloadingCsv(false);
     }
-  }, [georefSession?.id, openSignupGate]);
+  }, [georefSession, openSignupGate, buildExportFilename]);
 
   const handleContinueGeoreferenceToSurvey = useCallback(async () => {
     const sourceFeatures = georefFeatures.length ? georefFeatures : georefSession?.features || [];
@@ -2833,8 +2877,21 @@ export default function SurveyPlan() {
     return path.replace(/\/plots\/[^/]+(?=\/)/, `/plots/${activePlotId}`);
   }, []);
 
-  const resolvePlotFilename = useCallback((filename: string, activePlotId: number) => {
-    return filename.replace(/plot_[^_]+/, `plot_${activePlotId}`);
+  // Nigerian networks can leave a download's server-render phase (job queued/running, no bytes
+  // moving yet) taking far longer than the actual file transfer - a bare spinner gives no sense
+  // that anything is happening. This ramps a fake percentage up toward `target` (slowing down as
+  // it approaches, never claiming completion) to cover that phase; real byte progress from
+  // axios' onDownloadProgress takes over once the response actually starts streaming.
+  const startDownloadProgressRamp = useCallback((target: number, stepMs = 350) => {
+    const id = window.setInterval(() => {
+      setDownloadProgress((prev) => {
+        const base = prev ?? 0;
+        if (base >= target) return base;
+        const next = base + Math.max(0.4, (target - base) * 0.09);
+        return Math.min(target, next);
+      });
+    }, stepMs);
+    return () => window.clearInterval(id);
   }, []);
 
   const waitForPlotExportJob = useCallback(
@@ -2901,6 +2958,8 @@ export default function SurveyPlan() {
     }
     if (downloadLoadingKey) return;
     setDownloadLoadingKey(loadingKey);
+    setDownloadProgress(0);
+    const stopRamp = startDownloadProgressRamp(90);
     try {
       const activePlotId = await ensureServerPlot("Syncing draft before export...");
       // Use custom title if provided, otherwise use meta title
@@ -2961,7 +3020,7 @@ export default function SurveyPlan() {
       };
 
       const resolvedUrl = resolvePlotResourcePath(url, activePlotId);
-      const resolvedFilename = resolvePlotFilename(filename, activePlotId);
+      const resolvedFilename = filename;
       const exportJobPath = resolvedUrl.endsWith("/report/pdf")
         ? resolvedUrl.replace("/report/pdf", "/export-jobs/survey-plan.pdf")
         : resolvedUrl.endsWith("/orthophoto/pdf")
@@ -2974,16 +3033,41 @@ export default function SurveyPlan() {
           throw new Error("Export job was not created");
         }
         const job = await waitForPlotExportJob(jobId);
+        stopRamp();
+        setDownloadProgress(90);
         if (!job.download_url) {
           throw new Error("Export is ready but no download link was available");
         }
-        const res = await api.get(String(job.download_url), { responseType: "blob" });
+        const res = await api.get(String(job.download_url), {
+          responseType: "blob",
+          onDownloadProgress: (evt) => {
+            if (evt.total) {
+              setDownloadProgress(90 + (evt.loaded / evt.total) * 10);
+            }
+          },
+        });
         triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
       } else {
-        const res = await api.post(resolvedUrl, payload, { responseType: "blob" });
+        let rampStopped = false;
+        const res = await api.post(resolvedUrl, payload, {
+          responseType: "blob",
+          onDownloadProgress: (evt) => {
+            // Real bytes are now flowing - stop the ramp so it can't fight with (jump ahead of or
+            // behind) the actual transfer percentage once it starts arriving.
+            if (!rampStopped) {
+              rampStopped = true;
+              stopRamp();
+            }
+            if (evt.total) {
+              setDownloadProgress((evt.loaded / evt.total) * 100);
+            }
+          },
+        });
+        stopRamp();
         triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
       }
 
+      setDownloadProgress(100);
       markServerSynced();
       toast.success(`Downloaded ${resolvedFilename}`);
     } catch (err) {
@@ -2991,7 +3075,9 @@ export default function SurveyPlan() {
       const message = err instanceof Error ? err.message : "Failed to download file";
       toast.error(message);
     } finally {
+      stopRamp();
       setDownloadLoadingKey((prev) => (prev === loadingKey ? null : prev));
+      setDownloadProgress(null);
     }
   };
 
@@ -3001,6 +3087,8 @@ export default function SurveyPlan() {
       return;
     }
     setGeneratingTechnicalReport(true);
+    setDownloadProgress(0);
+    const stopRamp = startDownloadProgressRamp(90);
     try {
       const activePlotId = await ensureServerPlot("Syncing draft before export...");
       const payload = {
@@ -3031,19 +3119,29 @@ export default function SurveyPlan() {
       setMeta((prev) => ({ ...prev, ...fields }));
 
       const resolvedUrl = resolvePlotResourcePath(`/plots/${plotId}/export-jobs/technical-report.docx`, activePlotId);
-      const resolvedFilename = resolvePlotFilename(`plot_${plotId}_technical_report.docx`, activePlotId);
+      const resolvedFilename = buildExportFilename(surveyPlanIdentitySegments(), "Technical_Report", "docx");
       const created = await api.post(resolvedUrl, payload);
       const jobId = String(created?.data?.id || "");
       if (!jobId) {
         throw new Error("Export job was not created");
       }
       const job = await waitForPlotExportJob(jobId);
+      stopRamp();
+      setDownloadProgress(90);
       if (!job.download_url) {
         throw new Error("Export is ready but no download link was available");
       }
-      const res = await api.get(String(job.download_url), { responseType: "blob" });
+      const res = await api.get(String(job.download_url), {
+        responseType: "blob",
+        onDownloadProgress: (evt) => {
+          if (evt.total) {
+            setDownloadProgress(90 + (evt.loaded / evt.total) * 10);
+          }
+        },
+      });
       triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
 
+      setDownloadProgress(100);
       markServerSynced();
       toast.success(`Downloaded ${resolvedFilename}`);
       setShowTechnicalReportModal(false);
@@ -3052,7 +3150,9 @@ export default function SurveyPlan() {
       const message = err instanceof Error ? err.message : "Failed to generate technical report";
       toast.error(message);
     } finally {
+      stopRamp();
       setGeneratingTechnicalReport(false);
+      setDownloadProgress(null);
     }
   };
 
@@ -3063,10 +3163,12 @@ export default function SurveyPlan() {
     }
     if (downloadLoadingKey) return;
     setDownloadLoadingKey(loadingKey);
+    setDownloadProgress(0);
+    const stopRamp = startDownloadProgressRamp(90);
     try {
       const activePlotId = await ensureServerPlot("Syncing draft before export...");
       const resolvedUrl = resolvePlotResourcePath(url, activePlotId);
-      const resolvedFilename = resolvePlotFilename(filename, activePlotId);
+      const resolvedFilename = filename;
       const exportJobPath = resolvedUrl.endsWith("/survey-plan/dwg")
         ? resolvedUrl.replace("/survey-plan/dwg", "/export-jobs/survey-plan.dxf")
         : resolvedUrl.endsWith("/survey-plan/shapefile")
@@ -3079,15 +3181,38 @@ export default function SurveyPlan() {
           throw new Error("Export job was not created");
         }
         const job = await waitForPlotExportJob(jobId);
+        stopRamp();
+        setDownloadProgress(90);
         if (!job.download_url) {
           throw new Error("Export is ready but no download link was available");
         }
-        const res = await api.get(String(job.download_url), { responseType: "blob" });
+        const res = await api.get(String(job.download_url), {
+          responseType: "blob",
+          onDownloadProgress: (evt) => {
+            if (evt.total) {
+              setDownloadProgress(90 + (evt.loaded / evt.total) * 10);
+            }
+          },
+        });
         triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
       } else {
-        const res = await api.get(resolvedUrl, { responseType: "blob" });
+        let rampStopped = false;
+        const res = await api.get(resolvedUrl, {
+          responseType: "blob",
+          onDownloadProgress: (evt) => {
+            if (!rampStopped) {
+              rampStopped = true;
+              stopRamp();
+            }
+            if (evt.total) {
+              setDownloadProgress((evt.loaded / evt.total) * 100);
+            }
+          },
+        });
+        stopRamp();
         triggerBlobDownload(res.data, res.headers["content-type"], resolvedFilename);
       }
+      setDownloadProgress(100);
       markServerSynced();
       toast.success(`Downloaded ${resolvedFilename}`);
     } catch (err) {
@@ -3095,8 +3220,33 @@ export default function SurveyPlan() {
       const message = err instanceof Error ? err.message : "Failed to download file";
       toast.error(message);
     } finally {
+      stopRamp();
       setDownloadLoadingKey((prev) => (prev === loadingKey ? null : prev));
+      setDownloadProgress(null);
     }
+  };
+
+  // Shared button-content renderer for every export card: shows the idle icon+label normally,
+  // and swaps to a live progress bar + percentage while that specific download is in flight -
+  // Nigerian networks can leave a plain spinner looking stalled for a long time otherwise.
+  const renderDownloadButtonState = (key: string, idleLabel: string, idleIcon: ReactNode) => {
+    if (downloadLoadingKey === key) {
+      const pct = Math.round(downloadProgress ?? 0);
+      return (
+        <span className="download-progress" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+          <span className="download-progress-track">
+            <span className="download-progress-fill" style={{ width: `${pct}%` }} />
+          </span>
+          <span className="download-progress-pct">{pct}%</span>
+        </span>
+      );
+    }
+    return (
+      <>
+        {idleIcon}
+        <span>{idleLabel}</span>
+      </>
+    );
   };
 
   const loadSubdivisionBatches = useCallback(async (targetPlotId?: number | null) => {
@@ -3548,7 +3698,7 @@ export default function SurveyPlan() {
       triggerBlobDownload(
         res.data,
         res.headers["content-type"],
-        `subdivision_batch_${batchId}_survey_plans.zip`
+        buildExportFilename([subdivisionEstateName, meta.location_text], "Subdivision_Plans", "zip")
       );
       toast.success("Batch survey plans ZIP downloaded.");
     } catch (err: any) {
@@ -3622,7 +3772,11 @@ export default function SurveyPlan() {
       triggerBlobDownload(
         res.data,
         res.headers["content-type"],
-        `subdivision_clean_copy_batch_${batchId}.pdf`
+        buildExportFilename(
+          [subdivisionCleanCopyTitle || subdivisionEstateName, meta.location_text],
+          "Clean_Copy",
+          "pdf"
+        )
       );
       toast.success("Clean copy PDF downloaded.");
     } catch (err: any) {
@@ -4128,6 +4282,7 @@ export default function SurveyPlan() {
               }}
               controlPointName={meta.adamawa_control_point_name}
               generating={generatingTechnicalReport}
+              progress={downloadProgress}
               onGenerate={downloadTechnicalReport}
             />
           </Suspense>
@@ -4504,66 +4659,57 @@ export default function SurveyPlan() {
                       onClick={() =>
                         downloadWithJson(
                           `/plots/${plotId}/report/pdf`,
-                          `plot_${plotId}_survey_plan.pdf`,
+                          buildExportFilename(surveyPlanIdentitySegments(), "Survey_Plan", "pdf"),
                           "survey_pdf",
                           false,
                           "SURVEY PLAN"
                         )
                       }
                     >
-                      {downloadLoadingKey === "survey_pdf" ? (
-                        <>
-                          <span className="spinner download-spinner" />
-                          <span>Downloading...</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                          <span>Download PDF</span>
-                        </>
+                      {renderDownloadButtonState(
+                        "survey_pdf",
+                        "Download PDF",
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       )}
                     </button>
                   </div>
 
-                  {/* Orthophoto PDF */}
-                  <div className="export-card">
-                    <div className="export-icon ortho">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <rect x="3" y="3" width="18" height="18" rx="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <path d="M21 15l-5-5L5 21" />
-                      </svg>
-                    </div>
-                    <div className="export-info">
-                      <h4>Orthophoto PDF</h4>
-                      <p>Aerial imagery with plot overlay</p>
-                    </div>
-                    <button
-                      className="download-btn"
-                      disabled={Boolean(downloadLoadingKey)}
-                      onClick={() =>
-                        downloadWithJson(
-                          `/plots/${plotId}/orthophoto/pdf`,
-                          `plot_${plotId}_orthophoto.pdf`,
+                  {/* Orthophoto PDF - Site Plan already embeds its own orthophoto inset, so this
+                      separate export doesn't apply to it */}
+                  {meta.template_name !== "site_plan" && (
+                    <div className="export-card">
+                      <div className="export-icon ortho">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <path d="M21 15l-5-5L5 21" />
+                        </svg>
+                      </div>
+                      <div className="export-info">
+                        <h4>Orthophoto PDF</h4>
+                        <p>Aerial imagery with plot overlay</p>
+                      </div>
+                      <button
+                        className="download-btn"
+                        disabled={Boolean(downloadLoadingKey)}
+                        onClick={() =>
+                          downloadWithJson(
+                            `/plots/${plotId}/orthophoto/pdf`,
+                            buildExportFilename(surveyPlanIdentitySegments(), "Orthophoto", "pdf"),
+                            "orthophoto_pdf",
+                            false,
+                            "ORTHOPHOTO"
+                          )
+                        }
+                      >
+                        {renderDownloadButtonState(
                           "orthophoto_pdf",
-                          false,
-                          "ORTHOPHOTO"
-                        )
-                      }
-                    >
-                      {downloadLoadingKey === "orthophoto_pdf" ? (
-                        <>
-                          <span className="spinner download-spinner" />
-                          <span>Downloading...</span>
-                        </>
-                      ) : (
-                        <>
+                          "Download PDF",
                           <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                          <span>Download PDF</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                        )}
+                      </button>
+                    </div>
+                  )}
 
                   {/* DWG File */}
                   <div className="export-card">
@@ -4584,21 +4730,15 @@ export default function SurveyPlan() {
                       onClick={() =>
                         downloadWithGet(
                           `/plots/${plotId}/survey-plan/dwg`,
-                          `plot_${plotId}_survey_plan.dxf`,
+                          buildExportFilename(surveyPlanIdentitySegments(), "Survey_Plan", "dxf"),
                           "dwg"
                         )
                       }
                     >
-                      {downloadLoadingKey === "dwg" ? (
-                        <>
-                          <span className="spinner download-spinner" />
-                          <span>Downloading...</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                          <span>Download DWG</span>
-                        </>
+                      {renderDownloadButtonState(
+                        "dwg",
+                        "Download DWG",
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       )}
                     </button>
                   </div>
@@ -4621,63 +4761,53 @@ export default function SurveyPlan() {
                       onClick={() =>
                         downloadWithGet(
                           `/plots/${plotId}/survey-plan/shapefile`,
-                          `plot_${plotId}_survey_plan_shapefile.zip`,
+                          buildExportFilename(surveyPlanIdentitySegments(), "Survey_Plan_Shapefile", "zip"),
                           "shapefile_zip"
                         )
                       }
                     >
-                      {downloadLoadingKey === "shapefile_zip" ? (
-                        <>
-                          <span className="spinner download-spinner" />
-                          <span>Downloading...</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                          <span>Download ZIP</span>
-                        </>
+                      {renderDownloadButtonState(
+                        "shapefile_zip",
+                        "Download ZIP",
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       )}
                     </button>
                   </div>
 
-                  {/* Topo Map PDF */}
-                  <div className="export-card">
-                    <div className="export-icon topo">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
-                        <circle cx="12" cy="9" r="2.5" />
-                      </svg>
-                    </div>
-                    <div className="export-info">
-                      <h4>Topo Map PDF</h4>
-                      <p>Terrain contours with plot overlay</p>
-                    </div>
-                    <button
-                      className="download-btn"
-                      disabled={Boolean(downloadLoadingKey)}
-                      onClick={() =>
-                        downloadWithJson(
-                          `/plots/${plotId}/orthophoto/pdf`,
-                          `plot_${plotId}_topomap.pdf`,
+                  {/* Topo Map PDF - not applicable to the Site Plan template */}
+                  {meta.template_name !== "site_plan" && (
+                    <div className="export-card">
+                      <div className="export-icon topo">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+                          <circle cx="12" cy="9" r="2.5" />
+                        </svg>
+                      </div>
+                      <div className="export-info">
+                        <h4>Topo Map PDF</h4>
+                        <p>Terrain contours with plot overlay</p>
+                      </div>
+                      <button
+                        className="download-btn"
+                        disabled={Boolean(downloadLoadingKey)}
+                        onClick={() =>
+                          downloadWithJson(
+                            `/plots/${plotId}/orthophoto/pdf`,
+                            buildExportFilename(surveyPlanIdentitySegments(), "Topo_Map", "pdf"),
+                            "topomap_pdf",
+                            true,
+                            "TOPO MAP"
+                          )
+                        }
+                      >
+                        {renderDownloadButtonState(
                           "topomap_pdf",
-                          true,
-                          "TOPO MAP"
-                        )
-                      }
-                    >
-                      {downloadLoadingKey === "topomap_pdf" ? (
-                        <>
-                          <span className="spinner download-spinner" />
-                          <span>Downloading...</span>
-                        </>
-                      ) : (
-                        <>
+                          "Download PDF",
                           <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                          <span>Download PDF</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                        )}
+                      </button>
+                    </div>
+                  )}
 
                   {/* Back Computation */}
                   <div className="export-card">
@@ -4700,21 +4830,15 @@ export default function SurveyPlan() {
                       onClick={() =>
                         downloadWithJson(
                           `/plots/${plotId}/back-computation/pdf`,
-                          `plot_${plotId}_back_computation.pdf`,
+                          buildExportFilename(surveyPlanIdentitySegments(), "Back_Computation", "pdf"),
                           "back_computation_pdf"
                         )
                       }
                     >
-                      {downloadLoadingKey === "back_computation_pdf" ? (
-                        <>
-                          <span className="spinner download-spinner" />
-                          <span>Downloading...</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                          <span>Download PDF</span>
-                        </>
+                      {renderDownloadButtonState(
+                        "back_computation_pdf",
+                        "Download PDF",
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       )}
                     </button>
                   </div>
