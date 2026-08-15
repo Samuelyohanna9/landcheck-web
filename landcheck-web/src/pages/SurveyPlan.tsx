@@ -1250,6 +1250,20 @@ export default function SurveyPlan() {
     });
   }, [manualPoints, effectiveCoordinateSystem]);
 
+  const surveyInputCoordinatesPayload = useMemo(() => {
+    const validPoints = manualPoints.filter((p) => p.lng !== 0 || p.lat !== 0);
+    if (validPoints.length < 3) return [];
+    return validPoints.map((p, index) => ({
+      station: String((p.station || String.fromCharCode(65 + index)).trim()),
+      x: Number(p.lng),
+      y: Number(p.lat),
+      height:
+        p.height !== undefined && p.height !== null && Number.isFinite(Number(p.height))
+          ? Number(p.height)
+          : null,
+    }));
+  }, [manualPoints]);
+
   const effectiveRenderScaleText = useMemo(() => resolveScaleDraftState().scaleText, [resolveScaleDraftState]);
 
   const plotMetaPayload = useMemo(
@@ -1290,8 +1304,9 @@ export default function SurveyPlan() {
       fct_origin_beacon_text: meta.fct_origin_beacon_text,
       fct_cadastral_map_ref: meta.fct_cadastral_map_ref,
       fct_title_prefix: meta.fct_title_prefix,
+      survey_input_coordinates: surveyInputCoordinatesPayload,
     }),
-    [effectiveCoordinateSystem, effectiveRenderScaleText, meta]
+    [effectiveCoordinateSystem, effectiveRenderScaleText, meta, surveyInputCoordinatesPayload]
   );
 
   const serverSyncSignature = useMemo(
