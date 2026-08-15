@@ -89,11 +89,11 @@ function SurveyPlanStepOnePanel({
             {loading ? (
               <>
                 <span className="spinner" />
-                  Opening Draft...
+                  Plotting Draft...
               </>
             ) : (
               <>
-                  {workflowMode === "subdivision" ? "Open Mother Parcel Draft" : "Open Local Draft"}
+                  {workflowMode === "subdivision" ? "Plot & Save Mother Parcel Draft" : "Plot & Save Local Draft"}
                 <svg viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fillRule="evenodd"
