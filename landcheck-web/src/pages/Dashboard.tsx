@@ -4,6 +4,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { api } from "../api/client";
 import { clearSurveyAuthSession, getSurveyAuthSession } from "../auth/surveyAuth";
 import ProfileAvatarMenu from "../components/ProfileAvatarMenu";
+import "../styles/survey-tokens.css";
 import "../styles/dashboard.css";
 import { prefetchSurveyPlanPreviewStep, prefetchSurveyPlanRoute } from "../utils/surveyPlanPrefetch";
 
