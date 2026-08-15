@@ -1802,10 +1802,14 @@
 
 /* Action Bar */
 .action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
   display: flex;
   gap: 1rem;
   margin-top: auto;
-  padding-top: 1rem;
+  padding: 0.85rem 0 0.35rem;
+  background: linear-gradient(180deg, transparent 0%, var(--survey-ink-800) 28%);
 }
 
 /* Buttons */
