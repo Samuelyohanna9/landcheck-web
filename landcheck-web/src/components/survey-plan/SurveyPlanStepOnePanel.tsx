@@ -104,6 +104,7 @@ function SurveyPlanStepOnePanel({
               onCoordinatesDrawn={onCoordinatesDrawn}
               disabled={loading}
               lightweight={isLowBandwidth}
+              coordinateSystem={coordinateSystem}
             />
           </Suspense>
         ) : (
