@@ -10,12 +10,23 @@ type Point = {
   lat: number;
 };
 
+type SpotHeightPoint = Point & {
+  is_boundary?: boolean;
+};
+
 type Props = {
   coordinates: Point[];
   onCoordinatesDrawn?: (coords: Point[]) => void;
   disabled?: boolean;
   lightweight?: boolean;
   coordinateSystem?: string;
+  // "boundary" (default) is today's exact behavior - the interactive draw polygon plus its
+  // corner pins. "spot_heights" is a read-only view showing every uploaded point (boundary
+  // corners and spot-height-only samples alike, since a boundary corner is also a spot height)
+  // as unconnected markers, so a surveyor can see where their elevation samples actually sit
+  // without that data being forced into (and distorting) the boundary ring.
+  viewMode?: "boundary" | "spot_heights";
+  spotHeightPoints?: SpotHeightPoint[];
 };
 
 // Nigeria spans UTM zones 31N-33N, split at fixed meridians - picking the wrong zone for a
@@ -141,6 +152,8 @@ function MapViewEnhanced({
   disabled = false,
   lightweight = false,
   coordinateSystem,
+  viewMode = "boundary",
+  spotHeightPoints,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -149,7 +162,12 @@ function MapViewEnhanced({
   const mapboxglRef = useRef<any>(null);
   const isDrawingRef = useRef(false);
   const activeZoneRef = useRef<{ label: string; westLng: number; eastLng: number } | undefined>(undefined);
+  const viewModeRef = useRef<"boundary" | "spot_heights">(viewMode);
   const [zoneBadge, setZoneBadge] = useState<{ left: number; top: number; label: string } | null>(null);
+
+  useEffect(() => {
+    viewModeRef.current = viewMode;
+  }, [viewMode]);
 
   // Keeps the badge attached to whichever boundary meridian is actually on screen right now,
   // instead of sitting in a fixed corner unrelated to where the line is - recomputed on every
@@ -173,6 +191,29 @@ function MapViewEnhanced({
     const north = bounds.getNorth();
     const point = map.project([visibleLng, south + (north - south) * 0.14]);
     setZoneBadge({ left: point.x, top: point.y, label: `${zone.label} boundary` });
+  }, []);
+
+  // Switches between the interactive boundary view (draw polygon + its corner pins) and the
+  // read-only spot-heights view (every uploaded point as an unconnected dot) - toggled by the
+  // Boundary/Spot Heights buttons in the parent panel, not by anything drawn here.
+  const applySpotHeightVisibility = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const showSpotHeights = viewModeRef.current === "spot_heights";
+    ["plot-fill", "plot-outline"].forEach((id) => {
+      if (map.getLayer?.(id)) {
+        map.setLayoutProperty(id, "visibility", showSpotHeights ? "none" : "visible");
+      }
+    });
+    ["spot-height-circles", "spot-height-labels"].forEach((id) => {
+      if (map.getLayer?.(id)) {
+        map.setLayoutProperty(id, "visibility", showSpotHeights ? "visible" : "none");
+      }
+    });
+    markersRef.current.forEach((marker) => {
+      const el = marker.getElement?.();
+      if (el) el.style.display = showSpotHeights ? "none" : "";
+    });
   }, []);
 
   const handleDrawUpdate = useCallback(() => {
@@ -298,6 +339,46 @@ function MapViewEnhanced({
           },
         });
 
+        // Read-only "Spot Heights" view: every uploaded point (boundary corners included, since
+        // a boundary corner is also a spot height) as unconnected dots, hidden until that view is
+        // selected - see the viewMode effect below.
+        map.addSource("spot-height-points", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+
+        map.addLayer({
+          id: "spot-height-circles",
+          type: "circle",
+          source: "spot-height-points",
+          layout: { visibility: "none" },
+          paint: {
+            "circle-radius": 6,
+            "circle-color": ["case", ["==", ["get", "is_boundary"], true], "#f97316", "#2563eb"],
+            "circle-stroke-color": "#ffffff",
+            "circle-stroke-width": 1.5,
+          },
+        });
+
+        map.addLayer({
+          id: "spot-height-labels",
+          type: "symbol",
+          source: "spot-height-points",
+          layout: {
+            visibility: "none",
+            "text-field": ["get", "station"],
+            "text-size": 11,
+            "text-offset": [0, 1.2],
+            "text-anchor": "top",
+          },
+          paint: {
+            "text-color": "#1e293b",
+            "text-halo-color": "#ffffff",
+            "text-halo-width": 1.5,
+          },
+        });
+
+        applySpotHeightVisibility();
         updateZoneBadgePosition();
       });
 
@@ -327,7 +408,7 @@ function MapViewEnhanced({
       drawRef.current = null;
       mapboxglRef.current = null;
     };
-  }, [handleDrawUpdate, lightweight, onCoordinatesDrawn, updateZoneBadgePosition]);
+  }, [applySpotHeightVisibility, handleDrawUpdate, lightweight, onCoordinatesDrawn, updateZoneBadgePosition]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -355,6 +436,39 @@ function MapViewEnhanced({
       map.once("load", applyZoneData);
     }
   }, [coordinateSystem, updateZoneBadgePosition]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (map.isStyleLoaded() && map.getLayer?.("spot-height-circles")) {
+      applySpotHeightVisibility();
+    } else {
+      map.once("load", applySpotHeightVisibility);
+    }
+  }, [viewMode, applySpotHeightVisibility]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const applySpotHeightData = () => {
+      const source = map.getSource("spot-height-points") as any;
+      if (!source) return;
+      const valid = (spotHeightPoints || []).filter((p) => p.lng !== 0 || p.lat !== 0);
+      source.setData({
+        type: "FeatureCollection",
+        features: valid.map((p) => ({
+          type: "Feature",
+          properties: { station: p.station, is_boundary: p.is_boundary !== false },
+          geometry: { type: "Point", coordinates: [p.lng, p.lat] },
+        })),
+      });
+    };
+    if (map.isStyleLoaded() && map.getSource("spot-height-points")) {
+      applySpotHeightData();
+    } else {
+      map.once("load", applySpotHeightData);
+    }
+  }, [spotHeightPoints]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -426,6 +540,9 @@ function MapViewEnhanced({
       const el = document.createElement("div");
       el.className = "map-marker";
       el.innerHTML = `<span>${coord.station || String.fromCharCode(65 + index)}</span>`;
+      if (viewModeRef.current === "spot_heights") {
+        el.style.display = "none";
+      }
 
       const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([coord.lng, coord.lat])

@@ -11,6 +11,8 @@ type ManualPoint = {
   station: string;
   lng: number;
   lat: number;
+  height?: number;
+  is_boundary?: boolean;
 };
 
 type CoordinateSystem = {
@@ -22,13 +24,18 @@ type CoordinateSystem = {
 
 type Props = {
   points: ManualPoint[];
-  onUpdatePoint: (index: number, key: keyof ManualPoint, value: string | number) => void;
+  onUpdatePoint: (index: number, key: keyof ManualPoint, value: string | number | boolean) => void;
   onRemovePoint: (index: number) => void;
   onAddPoint: () => void;
   onBulkUpload: (points: ManualPoint[]) => void;
   disabled?: boolean;
   coordinateSystem: string;
   onCoordinateSystemChange: (system: string) => void;
+  // Opt-in: shows the "Boundary point" checkbox/"Spot height only" badge per row, and relaxes the
+  // minimum-3-points delete guard to only protect boundary points. This component is shared with
+  // other coordinate-entry flows (e.g. hazard analysis) that have no such distinction, so it stays
+  // off unless the caller explicitly wants it.
+  showPointRoles?: boolean;
 };
 
 const COORDINATE_SYSTEMS: CoordinateSystem[] = [
@@ -77,6 +84,7 @@ function CoordinateInput({
   disabled = false,
   coordinateSystem,
   onCoordinateSystemChange,
+  showPointRoles = false,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -233,63 +241,90 @@ function CoordinateInput({
       </div>
 
       <div className="coord-list-wrapper">
-        {points.map((point, index) => (
-          <div key={index} className={`coord-point-card ${disabled ? "disabled" : ""}`}>
-            <div className="coord-point-header">
-              <span className="row-number">{index + 1}</span>
-              <input
-                type="text"
-                value={point.station}
-                onChange={(event) => onUpdatePoint(index, "station", event.target.value)}
-                placeholder="A"
-                disabled={disabled}
-                className="station-input"
-                aria-label={`Station name for point ${index + 1}`}
-              />
-              <button
-                type="button"
-                onClick={() => onRemovePoint(index)}
-                disabled={disabled || points.length <= 3}
-                className="remove-btn"
-                title="Remove point"
+        {(() => {
+          // Without point roles enabled, every point counts toward the minimum - matches this
+          // component's original (pre-role) behavior exactly for callers that don't opt in.
+          const boundaryCount = showPointRoles
+            ? points.filter((p) => p.is_boundary !== false).length
+            : points.length;
+          return points.map((point, index) => {
+            const isBoundary = !showPointRoles || point.is_boundary !== false;
+            return (
+              <div
+                key={index}
+                className={`coord-point-card ${disabled ? "disabled" : ""} ${isBoundary ? "" : "spot-height"}`}
               >
-                <svg viewBox="0 0 20 20" fill="currentColor">
-                  <path
-                    fillRule="evenodd"
-                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                    clipRule="evenodd"
+                <div className="coord-point-header">
+                  <span className="row-number">{index + 1}</span>
+                  <input
+                    type="text"
+                    value={point.station}
+                    onChange={(event) => onUpdatePoint(index, "station", event.target.value)}
+                    placeholder="A"
+                    disabled={disabled}
+                    className="station-input"
+                    aria-label={`Station name for point ${index + 1}`}
                   />
-                </svg>
-              </button>
-            </div>
-            <div className="coord-point-fields">
-              <label className="coord-field">
-                <span className="coord-field-label">{xLabel}</span>
-                <input
-                  type="number"
-                  step="any"
-                  value={point.lng || ""}
-                  onChange={(event) => onUpdatePoint(index, "lng", parseFloat(event.target.value) || 0)}
-                  placeholder={placeholders.x}
-                  disabled={disabled}
-                  className="coord-input"
-                />
-              </label>
-              <label className="coord-field">
-                <span className="coord-field-label">{yLabel}</span>
-                <input
-                  type="number"
-                  step="any"
-                  value={point.lat || ""}
-                  onChange={(event) => onUpdatePoint(index, "lat", parseFloat(event.target.value) || 0)}
-                  placeholder={placeholders.y}
-                  disabled={disabled}
-                  className="coord-input"
-                />
-              </label>
-            </div>
-          </div>
-        ))}
+                  <button
+                    type="button"
+                    onClick={() => onRemovePoint(index)}
+                    disabled={disabled || (isBoundary && boundaryCount <= 3)}
+                    className="remove-btn"
+                    title={isBoundary && boundaryCount <= 3 ? "Minimum 3 boundary points required" : "Remove point"}
+                  >
+                    <svg viewBox="0 0 20 20" fill="currentColor">
+                      <path
+                        fillRule="evenodd"
+                        d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                <div className="coord-point-fields">
+                  <label className="coord-field">
+                    <span className="coord-field-label">{xLabel}</span>
+                    <input
+                      type="number"
+                      step="any"
+                      value={point.lng || ""}
+                      onChange={(event) => onUpdatePoint(index, "lng", parseFloat(event.target.value) || 0)}
+                      placeholder={placeholders.x}
+                      disabled={disabled}
+                      className="coord-input"
+                    />
+                  </label>
+                  <label className="coord-field">
+                    <span className="coord-field-label">{yLabel}</span>
+                    <input
+                      type="number"
+                      step="any"
+                      value={point.lat || ""}
+                      onChange={(event) => onUpdatePoint(index, "lat", parseFloat(event.target.value) || 0)}
+                      placeholder={placeholders.y}
+                      disabled={disabled}
+                      className="coord-input"
+                    />
+                  </label>
+                </div>
+                {showPointRoles && (
+                  <div className="coord-point-role">
+                    <label className="coord-role-toggle">
+                      <input
+                        type="checkbox"
+                        checked={isBoundary}
+                        onChange={(event) => onUpdatePoint(index, "is_boundary", event.target.checked)}
+                        disabled={disabled}
+                      />
+                      Boundary point
+                    </label>
+                    {!isBoundary && <span className="spot-height-badge">Spot height only</span>}
+                  </div>
+                )}
+              </div>
+            );
+          });
+        })()}
       </div>
 
       <div className="coord-footer">

@@ -163,6 +163,7 @@ type ManualPoint = {
   lng: number;
   lat: number;
   height?: number;
+  is_boundary?: boolean;
 };
 
 type PreviewType = "survey" | "orthophoto" | "topomap";
@@ -1108,7 +1109,7 @@ export default function SurveyPlan() {
 
 
   // Coordinate helpers
-  const updatePoint = useCallback((index: number, key: keyof ManualPoint, value: string | number) => {
+  const updatePoint = useCallback((index: number, key: keyof ManualPoint, value: string | number | boolean) => {
     setManualPoints((prev) => {
       const copy = [...prev];
       copy[index] = { ...copy[index], [key]: value } as ManualPoint;
@@ -1144,8 +1145,14 @@ export default function SurveyPlan() {
 
   const removePoint = useCallback((index: number) => {
     setManualPoints((prev) => {
-      if (prev.length <= 3) {
-        toast.error("Minimum 3 points required");
+      const target = prev[index];
+      const isBoundary = target?.is_boundary !== false;
+      const boundaryCount = prev.filter((p) => p.is_boundary !== false).length;
+      // Spot-height-only points don't count toward the "need 3 corners for a polygon" rule, so
+      // they can always be freely deleted - only removing a boundary point is blocked once just
+      // 3 remain.
+      if (isBoundary && boundaryCount <= 3) {
+        toast.error("Minimum 3 boundary points required");
         return prev;
       }
       return prev.filter((_, i) => i !== index);
@@ -1159,6 +1166,7 @@ export default function SurveyPlan() {
         station: getStationName(prev.length),
         lng: 0,
         lat: 0,
+        is_boundary: true,
       },
     ]);
   }, []);
@@ -1186,12 +1194,15 @@ export default function SurveyPlan() {
   // Handle coordinates drawn on map (always comes in WGS84)
   // Convert to selected coordinate system for display
   const handleCoordinatesFromMap = useCallback((points: ManualPoint[]) => {
+    const boundaryPoints = points.map((p) => ({ ...p, is_boundary: true }));
     if (coordinateSystem === "wgs84") {
-      // No conversion needed
-      setManualPoints(points);
+      // No conversion needed - keep any existing spot-height-only points, the interactive draw
+      // only ever sees/edits the boundary subset, so replacing the whole list here would silently
+      // drop them.
+      setManualPoints((prev) => [...boundaryPoints, ...prev.filter((p) => p.is_boundary === false)]);
     } else {
       // Convert from WGS84 to selected coordinate system
-      const convertedPoints = points.map((p) => {
+      const convertedPoints = boundaryPoints.map((p) => {
         if (p.lng === 0 && p.lat === 0) {
           return p;
         }
@@ -1200,9 +1211,10 @@ export default function SurveyPlan() {
           station: p.station,
           lng: x, // Easting
           lat: y, // Northing
+          is_boundary: true,
         };
       });
-      setManualPoints(convertedPoints);
+      setManualPoints((prev) => [...convertedPoints, ...prev.filter((p) => p.is_boundary === false)]);
     }
   }, [coordinateSystem]);
 
@@ -1214,9 +1226,17 @@ export default function SurveyPlan() {
     return same ? pts : [...pts, first];
   };
 
+  // Points that actually form the plot boundary ring - everything else is a spot-height-only
+  // sample (still used for elevation/topo purposes, see elevationPointsPayload below, but never
+  // fed into the polygon geometry or its per-vertex station labels).
+  const boundaryManualPoints = useMemo(
+    () => manualPoints.filter((p) => p.is_boundary !== false),
+    [manualPoints]
+  );
+
   // Final coordinates for backend (always in WGS84)
   const finalCoords = useMemo(() => {
-    const validPoints = manualPoints.filter(
+    const validPoints = boundaryManualPoints.filter(
       (p) => p.lng !== 0 || p.lat !== 0
     );
     if (validPoints.length >= 3) {
@@ -1232,7 +1252,7 @@ export default function SurveyPlan() {
       return closeRing(pts);
     }
     return null;
-  }, [manualPoints, effectiveCoordinateSystem]);
+  }, [boundaryManualPoints, effectiveCoordinateSystem]);
 
   // Elevation samples for the "Your Data" topo map mode - same WGS84 conversion as finalCoords,
   // but keeping the uploaded height value alongside each point instead of just the boundary ring.
@@ -1261,6 +1281,7 @@ export default function SurveyPlan() {
         p.height !== undefined && p.height !== null && Number.isFinite(Number(p.height))
           ? Number(p.height)
           : null,
+      is_boundary: p.is_boundary !== false,
     }));
   }, [manualPoints]);
 
@@ -1371,8 +1392,8 @@ export default function SurveyPlan() {
   );
 
   const stationNames = useMemo(() => {
-    return manualPoints.map((p) => (p.station || "").trim());
-  }, [manualPoints]);
+    return boundaryManualPoints.map((p) => (p.station || "").trim());
+  }, [boundaryManualPoints]);
 
   useEffect(() => {
     if (!draftHydrated) return;
@@ -1942,18 +1963,39 @@ export default function SurveyPlan() {
 
   // Check if coordinates are valid
   const hasValidCoords = useMemo(() => {
-    const validPoints = manualPoints.filter(
+    const validPoints = boundaryManualPoints.filter(
       (p) => (p.lng !== 0 || p.lat !== 0) && !isNaN(p.lng) && !isNaN(p.lat)
     );
     return validPoints.length >= 3;
-  }, [manualPoints]);
+  }, [boundaryManualPoints]);
 
-  // Convert form coordinates to WGS84 for map display
+  // Convert form coordinates to WGS84 for map display - boundary points only, so the interactive
+  // draw polygon never gets distorted by mixed-in spot-height-only samples.
   const mapCoordinates = useMemo(() => {
+    if (effectiveCoordinateSystem === "wgs84") {
+      return boundaryManualPoints;
+    }
+    // Convert projected coordinates to WGS84 for map
+    return boundaryManualPoints.map((p) => {
+      if (p.lng === 0 && p.lat === 0) {
+        return p;
+      }
+      const [lng, lat] = toWGS84(p.lng, p.lat, effectiveCoordinateSystem);
+      return {
+        station: p.station,
+        lng,
+        lat,
+      };
+    });
+  }, [boundaryManualPoints, effectiveCoordinateSystem]);
+
+  // Every uploaded point (boundary corners and spot-height-only samples alike, WGS84) for the
+  // read-only "Spot Heights" map view - a boundary corner is also a spot height, so nothing is
+  // excluded here the way it is for mapCoordinates above.
+  const spotHeightMapCoordinates = useMemo(() => {
     if (effectiveCoordinateSystem === "wgs84") {
       return manualPoints;
     }
-    // Convert projected coordinates to WGS84 for map
     return manualPoints.map((p) => {
       if (p.lng === 0 && p.lat === 0) {
         return p;
@@ -1963,6 +2005,7 @@ export default function SurveyPlan() {
         station: p.station,
         lng,
         lat,
+        is_boundary: p.is_boundary !== false,
       };
     });
   }, [manualPoints, effectiveCoordinateSystem]);
@@ -4378,6 +4421,7 @@ export default function SurveyPlan() {
                 showDraftMap={showDraftMap}
                 onLoadMapNow={() => setForceShowDraftMap(true)}
                 mapCoordinates={mapCoordinates}
+                spotHeightMapCoordinates={spotHeightMapCoordinates}
                 onCoordinatesDrawn={handleCoordinatesFromMap}
                 isLowBandwidth={isLowBandwidth}
                 manualLowBandwidth={manualLowBandwidth}

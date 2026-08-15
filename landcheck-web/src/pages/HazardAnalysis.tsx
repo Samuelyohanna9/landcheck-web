@@ -25,6 +25,7 @@ type ManualPoint = {
   lng: number;
   lat: number;
   height?: number;
+  is_boundary?: boolean;
 };
 
 type HazardType = "flood" | "erosion";
@@ -313,7 +314,7 @@ export default function HazardAnalysis() {
     throw new Error("Analysis is taking longer than expected. Please try again.");
   }, []);
 
-  const updatePoint = (index: number, key: keyof ManualPoint, value: string | number) => {
+  const updatePoint = (index: number, key: keyof ManualPoint, value: string | number | boolean) => {
     setManualPoints((prev) => {
       const copy = [...prev];
       copy[index] = { ...copy[index], [key]: value } as ManualPoint;
