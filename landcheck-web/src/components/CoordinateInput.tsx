@@ -354,6 +354,16 @@ function CoordinateInput({
         onConfirm={handlePreviewConfirm}
         coordinateSystem={coordinateSystem}
       />
+
+      {uploadParsing && (
+        <div className="coord-upload-overlay" role="status" aria-live="polite">
+          <div className="coord-upload-overlay-card">
+            <span className="coord-upload-spinner" />
+            <p className="coord-upload-overlay-title">Uploading data&hellip;</p>
+            <p className="coord-upload-overlay-subtitle">Reading your file and parsing coordinates</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
