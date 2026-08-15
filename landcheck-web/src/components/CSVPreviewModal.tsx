@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getCoordinateSystemLabel } from "../utils/coordinateConverter";
+import { getCoordinateSystemLabel, isProjectedCoordinateSystem } from "../utils/coordinateConverter";
 import "../styles/csv-preview-modal.css";
 
 type ManualPoint = {
@@ -7,6 +7,7 @@ type ManualPoint = {
   lng: number;
   lat: number;
   height?: number;
+  is_boundary?: boolean;
 };
 
 type Props = {
@@ -53,6 +54,14 @@ export default function CSVPreviewModal({
   const [heightCol, setHeightCol] = useState<number | null>(null);
   const [hasHeader, setHasHeader] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // "mapping" = choose which columns are station/easting/northing/height (as before).
+  // "boundary" = a second step, only needed when there's more than one point set worth marking:
+  // every uploaded point counts as a spot-height sample either way, but only the ones checked
+  // here become the plan's boundary ring - lets a surveyor upload one combined job file (boundary
+  // corners + interior spot heights) instead of losing the extra elevation points to get a clean
+  // boundary, or re-uploading the same file twice.
+  const [step, setStep] = useState<"mapping" | "boundary">("mapping");
+  const [parsedPoints, setParsedPoints] = useState<ManualPoint[]>([]);
 
   // Auto-detect columns when data changes
   useEffect(() => {
@@ -138,12 +147,29 @@ export default function CSVPreviewModal({
     setNorthingCol(detectedNorthing >= 0 ? detectedNorthing : null);
     setHeightCol(detectedHeight >= 0 ? detectedHeight : null);
     setError(null);
+    setStep("mapping");
+    setParsedPoints([]);
   }, [rawData]);
 
   if (!isOpen || !rawData || rawData.length === 0) return null;
 
   const columns = rawData[0]?.length || 0;
   const previewRows = rawData.slice(0, Math.min(6, rawData.length));
+
+  // Once points are parsed and validated, either hand off straight to the parent (no height
+  // column selected - nothing to distinguish, every row stays a boundary point exactly as
+  // before) or show the boundary-marking step so the user can flag which rows are boundary
+  // corners vs. spot-height-only samples, since every row counts as a spot height either way.
+  const proceedWithPoints = (pts: ManualPoint[]) => {
+    const withDefaults = pts.map((p) => ({ ...p, is_boundary: true }));
+    if (heightCol !== null) {
+      setParsedPoints(withDefaults);
+      setStep("boundary");
+    } else {
+      onConfirm(withDefaults);
+      onClose();
+    }
+  };
 
   // Validate and parse data
   const handleConfirm = () => {
@@ -218,13 +244,28 @@ export default function CSVPreviewModal({
       );
       // Still allow confirmation after warning
       setTimeout(() => {
-        onConfirm(points);
-        onClose();
+        proceedWithPoints(points);
       }, 3000);
       return;
     }
 
-    onConfirm(points);
+    proceedWithPoints(points);
+  };
+
+  const handleBoundaryToggle = (index: number, checked: boolean) => {
+    setParsedPoints((prev) => prev.map((p, i) => (i === index ? { ...p, is_boundary: checked } : p)));
+  };
+
+  const boundarySelectAll = () => setParsedPoints((prev) => prev.map((p) => ({ ...p, is_boundary: true })));
+  const boundaryClearAll = () => setParsedPoints((prev) => prev.map((p) => ({ ...p, is_boundary: false })));
+
+  const handleBoundaryConfirm = () => {
+    const boundaryCount = parsedPoints.filter((p) => p.is_boundary).length;
+    if (boundaryCount < 3) {
+      setError("Select at least 3 boundary points to form the plot boundary.");
+      return;
+    }
+    onConfirm(parsedPoints);
     onClose();
   };
 
@@ -241,16 +282,85 @@ export default function CSVPreviewModal({
     return options;
   };
 
+  const isProjected = isProjectedCoordinateSystem(coordinateSystem);
+  const boundaryMarkedCount = parsedPoints.filter((p) => p.is_boundary).length;
+
   return (
     <div className="csv-modal-overlay" onClick={onClose}>
       <div className="csv-modal" onClick={(e) => e.stopPropagation()}>
         <div className="csv-modal-header">
-          <h3>CSV Preview - Map Columns</h3>
+          <h3>{step === "mapping" ? "CSV Preview - Map Columns" : "Mark Boundary Points"}</h3>
           <button className="csv-modal-close" onClick={onClose}>
             &times;
           </button>
         </div>
 
+        {step === "boundary" ? (
+          <>
+            <div className="csv-modal-body">
+              <p className="csv-boundary-intro">
+                Every point below is used as a spot-height sample for the topo map. Check which ones also
+                form your plot boundary - leave everything checked if every row is a boundary corner.
+              </p>
+              <div className="csv-boundary-actions">
+                <button type="button" className="csv-boundary-action-btn" onClick={boundarySelectAll}>
+                  Select all
+                </button>
+                <button type="button" className="csv-boundary-action-btn" onClick={boundaryClearAll}>
+                  Clear all
+                </button>
+                <span className="csv-boundary-count">
+                  {boundaryMarkedCount} of {parsedPoints.length} marked as boundary
+                </span>
+              </div>
+
+              <div className="csv-preview-table-wrapper csv-boundary-table-wrapper">
+                <table className="csv-preview-table">
+                  <thead>
+                    <tr>
+                      <th className="row-num">#</th>
+                      <th>Station</th>
+                      <th>{isProjected ? "Easting (m)" : "Longitude"}</th>
+                      <th>{isProjected ? "Northing (m)" : "Latitude"}</th>
+                      <th>Height</th>
+                      <th>Boundary</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parsedPoints.map((p, idx) => (
+                      <tr key={idx} className={p.is_boundary ? "" : "spot-only-row"}>
+                        <td className="row-num">{idx + 1}</td>
+                        <td>{p.station}</td>
+                        <td>{p.lng}</td>
+                        <td>{p.lat}</td>
+                        <td>{p.height ?? "—"}</td>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={!!p.is_boundary}
+                            onChange={(e) => handleBoundaryToggle(idx, e.target.checked)}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {error && <div className="csv-error">{error}</div>}
+            </div>
+
+            <div className="csv-modal-footer">
+              <button className="csv-btn-cancel" onClick={() => setStep("mapping")}>
+                Back
+              </button>
+              <button className="csv-btn-confirm" onClick={handleBoundaryConfirm}>
+                Use These {parsedPoints.length} Points
+              </button>
+            </div>
+          </>
+        ) : (
+        <>
         <div className="csv-modal-body">
           {/* Column Mapping */}
           <div className="column-mapping">
@@ -416,6 +526,8 @@ export default function CSVPreviewModal({
             Import {rawData.length - (hasHeader ? 1 : 0)} Points
           </button>
         </div>
+        </>
+        )}
       </div>
     </div>
   );

@@ -1,22 +1,24 @@
-import { lazy, memo, Suspense, type ReactNode } from "react";
+import { lazy, memo, Suspense, useState, type ReactNode } from "react";
 import CoordinateInput from "../CoordinateInput";
 import { prefetchSurveyPlanDraftMapTools } from "../../utils/surveyPlanPrefetch";
 
 const MapViewEnhanced = lazy(() => import("../MapViewEnhanced"));
 
 type WorkflowMode = "survey" | "subdivision";
+type MapViewMode = "boundary" | "spot_heights";
 
 type ManualPoint = {
   station: string;
   lng: number;
   lat: number;
   height?: number;
+  is_boundary?: boolean;
 };
 
 type Props = {
   sidebar: ReactNode;
   manualPoints: ManualPoint[];
-  onUpdatePoint: (index: number, field: "lng" | "lat" | "height" | "station", value: string | number) => void;
+  onUpdatePoint: (index: number, field: "lng" | "lat" | "height" | "station" | "is_boundary", value: string | number | boolean) => void;
   onRemovePoint: (index: number) => void;
   onAddPoint: () => void;
   onBulkUpload: (points: ManualPoint[]) => void;
@@ -29,6 +31,7 @@ type Props = {
   showDraftMap: boolean;
   onLoadMapNow: () => void;
   mapCoordinates: ManualPoint[];
+  spotHeightMapCoordinates: ManualPoint[];
   onCoordinatesDrawn: (coords: ManualPoint[]) => void;
   isLowBandwidth: boolean;
   manualLowBandwidth: boolean;
@@ -51,11 +54,17 @@ function SurveyPlanStepOnePanel({
   showDraftMap,
   onLoadMapNow,
   mapCoordinates,
+  spotHeightMapCoordinates,
   onCoordinatesDrawn,
   isLowBandwidth,
   manualLowBandwidth,
   onManualLowBandwidthChange,
 }: Props) {
+  const [mapViewMode, setMapViewMode] = useState<MapViewMode>("boundary");
+  const hasAnyHeightData = manualPoints.some(
+    (p) => p.height !== undefined && p.height !== null && Number.isFinite(Number(p.height))
+  );
+
   const warmDraftMapTools = () => {
     void prefetchSurveyPlanDraftMapTools();
   };
@@ -73,6 +82,7 @@ function SurveyPlanStepOnePanel({
           disabled={loading}
           coordinateSystem={coordinateSystem}
           onCoordinateSystemChange={onCoordinateSystemChange}
+          showPointRoles
         />
         <div className="action-bar">
           <button className="btn-primary" disabled={!hasValidCoords || loading} onClick={onContinue}>
@@ -98,15 +108,37 @@ function SurveyPlanStepOnePanel({
       </div>
       <div className="panel-right">
         {showDraftMap ? (
-          <Suspense fallback={<div className="preview-card">Loading survey map...</div>}>
-            <MapViewEnhanced
-              coordinates={mapCoordinates}
-              onCoordinatesDrawn={onCoordinatesDrawn}
-              disabled={loading}
-              lightweight={isLowBandwidth}
-              coordinateSystem={coordinateSystem}
-            />
-          </Suspense>
+          <div className="step-one-map-wrap">
+            {hasAnyHeightData && (
+              <div className="map-view-toggle">
+                <button
+                  type="button"
+                  className={`map-view-toggle-btn ${mapViewMode === "boundary" ? "active" : ""}`}
+                  onClick={() => setMapViewMode("boundary")}
+                >
+                  Boundary
+                </button>
+                <button
+                  type="button"
+                  className={`map-view-toggle-btn ${mapViewMode === "spot_heights" ? "active" : ""}`}
+                  onClick={() => setMapViewMode("spot_heights")}
+                >
+                  Spot Heights
+                </button>
+              </div>
+            )}
+            <Suspense fallback={<div className="preview-card">Loading survey map...</div>}>
+              <MapViewEnhanced
+                coordinates={mapCoordinates}
+                onCoordinatesDrawn={onCoordinatesDrawn}
+                disabled={loading}
+                lightweight={isLowBandwidth}
+                coordinateSystem={coordinateSystem}
+                viewMode={mapViewMode}
+                spotHeightPoints={spotHeightMapCoordinates}
+              />
+            </Suspense>
+          </div>
         ) : (
             <div className="preview-card">
               <h3>Draft map on demand</h3>

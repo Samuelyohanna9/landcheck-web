@@ -216,6 +216,55 @@
   pointer-events: none;
 }
 
+.coord-point-card.spot-height {
+  border-color: rgba(96, 165, 250, 0.22);
+  background: rgba(96, 165, 250, 0.05);
+}
+
+.coord-point-card.spot-height:hover {
+  border-color: rgba(96, 165, 250, 0.34);
+  background: rgba(96, 165, 250, 0.08);
+}
+
+.coord-point-role {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(214, 223, 210, 0.06);
+}
+
+.coord-role-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #c4d0c8;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.coord-role-toggle input {
+  accent-color: #2b9f5f;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.spot-height-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(96, 165, 250, 0.16);
+  color: #93c5fd;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 .coord-point-header {
   display: flex;
   align-items: center;

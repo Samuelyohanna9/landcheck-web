@@ -265,6 +265,62 @@
   font-size: 0.8rem;
 }
 
+.csv-boundary-intro {
+  margin: 0 0 1rem;
+  color: #b9c6bd;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.csv-boundary-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+}
+
+.csv-boundary-action-btn {
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(60, 163, 104, 0.24);
+  background: rgba(39, 145, 89, 0.12);
+  color: #9ee0b8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.csv-boundary-action-btn:hover {
+  background: rgba(39, 145, 89, 0.2);
+  border-color: rgba(60, 163, 104, 0.36);
+}
+
+.csv-boundary-count {
+  color: #8ea197;
+  font-size: 0.78rem;
+  margin-left: auto;
+}
+
+.csv-boundary-table-wrapper {
+  max-height: 360px;
+}
+
+.csv-preview-table tbody tr.spot-only-row {
+  background: rgba(96, 165, 250, 0.06);
+}
+
+.csv-preview-table tbody tr.spot-only-row:hover {
+  background: rgba(96, 165, 250, 0.1);
+}
+
+.csv-preview-table input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #2b9f5f;
+  cursor: pointer;
+}
+
 .csv-modal-footer {
   border-top: 1px solid rgba(214, 223, 210, 0.08);
   background: rgba(247, 245, 238, 0.04);
