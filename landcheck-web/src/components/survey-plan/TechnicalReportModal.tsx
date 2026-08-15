@@ -21,6 +21,7 @@ type Props = {
   initial: TechnicalReportFields;
   controlPointName: string;
   generating: boolean;
+  progress?: number | null;
   onGenerate: (fields: TechnicalReportFields) => void;
 };
 
@@ -43,6 +44,7 @@ export default function TechnicalReportModal({
   initial,
   controlPointName,
   generating,
+  progress,
   onGenerate,
 }: Props) {
   const [instruments, setInstruments] = useState<string[]>(initial.technical_report_instruments || []);
@@ -255,7 +257,16 @@ export default function TechnicalReportModal({
             Cancel
           </button>
           <button className="csv-btn-confirm" onClick={handleConfirm} disabled={generating}>
-            {generating ? "Generating..." : "Generate Report"}
+            {generating ? (
+              <span className="download-progress" role="progressbar" aria-valuenow={Math.round(progress ?? 0)} aria-valuemin={0} aria-valuemax={100}>
+                <span className="download-progress-track">
+                  <span className="download-progress-fill" style={{ width: `${Math.round(progress ?? 0)}%` }} />
+                </span>
+                <span className="download-progress-pct">{Math.round(progress ?? 0)}%</span>
+              </span>
+            ) : (
+              "Generate Report"
+            )}
           </button>
         </div>
       </div>

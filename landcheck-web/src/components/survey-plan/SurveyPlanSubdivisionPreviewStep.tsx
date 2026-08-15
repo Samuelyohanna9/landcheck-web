@@ -370,7 +370,7 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
               <>
                 <div className="form-group">
                   <label>Applicant Name</label>
-                  <input value={props.meta.title_text} onChange={(e) => props.setMeta((m) => ({ ...m, title_text: e.target.value }))} placeholder="CHINEDU TIMOTHY OKEY" />
+                  <input value={props.meta.title_text} onChange={(e) => props.setMeta((m) => ({ ...m, title_text: e.target.value }))} placeholder="MUSA AUDU" />
                 </div>
                 <div className="form-group">
                   <label>Location</label>

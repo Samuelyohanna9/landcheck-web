@@ -3333,6 +3333,42 @@
   border-top-color: #e2e8f0;
 }
 
+.download-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 96px;
+  width: 100%;
+}
+
+.download-progress-track {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.download-progress-fill {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.download-progress-pct {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  min-width: 2.6em;
+  text-align: right;
+  flex-shrink: 0;
+}
+
 .export-panel .panel-left::-webkit-scrollbar {
   width: 9px;
 }

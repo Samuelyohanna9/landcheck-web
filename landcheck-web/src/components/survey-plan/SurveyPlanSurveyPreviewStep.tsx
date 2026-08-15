@@ -391,7 +391,7 @@ function SurveyPlanSurveyPreviewStep({
               <>
                 <div className="form-group">
                   <label>Applicant Name</label>
-                  <input value={meta.title_text} onChange={(e) => setMeta((m) => ({ ...m, title_text: e.target.value }))} placeholder="CHINEDU TIMOTHY OKEY" />
+                  <input value={meta.title_text} onChange={(e) => setMeta((m) => ({ ...m, title_text: e.target.value }))} placeholder="MUSA AUDU" />
                 </div>
                 <div className="form-group">
                   <label>Location</label>
