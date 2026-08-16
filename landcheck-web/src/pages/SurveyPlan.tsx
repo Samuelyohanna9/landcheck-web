@@ -3084,6 +3084,18 @@ export default function SurveyPlan() {
         coordinate_system: effectiveCoordinateSystem,
         paper_size: meta.paper_size,
         use_topo_map: useTopoMap,
+        // The topo map's own data-source/contour-interval/building-style picks (set in the Topo
+        // Map preview tab) are otherwise invisible to this shared PDF-export payload, which was
+        // only ever modeled on the main plan's own render options - so the export silently fell
+        // back to defaults (GEE DEM, Auto interval, the main plan's hatch style) regardless of
+        // what was actually selected and shown in the preview.
+        ...(useTopoMap
+          ? {
+              topo_source: topoSource,
+              contour_interval: contourInterval,
+              elevation_points: topoSource === "userdata" ? elevationPointsPayload : [],
+            }
+          : {}),
         north_arrow_style: northArrowStyle,
         north_arrow_color: northArrowColor,
         beacon_style: beaconStyle,
@@ -3094,7 +3106,7 @@ export default function SurveyPlan() {
         road_color: roadColor,
         river_color: riverColor,
         building_color: buildingColor,
-        building_hatch_type: buildingHatchType,
+        building_hatch_type: useTopoMap ? topoBuildingHatch : buildingHatchType,
         road_style: roadStyle,
         ...textStylePayload,
         template_name: meta.template_name,
