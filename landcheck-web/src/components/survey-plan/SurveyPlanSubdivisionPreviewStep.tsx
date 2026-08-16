@@ -196,6 +196,8 @@ type Props = {
   onPreviewTypeChange: (type: PreviewType) => void;
   topoSource: TopoSource;
   onTopoSourceChange: (source: TopoSource) => void;
+  contourInterval: number | null;
+  onContourIntervalChange: (interval: number | null) => void;
   northArrowStyle: NorthArrowStyle;
   northArrowColor: NorthArrowColor;
   beaconStyle: BeaconStyle;
@@ -1029,6 +1031,8 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                 onPreviewTypeChange={props.onPreviewTypeChange}
                 topoSource={props.topoSource}
                 onTopoSourceChange={props.onTopoSourceChange}
+                contourInterval={props.contourInterval}
+                onContourIntervalChange={props.onContourIntervalChange}
                 northArrowStyle={props.northArrowStyle}
                 northArrowColor={props.northArrowColor}
                 beaconStyle={props.beaconStyle}
