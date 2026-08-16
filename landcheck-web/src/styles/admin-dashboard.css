@@ -752,6 +752,13 @@
   color: #a7f3d0;
 }
 
+.plot-badge.subdivision {
+  background: rgba(249, 115, 22, 0.14);
+  border-color: rgba(251, 146, 60, 0.32);
+  color: #fdba74;
+  margin-left: 0.5rem;
+}
+
 .plot-detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

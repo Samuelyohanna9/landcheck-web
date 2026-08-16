@@ -40,6 +40,11 @@ type PlotDetail = {
   paper_size: string | null;
   coordinate_system: string | null;
   template_name: string | null;
+  parent_plot_id: number | null;
+  subdivision_batch_id: number | null;
+  subdivision_lot_no: string | null;
+  estate_name: string | null;
+  workflow_type: "subdivision" | "survey_plan";
   geometry: { type: string; coordinates: number[][][] } | null;
   coords: number[][];
   detected_features: {
@@ -77,6 +82,9 @@ type SurveyUserPlot = {
   created_at: string | null;
   coordinate_system: string | null;
   survey_input_coordinates: SurveyUserInputPoint[];
+  parent_plot_id: number | null;
+  estate_name: string | null;
+  workflow_type: "subdivision" | "survey_plan";
 };
 
 type SurveyUser = {
@@ -87,6 +95,19 @@ type SurveyUser = {
   last_login_at: string | null;
   plot_count: number;
   plots: SurveyUserPlot[];
+};
+
+type GeoreferenceSession = {
+  id: string;
+  title_text: string | null;
+  status: string | null;
+  target_coordinate_system: string | null;
+  target_epsg: number | null;
+  source_file_name: string | null;
+  source_content_type: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  finalized_at: string | null;
 };
 
 type FeedbackEntry = {
@@ -115,6 +136,7 @@ export default function AdminDashboard() {
   const [feedbackEntries, setFeedbackEntries] = useState<FeedbackEntry[]>([]);
   const [surveyUsers, setSurveyUsers] = useState<SurveyUser[]>([]);
   const [expandedSurveyUserId, setExpandedSurveyUserId] = useState<number | null>(null);
+  const [georeferenceSessions, setGeoreferenceSessions] = useState<GeoreferenceSession[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -138,9 +160,10 @@ export default function AdminDashboard() {
           api.get("/analytics/plots/details"),
           api.get("/feedback"),
           api.get("/analytics/survey-users"),
+          api.get("/analytics/georeference-sessions"),
         ]);
 
-        const [analyticsRes, dailyRes, feedbackRes, plotsRes, feedbackListRes, surveyUsersRes] = results;
+        const [analyticsRes, dailyRes, feedbackRes, plotsRes, feedbackListRes, surveyUsersRes, georefSessionsRes] = results;
 
         if (analyticsRes.status === "fulfilled") {
           setAnalytics(analyticsRes.value.data);
@@ -163,6 +186,10 @@ export default function AdminDashboard() {
           const data = surveyUsersRes.value.data;
           setSurveyUsers(Array.isArray(data) ? data : []);
         }
+        if (georefSessionsRes.status === "fulfilled") {
+          const data = georefSessionsRes.value.data;
+          setGeoreferenceSessions(Array.isArray(data) ? data : []);
+        }
       } catch (err) {
         console.error("Failed to fetch analytics:", err);
       } finally {
@@ -181,6 +208,7 @@ export default function AdminDashboard() {
     setPlotDetails([]);
     setFeedbackEntries([]);
     setSurveyUsers([]);
+    setGeoreferenceSessions([]);
     setLoading(false);
   };
 
@@ -547,6 +575,11 @@ export default function AdminDashboard() {
                                           <div className="survey-user-plot-info">
                                             <span className="survey-user-plot-title">
                                               {plot.title_text || `Plot #${plot.plot_id}`}
+                                              {plot.workflow_type === "subdivision" && (
+                                                <span className="plot-badge subdivision" title={plot.estate_name ? `Estate: ${plot.estate_name}` : undefined}>
+                                                  Subdivision Lot
+                                                </span>
+                                              )}
                                             </span>
                                             <span className="survey-user-plot-meta">
                                               {plot.location_text || "No location"} · {formatTemplateName(plot.template_name)} ·{" "}
@@ -851,6 +884,63 @@ export default function AdminDashboard() {
           </section>
 
           <section className="plots-detail-section">
+            <h2>Georeference Sessions</h2>
+            {georeferenceSessions.length === 0 ? (
+              <div className="no-feedback">
+                <p>No georeference sessions available</p>
+              </div>
+            ) : (
+              <div className="plot-detail-list">
+                {georeferenceSessions.map((session) => (
+                  <div key={session.id} className="plot-detail-card">
+                    <div className="plot-detail-header">
+                      <div>
+                        <span className="plot-detail-id">
+                          {session.title_text || `Session ${session.id.slice(0, 8)}`}
+                        </span>
+                        <span className="plot-detail-date">{formatDateTime(session.created_at)}</span>
+                      </div>
+                      <div className="plot-detail-badges">
+                        <span className="plot-badge">{session.status || "draft"}</span>
+                        <span className="plot-badge">
+                          {formatCoordinateSystem(session.target_coordinate_system)}
+                        </span>
+                        {session.source_file_name && (
+                          <span className="plot-badge">{session.source_file_name}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="plot-detail-grid">
+                      <div className="plot-detail-block">
+                        <h4>Session</h4>
+                        <div className="plot-kv">
+                          <span>Last Updated</span>
+                          <span>{formatDateTime(session.updated_at)}</span>
+                        </div>
+                        <div className="plot-kv">
+                          <span>Finalized</span>
+                          <span>{session.finalized_at ? formatDateTime(session.finalized_at) : "Not finalized"}</span>
+                        </div>
+                      </div>
+                      <div className="plot-detail-block">
+                        <h4>Downloads</h4>
+                        <a
+                          className="survey-user-download-btn"
+                          href={`${BACKEND_URL}/survey-georeference/sessions/${session.id}/exports/staking.csv`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          DGPS Staking CSV
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="plots-detail-section">
             <h2>Plot Details</h2>
             {plotDetails.length === 0 ? (
               <div className="no-feedback">
@@ -866,6 +956,11 @@ export default function AdminDashboard() {
                         <span className="plot-detail-date">{formatDateTime(plot.created_at)}</span>
                       </div>
                       <div className="plot-detail-badges">
+                        {plot.workflow_type === "subdivision" && (
+                          <span className="plot-badge subdivision" title={plot.parent_plot_id ? `From Plot #${plot.parent_plot_id}` : undefined}>
+                            Subdivision Lot{plot.subdivision_lot_no ? ` · ${plot.subdivision_lot_no}` : ""}
+                          </span>
+                        )}
                         <span className="plot-badge template">{formatTemplateName(plot.template_name)}</span>
                         <span className="plot-badge">{plot.scale_text || "Scale N/A"}</span>
                         <span className="plot-badge">{plot.paper_size || "A4"}</span>
