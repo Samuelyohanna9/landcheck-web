@@ -454,7 +454,7 @@ function SurveyPreview({
           </div>
           <span className="topo-source-hint">
             {topoSource === "opentopomap"
-              ? "Real contour lines from a global satellite elevation model (Copernicus/NASA) - the same data Flood and Erosion analysis use"
+              ? "Real contour lines from a global satellite elevation model (Copernicus/NASA)"
               : hasHeightData
               ? "Real contour lines from your uploaded elevation points"
               : "Upload CSV with height column to use your data"
