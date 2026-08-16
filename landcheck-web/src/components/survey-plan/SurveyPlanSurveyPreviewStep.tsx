@@ -114,6 +114,8 @@ type Props = {
   onPreviewTypeChange: (type: PreviewType) => void;
   topoSource: TopoSource;
   onTopoSourceChange: (source: TopoSource) => void;
+  contourInterval: number | null;
+  onContourIntervalChange: (interval: number | null) => void;
   northArrowStyle: NorthArrowStyle;
   northArrowColor: NorthArrowColor;
   beaconStyle: BeaconStyle;
@@ -202,6 +204,8 @@ function SurveyPlanSurveyPreviewStep({
   onPreviewTypeChange,
   topoSource,
   onTopoSourceChange,
+  contourInterval,
+  onContourIntervalChange,
   northArrowStyle,
   northArrowColor,
   beaconStyle,
@@ -737,6 +741,8 @@ function SurveyPlanSurveyPreviewStep({
           onPreviewTypeChange={onPreviewTypeChange}
           topoSource={topoSource}
           onTopoSourceChange={onTopoSourceChange}
+          contourInterval={contourInterval}
+          onContourIntervalChange={onContourIntervalChange}
           northArrowStyle={northArrowStyle}
           northArrowColor={northArrowColor}
           beaconStyle={beaconStyle}

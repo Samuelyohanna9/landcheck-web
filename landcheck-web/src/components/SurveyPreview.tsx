@@ -13,6 +13,8 @@ type Props = {
   onPreviewTypeChange: (type: PreviewType) => void;
   topoSource: TopoSource;
   onTopoSourceChange: (source: TopoSource) => void;
+  contourInterval: number | null;
+  onContourIntervalChange: (interval: number | null) => void;
   northArrowStyle: string;
   northArrowColor: string;
   beaconStyle: string;
@@ -84,6 +86,8 @@ function SurveyPreview({
   onPreviewTypeChange,
   topoSource,
   onTopoSourceChange,
+  contourInterval,
+  onContourIntervalChange,
   northArrowStyle,
   northArrowColor,
   beaconStyle,
@@ -429,7 +433,7 @@ function SurveyPreview({
               <svg viewBox="0 0 20 20" fill="currentColor" style={{ width: 14, height: 14 }}>
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clipRule="evenodd" />
               </svg>
-              OpenTopoMap
+              Global DEM (Satellite)
             </button>
             <button
               className={`topo-source-btn ${topoSource === "userdata" ? "active" : ""}`}
@@ -446,12 +450,32 @@ function SurveyPreview({
           </div>
           <span className="topo-source-hint">
             {topoSource === "opentopomap"
-              ? "Real contour lines from a global elevation model"
+              ? "Real contour lines from a global satellite elevation model (Copernicus/NASA) - the same data Flood and Erosion analysis use"
               : hasHeightData
               ? "Real contour lines from your uploaded elevation points"
               : "Upload CSV with height column to use your data"
             }
           </span>
+          <div className="contour-interval-bar">
+            <span className="topo-source-label">Contour Interval:</span>
+            <div className="topo-source-toggle">
+              <button
+                className={`topo-source-btn ${contourInterval === null ? "active" : ""}`}
+                onClick={() => onContourIntervalChange(null)}
+              >
+                Auto
+              </button>
+              {[0.25, 0.5, 1, 2, 5, 10].map((interval) => (
+                <button
+                  key={interval}
+                  className={`topo-source-btn ${contourInterval === interval ? "active" : ""}`}
+                  onClick={() => onContourIntervalChange(interval)}
+                >
+                  {interval}m
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

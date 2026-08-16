@@ -189,6 +189,7 @@ type SurveyPlanDraftState = {
   hasHeightData: boolean;
   previewType: PreviewType;
   topoSource: TopoSource;
+  contourInterval: number | null;
   northArrowStyle: NorthArrowStyle;
   northArrowColor: NorthArrowColor;
   beaconStyle: BeaconStyle;
@@ -683,6 +684,9 @@ export default function SurveyPlan() {
   const [hasHeightData, setHasHeightData] = useState(false);
   const [previewType, setPreviewType] = useState<PreviewType>("survey");
   const [topoSource, setTopoSource] = useState<TopoSource>("opentopomap");
+  // null = Auto (backend picks a contour interval from the site's actual relief); otherwise a
+  // fixed interval in metres the user explicitly chose.
+  const [contourInterval, setContourInterval] = useState<number | null>(null);
   const [northArrowStyle, setNorthArrowStyle] = useState<NorthArrowStyle>("one_side_stem");
   const [northArrowColor, setNorthArrowColor] = useState<NorthArrowColor>("blue");
   const [beaconStyle, setBeaconStyle] = useState<BeaconStyle>("cross");
@@ -1014,6 +1018,9 @@ export default function SurveyPlan() {
           setPreviewType("survey");
         }
         if (saved.topoSource) setTopoSource(saved.topoSource);
+        if (typeof saved.contourInterval === "number" || saved.contourInterval === null) {
+          setContourInterval(saved.contourInterval);
+        }
         if (saved.northArrowStyle) setNorthArrowStyle(saved.northArrowStyle);
         if (saved.northArrowColor) setNorthArrowColor(saved.northArrowColor);
         if (saved.beaconStyle) setBeaconStyle(saved.beaconStyle);
@@ -1341,6 +1348,7 @@ export default function SurveyPlan() {
         // the next render looks like - without them here, tweaking e.g. road width after a
         // preview was already rendered left the "changes aren't in the preview yet" banner off.
         renderOptions: {
+          contourInterval,
           northArrowStyle,
           northArrowColor,
           beaconStyle,
@@ -1368,6 +1376,7 @@ export default function SurveyPlan() {
     [
       finalCoords,
       plotMetaPayload,
+      contourInterval,
       northArrowStyle,
       northArrowColor,
       beaconStyle,
@@ -1409,6 +1418,7 @@ export default function SurveyPlan() {
       hasHeightData,
       previewType,
       topoSource,
+      contourInterval,
       northArrowStyle,
       northArrowColor,
       beaconStyle,
@@ -1477,6 +1487,7 @@ export default function SurveyPlan() {
     hasHeightData,
     previewType,
     topoSource,
+    contourInterval,
     northArrowStyle,
     northArrowColor,
     beaconStyle,
@@ -2301,6 +2312,7 @@ export default function SurveyPlan() {
           use_topo_map: true, // Always topo for topo map
           topo_source: source, // "opentopomap" or "userdata"
           elevation_points: source === "userdata" ? elevationPointsPayload : [],
+          contour_interval: contourInterval, // null = Auto
           north_arrow_style: northArrowStyle,
           north_arrow_color: northArrowColor,
         }, {
@@ -2334,6 +2346,7 @@ export default function SurveyPlan() {
     effectiveCoordinateSystem,
     meta.paper_size,
     elevationPointsPayload,
+    contourInterval,
     northArrowStyle,
     northArrowColor,
     ensureServerPlot,
@@ -2384,6 +2397,10 @@ export default function SurveyPlan() {
 
   const handleTopoSourceChange = useCallback((source: TopoSource) => {
     setTopoSource(source);
+  }, []);
+
+  const handleContourIntervalChange = useCallback((interval: number | null) => {
+    setContourInterval(interval);
   }, []);
 
   const handleNorthArrowStyleChange = useCallback((value: string) => {
@@ -2857,6 +2874,7 @@ export default function SurveyPlan() {
     setHasHeightData(false);
     setPreviewType("survey");
     setTopoSource("opentopomap");
+    setContourInterval(null);
     setNorthArrowStyle("one_side_stem");
     setNorthArrowColor("blue");
     setBeaconStyle("cross");
@@ -4489,7 +4507,9 @@ export default function SurveyPlan() {
               previewType={previewType}
               onPreviewTypeChange={handlePreviewTypeChange}
               topoSource={topoSource}
+              contourInterval={contourInterval}
               onTopoSourceChange={handleTopoSourceChange}
+              onContourIntervalChange={handleContourIntervalChange}
               northArrowStyle={northArrowStyle}
               northArrowColor={northArrowColor}
               beaconStyle={beaconStyle}
@@ -4659,7 +4679,9 @@ export default function SurveyPlan() {
               previewType={previewType}
               onPreviewTypeChange={handlePreviewTypeChange}
               topoSource={topoSource}
+              contourInterval={contourInterval}
               onTopoSourceChange={handleTopoSourceChange}
+              onContourIntervalChange={handleContourIntervalChange}
               northArrowStyle={northArrowStyle}
               northArrowColor={northArrowColor}
               beaconStyle={beaconStyle}
@@ -4987,7 +5009,9 @@ export default function SurveyPlan() {
                 previewType={previewType}
                 onPreviewTypeChange={setPreviewType}
                 topoSource={topoSource}
+                contourInterval={contourInterval}
                 onTopoSourceChange={setTopoSource}
+                onContourIntervalChange={setContourInterval}
                 northArrowStyle={northArrowStyle}
                 northArrowColor={northArrowColor}
                 beaconStyle={beaconStyle}
