@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useFloatingPopoverPosition } from "../utils/useFloatingPopoverPosition";
 
-type HatchType = "horizontal" | "vertical" | "diagonal" | "cross";
+type HatchType = "horizontal" | "vertical" | "diagonal" | "cross" | "solid";
 
 type HatchPatternPickerProps = {
   value: string;
@@ -14,6 +14,7 @@ const HATCH_OPTIONS: { value: HatchType; label: string }[] = [
   { value: "vertical", label: "Vertical" },
   { value: "diagonal", label: "Diagonal" },
   { value: "cross", label: "Cross-hatch" },
+  { value: "solid", label: "Solid Fill" },
 ];
 
 // Small AutoCAD-style hatch pattern preview, drawn to match this app's actual building-hatch
@@ -28,6 +29,7 @@ function HatchSwatch({ type }: { type: HatchType }) {
   const showHorizontal = type === "horizontal" || type === "cross";
   const showVertical = type === "vertical" || type === "cross";
   const showDiagonal = type === "diagonal";
+  const showSolid = type === "solid";
 
   return (
     <svg className="hatch-swatch" viewBox="0 0 28 20" aria-hidden="true">
@@ -38,6 +40,7 @@ function HatchSwatch({ type }: { type: HatchType }) {
       </defs>
       <rect className="hatch-swatch-bg" x="0.5" y="0.5" width="27" height="19" rx="2" />
       <g className="hatch-swatch-lines" clipPath={`url(#${clipId})`}>
+        {showSolid && <rect className="hatch-swatch-solid" x="0.5" y="0.5" width="27" height="19" />}
         {showHorizontal &&
           [4, 9, 14, 19].map((y) => <line key={`h-${y}`} x1="0" y1={y} x2="28" y2={y} />)}
         {showVertical &&

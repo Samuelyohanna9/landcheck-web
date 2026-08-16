@@ -174,7 +174,7 @@ type NorthArrowStyle = "one_side_stem" | "stacked_4n" | "classic" | "triangle" |
 type NorthArrowColor = "black" | "blue";
 type BeaconStyle = "circle" | "square" | "triangle" | "diamond" | "cross";
 type RoadWidthOption = "2" | "4" | "6" | "8" | "10" | "12" | "15" | "20" | "30";
-type BuildingHatchType = "horizontal" | "vertical" | "diagonal" | "cross";
+type BuildingHatchType = "horizontal" | "vertical" | "diagonal" | "cross" | "solid";
 // "" = this template's own existing default (solid for general/Adamawa, dashed for cadastral/FCT) -
 // left unset unless the user explicitly picks one, so existing plans keep looking exactly as they do.
 type RoadStyleOption = "" | "solid" | "dashed_symbol";
@@ -190,6 +190,7 @@ type SurveyPlanDraftState = {
   previewType: PreviewType;
   topoSource: TopoSource;
   contourInterval: number | null;
+  topoBuildingHatch: BuildingHatchType;
   northArrowStyle: NorthArrowStyle;
   northArrowColor: NorthArrowColor;
   beaconStyle: BeaconStyle;
@@ -698,6 +699,10 @@ export default function SurveyPlan() {
   const [riverColor, setRiverColor] = useState<string>("#0000ff");
   const [buildingColor, setBuildingColor] = useState<string>("#000000");
   const [buildingHatchType, setBuildingHatchType] = useState<BuildingHatchType>("diagonal");
+  // Topo Map gets its own building style (defaults to Solid Fill, which reads far more clearly
+  // against a terrain-colored contour background than hatching does) - independent from the main
+  // Survey Plan's own buildingHatchType/default above, though the user can change either freely.
+  const [topoBuildingHatch, setTopoBuildingHatch] = useState<BuildingHatchType>("solid");
   const [roadStyle, setRoadStyle] = useState<RoadStyleOption>("");
   const [titleFont, setTitleFont] = useState<string>("");
   const [titleSize, setTitleSize] = useState<string>("");
@@ -1032,6 +1037,7 @@ export default function SurveyPlan() {
         if (saved.riverColor) setRiverColor(saved.riverColor);
         if (saved.buildingColor) setBuildingColor(saved.buildingColor);
         if (saved.buildingHatchType) setBuildingHatchType(saved.buildingHatchType);
+        if (saved.topoBuildingHatch) setTopoBuildingHatch(saved.topoBuildingHatch);
         if (saved.roadStyle) setRoadStyle(saved.roadStyle);
         if (saved.titleFont) setTitleFont(saved.titleFont);
         if (saved.titleSize) setTitleSize(saved.titleSize);
@@ -1349,6 +1355,7 @@ export default function SurveyPlan() {
         // preview was already rendered left the "changes aren't in the preview yet" banner off.
         renderOptions: {
           contourInterval,
+          topoBuildingHatch,
           northArrowStyle,
           northArrowColor,
           beaconStyle,
@@ -1377,6 +1384,7 @@ export default function SurveyPlan() {
       finalCoords,
       plotMetaPayload,
       contourInterval,
+      topoBuildingHatch,
       northArrowStyle,
       northArrowColor,
       beaconStyle,
@@ -1419,6 +1427,7 @@ export default function SurveyPlan() {
       previewType,
       topoSource,
       contourInterval,
+      topoBuildingHatch,
       northArrowStyle,
       northArrowColor,
       beaconStyle,
@@ -1488,6 +1497,7 @@ export default function SurveyPlan() {
     previewType,
     topoSource,
     contourInterval,
+    topoBuildingHatch,
     northArrowStyle,
     northArrowColor,
     beaconStyle,
@@ -2313,6 +2323,7 @@ export default function SurveyPlan() {
           topo_source: source, // "opentopomap" or "userdata"
           elevation_points: source === "userdata" ? elevationPointsPayload : [],
           contour_interval: contourInterval, // null = Auto
+          building_hatch_type: topoBuildingHatch,
           north_arrow_style: northArrowStyle,
           north_arrow_color: northArrowColor,
         }, {
@@ -2347,6 +2358,7 @@ export default function SurveyPlan() {
     meta.paper_size,
     elevationPointsPayload,
     contourInterval,
+    topoBuildingHatch,
     northArrowStyle,
     northArrowColor,
     ensureServerPlot,
@@ -2401,6 +2413,10 @@ export default function SurveyPlan() {
 
   const handleContourIntervalChange = useCallback((interval: number | null) => {
     setContourInterval(interval);
+  }, []);
+
+  const handleTopoBuildingHatchChange = useCallback((value: string) => {
+    setTopoBuildingHatch(value as BuildingHatchType);
   }, []);
 
   const handleNorthArrowStyleChange = useCallback((value: string) => {
@@ -2875,6 +2891,7 @@ export default function SurveyPlan() {
     setPreviewType("survey");
     setTopoSource("opentopomap");
     setContourInterval(null);
+    setTopoBuildingHatch("solid");
     setNorthArrowStyle("one_side_stem");
     setNorthArrowColor("blue");
     setBeaconStyle("cross");
@@ -4508,8 +4525,10 @@ export default function SurveyPlan() {
               onPreviewTypeChange={handlePreviewTypeChange}
               topoSource={topoSource}
               contourInterval={contourInterval}
+              topoBuildingHatch={topoBuildingHatch}
               onTopoSourceChange={handleTopoSourceChange}
               onContourIntervalChange={handleContourIntervalChange}
+              onTopoBuildingHatchChange={handleTopoBuildingHatchChange}
               northArrowStyle={northArrowStyle}
               northArrowColor={northArrowColor}
               beaconStyle={beaconStyle}
@@ -4680,8 +4699,10 @@ export default function SurveyPlan() {
               onPreviewTypeChange={handlePreviewTypeChange}
               topoSource={topoSource}
               contourInterval={contourInterval}
+              topoBuildingHatch={topoBuildingHatch}
               onTopoSourceChange={handleTopoSourceChange}
               onContourIntervalChange={handleContourIntervalChange}
+              onTopoBuildingHatchChange={handleTopoBuildingHatchChange}
               northArrowStyle={northArrowStyle}
               northArrowColor={northArrowColor}
               beaconStyle={beaconStyle}
@@ -5010,8 +5031,10 @@ export default function SurveyPlan() {
                 onPreviewTypeChange={setPreviewType}
                 topoSource={topoSource}
                 contourInterval={contourInterval}
+                topoBuildingHatch={topoBuildingHatch}
                 onTopoSourceChange={setTopoSource}
                 onContourIntervalChange={setContourInterval}
+                onTopoBuildingHatchChange={handleTopoBuildingHatchChange}
                 northArrowStyle={northArrowStyle}
                 northArrowColor={northArrowColor}
                 beaconStyle={beaconStyle}
