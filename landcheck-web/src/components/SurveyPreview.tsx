@@ -15,6 +15,8 @@ type Props = {
   onTopoSourceChange: (source: TopoSource) => void;
   contourInterval: number | null;
   onContourIntervalChange: (interval: number | null) => void;
+  topoBuildingHatch: string;
+  onTopoBuildingHatchChange: (value: string) => void;
   northArrowStyle: string;
   northArrowColor: string;
   beaconStyle: string;
@@ -88,6 +90,8 @@ function SurveyPreview({
   onTopoSourceChange,
   contourInterval,
   onContourIntervalChange,
+  topoBuildingHatch,
+  onTopoBuildingHatchChange,
   northArrowStyle,
   northArrowColor,
   beaconStyle,
@@ -351,14 +355,14 @@ function SurveyPreview({
         roadColor={roadColor}
         riverColor={riverColor}
         buildingColor={buildingColor}
-        buildingHatchType={buildingHatchType}
+        buildingHatchType={previewType === "topomap" ? topoBuildingHatch : buildingHatchType}
         onBoundaryColorChange={onBoundaryColorChange}
         onGridColorChange={onGridColorChange}
         onTextColorChange={onTextColorChange}
         onRoadColorChange={onRoadColorChange}
         onRiverColorChange={onRiverColorChange}
         onBuildingColorChange={onBuildingColorChange}
-        onBuildingHatchTypeChange={onBuildingHatchTypeChange}
+        onBuildingHatchTypeChange={previewType === "topomap" ? onTopoBuildingHatchChange : onBuildingHatchTypeChange}
         titleFont={titleFont}
         titleSize={titleSize}
         onTitleFontChange={onTitleFontChange}

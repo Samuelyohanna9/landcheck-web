@@ -116,6 +116,8 @@ type Props = {
   onTopoSourceChange: (source: TopoSource) => void;
   contourInterval: number | null;
   onContourIntervalChange: (interval: number | null) => void;
+  topoBuildingHatch: string;
+  onTopoBuildingHatchChange: (value: string) => void;
   northArrowStyle: NorthArrowStyle;
   northArrowColor: NorthArrowColor;
   beaconStyle: BeaconStyle;
@@ -206,6 +208,8 @@ function SurveyPlanSurveyPreviewStep({
   onTopoSourceChange,
   contourInterval,
   onContourIntervalChange,
+  topoBuildingHatch,
+  onTopoBuildingHatchChange,
   northArrowStyle,
   northArrowColor,
   beaconStyle,
@@ -743,6 +747,8 @@ function SurveyPlanSurveyPreviewStep({
           onTopoSourceChange={onTopoSourceChange}
           contourInterval={contourInterval}
           onContourIntervalChange={onContourIntervalChange}
+          topoBuildingHatch={topoBuildingHatch}
+          onTopoBuildingHatchChange={onTopoBuildingHatchChange}
           northArrowStyle={northArrowStyle}
           northArrowColor={northArrowColor}
           beaconStyle={beaconStyle}

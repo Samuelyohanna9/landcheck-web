@@ -697,6 +697,11 @@
   stroke-width: 1;
 }
 
+.hatch-swatch-solid {
+  fill: var(--survey-parchment-ink);
+  opacity: 0.72;
+}
+
 .road-style-options {
   display: flex;
   flex-direction: column;
