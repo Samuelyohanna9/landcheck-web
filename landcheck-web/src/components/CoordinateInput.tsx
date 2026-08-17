@@ -303,6 +303,16 @@ function CoordinateInput({
                       step="any"
                       value={point.lng || ""}
                       onChange={(event) => onUpdatePoint(index, "lng", parseFloat(event.target.value) || 0)}
+                      onBlur={(event) => {
+                        // Easting/northing entry is normalized to 3 decimal places (millimetre
+                        // precision, standard for projected survey coordinates) once the surveyor
+                        // finishes typing - rounding on every keystroke instead would make it
+                        // impossible to type past the 3rd decimal at all. Left alone for WGS84
+                        // lat/lon, where 3 decimal degrees (~111m) would be a huge precision loss.
+                        if (!isProjected) return;
+                        const parsed = parseFloat(event.target.value);
+                        if (Number.isFinite(parsed)) onUpdatePoint(index, "lng", Math.round(parsed * 1000) / 1000);
+                      }}
                       placeholder={placeholders.x}
                       disabled={disabled}
                       className="coord-input"
@@ -315,6 +325,11 @@ function CoordinateInput({
                       step="any"
                       value={point.lat || ""}
                       onChange={(event) => onUpdatePoint(index, "lat", parseFloat(event.target.value) || 0)}
+                      onBlur={(event) => {
+                        if (!isProjected) return;
+                        const parsed = parseFloat(event.target.value);
+                        if (Number.isFinite(parsed)) onUpdatePoint(index, "lat", Math.round(parsed * 1000) / 1000);
+                      }}
                       placeholder={placeholders.y}
                       disabled={disabled}
                       className="coord-input"
