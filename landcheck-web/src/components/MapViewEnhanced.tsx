@@ -171,6 +171,11 @@ function MapViewEnhanced({
   const lastCountryRef = useRef<string | null>(null);
   const viewModeRef = useRef<"boundary" | "spot_heights">(viewMode);
   const [zoneBadge, setZoneBadge] = useState<{ left: number; top: number; label: string } | null>(null);
+  // Flips true once the map's "load" event has fired (sources/layers exist, mapRef.current is
+  // set) - the country-recenter effect below depends on this so it can retry once the map
+  // actually becomes ready, instead of silently giving up forever if a coordinate-system change
+  // happens to land before the (asynchronously-loaded) map has finished initializing.
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     viewModeRef.current = viewMode;
@@ -387,6 +392,7 @@ function MapViewEnhanced({
 
         applySpotHeightVisibility();
         updateZoneBadgePosition();
+        setMapReady(true);
       });
 
       map.on("move", updateZoneBadgePosition);
@@ -414,6 +420,7 @@ function MapViewEnhanced({
       mapRef.current = null;
       drawRef.current = null;
       mapboxglRef.current = null;
+      setMapReady(false);
     };
   }, [applySpotHeightVisibility, handleDrawUpdate, lightweight, onCoordinatesDrawn, updateZoneBadgePosition]);
 
@@ -443,33 +450,6 @@ function MapViewEnhanced({
       map.once("load", applyZoneData);
     }
   }, [coordinateSystem, updateZoneBadgePosition]);
-
-  // Recenters the map on the chosen coordinate system's country - only when the country actually
-  // changes (not on every zone tweak within the same country). Deliberately fires even with a
-  // boundary already drawn: a coordinate-system change usually means the surveyor is about to
-  // work somewhere else, and a map that silently stays put (while the zone-boundary line updates
-  // fine, since that effect has no such gate) is the confusing outcome, not the safe one.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    const country = getCoordinateSystemCountry(coordinateSystem || "wgs84");
-    const view = COUNTRY_MAP_VIEW[country];
-    const isFirstRun = lastCountryRef.current === null;
-    const countryChanged = !isFirstRun && lastCountryRef.current !== country;
-    lastCountryRef.current = country;
-    if (!view) return;
-    // On mount the map already opens on Nigeria's default view (see the init effect above), so
-    // only the first-run case for a NON-Nigeria country (e.g. a restored Ghana/Uganda draft)
-    // needs its own fly-to; every later run only reacts to an actual country change.
-    if (isFirstRun ? country === "Nigeria" : !countryChanged) return;
-
-    const flyToCountry = () => map.flyTo({ center: view.center, zoom: view.zoom, duration: 1200 });
-    if (map.isStyleLoaded()) {
-      flyToCountry();
-    } else {
-      map.once("load", flyToCountry);
-    }
-  }, [coordinateSystem]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -633,6 +613,40 @@ function MapViewEnhanced({
       }
     }
   }, [coordinates]);
+
+  // Recenters the map on the chosen coordinate system's country - only when the country actually
+  // changes (not on every zone tweak within the same country). Deliberately fires even with a
+  // boundary already drawn: a coordinate-system change usually means the surveyor is about to
+  // work somewhere else, and a map that silently stays put (while the zone-boundary line updates
+  // fine, since that effect has no such gate) is the confusing outcome, not the safe one.
+  // Declared AFTER the [coordinates] effect above (which can call its own fitBounds) so that if
+  // both ever fire in the same render pass, this one - reacting to the surveyor's own explicit
+  // country choice - always has the final say over where the camera ends up.
+  //
+  // Gated on `mapReady` (not just mapRef.current truthiness) and listed in the dependency array:
+  // the map loads asynchronously (dynamic import of the mapbox-gl chunk, then the "load" event),
+  // so a coordinate-system change that lands before that finishes would otherwise see no map to
+  // fly yet and - since this effect only re-runs when coordinateSystem itself changes again -
+  // never get a second chance. Depending on mapReady means it retries the instant the map
+  // actually finishes loading, using whatever coordinateSystem is current at that point.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const country = getCoordinateSystemCountry(coordinateSystem || "wgs84");
+    const view = COUNTRY_MAP_VIEW[country];
+    // Not updated until we're past the mapReady gate above, so if several coordinate-system
+    // changes happen while the map is still loading, the first run that actually executes still
+    // correctly treats itself as "first" and reconciles against whatever country is current then.
+    const isFirstRun = lastCountryRef.current === null;
+    const countryChanged = !isFirstRun && lastCountryRef.current !== country;
+    lastCountryRef.current = country;
+    if (!view) return;
+    // The map's hardcoded default view is already Nigeria, so the first reconciliation only needs
+    // to act for a non-Nigeria country; every later run only reacts to an actual country change.
+    if (isFirstRun ? country === "Nigeria" : !countryChanged) return;
+
+    map.flyTo({ center: view.center, zoom: view.zoom, duration: 1200 });
+  }, [coordinateSystem, mapReady]);
 
   const hasValidCoords = coordinates.filter(c => c.lng !== 0 || c.lat !== 0).length > 0;
 
