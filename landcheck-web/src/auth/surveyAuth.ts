@@ -212,6 +212,44 @@ const readDraftPlotIds = (): number[] => {
   }
 };
 
+// Every georeference session id created anonymously by this browser (from the
+// `landcheck_georef_sessions` draft) - claimed the same way and at the same points as plot ids.
+export const claimSurveyGeorefSessions = async (sessionIds: string[]) => {
+  if (!sessionIds.length) return [] as string[];
+  const session = getSurveyAuthSession();
+  if (!session) return [] as string[];
+  try {
+    const res = await api.post<{ claimed: string[] }>(
+      "/survey-georeference/sessions/claim",
+      { session_ids: sessionIds },
+      { headers: { Authorization: `Bearer ${session.access_token}` } },
+    );
+    return res.data?.claimed || [];
+  } catch {
+    return [] as string[];
+  }
+};
+
+const GEOREF_DRAFT_STORAGE_KEY = "landcheck_georef_sessions";
+
+const readDraftGeorefSessionIds = (): string[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(GEOREF_DRAFT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as { id?: string }[];
+    return parsed.map((s) => String(s.id || "")).filter(Boolean);
+  } catch {
+    return [];
+  }
+};
+
 // Convenience wrapper used by every sign-in completion path (magic-link verify, OTP verify,
 // Google callback) - claims whatever's in this browser's local draft.
-export const claimDraftSurveyPlots = () => claimSurveyPlots(readDraftPlotIds());
+export const claimDraftSurveyPlots = async () => {
+  const [plots] = await Promise.all([
+    claimSurveyPlots(readDraftPlotIds()),
+    claimSurveyGeorefSessions(readDraftGeorefSessionIds()),
+  ]);
+  return plots;
+};
