@@ -41,6 +41,11 @@ const UTM_ZONE_BOUNDARIES: Record<string, { label: string; westLng: number; east
   minna_32: { label: "Minna Datum Zone 32", westLng: 6, eastLng: 12 },
   utm_33n: { label: "UTM Zone 33N", westLng: 12, eastLng: 18 },
   minna_33: { label: "Minna Datum Zone 33", westLng: 12, eastLng: 18 },
+  ghana_utm_30n: { label: "Ghana UTM Zone 30N", westLng: -6, eastLng: 0 },
+  uganda_utm_35n: { label: "Uganda UTM Zone 35N", westLng: 24, eastLng: 30 },
+  uganda_arc1960_35n: { label: "Uganda Arc 1960 Zone 35N", westLng: 24, eastLng: 30 },
+  uganda_utm_36n: { label: "Uganda UTM Zone 36N", westLng: 30, eastLng: 36 },
+  uganda_arc1960_36n: { label: "Uganda Arc 1960 Zone 36N", westLng: 30, eastLng: 36 },
 };
 const ZONE_BOUNDARY_LAT_SPAN: [number, number] = [-2, 16]; // generous margin around Nigeria's real 4°N-14°N extent
 

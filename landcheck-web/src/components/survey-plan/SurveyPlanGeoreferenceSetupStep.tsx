@@ -3,6 +3,7 @@ import { api } from "../../api/client";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
 import type { GeoreferenceSession, GeoreferenceTransform } from "../../types/surveyGeoreference";
 import {
+  COORDINATE_SYSTEM_GROUPS,
   getCoordinateSystemLabel,
   isProjectedCoordinateSystem,
   looksLikeProjected,
@@ -41,17 +42,6 @@ type Props = {
   onContinue: () => void;
   onDeleteSession: () => void | Promise<void>;
 };
-
-const COORDINATE_OPTIONS = [
-  { value: "wgs84", label: "WGS84 (Lat / Lon)" },
-  { value: WGS84_NIGERIA_METERS, label: "WGS84 Nigeria Metres (Auto UTM)" },
-  { value: "utm_31n", label: "UTM Zone 31N" },
-  { value: "utm_32n", label: "UTM Zone 32N" },
-  { value: "utm_33n", label: "UTM Zone 33N" },
-  { value: "minna_31", label: "Minna Zone 31" },
-  { value: "minna_32", label: "Minna Zone 32" },
-  { value: "minna_33", label: "Minna Zone 33" },
-];
 
 const MIN_STAGE_ZOOM = 1;
 const MAX_STAGE_ZOOM = 4;
@@ -709,10 +699,14 @@ function SurveyPlanGeoreferenceSetupStep({
                 <label>
                   Target coordinate system
                   <select value={targetCoordinateSystem} onChange={(event) => onTargetCoordinateSystemChange(event.target.value)}>
-                    {COORDINATE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
+                    {COORDINATE_SYSTEM_GROUPS.map((group) => (
+                      <optgroup key={group.country} label={group.country}>
+                        {group.systems.map((sys) => (
+                          <option key={sys.key} value={sys.key}>
+                            {sys.name}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 </label>

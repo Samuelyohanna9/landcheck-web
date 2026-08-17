@@ -2,6 +2,7 @@ import { memo, useMemo, useRef, useState } from "react";
 import "../styles/coordinate-input.css";
 import CSVPreviewModal from "./CSVPreviewModal";
 import {
+  COORDINATE_SYSTEM_GROUPS,
   getCoordinateSystemEpsgLabel,
   isProjectedCoordinateSystem,
   WGS84_NIGERIA_METERS,
@@ -38,21 +39,9 @@ type Props = {
   showPointRoles?: boolean;
 };
 
-const COORDINATE_SYSTEMS: CoordinateSystem[] = [
-  { key: "wgs84", name: "WGS84 (Lat/Lon)", epsgLabel: "EPSG:4326", description: "Global GPS coordinates" },
-  {
-    key: WGS84_NIGERIA_METERS,
-    name: "WGS84 Nigeria Metres",
-    epsgLabel: "EPSG:32631/32632/32633",
-    description: "Auto-UTM metres for Nigeria. Best for map-picked or georeferenced jobs.",
-  },
-  { key: "utm_31n", name: "UTM Zone 31N", epsgLabel: "EPSG:32631", description: "Western Nigeria" },
-  { key: "utm_32n", name: "UTM Zone 32N", epsgLabel: "EPSG:32632", description: "Central Nigeria" },
-  { key: "utm_33n", name: "UTM Zone 33N", epsgLabel: "EPSG:32633", description: "Eastern Nigeria" },
-  { key: "minna_31", name: "Minna Datum Zone 31", epsgLabel: "EPSG:26331", description: "Nigerian Grid - West" },
-  { key: "minna_32", name: "Minna Datum Zone 32", epsgLabel: "EPSG:26332", description: "Nigerian Grid - Central" },
-  { key: "minna_33", name: "Minna Datum Zone 33", epsgLabel: "EPSG:26333", description: "Nigerian Grid - East" },
-];
+// Flattened view of COORDINATE_SYSTEM_GROUPS - kept for the "currently selected" lookup below;
+// the <select> itself renders the grouped form directly (see coord-system-select).
+const COORDINATE_SYSTEMS: CoordinateSystem[] = COORDINATE_SYSTEM_GROUPS.flatMap((group) => group.systems);
 
 const getPlaceholders = (system: string): { x: string; y: string } => {
   switch (system) {
@@ -70,6 +59,18 @@ const getPlaceholders = (system: string): { x: string; y: string } => {
       return { x: "e.g. 538120.78", y: "e.g. 1012340.56" };
     case "minna_33":
       return { x: "e.g. 285670.23", y: "e.g. 1245890.45" };
+    case "ghana_utm_30n":
+      return { x: "e.g. 811654.21", y: "e.g. 620144.52" };
+    case "ghana_leigon_grid":
+      return { x: "e.g. 364346.58", y: "e.g. 103339.97" };
+    case "uganda_utm_35n":
+      return { x: "e.g. 832785.45", y: "e.g. -138352.33" };
+    case "uganda_utm_36n":
+      return { x: "e.g. 453543.14", y: "e.g. 38421.28" };
+    case "uganda_arc1960_35n":
+      return { x: "e.g. 832716.80", y: "e.g. -138049.41" };
+    case "uganda_arc1960_36n":
+      return { x: "e.g. 453461.26", y: "e.g. 38723.00" };
     default:
       return { x: "e.g. 7.4951", y: "e.g. 9.0579" };
   }
@@ -212,10 +213,14 @@ function CoordinateInput({
             disabled={disabled}
             aria-describedby="coord-system-help"
           >
-            {COORDINATE_SYSTEMS.map((sys) => (
-              <option key={sys.key} value={sys.key}>
-                {sys.name}
-              </option>
+            {COORDINATE_SYSTEM_GROUPS.map((group) => (
+              <optgroup key={group.country} label={group.country}>
+                {group.systems.map((sys) => (
+                  <option key={sys.key} value={sys.key}>
+                    {sys.name}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
           <div className="coord-system-meta" id="coord-system-help" aria-live="polite">

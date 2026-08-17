@@ -97,6 +97,22 @@ type SurveyUser = {
   plots: SurveyUserPlot[];
 };
 
+type OsmOverpassCountryUsage = {
+  country_hint: string;
+  total_calls: number;
+  cache_hits: number;
+  distinct_buckets: number;
+  distinct_plots: number;
+  first_seen: string | null;
+  last_seen: string | null;
+  avg_fetch_ms: number | null;
+};
+
+type OsmOverpassUsage = {
+  by_country: OsmOverpassCountryUsage[];
+  recent: unknown[];
+};
+
 type GeoreferenceSession = {
   id: string;
   title_text: string | null;
@@ -137,6 +153,7 @@ export default function AdminDashboard() {
   const [surveyUsers, setSurveyUsers] = useState<SurveyUser[]>([]);
   const [expandedSurveyUserId, setExpandedSurveyUserId] = useState<number | null>(null);
   const [georeferenceSessions, setGeoreferenceSessions] = useState<GeoreferenceSession[]>([]);
+  const [osmOverpassUsage, setOsmOverpassUsage] = useState<OsmOverpassCountryUsage[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -161,9 +178,10 @@ export default function AdminDashboard() {
           api.get("/feedback"),
           api.get("/analytics/survey-users"),
           api.get("/analytics/georeference-sessions"),
+          api.get("/analytics/osm-overpass-usage"),
         ]);
 
-        const [analyticsRes, dailyRes, feedbackRes, plotsRes, feedbackListRes, surveyUsersRes, georefSessionsRes] = results;
+        const [analyticsRes, dailyRes, feedbackRes, plotsRes, feedbackListRes, surveyUsersRes, georefSessionsRes, osmOverpassRes] = results;
 
         if (analyticsRes.status === "fulfilled") {
           setAnalytics(analyticsRes.value.data);
@@ -190,6 +208,10 @@ export default function AdminDashboard() {
           const data = georefSessionsRes.value.data;
           setGeoreferenceSessions(Array.isArray(data) ? data : []);
         }
+        if (osmOverpassRes.status === "fulfilled") {
+          const data = osmOverpassRes.value.data as OsmOverpassUsage | undefined;
+          setOsmOverpassUsage(Array.isArray(data?.by_country) ? data!.by_country : []);
+        }
       } catch (err) {
         console.error("Failed to fetch analytics:", err);
       } finally {
@@ -209,6 +231,7 @@ export default function AdminDashboard() {
     setFeedbackEntries([]);
     setSurveyUsers([]);
     setGeoreferenceSessions([]);
+    setOsmOverpassUsage([]);
     setLoading(false);
   };
 
@@ -881,6 +904,53 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
+          </section>
+
+          <section className="plots-detail-section">
+            <h2>OSM Overpass Usage (Non-Nigeria Feature Detection)</h2>
+            {osmOverpassUsage.length === 0 ? (
+              <div className="no-feedback">
+                <p>No non-Nigeria plots detected yet - nothing has hit the Overpass fallback.</p>
+              </div>
+            ) : (
+              <div className="plot-detail-list">
+                {osmOverpassUsage.map((row) => (
+                  <div key={row.country_hint} className="plot-detail-card">
+                    <div className="plot-detail-header">
+                      <div>
+                        <span className="plot-detail-id">{row.country_hint}</span>
+                        <span className="plot-detail-date">
+                          {row.first_seen ? `First seen ${formatDateTime(row.first_seen)}` : ""}
+                        </span>
+                      </div>
+                      <div className="plot-detail-badges">
+                        <span className="plot-badge">{row.distinct_plots} plot{row.distinct_plots === 1 ? "" : "s"}</span>
+                        <span className="plot-badge">{row.distinct_buckets} area{row.distinct_buckets === 1 ? "" : "s"}</span>
+                        <span className="plot-badge">
+                          {row.total_calls} call{row.total_calls === 1 ? "" : "s"} ({row.cache_hits} cached)
+                        </span>
+                        {row.avg_fetch_ms != null && (
+                          <span className="plot-badge">~{Math.round(row.avg_fetch_ms)}ms/fetch</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="plot-detail-grid">
+                      <div className="plot-detail-block">
+                        <h4>Activity</h4>
+                        <div className="plot-kv">
+                          <span>Last seen</span>
+                          <span>{formatDateTime(row.last_seen)}</span>
+                        </div>
+                        <div className="plot-kv">
+                          <span>Cache hit rate</span>
+                          <span>{row.total_calls > 0 ? `${Math.round((row.cache_hits / row.total_calls) * 100)}%` : "N/A"}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           <section className="plots-detail-section">
