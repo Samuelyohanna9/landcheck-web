@@ -4,6 +4,8 @@ import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
 import type { GeoreferenceSession, GeoreferenceTransform } from "../../types/surveyGeoreference";
 import {
   COORDINATE_SYSTEM_GROUPS,
+  COUNTRY_MAP_VIEW,
+  getCoordinateSystemCountry,
   getCoordinateSystemLabel,
   isProjectedCoordinateSystem,
   looksLikeProjected,
@@ -75,6 +77,7 @@ function SurveyPlanGeoreferenceSetupStep({
   const mapRef = useRef<any>(null);
   const mapboxRef = useRef<any>(null);
   const mapControlMarkerRefs = useRef<any[]>([]);
+  const lastCountryRef = useRef<string | null>(null);
   const pendingRasterRef = useRef<string | null>(null);
   const dragStateRef = useRef<{ startX: number; startY: number; panX: number; panY: number; moved: boolean } | null>(null);
   const suppressNextImageClickRef = useRef(false);
@@ -346,6 +349,35 @@ function SurveyPlanGeoreferenceSetupStep({
       setMapReady(false);
     };
   }, [onAssignMapPoint]);
+
+  // Recenters the map on the chosen target coordinate system's country - only while there are no
+  // real ground control points placed yet (once one exists, the map already flies to it - see the
+  // pointSource-driven effect below), and only on an actual country change, so switching zones
+  // within the same country never yanks the view away from control points the surveyor just placed.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const hasRealPoints = controlPoints.some(
+      (item) =>
+        Number.isFinite(item.ground_x) &&
+        Number.isFinite(item.ground_y) &&
+        (Math.abs(item.ground_x) > 1e-6 || Math.abs(item.ground_y) > 1e-6),
+    );
+    const country = getCoordinateSystemCountry(targetCoordinateSystem || "wgs84");
+    const view = COUNTRY_MAP_VIEW[country];
+    const isFirstRun = lastCountryRef.current === null;
+    const countryChanged = !isFirstRun && lastCountryRef.current !== country;
+    lastCountryRef.current = country;
+    if (!view || hasRealPoints) return;
+    if (isFirstRun ? country === "Nigeria" : !countryChanged) return;
+
+    const flyToCountry = () => map.flyTo({ center: view.center, zoom: view.zoom, duration: 1200 });
+    if (map.isStyleLoaded?.()) {
+      flyToCountry();
+    } else {
+      map.once("load", flyToCountry);
+    }
+  }, [targetCoordinateSystem, controlPoints]);
 
   const pointSource = useMemo(
     () => ({

@@ -206,6 +206,34 @@ export function getCoordinateSystemLabel(system: string): string {
   return SYSTEM_DISPLAY_NAMES[String(system || "wgs84").trim().toLowerCase()] || "WGS84 (Lat/Lon)";
 }
 
+// Which COORDINATE_SYSTEM_GROUPS country a system key belongs to - drives the interactive map's
+// "recenter on the chosen country" behavior (see MapViewEnhanced.tsx) without a second, separately
+// maintained key->country table.
+const SYSTEM_TO_COUNTRY: Record<string, string> = COORDINATE_SYSTEM_GROUPS.reduce(
+  (acc, group) => {
+    group.systems.forEach((sys) => {
+      acc[sys.key] = group.country;
+    });
+    return acc;
+  },
+  {} as Record<string, string>,
+);
+
+export function getCoordinateSystemCountry(system: string): string {
+  return SYSTEM_TO_COUNTRY[String(system || "wgs84").trim().toLowerCase()] || "Global";
+}
+
+// Roughly-centered "home view" per country - both interactive maps (the main boundary-drawing
+// map in MapViewEnhanced.tsx and the georeference ground-control-point map in
+// SurveyPlanGeoreferenceSetupStep.tsx) fly here whenever the chosen coordinate system's country
+// changes, so picking a Ghana or Uganda system doesn't leave a surveyor stranded looking at
+// Nigeria (each map's default view) with no real data on screen yet to navigate by.
+export const COUNTRY_MAP_VIEW: Record<string, { center: [number, number]; zoom: number }> = {
+  Nigeria: { center: [7.5, 9.0], zoom: 6 },
+  Ghana: { center: [-1.1, 7.9], zoom: 6.3 },
+  Uganda: { center: [32.3, 1.4], zoom: 6.8 },
+};
+
 export function getCoordinateSystemEpsgLabel(system: string): string {
   return SYSTEM_EPSG_LABELS[String(system || "wgs84").trim().toLowerCase()] || "EPSG:4326";
 }
