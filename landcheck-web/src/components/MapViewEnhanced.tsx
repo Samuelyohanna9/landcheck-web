@@ -445,8 +445,10 @@ function MapViewEnhanced({
   }, [coordinateSystem, updateZoneBadgePosition]);
 
   // Recenters the map on the chosen coordinate system's country - only when the country actually
-  // changes (not on every zone tweak within the same country) and only while there's no drawn
-  // boundary yet, so switching systems mid-edit on a real plot never yanks the view away from it.
+  // changes (not on every zone tweak within the same country). Deliberately fires even with a
+  // boundary already drawn: a coordinate-system change usually means the surveyor is about to
+  // work somewhere else, and a map that silently stays put (while the zone-boundary line updates
+  // fine, since that effect has no such gate) is the confusing outcome, not the safe one.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -455,7 +457,7 @@ function MapViewEnhanced({
     const isFirstRun = lastCountryRef.current === null;
     const countryChanged = !isFirstRun && lastCountryRef.current !== country;
     lastCountryRef.current = country;
-    if (!view || coordinates.length > 0) return;
+    if (!view) return;
     // On mount the map already opens on Nigeria's default view (see the init effect above), so
     // only the first-run case for a NON-Nigeria country (e.g. a restored Ghana/Uganda draft)
     // needs its own fly-to; every later run only reacts to an actual country change.
@@ -467,7 +469,7 @@ function MapViewEnhanced({
     } else {
       map.once("load", flyToCountry);
     }
-  }, [coordinateSystem, coordinates.length]);
+  }, [coordinateSystem]);
 
   useEffect(() => {
     const map = mapRef.current;

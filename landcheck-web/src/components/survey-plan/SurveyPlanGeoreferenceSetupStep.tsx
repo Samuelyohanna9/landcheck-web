@@ -350,25 +350,20 @@ function SurveyPlanGeoreferenceSetupStep({
     };
   }, [onAssignMapPoint]);
 
-  // Recenters the map on the chosen target coordinate system's country - only while there are no
-  // real ground control points placed yet (once one exists, the map already flies to it - see the
-  // pointSource-driven effect below), and only on an actual country change, so switching zones
-  // within the same country never yanks the view away from control points the surveyor just placed.
+  // Recenters the map on the chosen target coordinate system's country - only on an actual
+  // country change (not every zone tweak within the same country). Fires even with control
+  // points already placed: a coordinate-system change usually means the surveyor is about to
+  // work somewhere else, so the map staying put would be the confusing outcome. If a real point
+  // exists, the pointSource-driven effect below will fly to it right after anyway.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const hasRealPoints = controlPoints.some(
-      (item) =>
-        Number.isFinite(item.ground_x) &&
-        Number.isFinite(item.ground_y) &&
-        (Math.abs(item.ground_x) > 1e-6 || Math.abs(item.ground_y) > 1e-6),
-    );
     const country = getCoordinateSystemCountry(targetCoordinateSystem || "wgs84");
     const view = COUNTRY_MAP_VIEW[country];
     const isFirstRun = lastCountryRef.current === null;
     const countryChanged = !isFirstRun && lastCountryRef.current !== country;
     lastCountryRef.current = country;
-    if (!view || hasRealPoints) return;
+    if (!view) return;
     if (isFirstRun ? country === "Nigeria" : !countryChanged) return;
 
     const flyToCountry = () => map.flyTo({ center: view.center, zoom: view.zoom, duration: 1200 });
@@ -377,7 +372,7 @@ function SurveyPlanGeoreferenceSetupStep({
     } else {
       map.once("load", flyToCountry);
     }
-  }, [targetCoordinateSystem, controlPoints]);
+  }, [targetCoordinateSystem]);
 
   const pointSource = useMemo(
     () => ({
