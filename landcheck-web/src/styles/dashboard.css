@@ -96,6 +96,371 @@
   height: 18px;
 }
 
+/* Help / support button */
+.support-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.625rem 1rem;
+  background: rgba(22, 40, 58, 0.55);
+  border: 1px solid var(--survey-ink-border);
+  border-radius: 8px;
+  color: var(--survey-text-secondary);
+  font-family: var(--survey-font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.support-btn:hover {
+  border-color: var(--survey-ink-border-strong);
+  color: var(--survey-text-primary);
+}
+
+.support-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* "New" split button + dropdown */
+.new-work-menu {
+  display: flex;
+}
+
+.new-work-split {
+  display: flex;
+}
+
+.new-work-primary {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.new-work-caret {
+  padding: 0.625rem 0.65rem;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 1px solid rgba(28, 17, 4, 0.25);
+}
+
+.new-work-caret svg {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.new-work-popover {
+  position: fixed;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+  padding: 0.4rem;
+  background: var(--survey-ink-800);
+  border: 1px solid var(--survey-ink-border-strong);
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.new-work-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.7rem;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--survey-text-primary);
+  font-family: var(--survey-font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.new-work-option:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Category badges (used both in the "New" menu and on each work row) */
+.work-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.work-badge-survey {
+  background: var(--survey-copper-glow);
+  color: var(--survey-copper-300);
+}
+
+.work-badge-subdivision {
+  background: var(--survey-forest-glow);
+  color: var(--survey-forest-400);
+}
+
+.work-badge-georeference {
+  background: rgba(96, 165, 250, 0.15);
+  color: var(--survey-spot-height);
+}
+
+/* Category filter tabs */
+.work-category-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.work-category-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.work-category-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  padding: 0.6rem 1rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--survey-text-secondary);
+  font-family: var(--survey-font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.work-category-tab:hover {
+  color: var(--survey-text-primary);
+}
+
+.work-category-tab.is-active {
+  color: var(--survey-text-primary);
+  border-bottom-color: var(--survey-copper-500);
+}
+
+.work-category-tab-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--survey-text-muted);
+  flex-shrink: 0;
+}
+
+.work-category-tab-dot.work-badge-survey {
+  background: var(--survey-copper-400);
+}
+
+.work-category-tab-dot.work-badge-subdivision {
+  background: var(--survey-forest-400);
+}
+
+.work-category-tab-dot.work-badge-georeference {
+  background: var(--survey-spot-height);
+}
+
+.work-category-tab-count {
+  padding: 0.05rem 0.4rem;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--survey-text-muted);
+}
+
+.work-category-tab.is-active .work-category-tab-count {
+  background: var(--survey-copper-glow);
+  color: var(--survey-copper-300);
+}
+
+/* Support modal */
+.support-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(6, 10, 16, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.support-modal {
+  width: 100%;
+  max-width: 440px;
+  padding: 1.5rem;
+  background: var(--survey-ink-800);
+  border: 1px solid var(--survey-ink-border-strong);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+.support-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.support-modal-header h3 {
+  font-family: var(--survey-font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--survey-text-primary);
+}
+
+.support-modal-close {
+  display: flex;
+  padding: 0.3rem;
+  background: none;
+  border: none;
+  color: var(--survey-text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.support-modal-close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--survey-text-primary);
+}
+
+.support-modal-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.support-modal-intro {
+  margin: 0 0 1.1rem;
+  color: var(--survey-text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.support-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.support-modal-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--survey-text-secondary);
+  margin-top: 0.5rem;
+}
+
+.support-modal-label .required {
+  color: var(--survey-danger);
+}
+
+.support-modal-form input,
+.support-modal-form textarea {
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  background: rgba(22, 40, 58, 0.55);
+  border: 1px solid var(--survey-ink-border);
+  border-radius: 10px;
+  color: var(--survey-text-primary);
+  font-family: var(--survey-font-body);
+  font-size: 0.875rem;
+  resize: vertical;
+}
+
+.support-modal-form input:focus,
+.support-modal-form textarea:focus {
+  outline: none;
+  border-color: var(--survey-copper-500);
+  box-shadow: 0 0 0 3px var(--survey-copper-glow);
+}
+
+.support-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.support-modal-cancel {
+  padding: 0.6rem 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--survey-ink-border);
+  border-radius: 8px;
+  color: var(--survey-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.support-modal-cancel:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.support-modal-submit {
+  padding: 0.6rem 1.2rem;
+  background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
+  border: none;
+  border-radius: 8px;
+  color: #1c1104;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.support-modal-submit:disabled,
+.support-modal-cancel:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Work row additions: category badge next to title, spacer for non-selectable rows, danger action */
+.workspace-project-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.workspace-project-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.workspace-project-checkbox-spacer {
+  width: 16px;
+  height: 16px;
+}
+
+.workspace-project-action-danger {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.workspace-project-action-danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #f87171;
+}
+
 /* Quick tools */
 .workspace-quick-tools-section {
   max-width: 1200px;
@@ -367,9 +732,6 @@
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--survey-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .workspace-project-meta {
@@ -550,11 +912,34 @@
 
   .header-right {
     justify-content: stretch;
+    flex-wrap: wrap;
+    gap: 0.6rem;
   }
 
-  .header-right .new-plot-btn {
+  .support-btn span {
+    display: none;
+  }
+
+  .support-btn {
+    padding: 0.625rem 0.75rem;
+  }
+
+  .new-work-menu {
+    flex: 1 1 auto;
+    order: 2;
+  }
+
+  .new-work-split {
+    width: 100%;
+  }
+
+  .new-work-primary {
     flex: 1;
     justify-content: center;
+  }
+
+  .work-category-tabs {
+    padding: 0 1rem;
   }
 
   .workspace-quick-tools-section {

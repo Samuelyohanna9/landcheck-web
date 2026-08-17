@@ -945,6 +945,7 @@ export default function SurveyPlan() {
       setGeorefFeatures(normalizedSession.features);
       setGeorefTargetCoordinateSystem(normalizedSession.target_coordinate_system || "wgs84");
       setGeorefSelectedControlPointId(preferredId);
+      if (normalizedSession.id) saveGeorefSessionToStorage(normalizedSession.id);
     },
     []
   );
@@ -1110,6 +1111,18 @@ export default function SurveyPlan() {
       setWorkflowMode(modeParam);
     }
   }, [draftHydrated, workflowMode, searchParams]);
+
+  // Dashboard "Continue" links for a specific georeference session with
+  // ?mode=georeference&session=<id> - loads that exact session instead of whatever's in this
+  // browser's local draft (which may be a different session, or none at all).
+  useEffect(() => {
+    if (!draftHydrated || workflowMode !== "georeference") return;
+    const sessionParam = searchParams.get("session");
+    if (!sessionParam || georefSession?.id === sessionParam) return;
+    loadGeoreferenceSession(sessionParam, { silent: true }).catch(() => {
+      toast.error("Could not open that georeference session.");
+    });
+  }, [draftHydrated, workflowMode, searchParams, georefSession?.id, loadGeoreferenceSession]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -2057,6 +2070,19 @@ export default function SurveyPlan() {
     }
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(plots));
+  };
+
+  // Mirrors savePlotToStorage above, but for georeference sessions - claimSurveyGeorefSessions
+  // (surveyAuth.ts) reads this list right after sign-in to attach any session id started here
+  // anonymously to the now-known user account.
+  const saveGeorefSessionToStorage = (id: string) => {
+    const STORAGE_KEY = "landcheck_georef_sessions";
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const sessions: { id: string }[] = stored ? JSON.parse(stored) : [];
+    if (sessions.some((s) => s.id === id)) return;
+    sessions.unshift({ id });
+    if (sessions.length > 50) sessions.pop();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
   };
 
   const fetchPlotFeatures = useCallback(async (id: number) => {
