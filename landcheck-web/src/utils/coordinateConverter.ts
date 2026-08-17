@@ -13,6 +13,16 @@ proj4.defs([
   ["EPSG:26331", "+proj=utm +zone=31 +ellps=clrk80 +towgs84=-92,-93,122,0,0,0,0 +units=m +no_defs"], // Minna Zone 31
   ["EPSG:26332", "+proj=utm +zone=32 +ellps=clrk80 +towgs84=-92,-93,122,0,0,0,0 +units=m +no_defs"], // Minna Zone 32
   ["EPSG:26333", "+proj=utm +zone=33 +ellps=clrk80 +towgs84=-92,-93,122,0,0,0,0 +units=m +no_defs"], // Minna Zone 33
+  // Ghana - UTM Zone 30N (WGS84, covers nearly all of Ghana) and the Leigon / Ghana Metre Grid,
+  // the national cadastral grid in use since 1978 (EPSG:25000, Clarke 1880 RGS ellipsoid).
+  ["EPSG:32630", "+proj=utm +zone=30 +datum=WGS84 +units=m +no_defs"],
+  ["EPSG:25000", "+proj=tmerc +lat_0=4.66666666666667 +lon_0=-1 +k=0.99975 +x_0=274319.51 +y_0=0 +ellps=clrk80 +towgs84=-130,29,364,0,0,0,0 +units=m +no_defs"],
+  // Uganda - straddles UTM zones 35N/36N (split at 30E). WGS84 UTM for modern GPS work; Arc 1960
+  // (same Clarke 1880 RGS ellipsoid as Ghana, different datum shift) for older cadastral records.
+  ["EPSG:32635", "+proj=utm +zone=35 +datum=WGS84 +units=m +no_defs"],
+  ["EPSG:32636", "+proj=utm +zone=36 +datum=WGS84 +units=m +no_defs"],
+  ["EPSG:21095", "+proj=utm +zone=35 +ellps=clrk80 +towgs84=-160,-6,-302,0,0,0,0 +units=m +no_defs"],
+  ["EPSG:21096", "+proj=utm +zone=36 +ellps=clrk80 +towgs84=-160,-6,-302,0,0,0,0 +units=m +no_defs"],
 ]);
 
 // Map coordinate system keys to EPSG codes
@@ -25,6 +35,12 @@ const SYSTEM_TO_EPSG: Record<string, string> = {
   minna_31: "EPSG:26331",
   minna_32: "EPSG:26332",
   minna_33: "EPSG:26333",
+  ghana_utm_30n: "EPSG:32630",
+  ghana_leigon_grid: "EPSG:25000",
+  uganda_utm_35n: "EPSG:32635",
+  uganda_utm_36n: "EPSG:32636",
+  uganda_arc1960_35n: "EPSG:21095",
+  uganda_arc1960_36n: "EPSG:21096",
 };
 
 export const WGS84_NIGERIA_METERS = "wgs84_nigeria_meters";
@@ -38,6 +54,12 @@ const SYSTEM_DISPLAY_NAMES: Record<string, string> = {
   minna_31: "Minna Datum Zone 31",
   minna_32: "Minna Datum Zone 32",
   minna_33: "Minna Datum Zone 33",
+  ghana_utm_30n: "Ghana UTM Zone 30N",
+  ghana_leigon_grid: "Ghana Leigon National Grid",
+  uganda_utm_35n: "Uganda UTM Zone 35N",
+  uganda_utm_36n: "Uganda UTM Zone 36N",
+  uganda_arc1960_35n: "Uganda Arc 1960 Zone 35N",
+  uganda_arc1960_36n: "Uganda Arc 1960 Zone 36N",
 };
 
 const SYSTEM_EPSG_LABELS: Record<string, string> = {
@@ -49,7 +71,60 @@ const SYSTEM_EPSG_LABELS: Record<string, string> = {
   minna_31: "EPSG:26331",
   minna_32: "EPSG:26332",
   minna_33: "EPSG:26333",
+  ghana_utm_30n: "EPSG:32630",
+  ghana_leigon_grid: "EPSG:25000",
+  uganda_utm_35n: "EPSG:32635",
+  uganda_utm_36n: "EPSG:32636",
+  uganda_arc1960_35n: "EPSG:21095",
+  uganda_arc1960_36n: "EPSG:21096",
 };
+
+// Country grouping for the coordinate-system picker UI (CoordinateInput.tsx,
+// SurveyPlanGeoreferenceSetupStep.tsx) - one entry per country, in the order they should appear.
+export type CoordinateSystemOption = { key: string; name: string; epsgLabel: string; description: string };
+export type CoordinateSystemCountryGroup = { country: string; systems: CoordinateSystemOption[] };
+
+export const COORDINATE_SYSTEM_GROUPS: CoordinateSystemCountryGroup[] = [
+  {
+    country: "Global",
+    systems: [
+      { key: "wgs84", name: "WGS84 (Lat/Lon)", epsgLabel: "EPSG:4326", description: "Global GPS coordinates" },
+    ],
+  },
+  {
+    country: "Nigeria",
+    systems: [
+      {
+        key: WGS84_NIGERIA_METERS,
+        name: "WGS84 Nigeria Metres",
+        epsgLabel: "EPSG:32631/32632/32633",
+        description: "Auto-UTM metres for Nigeria. Best for map-picked or georeferenced jobs.",
+      },
+      { key: "utm_31n", name: "UTM Zone 31N", epsgLabel: "EPSG:32631", description: "Western Nigeria" },
+      { key: "utm_32n", name: "UTM Zone 32N", epsgLabel: "EPSG:32632", description: "Central Nigeria" },
+      { key: "utm_33n", name: "UTM Zone 33N", epsgLabel: "EPSG:32633", description: "Eastern Nigeria" },
+      { key: "minna_31", name: "Minna Datum Zone 31", epsgLabel: "EPSG:26331", description: "Nigerian Grid - West" },
+      { key: "minna_32", name: "Minna Datum Zone 32", epsgLabel: "EPSG:26332", description: "Nigerian Grid - Central" },
+      { key: "minna_33", name: "Minna Datum Zone 33", epsgLabel: "EPSG:26333", description: "Nigerian Grid - East" },
+    ],
+  },
+  {
+    country: "Ghana",
+    systems: [
+      { key: "ghana_utm_30n", name: "UTM Zone 30N", epsgLabel: "EPSG:32630", description: "Modern GPS grid, covers nearly all of Ghana" },
+      { key: "ghana_leigon_grid", name: "Leigon National Grid", epsgLabel: "EPSG:25000", description: "Ghana's cadastral grid since 1978" },
+    ],
+  },
+  {
+    country: "Uganda",
+    systems: [
+      { key: "uganda_utm_35n", name: "UTM Zone 35N", epsgLabel: "EPSG:32635", description: "Modern GPS grid, west of 30°E" },
+      { key: "uganda_utm_36n", name: "UTM Zone 36N", epsgLabel: "EPSG:32636", description: "Modern GPS grid, east of 30°E" },
+      { key: "uganda_arc1960_35n", name: "Arc 1960 Zone 35N", epsgLabel: "EPSG:21095", description: "Local cadastral datum, west of 30°E" },
+      { key: "uganda_arc1960_36n", name: "Arc 1960 Zone 36N", epsgLabel: "EPSG:21096", description: "Local cadastral datum, east of 30°E" },
+    ],
+  },
+];
 
 const NIGERIA_BOUNDS = {
   minLng: 2.5,

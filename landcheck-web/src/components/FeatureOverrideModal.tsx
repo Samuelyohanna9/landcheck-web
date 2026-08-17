@@ -280,6 +280,12 @@ const getCoordinateSystemName = (sys: string) => {
   if (sys === "minna_31") return "MINNA UTM ZONE 31N";
   if (sys === "minna_32") return "MINNA UTM ZONE 32N";
   if (sys === "minna_33") return "MINNA UTM ZONE 33N";
+  if (sys === "ghana_utm_30n") return "GHANA UTM ZONE 30N";
+  if (sys === "ghana_leigon_grid") return "GHANA LEIGON GRID";
+  if (sys === "uganda_utm_35n") return "UGANDA UTM ZONE 35N";
+  if (sys === "uganda_utm_36n") return "UGANDA UTM ZONE 36N";
+  if (sys === "uganda_arc1960_35n") return "UGANDA ARC 1960 ZONE 35N";
+  if (sys === "uganda_arc1960_36n") return "UGANDA ARC 1960 ZONE 36N";
   return sys.toUpperCase();
 };
 
@@ -291,6 +297,12 @@ const getCoordinateSystemCompactName = (sys: string) => {
   if (sys === "minna_31") return "Minna 31";
   if (sys === "minna_32") return "Minna 32";
   if (sys === "minna_33") return "Minna 33";
+  if (sys === "ghana_utm_30n") return "Ghana UTM 30N";
+  if (sys === "ghana_leigon_grid") return "Ghana Leigon";
+  if (sys === "uganda_utm_35n") return "Uganda UTM 35N";
+  if (sys === "uganda_utm_36n") return "Uganda UTM 36N";
+  if (sys === "uganda_arc1960_35n") return "Uganda Arc60 35N";
+  if (sys === "uganda_arc1960_36n") return "Uganda Arc60 36N";
   return sys.toUpperCase();
 };
 
