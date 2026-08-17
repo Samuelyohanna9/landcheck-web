@@ -3,6 +3,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import "../styles/map-enhanced.css";
 import { loadMapboxDraw, loadMapboxGl } from "../utils/mapboxLoader";
+import { COUNTRY_MAP_VIEW, getCoordinateSystemCountry } from "../utils/coordinateConverter";
 
 type Point = {
   station: string;
@@ -167,6 +168,7 @@ function MapViewEnhanced({
   const mapboxglRef = useRef<any>(null);
   const isDrawingRef = useRef(false);
   const activeZoneRef = useRef<{ label: string; westLng: number; eastLng: number } | undefined>(undefined);
+  const lastCountryRef = useRef<string | null>(null);
   const viewModeRef = useRef<"boundary" | "spot_heights">(viewMode);
   const [zoneBadge, setZoneBadge] = useState<{ left: number; top: number; label: string } | null>(null);
 
@@ -441,6 +443,31 @@ function MapViewEnhanced({
       map.once("load", applyZoneData);
     }
   }, [coordinateSystem, updateZoneBadgePosition]);
+
+  // Recenters the map on the chosen coordinate system's country - only when the country actually
+  // changes (not on every zone tweak within the same country) and only while there's no drawn
+  // boundary yet, so switching systems mid-edit on a real plot never yanks the view away from it.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const country = getCoordinateSystemCountry(coordinateSystem || "wgs84");
+    const view = COUNTRY_MAP_VIEW[country];
+    const isFirstRun = lastCountryRef.current === null;
+    const countryChanged = !isFirstRun && lastCountryRef.current !== country;
+    lastCountryRef.current = country;
+    if (!view || coordinates.length > 0) return;
+    // On mount the map already opens on Nigeria's default view (see the init effect above), so
+    // only the first-run case for a NON-Nigeria country (e.g. a restored Ghana/Uganda draft)
+    // needs its own fly-to; every later run only reacts to an actual country change.
+    if (isFirstRun ? country === "Nigeria" : !countryChanged) return;
+
+    const flyToCountry = () => map.flyTo({ center: view.center, zoom: view.zoom, duration: 1200 });
+    if (map.isStyleLoaded()) {
+      flyToCountry();
+    } else {
+      map.once("load", flyToCountry);
+    }
+  }, [coordinateSystem, coordinates.length]);
 
   useEffect(() => {
     const map = mapRef.current;
