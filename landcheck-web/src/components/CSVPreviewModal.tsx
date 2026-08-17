@@ -34,6 +34,10 @@ const COORDINATE_RANGES: Record<string, { x: [number, number]; y: [number, numbe
   uganda_utm_36n: { x: [100000, 900000], y: [-10000000, 10000000] },
   uganda_arc1960_35n: { x: [100000, 900000], y: [-10000000, 10000000] },
   uganda_arc1960_36n: { x: [100000, 900000], y: [-10000000, 10000000] },
+  uganda_utm_35s: { x: [100000, 900000], y: [0, 10000000] },
+  uganda_utm_36s: { x: [100000, 900000], y: [0, 10000000] },
+  uganda_arc1960_35s: { x: [100000, 900000], y: [0, 10000000] },
+  uganda_arc1960_36s: { x: [100000, 900000], y: [0, 10000000] },
 };
 
 // Generate station name: A, B, C, ... Z, AA, AB, ...

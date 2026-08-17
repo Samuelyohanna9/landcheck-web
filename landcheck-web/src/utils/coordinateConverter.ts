@@ -23,6 +23,12 @@ proj4.defs([
   ["EPSG:32636", "+proj=utm +zone=36 +datum=WGS84 +units=m +no_defs"],
   ["EPSG:21095", "+proj=utm +zone=35 +ellps=clrk80 +towgs84=-160,-6,-302,0,0,0,0 +units=m +no_defs"],
   ["EPSG:21096", "+proj=utm +zone=36 +ellps=clrk80 +towgs84=-160,-6,-302,0,0,0,0 +units=m +no_defs"],
+  // Uganda also dips south of the equator (Lake Victoria/Masaka/Kabale area) - southern-
+  // hemisphere UTM zones (+south flag adds the standard 10,000,000m false northing).
+  ["EPSG:32735", "+proj=utm +zone=35 +south +datum=WGS84 +units=m +no_defs"],
+  ["EPSG:32736", "+proj=utm +zone=36 +south +datum=WGS84 +units=m +no_defs"],
+  ["EPSG:21035", "+proj=utm +zone=35 +south +ellps=clrk80 +towgs84=-160,-6,-302,0,0,0,0 +units=m +no_defs"],
+  ["EPSG:21036", "+proj=utm +zone=36 +south +ellps=clrk80 +towgs84=-160,-6,-302,0,0,0,0 +units=m +no_defs"],
 ]);
 
 // Map coordinate system keys to EPSG codes
@@ -41,6 +47,10 @@ const SYSTEM_TO_EPSG: Record<string, string> = {
   uganda_utm_36n: "EPSG:32636",
   uganda_arc1960_35n: "EPSG:21095",
   uganda_arc1960_36n: "EPSG:21096",
+  uganda_utm_35s: "EPSG:32735",
+  uganda_utm_36s: "EPSG:32736",
+  uganda_arc1960_35s: "EPSG:21035",
+  uganda_arc1960_36s: "EPSG:21036",
 };
 
 export const WGS84_NIGERIA_METERS = "wgs84_nigeria_meters";
@@ -60,6 +70,10 @@ const SYSTEM_DISPLAY_NAMES: Record<string, string> = {
   uganda_utm_36n: "Uganda UTM Zone 36N",
   uganda_arc1960_35n: "Uganda Arc 1960 Zone 35N",
   uganda_arc1960_36n: "Uganda Arc 1960 Zone 36N",
+  uganda_utm_35s: "Uganda UTM Zone 35S",
+  uganda_utm_36s: "Uganda UTM Zone 36S",
+  uganda_arc1960_35s: "Uganda Arc 1960 Zone 35S",
+  uganda_arc1960_36s: "Uganda Arc 1960 Zone 36S",
 };
 
 const SYSTEM_EPSG_LABELS: Record<string, string> = {
@@ -77,6 +91,10 @@ const SYSTEM_EPSG_LABELS: Record<string, string> = {
   uganda_utm_36n: "EPSG:32636",
   uganda_arc1960_35n: "EPSG:21095",
   uganda_arc1960_36n: "EPSG:21096",
+  uganda_utm_35s: "EPSG:32735",
+  uganda_utm_36s: "EPSG:32736",
+  uganda_arc1960_35s: "EPSG:21035",
+  uganda_arc1960_36s: "EPSG:21036",
 };
 
 // Country grouping for the coordinate-system picker UI (CoordinateInput.tsx,
@@ -118,10 +136,14 @@ export const COORDINATE_SYSTEM_GROUPS: CoordinateSystemCountryGroup[] = [
   {
     country: "Uganda",
     systems: [
-      { key: "uganda_utm_35n", name: "UTM Zone 35N", epsgLabel: "EPSG:32635", description: "Modern GPS grid, west of 30°E" },
-      { key: "uganda_utm_36n", name: "UTM Zone 36N", epsgLabel: "EPSG:32636", description: "Modern GPS grid, east of 30°E" },
-      { key: "uganda_arc1960_35n", name: "Arc 1960 Zone 35N", epsgLabel: "EPSG:21095", description: "Local cadastral datum, west of 30°E" },
-      { key: "uganda_arc1960_36n", name: "Arc 1960 Zone 36N", epsgLabel: "EPSG:21096", description: "Local cadastral datum, east of 30°E" },
+      { key: "uganda_utm_35n", name: "UTM Zone 35N", epsgLabel: "EPSG:32635", description: "Modern GPS grid, north of equator, west of 30°E" },
+      { key: "uganda_utm_36n", name: "UTM Zone 36N", epsgLabel: "EPSG:32636", description: "Modern GPS grid, north of equator, east of 30°E" },
+      { key: "uganda_utm_35s", name: "UTM Zone 35S", epsgLabel: "EPSG:32735", description: "Modern GPS grid, south of equator, west of 30°E" },
+      { key: "uganda_utm_36s", name: "UTM Zone 36S", epsgLabel: "EPSG:32736", description: "Modern GPS grid, south of equator, east of 30°E" },
+      { key: "uganda_arc1960_35n", name: "Arc 1960 Zone 35N", epsgLabel: "EPSG:21095", description: "Local cadastral datum, north of equator, west of 30°E" },
+      { key: "uganda_arc1960_36n", name: "Arc 1960 Zone 36N", epsgLabel: "EPSG:21096", description: "Local cadastral datum, north of equator, east of 30°E" },
+      { key: "uganda_arc1960_35s", name: "Arc 1960 Zone 35S", epsgLabel: "EPSG:21035", description: "Local cadastral datum, south of equator, west of 30°E" },
+      { key: "uganda_arc1960_36s", name: "Arc 1960 Zone 36S", epsgLabel: "EPSG:21036", description: "Local cadastral datum, south of equator, east of 30°E" },
     ],
   },
 ];

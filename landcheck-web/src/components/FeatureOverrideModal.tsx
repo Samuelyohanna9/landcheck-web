@@ -286,6 +286,10 @@ const getCoordinateSystemName = (sys: string) => {
   if (sys === "uganda_utm_36n") return "UGANDA UTM ZONE 36N";
   if (sys === "uganda_arc1960_35n") return "UGANDA ARC 1960 ZONE 35N";
   if (sys === "uganda_arc1960_36n") return "UGANDA ARC 1960 ZONE 36N";
+  if (sys === "uganda_utm_35s") return "UGANDA UTM ZONE 35S";
+  if (sys === "uganda_utm_36s") return "UGANDA UTM ZONE 36S";
+  if (sys === "uganda_arc1960_35s") return "UGANDA ARC 1960 ZONE 35S";
+  if (sys === "uganda_arc1960_36s") return "UGANDA ARC 1960 ZONE 36S";
   return sys.toUpperCase();
 };
 
@@ -303,6 +307,10 @@ const getCoordinateSystemCompactName = (sys: string) => {
   if (sys === "uganda_utm_36n") return "Uganda UTM 36N";
   if (sys === "uganda_arc1960_35n") return "Uganda Arc60 35N";
   if (sys === "uganda_arc1960_36n") return "Uganda Arc60 36N";
+  if (sys === "uganda_utm_35s") return "Uganda UTM 35S";
+  if (sys === "uganda_utm_36s") return "Uganda UTM 36S";
+  if (sys === "uganda_arc1960_35s") return "Uganda Arc60 35S";
+  if (sys === "uganda_arc1960_36s") return "Uganda Arc60 36S";
   return sys.toUpperCase();
 };
 
