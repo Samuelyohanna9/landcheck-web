@@ -3,6 +3,7 @@ import SurveyAppearancePanel from "./SurveyAppearancePanel";
 import RoadNamesPanel from "./RoadNamesPanel";
 import BeaconStylePicker from "./BeaconStylePicker";
 import NorthArrowStylePicker from "./NorthArrowStylePicker";
+import SurveyLoadingAnimation from "./SurveyLoadingAnimation";
 import "../styles/survey-preview.css";
 
 type PreviewType = "survey" | "orthophoto" | "topomap";
@@ -513,8 +514,7 @@ function SurveyPreview({
 
         {isLoading && (
           <div className="preview-loading">
-            <div className="loading-spinner" />
-            <span>Generating {getPreviewLabel()} preview...</span>
+            <SurveyLoadingAnimation label={`Generating ${getPreviewLabel()} preview...`} />
           </div>
         )}
 

@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "../../api/client";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
+import SurveyLoadingAnimation from "../SurveyLoadingAnimation";
 import type { GeoreferenceSession, GeoreferenceTransform } from "../../types/surveyGeoreference";
 import {
   COORDINATE_SYSTEM_GROUPS,
@@ -748,6 +749,9 @@ function SurveyPlanGeoreferenceSetupStep({
                   >
                     {creatingSession ? "Uploading raster..." : "Open Workspace"}
                   </button>
+                  {creatingSession && (
+                    <SurveyLoadingAnimation label="Uploading and preparing your raster..." size="small" />
+                  )}
                 </div>
               </div>
           )}
