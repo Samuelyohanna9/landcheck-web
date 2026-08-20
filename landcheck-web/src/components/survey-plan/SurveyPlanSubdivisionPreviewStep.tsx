@@ -93,6 +93,7 @@ type SubdivisionRoadSegment = {
 
 type SubdivisionPreviewData = {
   resolved_count: number;
+  requested_count?: number | null;
   target_area_m2?: number | null;
   orientation_deg?: number;
   derived_total_area_m2: number;
@@ -107,6 +108,7 @@ type SubdivisionPreviewData = {
   excluded_area_m2?: number | null;
   leftover_area_m2?: number | null;
   road_segments?: SubdivisionRoadSegment[] | null;
+  lot_count_balanced?: boolean;
 };
 
 type SubdivisionBatchRow = {
@@ -202,6 +204,8 @@ type Props = {
   setSubdivisionRoadWidthDraft: Dispatch<SetStateAction<string>>;
   onDeleteRoadSegment: (segment: SubdivisionRoadSegment) => void | Promise<void>;
   subdivisionRoadSegmentDeletingId: string | null;
+  selectedRoadSegmentId: string | null;
+  onSelectRoadSegment: (id: string | null) => void;
   subdivisionLotPrefix: string;
   setSubdivisionLotPrefix: Dispatch<SetStateAction<string>>;
   subdivisionEstateName: string;
@@ -860,12 +864,19 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
               </div>
               <ul className="subdivision-road-segments-list">
                 {props.subdivisionPreview.road_segments.map((segment, idx) => (
-                  <li key={segment.id}>
+                  <li
+                    key={segment.id}
+                    className={props.selectedRoadSegmentId === segment.id ? "is-selected" : ""}
+                    onClick={() => props.onSelectRoadSegment(props.selectedRoadSegmentId === segment.id ? null : segment.id)}
+                  >
                     <span>Road segment {idx + 1}{segment.source === "override" ? " (drawn)" : ""}</span>
                     <button
                       type="button"
                       className="btn-outline subdivision-road-segment-delete"
-                      onClick={() => props.onDeleteRoadSegment(segment)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        props.onDeleteRoadSegment(segment);
+                      }}
                       disabled={props.subdivisionRoadSegmentDeletingId === segment.id}
                     >
                       {props.subdivisionRoadSegmentDeletingId === segment.id ? "Removing..." : "Remove"}
@@ -1016,6 +1027,13 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                   </div>
                 )}
               </div>
+              {props.subdivisionPreview.lot_count_balanced && (
+                <p className="subdivision-note">
+                  Adjusted to <strong>{props.subdivisionPreview.resolved_count}</strong> lots (requested{" "}
+                  {props.subdivisionPreview.requested_count ?? "-"}) so every lot stays close in size on both sides of
+                  the excluded road.
+                </p>
+              )}
               <div className="subdivision-table-wrap">
                 <table className="subdivision-table">
                   <thead>

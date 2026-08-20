@@ -99,10 +99,36 @@ type SubdivisionPreviewPlot = {
   lot_no: string;
   area_m2: number;
   area_hectares: number;
-  geometry?: {
-    type: "Polygon";
-    coordinates: number[][][];
-  };
+  // Set when a lot combining both sides of an excluded road (equal-size division across the
+  // road) got split into separate same-lot-number entries (LOT-004A / LOT-004B) - every saved
+  // plot is a single contiguous parcel, so each part is its own ordinary Polygon entry, linked
+  // back to the others sharing this base lot number for display/coloring purposes.
+  combined_group?: string | null;
+  geometry?:
+    | { type: "Polygon"; coordinates: number[][][] }
+    | { type: "MultiPolygon"; coordinates: number[][][][] };
+};
+
+// Every exterior ring of a lot's geometry, whether it's one Polygon or several disjoint parts of
+// a MultiPolygon - callers treat each ring as its own closed shape to draw/measure.
+const subdivisionLotExteriorRings = (geometry: SubdivisionPreviewPlot["geometry"]): number[][][] => {
+  if (!geometry) return [];
+  if (geometry.type === "MultiPolygon") {
+    return (geometry.coordinates || []).map((poly) => poly?.[0] || []).filter((ring) => ring.length >= 3);
+  }
+  const ring = geometry.coordinates?.[0] || [];
+  return ring.length >= 3 ? [ring] : [];
+};
+
+// Cheap "how big is this ring" proxy (bounding-box area, not true polygon area) used only to pick
+// which part of a merged, multi-ring lot is the "main" one for label/station placement.
+const ringBBoxArea = (ring: number[][]): number => {
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  ring.forEach(([x, y]) => {
+    minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+  });
+  return Math.max(0, maxX - minX) * Math.max(0, maxY - minY);
 };
 
 type SubdivisionZoneGeojson = {
@@ -144,6 +170,7 @@ type SubdivisionPreviewData = {
   road_segments?: SubdivisionRoadSegment[] | null;
   leftover_geojson?: SubdivisionZoneGeojson | null;
   leftover_area_m2?: number | null;
+  lot_count_balanced?: boolean;
   total_area_m2: number;
   derived_total_area_m2: number;
   area_imbalance_m2: number;
@@ -804,7 +831,7 @@ export default function SurveyPlan() {
   const subdivisionMapRef = useRef<any>(null);
   const subdivisionMapboxRef = useRef<any>(null);
   const subdivisionMapReadyRef = useRef(false);
-  const subdivisionPreviewRef = useRef<SubdivisionPreviewData | null>(null);
+  const [selectedRoadSegmentId, setSelectedRoadSegmentId] = useState<string | null>(null);
   // On low-bandwidth connections the map should stay genuinely off (never just delayed) until
   // the user explicitly asks for it via "Load Map Now".
   const showDraftMap = forceShowDraftMap || (!isLowBandwidth && deferredDraftMap);
@@ -1665,19 +1692,28 @@ export default function SurveyPlan() {
 
     const normalized = subdivisionPreview.plots
       .map((plot) => {
-        const ringRaw = (plot.geometry?.coordinates?.[0] || [])
-          .map((point) => [Number(point?.[0]), Number(point?.[1])])
-          .filter((point) => Number.isFinite(point[0]) && Number.isFinite(point[1]));
-        if (ringRaw.length < 3) return null;
+        const rings = subdivisionLotExteriorRings(plot.geometry)
+          .map((ringRaw) =>
+            closeRingIfNeeded(
+              ringRaw
+                .map((point) => [Number(point?.[0]), Number(point?.[1])])
+                .filter((point) => Number.isFinite(point[0]) && Number.isFinite(point[1]))
+            )
+          )
+          .filter((ring) => ring.length >= 3);
+        if (!rings.length) return null;
+        // Label at the centroid of the largest part - a merged lot spanning both sides of an
+        // excluded road (see subdivisionLotExteriorRings) has more than one ring here.
+        const mainRing = rings.reduce((a, b) => (ringBBoxArea(b) > ringBBoxArea(a) ? b : a));
         return {
           ...plot,
-          ring: closeRingIfNeeded(ringRaw),
-          centroid: polygonCentroid(ringRaw),
+          rings,
+          centroid: polygonCentroid(mainRing),
         };
       })
       .filter(Boolean) as Array<
       SubdivisionPreviewPlot & {
-        ring: number[][];
+        rings: number[][][];
         centroid: [number, number];
       }
     >;
@@ -1708,11 +1744,13 @@ export default function SurveyPlan() {
     let minY = Infinity;
     let maxY = -Infinity;
     normalized.forEach((plot) => {
-      plot.ring.forEach((point) => {
-        minX = Math.min(minX, point[0]);
-        maxX = Math.max(maxX, point[0]);
-        minY = Math.min(minY, point[1]);
-        maxY = Math.max(maxY, point[1]);
+      plot.rings.forEach((ring) => {
+        ring.forEach((point) => {
+          minX = Math.min(minX, point[0]);
+          maxX = Math.max(maxX, point[0]);
+          minY = Math.min(minY, point[1]);
+          maxY = Math.max(maxY, point[1]);
+        });
       });
     });
     [...excludedRings, ...leftoverRings].forEach((ring) => {
@@ -1746,24 +1784,6 @@ export default function SurveyPlan() {
 
     const palette = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4", "#84cc16", "#f97316", "#6366f1", "#14b8a6"];
 
-    const plots = normalized.map((plot, idx) => {
-      const projected = plot.ring.map((pt) => mapPoint([pt[0], pt[1]]));
-      const path = `${projected
-        .map((pt, i) => `${i === 0 ? "M" : "L"} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`)
-        .join(" ")} Z`;
-      const centroidProjected = mapPoint(plot.centroid);
-      return {
-        idx,
-        lotNo: displayedSubdivisionLotNames[idx] || plot.lot_no,
-        areaM2: plot.area_m2,
-        areaHa: plot.area_hectares,
-        path,
-        stroke: palette[idx % palette.length],
-        labelX: Math.max(26, Math.min(width - 26, centroidProjected.x)),
-        labelY: Math.max(24, Math.min(height - 24, centroidProjected.y)),
-      };
-    });
-
     const ringsToPath = (rings: number[][][]) =>
       rings
         .map((ring) => {
@@ -1771,6 +1791,34 @@ export default function SurveyPlan() {
           return `${projected.map((pt, i) => `${i === 0 ? "M" : "L"} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`).join(" ")} Z`;
         })
         .join(" ");
+
+    // A lot combining both sides of an excluded road is saved as two separate same-lot-number
+    // entries (LOT-004A / LOT-004B, see combined_group) - grouping the color by combined_group
+    // (falling back to the lot's own number) means both parts share a color instead of each
+    // looking like an unrelated lot, even though each draws its own separate shape below.
+    const colorKeyOrder: string[] = [];
+    normalized.forEach((plot) => {
+      const key = plot.combined_group || plot.lot_no;
+      if (!colorKeyOrder.includes(key)) colorKeyOrder.push(key);
+    });
+
+    // A merged lot (see subdivisionLotExteriorRings) draws as multiple subpaths in one <path> -
+    // SVG fills each disjoint part on its own, exactly like the zone/road paths below already do.
+    const plots = normalized.map((plot, idx) => {
+      const path = ringsToPath(plot.rings);
+      const centroidProjected = mapPoint(plot.centroid);
+      const colorIdx = colorKeyOrder.indexOf(plot.combined_group || plot.lot_no);
+      return {
+        idx,
+        lotNo: displayedSubdivisionLotNames[idx] || plot.lot_no,
+        areaM2: plot.area_m2,
+        areaHa: plot.area_hectares,
+        path,
+        stroke: palette[colorIdx % palette.length],
+        labelX: Math.max(26, Math.min(width - 26, centroidProjected.x)),
+        labelY: Math.max(24, Math.min(height - 24, centroidProjected.y)),
+      };
+    });
 
     const excludedPath = excludedRings.length ? ringsToPath(excludedRings) : null;
     const leftoverPath = leftoverRings.length ? ringsToPath(leftoverRings) : null;
@@ -1806,11 +1854,13 @@ export default function SurveyPlan() {
     const stations: any[] = [];
 
     subdivisionPreview.plots.forEach((plot, idx) => {
-      const ring = (plot.geometry?.coordinates?.[0] || [])
-        .map((point) => [Number(point?.[0]), Number(point?.[1])])
-        .filter((point) => Number.isFinite(point[0]) && Number.isFinite(point[1]));
-      if (ring.length < 3) return;
-      const cleanRing = closeRingIfNeeded(ring as number[][]);
+      // A lot combining both sides of an excluded road is a MultiPolygon - Mapbox renders that
+      // natively in a fill/line layer, so the real geometry goes straight into the Feature. The
+      // "main" ring (the largest part) is only used below for where to put the label/stations.
+      const rings = subdivisionLotExteriorRings(plot.geometry);
+      if (!rings.length) return;
+      const mainRing = rings.reduce((a, b) => (ringBBoxArea(b) > ringBBoxArea(a) ? b : a));
+      const cleanRing = closeRingIfNeeded(mainRing);
       const centroid = polygonCentroid(cleanRing);
       const lotNo = displayedSubdivisionLotNames[idx] || plot.lot_no;
 
@@ -1820,10 +1870,7 @@ export default function SurveyPlan() {
           lotNo,
           areaHa: Number(plot.area_hectares || 0),
         },
-        geometry: {
-          type: "Polygon",
-          coordinates: [cleanRing],
-        },
+        geometry: plot.geometry,
       });
 
       labels.push({
@@ -2129,15 +2176,19 @@ export default function SurveyPlan() {
           id: "subdivision-road-segments-line",
           type: "line",
           source: "subdivision-road-segments-src",
-          paint: { "line-color": "#fb923c", "line-width": 3.2, "line-dasharray": [1.5, 1] },
+          paint: {
+            // Highlighted when it matches selectedRoadSegmentId - kept in sync by the effect
+            // below via setPaintProperty, since a fresh paint expression is baked in at layer
+            // creation and this layer isn't recreated every time the selection changes.
+            "line-color": ["case", ["==", ["get", "segmentId"], ""], "#facc15", "#fb923c"],
+            "line-width": ["case", ["==", ["get", "segmentId"], ""], 5, 3.2],
+            "line-dasharray": [1.5, 1],
+          },
         });
         map.on("click", "subdivision-road-segments-hit", (e: any) => {
           const segmentId = e.features?.[0]?.properties?.segmentId;
           if (!segmentId) return;
-          const segment = subdivisionPreviewRef.current?.road_segments?.find((s) => s.id === segmentId);
-          if (segment) {
-            void deleteSubdivisionRoadSegmentRef.current(segment);
-          }
+          setSelectedRoadSegmentId((prev) => (prev === segmentId ? null : segmentId));
         });
         map.on("mouseenter", "subdivision-road-segments-hit", () => {
           map.getCanvas().style.cursor = "pointer";
@@ -2195,6 +2246,19 @@ export default function SurveyPlan() {
       roadSegmentSource.setData((subdivisionMapPreviewData?.roadSegments || { type: "FeatureCollection", features: [] }) as any);
     }
   }, [subdivisionMapPreviewData, fitSubdivisionMapToData]);
+
+  useEffect(() => {
+    const map = subdivisionMapRef.current;
+    if (!map || !subdivisionMapReadyRef.current) return;
+    if (!map.getLayer("subdivision-road-segments-line")) return;
+    const matchId = selectedRoadSegmentId ?? "";
+    map.setPaintProperty("subdivision-road-segments-line", "line-color", [
+      "case", ["==", ["get", "segmentId"], matchId], "#facc15", "#fb923c",
+    ]);
+    map.setPaintProperty("subdivision-road-segments-line", "line-width", [
+      "case", ["==", ["get", "segmentId"], matchId], 5, 3.2,
+    ]);
+  }, [selectedRoadSegmentId, subdivisionMapPreviewData]);
 
   useEffect(() => {
     if (subdivisionPreviewPanelTab !== "subdivision_lines") return;
@@ -3922,10 +3986,17 @@ export default function SurveyPlan() {
       try {
         const activePlotId = await ensureServerPlot("Syncing draft for subdivision preview...");
         const res = await api.post(`/plots/${activePlotId}/subdivision/preview`, payload);
-        applySubdivisionPreviewResponse(res.data as SubdivisionPreviewData);
+        const data = res.data as SubdivisionPreviewData;
+        applySubdivisionPreviewResponse(data);
         markServerSynced();
         if (!silent) {
           toast.success("Subdivision preview ready.");
+          if (data.lot_count_balanced) {
+            toast(
+              `Adjusted to ${data.resolved_count} lots (from ${data.requested_count ?? "your requested count"}) so every lot stays close in size across the road.`,
+              { icon: "⚖️", duration: 6000 }
+            );
+          }
         }
       } catch (err: any) {
         if (!silent) {
@@ -3974,6 +4045,7 @@ export default function SurveyPlan() {
         }
         featureEditsPendingRef.current = true;
         toast.success("Road removed.");
+        setSelectedRoadSegmentId((prev) => (prev === segment.id ? null : prev));
         await previewSubdivision(true);
       } catch (err: any) {
         const detail = err?.response?.data?.detail;
@@ -3984,15 +4056,6 @@ export default function SurveyPlan() {
     },
     [plotId, previewSubdivision]
   );
-
-  const deleteSubdivisionRoadSegmentRef = useRef(deleteSubdivisionRoadSegment);
-  useEffect(() => {
-    deleteSubdivisionRoadSegmentRef.current = deleteSubdivisionRoadSegment;
-  }, [deleteSubdivisionRoadSegment]);
-
-  useEffect(() => {
-    subdivisionPreviewRef.current = subdivisionPreview;
-  }, [subdivisionPreview]);
 
   const scheduleSubdivisionLivePreview = useCallback(() => {
     if (subdivisionLivePreviewTimerRef.current !== null) {
@@ -5030,6 +5093,8 @@ export default function SurveyPlan() {
               setSubdivisionRoadWidthDraft={setSubdivisionRoadWidthDraft}
               onDeleteRoadSegment={deleteSubdivisionRoadSegment}
               subdivisionRoadSegmentDeletingId={subdivisionRoadSegmentDeletingId}
+              selectedRoadSegmentId={selectedRoadSegmentId}
+              onSelectRoadSegment={setSelectedRoadSegmentId}
               subdivisionLotPrefix={subdivisionLotPrefix}
               setSubdivisionLotPrefix={setSubdivisionLotPrefix}
               subdivisionEstateName={subdivisionEstateName}
