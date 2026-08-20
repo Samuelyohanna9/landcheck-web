@@ -1,0 +1,139 @@
+.cs-select {
+  position: relative;
+  width: 100%;
+}
+
+.cs-select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.74rem 0.88rem;
+  border-radius: 14px;
+  border: 1px solid var(--survey-ink-border-strong, rgba(214, 223, 210, 0.12));
+  background: linear-gradient(180deg, rgba(247, 245, 238, 0.06) 0%, rgba(247, 245, 238, 0.04) 100%);
+  color: var(--survey-text-primary, #f7f8f3);
+  font-family: var(--survey-font-body, inherit);
+  font-size: 0.92rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cs-select-trigger-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs-select-trigger:hover:not(:disabled) {
+  border-color: rgba(60, 163, 104, 0.3);
+}
+
+.cs-select-trigger:focus-visible {
+  outline: none;
+  border-color: var(--survey-copper-500, rgba(43, 159, 95, 0.5));
+  box-shadow: 0 0 0 4px var(--survey-copper-glow, rgba(43, 159, 95, 0.12));
+}
+
+.cs-select.is-disabled .cs-select-trigger {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cs-select-caret {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--survey-text-muted, #8ea197);
+  transition: transform 0.18s ease;
+}
+
+.cs-select-caret.is-open {
+  transform: rotate(180deg);
+}
+
+.cs-select-panel {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  border-radius: 14px;
+  border: 1px solid var(--survey-ink-border-strong, rgba(214, 223, 210, 0.14));
+  background: var(--survey-ink-900, #0c1712);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  padding: 0.4rem;
+}
+
+.cs-select-group + .cs-select-group {
+  margin-top: 0.3rem;
+  padding-top: 0.3rem;
+  border-top: 1px solid var(--survey-ink-border, rgba(214, 223, 210, 0.06));
+}
+
+.cs-select-group-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.4rem 0.6rem 0.25rem;
+  color: var(--survey-text-secondary, #9aaba2);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.cs-select-flag {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.cs-select-option {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--survey-text-primary, #f7f8f3);
+  font-family: var(--survey-font-body, inherit);
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+
+.cs-select-option:hover {
+  background: rgba(247, 245, 238, 0.06);
+}
+
+.cs-select-option.is-selected {
+  background: var(--survey-copper-glow, rgba(39, 145, 89, 0.16));
+  color: var(--survey-copper-300, #9ee0b8);
+  font-weight: 700;
+}
+
+.cs-select-option-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs-select-option-epsg {
+  flex-shrink: 0;
+  color: var(--survey-text-muted, #8ea197);
+  font-size: 0.72rem;
+}
+
+.cs-select-option.is-selected .cs-select-option-epsg {
+  color: inherit;
+  opacity: 0.75;
+}
