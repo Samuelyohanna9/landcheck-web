@@ -148,3 +148,29 @@ export async function withRetry<T>(
   }
   throw lastErr;
 }
+
+/**
+ * Pulls the backend's actual `detail` message out of a failed request, falling back to a caller
+ *-supplied message. Two things otherwise hide that message: axios errors are `instanceof Error`,
+ * so a naive `err instanceof Error ? err.message : ...` check always wins and shows axios's
+ * generic "Request failed with status code 400/500" instead; and for a request made with
+ * `responseType: "blob"` (every preview/orthophoto/topo/export render), a JSON error body still
+ * arrives as a Blob, not a parsed object, so `err.response.data.detail` is undefined unless that
+ * blob is read back out as text first.
+ */
+export async function extractApiErrorMessage(err: any, fallback: string): Promise<string> {
+  const data = err?.response?.data;
+  if (data && typeof Blob !== "undefined" && data instanceof Blob) {
+    try {
+      const text = await data.text();
+      const parsed = JSON.parse(text);
+      if (typeof parsed?.detail === "string" && parsed.detail) return parsed.detail;
+    } catch {
+      // Not JSON (a genuinely broken/binary response) - fall through to the other checks.
+    }
+  } else if (typeof data?.detail === "string" && data.detail) {
+    return data.detail;
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+}
