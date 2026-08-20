@@ -76,7 +76,7 @@ function Icon({ name, className }: { name: IconName; className?: string }) {
 const heroTrustBadges: { icon: IconName; label: string }[] = [
   { icon: "bolt", label: "Fast & Accurate" },
   { icon: "cloud", label: "Cloud Based" },
-  { icon: "flag", label: "Nigerian Standards" },
+  { icon: "flag", label: "African Standards" },
   { icon: "doc", label: "DWG & PDF Export" },
 ];
 
