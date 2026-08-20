@@ -1,6 +1,6 @@
 import { Suspense, lazy, startTransition, useEffect, useMemo, useState, useCallback, useRef, type SetStateAction, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { api, withRetry } from "../api/client";
+import { api, withRetry, extractApiErrorMessage } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
 import {
   consumePendingSurveyDownload,
@@ -2543,7 +2543,7 @@ export default function SurveyPlan() {
       markServerSynced();
     } catch (err) {
       console.error("Preview error:", err);
-      const message = err instanceof Error ? err.message : "Failed to load preview";
+      const message = await extractApiErrorMessage(err, "Failed to load preview");
       toast.error(message);
     } finally {
       if (requestId === previewRequestId.current) {
@@ -2611,7 +2611,7 @@ export default function SurveyPlan() {
       markServerSynced();
     } catch (err) {
       console.error("Orthophoto preview error:", err);
-      const message = err instanceof Error ? err.message : "Failed to load orthophoto preview";
+      const message = await extractApiErrorMessage(err, "Failed to load orthophoto preview");
       toast.error(message);
     } finally {
       if (requestId === orthophotoRequestId.current) {
@@ -2667,7 +2667,7 @@ export default function SurveyPlan() {
       markServerSynced();
     } catch (err) {
       console.error("Topo map preview error:", err);
-      const message = err instanceof Error ? err.message : "Failed to load topo map preview";
+      const message = await extractApiErrorMessage(err, "Failed to load topo map preview");
       toast.error(message);
     } finally {
       if (requestId === topoRequestId.current) {
@@ -3515,7 +3515,7 @@ export default function SurveyPlan() {
       toast.success(`Downloaded ${resolvedFilename}`);
     } catch (err) {
       console.error("Download error:", err);
-      const message = err instanceof Error ? err.message : "Failed to download file";
+      const message = await extractApiErrorMessage(err, "Failed to download file");
       toast.error(message);
     } finally {
       stopRamp();
@@ -3591,7 +3591,7 @@ export default function SurveyPlan() {
       setShowTechnicalReportModal(false);
     } catch (err) {
       console.error("Technical report download error:", err);
-      const message = err instanceof Error ? err.message : "Failed to generate technical report";
+      const message = await extractApiErrorMessage(err, "Failed to generate technical report");
       toast.error(message);
     } finally {
       stopRamp();
@@ -3663,7 +3663,7 @@ export default function SurveyPlan() {
       toast.success(`Downloaded ${resolvedFilename}`);
     } catch (err) {
       console.error("Download error:", err);
-      const message = err instanceof Error ? err.message : "Failed to download file";
+      const message = await extractApiErrorMessage(err, "Failed to download file");
       toast.error(message);
     } finally {
       stopRamp();
@@ -4429,7 +4429,7 @@ export default function SurveyPlan() {
         setShowFeatureEditor(true);
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not open Feature CAD Editor.";
+      const message = await extractApiErrorMessage(err, "Could not open Feature CAD Editor.");
       toast.error(message);
     }
   }, [ensureServerPlot, features, isOnline, markServerSynced, plotId, prefetchFeatureEditor]);
