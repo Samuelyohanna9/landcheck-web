@@ -1,5 +1,6 @@
 import { memo, useRef, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import SurveyPreview from "../SurveyPreview";
+import SurveyLoadingAnimation from "../SurveyLoadingAnimation";
 
 type PlotMeta = {
   title_text: string;
@@ -1241,11 +1242,16 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
             </div>
           ) : (
             <>
-              {!props.subdivisionPreview && (
+              {!props.subdivisionPreview && !props.subdivisionPreviewLoading && (
                 <div className="preview-empty">
                   <p>
                     Click <strong>Preview Split</strong> to see lot lines and area labels here.
                   </p>
+                </div>
+              )}
+              {!props.subdivisionPreview && props.subdivisionPreviewLoading && (
+                <div className="preview-loading">
+                  <SurveyLoadingAnimation label="Computing subdivision split..." />
                 </div>
               )}
               {(props.subdivisionMapPreviewData || props.subdivisionSvgPreview) && (
@@ -1255,6 +1261,11 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                   onPointerUp={props.stopSubdivisionBreakDrag}
                   onPointerCancel={props.stopSubdivisionBreakDrag}
                 >
+                  {props.subdivisionPreviewLoading && (
+                    <div className="subdivision-map-loading-overlay">
+                      <SurveyLoadingAnimation label="Updating subdivision split..." size="small" />
+                    </div>
+                  )}
                   {props.subdivisionMapPreviewData && props.hasMapboxToken ? (
                     <div ref={props.onSubdivisionMapContainerRef} className="subdivision-map-canvas" />
                   ) : (

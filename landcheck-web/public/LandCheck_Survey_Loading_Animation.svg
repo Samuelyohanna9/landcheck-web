@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="220" viewBox="0 0 520 220" role="img" aria-labelledby="title desc">
+  <title id="title">LandCheck Survey loading animation</title>
+  <desc id="desc">An animated land parcel outline with pulsing survey points, a scanning measurement line, and a loading indicator.</desc>
+
+  <defs>
+    <linearGradient id="brandGreen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2DD4BF"/>
+      <stop offset="1" stop-color="#22C55E"/>
+    </linearGradient>
+    <linearGradient id="progressGreen" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2DD4BF" stop-opacity="0"/>
+      <stop offset="0.35" stop-color="#2DD4BF"/>
+      <stop offset="1" stop-color="#22C55E"/>
+    </linearGradient>
+    <filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <clipPath id="progressClip">
+      <rect x="132" y="135" width="344" height="4" rx="2"/>
+    </clipPath>
+  </defs>
+
+  <style>
+    .parcel {
+      stroke-dasharray: 288;
+      stroke-dashoffset: 288;
+      animation: trace 2.4s cubic-bezier(.65,0,.35,1) infinite;
+    }
+    .survey-beam {
+      stroke-dasharray: 52 16;
+      animation: beam 1.5s linear infinite;
+    }
+    .point { transform-box: fill-box; transform-origin: center; animation: pulse 1.6s ease-in-out infinite; }
+    .point:nth-of-type(2) { animation-delay: .2s; }
+    .point:nth-of-type(3) { animation-delay: .4s; }
+    .point:nth-of-type(4) { animation-delay: .6s; }
+    .target { transform-box: fill-box; transform-origin: center; animation: target 1.6s ease-out infinite; }
+    .progress { animation: slide 1.8s cubic-bezier(.4,0,.2,1) infinite; }
+    .status { animation: breathe 1.8s ease-in-out infinite; }
+
+    @keyframes trace {
+      0% { stroke-dashoffset: 288; opacity: .3; }
+      45%, 75% { stroke-dashoffset: 0; opacity: 1; }
+      100% { stroke-dashoffset: -288; opacity: .3; }
+    }
+    @keyframes beam { to { stroke-dashoffset: -68; } }
+    @keyframes pulse {
+      0%, 100% { transform: scale(.72); opacity: .55; }
+      45% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes target {
+      0% { transform: scale(.25); opacity: 1; }
+      75%, 100% { transform: scale(2.4); opacity: 0; }
+    }
+    @keyframes slide {
+      0% { transform: translateX(-360px); }
+      55%, 100% { transform: translateX(360px); }
+    }
+    @keyframes breathe { 0%, 100% { opacity: .56; } 50% { opacity: 1; } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .parcel, .survey-beam, .point, .target, .progress, .status { animation: none; }
+      .parcel { stroke-dashoffset: 0; }
+      .progress { transform: translateX(0); }
+    }
+  </style>
+
+  <!-- Survey mark -->
+  <g transform="translate(24 28)">
+    <rect x="6" y="6" width="72" height="72" rx="10" fill="#22C55E" opacity=".07"/>
+    <rect class="parcel" x="6" y="6" width="72" height="72" rx="10" fill="none" stroke="url(#brandGreen)" stroke-width="5.5"/>
+
+    <g filter="url(#softGlow)">
+      <circle class="point" cx="6" cy="6" r="7" fill="url(#brandGreen)"/>
+      <circle class="point" cx="78" cy="6" r="7" fill="url(#brandGreen)"/>
+      <circle class="point" cx="78" cy="78" r="7" fill="url(#brandGreen)"/>
+      <circle class="point" cx="6" cy="78" r="7" fill="url(#brandGreen)"/>
+    </g>
+
+    <path class="survey-beam" d="M22 60 L62 28" fill="none" stroke="url(#brandGreen)" stroke-width="7" stroke-linecap="round"/>
+    <circle class="target" cx="42" cy="44" r="6" fill="none" stroke="#2DD4BF" stroke-width="2"/>
+    <circle cx="42" cy="44" r="4.5" fill="url(#brandGreen)"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="132" y="91" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="56" font-weight="700" letter-spacing="-1.8">
+    <tspan fill="#F1F5F9">Land</tspan><tspan fill="#22C55E">Check</tspan>
+  </text>
+  <text x="135" y="119" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="3.8" fill="#94A3B8">SURVEY</text>
+
+  <!-- Loading rail -->
+  <rect x="132" y="135" width="344" height="4" rx="2" fill="#94A3B8" opacity=".18"/>
+  <g clip-path="url(#progressClip)">
+    <rect class="progress" x="132" y="135" width="150" height="4" rx="2" fill="url(#progressGreen)"/>
+  </g>
+  <text class="status" x="132" y="166" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="13" font-weight="500" fill="#94A3B8">Preparing your survey workspace…</text>
+</svg>
