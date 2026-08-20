@@ -49,7 +49,8 @@ type PlotMeta = {
   technical_report_general_observation_text: string;
 };
 
-type SubdivisionMethod = "by_count" | "by_area" | "by_fraction" | "by_custom_area";
+type SubdivisionMethod = "by_count" | "by_area" | "by_fraction" | "by_custom_area" | "by_dimension";
+type SubdivisionDimensionUnit = "m" | "ft";
 type SubdivisionPanelTab = "survey_plan" | "subdivision_lines";
 type PreviewType = "survey" | "orthophoto" | "topomap";
 type TopoSource = "opentopomap" | "userdata";
@@ -87,6 +88,13 @@ type SubdivisionPreviewData = {
   total_area_m2: number;
   area_imbalance_m2: number;
   plots: SubdivisionPreviewPlot[];
+  lot_width_m?: number | null;
+  lot_height_m?: number | null;
+  dimension_unit?: SubdivisionDimensionUnit | null;
+  exclude_road?: boolean;
+  road_width_m?: number | null;
+  excluded_area_m2?: number | null;
+  leftover_area_m2?: number | null;
 };
 
 type SubdivisionBatchRow = {
@@ -110,6 +118,8 @@ type SubdivisionSvgPreview = {
   width: number;
   height: number;
   plots: SubdivisionSvgPreviewPlot[];
+  excludedPath?: string | null;
+  leftoverPath?: string | null;
 };
 
 type Props = {
@@ -167,6 +177,16 @@ type Props = {
   subdivisionParentAreaM2: number | null;
   subdivisionOrientationDraft: string;
   setSubdivisionOrientationDraft: Dispatch<SetStateAction<string>>;
+  subdivisionLotWidthDraft: string;
+  setSubdivisionLotWidthDraft: Dispatch<SetStateAction<string>>;
+  subdivisionLotHeightDraft: string;
+  setSubdivisionLotHeightDraft: Dispatch<SetStateAction<string>>;
+  subdivisionDimensionUnit: SubdivisionDimensionUnit;
+  setSubdivisionDimensionUnit: Dispatch<SetStateAction<SubdivisionDimensionUnit>>;
+  subdivisionExcludeRoad: boolean;
+  setSubdivisionExcludeRoad: Dispatch<SetStateAction<boolean>>;
+  subdivisionRoadWidthDraft: string;
+  setSubdivisionRoadWidthDraft: Dispatch<SetStateAction<string>>;
   subdivisionLotPrefix: string;
   setSubdivisionLotPrefix: Dispatch<SetStateAction<string>>;
   subdivisionEstateName: string;
@@ -697,6 +717,7 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                 <option value="by_area">Split by target plot area (sqm)</option>
                 <option value="by_fraction">Split by fractions</option>
                 <option value="by_custom_area">Split by custom lot areas</option>
+                <option value="by_dimension">Split into fixed-size plots (W x H)</option>
               </select>
             </div>
             {props.subdivisionMethod === "by_count" ? (
@@ -726,6 +747,29 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                 />
                 <span className="scale-helper">Example `2,3,5` means 20%, 30%, 50%. Drag division lines directly in Subdivision Line Preview.</span>
               </div>
+            ) : props.subdivisionMethod === "by_dimension" ? (
+              <>
+                <div className="form-group">
+                  <label>Lot Width</label>
+                  <input type="number" min={0.1} step="any" value={props.subdivisionLotWidthDraft} onChange={(e) => props.setSubdivisionLotWidthDraft(e.target.value)} placeholder="e.g. 100" />
+                </div>
+                <div className="form-group">
+                  <label>Lot Height</label>
+                  <input type="number" min={0.1} step="any" value={props.subdivisionLotHeightDraft} onChange={(e) => props.setSubdivisionLotHeightDraft(e.target.value)} placeholder="e.g. 50" />
+                </div>
+                <div className="form-group">
+                  <label>Unit</label>
+                  <select value={props.subdivisionDimensionUnit} onChange={(e) => props.setSubdivisionDimensionUnit(e.target.value as "m" | "ft")}>
+                    <option value="m">Meters</option>
+                    <option value="ft">Feet</option>
+                  </select>
+                </div>
+                <div className="form-group full-width">
+                  <span className="scale-helper">
+                    As many {props.subdivisionLotWidthDraft || "W"} x {props.subdivisionLotHeightDraft || "H"} {props.subdivisionDimensionUnit === "ft" ? "ft" : "m"} lots as fit are generated automatically; whatever area is left over is shown as its own "Remainder" zone on the map, not as a numbered lot.
+                  </span>
+                </div>
+              </>
             ) : (
               <>
                 <div className="form-group">
@@ -762,6 +806,27 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
               <label>Estate / Layout Name (Optional)</label>
               <input value={props.subdivisionEstateName} onChange={(e) => props.setSubdivisionEstateName(e.target.value)} placeholder="e.g. Think Green Estate Phase 1" />
             </div>
+            <div className="form-group">
+              <label className="subdivision-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={props.subdivisionExcludeRoad}
+                  onChange={(e) => props.setSubdivisionExcludeRoad(e.target.checked)}
+                />
+                Exclude access road
+              </label>
+            </div>
+            {props.subdivisionExcludeRoad && (
+              <div className="form-group">
+                <label>Road Width (m)</label>
+                <input type="number" min={1} step="any" value={props.subdivisionRoadWidthDraft} onChange={(e) => props.setSubdivisionRoadWidthDraft(e.target.value)} placeholder="e.g. 10" />
+              </div>
+            )}
+            {props.subdivisionExcludeRoad && (
+              <div className="form-group full-width">
+                <span className="scale-helper">Roads drawn in this plot's Feature Editor will be carved out (as a "Road Reserve" zone) before splitting, so no lot cuts across them.</span>
+              </div>
+            )}
           </div>
 
           {props.subdivisionMethod === "by_fraction" && (
@@ -891,6 +956,18 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                   <span className="subdivision-kpi-label">Area imbalance</span>
                   <strong>{Math.abs(props.subdivisionPreview.area_imbalance_m2).toFixed(4)} sqm</strong>
                 </div>
+                {!!props.subdivisionPreview.excluded_area_m2 && (
+                  <div className="subdivision-kpi">
+                    <span className="subdivision-kpi-label">Road reserve (excluded)</span>
+                    <strong>{props.subdivisionPreview.excluded_area_m2.toFixed(2)} sqm</strong>
+                  </div>
+                )}
+                {!!props.subdivisionPreview.leftover_area_m2 && (
+                  <div className="subdivision-kpi">
+                    <span className="subdivision-kpi-label">Remainder (unused)</span>
+                    <strong>{props.subdivisionPreview.leftover_area_m2.toFixed(2)} sqm</strong>
+                  </div>
+                )}
               </div>
               <div className="subdivision-table-wrap">
                 <table className="subdivision-table">
@@ -1125,6 +1202,28 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                           aria-label="Subdivision lot preview"
                         >
                           <rect x="0" y="0" width={props.subdivisionSvgPreview.width} height={props.subdivisionSvgPreview.height} fill="#0f172a" />
+                          {(props.subdivisionSvgPreview.excludedPath || props.subdivisionSvgPreview.leftoverPath) && (
+                            <g>
+                              {props.subdivisionSvgPreview.excludedPath && (
+                                <path
+                                  d={props.subdivisionSvgPreview.excludedPath}
+                                  fill="rgba(148,163,184,0.35)"
+                                  stroke="#64748b"
+                                  strokeWidth={1.6}
+                                  strokeDasharray="5,4"
+                                />
+                              )}
+                              {props.subdivisionSvgPreview.leftoverPath && (
+                                <path
+                                  d={props.subdivisionSvgPreview.leftoverPath}
+                                  fill="rgba(148,163,184,0.35)"
+                                  stroke="#64748b"
+                                  strokeWidth={1.6}
+                                  strokeDasharray="5,4"
+                                />
+                              )}
+                            </g>
+                          )}
                           <g>
                             {props.subdivisionSvgPreview.plots.map((plot) => (
                               <path key={`plot_path_${plot.idx}`} d={plot.path} fill="rgba(16,185,129,0.08)" stroke={plot.stroke} strokeWidth={2.4} />
