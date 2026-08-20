@@ -2637,6 +2637,21 @@
   margin: 0.9rem 0 0.8rem;
 }
 
+.subdivision-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 100%;
+  cursor: pointer;
+}
+
+.subdivision-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+
 .subdivision-help-card {
   margin-top: 0.7rem;
   border: 1px solid rgba(255, 255, 255, 0.09);

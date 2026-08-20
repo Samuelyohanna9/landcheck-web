@@ -91,7 +91,8 @@ type PlotMeta = {
   technical_report_general_observation_text: string;
 };
 
-type SubdivisionMethod = "by_count" | "by_area" | "by_fraction" | "by_custom_area";
+type SubdivisionMethod = "by_count" | "by_area" | "by_fraction" | "by_custom_area" | "by_dimension";
+type SubdivisionDimensionUnit = "m" | "ft";
 
 type SubdivisionPreviewPlot = {
   index: number;
@@ -104,6 +105,15 @@ type SubdivisionPreviewPlot = {
   };
 };
 
+type SubdivisionZoneGeojson = {
+  type: "Feature";
+  properties: Record<string, unknown>;
+  geometry: {
+    type: "Polygon" | "MultiPolygon";
+    coordinates: any;
+  };
+};
+
 type SubdivisionPreviewData = {
   method: SubdivisionMethod | string;
   resolved_count: number;
@@ -113,6 +123,15 @@ type SubdivisionPreviewData = {
   fraction_weights?: number[] | null;
   fraction_breaks?: number[] | null;
   custom_areas_m2?: number[] | null;
+  lot_width_m?: number | null;
+  lot_height_m?: number | null;
+  dimension_unit?: SubdivisionDimensionUnit | null;
+  exclude_road?: boolean;
+  road_width_m?: number | null;
+  excluded_geojson?: SubdivisionZoneGeojson | null;
+  excluded_area_m2?: number | null;
+  leftover_geojson?: SubdivisionZoneGeojson | null;
+  leftover_area_m2?: number | null;
   total_area_m2: number;
   derived_total_area_m2: number;
   area_imbalance_m2: number;
@@ -738,6 +757,11 @@ export default function SurveyPlan() {
   const [subdivisionMethod, setSubdivisionMethod] = useState<SubdivisionMethod>("by_count");
   const [subdivisionCountDraft, setSubdivisionCountDraft] = useState("4");
   const [subdivisionTargetAreaDraft, setSubdivisionTargetAreaDraft] = useState("");
+  const [subdivisionLotWidthDraft, setSubdivisionLotWidthDraft] = useState("");
+  const [subdivisionLotHeightDraft, setSubdivisionLotHeightDraft] = useState("");
+  const [subdivisionDimensionUnit, setSubdivisionDimensionUnit] = useState<SubdivisionDimensionUnit>("m");
+  const [subdivisionExcludeRoad, setSubdivisionExcludeRoad] = useState(false);
+  const [subdivisionRoadWidthDraft, setSubdivisionRoadWidthDraft] = useState("10");
   const [subdivisionFractionDraft, setSubdivisionFractionDraft] = useState("1, 1");
   const [subdivisionFractionBreaks, setSubdivisionFractionBreaks] = useState<number[]>([0.5]);
   const [subdivisionCustomAreaDrafts, setSubdivisionCustomAreaDrafts] = useState<string[]>([]);
@@ -1647,12 +1671,39 @@ export default function SurveyPlan() {
 
     if (!normalized.length) return null;
 
+    // Rings for either a Polygon or MultiPolygon zone geometry, each closed and coerced to
+    // finite [x,y] pairs - a MultiPolygon (a road split into two reserve strips, several
+    // disjoint leftover slivers) becomes multiple independent rings here, which one SVG <path>
+    // with several "M...Z" subpaths renders correctly (each disjoint part fills on its own).
+    const extractZoneRings = (zone: SubdivisionZoneGeojson | null | undefined): number[][][] => {
+      if (!zone?.geometry) return [];
+      const polyRingsList: any[] = zone.geometry.type === "MultiPolygon" ? zone.geometry.coordinates || [] : [zone.geometry.coordinates || []];
+      const out: number[][][] = [];
+      polyRingsList.forEach((rings: any) => {
+        const outerRing = (rings?.[0] || [])
+          .map((point: any) => [Number(point?.[0]), Number(point?.[1])])
+          .filter((point: number[]) => Number.isFinite(point[0]) && Number.isFinite(point[1]));
+        if (outerRing.length >= 3) out.push(closeRingIfNeeded(outerRing));
+      });
+      return out;
+    };
+    const excludedRings = extractZoneRings(subdivisionPreview.excluded_geojson);
+    const leftoverRings = extractZoneRings(subdivisionPreview.leftover_geojson);
+
     let minX = Infinity;
     let maxX = -Infinity;
     let minY = Infinity;
     let maxY = -Infinity;
     normalized.forEach((plot) => {
       plot.ring.forEach((point) => {
+        minX = Math.min(minX, point[0]);
+        maxX = Math.max(maxX, point[0]);
+        minY = Math.min(minY, point[1]);
+        maxY = Math.max(maxY, point[1]);
+      });
+    });
+    [...excludedRings, ...leftoverRings].forEach((ring) => {
+      ring.forEach((point) => {
         minX = Math.min(minX, point[0]);
         maxX = Math.max(maxX, point[0]);
         minY = Math.min(minY, point[1]);
@@ -1700,10 +1751,23 @@ export default function SurveyPlan() {
       };
     });
 
+    const ringsToPath = (rings: number[][][]) =>
+      rings
+        .map((ring) => {
+          const projected = ring.map((pt) => mapPoint([pt[0], pt[1]]));
+          return `${projected.map((pt, i) => `${i === 0 ? "M" : "L"} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`).join(" ")} Z`;
+        })
+        .join(" ");
+
+    const excludedPath = excludedRings.length ? ringsToPath(excludedRings) : null;
+    const leftoverPath = leftoverRings.length ? ringsToPath(leftoverRings) : null;
+
     return {
       width,
       height,
       plots,
+      excludedPath,
+      leftoverPath,
     };
   }, [subdivisionPreview, displayedSubdivisionLotNames]);
 
@@ -1762,6 +1826,33 @@ export default function SurveyPlan() {
     });
 
     if (!polygons.length) return null;
+
+    // Road-exclusion corridor / fixed-dimension leftover area, shown as their own zones - never
+    // as numbered lots. Either can legitimately be a MultiPolygon (a road split into two reserve
+    // strips, several disjoint leftover slivers); Mapbox GL renders that natively in fill/line
+    // layers, so the geometry is passed straight through rather than forced into single polygons.
+    const zones: any[] = [];
+    const zoneLabels: any[] = [];
+    const addZone = (zone: SubdivisionZoneGeojson | null | undefined, kind: "excluded" | "leftover", areaM2: number | null | undefined, label: string) => {
+      if (!zone?.geometry) return;
+      zones.push({
+        type: "Feature",
+        properties: { kind },
+        geometry: zone.geometry,
+      });
+      const firstRing = zone.geometry.type === "MultiPolygon" ? zone.geometry.coordinates?.[0]?.[0] : zone.geometry.coordinates?.[0];
+      if (Array.isArray(firstRing) && firstRing.length >= 3) {
+        const centroid = polygonCentroid(firstRing as number[][]);
+        zoneLabels.push({
+          type: "Feature",
+          properties: { label: `${label}\n${(Number(areaM2 || 0) / 10000).toFixed(3)} ha` },
+          geometry: { type: "Point", coordinates: [Number(centroid[0]), Number(centroid[1])] },
+        });
+      }
+    };
+    addZone(subdivisionPreview.excluded_geojson, "excluded", subdivisionPreview.excluded_area_m2, "Road Reserve");
+    addZone(subdivisionPreview.leftover_geojson, "leftover", subdivisionPreview.leftover_area_m2, "Remainder");
+
     return {
       polygons: {
         type: "FeatureCollection",
@@ -1774,6 +1865,14 @@ export default function SurveyPlan() {
       stations: {
         type: "FeatureCollection",
         features: stations,
+      },
+      zones: {
+        type: "FeatureCollection",
+        features: zones,
+      },
+      zoneLabels: {
+        type: "FeatureCollection",
+        features: zoneLabels,
       },
     };
   }, [subdivisionPreview, displayedSubdivisionLotNames]);
@@ -1845,6 +1944,53 @@ export default function SurveyPlan() {
       map.addControl(new mapboxgl.NavigationControl(), "top-right");
       map.on("load", () => {
         subdivisionMapReadyRef.current = true;
+
+        // Zones (road-reserve / leftover) are added before the lots layers so they always sit
+        // visually beneath the numbered lots.
+        map.addSource("subdivision-zones-src", {
+          type: "geojson",
+          data: (subdivisionMapPreviewData?.zones || { type: "FeatureCollection", features: [] }) as any,
+        });
+        map.addLayer({
+          id: "subdivision-zones-fill",
+          type: "fill",
+          source: "subdivision-zones-src",
+          paint: {
+            "fill-color": "#94a3b8",
+            "fill-opacity": 0.35,
+          },
+        });
+        map.addLayer({
+          id: "subdivision-zones-line",
+          type: "line",
+          source: "subdivision-zones-src",
+          paint: {
+            "line-color": "#64748b",
+            "line-width": 1.6,
+            "line-dasharray": [2, 1.5],
+          },
+        });
+        map.addSource("subdivision-zone-labels-src", {
+          type: "geojson",
+          data: (subdivisionMapPreviewData?.zoneLabels || { type: "FeatureCollection", features: [] }) as any,
+        });
+        map.addLayer({
+          id: "subdivision-zone-labels",
+          type: "symbol",
+          source: "subdivision-zone-labels-src",
+          layout: {
+            "text-field": ["get", "label"],
+            "text-size": 11,
+            "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+            "text-allow-overlap": true,
+            "text-anchor": "center",
+          },
+          paint: {
+            "text-color": "#e2e8f0",
+            "text-halo-color": "#334155",
+            "text-halo-width": 1.3,
+          },
+        });
 
         map.addSource("subdivision-lots-src", {
           type: "geojson",
@@ -1951,6 +2097,8 @@ export default function SurveyPlan() {
     const polySource = map.getSource("subdivision-lots-src") as any;
     const labelSource = map.getSource("subdivision-lots-labels-src") as any;
     const stationSource = map.getSource("subdivision-stations-src") as any;
+    const zoneSource = map.getSource("subdivision-zones-src") as any;
+    const zoneLabelSource = map.getSource("subdivision-zone-labels-src") as any;
     if (polySource && subdivisionMapPreviewData?.polygons) {
       polySource.setData(subdivisionMapPreviewData.polygons as any);
       fitSubdivisionMapToData(map, subdivisionMapPreviewData.polygons);
@@ -1960,6 +2108,12 @@ export default function SurveyPlan() {
     }
     if (stationSource && subdivisionMapPreviewData?.stations) {
       stationSource.setData(subdivisionMapPreviewData.stations as any);
+    }
+    if (zoneSource) {
+      zoneSource.setData((subdivisionMapPreviewData?.zones || { type: "FeatureCollection", features: [] }) as any);
+    }
+    if (zoneLabelSource) {
+      zoneLabelSource.setData((subdivisionMapPreviewData?.zoneLabels || { type: "FeatureCollection", features: [] }) as any);
     }
   }, [subdivisionMapPreviewData, fitSubdivisionMapToData]);
 
@@ -3584,6 +3738,17 @@ export default function SurveyPlan() {
         if (!silent) toast.error("Set a positive target area in square meters.");
         return null;
       }
+      const lotWidth = parsePositiveFloat(subdivisionLotWidthDraft);
+      const lotHeight = parsePositiveFloat(subdivisionLotHeightDraft);
+      if (subdivisionMethod === "by_dimension" && (lotWidth === null || lotHeight === null)) {
+        if (!silent) toast.error("Set a positive lot width and height.");
+        return null;
+      }
+      const roadWidth = parsePositiveFloat(subdivisionRoadWidthDraft);
+      if (subdivisionExcludeRoad && (roadWidth === null || roadWidth <= 0)) {
+        if (!silent) toast.error("Set a positive access road width.");
+        return null;
+      }
 
       const payload: Record<string, any> = {
         method: subdivisionMethod,
@@ -3592,7 +3757,15 @@ export default function SurveyPlan() {
         orientation_deg: Number.isFinite(orientationDeg) ? orientationDeg : 0,
         lot_prefix: lotPrefix,
         estate_name: subdivisionEstateName.trim(),
+        exclude_road: subdivisionExcludeRoad,
+        road_width_m: subdivisionExcludeRoad ? roadWidth : 10,
       };
+
+      if (subdivisionMethod === "by_dimension") {
+        payload.lot_width = lotWidth;
+        payload.lot_height = lotHeight;
+        payload.dimension_unit = subdivisionDimensionUnit;
+      }
 
       if (subdivisionMethod === "by_fraction") {
         const effectiveBreaks = sanitizeFractionBreaks(subdivisionFractionBreaksEffective);
@@ -3653,6 +3826,11 @@ export default function SurveyPlan() {
       subdivisionCustomAreaDrafts,
       subdivisionParentAreaM2,
       subdivisionLotNamesDraft,
+      subdivisionLotWidthDraft,
+      subdivisionLotHeightDraft,
+      subdivisionDimensionUnit,
+      subdivisionExcludeRoad,
+      subdivisionRoadWidthDraft,
     ]
   );
 
@@ -4708,6 +4886,16 @@ export default function SurveyPlan() {
               subdivisionParentAreaM2={subdivisionParentAreaM2}
               subdivisionOrientationDraft={subdivisionOrientationDraft}
               setSubdivisionOrientationDraft={setSubdivisionOrientationDraft}
+              subdivisionLotWidthDraft={subdivisionLotWidthDraft}
+              setSubdivisionLotWidthDraft={setSubdivisionLotWidthDraft}
+              subdivisionLotHeightDraft={subdivisionLotHeightDraft}
+              setSubdivisionLotHeightDraft={setSubdivisionLotHeightDraft}
+              subdivisionDimensionUnit={subdivisionDimensionUnit}
+              setSubdivisionDimensionUnit={setSubdivisionDimensionUnit}
+              subdivisionExcludeRoad={subdivisionExcludeRoad}
+              setSubdivisionExcludeRoad={setSubdivisionExcludeRoad}
+              subdivisionRoadWidthDraft={subdivisionRoadWidthDraft}
+              setSubdivisionRoadWidthDraft={setSubdivisionRoadWidthDraft}
               subdivisionLotPrefix={subdivisionLotPrefix}
               setSubdivisionLotPrefix={setSubdivisionLotPrefix}
               subdivisionEstateName={subdivisionEstateName}
