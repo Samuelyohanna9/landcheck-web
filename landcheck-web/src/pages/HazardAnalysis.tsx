@@ -5,6 +5,7 @@ import { api } from "../api/client";
 import CoordinateInput from "../components/CoordinateInput";
 import HazardInteractiveOverlay, { type HazardInteractiveMeta } from "../components/HazardInteractiveOverlay";
 import HazardProgressOverlay from "../components/HazardProgressOverlay";
+import HazardLoadingAnimation from "../components/HazardLoadingAnimation";
 import { fromWGS84, toWGS84 } from "../utils/coordinateConverter";
 import "../styles/hazard-analysis.css";
 
@@ -1058,7 +1059,7 @@ export default function HazardAnalysis() {
 
         <div className="hazard-right">
           <div className="hazard-map">
-            <Suspense fallback={<div className="hazard-empty">Loading map...</div>}>
+            <Suspense fallback={<div className="hazard-empty"><HazardLoadingAnimation label="Loading map..." size="small" /></div>}>
               <MapViewEnhanced coordinates={mapCoordinates} onCoordinatesDrawn={handleCoordinatesFromMap} />
             </Suspense>
           </div>
