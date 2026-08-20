@@ -613,6 +613,17 @@
   font-weight: 700;
 }
 
+.georef-target-crs-field {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.georef-target-crs-field label {
+  color: var(--survey-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .georef-upload-fields input,
 .georef-upload-fields select,
 .georef-point-row-grid input,

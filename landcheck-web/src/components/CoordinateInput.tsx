@@ -1,6 +1,7 @@
 import { memo, useMemo, useRef, useState } from "react";
 import "../styles/coordinate-input.css";
 import CSVPreviewModal from "./CSVPreviewModal";
+import CoordinateSystemSelect from "./CoordinateSystemSelect";
 import {
   COORDINATE_SYSTEM_GROUPS,
   getCoordinateSystemEpsgLabel,
@@ -40,7 +41,7 @@ type Props = {
 };
 
 // Flattened view of COORDINATE_SYSTEM_GROUPS - kept for the "currently selected" lookup below;
-// the <select> itself renders the grouped form directly (see coord-system-select).
+// CoordinateSystemSelect renders the grouped form itself.
 const COORDINATE_SYSTEMS: CoordinateSystem[] = COORDINATE_SYSTEM_GROUPS.flatMap((group) => group.systems);
 
 const getPlaceholders = (system: string): { x: string; y: string } => {
@@ -205,24 +206,12 @@ function CoordinateInput({
           Coordinate System
         </label>
         <div className="coord-system-field">
-          <select
+          <CoordinateSystemSelect
             id="coord-system-select"
-            className="coord-system-select"
             value={coordinateSystem}
-            onChange={(event) => onCoordinateSystemChange(event.target.value)}
+            onChange={onCoordinateSystemChange}
             disabled={disabled}
-            aria-describedby="coord-system-help"
-          >
-            {COORDINATE_SYSTEM_GROUPS.map((group) => (
-              <optgroup key={group.country} label={group.country}>
-                {group.systems.map((sys) => (
-                  <option key={sys.key} value={sys.key}>
-                    {sys.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+          />
           <div className="coord-system-meta" id="coord-system-help" aria-live="polite">
             <strong>{selectedCoordinateSystem.name}</strong>
             <span>{selectedCoordinateSystem.description}</span>

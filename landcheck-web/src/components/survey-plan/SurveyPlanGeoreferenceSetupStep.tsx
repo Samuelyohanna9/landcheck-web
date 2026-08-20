@@ -2,9 +2,9 @@ import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "reac
 import { api } from "../../api/client";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
 import SurveyLoadingAnimation from "../SurveyLoadingAnimation";
+import CoordinateSystemSelect from "../CoordinateSystemSelect";
 import type { GeoreferenceSession, GeoreferenceTransform } from "../../types/surveyGeoreference";
 import {
-  COORDINATE_SYSTEM_GROUPS,
   COUNTRY_MAP_VIEW,
   getCoordinateSystemCountry,
   getCoordinateSystemLabel,
@@ -724,20 +724,14 @@ function SurveyPlanGeoreferenceSetupStep({
                     placeholder="Fufore layout scan - July 2026"
                   />
                 </label>
-                <label>
-                  Target coordinate system
-                  <select value={targetCoordinateSystem} onChange={(event) => onTargetCoordinateSystemChange(event.target.value)}>
-                    {COORDINATE_SYSTEM_GROUPS.map((group) => (
-                      <optgroup key={group.country} label={group.country}>
-                        {group.systems.map((sys) => (
-                          <option key={sys.key} value={sys.key}>
-                            {sys.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                </label>
+                <div className="georef-target-crs-field">
+                  <label htmlFor="georef-target-crs-select">Target coordinate system</label>
+                  <CoordinateSystemSelect
+                    id="georef-target-crs-select"
+                    value={targetCoordinateSystem}
+                    onChange={onTargetCoordinateSystemChange}
+                  />
+                </div>
                 <button
                   type="button"
                   className="btn-primary"
