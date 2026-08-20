@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { isWorkAuthed, loginWork } from "../auth/workAuth";
+import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import "../styles/green-work-login.css";
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
@@ -121,6 +122,7 @@ export default function GreenWorkLogin() {
             <button type="submit" className="work-login-submit" disabled={loading}>
               {loading ? "Signing in..." : "Login"}
             </button>
+            {loading && <GreenLoadingAnimation size="small" />}
           </form>
 
           <div className="work-login-actions">

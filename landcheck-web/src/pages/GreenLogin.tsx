@@ -8,6 +8,7 @@ import {
   requestGreenSponsorPasswordReset,
   signUpGreenSponsor,
 } from "../auth/greenAuth";
+import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import "../styles/green-auth.css";
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
@@ -423,6 +424,7 @@ export default function GreenLogin() {
             <button type="submit" className="green-auth-submit" disabled={loading}>
               {loading ? "Please wait..." : authRoute === "field" ? "Login" : sponsorSignup ? "Create Sponsor Account" : "Sign In"}
             </button>
+            {loading && <GreenLoadingAnimation size="small" />}
 
             {authRoute === "sponsor" ? (
               <div className="green-auth-toggle">

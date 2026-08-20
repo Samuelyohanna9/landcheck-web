@@ -2,6 +2,9 @@ import { Component, lazy, Suspense, useEffect, useLayoutEffect, type ComponentTy
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import CookieConsentManager from "./components/CookieConsentManager";
 import SeoRouteMeta from "./components/SeoRouteMeta";
+import SurveyLoadingAnimation from "./components/SurveyLoadingAnimation";
+import HazardLoadingAnimation from "./components/HazardLoadingAnimation";
+import GreenLoadingAnimation from "./components/GreenLoadingAnimation";
 import { getGreenAuthSession, isGreenAuthed, isSponsorGreenSession } from "./auth/greenAuth";
 import { isWorkAuthed } from "./auth/workAuth";
 import { isSurveyAuthed } from "./auth/surveyAuth";
@@ -247,6 +250,35 @@ function RouteScrollManager() {
   return null;
 }
 
+// Suspense's fallback for every lazy route below - shown any time a route's own JS chunk is
+// still downloading (first visit to a page, or a slow connection re-fetching after a deploy),
+// which used to just render nothing. Picks the branded animation matching whichever product the
+// path belongs to, so navigating into Survey Plan, Hazard Analysis, or any Green surface (Work,
+// sponsor dashboards, merchant, public pages) shows that product's own loading identity instead
+// of a blank screen while its tab/page is prepared; anything else (landing, admin, etc.) still
+// falls back to nothing rather than guessing a brand that doesn't apply.
+function RouteLoadingFallback() {
+  const { pathname } = useLocation();
+  const path = pathname.toLowerCase();
+
+  let Animation: typeof SurveyLoadingAnimation | null = null;
+  if (path.startsWith("/survey")) {
+    Animation = SurveyLoadingAnimation;
+  } else if (path.startsWith("/hazard-analysis") || path.startsWith("/flood")) {
+    Animation = HazardLoadingAnimation;
+  } else if (path.startsWith("/green")) {
+    Animation = GreenLoadingAnimation;
+  }
+
+  if (!Animation) return null;
+
+  return (
+    <div className="route-loading-fallback">
+      <Animation size="large" />
+    </div>
+  );
+}
+
 export default function App() {
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -261,7 +293,7 @@ export default function App() {
         <SeoRouteMeta />
         <CookieConsentManager />
         <ChunkLoadBoundary>
-          <Suspense fallback={null}>
+          <Suspense fallback={<RouteLoadingFallback />}>
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/survey-plan" element={<SurveyPlan />} />

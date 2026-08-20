@@ -1,4 +1,5 @@
 import { Suspense, lazy } from "react";
+import GreenLoadingAnimation from "../GreenLoadingAnimation";
 
 const TreeMap = lazy(() => import("../TreeMap"));
 
@@ -369,6 +370,7 @@ export default function GreenWorkRemoteMonitoringPanel(props: GreenWorkRemoteMon
             </div>
             {remoteMonitoringLoading && (
               <div className="green-work-remote-progress-panel">
+                <GreenLoadingAnimation size="small" />
                 <div className="green-work-remote-progress-head">
                   <strong>{activeWorkflowProfile === "agric" ? "Farm-health calculation in progress" : "Vegetation calculation in progress"}</strong>
                   <span>{Math.max(8, Math.min(100, Math.round(remoteMonitoringProgressPct || 0)))}%</span>
@@ -466,6 +468,7 @@ export default function GreenWorkRemoteMonitoringPanel(props: GreenWorkRemoteMon
             </div>
           ) : remoteMonitoringLoading ? (
             <div className="green-work-remote-progress-panel is-report-panel">
+              <GreenLoadingAnimation size="small" />
               <div className="green-work-remote-progress-head">
                 <strong>{activeWorkflowProfile === "agric" ? "Calculating farm-health summary" : "Calculating vegetation summary"}</strong>
                 <span>{Math.max(8, Math.min(100, Math.round(remoteMonitoringProgressPct || 0)))}%</span>

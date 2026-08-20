@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getGreenAuthSession, isGreenAuthed, loginGreenSponsor, requestGreenSponsorPasswordReset } from "../auth/greenAuth";
 import { GreenGlyph } from "../components/GreenGlyph";
+import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import "../styles/green-merchant.css";
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
@@ -114,6 +115,7 @@ export default function GreenMerchantLogin() {
           <button type="submit" className="gm-login-submit" disabled={loading}>
             {loading ? "Signing in..." : "Sign in"}
           </button>
+          {loading && <GreenLoadingAnimation size="small" />}
         </form>
 
         <p className="gm-login-footnote">

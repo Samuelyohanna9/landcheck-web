@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { api, BACKEND_URL } from "../api/client";
 import type { TreeInspectData } from "../components/TreeMap";
+import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import { clearWorkAuthed, getWorkAuthSession } from "../auth/workAuth";
 import { usePrivacyConsentGate } from "../privacy/usePrivacyConsentGate";
 import {
@@ -15562,7 +15563,7 @@ export default function GreenWork() {
           )}
 
           {activeForm === "logs" && canAccessSuperAdmin && (
-            <Suspense fallback={<div className="green-work-card"><p className="green-work-note">Loading system logs and compliance tools...</p></div>}>
+            <Suspense fallback={<div className="green-work-card green-work-empty-state"><GreenLoadingAnimation label="Loading system logs and compliance tools..." size="small" /></div>}>
               <GreenWorkLogsPanel
                 refreshLogsAndReports={() => {
                   void loadComplianceDashboard();
@@ -16768,7 +16769,7 @@ export default function GreenWork() {
 
         <section className={`green-work-main ${overviewMode || liveTableMode || verraMode || remoteMonitoringMode || agricFarmerLiveMode || agricFieldCaptureMode || agricSupportVisitMode || shareImpactMode ? "overview-mode" : "single-mode"} ${mapViewMode ? "map-view-mode" : ""}`}>
           {shareImpactMode && (
-            <Suspense fallback={<div className="green-work-card green-work-empty-state">Loading share impact tools...</div>}>
+            <Suspense fallback={<div className="green-work-card green-work-empty-state"><GreenLoadingAnimation label="Loading share impact tools..." size="small" /></div>}>
               <GreenWorkShareImpactPanel
                 orgSlug={activeProjectRecord?.organization_slug ?? null}
                 orgProjects={activeProjectRecord?.organization_id
@@ -17382,7 +17383,7 @@ export default function GreenWork() {
           )}
 
           {activeProjectId && activeForm === "live_table" && (
-            <Suspense fallback={<div className="green-work-card green-work-empty-state">Loading live maintenance...</div>}>
+            <Suspense fallback={<div className="green-work-card green-work-empty-state"><GreenLoadingAnimation label="Loading live maintenance..." size="small" /></div>}>
               <GreenWorkLiveTablePanel
                 activeProjectId={activeProjectId}
                 loadProjectData={loadProjectData}
@@ -17430,7 +17431,7 @@ export default function GreenWork() {
           )}
 
           {activeProjectId && activeForm === "existing_tree_intake" && (
-            <Suspense fallback={<div className="green-work-card green-work-empty-state">Loading records inventory...</div>}>
+            <Suspense fallback={<div className="green-work-card green-work-empty-state"><GreenLoadingAnimation label="Loading records inventory..." size="small" /></div>}>
               <GreenWorkExistingTreeIntakePanel
                 activeProjectId={activeProjectId}
                 title={
@@ -17839,7 +17840,7 @@ export default function GreenWork() {
           )}
 
           {activeProjectId && activeForm === "remote_monitoring" && (
-            <Suspense fallback={<div className="green-work-card green-work-empty-state">Loading remote monitoring...</div>}>
+            <Suspense fallback={<div className="green-work-card green-work-empty-state"><GreenLoadingAnimation label="Loading remote monitoring..." size="small" /></div>}>
               <GreenWorkRemoteMonitoringPanel
                 activeWorkflowProfile={activeWorkflowProfile}
                 loadRemoteMonitoringAnalysis={loadRemoteMonitoringAnalysis}
@@ -17892,7 +17893,7 @@ export default function GreenWork() {
           )}
 
           {activeProjectId && (activeForm === "map_view" || assignWorkAreaMode) && (
-            <Suspense fallback={<div className="green-work-card green-work-empty-state">Loading work map...</div>}>
+            <Suspense fallback={<div className="green-work-card green-work-empty-state"><GreenLoadingAnimation label="Loading work map..." size="small" /></div>}>
               <GreenWorkMapPanel
                 mapCardRef={mapCardRef}
                 assignWorkAreaMode={assignWorkAreaMode}
