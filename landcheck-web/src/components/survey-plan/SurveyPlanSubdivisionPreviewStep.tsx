@@ -80,6 +80,17 @@ type SubdivisionPreviewPlot = {
   area_hectares: number;
 };
 
+type SubdivisionRoadSegment = {
+  id: string;
+  source: "detected" | "override";
+  override_id: number | null;
+  geojson: {
+    type: "Feature";
+    properties: Record<string, unknown>;
+    geometry: { type: "LineString"; coordinates: number[][] };
+  };
+};
+
 type SubdivisionPreviewData = {
   resolved_count: number;
   target_area_m2?: number | null;
@@ -95,6 +106,7 @@ type SubdivisionPreviewData = {
   road_width_m?: number | null;
   excluded_area_m2?: number | null;
   leftover_area_m2?: number | null;
+  road_segments?: SubdivisionRoadSegment[] | null;
 };
 
 type SubdivisionBatchRow = {
@@ -120,6 +132,7 @@ type SubdivisionSvgPreview = {
   plots: SubdivisionSvgPreviewPlot[];
   excludedPath?: string | null;
   leftoverPath?: string | null;
+  roadSegmentPaths?: string[];
 };
 
 type Props = {
@@ -187,6 +200,8 @@ type Props = {
   setSubdivisionExcludeRoad: Dispatch<SetStateAction<boolean>>;
   subdivisionRoadWidthDraft: string;
   setSubdivisionRoadWidthDraft: Dispatch<SetStateAction<string>>;
+  onDeleteRoadSegment: (segment: SubdivisionRoadSegment) => void | Promise<void>;
+  subdivisionRoadSegmentDeletingId: string | null;
   subdivisionLotPrefix: string;
   setSubdivisionLotPrefix: Dispatch<SetStateAction<string>>;
   subdivisionEstateName: string;
@@ -829,6 +844,38 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
             )}
           </div>
 
+          {props.subdivisionExcludeRoad && !!props.subdivisionPreview?.road_segments?.length && (
+            <div className="subdivision-road-segments-wrap">
+              <div className="subdivision-custom-areas-head">
+                <h5>Roads on this plot ({props.subdivisionPreview.road_segments.length})</h5>
+                <span>Click a road on the map, or remove one here.</span>
+                <button
+                  type="button"
+                  className="btn-outline subdivision-road-segments-edit-btn"
+                  onClick={props.onOpenFeatureCadEditor}
+                  disabled={props.serverSyncing || !props.isOnline}
+                >
+                  Move / redraw a road (Feature CAD Editor)
+                </button>
+              </div>
+              <ul className="subdivision-road-segments-list">
+                {props.subdivisionPreview.road_segments.map((segment, idx) => (
+                  <li key={segment.id}>
+                    <span>Road segment {idx + 1}{segment.source === "override" ? " (drawn)" : ""}</span>
+                    <button
+                      type="button"
+                      className="btn-outline subdivision-road-segment-delete"
+                      onClick={() => props.onDeleteRoadSegment(segment)}
+                      disabled={props.subdivisionRoadSegmentDeletingId === segment.id}
+                    >
+                      {props.subdivisionRoadSegmentDeletingId === segment.id ? "Removing..." : "Remove"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {props.subdivisionMethod === "by_fraction" && (
             <p className="subdivision-note subdivision-break-hint">
               Division-line editing is now on-canvas: open <strong>Subdivision Line Preview</strong> and drag the vertical guides.
@@ -1222,6 +1269,13 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                                   strokeDasharray="5,4"
                                 />
                               )}
+                            </g>
+                          )}
+                          {!!props.subdivisionSvgPreview.roadSegmentPaths?.length && (
+                            <g>
+                              {props.subdivisionSvgPreview.roadSegmentPaths.map((path, idx) => (
+                                <path key={`road_seg_${idx}`} d={path} fill="none" stroke="#fb923c" strokeWidth={3.2} strokeDasharray="4,2.5" />
+                              ))}
                             </g>
                           )}
                           <g>
