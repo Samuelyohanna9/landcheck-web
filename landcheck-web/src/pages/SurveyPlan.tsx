@@ -3850,12 +3850,17 @@ export default function SurveyPlan() {
         }
       } catch (err: any) {
         if (!silent) {
-          if (err instanceof Error) {
-            toast.error(err.message);
-            return;
-          }
+          // Axios errors are also `instanceof Error`, so checking that first (as this used to)
+          // always won and showed axios's generic "Request failed with status code 400" instead
+          // of the backend's actual reason - check for a server-sent detail message first.
           const detail = err?.response?.data?.detail;
-          toast.error(typeof detail === "string" ? detail : "Failed to preview subdivision.");
+          if (typeof detail === "string" && detail) {
+            toast.error(detail);
+          } else if (err instanceof Error) {
+            toast.error(err.message);
+          } else {
+            toast.error("Failed to preview subdivision.");
+          }
         }
       } finally {
         setSubdivisionPreviewLoading(false);
@@ -3891,12 +3896,14 @@ export default function SurveyPlan() {
       markServerSynced();
       toast.success(`Subdivision generated (${generated} plots).`);
     } catch (err: any) {
-      if (err instanceof Error) {
-        toast.error(err.message);
-        return;
-      }
       const detail = err?.response?.data?.detail;
-      toast.error(typeof detail === "string" ? detail : "Failed to generate subdivision batch.");
+      if (typeof detail === "string" && detail) {
+        toast.error(detail);
+      } else if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error("Failed to generate subdivision batch.");
+      }
     } finally {
       setSubdivisionApplyLoading(false);
     }
