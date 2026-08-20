@@ -100,19 +100,17 @@ const SYSTEM_EPSG_LABELS: Record<string, string> = {
 // Country grouping for the coordinate-system picker UI (CoordinateInput.tsx,
 // SurveyPlanGeoreferenceSetupStep.tsx) - one entry per country, in the order they should appear.
 export type CoordinateSystemOption = { key: string; name: string; epsgLabel: string; description: string };
-export type CoordinateSystemCountryGroup = { country: string; flag?: string; systems: CoordinateSystemOption[] };
+export type CoordinateSystemCountryGroup = { country: string; systems: CoordinateSystemOption[] };
 
 export const COORDINATE_SYSTEM_GROUPS: CoordinateSystemCountryGroup[] = [
   {
     country: "Global",
-    flag: "🌐",
     systems: [
       { key: "wgs84", name: "WGS84 (Lat/Lon)", epsgLabel: "EPSG:4326", description: "Global GPS coordinates" },
     ],
   },
   {
     country: "Nigeria",
-    flag: "🇳🇬",
     systems: [
       {
         key: WGS84_NIGERIA_METERS,
@@ -130,7 +128,6 @@ export const COORDINATE_SYSTEM_GROUPS: CoordinateSystemCountryGroup[] = [
   },
   {
     country: "Ghana",
-    flag: "🇬🇭",
     systems: [
       { key: "ghana_utm_30n", name: "UTM Zone 30N", epsgLabel: "EPSG:32630", description: "Modern GPS grid, covers nearly all of Ghana" },
       { key: "ghana_leigon_grid", name: "Leigon National Grid", epsgLabel: "EPSG:25000", description: "Ghana's cadastral grid since 1978" },
@@ -138,7 +135,6 @@ export const COORDINATE_SYSTEM_GROUPS: CoordinateSystemCountryGroup[] = [
   },
   {
     country: "Uganda",
-    flag: "🇺🇬",
     systems: [
       { key: "uganda_utm_35n", name: "UTM Zone 35N", epsgLabel: "EPSG:32635", description: "Modern GPS grid, north of equator, west of 30°E" },
       { key: "uganda_utm_36n", name: "UTM Zone 36N", epsgLabel: "EPSG:32636", description: "Modern GPS grid, north of equator, east of 30°E" },
