@@ -1,3 +1,5 @@
+import HazardLoadingAnimation from "./HazardLoadingAnimation";
+
 type Props = {
   visible: boolean;
   progressPct: number;
@@ -29,10 +31,7 @@ export default function HazardProgressOverlay({ visible, progressPct, stageText,
   return (
     <div className="hazard-progress-overlay" role="status" aria-live="polite">
       <div className="hazard-progress-card">
-        <div className="hazard-progress-brand">
-          <span className="hazard-progress-brand-mark">LC</span>
-          <span className="hazard-progress-brand-name">LandCheck</span>
-        </div>
+        <HazardLoadingAnimation size="small" />
 
         <div className="hazard-progress-ring-wrap">
           <svg className="hazard-progress-ring" viewBox="0 0 120 120">

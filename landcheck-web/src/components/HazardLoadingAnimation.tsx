@@ -6,6 +6,6 @@ type Props = {
   className?: string;
 };
 
-export default function SurveyLoadingAnimation(props: Props) {
-  return <BrandedLoadingAnimation src="/LandCheck_Survey_Loading_Animation.svg" {...props} />;
+export default function HazardLoadingAnimation(props: Props) {
+  return <BrandedLoadingAnimation src="/LandCheck_Flood_Erosion_Loading_Animation.svg" {...props} />;
 }
