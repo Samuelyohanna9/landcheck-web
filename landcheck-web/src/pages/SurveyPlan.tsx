@@ -114,6 +114,17 @@ type SubdivisionZoneGeojson = {
   };
 };
 
+type SubdivisionRoadSegment = {
+  id: string;
+  source: "detected" | "override";
+  override_id: number | null;
+  geojson: {
+    type: "Feature";
+    properties: Record<string, unknown>;
+    geometry: { type: "LineString"; coordinates: number[][] };
+  };
+};
+
 type SubdivisionPreviewData = {
   method: SubdivisionMethod | string;
   resolved_count: number;
@@ -130,6 +141,7 @@ type SubdivisionPreviewData = {
   road_width_m?: number | null;
   excluded_geojson?: SubdivisionZoneGeojson | null;
   excluded_area_m2?: number | null;
+  road_segments?: SubdivisionRoadSegment[] | null;
   leftover_geojson?: SubdivisionZoneGeojson | null;
   leftover_area_m2?: number | null;
   total_area_m2: number;
@@ -792,6 +804,7 @@ export default function SurveyPlan() {
   const subdivisionMapRef = useRef<any>(null);
   const subdivisionMapboxRef = useRef<any>(null);
   const subdivisionMapReadyRef = useRef(false);
+  const subdivisionPreviewRef = useRef<SubdivisionPreviewData | null>(null);
   // On low-bandwidth connections the map should stay genuinely off (never just delayed) until
   // the user explicitly asks for it via "Load Map Now".
   const showDraftMap = forceShowDraftMap || (!isLowBandwidth && deferredDraftMap);
@@ -1762,12 +1775,26 @@ export default function SurveyPlan() {
     const excludedPath = excludedRings.length ? ringsToPath(excludedRings) : null;
     const leftoverPath = leftoverRings.length ? ringsToPath(leftoverRings) : null;
 
+    // Individual roads (visual only in this lightweight fallback view - the Mapbox preview is
+    // where they're actually clickable to delete; see subdivisionMapPreviewData).
+    const roadSegmentPaths = (subdivisionPreview.road_segments || [])
+      .map((seg) => {
+        const coords = (seg.geojson?.geometry?.coordinates || [])
+          .map((point) => [Number(point?.[0]), Number(point?.[1])])
+          .filter((point) => Number.isFinite(point[0]) && Number.isFinite(point[1]));
+        if (coords.length < 2) return null;
+        const projected = coords.map((pt) => mapPoint([pt[0], pt[1]]));
+        return projected.map((pt, i) => `${i === 0 ? "M" : "L"} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`).join(" ");
+      })
+      .filter(Boolean) as string[];
+
     return {
       width,
       height,
       plots,
       excludedPath,
       leftoverPath,
+      roadSegmentPaths,
     };
   }, [subdivisionPreview, displayedSubdivisionLotNames]);
 
@@ -1853,6 +1880,16 @@ export default function SurveyPlan() {
     addZone(subdivisionPreview.excluded_geojson, "excluded", subdivisionPreview.excluded_area_m2, "Road Reserve");
     addZone(subdivisionPreview.leftover_geojson, "leftover", subdivisionPreview.leftover_area_m2, "Remainder");
 
+    // Individual roads feeding into the exclusion, each clickable on the map so a user can select
+    // and remove just that one (see deleteSubdivisionRoadSegment) instead of only the merged zone.
+    const roadSegments = (subdivisionPreview.road_segments || [])
+      .filter((seg) => seg?.geojson?.geometry?.coordinates?.length)
+      .map((seg) => ({
+        type: "Feature" as const,
+        properties: { segmentId: seg.id },
+        geometry: seg.geojson.geometry,
+      }));
+
     return {
       polygons: {
         type: "FeatureCollection",
@@ -1873,6 +1910,10 @@ export default function SurveyPlan() {
       zoneLabels: {
         type: "FeatureCollection",
         features: zoneLabels,
+      },
+      roadSegments: {
+        type: "FeatureCollection",
+        features: roadSegments,
       },
     };
   }, [subdivisionPreview, displayedSubdivisionLotNames]);
@@ -2071,6 +2112,40 @@ export default function SurveyPlan() {
           },
         });
 
+        // Individual roads feeding into "Exclude access road" - drawn last (on top) so they stay
+        // clickable even where a lot or the road-reserve zone sits underneath. The "-hit" layer is
+        // a wide, invisible line purely to make thin road lines easy to click/tap.
+        map.addSource("subdivision-road-segments-src", {
+          type: "geojson",
+          data: (subdivisionMapPreviewData?.roadSegments || { type: "FeatureCollection", features: [] }) as any,
+        });
+        map.addLayer({
+          id: "subdivision-road-segments-hit",
+          type: "line",
+          source: "subdivision-road-segments-src",
+          paint: { "line-color": "#000000", "line-width": 18, "line-opacity": 0.01 },
+        });
+        map.addLayer({
+          id: "subdivision-road-segments-line",
+          type: "line",
+          source: "subdivision-road-segments-src",
+          paint: { "line-color": "#fb923c", "line-width": 3.2, "line-dasharray": [1.5, 1] },
+        });
+        map.on("click", "subdivision-road-segments-hit", (e: any) => {
+          const segmentId = e.features?.[0]?.properties?.segmentId;
+          if (!segmentId) return;
+          const segment = subdivisionPreviewRef.current?.road_segments?.find((s) => s.id === segmentId);
+          if (segment) {
+            void deleteSubdivisionRoadSegmentRef.current(segment);
+          }
+        });
+        map.on("mouseenter", "subdivision-road-segments-hit", () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", "subdivision-road-segments-hit", () => {
+          map.getCanvas().style.cursor = "";
+        });
+
         if (subdivisionMapPreviewData?.polygons) {
           fitSubdivisionMapToData(map, subdivisionMapPreviewData.polygons);
         }
@@ -2099,6 +2174,7 @@ export default function SurveyPlan() {
     const stationSource = map.getSource("subdivision-stations-src") as any;
     const zoneSource = map.getSource("subdivision-zones-src") as any;
     const zoneLabelSource = map.getSource("subdivision-zone-labels-src") as any;
+    const roadSegmentSource = map.getSource("subdivision-road-segments-src") as any;
     if (polySource && subdivisionMapPreviewData?.polygons) {
       polySource.setData(subdivisionMapPreviewData.polygons as any);
       fitSubdivisionMapToData(map, subdivisionMapPreviewData.polygons);
@@ -2114,6 +2190,9 @@ export default function SurveyPlan() {
     }
     if (zoneLabelSource) {
       zoneLabelSource.setData((subdivisionMapPreviewData?.zoneLabels || { type: "FeatureCollection", features: [] }) as any);
+    }
+    if (roadSegmentSource) {
+      roadSegmentSource.setData((subdivisionMapPreviewData?.roadSegments || { type: "FeatureCollection", features: [] }) as any);
     }
   }, [subdivisionMapPreviewData, fitSubdivisionMapToData]);
 
@@ -3869,6 +3948,52 @@ export default function SurveyPlan() {
     [buildSubdivisionPayload, applySubdivisionPreviewResponse, ensureServerPlot, markServerSynced]
   );
 
+  const [subdivisionRoadSegmentDeletingId, setSubdivisionRoadSegmentDeletingId] = useState<string | null>(null);
+
+  const deleteSubdivisionRoadSegment = useCallback(
+    async (segment: SubdivisionRoadSegment) => {
+      if (!plotId) {
+        toast.error("Sync the draft to the server first.");
+        return;
+      }
+      const shouldDelete = window.confirm("Remove this road from the plot? This also affects the survey plan and CAD editor.");
+      if (!shouldDelete) return;
+
+      setSubdivisionRoadSegmentDeletingId(segment.id);
+      try {
+        if (segment.override_id) {
+          await api.delete(`/plots/${plotId}/feature-overrides/${segment.override_id}`);
+        } else {
+          // A detected/base road has no override row of its own - suppress it the same way the
+          // Feature CAD Editor does, with a "delete" override matching its own geometry.
+          await api.post(`/plots/${plotId}/feature-overrides`, {
+            feature_type: "road",
+            action: "delete",
+            geojson: segment.geojson.geometry,
+          });
+        }
+        featureEditsPendingRef.current = true;
+        toast.success("Road removed.");
+        await previewSubdivision(true);
+      } catch (err: any) {
+        const detail = err?.response?.data?.detail;
+        toast.error(typeof detail === "string" && detail ? detail : "Failed to remove road.");
+      } finally {
+        setSubdivisionRoadSegmentDeletingId(null);
+      }
+    },
+    [plotId, previewSubdivision]
+  );
+
+  const deleteSubdivisionRoadSegmentRef = useRef(deleteSubdivisionRoadSegment);
+  useEffect(() => {
+    deleteSubdivisionRoadSegmentRef.current = deleteSubdivisionRoadSegment;
+  }, [deleteSubdivisionRoadSegment]);
+
+  useEffect(() => {
+    subdivisionPreviewRef.current = subdivisionPreview;
+  }, [subdivisionPreview]);
+
   const scheduleSubdivisionLivePreview = useCallback(() => {
     if (subdivisionLivePreviewTimerRef.current !== null) {
       window.clearTimeout(subdivisionLivePreviewTimerRef.current);
@@ -4903,6 +5028,8 @@ export default function SurveyPlan() {
               setSubdivisionExcludeRoad={setSubdivisionExcludeRoad}
               subdivisionRoadWidthDraft={subdivisionRoadWidthDraft}
               setSubdivisionRoadWidthDraft={setSubdivisionRoadWidthDraft}
+              onDeleteRoadSegment={deleteSubdivisionRoadSegment}
+              subdivisionRoadSegmentDeletingId={subdivisionRoadSegmentDeletingId}
               subdivisionLotPrefix={subdivisionLotPrefix}
               setSubdivisionLotPrefix={setSubdivisionLotPrefix}
               subdivisionEstateName={subdivisionEstateName}
