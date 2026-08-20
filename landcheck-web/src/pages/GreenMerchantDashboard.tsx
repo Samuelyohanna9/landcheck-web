@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { getGreenAuthSession, clearGreenAuthed } from "../auth/greenAuth";
 import { GreenGlyph } from "../components/GreenGlyph";
+import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import { useInViewport } from "../hooks/useInViewport";
 import "../styles/green-merchant.css";
 
@@ -329,7 +330,7 @@ export default function GreenMerchantDashboard() {
                   </div>
                   {mapPoints.length > 0 ? (
                     mapViewport.inView ? (
-                      <Suspense fallback={<div className="gm-empty-state gm-empty-state--map">Loading verified tree map...</div>}>
+                      <Suspense fallback={<div className="gm-empty-state gm-empty-state--map"><GreenLoadingAnimation label="Loading verified tree map..." size="small" /></div>}>
                         <ProjectMap points={mapPoints} mode="green" />
                       </Suspense>
                     ) : (

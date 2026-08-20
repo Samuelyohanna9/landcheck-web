@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { api, BACKEND_URL } from "../api/client";
 import { clearGreenAuthed, getGreenAuthSession } from "../auth/greenAuth";
 import type { TreeInspectData } from "../components/TreeMap";
+import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
 import {
   cacheProjectDetailOffline,
   cacheProjectTreesOffline,
@@ -4294,7 +4295,7 @@ export default function Green() {
                     </span>
                   </div>
                 )}
-                <Suspense fallback={<div className="green-offline-banner">Loading map...</div>}>
+                <Suspense fallback={<div className="green-offline-banner"><GreenLoadingAnimation label="Loading map..." size="small" /></div>}>
                   <TreeMap
                     trees={treePoints}
                     draftPoint={

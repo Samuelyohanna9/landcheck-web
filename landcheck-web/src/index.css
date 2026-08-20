@@ -159,3 +159,40 @@ img {
 .gi-page :where(p, li, a, button, input, textarea, select, label, span, time, small) {
   font-family: var(--lc-public-font) !important;
 }
+
+/* Shared branded loading animation (survey/hazard/green) - kept in the app's main bundle rather
+   than a per-page stylesheet, since RouteLoadingFallback in App.tsx can render this BEFORE any
+   lazy route's own CSS chunk has loaded (that's the exact moment it exists to cover). */
+.branded-loading-animation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.branded-loading-animation-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.branded-loading-animation-img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.branded-loading-animation--small .branded-loading-animation-img {
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+}
+
+.route-loading-fallback {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #050b1a;
+}
