@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { COORDINATE_SYSTEM_GROUPS } from "../utils/coordinateConverter";
+import CountryFlag from "./CountryFlag";
 import "../styles/coordinate-system-select.css";
 
 type Props = {
@@ -57,7 +58,7 @@ export default function CoordinateSystemSelect({ value, onChange, disabled, id }
             <div className="cs-select-group" key={group.country}>
               <div className="cs-select-group-label">
                 <span>{group.country}</span>
-                {group.flag ? <span className="cs-select-flag" aria-hidden="true">{group.flag}</span> : null}
+                <CountryFlag country={group.country} size={18} className="cs-select-flag" />
               </div>
               {group.systems.map((sys) => (
                 <button
