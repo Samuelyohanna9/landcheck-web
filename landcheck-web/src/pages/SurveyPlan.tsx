@@ -236,6 +236,15 @@ type BuildingHatchType = "horizontal" | "vertical" | "diagonal" | "cross" | "sol
 // "" = this template's own existing default (solid for general/Adamawa, dashed for cadastral/FCT) -
 // left unset unless the user explicitly picks one, so existing plans keep looking exactly as they do.
 type RoadStyleOption = "" | "solid" | "dashed_symbol";
+type ScaleRecommendation = {
+  paper_size: "A4" | "A3" | "A2" | "A1" | "A0";
+  scale_text: string;
+  scale_denominator: number;
+  fitted_scale_denominator: number;
+  template_name: string;
+  reason: string;
+};
+type PreviewRenderSelection = Pick<ScaleRecommendation, "scale_text" | "paper_size">;
 
 type SurveyPlanDraftState = {
   workflowMode: WorkflowMode | null;
@@ -294,7 +303,7 @@ type SurveyPlanDraftState = {
 
 const DEFAULT_CERTIFICATION_STATEMENT =
   "I hereby certify that this survey plan is a true representation of the survey executed by me and conforms with the regulations of surveying profession.";
-const SCALE_PRESETS = [250, 500, 1000, 2000, 5000];
+const SCALE_PRESETS = [250, 500, 1000, 1250, 2000, 2500, 5000, 10000, 12500, 20000, 25000, 50000];
 const MIN_SCALE_DENOMINATOR = 100;
 const MAX_SCALE_DENOMINATOR = 50000;
 const DEFAULT_TEMPLATE_NAME: PlotMeta["template_name"] = "general";
@@ -731,6 +740,7 @@ export default function SurveyPlan() {
   const [plotId, setPlotId] = useState<number | null>(null);
   const [features, setFeatures] = useState<any>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [scaleRecommendation, setScaleRecommendation] = useState<ScaleRecommendation | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [orthophotoUrl, setOrthophotoUrl] = useState<string | null>(null);
   const [orthophotoLoading, setOrthophotoLoading] = useState(false);
@@ -2495,15 +2505,33 @@ export default function SurveyPlan() {
   }
 
   // Load preview image
-  const loadPreview = useCallback(async () => {
+  const loadPreview = useCallback(async (acceptedRecommendation?: PreviewRenderSelection) => {
     const requestId = ++previewRequestId.current;
     setPreviewLoading(true);
     try {
       const activePlotId = await ensureServerPlot("Syncing draft for official survey preview...", {
         fetchFeatures: true,
       });
+      if (!acceptedRecommendation && !hasManualScaleOverride && isAutoScaleText(effectiveRenderScaleText)) {
+        const recommendationResponse = await api.post<ScaleRecommendation>(
+          `/plots/${activePlotId}/scale-recommendation`,
+          {
+            coordinate_system: effectiveCoordinateSystem,
+            paper_size: meta.paper_size,
+            template_name: meta.template_name,
+            survey_input_coordinates: surveyInputCoordinatesPayload,
+          },
+          { timeout: SLOW_NETWORK_TIMEOUT_MS },
+        );
+        if (requestId === previewRequestId.current) {
+          setScaleRecommendation(recommendationResponse.data);
+        }
+        return;
+      }
       const payload = {
         ...buildPlotMetaPayload(),
+        scale_text: acceptedRecommendation?.scale_text || effectiveRenderScaleText,
+        paper_size: acceptedRecommendation?.paper_size || meta.paper_size,
         station_names: stationNames,
         north_arrow_style: northArrowStyle,
         north_arrow_color: northArrowColor,
@@ -2575,6 +2603,12 @@ export default function SurveyPlan() {
     areaFont,
     areaSize,
     ensureServerPlot,
+    hasManualScaleOverride,
+    effectiveRenderScaleText,
+    effectiveCoordinateSystem,
+    meta.paper_size,
+    meta.template_name,
+    surveyInputCoordinatesPayload,
     markServerSynced,
   ]);
 
@@ -2690,7 +2724,15 @@ export default function SurveyPlan() {
 
   const refreshCurrentPreview = useCallback(async () => {
     if (scaleDraftDirty) {
-      applyResolvedScaleState(resolveScaleDraftState());
+      const resolved = resolveScaleDraftState();
+      applyResolvedScaleState(resolved);
+      if (resolved.manualOverride && previewType === "survey") {
+        await loadPreview({
+          scale_text: resolved.scaleText,
+          paper_size: meta.paper_size as PreviewRenderSelection["paper_size"],
+        });
+        return;
+      }
     }
     if (previewType === "orthophoto") {
       await loadOrthophoto();
@@ -2709,8 +2751,26 @@ export default function SurveyPlan() {
     previewType,
     resolveScaleDraftState,
     scaleDraftDirty,
+    meta.paper_size,
     topoSource,
   ]);
+
+  const acceptScaleRecommendation = useCallback(() => {
+    if (!scaleRecommendation) return;
+    const recommendation = scaleRecommendation;
+    applyResolvedScaleState({
+      scaleText: recommendation.scale_text,
+      nextDraft: String(recommendation.scale_denominator),
+      manualOverride: true,
+    });
+    setMeta((current) =>
+      current.paper_size === recommendation.paper_size
+        ? current
+        : { ...current, paper_size: recommendation.paper_size },
+    );
+    setScaleRecommendation(null);
+    void loadPreview(recommendation);
+  }, [applyResolvedScaleState, loadPreview, scaleRecommendation]);
 
   useEffect(() => {
     if (workflowMode === "subdivision" && currentStep === 2 && previewType !== "survey") {
@@ -5584,6 +5644,30 @@ export default function SurveyPlan() {
           </Suspense>
         )}
       </div>
+      {scaleRecommendation && (
+        <div className="scale-recommendation-backdrop" role="dialog" aria-modal="true" aria-labelledby="scale-recommendation-title">
+          <section className="scale-recommendation-modal">
+            <span className="scale-recommendation-eyebrow">First plan preview</span>
+            <h2 id="scale-recommendation-title">Recommended survey layout</h2>
+            <p>
+              This parcel fits cleanly on <strong>{scaleRecommendation.paper_size}</strong> at the standard scale
+              <strong> {scaleRecommendation.scale_text}</strong>.
+            </p>
+            <p className="scale-recommendation-detail">
+              The calculated fit is 1:{scaleRecommendation.fitted_scale_denominator.toLocaleString()}; the recommendation rounds upward to preserve the full parcel.
+            </p>
+            <div className="scale-recommendation-actions">
+              <button type="button" className="btn-outline" onClick={() => setScaleRecommendation(null)}>
+                Cancel and choose manually
+              </button>
+              <button type="button" className="btn-primary" onClick={acceptScaleRecommendation}>
+                Yes, render this plan
+              </button>
+            </div>
+            <p className="scale-recommendation-footnote">You can change the paper size and scale at any time after rendering.</p>
+          </section>
+        </div>
+      )}
       {showScrollHint && (
         <div className="survey-scroll-hint" aria-hidden="true">
           <span>Scroll for more</span>

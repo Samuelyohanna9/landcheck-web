@@ -29,7 +29,13 @@ type ManualPoint = {
   is_boundary?: boolean;
 };
 
-type HazardType = "flood" | "erosion";
+type HazardType = "flood" | "erosion" | "lulc";
+
+const HAZARD_LABELS: Record<HazardType, string> = {
+  flood: "Flood",
+  erosion: "Erosion",
+  lulc: "Land Cover",
+};
 
 type AnalysisMode = "satellite" | "local" | "hybrid";
 
@@ -224,6 +230,23 @@ type ErosionResult = {
   references?: HazardReference[];
 };
 
+type LulcClassArea = { class_id: number; label: string; color: string; pct: number; area_ha?: number };
+
+type LulcResult = {
+  class_areas: LulcClassArea[];
+  class_count?: number;
+  dominant_class?: string | null;
+  dominant_pct?: number | null;
+  total_area_ha?: number;
+  overlay: string;
+  note: string;
+  buffer_m: number;
+  data_available?: boolean;
+  legend: LegendItem[];
+  interactive?: HazardInteractiveMeta | null;
+  references?: HazardReference[];
+};
+
 const riskChipClass = (riskClass: string) => {
   const normalized = riskClass.toLowerCase();
   if (normalized === "no data") return "no-data";
@@ -282,6 +305,7 @@ export default function HazardAnalysis() {
   const [coordinateSystem, setCoordinateSystem] = useState("wgs84");
   const [floodResult, setFloodResult] = useState<FloodResult | null>(null);
   const [erosionResult, setErosionResult] = useState<ErosionResult | null>(null);
+  const [lulcResult, setLulcResult] = useState<LulcResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [gisLoading, setGisLoading] = useState(false);
@@ -498,11 +522,12 @@ export default function HazardAnalysis() {
       const created = await api.post<HazardJobStatus>(`/hazards/${hazardType}/analyze`, buildHazardJobBody("preview"));
       const job = await pollHazardJob(created.data.id);
       if (hazardType === "flood") setFloodResult(job.result);
-      else setErosionResult(job.result);
-      toast.success(`${hazardType === "flood" ? "Flood" : "Erosion"} risk analysis complete`);
+      else if (hazardType === "erosion") setErosionResult(job.result);
+      else setLulcResult(job.result);
+      toast.success(`${HAZARD_LABELS[hazardType]} analysis complete`);
     } catch (err) {
       console.error(err);
-      toast.error(err instanceof Error ? err.message : `Failed to run ${hazardType} analysis`);
+      toast.error(err instanceof Error ? err.message : `Failed to run ${HAZARD_LABELS[hazardType]} analysis`);
     } finally {
       setLoading(false);
       setJobProgress(null);
@@ -519,7 +544,12 @@ export default function HazardAnalysis() {
       if (!job.download_url) throw new Error("Report finished but no file was returned.");
       const fileRes = await api.get(job.download_url, { responseType: "blob" });
       const blob = new Blob([fileRes.data], { type: fileRes.headers["content-type"] || "application/pdf" });
-      triggerBrowserDownload(blob, hazardType === "flood" ? "flood_risk_report.pdf" : "erosion_risk_report.pdf");
+      const pdfFileNames: Record<HazardType, string> = {
+        flood: "flood_risk_report.pdf",
+        erosion: "erosion_risk_report.pdf",
+        lulc: "lulc_report.pdf",
+      };
+      triggerBrowserDownload(blob, pdfFileNames[hazardType]);
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : "Failed to download PDF");
@@ -549,7 +579,7 @@ export default function HazardAnalysis() {
     }
   };
 
-  const result = hazardType === "flood" ? floodResult : erosionResult;
+  const result = hazardType === "flood" ? floodResult : hazardType === "erosion" ? erosionResult : lulcResult;
 
   const componentItems = useMemo(() => {
     if (hazardType === "flood" && floodResult) {
@@ -605,32 +635,41 @@ export default function HazardAnalysis() {
           >
             Erosion Risk
           </button>
+          <button
+            type="button"
+            className={`hazard-type-tab ${hazardType === "lulc" ? "active" : ""}`}
+            onClick={() => setHazardType("lulc")}
+          >
+            Land Use Land Cover
+          </button>
         </div>
       </header>
 
       <div className="hazard-content">
         <div className="hazard-left">
-          <div className="hazard-card">
-            <h3>Analysis Mode</h3>
-            <div className="hazard-mode-tabs">
-              {ANALYSIS_MODES.map((mode) => (
-                <button
-                  key={mode.value}
-                  type="button"
-                  className={`hazard-mode-tab ${analysisMode === mode.value ? "active" : ""}`}
-                  onClick={() => setAnalysisMode(mode.value)}
-                >
-                  {mode.label}
-                </button>
-              ))}
+          {hazardType !== "lulc" && (
+            <div className="hazard-card">
+              <h3>Analysis Mode</h3>
+              <div className="hazard-mode-tabs">
+                {ANALYSIS_MODES.map((mode) => (
+                  <button
+                    key={mode.value}
+                    type="button"
+                    className={`hazard-mode-tab ${analysisMode === mode.value ? "active" : ""}`}
+                    onClick={() => setAnalysisMode(mode.value)}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+              <p className="hazard-subtext">{ANALYSIS_MODES.find((m) => m.value === analysisMode)?.description}</p>
             </div>
-            <p className="hazard-subtext">{ANALYSIS_MODES.find((m) => m.value === analysisMode)?.description}</p>
-          </div>
+          )}
 
           <div className="hazard-card">
             <h3>Plot Boundary</h3>
             <p className="hazard-subtext">
-              Draw or input coordinates to analyze {hazardType === "flood" ? "flood" : "erosion"} risk. Screening-level only.
+              Draw or input coordinates to analyze {hazardType === "lulc" ? "land use / land cover" : `${hazardType} risk`}. Screening-level only.
             </p>
             <CoordinateInput
               points={manualPoints}
@@ -641,7 +680,7 @@ export default function HazardAnalysis() {
               coordinateSystem={coordinateSystem}
               onCoordinateSystemChange={setCoordinateSystem}
             />
-            {elevationSurveyPointCount >= 3 && (
+            {hazardType !== "lulc" && elevationSurveyPointCount >= 3 && (
               <p className="hazard-elevation-hint">
                 {elevationSurveyPointCount} surveyed elevation points detected — will be used for{" "}
                 {hazardType === "erosion" ? "local slope calculation" : "a site elevation comparison"} instead of global data only.
@@ -649,7 +688,7 @@ export default function HazardAnalysis() {
             )}
           </div>
 
-          {analysisMode !== "satellite" && (
+          {hazardType !== "lulc" && analysisMode !== "satellite" && (
             <div className="hazard-card">
               <div className="hazard-local-data-header">
                 <div>
@@ -809,7 +848,7 @@ export default function HazardAnalysis() {
 
           <div className="hazard-actions">
             <button className="btn-primary" onClick={runAnalysis} disabled={loading}>
-              {loading ? "Running..." : `Run ${hazardType === "flood" ? "Flood" : "Erosion"} Analysis`}
+              {loading ? "Running..." : `Run ${HAZARD_LABELS[hazardType]} Analysis`}
             </button>
             {hazardType === "flood" && (
               <label className="hazard-select">
@@ -827,14 +866,16 @@ export default function HazardAnalysis() {
                 </select>
               </label>
             )}
-            <label className="hazard-toggle">
-              <input
-                type="checkbox"
-                checked={showRaster}
-                onChange={(e) => setShowRaster(e.target.checked)}
-              />
-              Show local risk raster (advanced)
-            </label>
+            {hazardType !== "lulc" && (
+              <label className="hazard-toggle">
+                <input
+                  type="checkbox"
+                  checked={showRaster}
+                  onChange={(e) => setShowRaster(e.target.checked)}
+                />
+                Show local risk raster (advanced)
+              </label>
+            )}
           </div>
 
           {hazardType === "flood" && floodResult && (
@@ -1055,6 +1096,48 @@ export default function HazardAnalysis() {
               </div>
             </div>
           )}
+
+          {hazardType === "lulc" && lulcResult && (
+            <div className="hazard-card">
+              <h3>Land Cover Summary</h3>
+              {lulcResult.data_available !== false && lulcResult.dominant_class && (
+                <div className="hazard-buildings-callout">
+                  <strong>{lulcResult.dominant_class}</strong> is the dominant cover
+                  {lulcResult.dominant_pct != null ? <> (<strong>{lulcResult.dominant_pct}%</strong> of site)</> : null}
+                </div>
+              )}
+              {lulcResult.data_available !== false && lulcResult.class_areas.length > 0 && (
+                <>
+                  <h4 className="risk-components-title">Land cover breakdown</h4>
+                  <ComponentBars
+                    items={lulcResult.class_areas.map((c) => ({ label: c.label, value: c.pct / 100, color: c.color }))}
+                  />
+                </>
+              )}
+              {lulcResult.data_available === false && (
+                <p className="hazard-warning">
+                  No land cover data is available for this location.
+                </p>
+              )}
+              <p className="hazard-note">{lulcResult.note}</p>
+              <div className="hazard-method">
+                <h4>How this is computed</h4>
+                <p>
+                  Land cover is classified from Esri's 10m Annual Land Cover dataset (Sentinel-2-derived, via
+                  Impact Observatory), sampled over the plot boundary. The map's hillshade terrain background
+                  comes from the Copernicus GLO-30 global elevation model.
+                </p>
+                <p>Analysis buffer: {lulcResult.buffer_m} m around the plot (map context only).</p>
+                <p>Informational summary only — land cover is not a risk score.</p>
+                <HazardSources references={lulcResult.references} />
+              </div>
+              <div className="hazard-export-row">
+                <button className="btn-outline" onClick={downloadPdf} disabled={pdfLoading}>
+                  {pdfLoading ? "Preparing..." : "Download PDF Report"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="hazard-right">
@@ -1064,7 +1147,7 @@ export default function HazardAnalysis() {
             </Suspense>
           </div>
           <div className="hazard-overlay">
-            <h3>{hazardType === "flood" ? "Flood Risk Overlay" : "Erosion Risk Overlay"}</h3>
+            <h3>{hazardType === "lulc" ? "Land Cover" : `${HAZARD_LABELS[hazardType]} Risk`} Overlay</h3>
             {result?.overlay ? (
               <>
                 {/* Both hazard maps now bake their own legend, scale bar, and north arrow into

@@ -16,8 +16,8 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  background: #dc2626;
-  color: #fff;
+  background: linear-gradient(90deg, #8d5c1c, #b87825);
+  color: #fffaf0;
   padding: 0.32rem 0.6rem;
   flex-shrink: 0;
 }
@@ -226,7 +226,7 @@
 }
 
 .beacon-style-option.active {
-  background: rgba(59, 130, 246, 0.28);
+  background: var(--survey-copper-glow-strong);
   color: #ffffff;
 }
 

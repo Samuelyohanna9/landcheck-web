@@ -2380,27 +2380,27 @@
 }
 
 .feature-chip.building {
-  border-color: rgba(239, 68, 68, 0.3);
+  border-color: var(--survey-ink-border-strong);
 }
 
 .feature-chip.building svg {
-  color: #ef4444;
+  color: var(--survey-copper-300);
 }
 
 .feature-chip.road {
-  border-color: rgba(100, 116, 139, 0.3);
+  border-color: var(--survey-ink-border-strong);
 }
 
 .feature-chip.road svg {
-  color: var(--survey-text-secondary);
+  color: var(--survey-copper-300);
 }
 
 .feature-chip.river {
-  border-color: rgba(59, 130, 246, 0.3);
+  border-color: var(--survey-ink-border-strong);
 }
 
 .feature-chip.river svg {
-  color: #3b82f6;
+  color: var(--survey-copper-300);
 }
 
 .chip-count {
@@ -3863,7 +3863,74 @@
   }
 }
 
+.scale-recommendation-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(11, 29, 27, 0.62);
+  backdrop-filter: blur(5px);
+}
+
+.scale-recommendation-modal {
+  width: min(100%, 32rem);
+  padding: 1.75rem;
+  border: 1px solid rgba(210, 172, 84, 0.45);
+  border-radius: 20px;
+  background: #fffdf7;
+  box-shadow: 0 24px 70px rgba(8, 30, 26, 0.32);
+  color: #17362e;
+}
+
+.scale-recommendation-eyebrow {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: #856329;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.scale-recommendation-modal h2 {
+  margin: 0 0 0.7rem;
+  font-size: 1.45rem;
+}
+
+.scale-recommendation-modal p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.scale-recommendation-detail,
+.scale-recommendation-footnote {
+  margin-top: 0.75rem !important;
+  color: #5d6f69;
+  font-size: 0.9rem;
+}
+
+.scale-recommendation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.35rem;
+}
+
 @media (max-width: 640px) {
+  .scale-recommendation-modal {
+    padding: 1.3rem;
+  }
+
+  .scale-recommendation-actions {
+    flex-direction: column-reverse;
+  }
+
+  .scale-recommendation-actions button {
+    width: 100%;
+  }
+
   .survey-content {
     padding: 0.45rem;
     overflow-x: hidden;
@@ -4351,7 +4418,7 @@
 }
 
 .topo-toggle input:checked + .topo-toggle-slider {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
 }
 
 .topo-toggle input:checked + .topo-toggle-slider::after {
@@ -4683,19 +4750,19 @@
   align-items: center;
   justify-content: center;
   border-radius: 11px;
-  background: linear-gradient(135deg, #c17a3f 0%, #a8632e 100%);
+  background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
   color: #fff;
-  box-shadow: 0 4px 10px rgba(193, 122, 63, 0.28);
+  box-shadow: 0 4px 10px var(--survey-copper-glow-strong);
 }
 
 .mode-card:nth-child(2) .mode-card-icon-float {
-  background: linear-gradient(135deg, #2b9f5f 0%, #1f7b4e 100%);
-  box-shadow: 0 4px 10px rgba(43, 159, 95, 0.28);
+  background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
+  box-shadow: 0 4px 10px var(--survey-copper-glow-strong);
 }
 
 .mode-card:nth-child(3) .mode-card-icon-float {
-  background: linear-gradient(135deg, #4d8fdb 0%, #3169ad 100%);
-  box-shadow: 0 4px 10px rgba(49, 105, 173, 0.28);
+  background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
+  box-shadow: 0 4px 10px var(--survey-copper-glow-strong);
 }
 
 .mode-svg {
@@ -4775,7 +4842,7 @@
 }
 
 .workflow-inline-card {
-  background: linear-gradient(135deg, rgba(25, 52, 38, 0.95) 0%, rgba(17, 36, 27, 0.96) 100%);
+  background: linear-gradient(135deg, rgba(20, 39, 47, 0.96) 0%, rgba(12, 27, 36, 0.98) 100%);
 }
 
 .workflow-inline-title,
@@ -4846,8 +4913,8 @@
 .btn-primary {
   background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
   border: none;
-  color: #1c1104;
-  box-shadow: 0 18px 34px rgba(193, 122, 63, 0.24);
+  color: #062516;
+  box-shadow: 0 18px 34px var(--survey-copper-glow-strong);
 }
 
 .btn-secondary {
