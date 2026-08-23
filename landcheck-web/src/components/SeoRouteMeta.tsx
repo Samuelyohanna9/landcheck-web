@@ -256,9 +256,9 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
   "/flood": {
     title: "Flood Risk & Land Hazard Analysis Nigeria | Free Report | LandCheck",
     description:
-      "Screen any Nigerian land parcel for flood risk, erosion hazard, and soil stability. Instant free PDF risk report with site-specific analysis for any location in Nigeria.",
+      "Screen any Nigerian land parcel for flood risk, erosion hazard, soil stability, and land use / land cover. Instant free PDF risk report with site-specific analysis for any location in Nigeria.",
     keywords:
-      "flood risk analysis Nigeria, land hazard screening Nigeria, flood risk map Nigeria, erosion risk Nigeria, soil stability analysis Nigeria, flood PDF report, land hazard Nigeria, free flood risk report",
+      "flood risk analysis Nigeria, land hazard screening Nigeria, flood risk map Nigeria, erosion risk Nigeria, soil stability analysis Nigeria, land use land cover Nigeria, land cover analysis Nigeria, flood PDF report, land hazard Nigeria, free flood risk report",
     canonicalPath: "/flood",
     ogType: "website",
     ogImage: "https://landcheck.online/flood-background.jpg",
@@ -271,7 +271,7 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
       "provider": { "@id": "https://landcheck.online/#organization" },
       "areaServed": { "@type": "Country", "name": "Nigeria" },
       "description":
-        "Instant flood risk, erosion, and soil stability screening for any land parcel in Nigeria. Generates a professional PDF hazard report.",
+        "Instant flood risk, erosion, soil stability, and land use / land cover screening for any land parcel in Nigeria. Generates a professional PDF hazard report.",
       "url": "https://landcheck.online/flood",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "NGN" },
     },
@@ -280,8 +280,8 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
   "/hazard-analysis": {
     title: "Flood Risk Hazard Analysis Tool | LandCheck",
     description:
-      "Analyze land and site flood risks across Nigeria with map-based hazard tools for better planning and resilient project execution.",
-    keywords: "hazard analysis tool Nigeria, flood analysis tool",
+      "Analyze land and site flood risks, erosion, and land use / land cover across Nigeria with map-based hazard tools for better planning and resilient project execution.",
+    keywords: "hazard analysis tool Nigeria, flood analysis tool, land cover analysis tool",
     canonicalPath: "/flood",
     robots: "noindex,follow",
     ogType: "website",

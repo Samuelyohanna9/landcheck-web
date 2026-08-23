@@ -45,7 +45,7 @@ const products = [
   {
     key: "flood",
     title: "Flood Risk Analysis",
-    description: "Screen any Nigerian land parcel for flood risk, erosion, and soil stability with a detailed PDF risk report.",
+    description: "Screen any Nigerian land parcel for flood risk, erosion, soil stability, and land use / land cover with a detailed PDF risk report.",
     route: "/flood",
     bgClass: "lp-prod-flood-bg",
   },
