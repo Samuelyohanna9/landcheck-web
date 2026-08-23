@@ -40,6 +40,23 @@ const features = [
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width="28" height="28" aria-hidden="true">
         <path
+          d="M3 17l5-6 4 4 4-7 5 9"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path d="M3 20h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    ),
+    title: "Land Use / Land Cover",
+    detail:
+      "See exactly what's on the land — water, trees, crops, built area, and more — as a classified map with a %-of-area breakdown.",
+  },
+  {
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" width="28" height="28" aria-hidden="true">
+        <path
           d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
           stroke="currentColor"
           strokeWidth="1.5"
@@ -77,7 +94,7 @@ const steps = [
   {
     title: "Run Hazard Screening",
     detail:
-      "Our system analyzes flood exposure, erosion risk, soil stability, and environmental factors using global datasets.",
+      "Our system analyzes flood exposure, erosion risk, soil stability, and land use / land cover using global datasets.",
   },
   {
     title: "Download the Report",
@@ -137,8 +154,8 @@ export default function FloodAnalysisLanding() {
             for Any Site in Nigeria
           </h1>
           <p>
-            Instant flood risk assessment, erosion analysis, and soil stability reports — with a downloadable
-            PDF for any Nigerian land parcel.
+            Instant flood risk assessment, erosion analysis, soil stability, and land use / land cover
+            classification — with a downloadable PDF for any Nigerian land parcel.
           </p>
           <div className="fal-hero-ctas">
             <button
