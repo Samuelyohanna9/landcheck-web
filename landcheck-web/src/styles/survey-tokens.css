@@ -19,22 +19,27 @@
   --survey-ink-900: #0b1420;
   --survey-ink-800: #101d2b;
   --survey-ink-700: #16283a;
-  --survey-ink-border: rgba(224, 168, 104, 0.14);
-  --survey-ink-border-strong: rgba(224, 168, 104, 0.3);
+  --survey-ink-border: rgba(167, 196, 184, 0.14);
+  --survey-ink-border-strong: rgba(167, 196, 184, 0.3);
 
   /* Copper/brass — primary accent (survey instruments) */
-  --survey-copper-300: #f0c48f;
-  --survey-copper-400: #e0a868;
-  --survey-copper-500: #c17a3f;
-  --survey-copper-600: #a8632e;
-  --survey-copper-glow: rgba(224, 168, 104, 0.16);
-  --survey-copper-glow-strong: rgba(224, 168, 104, 0.26);
+  --survey-copper-300: #8be0b2;
+  --survey-copper-400: #3ccf85;
+  --survey-copper-500: #20a866;
+  --survey-copper-600: #157a4b;
+  --survey-copper-glow: rgba(60, 207, 133, 0.16);
+  --survey-copper-glow-strong: rgba(60, 207, 133, 0.26);
 
   /* Forest — secondary/success accent (existing brand green, kept) */
-  --survey-forest-400: #3ca368;
-  --survey-forest-500: #2b9f5f;
-  --survey-forest-600: #1f7b4e;
-  --survey-forest-glow: rgba(43, 159, 95, 0.16);
+  --survey-forest-400: #67d995;
+  --survey-forest-500: #35b975;
+  --survey-forest-600: #218557;
+  --survey-forest-glow: rgba(53, 185, 117, 0.16);
+
+  --survey-warning-300: #f4cf85;
+  --survey-warning-400: #dca34c;
+  --survey-warning-500: #a56c20;
+  --survey-warning-glow: rgba(220, 163, 76, 0.16);
 
   /* Parchment — light/paper surfaces */
   --survey-parchment-50: #f6f1e4;
@@ -53,7 +58,7 @@
   --survey-spot-height: #60a5fa;
 
   /* Motif helpers */
-  --survey-grid-line: rgba(224, 168, 104, 0.05);
+  --survey-grid-line: rgba(139, 224, 178, 0.05);
 }
 
 /* Faint blueprint/graph-paper grid — apply to large empty ink surfaces */
@@ -88,6 +93,6 @@
   gap: 0.32rem;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--survey-copper-400) 0%, var(--survey-copper-600) 100%);
-  color: #1c1104;
+  color: #062516;
   font-weight: 800;
 }

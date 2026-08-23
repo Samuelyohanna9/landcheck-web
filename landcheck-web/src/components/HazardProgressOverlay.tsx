@@ -4,7 +4,13 @@ type Props = {
   visible: boolean;
   progressPct: number;
   stageText: string;
-  hazardType: "flood" | "erosion";
+  hazardType: "flood" | "erosion" | "lulc";
+};
+
+const HAZARD_TYPE_LABELS: Record<Props["hazardType"], string> = {
+  flood: "Flood",
+  erosion: "Erosion",
+  lulc: "Land Cover",
 };
 
 const MILESTONES = [
@@ -55,7 +61,7 @@ export default function HazardProgressOverlay({ visible, progressPct, stageText,
           </svg>
           <div className="hazard-progress-ring-label">
             <span className="hazard-progress-pct">{pct}%</span>
-            <span className="hazard-progress-type">{hazardType === "flood" ? "Flood" : "Erosion"}</span>
+            <span className="hazard-progress-type">{HAZARD_TYPE_LABELS[hazardType]}</span>
           </div>
         </div>
 

@@ -126,6 +126,20 @@ type GeoreferenceSession = {
   finalized_at: string | null;
 };
 
+type SurveyActivityEvent = {
+  id: number;
+  event_type: string;
+  workflow: string;
+  plot_id: number | null;
+  subdivision_batch_id: number | null;
+  georeference_session_id: string | null;
+  details: Record<string, unknown>;
+  created_at: string | null;
+  actor_email: string | null;
+  actor_name: string | null;
+  preview_only: boolean;
+};
+
 type FeedbackEntry = {
   id: number;
   profession: string;
@@ -153,6 +167,7 @@ export default function AdminDashboard() {
   const [surveyUsers, setSurveyUsers] = useState<SurveyUser[]>([]);
   const [expandedSurveyUserId, setExpandedSurveyUserId] = useState<number | null>(null);
   const [georeferenceSessions, setGeoreferenceSessions] = useState<GeoreferenceSession[]>([]);
+  const [surveyActivity, setSurveyActivity] = useState<SurveyActivityEvent[]>([]);
   const [osmOverpassUsage, setOsmOverpassUsage] = useState<OsmOverpassCountryUsage[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -178,10 +193,11 @@ export default function AdminDashboard() {
           api.get("/feedback"),
           api.get("/analytics/survey-users"),
           api.get("/analytics/georeference-sessions"),
+          api.get("/analytics/survey-activity"),
           api.get("/analytics/osm-overpass-usage"),
         ]);
 
-        const [analyticsRes, dailyRes, feedbackRes, plotsRes, feedbackListRes, surveyUsersRes, georefSessionsRes, osmOverpassRes] = results;
+        const [analyticsRes, dailyRes, feedbackRes, plotsRes, feedbackListRes, surveyUsersRes, georefSessionsRes, surveyActivityRes, osmOverpassRes] = results;
 
         if (analyticsRes.status === "fulfilled") {
           setAnalytics(analyticsRes.value.data);
@@ -208,6 +224,10 @@ export default function AdminDashboard() {
           const data = georefSessionsRes.value.data;
           setGeoreferenceSessions(Array.isArray(data) ? data : []);
         }
+        if (surveyActivityRes.status === "fulfilled") {
+          const data = surveyActivityRes.value.data;
+          setSurveyActivity(Array.isArray(data) ? data : []);
+        }
         if (osmOverpassRes.status === "fulfilled") {
           const data = osmOverpassRes.value.data as OsmOverpassUsage | undefined;
           setOsmOverpassUsage(Array.isArray(data?.by_country) ? data!.by_country : []);
@@ -231,6 +251,7 @@ export default function AdminDashboard() {
     setFeedbackEntries([]);
     setSurveyUsers([]);
     setGeoreferenceSessions([]);
+    setSurveyActivity([]);
     setOsmOverpassUsage([]);
     setLoading(false);
   };
@@ -248,6 +269,17 @@ export default function AdminDashboard() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const formatSurveyActivity = (event: SurveyActivityEvent) => {
+    const labels: Record<string, string> = {
+      preview_completed: "Preview completed",
+      raster_uploaded: "Raster uploaded",
+      georeference_solved: "Georeference solved",
+      digitizing_saved: "Digitizing saved",
+      export_downloaded: "Export downloaded",
+    };
+    return labels[event.event_type] || event.event_type.replace(/_/g, " ");
   };
 
   const renderFeatureSummary = (plot: PlotDetail) => {
@@ -945,6 +977,47 @@ export default function AdminDashboard() {
                           <span>Cache hit rate</span>
                           <span>{row.total_calls > 0 ? `${Math.round((row.cache_hits / row.total_calls) * 100)}%` : "N/A"}</span>
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="plots-detail-section">
+            <h2>Survey Activity Audit</h2>
+            {surveyActivity.length === 0 ? (
+              <div className="no-feedback">
+                <p>No server-confirmed Survey activity yet.</p>
+              </div>
+            ) : (
+              <div className="plot-detail-list">
+                {surveyActivity.map((event) => (
+                  <div key={event.id} className="plot-detail-card">
+                    <div className="plot-detail-header">
+                      <div>
+                        <span className="plot-detail-id">{formatSurveyActivity(event)}</span>
+                        <span className="plot-detail-date">{formatDateTime(event.created_at)}</span>
+                      </div>
+                      <div className="plot-detail-badges">
+                        <span className="plot-badge">{event.workflow.replace(/_/g, " ")}</span>
+                        {event.preview_only && <span className="plot-badge">Preview only</span>}
+                        {event.plot_id && <span className="plot-badge">Plot #{event.plot_id}</span>}
+                        {event.subdivision_batch_id && <span className="plot-badge">Batch #{event.subdivision_batch_id}</span>}
+                      </div>
+                    </div>
+                    <div className="plot-detail-grid">
+                      <div className="plot-detail-block">
+                        <h4>Actor</h4>
+                        <div className="plot-kv"><span>User</span><span>{event.actor_name || event.actor_email || "Guest (preview before sign-in)"}</span></div>
+                        {event.actor_name && event.actor_email && <div className="plot-kv"><span>Email</span><span>{event.actor_email}</span></div>}
+                      </div>
+                      <div className="plot-detail-block">
+                        <h4>Outcome</h4>
+                        <div className="plot-kv"><span>Event</span><span>{formatSurveyActivity(event)}</span></div>
+                        {typeof event.details.export_type === "string" && <div className="plot-kv"><span>Export</span><span>{event.details.export_type}</span></div>}
+                        {typeof event.details.file_name === "string" && <div className="plot-kv"><span>File</span><span>{event.details.file_name}</span></div>}
                       </div>
                     </div>
                   </div>
