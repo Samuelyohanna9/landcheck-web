@@ -223,6 +223,25 @@
   margin-bottom: 0.75rem;
 }
 
+.hazard-screening-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.hazard-screening-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  font-size: 0.85rem;
+}
+
 .hazard-subtext {
   margin: 0 0 0.75rem;
   color: #94a3b8;
@@ -440,6 +459,15 @@
   border: 1px solid rgba(148, 163, 184, 0.35);
 }
 
+/* Deliberately the same neutral grey as .no-data, not a risk-tier color - a blind validation
+   found the rainfall/pluvial branch does not reliably discriminate, so it must never look like
+   validated risk evidence (see hazards.py's Phase 4 permanent record). */
+.risk-chip.experimental {
+  background: rgba(148, 163, 184, 0.18);
+  color: #94a3b8;
+  border: 1px dashed rgba(148, 163, 184, 0.5);
+}
+
 .hazard-export-row {
   display: flex;
   gap: 0.6rem;
@@ -553,6 +581,11 @@
   border: 1px solid rgba(245, 158, 11, 0.35);
   border-radius: 8px;
   padding: 0.65rem 0.8rem;
+}
+
+.hazard-note--context {
+  font-size: 0.8em;
+  opacity: 0.85;
 }
 
 .hazard-elevation-hint {
