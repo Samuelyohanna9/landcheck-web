@@ -184,6 +184,45 @@
   font-size: 1rem;
 }
 
+/* Flood's Overall Screening Risk card - a light accent border distinguishes it as the headline
+   summary sitting above the River/Rainfall detail cards, without a full re-theme. */
+.hazard-card--overall {
+  border-color: rgba(251, 146, 60, 0.35);
+}
+
+.hazard-primary-driver {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: #cbd5f5;
+}
+
+.hazard-primary-driver strong {
+  color: #fb923c;
+}
+
+.hazard-engine-compare {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.hazard-engine-compare-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 60px;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.78rem;
+  color: #cbd5f5;
+}
+
+.hazard-engine-compare-row .risk-component-track {
+  height: 9px;
+}
+
+.hazard-flood-map-tabs {
+  margin-bottom: 0.75rem;
+}
+
 .hazard-subtext {
   margin: 0 0 0.75rem;
   color: #94a3b8;
