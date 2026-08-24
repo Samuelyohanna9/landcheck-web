@@ -74,6 +74,13 @@ type SurveyUserInputPoint = {
   height: number | null;
 };
 
+type SurveyUserExport = {
+  job_id: string;
+  export_type: string;
+  file_name: string | null;
+  completed_at: string | null;
+};
+
 type SurveyUserPlot = {
   plot_id: number;
   title_text: string | null;
@@ -85,6 +92,7 @@ type SurveyUserPlot = {
   parent_plot_id: number | null;
   estate_name: string | null;
   workflow_type: "subdivision" | "survey_plan";
+  exports: SurveyUserExport[];
 };
 
 type SurveyUser = {
@@ -642,16 +650,19 @@ export default function AdminDashboard() {
                                             </span>
                                           </div>
                                           <div className="survey-user-plot-downloads">
-                                            {Object.entries(reportLinks(plot.plot_id)).map(([key, href]) => (
+                                            {(plot.exports || []).length === 0 ? (
+                                              <span className="survey-user-no-exports">No completed exports</span>
+                                            ) : plot.exports.map((exportJob) => (
                                               <a
-                                                key={key}
+                                                key={exportJob.job_id}
                                                 className="survey-user-download-btn"
-                                                href={href}
+                                                href={`${BACKEND_URL}/plots/export-jobs/${encodeURIComponent(exportJob.job_id)}/download`}
                                                 target="_blank"
                                                 rel="noreferrer"
+                                                title={exportJob.file_name || formatExportType(exportJob.export_type)}
                                                 onClick={(event) => event.stopPropagation()}
                                               >
-                                                {reportLabels[key] || key}
+                                                {formatExportType(exportJob.export_type)}
                                               </a>
                                             ))}
                                           </div>

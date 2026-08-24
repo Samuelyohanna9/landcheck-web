@@ -117,6 +117,9 @@ export const BACKEND_URL = API_URL;
 
 const isNetworkLevelFailure = (err: unknown) => {
   if (!axios.isAxiosError(err)) return false;
+  // A caller deliberately aborted this request (for example, starting a new survey plan).
+  // It must never be retried as a transient network failure.
+  if (err.code === "ERR_CANCELED") return false;
   // No `response` means the request never got a reply (timeout, dropped connection, DNS
   // failure, etc.) - a real 4xx/5xx from the server is a rejection, not a network fault, and
   // should surface immediately rather than being retried.
