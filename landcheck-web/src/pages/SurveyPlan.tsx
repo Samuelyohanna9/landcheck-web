@@ -848,6 +848,10 @@ export default function SurveyPlan() {
   const previewRequestId = useRef(0);
   const orthophotoRequestId = useRef(0);
   const topoRequestId = useRef(0);
+  const planGenerationRef = useRef(0);
+  const previewAbortRef = useRef<AbortController | null>(null);
+  const orthophotoAbortRef = useRef<AbortController | null>(null);
+  const topoAbortRef = useRef<AbortController | null>(null);
   const plotCreateRequestIdRef = useRef<{ signature: string; id: string } | null>(null);
   const [georefSession, setGeorefSession] = useState<GeoreferenceSession | null>(null);
   const [georefRasterObjectUrl, setGeorefRasterObjectUrl] = useState<string | null>(null);
@@ -2393,8 +2397,11 @@ export default function SurveyPlan() {
   };
 
   const fetchPlotFeatures = useCallback(async (id: number) => {
+    const planGeneration = planGenerationRef.current;
     const featureRes = await api.get(`/plots/${id}/features`);
-    setFeatures(featureRes.data);
+    if (planGeneration === planGenerationRef.current) {
+      setFeatures(featureRes.data);
+    }
   }, []);
 
   const markServerSynced = useCallback(() => {
@@ -2406,6 +2413,12 @@ export default function SurveyPlan() {
 
   const ensureServerPlot = useCallback(
     async (_reason: string, options?: { fetchFeatures?: boolean }) => {
+      const planGeneration = planGenerationRef.current;
+      const assertCurrentPlan = () => {
+        if (planGeneration !== planGenerationRef.current) {
+          throw new DOMException("Survey plan was replaced", "AbortError");
+        }
+      };
       if (!finalCoords) {
         throw new Error("Enter at least 3 valid coordinate points");
       }
@@ -2443,8 +2456,10 @@ export default function SurveyPlan() {
               client_request_id: plotCreateRequestIdRef.current!.id,
             })
           );
+          assertCurrentPlan();
           activePlotId = Number(res.data.plot_id ?? res.data.id);
           await withRetry(() => api.post(`/plots/${activePlotId}/meta`, plotMetaPayload));
+          assertCurrentPlan();
           setPlotId(activePlotId);
           savePlotToStorage(activePlotId);
           setSubdivisionPreview(null);
@@ -2458,16 +2473,21 @@ export default function SurveyPlan() {
             })
           );
           await withRetry(() => api.post(`/plots/${activePlotId}/meta`, plotMetaPayload));
+          assertCurrentPlan();
         }
 
         if (options?.fetchFeatures && !features) {
           await fetchPlotFeatures(activePlotId);
+          assertCurrentPlan();
         }
 
+        assertCurrentPlan();
         markServerSynced();
         return activePlotId;
       } finally {
-        setServerSyncing(false);
+        if (planGeneration === planGenerationRef.current) {
+          setServerSyncing(false);
+        }
       }
     },
     [
@@ -2507,11 +2527,16 @@ export default function SurveyPlan() {
   // Load preview image
   const loadPreview = useCallback(async (acceptedRecommendation?: PreviewRenderSelection) => {
     const requestId = ++previewRequestId.current;
+    const planGeneration = planGenerationRef.current;
+    previewAbortRef.current?.abort();
+    const controller = new AbortController();
+    previewAbortRef.current = controller;
     setPreviewLoading(true);
     try {
       const activePlotId = await ensureServerPlot("Syncing draft for official survey preview...", {
         fetchFeatures: true,
       });
+      if (requestId !== previewRequestId.current || planGeneration !== planGenerationRef.current) return;
       if (!acceptedRecommendation && !hasManualScaleOverride && isAutoScaleText(effectiveRenderScaleText)) {
         const recommendationResponse = await api.post<ScaleRecommendation>(
           `/plots/${activePlotId}/scale-recommendation`,
@@ -2521,9 +2546,9 @@ export default function SurveyPlan() {
             template_name: meta.template_name,
             survey_input_coordinates: surveyInputCoordinatesPayload,
           },
-          { timeout: SLOW_NETWORK_TIMEOUT_MS },
+          { timeout: SLOW_NETWORK_TIMEOUT_MS, signal: controller.signal },
         );
-        if (requestId === previewRequestId.current) {
+        if (requestId === previewRequestId.current && planGeneration === planGenerationRef.current) {
           setScaleRecommendation(recommendationResponse.data);
         }
         return;
@@ -2552,10 +2577,11 @@ export default function SurveyPlan() {
         api.post(`/plots/${activePlotId}/report/preview`, payload, {
           responseType: "blob",
           timeout: SLOW_NETWORK_TIMEOUT_MS,
+          signal: controller.signal,
         })
       );
 
-      if (requestId !== previewRequestId.current) {
+      if (requestId !== previewRequestId.current || planGeneration !== planGenerationRef.current) {
         return;
       }
 
@@ -2570,11 +2596,12 @@ export default function SurveyPlan() {
       }
       markServerSynced();
     } catch (err) {
+      if (controller.signal.aborted || planGeneration !== planGenerationRef.current) return;
       console.error("Preview error:", err);
       const message = await extractApiErrorMessage(err, "Failed to load preview");
       toast.error(message);
     } finally {
-      if (requestId === previewRequestId.current) {
+      if (requestId === previewRequestId.current && planGeneration === planGenerationRef.current) {
         setPreviewLoading(false);
       }
     }
@@ -2615,9 +2642,14 @@ export default function SurveyPlan() {
   // Load orthophoto preview (satellite imagery)
   const loadOrthophoto = useCallback(async () => {
     const requestId = ++orthophotoRequestId.current;
+    const planGeneration = planGenerationRef.current;
+    orthophotoAbortRef.current?.abort();
+    const controller = new AbortController();
+    orthophotoAbortRef.current = controller;
     setOrthophotoLoading(true);
     try {
       const activePlotId = await ensureServerPlot("Syncing draft for official orthophoto preview...");
+      if (requestId !== orthophotoRequestId.current || planGeneration !== planGenerationRef.current) return;
       const res = await withRetry(() =>
         api.post(`/plots/${activePlotId}/orthophoto/preview`, {
           scale_text: effectiveRenderScaleText,
@@ -2630,10 +2662,11 @@ export default function SurveyPlan() {
         }, {
           responseType: "blob",
           timeout: SLOW_NETWORK_TIMEOUT_MS,
+          signal: controller.signal,
         })
       );
 
-      if (requestId !== orthophotoRequestId.current) {
+      if (requestId !== orthophotoRequestId.current || planGeneration !== planGenerationRef.current) {
         return;
       }
 
@@ -2644,11 +2677,12 @@ export default function SurveyPlan() {
       });
       markServerSynced();
     } catch (err) {
+      if (controller.signal.aborted || planGeneration !== planGenerationRef.current) return;
       console.error("Orthophoto preview error:", err);
       const message = await extractApiErrorMessage(err, "Failed to load orthophoto preview");
       toast.error(message);
     } finally {
-      if (requestId === orthophotoRequestId.current) {
+      if (requestId === orthophotoRequestId.current && planGeneration === planGenerationRef.current) {
         setOrthophotoLoading(false);
       }
     }
@@ -2666,10 +2700,15 @@ export default function SurveyPlan() {
   // Load topo map preview (OpenTopoMap tiles or user height data)
   const loadTopoMap = useCallback(async (source: "opentopomap" | "userdata" = "opentopomap") => {
     const requestId = ++topoRequestId.current;
+    const planGeneration = planGenerationRef.current;
+    topoAbortRef.current?.abort();
+    const controller = new AbortController();
+    topoAbortRef.current = controller;
     setTopoMapLoading(true);
 
     try {
       const activePlotId = await ensureServerPlot("Syncing draft for official topo map preview...");
+      if (requestId !== topoRequestId.current || planGeneration !== planGenerationRef.current) return;
       const res = await withRetry(() =>
         api.post(`/plots/${activePlotId}/orthophoto/preview`, {
           scale_text: effectiveRenderScaleText,
@@ -2686,10 +2725,11 @@ export default function SurveyPlan() {
         }, {
           responseType: "blob",
           timeout: SLOW_NETWORK_TIMEOUT_MS,
+          signal: controller.signal,
         })
       );
 
-      if (requestId !== topoRequestId.current) {
+      if (requestId !== topoRequestId.current || planGeneration !== planGenerationRef.current) {
         return;
       }
 
@@ -2700,11 +2740,12 @@ export default function SurveyPlan() {
       });
       markServerSynced();
     } catch (err) {
+      if (controller.signal.aborted || planGeneration !== planGenerationRef.current) return;
       console.error("Topo map preview error:", err);
       const message = await extractApiErrorMessage(err, "Failed to load topo map preview");
       toast.error(message);
     } finally {
-      if (requestId === topoRequestId.current) {
+      if (requestId === topoRequestId.current && planGeneration === planGenerationRef.current) {
         setTopoMapLoading(false);
       }
     }
@@ -3254,6 +3295,18 @@ export default function SurveyPlan() {
 
   // Reset everything
   const resetAll = () => {
+    // Invalidate every outstanding asynchronous result before clearing UI state. A server render
+    // may finish after cancellation, but it can no longer restore the old plan in this session.
+    planGenerationRef.current += 1;
+    previewRequestId.current += 1;
+    orthophotoRequestId.current += 1;
+    topoRequestId.current += 1;
+    previewAbortRef.current?.abort();
+    orthophotoAbortRef.current?.abort();
+    topoAbortRef.current?.abort();
+    previewAbortRef.current = null;
+    orthophotoAbortRef.current = null;
+    topoAbortRef.current = null;
     clearSurveyPlanDraft(ACTIVE_SURVEY_DRAFT_ID).catch(() => {});
     clearGeorefLocalState();
     restoreActionsAppliedRef.current = false;
@@ -3266,9 +3319,23 @@ export default function SurveyPlan() {
     setCoordinateSystem("wgs84");
     setPlotId(null);
     setFeatures(null);
-    setPreviewUrl(null);
-    setOrthophotoUrl(null);
-    setTopoMapUrl(null);
+    setPreviewUrl((previous) => {
+      if (previous) URL.revokeObjectURL(previous);
+      return null;
+    });
+    setOrthophotoUrl((previous) => {
+      if (previous) URL.revokeObjectURL(previous);
+      return null;
+    });
+    setTopoMapUrl((previous) => {
+      if (previous) URL.revokeObjectURL(previous);
+      return null;
+    });
+    setPreviewLoading(false);
+    setOrthophotoLoading(false);
+    setTopoMapLoading(false);
+    setDownloadLoadingKey(null);
+    setDownloadProgress(null);
     setCurrentStep(1);
     setHasHeightData(false);
     setPreviewType("survey");
