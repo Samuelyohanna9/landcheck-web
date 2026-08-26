@@ -20,6 +20,7 @@ type HazardJobStatus = {
 };
 
 const MapViewEnhanced = lazy(() => import("../components/MapViewEnhanced"));
+const HazardFlood3DView = lazy(() => import("../components/HazardFlood3DView"));
 
 type ManualPoint = {
   station: string;
@@ -363,6 +364,7 @@ export default function HazardAnalysis() {
   const [coordinateSystem, setCoordinateSystem] = useState("wgs84");
   const [floodResult, setFloodResult] = useState<FloodResult | null>(null);
   const [floodMapView, setFloodMapView] = useState<"river" | "floodplain" | "rainfall">("river");
+  const [floodView3D, setFloodView3D] = useState(false);
   const [erosionResult, setErosionResult] = useState<ErosionResult | null>(null);
   const [lulcResult, setLulcResult] = useState<LulcResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -1382,9 +1384,26 @@ export default function HazardAnalysis() {
                 >
                   Rainfall
                 </button>
+                <button
+                  type="button"
+                  className={`hazard-type-tab ${floodView3D ? "active" : ""}`}
+                  onClick={() => setFloodView3D((v) => !v)}
+                >
+                  3D View
+                </button>
               </div>
             )}
-            {displayOverlay ? (
+            {hazardType === "flood" && floodResult && floodView3D ? (
+              <Suspense fallback={<div className="hazard-empty"><HazardLoadingAnimation label="Loading 3D view..." size="small" /></div>}>
+                <HazardFlood3DView
+                  key={floodMapView}
+                  overlaySrc={displayOverlay}
+                  interactive={displayInteractive}
+                  engineLabel={floodMapView === "rainfall" ? "Rainfall susceptibility" : floodMapView === "floodplain" ? "Floodplain susceptibility" : "River flood"}
+                  riskClass={activeFloodEngine?.risk_class}
+                />
+              </Suspense>
+            ) : displayOverlay ? (
               <>
                 {/* Both hazard maps now bake their own legend, scale bar, and north arrow into
                     the rendered image, so the separate CSS/JSON-driven ones are no longer shown. */}

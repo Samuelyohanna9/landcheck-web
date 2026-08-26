@@ -314,6 +314,63 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.hazard-flood-3d {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.hazard-flood-3d-map {
+  width: 100%;
+  height: 380px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.hazard-flood-3d-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.hazard-flood-3d-rotate.active {
+  border-color: #e07b00;
+  color: #fb923c;
+}
+
+.hazard-flood-3d-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-size: 0.75rem;
+  color: #cbd5f5;
+}
+
+.hazard-flood-3d-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.hazard-flood-3d-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.hazard-flood-3d-swatch--red {
+  background: #ef4444;
+}
+
+.hazard-flood-3d-swatch--green {
+  background: #22c55e;
+}
+
 .hazard-interactive-wrap {
   position: relative;
 }
