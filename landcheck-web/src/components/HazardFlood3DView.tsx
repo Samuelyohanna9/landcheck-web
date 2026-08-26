@@ -1,6 +1,58 @@
 import { useEffect, useRef, useState } from "react";
 import { loadMapboxGl, loadMapboxGlCss, MAPBOX_TOKEN } from "../utils/mapboxLoader";
-import type { HazardInteractiveMeta } from "./HazardInteractiveOverlay";
+import type { HazardInteractiveMeta, HazardValuePoint } from "./HazardInteractiveOverlay";
+
+// Builds one small square "water tile" per sample point that actually counts as flooded, instead
+// of one flat slab across the whole analysis box - so the water's footprint follows the model's
+// own grid rather than covering ground the model never flagged as at-risk.
+//
+// River's value_key is "depth_m", a real modelled depth - a point counts as flooded once it has
+// any (>2cm) depth, and each tile is raised to that point's own depth, so deeper cells really do
+// look deeper. Floodplain/Rainfall only produce a 0-100 susceptibility score with no physical zero
+// point (every location has *some* score), so there "affected" means the upper half of THIS site's
+// own score range - the relatively higher-susceptibility ground within the analyzed area - with
+// tile height scaled by how far into that range each point sits.
+function buildWaterTiles(points: HazardValuePoint[] | undefined, valueKey: string, cellWidthM: number) {
+  const features: GeoJSON.Feature[] = [];
+  if (!points?.length) return { type: "FeatureCollection" as const, features };
+
+  const isPhysicalDepth = valueKey === "depth_m";
+  const values = points
+    .map((p) => p[valueKey])
+    .filter((v): v is number => typeof v === "number");
+  if (!values.length) return { type: "FeatureCollection" as const, features };
+
+  const minV = Math.min(...values);
+  const maxV = Math.max(...values);
+  const threshold = isPhysicalDepth ? 0.02 : minV + (maxV - minV) * 0.5;
+
+  for (const p of points) {
+    const raw = p[valueKey];
+    if (typeof raw !== "number" || raw < threshold) continue;
+
+    const heightM = isPhysicalDepth
+      ? Math.max(raw, 0.15)
+      : 0.4 + (maxV > minV ? (raw - minV) / (maxV - minV) : 1) * 3.2;
+
+    const halfLat = cellWidthM / 2 / 111320;
+    const halfLng = cellWidthM / 2 / (111320 * Math.cos((p.lat * Math.PI) / 180) || 1);
+    features.push({
+      type: "Feature",
+      properties: { heightM },
+      geometry: {
+        type: "Polygon",
+        coordinates: [[
+          [p.lng - halfLng, p.lat - halfLat],
+          [p.lng + halfLng, p.lat - halfLat],
+          [p.lng + halfLng, p.lat + halfLat],
+          [p.lng - halfLng, p.lat + halfLat],
+          [p.lng - halfLng, p.lat - halfLat],
+        ]],
+      },
+    });
+  }
+  return { type: "FeatureCollection" as const, features };
+}
 
 type Props = {
   overlaySrc: string | null;
@@ -152,34 +204,28 @@ export default function HazardFlood3DView({
           });
         }
 
-        // The literal "water" a non-technical viewer actually reads as flooding - a translucent
-        // blue slab covering the whole analysis extent, raised to waterDepthM. Drawn last so it
-        // sits over the terrain/buildings; buildings taller than the water poke out above it,
-        // giving the "partially submerged" read the color-only version above didn't have.
-        if (waterDataAvailable && waterDepthM > 0) {
-          map.addSource("flood-water", {
-            type: "geojson",
-            data: {
-              type: "Feature",
-              properties: {},
-              geometry: {
-                type: "Polygon",
-                coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]],
+        // The literal "water" a non-technical viewer reads as flooding - one small translucent
+        // blue tile per sample point the model actually flagged as flooded/susceptible, each
+        // raised to that point's own height, so the water's shape follows the model's grid rather
+        // than blanketing the whole analysis box regardless of what was actually at risk there.
+        if (waterDataAvailable) {
+          const cellWidthM = interactive.snap_threshold_m || 90;
+          const waterGeojson = buildWaterTiles(interactive.value_points, interactive.value_key, cellWidthM);
+          if (waterGeojson.features.length) {
+            map.addSource("flood-water", { type: "geojson", data: waterGeojson });
+            map.addLayer({
+              id: "flood-water-surface",
+              type: "fill-extrusion",
+              source: "flood-water",
+              paint: {
+                "fill-extrusion-color": "#38bdf8",
+                "fill-extrusion-height": ["get", "heightM"],
+                "fill-extrusion-base": 0,
+                "fill-extrusion-opacity": 0.6,
+                "fill-extrusion-vertical-gradient": true,
               },
-            },
-          });
-          map.addLayer({
-            id: "flood-water-surface",
-            type: "fill-extrusion",
-            source: "flood-water",
-            paint: {
-              "fill-extrusion-color": "#38bdf8",
-              "fill-extrusion-height": waterDepthM,
-              "fill-extrusion-base": 0,
-              "fill-extrusion-opacity": 0.55,
-              "fill-extrusion-vertical-gradient": true,
-            },
-          });
+            });
+          }
         }
 
         map.fitBounds(
