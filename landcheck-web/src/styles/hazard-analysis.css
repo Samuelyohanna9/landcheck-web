@@ -371,6 +371,21 @@
   background: #22c55e;
 }
 
+.hazard-flood-3d-swatch--blue {
+  background: #38bdf8;
+}
+
+.hazard-flood-3d-plain-summary {
+  margin: 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #e2e8f0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 .hazard-interactive-wrap {
   position: relative;
 }

@@ -7,6 +7,14 @@ type Props = {
   interactive: HazardInteractiveMeta | null;
   engineLabel: string;
   riskClass?: string;
+  // Height (metres) of the literal blue water surface drawn over the site. For River this is a
+  // real modelled depth (GloFAS); for Floodplain/Rainfall - which only produce a 0-100
+  // susceptibility score, not a physical depth - it's a stylized height scaled from that score.
+  // `waterDepthModelled` tells the caption which case it is, so a susceptibility score never gets
+  // presented as if it were a measured flood depth.
+  waterDepthM: number;
+  waterDepthModelled: boolean;
+  waterDataAvailable: boolean;
 };
 
 // A tilted, orbitable 3D view of the same georeferenced result shown flat in the 2D overlay tabs -
@@ -14,7 +22,15 @@ type Props = {
 // own building footprints extruded and colored by threatened/not-threatened. Not a photorealistic
 // flood simulation (no water-surface physics) - it reuses exactly the data already computed for the
 // 2D tabs, just rendered from a perspective camera.
-export default function HazardFlood3DView({ overlaySrc, interactive, engineLabel, riskClass }: Props) {
+export default function HazardFlood3DView({
+  overlaySrc,
+  interactive,
+  engineLabel,
+  riskClass,
+  waterDepthM,
+  waterDepthModelled,
+  waterDataAvailable,
+}: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const autoRotateRef = useRef(true);
@@ -136,6 +152,36 @@ export default function HazardFlood3DView({ overlaySrc, interactive, engineLabel
           });
         }
 
+        // The literal "water" a non-technical viewer actually reads as flooding - a translucent
+        // blue slab covering the whole analysis extent, raised to waterDepthM. Drawn last so it
+        // sits over the terrain/buildings; buildings taller than the water poke out above it,
+        // giving the "partially submerged" read the color-only version above didn't have.
+        if (waterDataAvailable && waterDepthM > 0) {
+          map.addSource("flood-water", {
+            type: "geojson",
+            data: {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "Polygon",
+                coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]],
+              },
+            },
+          });
+          map.addLayer({
+            id: "flood-water-surface",
+            type: "fill-extrusion",
+            source: "flood-water",
+            paint: {
+              "fill-extrusion-color": "#38bdf8",
+              "fill-extrusion-height": waterDepthM,
+              "fill-extrusion-base": 0,
+              "fill-extrusion-opacity": 0.55,
+              "fill-extrusion-vertical-gradient": true,
+            },
+          });
+        }
+
         map.fitBounds(
           [
             [west, south],
@@ -157,7 +203,7 @@ export default function HazardFlood3DView({ overlaySrc, interactive, engineLabel
         mapRef.current = null;
       }
     };
-  }, [interactive, overlaySrc]);
+  }, [interactive, overlaySrc, waterDepthM, waterDepthModelled, waterDataAvailable]);
 
   if (!interactive?.bounds_wgs84) {
     return (
@@ -167,8 +213,15 @@ export default function HazardFlood3DView({ overlaySrc, interactive, engineLabel
     );
   }
 
+  const plainSummary = !waterDataAvailable
+    ? `No modelled ${engineLabel.toLowerCase()} at this location — no water shown.`
+    : waterDepthModelled
+      ? `Modelled floodwater could reach about ${waterDepthM.toFixed(1)} m deep here.`
+      : `Illustrative water level for a "${riskClass ?? "—"}" susceptibility score — a stylized picture of the risk, not a measured flood depth.`;
+
   return (
     <div className="hazard-flood-3d">
+      <p className="hazard-flood-3d-plain-summary">🌊 {plainSummary}</p>
       <div className="hazard-flood-3d-map" ref={containerRef} />
       {loadError && <p className="hazard-warning">{loadError}</p>}
       <div className="hazard-flood-3d-footer">
@@ -180,14 +233,12 @@ export default function HazardFlood3DView({ overlaySrc, interactive, engineLabel
           {autoRotate ? "Pause rotation" : "Auto-rotate"}
         </button>
         <div className="hazard-flood-3d-legend">
-          <span><i className="hazard-flood-3d-swatch hazard-flood-3d-swatch--red" /> Building in {engineLabel.toLowerCase()} zone</span>
-          <span><i className="hazard-flood-3d-swatch hazard-flood-3d-swatch--green" /> Not in zone</span>
+          <span><i className="hazard-flood-3d-swatch hazard-flood-3d-swatch--blue" /> Floodwater</span>
+          <span><i className="hazard-flood-3d-swatch hazard-flood-3d-swatch--red" /> Building at risk</span>
+          <span><i className="hazard-flood-3d-swatch hazard-flood-3d-swatch--green" /> Building clear</span>
         </div>
       </div>
-      <p className="hazard-interactive-hint">
-        Drag to orbit, scroll to zoom, right-click drag to change pitch
-        {riskClass ? ` — screening result: ${riskClass}` : ""}.
-      </p>
+      <p className="hazard-interactive-hint">Drag to orbit, scroll to zoom, right-click drag to change pitch.</p>
     </div>
   );
 }
