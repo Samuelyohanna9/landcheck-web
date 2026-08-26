@@ -1,4 +1,4 @@
-import { memo, useRef, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { memo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import SurveyPreview from "../SurveyPreview";
 import SurveyLoadingAnimation from "../SurveyLoadingAnimation";
 
@@ -12,7 +12,9 @@ type PlotMeta = {
   certification_statement: string;
   scale_text: string;
   paper_size: string;
-  template_name: "general" | "site_plan" | "adamawa_osg" | "akwa_ibom_osg" | "rivers_osg" | "cross_river_osg" | "fct_abuja_osg";
+  // "" means "not chosen yet" - see requireTemplate below, which blocks every action that
+  // depends on it until a real template is picked.
+  template_name: "" | "general" | "site_plan" | "adamawa_osg" | "akwa_ibom_osg" | "rivers_osg" | "cross_river_osg" | "fct_abuja_osg";
   fct_file_no: string;
   fct_district: string;
   fct_cadastral_zone: string;
@@ -304,6 +306,20 @@ type Props = {
 function SurveyPlanSubdivisionPreviewStep(props: Props) {
   const rendering = props.previewLoading || props.orthophotoLoading || props.topoMapLoading || props.serverSyncing;
   const templateSelectRef = useRef<HTMLSelectElement>(null);
+  const [templateError, setTemplateError] = useState(false);
+
+  // Every action that actually depends on which template is in use (rendering a preview, opening
+  // the CAD editor, generating a subdivision batch) runs through this first, instead of letting a
+  // click through and only discovering later that "general" was never a real choice.
+  const requireTemplate = (action: () => void | Promise<void>) => {
+    if (!props.meta.template_name) {
+      setTemplateError(true);
+      templateSelectRef.current?.focus();
+      templateSelectRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    void action();
+  };
 
   return (
     <div className="step-panel preview-panel">
@@ -326,8 +342,10 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
               </div>
               <select
                 ref={templateSelectRef}
+                className={!props.meta.template_name && templateError ? "field-error" : ""}
                 value={props.meta.template_name}
                 onChange={(e) => {
+                  setTemplateError(false);
                   const nextTemplate = e.target.value as PlotMeta["template_name"];
                   const wasCadastral = CADASTRAL_STATE_TEMPLATES.includes(props.meta.template_name);
                   const nowCadastral = CADASTRAL_STATE_TEMPLATES.includes(nextTemplate);
@@ -359,6 +377,7 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                   }
                 }}
               >
+                <option value="" disabled>Select a template...</option>
                 <option value="general">General</option>
                 <option value="site_plan">Site Plan</option>
                 <option value="adamawa_osg">Adamawa OSG</option>
@@ -367,6 +386,9 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                 <option value="cross_river_osg">Cross River State (Cadastral)</option>
                 <option value="fct_abuja_osg">FCT Abuja (Cadastral)</option>
               </select>
+              {!props.meta.template_name && templateError && (
+                <span className="template-error">Select a template first — it changes which fields and layout your plan uses.</span>
+              )}
               {props.meta.template_name === "site_plan" && <span className="template-hint">Site Plan template</span>}
               {props.meta.template_name === "adamawa_osg" && <span className="template-hint">Adamawa OSG template</span>}
               {CADASTRAL_STATE_TEMPLATES.includes(props.meta.template_name) && (
@@ -552,7 +574,7 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                   </span>
                 </div>
               </>
-            ) : (
+            ) : props.meta.template_name === "adamawa_osg" ? (
               <>
                 <div className="form-group">
                   <label>R of O Number</label>
@@ -620,6 +642,10 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                   />
                 </div>
               </>
+            ) : (
+              <div className="form-group full-width">
+                <span className="template-hint">Choose a template above to fill in this plan's details.</span>
+              </div>
             )}
             <div className="form-group scale-group">
               <label>Scale</label>
@@ -686,13 +712,13 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
           <div className="edit-feature-bar">
             <button
               className={`btn-secondary${props.previewNeedsRender && !rendering ? " needs-render" : ""}`}
-              onClick={props.refreshCurrentPreview}
+              onClick={() => requireTemplate(props.refreshCurrentPreview)}
               disabled={rendering}
             >
               {props.previewNeedsRender && !rendering && <span className="needs-render-dot" aria-hidden="true" />}
               {rendering ? "Rendering..." : props.previewActionLabel}
             </button>
-            <button className="btn-outline" onClick={props.onOpenFeatureCadEditor} disabled={props.serverSyncing || !props.isOnline}>
+            <button className="btn-outline" onClick={() => requireTemplate(props.onOpenFeatureCadEditor)} disabled={props.serverSyncing || !props.isOnline}>
               Open Feature CAD Editor
             </button>
           </div>
@@ -1104,7 +1130,7 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
             </svg>
             Back to Mother Parcel
           </button>
-          <button className="btn-secondary" onClick={props.applySubdivision} disabled={!props.plotId || props.subdivisionApplyLoading || props.subdivisionPreviewLoading}>
+          <button className="btn-secondary" onClick={() => requireTemplate(props.applySubdivision)} disabled={!props.plotId || props.subdivisionApplyLoading || props.subdivisionPreviewLoading}>
             {props.subdivisionApplyLoading ? (
               <>
                 <span className="spinner" />
@@ -1114,7 +1140,7 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
               "Generate Batch"
             )}
           </button>
-          <button className="btn-primary" onClick={props.onContinue} disabled={props.subdivisionBatches.length === 0}>
+          <button className="btn-primary" onClick={() => requireTemplate(props.onContinue)} disabled={props.subdivisionBatches.length === 0}>
             Continue to Batch Export
             <svg viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />

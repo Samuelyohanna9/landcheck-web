@@ -2316,6 +2316,19 @@
   color: var(--survey-copper-300);
 }
 
+.template-error {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #fecaca;
+}
+
+select.field-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.35);
+}
+
 .survey-container.is-preview-step .template-hint {
   margin-top: 0.22rem;
   font-size: 0.64rem;
