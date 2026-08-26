@@ -647,66 +647,70 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
                 <span className="template-hint">Choose a template above to fill in this plan's details.</span>
               </div>
             )}
-            <div className="form-group scale-group">
-              <label>Scale</label>
-              <div className="scale-input-wrapper">
-                <span className="scale-prefix">1 :</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={props.scaleDraft}
-                  onChange={(e) => props.setScaleDraft(e.target.value.replace(/[^0-9]/g, ""))}
-                  onBlur={props.commitScaleDraft}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      props.commitScaleDraft();
-                    }
-                  }}
-                  className="scale-number-input"
-                  placeholder="1000"
-                  aria-label="Scale denominator"
-                />
-              </div>
-              <span className="scale-helper">
-                Leave blank for auto-fit on first render, or type only the number after `1 :` (example: `1000`).
-              </span>
-              <div className="scale-presets">
-                {props.scalePresets.map((s) => (
-                  <button
-                    key={`sub_scale_${s}`}
-                    type="button"
-                    className={`scale-preset-btn ${!props.isAutoScaleText(props.currentScaleText) && props.parseScaleDenominator(props.currentScaleText) === s ? "active" : ""}`}
-                    onClick={() => props.applyScalePreset(s)}
-                  >
-                    1:{s}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="form-group paper-size-group">
-              <label>Paper Size</label>
-              <div className="paper-size-presets">
-                {["A4", "A3", "A2", "A1", "A0"].map((size) => (
-                  <button
-                    key={`sub_size_${size}`}
-                    type="button"
-                    className={`paper-size-btn ${props.meta.paper_size === size ? "active" : ""}`}
-                    onClick={() => props.setMeta((m) => ({ ...m, paper_size: size }))}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-              <span className="paper-size-hint">
-                {props.meta.paper_size === "A4" && "Standard (210 x 297 mm)"}
-                {props.meta.paper_size === "A3" && "Large (297 x 420 mm)"}
-                {props.meta.paper_size === "A2" && "Extra Large (420 x 594 mm)"}
-                {props.meta.paper_size === "A1" && "Poster (594 x 841 mm)"}
-                {props.meta.paper_size === "A0" && "Maximum (841 x 1189 mm)"}
-              </span>
-            </div>
+            {props.meta.template_name && (
+              <>
+                <div className="form-group scale-group">
+                  <label>Scale</label>
+                  <div className="scale-input-wrapper">
+                    <span className="scale-prefix">1 :</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={props.scaleDraft}
+                      onChange={(e) => props.setScaleDraft(e.target.value.replace(/[^0-9]/g, ""))}
+                      onBlur={props.commitScaleDraft}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          props.commitScaleDraft();
+                        }
+                      }}
+                      className="scale-number-input"
+                      placeholder="1000"
+                      aria-label="Scale denominator"
+                    />
+                  </div>
+                  <span className="scale-helper">
+                    Leave blank for auto-fit on first render, or type only the number after `1 :` (example: `1000`).
+                  </span>
+                  <div className="scale-presets">
+                    {props.scalePresets.map((s) => (
+                      <button
+                        key={`sub_scale_${s}`}
+                        type="button"
+                        className={`scale-preset-btn ${!props.isAutoScaleText(props.currentScaleText) && props.parseScaleDenominator(props.currentScaleText) === s ? "active" : ""}`}
+                        onClick={() => props.applyScalePreset(s)}
+                      >
+                        1:{s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="form-group paper-size-group">
+                  <label>Paper Size</label>
+                  <div className="paper-size-presets">
+                    {["A4", "A3", "A2", "A1", "A0"].map((size) => (
+                      <button
+                        key={`sub_size_${size}`}
+                        type="button"
+                        className={`paper-size-btn ${props.meta.paper_size === size ? "active" : ""}`}
+                        onClick={() => props.setMeta((m) => ({ ...m, paper_size: size }))}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="paper-size-hint">
+                    {props.meta.paper_size === "A4" && "Standard (210 x 297 mm)"}
+                    {props.meta.paper_size === "A3" && "Large (297 x 420 mm)"}
+                    {props.meta.paper_size === "A2" && "Extra Large (420 x 594 mm)"}
+                    {props.meta.paper_size === "A1" && "Poster (594 x 841 mm)"}
+                    {props.meta.paper_size === "A0" && "Maximum (841 x 1189 mm)"}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="edit-feature-bar">

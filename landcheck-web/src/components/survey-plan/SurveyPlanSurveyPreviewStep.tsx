@@ -633,69 +633,73 @@ function SurveyPlanSurveyPreviewStep({
                 <span className="template-hint">Choose a template above to fill in this plan's details.</span>
               </div>
             )}
-            <div className="form-group scale-group">
-              <label>Scale</label>
-              <div className="scale-input-wrapper">
-                <span className="scale-prefix">1 :</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={scaleDraft}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9]/g, "");
-                    setScaleDraft(val);
-                  }}
-                  onBlur={commitScaleDraft}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      commitScaleDraft();
-                    }
-                  }}
-                  className="scale-number-input"
-                  placeholder="1000"
-                  aria-label="Scale denominator"
-                />
-              </div>
-              <span className="scale-helper">
-                Leave blank for auto-fit on first render, or type only the number after `1 :` (example: `1000`).
-              </span>
-              <div className="scale-presets">
-                {scalePresets.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    className={`scale-preset-btn ${!isAutoScaleText(currentScaleText) && parseScaleDenominator(currentScaleText) === s ? "active" : ""}`}
-                    onClick={() => applyScalePreset(s)}
-                  >
-                    1:{s}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="form-group paper-size-group">
-              <label>Paper Size</label>
-              <div className="paper-size-presets">
-                {["A4", "A3", "A2", "A1", "A0"].map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    className={`paper-size-btn ${meta.paper_size === size ? "active" : ""}`}
-                    onClick={() => setMeta((m) => ({ ...m, paper_size: size }))}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-              <span className="paper-size-hint">
-                {meta.paper_size === "A4" && "Standard (210 x 297 mm)"}
-                {meta.paper_size === "A3" && "Large (297 x 420 mm)"}
-                {meta.paper_size === "A2" && "Extra Large (420 x 594 mm)"}
-                {meta.paper_size === "A1" && "Poster (594 x 841 mm)"}
-                {meta.paper_size === "A0" && "Maximum (841 x 1189 mm)"}
-              </span>
-            </div>
+            {meta.template_name && (
+              <>
+                <div className="form-group scale-group">
+                  <label>Scale</label>
+                  <div className="scale-input-wrapper">
+                    <span className="scale-prefix">1 :</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={scaleDraft}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, "");
+                        setScaleDraft(val);
+                      }}
+                      onBlur={commitScaleDraft}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          commitScaleDraft();
+                        }
+                      }}
+                      className="scale-number-input"
+                      placeholder="1000"
+                      aria-label="Scale denominator"
+                    />
+                  </div>
+                  <span className="scale-helper">
+                    Leave blank for auto-fit on first render, or type only the number after `1 :` (example: `1000`).
+                  </span>
+                  <div className="scale-presets">
+                    {scalePresets.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        className={`scale-preset-btn ${!isAutoScaleText(currentScaleText) && parseScaleDenominator(currentScaleText) === s ? "active" : ""}`}
+                        onClick={() => applyScalePreset(s)}
+                      >
+                        1:{s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="form-group paper-size-group">
+                  <label>Paper Size</label>
+                  <div className="paper-size-presets">
+                    {["A4", "A3", "A2", "A1", "A0"].map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        className={`paper-size-btn ${meta.paper_size === size ? "active" : ""}`}
+                        onClick={() => setMeta((m) => ({ ...m, paper_size: size }))}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="paper-size-hint">
+                    {meta.paper_size === "A4" && "Standard (210 x 297 mm)"}
+                    {meta.paper_size === "A3" && "Large (297 x 420 mm)"}
+                    {meta.paper_size === "A2" && "Extra Large (420 x 594 mm)"}
+                    {meta.paper_size === "A1" && "Poster (594 x 841 mm)"}
+                    {meta.paper_size === "A0" && "Maximum (841 x 1189 mm)"}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="edit-feature-bar">
