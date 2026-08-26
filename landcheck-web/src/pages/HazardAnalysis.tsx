@@ -667,6 +667,27 @@ export default function HazardAnalysis() {
   const displayInteractive = hazardType === "flood" ? activeFloodEngine?.interactive ?? null : (result as any)?.interactive ?? null;
   const displayBufferM = hazardType === "flood" ? floodResult?.buffer_m : (result as any)?.buffer_m;
 
+  // Drives the literal blue "water" surface in the 3D view. River is the one engine with an
+  // actual modelled depth (GloFAS) - use it as-is. Floodplain/Rainfall only produce a 0-100
+  // susceptibility score, not a physical depth, so their water height is explicitly illustrative
+  // (scaled from the score, not a modelled measurement) - flagged via `modelled: false` so the 3D
+  // view can caption it honestly instead of implying a depth prediction that was never computed.
+  const flood3DWater = useMemo(() => {
+    if (!floodResult || !activeFloodEngine) return { depthM: 0, modelled: false, dataAvailable: true };
+    if (floodMapView === "river") {
+      const river = floodResult.river;
+      const dataAvailable = river.data_available !== false;
+      const depth = river.mean_depth_m ?? river.max_depth_m ?? null;
+      return {
+        depthM: dataAvailable && depth != null ? depth : 0,
+        modelled: dataAvailable && depth != null,
+        dataAvailable,
+      };
+    }
+    const score = activeFloodEngine.risk_score ?? 0;
+    return { depthM: 0.4 + (score / 100) * 3.2, modelled: false, dataAvailable: true };
+  }, [floodResult, activeFloodEngine, floodMapView]);
+
   const componentItems = useMemo(() => {
     if (hazardType === "erosion" && erosionResult) {
       return [
@@ -1401,6 +1422,9 @@ export default function HazardAnalysis() {
                   interactive={displayInteractive}
                   engineLabel={floodMapView === "rainfall" ? "Rainfall susceptibility" : floodMapView === "floodplain" ? "Floodplain susceptibility" : "River flood"}
                   riskClass={activeFloodEngine?.risk_class}
+                  waterDepthM={flood3DWater.depthM}
+                  waterDepthModelled={flood3DWater.modelled}
+                  waterDataAvailable={flood3DWater.dataAvailable}
                 />
               </Suspense>
             ) : displayOverlay ? (
