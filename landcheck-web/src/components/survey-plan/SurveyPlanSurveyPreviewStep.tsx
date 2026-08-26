@@ -1,4 +1,4 @@
-import { memo, useRef, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { memo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import SurveyPreview from "../SurveyPreview";
 
 type PlotMeta = {
@@ -11,7 +11,10 @@ type PlotMeta = {
   certification_statement: string;
   scale_text: string;
   paper_size: string;
-  template_name: "general" | "site_plan" | "adamawa_osg" | "akwa_ibom_osg" | "rivers_osg" | "cross_river_osg" | "fct_abuja_osg";
+  // "" means "not chosen yet" - a brand-new plot starts here so a real template must be picked
+  // before anything downstream (preview, CAD editor, export) runs against it. Never persisted as a
+  // final choice - see requireTemplate below, which blocks every action that depends on it.
+  template_name: "" | "general" | "site_plan" | "adamawa_osg" | "akwa_ibom_osg" | "rivers_osg" | "cross_river_osg" | "fct_abuja_osg";
   fct_file_no: string;
   fct_district: string;
   fct_cadastral_zone: string;
@@ -261,6 +264,20 @@ function SurveyPlanSurveyPreviewStep({
 }: Props) {
   const rendering = previewLoading || orthophotoLoading || topoMapLoading || serverSyncing;
   const templateSelectRef = useRef<HTMLSelectElement>(null);
+  const [templateError, setTemplateError] = useState(false);
+
+  // Every action on this step that actually depends on which template is in use (rendering a
+  // preview, opening the CAD editor, moving on to export) runs through this first - instead of
+  // letting a click through and only discovering later that "general" was never a real choice.
+  const requireTemplate = (action: () => void | Promise<void>) => {
+    if (!meta.template_name) {
+      setTemplateError(true);
+      templateSelectRef.current?.focus();
+      templateSelectRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    void action();
+  };
 
   return (
     <div className="step-panel preview-panel">
@@ -311,8 +328,10 @@ function SurveyPlanSurveyPreviewStep({
               </div>
               <select
                 ref={templateSelectRef}
+                className={!meta.template_name && templateError ? "field-error" : ""}
                 value={meta.template_name}
                 onChange={(e) => {
+                  setTemplateError(false);
                   const nextTemplate = e.target.value as PlotMeta["template_name"];
                   const wasCadastral = CADASTRAL_STATE_TEMPLATES.includes(meta.template_name);
                   const nowCadastral = CADASTRAL_STATE_TEMPLATES.includes(nextTemplate);
@@ -344,6 +363,7 @@ function SurveyPlanSurveyPreviewStep({
                   }
                 }}
               >
+                <option value="" disabled>Select a template...</option>
                 <option value="general">General</option>
                 <option value="site_plan">Site Plan</option>
                 <option value="adamawa_osg">Adamawa OSG</option>
@@ -352,6 +372,9 @@ function SurveyPlanSurveyPreviewStep({
                 <option value="cross_river_osg">Cross River State (Cadastral)</option>
                 <option value="fct_abuja_osg">FCT Abuja (Cadastral)</option>
               </select>
+              {!meta.template_name && templateError && (
+                <span className="template-error">Select a template first — it changes which fields and layout your plan uses.</span>
+              )}
               {meta.template_name === "site_plan" && <span className="template-hint">Site Plan template</span>}
               {meta.template_name === "adamawa_osg" && <span className="template-hint">Adamawa OSG template</span>}
               {CADASTRAL_STATE_TEMPLATES.includes(meta.template_name) && (
@@ -537,7 +560,7 @@ function SurveyPlanSurveyPreviewStep({
                   </span>
                 </div>
               </>
-            ) : (
+            ) : meta.template_name === "adamawa_osg" ? (
               <>
                 <div className="form-group">
                   <label>R of O Number</label>
@@ -605,6 +628,10 @@ function SurveyPlanSurveyPreviewStep({
                   />
                 </div>
               </>
+            ) : (
+              <div className="form-group full-width">
+                <span className="template-hint">Choose a template above to fill in this plan's details.</span>
+              </div>
             )}
             <div className="form-group scale-group">
               <label>Scale</label>
@@ -674,7 +701,7 @@ function SurveyPlanSurveyPreviewStep({
           <div className="edit-feature-bar">
             <button
               className={`btn-secondary${previewNeedsRender && !rendering ? " needs-render" : ""}`}
-              onClick={refreshCurrentPreview}
+              onClick={() => requireTemplate(refreshCurrentPreview)}
               disabled={rendering}
             >
               {previewNeedsRender && !rendering && <span className="needs-render-dot" aria-hidden="true" />}
@@ -682,7 +709,7 @@ function SurveyPlanSurveyPreviewStep({
             </button>
             <button
               className="btn-outline"
-              onClick={onOpenFeatureCadEditor}
+              onClick={() => requireTemplate(onOpenFeatureCadEditor)}
               onMouseEnter={onPrefetchFeatureEditor}
               onFocus={onPrefetchFeatureEditor}
               disabled={!plotId && (serverSyncing || !isOnline)}
@@ -712,7 +739,7 @@ function SurveyPlanSurveyPreviewStep({
             </svg>
             Back to Coordinates
           </button>
-          <button className="btn-primary" onClick={onContinue}>
+          <button className="btn-primary" onClick={() => requireTemplate(onContinue)}>
             Continue to Export
             <svg viewBox="0 0 20 20" fill="currentColor">
               <path

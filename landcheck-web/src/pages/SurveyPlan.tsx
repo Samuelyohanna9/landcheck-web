@@ -53,7 +53,10 @@ type PlotMeta = {
   certification_statement: string;
   scale_text: string;
   paper_size: string;
-  template_name: "general" | "site_plan" | "adamawa_osg" | "akwa_ibom_osg" | "rivers_osg" | "cross_river_osg" | "fct_abuja_osg";
+  // "" = no template chosen yet - the state a brand-new plot starts in, so template selection is
+  // never silently skipped. See requireTemplate in the preview-step components, which blocks
+  // rendering/CAD-editor/continue actions until this becomes a real value.
+  template_name: "" | "general" | "site_plan" | "adamawa_osg" | "akwa_ibom_osg" | "rivers_osg" | "cross_river_osg" | "fct_abuja_osg";
   adamawa_rof_no: string;
   adamawa_owner_name: string;
   adamawa_authority_title: string;
@@ -306,7 +309,7 @@ const DEFAULT_CERTIFICATION_STATEMENT =
 const SCALE_PRESETS = [250, 500, 1000, 1250, 2000, 2500, 5000, 10000, 12500, 20000, 25000, 50000];
 const MIN_SCALE_DENOMINATOR = 100;
 const MAX_SCALE_DENOMINATOR = 50000;
-const DEFAULT_TEMPLATE_NAME: PlotMeta["template_name"] = "general";
+const DEFAULT_TEMPLATE_NAME: PlotMeta["template_name"] = "";
 const DEFAULT_ADAMAWA_AUTHORITY_TITLE = "SURVEYOR GENERAL";
 const DEFAULT_ADAMAWA_AUTHORITY_DATE = "November, 2024";
 const DEFAULT_ADAMAWA_ORIGIN_TEXT = "ORIGIN:- WGS 84 UTM ZONE 33N";
@@ -4570,7 +4573,11 @@ export default function SurveyPlan() {
       currentStep >= 2 &&
       !showFeatureEditor &&
       isOnline &&
-      hasValidCoords
+      hasValidCoords &&
+      // A draft can be restored sitting on step 2+ without ever having had a template picked
+      // (e.g. the tab was closed right after advancing) - don't auto-render against an unset
+      // template; the preview step's own template selector will prompt for one instead.
+      meta.template_name
     ) {
       void refreshCurrentPreview().catch(() => {});
     }
@@ -4589,6 +4596,7 @@ export default function SurveyPlan() {
     draftHydrated,
     hasValidCoords,
     isOnline,
+    meta.template_name,
     openFeatureCadEditor,
     pendingFeatureEditorRestore,
     refreshCurrentPreview,
