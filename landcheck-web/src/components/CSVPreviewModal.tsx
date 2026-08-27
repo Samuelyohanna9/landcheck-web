@@ -454,7 +454,8 @@ export default function CSVPreviewModal({
           {heightCol !== null && (
             <div className="csv-info height-info">
               <span className="info-icon">🗺️</span>
-              Height/elevation data detected! Topo map visualization will be available.
+              This selected column supplies the topo elevation for every imported row. In the next step,
+              choose which rows form the boundary; all rows with an elevation remain spot-height samples.
             </div>
           )}
 
