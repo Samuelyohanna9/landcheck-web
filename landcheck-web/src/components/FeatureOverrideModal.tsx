@@ -93,6 +93,7 @@ type ManualPoint = {
   lng: number;
   lat: number;
   height?: number;
+  is_boundary?: boolean;
 };
 
 type PlotMeta = {
@@ -965,7 +966,7 @@ export default function FeatureOverrideModal({
   setRoadWidth,
   plotId,
   meta,
-  manualPoints: _manualPoints,
+  manualPoints,
   beaconStyle: _beaconStyle,
   northArrowColor,
   coordinateSystem,
@@ -1003,6 +1004,14 @@ export default function FeatureOverrideModal({
   // Kept separate from `plotCoords` so the viewport's own scale/fit doesn't jump around
   // mid-drag - only the boundary's own rendering reacts to it.
   const boundaryCoords = boundaryDraft ?? plotCoords;
+  const boundaryStationNames = useMemo(
+    () => manualPoints.filter((point) => point.is_boundary !== false).map((point) => String(point.station || "").trim()),
+    [manualPoints]
+  );
+  const stationLabel = useCallback(
+    (index: number) => boundaryStationNames[index] || getStationName(index),
+    [boundaryStationNames]
+  );
 
   const [menu, setMenu] = useState<{ x: number; y: number; visible: boolean }>({ x: 0, y: 0, visible: false });
   const [selectedGeometry, setSelectedGeometry] = useState<any>(null);
@@ -1153,13 +1162,13 @@ export default function FeatureOverrideModal({
       const end = cleanCoords[(i + 1) % cleanCoords.length];
       return {
         key: `tbl-row-${i}`,
-        from: getStationName(i),
-        to: getStationName((i + 1) % cleanCoords.length),
+        from: stationLabel(i),
+        to: stationLabel((i + 1) % cleanCoords.length),
         bearing: getSegmentBearing(start, end),
         length: `${haversineDistanceMeters(start, end).toFixed(2)}m`,
       };
     });
-  }, [boundaryCoords]);
+  }, [boundaryCoords, stationLabel]);
   const plottingPreviewPoints = useMemo(() => {
     if (basemapMode !== "plotting" || activeTool === "select" || !plottingHoverPoint) return plottingPoints;
     return [...plottingPoints, plottingHoverPoint];
@@ -1218,12 +1227,12 @@ export default function FeatureOverrideModal({
         const [x, y] = fromWGS84(coord[0], coord[1], activeSystem);
         return {
           key: `${coord[0]}-${coord[1]}-${index}`,
-          label: editorTarget === "boundary" ? getStationName(index) : `P${index + 1}`,
+          label: editorTarget === "boundary" ? stationLabel(index) : `P${index + 1}`,
           x: formatEditorCoordinateValue(x, activeSystem),
           y: formatEditorCoordinateValue(y, activeSystem),
         };
       });
-  }, [coordinateSystem, editorTarget, selectedGeometry]);
+  }, [coordinateSystem, editorTarget, selectedGeometry, stationLabel]);
   const multiSelectedRecords = useMemo(
     () => objectRecords.filter((record) => multiSelectedKeys.includes(record.key)),
     [multiSelectedKeys, objectRecords]
@@ -3971,12 +3980,12 @@ export default function FeatureOverrideModal({
                           return labels;
                         })()}
 
-                        {/* Beacons and Station Names (A, B, C...) at vertices, constant screen size, draggable in Select mode */}
+                        {/* Beacons and the surveyor-provided station names at vertices, constant screen size, draggable in Select mode */}
                         {layerVisibility.boundary && plottingAnnotationState.showBoundaryStations && boundaryCoords && (() => {
                           const cleanCoords = getOpenRing(boundaryCoords);
                           return cleanCoords.map((coord, index) => {
                             const projected = plottingViewport.project(coord);
-                            const station = getStationName(index);
+                            const station = stationLabel(index);
                             const isBeingDragged = isDraggingBoundary && boundaryDragRef.current === index;
                             return (
                               <g
