@@ -457,8 +457,8 @@ function SurveyPreview({
             {topoSource === "opentopomap"
               ? "Real contour lines from a global satellite elevation model (Copernicus/NASA)"
               : hasHeightData
-              ? "Real contour lines from your uploaded elevation points"
-              : "Upload CSV with height column to use your data"
+              ? "Contours use every imported point with the selected elevation column, including boundary stations and spot heights"
+              : "Import a CSV/Excel file and map its height/elevation column to use your data"
             }
           </span>
           <div className="contour-interval-bar">

@@ -5122,7 +5122,7 @@ export default function SurveyPlan() {
               surveyPreviewUrl={previewUrl}
               orthophotoPreviewUrl={orthophotoUrl}
               topoMapPreviewUrl={topoMapUrl}
-              hasHeightData={hasHeightData}
+              hasHeightData={elevationPointsPayload.length >= 3}
             />
           </Suspense>
         )}
@@ -5310,7 +5310,7 @@ export default function SurveyPlan() {
               surveyPreviewUrl={previewUrl}
               orthophotoPreviewUrl={orthophotoUrl}
               topoMapPreviewUrl={topoMapUrl}
-              hasHeightData={hasHeightData}
+              hasHeightData={elevationPointsPayload.length >= 3}
               subdivisionMapPreviewData={subdivisionMapPreviewData}
               subdivisionSvgPreview={subdivisionSvgPreview}
               onSubdivisionLineCanvasRef={(node) => {
@@ -5646,7 +5646,7 @@ export default function SurveyPlan() {
                 loading={false}
                 orthophotoLoading={orthophotoLoading}
                 topoMapLoading={topoMapLoading}
-                hasHeightData={hasHeightData}
+                hasHeightData={elevationPointsPayload.length >= 3}
                 plotId={plotId}
                 onSaveFeatureOverride={handleSaveOverride}
                 onRoadNamesSaved={handleRoadNamesSaved}
