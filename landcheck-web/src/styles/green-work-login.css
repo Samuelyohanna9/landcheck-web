@@ -1,176 +1,177 @@
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&display=swap");
 
 :root {
-  --work-login-ink: #133126;
+  --work-login-ink: #10261d;
+  --work-login-ink-soft: #4d6459;
   --work-login-green: #1f8f57;
-  --work-login-green-deep: #166f3b;
-  --work-login-line: rgba(19, 88, 45, 0.08);
+  --work-login-green-deep: #0f5c34;
+  --work-login-line: rgba(16, 38, 29, 0.1);
+  --work-login-surface: #ffffff;
+  --work-login-bg: #f4f7f5;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 .work-login-page {
-  position: relative;
-  min-height: 100dvh;
+  height: 100dvh;
+  min-height: 560px;
   overflow: hidden;
   display: grid;
-  place-items: center;
-  padding: 2.5rem 1.25rem;
-  background:
-    radial-gradient(circle at 18% 82%, rgba(240, 228, 146, 0.16), transparent 18%),
-    radial-gradient(circle at 70% 10%, rgba(196, 225, 209, 0.28), transparent 22%),
-    linear-gradient(180deg, #edf6f3 0%, #ebf5f1 100%);
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1fr);
+  background: var(--work-login-bg);
   font-family: "Manrope", sans-serif;
   color: var(--work-login-ink);
 }
 
-.work-login-visual {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: min(68vw, 1220px);
-  pointer-events: none;
-  user-select: none;
+/* ---------- Left brand panel (desktop only) ---------- */
+
+.work-login-panel {
+  position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: clamp(1.75rem, 3vw, 3rem);
+  background: linear-gradient(165deg, #0f5c34 0%, #14733f 52%, #1f8f57 100%);
 }
 
-.work-login-visual::after {
-  content: "";
+.work-login-panel-image {
+  position: absolute;
+  inset: 0;
+  background-image: var(--work-login-panel-image);
+  background-size: cover;
+  background-position: center 30%;
+  opacity: 0.34;
+  mix-blend-mode: luminosity;
+}
+
+.work-login-panel-scrim {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(90deg, rgba(237, 246, 243, 0.08) 0%, rgba(237, 246, 243, 0.24) 48%, rgba(237, 246, 243, 0.96) 76%, rgba(237, 246, 243, 1) 100%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.18));
-  z-index: 2;
+    linear-gradient(180deg, rgba(9, 43, 26, 0.15) 0%, rgba(9, 43, 26, 0.55) 78%, rgba(8, 38, 23, 0.86) 100%),
+    linear-gradient(100deg, rgba(9, 43, 26, 0.35) 0%, transparent 55%);
 }
 
-.work-login-visual-fade {
+.work-login-panel-pattern {
   position: absolute;
   inset: 0;
+  opacity: 0.16;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='1'%3E%3Ccircle cx='0' cy='240' r='40'/%3E%3Ccircle cx='0' cy='240' r='90'/%3E%3Ccircle cx='0' cy='240' r='140'/%3E%3Ccircle cx='0' cy='240' r='190'/%3E%3Ccircle cx='240' cy='0' r='40'/%3E%3Ccircle cx='240' cy='0' r='90'/%3E%3Ccircle cx='240' cy='0' r='140'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 240px 240px;
+}
+
+.work-login-panel-top {
+  position: relative;
   z-index: 1;
-  background:
-    radial-gradient(circle at 24% 28%, rgba(255, 226, 128, 0.18), transparent 18%),
-    radial-gradient(circle at 62% 54%, rgba(155, 206, 176, 0.12), transparent 26%);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
-.work-login-visual-slide {
-  position: absolute;
-  inset: -2% 18% -2% -6%;
-  opacity: 0;
-  animation: work-login-visual-fade 18s infinite ease-in-out;
-  pointer-events: none;
-  user-select: none;
-}
-
-.work-login-visual-slide.is-second {
-  animation-delay: 6s;
-}
-
-.work-login-visual-slide.is-third {
-  animation-delay: 12s;
-}
-
-.work-login-visual-slide img {
-  width: 100%;
-  height: 100%;
+.work-login-panel-top img {
+  width: 34px;
+  height: 34px;
   display: block;
-  filter: blur(6px) saturate(0.78);
-  transform: scale(1.06);
+  border-radius: 9px;
 }
 
-.work-login-visual-slide img.is-cover {
-  object-fit: cover;
+.work-login-panel-top span {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
 }
 
-.work-login-visual-slide img.is-contain {
-  object-fit: contain;
-  padding: 10% 18% 12% 6%;
-  object-position: center left;
-  filter: blur(4px) saturate(0.88) opacity(0.88);
+.work-login-panel-content {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  max-width: 30ch;
 }
 
-@keyframes work-login-visual-fade {
-  0%,
-  10% {
-    opacity: 0;
-  }
-
-  16%,
-  29% {
-    opacity: 0.48;
-  }
-
-  36%,
-  100% {
-    opacity: 0;
-  }
+.work-login-panel-content h2 {
+  margin: 0 0 0.75rem;
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+  font-size: clamp(1.5rem, 1.7vw + 1rem, 2rem);
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  text-wrap: balance;
 }
 
-.work-login-top-badge {
-  position: absolute;
-  top: 32px;
-  left: 32px;
-  z-index: 2;
-  display: inline-flex;
+.work-login-panel-content p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.work-login-panel-tags {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.work-login-panel-tags span {
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Right side: form ---------- */
+
+.work-login-main {
+  position: relative;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.4);
-  color: #1d864b;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 4px 12px rgba(18, 48, 36, 0.02);
+  padding: clamp(1.25rem, 3vh, 2.5rem) clamp(1.25rem, 4vw, 3rem);
+}
+
+.work-login-mobile-header {
+  display: none;
 }
 
 .work-login-shell {
-  position: relative;
-  z-index: 3;
-  width: min(420px, 100%);
-  display: grid;
-  justify-items: center;
-  margin-left: clamp(140px, 14vw, 240px);
-}
-
-.work-login-brandmark {
-  width: 110px;
-  margin-bottom: 16px;
-  filter: drop-shadow(0 8px 16px rgba(18, 48, 36, 0.04));
-}
-
-.work-login-brandmark img {
-  width: 100%;
-  height: auto;
-  display: block;
-  object-fit: contain;
+  width: min(400px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.9rem, 1.8vh, 1.25rem);
 }
 
 .work-login-card {
   width: 100%;
-  border-radius: 28px;
-  border: 1px solid rgba(19, 88, 45, 0.07);
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: 
-    0 10px 30px rgba(18, 48, 36, 0.02),
-    0 30px 60px rgba(18, 48, 36, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(24px) saturate(1.2);
-}
-
-.work-login-card-head {
-  padding: 36px 32px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--work-login-line);
+  background: var(--work-login-surface);
+  box-shadow: 0 1px 2px rgba(16, 38, 29, 0.04), 0 20px 48px -20px rgba(16, 38, 29, 0.16);
+  padding: clamp(1.5rem, 2.6vh, 2rem) clamp(1.5rem, 2.6vw, 2rem);
 }
 
 .work-login-card-kicker {
   display: inline-flex;
-  margin-bottom: 12px;
-  padding: 0.44rem 0.85rem;
+  margin-bottom: 0.85rem;
+  padding: 0.32rem 0.7rem;
   border-radius: 999px;
-  background: rgba(42, 176, 97, 0.08);
-  color: #1d864b;
-  font-size: 0.72rem;
+  background: rgba(31, 143, 87, 0.09);
+  color: var(--work-login-green-deep);
+  font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -178,53 +179,58 @@
 
 .work-login-card h1 {
   margin: 0;
-  color: #133126;
+  color: var(--work-login-ink);
   font-family: "Fraunces", serif;
-  font-size: 2.1rem;
-  font-weight: 800;
-  line-height: 1.08;
-  letter-spacing: -0.04em;
+  font-size: clamp(1.4rem, 1.6vw + 0.9rem, 1.7rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
-.work-login-card-head p {
-  margin: 12px 0 0;
-  color: #556d60;
-  font-size: 0.9rem;
-  line-height: 1.68;
+.work-login-card-sub {
+  margin: 0.5rem 0 0;
+  color: var(--work-login-ink-soft);
+  font-size: 0.82rem;
+  line-height: 1.5;
 }
 
 .work-login-form {
   display: grid;
-  gap: 12px;
-  padding: 0 32px 24px;
+  gap: 0.65rem;
+  margin-top: 1.25rem;
 }
 
 .work-login-form label {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 800;
-  color: #1c5637;
+  color: #235c3e;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  margin-bottom: -0.15rem;
 }
 
 .work-login-form input {
   width: 100%;
-  min-height: 48px;
-  padding: 12px 16px;
-  border: 1px solid rgba(19, 88, 45, 0.12);
-  border-radius: 14px;
-  background: #ffffff;
-  color: #133126;
-  font-size: 0.95rem;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--work-login-line);
+  border-radius: 11px;
+  background: #fbfcfb;
+  color: var(--work-login-ink);
+  font-size: 0.92rem;
   font-family: inherit;
-  box-shadow: 0 2px 6px rgba(18, 48, 36, 0.01);
-  transition: border-color 200ms ease, box-shadow 200ms ease;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.work-login-form input::placeholder {
+  color: #9aa9a1;
 }
 
 .work-login-form input:focus {
   outline: none;
-  border-color: #1f8f57;
-  box-shadow: 0 0 0 4px rgba(31, 143, 86, 0.12);
+  background: #ffffff;
+  border-color: var(--work-login-green);
+  box-shadow: 0 0 0 3px rgba(31, 143, 87, 0.14);
 }
 
 .work-login-password-wrap {
@@ -232,143 +238,167 @@
 }
 
 .work-login-password-wrap input {
-  padding-right: 76px;
+  padding-right: 64px;
 }
 
 .work-login-password-eye {
   position: absolute;
   top: 50%;
-  right: 0.6rem;
+  right: 5px;
   transform: translateY(-50%);
-  border: 1px solid rgba(19, 88, 45, 0.12);
-  border-radius: 10px;
-  background: #fbfdfb;
-  color: #1d864b;
-  font-size: 0.76rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--work-login-green-deep);
+  font-size: 0.72rem;
   font-weight: 800;
-  padding: 0.35rem 0.6rem;
+  padding: 0.4rem 0.55rem;
   cursor: pointer;
-  transition: background 0.18s ease, border-color 0.18s ease;
+  transition: background 0.16s ease;
 }
 
 .work-login-password-eye:hover {
-  background: rgba(42, 176, 97, 0.06);
-  border-color: #1f8f57;
+  background: rgba(31, 143, 87, 0.08);
 }
 
 .work-login-error {
   margin: 0;
-  padding: 10px 14px;
-  border: 1px solid rgba(185, 28, 28, 0.2);
-  background: #fdf2f2;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(185, 28, 28, 0.18);
+  background: #fdf3f3;
   color: #b91c1c;
-  font-size: 0.88rem;
-  font-weight: 700;
-  line-height: 1.45;
-  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: 10px;
 }
 
 .work-login-submit {
-  margin-top: 8px;
-  min-height: 50px;
+  margin-top: 0.35rem;
+  min-height: 46px;
   border: 0;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #1f8f57 0%, #166f3b 100%);
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--work-login-green) 0%, var(--work-login-green-deep) 100%);
   color: #ffffff;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   cursor: pointer;
-  box-shadow: 0 12px 28px rgba(31, 140, 88, 0.2);
-  transition: transform 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
+  box-shadow: 0 10px 22px -6px rgba(15, 92, 52, 0.45);
+  transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .work-login-submit:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 16px 34px rgba(31, 140, 88, 0.3);
+  box-shadow: 0 14px 26px -6px rgba(15, 92, 52, 0.5);
 }
 
 .work-login-submit:disabled {
-  opacity: 0.6;
+  opacity: 0.65;
   cursor: wait;
 }
 
+.work-login-loading {
+  justify-self: center;
+  width: 72px;
+  display: flex;
+  justify-content: center;
+}
+
+.work-login-loading img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
 .work-login-actions {
-  display: grid;
-  gap: 8px;
-  padding: 0 32px 30px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin-top: 1.15rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--work-login-line);
 }
 
 .work-login-actions a {
-  color: #1f8f57;
+  color: var(--work-login-green-deep);
   text-decoration: none;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  line-height: 1.48;
-  transition: color 200ms ease;
+  transition: color 160ms ease;
 }
 
 .work-login-actions a:hover {
-  color: #166f3b;
+  color: var(--work-login-green);
   text-decoration: underline;
 }
 
 .work-login-footer {
-  margin: 16px 0 0;
-  color: #556d60;
-  font-size: 0.78rem;
+  margin: 0;
+  color: #7c8f85;
+  font-size: 0.72rem;
   line-height: 1.5;
   text-align: center;
 }
 
+/* ---------- Responsive ---------- */
+
 @media (max-width: 980px) {
-  .work-login-visual {
-    width: min(74vw, 860px);
+  .work-login-page {
+    grid-template-columns: 1fr;
   }
 
-  .work-login-shell {
-    margin-left: clamp(80px, 10vw, 140px);
+  .work-login-panel {
+    display: none;
+  }
+
+  .work-login-mobile-header {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-bottom: clamp(0.75rem, 2.5vh, 1.5rem);
+  }
+
+  .work-login-mobile-header img {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+
+  .work-login-mobile-header span {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--work-login-green-deep);
+  }
+
+  .work-login-main {
+    justify-content: flex-start;
+    padding-top: clamp(1.25rem, 5vh, 2rem);
   }
 }
 
-@media (max-width: 720px) {
-  .work-login-page {
-    padding: 1.5rem 1rem;
+@media (max-width: 420px) {
+  .work-login-card {
+    border-radius: 16px;
+    padding: 1.35rem 1.25rem;
   }
 
-  .work-login-top-badge {
-    top: 16px;
-    left: 16px;
+  .work-login-form input {
+    font-size: 16px;
   }
+}
 
-  .work-login-visual {
-    width: 100%;
-    opacity: 0.62;
-  }
-
-  .work-login-visual-slide {
-    inset: -2% -8% 30% -10%;
-  }
-
-  .work-login-brandmark {
-    width: 100px;
-    margin-bottom: 8px;
-  }
-
-  .work-login-shell {
-    width: min(420px, 100%);
-    margin-left: 0;
-  }
-
-  .work-login-card-head {
-    padding: 28px 24px 14px;
-  }
-
-  .work-login-form,
-  .work-login-actions {
-    padding-left: 24px;
-    padding-right: 24px;
+@media (max-height: 680px) {
+  .work-login-panel-content p,
+  .work-login-panel-tags {
+    display: none;
   }
 }
