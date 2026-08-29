@@ -1931,6 +1931,36 @@
   margin-top: 0.5rem;
 }
 
+.edit-map-features-button {
+  border-color: var(--survey-copper-500, rgba(43, 159, 95, 0.55));
+}
+
+.edit-map-features-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.42rem;
+  margin: 0.42rem 0 0;
+  color: var(--survey-text-secondary, #b8c5bb);
+  font-size: 0.73rem;
+  line-height: 1.38;
+}
+
+.edit-map-features-hint span {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.02rem;
+  border: 1px solid var(--survey-copper-500, rgba(43, 159, 95, 0.6));
+  border-radius: 50%;
+  color: var(--survey-copper-300, #8fe3ac);
+  font-family: Georgia, serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 /* Spinner */
 .spinner {
   width: 18px;

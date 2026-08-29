@@ -2519,7 +2519,7 @@ export default function SurveyPlan() {
       setCurrentStep(2);
     });
     toast.success(
-      "Draft saved locally. Click \"Render Official Preview\" below to generate and see your survey plan.",
+      "Draft saved locally. Click \"Preview Survey Plan\" below to generate and see your survey plan.",
       { duration: 5000 }
     );
   }, [hasValidCoords, workflowMode]);
@@ -3285,7 +3285,7 @@ export default function SurveyPlan() {
         ? "Render Topo Map"
         : workflowMode === "subdivision"
           ? "Render Parcel Preview"
-          : "Render Official Preview";
+          : "Preview Survey Plan";
 
   // Whether the currently-selected preview tab (survey/orthophoto/topomap) has ever been
   // rendered at all - distinct from hasUnsyncedServerChanges, which only tracks a render going

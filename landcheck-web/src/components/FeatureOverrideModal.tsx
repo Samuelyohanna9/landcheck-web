@@ -3471,7 +3471,7 @@ export default function FeatureOverrideModal({
     <div className="feature-override-modal">
       <div className="feature-override-card cad-editor-card">
         <div className="cad-toolbar">
-          <div className="cad-toolbar-brand" title="Feature CAD Editor — Survey Plan Drafting Workspace">
+          <div className="cad-toolbar-brand" title="Map Feature Editor — add missed features or correct detected ones">
             <CadIcon name="cad" className="cad-toolbar-brand-icon" />
           </div>
 
@@ -3656,7 +3656,7 @@ export default function FeatureOverrideModal({
             <button
               type="button"
               className={`cad-icon-btn${showEditorHelp ? " active" : ""}`}
-              title="Editor help"
+              title="How to edit map features"
               onClick={() => setShowEditorHelp(true)}
             >
               <CadIcon name="info" />
@@ -4775,8 +4775,8 @@ export default function FeatureOverrideModal({
           <div className="cad-help-dialog" onClick={(event) => event.stopPropagation()}>
             <div className="cad-help-head">
               <div>
-                <span>Editor help</span>
-                <h3>Use the drawing tools without covering the plot.</h3>
+                <span>Map feature help</span>
+                <h3>Add missed features or correct detected features on the plot.</h3>
               </div>
               <button type="button" className="cad-icon-btn" onClick={() => setShowEditorHelp(false)} title="Close help">
                 <CadIcon name="close" />

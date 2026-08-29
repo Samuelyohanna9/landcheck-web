@@ -720,12 +720,21 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
               disabled={rendering}
             >
               {props.previewNeedsRender && !rendering && <span className="needs-render-dot" aria-hidden="true" />}
-              {rendering ? "Rendering..." : props.previewActionLabel}
+              {rendering ? "Preparing preview..." : props.previewActionLabel}
             </button>
-            <button className="btn-outline" onClick={() => requireTemplate(props.onOpenFeatureCadEditor)} disabled={props.serverSyncing || !props.isOnline}>
-              Open Feature CAD Editor
+            <button
+              className="btn-outline edit-map-features-button"
+              onClick={() => requireTemplate(props.onOpenFeatureCadEditor)}
+              disabled={props.serverSyncing || !props.isOnline}
+              title="Add roads, buildings, rivers or fences LandCheck missed. You can also move, redraw or remove detected map features."
+            >
+              Edit Map Features
             </button>
           </div>
+          <p className="edit-map-features-hint">
+            <span aria-hidden="true">i</span>
+            Add a missed map feature or correct one LandCheck detected before creating your subdivision.
+          </p>
           {props.previewNeedsRender && !rendering && (
             <p className="needs-render-hint">
               {props.hasRenderedCurrentPreview ? (

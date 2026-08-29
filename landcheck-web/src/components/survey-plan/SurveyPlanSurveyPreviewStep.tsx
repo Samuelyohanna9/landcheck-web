@@ -709,18 +709,23 @@ function SurveyPlanSurveyPreviewStep({
               disabled={rendering}
             >
               {previewNeedsRender && !rendering && <span className="needs-render-dot" aria-hidden="true" />}
-              {rendering ? "Rendering..." : previewActionLabel}
+              {rendering ? "Preparing preview..." : previewActionLabel}
             </button>
             <button
-              className="btn-outline"
+              className="btn-outline edit-map-features-button"
               onClick={() => requireTemplate(onOpenFeatureCadEditor)}
               onMouseEnter={onPrefetchFeatureEditor}
               onFocus={onPrefetchFeatureEditor}
               disabled={!plotId && (serverSyncing || !isOnline)}
+              title="Add roads, buildings, rivers or fences LandCheck missed. You can also move, redraw or remove detected map features."
             >
-              Open Feature CAD Editor
+              Edit Map Features
             </button>
           </div>
+          <p className="edit-map-features-hint">
+            <span aria-hidden="true">i</span>
+            Use this only when you need to add a missed road, building, river or fence, or correct a detected feature.
+          </p>
           {previewNeedsRender && !rendering && (
             <p className="needs-render-hint">
               {hasRenderedCurrentPreview ? (
