@@ -7,7 +7,6 @@
   --work-login-green-deep: #0f5c34;
   --work-login-line: rgba(16, 38, 29, 0.1);
   --work-login-surface: #ffffff;
-  --work-login-bg: #f4f7f5;
 }
 
 * {
@@ -15,152 +14,93 @@
 }
 
 .work-login-page {
+  position: relative;
   height: 100dvh;
   min-height: 560px;
   overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1fr);
-  background: var(--work-login-bg);
+  place-items: center;
+  padding: clamp(1rem, 3vh, 2rem);
   font-family: "Manrope", sans-serif;
   color: var(--work-login-ink);
 }
 
-/* ---------- Left brand panel (desktop only) ---------- */
+/* ---------- Full-bleed brand backdrop ---------- */
 
-.work-login-panel {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: clamp(1.75rem, 3vw, 3rem);
-  background: linear-gradient(165deg, #0f5c34 0%, #14733f 52%, #1f8f57 100%);
-}
-
-.work-login-panel-image {
+.work-login-backdrop {
   position: absolute;
   inset: 0;
-  background-image: var(--work-login-panel-image);
+  z-index: 0;
+  overflow: hidden;
+  background: linear-gradient(165deg, #0f5c34 0%, #14733f 46%, #1f8f57 100%);
+}
+
+.work-login-backdrop-image {
+  position: absolute;
+  inset: 0;
   background-size: cover;
   background-position: center 30%;
-  opacity: 0.34;
+  opacity: 0.3;
   mix-blend-mode: luminosity;
 }
 
-.work-login-panel-scrim {
+.work-login-backdrop-scrim {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(9, 43, 26, 0.15) 0%, rgba(9, 43, 26, 0.55) 78%, rgba(8, 38, 23, 0.86) 100%),
-    linear-gradient(100deg, rgba(9, 43, 26, 0.35) 0%, transparent 55%);
+    radial-gradient(circle at 50% 38%, rgba(9, 43, 26, 0.05), rgba(9, 43, 26, 0.72) 76%),
+    linear-gradient(180deg, rgba(9, 43, 26, 0.25) 0%, rgba(8, 38, 23, 0.55) 100%);
 }
 
-.work-login-panel-pattern {
+.work-login-backdrop-pattern {
   position: absolute;
   inset: 0;
-  opacity: 0.16;
+  opacity: 0.14;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='1'%3E%3Ccircle cx='0' cy='240' r='40'/%3E%3Ccircle cx='0' cy='240' r='90'/%3E%3Ccircle cx='0' cy='240' r='140'/%3E%3Ccircle cx='0' cy='240' r='190'/%3E%3Ccircle cx='240' cy='0' r='40'/%3E%3Ccircle cx='240' cy='0' r='90'/%3E%3Ccircle cx='240' cy='0' r='140'/%3E%3C/g%3E%3C/svg%3E");
   background-size: 240px 240px;
 }
 
-.work-login-panel-top {
+/* ---------- Centered content column ---------- */
+
+.work-login-shell {
   position: relative;
   z-index: 1;
+  width: min(400px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(0.9rem, 1.8vh, 1.35rem);
+}
+
+.work-login-brand {
   display: flex;
   align-items: center;
   gap: 0.6rem;
 }
 
-.work-login-panel-top img {
+.work-login-brand img {
   width: 34px;
   height: 34px;
   display: block;
   border-radius: 9px;
 }
 
-.work-login-panel-top span {
+.work-login-brand span {
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.92);
-}
-
-.work-login-panel-content {
-  position: relative;
-  z-index: 1;
-  margin-top: auto;
-  max-width: 30ch;
-}
-
-.work-login-panel-content h2 {
-  margin: 0 0 0.75rem;
-  font-family: "Fraunces", serif;
-  font-weight: 600;
-  font-size: clamp(1.5rem, 1.7vw + 1rem, 2rem);
-  line-height: 1.18;
-  letter-spacing: -0.01em;
   color: #ffffff;
-  text-wrap: balance;
-}
-
-.work-login-panel-content p {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 0.88rem;
-  line-height: 1.6;
-}
-
-.work-login-panel-tags {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-}
-
-.work-login-panel-tags span {
-  padding: 0.35rem 0.7rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-/* ---------- Right side: form ---------- */
-
-.work-login-main {
-  position: relative;
-  height: 100%;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(1.25rem, 3vh, 2.5rem) clamp(1.25rem, 4vw, 3rem);
-}
-
-.work-login-mobile-header {
-  display: none;
-}
-
-.work-login-shell {
-  width: min(400px, 100%);
-  display: flex;
-  flex-direction: column;
-  gap: clamp(0.9rem, 1.8vh, 1.25rem);
 }
 
 .work-login-card {
   width: 100%;
   border-radius: 20px;
-  border: 1px solid var(--work-login-line);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   background: var(--work-login-surface);
-  box-shadow: 0 1px 2px rgba(16, 38, 29, 0.04), 0 20px 48px -20px rgba(16, 38, 29, 0.16);
+  box-shadow: 0 1px 2px rgba(8, 30, 18, 0.06), 0 30px 60px -18px rgba(6, 26, 16, 0.55);
   padding: clamp(1.5rem, 2.6vh, 2rem) clamp(1.5rem, 2.6vw, 2rem);
 }
 
@@ -341,49 +281,13 @@
 
 .work-login-footer {
   margin: 0;
-  color: #7c8f85;
+  color: rgba(255, 255, 255, 0.75);
   font-size: 0.72rem;
   line-height: 1.5;
   text-align: center;
 }
 
 /* ---------- Responsive ---------- */
-
-@media (max-width: 980px) {
-  .work-login-page {
-    grid-template-columns: 1fr;
-  }
-
-  .work-login-panel {
-    display: none;
-  }
-
-  .work-login-mobile-header {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    margin-bottom: clamp(0.75rem, 2.5vh, 1.5rem);
-  }
-
-  .work-login-mobile-header img {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-  }
-
-  .work-login-mobile-header span {
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--work-login-green-deep);
-  }
-
-  .work-login-main {
-    justify-content: flex-start;
-    padding-top: clamp(1.25rem, 5vh, 2rem);
-  }
-}
 
 @media (max-width: 420px) {
   .work-login-card {
@@ -393,12 +297,5 @@
 
   .work-login-form input {
     font-size: 16px;
-  }
-}
-
-@media (max-height: 680px) {
-  .work-login-panel-content p,
-  .work-login-panel-tags {
-    display: none;
   }
 }
