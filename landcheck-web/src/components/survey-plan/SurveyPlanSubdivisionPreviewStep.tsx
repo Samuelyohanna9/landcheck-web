@@ -715,26 +715,28 @@ function SurveyPlanSubdivisionPreviewStep(props: Props) {
 
           <div className="edit-feature-bar">
             <button
-              className={`btn-secondary${props.previewNeedsRender && !rendering ? " needs-render" : ""}`}
+              className={`btn-primary${props.previewNeedsRender && !rendering ? " needs-render" : ""}`}
               onClick={() => requireTemplate(props.refreshCurrentPreview)}
               disabled={rendering}
             >
               {props.previewNeedsRender && !rendering && <span className="needs-render-dot" aria-hidden="true" />}
               {rendering ? "Preparing preview..." : props.previewActionLabel}
             </button>
-            <button
-              className="btn-outline edit-map-features-button"
-              onClick={() => requireTemplate(props.onOpenFeatureCadEditor)}
-              disabled={props.serverSyncing || !props.isOnline}
-              title="Add roads, buildings, rivers or fences LandCheck missed. You can also move, redraw or remove detected map features."
-            >
-              Edit Map Features
-            </button>
+            <div className="edit-map-features-action">
+              <button
+                className="btn-outline edit-map-features-button"
+                onClick={() => requireTemplate(props.onOpenFeatureCadEditor)}
+                disabled={props.serverSyncing || !props.isOnline}
+                title="Add roads, buildings, rivers or fences LandCheck missed. You can also move, redraw or remove detected map features."
+              >
+                Edit Map Features
+              </button>
+              <p className="edit-map-features-hint">
+                <span aria-hidden="true">i</span>
+                Add a missed feature or correct a detected one.
+              </p>
+            </div>
           </div>
-          <p className="edit-map-features-hint">
-            <span aria-hidden="true">i</span>
-            Add a missed map feature or correct one LandCheck detected before creating your subdivision.
-          </p>
           {props.previewNeedsRender && !rendering && (
             <p className="needs-render-hint">
               {props.hasRenderedCurrentPreview ? (

@@ -704,28 +704,30 @@ function SurveyPlanSurveyPreviewStep({
 
           <div className="edit-feature-bar">
             <button
-              className={`btn-secondary${previewNeedsRender && !rendering ? " needs-render" : ""}`}
+              className={`btn-primary${previewNeedsRender && !rendering ? " needs-render" : ""}`}
               onClick={() => requireTemplate(refreshCurrentPreview)}
               disabled={rendering}
             >
               {previewNeedsRender && !rendering && <span className="needs-render-dot" aria-hidden="true" />}
               {rendering ? "Preparing preview..." : previewActionLabel}
             </button>
-            <button
-              className="btn-outline edit-map-features-button"
-              onClick={() => requireTemplate(onOpenFeatureCadEditor)}
-              onMouseEnter={onPrefetchFeatureEditor}
-              onFocus={onPrefetchFeatureEditor}
-              disabled={!plotId && (serverSyncing || !isOnline)}
-              title="Add roads, buildings, rivers or fences LandCheck missed. You can also move, redraw or remove detected map features."
-            >
-              Edit Map Features
-            </button>
+            <div className="edit-map-features-action">
+              <button
+                className="btn-outline edit-map-features-button"
+                onClick={() => requireTemplate(onOpenFeatureCadEditor)}
+                onMouseEnter={onPrefetchFeatureEditor}
+                onFocus={onPrefetchFeatureEditor}
+                disabled={!plotId && (serverSyncing || !isOnline)}
+                title="Add roads, buildings, rivers or fences LandCheck missed. You can also move, redraw or remove detected map features."
+              >
+                Edit Map Features
+              </button>
+              <p className="edit-map-features-hint">
+                <span aria-hidden="true">i</span>
+                Add a missed feature or correct a detected one.
+              </p>
+            </div>
           </div>
-          <p className="edit-map-features-hint">
-            <span aria-hidden="true">i</span>
-            Use this only when you need to add a missed road, building, river or fence, or correct a detected feature.
-          </p>
           {previewNeedsRender && !rendering && (
             <p className="needs-render-hint">
               {hasRenderedCurrentPreview ? (
