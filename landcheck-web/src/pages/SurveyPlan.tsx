@@ -244,6 +244,7 @@ type ScaleRecommendation = {
   scale_text: string;
   scale_denominator: number;
   fitted_scale_denominator: number;
+  deferred_dimension_count: number;
   template_name: string;
   reason: string;
 };
@@ -5729,8 +5730,13 @@ export default function SurveyPlan() {
               <strong> {scaleRecommendation.scale_text}</strong>.
             </p>
             <p className="scale-recommendation-detail">
-              The calculated fit is 1:{scaleRecommendation.fitted_scale_denominator.toLocaleString()}; the recommendation rounds upward to preserve the full parcel.
+              The calculated fit is 1:{scaleRecommendation.fitted_scale_denominator.toLocaleString()}; it includes clearance for bearing and distance labels before rounding upward to the standard scale.
             </p>
+            {scaleRecommendation.deferred_dimension_count > 0 && (
+              <p className="scale-recommendation-detail">
+                {scaleRecommendation.deferred_dimension_count} exceptionally close boundary {scaleRecommendation.deferred_dimension_count === 1 ? "segment will" : "segments will"} be shown in the boundary schedule/detail sheet to keep the main plan readable.
+              </p>
+            )}
             <div className="scale-recommendation-actions">
               <button type="button" className="btn-outline" onClick={() => setScaleRecommendation(null)}>
                 Cancel and choose manually
