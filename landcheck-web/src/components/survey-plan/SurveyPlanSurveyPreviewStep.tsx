@@ -736,10 +736,15 @@ function SurveyPlanSurveyPreviewStep({
             <button
               className="btn-outline qc-check-button"
               onClick={() => requireTemplate(runQcCheck)}
-              disabled={qcChecking || (serverSyncing && !plotId)}
-              title="Deterministic geometry checks (closure, area, duplicate coordinates, unusually long segments) - no AI call, instant results."
+              disabled={qcChecking || !hasRenderedCurrentPreview || (serverSyncing && !plotId)}
+              title={
+                !hasRenderedCurrentPreview
+                  ? `Render a preview first (click ${previewActionLabel}) before running the quality check.`
+                  : "Deterministic geometry checks (closure, area, duplicate coordinates, unusually long segments) - no AI call, instant results."
+              }
             >
-              {qcChecking ? "Checking..." : "✨ AI CHECK"}
+              <img src="/LandCheck_Survey_AI_Symbol.svg" alt="" className="qc-check-icon-img" aria-hidden="true" />
+              {qcChecking ? "Checking..." : "AI CHECK"}
             </button>
             <div className="edit-map-features-action">
               <button
@@ -790,7 +795,7 @@ function SurveyPlanSurveyPreviewStep({
                 <div className="qc-check-overall">
                   {qcResult.overall_status === "ok"
                     ? "Overall: no issues found."
-                    : `Overall: ${qcResult.review_count} item${qcResult.review_count === 1 ? "" : "s"} require review.`}
+                    : `Overall: ${qcResult.review_count} item${qcResult.review_count === 1 ? "" : "s"} ${qcResult.review_count === 1 ? "requires" : "require"} review.`}
                 </div>
               </div>
             )}

@@ -137,11 +137,12 @@ export default function GreenWorkExistingTreeIntakePanel({
               onClick={() => void generateCsrImpactNarrative()}
               disabled={csrNarrativeGenerating || csrNarrativeQuota?.remaining === 0}
             >
+              <img src="/LC_Green_AI_Symbol.svg" alt="" className="green-work-ai-icon" aria-hidden="true" />
               {csrNarrativeGenerating
                 ? "Drafting..."
                 : csrNarrativeQuota?.remaining === 0
                   ? "AI narratives used up for today"
-                  : "✨ Generate AI Draft"}
+                  : "Generate AI Draft"}
             </button>
           </div>
         </div>

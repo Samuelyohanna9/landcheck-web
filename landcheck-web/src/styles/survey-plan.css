@@ -3277,6 +3277,11 @@ select.field-error {
   flex: 0 0 auto;
 }
 
+.qc-check-icon-img {
+  width: 16px;
+  height: 16px;
+}
+
 .qc-check-panel {
   margin-top: 0.75rem;
   display: flex;

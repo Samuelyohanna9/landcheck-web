@@ -3617,6 +3617,13 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.green-work-ai-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+  margin-right: 0.3rem;
+}
+
 .work-actions button.green-work-verra-disclosure-btn {
   background: linear-gradient(180deg, #b38a44, #8a6a2f);
 }
