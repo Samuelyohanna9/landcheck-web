@@ -446,6 +446,61 @@
   }
 }
 
+/* Full-viewport (not container-scoped, unlike .coord-upload-overlay above) - the AI read genuinely
+   takes several real seconds against a live API, so it gets a more prominent, unmissable treatment
+   than the near-instant CSV parse. */
+.coord-ai-fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(6, 12, 10, 0.9);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: coord-ai-overlay-fade-in 0.2s ease;
+}
+
+.coord-ai-fullscreen-card {
+  width: min(360px, 92vw);
+  padding: 2rem 1.75rem 1.75rem;
+  border-radius: 20px;
+  background: linear-gradient(165deg, #0f2a1c 0%, #081712 100%);
+  border: 1px solid rgba(139, 92, 246, 0.28);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  text-align: center;
+}
+
+.coord-ai-fullscreen-title {
+  margin: 0.3rem 0 0;
+  color: var(--survey-text-primary, #f7f8f3);
+  font-family: var(--survey-font-body, inherit);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.coord-ai-fullscreen-subtitle {
+  margin: 0;
+  color: var(--survey-text-secondary, #9aaba2);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+@keyframes coord-ai-overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @media (max-width: 640px) {
   .coord-system-selector,
   .coord-upload-section,
