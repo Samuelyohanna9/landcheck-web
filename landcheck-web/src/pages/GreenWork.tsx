@@ -3950,6 +3950,9 @@ export default function GreenWork() {
   const [selectedMaturitySpecies, setSelectedMaturitySpecies] = useState("");
   const [selectedMaturityYears, setSelectedMaturityYears] = useState("3");
   const [treePhotoUploading, setTreePhotoUploading] = useState(false);
+  const [treeHealthChecking, setTreeHealthChecking] = useState(false);
+  const [treeHealthResult, setTreeHealthResult] = useState<any | null>(null);
+  const [treeHealthQuota, setTreeHealthQuota] = useState<{ used: number; remaining: number } | null>(null);
   const [drawerFrame, setDrawerFrame] = useState<DrawerFrame | null>(null);
   const [reviewQueue, setReviewQueue] = useState<ReviewQueueTask[]>([]);
   const [includePhotosInWorkPdf, setIncludePhotosInWorkPdf] = useState(false);
@@ -8240,6 +8243,34 @@ export default function GreenWork() {
     });
     const url = String(res.data?.url || "");
     if (!url) throw new Error("Upload URL missing");
+
+    // Advisory only - never blocks the upload, which has already succeeded by this point (see
+    // app/utils/green_photo_evidence.py's module docstring for why these are flags for a human to
+    // glance at, not an auto-reject). Centralized here rather than in each call site so every
+    // tree/task photo upload gets the same warning, however many places in this file end up
+    // calling uploadGreenPhoto.
+    const checks = res.data?.photo_checks;
+    if (checks?.duplicate) {
+      const distance = checks.duplicate.distance;
+      toast(
+        `This looks similar to a photo already used elsewhere in this project (match strength: ${distance <= 2 ? "very close" : "close"}). Double-check this is a genuinely new photo.`,
+        { icon: "🔁", duration: 8000 },
+      );
+    }
+    if (checks?.location_mismatch) {
+      const distanceKm = typeof checks.distance_from_tree_m === "number" ? (checks.distance_from_tree_m / 1000).toFixed(1) : null;
+      toast(
+        `This photo's own location data is ${distanceKm ? `~${distanceKm}km` : "far"} from where this tree is recorded. Make sure this is the right site.`,
+        { icon: "📍", duration: 8000 },
+      );
+    }
+    if (checks?.photo_not_recent) {
+      toast(
+        `This photo appears to be ${checks.photo_age_days} day${checks.photo_age_days === 1 ? "" : "s"} old, not freshly taken. Evidence photos should be current.`,
+        { icon: "🕒", duration: 8000 },
+      );
+    }
+
     return url;
   };
 
@@ -8259,6 +8290,46 @@ export default function GreenWork() {
       toast.error(error?.response?.data?.detail || "Failed to upload organization logo", { id: loadingId });
     } finally {
       setOrgLogoUploading(false);
+    }
+  };
+
+  useEffect(() => {
+    const treeId = inspectedTree?.id;
+    setTreeHealthResult(null);
+    if (!treeId) return;
+    let cancelled = false;
+    api
+      .get(`/green/trees/${treeId}/health-check`)
+      .then((res) => {
+        if (!cancelled) setTreeHealthResult(res.data?.latest || null);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [inspectedTree?.id]);
+
+  const runTreeHealthCheck = async () => {
+    if (!inspectedTree) return;
+    setTreeHealthChecking(true);
+    const loadingId = toast.loading("AI is reading tree health from the photo...");
+    try {
+      const res = await api.post(`/green/trees/${inspectedTree.id}/health-check`, {});
+      setTreeHealthResult(res.data);
+      setTreeHealthQuota({ used: res.data?.checks_used_today ?? 0, remaining: res.data?.checks_remaining_today ?? 0 });
+      toast.success("Tree health check complete", { id: loadingId });
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        toast.error(error?.response?.data?.detail || "You've used today's AI tree health checks - resets tomorrow.", {
+          id: loadingId,
+          duration: 8000,
+        });
+        setTreeHealthQuota({ used: 2, remaining: 0 });
+      } else {
+        toast.error(error?.response?.data?.detail || "Failed to run AI tree health check", { id: loadingId });
+      }
+    } finally {
+      setTreeHealthChecking(false);
     }
   };
 
@@ -9857,7 +9928,7 @@ export default function GreenWork() {
           ]
       : [
           { form: "overview", title: actionCsrMode ? "CSR Overview" : "Overview", note: actionCsrMode ? "Programme progress + implementation status" : "Progress summary" },
-          { form: "map_view", title: "Map View", note: `${actionWorkflowLabels.entityPlural} + draw polygons` },
+          { form: "map_view", title: "Map + AI Tree Health", note: `${actionWorkflowLabels.entityPlural} + draw polygons + AI health checks` },
           { form: "remote_monitoring", title: actionCsrMode ? "Impact Monitoring" : "Remote Monitoring", note: actionCsrMode ? "Satellite monitoring +" : "Satellite Monitoring +", isNew: true },
           { form: "live_table", title: actionCsrMode ? "Implementation Live" : "Live Maintenance", note: actionCsrMode ? "Planting + maintenance + verification" : "New planting + existing tree" },
           ...(publicSponsorshipProject
@@ -9888,7 +9959,7 @@ export default function GreenWork() {
   const displayedProjectActions: Array<{ form: WorkForm; title: string; note: string; isNew?: boolean }> = csrPartnerDashboardMode
     ? [
         { form: "overview", title: "CSR Overview", note: "Programme progress + implementation status" },
-        { form: "map_view", title: "Map View", note: "Trees + verified field locations" },
+        { form: "map_view", title: "Map + AI Tree Health", note: "Trees + verified field locations + AI health checks" },
         { form: "remote_monitoring", title: "Impact Monitoring", note: "Satellite monitoring +", isNew: true },
         { form: "live_table", title: "Implementation Live", note: "Planting + maintenance + verification" },
         { form: "existing_tree_intake", title: "Programme Records", note: "Verified implementation records" },
@@ -11422,7 +11493,7 @@ export default function GreenWork() {
               type="button"
               onClick={() => openForm("map_view")}
             >
-              Map View
+              Map + AI Tree Health
             </button>
             {!fieldWorkflowMode ? (
               <>
@@ -17978,6 +18049,58 @@ export default function GreenWork() {
                   />
                 </label>
               </div>
+              {!agricWorkflowMode && !reliefWorkflowMode && (
+                <div className="green-work-tree-health">
+                  <button
+                    type="button"
+                    className="green-work-tree-health-btn"
+                    disabled={treeHealthChecking || !inspectedTree.photo_url || treeHealthQuota?.remaining === 0}
+                    onClick={() => void runTreeHealthCheck()}
+                  >
+                    {treeHealthChecking
+                      ? "AI is reading tree health..."
+                      : treeHealthQuota?.remaining === 0
+                        ? "AI tree health checks used up for today"
+                        : "🌿 Find Tree Health with AI"}
+                  </button>
+                  {!inspectedTree.photo_url && <p className="green-work-note">Upload a tree photo first to run an AI health check.</p>}
+                  {treeHealthResult && (
+                    <div className={`green-work-tree-health-result health-class--${String(treeHealthResult.health_class || "unknown")}`}>
+                      <div className="green-work-tree-health-score-row">
+                        <span className="green-work-tree-health-score">{Math.round(Number(treeHealthResult.health_score ?? 0))}%</span>
+                        <span className="green-work-tree-health-class">
+                          {String(treeHealthResult.health_class || "unknown").replace(/^./, (c: string) => c.toUpperCase())}
+                        </span>
+                      </div>
+                      {Number.isFinite(Number(treeHealthResult.crown_dieback_percent)) && (
+                        <p className="green-work-tree-health-detail">Estimated crown dieback: {treeHealthResult.crown_dieback_percent}%</p>
+                      )}
+                      {treeHealthResult.leaf_color_assessment && (
+                        <p className="green-work-tree-health-detail">Foliage: {treeHealthResult.leaf_color_assessment}</p>
+                      )}
+                      {treeHealthResult.signs_of_pests_or_disease && (
+                        <p className="green-work-tree-health-detail is-warn">
+                          ⚠ Possible pest/disease signs{treeHealthResult.pest_or_disease_notes ? `: ${treeHealthResult.pest_or_disease_notes}` : ""}
+                        </p>
+                      )}
+                      {Array.isArray(treeHealthResult.structural_concerns) && treeHealthResult.structural_concerns.length > 0 && (
+                        <p className="green-work-tree-health-detail is-warn">⚠ {treeHealthResult.structural_concerns.join("; ")}</p>
+                      )}
+                      {treeHealthResult.summary && <p className="green-work-tree-health-summary">{treeHealthResult.summary}</p>}
+                      {treeHealthResult.recommended_action && (
+                        <p className="green-work-tree-health-action">Recommended: {treeHealthResult.recommended_action}</p>
+                      )}
+                      {treeHealthResult.photo_quality_note && (
+                        <p className="green-work-tree-health-detail is-muted">Note: {treeHealthResult.photo_quality_note}</p>
+                      )}
+                      <p className="green-work-tree-health-meta">
+                        AI visual screening only, not a certified arborist diagnosis - modelled on USDA FIA crown-dieback rating.
+                        {treeHealthResult.created_at ? ` Checked ${formatDateTimeLabel(treeHealthResult.created_at)}.` : ""}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
               <p className="green-work-tree-maintenance-count">
                 {activeWorkflowProfile === "agric" ? "Field Visit Records" : "Maintenance Records"}: {inspectedTree.maintenance.total}
               </p>

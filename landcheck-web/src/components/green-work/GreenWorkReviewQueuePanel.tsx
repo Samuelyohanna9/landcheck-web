@@ -246,6 +246,35 @@ export default function GreenWorkReviewQueuePanel({
               <div className="staff-row-meta">
                 Evidence: {evidencePhotos.length} photo{evidencePhotos.length === 1 ? "" : "s"} / {task.notes ? "notes" : "no-notes"}
               </div>
+              {task.photo_flags &&
+                (task.photo_flags.any_duplicate || task.photo_flags.any_location_mismatch || task.photo_flags.any_not_recent) && (
+                  <div className="green-work-review-flags">
+                    {task.photo_flags.any_duplicate && (
+                      <span className="green-work-review-flag green-work-review-flag--warn">
+                        🔁 Possible duplicate photo
+                        {Number.isFinite(Number(task.photo_flags.best_duplicate_distance))
+                          ? ` (match strength ${task.photo_flags.best_duplicate_distance})`
+                          : ""}
+                      </span>
+                    )}
+                    {task.photo_flags.any_location_mismatch && (
+                      <span className="green-work-review-flag green-work-review-flag--warn">
+                        📍 Photo location doesn't match record
+                        {Number.isFinite(Number(task.photo_flags.max_mismatch_distance_m))
+                          ? ` (${formatDistanceMeters(task.photo_flags.max_mismatch_distance_m)} away)`
+                          : ""}
+                      </span>
+                    )}
+                    {task.photo_flags.any_not_recent && (
+                      <span className="green-work-review-flag green-work-review-flag--info">
+                        🕒 Photo not recently taken
+                        {Number.isFinite(Number(task.photo_flags.max_photo_age_days))
+                          ? ` (${task.photo_flags.max_photo_age_days}d old)`
+                          : ""}
+                      </span>
+                    )}
+                  </div>
+                )}
               {evidencePhotos.length > 0 && (
                 <div className="green-work-review-photo">
                   {evidencePhotos.map((photoUrl, photoIndex) => (
