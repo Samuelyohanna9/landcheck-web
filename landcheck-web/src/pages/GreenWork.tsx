@@ -17610,6 +17610,11 @@ export default function GreenWork() {
                 formatTreeHeight={formatTreeHeight}
                 formatExistingTreeCo2Label={formatExistingTreeCo2Label}
                 backendUrl={BACKEND_URL}
+                csrImpactNarrative={csrImpactNarrative}
+                setCsrImpactNarrative={setCsrImpactNarrative}
+                csrNarrativeGenerating={csrNarrativeGenerating}
+                csrNarrativeQuota={csrNarrativeQuota}
+                generateCsrImpactNarrative={generateCsrImpactNarrative}
               />
             </Suspense>
           )}

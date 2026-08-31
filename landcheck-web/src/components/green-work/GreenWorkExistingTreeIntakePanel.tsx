@@ -39,6 +39,11 @@ type GreenWorkExistingTreeIntakePanelProps = {
   formatTreeHeight: (value: any) => string;
   formatExistingTreeCo2Label: (metric?: any) => string;
   backendUrl: string;
+  csrImpactNarrative: string;
+  setCsrImpactNarrative: (value: string) => void;
+  csrNarrativeGenerating: boolean;
+  csrNarrativeQuota: { used: number; remaining: number } | null;
+  generateCsrImpactNarrative: () => void | Promise<void>;
 };
 
 export default function GreenWorkExistingTreeIntakePanel({
@@ -79,6 +84,11 @@ export default function GreenWorkExistingTreeIntakePanel({
   formatTreeHeight,
   formatExistingTreeCo2Label,
   backendUrl,
+  csrImpactNarrative,
+  setCsrImpactNarrative,
+  csrNarrativeGenerating,
+  csrNarrativeQuota,
+  generateCsrImpactNarrative,
 }: GreenWorkExistingTreeIntakePanelProps) {
   return (
     <div className="green-work-card">
@@ -118,6 +128,36 @@ export default function GreenWorkExistingTreeIntakePanel({
         </div>
       </div>
       <p className="green-work-chart-context">{contextCopy}</p>
+      <div className="green-work-ai-narrative">
+        <div className="green-work-row">
+          <h4>AI Impact Narrative (Report Summary)</h4>
+          <div className="work-actions">
+            <button
+              type="button"
+              onClick={() => void generateCsrImpactNarrative()}
+              disabled={csrNarrativeGenerating || csrNarrativeQuota?.remaining === 0}
+            >
+              {csrNarrativeGenerating
+                ? "Drafting..."
+                : csrNarrativeQuota?.remaining === 0
+                  ? "AI narratives used up for today"
+                  : "✨ Generate AI Draft"}
+            </button>
+          </div>
+        </div>
+        <p className="green-work-chart-context">
+          AI drafts this summary paragraph from this project's own verified metrics - review and edit it before
+          exporting. It replaces the default summary text in the exported PDF and is labelled "AI-drafted" there.
+          Leave it blank to keep the standard summary instead.
+        </p>
+        <textarea
+          className="green-work-ai-narrative-textarea"
+          rows={4}
+          placeholder="Click 'Generate AI Draft' to write a report summary paragraph, or type your own here."
+          value={csrImpactNarrative}
+          onChange={(event) => setCsrImpactNarrative(event.target.value)}
+        />
+      </div>
       <div className="green-work-live-summary">
         <span className="green-work-live-pill neutral">Rows: {existingTreeIntakeRows.length}</span>
         {fieldWorkflowMode ? (

@@ -3273,6 +3273,114 @@ select.field-error {
   font-weight: 700;
 }
 
+.qc-check-button {
+  flex: 0 0 auto;
+}
+
+.qc-check-panel {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.qc-check-panel-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.qc-check-panel-input label {
+  font-size: 0.72rem;
+  color: var(--survey-text-secondary, #a8b3a3);
+}
+
+.qc-check-panel-input input {
+  max-width: 220px;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--survey-ink-border, rgba(214, 223, 210, 0.16));
+  background: rgba(247, 245, 238, 0.04);
+  color: var(--survey-text-primary, #edf1e9);
+  font-size: 0.82rem;
+}
+
+.qc-check-result {
+  border: 1px solid var(--survey-ink-border, rgba(214, 223, 210, 0.16));
+  border-left-width: 3px;
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  background: rgba(247, 245, 238, 0.03);
+}
+
+.qc-check-result--ok {
+  border-left-color: #22c55e;
+}
+
+.qc-check-result--review {
+  border-left-color: #f59e0b;
+}
+
+.qc-check-result-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.4rem;
+  color: var(--survey-text-primary, #edf1e9);
+  font-size: 0.86rem;
+}
+
+.qc-check-stale-hint {
+  font-size: 0.7rem;
+  color: #f59e0b;
+}
+
+.qc-check-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.qc-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--survey-text-secondary, #c7d0c3);
+}
+
+.qc-check-icon {
+  flex-shrink: 0;
+  width: 1.1em;
+}
+
+.qc-check-item--ok .qc-check-icon {
+  color: #22c55e;
+}
+
+.qc-check-item--warning .qc-check-icon {
+  color: #f59e0b;
+}
+
+.qc-check-item--error .qc-check-icon {
+  color: #ef4444;
+}
+
+.qc-check-overall {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--survey-ink-border, rgba(214, 223, 210, 0.12));
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--survey-text-primary, #edf1e9);
+}
+
 .preview-stale-banner {
   display: flex;
   align-items: flex-start;
