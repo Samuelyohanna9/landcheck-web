@@ -227,6 +227,11 @@ type ManualPoint = {
   lat: number;
   height?: number;
   is_boundary?: boolean;
+  // AI Field-to-Finish classification (see CoordinateInput.tsx's confirmFieldImport) - optional,
+  // only ever set for points imported through that flow. Threaded through elevationPointsPayload/
+  // surveyInputCoordinatesPayload below so the backend topo renderer can draw a distinct symbol.
+  category?: string;
+  feature_code?: string | null;
 };
 
 type PreviewType = "survey" | "orthophoto" | "topomap";
@@ -761,7 +766,6 @@ export default function SurveyPlan() {
   const [features, setFeatures] = useState<any>(null);
   const [qcChecking, setQcChecking] = useState(false);
   const [qcResult, setQcResult] = useState<QcCheckResult | null>(null);
-  const [qcStatedArea, setQcStatedArea] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [scaleRecommendation, setScaleRecommendation] = useState<ScaleRecommendation | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -1392,10 +1396,10 @@ export default function SurveyPlan() {
     if (withHeight.length < 3) return [];
     return withHeight.map((p) => {
       if (effectiveCoordinateSystem === "wgs84") {
-        return { lng: Number(p.lng), lat: Number(p.lat), elevation_m: Number(p.height) };
+        return { lng: Number(p.lng), lat: Number(p.lat), elevation_m: Number(p.height), category: p.category || "" };
       }
       const [lng, lat] = toWGS84(Number(p.lng), Number(p.lat), effectiveCoordinateSystem);
-      return { lng, lat, elevation_m: Number(p.height) };
+      return { lng, lat, elevation_m: Number(p.height), category: p.category || "" };
     });
   }, [manualPoints, effectiveCoordinateSystem]);
 
@@ -1411,6 +1415,8 @@ export default function SurveyPlan() {
           ? Number(p.height)
           : null,
       is_boundary: p.is_boundary !== false,
+      category: p.category || null,
+      feature_code: p.feature_code || null,
     }));
   }, [manualPoints]);
 
@@ -2823,12 +2829,7 @@ export default function SurveyPlan() {
     setQcChecking(true);
     try {
       const activePlotId = await ensureServerPlot("Syncing draft before AI quality check...");
-      const statedAreaValue = qcStatedArea.trim() ? Number(qcStatedArea) : null;
-      const params: Record<string, string> = {};
-      if (statedAreaValue && Number.isFinite(statedAreaValue) && statedAreaValue > 0) {
-        params.stated_area_m2 = String(statedAreaValue);
-      }
-      const res = await api.get<QcCheckResult>(`/plots/${activePlotId}/qc-check`, { params });
+      const res = await api.get<QcCheckResult>(`/plots/${activePlotId}/qc-check`);
       setQcResult(res.data);
     } catch (err) {
       const message = await extractApiErrorMessage(err, "Failed to run the AI quality check");
@@ -2836,7 +2837,7 @@ export default function SurveyPlan() {
     } finally {
       setQcChecking(false);
     }
-  }, [ensureServerPlot, qcStatedArea]);
+  }, [ensureServerPlot]);
 
   const acceptScaleRecommendation = useCallback(() => {
     if (!scaleRecommendation) return;
@@ -5105,8 +5106,6 @@ export default function SurveyPlan() {
               runQcCheck={runQcCheck}
               qcChecking={qcChecking}
               qcResult={qcResult}
-              qcStatedArea={qcStatedArea}
-              setQcStatedArea={setQcStatedArea}
               onSaveFeatureOverride={handleSaveOverride}
               onRoadNamesSaved={handleRoadNamesSaved}
               isOnline={isOnline}

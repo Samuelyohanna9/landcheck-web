@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">LC Green AI symbol</title>
+  <desc id="desc">A monitored tree leaf with geospatial ring, health pulse and artificial intelligence nodes.</desc>
+  <defs>
+    <linearGradient id="leaf" x1="154" y1="104" x2="356" y2="409" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A3E635"/><stop offset=".5" stop-color="#16A34A"/><stop offset="1" stop-color="#047857"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="70" y1="80" x2="439" y2="439" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22D3EE"/><stop offset="1" stop-color="#84CC16"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <circle cx="256" cy="256" r="188" fill="none" stroke="#064E3B" stroke-width="18"/>
+  <circle cx="256" cy="256" r="188" fill="none" stroke="url(#ring)" stroke-width="8" stroke-dasharray="70 20" stroke-linecap="round"/>
+  <path d="M257 414C120 345 121 190 275 91c92 72 139 210 35 299-17 14-35 22-53 24Z" fill="url(#leaf)" stroke="#064E3B" stroke-width="14" stroke-linejoin="round"/>
+  <path d="M257 415c-1-112 6-201 41-276M260 335l-70-71M269 276l91-65M278 222l-47-57" fill="none" stroke="#D9F99D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="none" stroke="#67E8F9" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M190 264h31l15-22 25 57 19-36h32"/>
+    <path d="M148 164c25-33 60-56 100-66M364 354c-23 29-55 50-91 60"/>
+  </g>
+  <g fill="#22D3EE" stroke="#ECFEFF" stroke-width="5" filter="url(#glow)">
+    <circle cx="190" cy="264" r="11"/><circle cx="312" cy="263" r="11"/><circle cx="231" cy="165" r="10"/>
+  </g>
+  <g fill="#A3E635" stroke="#064E3B" stroke-width="8">
+    <circle cx="117" cy="163" r="17"/><circle cx="397" cy="176" r="17"/><circle cx="373" cy="377" r="17"/>
+  </g>
+  <path d="M372 92v44M350 114h44" stroke="#FBBF24" stroke-width="11" stroke-linecap="round"/>
+  <path d="m393 126 11 11 23-27" fill="none" stroke="#FDE047" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
