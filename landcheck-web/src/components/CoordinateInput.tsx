@@ -4,12 +4,15 @@ import { api } from "../api/client";
 import "../styles/coordinate-input.css";
 import CSVPreviewModal from "./CSVPreviewModal";
 import CoordinateSystemSelect from "./CoordinateSystemSelect";
+import SurveyLoadingAnimation from "./SurveyLoadingAnimation";
 import {
   COORDINATE_SYSTEM_GROUPS,
   getCoordinateSystemEpsgLabel,
   isProjectedCoordinateSystem,
   WGS84_NIGERIA_METERS,
 } from "../utils/coordinateConverter";
+
+const AI_QUOTA_EXHAUSTED_KEY = "plan-reader-quota-exhausted-date";
 
 type PlanReaderCheck = { severity: "ok" | "warning" | "error"; code: string; message: string };
 type PlanReaderExtracted = {
@@ -115,6 +118,16 @@ function CoordinateInput({
   const [rawFileData, setRawFileData] = useState<(string | number)[][]>([]);
   const [uploadParsing, setUploadParsing] = useState(false);
   const [aiReading, setAiReading] = useState(false);
+  // Persisted (not just a toast) so a page refresh doesn't make the button look available again
+  // and let the surveyor waste another attempt on a request that's just going to 429 anyway - a
+  // soft, client-side echo of the server's real daily quota, keyed to today's date.
+  const [aiQuotaExhausted, setAiQuotaExhausted] = useState(() => {
+    try {
+      return window.localStorage.getItem(AI_QUOTA_EXHAUSTED_KEY) === new Date().toDateString();
+    } catch {
+      return false;
+    }
+  });
   const isProjected = isProjectedCoordinateSystem(coordinateSystem);
   const xLabel = isProjected ? "Easting (m)" : "Longitude";
   const yLabel = isProjected ? "Northing (m)" : "Latitude";
@@ -212,6 +225,16 @@ function CoordinateInput({
   // rawFileData/showPreviewModal state below) instead of a second, separate review UI - the AI's
   // job is only to produce the same [header, ...rows] shape a parsed spreadsheet would, so the
   // surveyor always corrects/confirms coordinates through one already-tested screen either way.
+  const markQuotaExhausted = () => {
+    setAiQuotaExhausted(true);
+    try {
+      window.localStorage.setItem(AI_QUOTA_EXHAUSTED_KEY, new Date().toDateString());
+    } catch {
+      // Best-effort only - a private/incognito window or blocked storage just means this specific
+      // reminder won't survive a refresh; the server's own quota still enforces the real limit.
+    }
+  };
+
   const handleAiPlanUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     const resetInput = () => {
@@ -258,19 +281,34 @@ function CoordinateInput({
       if (extracted.surveyor_name) metadataFields.surveyor_name = extracted.surveyor_name;
       if (Object.keys(metadataFields).length > 0) onImportedMetadata?.(metadataFields);
 
+      const remaining = res.data?.readings_remaining_today;
+      const remainingSuffix = typeof remaining === "number" ? ` (${remaining} reading${remaining === 1 ? "" : "s"} left today)` : "";
+      // Lock the button proactively the moment the 3rd read lands, rather than waiting for a
+      // pointless 4th attempt to discover it - same "tell them clearly, don't make them find out
+      // the hard way" goal as the 429 handling below.
+      if (remaining === 0) markQuotaExhausted();
+
       const problems = checks.filter((c) => c.severity !== "ok");
       if (problems.length > 0) {
         toast.error(
-          `AI read ${beacons.length} beacon(s) with ${problems.length} thing${problems.length === 1 ? "" : "s"} to review: ${problems[0].message}`,
+          `AI read ${beacons.length} beacon(s) with ${problems.length} thing${problems.length === 1 ? "" : "s"} to review: ${problems[0].message}${remainingSuffix}`,
           { duration: 7000 },
         );
         problems.slice(1, 4).forEach((c) => toast(c.message, { icon: "⚠️", duration: 7000 }));
       } else {
-        toast.success(`AI read ${beacons.length} beacon(s) - review and confirm below.`);
+        toast.success(`AI read ${beacons.length} beacon(s) - review and confirm below.${remainingSuffix}`);
       }
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      toast.error(typeof detail === "string" ? detail : "Couldn't read this plan. Try a clearer photo or scan.");
+      if (err?.response?.status === 429) {
+        markQuotaExhausted();
+        toast.error(
+          typeof detail === "string" ? detail : "You've used all your AI plan readings for today - please try again tomorrow.",
+          { duration: 10000, icon: "⏳" },
+        );
+      } else {
+        toast.error(typeof detail === "string" ? detail : "Couldn't read this plan. Try a clearer photo or scan.");
+      }
     } finally {
       setAiReading(false);
       resetInput();
@@ -341,17 +379,25 @@ function CoordinateInput({
               type="file"
               accept="image/jpeg,image/png,image/webp,application/pdf"
               onChange={handleAiPlanUpload}
-              disabled={disabled || aiReading}
+              disabled={disabled || aiReading || aiQuotaExhausted}
               className="file-input-hidden"
               id="coord-ai-plan-upload"
             />
-            <label htmlFor="coord-ai-plan-upload" className={`upload-btn upload-btn--ai ${disabled || aiReading ? "disabled" : ""}`}>
+            <label
+              htmlFor="coord-ai-plan-upload"
+              className={`upload-btn upload-btn--ai ${disabled || aiReading || aiQuotaExhausted ? "disabled" : ""}`}
+              title={aiQuotaExhausted ? "Resets tomorrow" : undefined}
+            >
               <svg viewBox="0 0 20 20" fill="currentColor">
                 <path d="M11 2a1 1 0 10-2 0v1.05A6.002 6.002 0 004.05 9H3a1 1 0 100 2h1.05A6.002 6.002 0 009 15.95V17a1 1 0 102 0v-1.05A6.002 6.002 0 0016.95 11H18a1 1 0 100-2h-1.05A6.002 6.002 0 0011 3.05V2zm-1 4a4 4 0 100 8 4 4 0 000-8z" />
               </svg>
-              {aiReading ? "Reading plan..." : "Import from Plan (AI)"}
+              {aiReading ? "Reading plan..." : aiQuotaExhausted ? "AI readings used up for today" : "Import from Plan (AI)"}
             </label>
-            <span className="upload-hint">Photo, scan, or PDF of an existing survey plan</span>
+            <span className="upload-hint">
+              {aiQuotaExhausted
+                ? "You've used all your AI plan readings for today - resets tomorrow."
+                : "Photo, scan, PDF of an existing survey plan or handwritten coordinate table. AI extracts beacons and coordinates automatically."}
+            </span>
           </>
         )}
       </div>
@@ -492,6 +538,18 @@ function CoordinateInput({
             <span className="coord-upload-spinner" />
             <p className="coord-upload-overlay-title">Uploading data&hellip;</p>
             <p className="coord-upload-overlay-subtitle">Reading your file and parsing coordinates</p>
+          </div>
+        </div>
+      )}
+
+      {aiReading && (
+        <div className="coord-ai-fullscreen-overlay" role="status" aria-live="polite">
+          <div className="coord-ai-fullscreen-card">
+            <SurveyLoadingAnimation size="medium" />
+            <p className="coord-ai-fullscreen-title">AI is reading your document&hellip;</p>
+            <p className="coord-ai-fullscreen-subtitle">
+              Extracting beacons, coordinates, and plan details. This usually takes a few seconds.
+            </p>
           </div>
         </div>
       )}
