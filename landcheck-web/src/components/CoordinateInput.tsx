@@ -71,6 +71,8 @@ type FieldImportPoint = {
 type FieldImportParsed = {
   points: FieldImportPoint[];
   column_mapping_summary?: string;
+  coordinate_system_guess?: string;
+  coordinate_system_evidence?: string | null;
   extraction_notes?: string[];
 };
 
@@ -193,6 +195,15 @@ function CoordinateInput({
   const [fieldImportReading, setFieldImportReading] = useState(false);
   const [fieldImportResult, setFieldImportResult] = useState<FieldImportParsed | null>(null);
   const [fieldImportCategories, setFieldImportCategories] = useState<FieldImportCategory[]>([]);
+  const [fieldImportMode, setFieldImportMode] = useState<"upload" | "paste">("upload");
+  const [fieldImportPasteText, setFieldImportPasteText] = useState("");
+  // Set right before opening CSVPreviewModal for a field-import confirm, keyed by the same station
+  // name each row was given - handlePreviewConfirm re-attaches category/feature_code by that key
+  // once the modal's own (unmodified) boundary-selection step confirms, then clears this.
+  const [pendingFieldImportCategoryByStation, setPendingFieldImportCategoryByStation] = useState<Record<
+    string,
+    { category: FieldImportCategory; feature_code: string | null }
+  > | null>(null);
   const [fieldImportQuotaExhausted, setFieldImportQuotaExhausted] = useState(() => {
     try {
       return window.localStorage.getItem(FIELD_IMPORT_QUOTA_EXHAUSTED_KEY) === new Date().toDateString();
@@ -290,6 +301,16 @@ function CoordinateInput({
   };
 
   const handlePreviewConfirm = (parsedPoints: ManualPoint[]) => {
+    if (pendingFieldImportCategoryByStation) {
+      const categoryByStation = pendingFieldImportCategoryByStation;
+      const enrichedPoints = parsedPoints.map((point) => {
+        const match = categoryByStation[point.station];
+        return match ? { ...point, category: match.category, feature_code: match.feature_code } : point;
+      });
+      setPendingFieldImportCategoryByStation(null);
+      onBulkUpload(enrichedPoints);
+      return;
+    }
     onBulkUpload(parsedPoints);
   };
 
@@ -427,13 +448,7 @@ function CoordinateInput({
     }
   };
 
-  const handleFieldDataUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    const resetInput = () => {
-      if (fieldImportFileInputRef.current) fieldImportFileInputRef.current.value = "";
-    };
-    if (!file) return;
-
+  const submitFieldImportContent = async (file: File) => {
     setFieldImportReading(true);
     try {
       const formData = new FormData();
@@ -444,11 +459,14 @@ function CoordinateInput({
       });
       const parsed = (res.data?.parsed || { points: [] }) as FieldImportParsed;
       if (!parsed.points || parsed.points.length === 0) {
-        toast.error("The AI couldn't read any coordinate rows from this file.");
+        toast.error("The AI couldn't read any coordinate rows from this data.");
         return;
       }
       setFieldImportResult(parsed);
       setFieldImportCategories(parsed.points.map((p) => p.category));
+      if (parsed.coordinate_system_guess && parsed.coordinate_system_guess !== "unknown") {
+        onCoordinateSystemChange(parsed.coordinate_system_guess);
+      }
 
       const remaining = res.data?.imports_remaining_today;
       const remainingSuffix = typeof remaining === "number" ? ` (${remaining} import${remaining === 1 ? "" : "s"} left today)` : "";
@@ -456,6 +474,7 @@ function CoordinateInput({
       toast.success(`AI read ${parsed.points.length} point(s) - review the categories below and confirm.${remainingSuffix}`, {
         duration: 6000,
       });
+      setFieldImportPasteText("");
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       if (err?.response?.status === 429) {
@@ -465,12 +484,28 @@ function CoordinateInput({
           { duration: 10000, icon: "⏳" },
         );
       } else {
-        toast.error(typeof detail === "string" ? detail : "Couldn't read this file. Check it's a plain-text coordinate export.");
+        toast.error(typeof detail === "string" ? detail : "Couldn't read this data. Check it's a plain-text coordinate export.");
       }
     } finally {
       setFieldImportReading(false);
-      resetInput();
     }
+  };
+
+  const handleFieldDataUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (fieldImportFileInputRef.current) fieldImportFileInputRef.current.value = "";
+    if (!file) return;
+    await submitFieldImportContent(file);
+  };
+
+  const handleFieldDataPasteSubmit = async () => {
+    const text = fieldImportPasteText.trim();
+    if (!text) return;
+    // Wrapped as a File so it reuses the exact same endpoint/validation/quota path as a real
+    // upload - the backend only ever reads this as plain text either way (see field_to_finish.py's
+    // router, which decodes the upload as UTF-8 text regardless of how it arrived).
+    const file = new File([text], "pasted-data.txt", { type: "text/plain" });
+    await submitFieldImportContent(file);
   };
 
   const updateFieldImportCategory = (index: number, category: FieldImportCategory) => {
@@ -479,19 +514,27 @@ function CoordinateInput({
 
   const confirmFieldImport = () => {
     if (!fieldImportResult) return;
-    const importedPoints: ManualPoint[] = fieldImportResult.points.map((point, index) => ({
-      station: String(point.point_number || String.fromCharCode(65 + index)).trim(),
-      lng: Number(point.x),
-      lat: Number(point.y),
-      height: point.elevation_m !== undefined && point.elevation_m !== null && Number.isFinite(Number(point.elevation_m))
-        ? Number(point.elevation_m)
-        : undefined,
-      is_boundary: fieldImportCategories[index] === "boundary",
-      category: fieldImportCategories[index],
-      feature_code: point.feature_code_raw,
-    }));
-    onBulkUpload(importedPoints);
-    toast.success(`Imported ${importedPoints.length} point(s).`);
+    const categoryByStation: Record<string, { category: FieldImportCategory; feature_code: string | null }> = {};
+    const header = isProjected ? ["Station", "Easting", "Northing", "Height"] : ["Station", "Longitude", "Latitude", "Height"];
+    const rows: (string | number)[][] = fieldImportResult.points.map((point, index) => {
+      const station = String(point.point_number || String.fromCharCode(65 + index)).trim();
+      categoryByStation[station] = { category: fieldImportCategories[index], feature_code: point.feature_code_raw ?? null };
+      return [
+        station,
+        point.x,
+        point.y,
+        point.elevation_m !== undefined && point.elevation_m !== null && Number.isFinite(Number(point.elevation_m))
+          ? Number(point.elevation_m)
+          : "",
+      ];
+    });
+    // Hands off to the exact same CSV-preview/boundary-selection modal a spreadsheet or Plan
+    // Reader import uses - the surveyor picks which points are boundary corners there, same as any
+    // other import path, rather than the AI's category guess silently deciding that for them.
+    // handlePreviewConfirm re-attaches category/feature_code by station once that modal confirms.
+    setPendingFieldImportCategoryByStation(categoryByStation);
+    setRawFileData([header, ...rows]);
+    setShowPreviewModal(true);
     setFieldImportResult(null);
     setFieldImportCategories([]);
   };
@@ -585,34 +628,89 @@ function CoordinateInput({
                 : "Photo, scan, PDF of an existing survey plan or handwritten coordinate table. AI extracts beacons and coordinates automatically."}
             </span>
 
-            <input
-              ref={fieldImportFileInputRef}
-              type="file"
-              accept=".txt,.csv,.dat,.asc,.tsv"
-              onChange={handleFieldDataUpload}
-              disabled={disabled || fieldImportReading || fieldImportQuotaExhausted}
-              className="file-input-hidden"
-              id="coord-field-import-upload"
-            />
-            <label
-              htmlFor="coord-field-import-upload"
-              className={`upload-btn upload-btn--ai ${disabled || fieldImportReading || fieldImportQuotaExhausted ? "disabled" : ""}`}
-              title={fieldImportQuotaExhausted ? "Resets tomorrow" : undefined}
-            >
-              <svg viewBox="0 0 20 20" fill="currentColor">
-                <path d="M11 2a1 1 0 10-2 0v1.05A6.002 6.002 0 004.05 9H3a1 1 0 100 2h1.05A6.002 6.002 0 009 15.95V17a1 1 0 102 0v-1.05A6.002 6.002 0 0016.95 11H18a1 1 0 100-2h-1.05A6.002 6.002 0 0011 3.05V2zm-1 4a4 4 0 100 8 4 4 0 000-8z" />
-              </svg>
-              {fieldImportReading
-                ? "Reading field data..."
-                : fieldImportQuotaExhausted
-                  ? "AI imports used up for today"
-                  : "Smart Field Import (AI)"}
-            </label>
-            <span className="upload-hint">
-              {fieldImportQuotaExhausted
-                ? "You've used all your AI field data imports for today - resets tomorrow."
-                : "Raw GNSS/total station export (.txt/.csv), even with messy or unlabeled columns and feature codes. AI sniffs the columns and classifies each point."}
-            </span>
+            <div className="coord-field-import-mode-toggle">
+              <button
+                type="button"
+                className={`coord-field-import-mode-btn ${fieldImportMode === "upload" ? "active" : ""}`}
+                onClick={() => setFieldImportMode("upload")}
+              >
+                Upload File
+              </button>
+              <button
+                type="button"
+                className={`coord-field-import-mode-btn ${fieldImportMode === "paste" ? "active" : ""}`}
+                onClick={() => setFieldImportMode("paste")}
+              >
+                Paste / Type Data
+              </button>
+            </div>
+
+            {fieldImportMode === "upload" ? (
+              <>
+                <input
+                  ref={fieldImportFileInputRef}
+                  type="file"
+                  accept=".txt,.csv,.dat,.asc,.tsv"
+                  onChange={handleFieldDataUpload}
+                  disabled={disabled || fieldImportReading || fieldImportQuotaExhausted}
+                  className="file-input-hidden"
+                  id="coord-field-import-upload"
+                />
+                <label
+                  htmlFor="coord-field-import-upload"
+                  className={`upload-btn upload-btn--ai ${disabled || fieldImportReading || fieldImportQuotaExhausted ? "disabled" : ""}`}
+                  title={fieldImportQuotaExhausted ? "Resets tomorrow" : undefined}
+                >
+                  <svg viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M11 2a1 1 0 10-2 0v1.05A6.002 6.002 0 004.05 9H3a1 1 0 100 2h1.05A6.002 6.002 0 009 15.95V17a1 1 0 102 0v-1.05A6.002 6.002 0 0016.95 11H18a1 1 0 100-2h-1.05A6.002 6.002 0 0011 3.05V2zm-1 4a4 4 0 100 8 4 4 0 000-8z" />
+                  </svg>
+                  {fieldImportReading
+                    ? "Reading field data..."
+                    : fieldImportQuotaExhausted
+                      ? "AI imports used up for today"
+                      : "Smart Field Import (AI)"}
+                </label>
+                <span className="upload-hint">
+                  {fieldImportQuotaExhausted
+                    ? "You've used all your AI field data imports for today - resets tomorrow."
+                    : "Raw GNSS/total station export (.txt/.csv), even with messy or unlabeled columns and feature codes. AI sniffs the columns and classifies each point."}
+                </span>
+              </>
+            ) : (
+              <div className="coord-field-import-paste">
+                <textarea
+                  className="coord-field-import-paste-textarea"
+                  rows={5}
+                  placeholder={
+                    "Paste or type raw coordinate data here, e.g.\nP001 329110.22 1028183.41 212.3 EP\nP002 329119.61 1028191.32 211.8 TR"
+                  }
+                  value={fieldImportPasteText}
+                  onChange={(e) => setFieldImportPasteText(e.target.value)}
+                  disabled={disabled || fieldImportReading || fieldImportQuotaExhausted}
+                />
+                <button
+                  type="button"
+                  className="upload-btn upload-btn--ai coord-field-import-paste-submit"
+                  onClick={() => void handleFieldDataPasteSubmit()}
+                  disabled={disabled || fieldImportReading || fieldImportQuotaExhausted || !fieldImportPasteText.trim()}
+                  title={fieldImportQuotaExhausted ? "Resets tomorrow" : undefined}
+                >
+                  <svg viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M11 2a1 1 0 10-2 0v1.05A6.002 6.002 0 004.05 9H3a1 1 0 100 2h1.05A6.002 6.002 0 009 15.95V17a1 1 0 102 0v-1.05A6.002 6.002 0 0016.95 11H18a1 1 0 100-2h-1.05A6.002 6.002 0 0011 3.05V2zm-1 4a4 4 0 100 8 4 4 0 000-8z" />
+                  </svg>
+                  {fieldImportReading
+                    ? "Reading field data..."
+                    : fieldImportQuotaExhausted
+                      ? "AI imports used up for today"
+                      : "Parse with AI"}
+                </button>
+                <span className="upload-hint">
+                  {fieldImportQuotaExhausted
+                    ? "You've used all your AI field data imports for today - resets tomorrow."
+                    : "Type or paste messy coordinate rows directly - no need to save a file first. AI sniffs the columns and classifies each point."}
+                </span>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -653,6 +751,12 @@ function CoordinateInput({
           </div>
           {fieldImportResult.column_mapping_summary && (
             <p className="upload-hint">{fieldImportResult.column_mapping_summary}</p>
+          )}
+          {fieldImportResult.coordinate_system_guess && fieldImportResult.coordinate_system_guess !== "unknown" && (
+            <p className="upload-hint">
+              Detected coordinate system: <strong>{fieldImportResult.coordinate_system_guess}</strong>
+              {fieldImportResult.coordinate_system_evidence ? ` - ${fieldImportResult.coordinate_system_evidence}` : ""} (applied above).
+            </p>
           )}
           <div className="coord-field-import-table-wrap">
             <table className="coord-field-import-table">
@@ -699,11 +803,11 @@ function CoordinateInput({
             </ul>
           )}
           <p className="upload-hint">
-            Points marked "Boundary corner" become boundary vertices; everything else imports as a spot-height/reference
-            point. Feature categories are shown for your review only - they aren't drawn as map symbols yet.
+            Next you'll pick which points are boundary corners, same as any other import - feature categories carry
+            through and show as map symbols (tree, pole, drain, etc.) once your plot renders.
           </p>
           <button type="button" className="coord-field-import-confirm" onClick={confirmFieldImport}>
-            Import {fieldImportResult.points.length} Point(s)
+            Continue to Boundary Selection ({fieldImportResult.points.length} point{fieldImportResult.points.length === 1 ? "" : "s"})
           </button>
         </div>
       )}
@@ -832,7 +936,10 @@ function CoordinateInput({
 
       <CSVPreviewModal
         isOpen={showPreviewModal}
-        onClose={() => setShowPreviewModal(false)}
+        onClose={() => {
+          setShowPreviewModal(false);
+          setPendingFieldImportCategoryByStation(null);
+        }}
         rawData={rawFileData}
         onConfirm={handlePreviewConfirm}
         coordinateSystem={coordinateSystem}
