@@ -105,6 +105,17 @@ type SurveyUser = {
   plots: SurveyUserPlot[];
 };
 
+type PlanReaderUsageEntry = {
+  identity_key: string;
+  user_id: number | null;
+  email: string | null;
+  full_name: string | null;
+  is_anonymous: boolean;
+  total_reads: number;
+  reads_today: number;
+  last_used_date: string | null;
+};
+
 type OsmOverpassCountryUsage = {
   country_hint: string;
   total_calls: number;
@@ -174,6 +185,8 @@ export default function AdminDashboard() {
   const [feedbackEntries, setFeedbackEntries] = useState<FeedbackEntry[]>([]);
   const [surveyUsers, setSurveyUsers] = useState<SurveyUser[]>([]);
   const [expandedSurveyUserId, setExpandedSurveyUserId] = useState<number | null>(null);
+  const [planReaderUsage, setPlanReaderUsage] = useState<PlanReaderUsageEntry[]>([]);
+  const [planReaderDailyLimit, setPlanReaderDailyLimit] = useState<number>(3);
   const [georeferenceSessions, setGeoreferenceSessions] = useState<GeoreferenceSession[]>([]);
   const [surveyActivity, setSurveyActivity] = useState<SurveyActivityEvent[]>([]);
   const [osmOverpassUsage, setOsmOverpassUsage] = useState<OsmOverpassCountryUsage[]>([]);
@@ -203,9 +216,10 @@ export default function AdminDashboard() {
           api.get("/analytics/georeference-sessions"),
           api.get("/analytics/survey-activity"),
           api.get("/analytics/osm-overpass-usage"),
+          api.get("/analytics/plan-reader-usage"),
         ]);
 
-        const [analyticsRes, dailyRes, feedbackRes, plotsRes, feedbackListRes, surveyUsersRes, georefSessionsRes, surveyActivityRes, osmOverpassRes] = results;
+        const [analyticsRes, dailyRes, feedbackRes, plotsRes, feedbackListRes, surveyUsersRes, georefSessionsRes, surveyActivityRes, osmOverpassRes, planReaderUsageRes] = results;
 
         if (analyticsRes.status === "fulfilled") {
           setAnalytics(analyticsRes.value.data);
@@ -240,6 +254,13 @@ export default function AdminDashboard() {
           const data = osmOverpassRes.value.data as OsmOverpassUsage | undefined;
           setOsmOverpassUsage(Array.isArray(data?.by_country) ? data!.by_country : []);
         }
+        if (planReaderUsageRes.status === "fulfilled") {
+          const data = planReaderUsageRes.value.data;
+          setPlanReaderUsage(Array.isArray(data?.users) ? data.users : []);
+          if (Number.isFinite(Number(data?.daily_limit))) {
+            setPlanReaderDailyLimit(Number(data.daily_limit));
+          }
+        }
       } catch (err) {
         console.error("Failed to fetch analytics:", err);
       } finally {
@@ -261,6 +282,7 @@ export default function AdminDashboard() {
     setGeoreferenceSessions([]);
     setSurveyActivity([]);
     setOsmOverpassUsage([]);
+    setPlanReaderUsage([]);
     setLoading(false);
   };
 
@@ -704,6 +726,47 @@ export default function AdminDashboard() {
                         </Fragment>
                       );
                     })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <section className="survey-users-section">
+            <h2>AI Plan Reader Usage ({planReaderUsage.length})</h2>
+            {planReaderUsage.length === 0 ? (
+              <p className="survey-users-empty">No AI Plan Reader usage recorded yet.</p>
+            ) : (
+              <div className="survey-users-table-wrap">
+                <table className="survey-users-table">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Total Reads</th>
+                      <th>Today</th>
+                      <th>Last Used</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {planReaderUsage.map((entry) => (
+                      <tr key={entry.identity_key}>
+                        <td>
+                          {entry.is_anonymous ? (
+                            <span title={entry.identity_key}>Anonymous ({entry.identity_key.replace(/^ip:/, "")})</span>
+                          ) : (
+                            <>
+                              {entry.email || `User #${entry.user_id}`}
+                              {entry.full_name ? ` (${entry.full_name})` : ""}
+                            </>
+                          )}
+                        </td>
+                        <td>{entry.total_reads}</td>
+                        <td>
+                          {entry.reads_today} / {planReaderDailyLimit}
+                        </td>
+                        <td>{formatDateTime(entry.last_used_date)}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
