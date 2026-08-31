@@ -135,6 +135,8 @@ const greenModels: GreenModel[] = [
 const photoEvidencePoints = [
   "Captured with GPS at the moment of planting.",
   "Each seedling carries a sponsor-linked QR identity.",
+  "AI screens every photo for duplicates and GPS/timestamp mismatches before it reaches a reviewer.",
+  "AI tree health checks estimate crown condition from field photos between visits.",
   "Reviewed by named field supervisors before approval.",
 ];
 
@@ -242,7 +244,7 @@ const workflowSteps = [
   {
     step: "Verify",
     title: "Verify and review",
-    body: "Check geotagged photos, mapped evidence, and supervisor approvals before records count toward impact.",
+    body: "AI flags duplicate or mismatched photos and screens tree health, then named supervisors approve before records count toward impact.",
   },
   {
     step: "Report",

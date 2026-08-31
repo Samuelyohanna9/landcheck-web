@@ -408,11 +408,155 @@
 }
 
 .spl-capability-card {
+  position: relative;
   padding: 26px 24px 28px;
   border-radius: 18px;
   background: #ffffff;
   border: 1px solid rgba(24, 66, 43, 0.08);
   box-shadow: 0 10px 28px rgba(23, 54, 39, 0.05);
+}
+
+.spl-capability-card--new {
+  border-color: rgba(138, 106, 32, 0.3);
+  box-shadow: 0 10px 28px rgba(138, 106, 32, 0.1);
+}
+
+.spl-capability-card-badge {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(138, 106, 32, 0.14);
+  color: #8a6a20;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.spl-section--ai {
+  padding: 64px 0;
+  background: linear-gradient(160deg, rgba(138, 106, 32, 0.07) 0%, rgba(42, 164, 95, 0.05) 100%);
+}
+
+.spl-ai-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+  gap: 48px;
+  align-items: center;
+}
+
+.spl-section-kicker--ai {
+  background: rgba(138, 106, 32, 0.12);
+  border-color: rgba(138, 106, 32, 0.16);
+}
+
+.spl-ai-copy h2 {
+  margin: 16px 0 0;
+  color: #16392a;
+  font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+  line-height: 1.08;
+}
+
+.spl-ai-lede {
+  margin: 16px 0 0;
+  color: #45594f;
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 52ch;
+}
+
+.spl-ai-points {
+  list-style: none;
+  margin: 24px 0 28px;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.spl-ai-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: #2c4438;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.spl-ai-point-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: rgba(42, 164, 95, 0.14);
+  color: #1a7c48;
+}
+
+.spl-ai-point-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.spl-ai-visual-card {
+  padding: 22px 22px 16px;
+  border-radius: 18px;
+  background: #16392a;
+  box-shadow: 0 24px 48px rgba(13, 39, 29, 0.28);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.spl-ai-visual-row {
+  display: grid;
+  grid-template-columns: 44px 1fr 1fr 24px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #d9e8de;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.spl-ai-visual-row:last-of-type {
+  border-bottom: none;
+}
+
+.spl-ai-visual-check {
+  width: 16px;
+  height: 16px;
+  color: #4cc46a;
+}
+
+.spl-ai-visual-row--flag {
+  grid-template-columns: 44px 1fr 1fr auto;
+}
+
+.spl-ai-visual-flag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(217, 186, 106, 0.18);
+  color: #d9ba6a;
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.spl-ai-visual-footer {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: #9fb5a9;
+  font-size: 0.76rem;
+}
+
+@media (max-width: 900px) {
+  .spl-ai-shell {
+    grid-template-columns: 1fr;
+  }
 }
 
 .spl-capability-card-icon {
