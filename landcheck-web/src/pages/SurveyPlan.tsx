@@ -5015,6 +5015,7 @@ export default function SurveyPlan() {
                 loading={loading}
                 coordinateSystem={coordinateSystem}
                 onCoordinateSystemChange={setCoordinateSystem}
+                onImportedMetadata={(fields) => setMeta((m) => ({ ...m, ...fields }))}
                 hasValidCoords={hasValidCoords}
                 onContinue={continueWithLocalDraft}
                 workflowMode={workflowMode}

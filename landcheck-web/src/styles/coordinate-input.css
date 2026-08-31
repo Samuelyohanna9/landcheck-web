@@ -196,6 +196,17 @@
   height: 16px;
 }
 
+.upload-btn--ai {
+  border-color: rgba(167, 139, 250, 0.35);
+  background: rgba(139, 92, 246, 0.14);
+  color: #c4b5fd;
+}
+
+.upload-btn--ai:hover:not(.disabled) {
+  background: rgba(139, 92, 246, 0.22);
+  border-color: rgba(167, 139, 250, 0.5);
+}
+
 .coord-list-wrapper {
   display: flex;
   flex-direction: column;

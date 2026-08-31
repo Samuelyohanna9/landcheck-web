@@ -36,6 +36,7 @@ type Props = {
   isLowBandwidth: boolean;
   manualLowBandwidth: boolean;
   onManualLowBandwidthChange: (value: boolean) => void;
+  onImportedMetadata?: (fields: Record<string, string>) => void;
 };
 
 function SurveyPlanStepOnePanel({
@@ -59,6 +60,7 @@ function SurveyPlanStepOnePanel({
   isLowBandwidth,
   manualLowBandwidth,
   onManualLowBandwidthChange,
+  onImportedMetadata,
 }: Props) {
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>("boundary");
   const hasAnyHeightData = manualPoints.some(
@@ -83,6 +85,7 @@ function SurveyPlanStepOnePanel({
           coordinateSystem={coordinateSystem}
           onCoordinateSystemChange={onCoordinateSystemChange}
           showPointRoles
+          onImportedMetadata={onImportedMetadata}
         />
         <div className="action-bar">
           <button className="btn-primary" disabled={!hasValidCoords || loading} onClick={onContinue}>

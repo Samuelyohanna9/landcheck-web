@@ -1,4 +1,6 @@
 import { memo, useMemo, useRef, useState } from "react";
+import toast from "react-hot-toast";
+import { api } from "../api/client";
 import "../styles/coordinate-input.css";
 import CSVPreviewModal from "./CSVPreviewModal";
 import CoordinateSystemSelect from "./CoordinateSystemSelect";
@@ -8,6 +10,19 @@ import {
   isProjectedCoordinateSystem,
   WGS84_NIGERIA_METERS,
 } from "../utils/coordinateConverter";
+
+type PlanReaderCheck = { severity: "ok" | "warning" | "error"; code: string; message: string };
+type PlanReaderExtracted = {
+  plan_number?: string | null;
+  title_text?: string | null;
+  location_text?: string | null;
+  lga_text?: string | null;
+  state_text?: string | null;
+  scale_text?: string | null;
+  surveyor_name?: string | null;
+  coordinate_system_guess?: string;
+  beacons?: { station: string; x: number; y: number; confidence: number }[];
+};
 
 type ManualPoint = {
   station: string;
@@ -38,6 +53,11 @@ type Props = {
   // other coordinate-entry flows (e.g. hazard analysis) that have no such distinction, so it stays
   // off unless the caller explicitly wants it.
   showPointRoles?: boolean;
+  // Opt-in: shows "Import from Plan (AI)" next to the existing CSV/Excel import, letting a
+  // surveyor upload a photo/scan of an EXISTING plan instead of retyping its coordinate table.
+  // Only Survey Plan passes this (it owns plan metadata to fill in); Hazard Analysis's plain
+  // coordinate entry has no such metadata, so it simply doesn't pass the prop and this stays off.
+  onImportedMetadata?: (fields: Record<string, string>) => void;
 };
 
 // Flattened view of COORDINATE_SYSTEM_GROUPS - kept for the "currently selected" lookup below;
@@ -87,11 +107,14 @@ function CoordinateInput({
   coordinateSystem,
   onCoordinateSystemChange,
   showPointRoles = false,
+  onImportedMetadata,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const aiFileInputRef = useRef<HTMLInputElement>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [rawFileData, setRawFileData] = useState<(string | number)[][]>([]);
   const [uploadParsing, setUploadParsing] = useState(false);
+  const [aiReading, setAiReading] = useState(false);
   const isProjected = isProjectedCoordinateSystem(coordinateSystem);
   const xLabel = isProjected ? "Easting (m)" : "Longitude";
   const yLabel = isProjected ? "Northing (m)" : "Latitude";
@@ -185,6 +208,75 @@ function CoordinateInput({
     onBulkUpload(parsedPoints);
   };
 
+  // Reuses the exact same review flow as a CSV import (CSVPreviewModal, driven by the same
+  // rawFileData/showPreviewModal state below) instead of a second, separate review UI - the AI's
+  // job is only to produce the same [header, ...rows] shape a parsed spreadsheet would, so the
+  // surveyor always corrects/confirms coordinates through one already-tested screen either way.
+  const handleAiPlanUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    const resetInput = () => {
+      if (aiFileInputRef.current) aiFileInputRef.current.value = "";
+    };
+    if (!file) return;
+
+    setAiReading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await api.post("/plan-reader/extract", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 90000,
+      });
+      const extracted = (res.data?.extracted || {}) as PlanReaderExtracted;
+      const checks = (res.data?.checks || []) as PlanReaderCheck[];
+      const beacons = extracted.beacons || [];
+
+      if (beacons.length < 3) {
+        toast.error("The AI couldn't read at least 3 beacon coordinates from this file.");
+        return;
+      }
+
+      const isProjectedGuess = ["minna_31", "minna_32", "minna_33", "utm_31n", "utm_32n", "utm_33n"].includes(
+        extracted.coordinate_system_guess || "",
+      );
+      if (extracted.coordinate_system_guess && extracted.coordinate_system_guess !== "unknown") {
+        onCoordinateSystemChange(extracted.coordinate_system_guess);
+      }
+
+      const header = isProjectedGuess ? ["Station", "Easting", "Northing"] : ["Station", "Longitude", "Latitude"];
+      const rows: (string | number)[][] = beacons.map((b) => [b.station, b.x, b.y]);
+      setRawFileData([header, ...rows]);
+      setShowPreviewModal(true);
+
+      const metadataFields: Record<string, string> = {};
+      if (extracted.plan_number) metadataFields.plan_number = extracted.plan_number;
+      if (extracted.title_text) metadataFields.title_text = extracted.title_text;
+      if (extracted.location_text) metadataFields.location_text = extracted.location_text;
+      if (extracted.lga_text) metadataFields.lga_text = extracted.lga_text;
+      if (extracted.state_text) metadataFields.state_text = extracted.state_text;
+      if (extracted.scale_text) metadataFields.scale_text = extracted.scale_text;
+      if (extracted.surveyor_name) metadataFields.surveyor_name = extracted.surveyor_name;
+      if (Object.keys(metadataFields).length > 0) onImportedMetadata?.(metadataFields);
+
+      const problems = checks.filter((c) => c.severity !== "ok");
+      if (problems.length > 0) {
+        toast.error(
+          `AI read ${beacons.length} beacon(s) with ${problems.length} thing${problems.length === 1 ? "" : "s"} to review: ${problems[0].message}`,
+          { duration: 7000 },
+        );
+        problems.slice(1, 4).forEach((c) => toast(c.message, { icon: "⚠️", duration: 7000 }));
+      } else {
+        toast.success(`AI read ${beacons.length} beacon(s) - review and confirm below.`);
+      }
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      toast.error(typeof detail === "string" ? detail : "Couldn't read this plan. Try a clearer photo or scan.");
+    } finally {
+      setAiReading(false);
+      resetInput();
+    }
+  };
+
   return (
     <div className="coord-input-container">
       <div className="coord-header">
@@ -241,6 +333,27 @@ function CoordinateInput({
           {uploadParsing ? "Processing file..." : "Import Sheet"}
         </label>
         <span className="upload-hint">CSV or Excel · station, easting, northing</span>
+
+        {onImportedMetadata && (
+          <>
+            <input
+              ref={aiFileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              onChange={handleAiPlanUpload}
+              disabled={disabled || aiReading}
+              className="file-input-hidden"
+              id="coord-ai-plan-upload"
+            />
+            <label htmlFor="coord-ai-plan-upload" className={`upload-btn upload-btn--ai ${disabled || aiReading ? "disabled" : ""}`}>
+              <svg viewBox="0 0 20 20" fill="currentColor">
+                <path d="M11 2a1 1 0 10-2 0v1.05A6.002 6.002 0 004.05 9H3a1 1 0 100 2h1.05A6.002 6.002 0 009 15.95V17a1 1 0 102 0v-1.05A6.002 6.002 0 0016.95 11H18a1 1 0 100-2h-1.05A6.002 6.002 0 0011 3.05V2zm-1 4a4 4 0 100 8 4 4 0 000-8z" />
+              </svg>
+              {aiReading ? "Reading plan..." : "Import from Plan (AI)"}
+            </label>
+            <span className="upload-hint">Photo, scan, or PDF of an existing survey plan</span>
+          </>
+        )}
       </div>
 
       <div className="coord-list-wrapper">
