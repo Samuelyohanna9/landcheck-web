@@ -63,6 +63,9 @@ function Icon({ name, className }: { name: IconName; className?: string }) {
       </span>
     );
   }
+  if (name === "sparkle") {
+    return <img src="/LandCheck_Survey_AI_Symbol.svg" alt="" className={className} aria-hidden="true" />;
+  }
   return (
     <svg
       className={className}
