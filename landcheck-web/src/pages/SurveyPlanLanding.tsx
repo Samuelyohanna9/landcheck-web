@@ -29,7 +29,10 @@ type IconName =
   | "compass"
   | "target"
   | "chevron"
-  | "paperplane";
+  | "paperplane"
+  | "sparkle"
+  | "check"
+  | "scan";
 
 const iconPaths: Record<Exclude<IconName, "flag">, string> = {
   bolt: "M13 2 4 14h6l-1 8 9-12h-6l1-8Z",
@@ -45,6 +48,9 @@ const iconPaths: Record<Exclude<IconName, "flag">, string> = {
   target: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-4a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0-3.2a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z",
   chevron: "m9 5 7 7-7 7",
   paperplane: "m3 11 18-8-8 18-2.5-7.5L3 11Zm10.5 2.5L21 3",
+  sparkle: "M12 3v3.5M12 17.5V21M4.6 12H8M16 12h3.4M6.8 6.8l2.4 2.4M14.8 14.8l2.4 2.4M17.2 6.8l-2.4 2.4M9.2 14.8l-2.4 2.4",
+  check: "m5 13 4 4L19 7",
+  scan: "M4 8V5a1 1 0 0 1 1-1h3M20 8V5a1 1 0 0 0-1-1h-3M4 16v3a1 1 0 0 0 1 1h3M20 16v3a1 1 0 0 1-1 1h-3M4 12h16M8 9l4-2 4 2v6l-4 2-4-2V9Z",
 };
 
 function Icon({ name, className }: { name: IconName; className?: string }) {
@@ -98,7 +104,14 @@ const previewModes: PreviewMode[] = [
   },
 ];
 
-const coreCapabilities: { icon: IconName; title: string; detail: string }[] = [
+const aiPlanReaderPoints: { icon: IconName; text: string }[] = [
+  { icon: "scan", text: "Upload a photo or scan of an existing survey plan - AI reads every beacon coordinate and label automatically." },
+  { icon: "check", text: "Instantly checked for closure error, area mismatch, duplicate stations, and out-of-range coordinates before you trust it." },
+  { icon: "sparkle", text: "Extracted beacons land straight into the same review table as a CSV import - confirm and go, no retyping from a printout." },
+];
+
+const coreCapabilities: { icon: IconName; title: string; detail: string; isNew?: boolean }[] = [
+  { icon: "sparkle", title: "AI Plan Reader", detail: "Digitize any existing survey plan photo or scan - AI extracts and checks beacon coordinates for you.", isNew: true },
   { icon: "pin", title: "Georeference", detail: "Georeference plans with Minna or WGS84 datum." },
   { icon: "cad", title: "CAD & Survey Tools", detail: "Powerful CAD tools for survey drafting." },
   { icon: "grid", title: "Plot Subdivision", detail: "Automatic subdivision and labeling." },
@@ -288,7 +301,8 @@ export default function SurveyPlanLanding() {
 
             <div className="spl-capability-grid">
               {coreCapabilities.map((item) => (
-                <article key={item.title} className="spl-capability-card">
+                <article key={item.title} className={`spl-capability-card${item.isNew ? " spl-capability-card--new" : ""}`}>
+                  {item.isNew && <span className="spl-capability-card-badge">New</span>}
                   <span className="spl-capability-card-icon">
                     <Icon name={item.icon} />
                   </span>
@@ -296,6 +310,61 @@ export default function SurveyPlanLanding() {
                   <p>{item.detail}</p>
                 </article>
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="spl-section spl-section--ai">
+          <div className="spl-shell spl-ai-shell">
+            <div className="spl-ai-copy">
+              <span className="spl-section-kicker spl-section-kicker--ai">AI-Powered · New</span>
+              <h2>Stop retyping beacon coordinates by hand.</h2>
+              <p className="spl-ai-lede">
+                Every surveyor has a drawer full of old plans that only exist on paper or as a flat photo.
+                The AI Plan Reader turns that photo into checked, editable coordinates in seconds.
+              </p>
+              <ul className="spl-ai-points">
+                {aiPlanReaderPoints.map((point) => (
+                  <li key={point.text}>
+                    <span className="spl-ai-point-icon">
+                      <Icon name={point.icon} />
+                    </span>
+                    <span>{point.text}</span>
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                className="spl-btn-primary"
+                onMouseEnter={warmSurveyEntry}
+                onFocus={warmSurveyEntry}
+                onClick={openSurvey}
+              >
+                Try the AI Plan Reader
+              </button>
+            </div>
+            <div className="spl-ai-visual" aria-hidden="true">
+              <div className="spl-ai-visual-card">
+                <div className="spl-ai-visual-row">
+                  <span>PB1</span>
+                  <span>312,481.22</span>
+                  <span>124,905.60</span>
+                  <Icon name="check" className="spl-ai-visual-check" />
+                </div>
+                <div className="spl-ai-visual-row">
+                  <span>PB2</span>
+                  <span>312,560.05</span>
+                  <span>124,918.31</span>
+                  <Icon name="check" className="spl-ai-visual-check" />
+                </div>
+                <div className="spl-ai-visual-row spl-ai-visual-row--flag">
+                  <span>PB3</span>
+                  <span>312,602.90</span>
+                  <span>124,880.14</span>
+                  <span className="spl-ai-visual-flag">Low confidence</span>
+                </div>
+                <div className="spl-ai-visual-footer">Closure error: 0.04m &middot; 3 of 3 beacons read</div>
+              </div>
             </div>
           </div>
         </section>

@@ -18094,7 +18094,7 @@ export default function GreenWork() {
                         <p className="green-work-tree-health-detail is-muted">Note: {treeHealthResult.photo_quality_note}</p>
                       )}
                       <p className="green-work-tree-health-meta">
-                        AI visual screening only, not a certified arborist diagnosis - modelled on USDA FIA crown-dieback rating.
+                        AI visual screening.
                         {treeHealthResult.created_at ? ` Checked ${formatDateTimeLabel(treeHealthResult.created_at)}.` : ""}
                       </p>
                     </div>
