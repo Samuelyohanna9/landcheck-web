@@ -15,6 +15,9 @@ import {
 const AI_QUOTA_EXHAUSTED_KEY = "plan-reader-quota-exhausted-date";
 
 type PlanReaderCheck = { severity: "ok" | "warning" | "error"; code: string; message: string };
+type PlanReaderBeacon = { station: string; x: number; y: number; confidence: number };
+type PlanReaderPlot = { plot_number?: string | null; beacons: PlanReaderBeacon[] };
+type PlanReaderRoad = { name?: string | null; width_m?: number | null; points: { x: number; y: number }[] };
 type PlanReaderExtracted = {
   plan_number?: string | null;
   title_text?: string | null;
@@ -24,8 +27,13 @@ type PlanReaderExtracted = {
   scale_text?: string | null;
   surveyor_name?: string | null;
   coordinate_system_guess?: string;
-  beacons?: { station: string; x: number; y: number; confidence: number }[];
+  beacons?: PlanReaderBeacon[];
+  layout_type?: "single_plot" | "estate_layout";
+  plots?: PlanReaderPlot[];
+  roads?: PlanReaderRoad[];
 };
+
+const PROJECTED_SYSTEM_KEYS = ["minna_31", "minna_32", "minna_33", "utm_31n", "utm_32n", "utm_33n"];
 
 type ManualPoint = {
   station: string;
@@ -118,6 +126,13 @@ function CoordinateInput({
   const [rawFileData, setRawFileData] = useState<(string | number)[][]>([]);
   const [uploadParsing, setUploadParsing] = useState(false);
   const [aiReading, setAiReading] = useState(false);
+  // Populated only when the AI Plan Reader detects an estate layout with more than one plot - a
+  // single-plot read never touches this, so the existing import flow below is completely
+  // unaffected. The surveyor picks which plot's beacons to load before the normal CSV-preview/
+  // confirm step (unchanged) takes over.
+  const [aiLayoutPlots, setAiLayoutPlots] = useState<PlanReaderPlot[]>([]);
+  const [aiLayoutRoads, setAiLayoutRoads] = useState<PlanReaderRoad[]>([]);
+  const [aiLayoutCoordSystem, setAiLayoutCoordSystem] = useState("");
   // Persisted (not just a toast) so a page refresh doesn't make the button look available again
   // and let the surveyor waste another attempt on a request that's just going to 429 anyway - a
   // soft, client-side echo of the server's real daily quota, keyed to today's date.
@@ -259,17 +274,26 @@ function CoordinateInput({
         return;
       }
 
-      const isProjectedGuess = ["minna_31", "minna_32", "minna_33", "utm_31n", "utm_32n", "utm_33n"].includes(
-        extracted.coordinate_system_guess || "",
-      );
+      const isProjectedGuess = PROJECTED_SYSTEM_KEYS.includes(extracted.coordinate_system_guess || "");
       if (extracted.coordinate_system_guess && extracted.coordinate_system_guess !== "unknown") {
         onCoordinateSystemChange(extracted.coordinate_system_guess);
       }
 
-      const header = isProjectedGuess ? ["Station", "Easting", "Northing"] : ["Station", "Longitude", "Latitude"];
-      const rows: (string | number)[][] = beacons.map((b) => [b.station, b.x, b.y]);
-      setRawFileData([header, ...rows]);
-      setShowPreviewModal(true);
+      const plots = extracted.plots && extracted.plots.length > 0 ? extracted.plots : [{ plot_number: null, beacons }];
+      const isEstateLayout = extracted.layout_type === "estate_layout" && plots.length > 1;
+
+      if (isEstateLayout) {
+        // Defer opening the CSV-preview/confirm modal until the surveyor picks a plot - keeps the
+        // existing single-plot import path (below) completely untouched for the common case.
+        setAiLayoutPlots(plots);
+        setAiLayoutRoads(extracted.roads || []);
+        setAiLayoutCoordSystem(extracted.coordinate_system_guess || "");
+      } else {
+        const header = isProjectedGuess ? ["Station", "Easting", "Northing"] : ["Station", "Longitude", "Latitude"];
+        const rows: (string | number)[][] = beacons.map((b) => [b.station, b.x, b.y]);
+        setRawFileData([header, ...rows]);
+        setShowPreviewModal(true);
+      }
 
       const metadataFields: Record<string, string> = {};
       if (extracted.plan_number) metadataFields.plan_number = extracted.plan_number;
@@ -289,7 +313,20 @@ function CoordinateInput({
       if (remaining === 0) markQuotaExhausted();
 
       const problems = checks.filter((c) => c.severity !== "ok");
-      if (problems.length > 0) {
+      if (isEstateLayout) {
+        const roadCount = extracted.roads?.length || 0;
+        const roadNote = roadCount > 0 ? ` and ${roadCount} road${roadCount === 1 ? "" : "s"}` : "";
+        toast.success(
+          `AI detected an estate layout with ${plots.length} plot(s)${roadNote} - pick a plot below to import.${remainingSuffix}`,
+          { duration: 8000 },
+        );
+        if (roadCount > 0) {
+          toast("Road import isn't automated yet - add road geometry manually on the map after importing your plot.", {
+            icon: "🛣️",
+            duration: 8000,
+          });
+        }
+      } else if (problems.length > 0) {
         toast.error(
           `AI read ${beacons.length} beacon(s) with ${problems.length} thing${problems.length === 1 ? "" : "s"} to review: ${problems[0].message}${remainingSuffix}`,
           { duration: 7000 },
@@ -313,6 +350,15 @@ function CoordinateInput({
       setAiReading(false);
       resetInput();
     }
+  };
+
+  const selectAiLayoutPlot = (plot: PlanReaderPlot) => {
+    const isProjectedGuess = PROJECTED_SYSTEM_KEYS.includes(aiLayoutCoordSystem);
+    const header = isProjectedGuess ? ["Station", "Easting", "Northing"] : ["Station", "Longitude", "Latitude"];
+    const rows: (string | number)[][] = plot.beacons.map((b) => [b.station, b.x, b.y]);
+    setRawFileData([header, ...rows]);
+    setShowPreviewModal(true);
+    setAiLayoutPlots([]);
   };
 
   return (
@@ -401,6 +447,32 @@ function CoordinateInput({
           </>
         )}
       </div>
+
+      {aiLayoutPlots.length > 1 && (
+        <div className="coord-ai-layout-panel">
+          <p className="coord-ai-layout-title">Estate layout detected - choose a plot to import:</p>
+          <div className="coord-ai-layout-plots">
+            {aiLayoutPlots.map((plot, index) => (
+              <button
+                type="button"
+                key={`${plot.plot_number || "plot"}-${index}`}
+                className="coord-ai-layout-plot-btn"
+                onClick={() => selectAiLayoutPlot(plot)}
+              >
+                {plot.plot_number || `Plot ${index + 1}`}
+                <span>{plot.beacons.length} beacon(s)</span>
+              </button>
+            ))}
+          </div>
+          {aiLayoutRoads.length > 0 && (
+            <p className="upload-hint">
+              Also detected {aiLayoutRoads.length} road{aiLayoutRoads.length === 1 ? "" : "s"}
+              {aiLayoutRoads.some((r) => r.name) ? ` (${aiLayoutRoads.filter((r) => r.name).map((r) => r.name).join(", ")})` : ""} -
+              road import isn't automated yet; add them manually on the map after importing your plot.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="coord-list-wrapper">
         {(() => {
