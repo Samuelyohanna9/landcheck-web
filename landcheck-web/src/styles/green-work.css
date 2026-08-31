@@ -4068,6 +4068,36 @@
   gap: 0.58rem;
 }
 
+.green-work-ai-narrative {
+  border: 1px solid var(--gw-border);
+  border-left: 3px solid var(--green-500);
+  border-radius: var(--radius-sm);
+  background: var(--green-50);
+  padding: 0.6rem 0.75rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.green-work-ai-narrative h4 {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--green-800);
+}
+
+.green-work-ai-narrative-textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--gw-border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.6rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  font-family: inherit;
+  color: #1f2933;
+  background: #ffffff;
+}
+
 .green-work-verra-filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));

@@ -22,6 +22,11 @@ type GreenWorkVerraReportsPanelProps = {
   verraHistory: any[];
   formatDateLabel: (value: string | null | undefined) => string;
   normalizeVerraExportFormat: (value: any) => any;
+  csrImpactNarrative: string;
+  setCsrImpactNarrative: (value: string) => void;
+  csrNarrativeGenerating: boolean;
+  csrNarrativeQuota: { used: number; remaining: number } | null;
+  generateCsrImpactNarrative: () => void | Promise<void>;
 };
 
 export default function GreenWorkVerraReportsPanel({
@@ -48,6 +53,11 @@ export default function GreenWorkVerraReportsPanel({
   verraHistory,
   formatDateLabel,
   normalizeVerraExportFormat,
+  csrImpactNarrative,
+  setCsrImpactNarrative,
+  csrNarrativeGenerating,
+  csrNarrativeQuota,
+  generateCsrImpactNarrative,
 }: GreenWorkVerraReportsPanelProps) {
   return (
     <div className="green-work-card green-work-verra-card">
@@ -103,6 +113,37 @@ export default function GreenWorkVerraReportsPanel({
             governance section. It is evidence to support the client's own IFRS S1/S2 filing, not a report to
             send to donors or the public.
           </p>
+
+          <div className="green-work-ai-narrative">
+            <div className="green-work-row">
+              <h4>AI Impact Narrative (Board Summary)</h4>
+              <div className="work-actions">
+                <button
+                  type="button"
+                  onClick={() => void generateCsrImpactNarrative()}
+                  disabled={csrNarrativeGenerating || csrNarrativeQuota?.remaining === 0}
+                >
+                  {csrNarrativeGenerating
+                    ? "Drafting..."
+                    : csrNarrativeQuota?.remaining === 0
+                      ? "AI narratives used up for today"
+                      : "✨ Generate AI Draft"}
+                </button>
+              </div>
+            </div>
+            <p className="green-work-chart-context">
+              AI drafts this paragraph from the verified metrics below - review and edit it before exporting.
+              It replaces the default bullet-point summary in the PDF's Board Summary box and is labelled
+              "AI-drafted" there. Leave it blank to keep the standard bullet summary instead.
+            </p>
+            <textarea
+              className="green-work-ai-narrative-textarea"
+              rows={4}
+              placeholder="Click 'Generate AI Draft' to write a board-ready summary paragraph, or type your own here."
+              value={csrImpactNarrative}
+              onChange={(event) => setCsrImpactNarrative(event.target.value)}
+            />
+          </div>
 
           <div className="green-work-live-summary">
             <span className="green-work-live-pill neutral">Implementation records: {existingTreeIntakeRows.length}</span>

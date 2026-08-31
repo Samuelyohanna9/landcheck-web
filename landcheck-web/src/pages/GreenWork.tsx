@@ -3953,6 +3953,9 @@ export default function GreenWork() {
   const [treeHealthChecking, setTreeHealthChecking] = useState(false);
   const [treeHealthResult, setTreeHealthResult] = useState<any | null>(null);
   const [treeHealthQuota, setTreeHealthQuota] = useState<{ used: number; remaining: number } | null>(null);
+  const [csrImpactNarrative, setCsrImpactNarrative] = useState("");
+  const [csrNarrativeGenerating, setCsrNarrativeGenerating] = useState(false);
+  const [csrNarrativeQuota, setCsrNarrativeQuota] = useState<{ used: number; remaining: number } | null>(null);
   const [drawerFrame, setDrawerFrame] = useState<DrawerFrame | null>(null);
   const [reviewQueue, setReviewQueue] = useState<ReviewQueueTask[]>([]);
   const [includePhotosInWorkPdf, setIncludePhotosInWorkPdf] = useState(false);
@@ -7258,6 +7261,10 @@ export default function GreenWork() {
   }, [activeProjectId]);
 
   useEffect(() => {
+    setCsrImpactNarrative("");
+  }, [activeProjectId]);
+
+  useEffect(() => {
     if (!showProjectDangerOptions) {
       setProjectSetupExpanded(false);
     }
@@ -8482,6 +8489,30 @@ export default function GreenWork() {
     );
   };
 
+  const generateCsrImpactNarrative = async () => {
+    if (!activeProjectId) return;
+    setCsrNarrativeGenerating(true);
+    const loadingId = toast.loading("AI is drafting the board summary...");
+    try {
+      const res = await api.post(`/green/projects/${activeProjectId}/impact-narrative`, {});
+      setCsrImpactNarrative(String(res.data?.narrative || ""));
+      setCsrNarrativeQuota({ used: res.data?.reads_used_today ?? 0, remaining: res.data?.reads_remaining_today ?? 0 });
+      toast.success("Draft ready - review and edit before exporting.", { id: loadingId });
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        toast.error(error?.response?.data?.detail || "You've used today's AI impact narratives - resets tomorrow.", {
+          id: loadingId,
+          duration: 8000,
+        });
+        setCsrNarrativeQuota({ used: 5, remaining: 0 });
+      } else {
+        toast.error(error?.response?.data?.detail || "Failed to generate AI impact narrative", { id: loadingId });
+      }
+    } finally {
+      setCsrNarrativeGenerating(false);
+    }
+  };
+
   const exportExistingTreesPdf = async () => {
     if (!activeProjectId) return;
     const loadingId = toast.loading(
@@ -8494,6 +8525,7 @@ export default function GreenWork() {
         export_type: "green-existing-trees-report",
         project_id: activeProjectId,
         include_photos: includePhotosInExistingTreesPdf,
+        ai_narrative: csrImpactNarrative.trim() || undefined,
         requested_by: workAuthSession?.user?.full_name || "work-user",
       });
       const jobId = String(created?.data?.id || "");
@@ -17180,6 +17212,11 @@ export default function GreenWork() {
                 verraHistory={verraHistory}
                 formatDateLabel={formatDateLabel}
                 normalizeVerraExportFormat={normalizeVerraExportFormat}
+                csrImpactNarrative={csrImpactNarrative}
+                setCsrImpactNarrative={setCsrImpactNarrative}
+                csrNarrativeGenerating={csrNarrativeGenerating}
+                csrNarrativeQuota={csrNarrativeQuota}
+                generateCsrImpactNarrative={generateCsrImpactNarrative}
               />
             </Suspense>
           )}
