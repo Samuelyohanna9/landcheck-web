@@ -121,8 +121,6 @@ type Props = {
   runQcCheck: () => void | Promise<void>;
   qcChecking: boolean;
   qcResult: QcCheckResult | null;
-  qcStatedArea: string;
-  setQcStatedArea: Dispatch<SetStateAction<string>>;
   onSaveFeatureOverride: (payload: {
     feature_type: "road" | "river";
     action: "add" | "delete" | "update";
@@ -224,8 +222,6 @@ function SurveyPlanSurveyPreviewStep({
   runQcCheck,
   qcChecking,
   qcResult,
-  qcStatedArea,
-  setQcStatedArea,
   onSaveFeatureOverride,
   onRoadNamesSaved,
   isOnline,
@@ -773,20 +769,6 @@ function SurveyPlanSurveyPreviewStep({
           )}
 
           <div className="qc-check-panel">
-            <div className="qc-check-panel-input">
-              <label htmlFor="qc-stated-area">
-                Plan area entered (optional, sqm) - compares against the calculated area for this one check only
-              </label>
-              <input
-                id="qc-stated-area"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="e.g. 2520"
-                value={qcStatedArea}
-                onChange={(e) => setQcStatedArea(e.target.value)}
-              />
-            </div>
             {qcResult && (
               <div className={`qc-check-result qc-check-result--${qcResult.overall_status}`}>
                 <div className="qc-check-result-header">

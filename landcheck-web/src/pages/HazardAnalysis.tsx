@@ -28,6 +28,8 @@ type ManualPoint = {
   lat: number;
   height?: number;
   is_boundary?: boolean;
+  category?: string;
+  feature_code?: string | null;
 };
 
 type HazardType = "flood" | "erosion" | "lulc";

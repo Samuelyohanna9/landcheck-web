@@ -13,12 +13,14 @@ type ManualPoint = {
   lat: number;
   height?: number;
   is_boundary?: boolean;
+  category?: string;
+  feature_code?: string | null;
 };
 
 type Props = {
   sidebar: ReactNode;
   manualPoints: ManualPoint[];
-  onUpdatePoint: (index: number, field: "lng" | "lat" | "height" | "station" | "is_boundary", value: string | number | boolean) => void;
+  onUpdatePoint: (index: number, field: keyof ManualPoint, value: string | number | boolean) => void;
   onRemovePoint: (index: number) => void;
   onAddPoint: () => void;
   onBulkUpload: (points: ManualPoint[]) => void;
