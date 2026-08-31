@@ -250,6 +250,22 @@ type ScaleRecommendation = {
 };
 type PreviewRenderSelection = Pick<ScaleRecommendation, "scale_text" | "paper_size">;
 
+type QcCheckItem = {
+  severity: "ok" | "warning" | "error";
+  code: string;
+  message: string;
+};
+type QcCheckResult = {
+  items: QcCheckItem[];
+  station_count: number;
+  area_m2: number | null;
+  perimeter_m: number | null;
+  closure_error_m: number | null;
+  closure_ratio: string | null;
+  review_count: number;
+  overall_status: "ok" | "review";
+};
+
 type SurveyPlanDraftState = {
   workflowMode: WorkflowMode | null;
   currentStep: number;
@@ -743,6 +759,9 @@ export default function SurveyPlan() {
   const loading = false;
   const [plotId, setPlotId] = useState<number | null>(null);
   const [features, setFeatures] = useState<any>(null);
+  const [qcChecking, setQcChecking] = useState(false);
+  const [qcResult, setQcResult] = useState<QcCheckResult | null>(null);
+  const [qcStatedArea, setQcStatedArea] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [scaleRecommendation, setScaleRecommendation] = useState<ScaleRecommendation | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -2799,6 +2818,25 @@ export default function SurveyPlan() {
     meta.paper_size,
     topoSource,
   ]);
+
+  const runQcCheck = useCallback(async () => {
+    setQcChecking(true);
+    try {
+      const activePlotId = await ensureServerPlot("Syncing draft before AI quality check...");
+      const statedAreaValue = qcStatedArea.trim() ? Number(qcStatedArea) : null;
+      const params: Record<string, string> = {};
+      if (statedAreaValue && Number.isFinite(statedAreaValue) && statedAreaValue > 0) {
+        params.stated_area_m2 = String(statedAreaValue);
+      }
+      const res = await api.get<QcCheckResult>(`/plots/${activePlotId}/qc-check`, { params });
+      setQcResult(res.data);
+    } catch (err) {
+      const message = await extractApiErrorMessage(err, "Failed to run the AI quality check");
+      toast.error(message);
+    } finally {
+      setQcChecking(false);
+    }
+  }, [ensureServerPlot, qcStatedArea]);
 
   const acceptScaleRecommendation = useCallback(() => {
     if (!scaleRecommendation) return;
@@ -5064,6 +5102,11 @@ export default function SurveyPlan() {
               onOpenFeatureCadEditor={openFeatureCadEditor}
               onPrefetchFeatureEditor={prefetchFeatureEditor}
               plotId={plotId}
+              runQcCheck={runQcCheck}
+              qcChecking={qcChecking}
+              qcResult={qcResult}
+              qcStatedArea={qcStatedArea}
+              setQcStatedArea={setQcStatedArea}
               onSaveFeatureOverride={handleSaveOverride}
               onRoadNamesSaved={handleRoadNamesSaved}
               isOnline={isOnline}

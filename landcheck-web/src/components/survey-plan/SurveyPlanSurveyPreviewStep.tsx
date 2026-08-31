@@ -52,6 +52,22 @@ type PlotMeta = {
   technical_report_general_observation_text: string;
 };
 
+type QcCheckItem = {
+  severity: "ok" | "warning" | "error";
+  code: string;
+  message: string;
+};
+type QcCheckResult = {
+  items: QcCheckItem[];
+  station_count: number;
+  area_m2: number | null;
+  perimeter_m: number | null;
+  closure_error_m: number | null;
+  closure_ratio: string | null;
+  review_count: number;
+  overall_status: "ok" | "review";
+};
+
 type PreviewType = "survey" | "orthophoto" | "topomap";
 type TopoSource = "opentopomap" | "userdata";
 type NorthArrowStyle = "one_side_stem" | "stacked_4n" | "classic" | "triangle" | "compass" | "chevron" | "orienteering" | "star" | "un_marker" | "nn_arrow";
@@ -102,6 +118,11 @@ type Props = {
   onOpenFeatureCadEditor: () => void | Promise<void>;
   onPrefetchFeatureEditor: () => void;
   plotId: number | null;
+  runQcCheck: () => void | Promise<void>;
+  qcChecking: boolean;
+  qcResult: QcCheckResult | null;
+  qcStatedArea: string;
+  setQcStatedArea: Dispatch<SetStateAction<string>>;
   onSaveFeatureOverride: (payload: {
     feature_type: "road" | "river";
     action: "add" | "delete" | "update";
@@ -200,6 +221,11 @@ function SurveyPlanSurveyPreviewStep({
   onOpenFeatureCadEditor,
   onPrefetchFeatureEditor,
   plotId,
+  runQcCheck,
+  qcChecking,
+  qcResult,
+  qcStatedArea,
+  setQcStatedArea,
   onSaveFeatureOverride,
   onRoadNamesSaved,
   isOnline,
@@ -711,6 +737,14 @@ function SurveyPlanSurveyPreviewStep({
               {previewNeedsRender && !rendering && <span className="needs-render-dot" aria-hidden="true" />}
               {rendering ? "Preparing preview..." : previewActionLabel}
             </button>
+            <button
+              className="btn-outline qc-check-button"
+              onClick={() => requireTemplate(runQcCheck)}
+              disabled={qcChecking || (serverSyncing && !plotId)}
+              title="Deterministic geometry checks (closure, area, duplicate coordinates, unusually long segments) - no AI call, instant results."
+            >
+              {qcChecking ? "Checking..." : "✨ AI CHECK"}
+            </button>
             <div className="edit-map-features-action">
               <button
                 className="btn-outline edit-map-features-button"
@@ -737,6 +771,48 @@ function SurveyPlanSurveyPreviewStep({
               )}
             </p>
           )}
+
+          <div className="qc-check-panel">
+            <div className="qc-check-panel-input">
+              <label htmlFor="qc-stated-area">
+                Plan area entered (optional, sqm) - compares against the calculated area for this one check only
+              </label>
+              <input
+                id="qc-stated-area"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g. 2520"
+                value={qcStatedArea}
+                onChange={(e) => setQcStatedArea(e.target.value)}
+              />
+            </div>
+            {qcResult && (
+              <div className={`qc-check-result qc-check-result--${qcResult.overall_status}`}>
+                <div className="qc-check-result-header">
+                  <strong>Survey Quality Check</strong>
+                  {previewNeedsRender && (
+                    <span className="qc-check-stale-hint">Plan has changed since this check - re-run for accurate results.</span>
+                  )}
+                </div>
+                <ul className="qc-check-list">
+                  {qcResult.items.map((item, index) => (
+                    <li key={`${item.code}-${index}`} className={`qc-check-item qc-check-item--${item.severity}`}>
+                      <span className="qc-check-icon" aria-hidden="true">
+                        {item.severity === "ok" ? "✓" : item.severity === "warning" ? "⚠️" : "✕"}
+                      </span>
+                      <span>{item.message}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="qc-check-overall">
+                  {qcResult.overall_status === "ok"
+                    ? "Overall: no issues found."
+                    : `Overall: ${qcResult.review_count} item${qcResult.review_count === 1 ? "" : "s"} require review.`}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="action-bar">
