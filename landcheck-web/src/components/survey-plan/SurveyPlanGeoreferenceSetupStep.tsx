@@ -95,8 +95,14 @@ function SurveyPlanGeoreferenceSetupStep({
   const [draftTitle, setDraftTitle] = useState("");
   const [draftFile, setDraftFile] = useState<File | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  const [addPointMenuOpen, setAddPointMenuOpen] = useState(false);
-  const [pendingPlacementMode, setPendingPlacementMode] = useState<"manual" | "map" | null>(null);
+  // Drives the guided two-click "add a control point" sequence: null (idle) -> "awaiting-raster"
+  // (waiting for a click on the survey plan) -> "awaiting-map" (waiting for the matching map
+  // click) -> "saved" (brief confirmation, auto-clears) -> null. Read inside the Mapbox click
+  // listener via placementStageRef, since that listener is registered once in the mount effect
+  // and would otherwise see a stale value.
+  const [placementStage, setPlacementStage] = useState<"awaiting-raster" | "awaiting-map" | "saved" | null>(null);
+  const placementStageRef = useRef<typeof placementStage>(null);
+  const savedStageTimeoutRef = useRef<number | null>(null);
   const [stageMetrics, setStageMetrics] = useState<RasterStageMetrics | null>(null);
   // Only one GCP's inputs are ever editable at a time - every other row shows compact read-only
   // values. Buffered as its own draft object (not committed field-by-field on blur like before)
@@ -324,28 +330,44 @@ function SurveyPlanGeoreferenceSetupStep({
     controlPointRefs.current[activePoint.id]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [activePoint?.id]);
 
-  // "Add manually" has nowhere else to type coordinates now that rows are collapsed by default -
-  // it opens that point's edit draft directly instead of relying on an always-visible input.
-  useEffect(() => {
-    if (pendingPlacementMode !== "manual" || !activePoint) return;
-    setEditDraft({
-      pointId: activePoint.id,
-      label: activePoint.label,
-      ground_x: Number.isFinite(activePoint.ground_x) ? String(activePoint.ground_x) : "",
-      ground_y: Number.isFinite(activePoint.ground_y) ? String(activePoint.ground_y) : "",
-      image_x: Number.isFinite(activePoint.image_x) ? String(activePoint.image_x) : "",
-      image_y: Number.isFinite(activePoint.image_y) ? String(activePoint.image_y) : "",
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingPlacementMode, activePoint?.id]);
-
   useEffect(() => {
     if (editDraft) editFirstFieldRef.current?.focus();
   }, [editDraft?.pointId]);
 
+  useEffect(() => {
+    placementStageRef.current = placementStage;
+  }, [placementStage]);
+
+  useEffect(() => {
+    return () => {
+      if (savedStageTimeoutRef.current != null) window.clearTimeout(savedStageTimeoutRef.current);
+    };
+  }, []);
+
+  // A session/raster change mid-sequence means the point being placed no longer applies.
+  useEffect(() => {
+    if (savedStageTimeoutRef.current != null) {
+      window.clearTimeout(savedStageTimeoutRef.current);
+      savedStageTimeoutRef.current = null;
+    }
+    setPlacementStage(null);
+  }, [session?.id]);
+
   const selectControlPoint = (controlPointId: string) => {
-    setPendingPlacementMode(null);
+    setPlacementStage(null);
     onSelectControlPoint(controlPointId);
+  };
+
+  const beginNewControlPoint = () => {
+    onAddControlPoint();
+    setPlacementStage("awaiting-raster");
+  };
+
+  const cancelPendingPoint = () => {
+    if (activePoint && !pointIsReady(activePoint)) {
+      onRemoveControlPoint(activePoint.id);
+    }
+    setPlacementStage(null);
   };
 
   const startEditPoint = (point: (typeof controlPoints)[number]) => {
@@ -388,12 +410,6 @@ function SurveyPlanGeoreferenceSetupStep({
   const formatGroundValue = (value: number) => (Number.isFinite(value) ? value.toFixed(projectedGroundSystem ? 3 : 6) : "--");
   const formatPixelValue = (value: number) => (Number.isFinite(value) ? value.toFixed(2) : "--");
 
-  const startAddPoint = (mode: "manual" | "map") => {
-    setAddPointMenuOpen(false);
-    setPendingPlacementMode(mode);
-    onAddControlPoint();
-  };
-
   useEffect(() => {
     let cancelled = false;
     if (!mapContainerRef.current || mapRef.current) return;
@@ -412,6 +428,13 @@ function SurveyPlanGeoreferenceSetupStep({
         if (!mapRef.current) return;
         mapRef.current.on("click", (event: any) => {
           onAssignMapPoint(Number(event.lngLat.lng), Number(event.lngLat.lat));
+          if (placementStageRef.current === "awaiting-map") {
+            setPlacementStage("saved");
+            savedStageTimeoutRef.current = window.setTimeout(() => {
+              setPlacementStage(null);
+              savedStageTimeoutRef.current = null;
+            }, 1400);
+          }
         });
         setMapReady(true);
       });
@@ -508,7 +531,7 @@ function SurveyPlanGeoreferenceSetupStep({
 
       const name = document.createElement("span");
       name.className = "georef-control-point-name";
-      name.textContent = String(feature.properties?.label || "GCP");
+      name.textContent = String(feature.properties?.label || "Control point");
 
       const reticle = document.createElement("span");
       reticle.className = "georef-control-point-reticle";
@@ -707,6 +730,9 @@ function SurveyPlanGeoreferenceSetupStep({
     );
     if (!pixel) return;
     onAssignImagePoint(pixel.pixelX, pixel.pixelY);
+    if (placementStage === "awaiting-raster") {
+      setPlacementStage("awaiting-map");
+    }
   };
 
   const stageMarkers = controlPoints
@@ -733,7 +759,7 @@ function SurveyPlanGeoreferenceSetupStep({
             {sidebar}
             <div className="geo-panel-heading">
               <h2>Control points</h2>
-              <p>Upload the scan, match the control points, then lock it in for digitizing.</p>
+              <p>Match points on the survey plan with their real-world locations.</p>
             </div>
 
             {!session && (
@@ -843,17 +869,24 @@ function SurveyPlanGeoreferenceSetupStep({
                     disabled={controlPoints.length < 3 || solving}
                     onClick={onSolve}
                   >
-                    {solving ? "Anchoring raster..." : "Anchor Raster"}
+                    {solving ? "Calculating fit..." : "Calculate fit"}
                   </button>
                 </div>
 
                 <div className="geo-section">
-                  <h3 className="geo-section-title">
-                    Control register
+                  <h3 className="geo-section-title georef-section-title-row">
+                    <span>Control points</span>
                     <span className="geo-section-hint">
-                      {" "}
                       {controlPoints.filter((point) => pointIsReady(point)).length}/{controlPoints.length} ready
                     </span>
+                    <button
+                      type="button"
+                      className="geo-info-btn"
+                      aria-label="What is a control point?"
+                      title="A ground control point (GCP) links a location on the survey plan to its matching real-world coordinate."
+                    >
+                      ?
+                    </button>
                   </h3>
               <div className="georef-control-list">
                 {controlPoints.map((point) => {
@@ -869,7 +902,7 @@ function SurveyPlanGeoreferenceSetupStep({
                         className={`georef-point-row is-editing${isActive ? " active" : ""}`}
                       >
                         <div className="georef-point-row-head">
-                          <strong>{point.label || "GCP"}</strong>
+                          <strong>{point.label || "Control point"}</strong>
                           <span className={`georef-point-status georef-point-status--${pointIsReady(point) ? "ready" : "pending"}`}>
                             {pointIsReady(point) ? "Ready" : "Needs input"}
                           </span>
@@ -952,7 +985,7 @@ function SurveyPlanGeoreferenceSetupStep({
                       tabIndex={0}
                     >
                       <div className="georef-point-row-line1">
-                        <strong>{point.label || "GCP"}</strong>
+                        <strong>{point.label || "Control point"}</strong>
                         <span className={`georef-point-status georef-point-status--${pointIsReady(point) ? "ready" : "pending"}`}>
                           {point.error_m != null ? `${point.error_m}m error` : pointIsReady(point) ? "Ready" : "Needs input"}
                         </span>
@@ -971,7 +1004,7 @@ function SurveyPlanGeoreferenceSetupStep({
                           <button
                             type="button"
                             className="georef-row-menu-btn"
-                            aria-label={`Actions for ${point.label || "GCP"}`}
+                            aria-label={`Actions for ${point.label || "Control point"}`}
                             aria-haspopup="menu"
                             aria-expanded={rowMenuOpenId === point.id}
                             onClick={(event) => {
@@ -1015,25 +1048,55 @@ function SurveyPlanGeoreferenceSetupStep({
                   );
                 })}
                   </div>
-                  <button type="button" className="geo-btn geo-btn-outline geo-btn-block" onClick={() => setAddPointMenuOpen(true)}>
-                    Add Next GCP
-                  </button>
+                  {placementStage === "awaiting-raster" || placementStage === "awaiting-map" ? (
+                    <div className="georef-placement-status">
+                      <div className="georef-placement-track">
+                        <span className={placementStage === "awaiting-raster" ? "is-active" : "is-done"}>Survey plan point</span>
+                        <span className={placementStage === "awaiting-map" ? "is-active" : ""}>Matching map location</span>
+                        <span>Control point saved</span>
+                      </div>
+                      <p className="geo-section-hint">
+                        {placementStage === "awaiting-raster"
+                          ? "Select a point on the survey plan."
+                          : "Select the matching location on the map."}
+                      </p>
+                      <button type="button" className="geo-btn geo-btn-outline geo-btn-block" onClick={cancelPendingPoint}>
+                        {placementStage === "awaiting-raster" ? "Cancel" : "Cancel point"}
+                      </button>
+                    </div>
+                  ) : placementStage === "saved" ? (
+                    <div className="georef-placement-status">
+                      <div className="georef-placement-track">
+                        <span className="is-done">Survey plan point</span>
+                        <span className="is-done">Matching map location</span>
+                        <span className="is-active">Control point saved</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <button type="button" className="geo-btn geo-btn-primary geo-btn-block" onClick={beginNewControlPoint}>
+                      {controlPoints.length === 0 ? "Start georeferencing" : "Add control point"}
+                    </button>
+                  )}
                 </div>
+
+                {!session.transform && (
+                  <p className="geo-section-hint georef-continue-hint">Add at least three well-distributed control points.</p>
+                )}
               </>
             )}
           </div>
 
           {session && (
             <div className="geo-left-footer">
-              <button type="button" className="geo-btn geo-btn-destructive-subtle" onClick={onDeleteSession} title="Clear session">
-                Clear Session
+              <button type="button" className="geo-btn geo-btn-destructive-subtle" onClick={onDeleteSession} title="Clear draft">
+                Clear draft
               </button>
               <button
                 type="button"
                 className="geo-btn geo-btn-primary"
                 disabled={!session.transform}
                 onClick={onContinue}
-                title={!session.transform ? "Anchor the raster before continuing." : undefined}
+                title={!session.transform ? "Add at least three well-distributed control points." : undefined}
               >
                 Continue to Digitize
               </button>
@@ -1043,12 +1106,24 @@ function SurveyPlanGeoreferenceSetupStep({
 
         <section className="geo-panel geo-panel-canvas" data-tab-panel="raster">
           <div className="geo-panel-heading">
-            <h2>Raster control stage</h2>
-            <p>{activePoint ? `Selected: ${activePoint.label}` : "Add a control point first"}</p>
+            <h2>Survey plan</h2>
+            <p>
+              {placementStage === "awaiting-raster"
+                ? "Select a point on the survey plan"
+                : activePoint
+                  ? `Selected: ${activePoint.label}`
+                  : "Start by matching a point on the plan."}
+            </p>
           </div>
           <div className="geo-canvas-wrap">
             <div className="geo-canvas-toolbar">
-              <button type="button" className="geo-canvas-tool-btn" onClick={() => setAddPointMenuOpen(true)} disabled={!session} title="Add Next GCP">
+              <button
+                type="button"
+                className="geo-canvas-tool-btn"
+                onClick={beginNewControlPoint}
+                disabled={!session || placementStage !== null}
+                title="Add control point"
+              >
                 <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
                 </svg>
@@ -1082,18 +1157,6 @@ function SurveyPlanGeoreferenceSetupStep({
                 Fit
               </button>
             </div>
-            {pendingPlacementMode && activePoint && !pointIsReady(activePoint) ? (
-              <div className="georef-guidance-banner">
-                <span>
-                  {pendingPlacementMode === "manual"
-                    ? `Type the pixel position and ground coordinate for "${activePoint.label}" in the fields on the left.`
-                    : `Click the matching point on the raster image, then click the same location on the reference map for "${activePoint.label}".`}
-                </span>
-                <button type="button" onClick={() => setPendingPlacementMode(null)}>
-                  Done
-                </button>
-              </div>
-            ) : null}
             <div className="georef-image-stage-viewport" ref={imageViewportRef} onWheel={handleStageWheel}>
               <div
                 className={`georef-image-stage georef-image-stage--zoomable${imageZoom > MIN_STAGE_ZOOM ? " is-zoomed" : ""}${draggingStage ? " is-dragging" : ""}`}
@@ -1172,7 +1235,7 @@ function SurveyPlanGeoreferenceSetupStep({
               <span>{cursorSample ? `${cursorSample.pixelX.toFixed(1)} / ${cursorSample.pixelY.toFixed(1)}` : "Move over image"}</span>
             </span>
             <span className="geo-status-item">
-              <em>Selected GCP target</em>
+              <em>Selected control point target</em>
               <span>
                 {activePoint
                   ? `${coordinateXLabel.split(" ")[0]} ${Number(activePoint.ground_x).toLocaleString(undefined, { maximumFractionDigits: projectedGroundSystem ? 3 : 6 })} / ${coordinateYLabel.split(" ")[0]} ${Number(activePoint.ground_y).toLocaleString(undefined, { maximumFractionDigits: projectedGroundSystem ? 3 : 6 })}`
@@ -1192,40 +1255,18 @@ function SurveyPlanGeoreferenceSetupStep({
 
         <section className="geo-panel geo-panel-map" data-tab-panel="map">
           <div className="geo-panel-heading">
-            <h2>Ground control map</h2>
-            <p>Click the map to pair the selected point with a real coordinate.</p>
+            <h2>Reference map</h2>
+            <p>
+              {placementStage === "awaiting-map"
+                ? "Select the matching location on the map"
+                : controlPoints.length === 0
+                  ? "Then select the same location on the map."
+                  : "Click the map to pair the selected point with a real coordinate."}
+            </p>
           </div>
-          {pendingPlacementMode === "map" && activePoint && !pointIsReady(activePoint) ? (
-            <div className="georef-guidance-banner">
-              <span>Now click the matching location on the map for "{activePoint.label}".</span>
-              <button type="button" onClick={() => setPendingPlacementMode(null)}>
-                Done
-              </button>
-            </div>
-          ) : null}
           <div className="geo-map-surface" ref={mapContainerRef} />
         </section>
       </div>
-
-      {addPointMenuOpen ? (
-        <div className="georef-add-point-backdrop" onClick={() => setAddPointMenuOpen(false)}>
-          <div className="georef-add-point-menu" onClick={(event) => event.stopPropagation()}>
-            <h4>Add ground control point</h4>
-            <p>How do you want to set this point's coordinates?</p>
-            <div className="georef-add-point-menu-actions">
-              <button type="button" className="geo-btn geo-btn-primary" onClick={() => startAddPoint("manual")}>
-                Add manually
-              </button>
-              <button type="button" className="geo-btn geo-btn-outline" onClick={() => startAddPoint("map")}>
-                Choose point on map
-              </button>
-              <button type="button" className="geo-btn geo-btn-outline" onClick={() => setAddPointMenuOpen(false)}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
