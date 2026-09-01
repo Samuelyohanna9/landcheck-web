@@ -980,11 +980,9 @@
    same .georef-workspace-redesign scope) - kept its own richer grid layout rather than forced
    into .geo-layer-row's single-line shape, which doesn't fit 5 inline-editable fields. */
 .georef-point-row {
-  padding: var(--geo-space-3, 0.82rem);
   border-radius: var(--geo-radius, 10px);
   border: 1px solid var(--geo-border, rgba(148, 163, 184, 0.18));
   background: var(--geo-surface-2, rgba(11, 20, 32, 0.54));
-  cursor: pointer;
 }
 
 .georef-point-row.active {
@@ -995,6 +993,115 @@
 .georef-point-row:focus-visible {
   outline: 2px solid var(--geo-accent, #25c77a);
   outline-offset: 2px;
+}
+
+/* Compact collapsed row - the default. ~70px tall so 3-5 rows fit in the sidebar without excess
+   scrolling; coordinates are plain read-only text, not inputs (see DESIGN GOAL). */
+.georef-point-row.is-compact {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: 70px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.georef-point-row.is-compact:hover {
+  border-color: var(--geo-border-strong, rgba(148, 163, 184, 0.34));
+}
+
+.georef-point-row-line1,
+.georef-point-row-line3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--geo-space-2, 0.5rem);
+}
+
+.georef-point-row-line1 strong {
+  color: var(--geo-text-primary, var(--survey-text-primary));
+  font-size: 0.86rem;
+}
+
+.georef-point-row-line2 {
+  color: var(--geo-text-secondary, var(--survey-text-secondary));
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.georef-point-row-line3 {
+  color: var(--geo-text-muted, var(--survey-text-secondary));
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.georef-row-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.georef-row-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--geo-text-secondary, var(--survey-text-secondary));
+  cursor: pointer;
+}
+
+.georef-row-menu-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.georef-row-menu-btn:hover {
+  background: var(--geo-surface-3, rgba(148, 163, 184, 0.16));
+  color: var(--geo-text-primary, var(--survey-text-primary));
+}
+
+.georef-row-menu-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+  padding: 4px;
+  border-radius: var(--geo-radius, 8px);
+  border: 1px solid var(--geo-border, rgba(148, 163, 184, 0.18));
+  background: var(--geo-surface-1, #101d2b);
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.4);
+}
+
+.georef-row-menu-popover button {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--geo-text-primary, var(--survey-text-primary));
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.georef-row-menu-popover button:hover {
+  background: var(--geo-surface-3, rgba(148, 163, 184, 0.16));
+}
+
+.georef-row-menu-popover button.is-destructive {
+  color: var(--geo-red, #ef6461);
+}
+
+/* Expanded edit mode - only one row at a time, back to the roomier padding/grid of inputs. */
+.georef-point-row.is-editing {
+  padding: var(--geo-space-3, 0.82rem);
 }
 
 .georef-point-row-head,

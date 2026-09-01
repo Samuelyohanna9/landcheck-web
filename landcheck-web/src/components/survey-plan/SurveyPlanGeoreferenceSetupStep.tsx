@@ -70,7 +70,14 @@ function SurveyPlanGeoreferenceSetupStep({
   onContinue,
   onDeleteSession,
 }: Props) {
-  type NumericField = "ground_x" | "ground_y" | "image_x" | "image_y";
+  type EditDraft = {
+    pointId: string;
+    label: string;
+    ground_x: string;
+    ground_y: string;
+    image_x: string;
+    image_y: string;
+  };
   const imageViewportRef = useRef<HTMLDivElement | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const imageStageRef = useRef<HTMLDivElement | null>(null);
@@ -83,14 +90,19 @@ function SurveyPlanGeoreferenceSetupStep({
   const dragStateRef = useRef<{ startX: number; startY: number; panX: number; panY: number; moved: boolean } | null>(null);
   const suppressNextImageClickRef = useRef(false);
   const controlPointRefs = useRef<Record<string, HTMLElement | null>>({});
-  const groundXInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const editFirstFieldRef = useRef<HTMLInputElement | null>(null);
+  const rowMenuRef = useRef<HTMLDivElement | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftFile, setDraftFile] = useState<File | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [addPointMenuOpen, setAddPointMenuOpen] = useState(false);
   const [pendingPlacementMode, setPendingPlacementMode] = useState<"manual" | "map" | null>(null);
   const [stageMetrics, setStageMetrics] = useState<RasterStageMetrics | null>(null);
-  const [numericDrafts, setNumericDrafts] = useState<Record<string, Partial<Record<NumericField, string>>>>({});
+  // Only one GCP's inputs are ever editable at a time - every other row shows compact read-only
+  // values. Buffered as its own draft object (not committed field-by-field on blur like before)
+  // so Save/Cancel can apply or discard the whole row's edits together.
+  const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
+  const [rowMenuOpenId, setRowMenuOpenId] = useState<string | null>(null);
   const [imageZoom, setImageZoom] = useState(MIN_STAGE_ZOOM);
   const [imagePan, setImagePan] = useState({ x: 0, y: 0 });
   const [draggingStage, setDraggingStage] = useState(false);
@@ -259,8 +271,21 @@ function SurveyPlanGeoreferenceSetupStep({
   }, [session?.title_text]);
 
   useEffect(() => {
-    setNumericDrafts({});
-  }, [controlPoints]);
+    if (editDraft && !controlPoints.some((point) => point.id === editDraft.pointId)) {
+      setEditDraft(null);
+    }
+  }, [controlPoints, editDraft]);
+
+  useEffect(() => {
+    if (!rowMenuOpenId) return;
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (rowMenuRef.current && !rowMenuRef.current.contains(event.target as Node)) {
+        setRowMenuOpenId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [rowMenuOpenId]);
 
   useEffect(() => {
     setImageZoom(MIN_STAGE_ZOOM);
@@ -299,15 +324,69 @@ function SurveyPlanGeoreferenceSetupStep({
     controlPointRefs.current[activePoint.id]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [activePoint?.id]);
 
+  // "Add manually" has nowhere else to type coordinates now that rows are collapsed by default -
+  // it opens that point's edit draft directly instead of relying on an always-visible input.
   useEffect(() => {
-    if (pendingPlacementMode !== "manual" || !activePoint?.id) return;
-    groundXInputRefs.current[activePoint.id]?.focus();
+    if (pendingPlacementMode !== "manual" || !activePoint) return;
+    setEditDraft({
+      pointId: activePoint.id,
+      label: activePoint.label,
+      ground_x: Number.isFinite(activePoint.ground_x) ? String(activePoint.ground_x) : "",
+      ground_y: Number.isFinite(activePoint.ground_y) ? String(activePoint.ground_y) : "",
+      image_x: Number.isFinite(activePoint.image_x) ? String(activePoint.image_x) : "",
+      image_y: Number.isFinite(activePoint.image_y) ? String(activePoint.image_y) : "",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingPlacementMode, activePoint?.id]);
+
+  useEffect(() => {
+    if (editDraft) editFirstFieldRef.current?.focus();
+  }, [editDraft?.pointId]);
 
   const selectControlPoint = (controlPointId: string) => {
     setPendingPlacementMode(null);
     onSelectControlPoint(controlPointId);
   };
+
+  const startEditPoint = (point: (typeof controlPoints)[number]) => {
+    setRowMenuOpenId(null);
+    selectControlPoint(point.id);
+    setEditDraft({
+      pointId: point.id,
+      label: point.label,
+      ground_x: Number.isFinite(point.ground_x) ? String(point.ground_x) : "",
+      ground_y: Number.isFinite(point.ground_y) ? String(point.ground_y) : "",
+      image_x: Number.isFinite(point.image_x) ? String(point.image_x) : "",
+      image_y: Number.isFinite(point.image_y) ? String(point.image_y) : "",
+    });
+  };
+
+  const cancelEdit = () => setEditDraft(null);
+
+  const saveEdit = () => {
+    if (!editDraft) return;
+    const { pointId, label, ground_x, ground_y, image_x, image_y } = editDraft;
+    onUpdateControlPoint(pointId, "label", label);
+    (
+      [
+        ["ground_x", ground_x],
+        ["ground_y", ground_y],
+        ["image_x", image_x],
+        ["image_y", image_y],
+      ] as const
+    ).forEach(([field, raw]) => {
+      const parsed = Number.parseFloat(String(raw).trim().replace(",", "."));
+      if (Number.isFinite(parsed)) onUpdateControlPoint(pointId, field, parsed);
+    });
+    setEditDraft(null);
+  };
+
+  const updateEditDraft = (field: keyof Omit<EditDraft, "pointId">, value: string) => {
+    setEditDraft((current) => (current ? { ...current, [field]: value } : current));
+  };
+
+  const formatGroundValue = (value: number) => (Number.isFinite(value) ? value.toFixed(projectedGroundSystem ? 3 : 6) : "--");
+  const formatPixelValue = (value: number) => (Number.isFinite(value) ? value.toFixed(2) : "--");
 
   const startAddPoint = (mode: "manual" | "map") => {
     setAddPointMenuOpen(false);
@@ -411,46 +490,6 @@ function SurveyPlanGeoreferenceSetupStep({
     }),
     [activePoint?.id, controlPoints, projectedGroundSystem, targetCoordinateSystem],
   );
-
-  const handleNumericDraftChange = (controlPointId: string, field: NumericField, rawValue: string) => {
-    setNumericDrafts((current) => ({
-      ...current,
-      [controlPointId]: {
-        ...(current[controlPointId] || {}),
-        [field]: rawValue,
-      },
-    }));
-  };
-
-  const commitNumericDraft = (controlPointId: string, field: NumericField) => {
-    const rawValue = numericDrafts[controlPointId]?.[field];
-    if (rawValue == null) return;
-    const normalized = String(rawValue).trim().replace(",", ".");
-    const parsed = Number.parseFloat(normalized);
-    if (Number.isFinite(parsed)) {
-      onUpdateControlPoint(controlPointId, field, parsed);
-    }
-    setNumericDrafts((current) => {
-      if (!current[controlPointId]) return current;
-      const nextFields = { ...(current[controlPointId] || {}) };
-      delete nextFields[field];
-      if (Object.keys(nextFields).length === 0) {
-        const nextState = { ...current };
-        delete nextState[controlPointId];
-        return nextState;
-      }
-      return {
-        ...current,
-        [controlPointId]: nextFields,
-      };
-    });
-  };
-
-  const getNumericInputValue = (controlPointId: string, field: NumericField, fallbackValue: number) => {
-    const draftValue = numericDrafts[controlPointId]?.[field];
-    if (draftValue != null) return draftValue;
-    return Number.isFinite(fallbackValue) ? String(fallbackValue) : "";
-  };
 
   useEffect(() => {
     const map = mapRef.current;
@@ -817,125 +856,164 @@ function SurveyPlanGeoreferenceSetupStep({
                     </span>
                   </h3>
               <div className="georef-control-list">
-                {controlPoints.map((point) => (
-                  <article
-                    key={point.id}
-                    ref={(node) => {
-                      controlPointRefs.current[point.id] = node;
-                    }}
-                    className={`georef-point-row${point.id === activePoint?.id ? " active" : ""}`}
-                    onClick={() => selectControlPoint(point.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        selectControlPoint(point.id);
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <div className="georef-point-row-head">
-                      <strong>{point.label}</strong>
-                      <span className={`georef-point-status georef-point-status--${pointIsReady(point) ? "ready" : "pending"}`}>
-                        {point.error_m != null ? `${point.error_m}m error` : pointIsReady(point) ? "Ready" : "Needs input"}
-                      </span>
-                    </div>
-                    <div className="georef-point-row-grid">
-                      <label>
-                        Label
-                        <input
-                          value={point.label}
-                          onChange={(event) => onUpdateControlPoint(point.id, "label", event.target.value)}
-                          onClick={(event) => event.stopPropagation()}
-                        />
-                      </label>
-                      <label>
-                        {coordinateXLabel}
-                        <input
-                          ref={(node) => {
-                            groundXInputRefs.current[point.id] = node;
-                          }}
-                          type="text"
-                          inputMode="decimal"
-                          value={getNumericInputValue(point.id, "ground_x", Number(point.ground_x))}
-                          onChange={(event) => handleNumericDraftChange(point.id, "ground_x", event.target.value)}
-                          onBlur={() => commitNumericDraft(point.id, "ground_x")}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                              event.preventDefault();
-                              commitNumericDraft(point.id, "ground_x");
-                            }
-                          }}
-                          onClick={(event) => event.stopPropagation()}
-                        />
-                      </label>
-                      <label>
-                        {coordinateYLabel}
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={getNumericInputValue(point.id, "ground_y", Number(point.ground_y))}
-                          onChange={(event) => handleNumericDraftChange(point.id, "ground_y", event.target.value)}
-                          onBlur={() => commitNumericDraft(point.id, "ground_y")}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                              event.preventDefault();
-                              commitNumericDraft(point.id, "ground_y");
-                            }
-                          }}
-                          onClick={(event) => event.stopPropagation()}
-                        />
-                      </label>
-                      <label>
-                        Pixel X
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={getNumericInputValue(point.id, "image_x", Number(point.image_x))}
-                          onChange={(event) => handleNumericDraftChange(point.id, "image_x", event.target.value)}
-                          onBlur={() => commitNumericDraft(point.id, "image_x")}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                              event.preventDefault();
-                              commitNumericDraft(point.id, "image_x");
-                            }
-                          }}
-                          onClick={(event) => event.stopPropagation()}
-                        />
-                      </label>
-                      <label>
-                        Pixel Y
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={getNumericInputValue(point.id, "image_y", Number(point.image_y))}
-                          onChange={(event) => handleNumericDraftChange(point.id, "image_y", event.target.value)}
-                          onBlur={() => commitNumericDraft(point.id, "image_y")}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                              event.preventDefault();
-                              commitNumericDraft(point.id, "image_y");
-                            }
-                          }}
-                          onClick={(event) => event.stopPropagation()}
-                        />
-                      </label>
-                    </div>
-                    <div className="georef-point-row-foot">
-                      <span>Click the raster to set image position, then click the map to set ground position.</span>
-                      <button
-                        type="button"
-                        className="georef-remove-point"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onRemoveControlPoint(point.id);
+                {controlPoints.map((point) => {
+                  const isEditing = editDraft?.pointId === point.id;
+                  const isActive = point.id === activePoint?.id;
+                  if (isEditing) {
+                    return (
+                      <article
+                        key={point.id}
+                        ref={(node) => {
+                          controlPointRefs.current[point.id] = node;
                         }}
+                        className={`georef-point-row is-editing${isActive ? " active" : ""}`}
                       >
-                        Remove
-                      </button>
-                    </div>
-                  </article>
-                ))}
+                        <div className="georef-point-row-head">
+                          <strong>{point.label || "GCP"}</strong>
+                          <span className={`georef-point-status georef-point-status--${pointIsReady(point) ? "ready" : "pending"}`}>
+                            {pointIsReady(point) ? "Ready" : "Needs input"}
+                          </span>
+                        </div>
+                        <div className="georef-point-row-grid">
+                          <label>
+                            Label
+                            <input
+                              ref={editFirstFieldRef}
+                              value={editDraft.label}
+                              onChange={(event) => updateEditDraft("label", event.target.value)}
+                            />
+                          </label>
+                          <label>
+                            {coordinateXLabel}
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={editDraft.ground_x}
+                              onChange={(event) => updateEditDraft("ground_x", event.target.value)}
+                            />
+                          </label>
+                          <label>
+                            {coordinateYLabel}
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={editDraft.ground_y}
+                              onChange={(event) => updateEditDraft("ground_y", event.target.value)}
+                            />
+                          </label>
+                          <label>
+                            Pixel X
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={editDraft.image_x}
+                              onChange={(event) => updateEditDraft("image_x", event.target.value)}
+                            />
+                          </label>
+                          <label>
+                            Pixel Y
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={editDraft.image_y}
+                              onChange={(event) => updateEditDraft("image_y", event.target.value)}
+                            />
+                          </label>
+                        </div>
+                        <div className="georef-point-row-foot">
+                          <span>Click the raster to set image position, then click the map to set ground position.</span>
+                        </div>
+                        <div className="geo-composer-actions">
+                          <button type="button" className="geo-btn geo-btn-outline" onClick={cancelEdit}>
+                            Cancel
+                          </button>
+                          <button type="button" className="geo-btn geo-btn-primary" onClick={saveEdit}>
+                            Save
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  }
+                  return (
+                    <article
+                      key={point.id}
+                      ref={(node) => {
+                        controlPointRefs.current[point.id] = node;
+                      }}
+                      className={`georef-point-row is-compact${isActive ? " active" : ""}`}
+                      onClick={() => selectControlPoint(point.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          selectControlPoint(point.id);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <div className="georef-point-row-line1">
+                        <strong>{point.label || "GCP"}</strong>
+                        <span className={`georef-point-status georef-point-status--${pointIsReady(point) ? "ready" : "pending"}`}>
+                          {point.error_m != null ? `${point.error_m}m error` : pointIsReady(point) ? "Ready" : "Needs input"}
+                        </span>
+                      </div>
+                      <div className="georef-point-row-line2">
+                        {formatGroundValue(Number(point.ground_x))}, {formatGroundValue(Number(point.ground_y))}
+                      </div>
+                      <div className="georef-point-row-line3">
+                        <span>
+                          Pixel {formatPixelValue(Number(point.image_x))}, {formatPixelValue(Number(point.image_y))}
+                        </span>
+                        <div
+                          className="georef-row-menu"
+                          ref={rowMenuOpenId === point.id ? rowMenuRef : undefined}
+                        >
+                          <button
+                            type="button"
+                            className="georef-row-menu-btn"
+                            aria-label={`Actions for ${point.label || "GCP"}`}
+                            aria-haspopup="menu"
+                            aria-expanded={rowMenuOpenId === point.id}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setRowMenuOpenId((current) => (current === point.id ? null : point.id));
+                            }}
+                          >
+                            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                              <path d="M10 5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 6.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM10 18a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" />
+                            </svg>
+                          </button>
+                          {rowMenuOpenId === point.id && (
+                            <div className="georef-row-menu-popover" role="menu">
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  startEditPoint(point);
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="is-destructive"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setRowMenuOpenId(null);
+                                  onRemoveControlPoint(point.id);
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
                   </div>
                   <button type="button" className="geo-btn geo-btn-outline geo-btn-block" onClick={() => setAddPointMenuOpen(true)}>
                     Add Next GCP
