@@ -1442,25 +1442,27 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           <div className="geo-status-bar">
             <span className="geo-status-item">
               <em>CRS</em>
-              {crsLabel}
+              <span>{crsLabel}</span>
             </span>
             <span className="geo-status-item">
               <em>{coordinateXLabel.split(" ")[0]} / {coordinateYLabel.split(" ")[0]}</em>
-              {cursorSample
-                ? `${formatGridCoordinate(cursorSample.targetX, projectedGroundSystem)} / ${formatGridCoordinate(cursorSample.targetY, projectedGroundSystem)}`
-                : "Move over image"}
+              <span>
+                {cursorSample
+                  ? `${formatGridCoordinate(cursorSample.targetX, projectedGroundSystem)} / ${formatGridCoordinate(cursorSample.targetY, projectedGroundSystem)}`
+                  : "Move over image"}
+              </span>
             </span>
             <span className="geo-status-item">
               <em>Vertices</em>
-              {statusVertexCount}
+              <span>{statusVertexCount}</span>
             </span>
             <span className="geo-status-item">
               <em>Length</em>
-              {projectedGroundSystem ? `${statusTotalDistance.toFixed(2)} m` : statusTotalDistance.toFixed(6)}
+              <span>{projectedGroundSystem ? `${statusTotalDistance.toFixed(2)} m` : statusTotalDistance.toFixed(6)}</span>
             </span>
             <span className="geo-status-item geo-status-item--snap">
               <em>Snapping</em>
-              Off
+              <span>Off</span>
             </span>
           </div>
         </section>
