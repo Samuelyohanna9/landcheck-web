@@ -3,7 +3,7 @@ import toast from "react-hot-toast";
 import { api } from "../../api/client";
 import SurveyLoadingAnimation from "../SurveyLoadingAnimation";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
-import { isProjectedCoordinateSystem, mercatorToWGS84, toWGS84 } from "../../utils/coordinateConverter";
+import { getCoordinateSystemLabel, isProjectedCoordinateSystem, mercatorToWGS84, toWGS84 } from "../../utils/coordinateConverter";
 import type { GeoreferenceFeature, GeoreferenceSession, GeoreferenceTransform } from "../../types/surveyGeoreference";
 import {
   getRasterPixelFromStageClick,
@@ -31,6 +31,105 @@ const toolLabels: Record<DraftTool, string> = {
   line: "Alignment / line",
   polygon: "Parcel boundary",
 };
+
+// Small line-style glyphs so each drawing tool is recognizable at a glance, not just by label -
+// deliberately plain stroked shapes (no fill) to read clearly at 18px against the dark panel.
+const toolIcons: Record<DraftTool, ReactNode> = {
+  polygon: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 7 8 4l8 2-1 8-9 2z" />
+    </svg>
+  ),
+  point: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <circle cx="10" cy="10" r="3.2" />
+      <circle cx="10" cy="10" r="0.6" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  line: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+      <path d="M3 15 9 8l4 3 4-7" />
+    </svg>
+  ),
+};
+
+type LayerTypeKey = "polygon" | "point" | "line";
+
+const layerRowConfig: { type: LayerTypeKey; label: string; swatchClass: string }[] = [
+  { type: "polygon", label: "Parcel boundary", swatchClass: "is-boundary" },
+  { type: "point", label: "Stake points", swatchClass: "is-stake" },
+  { type: "line", label: "Alignment lines", swatchClass: "is-line" },
+];
+
+// Small presentational pieces kept local to this file (props-only, no shared state) - reused for
+// the three drawing-tool buttons and the four layer rows so those blocks aren't one large inline
+// JSX mass. Not extracted to separate files since nothing else in the app needs them.
+function DrawingToolButton({
+  tool,
+  active,
+  onSelect,
+}: {
+  tool: DraftTool;
+  active: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button type="button" className={`geo-tool-btn${active ? " active" : ""}`} onClick={onSelect} aria-pressed={active}>
+      <span className="geo-tool-btn-icon">{toolIcons[tool]}</span>
+      <span className="geo-tool-btn-label">{toolLabels[tool]}</span>
+    </button>
+  );
+}
+
+function LayerRow({
+  label,
+  swatchClass,
+  count,
+  hidden,
+  onToggleVisibility,
+}: {
+  label: string;
+  swatchClass: string;
+  count: number;
+  hidden?: boolean;
+  onToggleVisibility?: () => void;
+}) {
+  return (
+    <div className="geo-layer-row">
+      <span className={`geo-layer-swatch ${swatchClass}`} aria-hidden="true" />
+      <span className="geo-layer-label">{label}</span>
+      <span className="geo-layer-count">{count}</span>
+      {onToggleVisibility ? (
+        <button
+          type="button"
+          className={`geo-layer-visibility${hidden ? " is-hidden" : ""}`}
+          onClick={onToggleVisibility}
+          aria-pressed={!hidden}
+          aria-label={hidden ? `Show ${label}` : `Hide ${label}`}
+          title={hidden ? "Hidden - click to show" : "Visible - click to hide"}
+        >
+          {hidden ? (
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+              <path d="M3 3l14 14M8.5 8.7a2 2 0 002.8 2.8M6.3 6.5C4.6 7.6 3.3 9 2.5 10c1.6 2.6 4.4 5 7.5 5 1 0 2-.2 2.9-.6M11.8 5.3c-.6-.1-1.2-.2-1.8-.2-3.1 0-5.9 2.4-7.5 5" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+              <path d="M2.5 10c1.6-2.6 4.4-5 7.5-5s5.9 2.4 7.5 5c-1.6 2.6-4.4 5-7.5 5s-5.9-2.4-7.5-5z" />
+              <circle cx="10" cy="10" r="2" />
+            </svg>
+          )}
+        </button>
+      ) : (
+        <span className="geo-layer-visibility geo-layer-visibility--static" title="Set on the previous step">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+            <path d="M2.5 10c1.6-2.6 4.4-5 7.5-5s5.9 2.4 7.5 5c-1.6 2.6-4.4 5-7.5 5s-5.9-2.4-7.5-5z" />
+            <circle cx="10" cy="10" r="2" />
+          </svg>
+        </span>
+      )}
+    </div>
+  );
+}
 
 // Same "remembered until tomorrow" quota flag pattern as CoordinateInput.tsx's AI features -
 // best-effort only (a private window or cleared storage just means this specific reminder doesn't
@@ -95,6 +194,53 @@ function SurveyPlanGeoreferenceWorkspaceStep({
       return false;
     }
   });
+  // Pure client-side display filter - never touches what's saved/exported, only which saved
+  // features are drawn on the raster stage and the Mapbox map right now.
+  const [hiddenLayerTypes, setHiddenLayerTypes] = useState<Set<LayerTypeKey>>(() => new Set());
+  const toggleLayerVisibility = (type: LayerTypeKey) => {
+    setHiddenLayerTypes((current) => {
+      const next = new Set(current);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  };
+  const [basemapStyle, setBasemapStyle] = useState<"satellite" | "vector">("satellite");
+  const [overlayOpacity, setOverlayOpacity] = useState(0.82);
+  const [rasterOverlayVisible, setRasterOverlayVisible] = useState(true);
+  const [layerManagerOpen, setLayerManagerOpen] = useState(false);
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
+  const [activeMobileTab, setActiveMobileTab] = useState<"tools" | "raster" | "map">("raster");
+  const [mapColumnWidthPercent, setMapColumnWidthPercent] = useState(36);
+  const mapResizeStateRef = useRef<{ startX: number; startWidthPercent: number; containerWidth: number } | null>(null);
+  const workspaceGridRef = useRef<HTMLDivElement | null>(null);
+
+  // Medium-screen drag handle between the canvas and map columns - a lightweight, self-contained
+  // resize (a display preference only, no data/layout implications beyond this component's own
+  // grid-template-columns).
+  const handleMapResizeStart = (event: React.MouseEvent<HTMLDivElement>) => {
+    const containerWidth = workspaceGridRef.current?.getBoundingClientRect().width || 1;
+    mapResizeStateRef.current = { startX: event.clientX, startWidthPercent: mapColumnWidthPercent, containerWidth };
+  };
+
+  useEffect(() => {
+    const handleMove = (event: MouseEvent) => {
+      const dragState = mapResizeStateRef.current;
+      if (!dragState) return;
+      const deltaPercent = ((dragState.startX - event.clientX) / dragState.containerWidth) * 100;
+      const nextPercent = Math.max(24, Math.min(50, dragState.startWidthPercent + deltaPercent));
+      setMapColumnWidthPercent(nextPercent);
+    };
+    const handleUp = () => {
+      mapResizeStateRef.current = null;
+    };
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, []);
   const overlayRasterUrl = session?.overlay?.raster_url
     ? (/^https?:\/\//i.test(session.overlay.raster_url) ? session.overlay.raster_url : `${api.defaults.baseURL || ""}${session.overlay.raster_url}`)
     : rasterObjectUrl;
@@ -302,6 +448,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     previewFeatures.forEach((feature) => {
       const coords = feature.wgs84_coordinates || [];
       if (!coords.length) return;
+      if (feature.source !== "draft" && hiddenLayerTypes.has(feature.feature_type)) return;
       if (feature.feature_type === "point") {
         pointFeatures.push({
           type: "Feature",
@@ -328,7 +475,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
       lines: { type: "FeatureCollection", features: lineFeatures },
       polygons: { type: "FeatureCollection", features: polygonFeatures },
     };
-  }, [previewFeatures]);
+  }, [previewFeatures, hiddenLayerTypes]);
 
   useEffect(() => {
     const measure = () => {
@@ -361,11 +508,15 @@ function SurveyPlanGeoreferenceWorkspaceStep({
       if (cancelled || !mapContainerRef.current) return;
       const map = new mapboxgl.Map({
         container: mapContainerRef.current,
-        style: "mapbox://styles/mapbox/satellite-streets-v12",
+        style:
+          basemapStyle === "vector"
+            ? "mapbox://styles/mapbox/streets-v12"
+            : "mapbox://styles/mapbox/satellite-streets-v12",
         center: [12.4, 9.2],
         zoom: 5.8,
         accessToken: MAPBOX_TOKEN,
       });
+      map.addControl(new mapboxgl.FullscreenControl(), "top-right");
       map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
       map.on("load", () => {
         if (overlayRasterUrl && session.overlay?.corners?.length) {
@@ -379,7 +530,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
             type: "raster",
             source: "georef-raster-workspace",
             paint: {
-              "raster-opacity": 0.82,
+              "raster-opacity": overlayOpacity,
               "raster-resampling": "linear",
               "raster-saturation": -0.08,
               "raster-contrast": 0.14,
@@ -473,7 +624,27 @@ function SurveyPlanGeoreferenceWorkspaceStep({
       }
       setMapReady(false);
     };
-  }, [overlayRasterUrl, session.overlay?.corners]);
+    // overlayOpacity/mapFeatureCollection are deliberately excluded here - both are synced by
+    // their own lightweight effects below instead of tearing down and recreating the whole map
+    // (which would lose the surveyor's current pan/zoom) every time a slider drags or a feature is
+    // added. basemapStyle IS included - switching basemap style is infrequent, and Mapbox clears
+    // every custom source/layer on setStyle anyway, so a full, clean re-init is simpler and safer
+    // than manually re-adding everything on a "style.load" event.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overlayRasterUrl, session.overlay?.corners, basemapStyle]);
+
+  // Keeps the raster overlay's opacity/visibility in sync with the slider and the layer manager's
+  // toggle, without tearing down and recreating the whole map.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map || !map.getLayer?.("georef-raster-workspace-layer")) return;
+    map.setPaintProperty("georef-raster-workspace-layer", "raster-opacity", rasterOverlayVisible ? overlayOpacity : 0);
+  }, [overlayOpacity, rasterOverlayVisible, mapReady]);
+
+  // Note: layer visibility on the map is handled by mapFeatureCollection already excluding
+  // hidden-type features from its GeoJSON (see its filter above) rather than a separate
+  // setLayoutProperty toggle - one source of truth, same effect on both the map and the raster
+  // stage's own SVG rendering (stageFeatures applies the identical filter).
 
   useEffect(() => {
     const map = mapRef.current;
@@ -513,6 +684,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   const stageFeatures = useMemo(
     () =>
       previewFeatures
+        .filter((feature) => feature.source === "draft" || !hiddenLayerTypes.has(feature.feature_type))
         .map((feature) => {
           const points = feature.pixels
             .map((point, index) => {
@@ -579,7 +751,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           pathPoints: string;
         }
       >,
-    [previewFeatures, stageMetrics],
+    [previewFeatures, stageMetrics, hiddenLayerTypes],
   );
 
   const selectedStageFeature =
@@ -589,6 +761,24 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     null;
 
   const selectedFeatureCoordinateRows = selectedStageFeature?.points || [];
+
+  // Status-bar-only derived values - pure display math over data that's already computed above
+  // (selectedStageFeature already reflects the in-progress draft while drawing, since a placed
+  // vertex immediately selects "draft"), nothing here is stored or exported.
+  const statusVertexCount = selectedFeatureCoordinateRows.length;
+  const statusTotalDistance = selectedFeatureCoordinateRows.reduce((total, point, index) => {
+    if (index === 0) return 0;
+    const previous = selectedFeatureCoordinateRows[index - 1];
+    const dx = point.targetX - previous.targetX;
+    const dy = point.targetY - previous.targetY;
+    return total + Math.sqrt(dx * dx + dy * dy);
+  }, 0);
+  const crsLabel = getCoordinateSystemLabel(effectiveTransformSystem);
+  const qualityLabel: Record<GeoreferenceTransform["quality"], string> = {
+    strong: "Good fit",
+    usable: "Usable fit",
+    weak: "Weak fit",
+  };
 
   const stageMarkers = useMemo(
     () =>
@@ -829,204 +1019,273 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   };
 
   return (
-    <div className="step-panel georef-step-panel">
-      <div className="panel-left georef-sidebar-column">
-        {sidebar}
-        <section className="georef-control-card">
-          <div className="georef-control-head">
-            <div>
-              <span className="georef-kicker">Digitize & Validate</span>
-              <h3>Digitize the final survey features on top of the calibrated raster</h3>
-              <p>Trace boundaries, staking points, and alignment lines, then review the coordinate register before export.</p>
+    <div className={`step-panel georef-step-panel georef-workspace-redesign${leftPanelCollapsed ? " left-collapsed" : ""}`} data-active-tab={activeMobileTab}>
+      <div
+        className="georef-workspace-grid"
+        ref={workspaceGridRef}
+        style={{ "--geo-map-col-width": `${mapColumnWidthPercent}%` } as React.CSSProperties}
+      >
+        <aside className="geo-panel geo-panel-left" data-tab-panel="tools">
+          <button
+            type="button"
+            className="geo-left-collapse-toggle"
+            onClick={() => setLeftPanelCollapsed((value) => !value)}
+            aria-label={leftPanelCollapsed ? "Show tools panel" : "Hide tools panel"}
+            title={leftPanelCollapsed ? "Show tools panel" : "Hide tools panel"}
+          >
+            {leftPanelCollapsed ? "›" : "‹"}
+          </button>
+          <div className="geo-left-scroll">
+            {sidebar}
+            <div className="geo-panel-heading">
+              <h2>Digitize features</h2>
+              <p>Trace and digitize features on the georeferenced raster.</p>
             </div>
-            <div className="georef-quality-pill">{transform.quality} fit, {transform.rms_error_m}m RMS</div>
-          </div>
 
-          <div className="georef-tool-row">
-            {(["polygon", "point", "line"] as DraftTool[]).map((item) => (
-              <button
-                key={item}
-                type="button"
-                className={`georef-tool-pill${tool === item ? " active" : ""}`}
-                onClick={() => {
-                  setTool(item);
-                  setDraftPixels([]);
-                  setDraftLabel(item === "polygon" ? "Primary parcel" : toolLabels[item]);
-                }}
-              >
-                {toolLabels[item]}
-              </button>
-            ))}
-          </div>
+            <div className="geo-quality-card" data-quality={transform.quality}>
+              <span className="geo-quality-dot" aria-hidden="true" />
+              <div>
+                <strong>{qualityLabel[transform.quality]} &middot; RMS {transform.rms_error_m}m</strong>
+                <span>Georeferencing quality</span>
+              </div>
+            </div>
 
-          <div className="georef-ai-digitize-row">
-            <button
-              type="button"
-              className="georef-ai-digitize-btn"
-              disabled={aiDigitizing || aiDigitizeQuotaExhausted}
-              onClick={() => void runAiDigitize()}
-              title={aiDigitizeQuotaExhausted ? "Resets tomorrow" : undefined}
-            >
-              <img src="/LandCheck_Survey_AI_Symbol.svg" alt="" className="georef-ai-digitize-icon" aria-hidden="true" />
-              {aiDigitizing
-                ? "AI is digitizing..."
-                : aiDigitizeQuotaExhausted
-                  ? "AI digitize runs used up for today"
-                  : "AI Digitize"}
-            </button>
-            <span className="georef-ai-digitize-hint">
-              Let AI locate the boundary and stake points on the raster for you to review, instead of tracing them by hand.
-            </span>
-          </div>
+            <div className="geo-section">
+              <h3 className="geo-section-title">Drawing tools</h3>
+              <div className="geo-tool-group">
+                {(["polygon", "point", "line"] as DraftTool[]).map((item) => (
+                  <DrawingToolButton
+                    key={item}
+                    tool={item}
+                    active={tool === item}
+                    onSelect={() => {
+                      setTool(item);
+                      setDraftPixels([]);
+                      setDraftLabel(item === "polygon" ? "Primary parcel" : toolLabels[item]);
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="geo-feature-composer">
+                <label className="geo-field-label">
+                  Feature label
+                  <input value={draftLabel} onChange={(event) => setDraftLabel(event.target.value)} placeholder="Primary parcel" />
+                </label>
+                <div className="geo-composer-actions">
+                  <button type="button" className="geo-btn geo-btn-outline" disabled={!draftPixels.length} onClick={() => setDraftPixels((current) => current.slice(0, -1))}>
+                    Undo point
+                  </button>
+                  <button type="button" className="geo-btn geo-btn-outline" disabled={!draftPixels.length} onClick={() => setDraftPixels([])}>
+                    Clear draft
+                  </button>
+                  {tool !== "point" && (
+                    <button
+                      type="button"
+                      className="geo-btn geo-btn-primary"
+                      disabled={tool === "line" ? draftPixels.length < 2 : draftPixels.length < 3}
+                      onClick={completeDraftFeature}
+                    >
+                      Finish {tool === "line" ? "line" : "polygon"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
 
-          <div className="georef-feature-composer">
-            <label>
-              Feature label
-              <input value={draftLabel} onChange={(event) => setDraftLabel(event.target.value)} placeholder="Primary parcel" />
-            </label>
-            <div className="georef-composer-actions">
-              <button type="button" className="btn-outline" disabled={!draftPixels.length} onClick={() => setDraftPixels((current) => current.slice(0, -1))}>
-                Undo point
-              </button>
-              <button type="button" className="btn-outline" disabled={!draftPixels.length} onClick={() => setDraftPixels([])}>
-                Clear draft
-              </button>
-              {tool !== "point" && (
-                <button type="button" className="btn-primary" disabled={tool === "line" ? draftPixels.length < 2 : draftPixels.length < 3} onClick={completeDraftFeature}>
-                  Finish {tool === "line" ? "line" : "polygon"}
-                </button>
+            <div className="geo-section">
+              <h3 className="geo-section-title">Layers</h3>
+              <div className="geo-layers-card">
+                {layerRowConfig.map((row) => (
+                  <LayerRow
+                    key={row.type}
+                    label={row.label}
+                    swatchClass={row.swatchClass}
+                    count={features.filter((feature) => feature.feature_type === row.type).length}
+                    hidden={hiddenLayerTypes.has(row.type)}
+                    onToggleVisibility={() => toggleLayerVisibility(row.type)}
+                  />
+                ))}
+                <LayerRow label="Control points" swatchClass="is-control" count={session.ground_control_points?.length ?? 0} />
+              </div>
+            </div>
+
+            <div className="geo-section">
+              <div className="geo-section-title-row">
+                <h3 className="geo-section-title">Digitized layers</h3>
+                <span className="geo-section-hint">Set the primary parcel, keep the export clean.</span>
+              </div>
+              {features.length === 0 ? (
+                <div className="geo-empty-list">
+                  <strong>No digitized features yet</strong>
+                  <span>Click the raster to place geometry, then save the working layer.</span>
+                </div>
+              ) : (
+                <div className="georef-feature-table-wrap">
+                  <table className="georef-feature-table">
+                    <thead>
+                      <tr>
+                        <th>Feature</th>
+                        <th>Geometry</th>
+                        <th>{projectedGroundSystem ? "Grid reference" : "Coordinate reference"}</th>
+                        <th>Role</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {features.map((feature) => {
+                        const firstCoordinate = feature.target_coordinates[0];
+                        const rowIsActive = selectedFeatureId === feature.id;
+                        return (
+                          <tr
+                            key={feature.id}
+                            className={rowIsActive ? "is-selected" : ""}
+                            onClick={() => setSelectedFeatureId(feature.id)}
+                          >
+                            <td>
+                              <strong>
+                                {feature.label}
+                                {feature.label?.startsWith("AI ") && <span className="georef-ai-feature-tag">AI</span>}
+                              </strong>
+                              <span>{feature.feature_type === "point" ? "Stake control" : feature.feature_type === "line" ? "Alignment" : "Boundary"}</span>
+                            </td>
+                            <td>{describeFeatureGeometry(feature)}</td>
+                            <td>
+                              {firstCoordinate
+                                ? `${coordinateXLabel.split(" ")[0]} ${formatGridCoordinate(firstCoordinate[0], projectedGroundSystem)} / ${coordinateYLabel.split(" ")[0]} ${formatGridCoordinate(firstCoordinate[1], projectedGroundSystem)}`
+                                : "--"}
+                            </td>
+                            <td>
+                              {feature.feature_type === "polygon" && feature.is_primary ? (
+                                <span className="georef-table-badge active">Primary parcel</span>
+                              ) : (
+                                <span className="georef-table-badge">Saved layer</span>
+                              )}
+                            </td>
+                            <td>
+                              <div className="georef-feature-actions">
+                                {feature.feature_type === "polygon" && (
+                                  <button
+                                    type="button"
+                                    className={`georef-mini-action${feature.is_primary ? " active" : ""}`}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      togglePrimaryPolygon(feature.id);
+                                    }}
+                                  >
+                                    {feature.is_primary ? "Primary parcel" : "Make primary"}
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  className="georef-mini-action danger"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    removeFeature(feature.id);
+                                  }}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="geo-ai-card">
+              <div className="geo-ai-card-head">
+                <img src="/LandCheck_Survey_AI_Symbol.svg" alt="" className="geo-ai-card-icon" aria-hidden="true" />
+                <strong>AI assistance</strong>
+              </div>
+              {aiDigitizeQuotaExhausted ? (
+                <>
+                  <p className="geo-ai-card-status">AI limit reached today</p>
+                  <p className="geo-ai-card-hint">Come back tomorrow for more AI help.</p>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="geo-btn geo-btn-ai geo-btn-block"
+                    disabled={aiDigitizing}
+                    onClick={() => void runAiDigitize()}
+                  >
+                    {aiDigitizing ? "AI is digitizing…" : "AI Digitize"}
+                  </button>
+                  <p className="geo-ai-card-hint">
+                    Let AI locate the boundary and stake points on the raster for you to review, instead of tracing
+                    them by hand.
+                  </p>
+                </>
               )}
             </div>
           </div>
 
-          <div className="georef-feature-register">
-            <div className="georef-feature-register-head">
-              <div>
-                <strong>Digitized layers</strong>
-                <span>Review saved features, set the primary parcel, and keep the export clean.</span>
-              </div>
-              <div className="georef-feature-register-metrics">
-                <span>{features.filter((feature) => feature.feature_type === "polygon").length} boundary</span>
-                <span>{features.filter((feature) => feature.feature_type === "line").length} line</span>
-                <span>{features.filter((feature) => feature.feature_type === "point").length} point</span>
-              </div>
-            </div>
-            {features.length === 0 ? (
-              <div className="georef-empty-list">
-                <strong>No digitized features yet</strong>
-                <span>Click the raster to place geometry, then save the working layer.</span>
-              </div>
-            ) : (
-              <div className="georef-feature-table-wrap">
-                <table className="georef-feature-table">
-                  <thead>
-                    <tr>
-                      <th>Feature</th>
-                      <th>Geometry</th>
-                      <th>{projectedGroundSystem ? "Grid reference" : "Coordinate reference"}</th>
-                      <th>Role</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {features.map((feature) => {
-                      const firstCoordinate = feature.target_coordinates[0];
-                      const rowIsActive = selectedFeatureId === feature.id;
-                      return (
-                        <tr
-                          key={feature.id}
-                          className={rowIsActive ? "is-selected" : ""}
-                          onClick={() => setSelectedFeatureId(feature.id)}
-                        >
-                          <td>
-                            <strong>
-                              {feature.label}
-                              {feature.label?.startsWith("AI ") && <span className="georef-ai-feature-tag">AI</span>}
-                            </strong>
-                            <span>{feature.feature_type === "point" ? "Stake control" : feature.feature_type === "line" ? "Alignment" : "Boundary"}</span>
-                          </td>
-                          <td>{describeFeatureGeometry(feature)}</td>
-                          <td>
-                            {firstCoordinate
-                              ? `${coordinateXLabel.split(" ")[0]} ${formatGridCoordinate(firstCoordinate[0], projectedGroundSystem)} / ${coordinateYLabel.split(" ")[0]} ${formatGridCoordinate(firstCoordinate[1], projectedGroundSystem)}`
-                              : "--"}
-                          </td>
-                          <td>
-                            {feature.feature_type === "polygon" && feature.is_primary ? (
-                              <span className="georef-table-badge active">Primary parcel</span>
-                            ) : (
-                              <span className="georef-table-badge">Saved layer</span>
-                            )}
-                          </td>
-                          <td>
-                            <div className="georef-feature-actions">
-                              {feature.feature_type === "polygon" && (
-                                <button
-                                  type="button"
-                                  className={`georef-mini-action${feature.is_primary ? " active" : ""}`}
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    togglePrimaryPolygon(feature.id);
-                                  }}
-                                >
-                                  {feature.is_primary ? "Primary parcel" : "Make primary"}
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                className="georef-mini-action danger"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  removeFeature(feature.id);
-                                }}
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          <div className="georef-actions-row">
-            <button type="button" className="btn-outline" onClick={onBack}>
+          <div className="geo-left-footer">
+            <button type="button" className="geo-btn geo-btn-outline" onClick={onBack}>
               Back to control points
             </button>
-            <button type="button" className="btn-primary" disabled={features.length === 0 || saving} onClick={onSaveFeatures}>
-              {saving ? "Saving digitized features..." : "Save Digitized Features"}
-            </button>
-            <button type="button" className="btn-secondary" disabled={features.length === 0} onClick={onContinue}>
-              Continue to Export
+            <button type="button" className="geo-btn geo-btn-secondary" disabled={features.length === 0 || saving} onClick={onSaveFeatures}>
+              {saving ? "Saving…" : "Save Digitized Features"}
             </button>
           </div>
-        </section>
-      </div>
+        </aside>
 
-      <div className="panel-right georef-visual-column">
-        <div className="georef-dual-stage">
-          <section className="georef-image-card">
-            <div className="georef-card-head">
-              <div>
-                <h4>Digitizing surface</h4>
-                <span>{tool === "point" ? "Each click saves a stake point immediately." : "Click to place vertices in order, then finish the layer."}</span>
-              </div>
-              <div className="georef-stage-toolbar">
-                <button type="button" className="btn-outline" onClick={() => updateStageZoom(imageZoom - STAGE_ZOOM_STEP)} disabled={imageZoom <= MIN_STAGE_ZOOM}>
-                  -
-                </button>
-                <span className="georef-stage-zoom-pill">{Math.round(imageZoom * 100)}%</span>
-                <button type="button" className="btn-outline" onClick={() => updateStageZoom(imageZoom + STAGE_ZOOM_STEP)} disabled={imageZoom >= MAX_STAGE_ZOOM}>
-                  +
-                </button>
-                <button type="button" className="btn-outline" onClick={() => updateStageZoom(MIN_STAGE_ZOOM)} disabled={imageZoom === MIN_STAGE_ZOOM && imagePan.x === 0 && imagePan.y === 0}>
-                  Fit
-                </button>
-              </div>
+        <section className="geo-panel geo-panel-canvas" data-tab-panel="raster">
+          <div className="geo-panel-heading">
+            <h2>Raster canvas</h2>
+            <p>
+              {tool === "point"
+                ? "Each click saves a stake point immediately."
+                : "Click points in order, then press Finish to complete the shape."}
+            </p>
+          </div>
+          <div className="geo-canvas-wrap">
+            <div className="geo-canvas-toolbar">
+              <button
+                type="button"
+                className="geo-canvas-tool-btn"
+                disabled={!draftPixels.length}
+                onClick={() => setDraftPixels((current) => current.slice(0, -1))}
+                aria-label="Undo last point"
+                title="Undo last point"
+              >
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M7 5 3 9l4 4M3 9h9a4 4 0 010 8h-2" />
+                </svg>
+              </button>
+              <span className="geo-canvas-toolbar-divider" aria-hidden="true" />
+              <button
+                type="button"
+                className="geo-canvas-tool-btn"
+                onClick={() => updateStageZoom(imageZoom - STAGE_ZOOM_STEP)}
+                disabled={imageZoom <= MIN_STAGE_ZOOM}
+                aria-label="Zoom out"
+              >
+                −
+              </button>
+              <span className="geo-zoom-pill">{Math.round(imageZoom * 100)}%</span>
+              <button
+                type="button"
+                className="geo-canvas-tool-btn"
+                onClick={() => updateStageZoom(imageZoom + STAGE_ZOOM_STEP)}
+                disabled={imageZoom >= MAX_STAGE_ZOOM}
+                aria-label="Zoom in"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                className="geo-canvas-tool-btn geo-canvas-tool-btn--fit"
+                onClick={() => updateStageZoom(MIN_STAGE_ZOOM)}
+                disabled={imageZoom === MIN_STAGE_ZOOM && imagePan.x === 0 && imagePan.y === 0}
+              >
+                Fit
+              </button>
             </div>
             <div className="georef-image-stage-viewport" ref={imageViewportRef} onWheel={handleStageWheel}>
               <div
@@ -1179,34 +1438,121 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                 </aside>
               ) : null}
             </div>
-            <div className="georef-coordinate-strip">
-              <article>
-                <span>Raster X / Y</span>
-                <strong>{cursorSample ? `X ${cursorSample.pixelX.toFixed(1)} / Y ${cursorSample.pixelY.toFixed(1)}` : "Move over image"}</strong>
-              </article>
-              <article>
-                <span>{projectedGroundSystem ? "Selected grid X / Y" : "Ground X / Y"}</span>
-                <strong>
-                  {cursorSample
-                    ? `X ${formatGridCoordinate(cursorSample.targetX, projectedGroundSystem)} / Y ${formatGridCoordinate(cursorSample.targetY, projectedGroundSystem)}`
-                    : "Waiting for cursor"}
-                </strong>
-              </article>
-              <article>
-                <span>WGS84 fallback</span>
-                <strong>{cursorSample ? `${formatWgs84Coordinate(cursorSample.lng)}, ${formatWgs84Coordinate(cursorSample.lat)}` : "Longitude / latitude"}</strong>
-              </article>
-            </div>
-          </section>
+          </div>
+          <div className="geo-status-bar">
+            <span className="geo-status-item">
+              <em>CRS</em>
+              {crsLabel}
+            </span>
+            <span className="geo-status-item">
+              <em>{coordinateXLabel.split(" ")[0]} / {coordinateYLabel.split(" ")[0]}</em>
+              {cursorSample
+                ? `${formatGridCoordinate(cursorSample.targetX, projectedGroundSystem)} / ${formatGridCoordinate(cursorSample.targetY, projectedGroundSystem)}`
+                : "Move over image"}
+            </span>
+            <span className="geo-status-item">
+              <em>Vertices</em>
+              {statusVertexCount}
+            </span>
+            <span className="geo-status-item">
+              <em>Length</em>
+              {projectedGroundSystem ? `${statusTotalDistance.toFixed(2)} m` : statusTotalDistance.toFixed(6)}
+            </span>
+            <span className="geo-status-item geo-status-item--snap">
+              <em>Snapping</em>
+              Off
+            </span>
+          </div>
+        </section>
 
-          <section className="georef-map-card">
-            <div className="georef-card-head">
-              <h4>Anchored map proof</h4>
-              <span>The raster footprint and every saved layer remain visible in the real map context.</span>
+        <section className="geo-panel geo-panel-map" data-tab-panel="map">
+          <div className="geo-panel-heading geo-panel-heading--map">
+            <h2>Map validation</h2>
+            <div className="geo-map-toolbar">
+              <div className="geo-basemap-switch" role="group" aria-label="Basemap style">
+                <button type="button" className={basemapStyle === "satellite" ? "active" : ""} onClick={() => setBasemapStyle("satellite")}>
+                  Satellite
+                </button>
+                <button type="button" className={basemapStyle === "vector" ? "active" : ""} onClick={() => setBasemapStyle("vector")}>
+                  Vector
+                </button>
+              </div>
+              <button
+                type="button"
+                className={`geo-icon-btn${layerManagerOpen ? " active" : ""}`}
+                onClick={() => setLayerManagerOpen((value) => !value)}
+                aria-pressed={layerManagerOpen}
+                aria-label="Layer manager"
+                title="Layer manager"
+              >
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M10 3 3 7l7 4 7-4z" />
+                  <path d="M3 11l7 4 7-4" />
+                </svg>
+              </button>
             </div>
-            <div className="georef-map-surface" ref={mapContainerRef} />
-          </section>
-        </div>
+          </div>
+          <div className="geo-map-surface-wrap">
+            <div className="geo-map-resize-handle" onMouseDown={handleMapResizeStart} title="Drag to resize" />
+            <div className="geo-map-surface" ref={mapContainerRef} />
+            {layerManagerOpen && (
+              <div className="geo-layer-manager-popover">
+                <strong>Layers</strong>
+                <label>
+                  <input type="checkbox" checked={rasterOverlayVisible} onChange={(event) => setRasterOverlayVisible(event.target.checked)} />
+                  Raster overlay
+                </label>
+                {layerRowConfig.map((row) => (
+                  <label key={row.type}>
+                    <input
+                      type="checkbox"
+                      checked={!hiddenLayerTypes.has(row.type)}
+                      onChange={() => toggleLayerVisibility(row.type)}
+                    />
+                    {row.label}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="geo-opacity-row">
+            <label htmlFor="geo-overlay-opacity">Overlay opacity</label>
+            <input
+              id="geo-overlay-opacity"
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={overlayOpacity}
+              onChange={(event) => setOverlayOpacity(Number(event.target.value))}
+            />
+            <span>{Math.round(overlayOpacity * 100)}%</span>
+          </div>
+        </section>
+      </div>
+
+      <div className="geo-mobile-tabs">
+        <button type="button" className={activeMobileTab === "tools" ? "active" : ""} onClick={() => setActiveMobileTab("tools")}>
+          Tools
+        </button>
+        <button type="button" className={activeMobileTab === "raster" ? "active" : ""} onClick={() => setActiveMobileTab("raster")}>
+          Raster
+        </button>
+        <button type="button" className={activeMobileTab === "map" ? "active" : ""} onClick={() => setActiveMobileTab("map")}>
+          Map
+        </button>
+      </div>
+
+      <div className="geo-primary-cta-dock">
+        <button
+          type="button"
+          className="geo-btn geo-btn-primary geo-btn-cta"
+          disabled={features.length === 0}
+          onClick={onContinue}
+          title={features.length === 0 ? "Digitize at least one boundary before continuing" : undefined}
+        >
+          Review &amp; export →
+        </button>
       </div>
 
       {aiDigitizing && (
