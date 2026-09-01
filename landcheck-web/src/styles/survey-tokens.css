@@ -59,6 +59,24 @@
 
   /* Motif helpers */
   --survey-grid-line: rgba(139, 224, 178, 0.05);
+
+  /* Native-GIS refinement (Survey Plan Production sidebar/map, Digitize workspace toolbar) - a
+     distinct cool navy/emerald palette from the warmer parchment/copper tokens above, used only
+     by the newer coordinate-input/map-toolbar UI. Scoped to :root here (this file only loads on
+     Survey/Dashboard) rather than mixed into the copper/parchment tokens above, so the two visual
+     languages stay independently adjustable. */
+  --survey-gis-bg: #07121d;
+  --survey-gis-panel-bg: #0b1724;
+  --survey-gis-raised-bg: #102131;
+  --survey-gis-hover-bg: #162a3b;
+  --survey-gis-primary: #21c77a;
+  --survey-gis-primary-hover: #27d684;
+  --survey-gis-primary-tint: rgba(33, 199, 122, 0.12);
+  --survey-gis-text-primary: #f3f6f8;
+  --survey-gis-text-secondary: #9aaaba;
+  --survey-gis-divider: rgba(148, 163, 184, 0.16);
+  --survey-gis-warning: #e7a93b;
+  --survey-gis-error: #ef5b5b;
 }
 
 /* Faint blueprint/graph-paper grid — apply to large empty ink surfaces */

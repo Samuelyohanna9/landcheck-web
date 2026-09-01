@@ -23,17 +23,17 @@
   min-height: 320px;
 }
 
-/* Custom Map Marker - RED and BIGGER */
+/* Custom Map Marker */
 .map-marker {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: linear-gradient(135deg, #21c77a 0%, #178a56 100%);
   border: 3px solid white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4), 0 0 0 2px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4), 0 0 0 2px rgba(33, 199, 122, 0.3);
   cursor: pointer;
   transition: transform 0.2s ease;
   z-index: 10;
@@ -41,7 +41,7 @@
 
 .map-marker:hover {
   transform: scale(1.15);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(33, 199, 122, 0.4);
 }
 
 .map-marker span {
@@ -135,35 +135,6 @@
   flex-shrink: 0;
 }
 
-/* Mapbox Draw Controls - BIGGER and more visible */
-.mapboxgl-ctrl-top-left {
-  top: 10px;
-  left: 10px;
-}
-
-.mapboxgl-ctrl-top-left .mapboxgl-ctrl-group {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
-  border: 2px solid white !important;
-  border-radius: 10px !important;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
-}
-
-.mapboxgl-ctrl-top-left .mapboxgl-ctrl-group button {
-  width: 44px !important;
-  height: 44px !important;
-  background-color: transparent !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
-}
-
-.mapboxgl-ctrl-top-left .mapboxgl-ctrl-group button:hover {
-  background-color: rgba(255, 255, 255, 0.2) !important;
-}
-
-.mapboxgl-ctrl-top-left .mapboxgl-ctrl-group button .mapboxgl-ctrl-icon {
-  filter: brightness(0) invert(1);
-}
-
 /* Navigation Controls */
 .mapboxgl-ctrl-top-right .mapboxgl-ctrl-group {
   background: rgba(255, 255, 255, 0.95) !important;
@@ -196,9 +167,252 @@
   color: var(--survey-text-muted) !important;
 }
 
-/* Draw tool active state indicator */
-.mapboxgl-ctrl-top-left .mapboxgl-ctrl-group button.active {
-  background-color: rgba(255, 255, 255, 0.3) !important;
+/* =========================================================================
+   Map toolbar, contextual selection action, layers popover, badges - own
+   scoped tokens matching the Survey Plan Production native-GIS palette.
+   MapViewEnhanced is shared with Hazard Analysis too, so these are declared
+   as plain values (not tied to any one page's wrapper class) rather than
+   assuming a `.survey-workspace-redesign` ancestor is always present.
+   ========================================================================= */
+.map-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(11, 23, 36, 0.92);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 20px rgba(2, 6, 12, 0.28);
+}
+
+.map-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #9aaaba;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.map-toolbar-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.map-toolbar-btn:hover:not(:disabled) {
+  background: rgba(148, 163, 184, 0.14);
+  color: #f3f6f8;
+}
+
+.map-toolbar-btn.active {
+  background: rgba(33, 199, 122, 0.18);
+  color: #21c77a;
+}
+
+.map-toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.map-toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(148, 163, 184, 0.2);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.map-basemap-switch {
+  display: flex;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  overflow: hidden;
+}
+
+.map-basemap-switch button {
+  padding: 0 10px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: #9aaaba;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.map-basemap-switch button.active {
+  background: rgba(33, 199, 122, 0.18);
+  color: #21c77a;
+}
+
+.map-basemap-switch button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.map-layers-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 160px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: #0b1724;
+  color: #f3f6f8;
+  font-size: 0.75rem;
+  box-shadow: 0 12px 28px rgba(2, 6, 12, 0.4);
+  z-index: 6;
+}
+
+.map-layers-popover strong {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9aaaba;
+}
+
+.map-layers-popover label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.map-selection-action {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+}
+
+.map-selection-action button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(239, 91, 91, 0.4);
+  background: rgba(239, 91, 91, 0.14);
+  color: #ef5b5b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.map-selection-action button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.map-selection-action button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.map-measure-readout {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(231, 169, 59, 0.35);
+  background: rgba(11, 23, 36, 0.92);
+  color: #e7a93b;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.map-measure-readout small {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: #9aaaba;
+}
+
+.map-area-badge {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 5;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(11, 23, 36, 0.92);
+  color: #f3f6f8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.map-empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.map-empty-state span {
+  font-size: 0.85rem;
+  color: #9aaaba;
+}
+
+.map-empty-state button {
+  pointer-events: auto;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(11, 23, 36, 0.85);
+  color: #f3f6f8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.map-empty-state button:hover:not(:disabled) {
+  border-color: rgba(33, 199, 122, 0.4);
+  color: #21c77a;
+}
+
+@media (max-width: 640px) {
+  .map-toolbar {
+    top: 8px;
+    left: 8px;
+    gap: 2px;
+    padding: 3px;
+  }
+
+  .map-basemap-switch button {
+    padding: 0 6px;
+    font-size: 0.62rem;
+  }
 }
 
 @media (max-width: 1024px) {

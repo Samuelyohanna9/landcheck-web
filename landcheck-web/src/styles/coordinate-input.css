@@ -781,3 +781,345 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================================
+   Native-GIS refinement: coordinate-system detail disclosure, input-method
+   tabs, coordinate-preview table. New selectors (no pre-existing appearance
+   to preserve), but still following this file's var(--survey-gis-X, fallback)
+   convention so Survey/Dashboard get the exact spec'd navy/emerald palette
+   while Hazard Analysis (no survey-tokens.css) gets a coherent dark fallback
+   instead of an unstyled/broken new UI.
+   ========================================================================= */
+.coord-system-selected-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.coord-system-selected-line strong {
+  color: var(--survey-gis-text-primary, #f7f8f3);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.coord-system-selected-line span {
+  color: var(--survey-gis-text-secondary, #9aaba2);
+  font-size: 0.74rem;
+}
+
+.coord-system-details-toggle {
+  margin-left: auto;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--survey-gis-primary, #3ccf85);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.coord-system-details-toggle:hover {
+  color: var(--survey-gis-primary-hover, #67d995);
+}
+
+.coord-system-details {
+  margin: 0.3rem 0 0;
+  color: var(--survey-gis-text-secondary, #9aaba2);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.coord-method-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  padding: 0.8rem 1rem 0;
+}
+
+.coord-method-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.6rem 0.4rem;
+  border-radius: 10px;
+  border: 1px solid var(--survey-gis-divider, rgba(214, 223, 210, 0.1));
+  background: var(--survey-gis-raised-bg, rgba(247, 245, 238, 0.04));
+  color: var(--survey-gis-text-secondary, #9aaba2);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.coord-method-tab svg {
+  width: 18px;
+  height: 18px;
+}
+
+.coord-method-tab:hover {
+  border-color: var(--survey-gis-divider, rgba(214, 223, 210, 0.2));
+  color: var(--survey-gis-text-primary, #f7f8f3);
+}
+
+.coord-method-tab.active {
+  border-color: var(--survey-gis-primary, #3ccf85);
+  background: var(--survey-gis-primary-tint, rgba(60, 207, 133, 0.14));
+  color: var(--survey-gis-primary, #3ccf85);
+}
+
+.coord-method-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.85rem 1rem;
+}
+
+.coord-method-panel h4 {
+  margin: 0;
+  color: var(--survey-gis-text-primary, #f7f8f3);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.coord-method-panel p {
+  margin: 0;
+  color: var(--survey-gis-text-secondary, #9aaba2);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.coord-method-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.62rem 1rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: var(--survey-gis-primary, #3ccf85);
+  color: #06170e;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+}
+
+.coord-method-action-btn:hover {
+  background: var(--survey-gis-primary-hover, #67d995);
+}
+
+.coord-method-action-btn.disabled,
+.coord-method-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.coord-method-action-btn--outline {
+  background: transparent;
+  border-color: var(--survey-gis-divider, rgba(214, 223, 210, 0.2));
+  color: var(--survey-gis-text-primary, #f7f8f3);
+}
+
+.coord-method-action-btn--outline:hover {
+  border-color: var(--survey-gis-primary, #3ccf85);
+  color: var(--survey-gis-primary, #3ccf85);
+  background: transparent;
+}
+
+.coord-method-action-btn--danger {
+  color: var(--survey-gis-error, #c76c6c);
+}
+
+.coord-method-action-btn--danger:hover {
+  border-color: var(--survey-gis-error, #c76c6c);
+  color: var(--survey-gis-error, #c76c6c);
+}
+
+.coord-method-secondary-link {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--survey-gis-text-secondary, #9aaba2);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.coord-method-secondary-link:hover:not(:disabled) {
+  color: var(--survey-gis-primary, #3ccf85);
+}
+
+.coord-method-secondary-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.coord-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+}
+
+.coord-preview-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.coord-preview-stat {
+  padding: 0.24rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--survey-gis-divider, rgba(214, 223, 210, 0.14));
+  background: var(--survey-gis-raised-bg, rgba(247, 245, 238, 0.04));
+  color: var(--survey-gis-text-secondary, #9aaba2);
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.coord-preview-stat.is-valid {
+  border-color: var(--survey-gis-primary, #3ccf85);
+  color: var(--survey-gis-primary, #3ccf85);
+}
+
+.coord-preview-stat.is-error {
+  border-color: var(--survey-gis-error, #c76c6c);
+  color: var(--survey-gis-error, #c76c6c);
+}
+
+.coord-preview-stat.is-warning {
+  border-color: var(--survey-gis-warning, #dca34c);
+  color: var(--survey-gis-warning, #dca34c);
+}
+
+.coord-preview-table-wrap {
+  max-height: 260px;
+  overflow: auto;
+  border-radius: 10px;
+  border: 1px solid var(--survey-gis-divider, rgba(214, 223, 210, 0.1));
+}
+
+.coord-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.coord-preview-table th {
+  position: sticky;
+  top: 0;
+  padding: 0.45rem 0.5rem;
+  background: var(--survey-gis-panel-bg, #101c28);
+  color: var(--survey-gis-text-secondary, #9aaba2);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: left;
+}
+
+.coord-preview-table td {
+  padding: 0.4rem 0.5rem;
+  border-top: 1px solid var(--survey-gis-divider, rgba(214, 223, 210, 0.08));
+  color: var(--survey-gis-text-primary, #f7f8f3);
+}
+
+.coord-preview-table tr.has-issue td {
+  background: rgba(199, 108, 108, 0.08);
+}
+
+.coord-status-pill {
+  display: inline-flex;
+  padding: 0.14rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  background: var(--survey-gis-primary-tint, rgba(60, 207, 133, 0.14));
+  color: var(--survey-gis-primary, #3ccf85);
+}
+
+.coord-status-pill.invalid,
+.coord-status-pill.duplicate {
+  background: rgba(239, 91, 91, 0.14);
+  color: var(--survey-gis-error, #c76c6c);
+}
+
+.coord-status-pill.missing-station {
+  background: rgba(231, 169, 59, 0.14);
+  color: var(--survey-gis-warning, #dca34c);
+}
+
+.coord-preview-row-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--survey-gis-text-secondary, #9aaba2);
+  cursor: pointer;
+}
+
+.coord-preview-row-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.coord-preview-row-btn:hover:not(:disabled) {
+  background: var(--survey-gis-hover-bg, rgba(247, 245, 238, 0.08));
+  color: var(--survey-gis-text-primary, #f7f8f3);
+}
+
+.coord-preview-row-btn--danger:hover:not(:disabled) {
+  color: var(--survey-gis-error, #c76c6c);
+}
+
+.coord-preview-row-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.coord-preview-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.coord-preview-actions .coord-method-action-btn {
+  flex: 1;
+}
+
+.coord-editor-done-btn {
+  margin-left: auto;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--survey-gis-primary, #3ccf85);
+  background: transparent;
+  color: var(--survey-gis-primary, #3ccf85);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.coord-editor-done-btn:hover {
+  background: var(--survey-gis-primary-tint, rgba(60, 207, 133, 0.14));
+}
+
+@media (max-width: 640px) {
+  .coord-method-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .coord-preview-actions {
+    flex-direction: column;
+  }
+}

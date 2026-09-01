@@ -5,32 +5,13 @@ import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import "../styles/map-enhanced.css";
 import { loadMapboxDraw, loadMapboxGl } from "../utils/mapboxLoader";
 import { COUNTRY_MAP_VIEW, getCoordinateSystemCountry } from "../utils/coordinateConverter";
+import { computeParcelAreaSqMeters, formatParcelArea, haversineDistanceMeters, isPlottableLngLat } from "../utils/surveyGeometry";
 
 type Point = {
   station: string;
   lng: number;
   lat: number;
 };
-
-// A wrong (or wrongly-detected) coordinate system doesn't just distort a plot's shape - it can
-// produce raw Easting/Northing-scale numbers that end up here still unconverted, and Mapbox's
-// LngLat constructor throws on anything outside real degree range instead of just ignoring it,
-// which crashes the whole map. This is the last line of defense against that: no point reaches a
-// mapboxgl call (Marker, LngLatBounds, GeoJSON source) without passing this check first, no matter
-// what upstream coordinate-system detection got wrong.
-function isPlottableLngLat(lng: unknown, lat: unknown): boolean {
-  const lngNum = Number(lng);
-  const latNum = Number(lat);
-  return (
-    Number.isFinite(lngNum) &&
-    Number.isFinite(latNum) &&
-    lngNum >= -180 &&
-    lngNum <= 180 &&
-    latNum >= -90 &&
-    latNum <= 90 &&
-    !(lngNum === 0 && latNum === 0)
-  );
-}
 
 type SpotHeightPoint = Point & {
   is_boundary?: boolean;
@@ -49,6 +30,13 @@ type Props = {
   // without that data being forced into (and distorting) the boundary ring.
   viewMode?: "boundary" | "spot_heights";
   spotHeightPoints?: SpotHeightPoint[];
+  // Opt-in: the compact Select/Fit/Basemap/Layers/Measure/Full-screen toolbar plus the contextual
+  // (only-when-selected) delete action and the restrained empty-state message. This component is
+  // shared with Hazard Analysis, which has no such toolbar and relies on Mapbox Draw's own
+  // always-visible polygon/trash buttons as its only way to create/clear a boundary - so those
+  // built-in controls stay exactly as they were by default, and only get replaced by the new
+  // toolbar when a caller explicitly opts in (Survey Plan Production does).
+  showToolbar?: boolean;
 };
 
 // Nigeria spans UTM zones 31N-33N, split at fixed meridians - picking the wrong zone for a
@@ -101,8 +89,8 @@ const drawStyles = [
     type: "fill",
     filter: ["all", ["==", "active", "true"], ["==", "$type", "Polygon"]],
     paint: {
-      "fill-color": "#ef4444",
-      "fill-opacity": 0.3,
+      "fill-color": "#21c77a",
+      "fill-opacity": 0.28,
     },
   },
   {
@@ -110,8 +98,8 @@ const drawStyles = [
     type: "fill",
     filter: ["all", ["==", "active", "false"], ["==", "$type", "Polygon"]],
     paint: {
-      "fill-color": "#ef4444",
-      "fill-opacity": 0.2,
+      "fill-color": "#21c77a",
+      "fill-opacity": 0.18,
     },
   },
   {
@@ -119,7 +107,7 @@ const drawStyles = [
     type: "line",
     filter: ["all", ["==", "active", "true"], ["==", "$type", "Polygon"]],
     paint: {
-      "line-color": "#ef4444",
+      "line-color": "#21c77a",
       "line-width": 3,
     },
   },
@@ -128,7 +116,7 @@ const drawStyles = [
     type: "line",
     filter: ["all", ["==", "active", "false"], ["==", "$type", "Polygon"]],
     paint: {
-      "line-color": "#dc2626",
+      "line-color": "#178a56",
       "line-width": 3,
     },
   },
@@ -137,7 +125,7 @@ const drawStyles = [
     type: "line",
     filter: ["all", ["==", "$type", "LineString"]],
     paint: {
-      "line-color": "#ef4444",
+      "line-color": "#21c77a",
       "line-width": 3,
       "line-dasharray": [2, 2],
     },
@@ -148,7 +136,7 @@ const drawStyles = [
     filter: ["all", ["==", "active", "true"], ["==", "$type", "Point"]],
     paint: {
       "circle-radius": 8,
-      "circle-color": "#ef4444",
+      "circle-color": "#21c77a",
       "circle-stroke-color": "#ffffff",
       "circle-stroke-width": 3,
     },
@@ -159,7 +147,7 @@ const drawStyles = [
     filter: ["all", ["==", "active", "false"], ["==", "$type", "Point"]],
     paint: {
       "circle-radius": 6,
-      "circle-color": "#dc2626",
+      "circle-color": "#178a56",
       "circle-stroke-color": "#ffffff",
       "circle-stroke-width": 2,
     },
@@ -170,7 +158,7 @@ const drawStyles = [
     filter: ["all", ["==", "$type", "Point"], ["==", "meta", "midpoint"]],
     paint: {
       "circle-radius": 5,
-      "circle-color": "#fca5a5",
+      "circle-color": "#8fe6bb",
       "circle-stroke-color": "#ffffff",
       "circle-stroke-width": 2,
     },
@@ -185,6 +173,7 @@ function MapViewEnhanced({
   coordinateSystem,
   viewMode = "boundary",
   spotHeightPoints,
+  showToolbar = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -202,9 +191,72 @@ function MapViewEnhanced({
   // happens to land before the (asynchronously-loaded) map has finished initializing.
   const [mapReady, setMapReady] = useState(false);
 
+  // Toolbar state - "select" is the default interactive mode (drag/click existing vertices via
+  // Mapbox Draw's own simple_select/direct_select); "measure" repurposes plain map clicks into a
+  // click-to-measure session instead of drawing/selecting anything.
+  const [mapTool, setMapTool] = useState<"select" | "measure">("select");
+  const mapToolRef = useRef<"select" | "measure">("select");
+  const [basemapStyle, setBasemapStyle] = useState<"satellite" | "vector">(lightweight ? "vector" : "satellite");
+  const [layerManagerOpen, setLayerManagerOpen] = useState(false);
+  const [boundaryLayerVisible, setBoundaryLayerVisible] = useState(true);
+  const [zoneLayerVisible, setZoneLayerVisible] = useState(true);
+  const [hasDrawSelection, setHasDrawSelection] = useState(false);
+  const [measurePoints, setMeasurePoints] = useState<[number, number][]>([]);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   useEffect(() => {
     viewModeRef.current = viewMode;
   }, [viewMode]);
+
+  useEffect(() => {
+    mapToolRef.current = mapTool;
+    if (mapTool !== "measure") {
+      setMeasurePoints([]);
+    }
+    // While measuring, hand the draw control an inert mode so a map click only adds a measure
+    // point instead of also selecting/dragging the boundary underneath it.
+    const draw = drawRef.current;
+    if (draw && typeof draw.changeMode === "function") {
+      try {
+        draw.changeMode(mapTool === "measure" ? "static" : "simple_select");
+      } catch {
+        // Draw may not be ready yet on the very first render - the mode defaults to
+        // simple_select at construction anyway, so there's nothing to recover here.
+      }
+    }
+  }, [mapTool]);
+
+  // A parent-driven low-bandwidth toggle should still pick a sensible default style, but must not
+  // clobber a basemap the surveyor has since chosen manually via the toolbar - only react when
+  // `lightweight` itself actually flips, not on every render.
+  const lightweightRef = useRef(lightweight);
+  useEffect(() => {
+    if (lightweightRef.current === lightweight) return;
+    lightweightRef.current = lightweight;
+    setBasemapStyle(lightweight ? "vector" : "satellite");
+  }, [lightweight]);
+
+  useEffect(() => {
+    const el = containerRef.current?.parentElement;
+    if (!el) return;
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === el);
+      // The map canvas doesn't automatically know its container just changed size.
+      window.setTimeout(() => mapRef.current?.resize?.(), 60);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    const container = containerRef.current?.parentElement;
+    if (!container) return;
+    if (document.fullscreenElement) {
+      void document.exitFullscreen();
+    } else {
+      void container.requestFullscreen?.();
+    }
+  }, []);
 
   // Keeps the badge attached to whichever boundary meridian is actually on screen right now,
   // instead of sitting in a fixed corner unrelated to where the line is - recomputed on every
@@ -302,9 +354,10 @@ function MapViewEnhanced({
 
       const map = new mapboxgl.Map({
         container: containerRef.current,
-        style: lightweight
-          ? "mapbox://styles/mapbox/streets-v12"
-          : "mapbox://styles/mapbox/satellite-streets-v12",
+        style:
+          basemapStyle === "vector"
+            ? "mapbox://styles/mapbox/streets-v12"
+            : "mapbox://styles/mapbox/satellite-streets-v12",
         center: [7.5, 9.0],
         zoom: 6,
       });
@@ -315,11 +368,17 @@ function MapViewEnhanced({
       const MapboxDraw = await loadMapboxDraw();
       if (disposed || mapRef.current !== map) return;
 
+      // With the new toolbar (showToolbar=true, Survey Plan Production): both built-in control
+      // buttons are hidden - drawing a fresh boundary and deleting the selected feature are driven
+      // by our own toolbar/contextual-action buttons instead, so nothing red floats over the map
+      // before a feature actually exists and is selected. Without it (Hazard Analysis, which has
+      // no such toolbar and no other way to create/clear a boundary on the map): both stay exactly
+      // as they always have, unconditionally visible.
       const draw = new MapboxDraw({
         displayControlsDefault: false,
         controls: {
-          polygon: true,
-          trash: true,
+          polygon: !showToolbar,
+          trash: !showToolbar,
         },
         defaultMode: "simple_select",
         styles: drawStyles,
@@ -345,8 +404,8 @@ function MapViewEnhanced({
           type: "fill",
           source: "plot-polygon",
           paint: {
-            "fill-color": "#ef4444",
-            "fill-opacity": 0.25,
+            "fill-color": "#21c77a",
+            "fill-opacity": 0.22,
           },
         });
 
@@ -355,8 +414,36 @@ function MapViewEnhanced({
           type: "line",
           source: "plot-polygon",
           paint: {
-            "line-color": "#dc2626",
+            "line-color": "#21c77a",
             "line-width": 3,
+          },
+        });
+
+        // Measure tool - a plain line + point source, populated only while mapTool === "measure"
+        // (see the click handler and the measurePoints-sync effect below); empty otherwise.
+        map.addSource("measure-line", {
+          type: "geojson",
+          data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [] } },
+        });
+        map.addLayer({
+          id: "measure-line-layer",
+          type: "line",
+          source: "measure-line",
+          paint: { "line-color": "#e7a93b", "line-width": 2, "line-dasharray": [2, 1.5] },
+        });
+        map.addSource("measure-points", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+        map.addLayer({
+          id: "measure-points-layer",
+          type: "circle",
+          source: "measure-points",
+          paint: {
+            "circle-radius": 4,
+            "circle-color": "#e7a93b",
+            "circle-stroke-color": "#ffffff",
+            "circle-stroke-width": 1.5,
           },
         });
 
@@ -435,6 +522,14 @@ function MapViewEnhanced({
           ]);
         }
       });
+      map.on("draw.selectionchange", (event: any) => {
+        setHasDrawSelection(Boolean(event?.features?.length));
+      });
+
+      map.on("click", (event: any) => {
+        if (mapToolRef.current !== "measure") return;
+        setMeasurePoints((current) => [...current, [event.lngLat.lng, event.lngLat.lat]]);
+      });
 
       drawRef.current = draw;
     })();
@@ -447,7 +542,7 @@ function MapViewEnhanced({
       mapboxglRef.current = null;
       setMapReady(false);
     };
-  }, [applySpotHeightVisibility, handleDrawUpdate, lightweight, onCoordinatesDrawn, updateZoneBadgePosition]);
+  }, [applySpotHeightVisibility, basemapStyle, handleDrawUpdate, onCoordinatesDrawn, showToolbar, updateZoneBadgePosition]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -485,6 +580,75 @@ function MapViewEnhanced({
       map.once("load", applySpotHeightVisibility);
     }
   }, [viewMode, applySpotHeightVisibility]);
+
+  // Measure-tool click points -> the line/point sources added at map load. Cleared whenever the
+  // tool switches away from "measure" (measurePoints itself is reset to [] in that same effect).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const applyMeasureData = () => {
+      const lineSource = map.getSource("measure-line") as any;
+      const pointSource = map.getSource("measure-points") as any;
+      if (lineSource) {
+        lineSource.setData({
+          type: "Feature",
+          properties: {},
+          geometry: { type: "LineString", coordinates: measurePoints },
+        });
+      }
+      if (pointSource) {
+        pointSource.setData({
+          type: "FeatureCollection",
+          features: measurePoints.map((coord) => ({
+            type: "Feature",
+            properties: {},
+            geometry: { type: "Point", coordinates: coord },
+          })),
+        });
+      }
+    };
+    if (map.isStyleLoaded() && map.getSource("measure-line")) {
+      applyMeasureData();
+    } else {
+      map.once("load", applyMeasureData);
+    }
+  }, [measurePoints]);
+
+  // Layers popover toggles - boundary (fill+outline+corner pins) and the UTM/Minna zone-boundary
+  // line are independent so a surveyor can hide the zone guide without also hiding their own work.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const applyVisibility = () => {
+      ["plot-fill", "plot-outline"].forEach((id) => {
+        if (map.getLayer?.(id)) map.setLayoutProperty(id, "visibility", boundaryLayerVisible ? "visible" : "none");
+      });
+      markersRef.current.forEach((marker) => {
+        const el = marker.getElement?.();
+        if (el) el.style.display = boundaryLayerVisible && viewModeRef.current !== "spot_heights" ? "" : "none";
+      });
+    };
+    if (map.isStyleLoaded() && map.getLayer?.("plot-fill")) {
+      applyVisibility();
+    } else {
+      map.once("load", applyVisibility);
+    }
+  }, [boundaryLayerVisible]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const applyVisibility = () => {
+      if (map.getLayer?.("utm-zone-boundary-line")) {
+        map.setLayoutProperty("utm-zone-boundary-line", "visibility", zoneLayerVisible ? "visible" : "none");
+      }
+    };
+    if (map.isStyleLoaded() && map.getLayer?.("utm-zone-boundary-line")) {
+      applyVisibility();
+    } else {
+      map.once("load", applyVisibility);
+    }
+  }, [zoneLayerVisible]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -662,6 +826,36 @@ function MapViewEnhanced({
     }
   }, [coordinates, mapReady]);
 
+  // Manual re-trigger for the same fitBounds the [coordinates] effect above already does
+  // automatically on every import/edit - useful after a surveyor has panned/zoomed away and wants
+  // to snap back to their boundary without touching the data itself.
+  const fitToBoundary = useCallback(() => {
+    const map = mapRef.current;
+    const mapboxgl = mapboxglRef.current;
+    if (!map || !mapboxgl) return;
+    const validCoords = coordinates.filter((c) => isPlottableLngLat(c.lng, c.lat));
+    if (validCoords.length === 0) return;
+    const bounds = new mapboxgl.LngLatBounds();
+    validCoords.forEach((c) => bounds.extend([c.lng, c.lat]));
+    map.fitBounds(bounds, { padding: 80, maxZoom: validCoords.length >= 3 ? 18 : 16, duration: 800 });
+  }, [coordinates]);
+
+  // Freehand polygon drawing (Mapbox Draw's own "draw_polygon" mode) is preserved but no longer
+  // has a permanently-visible button - it's reachable only from the empty-state's "Draw on map"
+  // link, since the page's primary boundary-creation paths are AI/CSV/manual entry in the sidebar.
+  const startFreehandDraw = useCallback(() => {
+    const draw = drawRef.current;
+    if (!draw || typeof draw.changeMode !== "function") return;
+    setMapTool("select");
+    draw.changeMode("draw_polygon");
+  }, []);
+
+  const handleDeleteSelection = useCallback(() => {
+    const draw = drawRef.current;
+    if (!draw) return;
+    draw.trash();
+  }, []);
+
   // Recenters the map on the chosen coordinate system's country - only when the country actually
   // changes (not on every zone tweak within the same country). Deliberately fires even with a
   // boundary already drawn: a coordinate-system change usually means the surveyor is about to
@@ -696,11 +890,137 @@ function MapViewEnhanced({
     map.flyTo({ center: view.center, zoom: view.zoom, duration: 1200 });
   }, [coordinateSystem, mapReady]);
 
-  const hasValidCoords = coordinates.filter((c) => isPlottableLngLat(c.lng, c.lat)).length > 0;
+  // Escape always means "back out of whatever the map is doing right now" - clears an in-progress
+  // measurement (or exits the tool entirely if there's nothing left to clear) without touching the
+  // boundary itself.
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || mapToolRef.current !== "measure") return;
+      setMeasurePoints((current) => {
+        if (current.length > 0) return [];
+        setMapTool("select");
+        return current;
+      });
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const validCoords = coordinates.filter((c) => isPlottableLngLat(c.lng, c.lat));
+  const hasValidCoords = validCoords.length > 0;
+  const parcelAreaSqM = validCoords.length >= 3 ? computeParcelAreaSqMeters(validCoords.map((c) => [c.lng, c.lat])) : 0;
+  const measureTotalMeters = measurePoints.slice(1).reduce(
+    (total, [lng, lat], index) => total + haversineDistanceMeters(measurePoints[index][0], measurePoints[index][1], lng, lat),
+    0,
+  );
+  const activeZone = coordinateSystem ? UTM_ZONE_BOUNDARIES[coordinateSystem] : undefined;
 
   return (
     <div className={`map-enhanced-container ${disabled ? "disabled" : ""}`}>
       <div ref={containerRef} className="map-enhanced" />
+
+      {showToolbar && (
+      <div className="map-toolbar" role="toolbar" aria-label="Map tools">
+        <button
+          type="button"
+          className={`map-toolbar-btn${mapTool === "select" ? " active" : ""}`}
+          onClick={() => setMapTool("select")}
+          disabled={disabled}
+          aria-pressed={mapTool === "select"}
+          title="Select"
+        >
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden="true">
+            <path d="M5 3l10 6-4.2 1.2L12 15z" />
+          </svg>
+        </button>
+        <button type="button" className="map-toolbar-btn" onClick={fitToBoundary} disabled={disabled || !hasValidCoords} title="Fit boundary">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+            <path d="M3 7V4a1 1 0 011-1h3M17 7V4a1 1 0 00-1-1h-3M3 13v3a1 1 0 001 1h3M17 13v3a1 1 0 01-1 1h-3" />
+          </svg>
+        </button>
+        <span className="map-toolbar-divider" aria-hidden="true" />
+        <div className="map-basemap-switch" role="group" aria-label="Basemap style">
+          <button type="button" className={basemapStyle === "satellite" ? "active" : ""} onClick={() => setBasemapStyle("satellite")} disabled={disabled}>
+            Satellite
+          </button>
+          <button type="button" className={basemapStyle === "vector" ? "active" : ""} onClick={() => setBasemapStyle("vector")} disabled={disabled}>
+            Vector
+          </button>
+        </div>
+        <button
+          type="button"
+          className={`map-toolbar-btn${layerManagerOpen ? " active" : ""}`}
+          onClick={() => setLayerManagerOpen((value) => !value)}
+          disabled={disabled}
+          aria-pressed={layerManagerOpen}
+          title="Layers"
+        >
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden="true">
+            <path d="M10 3 3 7l7 4 7-4z" />
+            <path d="M3 11l7 4 7-4" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          className={`map-toolbar-btn${mapTool === "measure" ? " active" : ""}`}
+          onClick={() => setMapTool(mapTool === "measure" ? "select" : "measure")}
+          disabled={disabled}
+          aria-pressed={mapTool === "measure"}
+          title="Measure"
+        >
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+            <path d="M3 15 15 3M6 12l2 2M9 9l2 2M12 6l2 2" />
+          </svg>
+        </button>
+        <span className="map-toolbar-divider" aria-hidden="true" />
+        <button
+          type="button"
+          className={`map-toolbar-btn${isFullscreen ? " active" : ""}`}
+          onClick={toggleFullscreen}
+          disabled={disabled}
+          aria-pressed={isFullscreen}
+          title="Full screen"
+        >
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M7 3H4a1 1 0 00-1 1v3M13 3h3a1 1 0 011 1v3M7 17H4a1 1 0 01-1-1v-3M13 17h3a1 1 0 001-1v-3" />
+          </svg>
+        </button>
+
+        {layerManagerOpen && (
+          <div className="map-layers-popover">
+            <strong>Layers</strong>
+            <label>
+              <input type="checkbox" checked={boundaryLayerVisible} onChange={(event) => setBoundaryLayerVisible(event.target.checked)} />
+              Boundary
+            </label>
+            {activeZone && (
+              <label>
+                <input type="checkbox" checked={zoneLayerVisible} onChange={(event) => setZoneLayerVisible(event.target.checked)} />
+                Zone boundary
+              </label>
+            )}
+          </div>
+        )}
+      </div>
+      )}
+
+      {showToolbar && hasDrawSelection && mapTool !== "measure" && (
+        <div className="map-selection-action">
+          <button type="button" onClick={handleDeleteSelection} disabled={disabled}>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10" />
+            </svg>
+            Delete
+          </button>
+        </div>
+      )}
+
+      {showToolbar && mapTool === "measure" && (
+        <div className="map-measure-readout">
+          <span>{measureTotalMeters >= 1000 ? `${(measureTotalMeters / 1000).toFixed(2)} km` : `${Math.round(measureTotalMeters)} m`}</span>
+          <small>{measurePoints.length === 0 ? "Click the map to start measuring" : "Click to continue · Esc to clear"}</small>
+        </div>
+      )}
 
       {zoneBadge && (
         <div
@@ -712,12 +1032,27 @@ function MapViewEnhanced({
         </div>
       )}
 
-      {hasValidCoords && coordinates.filter((c) => isPlottableLngLat(c.lng, c.lat)).length < 3 && (
+      {showToolbar && parcelAreaSqM > 0 && boundaryLayerVisible && (
+        <div className="map-area-badge">
+          <span>{formatParcelArea(parcelAreaSqM)}</span>
+        </div>
+      )}
+
+      {hasValidCoords && validCoords.length < 3 && (
         <div className="map-warning">
           <svg viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
           </svg>
           <span>Need at least 3 points to form a polygon</span>
+        </div>
+      )}
+
+      {showToolbar && !hasValidCoords && (
+        <div className="map-empty-state">
+          <span>Add coordinates to plot the survey boundary.</span>
+          <button type="button" onClick={startFreehandDraw} disabled={disabled}>
+            Draw on map
+          </button>
         </div>
       )}
     </div>

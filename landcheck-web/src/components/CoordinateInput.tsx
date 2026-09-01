@@ -12,6 +12,7 @@ import {
   verifyOrResolveNigeriaCoordinateSystem,
   WGS84_NIGERIA_METERS,
 } from "../utils/coordinateConverter";
+import { checkPolygonClosure } from "../utils/surveyGeometry";
 
 const AI_QUOTA_EXHAUSTED_KEY = "plan-reader-quota-exhausted-date";
 
@@ -122,6 +123,11 @@ type Props = {
   // rather than making the surveyor read a coordinate table. Falls back to the table+modal route
   // when not provided, so this stays backward compatible for any other consumer.
   onAiPlotParsed?: (points: ManualPoint[]) => void;
+  // Opt-in: powers the coordinate-preview table's "Clear" action, which needs to remove every
+  // point unconditionally (starting over with a different input method) - unlike onRemovePoint,
+  // which enforces the "at least 3 boundary points" rule per row and would just get stuck at 3
+  // instead of actually clearing. Without this prop, "Clear" isn't shown.
+  onClearAllPoints?: () => void;
 };
 
 // Flattened view of COORDINATE_SYSTEM_GROUPS - kept for the "currently selected" lookup below;
@@ -173,6 +179,7 @@ function CoordinateInput({
   showPointRoles = false,
   onImportedMetadata,
   onAiPlotParsed,
+  onClearAllPoints,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const aiFileInputRef = useRef<HTMLInputElement>(null);
@@ -206,12 +213,23 @@ function CoordinateInput({
   const [fieldImportResult, setFieldImportResult] = useState<FieldImportParsed | null>(null);
   const [fieldImportCategories, setFieldImportCategories] = useState<FieldImportCategory[]>([]);
   const [fieldImportMode, setFieldImportMode] = useState<"upload" | "paste">("upload");
-  // Sticky once true (even if every row is later deleted) - the surveyor explicitly asked for the
-  // manual entry form, so it stays available rather than vanishing the moment it's empty again.
-  const [manualEntryOpened, setManualEntryOpened] = useState(false);
-  const showPointList = points.length > 0 || manualEntryOpened;
+  // Which of the three equal input-method affordances is showing - only one at a time, replacing
+  // the old "everything stacked" sidebar. Only meaningful before any points exist; once points
+  // exist, the coordinate-preview table takes over regardless of which method produced them.
+  // Defaults to AI when that method is actually available for this caller (Survey Plan), otherwise
+  // CSV - so a caller without onImportedMetadata (e.g. Hazard Analysis) never lands on an empty tab.
+  const [inputMethod, setInputMethod] = useState<"ai" | "csv" | "manual">(onImportedMetadata ? "ai" : "csv");
+  // True while the card-based point editor (the pre-existing showPointList UI below) is open -
+  // set true by choosing Manual Entry (so typing the first few points doesn't immediately bounce
+  // to a read-only table) or by the preview table's "Edit coordinates" action; set false by the
+  // editor's own "Done" button, which returns to the coordinate-preview table.
+  const [previewEditing, setPreviewEditing] = useState(false);
+  const [coordSystemDetailsOpen, setCoordSystemDetailsOpen] = useState(false);
+  const showEditor = previewEditing;
+  const showMethodTabs = points.length === 0 && !previewEditing;
+
   const openManualEntry = () => {
-    setManualEntryOpened(true);
+    setPreviewEditing(true);
     if (points.length === 0) {
       onAddPoint();
       onAddPoint();
@@ -241,6 +259,48 @@ function CoordinateInput({
     () => COORDINATE_SYSTEMS.find((sys) => sys.key === coordinateSystem) ?? COORDINATE_SYSTEMS[0],
     [coordinateSystem]
   );
+
+  // Coordinate-preview table validation - deliberately NOT the WGS84-range isPlottableLngLat check
+  // used on the map, since `points` here store raw values in whatever coordinateSystem is
+  // selected (often a projected easting/northing in the hundreds of thousands, which would fail a
+  // "-180..180" range check even though it's perfectly valid). A point only needs to be a real,
+  // non-placeholder number pair to count as numerically valid at this stage - coordinate-system
+  // correctness is a separate concern already handled by the AI-detection/CSV-preview flows.
+  const pointValidation = useMemo(() => {
+    const seen = new Map<string, number>();
+    const rows = points.map((point) => {
+      const key = `${point.lng}|${point.lat}`;
+      seen.set(key, (seen.get(key) || 0) + 1);
+      return key;
+    });
+    const statuses = points.map((point, index) => {
+      const missingStation = !point.station || !point.station.trim();
+      const isNumeric = Number.isFinite(point.lng) && Number.isFinite(point.lat) && !(point.lng === 0 && point.lat === 0);
+      const isDuplicate = (seen.get(rows[index]) || 0) > 1;
+      if (!isNumeric) return "invalid" as const;
+      if (isDuplicate) return "duplicate" as const;
+      if (missingStation) return "missing-station" as const;
+      return "valid" as const;
+    });
+    const validCount = statuses.filter((s) => s === "valid").length;
+    const invalidCount = statuses.filter((s) => s === "invalid" || s === "duplicate").length;
+    const missingStationCount = statuses.filter((s) => s === "missing-station").length;
+    const boundaryPoints = points.filter((p) => !showPointRoles || p.is_boundary !== false);
+    const closure = checkPolygonClosure(boundaryPoints.map((p) => [p.lng, p.lat] as [number, number]));
+    return { statuses, validCount, invalidCount, missingStationCount, closure };
+  }, [points, showPointRoles]);
+
+  const closureLabel: Record<ReturnType<typeof checkPolygonClosure>, string> = {
+    closed: "Closed, simple boundary",
+    "self-intersecting": "Boundary lines cross - check point order",
+    incomplete: "Add more points to check closure",
+  };
+  const validationStatusLabel: Record<(typeof pointValidation.statuses)[number], string> = {
+    valid: "Valid",
+    invalid: "Invalid",
+    duplicate: "Duplicate",
+    "missing-station": "Missing station",
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -637,22 +697,13 @@ function CoordinateInput({
   return (
     <div className="coord-input-container">
       <div className="coord-header">
-        <h3 className="coord-title">
-          {showPointRoles && (
-            <svg className="coord-title-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="10" cy="10" r="7" />
-              <circle cx="10" cy="10" r="2.2" fill="currentColor" stroke="none" />
-              <path d="M10 1.6v2.4M10 16v2.4M1.6 10h2.4M16 10h2.4" />
-            </svg>
-          )}
-          Boundary Coordinates
-        </h3>
-        <p className="coord-subtitle">Add parcel points directly or import a prepared sheet.</p>
+        <h3 className="coord-title">Add boundary coordinates</h3>
+        <p className="coord-subtitle">Choose how you want to provide the survey coordinates.</p>
       </div>
 
       <div className="coord-system-selector">
         <label className="coord-system-label" htmlFor="coord-system-select">
-          Coordinate System
+          Coordinate system
         </label>
         <div className="coord-system-field">
           <CoordinateSystemSelect
@@ -661,169 +712,206 @@ function CoordinateInput({
             onChange={onCoordinateSystemChange}
             disabled={disabled}
           />
-          <div className="coord-system-meta" id="coord-system-help" aria-live="polite">
+          <div className="coord-system-selected-line">
             <strong>{selectedCoordinateSystem.name}</strong>
-            <span>{selectedCoordinateSystem.description}</span>
-            <em>{selectedCoordinateSystem.epsgLabel || getCoordinateSystemEpsgLabel(selectedCoordinateSystem.key)}</em>
+            <span>{selectedCoordinateSystem.epsgLabel || getCoordinateSystemEpsgLabel(selectedCoordinateSystem.key)}</span>
+            <button
+              type="button"
+              className="coord-system-details-toggle"
+              onClick={() => setCoordSystemDetailsOpen((value) => !value)}
+              aria-expanded={coordSystemDetailsOpen}
+            >
+              {coordSystemDetailsOpen ? "Hide details" : "Details"}
+            </button>
           </div>
+          {coordSystemDetailsOpen && <p className="coord-system-details">{selectedCoordinateSystem.description}</p>}
         </div>
       </div>
 
+      {/* The Plan Reader's hidden file input is declared unconditionally so it stays reachable
+          from the AI panel's "Import an existing plan document instead" link regardless of which
+          method tab is active - clicking that link just re-focuses this same input. */}
       {onImportedMetadata && (
-        <div className="ai-plot-hero">
-          <div className="ai-plot-hero-header">
-            <img src="/LandCheck_Survey_AI_Symbol.svg" alt="" className="ai-plot-hero-icon" aria-hidden="true" />
-            <div>
-              <span className="ai-plot-hero-badge">AI-Powered</span>
-              <h3>AI Field to Survey Plan</h3>
-            </div>
-          </div>
-          <p className="ai-plot-hero-copy">
-            Paste or upload your <strong>boundary points only</strong> - station and easting/northing (or lat/long),
-            even messy or unlabeled. AI detects the coordinate system automatically, plots the boundary on the map for
-            you to confirm, then takes you straight to template selection.
-          </p>
-
-          <div className="coord-field-import-mode-toggle">
-            <button
-              type="button"
-              className={`coord-field-import-mode-btn ${fieldImportMode === "upload" ? "active" : ""}`}
-              onClick={() => setFieldImportMode("upload")}
-            >
-              Upload File
-            </button>
-            <button
-              type="button"
-              className={`coord-field-import-mode-btn ${fieldImportMode === "paste" ? "active" : ""}`}
-              onClick={() => setFieldImportMode("paste")}
-            >
-              Paste / Type Data
-            </button>
-          </div>
-
-          {fieldImportMode === "upload" ? (
-            <>
-              <input
-                ref={fieldImportFileInputRef}
-                type="file"
-                accept=".txt,.csv,.dat,.asc,.tsv"
-                onChange={handleFieldDataUpload}
-                disabled={disabled || fieldImportReading || fieldImportQuotaExhausted}
-                className="file-input-hidden"
-                id="coord-field-import-upload"
-              />
-              <label
-                htmlFor="coord-field-import-upload"
-                className={`upload-btn upload-btn--ai ai-plot-hero-btn ${disabled || fieldImportReading || fieldImportQuotaExhausted ? "disabled" : ""}`}
-                title={fieldImportQuotaExhausted ? "Resets tomorrow" : undefined}
-              >
-                <img src="/LandCheck_Survey_AI_Symbol.svg" alt="" className="qc-check-icon-img" aria-hidden="true" />
-                {fieldImportReading
-                  ? "Reading field data..."
-                  : fieldImportQuotaExhausted
-                    ? "AI imports used up for today"
-                    : "Upload Boundary Data"}
-              </label>
-            </>
-          ) : (
-            <div className="coord-field-import-paste">
-              <textarea
-                className="coord-field-import-paste-textarea"
-                rows={5}
-                placeholder={
-                  "Paste or type boundary points here, e.g.\nA 329110.22 1028183.41\nB 329119.61 1028191.32"
-                }
-                value={fieldImportPasteText}
-                onChange={(e) => setFieldImportPasteText(e.target.value)}
-                disabled={disabled || fieldImportReading || fieldImportQuotaExhausted}
-              />
-              <button
-                type="button"
-                className="upload-btn upload-btn--ai ai-plot-hero-btn coord-field-import-paste-submit"
-                onClick={() => void handleFieldDataPasteSubmit()}
-                disabled={disabled || fieldImportReading || fieldImportQuotaExhausted || !fieldImportPasteText.trim()}
-                title={fieldImportQuotaExhausted ? "Resets tomorrow" : undefined}
-              >
-                <img src="/LandCheck_Survey_AI_Symbol.svg" alt="" className="qc-check-icon-img" aria-hidden="true" />
-                {fieldImportReading
-                  ? "Reading field data..."
-                  : fieldImportQuotaExhausted
-                    ? "AI imports used up for today"
-                    : "Plot Boundary with AI"}
-              </button>
-            </div>
-          )}
-          <span className="upload-hint">
-            {fieldImportQuotaExhausted
-              ? "You've used all your AI field data imports for today - resets tomorrow."
-              : "Prefer the traditional route? Use CSV import, scanned-plan import, or manual entry below."}
-          </span>
-        </div>
+        <input
+          ref={aiFileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          onChange={handleAiPlanUpload}
+          disabled={disabled || aiReading || aiQuotaExhausted}
+          className="file-input-hidden"
+          id="coord-ai-plan-upload"
+        />
       )}
 
-      <div className="coord-upload-section coord-upload-section--secondary">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv,.xlsx,.xls,.txt"
-          onChange={handleFileUpload}
-          disabled={disabled || uploadParsing}
-          className="file-input-hidden"
-          id="coord-file-upload"
-        />
-        <label htmlFor="coord-file-upload" className={`upload-btn ${disabled || uploadParsing ? "disabled" : ""}`}>
-          <svg viewBox="0 0 20 20" fill="currentColor">
-            <path
-              fillRule="evenodd"
-              d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
-              clipRule="evenodd"
-            />
-          </svg>
-          {uploadParsing ? "Processing file..." : "Import CSV / Excel"}
-        </label>
-        <span className="upload-hint">CSV or Excel · station, easting, northing</span>
-
-        {onImportedMetadata && (
-          <>
-            <input
-              ref={aiFileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
-              onChange={handleAiPlanUpload}
-              disabled={disabled || aiReading || aiQuotaExhausted}
-              className="file-input-hidden"
-              id="coord-ai-plan-upload"
-            />
-            <label
-              htmlFor="coord-ai-plan-upload"
-              className={`upload-btn upload-btn--ai ${disabled || aiReading || aiQuotaExhausted ? "disabled" : ""}`}
-              title={aiQuotaExhausted ? "Resets tomorrow" : undefined}
+      {showMethodTabs && (
+        <>
+          <div className="coord-method-tabs" role="tablist" aria-label="Coordinate input method">
+            {onImportedMetadata && (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={inputMethod === "ai"}
+                className={`coord-method-tab ${inputMethod === "ai" ? "active" : ""}`}
+                onClick={() => setInputMethod("ai")}
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path d="M11 2a1 1 0 10-2 0v1.05A6.002 6.002 0 004.05 9H3a1 1 0 100 2h1.05A6.002 6.002 0 009 15.95V17a1 1 0 102 0v-1.05A6.002 6.002 0 0016.95 11H18a1 1 0 100-2h-1.05A6.002 6.002 0 0011 3.05V2zm-1 4a4 4 0 100 8 4 4 0 000-8z" />
+                </svg>
+                AI Scan
+              </button>
+            )}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={inputMethod === "csv"}
+              className={`coord-method-tab ${inputMethod === "csv" ? "active" : ""}`}
+              onClick={() => setInputMethod("csv")}
             >
-              <svg viewBox="0 0 20 20" fill="currentColor">
-                <path d="M11 2a1 1 0 10-2 0v1.05A6.002 6.002 0 004.05 9H3a1 1 0 100 2h1.05A6.002 6.002 0 009 15.95V17a1 1 0 102 0v-1.05A6.002 6.002 0 0016.95 11H18a1 1 0 100-2h-1.05A6.002 6.002 0 0011 3.05V2zm-1 4a4 4 0 100 8 4 4 0 000-8z" />
+              <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path
+                  fillRule="evenodd"
+                  d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
+                  clipRule="evenodd"
+                />
               </svg>
-              {aiReading ? "Reading plan..." : aiQuotaExhausted ? "AI readings used up for today" : "Import from Scanned Plan (AI)"}
-            </label>
-            <span className="upload-hint">
-              {aiQuotaExhausted
-                ? "You've used all your AI plan readings for today - resets tomorrow."
-                : "Photo, scan, PDF of an existing survey plan or handwritten coordinate table. AI extracts beacons and coordinates automatically."}
-            </span>
-          </>
-        )}
-
-        {!showPointList && (
-          <>
-            <button type="button" className="upload-btn" onClick={openManualEntry} disabled={disabled}>
-              <svg viewBox="0 0 20 20" fill="currentColor">
+              CSV / Excel
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={inputMethod === "manual"}
+              className={`coord-method-tab ${inputMethod === "manual" ? "active" : ""}`}
+              onClick={() => setInputMethod("manual")}
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M10 4a1 1 0 011 1v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4V5a1 1 0 011-1z" />
               </svg>
               Manual Entry
             </button>
-            <span className="upload-hint">Type coordinates in one by one.</span>
-          </>
-        )}
-      </div>
+          </div>
+
+          {inputMethod === "ai" && onImportedMetadata && (
+            <div className="coord-method-panel">
+              <h4>AI coordinate extraction</h4>
+              <p>
+                Upload a scanned plan, photograph or handwritten coordinate list. LandCheck extracts the coordinate
+                values for your review before plotting.
+              </p>
+
+              <div className="coord-field-import-mode-toggle">
+                <button
+                  type="button"
+                  className={`coord-field-import-mode-btn ${fieldImportMode === "upload" ? "active" : ""}`}
+                  onClick={() => setFieldImportMode("upload")}
+                >
+                  Upload File
+                </button>
+                <button
+                  type="button"
+                  className={`coord-field-import-mode-btn ${fieldImportMode === "paste" ? "active" : ""}`}
+                  onClick={() => setFieldImportMode("paste")}
+                >
+                  Paste / Type Data
+                </button>
+              </div>
+
+              {fieldImportMode === "upload" ? (
+                <>
+                  <input
+                    ref={fieldImportFileInputRef}
+                    type="file"
+                    accept=".txt,.csv,.dat,.asc,.tsv"
+                    onChange={handleFieldDataUpload}
+                    disabled={disabled || fieldImportReading || fieldImportQuotaExhausted}
+                    className="file-input-hidden"
+                    id="coord-field-import-upload"
+                  />
+                  <label
+                    htmlFor="coord-field-import-upload"
+                    className={`coord-method-action-btn ${disabled || fieldImportReading || fieldImportQuotaExhausted ? "disabled" : ""}`}
+                    title={fieldImportQuotaExhausted ? "Resets tomorrow" : undefined}
+                  >
+                    {fieldImportReading
+                      ? "Reading field data..."
+                      : fieldImportQuotaExhausted
+                        ? "AI imports used up for today"
+                        : "Scan coordinates"}
+                  </label>
+                </>
+              ) : (
+                <div className="coord-field-import-paste">
+                  <textarea
+                    className="coord-field-import-paste-textarea"
+                    rows={5}
+                    placeholder={
+                      "Paste or type boundary points here, e.g.\nA 329110.22 1028183.41\nB 329119.61 1028191.32"
+                    }
+                    value={fieldImportPasteText}
+                    onChange={(e) => setFieldImportPasteText(e.target.value)}
+                    disabled={disabled || fieldImportReading || fieldImportQuotaExhausted}
+                  />
+                  <button
+                    type="button"
+                    className="coord-method-action-btn coord-field-import-paste-submit"
+                    onClick={() => void handleFieldDataPasteSubmit()}
+                    disabled={disabled || fieldImportReading || fieldImportQuotaExhausted || !fieldImportPasteText.trim()}
+                    title={fieldImportQuotaExhausted ? "Resets tomorrow" : undefined}
+                  >
+                    {fieldImportReading
+                      ? "Reading field data..."
+                      : fieldImportQuotaExhausted
+                        ? "AI imports used up for today"
+                        : "Scan coordinates"}
+                  </button>
+                </div>
+              )}
+              <span className="upload-hint">
+                {fieldImportQuotaExhausted
+                  ? "You've used all your AI imports for today - resets tomorrow."
+                  : "You will review the extracted coordinates before plotting."}
+              </span>
+              <button
+                type="button"
+                className="coord-method-secondary-link"
+                onClick={() => aiFileInputRef.current?.click()}
+                disabled={disabled || aiReading || aiQuotaExhausted}
+              >
+                {aiReading ? "Reading plan..." : "Import an existing plan document instead"}
+              </button>
+            </div>
+          )}
+
+          {inputMethod === "csv" && (
+            <div className="coord-method-panel">
+              <h4>CSV / Excel</h4>
+              <p>Import station, easting and northing columns from a spreadsheet.</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.xlsx,.xls,.txt"
+                onChange={handleFileUpload}
+                disabled={disabled || uploadParsing}
+                className="file-input-hidden"
+                id="coord-file-upload"
+              />
+              <label htmlFor="coord-file-upload" className={`coord-method-action-btn ${disabled || uploadParsing ? "disabled" : ""}`}>
+                {uploadParsing ? "Processing file..." : "Import file"}
+              </label>
+              <span className="upload-hint">CSV, XLS or XLSX</span>
+            </div>
+          )}
+
+          {inputMethod === "manual" && (
+            <div className="coord-method-panel">
+              <h4>Manual entry</h4>
+              <p>Enter coordinate stations individually.</p>
+              <button type="button" className="coord-method-action-btn" onClick={openManualEntry} disabled={disabled}>
+                Enter manually
+              </button>
+            </div>
+          )}
+        </>
+      )}
 
       {aiLayoutPlots.length > 1 && (
         <div className="coord-ai-layout-panel">
@@ -922,7 +1010,92 @@ function CoordinateInput({
         </div>
       )}
 
-      {showPointList && (
+      {points.length > 0 && !showEditor && (
+        <div className="coord-preview">
+          <div className="coord-preview-summary">
+            <span className="coord-preview-stat is-valid">{pointValidation.validCount} valid</span>
+            {pointValidation.invalidCount > 0 && (
+              <span className="coord-preview-stat is-error">{pointValidation.invalidCount} invalid/duplicate</span>
+            )}
+            {pointValidation.missingStationCount > 0 && (
+              <span className="coord-preview-stat is-warning">{pointValidation.missingStationCount} missing station</span>
+            )}
+            <span className="coord-preview-stat">{selectedCoordinateSystem.name}</span>
+            <span
+              className={`coord-preview-stat ${pointValidation.closure === "self-intersecting" ? "is-error" : pointValidation.closure === "closed" ? "is-valid" : ""}`}
+            >
+              {closureLabel[pointValidation.closure]}
+            </span>
+          </div>
+          <div className="coord-preview-table-wrap">
+            <table className="coord-preview-table">
+              <thead>
+                <tr>
+                  <th>Station</th>
+                  <th>{xLabel}</th>
+                  <th>{yLabel}</th>
+                  <th>Status</th>
+                  <th aria-label="Edit" />
+                  <th aria-label="Delete" />
+                </tr>
+              </thead>
+              <tbody>
+                {points.map((point, index) => (
+                  <tr key={index} className={pointValidation.statuses[index] !== "valid" ? "has-issue" : ""}>
+                    <td>{point.station || "--"}</td>
+                    <td>{point.lng || 0}</td>
+                    <td>{point.lat || 0}</td>
+                    <td>
+                      <span className={`coord-status-pill ${pointValidation.statuses[index]}`}>
+                        {validationStatusLabel[pointValidation.statuses[index]]}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="coord-preview-row-btn"
+                        onClick={() => setPreviewEditing(true)}
+                        aria-label={`Edit point ${index + 1}`}
+                        title="Edit"
+                      >
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M13.5 3.5l3 3L6 17H3v-3z" />
+                        </svg>
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="coord-preview-row-btn coord-preview-row-btn--danger"
+                        onClick={() => onRemovePoint(index)}
+                        disabled={disabled}
+                        aria-label={`Delete point ${index + 1}`}
+                        title="Delete"
+                      >
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10" />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="coord-preview-actions">
+            <button type="button" className="coord-method-action-btn coord-method-action-btn--outline" onClick={() => setPreviewEditing(true)}>
+              Edit coordinates
+            </button>
+            {onClearAllPoints && (
+              <button type="button" className="coord-method-action-btn coord-method-action-btn--outline coord-method-action-btn--danger" onClick={onClearAllPoints}>
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showEditor && (
       <>
       <div className="coord-list-wrapper">
         {(() => {
@@ -1044,6 +1217,9 @@ function CoordinateInput({
               ? "Projected coordinates convert to WGS84 automatically for processing."
               : "Ring will auto-close on creation."}
         </span>
+        <button type="button" className="coord-editor-done-btn" onClick={() => setPreviewEditing(false)}>
+          Done
+        </button>
       </div>
       </>
       )}

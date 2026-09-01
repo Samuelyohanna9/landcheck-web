@@ -2050,10 +2050,17 @@
   bottom: 0;
   z-index: 2;
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 1rem;
   margin-top: auto;
   padding: 0.85rem 0 0.35rem;
   background: linear-gradient(180deg, transparent 0%, var(--survey-ink-800) 28%);
+}
+
+.action-bar-hint {
+  color: var(--survey-gis-text-secondary, var(--survey-text-secondary, #9aaba2));
+  font-size: 0.76rem;
 }
 
 /* Buttons */
@@ -6880,6 +6887,174 @@ select.field-error {
   }
 
   .geo-h-step-label {
+    display: none;
+  }
+}
+
+/* =========================================================================
+   Survey-only app shell (56px header + 48px horizontal stepper) - structural
+   twin of .geo-top-bar/.geo-h-stepper above, but on the native-GIS navy/
+   emerald token set (--survey-gis-*) rather than the copper/parchment one,
+   per the brief's own exact palette. Subdivision is untouched (still the
+   older .survey-header + vertical workflow-inline-card sidebar stepper).
+   ========================================================================= */
+.survey-top-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 56px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--survey-gis-divider);
+  background: var(--survey-gis-panel-bg);
+  font-family: var(--survey-font-body, "IBM Plex Sans", sans-serif);
+}
+
+.survey-top-bar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--survey-gis-text-primary);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.survey-top-bar-brand svg {
+  width: 20px;
+  height: 20px;
+  color: var(--survey-gis-primary);
+}
+
+.survey-top-bar-saved {
+  flex: 1;
+  color: var(--survey-gis-text-secondary);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.survey-top-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.survey-top-bar-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--survey-gis-divider);
+  background: transparent;
+  color: var(--survey-gis-text-secondary);
+  cursor: pointer;
+}
+
+.survey-top-bar-icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.survey-top-bar-icon-btn:hover {
+  border-color: var(--survey-gis-primary);
+  color: var(--survey-gis-primary);
+}
+
+.survey-top-bar-btn {
+  padding: 0 16px;
+  min-height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--survey-gis-divider);
+  background: transparent;
+  color: var(--survey-gis-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.survey-top-bar-btn:hover {
+  border-color: var(--survey-gis-primary);
+  color: var(--survey-gis-text-primary);
+}
+
+.survey-h-stepper {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  height: 48px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--survey-gis-divider);
+  background: var(--survey-gis-bg);
+  overflow-x: auto;
+}
+
+.survey-h-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+
+.survey-h-step-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid var(--survey-gis-divider);
+  color: var(--survey-gis-text-secondary);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.survey-h-step-marker svg {
+  width: 12px;
+  height: 12px;
+}
+
+.survey-h-step-label {
+  color: var(--survey-gis-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.survey-h-step.completed .survey-h-step-marker {
+  border-color: var(--survey-gis-primary);
+  background: var(--survey-gis-primary);
+  color: #06170e;
+}
+
+.survey-h-step.completed .survey-h-step-label {
+  color: var(--survey-gis-text-secondary);
+}
+
+.survey-h-step.active {
+  border-bottom-color: var(--survey-gis-primary);
+}
+
+.survey-h-step.active .survey-h-step-marker {
+  border-color: var(--survey-gis-primary);
+  color: var(--survey-gis-primary);
+}
+
+.survey-h-step.active .survey-h-step-label {
+  color: var(--survey-gis-text-primary);
+}
+
+@media (max-width: 640px) {
+  .survey-top-bar-saved {
+    display: none;
+  }
+
+  .survey-h-stepper {
+    gap: 16px;
+  }
+
+  .survey-h-step-label {
     display: none;
   }
 }
