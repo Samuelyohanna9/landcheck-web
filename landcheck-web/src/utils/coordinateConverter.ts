@@ -458,7 +458,18 @@ export function resolveBestFitNigeriaCoordinateSystem(
  * deterministically resolves a system that does fit, instead of silently defaulting to wgs84 and
  * feeding raw Easting/Northing values into the map as degrees. A non-Nigeria guess (already
  * WGS84, or an explicit Ghana/Uganda system) is left untouched - this resolver only understands
- * Nigeria. Returns "" when nothing useful can be determined, leaving the caller's own default.
+ * Nigeria. When the values are clearly projected (too large to be degrees) but genuinely nothing
+ * can be confidently pinned down - no usable guess, and no candidate lands cleanly inside Nigeria
+ * with the right own-zone span - this still returns Nigeria's auto-UTM system rather than "",
+ * because "" would leave the caller at wgs84, which means every one of these projected values gets
+ * treated as if it were already a valid degree and silently dropped by the map's own out-of-range
+ * guard (MapViewEnhanced) - an accurate-looking but empty map, not a helpful failure. Auto-UTM
+ * always resolves to a real zone (worst case, its own documented central-Nigeria default), so the
+ * plot always appears somewhere - possibly in the wrong zone, which the visible, editable
+ * coordinate-system picker this feeds into is there to fix, matching how a manual CSV/Excel
+ * import behaves: it always plots with whatever system is selected, warning-not-blocking on an
+ * out-of-range mismatch, rather than refusing to draw anything at all. Returns "" only when the
+ * values look like ordinary WGS84 degrees already, so the caller's existing default is correct.
  */
 export function verifyOrResolveNigeriaCoordinateSystem(
   x: number,
@@ -488,5 +499,6 @@ export function verifyOrResolveNigeriaCoordinateSystem(
   }
 
   const resolved = resolveBestFitNigeriaCoordinateSystem(x, y);
-  return resolved?.system || (guessIsNigeriaCandidate ? guess : "");
+  if (resolved) return resolved.system;
+  return guessIsNigeriaCandidate ? guess : WGS84_NIGERIA_METERS;
 }
