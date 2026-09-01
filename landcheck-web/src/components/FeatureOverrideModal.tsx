@@ -1025,6 +1025,7 @@ export default function FeatureOverrideModal({
   const [activeTool, setActiveTool] = useState<EditorTool>("select");
   const [basemapMode, setBasemapMode] = useState<BasemapMode>("plotting");
   const [editorTarget, setEditorTarget] = useState<EditableFeatureTarget>(featureType);
+  const [actionFlyoutTarget, setActionFlyoutTarget] = useState<EditableFeatureTarget | null>(null);
 
   useEffect(() => {
     setEditorTarget((current) => (current === "boundary" ? current : featureType));
@@ -1766,6 +1767,7 @@ export default function FeatureOverrideModal({
     setShowTraversePanel(false);
     setShowEditorHelp(false);
     setSelectionMode(null);
+    setActionFlyoutTarget(null);
     setShowSuggestions(false);
     setActiveSuggestionIndex(0);
     setPlottingCamera(DEFAULT_PLOTTING_CAMERA);
@@ -1841,6 +1843,7 @@ export default function FeatureOverrideModal({
     setSelectedMetrics(null);
     setPendingSave(null);
     setActiveTool("select");
+    setActionFlyoutTarget(null);
     drawRef.current?.changeMode("simple_select");
   }, []);
 
@@ -3700,17 +3703,66 @@ export default function FeatureOverrideModal({
 
         <span className="cad-tool-rail-divider" />
 
-        {featureTargets.map((entry) => (
-          <button
-            key={entry.target}
-            type="button"
-            className={`cad-icon-btn${editorTarget === entry.target ? " active" : ""}`}
-            title={entry.target === "road" ? `${entry.label} (R)` : entry.label}
-            onClick={() => handleFeatureTypeChange(entry.target)}
-          >
-            <CadIcon name={entry.icon} />
-          </button>
-        ))}
+        <div className="cad-rail-group">
+          {featureTargets.map((entry) => (
+            <button
+              key={entry.target}
+              type="button"
+              className={`cad-icon-btn${editorTarget === entry.target ? " active" : ""}`}
+              title={entry.target === "road" ? `${entry.label} (R)` : entry.label}
+              onClick={() => {
+                handleFeatureTypeChange(entry.target);
+                setActionFlyoutTarget(entry.target === "boundary" ? null : entry.target);
+              }}
+            >
+              <CadIcon name={entry.icon} />
+            </button>
+          ))}
+
+          {actionFlyoutTarget ? (
+            <div className="cad-rail-flyout" role="menu">
+              <div className="cad-rail-flyout-head">
+                <strong>{formatEditorTargetLabel(actionFlyoutTarget)}</strong>
+                <button type="button" onClick={() => setActionFlyoutTarget(null)} aria-label="Close">
+                  &times;
+                </button>
+              </div>
+              <button
+                type="button"
+                className="cad-rail-flyout-option"
+                onClick={() => {
+                  startAddFlow();
+                  setActionFlyoutTarget(null);
+                }}
+              >
+                <CadIcon name="add" />
+                Add
+              </button>
+              <button
+                type="button"
+                className="cad-rail-flyout-option"
+                onClick={() => {
+                  startUpdateFlow();
+                  setActionFlyoutTarget(null);
+                }}
+              >
+                <CadIcon name="modify" />
+                Modify
+              </button>
+              <button
+                type="button"
+                className="cad-rail-flyout-option danger"
+                onClick={() => {
+                  startDeleteFlow();
+                  setActionFlyoutTarget(null);
+                }}
+              >
+                <CadIcon name="delete" />
+                Delete
+              </button>
+            </div>
+          ) : null}
+        </div>
 
         <span className="cad-tool-rail-divider" />
 
