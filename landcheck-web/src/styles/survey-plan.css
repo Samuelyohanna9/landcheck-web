@@ -1860,7 +1860,14 @@
 }
 
 .georef-empty-stage {
-  min-height: inherit;
+  /* Absolutely positioned to overlay the stage rather than sit in normal flow: the raster <img>
+     next to it is only visibility:hidden while loading/errored (not display:none), so it still
+     reserves its own full-height box - without this, that reserved space pushed this message
+     below the visible viewport, leaving only the stage's diagonal-hatch background visible with
+     no visible "Loading..."/error text at all. */
+  position: absolute;
+  inset: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -5984,6 +5991,18 @@ select.field-error {
   border-color: var(--geo-accent);
   background: var(--geo-accent);
   color: var(--geo-accent-ink);
+}
+
+.georef-placement-choice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--geo-space-2, 8px);
+}
+
+.georef-placement-choice-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--geo-space-2, 8px);
 }
 
 .geo-tool-group {
