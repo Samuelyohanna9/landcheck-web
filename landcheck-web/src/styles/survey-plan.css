@@ -1612,6 +1612,85 @@
   transform: none;
 }
 
+/* Floating "type the coordinate right here" box for the Add-manually flow - positioned/edge-
+   flipped the same way as .georef-cursor-probe above, just with an interactive form instead of a
+   read-only label (pointer-events restored, clicks inside stopped from reaching the raster). */
+.georef-manual-entry-popup {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  cursor: default;
+}
+
+.georef-manual-entry-popup-reticle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--geo-accent, #25c77a);
+  border: 1px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(2, 6, 23, 0.5);
+  transform: translate(-50%, -50%);
+}
+
+.georef-manual-entry-popup-body {
+  position: absolute;
+  left: calc(100% + 0.6rem);
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  gap: var(--geo-space-2, 8px);
+  width: 200px;
+  padding: var(--geo-space-3, 12px);
+  border-radius: var(--geo-radius, 10px);
+  border: 1px solid var(--geo-border-strong, rgba(148, 163, 184, 0.34));
+  background: var(--geo-surface-1, #112230);
+  box-shadow: 0 16px 32px rgba(2, 6, 23, 0.45);
+}
+
+.georef-manual-entry-popup-body strong {
+  color: var(--geo-text-primary, #f8fafc);
+  font-size: 12px;
+}
+
+.georef-manual-entry-popup-body label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--geo-text-secondary, #9fb0c0);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.georef-manual-entry-popup-body input {
+  min-height: 34px;
+  padding: 0 var(--geo-space-2, 8px);
+  border-radius: var(--geo-radius, 8px);
+  border: 1px solid var(--geo-border-strong, rgba(148, 163, 184, 0.34));
+  background: var(--geo-surface-2, #16283a);
+  color: var(--geo-text-primary, #f8fafc);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.georef-manual-entry-popup-body input:focus-visible {
+  border-color: var(--geo-accent, #25c77a);
+  outline: none;
+}
+
+.georef-manual-entry-popup.is-right-edge .georef-manual-entry-popup-body {
+  left: auto;
+  right: calc(100% + 0.6rem);
+}
+
+.georef-manual-entry-popup.is-bottom-edge .georef-manual-entry-popup-body {
+  top: auto;
+  bottom: calc(100% + 0.5rem);
+  transform: none;
+}
+
 .georef-control-point-marker {
   width: 22px;
   height: 22px;
