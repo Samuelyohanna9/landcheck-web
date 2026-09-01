@@ -360,7 +360,10 @@ function CoordinateInput({
       formData.append("file", file);
       const res = await api.post("/plan-reader/extract", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 90000,
+        // Backend retries up to ~91s worst case (2 attempts x 45s read timeout) before giving up -
+        // this must stay comfortably above that or the frontend times out first and the user never
+        // sees the backend's actual (successful or cleanly-failed) result.
+        timeout: 120000,
       });
       const extracted = (res.data?.extracted || {}) as PlanReaderExtracted;
       const checks = (res.data?.checks || []) as PlanReaderCheck[];
@@ -474,7 +477,9 @@ function CoordinateInput({
       formData.append("file", file);
       const res = await api.post("/field-to-finish/import", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 60000,
+        // See the matching comment on /plan-reader/extract above - must exceed the backend's ~91s
+        // worst-case retry budget.
+        timeout: 120000,
       });
       const parsed = (res.data?.parsed || { points: [] }) as FieldImportParsed;
       if (!parsed.points || parsed.points.length === 0) {
@@ -1028,7 +1033,7 @@ function CoordinateInput({
             <SurveyLoadingAnimation size="medium" />
             <p className="coord-ai-fullscreen-title">AI is reading your document&hellip;</p>
             <p className="coord-ai-fullscreen-subtitle">
-              Extracting beacons, coordinates, and plan details. This usually takes a few seconds.
+              Extracting beacons, coordinates, and plan details. Usually just a few seconds, occasionally up to a minute.
             </p>
           </div>
         </div>
@@ -1040,7 +1045,7 @@ function CoordinateInput({
             <SurveyLoadingAnimation size="medium" />
             <p className="coord-ai-fullscreen-title">AI is reading your field data&hellip;</p>
             <p className="coord-ai-fullscreen-subtitle">
-              Sniffing columns, classifying points, and detecting the coordinate system. This usually takes a few seconds.
+              Sniffing columns, classifying points, and detecting the coordinate system. Usually just a few seconds, occasionally up to a minute.
             </p>
           </div>
         </div>
