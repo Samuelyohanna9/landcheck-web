@@ -546,8 +546,19 @@ function MapViewEnhanced({
 
     if (isDrawingRef.current) return;
 
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
+    // mapRef.current is set as soon as the mapboxgl.Map constructor returns (see the mount effect
+    // above), well before its "load" event fires and its sources/layers (plot-polygon included)
+    // actually exist. A flow that hands this component coordinates the moment it first mounts -
+    // AI Field to Survey Plan jumps straight from import to a populated confirm-map, unlike a
+    // manual CSV upload which almost always lands on a map that's already been sitting loaded for
+    // a while - can run this effect before that happens: map.getSource("plot-polygon") then
+    // returns undefined, source.setData() is silently skipped, and the boundary never gets its red
+    // fill/outline even though the station markers (which don't need a style layer) still appear
+    // and fitBounds still moves the camera - "imported, camera looks right, but no plot". Same
+    // isStyleLoaded()/once("load", ...) deferral already used for spot-height data below.
+    const drawCoordinates = () => {
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
 
     const nonZeroCoords = coordinates.filter((c) => c.lng !== 0 || c.lat !== 0);
     const validCoords = nonZeroCoords.filter((c) => isPlottableLngLat(c.lng, c.lat));
@@ -647,6 +658,17 @@ function MapViewEnhanced({
         });
       }
     }
+    };
+
+    if (map.isStyleLoaded() && map.getSource("plot-polygon")) {
+      drawCoordinates();
+    } else {
+      map.once("load", drawCoordinates);
+    }
+
+    return () => {
+      map.off("load", drawCoordinates);
+    };
   }, [coordinates]);
 
   // Recenters the map on the chosen coordinate system's country - only when the country actually
