@@ -1,4 +1,5 @@
-import { Suspense, lazy, useCallback, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useMemo, useRef, useState } from "react";
+import { lazyWithChunkRecovery } from "../utils/lazyWithChunkRecovery";
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { api } from "../api/client";
@@ -19,8 +20,8 @@ type HazardJobStatus = {
   download_url: string | null;
 };
 
-const MapViewEnhanced = lazy(() => import("../components/MapViewEnhanced"));
-const HazardFlood3DView = lazy(() => import("../components/HazardFlood3DView"));
+const MapViewEnhanced = lazyWithChunkRecovery(() => import("../components/MapViewEnhanced"));
+const HazardFlood3DView = lazyWithChunkRecovery(() => import("../components/HazardFlood3DView"));
 
 type ManualPoint = {
   station: string;

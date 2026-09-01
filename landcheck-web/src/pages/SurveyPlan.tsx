@@ -1,4 +1,5 @@
-import { Suspense, lazy, startTransition, useEffect, useMemo, useState, useCallback, useRef, type SetStateAction, type ReactNode } from "react";
+import { Suspense, startTransition, useEffect, useMemo, useState, useCallback, useRef, type SetStateAction, type ReactNode } from "react";
+import { lazyWithChunkRecovery } from "../utils/lazyWithChunkRecovery";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, withRetry, extractApiErrorMessage } from "../api/client";
 import toast, { Toaster } from "react-hot-toast";
@@ -31,17 +32,17 @@ import {
 import "../styles/survey-tokens.css";
 import "../styles/survey-plan.css";
 
-const SurveyPreview = lazy(() => import("../components/SurveyPreview"));
-const SignupGateModal = lazy(() => import("../components/SignupGateModal"));
-const FeatureOverrideModal = lazy(() => import("../components/FeatureOverrideModal"));
-const TechnicalReportModal = lazy(() => import("../components/survey-plan/TechnicalReportModal"));
-const SurveyPlanStepOnePanel = lazy(() => import("../components/survey-plan/SurveyPlanStepOnePanel"));
-const SurveyPlanSurveyPreviewStep = lazy(() => import("../components/survey-plan/SurveyPlanSurveyPreviewStep"));
-const SurveyPlanSubdivisionPreviewStep = lazy(() => import("../components/survey-plan/SurveyPlanSubdivisionPreviewStep"));
-const SurveyPlanSubdivisionExportStep = lazy(() => import("../components/survey-plan/SurveyPlanSubdivisionExportStep"));
-const SurveyPlanGeoreferenceSetupStep = lazy(() => import("../components/survey-plan/SurveyPlanGeoreferenceSetupStep"));
-const SurveyPlanGeoreferenceWorkspaceStep = lazy(() => import("../components/survey-plan/SurveyPlanGeoreferenceWorkspaceStep"));
-const SurveyPlanGeoreferenceExportStep = lazy(() => import("../components/survey-plan/SurveyPlanGeoreferenceExportStep"));
+const SurveyPreview = lazyWithChunkRecovery(() => import("../components/SurveyPreview"));
+const SignupGateModal = lazyWithChunkRecovery(() => import("../components/SignupGateModal"));
+const FeatureOverrideModal = lazyWithChunkRecovery(() => import("../components/FeatureOverrideModal"));
+const TechnicalReportModal = lazyWithChunkRecovery(() => import("../components/survey-plan/TechnicalReportModal"));
+const SurveyPlanStepOnePanel = lazyWithChunkRecovery(() => import("../components/survey-plan/SurveyPlanStepOnePanel"));
+const SurveyPlanSurveyPreviewStep = lazyWithChunkRecovery(() => import("../components/survey-plan/SurveyPlanSurveyPreviewStep"));
+const SurveyPlanSubdivisionPreviewStep = lazyWithChunkRecovery(() => import("../components/survey-plan/SurveyPlanSubdivisionPreviewStep"));
+const SurveyPlanSubdivisionExportStep = lazyWithChunkRecovery(() => import("../components/survey-plan/SurveyPlanSubdivisionExportStep"));
+const SurveyPlanGeoreferenceSetupStep = lazyWithChunkRecovery(() => import("../components/survey-plan/SurveyPlanGeoreferenceSetupStep"));
+const SurveyPlanGeoreferenceWorkspaceStep = lazyWithChunkRecovery(() => import("../components/survey-plan/SurveyPlanGeoreferenceWorkspaceStep"));
+const SurveyPlanGeoreferenceExportStep = lazyWithChunkRecovery(() => import("../components/survey-plan/SurveyPlanGeoreferenceExportStep"));
 
 type PlotMeta = {
   title_text: string;

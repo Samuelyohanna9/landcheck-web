@@ -1,8 +1,9 @@
-import { lazy, memo, Suspense, useState, type ReactNode } from "react";
+import { memo, Suspense, useState, type ReactNode } from "react";
 import CoordinateInput from "../CoordinateInput";
 import { prefetchSurveyPlanDraftMapTools } from "../../utils/surveyPlanPrefetch";
+import { lazyWithChunkRecovery } from "../../utils/lazyWithChunkRecovery";
 
-const MapViewEnhanced = lazy(() => import("../MapViewEnhanced"));
+const MapViewEnhanced = lazyWithChunkRecovery(() => import("../MapViewEnhanced"));
 
 type WorkflowMode = "survey" | "subdivision";
 type MapViewMode = "boundary" | "spot_heights";

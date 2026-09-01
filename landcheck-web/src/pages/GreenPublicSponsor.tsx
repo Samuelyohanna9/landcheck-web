@@ -1,4 +1,5 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { lazyWithChunkRecovery } from "../utils/lazyWithChunkRecovery";
 import { useNavigate } from "react-router-dom";
 import {
   buildSponsorPrivacyUrl,
@@ -25,7 +26,7 @@ import { useDeferredMount } from "../hooks/useDeferredMount";
 import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
 
 const photoAsset = (fileName: string) => encodeURI(fileName);
-const PlantyAssistant = lazy(() => import("../components/PlantyAssistant"));
+const PlantyAssistant = lazyWithChunkRecovery(() => import("../components/PlantyAssistant"));
 
 const SPONSOR_BACKGROUND = "/sponsor_landing_page.jpg";
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=online.landcheck.mobile";

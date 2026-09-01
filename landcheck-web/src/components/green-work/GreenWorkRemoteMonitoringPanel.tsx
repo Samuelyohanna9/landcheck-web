@@ -1,7 +1,8 @@
-import { Suspense, lazy } from "react";
+import { Suspense } from "react";
 import GreenLoadingAnimation from "../GreenLoadingAnimation";
+import { lazyWithChunkRecovery } from "../../utils/lazyWithChunkRecovery";
 
-const TreeMap = lazy(() => import("../TreeMap"));
+const TreeMap = lazyWithChunkRecovery(() => import("../TreeMap"));
 
 type GreenWorkRemoteMonitoringPanelProps = {
   [key: string]: any;

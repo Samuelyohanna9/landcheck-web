@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import "../styles/green-partners.css";
 import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
@@ -6,9 +6,10 @@ import SocialLinks from "../components/SocialLinks";
 import { getArticleBySlug } from "../data/newsArticles";
 import { useDeferredMount } from "../hooks/useDeferredMount";
 import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
+import { lazyWithChunkRecovery } from "../utils/lazyWithChunkRecovery";
 
 const greenPartnersFeaturedStory = getArticleBySlug("song-school-planting-day")!;
-const FeaturedStorySpotlight = lazy(() => import("../components/FeaturedStorySpotlight"));
+const FeaturedStorySpotlight = lazyWithChunkRecovery(() => import("../components/FeaturedStorySpotlight"));
 
 type PartnerOrg = { name: string; logo: string | null };
 type MediaFit = "cover" | "contain";

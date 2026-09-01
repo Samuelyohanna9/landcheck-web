@@ -1,4 +1,5 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazyWithChunkRecovery } from "../utils/lazyWithChunkRecovery";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { api, BACKEND_URL } from "../api/client";
@@ -41,7 +42,7 @@ import {
 import { usePrivacyConsentGate } from "../privacy/usePrivacyConsentGate";
 import "../styles/green.css";
 
-const TreeMap = lazy(() => import("../components/TreeMap"));
+const TreeMap = lazyWithChunkRecovery(() => import("../components/TreeMap"));
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
 

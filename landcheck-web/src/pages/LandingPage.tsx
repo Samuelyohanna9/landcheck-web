@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/landing.css";
 import { fetchPublicImpactStats, fetchPublicPartnerOrganizations } from "../api/greenSponsor";
@@ -9,9 +9,10 @@ import { useCookieConsent } from "../privacy/cookieConsent";
 import { useDeferredMount } from "../hooks/useDeferredMount";
 import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
 import { prefetchSurveyPlanPreviewStep, prefetchSurveyPlanRoute } from "../utils/surveyPlanPrefetch";
+import { lazyWithChunkRecovery } from "../utils/lazyWithChunkRecovery";
 
 const landingFeaturedStory = getArticleBySlug("song-school-planting-day")!;
-const FeaturedStorySpotlight = lazy(() => import("../components/FeaturedStorySpotlight"));
+const FeaturedStorySpotlight = lazyWithChunkRecovery(() => import("../components/FeaturedStorySpotlight"));
 
 type PartnerOrg = { name: string; logo: string | null };
 

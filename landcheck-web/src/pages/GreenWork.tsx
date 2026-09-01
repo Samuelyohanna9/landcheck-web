@@ -1,4 +1,5 @@
-﻿import { Fragment, Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+﻿import { Fragment, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { lazyWithChunkRecovery } from "../utils/lazyWithChunkRecovery";
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { api, BACKEND_URL } from "../api/client";
@@ -19,17 +20,17 @@ import {
 } from "../offline/greenOffline";
 import "../styles/green-work.css";
 
-const GreenWorkMapPanel = lazy(() => import("../components/green-work/GreenWorkMapPanel"));
-const GreenWorkRemoteMonitoringPanel = lazy(() => import("../components/green-work/GreenWorkRemoteMonitoringPanel"));
-const GreenWorkLogsPanel = lazy(() => import("../components/green-work/GreenWorkLogsPanel"));
-const GreenWorkSponsorPayoutsPanel = lazy(() => import("../components/green-work/GreenWorkSponsorPayoutsPanel"));
-const GreenWorkMerchantsPanel = lazy(() => import("../components/green-work/GreenWorkMerchantsPanel"));
-const GreenWorkReviewQueuePanel = lazy(() => import("../components/green-work/GreenWorkReviewQueuePanel"));
-const GreenWorkSponsorFeedbackPanel = lazy(() => import("../components/green-work/GreenWorkSponsorFeedbackPanel"));
-const GreenWorkVerraReportsPanel = lazy(() => import("../components/green-work/GreenWorkVerraReportsPanel"));
-const GreenWorkLiveTablePanel = lazy(() => import("../components/green-work/GreenWorkLiveTablePanel"));
-const GreenWorkExistingTreeIntakePanel = lazy(() => import("../components/green-work/GreenWorkExistingTreeIntakePanel"));
-const GreenWorkShareImpactPanel = lazy(() => import("../components/green-work/GreenWorkShareImpactPanel"));
+const GreenWorkMapPanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkMapPanel"));
+const GreenWorkRemoteMonitoringPanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkRemoteMonitoringPanel"));
+const GreenWorkLogsPanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkLogsPanel"));
+const GreenWorkSponsorPayoutsPanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkSponsorPayoutsPanel"));
+const GreenWorkMerchantsPanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkMerchantsPanel"));
+const GreenWorkReviewQueuePanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkReviewQueuePanel"));
+const GreenWorkSponsorFeedbackPanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkSponsorFeedbackPanel"));
+const GreenWorkVerraReportsPanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkVerraReportsPanel"));
+const GreenWorkLiveTablePanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkLiveTablePanel"));
+const GreenWorkExistingTreeIntakePanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkExistingTreeIntakePanel"));
+const GreenWorkShareImpactPanel = lazyWithChunkRecovery(() => import("../components/green-work/GreenWorkShareImpactPanel"));
 
 const GREEN_LOGO_SRC = "/green-logo-cropped-760.png";
 const REMOTE_MONITORING_PROGRESS_STEPS = [

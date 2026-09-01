@@ -1,10 +1,11 @@
-import { lazy, Suspense, useState } from "react";
+import { Suspense, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { prefetchSurveyPlanPreviewStep, prefetchSurveyPlanRoute } from "../utils/surveyPlanPrefetch";
 import { isSurveyAuthed } from "../auth/surveyAuth";
+import { lazyWithChunkRecovery } from "../utils/lazyWithChunkRecovery";
 import "../styles/navbar.css";
 
-const SignupGateModal = lazy(() => import("./SignupGateModal"));
+const SignupGateModal = lazyWithChunkRecovery(() => import("./SignupGateModal"));
 
 const NAV_ITEMS = [
   { label: "LandCheck Green", route: "/green-partners" },
