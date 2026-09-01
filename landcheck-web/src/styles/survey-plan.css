@@ -566,20 +566,21 @@
 }
 
 .georef-upload-dropzone {
-  min-height: 180px;
+  min-height: 140px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.32rem;
   text-align: center;
-  border: 1px dashed rgba(96, 165, 250, 0.32);
-  border-radius: 16px;
-  background: rgba(11, 20, 32, 0.5);
-  color: var(--survey-text-primary);
+  border: 1px dashed var(--geo-border-strong, rgba(96, 165, 250, 0.32));
+  border-radius: var(--geo-radius, 16px);
+  background: var(--geo-surface-2, rgba(11, 20, 32, 0.5));
+  color: var(--geo-text-primary, var(--survey-text-primary));
   position: relative;
   overflow: hidden;
   padding: 1rem;
+  cursor: pointer;
 }
 
 .georef-upload-dropzone input {
@@ -590,12 +591,12 @@
 }
 
 .georef-upload-dropzone strong {
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .georef-upload-dropzone span {
-  color: var(--survey-text-secondary);
-  font-size: 0.8rem;
+  color: var(--geo-text-secondary, var(--survey-text-secondary));
+  font-size: 0.78rem;
 }
 
 .georef-upload-fields {
@@ -968,7 +969,6 @@
   font-size: 0.76rem;
 }
 
-.georef-point-row,
 .georef-feature-card {
   padding: 0.82rem 0.88rem;
   border-radius: 16px;
@@ -976,17 +976,24 @@
   background: rgba(11, 20, 32, 0.54);
 }
 
+/* Retinted onto the Digitize workspace's flatter --geo-* token set (Setup now renders inside the
+   same .georef-workspace-redesign scope) - kept its own richer grid layout rather than forced
+   into .geo-layer-row's single-line shape, which doesn't fit 5 inline-editable fields. */
 .georef-point-row {
+  padding: var(--geo-space-3, 0.82rem);
+  border-radius: var(--geo-radius, 10px);
+  border: 1px solid var(--geo-border, rgba(148, 163, 184, 0.18));
+  background: var(--geo-surface-2, rgba(11, 20, 32, 0.54));
   cursor: pointer;
 }
 
 .georef-point-row.active {
-  border-color: var(--survey-copper-500);
-  box-shadow: inset 0 0 0 1px var(--survey-copper-glow);
+  border-color: var(--geo-accent, #25c77a);
+  box-shadow: inset 0 0 0 1px var(--geo-accent, #25c77a);
 }
 
 .georef-point-row:focus-visible {
-  outline: 2px solid var(--survey-copper-500);
+  outline: 2px solid var(--geo-accent, #25c77a);
   outline-offset: 2px;
 }
 
@@ -1000,11 +1007,16 @@
 
 .georef-point-row-head strong,
 .georef-feature-card strong {
-  color: var(--survey-text-primary);
+  color: var(--geo-text-primary, var(--survey-text-primary));
 }
 
 .georef-point-row-head span,
-.georef-point-row-foot span,
+.georef-point-row-foot span {
+  color: var(--geo-text-secondary, var(--survey-text-secondary));
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
 .georef-feature-card p,
 .georef-empty-list span {
   color: var(--survey-text-secondary);
@@ -1020,10 +1032,10 @@
 }
 
 .georef-remove-point {
-  border: 1px solid rgba(239, 68, 68, 0.26);
-  background: rgba(127, 29, 29, 0.22);
-  color: #fecaca;
-  border-radius: 999px;
+  border: 1px solid var(--geo-red, rgba(239, 68, 68, 0.26));
+  background: rgba(239, 100, 97, 0.14);
+  color: var(--geo-red, #fecaca);
+  border-radius: var(--geo-radius, 999px);
   padding: 0.45rem 0.82rem;
   font-size: 0.76rem;
   font-weight: 700;
@@ -1068,18 +1080,18 @@
   font-weight: 800;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  background: var(--survey-ink-border);
-  color: var(--survey-text-secondary);
+  background: var(--geo-border, var(--survey-ink-border));
+  color: var(--geo-text-secondary, var(--survey-text-secondary));
 }
 
 .georef-point-status--pending {
-  background: rgba(245, 158, 11, 0.18);
-  color: #fbbf24;
+  background: rgba(220, 163, 76, 0.18);
+  color: var(--geo-amber, #fbbf24);
 }
 
 .georef-point-status--ready {
-  background: var(--survey-forest-glow);
-  color: var(--survey-forest-400);
+  background: rgba(37, 199, 122, 0.16);
+  color: var(--geo-accent, var(--survey-forest-400));
 }
 
 .georef-stage-eyebrow {
