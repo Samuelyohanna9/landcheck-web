@@ -28,8 +28,14 @@ type Props = {
 
 const toolLabels: Record<DraftTool, string> = {
   point: "Stake point",
-  line: "Alignment / line",
-  polygon: "Parcel boundary",
+  line: "Alignment",
+  polygon: "Boundary",
+};
+
+const toolShortcutKeys: Record<DraftTool, string> = {
+  polygon: "B",
+  point: "P",
+  line: "L",
 };
 
 // Small line-style glyphs so each drawing tool is recognizable at a glance, not just by label -
@@ -74,9 +80,19 @@ function DrawingToolButton({
   onSelect: () => void;
 }) {
   return (
-    <button type="button" className={`geo-tool-btn${active ? " active" : ""}`} onClick={onSelect} aria-pressed={active}>
+    <button
+      type="button"
+      className={`geo-tool-btn${active ? " active" : ""}`}
+      onClick={onSelect}
+      aria-pressed={active}
+      aria-label={`${toolLabels[tool]} tool (shortcut ${toolShortcutKeys[tool]})`}
+      title={`Shortcut: ${toolShortcutKeys[tool]}`}
+    >
       <span className="geo-tool-btn-icon">{toolIcons[tool]}</span>
       <span className="geo-tool-btn-label">{toolLabels[tool]}</span>
+      <span className="geo-tool-btn-shortcut" aria-hidden="true">
+        {toolShortcutKeys[tool]}
+      </span>
       {active && (
         <svg className="geo-tool-btn-check" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -190,6 +206,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   const [draftLabel, setDraftLabel] = useState("Primary parcel");
   const [draftPixels, setDraftPixels] = useState<{ x: number; y: number }[]>([]);
   const [stageMetrics, setStageMetrics] = useState<RasterStageMetrics | null>(null);
+  const [rasterLoadState, setRasterLoadState] = useState<"loading" | "loaded" | "error">("loading");
   const [imageZoom, setImageZoom] = useState(MIN_STAGE_ZOOM);
   const [imagePan, setImagePan] = useState({ x: 0, y: 0 });
   const [draggingStage, setDraggingStage] = useState(false);
@@ -218,7 +235,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   const [layerManagerOpen, setLayerManagerOpen] = useState(false);
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState<"tools" | "raster" | "map">("raster");
-  const [mapColumnWidthPercent, setMapColumnWidthPercent] = useState(36);
+  const [mapColumnWidthPercent, setMapColumnWidthPercent] = useState(33);
   const mapResizeStateRef = useRef<{ startX: number; startWidthPercent: number; containerWidth: number } | null>(null);
   const workspaceGridRef = useRef<HTMLDivElement | null>(null);
 
@@ -445,6 +462,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     setDraggingStage(false);
     dragStateRef.current = null;
     suppressNextStageClickRef.current = false;
+    setRasterLoadState(rasterObjectUrl ? "loading" : "error");
   }, [session.id, rasterObjectUrl]);
 
   const mapFeatureCollection = useMemo(() => {
@@ -786,6 +804,11 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     usable: "Usable fit",
     weak: "Weak fit",
   };
+  // A 3-point affine fit is exactly determined, so its RMS is ~0 by construction and
+  // says nothing about placement accuracy - show it as its own state rather than "Good fit".
+  const displayQualityKey: GeoreferenceTransform["quality"] = transform.exact_fit ? "usable" : transform.quality;
+  const displayQualityLabel = transform.exact_fit ? "Exact fit (3 pts)" : qualityLabel[transform.quality];
+  const rmsDisplay = transform.exact_fit ? "n/a" : `${transform.rms_error_m.toFixed(3)} m`;
 
   // Compact digitized-features summary - pure derived counts over the same `features` array the
   // detailed table below already renders, nothing new stored.
@@ -960,6 +983,43 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     setSelectedFeatureId(nextFeatureId);
   };
 
+  // B/P/L switch tools, Escape cancels the in-progress draft, Delete/Backspace drops the last
+  // placed vertex - guarded against firing while the user is actually typing (e.g. the feature
+  // label field) so shortcut letters don't hijack normal text entry.
+  useEffect(() => {
+    const shortcutToTool: Record<string, DraftTool> = { b: "polygon", p: "point", l: "line" };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isTextInput =
+        target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if (isTextInput) return;
+
+      if (event.key === "Escape") {
+        if (draftPixels.length) {
+          setDraftPixels([]);
+          event.preventDefault();
+        }
+        return;
+      }
+      if (event.key === "Delete" || event.key === "Backspace") {
+        if (draftPixels.length) {
+          setDraftPixels((current) => current.slice(0, -1));
+          event.preventDefault();
+        }
+        return;
+      }
+      const nextTool = shortcutToTool[event.key.toLowerCase()];
+      if (nextTool) {
+        setTool(nextTool);
+        setDraftPixels([]);
+        setDraftLabel(nextTool === "polygon" ? "Primary parcel" : toolLabels[nextTool]);
+        event.preventDefault();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [draftPixels.length]);
+
   const markAiDigitizeQuotaExhausted = () => {
     setAiDigitizeQuotaExhausted(true);
     try {
@@ -1054,13 +1114,13 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           <div className="geo-left-scroll">
             {sidebar}
             <div className="geo-panel-heading">
-              <h2>Digitize features</h2>
+              <h2>Feature tools</h2>
               <p>Trace and digitize features on the georeferenced raster.</p>
             </div>
 
-            <div className="geo-quality-card" data-quality={transform.quality}>
+            <div className="geo-quality-card" data-quality={displayQualityKey}>
               <span className="geo-quality-icon" aria-hidden="true">
-                {transform.quality === "weak" ? (
+                {displayQualityKey === "weak" ? (
                   <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
@@ -1072,7 +1132,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
               </span>
               <div className="geo-quality-copy">
                 <strong>
-                  {qualityLabel[transform.quality]} &middot; RMS {transform.rms_error_m} m
+                  <span>{displayQualityLabel}</span> &middot; <span>RMS {rmsDisplay}</span>
                 </strong>
                 <span className="geo-quality-caption">
                   Georeferencing quality
@@ -1080,7 +1140,11 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                     type="button"
                     className="geo-info-btn"
                     aria-label="What is RMS error?"
-                    title="RMS (root-mean-square) error measures, in metres, how far the solved transform's own control points land from their true positions - lower is a tighter fit."
+                    title={
+                      transform.exact_fit
+                        ? "With exactly 3 control points the transform passes through all of them exactly, so RMS is not a meaningful accuracy signal. Add a 4th point to get a real fit-quality measurement."
+                        : "Average control-point alignment error, in metres - how far the solved transform's own control points land from their true positions. Lower is a tighter fit."
+                    }
                   >
                     ?
                   </button>
@@ -1328,7 +1392,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
 
         <section className="geo-panel geo-panel-canvas" data-tab-panel="raster">
           <div className="geo-panel-heading">
-            <h2>Raster canvas</h2>
+            <h2>Survey plan</h2>
             <p>
               {tool === "point"
                 ? "Each click saves a stake point immediately."
@@ -1394,7 +1458,14 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                       ref={rasterImageRef}
                       src={rasterObjectUrl}
                       alt={session.title_text || "Georeferenced raster"}
-                      onLoad={() =>
+                      style={rasterLoadState === "loaded" ? undefined : { visibility: "hidden" }}
+                      onLoad={(event) => {
+                        const target = event.currentTarget;
+                        if (target.naturalWidth <= 0 || target.naturalHeight <= 0) {
+                          setRasterLoadState("error");
+                          return;
+                        }
+                        setRasterLoadState("loaded");
                         setStageMetrics(
                           getRasterStageMetrics(
                             imageStageRef.current,
@@ -1402,9 +1473,20 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                             session.source_width,
                             session.source_height,
                           ),
-                        )
-                      }
+                        );
+                      }}
+                      onError={() => setRasterLoadState("error")}
                     />
+                    {rasterLoadState !== "loaded" ? (
+                      <div className="georef-empty-stage">
+                        <strong>{rasterLoadState === "error" ? "Survey plan could not be loaded." : "Loading survey plan…"}</strong>
+                        <span>
+                          {rasterLoadState === "error"
+                            ? "Reload the session, or start a new plan and re-upload the file."
+                            : "This can take a moment for large scans."}
+                        </span>
+                      </div>
+                    ) : null}
                     <svg className="georef-image-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                       {stageFeatures.map((feature) => {
                         const isActive = feature.id === selectedStageFeature?.id || feature.draft;
@@ -1560,7 +1642,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
 
         <section className="geo-panel geo-panel-map" data-tab-panel="map">
           <div className="geo-panel-heading geo-panel-heading--map">
-            <h2>Map validation</h2>
+            <h2>Map check</h2>
             <div className="geo-map-toolbar">
               <div className="geo-basemap-switch" role="group" aria-label="Basemap style">
                 <button type="button" className={basemapStyle === "satellite" ? "active" : ""} onClick={() => setBasemapStyle("satellite")}>
@@ -1609,7 +1691,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
             )}
           </div>
           <div className="geo-opacity-row">
-            <label htmlFor="geo-overlay-opacity">Overlay opacity</label>
+            <label htmlFor="geo-overlay-opacity">Plan opacity</label>
             <input
               id="geo-overlay-opacity"
               type="range"

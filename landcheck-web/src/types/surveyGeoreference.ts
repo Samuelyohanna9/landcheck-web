@@ -28,6 +28,7 @@ export type GeoreferenceTransform = {
   map_homography?: [number, number, number, number, number, number, number, number, number] | null;
   rms_error_m: number;
   condition_number: number;
+  exact_fit: boolean;
   quality: "strong" | "usable" | "weak";
   points_used: number;
   residuals: GeoreferenceControlPoint[];
