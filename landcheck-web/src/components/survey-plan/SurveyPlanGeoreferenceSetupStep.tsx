@@ -105,9 +105,22 @@ function SurveyPlanGeoreferenceSetupStep({
   // Which surface the surveyor chose to match first for the point currently in progress - lets
   // the raster/map click handlers below tell "this is the first of the pair" (advance to the
   // other side) apart from "this is the second, completing click" (advance to "saved"),
-  // regardless of which side they started with.
-  const startedViaRef = useRef<"raster" | "map">("raster");
+  // regardless of which side they started with. "manual" means: click the survey plan to place
+  // the pixel position, then type the real-world coordinate right there instead of clicking the
+  // map at all - see manualEntryPopup below.
+  const startedViaRef = useRef<"raster" | "map" | "manual">("raster");
   const savedStageTimeoutRef = useRef<number | null>(null);
+  // A small inline coordinate-entry box anchored at the exact stage position the surveyor just
+  // clicked (in the same left%/top% coordinate space already used for markers/cursor probe) -
+  // "Add manually" places the pixel position by clicking, then types the ground X/Y right there
+  // instead of needing a second click on the map.
+  const [manualEntryPopup, setManualEntryPopup] = useState<{
+    pointId: string;
+    leftPercent: number;
+    topPercent: number;
+    x: string;
+    y: string;
+  } | null>(null);
   const [stageMetrics, setStageMetrics] = useState<RasterStageMetrics | null>(null);
   // Only one GCP's inputs are ever editable at a time - every other row shows compact read-only
   // values. Buffered as its own draft object (not committed field-by-field on blur like before)
@@ -356,6 +369,7 @@ function SurveyPlanGeoreferenceSetupStep({
       savedStageTimeoutRef.current = null;
     }
     setPlacementStage(null);
+    setManualEntryPopup(null);
   }, [session?.id]);
 
   const selectControlPoint = (controlPointId: string) => {
@@ -376,16 +390,43 @@ function SurveyPlanGeoreferenceSetupStep({
     setPlacementStage(null);
   };
 
-  // "Add manually" adds a blank point and opens its edit form directly (typed pixel + ground X/Y)
-  // instead of waiting for a raster/map click - the point doesn't exist yet at the moment this
-  // fires, so pendingManualEntryRef defers opening the editor until the effect below sees
-  // `activePoint` actually reflect the newly added point (same fallback-to-last-point behavior
-  // the raster/map click flow already relies on).
-  const pendingManualEntryRef = useRef(false);
-
+  // "Add manually" places the pixel position with a normal click on the survey plan (handled in
+  // handleRasterClick below, tagged via startedViaRef.current === "manual"), then opens the
+  // floating coordinate box right at that clicked spot instead of requiring a second click on the
+  // map - see manualEntryPopup.
   const beginManualControlPoint = () => {
-    pendingManualEntryRef.current = true;
     onAddControlPoint();
+    startedViaRef.current = "manual";
+    setPlacementStage("awaiting-raster");
+  };
+
+  const saveManualEntry = () => {
+    if (!manualEntryPopup) return;
+    const parsedX = Number.parseFloat(String(manualEntryPopup.x).trim().replace(",", "."));
+    const parsedY = Number.parseFloat(String(manualEntryPopup.y).trim().replace(",", "."));
+    if (!Number.isFinite(parsedX) || !Number.isFinite(parsedY)) return;
+    onUpdateControlPoint(manualEntryPopup.pointId, "ground_x", parsedX);
+    onUpdateControlPoint(manualEntryPopup.pointId, "ground_y", parsedY);
+    setManualEntryPopup(null);
+    setPlacementStage("saved");
+    savedStageTimeoutRef.current = window.setTimeout(() => {
+      setPlacementStage(null);
+      savedStageTimeoutRef.current = null;
+    }, 1400);
+  };
+
+  const cancelManualEntry = () => {
+    if (manualEntryPopup) {
+      const point = controlPoints.find((item) => item.id === manualEntryPopup.pointId);
+      if (point && !pointIsReady(point)) {
+        onRemoveControlPoint(point.id);
+      }
+    }
+    setManualEntryPopup(null);
+  };
+
+  const updateManualEntryField = (field: "x" | "y", value: string) => {
+    setManualEntryPopup((current) => (current ? { ...current, [field]: value } : current));
   };
 
   const startEditPoint = (point: (typeof controlPoints)[number]) => {
@@ -400,13 +441,6 @@ function SurveyPlanGeoreferenceSetupStep({
       image_y: Number.isFinite(point.image_y) ? String(point.image_y) : "",
     });
   };
-
-  useEffect(() => {
-    if (!pendingManualEntryRef.current || !activePoint) return;
-    pendingManualEntryRef.current = false;
-    startEditPoint(activePoint);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePoint?.id]);
 
   // Guards against orphaning a blank point: cancelling right after "Add manually" (before typing
   // anything) removes the just-created incomplete point instead of leaving it stuck at "Needs
@@ -774,7 +808,19 @@ function SurveyPlanGeoreferenceSetupStep({
     if (!pixel) return;
     onAssignImagePoint(pixel.pixelX, pixel.pixelY);
     if (placementStage === "awaiting-raster") {
-      if (startedViaRef.current === "raster") {
+      if (startedViaRef.current === "manual") {
+        // Places the pixel position, then opens the coordinate box right at that spot instead of
+        // waiting for a map click.
+        const stagePosition = projectRasterPixelToStage(pixel.pixelX, pixel.pixelY, stageMetrics);
+        setManualEntryPopup({
+          pointId: activePoint.id,
+          leftPercent: stagePosition?.leftPercent ?? 50,
+          topPercent: stagePosition?.topPercent ?? 50,
+          x: "",
+          y: "",
+        });
+        setPlacementStage(null);
+      } else if (startedViaRef.current === "raster") {
         // First click of the pair - now wait for the matching map location.
         setPlacementStage("awaiting-map");
       } else {
@@ -1108,13 +1154,15 @@ function SurveyPlanGeoreferenceSetupStep({
                           Survey plan point
                         </span>
                         <span className={activePoint && pointHasGround(activePoint) ? "is-done" : placementStage === "awaiting-map" ? "is-active" : ""}>
-                          Matching map location
+                          {startedViaRef.current === "manual" ? "Type its coordinate" : "Matching map location"}
                         </span>
                         <span>Control point saved</span>
                       </div>
                       <p className="geo-section-hint">
                         {placementStage === "awaiting-raster"
-                          ? "Select a point on the survey plan."
+                          ? startedViaRef.current === "manual"
+                            ? "Click the point on the survey plan, then type its coordinate."
+                            : "Select a point on the survey plan."
                           : "Select the matching location on the map."}
                       </p>
                       <button type="button" className="geo-btn geo-btn-outline geo-btn-block" onClick={cancelPendingPoint}>
@@ -1181,7 +1229,9 @@ function SurveyPlanGeoreferenceSetupStep({
             <h2>Survey plan</h2>
             <p>
               {placementStage === "awaiting-raster"
-                ? "Select a point on the survey plan"
+                ? startedViaRef.current === "manual"
+                  ? "Click the point, then type its coordinate."
+                  : "Select a point on the survey plan"
                 : activePoint
                   ? `Selected: ${activePoint.label}`
                   : "Start by matching a point on the plan."}
@@ -1290,6 +1340,57 @@ function SurveyPlanGeoreferenceSetupStep({
                           <span>PY {cursorSample.pixelY.toFixed(1)}</span>
                         </span>
                       </span>
+                    ) : null}
+                    {manualEntryPopup ? (
+                      <div
+                        className={`georef-manual-entry-popup${manualEntryPopup.leftPercent > 62 ? " is-right-edge" : ""}${manualEntryPopup.topPercent > 62 ? " is-bottom-edge" : ""}`}
+                        style={{ left: `${manualEntryPopup.leftPercent}%`, top: `${manualEntryPopup.topPercent}%` }}
+                        onClick={(event) => event.stopPropagation()}
+                        onMouseDown={(event) => event.stopPropagation()}
+                      >
+                        <span className="georef-manual-entry-popup-reticle" aria-hidden="true" />
+                        <div className="georef-manual-entry-popup-body">
+                          <strong>Enter coordinate</strong>
+                          <label>
+                            {coordinateXLabel}
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              autoFocus
+                              value={manualEntryPopup.x}
+                              onChange={(event) => updateManualEntryField("x", event.target.value)}
+                            />
+                          </label>
+                          <label>
+                            {coordinateYLabel}
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={manualEntryPopup.y}
+                              onChange={(event) => updateManualEntryField("y", event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") saveManualEntry();
+                              }}
+                            />
+                          </label>
+                          <div className="geo-composer-actions">
+                            <button type="button" className="geo-btn geo-btn-outline" onClick={cancelManualEntry}>
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              className="geo-btn geo-btn-primary"
+                              disabled={
+                                !Number.isFinite(Number.parseFloat(manualEntryPopup.x.replace(",", "."))) ||
+                                !Number.isFinite(Number.parseFloat(manualEntryPopup.y.replace(",", ".")))
+                              }
+                              onClick={saveManualEntry}
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     ) : null}
                   </>
                 ) : (
