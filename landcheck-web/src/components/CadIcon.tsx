@@ -22,7 +22,21 @@ export type CadIconName =
   | "table"
   | "info"
   | "close"
-  | "cad";
+  | "cad"
+  | "undo"
+  | "redo"
+  | "preview"
+  | "export"
+  | "duplicate"
+  | "measure"
+  | "boundary"
+  | "road"
+  | "river"
+  | "fence"
+  | "building"
+  | "point"
+  | "text"
+  | "dimension";
 
 export default function CadIcon({ name, className = "" }: { name: CadIconName; className?: string }) {
   switch (name) {
@@ -68,6 +82,34 @@ export default function CadIcon({ name, className = "" }: { name: CadIconName; c
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5.5 5.5 13 13M18.5 5.5l-13 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>;
     case "cad":
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 15.5v-7l4 5.5 4-5.5v7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case "undo":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 8H5V4M5 8c1.8-2.2 4.4-3.5 7.3-3.5A8.5 8.5 0 1 1 4.2 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case "redo":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M17 8h2V4M19 8c-1.8-2.2-4.4-3.5-7.3-3.5A8.5 8.5 0 1 0 19.8 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case "preview":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /><circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="1.5" /></svg>;
+    case "export":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /><path d="M4.5 14.5V19a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>;
+    case "duplicate":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="1.4" stroke="currentColor" strokeWidth="1.5" /><path d="M15.5 5.5h-9a1 1 0 0 0-1 1v9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>;
+    case "measure":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="9" width="18" height="6" rx="1" transform="rotate(-20 12 12)" stroke="currentColor" strokeWidth="1.5" /><path d="m8.3 10.6.7 1.6M11.6 9.3l.7 1.6M14.9 8l.7 1.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>;
+    case "boundary":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8 12 4l8 4-2 8H6L4 8Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeDasharray="3 2.2" /></svg>;
+    case "road":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 3.5 5 20.5M15 3.5l4 17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /><path d="M12 5v2.4M12 10.4v2.4M12 15.8v2.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>;
+    case "river":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 8c2 0 2 2.2 4 2.2S8.5 8 10.5 8s2 2.2 4 2.2S16.5 8 18.5 8s2 2.2 3 2.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /><path d="M2.5 14.5c2 0 2 2.2 4 2.2s2-2.2 4-2.2 2 2.2 4 2.2 2-2.2 4-2.2 2 2.2 3 2.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>;
+    case "fence":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3.5v17M12 3.5v17M18 3.5v17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /><path d="M3 8.5h18M3 14.5h18" stroke="currentColor" strokeWidth="1.4" /></svg>;
+    case "building":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="8.5" width="14" height="12" stroke="currentColor" strokeWidth="1.5" /><path d="M9 20.5v-4h6v4" stroke="currentColor" strokeWidth="1.5" /><path d="M9 12h1.4M13.6 12H15M9 15.3h1.4M13.6 15.3H15" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>;
+    case "point":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="7.5" stroke="currentColor" strokeWidth="1.4" strokeDasharray="2.4 2.2" /><circle cx="12" cy="12" r="2.1" fill="currentColor" /></svg>;
+    case "text":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 6h14M12 6v13" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>;
+    case "dimension":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8v3M20 8v3M4 9.5h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /><path d="m5 16 3-3M8 16l3-3M11 16l3-3M14 16l3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>;
     default:
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" /></svg>;
   }

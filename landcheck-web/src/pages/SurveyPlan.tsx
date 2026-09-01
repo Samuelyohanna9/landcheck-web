@@ -5185,6 +5185,11 @@ export default function SurveyPlan() {
               northArrowColor={northArrowColor}
               coordinateSystem={coordinateSystem}
               onBoundaryPointChange={handleBoundaryPointChange}
+              onPreview={handleCloseFeatureEditor}
+              onExport={() => {
+                handleCloseFeatureEditor();
+                goToStep(3);
+              }}
               />
             </Suspense>
           )}

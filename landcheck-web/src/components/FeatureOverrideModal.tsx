@@ -4,7 +4,7 @@ import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import toast from "react-hot-toast";
 import "../styles/feature-override-modal.css";
 import { fromWGS84 } from "../utils/coordinateConverter";
-import CadIcon from "./CadIcon";
+import CadIcon, { type CadIconName } from "./CadIcon";
 import { loadMapboxDraw, loadMapboxGl } from "../utils/mapboxLoader";
 
 type FeatureType = "road" | "building" | "river" | "fence";
@@ -132,6 +132,8 @@ type Props = {
   northArrowColor: NorthArrowColor;
   coordinateSystem: string;
   onBoundaryPointChange?: (index: number, lngLat: [number, number]) => void;
+  onPreview?: () => void;
+  onExport?: () => void;
 };
 
 const DEFAULT_LAYER_VISIBILITY: LayerVisibility = {
@@ -971,6 +973,8 @@ export default function FeatureOverrideModal({
   northArrowColor,
   coordinateSystem,
   onBoundaryPointChange,
+  onPreview,
+  onExport,
 }: Props) {
   const mapRef = useRef<any>(null);
   const drawRef = useRef<any>(null);
@@ -1070,13 +1074,39 @@ export default function FeatureOverrideModal({
   const plottingViewportBoxWidth = Math.max(plottingPageWidth - PLOTTING_VIEWPORT_MARGIN * 2, 100);
   const plottingViewportBoxHeight = Math.max(plottingPageHeight - PLOTTING_VIEWPORT_MARGIN * 2, 100);
 
-  const [showLeftSidebar, setShowLeftSidebar] = useState(false);
-  const [showRightSidebar, setShowRightSidebar] = useState(false);
+  const [showRightSidebar, setShowRightSidebar] = useState(true);
   const [showEditorHelp, setShowEditorHelp] = useState(false);
   const [showTraversePanel, setShowTraversePanel] = useState(false);
+  // Committed-feature undo/redo (separate from undoLastVertex, which only pops a point while
+  // actively mid-drawing). Snapshot-based rather than a command-pattern action list - the
+  // featureCollections shape is already the single source of truth for committed features, so a
+  // snapshot is simple, correct, and easy to reason about at this data scale. featureCollections
+  // is mirrored into a ref so the callbacks below always read the latest value without needing to
+  // widen their own dependency arrays (same pattern this session already used for stale-closure-
+  // prone callbacks in the georeferencing workspace).
+  const HISTORY_LIMIT = 50;
+  const [historyPast, setHistoryPast] = useState<FeatureCollectionState[]>([]);
+  const [historyFuture, setHistoryFuture] = useState<FeatureCollectionState[]>([]);
+  const featureCollectionsRef = useRef<FeatureCollectionState>(DEFAULT_FEATURE_COLLECTIONS);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  // One-time canvas hint, dismissed permanently once seen (mirrors the "remembered until
+  // dismissed" localStorage pattern already used for AI-quota flags in CoordinateInput.tsx).
+  const [showCanvasHint, setShowCanvasHint] = useState(() => {
+    try {
+      return window.localStorage.getItem("cad-editor-canvas-hint-dismissed") !== "1";
+    } catch {
+      return true;
+    }
+  });
+  const [gridVisible, setGridVisible] = useState(true);
+  const [showCommandBar, setShowCommandBar] = useState(false);
+  const commandBarInputRef = useRef<HTMLInputElement | null>(null);
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>(DEFAULT_LAYER_VISIBILITY);
   const [featureInventory, setFeatureInventory] = useState<FeatureInventory>(DEFAULT_INVENTORY);
   const [featureCollections, setFeatureCollections] = useState<FeatureCollectionState>(DEFAULT_FEATURE_COLLECTIONS);
+  useEffect(() => {
+    featureCollectionsRef.current = featureCollections;
+  }, [featureCollections]);
   const [plottingPoints, setPlottingPoints] = useState<number[][]>([]);
   const [pendingSave, setPendingSave] = useState<PendingSave | null>(null);
   const [savingAction, setSavingAction] = useState(false);
@@ -1371,6 +1401,41 @@ export default function FeatureOverrideModal({
   const pushCommandMessage = useCallback((message: string) => {
     setCommandMessages((previous) => [...previous.slice(-7), message]);
   }, []);
+
+  // Snapshots featureCollections onto the undo stack right before a committed mutation and clears
+  // the redo stack, matching the usual editor convention that a fresh action invalidates any
+  // previously undone redo history.
+  const pushHistorySnapshot = useCallback(() => {
+    setHistoryPast((previous) => {
+      const next = [...previous, featureCollectionsRef.current];
+      return next.length > HISTORY_LIMIT ? next.slice(next.length - HISTORY_LIMIT) : next;
+    });
+    setHistoryFuture([]);
+  }, []);
+
+  const undoHistory = useCallback(() => {
+    setHistoryPast((previous) => {
+      if (previous.length === 0) return previous;
+      const last = previous[previous.length - 1];
+      setHistoryFuture((future) => [featureCollectionsRef.current, ...future]);
+      setFeatureCollections(last);
+      setHasUnsavedChanges(true);
+      pushCommandMessage("Undo.");
+      return previous.slice(0, -1);
+    });
+  }, [pushCommandMessage]);
+
+  const redoHistory = useCallback(() => {
+    setHistoryFuture((previous) => {
+      if (previous.length === 0) return previous;
+      const next = previous[0];
+      setHistoryPast((past) => [...past, featureCollectionsRef.current]);
+      setFeatureCollections(next);
+      setHasUnsavedChanges(true);
+      pushCommandMessage("Redo.");
+      return previous.slice(1);
+    });
+  }, [pushCommandMessage]);
 
   const activateSelectionMode = useCallback((mode: SelectionMode) => {
     setSelectionMode((previous) => (previous === mode ? null : mode));
@@ -1697,8 +1762,7 @@ export default function FeatureOverrideModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    setShowLeftSidebar(false);
-    setShowRightSidebar(false);
+    setShowRightSidebar(true);
     setShowTraversePanel(false);
     setShowEditorHelp(false);
     setSelectionMode(null);
@@ -1706,6 +1770,9 @@ export default function FeatureOverrideModal({
     setActiveSuggestionIndex(0);
     setPlottingCamera(DEFAULT_PLOTTING_CAMERA);
     autoFitPlottedViewRef.current = false;
+    setHistoryPast([]);
+    setHistoryFuture([]);
+    setHasUnsavedChanges(false);
   }, [isOpen]);
 
   useEffect(() => {
@@ -2196,19 +2263,34 @@ export default function FeatureOverrideModal({
         return;
       }
 
+      if (event.key === "/") {
+        event.preventDefault();
+        setShowCommandBar(true);
+        window.requestAnimationFrame(() => commandBarInputRef.current?.focus());
+        return;
+      }
+
       const key = event.key.toLowerCase();
 
-      // Undo last vertex during line/polygon drawing
+      // Ctrl+Shift+Z / Ctrl+Y redo committed add/modify/delete actions
+      if ((event.ctrlKey || event.metaKey) && (key === "y" || (event.shiftKey && key === "z"))) {
+        event.preventDefault();
+        redoHistory();
+        return;
+      }
+
+      // Ctrl+Z: undo the last clicked vertex while actively drawing, otherwise undo the last
+      // committed add/modify/delete action.
       if ((event.ctrlKey || event.metaKey) && key === "z") {
         event.preventDefault();
         if (activeTool !== "select" && plottingPoints.length > 0) {
           undoLastVertex();
         } else {
-          pushCommandMessage("No action to undo.");
+          undoHistory();
         }
         return;
       }
-      
+
       if (event.key === "Escape") {
         event.preventDefault();
         clearWorkingSelection();
@@ -2252,10 +2334,16 @@ export default function FeatureOverrideModal({
           pushCommandMessage("Polygon tool active (P).");
           break;
         case "s":
+        case "v":
           event.preventDefault();
           setActiveTool("select");
           setSelectionMode(null);
-          pushCommandMessage("Select tool active (S).");
+          pushCommandMessage(`Select tool active (${key.toUpperCase()}).`);
+          break;
+        case "r":
+          event.preventDefault();
+          handleFeatureTypeChange("road");
+          pushCommandMessage("Road layer active (R).");
           break;
         case "z":
           event.preventDefault();
@@ -2302,7 +2390,7 @@ export default function FeatureOverrideModal({
           break;
         case "h":
           event.preventDefault();
-          pushCommandMessage("Hotkeys: L=Line, P=Polygon, S=Select, Z=Zoom Fit, O=Ortho, N=Snap, M=Measure, B=Box Select, U=Undo/Clear, Delete=Erase, Enter=Commit.");
+          pushCommandMessage("Hotkeys: V/S=Select, L=Line, P=Polygon, R=Road, Z=Zoom Fit, O=Ortho, N=Snap, M=Measure, B=Box Select, U=Undo/Clear, Ctrl+Z=Undo, Ctrl+Y=Redo, Delete=Erase, Escape=Cancel, Enter=Commit.");
           break;
         default:
           break;
@@ -2324,6 +2412,9 @@ export default function FeatureOverrideModal({
     setEditorTool,
     activateSelectionMode,
     undoLastVertex,
+    undoHistory,
+    redoHistory,
+    handleFeatureTypeChange,
   ]);
 
   useEffect(() => {
@@ -3372,6 +3463,33 @@ export default function FeatureOverrideModal({
     });
   };
 
+  // Clones the selected feature's geometry a small offset away and routes it through the same
+  // confirm-then-commit path as a normal Add, so it participates in the undo/redo history and the
+  // usual save confirmation like any other add.
+  const duplicateSelection = useCallback(() => {
+    if (!selectedFeatureRecord || !selectedGeometry || editorTarget === "boundary") {
+      pushCommandMessage("Select a road, river, fence, or building to duplicate.");
+      return;
+    }
+    const shift = (coords: any): any =>
+      Array.isArray(coords[0]) ? coords.map(shift) : [coords[0] + 0.00003, coords[1] + 0.00003];
+    const offsetGeometry = { ...selectedGeometry, coordinates: shift(selectedGeometry.coordinates) };
+    const duplicateName =
+      selectedFeatureRecord.type === "road"
+        ? `${roadName || selectedFeatureRecord.label} copy`
+        : selectedFeatureRecord.type === "river"
+          ? `${riverName || selectedFeatureRecord.label} copy`
+          : undefined;
+    setPendingSave({
+      kind: "upsert",
+      featureType: selectedFeatureRecord.type as FeatureType,
+      action: "add",
+      geometry: offsetGeometry,
+      name: duplicateName,
+      width_m: selectedFeatureRecord.type === "road" ? roadWidthMeters ?? undefined : undefined,
+    });
+  }, [selectedFeatureRecord, selectedGeometry, editorTarget, roadName, riverName, roadWidthMeters, pushCommandMessage]);
+
   const cancelPendingSave = useCallback(() => {
     setPendingSave(null);
   }, []);
@@ -3402,7 +3520,9 @@ export default function FeatureOverrideModal({
       }
 
       if (removedKeys.length > 0) {
+        pushHistorySnapshot();
         removeFeaturesByKeys(removedKeys);
+        setHasUnsavedChanges(false);
       }
       if (successCount > 0) {
         toast.success(successCount > 1 ? `${successCount} features deleted` : "Feature deleted");
@@ -3429,6 +3549,8 @@ export default function FeatureOverrideModal({
     }
     if (!ok) return;
 
+    pushHistorySnapshot();
+    setHasUnsavedChanges(false);
     if (pending.replacedKey) {
       removeFeaturesByKeys([pending.replacedKey]);
     }
@@ -3446,7 +3568,7 @@ export default function FeatureOverrideModal({
     });
     toast.success(pending.action === "add" ? "Feature added" : "Feature updated");
     clearWorkingSelection();
-  }, [pendingSave, onSave, removeFeaturesByKeys, clearWorkingSelection]);
+  }, [pendingSave, onSave, removeFeaturesByKeys, clearWorkingSelection, pushHistorySnapshot]);
 
   const pendingSaveDescription = (() => {
     if (!pendingSave) return "";
@@ -3460,286 +3582,272 @@ export default function FeatureOverrideModal({
       : `apply the change to the selected ${pendingSave.featureType}`;
   })();
 
-  const suggestedTool = toolForEditorTarget(editorTarget);
-  const suggestedToolLabel =
-    suggestedTool === "draw_polygon" ? "Polygon tool" : suggestedTool === "draw_line_string" ? "Line tool" : "Select tool";
   const cadMetaTooltip = `R of O ${meta.adamawa_rof_no || plotId || "590"} | ${meta.adamawa_owner_name || meta.title_text || "Survey Plan"} | ${meta.location_text || "Pilot Plot"} | Scale ${meta.scale_text || "1 : 250"} | ${meta.surveyor_rank || "Surveyor General"}`;
 
-  if (!isOpen) return null;
+  const hasActiveSelection = Boolean(selectedFeatureRecord) || hasSelectedGeometry || selectedObjectCount > 0;
+  const isDrawingFeature = !hasActiveSelection && (activeTool !== "select" || action === "add");
+  const inspectorMode: "draw" | "selection" | "idle" = hasActiveSelection ? "selection" : isDrawingFeature ? "draw" : "idle";
 
-  return (
-    <div className="feature-override-modal">
-      <div className="feature-override-card cad-editor-card">
-        <div className="cad-toolbar">
-          <div className="cad-toolbar-brand" title="Map Feature Editor — add missed features or correct detected ones">
+  function renderAppBar() {
+    return (
+      <div className="cad-app-bar">
+        <div className="cad-app-bar-section cad-app-bar-left">
+          <div className="cad-toolbar-brand" title="Survey Plan CAD Editor">
             <CadIcon name="cad" className="cad-toolbar-brand-icon" />
           </div>
-
-          <div className="cad-toolbar-group">
-            <button
-              type="button"
-              className={`cad-icon-btn${activeTool === "select" ? " active" : ""}`}
-              title="Select"
-              onClick={() => {
-                setEditorTool("select");
-                setSelectionMode(null);
-              }}
-            >
-              <CadIcon name="select" />
-            </button>
-            <button
-              type="button"
-              className={`cad-icon-btn${selectionMode === "box" ? " active" : ""}`}
-              title="Box select"
-              onClick={() => activateSelectionMode("box")}
-            >
-              <CadIcon name="box-select" />
-            </button>
-            <button
-              type="button"
-              className={`cad-icon-btn${selectionMode === "lasso" ? " active" : ""}`}
-              title="Lasso select"
-              onClick={() => activateSelectionMode("lasso")}
-            >
-              <CadIcon name="lasso" />
-            </button>
-            <button
-              type="button"
-              className={`cad-icon-btn${activeTool === "draw_line_string" ? " active" : ""}`}
-              title="Line"
-              onClick={() => {
-                setSelectionMode(null);
-                setEditorTool("draw_line_string");
-              }}
-            >
-              <CadIcon name="line" />
-            </button>
-            <button
-              type="button"
-              className={`cad-icon-btn${activeTool === "draw_polygon" ? " active" : ""}`}
-              title="Polygon"
-              onClick={() => {
-                setSelectionMode(null);
-                setEditorTool("draw_polygon");
-              }}
-            >
-              <CadIcon name="polygon" />
-            </button>
-            <button
-              type="button"
-              className="cad-icon-btn"
-              title={`Match ${suggestedToolLabel}`}
-              onClick={() => {
-                setSelectionMode(null);
-                setEditorTool(suggestedTool);
-              }}
-            >
-              <CadIcon name="wand" />
-            </button>
+          <div className="cad-app-bar-title" title={cadMetaTooltip}>
+            <strong>{meta.title_text || "Survey Plan"}</strong>
+            <span className={`cad-save-status${hasUnsavedChanges ? " is-unsaved" : ""}`}>
+              {hasUnsavedChanges ? "Unsaved changes" : "Saved"}
+            </span>
           </div>
+        </div>
 
+        <div className="cad-app-bar-section cad-app-bar-center">
+          <button type="button" className="cad-icon-btn" title="Undo (Ctrl+Z)" onClick={undoHistory} disabled={historyPast.length === 0}>
+            <CadIcon name="undo" />
+          </button>
+          <button type="button" className="cad-icon-btn" title="Redo (Ctrl+Y)" onClick={redoHistory} disabled={historyFuture.length === 0}>
+            <CadIcon name="redo" />
+          </button>
           <span className="cad-toolbar-divider" />
+          <button
+            type="button"
+            className={`cad-app-bar-save${action === "delete" ? " danger" : ""}`}
+            onClick={handleSave}
+            disabled={!canSave || savingAction}
+          >
+            {savingAction ? "Saving..." : primaryActionLabel}
+          </button>
+          <span className="cad-app-bar-scale">Scale {meta.scale_text || "1 : 250"}</span>
+        </div>
 
-          <div className="cad-toolbar-group">
-            <button type="button" className="cad-icon-btn" title="Fit Plot" onClick={fitPlotBoundary}>
-              <CadIcon name="fit" />
+        <div className="cad-app-bar-section cad-app-bar-right">
+          {onPreview ? (
+            <button type="button" className="cad-app-bar-link" onClick={onPreview}>
+              <CadIcon name="preview" />
+              Preview
             </button>
-            {basemapMode === "plotting" ? (
-              <>
-                <button type="button" className="cad-icon-btn" title="Zoom In" onClick={() => zoomPlottingCamera("in")}>
-                  <CadIcon name="zoom-in" />
-                </button>
-                <button type="button" className="cad-icon-btn" title="Zoom Out" onClick={() => zoomPlottingCamera("out")}>
-                  <CadIcon name="zoom-out" />
-                </button>
-              </>
-            ) : null}
-            <button type="button" className="cad-icon-btn" title="Clear Draft" onClick={clearWorkingSelection}>
-              <CadIcon name="clear" />
+          ) : null}
+          {onExport ? (
+            <button type="button" className="cad-app-bar-link" onClick={onExport}>
+              <CadIcon name="export" />
+              Export
             </button>
-          </div>
-
+          ) : null}
+          <button
+            type="button"
+            className={`cad-icon-btn${showEditorHelp ? " active" : ""}`}
+            title="How to edit map features"
+            onClick={() => setShowEditorHelp(true)}
+          >
+            <CadIcon name="info" />
+          </button>
+          <button
+            type="button"
+            className={`cad-icon-btn${showRightSidebar ? " active" : ""}`}
+            title="Toggle Inspector panel"
+            onClick={() => setShowRightSidebar((value) => !value)}
+          >
+            <CadIcon name="inspector" />
+          </button>
           <span className="cad-toolbar-divider" />
-
-          <div className="cad-toolbar-group cad-toolbar-group--editing" title="Pick a feature type, then Add, Modify, or Delete it in the plotting area below.">
-            <CadIcon name="info" className="cad-toolbar-group-cue" />
-            <select
-              className="cad-toolbar-select"
-              value={editorTarget}
-              onChange={(event) => handleFeatureTypeChange(event.target.value as EditableFeatureTarget)}
-              title="Feature type"
-            >
-              <option value="road">Road</option>
-              <option value="building">Building</option>
-              <option value="river">River</option>
-              <option value="fence">Fence</option>
-              <option value="boundary">Boundary</option>
-            </select>
-            {editorTarget === "road" && action !== "delete" ? (
-              <label className="cad-toolbar-inline-field" title="Road width in meters">
-                <span>Width (m)</span>
-                <input
-                  className="cad-toolbar-input"
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  inputMode="decimal"
-                  value={roadWidth}
-                  onChange={(event) => setRoadWidth(event.target.value)}
-                  placeholder="10"
-                />
-              </label>
-            ) : null}
-            <button
-              type="button"
-              className={`cad-icon-btn${action === "add" ? " active" : ""}`}
-              title={editorTarget === "boundary" ? "Boundary is protected from add commands" : "Add New"}
-              onClick={startAddFlow}
-              disabled={editorTarget === "boundary"}
-            >
-              <CadIcon name="add" />
-            </button>
-            <button type="button" className={`cad-icon-btn${action === "update" ? " active" : ""}`} title="Modify Selected" onClick={startUpdateFlow}>
-              <CadIcon name="modify" />
-            </button>
-            <button
-              type="button"
-              className={`cad-icon-btn danger${action === "delete" ? " active" : ""}`}
-              title={editorTarget === "boundary" ? "Boundary is protected from delete commands" : "Delete Selected"}
-              onClick={startDeleteFlow}
-              disabled={editorTarget === "boundary"}
-            >
-              <CadIcon name="delete" />
-            </button>
-          </div>
-
-          <span className="cad-toolbar-divider" />
-
-          <div className="cad-toolbar-group">
-            <select
-              className="cad-toolbar-select"
-              value={basemapMode}
-              onChange={(event) => setBasemapMode(event.target.value as BasemapMode)}
-              title="Basemap"
-            >
-              <option value="satellite">Satellite</option>
-              <option value="plotting">Plotting</option>
-            </select>
-          </div>
-
-          <div className="cad-toolbar-meta" title={cadMetaTooltip}>
-            {toolbarMetaItems.map((item) => (
-              <div key={item.label} className="cad-toolbar-meta-chip" title={`${item.label}: ${item.value}`}>
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-              </div>
-            ))}
-            <div className="cad-toolbar-meta-chip cad-toolbar-meta-chip--selection" title={`Selection: ${selectionHeadline}`}>
-              <span>Selection</span>
-              <strong>{selectionHeadline}</strong>
-            </div>
-          </div>
-
-          <div className="cad-toolbar-spacer" />
-
-          <div className="cad-toolbar-group">
-            {basemapMode === "plotting" && (
-              <button
-                type="button"
-                className={`cad-icon-btn${showTraversePanel ? " active" : ""}`}
-                title="Traverse table"
-                onClick={() => setShowTraversePanel((value) => !value)}
-              >
-                <CadIcon name="table" />
-              </button>
-            )}
-            <button
-              type="button"
-              className={`cad-icon-btn${showEditorHelp ? " active" : ""}`}
-              title="How to edit map features"
-              onClick={() => setShowEditorHelp(true)}
-            >
-              <CadIcon name="info" />
-            </button>
-            <button
-              type="button"
-              className={`cad-icon-btn${showLeftSidebar ? " active" : ""}`}
-              title="Toggle Setup & Layers panel"
-              onClick={() => setShowLeftSidebar(!showLeftSidebar)}
-            >
-              <CadIcon name="layers" />
-            </button>
-            <button
-              type="button"
-              className={`cad-icon-btn${showRightSidebar ? " active" : ""}`}
-              title="Toggle Inspector panel"
-              onClick={() => setShowRightSidebar(!showRightSidebar)}
-            >
-              <CadIcon name="inspector" />
-            </button>
-          </div>
-
-          <span className="cad-toolbar-divider" />
-
           <button type="button" className="cad-icon-btn cad-icon-btn--close" title="Close editor" onClick={onClose}>
             <CadIcon name="close" />
           </button>
         </div>
+      </div>
+    );
+  }
 
-        <div className="cad-editor-body">
-          <aside className="cad-editor-sidebar" style={{ display: showLeftSidebar ? "block" : "none" }}>
-            <section className="cad-panel cad-panel--workspace">
-              <div className="cad-panel-head" style={{ position: "relative" }}>
-                <strong>Workspace</strong>
-                <span>Quick survey context</span>
-                <button
-                  type="button"
-                  className="cad-panel-close-btn"
-                  onClick={() => setShowLeftSidebar(false)}
-                  title="Collapse panel"
-                >
-                  &times;
-                </button>
-              </div>
-              <div className="cad-workspace-grid">
-                {workspaceSummary.map((item) => (
-                  <div key={item.label} className="cad-workspace-card">
-                    <span>{item.label}</span>
-                    <strong>{item.value}</strong>
-                  </div>
-                ))}
-              </div>
-            </section>
+  function renderToolRail() {
+    const featureTargets: Array<{ target: EditableFeatureTarget; label: string; icon: CadIconName }> = [
+      { target: "boundary", label: "Boundary", icon: "boundary" },
+      { target: "road", label: "Road", icon: "road" },
+      { target: "river", label: "River", icon: "river" },
+      { target: "fence", label: "Fence", icon: "fence" },
+      { target: "building", label: "Building", icon: "building" },
+    ];
+    return (
+      <div className="cad-tool-rail">
+        <button
+          type="button"
+          className={`cad-icon-btn${activeTool === "select" && !selectionMode ? " active" : ""}`}
+          title="Select (V)"
+          onClick={() => {
+            setEditorTool("select");
+            setSelectionMode(null);
+          }}
+        >
+          <CadIcon name="select" />
+        </button>
+        <button
+          type="button"
+          className={`cad-icon-btn${selectionMode === "box" ? " active" : ""}`}
+          title="Box select (B)"
+          onClick={() => activateSelectionMode("box")}
+        >
+          <CadIcon name="box-select" />
+        </button>
+        <button
+          type="button"
+          className={`cad-icon-btn${selectionMode === "lasso" ? " active" : ""}`}
+          title="Lasso select"
+          onClick={() => activateSelectionMode("lasso")}
+        >
+          <CadIcon name="lasso" />
+        </button>
 
+        <span className="cad-tool-rail-divider" />
+
+        {featureTargets.map((entry) => (
+          <button
+            key={entry.target}
+            type="button"
+            className={`cad-icon-btn${editorTarget === entry.target ? " active" : ""}`}
+            title={entry.target === "road" ? `${entry.label} (R)` : entry.label}
+            onClick={() => handleFeatureTypeChange(entry.target)}
+          >
+            <CadIcon name={entry.icon} />
+          </button>
+        ))}
+
+        <span className="cad-tool-rail-divider" />
+
+        <button
+          type="button"
+          className={`cad-icon-btn${action === "add" ? " active" : ""}`}
+          title={editorTarget === "boundary" ? "Boundary is protected from add commands" : "Add New"}
+          onClick={startAddFlow}
+          disabled={editorTarget === "boundary"}
+        >
+          <CadIcon name="add" />
+        </button>
+        <button
+          type="button"
+          className={`cad-icon-btn${action === "update" ? " active" : ""}`}
+          title="Modify Selected"
+          onClick={startUpdateFlow}
+        >
+          <CadIcon name="modify" />
+        </button>
+        <button
+          type="button"
+          className={`cad-icon-btn danger${action === "delete" ? " active" : ""}`}
+          title={editorTarget === "boundary" ? "Boundary is protected from delete commands" : "Delete Selected (Delete)"}
+          onClick={startDeleteFlow}
+          disabled={editorTarget === "boundary"}
+        >
+          <CadIcon name="delete" />
+        </button>
+
+        <span className="cad-tool-rail-divider" />
+
+        <button type="button" className="cad-icon-btn" disabled title="Stake point - coming soon">
+          <CadIcon name="point" />
+        </button>
+        <button type="button" className="cad-icon-btn" disabled title="Text annotation - coming soon">
+          <CadIcon name="text" />
+        </button>
+        <button type="button" className="cad-icon-btn" disabled title="Dimension - coming soon">
+          <CadIcon name="dimension" />
+        </button>
+        <button
+          type="button"
+          className={`cad-icon-btn${draftingAssist.measure ? " active" : ""}`}
+          title="Measure (M)"
+          onClick={() => toggleDraftingAssist("measure")}
+        >
+          <CadIcon name="measure" />
+        </button>
+      </div>
+    );
+  }
+
+  function renderCanvasToolbar() {
+    return (
+      <div className="cad-canvas-toolbar">
+        <button
+          type="button"
+          className={`cad-icon-btn${activeTool === "select" ? " active" : ""}`}
+          title="Pan / select"
+          onClick={() => {
+            setEditorTool("select");
+            setSelectionMode(null);
+          }}
+        >
+          <CadIcon name="select" />
+        </button>
+        {basemapMode === "plotting" ? (
+          <>
+            <button type="button" className="cad-icon-btn" title="Zoom Out" onClick={() => zoomPlottingCamera("out")}>
+              <CadIcon name="zoom-out" />
+            </button>
+            <span className="cad-canvas-toolbar-percent">{plottingZoomPercent}</span>
+            <button type="button" className="cad-icon-btn" title="Zoom In" onClick={() => zoomPlottingCamera("in")}>
+              <CadIcon name="zoom-in" />
+            </button>
+          </>
+        ) : null}
+        <button type="button" className="cad-icon-btn" title="Fit Plot" onClick={fitPlotBoundary}>
+          <CadIcon name="fit" />
+        </button>
+        {basemapMode === "plotting" ? (
+          <button
+            type="button"
+            className={`cad-icon-btn${gridVisible ? " active" : ""}`}
+            title="Toggle grid"
+            onClick={() => setGridVisible((value) => !value)}
+          >
+            <CadIcon name="grid" />
+          </button>
+        ) : null}
+        <span className="cad-toolbar-divider" />
+        <button
+          type="button"
+          className="cad-icon-btn"
+          title={basemapMode === "plotting" ? "Switch to satellite review (F7)" : "Switch to plotting sheet (F7)"}
+          onClick={() => setBasemapMode((mode) => (mode === "plotting" ? "satellite" : "plotting"))}
+        >
+          <CadIcon name={basemapMode === "plotting" ? "satellite" : "grid"} />
+        </button>
+      </div>
+    );
+  }
+
+  function renderInspector() {
+    return (
+      <aside className="cad-editor-inspector" style={{ display: showRightSidebar ? "flex" : "none" }}>
+        <div className="cad-panel-head cad-inspector-head">
+          <strong>
+            {inspectorMode === "draw"
+              ? `New ${formatEditorTargetLabel(editorTarget)}`
+              : inspectorMode === "selection"
+                ? "Selection"
+                : "Plan properties"}
+          </strong>
+          <button type="button" className="cad-panel-close-btn" onClick={() => setShowRightSidebar(false)} title="Collapse panel">
+            &times;
+          </button>
+        </div>
+
+        <div className="cad-inspector-scroll">
+          {inspectorMode === "draw" ? (
             <section className="cad-panel">
-              <div className="cad-panel-head">
-                <strong>Feature Setup</strong>
-                <span>Choose the layer you want to work on.</span>
-              </div>
               <div className="feature-override-controls cad-form-grid">
-                <div className="field">
-                  <label>Feature Type</label>
-                  <select value={editorTarget} onChange={(event) => handleFeatureTypeChange(event.target.value as EditableFeatureTarget)}>
-                    <option value="road">Road</option>
-                    <option value="building">Building</option>
-                    <option value="river">River</option>
-                    <option value="fence">Fence</option>
-                    <option value="boundary">Boundary</option>
-                  </select>
-                </div>
-                {editorTarget === "road" && action !== "delete" && (
+                {editorTarget === "road" ? (
                   <div className="field wide">
                     <label>Road Name</label>
                     <input value={roadName} onChange={(event) => setRoadName(event.target.value)} placeholder="e.g. Access Road A" />
                   </div>
-                )}
-                {editorTarget === "river" && action !== "delete" && (
+                ) : null}
+                {editorTarget === "river" ? (
                   <div className="field wide">
                     <label>River Name</label>
                     <input value={riverName} onChange={(event) => setRiverName(event.target.value)} placeholder="e.g. Ikpa River" />
                   </div>
-                )}
-                {editorTarget === "road" && action !== "delete" && (
+                ) : null}
+                {editorTarget === "road" ? (
                   <div className="field">
                     <label>Road Width (m)</label>
                     <input
@@ -3752,74 +3860,412 @@ export default function FeatureOverrideModal({
                       placeholder="Enter road width in meters"
                     />
                   </div>
-                )}
+                ) : null}
                 <div className="hint">
-                  Roads, rivers, and fences use lines. Buildings use polygons. Boundary stays locked until you intentionally select it.
+                  Click points on the plot to draw {formatEditorTargetLabel(editorTarget).toLowerCase()}. Press Enter or
+                  double-click to finish.
                 </div>
               </div>
-            </section>
-
-            <section className="cad-panel">
-              <div className="cad-panel-head">
-                <strong>Feature Register</strong>
-                <span>Pick an object to review or edit.</span>
+              <div className="cad-command-center-actions cad-command-center-actions--secondary">
+                <button type="button" className="cad-command-action" onClick={clearWorkingSelection}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className={`cad-command-primary${action === "delete" ? " danger" : ""}`}
+                  onClick={handleSave}
+                  disabled={!canSave || savingAction}
+                >
+                  {savingAction ? "Saving..." : primaryActionLabel}
+                </button>
               </div>
-              <div className="cad-object-list">
-                {visibleObjectRecords.length ? (
-                  visibleObjectRecords.map((record) => (
-                    <button
-                      type="button"
-                      key={record.key}
-                      className={`cad-object-item${multiSelectedKeys.includes(record.key) || selectedFeatureRecord?.key === record.key ? " active" : ""}`}
-                      onClick={(event) => handleObjectRecordClick(event, record)}
-                    >
-                      <span className="cad-object-item-main">
-                        <strong>{record.label}</strong>
-                        <small>{record.metrics ? `${record.metrics.geometryType} · ${record.metrics.vertices} pts` : record.type}</small>
-                      </span>
-                      <span className={`cad-object-type cad-object-type--${record.type}`}>{record.type}</span>
-                    </button>
-                  ))
+            </section>
+          ) : inspectorMode === "selection" ? (
+            <>
+              <section className="cad-panel">
+                <div className="cad-panel-head">
+                  <span>
+                    {selectedObjectCount > 1 ? `${selectedObjectCount} objects selected` : "Selected feature summary"}
+                  </span>
+                </div>
+                {selectedObjectCount > 1 ? (
+                  <div className="cad-selection-summary">
+                    <strong>Multi-selection active</strong>
+                    <span>
+                      {selectedObjectCount} objects are selected. Modify and delete still act on the active target only.
+                    </span>
+                  </div>
+                ) : null}
+                {selectedFeatureRecord ? (
+                  <div className="cad-property-list">
+                    <div className="cad-property-row">
+                      <span>Label</span>
+                      <strong>{selectedFeatureRecord.label}</strong>
+                    </div>
+                    <div className="cad-property-row">
+                      <span>Feature</span>
+                      <strong>{selectedFeatureRecord.type}</strong>
+                    </div>
+                    <div className="cad-property-row">
+                      <span>Command</span>
+                      <strong>{activeCommandLabel}</strong>
+                    </div>
+                    <div className="cad-property-row">
+                      <span>Geometry</span>
+                      <strong>{selectedFeatureRecord.metrics?.geometryType || "--"}</strong>
+                    </div>
+                    <div className="cad-property-row">
+                      <span>Coord system</span>
+                      <strong>{getCoordinateSystemName(coordinateSystem || "wgs84")}</strong>
+                    </div>
+                    {selectedFeatureRecord.type === "road" ? (
+                      <>
+                        <div className="cad-property-row">
+                          <span>Road name</span>
+                          <strong>{roadName || "--"}</strong>
+                        </div>
+                        <div className="cad-property-row">
+                          <span>Width</span>
+                          <strong>{roadWidth} m</strong>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
                 ) : (
-                  <p className="cad-empty-state">No visible detected objects in the current layer filter.</p>
+                  <p className="cad-empty-state">Select an object from the register or canvas to open its survey properties.</p>
                 )}
-              </div>
-            </section>
+                <div className="cad-command-center-actions cad-command-center-actions--secondary">
+                  <button
+                    type="button"
+                    className="cad-command-action"
+                    onClick={duplicateSelection}
+                    disabled={!selectedFeatureRecord || editorTarget === "boundary"}
+                  >
+                    Duplicate
+                  </button>
+                  <button
+                    type="button"
+                    className={`cad-command-action cad-command-action--danger${action === "delete" ? " active" : ""}`}
+                    onClick={startDeleteFlow}
+                    disabled={editorTarget === "boundary"}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </section>
 
-            <section className="cad-panel">
-              <div className="cad-panel-head">
-                <strong>Layer Visibility</strong>
-                <span>Show only the references you need.</span>
-              </div>
-              <div className="cad-layer-list">
-                {([
-                  ["boundary", "Plot boundary", null],
-                  ["road", "Roads", featureInventory.road],
-                  ["building", "Buildings", featureInventory.building],
-                  ["river", "Rivers", featureInventory.river],
-                  ["fence", "Fences", featureInventory.fence],
-                ] as Array<[keyof LayerVisibility, string, number | null]>).map(([key, label, count]) => (
-                  <label key={key} className="cad-layer-toggle">
-                    <input
-                      type="checkbox"
-                      checked={layerVisibility[key]}
-                      onChange={(event) =>
-                        setLayerVisibility((previous) => ({
-                          ...previous,
-                          [key]: event.target.checked,
-                        }))
-                      }
-                    />
-                    <span>{label}</span>
-                    {typeof count === "number" ? <em>{count}</em> : <em>ref</em>}
-                  </label>
-                ))}
-              </div>
-            </section>
-          </aside>
+              <section className="cad-panel">
+                <div className="cad-panel-head">
+                  <strong>Geometry</strong>
+                  <span>{hasSelectedGeometry ? "Selection ready for command execution" : "Live drafting measurements and parcel scale"}</span>
+                </div>
+                {activeMetrics ? (
+                  <div className="cad-metrics-grid">
+                    <div className="cad-metric">
+                      <span>Type</span>
+                      <strong>{activeMetrics.geometryType}</strong>
+                    </div>
+                    <div className="cad-metric">
+                      <span>Vertices</span>
+                      <strong>{activeMetrics.vertices}</strong>
+                    </div>
+                    <div className="cad-metric">
+                      <span>Length</span>
+                      <strong>{formatLength(activeMetrics.lengthM || activeMetrics.perimeterM)}</strong>
+                    </div>
+                    <div className="cad-metric">
+                      <span>Area</span>
+                      <strong>{formatArea(activeMetrics.areaSqm)}</strong>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="cad-empty-state">Select a detected feature or start drawing to see geometry measurements.</p>
+                )}
+                {hasSelectedGeometry ? (
+                  <div className="cad-selection-summary">
+                    <strong>Selected target</strong>
+                    <span>
+                      {editorTarget === "boundary"
+                        ? "Boundary selected. Drag a parcel vertex in plotting view to update the boundary."
+                        : `${formatEditorTargetLabel(editorTarget)} selected. Use Modify Selected to adjust it or Delete Selected to remove it.`}
+                    </span>
+                  </div>
+                ) : null}
+                {selectedObjectCount > 1 ? (
+                  <div className="cad-selection-summary">
+                    <strong>Selection set</strong>
+                    <span>
+                      {multiSelectedRecords.slice(0, 4).map((record) => record.label).join(", ")}
+                      {selectedObjectCount > 4 ? ` +${selectedObjectCount - 4} more` : ""}
+                    </span>
+                  </div>
+                ) : null}
+                {action === "delete" ? (
+                  <div className="cad-warning">
+                    <strong>Delete mode</strong>
+                    <span>Delete does not happen immediately. You will be asked to confirm before anything is removed.</span>
+                  </div>
+                ) : null}
+              </section>
 
+              <section className="cad-panel">
+                <div className="cad-panel-head">
+                  <strong>Coordinate Register</strong>
+                  <span>First eight vertices in the active coordinate system</span>
+                </div>
+                {selectedCoordinateRows.length ? (
+                  <div className="cad-coordinate-table-wrap">
+                    <table className="cad-coordinate-table">
+                      <thead>
+                        <tr>
+                          <th>Point</th>
+                          <th>{coordinateAxisLabels.xShort}</th>
+                          <th>{coordinateAxisLabels.yShort}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedCoordinateRows.map((coord) => (
+                          <tr key={coord.key}>
+                            <td>{coord.label}</td>
+                            <td>{coord.x}</td>
+                            <td>{coord.y}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="cad-empty-state">The selected geometry coordinates will appear here.</p>
+                )}
+              </section>
+
+              <section className="cad-panel">
+                <div className="cad-panel-head">
+                  <strong>Survey Precision</strong>
+                  <span>Drafting assist and snap controls for accurate survey edits</span>
+                </div>
+                <div className="cad-property-list">
+                  <div className="cad-property-row">
+                    <span>Snap set</span>
+                    <strong>{osnapSummary}</strong>
+                  </div>
+                  <div className="cad-property-row">
+                    <span>Cursor basis</span>
+                    <strong>{getCoordinateSystemName(coordinateSystem || "wgs84")}</strong>
+                  </div>
+                  <div className="cad-property-row">
+                    <span>View</span>
+                    <strong>{basemapMode === "plotting" ? `Plotting ${plottingZoomPercent}` : "Satellite"}</strong>
+                  </div>
+                </div>
+                <div className="cad-osnap-list">
+                  <button type="button" className={`cad-osnap-chip${osnapModes.endpoint ? " active" : ""}`} onClick={() => toggleOsnapMode("endpoint")}>
+                    Endpoint
+                  </button>
+                  <button type="button" className={`cad-osnap-chip${osnapModes.midpoint ? " active" : ""}`} onClick={() => toggleOsnapMode("midpoint")}>
+                    Midpoint
+                  </button>
+                  <button type="button" className={`cad-osnap-chip${osnapModes.intersection ? " active" : ""}`} onClick={() => toggleOsnapMode("intersection")}>
+                    Intersection
+                  </button>
+                </div>
+              </section>
+            </>
+          ) : (
+            <>
+              <section className="cad-panel">
+                <div className="cad-panel-head">
+                  <span>Read-only plan context carried from Setup</span>
+                </div>
+                <div className="cad-workspace-grid">
+                  {workspaceSummary.map((item) => (
+                    <div key={item.label} className="cad-workspace-card">
+                      <span>{item.label}</span>
+                      <strong>{item.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="cad-panel">
+                <div className="cad-panel-head">
+                  <strong>Layers</strong>
+                  <span>Show only the references you need.</span>
+                </div>
+                <div className="cad-layer-list">
+                  {([
+                    ["boundary", "Plot boundary", null],
+                    ["road", "Roads", featureInventory.road],
+                    ["building", "Buildings", featureInventory.building],
+                    ["river", "Rivers", featureInventory.river],
+                    ["fence", "Fences", featureInventory.fence],
+                  ] as Array<[keyof LayerVisibility, string, number | null]>).map(([key, label, count]) => (
+                    <label key={key} className="cad-layer-toggle">
+                      <input
+                        type="checkbox"
+                        checked={layerVisibility[key]}
+                        onChange={(event) =>
+                          setLayerVisibility((previous) => ({
+                            ...previous,
+                            [key]: event.target.checked,
+                          }))
+                        }
+                      />
+                      <span>{label}</span>
+                      {typeof count === "number" ? <em>{count}</em> : <em>ref</em>}
+                    </label>
+                  ))}
+                </div>
+              </section>
+
+              <section className="cad-panel">
+                <div className="cad-panel-head">
+                  <strong>Feature Register</strong>
+                  <span>Pick an object to review or edit.</span>
+                </div>
+                <div className="cad-object-list">
+                  {visibleObjectRecords.length ? (
+                    visibleObjectRecords.map((record) => (
+                      <button
+                        type="button"
+                        key={record.key}
+                        className={`cad-object-item${multiSelectedKeys.includes(record.key) || selectedFeatureRecord?.key === record.key ? " active" : ""}`}
+                        onClick={(event) => handleObjectRecordClick(event, record)}
+                      >
+                        <span className="cad-object-item-main">
+                          <strong>{record.label}</strong>
+                          <small>{record.metrics ? `${record.metrics.geometryType} · ${record.metrics.vertices} pts` : record.type}</small>
+                        </span>
+                        <span className={`cad-object-type cad-object-type--${record.type}`}>{record.type}</span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="cad-empty-state">No visible detected objects in the current layer filter.</p>
+                  )}
+                </div>
+              </section>
+            </>
+          )}
+        </div>
+      </aside>
+    );
+  }
+
+  function renderStatusBar() {
+    return (
+      <div className="cad-status-bar">
+        <div className="cad-status-bar-row">
+          <span className="cad-status-chip cad-status-chip--prompt">
+            <strong>{activeCommandLabel}</strong> | {formatEditorTargetLabel(editorTarget)}
+          </span>
+          <span className="cad-status-chip">{selectionHeadline}</span>
+          <span className="cad-status-chip">{cursorDisplay?.compact || "Cursor unavailable"}</span>
+          <span className="cad-status-chip">
+            {basemapMode === "plotting" ? `Plotting ${plottingZoomPercent}` : "Satellite review"}
+          </span>
+          <span className="cad-status-chip">Scale {meta.scale_text || "1 : 250"}</span>
+          <span className="cad-status-chip">{getCoordinateSystemName(coordinateSystem || "wgs84")}</span>
+          {activeMetrics ? (
+            <span className="cad-status-chip">
+              {activeMetrics.geometryType} | {activeMetrics.vertices} pts | {formatLength(activeMetrics.lengthM || activeMetrics.perimeterM)}
+            </span>
+          ) : null}
+
+          <span className="cad-status-bar-spacer" />
+
+          {basemapMode === "plotting" && plottingSnapLabel ? (
+            <span className="cad-status-chip">Snap target | {plottingSnapLabel}</span>
+          ) : null}
+          <button type="button" className={`cad-status-toggle${draftingAssist.snap ? " active" : ""}`} onClick={() => toggleDraftingAssist("snap")}>
+            Snap {draftingAssist.snap ? "On" : "Off"}
+          </button>
+          <button type="button" className={`cad-status-toggle${draftingAssist.ortho ? " active" : ""}`} onClick={() => toggleDraftingAssist("ortho")}>
+            Ortho {draftingAssist.ortho ? "On" : "Off"}
+          </button>
+          <button type="button" className={`cad-status-toggle${draftingAssist.measure ? " active" : ""}`} onClick={() => toggleDraftingAssist("measure")}>
+            Measure {draftingAssist.measure ? "On" : "Off"}
+          </button>
+          {basemapMode === "plotting" ? (
+            <button
+              type="button"
+              className={`cad-status-toggle${showTraversePanel ? " active" : ""}`}
+              onClick={() => setShowTraversePanel((value) => !value)}
+            >
+              Traverse
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className={`cad-status-toggle${showCommandBar ? " active" : ""}`}
+            onClick={() => {
+              setShowCommandBar((value) => !value);
+              window.requestAnimationFrame(() => commandBarInputRef.current?.focus());
+            }}
+            title="Command line (/)"
+          >
+            Command
+          </button>
+        </div>
+
+        {showCommandBar ? (
+          <div className="cad-command-strip">
+            <div className="cad-command-log">{commandMessages[commandMessages.length - 1] || "Ready."}</div>
+            <div className="cad-command-entry">
+              <span className="cad-command-prompt">Command</span>
+              <div className="cad-command-input-container">
+                {showSuggestions && suggestions.length > 0 && (
+                  <ul className="cad-command-suggestions">
+                    {suggestions.map((suggestion, index) => (
+                      <li
+                        key={suggestion}
+                        className={index === activeSuggestionIndex ? "active" : ""}
+                        onClick={() => handleSuggestionClick(suggestion)}
+                      >
+                        {suggestion}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <input
+                  ref={commandBarInputRef}
+                  value={commandInput}
+                  onChange={(event) => handleCommandInputChange(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      setShowCommandBar(false);
+                      (event.target as HTMLInputElement).blur();
+                      return;
+                    }
+                    handleCommandKeyDown(event);
+                  }}
+                  placeholder="HELP, L, PL, M, E, SNAP, ORTHO..."
+                  autoComplete="off"
+                  spellCheck="false"
+                />
+              </div>
+              <button type="button" className="cad-tool-btn" onClick={handleCommandSubmit}>
+                Run
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="feature-override-modal">
+      <div className="feature-override-card cad-editor-card">
+        {renderAppBar()}
+
+        <div className="cad-editor-body">
+          {renderToolRail()}
           <div className={`cad-editor-canvas cad-editor-canvas--${basemapMode}`}>
             <div className="cad-canvas-workspace-wrapper" style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+              {renderCanvasToolbar()}
               {basemapMode === "plotting" ? (
                 <div className="feature-override-map cad-plotting-stage" ref={plottingStageRef}>
                 {false ? <div className="cad-plotting-ribbon">
@@ -3839,10 +4285,29 @@ export default function FeatureOverrideModal({
                     ))}
                   </div>
                 </div> : null}
-                <div className="cad-plotting-help">
-                  Wheel to zoom. Hold middle mouse and drag to pan.
-                  {selectionMode ? ` ${selectionMode === "box" ? "Drag a window to select multiple objects." : "Trace a lasso to select multiple objects."}` : ""}
-                </div>
+                {selectionMode ? (
+                  <div className="cad-plotting-help">
+                    {selectionMode === "box" ? "Drag a window to select multiple objects." : "Trace a lasso to select multiple objects."}
+                  </div>
+                ) : showCanvasHint ? (
+                  <div className="cad-plotting-help cad-plotting-help--dismissible">
+                    <span>Wheel to zoom. Hold middle mouse and drag to pan.</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCanvasHint(false);
+                        try {
+                          window.localStorage.setItem("cad-editor-canvas-hint-dismissed", "1");
+                        } catch {
+                          /* ignore */
+                        }
+                      }}
+                      aria-label="Dismiss hint"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ) : null}
                 <svg
                   className={`cad-plotting-svg${plottingPanActive ? " is-panning" : ""}`}
                   viewBox={`0 0 ${plottingPageWidth} ${plottingPageHeight}`}
@@ -3909,7 +4374,7 @@ export default function FeatureOverrideModal({
                     <g clipPath="url(#cad-viewport-clip)">
                       {/* Panned/zoomed group */}
                       <g transform={`translate(${plottingCamera.offsetX.toFixed(2)} ${plottingCamera.offsetY.toFixed(2)}) scale(${plottingCamera.zoom.toFixed(3)})`}>
-                        {plottingGridLines.map((line) => (
+                        {gridVisible && plottingGridLines.map((line) => (
                           <line
                             key={line.key}
                             x1={line.x1}
@@ -3936,7 +4401,7 @@ export default function FeatureOverrideModal({
                               <text
                                 x={0}
                                 y={0}
-                                fill="#ef4444"
+                                fill="var(--cad-dimension, #f3f6f8)"
                                 fontSize="11.5"
                                 fontWeight="bold"
                                 fontFamily="monospace"
@@ -3972,8 +4437,8 @@ export default function FeatureOverrideModal({
 
                             labels.push(
                               <g key={`lbl-${i}`} transform={`translate(${midX}, ${midY}) rotate(${angleDeg}) scale(${plottingInverseZoom})`}>
-                                <text y="-5" fill="#ef4444" fontSize="9.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle" className="cad-svg-halo-text">{bearingStr}</text>
-                                <text y="7" fill="#ef4444" fontSize="9.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle" className="cad-svg-halo-text">{distStr}</text>
+                                <text y="-5" fill="var(--cad-dimension, #f3f6f8)" fontSize="9.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle" className="cad-svg-halo-text">{bearingStr}</text>
+                                <text y="7" fill="var(--cad-dimension, #f3f6f8)" fontSize="9.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle" className="cad-svg-halo-text">{distStr}</text>
                               </g>
                             );
                           }
@@ -4402,372 +4867,13 @@ export default function FeatureOverrideModal({
               </div>
             )}
 
-            {!showLeftSidebar && (
-              <button
-                type="button"
-                className="cad-floating-tab cad-floating-tab--left"
-                onClick={() => setShowLeftSidebar(true)}
-                title="Show setup tools"
-              >
-                <span className="cad-floating-tab-arrow">&gt;</span>
-                <span className="cad-floating-tab-text">Setup</span>
-              </button>
-            )}
-            {!showRightSidebar && (
-              <button
-                type="button"
-                className="cad-floating-tab cad-floating-tab--right"
-                onClick={() => setShowRightSidebar(true)}
-                title="Show review inspector"
-              >
-                <span className="cad-floating-tab-arrow">&lt;</span>
-                <span className="cad-floating-tab-text">Review</span>
-              </button>
-            )}
           </div>
-            <div className="cad-status-bar">
-              <span className="cad-status-chip cad-status-chip--prompt">
-                <strong>{activeCommandLabel}</strong> | {formatEditorTargetLabel(editorTarget)}
-              </span>
-              <span className="cad-status-chip">
-                {cursorDisplay?.compact || "Cursor unavailable"}
-              </span>
-              <span className="cad-status-chip">
-                {basemapMode === "plotting" ? `Plotting ${plottingZoomPercent}` : "Satellite review"}
-              </span>
-              {activeMetrics ? (
-                <span className="cad-status-chip">
-                  {activeMetrics.geometryType} | {activeMetrics.vertices} pts | {formatLength(activeMetrics.lengthM || activeMetrics.perimeterM)}
-                </span>
-              ) : null}
-              <button type="button" className={`cad-status-toggle${draftingAssist.snap ? " active" : ""}`} onClick={() => toggleDraftingAssist("snap")}>
-                Snap {draftingAssist.snap ? "On" : "Off"}
-              </button>
-              <button type="button" className={`cad-status-toggle${draftingAssist.ortho ? " active" : ""}`} onClick={() => toggleDraftingAssist("ortho")}>
-                Ortho {draftingAssist.ortho ? "On" : "Off"}
-              </button>
-              <button type="button" className={`cad-status-toggle${draftingAssist.measure ? " active" : ""}`} onClick={() => toggleDraftingAssist("measure")}>
-                Measure {draftingAssist.measure ? "On" : "Off"}
-              </button>
-              {basemapMode === "plotting" && plottingSnapLabel ? <span className="cad-status-chip">Snap target | {plottingSnapLabel}</span> : null}
-            </div>
           </div>
 
-          <aside className="cad-editor-inspector" style={{ display: showRightSidebar ? "block" : "none" }}>
-            <section className="cad-panel cad-panel--command">
-              <div className="cad-panel-head" style={{ position: "relative" }}>
-                <strong>Command</strong>
-                <span>Open the review tools only when you need them.</span>
-                <button
-                  type="button"
-                  className="cad-panel-close-btn"
-                  onClick={() => setShowRightSidebar(false)}
-                  title="Collapse panel"
-                >
-                  &times;
-                </button>
-              </div>
-              <div className="cad-command-center-grid">
-                <div className="cad-command-center-card">
-                  <span>Current command</span>
-                  <strong>{activeCommandLabel}</strong>
-                  <small>{formatEditorTargetLabel(editorTarget)}</small>
-                </div>
-                <div className="cad-command-center-card">
-                  <span>Selection</span>
-                  <strong>{selectionHeadline}</strong>
-                  <small>{basemapMode === "plotting" ? `Plotting ${plottingZoomPercent}` : "Satellite review"}</small>
-                </div>
-              </div>
-              <div className="cad-command-center-actions">
-                <button
-                  type="button"
-                  className={`cad-command-action${action === "add" ? " active" : ""}`}
-                  onClick={startAddFlow}
-                  disabled={editorTarget === "boundary"}
-                >
-                  Add
-                </button>
-                <button
-                  type="button"
-                  className={`cad-command-action${action === "update" ? " active" : ""}`}
-                  onClick={startUpdateFlow}
-                >
-                  Modify
-                </button>
-                <button
-                  type="button"
-                  className={`cad-command-action cad-command-action--danger${action === "delete" ? " active" : ""}`}
-                  onClick={startDeleteFlow}
-                  disabled={editorTarget === "boundary"}
-                >
-                  Delete
-                </button>
-              </div>
-              <div className="cad-command-center-actions cad-command-center-actions--secondary">
-                <button type="button" className="cad-command-action" onClick={fitPlotBoundary}>
-                  Fit plot
-                </button>
-                <button type="button" className="cad-command-action" onClick={clearWorkingSelection}>
-                  Clear draft
-                </button>
-                {basemapMode === "plotting" ? (
-                  <button
-                    type="button"
-                    className={`cad-command-action${showTraversePanel ? " active" : ""}`}
-                    onClick={() => setShowTraversePanel((value) => !value)}
-                  >
-                    Traverse
-                  </button>
-                ) : null}
-              </div>
-              {editorTarget === "boundary" ? (
-                <div className="cad-command-center-note">
-                  Boundary geometry is protected from add and delete commands. Switch to Boundary only when you intend to adjust parcel vertices.
-                </div>
-              ) : null}
-              <div className="cad-command-center-primary">
-                <button
-                  type="button"
-                  className={`cad-command-primary${action === "delete" ? " danger" : ""}`}
-                  onClick={handleSave}
-                  disabled={!canSave || savingAction}
-                >
-                  {savingAction ? "Saving..." : primaryActionLabel}
-                </button>
-              </div>
-            </section>
-
-            <section className="cad-panel">
-              <div className="cad-panel-head">
-                <strong>Selection</strong>
-                <span>
-                  {selectedObjectCount > 1
-                    ? `${selectedObjectCount} objects selected`
-                    : selectedFeatureRecord
-                      ? "Selected feature summary"
-                      : "Select a feature to review it here"}
-                </span>
-              </div>
-              {selectedObjectCount > 1 ? (
-                <div className="cad-selection-summary">
-                  <strong>Multi-selection active</strong>
-                  <span>
-                    {selectedObjectCount} objects are selected. Modify and delete still act on the active target only.
-                  </span>
-                </div>
-              ) : null}
-              {selectedFeatureRecord ? (
-                <div className="cad-property-list">
-                  <div className="cad-property-row">
-                    <span>Label</span>
-                    <strong>{selectedFeatureRecord.label}</strong>
-                  </div>
-                  <div className="cad-property-row">
-                    <span>Feature</span>
-                    <strong>{selectedFeatureRecord.type}</strong>
-                  </div>
-                  <div className="cad-property-row">
-                    <span>Command</span>
-                    <strong>{activeCommandLabel}</strong>
-                  </div>
-                      <div className="cad-property-row">
-                        <span>Geometry</span>
-                        <strong>{selectedFeatureRecord.metrics?.geometryType || "--"}</strong>
-                      </div>
-                      <div className="cad-property-row">
-                        <span>Coord system</span>
-                        <strong>{getCoordinateSystemName(coordinateSystem || "wgs84")}</strong>
-                      </div>
-                      {selectedFeatureRecord.type === "road" ? (
-                    <>
-                      <div className="cad-property-row">
-                        <span>Road name</span>
-                        <strong>{roadName || "--"}</strong>
-                      </div>
-                      <div className="cad-property-row">
-                        <span>Width</span>
-                        <strong>{roadWidth} m</strong>
-                      </div>
-                    </>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="cad-empty-state">Select an object from the register or canvas to open its survey properties.</p>
-              )}
-            </section>
-
-            <section className="cad-panel">
-              <div className="cad-panel-head">
-                <strong>Geometry</strong>
-                <span>{hasSelectedGeometry ? "Selection ready for command execution" : "Live drafting measurements and parcel scale"}</span>
-              </div>
-              {activeMetrics ? (
-                <div className="cad-metrics-grid">
-                  <div className="cad-metric">
-                    <span>Type</span>
-                    <strong>{activeMetrics.geometryType}</strong>
-                  </div>
-                  <div className="cad-metric">
-                    <span>Vertices</span>
-                    <strong>{activeMetrics.vertices}</strong>
-                  </div>
-                  <div className="cad-metric">
-                    <span>Length</span>
-                    <strong>{formatLength(activeMetrics.lengthM || activeMetrics.perimeterM)}</strong>
-                  </div>
-                  <div className="cad-metric">
-                    <span>Area</span>
-                    <strong>{formatArea(activeMetrics.areaSqm)}</strong>
-                  </div>
-                </div>
-              ) : (
-                <p className="cad-empty-state">Select a detected feature or start drawing to see geometry measurements.</p>
-              )}
-              {hasSelectedGeometry ? (
-                <div className="cad-selection-summary">
-                  <strong>Selected target</strong>
-                  <span>
-                    {editorTarget === "boundary"
-                      ? "Boundary selected. Drag a parcel vertex in plotting view to update the boundary."
-                      : `${formatEditorTargetLabel(editorTarget)} selected. Use Modify Selected to adjust it or Delete Selected to remove it.`}
-                  </span>
-                </div>
-              ) : null}
-              {selectedObjectCount > 1 ? (
-                <div className="cad-selection-summary">
-                  <strong>Selection set</strong>
-                  <span>
-                    {multiSelectedRecords.slice(0, 4).map((record) => record.label).join(", ")}
-                    {selectedObjectCount > 4 ? ` +${selectedObjectCount - 4} more` : ""}
-                  </span>
-                </div>
-              ) : null}
-              {action === "delete" ? (
-                <div className="cad-warning">
-                  <strong>Delete mode</strong>
-                  <span>Delete does not happen immediately. You will be asked to confirm before anything is removed.</span>
-                </div>
-              ) : null}
-            </section>
-
-            <section className="cad-panel">
-              <div className="cad-panel-head">
-                <strong>Coordinate Register</strong>
-                <span>First eight vertices in the active coordinate system</span>
-              </div>
-              {selectedCoordinateRows.length ? (
-                <div className="cad-coordinate-table-wrap">
-                  <table className="cad-coordinate-table">
-                    <thead>
-                      <tr>
-                        <th>Point</th>
-                        <th>{coordinateAxisLabels.xShort}</th>
-                        <th>{coordinateAxisLabels.yShort}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedCoordinateRows.map((coord) => (
-                        <tr key={coord.key}>
-                          <td>{coord.label}</td>
-                          <td>{coord.x}</td>
-                          <td>{coord.y}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="cad-empty-state">The selected geometry coordinates will appear here.</p>
-              )}
-            </section>
-
-            <section className="cad-panel">
-              <div className="cad-panel-head">
-                <strong>Survey Precision</strong>
-                <span>Drafting assist and snap controls for accurate survey edits</span>
-              </div>
-              <div className="cad-property-list">
-                <div className="cad-property-row">
-                  <span>Snap set</span>
-                  <strong>{osnapSummary}</strong>
-                </div>
-                <div className="cad-property-row">
-                  <span>Cursor basis</span>
-                  <strong>{getCoordinateSystemName(coordinateSystem || "wgs84")}</strong>
-                </div>
-                <div className="cad-property-row">
-                  <span>View</span>
-                  <strong>{basemapMode === "plotting" ? `Plotting ${plottingZoomPercent}` : "Satellite"}</strong>
-                </div>
-              </div>
-              <div className="cad-osnap-list">
-                <button type="button" className={`cad-osnap-chip${osnapModes.endpoint ? " active" : ""}`} onClick={() => toggleOsnapMode("endpoint")}>
-                  Endpoint
-                </button>
-                <button type="button" className={`cad-osnap-chip${osnapModes.midpoint ? " active" : ""}`} onClick={() => toggleOsnapMode("midpoint")}>
-                  Midpoint
-                </button>
-                <button type="button" className={`cad-osnap-chip${osnapModes.intersection ? " active" : ""}`} onClick={() => toggleOsnapMode("intersection")}>
-                  Intersection
-                </button>
-              </div>
-            </section>
-          </aside>
+          {renderInspector()}
         </div>
 
-        <div className="cad-command-strip">
-          <div className="cad-command-log">
-            {commandMessages[commandMessages.length - 1] || "Ready."}
-          </div>
-          <div className="cad-command-entry">
-            <span className="cad-command-prompt">Command</span>
-            <div className="cad-command-input-container">
-              {showSuggestions && suggestions.length > 0 && (
-                <ul className="cad-command-suggestions">
-                  {suggestions.map((suggestion, index) => (
-                    <li
-                      key={suggestion}
-                      className={index === activeSuggestionIndex ? "active" : ""}
-                      onClick={() => handleSuggestionClick(suggestion)}
-                    >
-                      {suggestion}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <input
-                value={commandInput}
-                onChange={(event) => handleCommandInputChange(event.target.value)}
-                onKeyDown={handleCommandKeyDown}
-                placeholder="HELP, L, PL, M, E, SNAP, ORTHO..."
-                autoComplete="off"
-                spellCheck="false"
-              />
-            </div>
-            <button type="button" className="cad-tool-btn" onClick={handleCommandSubmit}>
-              Run
-            </button>
-          </div>
-        </div>
-
-        <div className="feature-override-actions cad-editor-actions cad-editor-actions--compact">
-          <div className="cad-editor-actions-right">
-            <button className="btn-outline" onClick={clearWorkingSelection}>
-              Clear
-            </button>
-            <button className="btn-outline" onClick={onClose}>
-              Cancel
-            </button>
-            <button
-              className={`btn-primary${action === "delete" ? " danger" : ""}`}
-              onClick={handleSave}
-              disabled={!canSave || savingAction}
-            >
-              {savingAction ? "Saving..." : primaryActionLabel}
-            </button>
-          </div>
-        </div>
+        {renderStatusBar()}
       </div>
 
       {showEditorHelp && (
@@ -4792,7 +4898,7 @@ export default function FeatureOverrideModal({
               ))}
             </div>
             <div className="cad-help-footer">
-              <strong>Tip:</strong> Keep the plot open, pull in Tools only when needed, and use Inspector only when reviewing a selected object.
+              <strong>Tip:</strong> Use the left toolbar to pick a drawing tool, then check the right inspector to review or edit a selected object.
             </div>
           </div>
         </div>
