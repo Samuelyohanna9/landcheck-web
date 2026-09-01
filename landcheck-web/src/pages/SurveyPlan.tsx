@@ -349,11 +349,11 @@ const ACTIVE_SURVEY_DRAFT_ID = "active";
 // networks make both legitimately slower than 30s even when nothing is actually stuck.
 const SLOW_NETWORK_TIMEOUT_MS = 180000;
 
-const buildDefaultManualPoints = (): ManualPoint[] => [
-  { station: "A", lng: 0, lat: 0 },
-  { station: "B", lng: 0, lat: 0 },
-  { station: "C", lng: 0, lat: 0 },
-];
+// Empty, not 3 blank (0,0) rows - a fresh plan should show nothing until the surveyor actually
+// imports or explicitly opens manual entry (see CoordinateInput.tsx's "Manual Entry" toggle).
+// Pre-seeded blank rows used to confuse the AI Quality Check, which had no way to tell "genuinely
+// unedited" apart from "the surveyor typed something".
+const buildDefaultManualPoints = (): ManualPoint[] => [];
 
 const buildDefaultPlotMeta = (): PlotMeta => ({
   title_text: "SURVEY PLAN",
@@ -1323,6 +1323,10 @@ export default function SurveyPlan() {
       toast.success(`Loaded ${points.length} coordinates from file`);
     }
   }, []);
+
+  // AI Field to Survey Plan state (handlers defined below, right after goToStep) - a deliberately
+  // different route from every other import path: no manual point list, no column-mapping modal.
+  const [aiPlotAwaitingConfirmation, setAiPlotAwaitingConfirmation] = useState(false);
 
   // Handle coordinates drawn on map (always comes in WGS84)
   // Convert to selected coordinate system for display
@@ -2866,6 +2870,32 @@ export default function SurveyPlan() {
     startTransition(() => {
       setCurrentStep(step);
     });
+  }, []);
+
+  // AI Field to Survey Plan - the AI's parsed boundary is loaded straight onto the map (same
+  // mapCoordinates derivation every other import path already uses, so it renders as the same red
+  // polygon with zero new map code) and the surveyor confirms the location visually instead of
+  // reading a coordinate table. Confirming jumps straight to template selection (step 2);
+  // rejecting clears the tentative points and returns to the AI input, ready to retry.
+  const handleAiPlotParsed = useCallback((points: ManualPoint[]) => {
+    if (points.length < 3) {
+      toast.error("AI needs at least 3 boundary points to plot a shape.");
+      return;
+    }
+    setManualPoints(points);
+    setForceShowDraftMap(true);
+    setHasHeightData(false);
+    setAiPlotAwaitingConfirmation(true);
+  }, []);
+
+  const confirmAiPlot = useCallback(() => {
+    setAiPlotAwaitingConfirmation(false);
+    goToStep(2);
+  }, [goToStep]);
+
+  const rejectAiPlot = useCallback(() => {
+    setManualPoints([]);
+    setAiPlotAwaitingConfirmation(false);
   }, []);
 
   const handlePreviewTypeChange = useCallback((type: PreviewType) => {
@@ -5066,6 +5096,10 @@ export default function SurveyPlan() {
                 isLowBandwidth={isLowBandwidth}
                 manualLowBandwidth={manualLowBandwidth}
                 onManualLowBandwidthChange={setManualLowBandwidth}
+                onAiPlotParsed={handleAiPlotParsed}
+                aiPlotAwaitingConfirmation={aiPlotAwaitingConfirmation}
+                onConfirmAiPlot={confirmAiPlot}
+                onRejectAiPlot={rejectAiPlot}
               />
             )}
           </Suspense>

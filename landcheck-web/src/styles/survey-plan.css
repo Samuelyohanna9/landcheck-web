@@ -1733,6 +1733,43 @@
   scrollbar-gutter: stable;
 }
 
+.ai-plot-confirm-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 1.5rem 1.4rem;
+  border-radius: 16px;
+  border: 1px solid rgba(167, 139, 250, 0.4);
+  background: linear-gradient(160deg, rgba(139, 92, 246, 0.14) 0%, rgba(109, 40, 217, 0.08) 100%);
+  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.08), 0 12px 28px rgba(76, 29, 149, 0.18);
+}
+
+.ai-plot-confirm-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.ai-plot-confirm-card h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--survey-text-primary, #edf1e9);
+}
+
+.ai-plot-confirm-card p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--survey-text-secondary, #c4d0c8);
+}
+
+.ai-plot-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.3rem;
+}
+
 .panel-right {
   background: rgba(22, 40, 58, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.1);

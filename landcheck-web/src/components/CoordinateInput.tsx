@@ -117,6 +117,12 @@ type Props = {
   // Only Survey Plan passes this (it owns plan metadata to fill in); Hazard Analysis's plain
   // coordinate entry has no such metadata, so it simply doesn't pass the prop and this stays off.
   onImportedMetadata?: (fields: Record<string, string>) => void;
+  // Opt-in: when provided, "AI Field to Survey Plan" hands its parsed boundary straight to this
+  // callback instead of the category-review table + CSV-preview modal - the caller is expected to
+  // load the points onto its own map for a visual confirm step (see SurveyPlanStepOnePanel.tsx)
+  // rather than making the surveyor read a coordinate table. Falls back to the table+modal route
+  // when not provided, so this stays backward compatible for any other consumer.
+  onAiPlotParsed?: (points: ManualPoint[]) => void;
 };
 
 // Flattened view of COORDINATE_SYSTEM_GROUPS - kept for the "currently selected" lookup below;
@@ -167,6 +173,7 @@ function CoordinateInput({
   onCoordinateSystemChange,
   showPointRoles = false,
   onImportedMetadata,
+  onAiPlotParsed,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const aiFileInputRef = useRef<HTMLInputElement>(null);
@@ -196,6 +203,18 @@ function CoordinateInput({
   const [fieldImportResult, setFieldImportResult] = useState<FieldImportParsed | null>(null);
   const [fieldImportCategories, setFieldImportCategories] = useState<FieldImportCategory[]>([]);
   const [fieldImportMode, setFieldImportMode] = useState<"upload" | "paste">("upload");
+  // Sticky once true (even if every row is later deleted) - the surveyor explicitly asked for the
+  // manual entry form, so it stays available rather than vanishing the moment it's empty again.
+  const [manualEntryOpened, setManualEntryOpened] = useState(false);
+  const showPointList = points.length > 0 || manualEntryOpened;
+  const openManualEntry = () => {
+    setManualEntryOpened(true);
+    if (points.length === 0) {
+      onAddPoint();
+      onAddPoint();
+      onAddPoint();
+    }
+  };
   const [fieldImportPasteText, setFieldImportPasteText] = useState("");
   // Set right before opening CSVPreviewModal for a field-import confirm, keyed by the same station
   // name each row was given - handlePreviewConfirm re-attaches category/feature_code by that key
@@ -462,8 +481,6 @@ function CoordinateInput({
         toast.error("The AI couldn't read any coordinate rows from this data.");
         return;
       }
-      setFieldImportResult(parsed);
-      setFieldImportCategories(parsed.points.map((p) => p.category));
       if (parsed.coordinate_system_guess && parsed.coordinate_system_guess !== "unknown") {
         onCoordinateSystemChange(parsed.coordinate_system_guess);
       }
@@ -471,9 +488,35 @@ function CoordinateInput({
       const remaining = res.data?.imports_remaining_today;
       const remainingSuffix = typeof remaining === "number" ? ` (${remaining} import${remaining === 1 ? "" : "s"} left today)` : "";
       if (remaining === 0) markFieldImportQuotaExhausted();
-      toast.success(`AI read ${parsed.points.length} point(s) - review the categories below and confirm.${remainingSuffix}`, {
-        duration: 6000,
-      });
+
+      if (onAiPlotParsed) {
+        // AI Field to Survey Plan: every point here is a boundary corner by the surveyor's own
+        // instruction (this flow's input is boundary-only) - no category review, no CSV-preview
+        // modal. Straight to the caller's map-confirm step.
+        if (parsed.points.length < 3) {
+          toast.error(`AI only found ${parsed.points.length} point(s) - at least 3 boundary corners are needed.`);
+          return;
+        }
+        const boundaryPoints: ManualPoint[] = parsed.points.map((point, index) => ({
+          station: String(point.point_number || String.fromCharCode(65 + index)).trim(),
+          lng: Number(point.x),
+          lat: Number(point.y),
+          height: point.elevation_m !== undefined && point.elevation_m !== null && Number.isFinite(Number(point.elevation_m))
+            ? Number(point.elevation_m)
+            : undefined,
+          is_boundary: true,
+        }));
+        onAiPlotParsed(boundaryPoints);
+        toast.success(`AI plotted ${boundaryPoints.length} boundary point(s) - confirm the location on the map.${remainingSuffix}`, {
+          duration: 6000,
+        });
+      } else {
+        setFieldImportResult(parsed);
+        setFieldImportCategories(parsed.points.map((p) => p.category));
+        toast.success(`AI read ${parsed.points.length} point(s) - review the categories below and confirm.${remainingSuffix}`, {
+          duration: 6000,
+        });
+      }
       setFieldImportPasteText("");
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
@@ -579,7 +622,99 @@ function CoordinateInput({
         </div>
       </div>
 
-      <div className="coord-upload-section">
+      {onImportedMetadata && (
+        <div className="ai-plot-hero">
+          <div className="ai-plot-hero-header">
+            <img src="/LandCheck_Survey_AI_Symbol.svg" alt="" className="ai-plot-hero-icon" aria-hidden="true" />
+            <div>
+              <span className="ai-plot-hero-badge">AI-Powered</span>
+              <h3>AI Field to Survey Plan</h3>
+            </div>
+          </div>
+          <p className="ai-plot-hero-copy">
+            Paste or upload your <strong>boundary points only</strong> - station and easting/northing (or lat/long),
+            even messy or unlabeled. AI detects the coordinate system automatically, plots the boundary on the map for
+            you to confirm, then takes you straight to template selection.
+          </p>
+
+          <div className="coord-field-import-mode-toggle">
+            <button
+              type="button"
+              className={`coord-field-import-mode-btn ${fieldImportMode === "upload" ? "active" : ""}`}
+              onClick={() => setFieldImportMode("upload")}
+            >
+              Upload File
+            </button>
+            <button
+              type="button"
+              className={`coord-field-import-mode-btn ${fieldImportMode === "paste" ? "active" : ""}`}
+              onClick={() => setFieldImportMode("paste")}
+            >
+              Paste / Type Data
+            </button>
+          </div>
+
+          {fieldImportMode === "upload" ? (
+            <>
+              <input
+                ref={fieldImportFileInputRef}
+                type="file"
+                accept=".txt,.csv,.dat,.asc,.tsv"
+                onChange={handleFieldDataUpload}
+                disabled={disabled || fieldImportReading || fieldImportQuotaExhausted}
+                className="file-input-hidden"
+                id="coord-field-import-upload"
+              />
+              <label
+                htmlFor="coord-field-import-upload"
+                className={`upload-btn upload-btn--ai ai-plot-hero-btn ${disabled || fieldImportReading || fieldImportQuotaExhausted ? "disabled" : ""}`}
+                title={fieldImportQuotaExhausted ? "Resets tomorrow" : undefined}
+              >
+                <img src="/LandCheck_Survey_AI_Symbol.svg" alt="" className="qc-check-icon-img" aria-hidden="true" />
+                {fieldImportReading
+                  ? "Reading field data..."
+                  : fieldImportQuotaExhausted
+                    ? "AI imports used up for today"
+                    : "Upload Boundary Data"}
+              </label>
+            </>
+          ) : (
+            <div className="coord-field-import-paste">
+              <textarea
+                className="coord-field-import-paste-textarea"
+                rows={5}
+                placeholder={
+                  "Paste or type boundary points here, e.g.\nA 329110.22 1028183.41\nB 329119.61 1028191.32"
+                }
+                value={fieldImportPasteText}
+                onChange={(e) => setFieldImportPasteText(e.target.value)}
+                disabled={disabled || fieldImportReading || fieldImportQuotaExhausted}
+              />
+              <button
+                type="button"
+                className="upload-btn upload-btn--ai ai-plot-hero-btn coord-field-import-paste-submit"
+                onClick={() => void handleFieldDataPasteSubmit()}
+                disabled={disabled || fieldImportReading || fieldImportQuotaExhausted || !fieldImportPasteText.trim()}
+                title={fieldImportQuotaExhausted ? "Resets tomorrow" : undefined}
+              >
+                <img src="/LandCheck_Survey_AI_Symbol.svg" alt="" className="qc-check-icon-img" aria-hidden="true" />
+                {fieldImportReading
+                  ? "Reading field data..."
+                  : fieldImportQuotaExhausted
+                    ? "AI imports used up for today"
+                    : "Plot Boundary with AI"}
+              </button>
+            </div>
+          )}
+          <span className="upload-hint">
+            {fieldImportQuotaExhausted
+              ? "You've used all your AI field data imports for today - resets tomorrow."
+              : "Prefer the traditional route? Use CSV import, scanned-plan import, or manual entry below."}
+          </span>
+        </div>
+      )}
+
+      <div className="coord-upload-section coord-upload-section--secondary">
         <input
           ref={fileInputRef}
           type="file"
@@ -597,7 +732,7 @@ function CoordinateInput({
               clipRule="evenodd"
             />
           </svg>
-          {uploadParsing ? "Processing file..." : "Import Sheet"}
+          {uploadParsing ? "Processing file..." : "Import CSV / Excel"}
         </label>
         <span className="upload-hint">CSV or Excel · station, easting, northing</span>
 
@@ -620,97 +755,25 @@ function CoordinateInput({
               <svg viewBox="0 0 20 20" fill="currentColor">
                 <path d="M11 2a1 1 0 10-2 0v1.05A6.002 6.002 0 004.05 9H3a1 1 0 100 2h1.05A6.002 6.002 0 009 15.95V17a1 1 0 102 0v-1.05A6.002 6.002 0 0016.95 11H18a1 1 0 100-2h-1.05A6.002 6.002 0 0011 3.05V2zm-1 4a4 4 0 100 8 4 4 0 000-8z" />
               </svg>
-              {aiReading ? "Reading plan..." : aiQuotaExhausted ? "AI readings used up for today" : "Import from Plan (AI)"}
+              {aiReading ? "Reading plan..." : aiQuotaExhausted ? "AI readings used up for today" : "Import from Scanned Plan (AI)"}
             </label>
             <span className="upload-hint">
               {aiQuotaExhausted
                 ? "You've used all your AI plan readings for today - resets tomorrow."
                 : "Photo, scan, PDF of an existing survey plan or handwritten coordinate table. AI extracts beacons and coordinates automatically."}
             </span>
+          </>
+        )}
 
-            <div className="coord-field-import-mode-toggle">
-              <button
-                type="button"
-                className={`coord-field-import-mode-btn ${fieldImportMode === "upload" ? "active" : ""}`}
-                onClick={() => setFieldImportMode("upload")}
-              >
-                Upload File
-              </button>
-              <button
-                type="button"
-                className={`coord-field-import-mode-btn ${fieldImportMode === "paste" ? "active" : ""}`}
-                onClick={() => setFieldImportMode("paste")}
-              >
-                Paste / Type Data
-              </button>
-            </div>
-
-            {fieldImportMode === "upload" ? (
-              <>
-                <input
-                  ref={fieldImportFileInputRef}
-                  type="file"
-                  accept=".txt,.csv,.dat,.asc,.tsv"
-                  onChange={handleFieldDataUpload}
-                  disabled={disabled || fieldImportReading || fieldImportQuotaExhausted}
-                  className="file-input-hidden"
-                  id="coord-field-import-upload"
-                />
-                <label
-                  htmlFor="coord-field-import-upload"
-                  className={`upload-btn upload-btn--ai ${disabled || fieldImportReading || fieldImportQuotaExhausted ? "disabled" : ""}`}
-                  title={fieldImportQuotaExhausted ? "Resets tomorrow" : undefined}
-                >
-                  <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M11 2a1 1 0 10-2 0v1.05A6.002 6.002 0 004.05 9H3a1 1 0 100 2h1.05A6.002 6.002 0 009 15.95V17a1 1 0 102 0v-1.05A6.002 6.002 0 0016.95 11H18a1 1 0 100-2h-1.05A6.002 6.002 0 0011 3.05V2zm-1 4a4 4 0 100 8 4 4 0 000-8z" />
-                  </svg>
-                  {fieldImportReading
-                    ? "Reading field data..."
-                    : fieldImportQuotaExhausted
-                      ? "AI imports used up for today"
-                      : "Smart Field Import (AI)"}
-                </label>
-                <span className="upload-hint">
-                  {fieldImportQuotaExhausted
-                    ? "You've used all your AI field data imports for today - resets tomorrow."
-                    : "Raw GNSS/total station export (.txt/.csv), even with messy or unlabeled columns and feature codes. AI sniffs the columns and classifies each point."}
-                </span>
-              </>
-            ) : (
-              <div className="coord-field-import-paste">
-                <textarea
-                  className="coord-field-import-paste-textarea"
-                  rows={5}
-                  placeholder={
-                    "Paste or type raw coordinate data here, e.g.\nP001 329110.22 1028183.41 212.3 EP\nP002 329119.61 1028191.32 211.8 TR"
-                  }
-                  value={fieldImportPasteText}
-                  onChange={(e) => setFieldImportPasteText(e.target.value)}
-                  disabled={disabled || fieldImportReading || fieldImportQuotaExhausted}
-                />
-                <button
-                  type="button"
-                  className="upload-btn upload-btn--ai coord-field-import-paste-submit"
-                  onClick={() => void handleFieldDataPasteSubmit()}
-                  disabled={disabled || fieldImportReading || fieldImportQuotaExhausted || !fieldImportPasteText.trim()}
-                  title={fieldImportQuotaExhausted ? "Resets tomorrow" : undefined}
-                >
-                  <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M11 2a1 1 0 10-2 0v1.05A6.002 6.002 0 004.05 9H3a1 1 0 100 2h1.05A6.002 6.002 0 009 15.95V17a1 1 0 102 0v-1.05A6.002 6.002 0 0016.95 11H18a1 1 0 100-2h-1.05A6.002 6.002 0 0011 3.05V2zm-1 4a4 4 0 100 8 4 4 0 000-8z" />
-                  </svg>
-                  {fieldImportReading
-                    ? "Reading field data..."
-                    : fieldImportQuotaExhausted
-                      ? "AI imports used up for today"
-                      : "Parse with AI"}
-                </button>
-                <span className="upload-hint">
-                  {fieldImportQuotaExhausted
-                    ? "You've used all your AI field data imports for today - resets tomorrow."
-                    : "Type or paste messy coordinate rows directly - no need to save a file first. AI sniffs the columns and classifies each point."}
-                </span>
-              </div>
-            )}
+        {!showPointList && (
+          <>
+            <button type="button" className="upload-btn" onClick={openManualEntry} disabled={disabled}>
+              <svg viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10 4a1 1 0 011 1v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4V5a1 1 0 011-1z" />
+              </svg>
+              Manual Entry
+            </button>
+            <span className="upload-hint">Type coordinates in one by one.</span>
           </>
         )}
       </div>
@@ -812,6 +875,8 @@ function CoordinateInput({
         </div>
       )}
 
+      {showPointList && (
+      <>
       <div className="coord-list-wrapper">
         {(() => {
           // Without point roles enabled, every point counts toward the minimum - matches this
@@ -933,6 +998,8 @@ function CoordinateInput({
               : "Ring will auto-close on creation."}
         </span>
       </div>
+      </>
+      )}
 
       <CSVPreviewModal
         isOpen={showPreviewModal}

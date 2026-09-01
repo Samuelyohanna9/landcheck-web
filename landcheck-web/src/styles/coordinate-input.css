@@ -207,6 +207,75 @@
   border-color: rgba(167, 139, 250, 0.5);
 }
 
+/* AI Field to Survey Plan - the hero import route, deliberately more prominent than the plain
+   secondary buttons below it (see .coord-upload-section--secondary). Gated by onImportedMetadata,
+   same as every other AI element in this file - never renders on HazardAnalysis. */
+.ai-plot-hero {
+  margin: 0 1rem 0.9rem;
+  padding: 1rem 1.1rem 1.1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(167, 139, 250, 0.4);
+  background: linear-gradient(160deg, rgba(139, 92, 246, 0.14) 0%, rgba(109, 40, 217, 0.08) 100%);
+  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.08), 0 12px 28px rgba(76, 29, 149, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.ai-plot-hero-header {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.ai-plot-hero-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+.ai-plot-hero-badge {
+  display: inline-block;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(167, 139, 250, 0.22);
+  color: #d8c9ff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+}
+
+.ai-plot-hero-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--survey-text-primary, #edf1e9);
+}
+
+.ai-plot-hero-copy {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--survey-text-secondary, #c4d0c8);
+}
+
+.ai-plot-hero-copy strong {
+  color: #d8c9ff;
+}
+
+.ai-plot-hero-btn {
+  justify-content: center;
+  min-height: 46px;
+  font-size: 0.86rem;
+  background: rgba(139, 92, 246, 0.24);
+  border-color: rgba(167, 139, 250, 0.55);
+}
+
+.coord-upload-section--secondary {
+  padding-top: 0.6rem;
+}
+
 .coord-field-import-mode-toggle {
   display: flex;
   gap: 0.4rem;

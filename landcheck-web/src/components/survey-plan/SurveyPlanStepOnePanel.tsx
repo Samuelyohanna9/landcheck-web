@@ -39,6 +39,10 @@ type Props = {
   manualLowBandwidth: boolean;
   onManualLowBandwidthChange: (value: boolean) => void;
   onImportedMetadata?: (fields: Record<string, string>) => void;
+  onAiPlotParsed?: (points: ManualPoint[]) => void;
+  aiPlotAwaitingConfirmation: boolean;
+  onConfirmAiPlot: () => void;
+  onRejectAiPlot: () => void;
 };
 
 function SurveyPlanStepOnePanel({
@@ -63,6 +67,10 @@ function SurveyPlanStepOnePanel({
   manualLowBandwidth,
   onManualLowBandwidthChange,
   onImportedMetadata,
+  onAiPlotParsed,
+  aiPlotAwaitingConfirmation,
+  onConfirmAiPlot,
+  onRejectAiPlot,
 }: Props) {
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>("boundary");
   const hasAnyHeightData = manualPoints.some(
@@ -76,40 +84,62 @@ function SurveyPlanStepOnePanel({
   return (
     <div className="step-panel">
       <div className="panel-left">
-        {sidebar}
-        <CoordinateInput
-          points={manualPoints}
-          onUpdatePoint={onUpdatePoint}
-          onRemovePoint={onRemovePoint}
-          onAddPoint={onAddPoint}
-          onBulkUpload={onBulkUpload}
-          disabled={loading}
-          coordinateSystem={coordinateSystem}
-          onCoordinateSystemChange={onCoordinateSystemChange}
-          showPointRoles
-          onImportedMetadata={onImportedMetadata}
-        />
-        <div className="action-bar">
-          <button className="btn-primary" disabled={!hasValidCoords || loading} onClick={onContinue}>
-            {loading ? (
-              <>
-                <span className="spinner" />
-                  Plotting Draft...
-              </>
-            ) : (
-              <>
-                  {workflowMode === "subdivision" ? "Plot & Save Mother Parcel Draft" : "Plot & Save Local Draft"}
-                <svg viewBox="0 0 20 20" fill="currentColor">
-                  <path
-                    fillRule="evenodd"
-                    d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </>
-            )}
-          </button>
-        </div>
+        {aiPlotAwaitingConfirmation ? (
+          <div className="ai-plot-confirm-card">
+            <img src="/LandCheck_Survey_AI_Symbol.svg" alt="" className="ai-plot-confirm-icon" aria-hidden="true" />
+            <h3>Confirm Boundary Location</h3>
+            <p>
+              AI plotted {manualPoints.filter((p) => p.is_boundary !== false).length} boundary point(s), shown in red on
+              the map. Is this the right location and shape for your parcel?
+            </p>
+            <div className="ai-plot-confirm-actions">
+              <button type="button" className="btn-primary" onClick={onConfirmAiPlot}>
+                Yes, this is correct - Continue
+              </button>
+              <button type="button" className="btn-outline" onClick={onRejectAiPlot}>
+                No, let me redo it
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {sidebar}
+            <CoordinateInput
+              points={manualPoints}
+              onUpdatePoint={onUpdatePoint}
+              onRemovePoint={onRemovePoint}
+              onAddPoint={onAddPoint}
+              onBulkUpload={onBulkUpload}
+              disabled={loading}
+              coordinateSystem={coordinateSystem}
+              onCoordinateSystemChange={onCoordinateSystemChange}
+              showPointRoles
+              onImportedMetadata={onImportedMetadata}
+              onAiPlotParsed={onAiPlotParsed}
+            />
+            <div className="action-bar">
+              <button className="btn-primary" disabled={!hasValidCoords || loading} onClick={onContinue}>
+                {loading ? (
+                  <>
+                    <span className="spinner" />
+                      Plotting Draft...
+                  </>
+                ) : (
+                  <>
+                      {workflowMode === "subdivision" ? "Plot & Save Mother Parcel Draft" : "Plot & Save Local Draft"}
+                    <svg viewBox="0 0 20 20" fill="currentColor">
+                      <path
+                        fillRule="evenodd"
+                        d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </>
+                )}
+              </button>
+            </div>
+          </>
+        )}
       </div>
       <div className="panel-right">
         {showDraftMap ? (
