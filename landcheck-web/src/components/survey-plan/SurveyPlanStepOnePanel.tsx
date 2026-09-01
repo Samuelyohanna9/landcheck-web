@@ -80,6 +80,20 @@ function SurveyPlanStepOnePanel({
     (p) => p.height !== undefined && p.height !== null && Number.isFinite(Number(p.height))
   );
 
+  // Checked against mapCoordinates - the exact same already-converted-to-WGS84 array handed to
+  // MapViewEnhanced - so this reads as "will the map actually be able to draw this", not just
+  // "did the AI return some numbers". Surfaces a data problem (bad coordinate system, AI parsing
+  // garbage) directly on the confirm card instead of leaving a surveyor staring at a map that
+  // silently drew nothing with no way to tell why.
+  const plottablePointCount = mapCoordinates.filter(
+    (p) =>
+      Number.isFinite(p.lng) &&
+      Number.isFinite(p.lat) &&
+      Math.abs(p.lng) <= 180 &&
+      Math.abs(p.lat) <= 90 &&
+      !(p.lng === 0 && p.lat === 0)
+  ).length;
+
   const warmDraftMapTools = () => {
     void prefetchSurveyPlanDraftMapTools();
   };
@@ -106,6 +120,15 @@ function SurveyPlanStepOnePanel({
               <p className="ai-plot-confirm-coord-system-hint">
                 If the shape looks wrong or is in the wrong place, this is usually the fix - pick the correct system
                 and the map updates immediately.
+              </p>
+              <p
+                className={`ai-plot-confirm-plottable-status${plottablePointCount === 0 ? " is-error" : ""}`}
+              >
+                {plottablePointCount === mapCoordinates.length
+                  ? `All ${mapCoordinates.length} point(s) are plotting on the map.`
+                  : plottablePointCount === 0
+                    ? `None of the ${mapCoordinates.length} point(s) could be plotted with this coordinate system - try a different one above.`
+                    : `${plottablePointCount} of ${mapCoordinates.length} point(s) are plotting - the rest look invalid for this coordinate system.`}
               </p>
             </div>
             <div className="ai-plot-confirm-actions">
