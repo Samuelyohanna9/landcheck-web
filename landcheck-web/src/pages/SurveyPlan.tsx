@@ -2885,7 +2885,10 @@ export default function SurveyPlan() {
     }
     setManualPoints(points);
     setForceShowDraftMap(true);
-    setHasHeightData(false);
+    // Same height-presence check handleBulkUpload uses - AI Field-to-Finish import genuinely
+    // returns elevation_m for many field files, so hardcoding this to false would silently hide
+    // topo/elevation options downstream for a plan that actually has real height data.
+    setHasHeightData(points.some((p) => p.height !== undefined && p.height !== null && Number.isFinite(Number(p.height))));
     setAiPlotAwaitingConfirmation(true);
   }, []);
 

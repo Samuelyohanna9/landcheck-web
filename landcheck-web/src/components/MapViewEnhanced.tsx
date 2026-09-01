@@ -538,27 +538,29 @@ function MapViewEnhanced({
     };
   }, []);
 
+  // Gated on mapReady, not just mapRef.current/mapboxglRef.current truthiness, and mapReady is
+  // listed as a dependency below - same reasoning as the country-recenter effect further down.
+  // mapRef.current is set synchronously as soon as the mapboxgl.Map constructor returns (see the
+  // mount effect above), but that happens inside an async IIFE (behind an awaited loadMapboxGl()
+  // chunk fetch); a flow that hands this component coordinates the moment it first mounts - AI
+  // Field to Survey Plan jumps straight from import to a populated confirm-map, unlike a manual
+  // CSV upload which almost always lands on a map that's already been sitting loaded for a while -
+  // runs this effect on mount, before that promise has resolved, so mapRef.current is still null
+  // and this effect used to bail out for good: since `coordinates` never changes again after a
+  // one-shot AI import, it never got a second chance to draw once the map actually finished
+  // loading. Depending on mapReady means it retries the instant the map (and its plot-polygon
+  // source) becomes available, instead of a coordinate-system change being the only thing that
+  // could ever re-trigger a draw.
   useEffect(() => {
     const map = mapRef.current;
     const draw = drawRef.current;
     const mapboxgl = mapboxglRef.current;
-    if (!map || !mapboxgl) return;
+    if (!map || !mapboxgl || !mapReady) return;
 
     if (isDrawingRef.current) return;
 
-    // mapRef.current is set as soon as the mapboxgl.Map constructor returns (see the mount effect
-    // above), well before its "load" event fires and its sources/layers (plot-polygon included)
-    // actually exist. A flow that hands this component coordinates the moment it first mounts -
-    // AI Field to Survey Plan jumps straight from import to a populated confirm-map, unlike a
-    // manual CSV upload which almost always lands on a map that's already been sitting loaded for
-    // a while - can run this effect before that happens: map.getSource("plot-polygon") then
-    // returns undefined, source.setData() is silently skipped, and the boundary never gets its red
-    // fill/outline even though the station markers (which don't need a style layer) still appear
-    // and fitBounds still moves the camera - "imported, camera looks right, but no plot". Same
-    // isStyleLoaded()/once("load", ...) deferral already used for spot-height data below.
-    const drawCoordinates = () => {
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
 
     const nonZeroCoords = coordinates.filter((c) => c.lng !== 0 || c.lat !== 0);
     const validCoords = nonZeroCoords.filter((c) => isPlottableLngLat(c.lng, c.lat));
@@ -658,18 +660,7 @@ function MapViewEnhanced({
         });
       }
     }
-    };
-
-    if (map.isStyleLoaded() && map.getSource("plot-polygon")) {
-      drawCoordinates();
-    } else {
-      map.once("load", drawCoordinates);
-    }
-
-    return () => {
-      map.off("load", drawCoordinates);
-    };
-  }, [coordinates]);
+  }, [coordinates, mapReady]);
 
   // Recenters the map on the chosen coordinate system's country - only when the country actually
   // changes (not on every zone tweak within the same country). Deliberately fires even with a
