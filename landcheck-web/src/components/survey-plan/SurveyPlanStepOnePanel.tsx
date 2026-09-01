@@ -46,6 +46,7 @@ type Props = {
   aiPlotAwaitingConfirmation: boolean;
   onConfirmAiPlot: () => void;
   onRejectAiPlot: () => void;
+  onClearAllPoints?: () => void;
 };
 
 function SurveyPlanStepOnePanel({
@@ -74,6 +75,7 @@ function SurveyPlanStepOnePanel({
   aiPlotAwaitingConfirmation,
   onConfirmAiPlot,
   onRejectAiPlot,
+  onClearAllPoints,
 }: Props) {
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>("boundary");
   const hasAnyHeightData = manualPoints.some(
@@ -155,17 +157,23 @@ function SurveyPlanStepOnePanel({
               showPointRoles
               onImportedMetadata={onImportedMetadata}
               onAiPlotParsed={onAiPlotParsed}
+              onClearAllPoints={onClearAllPoints}
             />
             <div className="action-bar">
-              <button className="btn-primary" disabled={!hasValidCoords || loading} onClick={onContinue}>
+              <button
+                className="btn-primary"
+                disabled={!hasValidCoords || loading}
+                onClick={onContinue}
+                title={!hasValidCoords && !loading ? "Add at least three valid boundary points." : undefined}
+              >
                 {loading ? (
                   <>
                     <span className="spinner" />
-                      Plotting Draft...
+                      Plotting...
                   </>
                 ) : (
                   <>
-                      {workflowMode === "subdivision" ? "Plot & Save Mother Parcel Draft" : "Plot & Save Local Draft"}
+                      {workflowMode === "subdivision" ? "Plot mother parcel boundary" : "Plot boundary"}
                     <svg viewBox="0 0 20 20" fill="currentColor">
                       <path
                         fillRule="evenodd"
@@ -176,6 +184,9 @@ function SurveyPlanStepOnePanel({
                   </>
                 )}
               </button>
+              {!hasValidCoords && !loading && (
+                <span className="action-bar-hint">Add at least three valid boundary points.</span>
+              )}
             </div>
           </>
         )}
@@ -210,6 +221,7 @@ function SurveyPlanStepOnePanel({
                 coordinateSystem={coordinateSystem}
                 viewMode={mapViewMode}
                 spotHeightPoints={spotHeightMapCoordinates}
+                showToolbar
               />
             </Suspense>
           </div>

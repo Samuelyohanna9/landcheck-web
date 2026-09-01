@@ -904,6 +904,11 @@ export default function SurveyPlan() {
   const [georefSolving, setGeorefSolving] = useState(false);
   const [georefSavingFeatures, setGeorefSavingFeatures] = useState(false);
   const [georefLastSavedAt, setGeorefLastSavedAt] = useState<Date | null>(null);
+  // Mirrors georefLastSavedAt's "Last saved HH:MM:SS" pattern for the new Survey-only top bar -
+  // but set from the existing debounced local-draft autosave effect below rather than an explicit
+  // save button, since the survey/subdivision workflows have never had one of those (saving here
+  // has always been continuous/automatic).
+  const [surveyLastSavedAt, setSurveyLastSavedAt] = useState<Date | null>(null);
   const [georefDownloadingCsv, setGeorefDownloadingCsv] = useState(false);
   const [georefContinuing, setGeorefContinuing] = useState(false);
   const effectiveCoordinateSystem = useMemo(() => {
@@ -1319,6 +1324,14 @@ export default function SurveyPlan() {
     ]);
   }, []);
 
+  // Deliberately bypasses removePoint's per-row "minimum 3 boundary points" guard - this is an
+  // explicit "start over" action from the coordinate-preview table, not a single accidental
+  // deletion, so it should actually empty the list rather than get stuck at 3 placeholder points.
+  const clearAllPoints = useCallback(() => {
+    setManualPoints([]);
+    setHasHeightData(false);
+  }, []);
+
   // Handle bulk upload from CSV/Excel
   const handleBulkUpload = useCallback((points: ManualPoint[]) => {
     if (points.length < 3) {
@@ -1614,7 +1627,9 @@ export default function SurveyPlan() {
       window.clearTimeout(pendingDraftWriteRef.current);
     }
     pendingDraftWriteRef.current = window.setTimeout(() => {
-      saveSurveyPlanDraft(ACTIVE_SURVEY_DRAFT_ID, draftState).catch(() => {});
+      saveSurveyPlanDraft(ACTIVE_SURVEY_DRAFT_ID, draftState)
+        .then(() => setSurveyLastSavedAt(new Date()))
+        .catch(() => {});
       pendingDraftWriteRef.current = null;
     }, 180);
 
@@ -4812,6 +4827,82 @@ export default function SurveyPlan() {
     </>
   );
 
+  // Survey-only app shell (explicit user choice: Subdivision keeps its existing survey-header +
+  // vertical sidebar stepper unchanged, since it wasn't part of this request and shares no code
+  // with this new function). Mirrors renderGeoreferenceTopBar()'s exact 56px-header/stepper-bar
+  // shape and save-status pattern, just reading surveyLastSavedAt (the existing debounced local
+  // draft autosave, timestamped above) instead of an explicit save action - this workflow has
+  // never had a manual save button, so "Saved HH:MM:SS" here reports the same autosave it always
+  // relied on, just finally made visible.
+  const renderSurveyTopBar = () => (
+    <>
+      <header className="survey-top-bar">
+        <div className="survey-top-bar-brand">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="10" cy="10" r="7" />
+            <path d="M10 3v2M10 15v2M3 10h2M15 10h2" />
+            <circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none" />
+          </svg>
+          <span>LandCheck Survey</span>
+        </div>
+        <span className="survey-top-bar-saved">
+          {surveyLastSavedAt ? `Saved ${surveyLastSavedAt.toLocaleTimeString(undefined, { hour12: false })}` : "Unsaved"}
+        </span>
+        <div className="survey-top-bar-actions">
+          <button type="button" className="survey-top-bar-icon-btn" title="Help" aria-label="Help">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+              <circle cx="10" cy="10" r="7.25" />
+              <path d="M7.8 7.8a2.2 2.2 0 114 1.2c0 1.4-2 1.6-2 3" strokeLinecap="round" />
+              <circle cx="10" cy="14" r="0.15" fill="currentColor" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="survey-top-bar-icon-btn"
+            title={isSurveyAuthed() ? "My Dashboard" : "Sign in"}
+            aria-label={isSurveyAuthed() ? "My Dashboard" : "Sign in"}
+            onClick={() => {
+              if (isSurveyAuthed()) {
+                navigate("/dashboard");
+              } else {
+                setPendingGateDownload(null);
+                setSignupGateOpen(true);
+              }
+            }}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fillRule="evenodd" d="M10 9a4 4 0 100-8 4 4 0 000 8zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <button type="button" className="survey-top-bar-btn" onClick={handleStartNewPlan}>
+            New plan
+          </button>
+        </div>
+      </header>
+      <nav className="survey-h-stepper" aria-label="Survey workflow progress">
+        {SURVEY_STEPS.map((step) => {
+          const completed = currentStep > step.id;
+          const active = currentStep === step.id;
+          const label = step.id === 1 ? "Add coordinates" : step.id === 2 ? "Confirm & prepare" : "Export";
+          return (
+            <div key={`survey_h_step_${step.id}`} className={`survey-h-step${active ? " active" : ""}${completed ? " completed" : ""}`}>
+              <span className="survey-h-step-marker">
+                {completed ? (
+                  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  step.id
+                )}
+              </span>
+              <span className="survey-h-step-label">{label}</span>
+            </div>
+          );
+        })}
+      </nav>
+    </>
+  );
+
   const renderSidebarStepsCard = () => (
     <div className="workflow-inline-card workflow-inline-card--sidebar">
       <div className="workflow-inline-title">
@@ -4861,6 +4952,8 @@ export default function SurveyPlan() {
       {/* Header */}
       {workflowMode === "georeference" ? (
         renderGeoreferenceTopBar()
+      ) : workflowMode === "survey" ? (
+        renderSurveyTopBar()
       ) : (
       <header className="survey-header">
         <SurveyNetworkMotif className="survey-header-motif" />
@@ -4898,22 +4991,12 @@ export default function SurveyPlan() {
             LandCheck Survey Studio
           </span>
           <h1 className="survey-title">
-            {workflowMode === "survey"
-              ? "Survey Plan Production"
-              : workflowMode === "subdivision"
-                ? "Plot Subdivision"
-                : workflowMode === "georeference"
-                  ? "Raster Georeferencing"
-                  : "Survey Plan"}
+            {workflowMode === "subdivision" ? "Plot Subdivision" : "Survey Plan"}
           </h1>
           <p className="survey-subtitle">
-            {workflowMode === "survey"
-              ? "Coordinate intake, preview, editing, and export in one controlled drafting workflow."
-              : workflowMode === "subdivision"
-                ? "Break a parent parcel into production-ready lots with live review before export."
-                : workflowMode === "georeference"
-                  ? "Anchor scanned sheets to real coordinates, digitize cleanly, and continue into Survey Plan."
-                  : "Choose the workflow that matches the production job you want to run."}
+            {workflowMode === "subdivision"
+              ? "Break a parent parcel into production-ready lots with live review before export."
+              : "Choose the workflow that matches the production job you want to run."}
           </p>
         </div>
         <button className="reset-btn" onClick={handleStartNewPlan}>
@@ -5173,7 +5256,7 @@ export default function SurveyPlan() {
               />
             ) : (
               <SurveyPlanStepOnePanel
-                sidebar={renderSidebarStepsCard()}
+                sidebar={workflowMode === "survey" ? null : renderSidebarStepsCard() /* the new survey-h-stepper in renderSurveyTopBar() replaces this for survey */}
                 manualPoints={manualPoints}
                 onUpdatePoint={updatePoint}
                 onRemovePoint={removePoint}
@@ -5198,6 +5281,7 @@ export default function SurveyPlan() {
                 aiPlotAwaitingConfirmation={aiPlotAwaitingConfirmation}
                 onConfirmAiPlot={confirmAiPlot}
                 onRejectAiPlot={rejectAiPlot}
+                onClearAllPoints={clearAllPoints}
               />
             )}
           </Suspense>
@@ -5207,7 +5291,7 @@ export default function SurveyPlan() {
         {workflowMode === "survey" && currentStep === 2 && (
           <Suspense fallback={<div className="preview-card">Loading survey preview workspace...</div>}>
             <SurveyPlanSurveyPreviewStep
-              sidebar={renderSidebarStepsCard()}
+              sidebar={null /* the new survey-h-stepper in renderSurveyTopBar() replaces this for survey */}
               featureCounts={featureCounts}
               meta={meta}
               setMeta={setMeta}
@@ -5510,7 +5594,7 @@ export default function SurveyPlan() {
         {workflowMode === "survey" && currentStep === 3 && (
           <div className="step-panel export-panel">
             <div className="panel-left">
-              {renderSidebarStepsCard()}
+              {/* the new survey-h-stepper in renderSurveyTopBar() replaces the sidebar card here for survey */}
               <div className="export-section">
                 <h3 className="section-title">Download Documents</h3>
                 <p className="section-desc">Your survey documents are ready. Choose the formats you need:</p>
