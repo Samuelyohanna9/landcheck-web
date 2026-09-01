@@ -724,6 +724,19 @@ export default function SurveyPlan() {
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [restoredDraftUpdatedAt, setRestoredDraftUpdatedAt] = useState<string | null>(null);
   const [showDraftRecoveryBanner, setShowDraftRecoveryBanner] = useState(false);
+  // Georeference's new top bar has no room for (and per the redesign, deliberately drops) the
+  // large "Draft restored" banner every other workflow still shows - a small dismissible toast
+  // carries the same information without dominating the interface.
+  useEffect(() => {
+    if (workflowMode === "georeference" && showDraftRecoveryBanner && restoredDraftUpdatedAt) {
+      toast(`Restored your georeference draft, saved on this device ${formatDraftUpdatedAt(restoredDraftUpdatedAt)}.`, {
+        duration: 6000,
+        icon: "↺",
+      });
+      setShowDraftRecoveryBanner(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workflowMode, showDraftRecoveryBanner, restoredDraftUpdatedAt]);
   const [pendingFeatureEditorRestore, setPendingFeatureEditorRestore] = useState(false);
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === "undefined" ? true : navigator.onLine
@@ -890,6 +903,7 @@ export default function SurveyPlan() {
   const [georefUploading, setGeorefUploading] = useState(false);
   const [georefSolving, setGeorefSolving] = useState(false);
   const [georefSavingFeatures, setGeorefSavingFeatures] = useState(false);
+  const [georefLastSavedAt, setGeorefLastSavedAt] = useState<Date | null>(null);
   const [georefDownloadingCsv, setGeorefDownloadingCsv] = useState(false);
   const [georefContinuing, setGeorefContinuing] = useState(false);
   const effectiveCoordinateSystem = useMemo(() => {
@@ -3190,6 +3204,7 @@ export default function SurveyPlan() {
       });
       const session = res.data?.session as GeoreferenceSession;
       applyGeoreferenceSession(session, georefSelectedControlPointId);
+      setGeorefLastSavedAt(new Date());
       toast.success("Digitized features saved.");
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
@@ -4722,6 +4737,81 @@ export default function SurveyPlan() {
     }, 250);
   }, [refreshCurrentPreview]);
 
+  // Georeference-only top bar + horizontal stepper (per explicit user choice: replaces the shared
+  // survey-header + vertical sidebar stepper ONLY for this workflow's 3 steps; survey/subdivision
+  // keep the original header untouched). "Last saved," not "Autosaved" - saving here is an
+  // explicit button action (handleSaveGeoreferenceFeatures), not a background autosave, so
+  // claiming autosave would be inaccurate.
+  const renderGeoreferenceTopBar = () => (
+    <>
+      <header className="geo-top-bar">
+        <div className="geo-top-bar-brand">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="10" cy="10" r="7" />
+            <path d="M10 3v2M10 15v2M3 10h2M15 10h2" />
+            <circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none" />
+          </svg>
+          <span>LandCheck Survey</span>
+        </div>
+        <span className="geo-top-bar-saved">
+          {georefLastSavedAt
+            ? `Last saved ${georefLastSavedAt.toLocaleTimeString(undefined, { hour12: false })}`
+            : "Not saved yet"}
+        </span>
+        <div className="geo-top-bar-actions">
+          <button type="button" className="geo-top-bar-icon-btn" title="Help" aria-label="Help">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+              <circle cx="10" cy="10" r="7.25" />
+              <path d="M7.8 7.8a2.2 2.2 0 114 1.2c0 1.4-2 1.6-2 3" strokeLinecap="round" />
+              <circle cx="10" cy="14" r="0.15" fill="currentColor" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="geo-top-bar-icon-btn"
+            title={isSurveyAuthed() ? "My Dashboard" : "Sign in"}
+            aria-label={isSurveyAuthed() ? "My Dashboard" : "Sign in"}
+            onClick={() => {
+              if (isSurveyAuthed()) {
+                navigate("/dashboard");
+              } else {
+                setPendingGateDownload(null);
+                setSignupGateOpen(true);
+              }
+            }}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fillRule="evenodd" d="M10 9a4 4 0 100-8 4 4 0 000 8zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <button type="button" className="geo-top-bar-btn" onClick={handleStartNewPlan}>
+            Start new plan
+          </button>
+        </div>
+      </header>
+      <nav className="geo-h-stepper" aria-label="Georeference workflow progress">
+        {GEOREFERENCE_STEPS.map((step) => {
+          const completed = currentStep > step.id;
+          const active = currentStep === step.id;
+          return (
+            <div key={`h_step_${step.id}`} className={`geo-h-step${active ? " active" : ""}${completed ? " completed" : ""}`}>
+              <span className="geo-h-step-marker">
+                {completed ? (
+                  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  step.id
+                )}
+              </span>
+              <span className="geo-h-step-label">{step.title === "Digitize Workspace" ? "Digitize features" : step.title === "Export & Continue" ? "Review & export" : "Upload & control points"}</span>
+            </div>
+          );
+        })}
+      </nav>
+    </>
+  );
+
   const renderSidebarStepsCard = () => (
     <div className="workflow-inline-card workflow-inline-card--sidebar">
       <div className="workflow-inline-title">
@@ -4769,6 +4859,9 @@ export default function SurveyPlan() {
       <Toaster position="top-right" />
 
       {/* Header */}
+      {workflowMode === "georeference" ? (
+        renderGeoreferenceTopBar()
+      ) : (
       <header className="survey-header">
         <SurveyNetworkMotif className="survey-header-motif" />
         <button className="back-btn" onClick={() => navigate("/")}>
@@ -4830,6 +4923,7 @@ export default function SurveyPlan() {
           Start New Plan
         </button>
       </header>
+      )}
 
       {/* Main Content */}
         <div className="survey-content" ref={surveyContentRef}>
@@ -4845,7 +4939,7 @@ export default function SurveyPlan() {
             </div>
           ) : (
             <>
-          {showDraftRecoveryBanner && restoredDraftUpdatedAt && workflowMode && (
+          {showDraftRecoveryBanner && restoredDraftUpdatedAt && workflowMode && workflowMode !== "georeference" && (
             <div className={`survey-sync-banner survey-draft-banner${!isOnline ? " offline" : ""}`}>
               <div className="survey-sync-banner-copy">
                 <strong>Draft restored</strong>
@@ -5052,7 +5146,7 @@ export default function SurveyPlan() {
           <Suspense fallback={<div className="preview-card">Loading survey draft workspace...</div>}>
             {workflowMode === "georeference" ? (
               <SurveyPlanGeoreferenceSetupStep
-                sidebar={renderSidebarStepsCard()}
+                sidebar={null /* the new geo-h-stepper in renderGeoreferenceTopBar() replaces this for georeference */}
                 session={georefSession}
                 rasterObjectUrl={georefRasterObjectUrl}
                 selectedControlPointId={georefSelectedControlPointId}
@@ -5212,7 +5306,7 @@ export default function SurveyPlan() {
         {workflowMode === "georeference" && currentStep === 2 && georefSession?.transform && (
           <Suspense fallback={<div className="preview-card">Loading georeference digitizing workspace...</div>}>
             <SurveyPlanGeoreferenceWorkspaceStep
-              sidebar={renderSidebarStepsCard()}
+              sidebar={null /* the new geo-h-stepper in renderGeoreferenceTopBar() replaces this for georeference */}
               session={georefSession}
               rasterObjectUrl={georefRasterObjectUrl}
               features={georefFeatures}
@@ -5742,7 +5836,7 @@ export default function SurveyPlan() {
         {workflowMode === "georeference" && currentStep === 3 && georefSession && (
           <Suspense fallback={<div className="preview-card">Loading georeference exports...</div>}>
             <SurveyPlanGeoreferenceExportStep
-              sidebar={renderSidebarStepsCard()}
+              sidebar={null /* the new geo-h-stepper in renderGeoreferenceTopBar() replaces this for georeference */}
               session={georefSession}
               features={georefFeatures.length ? georefFeatures : georefSession.features}
               downloadingCsv={georefDownloadingCsv}
