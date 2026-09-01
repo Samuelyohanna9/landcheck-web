@@ -78,6 +78,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   const mapRef = useRef<any>(null);
   const dragStateRef = useRef<{ startX: number; startY: number; panX: number; panY: number; moved: boolean } | null>(null);
   const suppressNextStageClickRef = useRef(false);
+  const suppressNextAutoSelectRef = useRef(false);
   const [mapReady, setMapReady] = useState(false);
   const [tool, setTool] = useState<DraftTool>("polygon");
   const [draftLabel, setDraftLabel] = useState("Primary parcel");
@@ -273,6 +274,14 @@ function SurveyPlanGeoreferenceWorkspaceStep({
       return;
     }
     if (selectedFeatureId && previewFeatures.some((feature) => feature.id === selectedFeatureId)) return;
+    if (suppressNextAutoSelectRef.current) {
+      // AI Digitize just added its draft feature(s) - the surveyor needs an unobstructed view of
+      // the whole raster to visually compare the AI's boundary against the plan first, not the
+      // coordinate float panel popping up and covering it before they've even looked. One-shot:
+      // the very next manual selection (or draw) behaves exactly as before.
+      suppressNextAutoSelectRef.current = false;
+      return;
+    }
     const draftFeature = previewFeatures.find((feature) => feature.source === "draft");
     setSelectedFeatureId(draftFeature?.id || previewFeatures[0]?.id || null);
   }, [previewFeatures, selectedFeatureId]);
@@ -775,6 +784,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
         toast.error("AI couldn't confidently locate any boundary or stake points on this raster.");
         return;
       }
+      suppressNextAutoSelectRef.current = true;
       onFeaturesChange([...features, ...draftFeatures]);
       const boundaryCount = draftFeatures.filter((f) => f.feature_type === "polygon").length;
       const stakeCount = draftFeatures.length - boundaryCount;
@@ -1133,6 +1143,15 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                     <span className="georef-quality-pill">
                       {selectedStageFeature.feature_type === "point" ? "Dot" : selectedStageFeature.feature_type}
                     </span>
+                    <button
+                      type="button"
+                      className="georef-coordinate-float-close"
+                      onClick={() => setSelectedFeatureId(null)}
+                      aria-label="Close coordinate panel"
+                      title="Close"
+                    >
+                      &times;
+                    </button>
                   </div>
                   <div className="georef-coordinate-mini-table-wrap">
                     <table className="georef-coordinate-mini-table">

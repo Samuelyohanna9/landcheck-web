@@ -1646,7 +1646,9 @@
   right: 0.9rem;
   bottom: 0.9rem;
   z-index: 4;
-  width: min(420px, calc(100% - 1.8rem));
+  width: min(340px, calc(100% - 1.8rem));
+  max-height: min(60%, 360px);
+  overflow: auto;
   padding: 0.82rem;
   border-radius: 18px;
   border: 1px solid var(--survey-ink-border);
@@ -1659,8 +1661,29 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.72rem;
+  gap: 0.5rem;
   margin-bottom: 0.72rem;
+}
+
+.georef-coordinate-float-close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid var(--survey-ink-border-strong);
+  background: rgba(247, 245, 238, 0.06);
+  color: var(--survey-text-secondary);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.georef-coordinate-float-close:hover {
+  background: rgba(247, 245, 238, 0.12);
+  color: var(--survey-text-primary);
 }
 
 .georef-coordinate-float-head strong {
