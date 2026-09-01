@@ -1,5 +1,7 @@
 import { memo, Suspense, useState, type ReactNode } from "react";
 import CoordinateInput from "../CoordinateInput";
+import CoordinateSystemSelect from "../CoordinateSystemSelect";
+import { getCoordinateSystemEpsgLabel, getCoordinateSystemLabel } from "../../utils/coordinateConverter";
 import { prefetchSurveyPlanDraftMapTools } from "../../utils/surveyPlanPrefetch";
 import { lazyWithChunkRecovery } from "../../utils/lazyWithChunkRecovery";
 
@@ -93,6 +95,19 @@ function SurveyPlanStepOnePanel({
               AI plotted {manualPoints.filter((p) => p.is_boundary !== false).length} boundary point(s), shown in red on
               the map. Is this the right location and shape for your parcel?
             </p>
+            <div className="ai-plot-confirm-coord-system">
+              <div className="ai-plot-confirm-coord-system-label">
+                <span>Detected coordinate system</span>
+                <em>
+                  {getCoordinateSystemLabel(coordinateSystem)} ({getCoordinateSystemEpsgLabel(coordinateSystem)})
+                </em>
+              </div>
+              <CoordinateSystemSelect value={coordinateSystem} onChange={onCoordinateSystemChange} />
+              <p className="ai-plot-confirm-coord-system-hint">
+                If the shape looks wrong or is in the wrong place, this is usually the fix - pick the correct system
+                and the map updates immediately.
+              </p>
+            </div>
             <div className="ai-plot-confirm-actions">
               <button type="button" className="btn-primary" onClick={onConfirmAiPlot}>
                 Yes, this is correct - Continue

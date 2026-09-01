@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { getCoordinateSystemLabel, isProjectedCoordinateSystem } from "../utils/coordinateConverter";
+import { getCoordinateSystemEpsgLabel, getCoordinateSystemLabel, isProjectedCoordinateSystem } from "../utils/coordinateConverter";
+import CoordinateSystemSelect from "./CoordinateSystemSelect";
 import "../styles/csv-preview-modal.css";
 
 type ManualPoint = {
@@ -16,6 +17,8 @@ type Props = {
   rawData: (string | number)[][];
   onConfirm: (points: ManualPoint[]) => void;
   coordinateSystem: string;
+  onCoordinateSystemChange?: (value: string) => void;
+  coordinateSystemAutoDetected?: boolean;
 };
 
 // Coordinate system ranges for validation
@@ -57,6 +60,8 @@ export default function CSVPreviewModal({
   rawData,
   onConfirm,
   coordinateSystem,
+  onCoordinateSystemChange,
+  coordinateSystemAutoDetected,
 }: Props) {
   const [stationCol, setStationCol] = useState<number | null>(null);
   const [eastingCol, setEastingCol] = useState<number | null>(null);
@@ -373,6 +378,16 @@ export default function CSVPreviewModal({
         ) : (
         <>
         <div className="csv-modal-body">
+          {onCoordinateSystemChange && (
+            <div className="csv-coord-system-row">
+              <div className="csv-coord-system-label">
+                <span>{coordinateSystemAutoDetected ? "AI-detected coordinate system" : "Coordinate System"}</span>
+                <em>{getCoordinateSystemLabel(coordinateSystem)} ({getCoordinateSystemEpsgLabel(coordinateSystem)})</em>
+              </div>
+              <CoordinateSystemSelect value={coordinateSystem} onChange={onCoordinateSystemChange} />
+            </div>
+          )}
+
           {/* Column Mapping */}
           <div className="column-mapping">
             <div className="mapping-row">
