@@ -1,5 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import toast from "react-hot-toast";
 import { api } from "../../api/client";
+import SurveyLoadingAnimation from "../SurveyLoadingAnimation";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
 import { isProjectedCoordinateSystem, mercatorToWGS84, toWGS84 } from "../../utils/coordinateConverter";
 import type { GeoreferenceFeature, GeoreferenceSession, GeoreferenceTransform } from "../../types/surveyGeoreference";
@@ -29,6 +31,11 @@ const toolLabels: Record<DraftTool, string> = {
   line: "Alignment / line",
   polygon: "Parcel boundary",
 };
+
+// Same "remembered until tomorrow" quota flag pattern as CoordinateInput.tsx's AI features -
+// best-effort only (a private window or cleared storage just means this specific reminder doesn't
+// survive a refresh; the server's own daily cap still enforces the real limit).
+const AI_DIGITIZE_QUOTA_EXHAUSTED_KEY = "georeference-ai-digitize-quota-exhausted-date";
 
 const MIN_STAGE_ZOOM = 1;
 const MAX_STAGE_ZOOM = 4;
@@ -79,6 +86,14 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   const [imageZoom, setImageZoom] = useState(MIN_STAGE_ZOOM);
   const [imagePan, setImagePan] = useState({ x: 0, y: 0 });
   const [draggingStage, setDraggingStage] = useState(false);
+  const [aiDigitizing, setAiDigitizing] = useState(false);
+  const [aiDigitizeQuotaExhausted, setAiDigitizeQuotaExhausted] = useState(() => {
+    try {
+      return window.localStorage.getItem(AI_DIGITIZE_QUOTA_EXHAUSTED_KEY) === new Date().toDateString();
+    } catch {
+      return false;
+    }
+  });
   const overlayRasterUrl = session?.overlay?.raster_url
     ? (/^https?:\/\//i.test(session.overlay.raster_url) ? session.overlay.raster_url : `${api.defaults.baseURL || ""}${session.overlay.raster_url}`)
     : rasterObjectUrl;
@@ -730,6 +745,61 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     setSelectedFeatureId(nextFeatureId);
   };
 
+  const markAiDigitizeQuotaExhausted = () => {
+    setAiDigitizeQuotaExhausted(true);
+    try {
+      window.localStorage.setItem(AI_DIGITIZE_QUOTA_EXHAUSTED_KEY, new Date().toDateString());
+    } catch {
+      // Best-effort only, same as CoordinateInput.tsx's quota flags.
+    }
+  };
+
+  // Sends the anchored raster to Gemini vision to visually locate boundary-corner/stake markers,
+  // then appends the results (already converted to real-world coordinates server-side, via the
+  // exact same _feature_to_saved_payload the manual tool's own save path uses) straight into the
+  // existing features array as drafts - the surveyor reviews/edits/deletes them with the same
+  // manual tools (select, remove, toggle primary) before saving, no separate review UI needed.
+  const runAiDigitize = async () => {
+    if (aiDigitizing || aiDigitizeQuotaExhausted) return;
+    setAiDigitizing(true);
+    try {
+      const res = await api.post(
+        `/survey-georeference/sessions/${session.id}/ai-digitize`,
+        {},
+        // Backend retries up to ~91s worst case (2 attempts x 45s read timeout) - this must stay
+        // comfortably above that, same convention as every other AI call in this app.
+        { timeout: 120000 },
+      );
+      const draftFeatures = (res.data?.draft_features || []) as GeoreferenceFeature[];
+      if (draftFeatures.length === 0) {
+        toast.error("AI couldn't confidently locate any boundary or stake points on this raster.");
+        return;
+      }
+      onFeaturesChange([...features, ...draftFeatures]);
+      const boundaryCount = draftFeatures.filter((f) => f.feature_type === "polygon").length;
+      const stakeCount = draftFeatures.length - boundaryCount;
+      const remaining = res.data?.digitize_runs_remaining_today;
+      const remainingSuffix = typeof remaining === "number" ? ` (${remaining} run${remaining === 1 ? "" : "s"} left today)` : "";
+      if (remaining === 0) markAiDigitizeQuotaExhausted();
+      const parts: string[] = [];
+      if (boundaryCount > 0) parts.push("a boundary");
+      if (stakeCount > 0) parts.push(`${stakeCount} stake point${stakeCount === 1 ? "" : "s"}`);
+      toast.success(`AI detected ${parts.join(" and ")} - review and adjust before saving.${remainingSuffix}`, { duration: 7000 });
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      if (err?.response?.status === 429) {
+        markAiDigitizeQuotaExhausted();
+        toast.error(typeof detail === "string" ? detail : "You've used all your AI digitize runs for today - please try again tomorrow.", {
+          duration: 10000,
+        });
+      } else {
+        toast.error(typeof detail === "string" ? detail : "Couldn't digitize this raster with AI. Try tracing it manually instead.");
+      }
+    } finally {
+      setAiDigitizing(false);
+    }
+  };
+
   const togglePrimaryPolygon = (featureId: string) => {
     onFeaturesChange(
       features.map((feature) =>
@@ -777,6 +847,26 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                 {toolLabels[item]}
               </button>
             ))}
+          </div>
+
+          <div className="georef-ai-digitize-row">
+            <button
+              type="button"
+              className="georef-ai-digitize-btn"
+              disabled={aiDigitizing || aiDigitizeQuotaExhausted}
+              onClick={() => void runAiDigitize()}
+              title={aiDigitizeQuotaExhausted ? "Resets tomorrow" : undefined}
+            >
+              <img src="/LandCheck_Survey_AI_Symbol.svg" alt="" className="georef-ai-digitize-icon" aria-hidden="true" />
+              {aiDigitizing
+                ? "AI is digitizing..."
+                : aiDigitizeQuotaExhausted
+                  ? "AI digitize runs used up for today"
+                  : "AI Digitize"}
+            </button>
+            <span className="georef-ai-digitize-hint">
+              Let AI locate the boundary and stake points on the raster for you to review, instead of tracing them by hand.
+            </span>
           </div>
 
           <div className="georef-feature-composer">
@@ -839,7 +929,10 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                           onClick={() => setSelectedFeatureId(feature.id)}
                         >
                           <td>
-                            <strong>{feature.label}</strong>
+                            <strong>
+                              {feature.label}
+                              {feature.label?.startsWith("AI ") && <span className="georef-ai-feature-tag">AI</span>}
+                            </strong>
                             <span>{feature.feature_type === "point" ? "Stake control" : feature.feature_type === "line" ? "Alignment" : "Boundary"}</span>
                           </td>
                           <td>{describeFeatureGeometry(feature)}</td>
@@ -1096,6 +1189,19 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           </section>
         </div>
       </div>
+
+      {aiDigitizing && (
+        <div className="georef-ai-fullscreen-overlay" role="status" aria-live="polite">
+          <div className="georef-ai-fullscreen-card">
+            <SurveyLoadingAnimation size="medium" />
+            <p className="georef-ai-fullscreen-title">AI is digitizing your plan&hellip;</p>
+            <p className="georef-ai-fullscreen-subtitle">
+              Locating boundary corners and stake points on the calibrated raster. Usually just a few seconds,
+              occasionally up to a minute.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
