@@ -765,8 +765,24 @@ function SurveyPlanGeoreferenceSetupStep({
                   </article>
                 <article className="georef-stat-card">
                   <span className="georef-stat-label">Fit quality</span>
-                  <strong>{session.transform ? session.transform.quality : "Pending"}</strong>
-                  <small>{session.transform ? `${session.transform.rms_error_m}m RMS` : "Solve once points are matched"}</small>
+                  <strong>
+                    {session.transform
+                      ? session.transform.exact_fit
+                        ? "Exact fit (3 pts)"
+                        : session.transform.quality === "strong"
+                          ? "Good fit"
+                          : session.transform.quality === "usable"
+                            ? "Usable fit"
+                            : "Weak fit"
+                      : "Pending"}
+                  </strong>
+                  <small>
+                    {session.transform
+                      ? session.transform.exact_fit
+                        ? "RMS not meaningful with 3 points"
+                        : `${session.transform.rms_error_m.toFixed(3)}m RMS`
+                      : "Solve once points are matched"}
+                  </small>
                 </article>
               </div>
 

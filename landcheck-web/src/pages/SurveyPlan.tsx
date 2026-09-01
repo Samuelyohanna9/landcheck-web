@@ -4804,7 +4804,7 @@ export default function SurveyPlan() {
                   step.id
                 )}
               </span>
-              <span className="geo-h-step-label">{step.title === "Digitize Workspace" ? "Digitize features" : step.title === "Export & Continue" ? "Review & export" : "Upload & control points"}</span>
+              <span className="geo-h-step-label">{step.title === "Digitize Workspace" ? "Digitize" : step.title === "Export & Continue" ? "Export" : "Control points"}</span>
             </div>
           );
         })}
