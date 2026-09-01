@@ -9,7 +9,7 @@ import {
   COORDINATE_SYSTEM_GROUPS,
   getCoordinateSystemEpsgLabel,
   isProjectedCoordinateSystem,
-  looksLikeProjected,
+  verifyOrResolveNigeriaCoordinateSystem,
   WGS84_NIGERIA_METERS,
 } from "../utils/coordinateConverter";
 
@@ -177,6 +177,10 @@ function CoordinateInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const aiFileInputRef = useRef<HTMLInputElement>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  // Whether the coordinate system currently selected came from the AI's own detection (shown as
+  // an "AI-detected" badge in the preview modal) rather than the surveyor's manual pick beforehand
+  // (a plain CSV/Excel import never touches this - it just uses whatever was already selected).
+  const [coordinateSystemAutoDetected, setCoordinateSystemAutoDetected] = useState(false);
   const [rawFileData, setRawFileData] = useState<(string | number)[][]>([]);
   const [uploadParsing, setUploadParsing] = useState(false);
   const [aiReading, setAiReading] = useState(false);
@@ -243,6 +247,7 @@ function CoordinateInput({
     if (!file) return;
 
     const fileName = file.name.toLowerCase();
+    setCoordinateSystemAutoDetected(false);
     const resetFileInput = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -373,18 +378,15 @@ function CoordinateInput({
         return;
       }
 
-      const looksProjectedByMagnitude = looksLikeProjected(Number(beacons[0]?.x), Number(beacons[0]?.y));
-      const hasNamedGuess = Boolean(extracted.coordinate_system_guess && extracted.coordinate_system_guess !== "unknown");
-      // Same safety net as the Field-to-Finish import above - an "unknown" guess must not fall
-      // through to wgs84 when the raw values are obviously Easting/Northing, or the coordinate
-      // system picker (and eventually the map) ends up treating hundreds-of-thousands-scale
-      // values as degrees.
-      const resolvedCoordSystemGuess = hasNamedGuess
-        ? extracted.coordinate_system_guess!
-        : looksProjectedByMagnitude
-        ? WGS84_NIGERIA_METERS
-        : "";
+      // Don't just trust the AI's named guess (or blindly default to wgs84 when it says
+      // "unknown") - cross-check it by reverse-projecting the actual values through every
+      // candidate Nigerian system and keeping whichever one(s) really land inside the country.
+      // This both corrects a wrong guess and fills in a missing one deterministically.
+      const resolvedCoordSystemGuess = verifyOrResolveNigeriaCoordinateSystem(
+        Number(beacons[0]?.x), Number(beacons[0]?.y), extracted.coordinate_system_guess
+      );
       const isProjectedGuess = isProjectedCoordinateSystem(resolvedCoordSystemGuess || "wgs84");
+      setCoordinateSystemAutoDetected(Boolean(resolvedCoordSystemGuess));
       if (resolvedCoordSystemGuess) {
         onCoordinateSystemChange(resolvedCoordSystemGuess);
       }
@@ -496,16 +498,16 @@ function CoordinateInput({
         toast.error("The AI couldn't read any coordinate rows from this data.");
         return;
       }
-      if (parsed.coordinate_system_guess && parsed.coordinate_system_guess !== "unknown") {
-        onCoordinateSystemChange(parsed.coordinate_system_guess);
-      } else if (looksLikeProjected(Number(parsed.points[0]?.x), Number(parsed.points[0]?.y))) {
-        // The AI couldn't name a specific system, but the values are clearly not lat/lng (too
-        // large in magnitude) - defaulting to "wgs84" here would feed raw Easting/Northing values
-        // straight into the map as degrees and crash it ("Invalid LngLat latitude value"). Fall
-        // back to Nigeria's auto-UTM system, which resolves the correct zone (31N/32N/33N) per
-        // point from the value itself - a safe default for most Nigerian/African projected data
-        // even without a confident named-system guess.
-        onCoordinateSystemChange(WGS84_NIGERIA_METERS);
+      // Cross-check the AI's guess (or resolve one when it says "unknown") by reverse-projecting
+      // the actual values through every candidate Nigerian system and keeping whichever really
+      // lands inside the country - more reliable than trusting a text guess or defaulting to
+      // wgs84, which would feed raw Easting/Northing values into the map as degrees and crash it.
+      const resolvedFieldImportSystem = verifyOrResolveNigeriaCoordinateSystem(
+        Number(parsed.points[0]?.x), Number(parsed.points[0]?.y), parsed.coordinate_system_guess
+      );
+      setCoordinateSystemAutoDetected(Boolean(resolvedFieldImportSystem));
+      if (resolvedFieldImportSystem) {
+        onCoordinateSystemChange(resolvedFieldImportSystem);
       }
 
       const remaining = res.data?.imports_remaining_today;
@@ -1037,6 +1039,8 @@ function CoordinateInput({
         rawData={rawFileData}
         onConfirm={handlePreviewConfirm}
         coordinateSystem={coordinateSystem}
+        onCoordinateSystemChange={onCoordinateSystemChange}
+        coordinateSystemAutoDetected={coordinateSystemAutoDetected}
       />
 
       {uploadParsing && (

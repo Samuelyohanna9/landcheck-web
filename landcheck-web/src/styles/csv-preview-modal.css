@@ -74,6 +74,41 @@
   margin-bottom: 1rem;
 }
 
+.csv-coord-system-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 18px;
+  border: 1px solid var(--survey-copper-500);
+  background: var(--survey-copper-glow);
+  margin-bottom: 1rem;
+}
+
+.csv-coord-system-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.csv-coord-system-label span {
+  color: var(--survey-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.csv-coord-system-label em {
+  color: var(--survey-text-primary);
+  font-style: normal;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
 .mapping-row {
   margin-bottom: 1rem;
 }
