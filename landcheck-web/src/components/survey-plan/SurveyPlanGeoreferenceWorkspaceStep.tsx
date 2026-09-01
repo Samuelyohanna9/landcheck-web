@@ -77,6 +77,11 @@ function DrawingToolButton({
     <button type="button" className={`geo-tool-btn${active ? " active" : ""}`} onClick={onSelect} aria-pressed={active}>
       <span className="geo-tool-btn-icon">{toolIcons[tool]}</span>
       <span className="geo-tool-btn-label">{toolLabels[tool]}</span>
+      {active && (
+        <svg className="geo-tool-btn-check" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+        </svg>
+      )}
     </button>
   );
 }
@@ -97,7 +102,9 @@ function LayerRow({
   return (
     <div className="geo-layer-row">
       <span className={`geo-layer-swatch ${swatchClass}`} aria-hidden="true" />
-      <span className="geo-layer-label">{label}</span>
+      <span className="geo-layer-label" title={label}>
+        {label}
+      </span>
       <span className="geo-layer-count">{count}</span>
       {onToggleVisibility ? (
         <button
@@ -780,6 +787,15 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     weak: "Weak fit",
   };
 
+  // Compact digitized-features summary - pure derived counts over the same `features` array the
+  // detailed table below already renders, nothing new stored.
+  const boundaryFeatureCount = features.filter((feature) => feature.feature_type === "polygon").length;
+  const stakeFeatureCount = features.filter((feature) => feature.feature_type === "point").length;
+  const lineFeatureCount = features.filter((feature) => feature.feature_type === "line").length;
+  const primaryParcelFeature = features.find((feature) => feature.feature_type === "polygon" && feature.is_primary);
+  const digitizedValidationStatus =
+    boundaryFeatureCount === 0 ? "No boundary yet" : !primaryParcelFeature ? "Set a primary parcel" : "Ready to save";
+
   const stageMarkers = useMemo(
     () =>
       stageFeatures.flatMap((feature) => {
@@ -1043,10 +1059,32 @@ function SurveyPlanGeoreferenceWorkspaceStep({
             </div>
 
             <div className="geo-quality-card" data-quality={transform.quality}>
-              <span className="geo-quality-dot" aria-hidden="true" />
-              <div>
-                <strong>{qualityLabel[transform.quality]} &middot; RMS {transform.rms_error_m}m</strong>
-                <span>Georeferencing quality</span>
+              <span className="geo-quality-icon" aria-hidden="true">
+                {transform.quality === "weak" ? (
+                  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </span>
+              <div className="geo-quality-copy">
+                <strong>
+                  {qualityLabel[transform.quality]} &middot; RMS {transform.rms_error_m} m
+                </strong>
+                <span className="geo-quality-caption">
+                  Georeferencing quality
+                  <button
+                    type="button"
+                    className="geo-info-btn"
+                    aria-label="What is RMS error?"
+                    title="RMS (root-mean-square) error measures, in metres, how far the solved transform's own control points land from their true positions - lower is a tighter fit."
+                  >
+                    ?
+                  </button>
+                </span>
               </div>
             </div>
 
@@ -1066,29 +1104,49 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                   />
                 ))}
               </div>
+            </div>
+
+            <div className="geo-section">
+              <h3 className="geo-section-title">Feature details</h3>
               <div className="geo-feature-composer">
-                <label className="geo-field-label">
+                <label className="geo-field-label" htmlFor="geo-feature-label-input">
                   Feature label
-                  <input value={draftLabel} onChange={(event) => setDraftLabel(event.target.value)} placeholder="Primary parcel" />
                 </label>
+                <input
+                  id="geo-feature-label-input"
+                  className="geo-field-input"
+                  value={draftLabel}
+                  onChange={(event) => setDraftLabel(event.target.value)}
+                  placeholder="Primary parcel"
+                />
                 <div className="geo-composer-actions">
-                  <button type="button" className="geo-btn geo-btn-outline" disabled={!draftPixels.length} onClick={() => setDraftPixels((current) => current.slice(0, -1))}>
+                  <button
+                    type="button"
+                    className="geo-btn geo-btn-outline"
+                    disabled={!draftPixels.length}
+                    onClick={() => setDraftPixels((current) => current.slice(0, -1))}
+                  >
                     Undo point
                   </button>
-                  <button type="button" className="geo-btn geo-btn-outline" disabled={!draftPixels.length} onClick={() => setDraftPixels([])}>
+                  <button
+                    type="button"
+                    className="geo-btn geo-btn-destructive-subtle"
+                    disabled={!draftPixels.length}
+                    onClick={() => setDraftPixels([])}
+                  >
                     Clear draft
                   </button>
-                  {tool !== "point" && (
-                    <button
-                      type="button"
-                      className="geo-btn geo-btn-primary"
-                      disabled={tool === "line" ? draftPixels.length < 2 : draftPixels.length < 3}
-                      onClick={completeDraftFeature}
-                    >
-                      Finish {tool === "line" ? "line" : "polygon"}
-                    </button>
-                  )}
                 </div>
+                {tool !== "point" && (
+                  <button
+                    type="button"
+                    className="geo-btn geo-btn-primary geo-btn-block"
+                    disabled={tool === "line" ? draftPixels.length < 2 : draftPixels.length < 3}
+                    onClick={completeDraftFeature}
+                  >
+                    Finish {tool === "line" ? "line" : "polygon"}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1110,17 +1168,43 @@ function SurveyPlanGeoreferenceWorkspaceStep({
             </div>
 
             <div className="geo-section">
-              <div className="geo-section-title-row">
-                <h3 className="geo-section-title">Digitized layers</h3>
-                <span className="geo-section-hint">Set the primary parcel, keep the export clean.</span>
-              </div>
+              <h3 className="geo-section-title">Digitized features</h3>
               {features.length === 0 ? (
                 <div className="geo-empty-list">
-                  <strong>No digitized features yet</strong>
-                  <span>Click the raster to place geometry, then save the working layer.</span>
+                  <svg className="geo-empty-list-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M4 6 8 3l8 2-1 8-9 2z" />
+                    <circle cx="10" cy="10" r="0.6" fill="currentColor" stroke="none" />
+                  </svg>
+                  <div>
+                    <strong>No features digitized yet</strong>
+                    <span>Select a drawing tool and click the raster to add geometry.</span>
+                  </div>
                 </div>
               ) : (
-                <div className="georef-feature-table-wrap">
+                <>
+                  <div className="geo-digitized-summary">
+                    <div className="geo-digitized-summary-row">
+                      <span>Primary parcel</span>
+                      <strong>{primaryParcelFeature ? primaryParcelFeature.label : "Not set"}</strong>
+                    </div>
+                    <div className="geo-digitized-summary-row">
+                      <span>Stake points</span>
+                      <strong>{stakeFeatureCount}</strong>
+                    </div>
+                    <div className="geo-digitized-summary-row">
+                      <span>Alignment lines</span>
+                      <strong>{lineFeatureCount}</strong>
+                    </div>
+                    <div className="geo-digitized-summary-row">
+                      <span>Status</span>
+                      <strong
+                        className={`geo-digitized-status${digitizedValidationStatus === "Ready to save" ? " is-ready" : ""}`}
+                      >
+                        {digitizedValidationStatus}
+                      </strong>
+                    </div>
+                  </div>
+                  <div className="georef-feature-table-wrap">
                   <table className="georef-feature-table">
                     <thead>
                       <tr>
@@ -1192,7 +1276,8 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                       })}
                     </tbody>
                   </table>
-                </div>
+                  </div>
+                </>
               )}
             </div>
 
@@ -1226,11 +1311,17 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           </div>
 
           <div className="geo-left-footer">
-            <button type="button" className="geo-btn geo-btn-outline" onClick={onBack}>
-              Back to control points
+            <button type="button" className="geo-btn geo-btn-outline" onClick={onBack} title="Back to control points">
+              Back
             </button>
-            <button type="button" className="geo-btn geo-btn-secondary" disabled={features.length === 0 || saving} onClick={onSaveFeatures}>
-              {saving ? "Saving…" : "Save Digitized Features"}
+            <button
+              type="button"
+              className="geo-btn geo-btn-primary"
+              disabled={features.length === 0 || saving}
+              onClick={onSaveFeatures}
+              title={features.length === 0 ? "Digitize at least one feature before saving." : undefined}
+            >
+              {saving ? "Saving…" : "Save features"}
             </button>
           </div>
         </aside>
