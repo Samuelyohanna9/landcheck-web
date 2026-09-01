@@ -1,6 +1,7 @@
-import { Suspense, lazy } from "react";
+import { Suspense } from "react";
+import { lazyWithChunkRecovery } from "../../utils/lazyWithChunkRecovery";
 
-const TreeMap = lazy(() => import("../TreeMap"));
+const TreeMap = lazyWithChunkRecovery(() => import("../TreeMap"));
 
 type GreenWorkMapPanelProps = {
   [key: string]: any;
