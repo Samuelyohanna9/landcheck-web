@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useCallback, useState } from "react";
+import toast from "react-hot-toast";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import "../styles/map-enhanced.css";
@@ -10,6 +11,26 @@ type Point = {
   lng: number;
   lat: number;
 };
+
+// A wrong (or wrongly-detected) coordinate system doesn't just distort a plot's shape - it can
+// produce raw Easting/Northing-scale numbers that end up here still unconverted, and Mapbox's
+// LngLat constructor throws on anything outside real degree range instead of just ignoring it,
+// which crashes the whole map. This is the last line of defense against that: no point reaches a
+// mapboxgl call (Marker, LngLatBounds, GeoJSON source) without passing this check first, no matter
+// what upstream coordinate-system detection got wrong.
+function isPlottableLngLat(lng: unknown, lat: unknown): boolean {
+  const lngNum = Number(lng);
+  const latNum = Number(lat);
+  return (
+    Number.isFinite(lngNum) &&
+    Number.isFinite(latNum) &&
+    lngNum >= -180 &&
+    lngNum <= 180 &&
+    latNum >= -90 &&
+    latNum <= 90 &&
+    !(lngNum === 0 && latNum === 0)
+  );
+}
 
 type SpotHeightPoint = Point & {
   is_boundary?: boolean;
@@ -471,7 +492,7 @@ function MapViewEnhanced({
     const applySpotHeightData = () => {
       const source = map.getSource("spot-height-points") as any;
       if (!source) return;
-      const valid = (spotHeightPoints || []).filter((p) => p.lng !== 0 || p.lat !== 0);
+      const valid = (spotHeightPoints || []).filter((p) => isPlottableLngLat(p.lng, p.lat));
       source.setData({
         type: "FeatureCollection",
         features: valid.map((p) => ({
@@ -528,9 +549,19 @@ function MapViewEnhanced({
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    const validCoords = coordinates.filter(
-      (c) => c.lng !== 0 || c.lat !== 0
-    );
+    const nonZeroCoords = coordinates.filter((c) => c.lng !== 0 || c.lat !== 0);
+    const validCoords = nonZeroCoords.filter((c) => isPlottableLngLat(c.lng, c.lat));
+    if (validCoords.length < nonZeroCoords.length) {
+      const droppedCount = nonZeroCoords.length - validCoords.length;
+      console.error(
+        `MapViewEnhanced: dropped ${droppedCount} point(s) with out-of-range coordinates instead of crashing`,
+        nonZeroCoords.filter((c) => !isPlottableLngLat(c.lng, c.lat))
+      );
+      toast.error(
+        `${droppedCount} point${droppedCount === 1 ? "" : "s"} couldn't be plotted - the coordinates look outside a valid range for the selected system. Try a different coordinate system.`,
+        { duration: 9000 }
+      );
+    }
 
     if (draw) {
       const features = draw.getAll();
@@ -652,7 +683,7 @@ function MapViewEnhanced({
     map.flyTo({ center: view.center, zoom: view.zoom, duration: 1200 });
   }, [coordinateSystem, mapReady]);
 
-  const hasValidCoords = coordinates.filter(c => c.lng !== 0 || c.lat !== 0).length > 0;
+  const hasValidCoords = coordinates.filter((c) => isPlottableLngLat(c.lng, c.lat)).length > 0;
 
   return (
     <div className={`map-enhanced-container ${disabled ? "disabled" : ""}`}>
@@ -668,7 +699,7 @@ function MapViewEnhanced({
         </div>
       )}
 
-      {hasValidCoords && coordinates.filter(c => c.lng !== 0 || c.lat !== 0).length < 3 && (
+      {hasValidCoords && coordinates.filter((c) => isPlottableLngLat(c.lng, c.lat)).length < 3 && (
         <div className="map-warning">
           <svg viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
