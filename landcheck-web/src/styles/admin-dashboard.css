@@ -911,6 +911,23 @@
   font-size: 0.9rem;
 }
 
+.ai-feature-usage-group {
+  margin-top: 1.5rem;
+}
+
+.ai-feature-usage-group:first-child {
+  margin-top: 0;
+}
+
+.ai-feature-usage-heading {
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
 .survey-users-table-wrap {
   background: rgba(30, 41, 59, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.1);

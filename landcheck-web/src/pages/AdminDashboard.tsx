@@ -105,7 +105,7 @@ type SurveyUser = {
   plots: SurveyUserPlot[];
 };
 
-type PlanReaderUsageEntry = {
+type AiFeatureUsageEntry = {
   identity_key: string;
   user_id: number | null;
   email: string | null;
@@ -114,6 +114,13 @@ type PlanReaderUsageEntry = {
   total_reads: number;
   reads_today: number;
   last_used_date: string | null;
+};
+
+type AiFeatureUsageGroup = {
+  feature: string;
+  label: string;
+  daily_limit: number;
+  users: AiFeatureUsageEntry[];
 };
 
 type OsmOverpassCountryUsage = {
@@ -185,8 +192,7 @@ export default function AdminDashboard() {
   const [feedbackEntries, setFeedbackEntries] = useState<FeedbackEntry[]>([]);
   const [surveyUsers, setSurveyUsers] = useState<SurveyUser[]>([]);
   const [expandedSurveyUserId, setExpandedSurveyUserId] = useState<number | null>(null);
-  const [planReaderUsage, setPlanReaderUsage] = useState<PlanReaderUsageEntry[]>([]);
-  const [planReaderDailyLimit, setPlanReaderDailyLimit] = useState<number>(3);
+  const [aiFeatureUsage, setAiFeatureUsage] = useState<AiFeatureUsageGroup[]>([]);
   const [georeferenceSessions, setGeoreferenceSessions] = useState<GeoreferenceSession[]>([]);
   const [surveyActivity, setSurveyActivity] = useState<SurveyActivityEvent[]>([]);
   const [osmOverpassUsage, setOsmOverpassUsage] = useState<OsmOverpassCountryUsage[]>([]);
@@ -216,10 +222,10 @@ export default function AdminDashboard() {
           api.get("/analytics/georeference-sessions"),
           api.get("/analytics/survey-activity"),
           api.get("/analytics/osm-overpass-usage"),
-          api.get("/analytics/plan-reader-usage"),
+          api.get("/analytics/ai-feature-usage"),
         ]);
 
-        const [analyticsRes, dailyRes, feedbackRes, plotsRes, feedbackListRes, surveyUsersRes, georefSessionsRes, surveyActivityRes, osmOverpassRes, planReaderUsageRes] = results;
+        const [analyticsRes, dailyRes, feedbackRes, plotsRes, feedbackListRes, surveyUsersRes, georefSessionsRes, surveyActivityRes, osmOverpassRes, aiFeatureUsageRes] = results;
 
         if (analyticsRes.status === "fulfilled") {
           setAnalytics(analyticsRes.value.data);
@@ -254,12 +260,9 @@ export default function AdminDashboard() {
           const data = osmOverpassRes.value.data as OsmOverpassUsage | undefined;
           setOsmOverpassUsage(Array.isArray(data?.by_country) ? data!.by_country : []);
         }
-        if (planReaderUsageRes.status === "fulfilled") {
-          const data = planReaderUsageRes.value.data;
-          setPlanReaderUsage(Array.isArray(data?.users) ? data.users : []);
-          if (Number.isFinite(Number(data?.daily_limit))) {
-            setPlanReaderDailyLimit(Number(data.daily_limit));
-          }
+        if (aiFeatureUsageRes.status === "fulfilled") {
+          const data = aiFeatureUsageRes.value.data;
+          setAiFeatureUsage(Array.isArray(data?.features) ? data.features : []);
         }
       } catch (err) {
         console.error("Failed to fetch analytics:", err);
@@ -282,7 +285,7 @@ export default function AdminDashboard() {
     setGeoreferenceSessions([]);
     setSurveyActivity([]);
     setOsmOverpassUsage([]);
-    setPlanReaderUsage([]);
+    setAiFeatureUsage([]);
     setLoading(false);
   };
 
@@ -733,43 +736,54 @@ export default function AdminDashboard() {
           </section>
 
           <section className="survey-users-section">
-            <h2>AI Plan Reader Usage ({planReaderUsage.length})</h2>
-            {planReaderUsage.length === 0 ? (
-              <p className="survey-users-empty">No AI Plan Reader usage recorded yet.</p>
+            <h2>AI Feature Usage</h2>
+            {aiFeatureUsage.every((group) => group.users.length === 0) ? (
+              <p className="survey-users-empty">No AI feature usage recorded yet.</p>
             ) : (
-              <div className="survey-users-table-wrap">
-                <table className="survey-users-table">
-                  <thead>
-                    <tr>
-                      <th>User</th>
-                      <th>Total Reads</th>
-                      <th>Today</th>
-                      <th>Last Used</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {planReaderUsage.map((entry) => (
-                      <tr key={entry.identity_key}>
-                        <td>
-                          {entry.is_anonymous ? (
-                            <span title={entry.identity_key}>Anonymous ({entry.identity_key.replace(/^ip:/, "")})</span>
-                          ) : (
-                            <>
-                              {entry.email || `User #${entry.user_id}`}
-                              {entry.full_name ? ` (${entry.full_name})` : ""}
-                            </>
-                          )}
-                        </td>
-                        <td>{entry.total_reads}</td>
-                        <td>
-                          {entry.reads_today} / {planReaderDailyLimit}
-                        </td>
-                        <td>{formatDateTime(entry.last_used_date)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              aiFeatureUsage.map((group) => (
+                <div key={group.feature} className="ai-feature-usage-group">
+                  <h3 className="ai-feature-usage-heading">
+                    {group.label} ({group.users.length}) - {group.daily_limit}/day cap
+                  </h3>
+                  {group.users.length === 0 ? (
+                    <p className="survey-users-empty">No usage recorded yet.</p>
+                  ) : (
+                    <div className="survey-users-table-wrap">
+                      <table className="survey-users-table">
+                        <thead>
+                          <tr>
+                            <th>User</th>
+                            <th>Total Reads</th>
+                            <th>Today</th>
+                            <th>Last Used</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {group.users.map((entry) => (
+                            <tr key={entry.identity_key}>
+                              <td>
+                                {entry.is_anonymous ? (
+                                  <span title={entry.identity_key}>Anonymous ({entry.identity_key.replace(/.*ip:/, "")})</span>
+                                ) : (
+                                  <>
+                                    {entry.email || `User #${entry.user_id}`}
+                                    {entry.full_name ? ` (${entry.full_name})` : ""}
+                                  </>
+                                )}
+                              </td>
+                              <td>{entry.total_reads}</td>
+                              <td>
+                                {entry.reads_today} / {group.daily_limit}
+                              </td>
+                              <td>{formatDateTime(entry.last_used_date)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              ))
             )}
           </section>
 
