@@ -258,26 +258,44 @@ function CoordinateInput({
       setUploadParsing(true);
       try {
         const { default: Papa } = await import("papaparse");
-        Papa.parse(file, {
-          complete: (results) => {
-            const data = results.data as (string | number)[][];
-            if (data.length > 0) {
-              setRawFileData(data);
-              setShowPreviewModal(true);
-            } else {
-              alert("No data found in file. Please check the format.");
-            }
-            setUploadParsing(false);
-            resetFileInput();
-          },
-          error: (error) => {
-            alert(`Error parsing CSV: ${error.message}`);
-            setUploadParsing(false);
-            resetFileInput();
-          },
-        });
+        const text = await file.text();
+        // Try each real-world delimiter explicitly and keep whichever actually splits the file
+        // into multiple, row-length-consistent columns - some GNSS/total-station export tools
+        // produce semicolon- or tab-delimited "CSV" files, and Papa's own delimiter auto-detection
+        // can occasionally misfire on files with quoted fields (e.g. a quoted timestamp column),
+        // silently collapsing every row into one unusable mega-column instead of erroring.
+        const candidateDelimiters = [",", ";", "\t", "|"];
+        let bestData: (string | number)[][] = [];
+        let bestScore = -1;
+        for (const delimiter of candidateDelimiters) {
+          const result = Papa.parse<(string | number)[]>(text, { delimiter, skipEmptyLines: "greedy" });
+          const rows = (result.data || []).filter((row) => row.length > 0);
+          if (rows.length === 0) continue;
+          const colCount = rows[0].length;
+          if (colCount <= 1) continue;
+          const consistentRows = rows.filter((row) => row.length === colCount).length;
+          const score = colCount * 1000 + consistentRows;
+          if (score > bestScore) {
+            bestScore = score;
+            bestData = rows;
+          }
+        }
+        if (bestData.length === 0) {
+          // Nothing beat a single column with any of the explicit delimiters tried - fall back to
+          // Papa's own auto-detection rather than assuming the file is unreadable.
+          const fallback = Papa.parse<(string | number)[]>(text, { skipEmptyLines: "greedy" });
+          bestData = (fallback.data || []).filter((row) => row.length > 0);
+        }
+        if (bestData.length > 0) {
+          setRawFileData(bestData);
+          setShowPreviewModal(true);
+        } else {
+          alert("No data found in file. Please check the format.");
+        }
+        setUploadParsing(false);
+        resetFileInput();
       } catch (error) {
-        alert(`Error loading CSV parser: ${error}`);
+        alert(`Error parsing CSV: ${error}`);
         setUploadParsing(false);
         resetFileInput();
       }

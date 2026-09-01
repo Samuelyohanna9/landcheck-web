@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { getCoordinateSystemEpsgLabel, getCoordinateSystemLabel, isProjectedCoordinateSystem } from "../utils/coordinateConverter";
+import {
+  getCoordinateSystemEpsgLabel,
+  getCoordinateSystemLabel,
+  isProjectedCoordinateSystem,
+  verifyOrResolveNigeriaCoordinateSystem,
+} from "../utils/coordinateConverter";
 import CoordinateSystemSelect from "./CoordinateSystemSelect";
 import "../styles/csv-preview-modal.css";
 
@@ -77,6 +82,10 @@ export default function CSVPreviewModal({
   // boundary, or re-uploading the same file twice.
   const [step, setStep] = useState<"mapping" | "boundary">("mapping");
   const [parsedPoints, setParsedPoints] = useState<ManualPoint[]>([]);
+  // Distinguishes "we read this from the actual coordinate values" from the coordinateSystemAuto
+  // Detected prop (which means an AI import supplied a guess) - both show the same badge wording,
+  // but this one also needs to reset per-file, not just live off the parent's own state.
+  const [valueDetectedCoordinateSystem, setValueDetectedCoordinateSystem] = useState(false);
 
   // Auto-detect columns when data changes
   useEffect(() => {
@@ -89,44 +98,39 @@ export default function CSVPreviewModal({
     let detectedHeight = -1;
     let headerDetected = false;
 
-    // Try to detect headers
+    // Try to detect headers - first match wins per role (a later column matching the same role,
+    // e.g. both "Z" and "H" columns looking like elevation, must never silently overwrite an
+    // earlier, equally-valid detection).
     for (let i = 0; i < firstRow.length; i++) {
       const header = firstRow[i];
       if (
-        header.includes("station") ||
-        header.includes("point") ||
-        header.includes("name") ||
-        header.includes("beacon")
+        detectedStation === -1 &&
+        (header.includes("station") || header.includes("point") || header.includes("name") || header.includes("beacon"))
       ) {
         detectedStation = i;
         headerDetected = true;
       } else if (
-        header.includes("easting") ||
-        header.includes("lng") ||
-        header.includes("longitude") ||
-        header === "x" ||
-        header === "e"
+        detectedEasting === -1 &&
+        (header.includes("easting") || header.includes("lng") || header.includes("longitude") || header === "x" || header === "e")
       ) {
         detectedEasting = i;
         headerDetected = true;
       } else if (
-        header.includes("northing") ||
-        header.includes("lat") ||
-        header.includes("latitude") ||
-        header === "y" ||
-        header === "n"
+        detectedNorthing === -1 &&
+        (header.includes("northing") || header.includes("lat") || header.includes("latitude") || header === "y" || header === "n")
       ) {
         detectedNorthing = i;
         headerDetected = true;
       } else if (
-        header.includes("height") ||
-        header.includes("elevation") ||
-        header.includes("altitude") ||
-        header.includes("elev") ||
-        header === "z" ||
-        header === "h" ||
-        header.includes("rl") ||
-        header.includes("level")
+        detectedHeight === -1 &&
+        (header.includes("height") ||
+          header.includes("elevation") ||
+          header.includes("altitude") ||
+          header.includes("elev") ||
+          header === "z" ||
+          header === "h" ||
+          header.includes("rl") ||
+          header.includes("level"))
       ) {
         detectedHeight = i;
         headerDetected = true;
@@ -164,6 +168,23 @@ export default function CSVPreviewModal({
     setError(null);
     setStep("mapping");
     setParsedPoints([]);
+    setValueDetectedCoordinateSystem(false);
+
+    // Once the easting/northing columns are known, also try to work out the coordinate system
+    // from the actual numbers - the same geometry-based cross-check the AI import paths use,
+    // applied here for a plain CSV/Excel upload that never had an AI guess to begin with. Only
+    // overrides the currently-selected system when there's a real Nigeria-projected reading to
+    // go on; ordinary WGS84 lat/lng data is left as whatever's already selected.
+    if (onCoordinateSystemChange && detectedEasting >= 0 && detectedNorthing >= 0) {
+      const sampleRow = rawData[headerDetected ? 1 : 0];
+      const sampleX = Number(sampleRow?.[detectedEasting]);
+      const sampleY = Number(sampleRow?.[detectedNorthing]);
+      const resolved = verifyOrResolveNigeriaCoordinateSystem(sampleX, sampleY, null);
+      if (resolved) {
+        onCoordinateSystemChange(resolved);
+        setValueDetectedCoordinateSystem(true);
+      }
+    }
   }, [rawData]);
 
   if (!isOpen || !rawData || rawData.length === 0) return null;
@@ -381,7 +402,13 @@ export default function CSVPreviewModal({
           {onCoordinateSystemChange && (
             <div className="csv-coord-system-row">
               <div className="csv-coord-system-label">
-                <span>{coordinateSystemAutoDetected ? "AI-detected coordinate system" : "Coordinate System"}</span>
+                <span>
+                  {coordinateSystemAutoDetected
+                    ? "AI-detected coordinate system"
+                    : valueDetectedCoordinateSystem
+                      ? "Detected from your data"
+                      : "Coordinate System"}
+                </span>
                 <em>{getCoordinateSystemLabel(coordinateSystem)} ({getCoordinateSystemEpsgLabel(coordinateSystem)})</em>
               </div>
               <CoordinateSystemSelect value={coordinateSystem} onChange={onCoordinateSystemChange} />
@@ -450,7 +477,7 @@ export default function CSVPreviewModal({
               <div className="mapping-select">
                 <label>
                   Height / Elevation (optional)
-                  {heightCol !== null && <span className="height-badge">🗺️ Topo</span>}
+                  {heightCol !== null && <span className="height-badge">Topo</span>}
                 </label>
                 <select
                   value={heightCol ?? ""}
@@ -468,7 +495,6 @@ export default function CSVPreviewModal({
           {/* Height data info message */}
           {heightCol !== null && (
             <div className="csv-info height-info">
-              <span className="info-icon">🗺️</span>
               This selected column supplies the topo elevation for every imported row. In the next step,
               choose which rows form the boundary; all rows with an elevation remain spot-height samples.
             </div>
