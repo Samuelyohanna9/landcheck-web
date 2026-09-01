@@ -418,7 +418,10 @@
   gap: 0.22rem;
   width: 44px;
   padding: 0.5rem 0;
-  overflow-y: auto;
+  /* Left deliberately un-clipped (rather than overflow-y: auto) so the Add/Modify/Delete flyout
+     below can extend past the rail's 44px width without being cut off - the icon list is short
+     and fixed, so vertical scrolling was never actually needed here. */
+  overflow: visible;
   border-right: 1px solid rgba(148, 163, 184, 0.12);
   background: linear-gradient(180deg, rgba(10, 17, 29, 0.98), rgba(11, 18, 30, 0.98));
 }
@@ -429,6 +432,88 @@
   margin: 0.3rem 0;
   background: rgba(148, 163, 184, 0.16);
   flex-shrink: 0;
+}
+
+.cad-rail-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.22rem;
+}
+
+.cad-rail-flyout {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 0.5rem);
+  z-index: 7;
+  width: 160px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 10px;
+  background: rgba(11, 18, 32, 0.98);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.4);
+}
+
+.cad-rail-flyout-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(2, 6, 23, 0.5);
+}
+
+.cad-rail-flyout-head strong {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #f3f6f8;
+}
+
+.cad-rail-flyout-head button {
+  border: none;
+  background: transparent;
+  color: #9aaaba;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cad-rail-flyout-head button:hover {
+  color: #f3f6f8;
+}
+
+.cad-rail-flyout-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+  background: transparent;
+  color: #e2e8f0;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cad-rail-flyout-option svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.cad-rail-flyout-option:hover {
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.cad-rail-flyout-option.danger:hover {
+  background: rgba(69, 10, 10, 0.45);
+  color: #fecaca;
 }
 
 /* ─── Floating canvas toolbar: pan/select, zoom, fit, grid, basemap ─── */
