@@ -20,6 +20,13 @@
   border: 0;
   background: linear-gradient(180deg, #0d1420 0%, #0b111c 100%);
   box-shadow: 0 32px 80px rgba(0, 0, 0, 0.55);
+  /* Scoped tokens for the CAD editor shell - not globals, since this palette (and the "reserve
+     red for errors only" rule it encodes) is specific to this workspace. */
+  --cad-selected: #35d07f;
+  --cad-active-preview: #55e69a;
+  --cad-boundary: #f16c7f;
+  --cad-vertex: #cbd5e1;
+  --cad-dimension: #f3f6f8;
 }
 
 /* ─── Compact icon toolbar (replaces the old text-heavy header + tool rows) ─── */
@@ -283,51 +290,266 @@
   background: linear-gradient(180deg, rgba(185, 28, 28, 0.28), rgba(69, 10, 10, 0.74));
 }
 
+/* ─── Compact app bar (48px): brand + plan name, undo/redo/save, preview/export/help/close ─── */
+.cad-app-bar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.6rem;
+  height: 48px;
+  padding: 0 0.6rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  background: linear-gradient(180deg, rgba(14, 23, 37, 0.98), rgba(11, 18, 32, 0.98));
+}
+
+.cad-app-bar-section {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.cad-app-bar-center {
+  justify-content: center;
+}
+
+.cad-app-bar-right {
+  justify-content: flex-end;
+}
+
+.cad-app-bar-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.cad-app-bar-title strong {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #f3f6f8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 22ch;
+}
+
+.cad-save-status {
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #6f8192;
+}
+
+.cad-save-status.is-unsaved {
+  color: #e7a93b;
+}
+
+.cad-app-bar-save {
+  border: 1px solid rgba(33, 199, 122, 0.4);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(33, 199, 122, 0.28), rgba(21, 128, 78, 0.42));
+  color: #ecfdf5;
+  padding: 0.32rem 0.75rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cad-app-bar-save:hover {
+  border-color: rgba(33, 199, 122, 0.62);
+}
+
+.cad-app-bar-save:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.cad-app-bar-save.danger {
+  border-color: rgba(239, 91, 91, 0.45);
+  background: linear-gradient(180deg, rgba(239, 91, 91, 0.3), rgba(153, 27, 27, 0.5));
+  color: #fef2f2;
+}
+
+.cad-app-bar-scale {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #9aaaba;
+  white-space: nowrap;
+}
+
+.cad-app-bar-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #cbd5e1;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cad-app-bar-link svg {
+  width: 15px;
+  height: 15px;
+}
+
+.cad-app-bar-link:hover {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.22);
+  color: #f8fafc;
+}
+
+/* ─── Left vertical drawing-tool rail (44px) ─── */
+.cad-tool-rail {
+  grid-column: 1;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.22rem;
+  width: 44px;
+  padding: 0.5rem 0;
+  overflow-y: auto;
+  border-right: 1px solid rgba(148, 163, 184, 0.12);
+  background: linear-gradient(180deg, rgba(10, 17, 29, 0.98), rgba(11, 18, 30, 0.98));
+}
+
+.cad-tool-rail-divider {
+  width: 22px;
+  height: 1px;
+  margin: 0.3rem 0;
+  background: rgba(148, 163, 184, 0.16);
+  flex-shrink: 0;
+}
+
+/* ─── Floating canvas toolbar: pan/select, zoom, fit, grid, basemap ─── */
+.cad-canvas-toolbar {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.22rem;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 10px;
+  background: rgba(9, 15, 26, 0.86);
+  backdrop-filter: blur(10px);
+}
+
+.cad-canvas-toolbar-percent {
+  min-width: 3.4ch;
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #9aaaba;
+}
+
+.cad-plotting-help--dismissible {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 10px;
+}
+
+.cad-plotting-help--dismissible button {
+  border: none;
+  background: transparent;
+  color: #9aaaba;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cad-plotting-help--dismissible button:hover {
+  color: #f3f6f8;
+}
+
+/* ─── Bottom status/command bar (36px collapsed) ─── */
+.cad-status-bar {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(8, 13, 22, 0.98);
+}
+
+.cad-status-bar-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.4rem;
+  height: 36px;
+  padding: 0 0.7rem;
+  overflow-x: auto;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+}
+
+.cad-status-bar-spacer {
+  flex: 1;
+  min-width: 0.5rem;
+}
+
 .cad-editor-body {
   flex: 1;
   min-height: 0;
   position: relative;
-  display: block;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 280px;
   overflow: hidden;
   background:
     radial-gradient(circle at top left, rgba(22, 78, 99, 0.08), transparent 18%),
     linear-gradient(180deg, #08111b 0%, #050a12 100%);
 }
 
-.cad-editor-sidebar {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
+.cad-editor-inspector {
+  position: relative;
   z-index: 8;
-  width: min(272px, calc(100% - 1rem));
+  width: 280px;
   min-height: 0;
-  overflow: auto;
-  padding: 0.85rem 0.8rem;
-  border-right: 1px solid rgba(148, 163, 184, 0.12);
-  background: linear-gradient(180deg, rgba(10, 17, 29, 0.98), rgba(11, 18, 30, 0.98));
-  border-radius: 0 18px 18px 0;
-  box-shadow: 20px 0 40px rgba(2, 6, 23, 0.42);
-  /* Layout containment keeps this panel's own reflows (hover states, selection summaries, etc.)
-     from ever being able to affect the shared grid row's height. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  border-left: 1px solid rgba(148, 163, 184, 0.12);
+  background: linear-gradient(180deg, rgba(10, 17, 29, 0.96), rgba(12, 20, 34, 0.98));
   contain: layout paint;
 }
 
-.cad-editor-inspector {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 0;
-  z-index: 8;
-  width: min(272px, calc(100% - 1rem));
+.cad-inspector-head {
+  flex-shrink: 0;
+}
+
+.cad-inspector-scroll {
+  flex: 1;
   min-height: 0;
   overflow: auto;
   padding: 0.85rem 0.8rem;
-  border-left: 1px solid rgba(148, 163, 184, 0.12);
-  background: linear-gradient(180deg, rgba(10, 17, 29, 0.96), rgba(12, 20, 34, 0.98));
-  border-radius: 18px 0 0 18px;
-  box-shadow: -20px 0 40px rgba(2, 6, 23, 0.42);
-  contain: layout paint;
+}
+
+@media (max-width: 1200px) {
+  .cad-editor-body {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .cad-editor-inspector {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    box-shadow: -20px 0 40px rgba(2, 6, 23, 0.5);
+  }
 }
 
 .cad-panel {
@@ -1057,7 +1279,7 @@
 
 .cad-svg-boundary {
   fill: rgba(18, 36, 24, 0.14);
-  stroke: #fb7185;
+  stroke: var(--cad-boundary, #f16c7f);
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
 }
@@ -1125,7 +1347,7 @@
 .cad-svg-beacon rect,
 .cad-svg-beacon polygon,
 .cad-svg-beacon line {
-  stroke: #ef4444;
+  stroke: var(--cad-vertex, #cbd5e1);
   vector-effect: non-scaling-stroke;
 }
 
@@ -1196,8 +1418,8 @@
 }
 
 .cad-svg-selected {
-  fill: rgba(34, 197, 94, 0.08);
-  stroke: #4ade80;
+  fill: rgba(53, 208, 127, 0.1);
+  stroke: var(--cad-selected, #35d07f);
   stroke-width: 2.5;
   vector-effect: non-scaling-stroke;
 }
@@ -1213,14 +1435,14 @@
 
 .cad-svg-draft {
   fill: none;
-  stroke: #f97316;
+  stroke: var(--cad-active-preview, #55e69a);
   stroke-width: 2.2;
   stroke-dasharray: 10 7;
   vector-effect: non-scaling-stroke;
 }
 
 .cad-svg-draft--polygon {
-  fill: rgba(249, 115, 22, 0.08);
+  fill: rgba(85, 230, 154, 0.08);
 }
 
 .cad-svg-preview {
