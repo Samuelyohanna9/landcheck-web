@@ -102,6 +102,11 @@ function SurveyPlanGeoreferenceSetupStep({
   // and would otherwise see a stale value.
   const [placementStage, setPlacementStage] = useState<"awaiting-raster" | "awaiting-map" | "saved" | null>(null);
   const placementStageRef = useRef<typeof placementStage>(null);
+  // Which surface the surveyor chose to match first for the point currently in progress - lets
+  // the raster/map click handlers below tell "this is the first of the pair" (advance to the
+  // other side) apart from "this is the second, completing click" (advance to "saved"),
+  // regardless of which side they started with.
+  const startedViaRef = useRef<"raster" | "map">("raster");
   const savedStageTimeoutRef = useRef<number | null>(null);
   const [stageMetrics, setStageMetrics] = useState<RasterStageMetrics | null>(null);
   // Only one GCP's inputs are ever editable at a time - every other row shows compact read-only
@@ -124,11 +129,11 @@ function SurveyPlanGeoreferenceSetupStep({
   } | null>(null);
 
   const controlPoints = session?.ground_control_points || [];
-  const pointIsReady = (point: (typeof controlPoints)[number]) => {
-    const hasImage = Number.isFinite(point.image_x) && Number.isFinite(point.image_y) && (Math.abs(point.image_x) > 0.5 || Math.abs(point.image_y) > 0.5);
-    const hasGround = Number.isFinite(point.ground_x) && Number.isFinite(point.ground_y) && (Math.abs(point.ground_x) > 0.0001 || Math.abs(point.ground_y) > 0.0001);
-    return hasImage && hasGround;
-  };
+  const pointHasImage = (point: (typeof controlPoints)[number]) =>
+    Number.isFinite(point.image_x) && Number.isFinite(point.image_y) && (Math.abs(point.image_x) > 0.5 || Math.abs(point.image_y) > 0.5);
+  const pointHasGround = (point: (typeof controlPoints)[number]) =>
+    Number.isFinite(point.ground_x) && Number.isFinite(point.ground_y) && (Math.abs(point.ground_x) > 0.0001 || Math.abs(point.ground_y) > 0.0001);
+  const pointIsReady = (point: (typeof controlPoints)[number]) => pointHasImage(point) && pointHasGround(point);
   const activePoint =
     controlPoints.find((item) => item.id === selectedControlPointId) || controlPoints[controlPoints.length - 1] || null;
   const solvedTransform = (session?.transform || null) as GeoreferenceTransform | null;
@@ -358,9 +363,10 @@ function SurveyPlanGeoreferenceSetupStep({
     onSelectControlPoint(controlPointId);
   };
 
-  const beginNewControlPoint = () => {
+  const beginNewControlPoint = (side: "raster" | "map") => {
     onAddControlPoint();
-    setPlacementStage("awaiting-raster");
+    startedViaRef.current = side;
+    setPlacementStage(side === "raster" ? "awaiting-raster" : "awaiting-map");
   };
 
   const cancelPendingPoint = () => {
@@ -429,11 +435,17 @@ function SurveyPlanGeoreferenceSetupStep({
         mapRef.current.on("click", (event: any) => {
           onAssignMapPoint(Number(event.lngLat.lng), Number(event.lngLat.lat));
           if (placementStageRef.current === "awaiting-map") {
-            setPlacementStage("saved");
-            savedStageTimeoutRef.current = window.setTimeout(() => {
-              setPlacementStage(null);
-              savedStageTimeoutRef.current = null;
-            }, 1400);
+            if (startedViaRef.current === "map") {
+              // First click of the pair - now wait for the matching survey-plan point.
+              setPlacementStage("awaiting-raster");
+            } else {
+              // Started on the survey plan, this map click completes the pair.
+              setPlacementStage("saved");
+              savedStageTimeoutRef.current = window.setTimeout(() => {
+                setPlacementStage(null);
+                savedStageTimeoutRef.current = null;
+              }, 1400);
+            }
           }
         });
         setMapReady(true);
@@ -731,7 +743,17 @@ function SurveyPlanGeoreferenceSetupStep({
     if (!pixel) return;
     onAssignImagePoint(pixel.pixelX, pixel.pixelY);
     if (placementStage === "awaiting-raster") {
-      setPlacementStage("awaiting-map");
+      if (startedViaRef.current === "raster") {
+        // First click of the pair - now wait for the matching map location.
+        setPlacementStage("awaiting-map");
+      } else {
+        // Started on the map, this raster click completes the pair.
+        setPlacementStage("saved");
+        savedStageTimeoutRef.current = window.setTimeout(() => {
+          setPlacementStage(null);
+          savedStageTimeoutRef.current = null;
+        }, 1400);
+      }
     }
   };
 
@@ -1051,8 +1073,12 @@ function SurveyPlanGeoreferenceSetupStep({
                   {placementStage === "awaiting-raster" || placementStage === "awaiting-map" ? (
                     <div className="georef-placement-status">
                       <div className="georef-placement-track">
-                        <span className={placementStage === "awaiting-raster" ? "is-active" : "is-done"}>Survey plan point</span>
-                        <span className={placementStage === "awaiting-map" ? "is-active" : ""}>Matching map location</span>
+                        <span className={activePoint && pointHasImage(activePoint) ? "is-done" : placementStage === "awaiting-raster" ? "is-active" : ""}>
+                          Survey plan point
+                        </span>
+                        <span className={activePoint && pointHasGround(activePoint) ? "is-done" : placementStage === "awaiting-map" ? "is-active" : ""}>
+                          Matching map location
+                        </span>
                         <span>Control point saved</span>
                       </div>
                       <p className="geo-section-hint">
@@ -1061,7 +1087,7 @@ function SurveyPlanGeoreferenceSetupStep({
                           : "Select the matching location on the map."}
                       </p>
                       <button type="button" className="geo-btn geo-btn-outline geo-btn-block" onClick={cancelPendingPoint}>
-                        {placementStage === "awaiting-raster" ? "Cancel" : "Cancel point"}
+                        {activePoint && (pointHasImage(activePoint) || pointHasGround(activePoint)) ? "Cancel point" : "Cancel"}
                       </button>
                     </div>
                   ) : placementStage === "saved" ? (
@@ -1073,9 +1099,21 @@ function SurveyPlanGeoreferenceSetupStep({
                       </div>
                     </div>
                   ) : (
-                    <button type="button" className="geo-btn geo-btn-primary geo-btn-block" onClick={beginNewControlPoint}>
-                      {controlPoints.length === 0 ? "Start georeferencing" : "Add control point"}
-                    </button>
+                    <div className="georef-placement-choice">
+                      <p className="geo-section-hint">
+                        {controlPoints.length === 0
+                          ? "Start georeferencing by matching a point."
+                          : "Match another point - choose where to start."}
+                      </p>
+                      <div className="georef-placement-choice-actions">
+                        <button type="button" className="geo-btn geo-btn-primary" onClick={() => beginNewControlPoint("raster")}>
+                          Match on survey plan
+                        </button>
+                        <button type="button" className="geo-btn geo-btn-outline" onClick={() => beginNewControlPoint("map")}>
+                          Match on map
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -1120,9 +1158,9 @@ function SurveyPlanGeoreferenceSetupStep({
               <button
                 type="button"
                 className="geo-canvas-tool-btn"
-                onClick={beginNewControlPoint}
+                onClick={() => beginNewControlPoint("raster")}
                 disabled={!session || placementStage !== null}
-                title="Add control point"
+                title="Add control point (match on survey plan)"
               >
                 <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
