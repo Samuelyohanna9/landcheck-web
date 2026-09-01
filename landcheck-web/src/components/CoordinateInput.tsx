@@ -966,6 +966,18 @@ function CoordinateInput({
           </div>
         </div>
       )}
+
+      {fieldImportReading && (
+        <div className="coord-ai-fullscreen-overlay" role="status" aria-live="polite">
+          <div className="coord-ai-fullscreen-card">
+            <SurveyLoadingAnimation size="medium" />
+            <p className="coord-ai-fullscreen-title">AI is reading your field data&hellip;</p>
+            <p className="coord-ai-fullscreen-subtitle">
+              Sniffing columns, classifying points, and detecting the coordinate system. This usually takes a few seconds.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
