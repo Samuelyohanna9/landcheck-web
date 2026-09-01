@@ -687,122 +687,135 @@ function SurveyPlanGeoreferenceSetupStep({
     });
 
   return (
-    <div className="step-panel georef-step-panel">
-      <div className="panel-left georef-sidebar-column">
-        {sidebar}
-        <section className="georef-control-card">
-          <div className="georef-control-head">
-              <div>
-                <span className="georef-kicker">Georeference Workspace</span>
-                <h3>Anchor a scanned plan to site coordinates</h3>
-                <p>Upload the scan, match the control points, then lock it in for digitizing.</p>
-              </div>
-            {session ? (
-              <button type="button" className="btn-outline georef-delete-btn" onClick={onDeleteSession}>
-                Clear Session
-              </button>
-            ) : null}
-          </div>
+    <div className="step-panel georef-step-panel georef-workspace-redesign">
+      <div className="georef-workspace-grid">
+        <aside className="geo-panel geo-panel-left" data-tab-panel="tools">
+          <div className="geo-left-scroll">
+            {sidebar}
+            <div className="geo-panel-heading">
+              <h2>Control points</h2>
+              <p>Upload the scan, match the control points, then lock it in for digitizing.</p>
+            </div>
 
-          {!session && (
-            <div className="georef-upload-grid">
-              <label className="georef-upload-dropzone">
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={(event) => setDraftFile(event.target.files?.[0] || null)}
-                />
-                <strong>{draftFile ? draftFile.name : "Choose raster image"}</strong>
-                <span>JPEG, PNG, or WEBP scanned plans</span>
-              </label>
-              <div className="georef-upload-fields">
-                  <label>
-                    Image title
-                    <input
-                      value={draftTitle}
-                      onChange={(event) => setDraftTitle(event.target.value)}
-                    placeholder="Fufore layout scan - July 2026"
+            {!session && (
+              <div className="geo-section">
+                <h3 className="geo-section-title">Raster</h3>
+                <label className="georef-upload-dropzone">
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(event) => setDraftFile(event.target.files?.[0] || null)}
                   />
+                  <strong>{draftFile ? draftFile.name : "Choose raster image"}</strong>
+                  <span>JPEG, PNG, or WEBP scanned plans</span>
                 </label>
-                <div className="georef-target-crs-field">
-                  <label htmlFor="georef-target-crs-select">Target coordinate system</label>
-                  <CoordinateSystemSelect
-                    id="georef-target-crs-select"
-                    value={targetCoordinateSystem}
-                    onChange={onTargetCoordinateSystemChange}
-                  />
-                </div>
+                <label className="geo-field-label" htmlFor="georef-title-input">
+                  Image title
+                </label>
+                <input
+                  id="georef-title-input"
+                  className="geo-field-input"
+                  value={draftTitle}
+                  onChange={(event) => setDraftTitle(event.target.value)}
+                  placeholder="Fufore layout scan - July 2026"
+                />
+                <label className="geo-field-label" htmlFor="georef-target-crs-select">
+                  Target coordinate system
+                </label>
+                <CoordinateSystemSelect
+                  id="georef-target-crs-select"
+                  value={targetCoordinateSystem}
+                  onChange={onTargetCoordinateSystemChange}
+                />
                 <button
                   type="button"
-                  className="btn-primary"
+                  className="geo-btn geo-btn-primary geo-btn-block"
                   disabled={!draftFile || creatingSession}
                   onClick={() => {
                     if (!draftFile) return;
                     void onCreateSession(draftFile, draftTitle, targetCoordinateSystem);
                   }}
-                  >
-                    {creatingSession ? "Uploading raster..." : "Open Workspace"}
-                  </button>
-                  {creatingSession && (
-                    <SurveyLoadingAnimation label="Uploading and preparing your raster..." size="small" />
-                  )}
+                >
+                  {creatingSession ? "Uploading raster..." : "Open Workspace"}
+                </button>
+                {creatingSession && (
+                  <SurveyLoadingAnimation label="Uploading and preparing your raster..." size="small" />
+                )}
+              </div>
+            )}
+
+            {session && (
+              <>
+                <div className="geo-section">
+                  <h3 className="geo-section-title">Raster</h3>
+                  <p className="geo-section-hint">
+                    {session.source_width} x {session.source_height} &middot; {session.source_file_name}
+                  </p>
+                  <p className="geo-section-hint">
+                    {controlPoints.length} control point{controlPoints.length === 1 ? "" : "s"} &middot; match at
+                    least three
+                  </p>
                 </div>
-              </div>
-          )}
 
-          {session && (
-            <>
-              <div className="georef-stat-grid">
-                <article className="georef-stat-card">
-                  <span className="georef-stat-label">Raster</span>
-                  <strong>{session.source_width} x {session.source_height}</strong>
-                  <small>{session.source_file_name}</small>
-                </article>
-                  <article className="georef-stat-card">
-                    <span className="georef-stat-label">Controls</span>
-                    <strong>{controlPoints.length}</strong>
-                    <small>Match at least three points</small>
-                  </article>
-                <article className="georef-stat-card">
-                  <span className="georef-stat-label">Fit quality</span>
-                  <strong>
-                    {session.transform
-                      ? session.transform.exact_fit
-                        ? "Exact fit (3 pts)"
-                        : session.transform.quality === "strong"
-                          ? "Good fit"
-                          : session.transform.quality === "usable"
-                            ? "Usable fit"
-                            : "Weak fit"
-                      : "Pending"}
-                  </strong>
-                  <small>
-                    {session.transform
-                      ? session.transform.exact_fit
-                        ? "RMS not meaningful with 3 points"
-                        : `${session.transform.rms_error_m.toFixed(3)}m RMS`
-                      : "Solve once points are matched"}
-                  </small>
-                </article>
-              </div>
+                {session.transform ? (
+                  <div className="geo-quality-card" data-quality={session.transform.exact_fit ? "usable" : session.transform.quality}>
+                    <span className="geo-quality-icon" aria-hidden="true">
+                      {session.transform.quality === "weak" && !session.transform.exact_fit ? (
+                        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </span>
+                    <div className="geo-quality-copy">
+                      <strong>
+                        <span>
+                          {session.transform.exact_fit
+                            ? "Exact fit (3 pts)"
+                            : session.transform.quality === "strong"
+                              ? "Good fit"
+                              : session.transform.quality === "usable"
+                                ? "Usable fit"
+                                : "Weak fit"}
+                        </span>{" "}
+                        &middot;{" "}
+                        <span>
+                          RMS {session.transform.exact_fit ? "n/a" : `${session.transform.rms_error_m.toFixed(3)} m`}
+                        </span>
+                      </strong>
+                      <span className="geo-quality-caption">Georeferencing quality</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="geo-section">
+                    <h3 className="geo-section-title">Fit quality</h3>
+                    <p className="geo-section-hint">Pending - solve once points are matched.</p>
+                  </div>
+                )}
 
-              <div className="georef-coordinate-hint">{coordinateHint}</div>
-
-              <div className="georef-actions-row">
-                  <button type="button" className="btn-primary" disabled={controlPoints.length < 3 || solving} onClick={onSolve}>
+                <div className="geo-section">
+                  <p className="geo-section-hint">{coordinateHint}</p>
+                  <button
+                    type="button"
+                    className="geo-btn geo-btn-primary geo-btn-block"
+                    disabled={controlPoints.length < 3 || solving}
+                    onClick={onSolve}
+                  >
                     {solving ? "Anchoring raster..." : "Anchor Raster"}
                   </button>
-                  <button type="button" className="btn-secondary" disabled={!session.transform} onClick={onContinue}>
-                    Continue to Digitize
-                </button>
-              </div>
-
-                <div className="georef-control-list-head">
-                  <strong>Control Register</strong>
-                  <span>
-                    {controlPoints.filter((point) => pointIsReady(point)).length}/{controlPoints.length} ready
-                  </span>
                 </div>
+
+                <div className="geo-section">
+                  <h3 className="geo-section-title">
+                    Control register
+                    <span className="geo-section-hint">
+                      {" "}
+                      {controlPoints.filter((point) => pointIsReady(point)).length}/{controlPoints.length} ready
+                    </span>
+                  </h3>
               <div className="georef-control-list">
                 {controlPoints.map((point) => (
                   <article
@@ -923,47 +936,73 @@ function SurveyPlanGeoreferenceSetupStep({
                     </div>
                   </article>
                 ))}
-              </div>
-              <div className="georef-action-dock">
-                  <button type="button" className="btn-primary" onClick={() => setAddPointMenuOpen(true)}>
+                  </div>
+                  <button type="button" className="geo-btn geo-btn-outline geo-btn-block" onClick={() => setAddPointMenuOpen(true)}>
                     Add Next GCP
                   </button>
-                  <button type="button" className="btn-outline" disabled={controlPoints.length < 3 || solving} onClick={onSolve}>
-                    {solving ? "Anchoring raster..." : "Anchor Raster"}
-                  </button>
-                  <button type="button" className="btn-secondary" disabled={!session.transform} onClick={onContinue}>
-                    Continue to Digitize
-                </button>
-              </div>
-            </>
-          )}
-        </section>
-      </div>
-
-      <div className="panel-right georef-visual-column">
-        <div className="georef-dual-stage">
-          <section className="georef-image-card">
-            <div className="georef-card-head">
-                <div>
-                  <span className="georef-stage-eyebrow">1. Raster</span>
-                  <h4>Raster control stage</h4>
-                  <span>{activePoint ? `Selected: ${activePoint.label}` : "Add a control point first"}</span>
                 </div>
-              <div className="georef-stage-toolbar">
-                  <button type="button" className="btn-primary" onClick={() => setAddPointMenuOpen(true)} disabled={!session}>
-                    Add Next GCP
-                  </button>
-                <button type="button" className="btn-outline" onClick={() => updateStageZoom(imageZoom - STAGE_ZOOM_STEP)} disabled={!rasterObjectUrl || imageZoom <= MIN_STAGE_ZOOM}>
-                  -
-                </button>
-                <span className="georef-stage-zoom-pill">{Math.round(imageZoom * 100)}%</span>
-                <button type="button" className="btn-outline" onClick={() => updateStageZoom(imageZoom + STAGE_ZOOM_STEP)} disabled={!rasterObjectUrl || imageZoom >= MAX_STAGE_ZOOM}>
-                  +
-                </button>
-                <button type="button" className="btn-outline" onClick={() => updateStageZoom(MIN_STAGE_ZOOM)} disabled={!rasterObjectUrl || (imageZoom === MIN_STAGE_ZOOM && imagePan.x === 0 && imagePan.y === 0)}>
-                  Fit
-                </button>
-              </div>
+              </>
+            )}
+          </div>
+
+          {session && (
+            <div className="geo-left-footer">
+              <button type="button" className="geo-btn geo-btn-destructive-subtle" onClick={onDeleteSession} title="Clear session">
+                Clear Session
+              </button>
+              <button
+                type="button"
+                className="geo-btn geo-btn-primary"
+                disabled={!session.transform}
+                onClick={onContinue}
+                title={!session.transform ? "Anchor the raster before continuing." : undefined}
+              >
+                Continue to Digitize
+              </button>
+            </div>
+          )}
+        </aside>
+
+        <section className="geo-panel geo-panel-canvas" data-tab-panel="raster">
+          <div className="geo-panel-heading">
+            <h2>Raster control stage</h2>
+            <p>{activePoint ? `Selected: ${activePoint.label}` : "Add a control point first"}</p>
+          </div>
+          <div className="geo-canvas-wrap">
+            <div className="geo-canvas-toolbar">
+              <button type="button" className="geo-canvas-tool-btn" onClick={() => setAddPointMenuOpen(true)} disabled={!session} title="Add Next GCP">
+                <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <span className="geo-canvas-toolbar-divider" aria-hidden="true" />
+              <button
+                type="button"
+                className="geo-canvas-tool-btn"
+                onClick={() => updateStageZoom(imageZoom - STAGE_ZOOM_STEP)}
+                disabled={!rasterObjectUrl || imageZoom <= MIN_STAGE_ZOOM}
+                aria-label="Zoom out"
+              >
+                −
+              </button>
+              <span className="geo-zoom-pill">{Math.round(imageZoom * 100)}%</span>
+              <button
+                type="button"
+                className="geo-canvas-tool-btn"
+                onClick={() => updateStageZoom(imageZoom + STAGE_ZOOM_STEP)}
+                disabled={!rasterObjectUrl || imageZoom >= MAX_STAGE_ZOOM}
+                aria-label="Zoom in"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                className="geo-canvas-tool-btn geo-canvas-tool-btn--fit"
+                onClick={() => updateStageZoom(MIN_STAGE_ZOOM)}
+                disabled={!rasterObjectUrl || (imageZoom === MIN_STAGE_ZOOM && imagePan.x === 0 && imagePan.y === 0)}
+              >
+                Fit
+              </button>
             </div>
             {pendingPlacementMode && activePoint && !pointIsReady(activePoint) ? (
               <div className="georef-guidance-banner">
@@ -1042,55 +1081,52 @@ function SurveyPlanGeoreferenceSetupStep({
                   </>
                 ) : (
                   <div className="georef-empty-stage">
-                    <strong>Upload a raster to begin</strong>
-                    <span>The image will appear here for pixel control placement.</span>
+                    <strong>Upload a raster to see it here</strong>
+                    <span>Once uploaded, it appears here for pixel control placement.</span>
                   </div>
                 )}
               </div>
             </div>
-            <div className="georef-coordinate-strip">
-              <article>
-                <span>Raster X / Y</span>
-                <strong>{cursorSample ? `X ${cursorSample.pixelX.toFixed(1)} / Y ${cursorSample.pixelY.toFixed(1)}` : "Move over image"}</strong>
-              </article>
-              <article>
-                <span>Selected GCP target</span>
-                <strong>
-                  {activePoint
-                    ? `${coordinateXLabel.split(" ")[0]} ${Number(activePoint.ground_x).toLocaleString(undefined, { maximumFractionDigits: projectedGroundSystem ? 3 : 6 })} / ${coordinateYLabel.split(" ")[0]} ${Number(activePoint.ground_y).toLocaleString(undefined, { maximumFractionDigits: projectedGroundSystem ? 3 : 6 })}`
-                    : "Select a control point"}
-                </strong>
-              </article>
-              <article>
-                <span>{solvedTransform ? "Live solved preview" : "Ground preview"}</span>
-                <strong>
-                  {solvedTransform && cursorSample?.targetX != null && cursorSample?.targetY != null
-                    ? `${coordinateXLabel.split(" ")[0]} ${cursorSample.targetX.toLocaleString(undefined, { maximumFractionDigits: projectedGroundSystem ? 3 : 6 })} / ${coordinateYLabel.split(" ")[0]} ${cursorSample.targetY.toLocaleString(undefined, { maximumFractionDigits: projectedGroundSystem ? 3 : 6 })}`
-                    : "Solve georeference to preview grid values"}
-                </strong>
-              </article>
-            </div>
-          </section>
+          </div>
+          <div className="geo-status-bar">
+            <span className="geo-status-item">
+              <em>Raster X / Y</em>
+              <span>{cursorSample ? `${cursorSample.pixelX.toFixed(1)} / ${cursorSample.pixelY.toFixed(1)}` : "Move over image"}</span>
+            </span>
+            <span className="geo-status-item">
+              <em>Selected GCP target</em>
+              <span>
+                {activePoint
+                  ? `${coordinateXLabel.split(" ")[0]} ${Number(activePoint.ground_x).toLocaleString(undefined, { maximumFractionDigits: projectedGroundSystem ? 3 : 6 })} / ${coordinateYLabel.split(" ")[0]} ${Number(activePoint.ground_y).toLocaleString(undefined, { maximumFractionDigits: projectedGroundSystem ? 3 : 6 })}`
+                  : "Select a control point"}
+              </span>
+            </span>
+            <span className="geo-status-item">
+              <em>{solvedTransform ? "Live solved preview" : "Ground preview"}</em>
+              <span>
+                {solvedTransform && cursorSample?.targetX != null && cursorSample?.targetY != null
+                  ? `${coordinateXLabel.split(" ")[0]} ${cursorSample.targetX.toLocaleString(undefined, { maximumFractionDigits: projectedGroundSystem ? 3 : 6 })} / ${coordinateYLabel.split(" ")[0]} ${cursorSample.targetY.toLocaleString(undefined, { maximumFractionDigits: projectedGroundSystem ? 3 : 6 })}`
+                  : "Solve georeference to preview grid values"}
+              </span>
+            </span>
+          </div>
+        </section>
 
-          <section className="georef-map-card">
-            <div className="georef-card-head">
-              <div>
-                <span className="georef-stage-eyebrow">2. Reference map</span>
-                <h4>Ground control map</h4>
-                <span>Click the map to pair the selected point with a real coordinate.</span>
-              </div>
+        <section className="geo-panel geo-panel-map" data-tab-panel="map">
+          <div className="geo-panel-heading">
+            <h2>Ground control map</h2>
+            <p>Click the map to pair the selected point with a real coordinate.</p>
+          </div>
+          {pendingPlacementMode === "map" && activePoint && !pointIsReady(activePoint) ? (
+            <div className="georef-guidance-banner">
+              <span>Now click the matching location on the map for "{activePoint.label}".</span>
+              <button type="button" onClick={() => setPendingPlacementMode(null)}>
+                Done
+              </button>
             </div>
-            {pendingPlacementMode === "map" && activePoint && !pointIsReady(activePoint) ? (
-              <div className="georef-guidance-banner">
-                <span>Now click the matching location on the map for "{activePoint.label}".</span>
-                <button type="button" onClick={() => setPendingPlacementMode(null)}>
-                  Done
-                </button>
-              </div>
-            ) : null}
-            <div className="georef-map-surface" ref={mapContainerRef} />
-          </section>
-        </div>
+          ) : null}
+          <div className="geo-map-surface" ref={mapContainerRef} />
+        </section>
       </div>
 
       {addPointMenuOpen ? (
@@ -1099,13 +1135,13 @@ function SurveyPlanGeoreferenceSetupStep({
             <h4>Add ground control point</h4>
             <p>How do you want to set this point's coordinates?</p>
             <div className="georef-add-point-menu-actions">
-              <button type="button" className="btn-primary" onClick={() => startAddPoint("manual")}>
+              <button type="button" className="geo-btn geo-btn-primary" onClick={() => startAddPoint("manual")}>
                 Add manually
               </button>
-              <button type="button" className="btn-outline" onClick={() => startAddPoint("map")}>
+              <button type="button" className="geo-btn geo-btn-outline" onClick={() => startAddPoint("map")}>
                 Choose point on map
               </button>
-              <button type="button" className="btn-outline" onClick={() => setAddPointMenuOpen(false)}>
+              <button type="button" className="geo-btn geo-btn-outline" onClick={() => setAddPointMenuOpen(false)}>
                 Cancel
               </button>
             </div>
