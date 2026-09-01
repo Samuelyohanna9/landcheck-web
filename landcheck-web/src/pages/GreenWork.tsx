@@ -18099,11 +18099,12 @@ export default function GreenWork() {
                     disabled={treeHealthChecking || !inspectedTree.photo_url || treeHealthQuota?.remaining === 0}
                     onClick={() => void runTreeHealthCheck()}
                   >
+                    <img src="/LC_Green_AI_Symbol.svg" alt="" className="green-work-ai-icon" aria-hidden="true" />
                     {treeHealthChecking
                       ? "AI is reading tree health..."
                       : treeHealthQuota?.remaining === 0
                         ? "AI tree health checks used up for today"
-                        : "🌿 Find Tree Health with AI"}
+                        : "Find Tree Health with AI"}
                   </button>
                   {!inspectedTree.photo_url && <p className="green-work-note">Upload a tree photo first to run an AI health check.</p>}
                   {treeHealthResult && (
