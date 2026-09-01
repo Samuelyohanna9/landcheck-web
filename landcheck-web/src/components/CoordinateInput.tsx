@@ -9,6 +9,7 @@ import {
   COORDINATE_SYSTEM_GROUPS,
   getCoordinateSystemEpsgLabel,
   isProjectedCoordinateSystem,
+  looksLikeProjected,
   WGS84_NIGERIA_METERS,
 } from "../utils/coordinateConverter";
 
@@ -32,8 +33,6 @@ type PlanReaderExtracted = {
   plots?: PlanReaderPlot[];
   roads?: PlanReaderRoad[];
 };
-
-const PROJECTED_SYSTEM_KEYS = ["minna_31", "minna_32", "minna_33", "utm_31n", "utm_32n", "utm_33n"];
 
 const FIELD_IMPORT_QUOTA_EXHAUSTED_KEY = "field-to-finish-quota-exhausted-date";
 
@@ -374,9 +373,20 @@ function CoordinateInput({
         return;
       }
 
-      const isProjectedGuess = PROJECTED_SYSTEM_KEYS.includes(extracted.coordinate_system_guess || "");
-      if (extracted.coordinate_system_guess && extracted.coordinate_system_guess !== "unknown") {
-        onCoordinateSystemChange(extracted.coordinate_system_guess);
+      const looksProjectedByMagnitude = looksLikeProjected(Number(beacons[0]?.x), Number(beacons[0]?.y));
+      const hasNamedGuess = Boolean(extracted.coordinate_system_guess && extracted.coordinate_system_guess !== "unknown");
+      // Same safety net as the Field-to-Finish import above - an "unknown" guess must not fall
+      // through to wgs84 when the raw values are obviously Easting/Northing, or the coordinate
+      // system picker (and eventually the map) ends up treating hundreds-of-thousands-scale
+      // values as degrees.
+      const resolvedCoordSystemGuess = hasNamedGuess
+        ? extracted.coordinate_system_guess!
+        : looksProjectedByMagnitude
+        ? WGS84_NIGERIA_METERS
+        : "";
+      const isProjectedGuess = isProjectedCoordinateSystem(resolvedCoordSystemGuess || "wgs84");
+      if (resolvedCoordSystemGuess) {
+        onCoordinateSystemChange(resolvedCoordSystemGuess);
       }
 
       const plots = extracted.plots && extracted.plots.length > 0 ? extracted.plots : [{ plot_number: null, beacons }];
@@ -387,7 +397,7 @@ function CoordinateInput({
         // existing single-plot import path (below) completely untouched for the common case.
         setAiLayoutPlots(plots);
         setAiLayoutRoads(extracted.roads || []);
-        setAiLayoutCoordSystem(extracted.coordinate_system_guess || "");
+        setAiLayoutCoordSystem(resolvedCoordSystemGuess);
       } else {
         const header = isProjectedGuess ? ["Station", "Easting", "Northing"] : ["Station", "Longitude", "Latitude"];
         const rows: (string | number)[][] = beacons.map((b) => [b.station, b.x, b.y]);
@@ -453,7 +463,7 @@ function CoordinateInput({
   };
 
   const selectAiLayoutPlot = (plot: PlanReaderPlot) => {
-    const isProjectedGuess = PROJECTED_SYSTEM_KEYS.includes(aiLayoutCoordSystem);
+    const isProjectedGuess = isProjectedCoordinateSystem(aiLayoutCoordSystem || "wgs84");
     const header = isProjectedGuess ? ["Station", "Easting", "Northing"] : ["Station", "Longitude", "Latitude"];
     const rows: (string | number)[][] = plot.beacons.map((b) => [b.station, b.x, b.y]);
     setRawFileData([header, ...rows]);
@@ -488,6 +498,14 @@ function CoordinateInput({
       }
       if (parsed.coordinate_system_guess && parsed.coordinate_system_guess !== "unknown") {
         onCoordinateSystemChange(parsed.coordinate_system_guess);
+      } else if (looksLikeProjected(Number(parsed.points[0]?.x), Number(parsed.points[0]?.y))) {
+        // The AI couldn't name a specific system, but the values are clearly not lat/lng (too
+        // large in magnitude) - defaulting to "wgs84" here would feed raw Easting/Northing values
+        // straight into the map as degrees and crash it ("Invalid LngLat latitude value"). Fall
+        // back to Nigeria's auto-UTM system, which resolves the correct zone (31N/32N/33N) per
+        // point from the value itself - a safe default for most Nigerian/African projected data
+        // even without a confident named-system guess.
+        onCoordinateSystemChange(WGS84_NIGERIA_METERS);
       }
 
       const remaining = res.data?.imports_remaining_today;
@@ -502,6 +520,10 @@ function CoordinateInput({
           toast.error(`AI only found ${parsed.points.length} point(s) - at least 3 boundary corners are needed.`);
           return;
         }
+        // ManualPoint.lng/lat store raw values in whatever coordinateSystem is currently selected
+        // (converted to WGS84 centrally at map-render time in SurveyPlan.tsx's mapCoordinates) -
+        // so these stay as the AI's raw x/y, matching onCoordinateSystemChange above which already
+        // switched the plan's coordinate system to the AI's detected guess.
         const boundaryPoints: ManualPoint[] = parsed.points.map((point, index) => ({
           station: String(point.point_number || String.fromCharCode(65 + index)).trim(),
           lng: Number(point.x),
