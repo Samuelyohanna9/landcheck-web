@@ -5941,6 +5941,51 @@ select.field-error {
   overflow-wrap: anywhere;
 }
 
+.georef-section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.georef-continue-hint {
+  margin-top: -4px;
+}
+
+/* Guided add-control-point sequence status (replaces the old add-point menu) */
+.georef-placement-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--geo-space-2, 8px);
+}
+
+.georef-placement-track {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--geo-text-muted);
+}
+
+.georef-placement-track span {
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--geo-border);
+  background: var(--geo-surface-2);
+  white-space: nowrap;
+}
+
+.georef-placement-track span.is-done {
+  border-color: var(--geo-accent);
+  color: var(--geo-accent);
+}
+
+.georef-placement-track span.is-active {
+  border-color: var(--geo-accent);
+  background: var(--geo-accent);
+  color: var(--geo-accent-ink);
+}
+
 .geo-tool-group {
   display: flex;
   flex-direction: column;
@@ -6536,6 +6581,51 @@ select.field-error {
 .geo-status-item--snap em,
 .geo-status-item--snap {
   color: var(--geo-text-muted);
+}
+
+/* ---------- Export step - shares the shell above, own small additions ---------- */
+
+.georef-workspace-redesign.export-panel .georef-workspace-grid {
+  grid-template-columns: 320px minmax(0, 1fr);
+}
+
+/* Export summary reads as a label/value list, not a wrapping inline strip like the canvas
+   status bar - one row per line, value right-aligned. */
+.geo-status-bar--stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--geo-space-2);
+}
+
+.geo-status-bar--stacked .geo-status-item {
+  justify-content: space-between;
+}
+
+.geo-canvas-wrap--scroll {
+  overflow: auto;
+}
+
+.georef-validation-row {
+  min-height: 0;
+  padding: var(--geo-space-2) var(--geo-space-3);
+  cursor: default;
+}
+
+.geo-section--handoff {
+  padding-top: var(--geo-space-3);
+  border-top: 1px solid var(--geo-border);
+}
+
+.geo-section--handoff .georef-export-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--geo-text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.geo-section--handoff .georef-export-list li + li {
+  margin-top: 0.3rem;
 }
 
 /* ---------- Right column: map validation ---------- */
