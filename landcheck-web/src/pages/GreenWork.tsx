@@ -8322,7 +8322,10 @@ export default function GreenWork() {
     setTreeHealthChecking(true);
     const loadingId = toast.loading("AI is reading tree health from the photo...");
     try {
-      const res = await api.post(`/green/trees/${inspectedTree.id}/health-check`, {});
+      // Backend retries up to ~91s worst case (2 attempts x 45s read timeout) before giving up -
+      // the default client timeout (30s) is too short and would give up before the backend's own
+      // actual result (success or clean failure) comes back.
+      const res = await api.post(`/green/trees/${inspectedTree.id}/health-check`, {}, { timeout: 120000 });
       setTreeHealthResult(res.data);
       setTreeHealthQuota({ used: res.data?.checks_used_today ?? 0, remaining: res.data?.checks_remaining_today ?? 0 });
       toast.success("Tree health check complete", { id: loadingId });
@@ -8495,7 +8498,9 @@ export default function GreenWork() {
     setCsrNarrativeGenerating(true);
     const loadingId = toast.loading("AI is drafting the board summary...");
     try {
-      const res = await api.post(`/green/projects/${activeProjectId}/impact-narrative`, {});
+      // See the matching comment on the tree-health-check call above - must exceed the backend's
+      // ~91s worst-case retry budget rather than the client's 30s default.
+      const res = await api.post(`/green/projects/${activeProjectId}/impact-narrative`, {}, { timeout: 120000 });
       setCsrImpactNarrative(String(res.data?.narrative || ""));
       setCsrNarrativeQuota({ used: res.data?.reads_used_today ?? 0, remaining: res.data?.reads_remaining_today ?? 0 });
       toast.success("Draft ready - review and edit before exporting.", { id: loadingId });
