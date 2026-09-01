@@ -376,6 +376,18 @@ function SurveyPlanGeoreferenceSetupStep({
     setPlacementStage(null);
   };
 
+  // "Add manually" adds a blank point and opens its edit form directly (typed pixel + ground X/Y)
+  // instead of waiting for a raster/map click - the point doesn't exist yet at the moment this
+  // fires, so pendingManualEntryRef defers opening the editor until the effect below sees
+  // `activePoint` actually reflect the newly added point (same fallback-to-last-point behavior
+  // the raster/map click flow already relies on).
+  const pendingManualEntryRef = useRef(false);
+
+  const beginManualControlPoint = () => {
+    pendingManualEntryRef.current = true;
+    onAddControlPoint();
+  };
+
   const startEditPoint = (point: (typeof controlPoints)[number]) => {
     setRowMenuOpenId(null);
     selectControlPoint(point.id);
@@ -389,7 +401,26 @@ function SurveyPlanGeoreferenceSetupStep({
     });
   };
 
-  const cancelEdit = () => setEditDraft(null);
+  useEffect(() => {
+    if (!pendingManualEntryRef.current || !activePoint) return;
+    pendingManualEntryRef.current = false;
+    startEditPoint(activePoint);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePoint?.id]);
+
+  // Guards against orphaning a blank point: cancelling right after "Add manually" (before typing
+  // anything) removes the just-created incomplete point instead of leaving it stuck at "Needs
+  // input" forever. Never touches a real, already-matched point - pointIsReady is already true
+  // for those, so the guard only ever fires on a genuinely incomplete one.
+  const cancelEdit = () => {
+    if (editDraft) {
+      const point = controlPoints.find((item) => item.id === editDraft.pointId);
+      if (point && !pointIsReady(point)) {
+        onRemoveControlPoint(point.id);
+      }
+    }
+    setEditDraft(null);
+  };
 
   const saveEdit = () => {
     if (!editDraft) return;
@@ -1113,6 +1144,9 @@ function SurveyPlanGeoreferenceSetupStep({
                           Match on map
                         </button>
                       </div>
+                      <button type="button" className="geo-btn geo-btn-outline geo-btn-block" onClick={beginManualControlPoint}>
+                        Add manually
+                      </button>
                     </div>
                   )}
                 </div>
