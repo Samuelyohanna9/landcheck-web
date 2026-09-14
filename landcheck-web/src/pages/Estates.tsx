@@ -1104,6 +1104,9 @@ export default function Estates() {
           </button>
         </div>
         <div className="edash-map-canvas-wrap">
+          <div style={{ position: "absolute", top: 8, left: 8, zIndex: 50, background: "#111827", color: "#fff", fontSize: 11, lineHeight: 1.5, padding: "8px 12px", borderRadius: 8, fontFamily: "monospace", maxWidth: 420, whiteSpace: "pre-wrap" }}>
+            {`DEBUG token=${Boolean(MAPBOX_TOKEN)} mapReady=${mapReady} mapError="${mapError}" styleGen=${styleGeneration} plots=${mapPlotGeojson.features.length} boundary=${Boolean(mapBoundary)} mapRefSet=${Boolean(mapRef.current)}`}
+          </div>
           {MAPBOX_TOKEN && !mapError ? (
             <>
               {!mapReady && <EstatePlotMapFallback features={mapPlotGeojson.features} boundary={mapBoundary} message="Loading the interactive map..." onSelect={(plotId) => {
