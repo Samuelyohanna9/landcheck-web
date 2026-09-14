@@ -5,6 +5,7 @@ import { api, extractApiErrorMessage } from "../api/client";
 import { money } from "../components/estates/FinancialComponents";
 import CoordinateInput from "../components/CoordinateInput";
 import EstateLayoutImport, { type EstateLayoutMethod } from "../components/estates/EstateLayoutImport";
+import EstateLayoutDesigner from "../components/estates/EstateLayoutDesigner";
 import MapViewEnhanced from "../components/MapViewEnhanced";
 import { loadMapboxGl, loadMapboxGlCss, MAPBOX_TOKEN } from "../utils/mapboxLoader";
 import { toWGS84 } from "../utils/coordinateConverter";
@@ -93,6 +94,9 @@ export default function Estates() {
   const [importSourceCrs, setImportSourceCrs] = useState("EPSG:4326");
   const [layoutUploadBusy, setLayoutUploadBusy] = useState(false);
   const [layoutMessage, setLayoutMessage] = useState("");
+  const [layoutProposal, setLayoutProposal] = useState<any>(null);
+  const [layoutDesignerBusy, setLayoutDesignerBusy] = useState(false);
+  const [layoutDesignerMessage, setLayoutDesignerMessage] = useState("");
   const [message, setMessage] = useState("Loading estates...");
   const [allocations, setAllocations] = useState<any[]>([]);
   const [plots, setPlots] = useState<any[]>([]);
@@ -296,6 +300,34 @@ export default function Estates() {
     else if (method === "dxf") setDxfFile(file);
     else setScannedLayoutFile(file);
   };
+  const generateLayoutProposal = async (criteria: Record<string, unknown>) => {
+    if (!estateId) return;
+    setLayoutDesignerBusy(true);
+    setLayoutDesignerMessage("");
+    try {
+      const response = await api.post(`/estates/${estateId}/layout-proposals`, criteria);
+      setLayoutProposal(response.data);
+      setLayoutDesignerMessage("Draft layout created. Review it before adding plots to the Estate.");
+    } catch (error) {
+      setLayoutDesignerMessage(await extractApiErrorMessage(error, "The draft layout could not be created."));
+    } finally {
+      setLayoutDesignerBusy(false);
+    }
+  };
+  const decideLayoutProposal = async (proposalId: number, status: "approved" | "rejected") => {
+    setLayoutDesignerBusy(true);
+    setLayoutDesignerMessage("");
+    try {
+      await api.post(`/estates/layout-proposals/${proposalId}/decision`, { status });
+      setLayoutDesignerMessage(status === "approved" ? "The plots and shared spaces were added to the Estate map." : "Draft layout discarded.");
+      if (status === "approved") window.location.reload();
+      else setLayoutProposal((current: any) => current ? { ...current, status } : current);
+    } catch (error) {
+      setLayoutDesignerMessage(await extractApiErrorMessage(error, "The layout decision could not be saved."));
+    } finally {
+      setLayoutDesignerBusy(false);
+    }
+  };
   const selectLayerForEdit = (id: string) => {
     setSelectedLayerId(id);
     const feature = (layerGeojson.features || []).find((item: any) => String(item.id) === id);
@@ -337,6 +369,7 @@ export default function Estates() {
     api.get(`/estates/${estateId}/plots.geojson`).then((response) => setPlotGeojson(response.data)).catch(() => setPlotGeojson({ type: "FeatureCollection", features: [] }));
     api.get(`/estates/${estateId}/layers.geojson`).then((response) => setLayerGeojson(response.data)).catch(() => setLayerGeojson({ type: "FeatureCollection", features: [] }));
     api.get(`/estates/${estateId}/import-reviews`).then((response) => setImportReviews(response.data || [])).catch(() => setImportReviews([]));
+    api.get(`/estates/${estateId}/layout-proposals`).then((response) => setLayoutProposal((response.data || [])[0] || null)).catch(() => setLayoutProposal(null));
     api.get(`/estates/${estateId}/hazards`).then((response) => setHazardDashboard(response.data)).catch(() => setHazardDashboard(null));
     api.get(`/estates/${estateId}/blocks`).then((response) => setBlocks(response.data || [])).catch(() => setBlocks([]));
     Promise.all([api.get(`/estates/${estateId}/quality-check`), api.get(`/estates/${estateId}/activity`), api.get(`/estates/${estateId}/dashboard`)]).then(([qc, events, metrics]) => { setQuality(qc.data); setActivity(events.data || []); setDashboard(metrics.data); }).catch(() => { setQuality(null); setActivity([]); setDashboard(null); });
@@ -457,6 +490,7 @@ export default function Estates() {
     <section className="estates-toolbar"><strong>{estateSession?.user.organization_name || "My estates"}</strong><div><Link to="/estates/workspace">Estate workspace</Link><button type="button" onClick={() => { clearEstateAuthSession(); navigate("/estates", { replace: true }); }}>Sign out</button></div></section>
     {!estateId && organizations.length > 0 && <section className="estate-create estate-setup"><div><p className="workflow-eyebrow">Step 1 · Create Estate</p><h2>Start the estate register</h2><p>Set the project context first. You can add the boundary and approved parcels through the layout review workflow.</p></div><select value={newEstateOrg} onChange={(event) => setNewEstateOrg(event.target.value)}><option value="">Organization</option>{organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}</select><input value={newEstateName} onChange={(event) => setNewEstateName(event.target.value)} placeholder="Estate name" /><input value={newEstateLocation} onChange={(event) => setNewEstateLocation(event.target.value)} placeholder="Location" /><input value={newEstateCrs} onChange={(event) => setNewEstateCrs(event.target.value)} placeholder="Coordinate system, e.g. EPSG:4326" /><input value={newEstateDatum} onChange={(event) => setNewEstateDatum(event.target.value)} placeholder="Datum (optional)" /><input value={newEstateProjectReference} onChange={(event) => setNewEstateProjectReference(event.target.value)} placeholder="Project reference (optional)" /><input value={newEstateProjectOwner} onChange={(event) => setNewEstateProjectOwner(event.target.value)} placeholder="Developer / owner (optional)" /><textarea value={newEstateOwnershipDetails} onChange={(event) => setNewEstateOwnershipDetails(event.target.value)} placeholder="Ownership or project details (optional)" /><textarea value={newEstateBoundaryCoordinates} onChange={(event) => setNewEstateBoundaryCoordinates(event.target.value)} placeholder="Estate boundary: longitude, latitude per line (optional)" /><button type="button" onClick={() => void createEstate()}>Create Estate</button></section>}
     {estateId && <EstateLayoutImport reviews={importReviews} files={{ csv: csvFile, geojson: geojsonFile, dxf: dxfFile, "scanned-layout": scannedLayoutFile }} onFileChange={handleLayoutFileChange} onUpload={(method) => void uploadLayout(method)} onDecision={(reviewId, status) => void decideImportReview(reviewId, status)} message={layoutMessage} busy={layoutUploadBusy} />}
+    {estateId && <EstateLayoutDesigner boundaryPresent={Boolean(estateDetail?.boundary)} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} />}
     {estateId && <section className="estate-map-panel"><div><p className="workflow-eyebrow">Step 4 · Manage plot inventory</p><h2>Estate parcel map</h2><p>Every approved plot is visible here: green available, amber reserved, red allocated/sold, slate on hold.</p></div><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All plot statuses</option><option value="available">Available</option><option value="reserved">Reserved</option><option value="allocated">Allocated / sold</option><option value="on_hold">On hold</option></select>{MAPBOX_TOKEN ? <div ref={mapContainer} className="estate-map" /> : <div className="estate-map-fallback">Map preview is unavailable right now. {visiblePlotGeojson.features.length} plot geometries are ready in this Estate.</div>}</section>}
     {estateId && dashboard && <section className="estate-metrics"><strong>{dashboard.total_plots} total plots</strong><span>{dashboard.statuses.available || 0} available</span><span>{dashboard.statuses.reserved || 0} reserved</span><span>{dashboard.statuses.allocated || 0} allocated / sold</span><span>{dashboard.statuses.on_hold || 0} on hold</span><span>{dashboard.awaiting_survey} awaiting survey</span><span>{dashboard.survey_completed || 0} Survey completed</span><span>{dashboard.awaiting_staking} awaiting staking</span><span>{dashboard.development.site_cleared || 0} site cleared</span><span>{dashboard.development.foundation || 0} foundation</span><span>{dashboard.development.under_construction || 0} under construction</span><span>{dashboard.development.developed || 0} developed</span><span>Collected {money(dashboard.financial.confirmed_collections)}</span><span>Outstanding {money(dashboard.financial.outstanding_balance)}</span></section>}
     {estateId && estateDetail && <section className="estate-settings"><div><p className="workflow-eyebrow">Operating rule</p><h2>Survey eligibility</h2><p>Prepare Survey when the selected percentage of the agreed price has been confirmed. Set 0% to allow preparation immediately.</p></div><label><span>Minimum confirmed payment</span><input type="number" min="0" max="100" step="1" value={surveyRulePercentage} onChange={(event) => setSurveyRulePercentage(event.target.value)} /></label><label className="estate-checkbox"><input type="checkbox" checked={surveyRuleEnabled} onChange={(event) => setSurveyRuleEnabled(event.target.checked)} /> Enforce this rule</label><button type="button" onClick={() => void saveSurveyRule()}>Save rule</button></section>}
