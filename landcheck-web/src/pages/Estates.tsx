@@ -11,6 +11,7 @@ import { loadMapboxGl, loadMapboxGlCss, MAPBOX_TOKEN } from "../utils/mapboxLoad
 import { toWGS84 } from "../utils/coordinateConverter";
 import { checkPolygonClosure } from "../utils/surveyGeometry";
 import EstateIcon from "../components/estates/EstateIcon";
+import EstateModal from "../components/estates/EstateModal";
 import EstateShell from "../components/estates/EstateShell";
 import "../styles/estates.css";
 import "../styles/estate-dashboard.css";
@@ -1448,20 +1449,9 @@ export default function Estates() {
 
   function renderToolModal(title: string, subtitle: string, content: ReactNode) {
     return (
-      <div className="edash-modal-overlay" onClick={() => setActiveTool(null)}>
-        <div className="edash-modal" onClick={(event) => event.stopPropagation()}>
-          <div className="edash-modal-head">
-            <div>
-              <h2>{title}</h2>
-              <p>{subtitle}</p>
-            </div>
-            <button type="button" className="edash-modal-close" onClick={() => setActiveTool(null)} aria-label="Close">
-              <EstateIcon name="close" />
-            </button>
-          </div>
-          <div className="edash-modal-body">{content}</div>
-        </div>
-      </div>
+      <EstateModal title={title} subtitle={subtitle} onClose={() => setActiveTool(null)}>
+        {content}
+      </EstateModal>
     );
   }
 
