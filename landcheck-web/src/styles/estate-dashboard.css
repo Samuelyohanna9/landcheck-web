@@ -851,29 +851,6 @@
 .edash-risk-icon svg { width: 15px; height: 15px; }
 .edash-risk-item span { flex: 1; font-size: 0.82rem; font-weight: 700; color: var(--edash-ink); }
 
-/* ─── Quick actions ─── */
-.edash-quick-actions { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
-
-.edash-quick-action-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 13px 14px;
-  border: 1px solid var(--edash-border);
-  border-radius: var(--edash-radius-md);
-  background: #fff;
-  color: var(--edash-ink);
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-align: left;
-  cursor: pointer;
-  min-width: 0;
-}
-
-.edash-quick-action-btn:hover { border-color: var(--edash-brand); background: var(--edash-brand-tint); color: var(--edash-brand-dark); }
-.edash-quick-action-btn svg { width: 17px; height: 17px; flex-shrink: 0; color: var(--edash-brand); }
-.edash-quick-action-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
 /* ─── Footer ─── */
 .edash-footer {
   display: flex;
@@ -916,7 +893,6 @@
 /* ─── Responsive ─── */
 @media (max-width: 1320px) {
   .edash-stats-row, .edash-stats-row--five { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .edash-quick-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (max-width: 1180px) {
@@ -945,7 +921,6 @@
   .edash-stats-row, .edash-stats-row--five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .edash-bottom-row { grid-template-columns: 1fr; }
   .edash-bottom-row > :last-child { grid-column: auto; }
-  .edash-quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .edash-overview-grid, .edash-overview-grid--3 { grid-template-columns: 1fr 1fr; }
   .edash-search { display: none; }
   .edash-user-meta { display: none; }
@@ -1226,4 +1201,94 @@
   color: var(--edash-ink);
   font-size: 0.74rem;
   font-weight: 700;
+}
+
+/* ─── Compact tools toolbar (replaces the old full-width Quick Actions card) ─── */
+.edash-tools-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+.edash-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--edash-border);
+  border-radius: 999px;
+  background: var(--edash-surface);
+  color: var(--edash-ink);
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.edash-tool-btn svg { width: 14px; height: 14px; color: var(--edash-brand); flex-shrink: 0; }
+.edash-tool-btn:hover { border-color: var(--edash-brand); background: var(--edash-brand-tint); color: var(--edash-brand-dark); }
+.edash-tool-btn:hover svg { color: var(--edash-brand-dark); }
+
+/* ─── Modal overlay for on-demand tools (import, create plot, layout, blocks, layers, QC) ─── */
+.edash-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 5vh 20px;
+  overflow-y: auto;
+  background: rgba(16, 24, 39, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.edash-modal {
+  width: 100%;
+  max-width: 760px;
+  border-radius: var(--edash-radius-lg);
+  background: var(--edash-surface);
+  box-shadow: var(--edash-shadow-pop);
+  overflow: hidden;
+}
+
+.edash-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--edash-border);
+}
+
+.edash-modal-head h2 { margin: 0; font-size: 1rem; font-weight: 800; color: var(--edash-ink); }
+.edash-modal-head p { margin: 2px 0 0; color: var(--edash-muted); font-size: 0.8rem; }
+
+.edash-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--edash-border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--edash-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.edash-modal-close:hover { color: var(--edash-ink); border-color: var(--edash-faint); }
+.edash-modal-close svg { width: 14px; height: 14px; }
+
+.edash-modal-body { max-height: 76vh; overflow-y: auto; padding: 20px; }
+.edash-modal-body > .edash-card { box-shadow: none; border: none; }
+.edash-modal-body > .edash-card > .edash-card-inner { padding: 0; }
+
+@media (max-width: 640px) {
+  .edash-modal-overlay { padding: 0; align-items: stretch; }
+  .edash-modal { max-width: none; border-radius: 0; min-height: 100vh; }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { clearEstateAuthSession } from "../auth/estateAuth";
 import { api, extractApiErrorMessage } from "../api/client";
@@ -101,7 +101,6 @@ export default function Estates() {
   const [newEstateBoundaryCoordinates, setNewEstateBoundaryCoordinates] = useState("");
   const [newEstateOrg, setNewEstateOrg] = useState("");
   const [plotNumber, setPlotNumber] = useState("");
-  const [plotCoordinates, setPlotCoordinates] = useState("");
   const [plotInputPoints, setPlotInputPoints] = useState<EstateCoordinatePoint[]>([]);
   const [plotInputCoordinateSystem, setPlotInputCoordinateSystem] = useState("wgs84");
   const [customerName, setCustomerName] = useState("");
@@ -160,6 +159,7 @@ export default function Estates() {
   const [drawerTab, setDrawerTab] = useState<"overview" | "customer" | "survey" | "staking" | "documents" | "hazards" | "timeline">("overview");
   const [editingDevelopment, setEditingDevelopment] = useState(false);
   const [plotContextMenu, setPlotContextMenu] = useState<{ x: number; y: number; plotId: number } | null>(null);
+  const [activeTool, setActiveTool] = useState<"import" | "create-plot" | "layout" | "blocks" | "layers" | "qc" | null>(null);
   const [plotDocumentFile, setPlotDocumentFile] = useState<File | null>(null);
   const [plotDocumentBusy, setPlotDocumentBusy] = useState(false);
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -206,13 +206,6 @@ export default function Estates() {
     if (!estateId) return;
     try { const response = await api.post(`/estates/${estateId}/approve-map`); setDashboard((current: any) => current ? { ...current, estate: { ...current.estate, status: response.data.status } } : current); setWorkflowMessage("Estate map approved and published as the operational plot register."); }
     catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Resolve the geometry issues before publishing the Estate map.")); }
-  };
-  const createPlot = async () => {
-    if (!estateId || !plotNumber.trim()) { setMessage("Enter a plot number and at least three coordinate rows."); return; }
-    const ring = plotCoordinates.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => line.split(/[\s,]+/).map(Number)).filter((point) => point.length >= 2 && point.every(Number.isFinite)).map(([lng, lat]) => [lng, lat]);
-    if (ring.length < 3) { setMessage("Use one longitude,latitude coordinate per line (at least three rows)."); return; }
-    try { await api.post(`/estates/${estateId}/plots`, { plot_number: plotNumber.trim(), geometry: { type: "Polygon", coordinates: [[...ring, ring[0]]] }, geometry_status: "approved" }); window.location.reload(); }
-    catch (error) { setMessage(await extractApiErrorMessage(error, "Plot could not be created.")); }
   };
   const updatePlotInputPoint = (index: number, field: string, value: string | number | boolean) => {
     setPlotInputPoints((current) => current.map((point, pointIndex) => pointIndex === index ? { ...point, [field]: value } : point));
@@ -1425,29 +1418,177 @@ export default function Estates() {
     );
   }
 
-  function renderQuickActions() {
-    const actions: Array<{ label: string; icon: import("../components/estates/EstateIcon").EstateIconName; to: string }> = [
-      { label: "Import Land Data", icon: "upload", to: `/estates/${estateId}/map#layout-import` },
-      { label: "Create Plot", icon: "plus", to: `/estates/${estateId}/map#plot-register` },
-      { label: "Run Geometry Check", icon: "check-circle", to: `/estates/${estateId}/map#estate-qc` },
-      { label: "Generate Report", icon: "reports", to: `/estates/${estateId}/reports` },
-      { label: "Estate Settings", icon: "settings", to: `/estates/${estateId}/settings` },
+  function renderToolsBar() {
+    type ToolKey = "import" | "create-plot" | "layout" | "blocks" | "layers" | "qc";
+    const tools: Array<{ key: ToolKey; label: string; icon: import("../components/estates/EstateIcon").EstateIconName }> = [
+      { key: "import", label: "Import Land Data", icon: "upload" },
+      { key: "create-plot", label: "Create Plot", icon: "plus" },
+      { key: "layout", label: "Design Layout", icon: "map" },
+      { key: "blocks", label: "Blocks", icon: "grid" },
+      { key: "layers", label: "Map Layers", icon: "layers" },
+      { key: "qc", label: "Geometry Check", icon: "check-circle" },
     ];
     return (
-      <div className="edash-card">
-        <div className="edash-card-inner">
-          <div className="edash-card-head"><h3 className="edash-card-title">Quick Actions</h3></div>
-          <div className="edash-quick-actions">
-            {actions.map((action) => (
-              <Link key={action.label} className="edash-quick-action-btn" to={action.to}>
-                <EstateIcon name={action.icon} />
-                <span>{action.label}</span>
-              </Link>
-            ))}
+      <div className="edash-tools-bar">
+        {tools.map((tool) => (
+          <button key={tool.key} type="button" className="edash-tool-btn" onClick={() => setActiveTool(tool.key)}>
+            <EstateIcon name={tool.icon} />
+            {tool.label}
+          </button>
+        ))}
+        <Link className="edash-tool-btn" to={`/estates/${estateId}/reports`}>
+          <EstateIcon name="reports" /> Generate Report
+        </Link>
+        <Link className="edash-tool-btn" to={`/estates/${estateId}/settings`}>
+          <EstateIcon name="settings" /> Estate Settings
+        </Link>
+      </div>
+    );
+  }
+
+  function renderToolModal(title: string, subtitle: string, content: ReactNode) {
+    return (
+      <div className="edash-modal-overlay" onClick={() => setActiveTool(null)}>
+        <div className="edash-modal" onClick={(event) => event.stopPropagation()}>
+          <div className="edash-modal-head">
+            <div>
+              <h2>{title}</h2>
+              <p>{subtitle}</p>
+            </div>
+            <button type="button" className="edash-modal-close" onClick={() => setActiveTool(null)} aria-label="Close">
+              <EstateIcon name="close" />
+            </button>
           </div>
+          <div className="edash-modal-body">{content}</div>
         </div>
       </div>
     );
+  }
+
+  function renderActiveToolModal() {
+    if (activeTool === "import") {
+      return renderToolModal("Import land data", "Pick the format you already have - we'll show a preview before adding plots.", (
+        <EstateLayoutImport
+          reviews={importReviews}
+          files={{ csv: csvFile, geojson: geojsonFile, dxf: dxfFile, "scanned-layout": scannedLayoutFile }}
+          onFileChange={handleLayoutFileChange}
+          onUpload={(method) => void uploadLayout(method)}
+          onDecision={(reviewId, status) => void decideImportReview(reviewId, status)}
+          onStartGeoreference={(file) => void startGeoreferenceImport(file)}
+          onOpenGeoreference={openGeoreferenceTool}
+          onImportFromGeoreference={(reviewId) => void importPlotsFromGeoreference(reviewId)}
+          message={layoutMessage}
+          busy={layoutUploadBusy}
+        />
+      ));
+    }
+    if (activeTool === "create-plot") {
+      return renderToolModal("Create a plot from coordinates", "Enter points manually or import a spreadsheet - the boundary appears on the map immediately.", (
+        <>
+          <label className="edash-field" style={{ marginBottom: 12, maxWidth: 260 }}><span>Plot number</span><input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="e.g. B-024" /></label>
+          <div className="edash-content-row edash-content-row--split">
+            <CoordinateInput title="Add plot boundary" subtitle="Choose a spreadsheet or enter the points manually." sidebar={<div className="edash-field-note"><strong style={{ color: "var(--edash-ink)" }}>Plot boundary</strong><br />Use the same coordinate workflow as Survey.</div>} points={plotInputPoints} onUpdatePoint={updatePlotInputPoint} onRemovePoint={removePlotInputPoint} onAddPoint={addPlotInputPoint} onBulkUpload={importPlotInputPoints} disabled={false} coordinateSystem={plotInputCoordinateSystem} onCoordinateSystemChange={setPlotInputCoordinateSystem} onReorderPoints={reorderPlotInputPoints} onClearAllPoints={() => setPlotInputPoints([])} />
+            <div>
+              <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.84rem" }}>Map preview</h3></div>
+              <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>Edit the boundary on the map or use the table.</p>
+              {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={plotInputMapPoints} onCoordinatesDrawn={handlePlotCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <p className="edash-tab-empty">Map preview is unavailable right now. You can still review the coordinates above.</p>}
+            </div>
+          </div>
+          {workflowMessage && <p className="edash-tab-empty" style={{ textAlign: "left", padding: "8px 0" }} role="status">{workflowMessage}</p>}
+          <button type="button" className="edash-btn-primary" style={{ marginTop: 12 }} disabled={plotInputMapPoints.length < 3 || plotInputClosure === "self-intersecting"} onClick={() => void createPlotFromInput()}>{plotInputClosure === "self-intersecting" ? "Fix boundary first" : "Create plot"}</button>
+        </>
+      ));
+    }
+    if (activeTool === "layout") {
+      return renderToolModal("Design your layout", "Turn the Estate boundary into plots automatically, or split it evenly.", (
+        <>
+          {estateDetail?.boundary && plots.length === 0 && (
+            <div className="edash-info-card" style={{ flexDirection: "column", marginBottom: 16 }}>
+              <div className="edash-info-card-head"><span className="edash-status-row-title">Split into equal plots</span></div>
+              <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>Fast: divide the whole boundary evenly. Best for uniform lots with no roads or open space.</p>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input type="number" min="2" max="200" value={subdivisionCount} onChange={(event) => setSubdivisionCount(event.target.value)} style={{ width: 80, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
+                <button type="button" className="edash-btn-primary" disabled={subdivisionBusy} onClick={() => void splitBoundaryIntoPlots()}>{subdivisionBusy ? "Creating..." : "Split boundary"}</button>
+              </div>
+            </div>
+          )}
+          <EstateLayoutDesigner boundaryPresent={Boolean(estateDetail?.boundary)} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} />
+        </>
+      ));
+    }
+    if (activeTool === "blocks") {
+      return renderToolModal("Blocks", "Define block labels before assigning imported or manually created plots.", (
+        <>
+          <div className="edash-form-row" style={{ marginBottom: 12 }}>
+            <label className="edash-field"><span>Block label</span><input value={blockLabel} onChange={(event) => setBlockLabel(event.target.value)} placeholder="e.g. B" /></label>
+            <label className="edash-field"><span>Block name</span><input value={blockName} onChange={(event) => setBlockName(event.target.value)} placeholder="Optional" /></label>
+            <button type="button" className="edash-btn-primary" onClick={() => void createBlock()}>Add block</button>
+          </div>
+          <div className="edash-chip-row">
+            {blocks.length ? blocks.map((block) => <span key={block.id} className="edash-chip">{block.label}{block.name ? ` - ${block.name}` : ""}</span>) : <p className="edash-tab-empty" style={{ padding: 0 }}>No blocks yet.</p>}
+          </div>
+        </>
+      ));
+    }
+    if (activeTool === "layers") {
+      return renderToolModal("Map layers", "Add or correct roads, drainage, open space and infrastructure.", (
+        <>
+          <div className="edash-form-grid" style={{ marginBottom: 20 }}>
+            <div className="edash-form-row">
+              <label className="edash-field"><span>Layer type</span><select value={layerType} onChange={(event) => setLayerType(event.target.value)}><option value="road">Road</option><option value="drainage">Drainage</option><option value="open_space">Open space</option><option value="infrastructure">Infrastructure</option></select></label>
+              <label className="edash-field"><span>Layer name</span><input value={layerName} onChange={(event) => setLayerName(event.target.value)} placeholder="Optional" /></label>
+            </div>
+            <label className="edash-field"><span>Coordinates</span><textarea value={layerCoordinates} onChange={(event) => setLayerCoordinates(event.target.value)} placeholder="longitude, latitude per line" /></label>
+            <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => void createLayer()}>Add layer</button>
+          </div>
+          {layerGeojson.features.length > 0 && (
+            <div className="edash-form-grid">
+              <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.86rem" }}>Spatial layer editor</h3></div>
+              <label className="edash-field"><span>Layer</span>
+                <select value={selectedLayerId} onChange={(event) => selectLayerForEdit(event.target.value)}>
+                  <option value="">Select a layer</option>
+                  {layerGeojson.features.map((feature: any) => <option key={feature.id} value={feature.id}>{feature.properties.name || feature.properties.type} #{feature.id}</option>)}
+                </select>
+              </label>
+              {selectedLayerId && (
+                <>
+                  <label className="edash-field"><span>Coordinates</span><textarea value={layerEditCoordinates} onChange={(event) => setLayerEditCoordinates(event.target.value)} /></label>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button type="button" className="edash-btn-primary" onClick={() => void updateLayer()}>Save geometry</button>
+                    <button type="button" className="edash-btn-outline" onClick={() => void archiveLayer()}>Archive layer</button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </>
+      ));
+    }
+    if (activeTool === "qc") {
+      return renderToolModal("Geometry check", "Review issues before you approve and publish the Estate map.", quality ? (
+        <>
+          <div className="edash-card-head">
+            <h3 className="edash-card-title">{quality.review_required ? "Review required" : "Geometry ready"}</h3>
+            <span className={`edash-status-pill tone-${quality.review_required ? "warn" : "good"}`}>{quality.plot_count} plots checked</span>
+          </div>
+          <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>{quality.issues.length} issue(s) detected.</p>
+          {quality.issues.length > 0 && (
+            <div className="edash-issue-list" style={{ marginBottom: 12 }}>
+              <ul>{quality.issues.slice(0, 8).map((issue: any, index: number) => <li key={`${issue.code}-${index}`}>{issue.message}</li>)}</ul>
+            </div>
+          )}
+          {dashboard && (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <span className="edash-status-row-desc"><strong style={{ color: "var(--edash-ink)" }}>Register status:</strong> {dashboard.estate.status.replaceAll("_", " ")}</span>
+              <button type="button" className="edash-btn-primary" disabled={dashboard.estate.status === "active" || quality.review_required || quality.plot_count === 0} onClick={() => void approveEstateMap()}>
+                {dashboard.estate.status === "active" ? "Estate map published" : "Approve and publish map"}
+              </button>
+            </div>
+          )}
+        </>
+      ) : <p className="edash-tab-empty">Loading...</p>);
+    }
+    return null;
   }
 
   function renderFooter() {
@@ -1545,6 +1686,7 @@ export default function Estates() {
       onSearchChange={setPlotSearch}
       recentActivity={activity}
     >
+      {isMapView && renderToolsBar()}
       {renderStatsRow()}
       {isMapView ? (
         <div className="edash-content-row">
@@ -1554,163 +1696,8 @@ export default function Estates() {
         </div>
       ) : null}
       {renderBottomRow()}
-      {renderQuickActions()}
       {renderFooter()}
-
-      {isMapView && (
-        <div className="edash-legacy-tools">
-          <div className="edash-legacy-tools-head">
-            <h2>Plot &amp; layout tools</h2>
-            <p>Create plots, import a layout, manage blocks and spatial layers, and publish the approved Estate map.</p>
-          </div>
-          <div className="edash-card" id="plot-register">
-            <div className="edash-card-inner">
-              <div className="edash-card-head">
-                <h3 className="edash-card-title">Create a plot from coordinates</h3>
-              </div>
-              <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>Import a CSV or Excel file or enter points manually. The boundary appears on the map immediately, where you can move points before adding it to the plot register.</p>
-              <label className="edash-field" style={{ marginBottom: 12, maxWidth: 260 }}><span>Plot number</span><input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="e.g. B-024" /></label>
-              <div className="edash-content-row edash-content-row--split">
-                <CoordinateInput title="Add plot boundary" subtitle="Choose a spreadsheet or enter the points manually." sidebar={<div className="edash-field-note"><strong style={{ color: "var(--edash-ink)" }}>Plot boundary</strong><br />Use the same coordinate workflow as Survey.</div>} points={plotInputPoints} onUpdatePoint={updatePlotInputPoint} onRemovePoint={removePlotInputPoint} onAddPoint={addPlotInputPoint} onBulkUpload={importPlotInputPoints} disabled={false} coordinateSystem={plotInputCoordinateSystem} onCoordinateSystemChange={setPlotInputCoordinateSystem} onReorderPoints={reorderPlotInputPoints} onClearAllPoints={() => setPlotInputPoints([])} />
-                <div>
-                  <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.84rem" }}>Map preview</h3></div>
-                  <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>Edit the boundary on the map or use the table.</p>
-                  {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={plotInputMapPoints} onCoordinatesDrawn={handlePlotCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <p className="edash-tab-empty">Map preview is unavailable right now. You can still review the coordinates above.</p>}
-                </div>
-              </div>
-              {workflowMessage && <p className="edash-tab-empty" style={{ textAlign: "left", padding: "8px 0" }} role="status">{workflowMessage}</p>}
-              <button type="button" className="edash-btn-primary" style={{ marginTop: 12 }} disabled={plotInputMapPoints.length < 3 || plotInputClosure === "self-intersecting"} onClick={() => void createPlotFromInput()}>{plotInputClosure === "self-intersecting" ? "Fix boundary first" : "Create plot"}</button>
-            </div>
-          </div>
-          <div id="layout-import">
-            <EstateLayoutImport
-              reviews={importReviews}
-              files={{ csv: csvFile, geojson: geojsonFile, dxf: dxfFile, "scanned-layout": scannedLayoutFile }}
-              onFileChange={handleLayoutFileChange}
-              onUpload={(method) => void uploadLayout(method)}
-              onDecision={(reviewId, status) => void decideImportReview(reviewId, status)}
-              onStartGeoreference={(file) => void startGeoreferenceImport(file)}
-              onOpenGeoreference={openGeoreferenceTool}
-              onImportFromGeoreference={(reviewId) => void importPlotsFromGeoreference(reviewId)}
-              message={layoutMessage}
-              busy={layoutUploadBusy}
-            />
-          </div>
-          {estateDetail?.boundary && plots.length === 0 && (
-            <div className="edash-card" id="boundary-choice">
-              <div className="edash-card-inner">
-                <div className="edash-card-head"><h3 className="edash-card-title">Turn the boundary into plots</h3></div>
-                <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>Your Estate boundary is ready. Choose how to create its plots.</p>
-                <div className="edash-content-row edash-content-row--split">
-                  <div className="edash-info-card" style={{ flexDirection: "column" }}>
-                    <div className="edash-info-card-head"><span className="edash-status-row-title">Split into equal plots</span></div>
-                    <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>Fast: divide the whole boundary evenly. Best for uniform lots with no roads or open space.</p>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      <input type="number" min="2" max="200" value={subdivisionCount} onChange={(event) => setSubdivisionCount(event.target.value)} style={{ width: 80, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
-                      <button type="button" className="edash-btn-primary" disabled={subdivisionBusy} onClick={() => void splitBoundaryIntoPlots()}>{subdivisionBusy ? "Creating..." : "Split boundary"}</button>
-                    </div>
-                  </div>
-                  <div className="edash-info-card" style={{ flexDirection: "column" }}>
-                    <div className="edash-info-card-head"><span className="edash-status-row-title">Design a layout automatically</span></div>
-                    <p className="edash-status-row-desc">Smarter: generates plots, access roads, drainage and open space from your criteria, ready for review below.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          <EstateLayoutDesigner boundaryPresent={Boolean(estateDetail?.boundary)} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} />
-          {quality && (
-            <div className="edash-card" id="estate-qc">
-              <div className="edash-card-inner">
-                <div className="edash-card-head">
-                  <h3 className="edash-card-title">{quality.review_required ? "Review required" : "Geometry ready"}</h3>
-                  <span className={`edash-status-pill tone-${quality.review_required ? "warn" : "good"}`}>{quality.plot_count} plots checked</span>
-                </div>
-                <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>{quality.issues.length} issue(s) detected.</p>
-                {quality.issues.length > 0 && (
-                  <div className="edash-issue-list" style={{ marginBottom: 12 }}>
-                    <ul>
-                      {quality.issues.slice(0, 8).map((issue: any, index: number) => <li key={`${issue.code}-${index}`}>{issue.message}</li>)}
-                    </ul>
-                  </div>
-                )}
-                {dashboard && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                    <span className="edash-status-row-desc"><strong style={{ color: "var(--edash-ink)" }}>Register status:</strong> {dashboard.estate.status.replaceAll("_", " ")}</span>
-                    <button type="button" className="edash-btn-primary" disabled={dashboard.estate.status === "active" || quality.review_required || quality.plot_count === 0} onClick={() => void approveEstateMap()}>
-                      {dashboard.estate.status === "active" ? "Estate map published" : "Approve and publish map"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          <div className="edash-card">
-            <div className="edash-card-inner">
-              <div className="edash-card-head"><h3 className="edash-card-title">Add a parcel</h3></div>
-              <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>Paste one <code>longitude, latitude</code> pair per line. Geometry is checked before saving.</p>
-              <div className="edash-form-grid">
-                <label className="edash-field" style={{ maxWidth: 260 }}><span>Plot number</span><input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="e.g. B-024" /></label>
-                <label className="edash-field"><span>Coordinates</span><textarea value={plotCoordinates} onChange={(event) => setPlotCoordinates(event.target.value)} placeholder="7.1234, 9.1234&#10;7.1238, 9.1234&#10;7.1238, 9.1238" /></label>
-                <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => void createPlot()}>Add approved plot</button>
-              </div>
-            </div>
-          </div>
-          <div className="edash-card">
-            <div className="edash-card-inner">
-              <div className="edash-card-head"><h3 className="edash-card-title">Map layer</h3></div>
-              <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>Add a visible operational layer: road, drainage, open space or infrastructure.</p>
-              <div className="edash-form-grid">
-                <div className="edash-form-row">
-                  <label className="edash-field"><span>Layer type</span><select value={layerType} onChange={(event) => setLayerType(event.target.value)}><option value="road">Road</option><option value="drainage">Drainage</option><option value="open_space">Open space</option><option value="infrastructure">Infrastructure</option></select></label>
-                  <label className="edash-field"><span>Layer name</span><input value={layerName} onChange={(event) => setLayerName(event.target.value)} placeholder="Optional" /></label>
-                </div>
-                <label className="edash-field"><span>Coordinates</span><textarea value={layerCoordinates} onChange={(event) => setLayerCoordinates(event.target.value)} placeholder="longitude, latitude per line" /></label>
-                <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => void createLayer()}>Add layer</button>
-              </div>
-            </div>
-          </div>
-          {layerGeojson.features.length > 0 && (
-            <div className="edash-card">
-              <div className="edash-card-inner">
-                <div className="edash-card-head"><h3 className="edash-card-title">Spatial layer editor</h3></div>
-                <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>Select a layer, adjust its coordinate rows, then save. Archiving removes it from the operational map without deleting its audit trail.</p>
-                <div className="edash-form-grid">
-                  <label className="edash-field"><span>Layer</span>
-                    <select value={selectedLayerId} onChange={(event) => selectLayerForEdit(event.target.value)}>
-                      <option value="">Select a layer</option>
-                      {layerGeojson.features.map((feature: any) => <option key={feature.id} value={feature.id}>{feature.properties.name || feature.properties.type} #{feature.id}</option>)}
-                    </select>
-                  </label>
-                  {selectedLayerId && (
-                    <>
-                      <label className="edash-field"><span>Coordinates</span><textarea value={layerEditCoordinates} onChange={(event) => setLayerEditCoordinates(event.target.value)} /></label>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button type="button" className="edash-btn-primary" onClick={() => void updateLayer()}>Save geometry</button>
-                        <button type="button" className="edash-btn-outline" onClick={() => void archiveLayer()}>Archive layer</button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-          <div className="edash-card">
-            <div className="edash-card-inner">
-              <div className="edash-card-head"><h3 className="edash-card-title">Blocks</h3></div>
-              <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>Define block labels before assigning imported or manually created plots.</p>
-              <div className="edash-form-row" style={{ marginBottom: 12 }}>
-                <label className="edash-field"><span>Block label</span><input value={blockLabel} onChange={(event) => setBlockLabel(event.target.value)} placeholder="e.g. B" /></label>
-                <label className="edash-field"><span>Block name</span><input value={blockName} onChange={(event) => setBlockName(event.target.value)} placeholder="Optional" /></label>
-                <button type="button" className="edash-btn-primary" onClick={() => void createBlock()}>Add block</button>
-              </div>
-              <div className="edash-chip-row">
-                {blocks.length ? blocks.map((block) => <span key={block.id} className="edash-chip">{block.label}{block.name ? ` - ${block.name}` : ""}</span>) : <p className="edash-tab-empty" style={{ padding: 0 }}>No blocks yet.</p>}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {activeTool && renderActiveToolModal()}
     </EstateShell>
   );
 }
