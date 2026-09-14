@@ -1031,3 +1031,51 @@
 .edash-onboard-existing select { flex: 1; }
 
 .edash-onboard-hint { color: var(--edash-faint); font-size: 0.78rem; text-align: center; }
+
+/* ─── Map plot popup (mapboxgl.Popup DOM content) ─── */
+.edash-map-popup { display: flex; flex-direction: column; gap: 4px; font-family: "DM Sans", "Inter", sans-serif; }
+.edash-map-popup strong { font-size: 0.88rem; color: var(--edash-ink); }
+.edash-map-popup-status { font-size: 0.7rem; font-weight: 700; text-transform: capitalize; color: var(--edash-brand-dark); }
+.edash-map-popup p { margin: 2px 0 6px; font-size: 0.8rem; color: var(--edash-muted); }
+.edash-map-popup-btn { width: 100%; justify-content: center; }
+.mapboxgl-popup-content { padding: 12px !important; border-radius: 10px !important; }
+
+/* ─── Right-click plot context menu ─── */
+.edash-context-menu {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--edash-border);
+  border-radius: 10px;
+  background: var(--edash-surface);
+  box-shadow: var(--edash-shadow-pop);
+}
+.edash-context-menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--edash-border-soft);
+  background: #f7f8fa;
+}
+.edash-context-menu-head strong { font-size: 0.8rem; font-weight: 700; color: var(--edash-ink); }
+.edash-context-menu-head button { border: none; background: transparent; color: var(--edash-faint); font-size: 0.95rem; line-height: 1; cursor: pointer; padding: 0; }
+.edash-context-menu-head button:hover { color: var(--edash-ink); }
+.edash-context-menu-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: none;
+  border-top: 1px solid var(--edash-border-soft);
+  background: transparent;
+  color: var(--edash-ink);
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.edash-context-menu-option svg { width: 15px; height: 15px; color: var(--edash-brand); flex-shrink: 0; }
+.edash-context-menu-option:hover:not(:disabled) { background: var(--edash-neutral-tint); }
+.edash-context-menu-option:disabled { color: var(--edash-faint); cursor: not-allowed; }
+.edash-context-menu-option:disabled svg { color: var(--edash-faint); }

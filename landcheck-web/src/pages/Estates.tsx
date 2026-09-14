@@ -55,6 +55,12 @@ function segmentsCross(a: { lng: number; lat: number }, b: { lng: number; lat: n
   return ((ab > 0 && ac < 0) || (ab < 0 && ac > 0)) && ((cd > 0 && cb < 0) || (cd < 0 && cb > 0));
 }
 
+function getRingCentroid(ring: number[][]): [number, number] {
+  if (!ring || ring.length === 0) return [0, 0];
+  const sum = ring.reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0]);
+  return [sum[0] / ring.length, sum[1] / ring.length];
+}
+
 function orderBoundaryPointIndexes(points: Array<{ lng: number; lat: number }>) {
   if (points.length < 3) return points.map((_, index) => index);
   const center = points.reduce((sum, point) => ({ lng: sum.lng + point.lng / points.length, lat: sum.lat + point.lat / points.length }), { lng: 0, lat: 0 });
@@ -153,6 +159,7 @@ export default function Estates() {
   const [layersVisible, setLayersVisible] = useState(true);
   const [drawerTab, setDrawerTab] = useState<"overview" | "customer" | "survey" | "staking" | "documents" | "hazards" | "timeline">("overview");
   const [editingDevelopment, setEditingDevelopment] = useState(false);
+  const [plotContextMenu, setPlotContextMenu] = useState<{ x: number; y: number; plotId: number } | null>(null);
   const [plotDocumentFile, setPlotDocumentFile] = useState<File | null>(null);
   const [plotDocumentBusy, setPlotDocumentBusy] = useState(false);
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -255,6 +262,25 @@ export default function Estates() {
       window.location.reload();
     } catch (error) {
       setWorkflowMessage(await extractApiErrorMessage(error, "This plot could not be split."));
+    } finally {
+      setSubdivisionBusy(false);
+    }
+  };
+  const splitBoundaryIntoPlots = async () => {
+    if (!estateId || !estateDetail?.boundary) return;
+    const splitCount = Number(subdivisionCount);
+    if (!Number.isInteger(splitCount) || splitCount < 2 || splitCount > 200) {
+      setWorkflowMessage("Choose between 2 and 200 new plots.");
+      return;
+    }
+    setSubdivisionBusy(true);
+    try {
+      const created = await api.post(`/estates/${estateId}/plots`, { plot_number: "WHOLE", geometry: estateDetail.boundary, geometry_status: "approved" });
+      const response = await api.post(`/estates/${estateId}/plots/${created.data.id}/subdivide`, { split_count: splitCount });
+      setWorkflowMessage(`${response.data.created_count} plots created from the boundary. They are ready to reserve or allocate.`);
+      window.location.reload();
+    } catch (error) {
+      setWorkflowMessage(await extractApiErrorMessage(error, "The boundary could not be split into plots."));
     } finally {
       setSubdivisionBusy(false);
     }
@@ -486,6 +512,27 @@ export default function Estates() {
           paint: { "text-color": "#ffffff", "text-halo-color": "rgba(16,24,39,0.85)", "text-halo-width": 3 },
         });
 
+        const plotLabelFeatures = visiblePlotGeojson.features.map((feature: any) => {
+          const allocation = allocations.find((item) => item.plot_id === Number(feature.properties?.id));
+          return {
+            type: "Feature",
+            properties: {
+              label: allocation ? allocation.customer_name : feature.properties?.plot_number || "",
+              isCustomer: Boolean(allocation),
+            },
+            geometry: feature.geometry?.type === "Polygon" ? { type: "Point", coordinates: getRingCentroid(feature.geometry.coordinates[0]) } : feature.geometry,
+          };
+        });
+        map.addSource("estate-plot-labels", { type: "geojson", data: { type: "FeatureCollection", features: plotLabelFeatures } as any });
+        map.addLayer({
+          id: "estate-plot-labels",
+          type: "symbol",
+          source: "estate-plot-labels",
+          minzoom: 15,
+          layout: { "text-field": ["get", "label"], "text-size": 10, "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"] },
+          paint: { "text-color": ["case", ["get", "isCustomer"], "#ffffff", "#0f1e17"], "text-halo-color": ["case", ["get", "isCustomer"], "rgba(16,24,39,0.85)", "rgba(255,255,255,0.85)"], "text-halo-width": 2 },
+        });
+
         const bounds = new mapboxgl.LngLatBounds();
         const extendGeometry = (geometry: any) => {
           if (!geometry) return;
@@ -497,13 +544,44 @@ export default function Estates() {
         if (estateDetail?.boundary) extendGeometry(estateDetail.boundary);
         visiblePlotGeojson.features.forEach((feature: any) => extendGeometry(feature.geometry));
         if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 46, maxZoom: 17 });
-        map.on("click", "estate-plots-fill", (event: any) => {
-          const id = Number(event.features?.[0]?.properties?.id);
+        const openPlotDrawer = (id: number) => {
           setSelectedPlotId(id);
           setDrawerTab("overview");
           const allocation = allocations.find((item) => item.plot_id === id);
           if (allocation) void selectAllocation(String(allocation.id));
           else { setAllocationId(""); setFinancial(null); }
+        };
+        map.on("click", "estate-plots-fill", (event: any) => {
+          const id = Number(event.features?.[0]?.properties?.id);
+          const properties = event.features?.[0]?.properties || {};
+          const allocation = allocations.find((item) => item.plot_id === id);
+          const container = document.createElement("div");
+          container.className = "edash-map-popup";
+          const title = document.createElement("strong");
+          title.textContent = properties.plot_number || "";
+          const status = document.createElement("span");
+          status.className = "edash-map-popup-status";
+          status.textContent = String(properties.commercial_status || "").replaceAll("_", " ");
+          const customerLine = document.createElement("p");
+          customerLine.textContent = allocation ? allocation.customer_name : "No customer yet";
+          container.append(title, status, customerLine);
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "edash-btn-primary edash-map-popup-btn";
+          button.textContent = "More details";
+          const popup = new mapboxgl.Popup({ closeButton: true, closeOnClick: true, offset: 12, maxWidth: "220px" })
+            .setLngLat(event.lngLat)
+            .setDOMContent(container)
+            .addTo(map);
+          button.onclick = () => { openPlotDrawer(id); popup.remove(); };
+          container.appendChild(button);
+        });
+        map.on("contextmenu", "estate-plots-fill", (event: any) => {
+          event.preventDefault();
+          event.originalEvent?.preventDefault();
+          const id = Number(event.features?.[0]?.properties?.id);
+          if (!Number.isFinite(id)) return;
+          setPlotContextMenu({ x: event.originalEvent.clientX, y: event.originalEvent.clientY, plotId: id });
         });
         map.on("mouseenter", "estate-plots-fill", () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", "estate-plots-fill", () => { map.getCanvas().style.cursor = ""; });
       });
@@ -536,6 +614,26 @@ export default function Estates() {
     setWorkflowMessage("");
     try { await action(); await refreshWorkflow(); setWorkflowMessage(`${label} completed.`); }
     catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, `${label} could not be completed.`)); }
+  };
+  const createOfficialSurveyPlan = async (plotId: number) => {
+    setPlotContextMenu(null);
+    const allocation = allocations.find((item) => item.plot_id === plotId);
+    if (!allocation) { setWorkflowMessage("Allocate this plot to a customer before creating its Official Survey Plan."); return; }
+    setWorkflowMessage("");
+    try {
+      let survey = surveyRequests.find((item) => item.plot.id === plotId);
+      if (!survey) {
+        survey = (await api.post(`/estates/plots/${plotId}/survey-requests`)).data;
+        await refreshWorkflow();
+      }
+      if (!survey.materialized) {
+        const started = await api.post(`/estates/survey-requests/${survey.id}/start`);
+        survey = { ...survey, ...started.data };
+      }
+      navigate(`/survey-plan?mode=survey&estate_survey_plot=${survey.survey_working_plot_id || ""}`);
+    } catch (error) {
+      setWorkflowMessage(await extractApiErrorMessage(error, "Official Survey Plan could not be created."));
+    }
   };
   const downloadDgps = async (taskId: number) => {
     try {
@@ -783,6 +881,59 @@ export default function Estates() {
           </div>
         </div>
       </div>
+    );
+  }
+
+  function renderPlotContextMenu() {
+    if (!plotContextMenu) return null;
+    const plot = plots.find((item) => item.id === plotContextMenu.plotId);
+    const allocation = allocations.find((item) => item.plot_id === plotContextMenu.plotId);
+    const survey = surveyRequests.find((item) => item.plot.id === plotContextMenu.plotId);
+    return (
+      <>
+        <div style={{ position: "fixed", inset: 0, zIndex: 29 }} onClick={() => setPlotContextMenu(null)} onContextMenu={(event) => { event.preventDefault(); setPlotContextMenu(null); }} />
+        <div className="edash-context-menu" style={{ position: "fixed", left: plotContextMenu.x, top: plotContextMenu.y, zIndex: 30, width: 220 }}>
+          <div className="edash-context-menu-head">
+            <strong>{plot?.plot_number || "Plot"}</strong>
+            <button type="button" onClick={() => setPlotContextMenu(null)} aria-label="Close">&times;</button>
+          </div>
+          <button
+            type="button"
+            className="edash-context-menu-option"
+            disabled={!allocation}
+            title={allocation ? undefined : "Allocate this plot to a customer first"}
+            onClick={() => void createOfficialSurveyPlan(plotContextMenu.plotId)}
+          >
+            <EstateIcon name="survey" /> {survey?.materialized ? "Open Official Survey Plan" : "Create Official Survey Plan"}
+          </button>
+          <button
+            type="button"
+            className="edash-context-menu-option"
+            onClick={() => {
+              setSelectedPlotId(plotContextMenu.plotId);
+              setDrawerTab("customer");
+              if (allocation) void selectAllocation(String(allocation.id));
+              else { setAllocationId(""); setFinancial(null); }
+              setPlotContextMenu(null);
+            }}
+          >
+            <EstateIcon name="customers" /> {allocation ? "View customer" : "Reserve / allocate"}
+          </button>
+          <button
+            type="button"
+            className="edash-context-menu-option"
+            onClick={() => {
+              setSelectedPlotId(plotContextMenu.plotId);
+              setDrawerTab("overview");
+              if (allocation) void selectAllocation(String(allocation.id));
+              else { setAllocationId(""); setFinancial(null); }
+              setPlotContextMenu(null);
+            }}
+          >
+            <EstateIcon name="map" /> View details
+          </button>
+        </div>
+      </>
     );
   }
 
@@ -1363,6 +1514,7 @@ export default function Estates() {
         <div className="edash-content-row">
           {renderMapPanel()}
           {renderPlotDrawer()}
+          {renderPlotContextMenu()}
         </div>
       ) : null}
       {renderBottomRow()}
@@ -1379,6 +1531,28 @@ export default function Estates() {
           <div id="layout-import">
             <EstateLayoutImport reviews={importReviews} files={{ csv: csvFile, geojson: geojsonFile, dxf: dxfFile, "scanned-layout": scannedLayoutFile }} onFileChange={handleLayoutFileChange} onUpload={(method) => void uploadLayout(method)} onDecision={(reviewId, status) => void decideImportReview(reviewId, status)} message={layoutMessage} busy={layoutUploadBusy} />
           </div>
+          {estateDetail?.boundary && plots.length === 0 && (
+            <div className="edash-card" id="boundary-choice">
+              <div className="edash-card-inner">
+                <div className="edash-card-head"><h3 className="edash-card-title">Turn the boundary into plots</h3></div>
+                <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>Your Estate boundary is ready. Choose how to create its plots.</p>
+                <div className="edash-content-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                  <div className="edash-info-card" style={{ flexDirection: "column" }}>
+                    <div className="edash-info-card-head"><span className="edash-status-row-title">Split into equal plots</span></div>
+                    <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>Fast: divide the whole boundary evenly. Best for uniform lots with no roads or open space.</p>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <input type="number" min="2" max="200" value={subdivisionCount} onChange={(event) => setSubdivisionCount(event.target.value)} style={{ width: 80, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
+                      <button type="button" className="edash-btn-primary" disabled={subdivisionBusy} onClick={() => void splitBoundaryIntoPlots()}>{subdivisionBusy ? "Creating..." : "Split boundary"}</button>
+                    </div>
+                  </div>
+                  <div className="edash-info-card" style={{ flexDirection: "column" }}>
+                    <div className="edash-info-card-head"><span className="edash-status-row-title">Design a layout automatically</span></div>
+                    <p className="edash-status-row-desc">Smarter: generates plots, access roads, drainage and open space from your criteria, ready for review below.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           <EstateLayoutDesigner boundaryPresent={Boolean(estateDetail?.boundary)} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} />
           {quality && <section id="estate-qc" className="estate-qc"><div><p className="workflow-eyebrow">Approve the Estate map</p><h2>{quality.review_required ? "Review required" : "Geometry ready"}</h2><p>{quality.plot_count} plots checked. {quality.issues.length} issue(s) detected.</p></div>{quality.issues.slice(0,8).map((issue:any,index:number) => <p key={`${issue.code}-${index}`} className={issue.severity}>{issue.message}</p>)}{dashboard && <div className="estate-publish-action"><p><strong>Register status:</strong> {dashboard.estate.status.replaceAll("_", " ")}</p><button type="button" disabled={dashboard.estate.status === "active" || quality.review_required || quality.plot_count === 0} onClick={() => void approveEstateMap()}>{dashboard.estate.status === "active" ? "Estate map published" : "Approve and publish map"}</button></div>}</section>}
           <section className="estate-create estate-plot-import"><div><p className="workflow-eyebrow">Add parcel</p><h2>Coordinates or CSV rows</h2><p>Paste one <code>longitude, latitude</code> pair per line. Geometry is checked before saving.</p></div><input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="Plot number, e.g. B-024" /><textarea value={plotCoordinates} onChange={(event) => setPlotCoordinates(event.target.value)} placeholder="7.1234, 9.1234&#10;7.1238, 9.1234&#10;7.1238, 9.1238" /><button type="button" onClick={() => void createPlot()}>Add approved plot</button></section>
