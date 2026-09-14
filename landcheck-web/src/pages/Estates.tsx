@@ -824,6 +824,17 @@ export default function Estates() {
       setLayoutDesignerBusy(false);
     }
   };
+  const editLayoutProposalCandidates = async (proposalId: number, plotCandidates: any[]) => {
+    setLayoutDesignerMessage("");
+    try {
+      const response = await api.patch(`/estates/layout-proposals/${proposalId}`, { plot_candidates: plotCandidates });
+      setLayoutProposal(response.data);
+      setLayoutDesignerMessage(`Saved. ${response.data.candidates?.length || 0} plots in this draft now.`);
+    } catch (error) {
+      setLayoutDesignerMessage(await extractApiErrorMessage(error, "Your changes could not be saved."), "danger");
+      throw error;
+    }
+  };
   const selectLayerForEdit = (id: string) => {
     setSelectedLayerId(id);
     const feature = (layerGeojson.features || []).find((item: any) => String(item.id) === id);
@@ -2025,7 +2036,7 @@ export default function Estates() {
                   </div>
                 </div>
               )}
-              <EstateLayoutDesigner boundaryPresent={hasBoundary} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} messageTone={layoutDesignerMessageTone} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} />
+              <EstateLayoutDesigner boundaryPresent={hasBoundary} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} messageTone={layoutDesignerMessageTone} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} onEditCandidates={editLayoutProposalCandidates} />
             </>
           )}
         </>
