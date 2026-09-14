@@ -64,7 +64,7 @@ export default function EstateCustomersPage() {
 
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="customers" search={search} onSearchChange={setSearch} searchPlaceholder="Search customers..." recentActivity={activity}>
-      <div className="edash-content-row" style={{ gridTemplateColumns: "1fr 360px" }}>
+      <div className="edash-content-row">
         <div className="edash-card">
           <div className="edash-card-inner">
             <div className="edash-card-head"><h3 className="edash-card-title">Customers ({filtered.length})</h3></div>
@@ -98,7 +98,7 @@ export default function EstateCustomersPage() {
             {detail && (
               <>
                 <div className="edash-card-head" style={{ marginTop: 16 }}><h3 className="edash-card-title">Financial summary</h3></div>
-                <div className="edash-overview-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                <div className="edash-overview-grid edash-overview-grid--2">
                   <div className="edash-overview-field"><span>Agreed</span><strong>{money(detail.totals?.agreed_price ?? detail.financial?.agreed_price ?? 0)}</strong></div>
                   <div className="edash-overview-field"><span>Outstanding</span><strong>{money(detail.totals?.outstanding ?? detail.financial?.outstanding ?? 0)}</strong></div>
                 </div>

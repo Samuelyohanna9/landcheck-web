@@ -28,12 +28,12 @@ export default function EstateReportsPage() {
       <div className="edash-section-head">
         <button type="button" className="edash-btn-outline" onClick={() => window.print()}>Print report</button>
       </div>
-      <div className="edash-bottom-row" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+      <div className="edash-bottom-row">
         <div className="edash-card">
           <div className="edash-card-inner">
             <div className="edash-card-head"><h3 className="edash-card-title">Inventory</h3></div>
             {dashboard ? (
-              <div className="edash-overview-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+              <div className="edash-overview-grid edash-overview-grid--2">
                 <div className="edash-overview-field"><span>Total plots</span><strong>{dashboard.total_plots}</strong></div>
                 <div className="edash-overview-field"><span>Available</span><strong>{dashboard.statuses?.available || 0}</strong></div>
                 <div className="edash-overview-field"><span>Allocated</span><strong>{dashboard.statuses?.allocated || 0}</strong></div>
@@ -48,7 +48,7 @@ export default function EstateReportsPage() {
           <div className="edash-card-inner">
             <div className="edash-card-head"><h3 className="edash-card-title">Financial</h3></div>
             {dashboard ? (
-              <div className="edash-overview-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+              <div className="edash-overview-grid edash-overview-grid--2">
                 <div className="edash-overview-field"><span>Contracted</span><strong>{money(dashboard.financial?.contracted_sales_value || 0)}</strong></div>
                 <div className="edash-overview-field"><span>Confirmed</span><strong>{money(dashboard.financial?.confirmed_collections || 0)}</strong></div>
                 <div className="edash-overview-field"><span>Pending</span><strong>{money(dashboard.financial?.pending_collections || 0)}</strong></div>

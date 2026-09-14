@@ -73,7 +73,7 @@ export default function EstateSettingsPage() {
   return (
     <EstateShell estateId={estateId} estateName={estateDetail?.name} activeKey="settings" recentActivity={activity}>
       {message && <p className="edash-tab-empty" style={{ textAlign: "left", padding: "4px 2px" }}>{message}</p>}
-      <div className="edash-content-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
+      <div className="edash-content-row edash-content-row--split">
         <div className="edash-card">
           <div className="edash-card-inner">
             <div className="edash-card-head"><h3 className="edash-card-title">Estate details</h3></div>

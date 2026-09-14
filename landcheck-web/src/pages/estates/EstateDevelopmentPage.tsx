@@ -45,7 +45,7 @@ export default function EstateDevelopmentPage() {
 
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="development" recentActivity={activity}>
-      <div className="edash-stats-row" style={{ gridTemplateColumns: "repeat(5, minmax(0,1fr))" }}>
+      <div className="edash-stats-row edash-stats-row--five">
         {Object.entries(STATUS_LABELS).map(([key, label]) => (
           <div key={key} className="edash-stat-card">
             <div className="edash-stat-body">

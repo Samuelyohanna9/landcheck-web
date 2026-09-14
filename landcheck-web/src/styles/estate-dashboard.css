@@ -887,6 +887,9 @@
 
 /* ─── Legacy workspace tools tucked below the dashboard ─── */
 .edash-legacy-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   padding: 0 26px 40px;
 }
 
@@ -902,14 +905,22 @@
 .edash-legacy-tools-head h2 { margin: 14px 0 0; font-size: 1rem; font-weight: 800; color: var(--edash-ink); }
 .edash-legacy-tools-head p { margin: 2px 0 0; color: var(--edash-muted); font-size: 0.8rem; }
 
+/* Layout modifiers - a real class (not an inline style) so every breakpoint below still applies;
+   an inline `style` on the same element would win over every rule in this file, media queries
+   included, and silently break the collapse on narrow screens. */
+.edash-content-row--split { grid-template-columns: 1fr 1fr; }
+.edash-overview-grid--2 { grid-template-columns: 1fr 1fr; }
+.edash-overview-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.edash-stats-row--five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
 /* ─── Responsive ─── */
 @media (max-width: 1320px) {
-  .edash-stats-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .edash-stats-row, .edash-stats-row--five { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .edash-quick-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (max-width: 1180px) {
-  .edash-content-row { grid-template-columns: 1fr; }
+  .edash-content-row, .edash-content-row--split { grid-template-columns: 1fr; }
   .edash-drawer { min-height: 300px; }
   .edash-bottom-row { grid-template-columns: 1fr 1fr; }
   .edash-bottom-row > :last-child { grid-column: 1 / -1; }
@@ -931,13 +942,18 @@
   .edash.is-sidebar-open .edash-sidebar { transform: translateX(0); }
   .edash-menu-toggle { display: flex; }
   .edash-breadcrumb strong { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
-  .edash-stats-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .edash-stats-row, .edash-stats-row--five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .edash-bottom-row { grid-template-columns: 1fr; }
   .edash-bottom-row > :last-child { grid-column: auto; }
   .edash-quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .edash-overview-grid { grid-template-columns: 1fr 1fr; }
+  .edash-overview-grid, .edash-overview-grid--3 { grid-template-columns: 1fr 1fr; }
   .edash-search { display: none; }
   .edash-user-meta { display: none; }
+}
+
+@media (max-width: 520px) {
+  .edash-overview-grid, .edash-overview-grid--2, .edash-overview-grid--3 { grid-template-columns: 1fr; }
+  .edash-method-tabs { grid-template-columns: 1fr; }
 }
 
 /* ─── Estate onboarding: pick or create an estate (no sidebar - nothing to navigate to yet) ─── */
@@ -1079,3 +1095,135 @@
 .edash-context-menu-option:hover:not(:disabled) { background: var(--edash-neutral-tint); }
 .edash-context-menu-option:disabled { color: var(--edash-faint); cursor: not-allowed; }
 .edash-context-menu-option:disabled svg { color: var(--edash-faint); }
+
+/* ─── Plot & layout tools: layout import/designer + the rest of the legacy workflow forms ─── */
+.edash-step-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--edash-brand-tint);
+  color: var(--edash-brand-dark);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.edash-method-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.edash-method-tab {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--edash-border);
+  border-radius: var(--edash-radius-md);
+  background: #fff;
+  color: var(--edash-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.edash-method-tab svg { width: 17px; height: 17px; margin-top: 1px; color: var(--edash-muted); flex-shrink: 0; }
+.edash-method-tab span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.edash-method-tab strong { font-size: 0.82rem; font-weight: 700; }
+.edash-method-tab small { color: var(--edash-muted); font-size: 0.72rem; line-height: 1.3; }
+.edash-method-tab.active { border-color: var(--edash-brand); background: var(--edash-brand-tint); }
+.edash-method-tab.active svg { color: var(--edash-brand-dark); }
+.edash-method-tab:hover:not(.active) { border-color: var(--edash-faint); }
+
+.edash-upload-dropzone {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px dashed var(--edash-border);
+  border-radius: var(--edash-radius-md);
+  background: #fafbfc;
+}
+
+.edash-upload-dropzone-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--edash-border);
+  border-radius: var(--edash-radius-sm);
+  background: #fff;
+  color: var(--edash-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.edash-upload-dropzone-input:hover { border-color: var(--edash-brand); }
+.edash-upload-dropzone-input svg { width: 17px; height: 17px; color: var(--edash-brand); flex-shrink: 0; }
+.edash-upload-dropzone-input input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.edash-upload-dropzone > .edash-btn-primary { align-self: flex-start; }
+
+.edash-layout-preview { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.edash-layout-preview svg {
+  width: 100%;
+  height: 160px;
+  border: 1px solid var(--edash-border-soft);
+  border-radius: var(--edash-radius-sm);
+  background: #fafbfc;
+}
+.edash-layout-preview polygon { fill: var(--edash-brand-tint); stroke: var(--edash-brand); stroke-width: 0.6; }
+.edash-layout-preview text { font-size: 3.4px; fill: var(--edash-ink); text-anchor: middle; font-weight: 700; }
+.edash-layout-preview > span { color: var(--edash-muted); font-size: 0.76rem; font-weight: 600; }
+
+.edash-issue-list {
+  padding: 10px 12px;
+  border: 1px solid var(--edash-danger-tint);
+  border-radius: var(--edash-radius-sm);
+  background: var(--edash-danger-tint);
+  color: var(--edash-danger);
+  font-size: 0.78rem;
+}
+.edash-issue-list strong { display: block; margin-bottom: 4px; font-size: 0.78rem; }
+.edash-issue-list ul { margin: 0; padding-left: 18px; }
+.edash-issue-list li { margin: 2px 0; }
+.edash-issue-list > span { display: block; margin-top: 4px; font-weight: 600; }
+
+/* Generic field/grid used by the remaining legacy workflow forms (plot creation, layers, blocks,
+   allocation lookup, survey/staking delivery) once re-skinned onto the .edash card system. */
+.edash-form-grid { display: flex; flex-direction: column; gap: 12px; }
+.edash-form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.edash-field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 160px; }
+.edash-field span { font-size: 0.72rem; font-weight: 700; color: var(--edash-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.edash-field input,
+.edash-field select,
+.edash-field textarea {
+  padding: 9px 11px;
+  border: 1px solid var(--edash-border);
+  border-radius: var(--edash-radius-sm);
+  background: #fff;
+  color: var(--edash-ink);
+  font-size: 0.84rem;
+  font-family: inherit;
+}
+.edash-field input:focus,
+.edash-field select:focus,
+.edash-field textarea:focus { outline: none; border-color: var(--edash-brand); box-shadow: 0 0 0 3px var(--edash-brand-tint); }
+.edash-field textarea { min-height: 84px; resize: vertical; font-family: ui-monospace, monospace; font-size: 0.78rem; }
+.edash-field-note { margin: 0; color: var(--edash-faint); font-size: 0.76rem; line-height: 1.4; }
+.edash-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.edash-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--edash-neutral-tint);
+  color: var(--edash-ink);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
