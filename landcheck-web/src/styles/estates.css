@@ -116,6 +116,107 @@
 .estate-import-review-queue summary { cursor: pointer; color: var(--workspace-ink); font-weight: 800; }
 .estate-create code, .estate-map-fallback code { padding: 3px 6px; border-radius: 5px; background: rgba(8, 127, 118, .1); color: var(--workspace-teal); }
 .estates-shell button:focus-visible, .estates-shell a:focus-visible, .estates-shell input:focus-visible, .estates-shell select:focus-visible, .estates-shell textarea:focus-visible { outline: 3px solid rgba(210, 157, 62, .55); outline-offset: 3px; }
+.estates-shell { display: flex; flex-direction: column; }
+.estates-shell > header { order: 1; }
+.estates-shell > .estates-toolbar { order: 2; }
+.estates-shell > .estate-map-panel { order: 3; }
+.estates-shell > .estate-create, .estates-shell > .estate-grid, .estates-shell > .estates-message { order: 3; }
+.estates-shell > .estate-metrics { order: 4; }
+.estates-shell > .estate-import-panel { order: 5; }
+.estates-shell > .estate-settings, .estates-shell > .estate-qc, .estates-shell > .estate-timeline, .estates-shell > .estate-import-review-queue, .estates-shell > .estate-block-editor, .estates-shell > .estate-layer-editor { order: 6; }
+.estates-shell > .estate-plot-record, .estates-shell > .estate-allocation-panel, .estates-shell > .estate-workflow-panel { order: 7; }
+.estate-app > .estate-import-panel + .estate-import-panel { align-items: stretch; gap: 14px; }
+.estate-app > .estate-import-panel + .estate-import-panel > div { flex-basis: 100%; }
+.estate-app > .estate-import-panel + .estate-import-panel > label { min-width: 190px; flex: 1 1 220px; padding: 13px; border: 1px solid rgba(8, 127, 118, .14); border-radius: 12px; background: rgba(255, 255, 252, .78); }
+.estate-app > .estate-import-panel + .estate-import-panel > label:nth-of-type(2) { display: none; }
+.estate-app > .estate-import-panel + .estate-import-panel > button { align-self: end; min-height: 44px; padding: 11px 15px; border: 0; border-radius: 10px; background: var(--workspace-teal); color: #fff; font: 800 .73rem "DM Sans", "Segoe UI", sans-serif; cursor: pointer; }
+.estate-app > .estate-import-panel + .estate-import-panel > button:hover { background: #075f59; transform: translateY(-1px); }
+.estate-map-panel { min-height: 500px; border-top: 3px solid var(--workspace-teal); }
+.estate-map-panel > div:first-child { padding-bottom: 4px; }
+.estate-map-panel > div:first-child::after { display: block; margin-top: 12px; color: var(--workspace-teal); content: "Select a plot on the map to open its register, customer and delivery workflow."; font: 700 .72rem/1.5 "DM Sans", "Segoe UI", sans-serif; letter-spacing: .02em; }
+.estates-shell { display: grid; flex-direction: initial; grid-template-columns: 248px minmax(0, 1fr); gap: 0; padding: 0; background: var(--workspace-paper); }
+.estates-shell > .estate-sidebar { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; width: 248px; max-width: none; min-height: 100vh; margin: 0; padding: 26px 14px 18px; position: sticky; top: 0; align-self: start; overflow: hidden; background: linear-gradient(180deg, #142631, #0d1b24); color: #f4f7ef; }
+.estate-brand { display: flex; align-items: center; gap: 10px; padding: 0 10px 28px; }
+.estate-brand-mark { display: grid; place-items: center; width: 31px; height: 37px; border-radius: 15px 4px 15px 4px; background: #39b982; color: #0d2d27; font: 900 1.25rem Georgia, serif; transform: rotate(-12deg); }
+.estate-brand strong, .estate-brand small { display: block; }
+.estate-brand strong { font-size: 1.02rem; letter-spacing: -.03em; }
+.estate-brand small { margin-top: 2px; color: #41d08b; font-size: .82rem; font-weight: 800; letter-spacing: .03em; }
+.estate-sidebar-estate { display: grid; gap: 6px; margin: 0 0 20px; padding: 15px 14px; border: 1px solid rgba(255,255,255,.11); border-radius: 11px; background: rgba(255,255,255,.08); }
+.estate-sidebar-estate small { color: #8bd6b1; font: 800 .58rem "DM Sans", "Segoe UI", sans-serif; letter-spacing: .12em; }
+.estate-sidebar-estate strong { overflow: hidden; color: #fff; font-size: .88rem; text-overflow: ellipsis; white-space: nowrap; }
+.estate-sidebar-estate span { overflow: hidden; color: rgba(244,247,239,.58); font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+.estate-sidebar nav { display: grid; gap: 4px; }
+.estate-sidebar nav a { display: flex; align-items: center; gap: 11px; min-height: 39px; padding: 0 12px; border-radius: 8px; color: rgba(244,247,239,.8); font: 600 .78rem "DM Sans", "Segoe UI", sans-serif; text-decoration: none; transition: background .18s ease, color .18s ease; }
+.estate-sidebar nav a span { display: inline-grid; place-items: center; width: 17px; color: #9fb7b0; font: 800 .7rem "DM Sans", "Segoe UI", sans-serif; }
+.estate-sidebar nav a span { overflow: hidden; font-size: 0; }
+.estate-sidebar nav a span::after { font-size: .46rem; letter-spacing: -.04em; }
+.estate-sidebar nav a:nth-child(1) span::after { content: "DB"; }
+.estate-sidebar nav a:nth-child(2) span::after { content: "MAP"; }
+.estate-sidebar nav a:nth-child(3) span::after { content: "PLT"; }
+.estate-sidebar nav a:nth-child(4) span::after { content: "CUS"; }
+.estate-sidebar nav a:nth-child(5) span::after { content: "PAY"; }
+.estate-sidebar nav a:nth-child(6) span::after { content: "SUR"; }
+.estate-sidebar nav a:nth-child(7) span::after { content: "STK"; }
+.estate-sidebar nav a:nth-child(8) span::after { content: "DOC"; }
+.estate-sidebar nav a:nth-child(9) span::after { content: "DEV"; }
+.estate-sidebar nav a:nth-child(10) span::after { content: "RSK"; }
+.estate-sidebar nav a:nth-child(11) span::after { content: "LOG"; }
+.estate-sidebar nav a:nth-child(12) span::after { content: "CFG"; }
+.estate-sidebar nav a:hover { background: rgba(255,255,255,.08); color: #fff; }
+.estate-sidebar nav a.active { background: #087f68; color: #fff; box-shadow: inset 3px 0 #55d99a; }
+.estate-sidebar nav a.active span { color: #b4f1d0; }
+.estate-sidebar-footer { display: flex; align-items: center; gap: 11px; margin-top: auto; padding: 20px 12px 0; border-top: 1px solid rgba(255,255,255,.1); color: rgba(244,247,239,.68); font: 600 .72rem "DM Sans", "Segoe UI", sans-serif; }
+.estate-sidebar-footer span { display: grid; place-items: center; width: 17px; height: 17px; border: 1px solid currentColor; border-radius: 50%; font-size: .62rem; }
+.estates-shell > .estate-app { grid-column: 2; grid-row: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 380px); grid-auto-rows: min-content; align-content: start; gap: 16px; width: 100%; max-width: none; min-width: 0; min-height: 100vh; margin: 0; padding: 0 clamp(20px, 2.5vw, 42px) 64px; }
+.estate-app > * { width: 100%; max-width: none; margin-left: 0; margin-right: 0; }
+.estate-topbar { display: grid; grid-template-columns: minmax(170px, 1fr) minmax(260px, 440px) minmax(190px, 250px); grid-column: 1 / -1; align-items: center; gap: 20px; min-height: 66px; border-bottom: 1px solid var(--workspace-line); }
+.estate-breadcrumb { display: flex; align-items: center; gap: 11px; color: var(--workspace-muted); font: 600 .76rem "DM Sans", "Segoe UI", sans-serif; }
+.estate-breadcrumb b { color: #9aa9a2; font-size: 1.1rem; font-weight: 400; }
+.estate-breadcrumb strong { color: var(--workspace-ink); }
+.estate-search { display: flex; align-items: center; gap: 9px; min-height: 39px; padding: 0 12px; border: 1px solid var(--workspace-line); border-radius: 8px; background: rgba(255,255,252,.8); color: #62756e; }
+.estate-search > span { font-size: 1.2rem; line-height: 1; }
+.estate-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--workspace-ink); font: .75rem "DM Sans", "Segoe UI", sans-serif; }
+.estate-user { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.estate-avatar { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 50%; background: #2aab73; color: white; font: 800 .75rem "DM Sans", "Segoe UI", sans-serif; }
+.estate-user strong, .estate-user small { display: block; }
+.estate-user strong { color: var(--workspace-ink); font: 800 .73rem "DM Sans", "Segoe UI", sans-serif; }
+.estate-user small { margin-top: 2px; color: var(--workspace-muted); font-size: .62rem; }
+.estate-app > header { grid-column: 1 / -1; padding: 27px 0 4px; }
+.estate-app > header span { color: var(--workspace-teal); font: 800 .62rem "DM Sans", "Segoe UI", sans-serif; letter-spacing: .17em; text-transform: uppercase; }
+.estate-app > header span::before { display: none; }
+.estate-app > header h1 { max-width: none; margin: 7px 0 4px; font: 600 clamp(1.7rem, 3vw, 2.35rem)/1.05 Georgia, "Times New Roman", serif; letter-spacing: -.05em; }
+.estate-app > header p { max-width: none; color: var(--workspace-muted); font-size: .78rem; line-height: 1.45; }
+.estate-app > .estates-toolbar { display: none; }
+.estate-app > .estate-map-panel { grid-column: 1; grid-row: 4 / span 2; align-self: stretch; min-height: 620px; margin: 0; }
+.estate-app > .estate-metrics { grid-column: 1 / -1; grid-row: 3; grid-template-columns: repeat(6, minmax(0, 1fr)); margin: 0; }
+.estate-app > .estate-plot-record { grid-column: 2; grid-row: 4; margin: 0; }
+.estate-app > .estate-allocation-panel, .estate-app > .estate-workflow-panel { grid-column: 2; margin: 0; }
+.estate-app > .estate-import-panel, .estate-app > .estate-settings, .estate-app > .estate-qc, .estate-app > .estate-timeline, .estate-app > .estate-import-review-queue, .estate-app > .estate-block-editor, .estate-app > .estate-layer-editor, .estate-app > .estate-create, .estate-app > .estate-grid, .estate-app > .estates-message { grid-column: 1 / -1; }
+.estate-app > .estates-toolbar + .estate-import-panel { display: none; }
+.estate-app > .estate-create, .estate-app > .estate-grid, .estate-app > .estates-message { grid-row: auto; }
+.estate-app > .estate-map-panel .estate-map { min-height: 540px; height: 100%; }
+.estate-app > .estate-map-panel .estate-map-fallback { min-height: 540px; height: 100%; display: grid; place-items: center; text-align: center; }
+.estate-app > .estate-plot-record { min-height: 300px; }
+.estate-app > .estate-plot-record h2 { font-size: 1.7rem; }
+.estate-app > .estate-allocation-panel { align-self: start; }
+.estate-app > .estate-topbar { order: 0; }
+.estate-app > header { order: 1; }
+.estate-app > .estates-toolbar { order: 2; }
+.estate-app > .estate-metrics { order: 3; }
+.estate-app > .estate-map-panel, .estate-app > .estate-plot-record { order: 4; }
+.estate-app > .estate-allocation-panel, .estate-app > .estate-workflow-panel { order: 5; }
+.estate-app > .estate-import-panel, .estate-app > .estate-settings, .estate-app > .estate-qc, .estate-app > .estate-timeline, .estate-app > .estate-import-review-queue, .estate-app > .estate-block-editor, .estate-app > .estate-layer-editor { order: 6; }
+.estate-app > .estate-create.estate-setup, .estate-app > .estate-grid, .estate-app > .estates-message { order: 3; }
+.estate-app > .estate-create.estate-allocation-action { grid-column: 2; order: 5; }
+.estate-app > .estate-create.estate-plot-import, .estate-app > .estate-create.estate-block-editor, .estate-app > .estate-create.estate-layer-editor { order: 6; }
+@media (max-width: 980px) {
+  .estates-shell { grid-template-columns: 205px minmax(0, 1fr); }
+  .estates-shell > .estate-sidebar { width: 205px; }
+  .estates-shell > .estate-app { grid-template-columns: minmax(0, 1fr) minmax(270px, 320px); padding-left: 18px; padding-right: 18px; }
+  .estate-topbar { grid-template-columns: 1fr minmax(220px, 1fr); }
+  .estate-user { display: none; }
+  .estate-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+}
 @media (max-width: 1050px) {
   .estate-setup > select, .estate-setup > input { grid-column: span 4; }
   .estate-setup > textarea { grid-column: span 6; }
@@ -123,9 +224,22 @@
   .estate-metrics strong { grid-column: span 2; }
 }
 @media (max-width: 720px) {
-  .estates-shell { padding: 0 17px 54px; }
-  .estates-shell > header { padding-top: 43px; }
-  .estates-shell > header h1 { font-size: clamp(2.8rem, 15vw, 4.3rem); }
+  .estates-shell { display: block; padding: 0 0 54px; }
+  .estates-shell > .estate-sidebar { position: static; width: 100%; min-height: 0; padding: 15px 14px 12px; }
+  .estate-brand { padding-bottom: 15px; }
+  .estate-sidebar-estate { margin-bottom: 12px; }
+  .estate-sidebar nav { display: flex; overflow-x: auto; padding-bottom: 3px; }
+  .estate-sidebar nav a { flex: 0 0 auto; min-height: 35px; padding: 0 10px; font-size: .68rem; }
+  .estate-sidebar-footer { display: none; }
+  .estates-shell > .estate-app { display: grid; grid-template-columns: 1fr; gap: 13px; min-height: 0; padding: 0 14px 40px; }
+  .estate-topbar { grid-template-columns: 1fr; gap: 10px; padding: 13px 0; }
+  .estate-user { display: none; }
+  .estate-app > header { padding: 20px 0 6px; }
+  .estate-app > header h1 { font-size: 1.9rem; }
+  .estate-app > .estate-map-panel { grid-column: 1; grid-row: auto; min-height: 0; }
+  .estate-app > .estate-metrics { grid-column: 1; grid-row: auto; }
+  .estate-app > .estate-plot-record, .estate-app > .estate-allocation-panel, .estate-app > .estate-workflow-panel, .estate-app > .estate-create.estate-allocation-action { grid-column: 1; grid-row: auto; }
+  .estate-app > .estate-map-panel .estate-map, .estate-app > .estate-map-panel .estate-map-fallback { min-height: 390px; height: 62vw; }
   .estates-toolbar { align-items: flex-start; flex-direction: column; gap: 14px; }
   .estate-create, .estate-setup { grid-template-columns: 1fr; padding: 22px; }
   .estate-setup > select, .estate-setup > input, .estate-setup > textarea, .estate-setup > button { grid-column: 1; }
