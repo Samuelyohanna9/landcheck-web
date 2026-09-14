@@ -68,6 +68,7 @@ export default function Estates() {
   const [plotGeojson, setPlotGeojson] = useState<any>({ type: "FeatureCollection", features: [] });
   const [layerGeojson, setLayerGeojson] = useState<any>({ type: "FeatureCollection", features: [] });
   const [statusFilter, setStatusFilter] = useState("all");
+  const [plotSearch, setPlotSearch] = useState("");
   const [quality, setQuality] = useState<any>(null);
   const [activity, setActivity] = useState<any[]>([]);
   const [dashboard, setDashboard] = useState<any>(null);
@@ -76,7 +77,17 @@ export default function Estates() {
   const [surveyRulePercentage, setSurveyRulePercentage] = useState("0");
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
-  const visiblePlotGeojson = useMemo(() => ({ ...plotGeojson, features: (plotGeojson.features || []).filter((feature: any) => statusFilter === "all" || feature.properties.commercial_status === statusFilter) }), [plotGeojson, statusFilter]);
+  const visiblePlotGeojson = useMemo(() => {
+    const query = plotSearch.trim().toLowerCase();
+    return {
+      ...plotGeojson,
+      features: (plotGeojson.features || []).filter((feature: any) => {
+        const properties = feature.properties || {};
+        const plotNumber = String(properties.plot_number || properties.number || "").toLowerCase();
+        return (statusFilter === "all" || properties.commercial_status === statusFilter) && (!query || plotNumber.includes(query));
+      }),
+    };
+  }, [plotGeojson, plotSearch, statusFilter]);
   useEffect(() => {
     api.get("/estates/foundation/access").then((response) => { const rows=response.data.organizations || []; setOrganizations(rows); if (rows.length === 1) setNewEstateOrg(String(rows[0].id)); }).catch(() => setOrganizations([]));
     api.get("/estates")
@@ -222,7 +233,7 @@ export default function Estates() {
     Promise.all([api.get(`/estates/${estateId}/quality-check`), api.get(`/estates/${estateId}/activity`), api.get(`/estates/${estateId}/dashboard`)]).then(([qc, events, metrics]) => { setQuality(qc.data); setActivity(events.data || []); setDashboard(metrics.data); }).catch(() => { setQuality(null); setActivity([]); setDashboard(null); });
   }, [estateId]);
   useEffect(() => {
-    if (!estateId || !mapContainer.current || !MAPBOX_TOKEN || !visiblePlotGeojson.features.length) return;
+    if (!estateId || !mapContainer.current || !MAPBOX_TOKEN) return;
     let cancelled = false;
     void Promise.all([loadMapboxGl(), loadMapboxGlCss()]).then(([mapboxgl]) => {
       if (cancelled || !mapContainer.current) return;
@@ -230,19 +241,45 @@ export default function Estates() {
       const map = new mapboxgl.Map({ container: mapContainer.current, style: "mapbox://styles/mapbox/light-v11", center: [7.4, 9.1], zoom: 12 });
       mapRef.current = map;
       map.on("load", () => {
+        if (estateDetail?.boundary) {
+          const boundaryFeature = { type: "Feature", properties: {}, geometry: estateDetail.boundary };
+          map.addSource("estate-boundary", { type: "geojson", data: boundaryFeature as any });
+          map.addLayer({ id: "estate-boundary-fill", type: "fill", source: "estate-boundary", paint: { "fill-color": "#8bb59a", "fill-opacity": 0.08 } });
+          map.addLayer({ id: "estate-boundary-outline", type: "line", source: "estate-boundary", paint: { "line-color": "#087f76", "line-width": 2, "line-dasharray": [2, 2] } });
+        }
         map.addSource("estate-plots", { type: "geojson", data: visiblePlotGeojson });
         map.addLayer({ id: "estate-plots-fill", type: "fill", source: "estate-plots", paint: { "fill-color": ["match", ["get", "commercial_status"], "available", "#5b9b65", "reserved", "#dcaa43", "allocated", "#ba5e52", "on_hold", "#6d7690", "#87928b"], "fill-opacity": 0.58 } });
         map.addLayer({ id: "estate-plots-outline", type: "line", source: "estate-plots", paint: { "line-color": "#173d30", "line-width": 1.5 } });
         map.addSource("estate-layers", { type: "geojson", data: layerGeojson });
         map.addLayer({ id: "estate-layers-line", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "road", "#313131", "drainage", "#287cb4", "#b77c2d"], "line-width": 3 } });
         map.addLayer({ id: "estate-layers-fill", type: "fill", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": ["match", ["get", "type"], "open_space", "#78a85d", "infrastructure", "#b77c2d", "#287cb4"], "fill-opacity": 0.35 } });
-        const bounds = new mapboxgl.LngLatBounds(); visiblePlotGeojson.features.forEach((feature: any) => feature.geometry.coordinates[0].forEach((coord: number[]) => bounds.extend(coord))); if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 46, maxZoom: 17 });
+        const bounds = new mapboxgl.LngLatBounds();
+        const extendGeometry = (geometry: any) => {
+          if (!geometry) return;
+          const coordinates = geometry.coordinates;
+          if (geometry.type === "Point") bounds.extend(coordinates);
+          else if (geometry.type === "LineString") coordinates.forEach((coord: number[]) => bounds.extend(coord));
+          else coordinates.forEach((part: any) => extendGeometry({ type: geometry.type === "Polygon" ? "LineString" : geometry.type === "MultiPolygon" ? "Polygon" : "LineString", coordinates: geometry.type === "Polygon" ? part : part }));
+        };
+        if (estateDetail?.boundary) extendGeometry(estateDetail.boundary);
+        visiblePlotGeojson.features.forEach((feature: any) => extendGeometry(feature.geometry));
+        if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 46, maxZoom: 17 });
         map.on("click", "estate-plots-fill", (event: any) => { const id = Number(event.features?.[0]?.properties?.id); setSelectedPlotId(id); const allocation = allocations.find((item) => item.plot_id === id); if (allocation) void selectAllocation(String(allocation.id)); else { setAllocationId(""); setFinancial(null); } });
         map.on("mouseenter", "estate-plots-fill", () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", "estate-plots-fill", () => { map.getCanvas().style.cursor = ""; });
       });
     });
     return () => { cancelled = true; mapRef.current?.remove(); mapRef.current = null; };
-  }, [estateId, visiblePlotGeojson, layerGeojson, allocations]);
+  }, [estateId, estateDetail, visiblePlotGeojson, layerGeojson, allocations]);
+  useEffect(() => {
+    const anchors: Array<[string, string]> = [
+      [".estate-map-panel", "plot-register"],
+      [".estate-workflow-panel", "estate-workflow"],
+      [".estate-qc.estate-hazard-dashboard", "hazard-dashboard"],
+      [".estate-settings", "estate-settings"],
+      [".estate-timeline", "estate-timeline"],
+    ];
+    anchors.forEach(([selector, id]) => document.querySelector(`.estate-app ${selector}`)?.setAttribute("id", id));
+  }, [estateId, selectedPlotId, financial, hazardDashboard, activity]);
   const selectAllocation = async (id: string) => {
     setAllocationId(id); setFinancial(null);
     if (!id) return;
@@ -283,7 +320,28 @@ export default function Estates() {
   const selectedTask = selectedSurvey && stakingTasks.find((item) => item.survey_request_id === selectedSurvey.id);
   const estateSession = getEstateAuthSession();
   return <main className="estates-shell">
-    <header><span>LandCheck Estates</span><h1>Estate operations, anchored to the parcel.</h1><p>Manage approved plots, customers, reservations and allocations.</p></header>
+    <aside className="estate-sidebar">
+      <div className="estate-brand"><span className="estate-brand-mark">L</span><div><strong>LandCheck</strong><small>Estates</small></div></div>
+      <div className="estate-sidebar-estate"><small>ACTIVE ESTATE</small><strong>{estateDetail?.name || estates[0]?.name || "Estate workspace"}</strong><span>{estateDetail?.location_text || estates[0]?.location || "Choose an estate to begin"}</span></div>
+      <nav aria-label="Estate navigation">
+        <Link className={!estateId ? "active" : ""} to="/estates/workspace"><span>⌂</span>Dashboard</Link>
+        <Link className={estateId ? "active" : ""} to={estateId ? `/estates/${estateId}/map` : "/estates/workspace"}><span>▦</span>Map &amp; Plots</Link>
+        <Link to={estateId ? `/estates/${estateId}/map#plot-register` : "/estates/workspace#plot-register"}><span>▤</span>Plots</Link>
+        <Link to="/estates/payments"><span>♙</span>Customers</Link>
+        <Link to="/estates/payments"><span>₦</span>Sales &amp; Payments</Link>
+        <a href={estateId ? "#estate-workflow" : "/estates/workspace"}><span>⌖</span>Survey</a>
+        <a href={estateId ? "#estate-workflow" : "/estates/workspace"}><span>⌁</span>Staking</a>
+        <Link to="/estates/documents"><span>□</span>Documents</Link>
+        <a href={estateId ? "#estate-workflow" : "/estates/workspace"}><span>⌂</span>Development</a>
+        <a href={estateId ? "#hazard-dashboard" : "/estates/workspace"}><span>△</span>Hazard Analysis</a>
+        <a href={estateId ? "#estate-timeline" : "/estates/workspace"}><span>◷</span>Audit Timeline</a>
+        <a href={estateId ? "#estate-settings" : "/estates/workspace"}><span>⚙</span>Settings</a>
+      </nav>
+      <div className="estate-sidebar-footer"><span>?</span>Help &amp; Support</div>
+    </aside>
+    <div className="estate-app">
+      <div className="estate-topbar"><div className="estate-breadcrumb"><span>Estates</span><b>›</b><strong>{estateDetail?.name || "Workspace"}</strong></div><label className="estate-search"><span aria-hidden="true">⌕</span><input value={plotSearch} onChange={(event) => setPlotSearch(event.target.value)} placeholder="Search plots by number..." aria-label="Search plots by number" /></label><div className="estate-user"><span className="estate-avatar">{(estateSession?.user.organization_name || "E").slice(0, 1).toUpperCase()}</span><div><strong>{estateSession?.user.organization_name || "Estate team"}</strong><small>Estate workspace</small></div></div></div>
+    <header><span>LandCheck Estates</span><h1>{estateDetail?.name || "Estate workspace"}</h1><p>Map-first parcel operations for layouts, plots, customers and delivery.</p></header>
     <section className="estates-toolbar"><strong>{estateSession?.user.organization_name || "My estates"}</strong><div><Link to="/estates/workspace">Estate workspace</Link><button type="button" onClick={() => { clearEstateAuthSession(); navigate("/estates", { replace: true }); }}>Sign out</button></div></section>
     {!estateId && organizations.length > 0 && <section className="estate-create estate-setup"><div><p className="workflow-eyebrow">Step 1 · Create Estate</p><h2>Start the estate register</h2><p>Set the project context first. You can add the boundary and approved parcels through the layout review workflow.</p></div><select value={newEstateOrg} onChange={(event) => setNewEstateOrg(event.target.value)}><option value="">Organization</option>{organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}</select><input value={newEstateName} onChange={(event) => setNewEstateName(event.target.value)} placeholder="Estate name" /><input value={newEstateLocation} onChange={(event) => setNewEstateLocation(event.target.value)} placeholder="Location" /><input value={newEstateCrs} onChange={(event) => setNewEstateCrs(event.target.value)} placeholder="Coordinate system, e.g. EPSG:4326" /><input value={newEstateDatum} onChange={(event) => setNewEstateDatum(event.target.value)} placeholder="Datum (optional)" /><input value={newEstateProjectReference} onChange={(event) => setNewEstateProjectReference(event.target.value)} placeholder="Project reference (optional)" /><input value={newEstateProjectOwner} onChange={(event) => setNewEstateProjectOwner(event.target.value)} placeholder="Developer / owner (optional)" /><textarea value={newEstateOwnershipDetails} onChange={(event) => setNewEstateOwnershipDetails(event.target.value)} placeholder="Ownership or project details (optional)" /><textarea value={newEstateBoundaryCoordinates} onChange={(event) => setNewEstateBoundaryCoordinates(event.target.value)} placeholder="Estate boundary: longitude, latitude per line (optional)" /><button type="button" onClick={() => void createEstate()}>Create Estate</button></section>}
     {estateId && <section className="estate-import-panel"><div><p className="workflow-eyebrow">Step 2 · Bring in layout data</p><h2>Import and verify the Estate layout</h2><p>Upload an existing digital layout, or georeference and digitize a scanned plan in Survey. Geometry stays in review until an authorized surveyor or manager approves it.</p></div><Link to="/survey-plan?mode=georeference">Georeference scanned layout</Link><Link to="/survey-plan?mode=survey">Import survey coordinates</Link></section>}
@@ -304,5 +362,6 @@ export default function Estates() {
     {message ? <p className="estates-message">{message}</p> : <section className="estate-grid">{estates.map((estate) => <article key={estate.id}><small>{estate.status.replaceAll("_", " ")}</small><h2>{estate.name}</h2><p>{estate.location || "Location pending"}</p>{estate.financial && <p className="estate-financial">Collected {money(estate.financial.confirmed_collections)}<br/>Outstanding {money(estate.financial.outstanding_balance)}</p>}<Link to={`/estates/${estate.id}/map`}>Open estate map</Link><Link to="/estates/payments">Payments and statements</Link></article>)}</section>}
     {estateId && <section className="estate-create estate-block-editor"><div><p className="workflow-eyebrow">Estate structure</p><h2>Blocks</h2><p>Define block labels before assigning imported or manually created plots.</p></div><input value={blockLabel} onChange={(event) => setBlockLabel(event.target.value)} placeholder="Block label, e.g. B" /><input value={blockName} onChange={(event) => setBlockName(event.target.value)} placeholder="Block name (optional)" /><button type="button" onClick={() => void createBlock()}>Add block</button><p>{blocks.map((block) => `${block.label}${block.name ? ` - ${block.name}` : ""}`).join(" · ") || "No blocks yet."}</p></section>}
     {estateId && importReviews.length > 0 && <section className="estate-import-review-queue"><p className="workflow-eyebrow">Approval queue</p><h2>Review candidate parcels</h2>{importReviews.map((review) => <details key={review.id}><summary>{review.source_type} - {review.status} - {review.candidate_count} candidate(s)</summary>{review.status === "review_required" && <><p>Adjust the JSON only after surveyor verification. Each item needs plot_number and a GeoJSON Polygon geometry.</p><textarea value={reviewCandidateText[review.id] ?? JSON.stringify(review.candidates || [], null, 2)} onChange={(event) => setReviewCandidateText((current) => ({ ...current, [review.id]: event.target.value }))} /><button type="button" onClick={() => void decideImportReview(review.id, "approved", reviewCandidateText[review.id])}>Approve candidates as Estate plots</button><button type="button" onClick={() => void decideImportReview(review.id, "rejected")}>Reject review</button></>}</details>)}</section>}
+    </div>
   </main>;
 }
