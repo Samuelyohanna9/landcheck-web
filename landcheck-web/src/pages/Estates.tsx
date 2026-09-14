@@ -6,6 +6,7 @@ import { money } from "../components/estates/FinancialComponents";
 import CoordinateInput from "../components/CoordinateInput";
 import { loadMapboxGl, loadMapboxGlCss, MAPBOX_TOKEN } from "../utils/mapboxLoader";
 import { toWGS84 } from "../utils/coordinateConverter";
+import { checkPolygonClosure } from "../utils/surveyGeometry";
 import "../styles/estates.css";
 
 type Estate = { id: number; name: string; status: string; organization_id: number; location?: string | null; crs?: string; project_reference?: string | null; project_owner?: string | null; financial?: { confirmed_collections:string; outstanding_balance:string } };
@@ -13,6 +14,37 @@ type EstateCoordinatePoint = { station: string; lng: number; lat: number; height
 
 function parseCoordinateRows(value: string): number[][] {
   return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => line.split(/[\s,]+/).map(Number)).filter((point) => point.length >= 2 && point.every(Number.isFinite)).map(([x, y]) => [x, y]);
+}
+
+function segmentsCross(a: { lng: number; lat: number }, b: { lng: number; lat: number }, c: { lng: number; lat: number }, d: { lng: number; lat: number }) {
+  const orientation = (p: typeof a, q: typeof a, r: typeof a) => (q.lng - p.lng) * (r.lat - p.lat) - (q.lat - p.lat) * (r.lng - p.lng);
+  const ab = orientation(a, b, c);
+  const ac = orientation(a, b, d);
+  const cd = orientation(c, d, a);
+  const cb = orientation(c, d, b);
+  return ((ab > 0 && ac < 0) || (ab < 0 && ac > 0)) && ((cd > 0 && cb < 0) || (cd < 0 && cb > 0));
+}
+
+function orderBoundaryPointIndexes(points: Array<{ lng: number; lat: number }>) {
+  if (points.length < 3) return points.map((_, index) => index);
+  const center = points.reduce((sum, point) => ({ lng: sum.lng + point.lng / points.length, lat: sum.lat + point.lat / points.length }), { lng: 0, lat: 0 });
+  const order = points.map((_, index) => index).sort((left, right) => Math.atan2(points[left].lat - center.lat, points[left].lng - center.lng) - Math.atan2(points[right].lat - center.lat, points[right].lng - center.lng));
+  for (let pass = 0; pass < points.length * points.length; pass += 1) {
+    let changed = false;
+    for (let first = 0; first < order.length - 2 && !changed; first += 1) {
+      for (let second = first + 2; second < order.length && !changed; second += 1) {
+        if (first === 0 && second === order.length - 1) continue;
+        const nextFirst = (first + 1) % order.length;
+        const nextSecond = (second + 1) % order.length;
+        if (segmentsCross(points[order[first]], points[order[nextFirst]], points[order[second]], points[order[nextSecond]])) {
+          order.splice(first + 1, second - first, ...order.slice(first + 1, second + 1).reverse());
+          changed = true;
+        }
+      }
+    }
+    if (!changed) break;
+  }
+  return order;
 }
 
 export default function Estates() {
@@ -97,6 +129,7 @@ export default function Estates() {
     const [lng, lat] = toWGS84(Number(point.lng), Number(point.lat), plotInputCoordinateSystem);
     return { ...point, lng, lat };
   }).filter((point) => Number.isFinite(point.lng) && Number.isFinite(point.lat)), [plotInputPoints, plotInputCoordinateSystem]);
+  const plotInputClosure = useMemo(() => checkPolygonClosure(plotInputMapPoints.map((point) => [point.lng, point.lat] as [number, number])), [plotInputMapPoints]);
   useEffect(() => {
     api.get("/estates/foundation/access").then((response) => { const rows=response.data.organizations || []; setOrganizations(rows); if (rows.length === 1) setNewEstateOrg(String(rows[0].id)); }).catch(() => setOrganizations([]));
     api.get("/estates")
@@ -144,6 +177,14 @@ export default function Estates() {
   const removePlotInputPoint = (index: number) => {
     setPlotInputPoints((current) => current.filter((_, pointIndex) => pointIndex !== index));
   };
+  const reorderPlotInputPoints = () => {
+    if (plotInputMapPoints.length !== plotInputPoints.length || plotInputClosure !== "self-intersecting") return;
+    const order = orderBoundaryPointIndexes(plotInputMapPoints);
+    const reordered = order.map((index) => plotInputPoints[index]);
+    const reorderedMapPoints = order.map((index) => plotInputMapPoints[index]);
+    setPlotInputPoints(reordered);
+    setWorkflowMessage(checkPolygonClosure(reorderedMapPoints.map((point) => [point.lng, point.lat] as [number, number])) === "closed" ? "Point order corrected. Review the boundary, then create the plot." : "The points still cross. Edit the point order manually before creating the plot.");
+  };
   const importPlotInputPoints = (points: EstateCoordinatePoint[]) => {
     setPlotInputPoints(points.map((point, index) => ({ ...point, station: point.station || `P${index + 1}`, is_boundary: true })));
   };
@@ -152,6 +193,7 @@ export default function Estates() {
     if (plotInputPoints.length < 3) { setWorkflowMessage("Add at least three boundary points or import a coordinate file."); return; }
     const ring = plotInputMapPoints.map((point) => [point.lng, point.lat]);
     if (ring.length < 3 || ring.some((point) => point.some((value) => !Number.isFinite(value)))) { setWorkflowMessage("Check the coordinate values before creating this plot."); return; }
+    if (plotInputClosure === "self-intersecting") { setWorkflowMessage("Order the boundary points before creating the plot."); return; }
     try { await api.post(`/estates/${estateId}/plots`, { plot_number: plotNumber.trim(), geometry: { type: "Polygon", coordinates: [[...ring, ring[0]]] }, geometry_status: "approved" }); window.location.reload(); }
     catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Plot could not be created.")); }
   };
@@ -373,7 +415,7 @@ export default function Estates() {
     <header><span>LandCheck Estates</span><h1>{estateDetail?.name || "Estate workspace"}</h1><p>Map-first parcel operations for layouts, plots, customers and delivery.</p></header>
     {!estateId && estates.length > 0 && <section className="estate-existing-chooser"><div><p className="workflow-eyebrow">Your estates</p><h2>Open an existing estate</h2><p>Choose an Estate to open its map and plot register.</p></div><label>Choose an estate<select defaultValue="" onChange={(event) => { if (event.target.value) navigate(`/estates/${event.target.value}/map`); }}><option value="">Select an estate</option>{estates.map((estate) => <option key={estate.id} value={estate.id}>{estate.name}{estate.location ? ` - ${estate.location}` : ""}</option>)}</select></label></section>}
     {!estateId && organizations.length > 0 && <section className="estate-create estate-setup-simple"><div><p className="workflow-eyebrow">Start here</p><h2>Create an estate</h2><p>Add the basics now. You can bring in the layout and plots after the Estate is created.</p></div><label>Your organisation<select value={newEstateOrg} onChange={(event) => setNewEstateOrg(event.target.value)}><option value="">Choose organisation</option>{organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}</select></label><label>Estate name<input value={newEstateName} onChange={(event) => setNewEstateName(event.target.value)} placeholder="e.g. Greenview Estate" /></label><label>Location<input value={newEstateLocation} onChange={(event) => setNewEstateLocation(event.target.value)} placeholder="City, state or area" /></label><label className="estate-boundary-field">Estate boundary <span>Optional - one longitude, latitude pair per line</span><textarea value={newEstateBoundaryCoordinates} onChange={(event) => setNewEstateBoundaryCoordinates(event.target.value)} placeholder="7.1234, 9.1234&#10;7.1238, 9.1234&#10;7.1238, 9.1238" /></label><details><summary>Project details (optional)</summary><div><label>Coordinate system<input value={newEstateCrs} onChange={(event) => setNewEstateCrs(event.target.value)} placeholder="EPSG:4326" /></label><label>Datum<input value={newEstateDatum} onChange={(event) => setNewEstateDatum(event.target.value)} placeholder="Datum" /></label><label>Project reference<input value={newEstateProjectReference} onChange={(event) => setNewEstateProjectReference(event.target.value)} placeholder="Reference" /></label><label>Developer or owner<input value={newEstateProjectOwner} onChange={(event) => setNewEstateProjectOwner(event.target.value)} placeholder="Name" /></label><label>Notes<textarea value={newEstateOwnershipDetails} onChange={(event) => setNewEstateOwnershipDetails(event.target.value)} placeholder="Ownership or project notes" /></label></div></details><button type="button" onClick={() => void createEstate()}>Create estate</button></section>}
-    {estateId && <section className="estate-plot-input-panel"><div><p className="workflow-eyebrow">Add one plot</p><h2>Create a plot from coordinates</h2><p>Import a CSV or Excel file or enter points manually. Review the boundary on the Estate map before adding it to the plot register.</p></div><label>Plot number<input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="e.g. B-024" /></label><CoordinateInput title="Add plot boundary" subtitle="Choose a spreadsheet or enter the points manually." sidebar={<div className="estate-coordinate-context"><strong>Plot boundary</strong><span>Use the same coordinate workflow as Survey.</span></div>} points={plotInputPoints} onUpdatePoint={updatePlotInputPoint} onRemovePoint={removePlotInputPoint} onAddPoint={addPlotInputPoint} onBulkUpload={importPlotInputPoints} disabled={false} coordinateSystem={plotInputCoordinateSystem} onCoordinateSystemChange={setPlotInputCoordinateSystem} onClearAllPoints={() => setPlotInputPoints([])} /><button type="button" className="estate-plot-create-button" disabled={plotInputMapPoints.length < 3} onClick={() => void createPlotFromInput()}>Create plot</button></section>}
+    {estateId && <section className="estate-plot-input-panel"><div><p className="workflow-eyebrow">Add one plot</p><h2>Create a plot from coordinates</h2><p>Import a CSV or Excel file or enter points manually. Review the boundary on the Estate map before adding it to the plot register.</p></div><label>Plot number<input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="e.g. B-024" /></label><CoordinateInput title="Add plot boundary" subtitle="Choose a spreadsheet or enter the points manually." sidebar={<div className="estate-coordinate-context"><strong>Plot boundary</strong><span>Use the same coordinate workflow as Survey.</span></div>} points={plotInputPoints} onUpdatePoint={updatePlotInputPoint} onRemovePoint={removePlotInputPoint} onAddPoint={addPlotInputPoint} onBulkUpload={importPlotInputPoints} disabled={false} coordinateSystem={plotInputCoordinateSystem} onCoordinateSystemChange={setPlotInputCoordinateSystem} onReorderPoints={reorderPlotInputPoints} onClearAllPoints={() => setPlotInputPoints([])} /><button type="button" className="estate-plot-create-button" disabled={plotInputMapPoints.length < 3 || plotInputClosure === "self-intersecting"} onClick={() => void createPlotFromInput()}>{plotInputClosure === "self-intersecting" ? "Order points first" : "Create plot"}</button></section>}
     <section className="estates-toolbar"><strong>{estateSession?.user.organization_name || "My estates"}</strong><div><Link to="/estates/workspace">Estate workspace</Link><button type="button" onClick={() => { clearEstateAuthSession(); navigate("/estates", { replace: true }); }}>Sign out</button></div></section>
     {!estateId && organizations.length > 0 && <section className="estate-create estate-setup"><div><p className="workflow-eyebrow">Step 1 · Create Estate</p><h2>Start the estate register</h2><p>Set the project context first. You can add the boundary and approved parcels through the layout review workflow.</p></div><select value={newEstateOrg} onChange={(event) => setNewEstateOrg(event.target.value)}><option value="">Organization</option>{organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}</select><input value={newEstateName} onChange={(event) => setNewEstateName(event.target.value)} placeholder="Estate name" /><input value={newEstateLocation} onChange={(event) => setNewEstateLocation(event.target.value)} placeholder="Location" /><input value={newEstateCrs} onChange={(event) => setNewEstateCrs(event.target.value)} placeholder="Coordinate system, e.g. EPSG:4326" /><input value={newEstateDatum} onChange={(event) => setNewEstateDatum(event.target.value)} placeholder="Datum (optional)" /><input value={newEstateProjectReference} onChange={(event) => setNewEstateProjectReference(event.target.value)} placeholder="Project reference (optional)" /><input value={newEstateProjectOwner} onChange={(event) => setNewEstateProjectOwner(event.target.value)} placeholder="Developer / owner (optional)" /><textarea value={newEstateOwnershipDetails} onChange={(event) => setNewEstateOwnershipDetails(event.target.value)} placeholder="Ownership or project details (optional)" /><textarea value={newEstateBoundaryCoordinates} onChange={(event) => setNewEstateBoundaryCoordinates(event.target.value)} placeholder="Estate boundary: longitude, latitude per line (optional)" /><button type="button" onClick={() => void createEstate()}>Create Estate</button></section>}
     {estateId && <section className="estate-import-panel"><div><p className="workflow-eyebrow">Step 2 · Bring in layout data</p><h2>Import and verify the Estate layout</h2><p>Upload an existing digital layout, or georeference and digitize a scanned plan in Survey. Geometry stays in review until an authorized surveyor or manager approves it.</p></div><Link to="/survey-plan?mode=georeference">Georeference scanned layout</Link><Link to="/survey-plan?mode=survey">Import survey coordinates</Link></section>}

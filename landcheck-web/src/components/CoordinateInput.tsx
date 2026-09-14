@@ -126,6 +126,8 @@ type Props = {
   // rather than making the surveyor read a coordinate table. Falls back to the table+modal route
   // when not provided, so this stays backward compatible for any other consumer.
   onAiPlotParsed?: (points: ManualPoint[]) => void;
+  // Optional recovery action for callers that import an unordered boundary point set.
+  onReorderPoints?: () => void;
   // Opt-in: powers the coordinate-preview table's "Clear" action, which needs to remove every
   // point unconditionally (starting over with a different input method) - unlike onRemovePoint,
   // which enforces the "at least 3 boundary points" rule per row and would just get stuck at 3
@@ -185,6 +187,7 @@ function CoordinateInput({
   showPointRoles = false,
   onImportedMetadata,
   onAiPlotParsed,
+  onReorderPoints,
   onClearAllPoints,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1093,6 +1096,11 @@ function CoordinateInput({
             <button type="button" className="coord-method-action-btn coord-method-action-btn--outline" onClick={() => setPreviewEditing(true)}>
               Edit coordinates
             </button>
+            {pointValidation.closure === "self-intersecting" && onReorderPoints && (
+              <button type="button" className="coord-method-action-btn coord-method-action-btn--outline" onClick={onReorderPoints}>
+                Order points around boundary
+              </button>
+            )}
             {onClearAllPoints && (
               <button type="button" className="coord-method-action-btn coord-method-action-btn--outline coord-method-action-btn--danger" onClick={onClearAllPoints}>
                 Clear
