@@ -10,7 +10,54 @@ import MapViewEnhanced from "../components/MapViewEnhanced";
 import { loadMapboxGl, loadMapboxGlCss, MAPBOX_TOKEN } from "../utils/mapboxLoader";
 import { toWGS84 } from "../utils/coordinateConverter";
 import { checkPolygonClosure } from "../utils/surveyGeometry";
+import EstateIcon from "../components/estates/EstateIcon";
 import "../styles/estates.css";
+import "../styles/estate-dashboard.css";
+
+const STATUS_COLORS = {
+  available: "#1e8a4c",
+  allocated: "#2a78d6",
+  reserved: "#d69100",
+  under_survey: "#d9622a",
+  under_staking: "#6046a8",
+  developed: "#d1433f",
+  on_hold: "#667085",
+} as const;
+
+const NAV_ITEMS: Array<{ key: string; label: string; icon: import("../components/estates/EstateIcon").EstateIconName; hash?: string }> = [
+  { key: "dashboard", label: "Dashboard", icon: "dashboard" },
+  { key: "map", label: "Map & Plots", icon: "map" },
+  { key: "plots", label: "Plots", icon: "plots", hash: "plot-register" },
+  { key: "customers", label: "Customers", icon: "customers", hash: "customer-tools" },
+  { key: "payments", label: "Sales & Payments", icon: "payments", hash: "customer-tools" },
+  { key: "survey", label: "Survey", icon: "survey", hash: "estate-workflow" },
+  { key: "staking", label: "Staking", icon: "staking", hash: "estate-workflow" },
+  { key: "documents", label: "Documents", icon: "documents", hash: "customer-tools" },
+  { key: "development", label: "Development", icon: "development", hash: "estate-workflow" },
+  { key: "hazard", label: "Hazard Analysis", icon: "hazard", hash: "hazard-dashboard" },
+  { key: "reports", label: "Reports", icon: "reports", hash: "hazard-dashboard" },
+  { key: "audit", label: "Audit Timeline", icon: "audit", hash: "estate-timeline" },
+  { key: "settings", label: "Settings", icon: "settings", hash: "estate-settings" },
+];
+
+function relativeTime(value: string) {
+  const then = new Date(value).getTime();
+  if (!Number.isFinite(then)) return "";
+  const diffMs = Date.now() - then;
+  const minutes = Math.round(diffMs / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(value).toLocaleDateString();
+}
+
+function humanizeRole(roleKey?: string | null) {
+  if (!roleKey) return "Estate team";
+  return roleKey.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
 
 type Estate = { id: number; name: string; status: string; organization_id: number; location?: string | null; crs?: string; project_reference?: string | null; project_owner?: string | null; financial?: { confirmed_collections:string; outstanding_balance:string } };
 type EstateCoordinatePoint = { station: string; lng: number; lat: number; height?: number; is_boundary?: boolean };
@@ -120,6 +167,16 @@ export default function Estates() {
   const [estateDetail, setEstateDetail] = useState<any>(null);
   const [surveyRuleEnabled, setSurveyRuleEnabled] = useState(false);
   const [surveyRulePercentage, setSurveyRulePercentage] = useState("0");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mapStyleMode, setMapStyleMode] = useState<"map" | "satellite">("satellite");
+  const [blockFilterId, setBlockFilterId] = useState("all");
+  const [layersVisible, setLayersVisible] = useState(true);
+  const [drawerTab, setDrawerTab] = useState<"overview" | "customer" | "survey" | "staking" | "documents" | "hazards" | "timeline">("overview");
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [editingDevelopment, setEditingDevelopment] = useState(false);
+  const [plotDocumentFile, setPlotDocumentFile] = useState<File | null>(null);
+  const [plotDocumentBusy, setPlotDocumentBusy] = useState(false);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const visiblePlotGeojson = useMemo(() => {
@@ -129,10 +186,11 @@ export default function Estates() {
       features: (plotGeojson.features || []).filter((feature: any) => {
         const properties = feature.properties || {};
         const plotNumber = String(properties.plot_number || properties.number || "").toLowerCase();
-        return (statusFilter === "all" || properties.commercial_status === statusFilter) && (!query || plotNumber.includes(query));
+        const matchesBlock = blockFilterId === "all" || String(properties.block_id ?? "") === blockFilterId;
+        return matchesBlock && (statusFilter === "all" || properties.commercial_status === statusFilter) && (!query || plotNumber.includes(query));
       }),
     };
-  }, [plotGeojson, plotSearch, statusFilter]);
+  }, [plotGeojson, plotSearch, statusFilter, blockFilterId]);
   const plotInputMapPoints = useMemo(() => plotInputPoints.map((point) => {
     const [lng, lat] = toWGS84(Number(point.lng), Number(point.lat), plotInputCoordinateSystem);
     return { ...point, lng, lat };
@@ -380,7 +438,12 @@ export default function Estates() {
     void Promise.all([loadMapboxGl(), loadMapboxGlCss()]).then(([mapboxgl]) => {
       if (cancelled || !mapContainer.current) return;
       mapRef.current?.remove();
-      const map = new mapboxgl.Map({ container: mapContainer.current, style: "mapbox://styles/mapbox/light-v11", center: [7.4, 9.1], zoom: 12 });
+      const map = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: mapStyleMode === "satellite" ? "mapbox://styles/mapbox/satellite-streets-v12" : "mapbox://styles/mapbox/light-v11",
+        center: [7.4, 9.1],
+        zoom: 12,
+      });
       mapRef.current = map;
       map.on("load", () => {
         if (estateDetail?.boundary) {
@@ -390,11 +453,66 @@ export default function Estates() {
           map.addLayer({ id: "estate-boundary-outline", type: "line", source: "estate-boundary", paint: { "line-color": "#087f76", "line-width": 2, "line-dasharray": [2, 2] } });
         }
         map.addSource("estate-plots", { type: "geojson", data: visiblePlotGeojson });
-        map.addLayer({ id: "estate-plots-fill", type: "fill", source: "estate-plots", paint: { "fill-color": ["match", ["get", "commercial_status"], "available", "#5b9b65", "reserved", "#dcaa43", "allocated", "#ba5e52", "on_hold", "#6d7690", "#87928b"], "fill-opacity": 0.58 } });
-        map.addLayer({ id: "estate-plots-outline", type: "line", source: "estate-plots", paint: { "line-color": "#173d30", "line-width": 1.5 } });
-        map.addSource("estate-layers", { type: "geojson", data: layerGeojson });
-        map.addLayer({ id: "estate-layers-line", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "road", "#313131", "drainage", "#287cb4", "#b77c2d"], "line-width": 3 } });
+        map.addLayer({
+          id: "estate-plots-fill",
+          type: "fill",
+          source: "estate-plots",
+          paint: {
+            "fill-color": [
+              "match",
+              ["get", "commercial_status"],
+              "available", STATUS_COLORS.available,
+              "reserved", STATUS_COLORS.reserved,
+              "allocated", STATUS_COLORS.allocated,
+              "on_hold", STATUS_COLORS.on_hold,
+              STATUS_COLORS.on_hold,
+            ],
+            "fill-opacity": mapStyleMode === "satellite" ? 0.62 : 0.5,
+          },
+        });
+        map.addLayer({ id: "estate-plots-outline", type: "line", source: "estate-plots", paint: { "line-color": "#ffffff", "line-width": 1.4 } });
+        map.addSource("estate-layers", { type: "geojson", data: layersVisible ? layerGeojson : { type: "FeatureCollection", features: [] } });
+        map.addLayer({ id: "estate-layers-line", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "road", "#2b2f36", "drainage", "#287cb4", "#b77c2d"], "line-width": 3 } });
         map.addLayer({ id: "estate-layers-fill", type: "fill", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": ["match", ["get", "type"], "open_space", "#78a85d", "infrastructure", "#b77c2d", "#287cb4"], "fill-opacity": 0.35 } });
+
+        const blockCentroids = new Map<string, { sumLng: number; sumLat: number; count: number }>();
+        const collectVertices = (geometry: any, blockId: string) => {
+          if (!geometry) return;
+          const walk = (coords: any): void => {
+            if (typeof coords[0] === "number") {
+              const entry = blockCentroids.get(blockId) || { sumLng: 0, sumLat: 0, count: 0 };
+              entry.sumLng += coords[0];
+              entry.sumLat += coords[1];
+              entry.count += 1;
+              blockCentroids.set(blockId, entry);
+            } else {
+              coords.forEach(walk);
+            }
+          };
+          walk(geometry.coordinates);
+        };
+        visiblePlotGeojson.features.forEach((feature: any) => {
+          const blockId = feature.properties?.block_id;
+          if (blockId === undefined || blockId === null) return;
+          collectVertices(feature.geometry, String(blockId));
+        });
+        const blockLabelFeatures = Array.from(blockCentroids.entries()).map(([blockId, entry]) => {
+          const block = blocks.find((item) => String(item.id) === blockId);
+          return {
+            type: "Feature",
+            properties: { label: block ? `BLOCK ${block.label}` : `BLOCK ${blockId}` },
+            geometry: { type: "Point", coordinates: [entry.sumLng / entry.count, entry.sumLat / entry.count] },
+          };
+        });
+        map.addSource("estate-block-labels", { type: "geojson", data: { type: "FeatureCollection", features: blockLabelFeatures } as any });
+        map.addLayer({
+          id: "estate-block-labels",
+          type: "symbol",
+          source: "estate-block-labels",
+          layout: { "text-field": ["get", "label"], "text-size": 11, "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"] },
+          paint: { "text-color": "#ffffff", "text-halo-color": "rgba(16,24,39,0.85)", "text-halo-width": 3 },
+        });
+
         const bounds = new mapboxgl.LngLatBounds();
         const extendGeometry = (geometry: any) => {
           if (!geometry) return;
@@ -406,22 +524,19 @@ export default function Estates() {
         if (estateDetail?.boundary) extendGeometry(estateDetail.boundary);
         visiblePlotGeojson.features.forEach((feature: any) => extendGeometry(feature.geometry));
         if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 46, maxZoom: 17 });
-        map.on("click", "estate-plots-fill", (event: any) => { const id = Number(event.features?.[0]?.properties?.id); setSelectedPlotId(id); const allocation = allocations.find((item) => item.plot_id === id); if (allocation) void selectAllocation(String(allocation.id)); else { setAllocationId(""); setFinancial(null); } });
+        map.on("click", "estate-plots-fill", (event: any) => {
+          const id = Number(event.features?.[0]?.properties?.id);
+          setSelectedPlotId(id);
+          setDrawerTab("overview");
+          const allocation = allocations.find((item) => item.plot_id === id);
+          if (allocation) void selectAllocation(String(allocation.id));
+          else { setAllocationId(""); setFinancial(null); }
+        });
         map.on("mouseenter", "estate-plots-fill", () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", "estate-plots-fill", () => { map.getCanvas().style.cursor = ""; });
       });
     });
     return () => { cancelled = true; mapRef.current?.remove(); mapRef.current = null; };
-  }, [estateId, estateDetail, visiblePlotGeojson, layerGeojson, allocations]);
-  useEffect(() => {
-    const anchors: Array<[string, string]> = [
-      [".estate-map-panel", "plot-register"],
-      [".estate-workflow-panel", "estate-workflow"],
-      [".estate-qc.estate-hazard-dashboard", "hazard-dashboard"],
-      [".estate-settings", "estate-settings"],
-      [".estate-timeline", "estate-timeline"],
-    ];
-    anchors.forEach(([selector, id]) => document.querySelector(`.estate-app ${selector}`)?.setAttribute("id", id));
-  }, [estateId, selectedPlotId, financial, hazardDashboard, activity]);
+  }, [estateId, estateDetail, visiblePlotGeojson, layerGeojson, allocations, mapStyleMode, blocks, layersVisible]);
   const selectAllocation = async (id: string) => {
     setAllocationId(id); setFinancial(null);
     if (!id) return;
@@ -461,51 +576,903 @@ export default function Estates() {
   const selectedSurvey = selectedAllocation && surveyRequests.find((item) => item.plot.id === selectedAllocation.plot_id);
   const selectedTask = selectedSurvey && stakingTasks.find((item) => item.survey_request_id === selectedSurvey.id);
   const estateSession = getEstateAuthSession();
-  return <main className="estates-shell">
-    <aside className="estate-sidebar">
-      <div className="estate-brand"><span className="estate-brand-mark">L</span><div><strong>LandCheck</strong><small>Estates</small></div></div>
-      <div className="estate-sidebar-estate"><small>ACTIVE ESTATE</small><strong>{estateDetail?.name || estates[0]?.name || "Estate workspace"}</strong><span>{estateDetail?.location_text || estates[0]?.location || "Choose an estate to begin"}</span></div>
-      <nav aria-label="Estate navigation">
-        <Link className={!estateId ? "active" : ""} to="/estates/workspace"><span>⌂</span>Dashboard</Link>
-        <Link className={estateId ? "active" : ""} to={estateId ? `/estates/${estateId}/map` : "/estates/workspace"}><span>▦</span>Map &amp; Plots</Link>
-        <Link to={estateId ? `/estates/${estateId}/map#plot-register` : "/estates/workspace#plot-register"}><span>▤</span>Plots</Link>
-        <Link to="/estates/payments"><span>♙</span>Customers</Link>
-        <Link to="/estates/payments"><span>₦</span>Sales &amp; Payments</Link>
-        <a href={estateId ? "#estate-workflow" : "/estates/workspace"}><span>⌖</span>Survey</a>
-        <a href={estateId ? "#estate-workflow" : "/estates/workspace"}><span>⌁</span>Staking</a>
-        <Link to="/estates/documents"><span>□</span>Documents</Link>
-        <a href={estateId ? "#estate-workflow" : "/estates/workspace"}><span>⌂</span>Development</a>
-        <a href={estateId ? "#hazard-dashboard" : "/estates/workspace"}><span>△</span>Hazard Analysis</a>
-        <a href={estateId ? "#estate-timeline" : "/estates/workspace"}><span>◷</span>Audit Timeline</a>
-        <a href={estateId ? "#estate-settings" : "/estates/workspace"}><span>⚙</span>Settings</a>
-      </nav>
-      <div className="estate-sidebar-footer"><span>?</span>Help &amp; Support</div>
-    </aside>
-    <div className="estate-app">
-      <div className="estate-topbar"><div className="estate-breadcrumb"><span>Estates</span><b>›</b><strong>{estateDetail?.name || "Workspace"}</strong></div><label className="estate-search"><span aria-hidden="true">⌕</span><input value={plotSearch} onChange={(event) => setPlotSearch(event.target.value)} placeholder="Search plots by number..." aria-label="Search plots by number" /></label><div className="estate-user"><span className="estate-avatar">{(estateSession?.user.organization_name || "E").slice(0, 1).toUpperCase()}</span><div><strong>{estateSession?.user.organization_name || "Estate team"}</strong><small>Estate workspace</small></div></div></div>
-    <header><span>LandCheck Estates</span><h1>{estateDetail?.name || "Estate workspace"}</h1><p>Map-first parcel operations for layouts, plots, customers and delivery.</p></header>
-    {!estateId && estates.length > 0 && <section className="estate-existing-chooser"><div><p className="workflow-eyebrow">Your estates</p><h2>Open an existing estate</h2><p>Choose an Estate to open its map and plot register.</p></div><label>Choose an estate<select defaultValue="" onChange={(event) => { if (event.target.value) navigate(`/estates/${event.target.value}/map`); }}><option value="">Select an estate</option>{estates.map((estate) => <option key={estate.id} value={estate.id}>{estate.name}{estate.location ? ` - ${estate.location}` : ""}</option>)}</select></label></section>}
-    {!estateId && organizations.length > 0 && <section className="estate-create estate-setup-simple"><div><p className="workflow-eyebrow">Start here</p><h2>Create an estate</h2><p>Add the basics now. You can bring in the layout and plots after the Estate is created.</p></div><label>Your organisation<select value={newEstateOrg} onChange={(event) => setNewEstateOrg(event.target.value)}><option value="">Choose organisation</option>{organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}</select></label><label>Estate name<input value={newEstateName} onChange={(event) => setNewEstateName(event.target.value)} placeholder="e.g. Greenview Estate" /></label><label>Location<input value={newEstateLocation} onChange={(event) => setNewEstateLocation(event.target.value)} placeholder="City, state or area" /></label><label className="estate-boundary-field">Estate boundary <span>Optional - one longitude, latitude pair per line</span><textarea value={newEstateBoundaryCoordinates} onChange={(event) => setNewEstateBoundaryCoordinates(event.target.value)} placeholder="7.1234, 9.1234&#10;7.1238, 9.1234&#10;7.1238, 9.1238" /></label><details><summary>Project details (optional)</summary><div><label>Coordinate system<input value={newEstateCrs} onChange={(event) => setNewEstateCrs(event.target.value)} placeholder="EPSG:4326" /></label><label>Datum<input value={newEstateDatum} onChange={(event) => setNewEstateDatum(event.target.value)} placeholder="Datum" /></label><label>Project reference<input value={newEstateProjectReference} onChange={(event) => setNewEstateProjectReference(event.target.value)} placeholder="Reference" /></label><label>Developer or owner<input value={newEstateProjectOwner} onChange={(event) => setNewEstateProjectOwner(event.target.value)} placeholder="Name" /></label><label>Notes<textarea value={newEstateOwnershipDetails} onChange={(event) => setNewEstateOwnershipDetails(event.target.value)} placeholder="Ownership or project notes" /></label></div></details><button type="button" onClick={() => void createEstate()}>Create estate</button></section>}
-    {estateId && <section className="estate-plot-input-panel"><div><p className="workflow-eyebrow">Add one plot</p><h2>Create a plot from coordinates</h2><p>Import a CSV or Excel file or enter points manually. The boundary appears on the map immediately, where you can move points before adding it to the plot register.</p></div><label>Plot number<input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="e.g. B-024" /></label><div className="estate-plot-input-workbench"><CoordinateInput title="Add plot boundary" subtitle="Choose a spreadsheet or enter the points manually." sidebar={<div className="estate-coordinate-context"><strong>Plot boundary</strong><span>Use the same coordinate workflow as Survey.</span></div>} points={plotInputPoints} onUpdatePoint={updatePlotInputPoint} onRemovePoint={removePlotInputPoint} onAddPoint={addPlotInputPoint} onBulkUpload={importPlotInputPoints} disabled={false} coordinateSystem={plotInputCoordinateSystem} onCoordinateSystemChange={setPlotInputCoordinateSystem} onReorderPoints={reorderPlotInputPoints} onClearAllPoints={() => setPlotInputPoints([])} /><div className="estate-plot-map-preview"><div><p className="workflow-eyebrow">Map preview</p><h3>Check the plot location</h3><p>Edit the boundary on the map or use the table above.</p></div>{MAPBOX_TOKEN ? <MapViewEnhanced coordinates={plotInputMapPoints} onCoordinatesDrawn={handlePlotCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <div className="estate-map-fallback">Map preview is unavailable right now. You can still review the coordinates above.</div>}</div></div>{workflowMessage && <p className="estate-plot-input-message" role="status">{workflowMessage}</p>}<button type="button" className="estate-plot-create-button" disabled={plotInputMapPoints.length < 3 || plotInputClosure === "self-intersecting"} onClick={() => void createPlotFromInput()}>{plotInputClosure === "self-intersecting" ? "Fix boundary first" : "Create plot"}</button></section>}
-    <section className="estates-toolbar"><strong>{estateSession?.user.organization_name || "My estates"}</strong><div><Link to="/estates/workspace">Estate workspace</Link><button type="button" onClick={() => { clearEstateAuthSession(); navigate("/estates", { replace: true }); }}>Sign out</button></div></section>
-    {!estateId && organizations.length > 0 && <section className="estate-create estate-setup"><div><p className="workflow-eyebrow">Step 1 · Create Estate</p><h2>Start the estate register</h2><p>Set the project context first. You can add the boundary and approved parcels through the layout review workflow.</p></div><select value={newEstateOrg} onChange={(event) => setNewEstateOrg(event.target.value)}><option value="">Organization</option>{organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}</select><input value={newEstateName} onChange={(event) => setNewEstateName(event.target.value)} placeholder="Estate name" /><input value={newEstateLocation} onChange={(event) => setNewEstateLocation(event.target.value)} placeholder="Location" /><input value={newEstateCrs} onChange={(event) => setNewEstateCrs(event.target.value)} placeholder="Coordinate system, e.g. EPSG:4326" /><input value={newEstateDatum} onChange={(event) => setNewEstateDatum(event.target.value)} placeholder="Datum (optional)" /><input value={newEstateProjectReference} onChange={(event) => setNewEstateProjectReference(event.target.value)} placeholder="Project reference (optional)" /><input value={newEstateProjectOwner} onChange={(event) => setNewEstateProjectOwner(event.target.value)} placeholder="Developer / owner (optional)" /><textarea value={newEstateOwnershipDetails} onChange={(event) => setNewEstateOwnershipDetails(event.target.value)} placeholder="Ownership or project details (optional)" /><textarea value={newEstateBoundaryCoordinates} onChange={(event) => setNewEstateBoundaryCoordinates(event.target.value)} placeholder="Estate boundary: longitude, latitude per line (optional)" /><button type="button" onClick={() => void createEstate()}>Create Estate</button></section>}
-    {estateId && <EstateLayoutImport reviews={importReviews} files={{ csv: csvFile, geojson: geojsonFile, dxf: dxfFile, "scanned-layout": scannedLayoutFile }} onFileChange={handleLayoutFileChange} onUpload={(method) => void uploadLayout(method)} onDecision={(reviewId, status) => void decideImportReview(reviewId, status)} message={layoutMessage} busy={layoutUploadBusy} />}
-    {estateId && <EstateLayoutDesigner boundaryPresent={Boolean(estateDetail?.boundary)} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} />}
-    {estateId && <section className="estate-map-panel"><div><p className="workflow-eyebrow">Step 4 · Manage plot inventory</p><h2>Estate parcel map</h2><p>Every approved plot is visible here: green available, amber reserved, red allocated/sold, slate on hold.</p></div><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All plot statuses</option><option value="available">Available</option><option value="reserved">Reserved</option><option value="allocated">Allocated / sold</option><option value="on_hold">On hold</option></select>{MAPBOX_TOKEN ? <div ref={mapContainer} className="estate-map" /> : <div className="estate-map-fallback">Map preview is unavailable right now. {visiblePlotGeojson.features.length} plot geometries are ready in this Estate.</div>}</section>}
-    {estateId && dashboard && <section className="estate-metrics"><strong>{dashboard.total_plots} total plots</strong><span>{dashboard.statuses.available || 0} available</span><span>{dashboard.statuses.reserved || 0} reserved</span><span>{dashboard.statuses.allocated || 0} allocated / sold</span><span>{dashboard.statuses.on_hold || 0} on hold</span><span>{dashboard.awaiting_survey} awaiting survey</span><span>{dashboard.survey_completed || 0} Survey completed</span><span>{dashboard.awaiting_staking} awaiting staking</span><span>{dashboard.development.site_cleared || 0} site cleared</span><span>{dashboard.development.foundation || 0} foundation</span><span>{dashboard.development.under_construction || 0} under construction</span><span>{dashboard.development.developed || 0} developed</span><span>Collected {money(dashboard.financial.confirmed_collections)}</span><span>Outstanding {money(dashboard.financial.outstanding_balance)}</span></section>}
-    {estateId && estateDetail && <section className="estate-settings"><div><p className="workflow-eyebrow">Operating rule</p><h2>Survey eligibility</h2><p>Prepare Survey when the selected percentage of the agreed price has been confirmed. Set 0% to allow preparation immediately.</p></div><label><span>Minimum confirmed payment</span><input type="number" min="0" max="100" step="1" value={surveyRulePercentage} onChange={(event) => setSurveyRulePercentage(event.target.value)} /></label><label className="estate-checkbox"><input type="checkbox" checked={surveyRuleEnabled} onChange={(event) => setSurveyRuleEnabled(event.target.checked)} /> Enforce this rule</label><button type="button" onClick={() => void saveSurveyRule()}>Save rule</button></section>}
-    {estateId && hazardDashboard && <section className="estate-qc estate-hazard-dashboard"><div><p className="workflow-eyebrow">Site intelligence</p><h2>Persisted hazard screening</h2><p>{hazardDashboard.assessment_count || 0} assessment record(s) stored against this Estate.</p></div>{Object.entries(hazardDashboard.summary || {}).map(([type, value]: [string, any]) => <p key={type}><strong>{type.toUpperCase()}</strong> - {value.assessed} result(s): {Object.entries(value.classes || {}).map(([risk, count]) => `${risk} (${count})`).join(", ") || "No classification"}</p>)}{(hazardDashboard.assessments || []).slice(0, 12).map((item: any) => <p key={item.plot_id || "estate"}><strong>{item.plot_id ? `Plot ${item.plot_id}` : "Estate"}</strong> - {Object.entries(item.hazards || {}).map(([type, value]: [string, any]) => `${type}: ${value.risk_class || "unavailable"}`).join("; ")}</p>)}</section>}
-    {estateId && quality && <section className="estate-qc"><div><p className="workflow-eyebrow">Step 3 · Approve the Estate map</p><h2>{quality.review_required ? "Review required" : "Geometry ready"}</h2><p>{quality.plot_count} plots checked. {quality.issues.length} issue(s) detected.</p></div>{quality.issues.slice(0,8).map((issue:any,index:number) => <p key={`${issue.code}-${index}`} className={issue.severity}>{issue.message}</p>)}{dashboard && <div className="estate-publish-action"><p><strong>Register status:</strong> {dashboard.estate.status.replaceAll("_", " ")}</p><button type="button" disabled={dashboard.estate.status === "active" || quality.review_required || quality.plot_count === 0} onClick={() => void approveEstateMap()}>{dashboard.estate.status === "active" ? "Estate map published" : "Approve and publish map"}</button></div>}</section>}
-    {estateId && <section className="estate-create estate-plot-import"><div><p className="workflow-eyebrow">Add parcel</p><h2>Coordinates or CSV rows</h2><p>Paste one <code>longitude, latitude</code> pair per line. Geometry is checked before saving.</p></div><input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="Plot number, e.g. B-024" /><textarea value={plotCoordinates} onChange={(event) => setPlotCoordinates(event.target.value)} placeholder="7.1234, 9.1234&#10;7.1238, 9.1234&#10;7.1238, 9.1238" /><button type="button" onClick={() => void createPlot()}>Add approved plot</button></section>}
-    {estateId && <section className="estate-create estate-plot-import"><div><p className="workflow-eyebrow">Map layer</p><h2>Road, drainage, open space, infrastructure</h2><p>Paste coordinate rows to add a visible operational layer.</p></div><select value={layerType} onChange={(event) => setLayerType(event.target.value)}><option value="road">Road</option><option value="drainage">Drainage</option><option value="open_space">Open space</option><option value="infrastructure">Infrastructure</option></select><input value={layerName} onChange={(event) => setLayerName(event.target.value)} placeholder="Layer name" /><textarea value={layerCoordinates} onChange={(event) => setLayerCoordinates(event.target.value)} placeholder="longitude, latitude per line" /><button type="button" onClick={() => void createLayer()}>Add layer</button></section>}
-    {estateId && selectedPlot && <section className="estate-plot-record"><p className="workflow-eyebrow">Selected plot record</p><h2>{selectedPlot.plot_number}</h2><div><span>{selectedPlot.commercial_status.replaceAll("_", " ")}</span><span>{selectedPlot.development_status?.replaceAll("_", " ") || "not started"}</span><span>{Number(selectedPlot.area_sqm || 0).toLocaleString()} sqm</span></div><p>{selectedAllocation ? `${selectedAllocation.customer_name} · ${selectedAllocation.status}` : "No active customer allocation."}</p>{selectedAllocation && <button type="button" onClick={() => void selectAllocation(String(selectedAllocation.id))}>Open financial record</button>}{selectedPlot.commercial_status === "available" && <details className="estate-subdivision"><summary>Split this plot</summary><p>Create smaller plots from this available plot. The new plots will appear on the map and can be reserved or allocated.</p><label>Number of new plots<input type="number" min="2" max="100" value={subdivisionCount} onChange={(event) => setSubdivisionCount(event.target.value)} /></label><button type="button" disabled={subdivisionBusy} onClick={() => void subdividePlot()}>{subdivisionBusy ? "Creating plots..." : "Create plots"}</button></details>}<button type="button" onClick={() => void loadHazards()}>Screen flood and erosion</button>{hazards && <p>Flood: {hazards.flood?.summary?.floodplain_class || "unavailable"} · Erosion: {hazards.erosion?.risk_class || "unavailable"}</p>}<div className="inspection-form"><p className="optional-work-note">Optional site note. This is a web record; no field app is required.</p><select value={inspectionOutcome} onChange={(event) => setInspectionOutcome(event.target.value)}><option value="observed">Observed</option><option value="passed">Passed</option><option value="attention_required">Attention required</option><option value="failed">Failed</option></select><input value={inspectionNotes} onChange={(event) => setInspectionNotes(event.target.value)} placeholder="Optional site note" /><button type="button" onClick={() => void recordInspection()}>Save site note</button></div>{inspections.slice(0,5).map((inspection) => <p key={inspection.id}><strong>{inspection.outcome.replaceAll("_", " ")}</strong> · {inspection.notes || "No note"}</p>)}</section>}
-    {estateId && selectedPlot && !selectedAllocation && <section className="estate-create estate-allocation-action"><div><p className="workflow-eyebrow">Step 5 · Customer and allocation</p><h2>Reserve or allocate {selectedPlot.plot_number}</h2><p>Create a customer or choose an existing customer, then record the commercial terms for this parcel.</p></div><input value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="New customer full name" /><input value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} placeholder="Phone (optional)" /><button type="button" onClick={() => void createCustomer()}>Add customer</button><select value={selectedCustomerId} onChange={(event) => setSelectedCustomerId(event.target.value)}><option value="">Choose customer</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select><input type="number" min="0.01" step="0.01" value={agreedPrice} onChange={(event) => setAgreedPrice(event.target.value)} placeholder="Agreed price (NGN)" /><input value={paymentPlan} onChange={(event) => setPaymentPlan(event.target.value)} placeholder="Payment plan (optional)" /><button type="button" onClick={() => void assignCustomer(false)}>Reserve</button><button type="button" onClick={() => void assignCustomer(true)}>Allocate / sell</button></section>}
-    {estateId && layerGeojson.features.length > 0 && <section className="estate-create estate-layer-editor"><div><p className="workflow-eyebrow">Spatial layer editor</p><h2>Correct detected infrastructure</h2><p>Select a layer, adjust its coordinate rows, then save. Archiving removes it from the operational map without deleting its audit trail.</p></div><select value={selectedLayerId} onChange={(event) => selectLayerForEdit(event.target.value)}><option value="">Select a layer</option>{layerGeojson.features.map((feature: any) => <option key={feature.id} value={feature.id}>{feature.properties.name || feature.properties.type} #{feature.id}</option>)}</select>{selectedLayerId && <><textarea value={layerEditCoordinates} onChange={(event) => setLayerEditCoordinates(event.target.value)} /><button type="button" onClick={() => void updateLayer()}>Save geometry</button><button type="button" onClick={() => void archiveLayer()}>Archive layer</button></>}</section>}
-    {estateId && <section className="estate-allocation-panel"><h2>Selected Plot Financials</h2><select value={allocationId} onChange={(event) => void selectAllocation(event.target.value)}><option value="">Select an allocated plot</option>{allocations.map((allocation) => <option key={allocation.id} value={allocation.id}>{allocation.plot_number} - {allocation.customer_name}</option>)}</select>{financial && <><p><strong>{financial.customer.name}</strong> | {financial.estate.name} / {financial.plot.number}</p><div className="estate-financial-grid"><span>Agreed {money(financial.financial.agreed_price)}</span><span>Confirmed {money(financial.financial.confirmed_paid)}</span><span>Pending {money(financial.financial.pending_paid)}</span><span>Outstanding {money(financial.financial.outstanding)}</span><span>Progress {financial.financial.percentage}%</span><span>{financial.financial.fully_paid ? "Fully paid" : "Balance outstanding"}</span></div><h3>Payment History</h3>{financial.payments.map((payment: any) => <p key={payment.id}>{payment.date}: {money(payment.amount)} - {payment.status} {payment.reference ? `(${payment.reference})` : ""}</p>)}<Link to="/estates/payments">Record payment, open payment, view receipt, confirm or void</Link><Link to="/estates/payments">View customer statement</Link></>}</section>}
-    {estateId && allocationId && <section className="estate-workflow-panel"><p className="workflow-eyebrow">Steps 7–9 · Survey, staking and development</p><h2>Deliver this allocated plot</h2><p>Prepare Survey from the approved Estate geometry, then prepare a DGPS file for the developer or surveyor. Field evidence is optional and the normal GNSS field workflow remains outside Estates.</p>{selectedPlot && <label className="workflow-upload">Development progress <select value={selectedPlot.development_status || "not_started"} onChange={(event) => void runWorkflow("Development status", async () => { await api.patch(`/estates/plots/${selectedPlot.id}/development-status`, { status: event.target.value }); setPlots((current) => current.map((plot) => plot.id === selectedPlot.id ? { ...plot, development_status: event.target.value } : plot)); })}><option value="not_started">Not started</option><option value="site_cleared">Site cleared</option><option value="foundation">Foundation</option><option value="under_construction">Under construction</option><option value="developed">Developed</option></select></label>}{!selectedSurvey && selectedAllocation && <button type="button" onClick={() => void runWorkflow("Survey preparation", () => api.post(`/estates/plots/${selectedAllocation.plot_id}/survey-requests`))}>Prepare Survey</button>}{selectedSurvey && <><p><strong>Survey:</strong> {selectedSurvey.status.replaceAll("_", " ")}{selectedSurvey.survey_reference ? ` (${selectedSurvey.survey_reference})` : ""}</p>{!selectedSurvey.materialized && <button type="button" onClick={() => void runWorkflow("Survey workspace", () => api.post(`/estates/survey-requests/${selectedSurvey.id}/start`))}>Open Survey preparation</button>}{selectedSurvey.materialized && <Link className="workflow-link" to={`/survey-plan?mode=survey&estate_survey_plot=${selectedSurvey.survey_working_plot_id || ""}`}>Open approved plot in Survey</Link>}{selectedSurvey.materialized && selectedSurvey.status !== "completed" && <button type="button" onClick={() => void runWorkflow("Survey completion", () => api.post(`/estates/survey-requests/${selectedSurvey.id}/complete`))}>Mark Survey complete</button>}{selectedSurvey.materialized && !selectedTask && <button type="button" onClick={() => void runWorkflow("Staking preparation", () => api.post(`/estates/survey-requests/${selectedSurvey.id}/staking-tasks`))}>Prepare for Staking</button>}</>}{selectedTask && <div className="workflow-task"><p><strong>Staking preparation:</strong> {selectedTask.status.replaceAll("_", " ")}{selectedTask.assigned_subject_id ? ` · handled by ${selectedTask.assigned_subject_id}` : ""}</p><button type="button" onClick={() => void downloadDgps(selectedTask.id)}>Download DGPS CSV</button><label className="workflow-upload">Optional supporting evidence <input type="file" accept="image/*,.pdf" onChange={(event) => setStakingEvidence(event.target.files?.[0] || null)} /></label>{stakingEvidence && <button type="button" onClick={() => void uploadStakingEvidence(selectedTask.id)}>Add optional evidence</button>}{selectedTask.status === "pending" && <button type="button" onClick={() => void runWorkflow("Staking status", () => api.post(`/estates/staking-tasks/${selectedTask.id}/start`))}>Mark staking in progress</button>}{selectedTask.status === "in_progress" && <button type="button" onClick={() => void runWorkflow("Staking completion", () => api.post(`/estates/staking-tasks/${selectedTask.id}/complete`))}>Mark staking complete</button>}</div>}{workflowMessage && <p className="workflow-message">{workflowMessage}</p>}</section>}
-    {estateId && activity.length > 0 && <section className="estate-timeline"><p className="workflow-eyebrow">Activity</p><h2>Parcel activity timeline</h2>{activity.slice(0,12).map((event) => <p key={event.id}><strong>{event.action.replaceAll("_", " ")}</strong> · {new Date(event.created_at).toLocaleString()}</p>)}</section>}
-    {message ? <p className="estates-message">{message}</p> : <section className="estate-grid">{estates.map((estate) => <article key={estate.id}><small>{estate.status.replaceAll("_", " ")}</small><h2>{estate.name}</h2><p>{estate.location || "Location pending"}</p>{estate.financial && <p className="estate-financial">Collected {money(estate.financial.confirmed_collections)}<br/>Outstanding {money(estate.financial.outstanding_balance)}</p>}<Link to={`/estates/${estate.id}/map`}>Open estate map</Link><Link to="/estates/payments">Payments and statements</Link></article>)}</section>}
-    {estateId && <section className="estate-create estate-block-editor"><div><p className="workflow-eyebrow">Estate structure</p><h2>Blocks</h2><p>Define block labels before assigning imported or manually created plots.</p></div><input value={blockLabel} onChange={(event) => setBlockLabel(event.target.value)} placeholder="Block label, e.g. B" /><input value={blockName} onChange={(event) => setBlockName(event.target.value)} placeholder="Block name (optional)" /><button type="button" onClick={() => void createBlock()}>Add block</button><p>{blocks.map((block) => `${block.label}${block.name ? ` - ${block.name}` : ""}`).join(" · ") || "No blocks yet."}</p></section>}
+
+  const orderedPlotIds = visiblePlotGeojson.features.map((feature: any) => Number(feature.properties?.id));
+  const selectedPlotPosition = selectedPlot ? orderedPlotIds.indexOf(selectedPlot.id) : -1;
+  const goToAdjacentPlot = (direction: 1 | -1) => {
+    if (selectedPlotPosition < 0 || orderedPlotIds.length === 0) return;
+    const nextIndex = (selectedPlotPosition + direction + orderedPlotIds.length) % orderedPlotIds.length;
+    const nextId = orderedPlotIds[nextIndex];
+    setSelectedPlotId(nextId);
+    setDrawerTab("overview");
+    const allocation = allocations.find((item) => item.plot_id === nextId);
+    if (allocation) void selectAllocation(String(allocation.id));
+    else { setAllocationId(""); setFinancial(null); }
+  };
+  const selectedBlock = selectedPlot ? blocks.find((block) => block.id === selectedPlot.block_id) : undefined;
+  const openTab = (tab: typeof drawerTab) => { setDrawerTab(tab); setEditingDevelopment(false); };
+  const flyToSelectedPlot = () => {
+    if (!mapRef.current || !selectedPlot) return;
+    const feature = visiblePlotGeojson.features.find((item: any) => Number(item.properties?.id) === selectedPlot.id);
+    const ring = feature?.geometry?.type === "Polygon" ? feature.geometry.coordinates[0] : null;
+    if (!ring || ring.length === 0) return;
+    const lngs = ring.map((coord: number[]) => coord[0]);
+    const lats = ring.map((coord: number[]) => coord[1]);
+    mapRef.current.fitBounds(
+      [
+        [Math.min(...lngs), Math.min(...lats)],
+        [Math.max(...lngs), Math.max(...lats)],
+      ],
+      { padding: 120, maxZoom: 19 }
+    );
+  };
+  const updateDevelopmentStatus = async (status: string) => {
+    if (!selectedPlot) return;
+    try {
+      await api.patch(`/estates/plots/${selectedPlot.id}/development-status`, { status });
+      setPlots((current) => current.map((plot) => (plot.id === selectedPlot.id ? { ...plot, development_status: status } : plot)));
+      setEditingDevelopment(false);
+    } catch (error) {
+      setWorkflowMessage(await extractApiErrorMessage(error, "Development status could not be saved."));
+    }
+  };
+  const uploadPlotDocument = async () => {
+    if (!selectedPlot || !plotDocumentFile) return;
+    const form = new FormData();
+    form.append("file", plotDocumentFile);
+    setPlotDocumentBusy(true);
+    try {
+      await api.post("/estates/documents", form, { params: { entity_type: "plot", entity_id: selectedPlot.id, document_type: "plot_record", description: `Uploaded from the plot drawer for ${selectedPlot.plot_number}` } });
+      setPlotDocumentFile(null);
+      setWorkflowMessage("Document stored in the private Document Vault.");
+    } catch (error) {
+      setWorkflowMessage(await extractApiErrorMessage(error, "Document could not be uploaded."));
+    } finally {
+      setPlotDocumentBusy(false);
+    }
+  };
+  const riskTone = (riskClass: string | undefined) => {
+    const value = (riskClass || "").toLowerCase();
+    if (["low", "minimal", "none"].includes(value)) return "good";
+    if (["moderate", "medium"].includes(value)) return "warn";
+    if (["high", "severe", "critical"].includes(value)) return "danger";
+    return "neutral";
+  };
+  const statusPillTone = (status: string | undefined) => {
+    const value = (status || "").toLowerCase();
+    if (["completed", "approved", "allocated", "active", "fully_paid", "confirmed"].includes(value)) return "good";
+    if (["in_progress", "assigned", "requested", "reserved"].includes(value)) return "info";
+    if (["attention_required", "review_required", "pending_confirmation", "site_cleared", "foundation"].includes(value)) return "warn";
+    if (["failed", "cancelled", "rejected", "voided"].includes(value)) return "danger";
+    return "neutral";
+  };
+  const activityTone = (action: string | undefined) => {
+    const value = (action || "").toLowerCase();
+    if (value.includes("payment") || value.includes("confirm")) return "good";
+    if (value.includes("created") || value.includes("survey") || value.includes("staking")) return "info";
+    return "neutral";
+  };
+  const activityIcon = (action: string | undefined): import("../components/estates/EstateIcon").EstateIconName => {
+    const value = (action || "").toLowerCase();
+    if (value.includes("payment")) return "payments";
+    if (value.includes("survey")) return "survey";
+    if (value.includes("staking")) return "staking";
+    if (value.includes("allocat")) return "customers";
+    if (value.includes("document")) return "documents";
+    if (value.includes("plot")) return "plots";
+    return "activity";
+  };
+  const donutOrder: Array<{ key: string; label: string; value: number; color: string }> = dashboard
+    ? [
+        { key: "reserved", label: "Reserved", value: dashboard.statuses?.reserved || 0, color: STATUS_COLORS.reserved },
+        { key: "available", label: "Available", value: dashboard.statuses?.available || 0, color: STATUS_COLORS.available },
+        { key: "allocated", label: "Allocated", value: dashboard.statuses?.allocated || 0, color: STATUS_COLORS.allocated },
+        { key: "under_survey", label: "Under Survey", value: dashboard.awaiting_survey || 0, color: STATUS_COLORS.under_survey },
+        { key: "under_staking", label: "Under Staking", value: dashboard.awaiting_staking || 0, color: STATUS_COLORS.under_staking },
+        { key: "developed", label: "Developed", value: dashboard.development?.developed || 0, color: STATUS_COLORS.developed },
+      ]
+    : [];
+  const donutTotal = donutOrder.reduce((sum, item) => sum + item.value, 0) || 1;
+  let donutCursor = 0;
+  const donutArcs = donutOrder.map((item) => {
+    const fraction = item.value / donutTotal;
+    const arc = { ...item, offset: donutCursor, fraction };
+    donutCursor += fraction;
+    return arc;
+  });
+  const donutCircumference = 2 * Math.PI * 15.9155;
+  const allocatedFraction = dashboard ? (dashboard.statuses?.allocated || 0) / (dashboard.total_plots || 1) : 0;
+  const plotTimeline = selectedPlot ? activity.filter((event: any) => event.entity_type === "plot" && Number(event.entity_id) === selectedPlot.id) : [];
+
+  function renderDashboardSidebar() {
+    return (
+      <aside className="edash-sidebar">
+        <div className="edash-sidebar-brand">
+          <span className="edash-sidebar-brand-mark"><EstateIcon name="house" /></span>
+          <div>
+            <strong>LandCheck</strong>
+            <small>Estates</small>
+          </div>
+        </div>
+        <nav className="edash-nav" aria-label="Estate navigation">
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.key}
+              className={`edash-nav-item${item.key === "dashboard" || item.key === "map" ? " active" : ""}`}
+              to={item.hash ? `/estates/${estateId}/map#${item.hash}` : `/estates/${estateId}/map`}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <span className="edash-nav-icon"><EstateIcon name={item.icon} /></span>
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="edash-sidebar-footer">
+          <EstateIcon name="help" />
+          Help &amp; Support
+        </div>
+      </aside>
+    );
+  }
+
+  function renderDashboardTopbar() {
+    return (
+      <div className="edash-topbar">
+        <button type="button" className="edash-menu-toggle" onClick={() => setSidebarOpen((value) => !value)} aria-label="Toggle navigation">
+          <EstateIcon name="menu" />
+        </button>
+        <div className="edash-breadcrumb">
+          <span>Estates</span>
+          <b>&rsaquo;</b>
+          <strong>{estateDetail?.name || "Estate"}</strong>
+        </div>
+        <label className="edash-search">
+          <EstateIcon name="search" />
+          <input value={plotSearch} onChange={(event) => setPlotSearch(event.target.value)} placeholder="Search plots, customers, documents..." aria-label="Search plots, customers, documents" />
+        </label>
+        <div className="edash-topbar-right">
+          <div style={{ position: "relative" }}>
+            <button type="button" className="edash-icon-btn" onClick={() => setNotifOpen((value) => !value)} aria-label="Recent updates">
+              <EstateIcon name="bell" />
+              {activity.length > 0 && <span className="edash-notif-badge">{Math.min(activity.length, 9)}</span>}
+            </button>
+            {notifOpen && (
+              <div className="edash-card" style={{ position: "absolute", right: 0, top: 44, width: 300, zIndex: 20 }}>
+                <div className="edash-card-inner" style={{ padding: 12 }}>
+                  <div className="edash-card-head" style={{ marginBottom: 8 }}>
+                    <p className="edash-card-title" style={{ fontSize: "0.82rem" }}>Recent updates</p>
+                  </div>
+                  {activity.length ? (
+                    <div className="edash-activity-list">
+                      {activity.slice(0, 5).map((event: any) => (
+                        <div key={event.id} className="edash-activity-item">
+                          <span className={`edash-activity-icon tone-${activityTone(event.action)}`}><EstateIcon name={activityIcon(event.action)} /></span>
+                          <div className="edash-activity-body">
+                            <strong>{String(event.action || "").replaceAll("_", " ")}</strong>
+                            <span>{relativeTime(event.created_at)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ color: "var(--edash-faint)", fontSize: "0.8rem" }}>No activity yet.</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <div style={{ position: "relative" }}>
+            <div className="edash-user" onClick={() => setUserMenuOpen((value) => !value)}>
+              <span className="edash-user-avatar">{(estateSession?.user.full_name || estateSession?.user.organization_name || "E").slice(0, 1).toUpperCase()}</span>
+              <div className="edash-user-meta">
+                <strong>{estateSession?.user.full_name || estateSession?.user.organization_name || "Estate team"}</strong>
+                <small>{humanizeRole(estateSession?.user.role_key)}</small>
+              </div>
+              <span className="edash-user-chevron"><EstateIcon name="chevron-down" /></span>
+            </div>
+            {userMenuOpen && (
+              <div className="edash-card" style={{ position: "absolute", right: 0, top: 44, width: 180, zIndex: 20 }}>
+                <div className="edash-card-inner" style={{ padding: 6 }}>
+                  <Link className="edash-nav-item" to="/estates/workspace" onClick={() => setUserMenuOpen(false)}>
+                    <span className="edash-nav-icon"><EstateIcon name="grid" /></span>All estates
+                  </Link>
+                  <button
+                    type="button"
+                    className="edash-nav-item"
+                    style={{ width: "100%", border: "none", background: "transparent", cursor: "pointer" }}
+                    onClick={() => { clearEstateAuthSession(); navigate("/estates", { replace: true }); }}
+                  >
+                    <span className="edash-nav-icon"><EstateIcon name="close" /></span>Sign out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderStatsRow() {
+    if (!dashboard) return null;
+    const total = dashboard.total_plots || 0;
+    const pct = (value: number) => (total > 0 ? `${((value / total) * 100).toFixed(1)}%` : "0%");
+    const cards: Array<{ label: string; value: number; sub: string; icon: import("../components/estates/EstateIcon").EstateIconName; tone: string }> = [
+      { label: "Total Plots", value: total, sub: `${Number(dashboard.mapped_area_sqm || 0).toLocaleString()} m² mapped`, icon: "grid", tone: "neutral" },
+      { label: "Allocated", value: dashboard.statuses?.allocated || 0, sub: pct(dashboard.statuses?.allocated || 0), icon: "person", tone: "allocated" },
+      { label: "Available", value: dashboard.statuses?.available || 0, sub: pct(dashboard.statuses?.available || 0), icon: "house", tone: "available" },
+      { label: "Reserved", value: dashboard.statuses?.reserved || 0, sub: pct(dashboard.statuses?.reserved || 0), icon: "clock", tone: "reserved" },
+      { label: "Under Survey", value: dashboard.awaiting_survey || 0, sub: pct(dashboard.awaiting_survey || 0), icon: "compass", tone: "survey" },
+      { label: "Under Staking", value: dashboard.awaiting_staking || 0, sub: pct(dashboard.awaiting_staking || 0), icon: "pin", tone: "staking" },
+    ];
+    return (
+      <>
+        <div className="edash-section-head">
+          <button type="button" className="edash-btn-outline" onClick={flyToSelectedPlot} disabled={!selectedPlot}>
+            <EstateIcon name="map" /> View on Map
+          </button>
+        </div>
+        <div className="edash-stats-row">
+          {cards.map((card) => (
+            <div key={card.label} className="edash-stat-card">
+              <span className={`edash-stat-icon tone-${card.tone}`}><EstateIcon name={card.icon} /></span>
+              <div className="edash-stat-body">
+                <p className="edash-stat-label">{card.label}</p>
+                <p className="edash-stat-value">{card.value.toLocaleString()}</p>
+                <span className={`edash-stat-sub${card.label === "Total Plots" ? "" : " positive"}`}>{card.sub}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </>
+    );
+  }
+
+  function renderMapPanel() {
+    return (
+      <div className="edash-card edash-map-card">
+        <div className="edash-map-toolbar">
+          <div className="edash-map-mode-tabs">
+            <button type="button" className={`edash-map-mode-tab${mapStyleMode === "map" ? " active" : ""}`} onClick={() => setMapStyleMode("map")}>Map</button>
+            <button type="button" className={`edash-map-mode-tab${mapStyleMode === "satellite" ? " active" : ""}`} onClick={() => setMapStyleMode("satellite")}>Satellite</button>
+            <button type="button" className={`edash-map-mode-tab${layersVisible ? " active" : ""}`} onClick={() => setLayersVisible((value) => !value)} title="Toggle roads, drainage and open space">Layers</button>
+          </div>
+          <label className="edash-map-search">
+            <EstateIcon name="search" />
+            <input value={plotSearch} onChange={(event) => setPlotSearch(event.target.value)} placeholder="Search plot number..." />
+          </label>
+          <select className="edash-map-select" value={blockFilterId} onChange={(event) => setBlockFilterId(event.target.value)}>
+            <option value="all">All Blocks</option>
+            {blocks.map((block) => <option key={block.id} value={String(block.id)}>{`Block ${block.label}`}</option>)}
+          </select>
+          <select className="edash-map-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+            <option value="all">All Status</option>
+            <option value="available">Available</option>
+            <option value="reserved">Reserved</option>
+            <option value="allocated">Allocated</option>
+            <option value="on_hold">On hold</option>
+          </select>
+          <div className="edash-map-toolbar-spacer" />
+          <button type="button" className="edash-icon-btn" title="Reset filters" onClick={() => { setStatusFilter("all"); setBlockFilterId("all"); setPlotSearch(""); }}>
+            <EstateIcon name="filter" />
+          </button>
+        </div>
+        <div className="edash-map-canvas-wrap">
+          {MAPBOX_TOKEN ? (
+            <div ref={mapContainer} className="edash-map-canvas" />
+          ) : (
+            <div className="edash-map-fallback">Map preview is unavailable right now. {visiblePlotGeojson.features.length} plot geometries are ready in this Estate.</div>
+          )}
+          <div className="edash-map-controls">
+            <div className="edash-map-controls-group">
+              <button type="button" className="edash-map-ctrl-btn" title="Zoom in" onClick={() => mapRef.current?.zoomIn()}><EstateIcon name="zoom-in" /></button>
+              <button type="button" className="edash-map-ctrl-btn" title="Zoom out" onClick={() => mapRef.current?.zoomOut()}><EstateIcon name="zoom-out" /></button>
+            </div>
+            <button type="button" className="edash-map-controls-group edash-map-ctrl-btn" title="Fit to estate" onClick={() => {
+              if (!mapRef.current) return;
+              const bounds = visiblePlotGeojson.features.reduce((acc: number[][] | null, feature: any) => {
+                const ring = feature.geometry?.type === "Polygon" ? feature.geometry.coordinates[0] : [];
+                return ring.reduce((box: number[][] | null, coord: number[]) => {
+                  if (!box) return [[coord[0], coord[1]], [coord[0], coord[1]]];
+                  box[0][0] = Math.min(box[0][0], coord[0]); box[0][1] = Math.min(box[0][1], coord[1]);
+                  box[1][0] = Math.max(box[1][0], coord[0]); box[1][1] = Math.max(box[1][1], coord[1]);
+                  return box;
+                }, acc);
+              }, null);
+              if (bounds) mapRef.current.fitBounds(bounds, { padding: 46, maxZoom: 17 });
+            }}>
+              <EstateIcon name="locate" />
+            </button>
+            <button type="button" className={`edash-map-controls-group edash-map-ctrl-btn${layersVisible ? " active" : ""}`} title="Toggle layers" onClick={() => setLayersVisible((value) => !value)}>
+              <EstateIcon name="layers" />
+            </button>
+            <button type="button" className="edash-map-controls-group edash-map-ctrl-btn" title="Fullscreen" onClick={() => mapContainer.current?.parentElement?.requestFullscreen?.()}>
+              <EstateIcon name="expand" />
+            </button>
+          </div>
+          <div className="edash-map-legend">
+            {[
+              { label: "Available", color: STATUS_COLORS.available },
+              { label: "Allocated", color: STATUS_COLORS.allocated },
+              { label: "Reserved", color: STATUS_COLORS.reserved },
+              { label: "Under Survey", color: STATUS_COLORS.under_survey },
+              { label: "Under Staking", color: STATUS_COLORS.under_staking },
+              { label: "Developed", color: STATUS_COLORS.developed },
+            ].map((item) => (
+              <span key={item.label} className="edash-map-legend-item">
+                <span className="edash-map-legend-dot" style={{ background: item.color }} />
+                {item.label}
+              </span>
+            ))}
+          </div>
+          <div className="edash-map-scale">
+            <div className="edash-map-scale-bar"><span style={{ width: 60 }} /></div>
+            <span className="edash-map-scale-label">0&nbsp;&nbsp;50&nbsp;&nbsp;100 m</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderPlotDrawer() {
+    const statusValue = selectedPlot?.commercial_status;
+    const developmentValue = selectedPlot?.development_status || "not_started";
+    const developmentLabels: Record<string, string> = { not_started: "Not started", site_cleared: "Site cleared", foundation: "Foundation", under_construction: "Under construction", developed: "Developed" };
+    const surveyLabel = selectedSurvey ? String(selectedSurvey.status).replaceAll("_", " ") : "Not started";
+    const stakingLabel = selectedTask ? String(selectedTask.status).replaceAll("_", " ") : "Not started";
+    const hazardFlood = hazards?.flood?.summary?.floodplain_class || hazardDashboard?.assessments?.find((item: any) => item.plot_id === selectedPlot?.id)?.hazards?.flood?.risk_class;
+    const hazardErosion = hazards?.erosion?.risk_class || hazardDashboard?.assessments?.find((item: any) => item.plot_id === selectedPlot?.id)?.hazards?.erosion?.risk_class;
+    const hazardOverall = [hazardFlood, hazardErosion].filter(Boolean);
+    const hazardOverallLabel = hazardOverall.length ? (hazardOverall.every((value) => riskTone(value) === "good") ? "Low Risk" : hazardOverall.some((value) => riskTone(value) === "danger") ? "High Risk" : "Moderate Risk") : "Not screened";
+
+    return (
+      <div className="edash-card edash-drawer">
+        {!selectedPlot ? (
+          <div className="edash-drawer-empty">
+            <EstateIcon name="plots" />
+            <strong>No plot selected</strong>
+            <span>Click a parcel on the map to open its full record here.</span>
+          </div>
+        ) : (
+          <>
+            <div className="edash-drawer-head">
+              <div className="edash-drawer-title-row">
+                <span className="edash-drawer-plot-no">Plot {selectedPlot.plot_number}</span>
+                <span className={`edash-status-pill tone-${statusPillTone(statusValue)}`}>{String(statusValue || "").replaceAll("_", " ")}</span>
+                <div className="edash-drawer-nav">
+                  <button type="button" className="edash-drawer-nav-btn" onClick={() => goToAdjacentPlot(-1)} disabled={orderedPlotIds.length < 2} aria-label="Previous plot"><EstateIcon name="chevron-left" /></button>
+                  <button type="button" className="edash-drawer-nav-btn" onClick={() => goToAdjacentPlot(1)} disabled={orderedPlotIds.length < 2} aria-label="Next plot"><EstateIcon name="chevron-right" /></button>
+                  <button type="button" className="edash-drawer-nav-btn" onClick={() => { setSelectedPlotId(null); setAllocationId(""); setFinancial(null); }} aria-label="Close"><EstateIcon name="close" /></button>
+                </div>
+              </div>
+              <p className="edash-drawer-sub">{selectedBlock ? `Block ${selectedBlock.label}` : "Unassigned block"} &middot; {Number(selectedPlot.area_sqm || 0).toLocaleString()} m²</p>
+              <button type="button" className="edash-btn-outline edash-drawer-view-map" onClick={flyToSelectedPlot}>
+                <EstateIcon name="map" /> View on Map
+              </button>
+              <div className="edash-drawer-tabs">
+                {([
+                  ["overview", "Overview"], ["customer", "Customer"], ["survey", "Survey"], ["staking", "Staking"],
+                  ["documents", "Documents"], ["hazards", "Hazards"], ["timeline", "Timeline"],
+                ] as Array<[typeof drawerTab, string]>).map(([key, label]) => (
+                  <button key={key} type="button" className={`edash-drawer-tab${drawerTab === key ? " active" : ""}`} onClick={() => openTab(key)}>{label}</button>
+                ))}
+              </div>
+            </div>
+            <div className="edash-drawer-body">
+              {drawerTab === "overview" && (
+                <div className="edash-tab-panel">
+                  <div className="edash-overview-grid">
+                    <div className="edash-overview-field"><span>Status</span><strong style={{ textTransform: "capitalize" }}>{String(statusValue || "").replaceAll("_", " ")}</strong></div>
+                    <div className="edash-overview-field"><span>Block</span><strong>{selectedBlock?.label || "--"}</strong></div>
+                    <div className="edash-overview-field"><span>Plot No.</span><strong>{selectedPlot.plot_number}</strong></div>
+                    <div className="edash-overview-field"><span>Area</span><strong>{Number(selectedPlot.area_sqm || 0).toLocaleString()} m²</strong></div>
+                    <div className="edash-overview-thumb" aria-hidden="true" />
+                  </div>
+
+                  {selectedPlot.commercial_status === "available" && (
+                    <details className="edash-info-card" style={{ display: "block" }}>
+                      <summary style={{ cursor: "pointer", fontWeight: 700, fontSize: "0.82rem" }}>Split this plot</summary>
+                      <p className="edash-status-row-desc" style={{ margin: "8px 0" }}>Create smaller plots from this available plot. The new plots appear on the map and can be reserved or allocated.</p>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <input type="number" min="2" max="100" value={subdivisionCount} onChange={(event) => setSubdivisionCount(event.target.value)} style={{ width: 80, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
+                        <button type="button" className="edash-btn-primary" disabled={subdivisionBusy} onClick={() => void subdividePlot()}>{subdivisionBusy ? "Creating plots..." : "Create plots"}</button>
+                      </div>
+                    </details>
+                  )}
+
+                  <div className="edash-info-card" style={{ flexDirection: "column" }}>
+                    <div className="edash-info-card-head"><span className="edash-status-row-title">Site notes</span></div>
+                    <div style={{ display: "flex", gap: 8, margin: "6px 0" }}>
+                      <select className="edash-map-select" value={inspectionOutcome} onChange={(event) => setInspectionOutcome(event.target.value)}>
+                        <option value="observed">Observed</option>
+                        <option value="passed">Passed</option>
+                        <option value="attention_required">Attention required</option>
+                        <option value="failed">Failed</option>
+                      </select>
+                      <input value={inspectionNotes} onChange={(event) => setInspectionNotes(event.target.value)} placeholder="Optional site note" style={{ flex: 1, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
+                      <button type="button" className="edash-btn-outline" onClick={() => void recordInspection()}>Save</button>
+                    </div>
+                    {inspections.slice(0, 4).map((inspection) => (
+                      <p key={inspection.id} className="edash-status-row-desc" style={{ margin: "2px 0" }}>
+                        <strong style={{ color: "var(--edash-ink)", textTransform: "capitalize" }}>{inspection.outcome.replaceAll("_", " ")}</strong> &middot; {inspection.notes || "No note"}
+                      </p>
+                    ))}
+                  </div>
+
+                  <div className="edash-info-card">
+                    <span className="edash-info-card-icon"><EstateIcon name="customers" /></span>
+                    <div className="edash-info-card-body">
+                      <div className="edash-info-card-head"><span className="edash-info-card-title">Customer</span></div>
+                      {selectedAllocation ? (
+                        <>
+                          <p className="edash-info-card-name">{selectedAllocation.customer_name}</p>
+                          <p className="edash-info-card-meta">{financial?.customer?.email || financial?.customer?.phone || selectedAllocation.status}</p>
+                        </>
+                      ) : (
+                        <p className="edash-info-card-meta">No active customer allocation.</p>
+                      )}
+                    </div>
+                    <button type="button" className="edash-btn-outline edash-info-card-action" onClick={() => openTab("customer")}>View Customer</button>
+                  </div>
+
+                  <div className="edash-info-card">
+                    <span className="edash-info-card-icon"><EstateIcon name="wallet" /></span>
+                    <div className="edash-info-card-body">
+                      <div className="edash-info-card-head"><span className="edash-info-card-title">Payment Summary</span></div>
+                      {financial ? (
+                        <>
+                          <p className="edash-payment-total">{money(financial.financial.agreed_price)}</p>
+                          <div className="edash-payment-split">
+                            <span className="confirmed">{money(financial.financial.confirmed_paid)}<small>Confirmed</small></span>
+                            <span className="outstanding">{money(financial.financial.outstanding)}<small>Outstanding</small></span>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="edash-info-card-meta">No payment record for this plot yet.</p>
+                      )}
+                    </div>
+                    <button type="button" className="edash-btn-outline edash-info-card-action" onClick={() => openTab("customer")}>View Payments</button>
+                  </div>
+
+                  <div className="edash-info-card">
+                    <span className="edash-info-card-icon"><EstateIcon name="survey" /></span>
+                    <div className="edash-info-card-body">
+                      <div className="edash-info-card-head">
+                        <span className="edash-status-row-title">Survey</span>
+                        <span className={`edash-status-pill tone-${statusPillTone(selectedSurvey?.status)}`}>{surveyLabel}</span>
+                      </div>
+                      <p className="edash-status-row-desc">{selectedSurvey ? `Survey reference ${selectedSurvey.survey_reference || "pending"}.` : "Prepare a Survey package once this plot is allocated."}</p>
+                    </div>
+                    <button type="button" className="edash-btn-outline edash-info-card-action" onClick={() => openTab("survey")}>View Survey</button>
+                  </div>
+
+                  <div className="edash-info-card">
+                    <span className="edash-info-card-icon"><EstateIcon name="staking" /></span>
+                    <div className="edash-info-card-body">
+                      <div className="edash-info-card-head">
+                        <span className="edash-status-row-title">Staking</span>
+                        <span className={`edash-status-pill tone-${statusPillTone(selectedTask?.status)}`}>{stakingLabel}</span>
+                      </div>
+                      <p className="edash-status-row-desc">{selectedTask ? "DGPS staking task created for this plot." : "Generate DGPS and create a staking task."}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="edash-btn-primary edash-info-card-action"
+                      disabled={!selectedSurvey?.materialized || Boolean(selectedTask)}
+                      onClick={() => {
+                        if (selectedTask) { openTab("staking"); return; }
+                        void runWorkflow("Staking preparation", () => api.post(`/estates/survey-requests/${selectedSurvey!.id}/staking-tasks`)).then(() => openTab("staking"));
+                      }}
+                    >
+                      {selectedTask ? "View Staking" : "Start Staking"}
+                    </button>
+                  </div>
+
+                  <div className="edash-info-card">
+                    <span className="edash-info-card-icon"><EstateIcon name="development" /></span>
+                    <div className="edash-info-card-body">
+                      <div className="edash-info-card-head">
+                        <span className="edash-status-row-title">Development</span>
+                        <span className={`edash-status-pill tone-${statusPillTone(developmentValue)}`}>{developmentLabels[developmentValue] || developmentValue}</span>
+                      </div>
+                      <p className="edash-status-row-desc">{developmentValue === "not_started" ? "No development record yet" : `Latest status: ${developmentLabels[developmentValue]}`}</p>
+                    </div>
+                    {editingDevelopment ? (
+                      <select className="edash-map-select" autoFocus defaultValue={developmentValue} onChange={(event) => void updateDevelopmentStatus(event.target.value)} onBlur={() => setEditingDevelopment(false)}>
+                        {Object.entries(developmentLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                      </select>
+                    ) : (
+                      <button type="button" className="edash-btn-outline edash-info-card-action" onClick={() => setEditingDevelopment(true)}>{developmentValue === "not_started" ? "Add Record" : "Update"}</button>
+                    )}
+                  </div>
+
+                  <div className="edash-info-card">
+                    <span className="edash-info-card-icon"><EstateIcon name="hazard" /></span>
+                    <div className="edash-info-card-body">
+                      <div className="edash-info-card-head">
+                        <span className="edash-status-row-title">Hazard Analysis</span>
+                        <span className={`edash-status-pill tone-${hazardOverall.length ? riskTone(hazardOverall.find((value) => riskTone(value) !== "good") || hazardOverall[0]) : "neutral"}`}>{hazardOverallLabel}</span>
+                      </div>
+                      <p className="edash-status-row-desc">{hazardOverall.length ? "Flood, erosion and vulnerability analysis completed" : "Run flood and erosion screening for this plot."}</p>
+                    </div>
+                    <button type="button" className="edash-btn-outline edash-info-card-action" onClick={() => openTab("hazards")}>View Analysis</button>
+                  </div>
+                </div>
+              )}
+
+              {drawerTab === "customer" && (
+                <div className="edash-tab-panel">
+                  {selectedAllocation ? (
+                    <>
+                      <div className="edash-info-card">
+                        <span className="edash-info-card-icon"><EstateIcon name="customers" /></span>
+                        <div className="edash-info-card-body">
+                          <p className="edash-info-card-name">{selectedAllocation.customer_name}</p>
+                          <p className="edash-info-card-meta">Allocation status: {selectedAllocation.status.replaceAll("_", " ")}</p>
+                        </div>
+                      </div>
+                      {financial && (
+                        <>
+                          <div className="edash-overview-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+                            <div className="edash-overview-field"><span>Agreed</span><strong>{money(financial.financial.agreed_price)}</strong></div>
+                            <div className="edash-overview-field"><span>Confirmed</span><strong>{money(financial.financial.confirmed_paid)}</strong></div>
+                            <div className="edash-overview-field"><span>Outstanding</span><strong>{money(financial.financial.outstanding)}</strong></div>
+                          </div>
+                          <p className="edash-status-row-title" style={{ margin: "6px 0" }}>Payment history</p>
+                          {financial.payments?.length ? (
+                            <table className="edash-mini-table">
+                              <thead><tr><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+                              <tbody>
+                                {financial.payments.slice(0, 8).map((payment: any) => (
+                                  <tr key={payment.id}><td>{payment.date}</td><td>{money(payment.amount)}</td><td style={{ textTransform: "capitalize" }}>{payment.status.replaceAll("_", " ")}</td></tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          ) : <p className="edash-tab-empty">No payments recorded yet.</p>}
+                          <Link className="edash-btn-outline" style={{ display: "inline-flex", marginTop: 8 }} to="/estates/payments">Open full payment workspace</Link>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <div className="edash-tab-panel">
+                      <p className="edash-tab-empty" style={{ padding: "10px 0" }}>This plot has no customer yet. Add one or choose an existing customer to reserve or allocate it.</p>
+                      <label className="edash-overview-field" style={{ marginBottom: 8 }}><span>New customer</span><input value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="Full name" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} /></label>
+                      <button type="button" className="edash-btn-outline" onClick={() => void createCustomer()}>Add customer</button>
+                      <select className="edash-map-select" style={{ margin: "10px 0", width: "100%" }} value={selectedCustomerId} onChange={(event) => setSelectedCustomerId(event.target.value)}>
+                        <option value="">Choose customer</option>
+                        {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
+                      </select>
+                      <input type="number" min="0" step="0.01" value={agreedPrice} onChange={(event) => setAgreedPrice(event.target.value)} placeholder="Agreed price (NGN)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
+                      <input value={paymentPlan} onChange={(event) => setPaymentPlan(event.target.value)} placeholder="Payment plan (optional)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button type="button" className="edash-btn-outline" onClick={() => void assignCustomer(false)}>Reserve</button>
+                        <button type="button" className="edash-btn-primary" onClick={() => void assignCustomer(true)}>Allocate / sell</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {drawerTab === "survey" && (
+                <div className="edash-tab-panel">
+                  {selectedSurvey ? (
+                    <>
+                      <div className="edash-info-card">
+                        <span className="edash-info-card-icon"><EstateIcon name="survey" /></span>
+                        <div className="edash-info-card-body">
+                          <div className="edash-info-card-head"><span className="edash-status-row-title">Survey request</span><span className={`edash-status-pill tone-${statusPillTone(selectedSurvey.status)}`}>{surveyLabel}</span></div>
+                          <p className="edash-status-row-desc">{selectedSurvey.survey_reference ? `Reference ${selectedSurvey.survey_reference}` : "No reference assigned yet."}</p>
+                        </div>
+                      </div>
+                      {!selectedSurvey.materialized && <button type="button" className="edash-btn-primary" onClick={() => void runWorkflow("Survey workspace", () => api.post(`/estates/survey-requests/${selectedSurvey.id}/start`))}>Open Survey preparation</button>}
+                      {selectedSurvey.materialized && <Link className="edash-btn-outline" style={{ display: "inline-flex", marginRight: 8 }} to={`/survey-plan?mode=survey&estate_survey_plot=${selectedSurvey.survey_working_plot_id || ""}`}>Open approved plot in Survey</Link>}
+                      {selectedSurvey.materialized && selectedSurvey.status !== "completed" && <button type="button" className="edash-btn-primary" onClick={() => void runWorkflow("Survey completion", () => api.post(`/estates/survey-requests/${selectedSurvey.id}/complete`))}>Mark Survey complete</button>}
+                    </>
+                  ) : (
+                    <div className="edash-tab-empty">
+                      <EstateIcon name="survey" />
+                      <span>No Survey request yet for this plot.</span>
+                      {selectedAllocation && <button type="button" className="edash-btn-primary" style={{ marginTop: 8 }} onClick={() => void runWorkflow("Survey preparation", () => api.post(`/estates/plots/${selectedAllocation.plot_id}/survey-requests`))}>Prepare Survey</button>}
+                    </div>
+                  )}
+                  {workflowMessage && <p className="edash-tab-empty" style={{ color: "var(--edash-good)" }}>{workflowMessage}</p>}
+                </div>
+              )}
+
+              {drawerTab === "staking" && (
+                <div className="edash-tab-panel">
+                  {selectedTask ? (
+                    <>
+                      <div className="edash-info-card">
+                        <span className="edash-info-card-icon"><EstateIcon name="staking" /></span>
+                        <div className="edash-info-card-body">
+                          <div className="edash-info-card-head"><span className="edash-status-row-title">Staking task</span><span className={`edash-status-pill tone-${statusPillTone(selectedTask.status)}`}>{stakingLabel}</span></div>
+                          <p className="edash-status-row-desc">{selectedTask.assigned_subject_id ? `Handled by ${selectedTask.assigned_subject_id}` : "Not yet assigned to a field officer."}</p>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <button type="button" className="edash-btn-outline" onClick={() => void downloadDgps(selectedTask.id)}><EstateIcon name="download" /> Download DGPS CSV</button>
+                        {selectedTask.status === "pending" && <button type="button" className="edash-btn-primary" onClick={() => void runWorkflow("Staking status", () => api.post(`/estates/staking-tasks/${selectedTask.id}/start`))}>Mark in progress</button>}
+                        {selectedTask.status === "in_progress" && <button type="button" className="edash-btn-primary" onClick={() => void runWorkflow("Staking completion", () => api.post(`/estates/staking-tasks/${selectedTask.id}/complete`))}>Mark complete</button>}
+                      </div>
+                      <label className="edash-overview-field" style={{ marginTop: 10 }}>
+                        <span>Field evidence</span>
+                        <input type="file" accept="image/*,.pdf" onChange={(event) => setStakingEvidence(event.target.files?.[0] || null)} />
+                      </label>
+                      {stakingEvidence && <button type="button" className="edash-btn-outline" onClick={() => void uploadStakingEvidence(selectedTask.id)}>Upload evidence</button>}
+                    </>
+                  ) : (
+                    <div className="edash-tab-empty">
+                      <EstateIcon name="staking" />
+                      <span>{selectedSurvey?.materialized ? "Staking has not been prepared for this plot yet." : "Complete Survey first to prepare staking."}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {drawerTab === "documents" && (
+                <div className="edash-tab-panel">
+                  <label className="edash-overview-field">
+                    <span>Upload a document for this plot</span>
+                    <input type="file" onChange={(event) => setPlotDocumentFile(event.target.files?.[0] || null)} />
+                  </label>
+                  <button type="button" className="edash-btn-primary" disabled={!plotDocumentFile || plotDocumentBusy} onClick={() => void uploadPlotDocument()}>
+                    <EstateIcon name="upload" /> {plotDocumentBusy ? "Uploading..." : "Upload document"}
+                  </button>
+                  <Link className="edash-btn-outline" style={{ display: "inline-flex", marginTop: 10 }} to="/estates/documents">Open the full Document Vault</Link>
+                </div>
+              )}
+
+              {drawerTab === "hazards" && (
+                <div className="edash-tab-panel">
+                  <div className="edash-risk-list">
+                    <div className="edash-risk-item">
+                      <span className="edash-risk-icon"><EstateIcon name="flood" /></span>
+                      <span>Flood Risk</span>
+                      <span className={`edash-status-pill tone-${hazardFlood ? riskTone(hazardFlood) : "neutral"}`}>{hazardFlood ? hazardFlood.replaceAll("_", " ") : "Not screened"}</span>
+                    </div>
+                    <div className="edash-risk-item">
+                      <span className="edash-risk-icon"><EstateIcon name="erosion" /></span>
+                      <span>Erosion Risk</span>
+                      <span className={`edash-status-pill tone-${hazardErosion ? riskTone(hazardErosion) : "neutral"}`}>{hazardErosion ? hazardErosion.replaceAll("_", " ") : "Not screened"}</span>
+                    </div>
+                  </div>
+                  <button type="button" className="edash-btn-primary" style={{ marginTop: 12 }} onClick={() => void loadHazards()}>Run flood + erosion screening</button>
+                </div>
+              )}
+
+              {drawerTab === "timeline" && (
+                <div className="edash-tab-panel">
+                  {plotTimeline.length ? (
+                    <div className="edash-timeline-list">
+                      {plotTimeline.map((event: any) => (
+                        <div key={event.id} className="edash-timeline-item">
+                          <span className="edash-timeline-dot" />
+                          <div>
+                            <strong>{String(event.action || "").replaceAll("_", " ")}</strong>
+                            <small>{new Date(event.created_at).toLocaleString()}</small>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="edash-tab-empty">
+                      <EstateIcon name="audit" />
+                      <span>No recorded activity for this plot yet.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  function renderBottomRow() {
+    return (
+      <div className="edash-bottom-row">
+        <div className="edash-card">
+          <div className="edash-card-inner">
+            <div className="edash-card-head">
+              <h3 className="edash-card-title">Recent Activity</h3>
+              <a className="edash-card-link" href={`/estates/${estateId}/map#estate-timeline`}>View All</a>
+            </div>
+            {activity.length ? (
+              <div className="edash-activity-list">
+                {activity.slice(0, 6).map((event: any) => (
+                  <div key={event.id} className="edash-activity-item">
+                    <span className={`edash-activity-icon tone-${activityTone(event.action)}`}><EstateIcon name={activityIcon(event.action)} /></span>
+                    <div className="edash-activity-body">
+                      <strong>{String(event.action || "").replaceAll("_", " ")}</strong>
+                      <span>{event.entity_type === "plot" ? `Plot ${event.entity_id} · ` : ""}{relativeTime(event.created_at)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="edash-tab-empty">No activity recorded yet.</p>}
+          </div>
+        </div>
+
+        <div className="edash-card">
+          <div className="edash-card-inner">
+            <div className="edash-card-head"><h3 className="edash-card-title">Estate Progress</h3></div>
+            {dashboard ? (
+              <div className="edash-progress-donut-row">
+                <svg viewBox="0 0 36 36" width="118" height="118">
+                  <circle cx="18" cy="18" r="15.9155" fill="none" stroke="var(--edash-border-soft)" strokeWidth="4.2" />
+                  {donutArcs.map((arc) => (
+                    <circle
+                      key={arc.key}
+                      cx="18" cy="18" r="15.9155" fill="none"
+                      stroke={arc.color}
+                      strokeWidth="4.2"
+                      strokeDasharray={`${arc.fraction * donutCircumference} ${donutCircumference - arc.fraction * donutCircumference}`}
+                      strokeDashoffset={25 - arc.offset * 100}
+                      strokeLinecap="butt"
+                    />
+                  ))}
+                  <text x="18" y="19.5" textAnchor="middle" fontSize="7" fontWeight="800" fill="var(--edash-ink)">{Math.round(allocatedFraction * 100)}%</text>
+                </svg>
+                <div className="edash-donut-legend">
+                  {donutOrder.map((item) => (
+                    <div key={item.key} className="edash-donut-legend-item">
+                      <span className="edash-donut-legend-dot" style={{ background: item.color }} />
+                      <span>{item.label}</span>
+                      <strong>{item.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : <p className="edash-tab-empty">No plots mapped yet.</p>}
+          </div>
+        </div>
+
+        <div className="edash-card">
+          <div className="edash-card-inner">
+            <div className="edash-card-head">
+              <h3 className="edash-card-title">Risk Overview</h3>
+              <a className="edash-card-link" href={`/estates/${estateId}/map#hazard-dashboard`}>View Details</a>
+            </div>
+            <div className="edash-risk-list">
+              {Object.entries(hazardDashboard?.summary || {}).length ? (
+                Object.entries(hazardDashboard.summary).map(([type, value]: [string, any]) => {
+                  const classes: string[] = Object.keys(value.classes || {});
+                  const worst = classes.find((entry) => riskTone(entry) === "danger") || classes.find((entry) => riskTone(entry) === "warn") || classes[0];
+                  return (
+                    <div key={type} className="edash-risk-item">
+                      <span className="edash-risk-icon"><EstateIcon name={type === "flood" ? "flood" : "erosion"} /></span>
+                      <span style={{ textTransform: "capitalize" }}>{type} Risk</span>
+                      <span className={`edash-status-pill tone-${worst ? riskTone(worst) : "neutral"}`}>{worst ? worst.replaceAll("_", " ") : "Unscreened"}</span>
+                    </div>
+                  );
+                })
+              ) : (
+                <>
+                  <div className="edash-risk-item"><span className="edash-risk-icon"><EstateIcon name="flood" /></span><span>Flood Risk</span><span className="edash-status-pill tone-neutral">Not screened</span></div>
+                  <div className="edash-risk-item"><span className="edash-risk-icon"><EstateIcon name="erosion" /></span><span>Erosion Risk</span><span className="edash-status-pill tone-neutral">Not screened</span></div>
+                </>
+              )}
+              <div className="edash-risk-item">
+                <span className="edash-risk-icon"><EstateIcon name="shield" /></span>
+                <span>General Vulnerability</span>
+                <span className={`edash-status-pill tone-${quality && !quality.review_required ? "good" : "neutral"}`}>{quality ? (quality.review_required ? "Review required" : "Low") : "Pending"}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderQuickActions() {
+    const actions: Array<{ label: string; icon: import("../components/estates/EstateIcon").EstateIconName; hash: string }> = [
+      { label: "Import Land Data", icon: "upload", hash: "layout-import" },
+      { label: "Create Plot", icon: "plus", hash: "plot-register" },
+      { label: "Run Geometry Check", icon: "check-circle", hash: "estate-qc" },
+      { label: "Generate Report", icon: "reports", hash: "hazard-dashboard" },
+      { label: "Estate Settings", icon: "settings", hash: "estate-settings" },
+    ];
+    return (
+      <div className="edash-card">
+        <div className="edash-card-inner">
+          <div className="edash-card-head"><h3 className="edash-card-title">Quick Actions</h3></div>
+          <div className="edash-quick-actions">
+            {actions.map((action) => (
+              <a key={action.label} className="edash-quick-action-btn" href={`#${action.hash}`}>
+                <EstateIcon name={action.icon} />
+                <span>{action.label}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderFooter() {
+    return (
+      <div className="edash-footer">
+        <span>landcheck-estates v3.0.0</span>
+        <span>Secure &middot; Private &middot; For a more certain tomorrow</span>
+      </div>
+    );
+  }
+
+  if (!estateId) {
+    return (
+      <main className="estates-shell">
+        <aside className="estate-sidebar">
+          <div className="estate-brand"><span className="estate-brand-mark">L</span><div><strong>LandCheck</strong><small>Estates</small></div></div>
+          <div className="estate-sidebar-estate"><small>ACTIVE ESTATE</small><strong>{estates[0]?.name || "Estate workspace"}</strong><span>{estates[0]?.location || "Choose an estate to begin"}</span></div>
+          <nav aria-label="Estate navigation">
+            <Link className="active" to="/estates/workspace"><span>⌂</span>Dashboard</Link>
+            <Link to="/estates/workspace"><span>▦</span>Map &amp; Plots</Link>
+            <Link to="/estates/workspace#plot-register"><span>▤</span>Plots</Link>
+            <Link to="/estates/payments"><span>♙</span>Customers</Link>
+            <Link to="/estates/payments"><span>₦</span>Sales &amp; Payments</Link>
+            <Link to="/estates/workspace"><span>⌖</span>Survey</Link>
+            <Link to="/estates/workspace"><span>⌁</span>Staking</Link>
+            <Link to="/estates/documents"><span>□</span>Documents</Link>
+            <Link to="/estates/workspace"><span>⌂</span>Development</Link>
+            <Link to="/estates/workspace"><span>△</span>Hazard Analysis</Link>
+            <Link to="/estates/workspace"><span>◷</span>Audit Timeline</Link>
+            <Link to="/estates/workspace"><span>⚙</span>Settings</Link>
+          </nav>
+          <div className="estate-sidebar-footer"><span>?</span>Help &amp; Support</div>
+        </aside>
+        <div className="estate-app">
+          <div className="estate-topbar"><div className="estate-breadcrumb"><span>Estates</span><b>›</b><strong>Workspace</strong></div><label className="estate-search"><span aria-hidden="true">⌕</span><input value={plotSearch} onChange={(event) => setPlotSearch(event.target.value)} placeholder="Search plots by number..." aria-label="Search plots by number" /></label><div className="estate-user"><span className="estate-avatar">{(estateSession?.user.organization_name || "E").slice(0, 1).toUpperCase()}</span><div><strong>{estateSession?.user.organization_name || "Estate team"}</strong><small>Estate workspace</small></div></div></div>
+          <header><span>LandCheck Estates</span><h1>Estate workspace</h1><p>Map-first parcel operations for layouts, plots, customers and delivery.</p></header>
+          {estates.length > 0 && <section className="estate-existing-chooser"><div><p className="workflow-eyebrow">Your estates</p><h2>Open an existing estate</h2><p>Choose an Estate to open its map and plot register.</p></div><label>Choose an estate<select defaultValue="" onChange={(event) => { if (event.target.value) navigate(`/estates/${event.target.value}/map`); }}><option value="">Select an estate</option>{estates.map((estate) => <option key={estate.id} value={estate.id}>{estate.name}{estate.location ? ` - ${estate.location}` : ""}</option>)}</select></label></section>}
+          {organizations.length > 0 && <section className="estate-create estate-setup-simple"><div><p className="workflow-eyebrow">Start here</p><h2>Create an estate</h2><p>Add the basics now. You can bring in the layout and plots after the Estate is created.</p></div><label>Your organisation<select value={newEstateOrg} onChange={(event) => setNewEstateOrg(event.target.value)}><option value="">Choose organisation</option>{organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}</select></label><label>Estate name<input value={newEstateName} onChange={(event) => setNewEstateName(event.target.value)} placeholder="e.g. Greenview Estate" /></label><label>Location<input value={newEstateLocation} onChange={(event) => setNewEstateLocation(event.target.value)} placeholder="City, state or area" /></label><label className="estate-boundary-field">Estate boundary <span>Optional - one longitude, latitude pair per line</span><textarea value={newEstateBoundaryCoordinates} onChange={(event) => setNewEstateBoundaryCoordinates(event.target.value)} placeholder="7.1234, 9.1234&#10;7.1238, 9.1234&#10;7.1238, 9.1238" /></label><details><summary>Project details (optional)</summary><div><label>Coordinate system<input value={newEstateCrs} onChange={(event) => setNewEstateCrs(event.target.value)} placeholder="EPSG:4326" /></label><label>Datum<input value={newEstateDatum} onChange={(event) => setNewEstateDatum(event.target.value)} placeholder="Datum" /></label><label>Project reference<input value={newEstateProjectReference} onChange={(event) => setNewEstateProjectReference(event.target.value)} placeholder="Reference" /></label><label>Developer or owner<input value={newEstateProjectOwner} onChange={(event) => setNewEstateProjectOwner(event.target.value)} placeholder="Name" /></label><label>Notes<textarea value={newEstateOwnershipDetails} onChange={(event) => setNewEstateOwnershipDetails(event.target.value)} placeholder="Ownership or project notes" /></label></div></details><button type="button" onClick={() => void createEstate()}>Create estate</button></section>}
+          <section className="estates-toolbar"><strong>{estateSession?.user.organization_name || "My estates"}</strong><div><Link to="/estates/workspace">Estate workspace</Link><button type="button" onClick={() => { clearEstateAuthSession(); navigate("/estates", { replace: true }); }}>Sign out</button></div></section>
+          {organizations.length > 0 && <section className="estate-create estate-setup"><div><p className="workflow-eyebrow">Step 1 · Create Estate</p><h2>Start the estate register</h2><p>Set the project context first. You can add the boundary and approved parcels through the layout review workflow.</p></div><select value={newEstateOrg} onChange={(event) => setNewEstateOrg(event.target.value)}><option value="">Organization</option>{organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}</select><input value={newEstateName} onChange={(event) => setNewEstateName(event.target.value)} placeholder="Estate name" /><input value={newEstateLocation} onChange={(event) => setNewEstateLocation(event.target.value)} placeholder="Location" /><input value={newEstateCrs} onChange={(event) => setNewEstateCrs(event.target.value)} placeholder="Coordinate system, e.g. EPSG:4326" /><input value={newEstateDatum} onChange={(event) => setNewEstateDatum(event.target.value)} placeholder="Datum (optional)" /><input value={newEstateProjectReference} onChange={(event) => setNewEstateProjectReference(event.target.value)} placeholder="Project reference (optional)" /><input value={newEstateProjectOwner} onChange={(event) => setNewEstateProjectOwner(event.target.value)} placeholder="Developer / owner (optional)" /><textarea value={newEstateOwnershipDetails} onChange={(event) => setNewEstateOwnershipDetails(event.target.value)} placeholder="Ownership or project details (optional)" /><textarea value={newEstateBoundaryCoordinates} onChange={(event) => setNewEstateBoundaryCoordinates(event.target.value)} placeholder="Estate boundary: longitude, latitude per line (optional)" /><button type="button" onClick={() => void createEstate()}>Create Estate</button></section>}
+          {message ? <p className="estates-message">{message}</p> : <section className="estate-grid">{estates.map((estate) => <article key={estate.id}><small>{estate.status.replaceAll("_", " ")}</small><h2>{estate.name}</h2><p>{estate.location || "Location pending"}</p>{estate.financial && <p className="estate-financial">Collected {money(estate.financial.confirmed_collections)}<br/>Outstanding {money(estate.financial.outstanding_balance)}</p>}<Link to={`/estates/${estate.id}/map`}>Open estate map</Link><Link to="/estates/payments">Payments and statements</Link></article>)}</section>}
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <div className={`edash${sidebarOpen ? " is-sidebar-open" : ""}`}>
+      {renderDashboardSidebar()}
+      <div className="edash-main">
+        {renderDashboardTopbar()}
+        <div className="edash-body">
+          {renderStatsRow()}
+          <div className="edash-content-row">
+            {renderMapPanel()}
+            {renderPlotDrawer()}
+          </div>
+          {renderBottomRow()}
+          {renderQuickActions()}
+          {renderFooter()}
+        </div>
+
+        <div className="edash-legacy-tools">
+          <div className="edash-legacy-tools-head">
+            <h2>Estate workspace tools</h2>
+            <p>Import layouts, manage blocks and structure, and review the geometry, hazard and settings detail behind this dashboard.</p>
+          </div>
+          <section id="plot-register" className="estate-plot-input-panel"><div><p className="workflow-eyebrow">Add one plot</p><h2>Create a plot from coordinates</h2><p>Import a CSV or Excel file or enter points manually. The boundary appears on the map immediately, where you can move points before adding it to the plot register.</p></div><label>Plot number<input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="e.g. B-024" /></label><div className="estate-plot-input-workbench"><CoordinateInput title="Add plot boundary" subtitle="Choose a spreadsheet or enter the points manually." sidebar={<div className="estate-coordinate-context"><strong>Plot boundary</strong><span>Use the same coordinate workflow as Survey.</span></div>} points={plotInputPoints} onUpdatePoint={updatePlotInputPoint} onRemovePoint={removePlotInputPoint} onAddPoint={addPlotInputPoint} onBulkUpload={importPlotInputPoints} disabled={false} coordinateSystem={plotInputCoordinateSystem} onCoordinateSystemChange={setPlotInputCoordinateSystem} onReorderPoints={reorderPlotInputPoints} onClearAllPoints={() => setPlotInputPoints([])} /><div className="estate-plot-map-preview"><div><p className="workflow-eyebrow">Map preview</p><h3>Check the plot location</h3><p>Edit the boundary on the map or use the table above.</p></div>{MAPBOX_TOKEN ? <MapViewEnhanced coordinates={plotInputMapPoints} onCoordinatesDrawn={handlePlotCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <div className="estate-map-fallback">Map preview is unavailable right now. You can still review the coordinates above.</div>}</div></div>{workflowMessage && <p className="estate-plot-input-message" role="status">{workflowMessage}</p>}<button type="button" className="estate-plot-create-button" disabled={plotInputMapPoints.length < 3 || plotInputClosure === "self-intersecting"} onClick={() => void createPlotFromInput()}>{plotInputClosure === "self-intersecting" ? "Fix boundary first" : "Create plot"}</button></section>
+          <div id="layout-import">
+            <EstateLayoutImport reviews={importReviews} files={{ csv: csvFile, geojson: geojsonFile, dxf: dxfFile, "scanned-layout": scannedLayoutFile }} onFileChange={handleLayoutFileChange} onUpload={(method) => void uploadLayout(method)} onDecision={(reviewId, status) => void decideImportReview(reviewId, status)} message={layoutMessage} busy={layoutUploadBusy} />
+          </div>
+          <EstateLayoutDesigner boundaryPresent={Boolean(estateDetail?.boundary)} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} />
+          <section id="estate-settings" className="estate-settings"><div><p className="workflow-eyebrow">Operating rule</p><h2>Survey eligibility</h2><p>Prepare Survey when the selected percentage of the agreed price has been confirmed. Set 0% to allow preparation immediately.</p></div><label><span>Minimum confirmed payment</span><input type="number" min="0" max="100" step="1" value={surveyRulePercentage} onChange={(event) => setSurveyRulePercentage(event.target.value)} /></label><label className="estate-checkbox"><input type="checkbox" checked={surveyRuleEnabled} onChange={(event) => setSurveyRuleEnabled(event.target.checked)} /> Enforce this rule</label><button type="button" onClick={() => void saveSurveyRule()}>Save rule</button></section>
+          {hazardDashboard && <section id="hazard-dashboard" className="estate-qc estate-hazard-dashboard"><div><p className="workflow-eyebrow">Site intelligence</p><h2>Persisted hazard screening</h2><p>{hazardDashboard.assessment_count || 0} assessment record(s) stored against this Estate.</p></div>{Object.entries(hazardDashboard.summary || {}).map(([type, value]: [string, any]) => <p key={type}><strong>{type.toUpperCase()}</strong> - {value.assessed} result(s): {Object.entries(value.classes || {}).map(([risk, count]) => `${risk} (${count})`).join(", ") || "No classification"}</p>)}{(hazardDashboard.assessments || []).slice(0, 12).map((item: any) => <p key={item.plot_id || "estate"}><strong>{item.plot_id ? `Plot ${item.plot_id}` : "Estate"}</strong> - {Object.entries(item.hazards || {}).map(([type, value]: [string, any]) => `${type}: ${value.risk_class || "unavailable"}`).join("; ")}</p>)}</section>}
+          {quality && <section id="estate-qc" className="estate-qc"><div><p className="workflow-eyebrow">Approve the Estate map</p><h2>{quality.review_required ? "Review required" : "Geometry ready"}</h2><p>{quality.plot_count} plots checked. {quality.issues.length} issue(s) detected.</p></div>{quality.issues.slice(0,8).map((issue:any,index:number) => <p key={`${issue.code}-${index}`} className={issue.severity}>{issue.message}</p>)}{dashboard && <div className="estate-publish-action"><p><strong>Register status:</strong> {dashboard.estate.status.replaceAll("_", " ")}</p><button type="button" disabled={dashboard.estate.status === "active" || quality.review_required || quality.plot_count === 0} onClick={() => void approveEstateMap()}>{dashboard.estate.status === "active" ? "Estate map published" : "Approve and publish map"}</button></div>}</section>}
+          <section className="estate-create estate-plot-import"><div><p className="workflow-eyebrow">Add parcel</p><h2>Coordinates or CSV rows</h2><p>Paste one <code>longitude, latitude</code> pair per line. Geometry is checked before saving.</p></div><input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="Plot number, e.g. B-024" /><textarea value={plotCoordinates} onChange={(event) => setPlotCoordinates(event.target.value)} placeholder="7.1234, 9.1234&#10;7.1238, 9.1234&#10;7.1238, 9.1238" /><button type="button" onClick={() => void createPlot()}>Add approved plot</button></section>
+          <section className="estate-create estate-plot-import"><div><p className="workflow-eyebrow">Map layer</p><h2>Road, drainage, open space, infrastructure</h2><p>Paste coordinate rows to add a visible operational layer.</p></div><select value={layerType} onChange={(event) => setLayerType(event.target.value)}><option value="road">Road</option><option value="drainage">Drainage</option><option value="open_space">Open space</option><option value="infrastructure">Infrastructure</option></select><input value={layerName} onChange={(event) => setLayerName(event.target.value)} placeholder="Layer name" /><textarea value={layerCoordinates} onChange={(event) => setLayerCoordinates(event.target.value)} placeholder="longitude, latitude per line" /><button type="button" onClick={() => void createLayer()}>Add layer</button></section>
+          {layerGeojson.features.length > 0 && <section className="estate-create estate-layer-editor"><div><p className="workflow-eyebrow">Spatial layer editor</p><h2>Correct detected infrastructure</h2><p>Select a layer, adjust its coordinate rows, then save. Archiving removes it from the operational map without deleting its audit trail.</p></div><select value={selectedLayerId} onChange={(event) => selectLayerForEdit(event.target.value)}><option value="">Select a layer</option>{layerGeojson.features.map((feature: any) => <option key={feature.id} value={feature.id}>{feature.properties.name || feature.properties.type} #{feature.id}</option>)}</select>{selectedLayerId && <><textarea value={layerEditCoordinates} onChange={(event) => setLayerEditCoordinates(event.target.value)} /><button type="button" onClick={() => void updateLayer()}>Save geometry</button><button type="button" onClick={() => void archiveLayer()}>Archive layer</button></>}</section>}
+          <section id="customer-tools" className="estate-allocation-panel"><h2>Selected Plot Financials</h2><select value={allocationId} onChange={(event) => void selectAllocation(event.target.value)}><option value="">Select an allocated plot</option>{allocations.map((allocation) => <option key={allocation.id} value={allocation.id}>{allocation.plot_number} - {allocation.customer_name}</option>)}</select>{financial && <><p><strong>{financial.customer.name}</strong> | {financial.estate.name} / {financial.plot.number}</p><div className="estate-financial-grid"><span>Agreed {money(financial.financial.agreed_price)}</span><span>Confirmed {money(financial.financial.confirmed_paid)}</span><span>Pending {money(financial.financial.pending_paid)}</span><span>Outstanding {money(financial.financial.outstanding)}</span><span>Progress {financial.financial.percentage}%</span><span>{financial.financial.fully_paid ? "Fully paid" : "Balance outstanding"}</span></div><h3>Payment History</h3>{financial.payments.map((payment: any) => <p key={payment.id}>{payment.date}: {money(payment.amount)} - {payment.status} {payment.reference ? `(${payment.reference})` : ""}</p>)}<Link to="/estates/payments">Record payment, open payment, view receipt, confirm or void</Link><Link to="/estates/payments">View customer statement</Link></>}</section>
+          {allocationId && <section id="estate-workflow" className="estate-workflow-panel"><p className="workflow-eyebrow">Survey, staking and development</p><h2>Deliver this allocated plot</h2><p>Prepare Survey from the approved Estate geometry, then prepare a DGPS file for the developer or surveyor. Field evidence is optional and the normal GNSS field workflow remains outside Estates.</p>{selectedPlot && <label className="workflow-upload">Development progress <select value={selectedPlot.development_status || "not_started"} onChange={(event) => void runWorkflow("Development status", async () => { await api.patch(`/estates/plots/${selectedPlot.id}/development-status`, { status: event.target.value }); setPlots((current) => current.map((plot) => plot.id === selectedPlot.id ? { ...plot, development_status: event.target.value } : plot)); })}><option value="not_started">Not started</option><option value="site_cleared">Site cleared</option><option value="foundation">Foundation</option><option value="under_construction">Under construction</option><option value="developed">Developed</option></select></label>}{!selectedSurvey && selectedAllocation && <button type="button" onClick={() => void runWorkflow("Survey preparation", () => api.post(`/estates/plots/${selectedAllocation.plot_id}/survey-requests`))}>Prepare Survey</button>}{selectedSurvey && <><p><strong>Survey:</strong> {selectedSurvey.status.replaceAll("_", " ")}{selectedSurvey.survey_reference ? ` (${selectedSurvey.survey_reference})` : ""}</p>{!selectedSurvey.materialized && <button type="button" onClick={() => void runWorkflow("Survey workspace", () => api.post(`/estates/survey-requests/${selectedSurvey.id}/start`))}>Open Survey preparation</button>}{selectedSurvey.materialized && <Link className="workflow-link" to={`/survey-plan?mode=survey&estate_survey_plot=${selectedSurvey.survey_working_plot_id || ""}`}>Open approved plot in Survey</Link>}{selectedSurvey.materialized && selectedSurvey.status !== "completed" && <button type="button" onClick={() => void runWorkflow("Survey completion", () => api.post(`/estates/survey-requests/${selectedSurvey.id}/complete`))}>Mark Survey complete</button>}{selectedSurvey.materialized && !selectedTask && <button type="button" onClick={() => void runWorkflow("Staking preparation", () => api.post(`/estates/survey-requests/${selectedSurvey.id}/staking-tasks`))}>Prepare for Staking</button>}</>}{selectedTask && <div className="workflow-task"><p><strong>Staking preparation:</strong> {selectedTask.status.replaceAll("_", " ")}{selectedTask.assigned_subject_id ? ` · handled by ${selectedTask.assigned_subject_id}` : ""}</p><button type="button" onClick={() => void downloadDgps(selectedTask.id)}>Download DGPS CSV</button><label className="workflow-upload">Optional supporting evidence <input type="file" accept="image/*,.pdf" onChange={(event) => setStakingEvidence(event.target.files?.[0] || null)} /></label>{stakingEvidence && <button type="button" onClick={() => void uploadStakingEvidence(selectedTask.id)}>Add optional evidence</button>}{selectedTask.status === "pending" && <button type="button" onClick={() => void runWorkflow("Staking status", () => api.post(`/estates/staking-tasks/${selectedTask.id}/start`))}>Mark staking in progress</button>}{selectedTask.status === "in_progress" && <button type="button" onClick={() => void runWorkflow("Staking completion", () => api.post(`/estates/staking-tasks/${selectedTask.id}/complete`))}>Mark staking complete</button>}</div>}{workflowMessage && <p className="workflow-message">{workflowMessage}</p>}</section>}
+          {activity.length > 0 && <section id="estate-timeline" className="estate-timeline"><p className="workflow-eyebrow">Activity</p><h2>Parcel activity timeline</h2>{activity.slice(0,12).map((event) => <p key={event.id}><strong>{event.action.replaceAll("_", " ")}</strong> · {new Date(event.created_at).toLocaleString()}</p>)}</section>}
+          <section className="estate-create estate-block-editor"><div><p className="workflow-eyebrow">Estate structure</p><h2>Blocks</h2><p>Define block labels before assigning imported or manually created plots.</p></div><input value={blockLabel} onChange={(event) => setBlockLabel(event.target.value)} placeholder="Block label, e.g. B" /><input value={blockName} onChange={(event) => setBlockName(event.target.value)} placeholder="Block name (optional)" /><button type="button" onClick={() => void createBlock()}>Add block</button><p>{blocks.map((block) => `${block.label}${block.name ? ` - ${block.name}` : ""}`).join(" · ") || "No blocks yet."}</p></section>
+        </div>
+      </div>
     </div>
-  </main>;
+  );
 }
