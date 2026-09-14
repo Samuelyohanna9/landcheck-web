@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import EstateIcon from "./EstateIcon";
 import Spinner from "./EstateSpinner";
-import { loadMapboxGl, loadMapboxGlCss, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
+import { loadMapboxDraw, loadMapboxDrawCss, loadMapboxGl, loadMapboxGlCss, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
 
 type LayoutCriteria = {
   target_plot_area_sqm: number;
@@ -26,6 +26,7 @@ type Props = {
   messageTone?: "good" | "danger";
   onGenerate: (criteria: LayoutCriteria) => void;
   onDecision: (proposalId: number, status: "approved" | "rejected") => void;
+  onEditCandidates?: (proposalId: number, plotCandidates: any[]) => Promise<void>;
 };
 
 const DEFAULT_CRITERIA: LayoutCriteria = {
@@ -160,11 +161,19 @@ function walkCoordinates(coords: any, visit: (point: [number, number]) => void) 
 // same construction pattern used for the main Estate map, including the position:absolute
 // !important CSS fix - mapbox-gl.css otherwise collapses the container to zero height) so users
 // can zoom, pan and go fullscreen to actually inspect a layout with hundreds of plots.
-function LayoutPreviewMap({ proposal }: { proposal: any }) {
+const EDITABLE_PLOT_LAYERS = ["preview-plots-fill", "preview-plots-outline", "preview-plots-labels"];
+
+function LayoutPreviewMap({ proposal, onEditCandidates }: { proposal: any; onEditCandidates?: (proposalId: number, plotCandidates: any[]) => Promise<void> }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
+  const drawRef = useRef<any>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [pendingGeometry, setPendingGeometry] = useState<Record<string, any>>({});
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [savingEdits, setSavingEdits] = useState(false);
+  const hasEdits = Object.keys(pendingGeometry).length > 0 || deletedIds.size > 0;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current || !MAPBOX_TOKEN) return;
@@ -217,9 +226,79 @@ function LayoutPreviewMap({ proposal }: { proposal: any }) {
     return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
   }, []);
 
+  // Toggling "editing" swaps the static preview-plots layers for a MapboxDraw instance loaded
+  // with the same candidates (keyed by plot_number) - dragging a vertex or midpoint (which adds a
+  // new one) is native to Draw's simple_select/direct_select modes, and its trash control or the
+  // Delete key removes a candidate outright. Edits are staged locally until "Save changes".
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !editing) return;
+    let cancelled = false;
+    void Promise.all([loadMapboxDraw(), loadMapboxDrawCss()]).then(([MapboxDraw]) => {
+      if (cancelled || mapRef.current !== map) return;
+      const draw = new MapboxDraw({ displayControlsDefault: false, controls: { trash: true }, defaultMode: "simple_select" });
+      map.addControl(draw, "top-left");
+      drawRef.current = draw;
+      const plotFeatures = (proposal?.candidates || []).map((candidate: any) => ({ type: "Feature", id: String(candidate.plot_number), properties: { plot_number: candidate.plot_number }, geometry: candidate.geometry }));
+      draw.set({ type: "FeatureCollection", features: plotFeatures });
+      EDITABLE_PLOT_LAYERS.forEach((id) => { try { map.setLayoutProperty(id, "visibility", "none"); } catch { /* layer not ready yet */ } });
+
+      const captureUpdate = (event: any) => {
+        setPendingGeometry((current) => {
+          const next = { ...current };
+          (event.features || []).forEach((feature: any) => { next[String(feature.id)] = feature.geometry; });
+          return next;
+        });
+      };
+      const captureDelete = (event: any) => {
+        setDeletedIds((current) => {
+          const next = new Set(current);
+          (event.features || []).forEach((feature: any) => next.add(String(feature.id)));
+          return next;
+        });
+      };
+      map.on("draw.update", captureUpdate);
+      map.on("draw.delete", captureDelete);
+      (map as any)._edashDrawHandlers = { captureUpdate, captureDelete };
+    });
+    return () => {
+      cancelled = true;
+      const handlers = (map as any)?._edashDrawHandlers;
+      if (handlers) { map.off("draw.update", handlers.captureUpdate); map.off("draw.delete", handlers.captureDelete); }
+      if (drawRef.current) { try { map.removeControl(drawRef.current); } catch { /* map already gone */ } }
+      drawRef.current = null;
+      EDITABLE_PLOT_LAYERS.forEach((id) => { try { map.setLayoutProperty(id, "visibility", "visible"); } catch { /* layer not ready */ } });
+    };
+  }, [editing, proposal?.id]);
+
   const toggleFullscreen = () => {
     if (document.fullscreenElement) void document.exitFullscreen();
     else void wrapRef.current?.requestFullscreen();
+  };
+
+  const cancelEdits = () => {
+    setPendingGeometry({});
+    setDeletedIds(new Set());
+    setEditing(false);
+  };
+
+  const saveEdits = async () => {
+    if (!onEditCandidates || !proposal?.id) return;
+    const merged = (proposal.candidates || [])
+      .filter((candidate: any) => !deletedIds.has(String(candidate.plot_number)))
+      .map((candidate: any) => {
+        const updatedGeometry = pendingGeometry[String(candidate.plot_number)];
+        return updatedGeometry ? { ...candidate, geometry: updatedGeometry } : candidate;
+      });
+    setSavingEdits(true);
+    try {
+      await onEditCandidates(proposal.id, merged);
+      setPendingGeometry({});
+      setDeletedIds(new Set());
+      setEditing(false);
+    } finally {
+      setSavingEdits(false);
+    }
   };
 
   if (!MAPBOX_TOKEN) return <LayoutPreview proposal={proposal} />;
@@ -227,15 +306,33 @@ function LayoutPreviewMap({ proposal }: { proposal: any }) {
   return (
     <div ref={wrapRef} className="edash-layout-preview-wrap">
       <div ref={containerRef} className="edash-layout-preview-map" />
-      <button type="button" className="edash-map-ctrl-btn edash-layout-preview-fullscreen" title={isFullscreen ? "Exit fullscreen" : "Fullscreen"} onClick={toggleFullscreen}>
-        <EstateIcon name="expand" />
-      </button>
-      <span className="edash-layout-preview-count">{proposal.candidates?.length || 0} plots in this draft</span>
+      <div className="edash-layout-preview-toolbar">
+        {onEditCandidates && proposal.status === "review_required" && (
+          editing ? (
+            <>
+              <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits || !hasEdits} onClick={() => void saveEdits()} title="Save changes">
+                {savingEdits ? <Spinner size={13} /> : <EstateIcon name="check-circle" />} Save changes
+              </button>
+              <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits} onClick={cancelEdits} title="Cancel editing">
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" onClick={() => setEditing(true)} title="Edit plot vertices">
+              Edit plots
+            </button>
+          )
+        )}
+        <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" title={isFullscreen ? "Exit fullscreen" : "Fullscreen"} onClick={toggleFullscreen}>
+          <EstateIcon name="expand" />
+        </button>
+      </div>
+      <span className="edash-layout-preview-count">{editing ? "Drag a vertex to reshape, drag a midpoint to add one, or select and delete a plot" : `${proposal.candidates?.length || 0} plots in this draft`}</span>
     </div>
   );
 }
 
-export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy = false, message, messageTone = "good", onGenerate, onDecision }: Props) {
+export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy = false, message, messageTone = "good", onGenerate, onDecision, onEditCandidates }: Props) {
   const [templateKey, setTemplateKey] = useState<LayoutTemplateKey>("standard");
   const [criteria, setCriteria] = useState<LayoutCriteria>({ ...DEFAULT_CRITERIA, ...LAYOUT_TEMPLATES.find((item) => item.key === "standard")!.criteria });
   const [open, setOpen] = useState(false);
@@ -338,7 +435,7 @@ export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy =
             </div>
             <p className="edash-status-row-desc">{proposal.diagnostics?.estimated_plot_count || proposal.candidates?.length || 0} plots, about {Math.round(Number(proposal.diagnostics?.total_plot_area_sqm || 0)).toLocaleString()} m² of plot area.</p>
             <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>{proposal.diagnostics?.road_count || 0} access roads and {Number(proposal.diagnostics?.open_space_percent || 0).toFixed(1)}% open-space reserve.</p>
-            <LayoutPreviewMap proposal={proposal} />
+            <LayoutPreviewMap proposal={proposal} onEditCandidates={onEditCandidates} />
             {proposal.status === "review_required" && (
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                 <button type="button" className="edash-btn-primary" disabled={busy} onClick={() => onDecision(proposal.id, "approved")}>Approve and add plots</button>
