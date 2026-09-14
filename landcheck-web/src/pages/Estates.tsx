@@ -436,6 +436,7 @@ export default function Estates() {
   const [mapError, setMapError] = useState("");
   const [mapReady, setMapReady] = useState(false);
   const [styleGeneration, setStyleGeneration] = useState(0);
+  const [mapDebugInfo, setMapDebugInfo] = useState("");
   const visiblePlotGeojson = useMemo(() => {
     const query = plotSearch.trim().toLowerCase();
     return {
@@ -835,6 +836,13 @@ export default function Estates() {
         }
         setMapReady(true);
         setStyleGeneration((value) => value + 1);
+        window.setTimeout(() => {
+          if (cancelled || mapRef.current !== map) return;
+          const canvas = map.getCanvas();
+          const rect = map.getContainer().getBoundingClientRect();
+          const wrapRect = mapContainer.current?.parentElement?.getBoundingClientRect();
+          setMapDebugInfo(`canvas=${canvas.width}x${canvas.height} containerRect=${Math.round(rect.width)}x${Math.round(rect.height)} wrapRect=${Math.round(wrapRect?.width || 0)}x${Math.round(wrapRect?.height || 0)} styleLoaded=${map.isStyleLoaded()} sources=${Object.keys(map.getStyle()?.sources || {}).length} center=${map.getCenter().lng.toFixed(2)},${map.getCenter().lat.toFixed(2)} zoom=${map.getZoom().toFixed(1)}`);
+        }, 1500);
       });
     });
     return () => { cancelled = true; window.clearTimeout(mapLoadTimeout); (mapRef.current as any)?._edashResizeObserver?.disconnect(); mapRef.current?.remove(); mapRef.current = null; setMapReady(false); };
@@ -1104,8 +1112,8 @@ export default function Estates() {
           </button>
         </div>
         <div className="edash-map-canvas-wrap">
-          <div style={{ position: "absolute", top: 8, left: 8, zIndex: 50, background: "#111827", color: "#fff", fontSize: 11, lineHeight: 1.5, padding: "8px 12px", borderRadius: 8, fontFamily: "monospace", maxWidth: 420, whiteSpace: "pre-wrap" }}>
-            {`DEBUG token=${Boolean(MAPBOX_TOKEN)} mapReady=${mapReady} mapError="${mapError}" styleGen=${styleGeneration} plots=${mapPlotGeojson.features.length} boundary=${Boolean(mapBoundary)} mapRefSet=${Boolean(mapRef.current)}`}
+          <div style={{ position: "absolute", top: 8, left: 8, zIndex: 50, background: "#111827", color: "#fff", fontSize: 11, lineHeight: 1.5, padding: "8px 12px", borderRadius: 8, fontFamily: "monospace", maxWidth: 460, whiteSpace: "pre-wrap" }}>
+            {`DEBUG token=${Boolean(MAPBOX_TOKEN)} mapReady=${mapReady} mapError="${mapError}" styleGen=${styleGeneration} plots=${mapPlotGeojson.features.length} boundary=${Boolean(mapBoundary)} mapRefSet=${Boolean(mapRef.current)}\n${mapDebugInfo || "(measuring in ~1.5s...)"}`}
           </div>
           {MAPBOX_TOKEN && !mapError ? (
             <>
