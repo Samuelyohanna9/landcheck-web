@@ -1,0 +1,130 @@
+:root {
+  --estate-ink: #10243a;
+  --estate-navy: #0b1a2a;
+  --estate-slate: #526579;
+  --estate-cyan: #60d8d1;
+  --estate-gold: #e8b56a;
+  --estate-paper: #f4f1e8;
+  --estate-line: rgba(16, 36, 58, .15);
+}
+
+.estate-portal { min-height: 100vh; background: var(--estate-paper); color: var(--estate-ink); font-family: Georgia, "Times New Roman", serif; }
+.estate-portal-nav { display: flex; align-items: center; justify-content: space-between; max-width: 1260px; margin: auto; padding: 28px clamp(24px, 5vw, 72px); }
+.estate-wordmark { display: inline-flex; flex-direction: column; gap: 1px; color: var(--estate-ink); font: .72rem/1 Arial, sans-serif; letter-spacing: .2em; text-decoration: none; }
+.estate-wordmark strong { color: #209c95; font-size: 1.03rem; letter-spacing: .12em; }
+.estate-portal-nav-links { display: flex; align-items: center; gap: 26px; font: 600 .8rem Arial, sans-serif; }
+.estate-portal-nav-links a { color: var(--estate-ink); text-decoration: none; }
+.estate-nav-login { opacity: .7; }
+.estate-button { display: inline-flex; align-items: center; justify-content: center; gap: 18px; padding: 16px 21px; border: 0; border-radius: 2px; background: var(--estate-ink); color: #fff !important; font: 700 .82rem Arial, sans-serif; text-decoration: none; cursor: pointer; transition: transform .2s, background .2s; }
+.estate-button:hover { background: #1a5260; transform: translateY(-2px); }
+.estate-button:disabled { cursor: wait; opacity: .65; transform: none; }
+.estate-button--small { padding: 12px 16px; }
+.estate-kicker { margin: 0; color: #198e89; font: 700 .68rem Arial, sans-serif; letter-spacing: .19em; text-transform: uppercase; }
+.estate-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(400px, 1fr); gap: clamp(34px, 7vw, 110px); align-items: center; max-width: 1260px; margin: 0 auto; padding: clamp(55px, 9vw, 125px) clamp(24px, 5vw, 72px) 100px; }
+.estate-hero h1 { max-width: 620px; margin: 18px 0 25px; font-size: clamp(3.4rem, 6.5vw, 6.7rem); font-weight: 400; line-height: .91; letter-spacing: -.055em; }
+.estate-hero-lede { max-width: 510px; margin: 0; color: var(--estate-slate); font-size: 1.09rem; line-height: 1.7; }
+.estate-hero-actions { display: flex; align-items: center; gap: 25px; flex-wrap: wrap; margin-top: 32px; }
+.estate-text-link { color: var(--estate-ink); font: 700 .78rem Arial, sans-serif; text-decoration: none; border-bottom: 1px solid currentColor; padding-bottom: 4px; }
+.estate-text-link--light { color: #e6f2ec; }
+.estate-hero-proof { display: flex; gap: 18px; margin-top: 42px; color: #738292; font: 700 .63rem Arial, sans-serif; letter-spacing: .11em; text-transform: uppercase; }
+.estate-hero-proof span + span { border-left: 1px solid #aab2b2; padding-left: 18px; }
+.estate-hero-visual { position: relative; min-height: 490px; }
+.estate-visual-grid { position: absolute; inset: 5% 0 3% 5%; background-image: linear-gradient(rgba(22, 83, 89, .11) 1px, transparent 1px), linear-gradient(90deg, rgba(22, 83, 89, .11) 1px, transparent 1px); background-size: 42px 42px; transform: rotate(-6deg); border: 1px solid rgba(22, 83, 89, .17); }
+.estate-map-card { position: absolute; top: 12%; left: 12%; width: min(80%, 420px); padding: 16px; background: #10243a; box-shadow: 25px 30px 50px rgba(16, 36, 58, .22); transform: rotate(3deg); }
+.estate-map-card-top { display: flex; justify-content: space-between; color: #b8cdd0; font: 700 .57rem Arial, sans-serif; letter-spacing: .17em; }
+.estate-map-card-top b { padding: 4px 7px; background: #1f9e95; color: #fff; font-size: .48rem; }
+.estate-mini-map { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; height: 280px; margin: 13px 0; background: #e1e3d8; overflow: hidden; transform: skewY(-3deg); }
+.plot { position: relative; display: block; background: #d3e0cc; border: 1px solid #587e70; }
+.plot--sold { background: #efb4a2; }
+.plot--reserved { background: #e9d395; }
+.plot:nth-child(1) { margin: 8px 4px 0 12px; }
+.plot:nth-child(2) { margin: 12px 3px 5px; }
+.plot:nth-child(3) { margin: 4px 10px 0 3px; }
+.plot:nth-child(4) { margin: -3px 6px 9px; }
+.plot:nth-child(5) { margin: 4px 5px; }
+.plot:nth-child(6) { margin: 6px 12px 0 2px; }
+.estate-road { position: absolute; display: block; height: 9px; background: #faf7e9; border: 2px solid #7b9690; }
+.estate-road--one { width: 120%; left: -10%; top: 46%; transform: rotate(38deg); }
+.estate-road--two { width: 130%; left: -14%; top: 57%; transform: rotate(-29deg); }
+.estate-map-card-footer { display: flex; justify-content: space-between; align-items: end; color: #fff; font: 700 .64rem Arial, sans-serif; }
+.estate-map-card-footer span { color: #a5b8bc; font-size: .56rem; font-weight: 400; }
+.estate-float-card { position: absolute; display: flex; flex-direction: column; gap: 5px; padding: 16px 18px; background: #fff; box-shadow: 0 18px 35px rgba(16, 36, 58, .15); font-family: Arial, sans-serif; }
+.estate-float-card small { color: #77909a; font-size: .57rem; font-weight: 700; letter-spacing: .13em; }
+.estate-float-card strong { font: 700 1.5rem Georgia, serif; }
+.estate-float-card span { color: #719087; font-size: .65rem; }
+.estate-float-card--cash { right: 0; top: 5%; border-top: 3px solid var(--estate-gold); }
+.estate-float-card--queue { right: 2%; bottom: 10%; border-top: 3px solid var(--estate-cyan); }
+.estate-trust-strip { display: flex; justify-content: space-between; gap: 20px; max-width: 1260px; margin: auto; padding: 19px clamp(24px, 5vw, 72px); border-top: 1px solid var(--estate-line); border-bottom: 1px solid var(--estate-line); color: #82909c; font: 700 .6rem Arial, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+.estate-trust-strip span:first-child { color: var(--estate-ink); }
+.estate-workflow-section { max-width: 1260px; margin: auto; padding: 120px clamp(24px, 5vw, 72px); }
+.estate-section-heading { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 55px; }
+.estate-section-heading h2, .estate-intelligence-section h2 { max-width: 510px; margin: 11px 0 0; font-size: clamp(2.4rem, 4.3vw, 4.6rem); font-weight: 400; line-height: .98; letter-spacing: -.045em; }
+.estate-section-heading > p:last-child { max-width: 390px; align-self: end; margin: 0; color: var(--estate-slate); line-height: 1.7; }
+.estate-workflow-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 1px solid var(--estate-line); }
+.estate-workflow-grid article { min-height: 230px; padding: 25px 25px 20px 0; border-right: 1px solid var(--estate-line); }
+.estate-workflow-grid article + article { padding-left: 25px; }
+.estate-workflow-grid article:last-child { border-right: 0; }
+.estate-workflow-grid article > span { color: #198e89; font: 700 .7rem Arial, sans-serif; letter-spacing: .13em; }
+.estate-workflow-grid h3 { margin: 52px 0 11px; font-size: 1.35rem; font-weight: 400; }
+.estate-workflow-grid p { max-width: 210px; margin: 0; color: var(--estate-slate); font-size: .9rem; line-height: 1.55; }
+.estate-intelligence-section { display: grid; grid-template-columns: 1.1fr .9fr; gap: 80px; align-items: center; padding: 100px max(24px, calc((100vw - 1116px) / 2)); background: var(--estate-navy); color: #eef3ed; }
+.estate-intelligence-section h2 { margin-bottom: 24px; color: #fff; }
+.estate-intelligence-section p:not(.estate-kicker) { max-width: 500px; color: #b9cbd0; line-height: 1.7; }
+.estate-intelligence-list { border-top: 1px solid rgba(219, 239, 232, .24); }
+.estate-intelligence-list div { display: flex; justify-content: space-between; gap: 20px; padding: 19px 0; border-bottom: 1px solid rgba(219, 239, 232, .24); font: 700 .67rem Arial, sans-serif; }
+.estate-intelligence-list b { color: var(--estate-cyan); letter-spacing: .12em; }
+.estate-intelligence-list span { color: #d8e5e3; font-weight: 400; }
+.estate-portal-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; max-width: 1260px; margin: auto; padding: 35px clamp(24px, 5vw, 72px); color: #788995; font: 600 .7rem Arial, sans-serif; }
+.estate-portal-footer > a:last-child { color: var(--estate-ink); text-decoration: none; }
+.estate-auth-page { min-height: 100vh; background: radial-gradient(circle at 8% 10%, #d7ebe6 0, transparent 32%), var(--estate-paper); color: var(--estate-ink); font-family: Georgia, "Times New Roman", serif; }
+.estate-auth-shell { display: flex; flex-direction: column; justify-content: center; gap: 30px; min-height: 100vh; width: min(100% - 48px, 470px); margin: auto; padding: 40px 0; }
+.estate-auth-shell--register { display: grid; grid-template-columns: minmax(230px, 1fr) minmax(360px, 450px); gap: clamp(45px, 9vw, 130px); align-items: center; width: min(100% - 48px, 1030px); }
+.estate-auth-shell--register .estate-wordmark { grid-column: 1 / -1; align-self: start; }
+.estate-auth-card { padding: 34px; background: #fff; border: 1px solid var(--estate-line); box-shadow: 18px 22px 50px rgba(16, 36, 58, .1); }
+.estate-auth-card h1, .estate-auth-card h2 { margin: 10px 0; font-size: 2.5rem; font-weight: 400; letter-spacing: -.04em; }
+.estate-auth-card > p:not(.estate-kicker) { color: var(--estate-slate); line-height: 1.6; }
+.estate-auth-card form { display: grid; gap: 16px; margin-top: 27px; }
+.estate-auth-card label { display: grid; gap: 7px; color: var(--estate-ink); font: 700 .7rem Arial, sans-serif; }
+.estate-auth-card label small { color: #81909b; font-weight: 400; }
+.estate-auth-card input { box-sizing: border-box; width: 100%; padding: 13px 12px; border: 1px solid #ccd6d6; background: #fbfcf8; color: var(--estate-ink); font: 1rem Georgia, serif; outline: 0; }
+.estate-auth-card input:focus { border-color: #208f8a; box-shadow: 0 0 0 3px rgba(32, 143, 138, .12); }
+.estate-auth-error { padding: 11px 12px; background: #fff0eb; border-left: 3px solid #c5533e; color: #9b392a; font: 600 .76rem Arial, sans-serif; line-height: 1.4; }
+.estate-auth-switch { margin: 23px 0 0 !important; color: #74828c !important; font: 600 .74rem Arial, sans-serif !important; }
+.estate-auth-switch a, .estate-auth-back { color: #167d7b; font-weight: 700; }
+.estate-auth-back { font: 600 .7rem Arial, sans-serif; text-decoration: none; }
+.estate-register-intro h1 { max-width: 430px; margin: 16px 0; font-size: clamp(3rem, 5vw, 5rem); font-weight: 400; line-height: .95; letter-spacing: -.055em; }
+.estate-register-intro > p:not(.estate-kicker) { max-width: 380px; color: var(--estate-slate); line-height: 1.7; }
+.estate-register-points { display: grid; gap: 13px; margin-top: 34px; color: #496371; font: 700 .75rem Arial, sans-serif; }
+.estate-register-points b { display: inline-grid; place-items: center; width: 27px; height: 27px; margin-right: 8px; background: #d8ebe2; color: #167d7b; font-size: .6rem; }
+.estate-auth-shell--register .estate-auth-card { grid-column: 2; }
+.estate-auth-shell--register .estate-register-intro { grid-column: 1; grid-row: 2; }
+.estate-auth-shell--register .estate-wordmark { grid-row: 1; }
+
+@media (max-width: 850px) {
+  .estate-hero { grid-template-columns: 1fr; }
+  .estate-hero-visual { min-height: 430px; }
+  .estate-section-heading { grid-template-columns: 1fr; }
+  .estate-workflow-grid { grid-template-columns: repeat(2, 1fr); }
+  .estate-workflow-grid article:nth-child(2) { border-right: 0; }
+  .estate-workflow-grid article:nth-child(3), .estate-workflow-grid article:nth-child(4) { border-top: 1px solid var(--estate-line); }
+  .estate-workflow-grid article:nth-child(3) { padding-left: 0; }
+  .estate-intelligence-section { grid-template-columns: 1fr; gap: 45px; }
+  .estate-auth-shell--register { grid-template-columns: 1fr; width: min(100% - 48px, 560px); }
+  .estate-auth-shell--register .estate-register-intro, .estate-auth-shell--register .estate-auth-card { grid-column: 1; grid-row: auto; }
+  .estate-auth-shell--register .estate-wordmark { grid-column: 1; }
+}
+
+@media (max-width: 600px) {
+  .estate-portal-nav-links a:not(.estate-nav-login) { display: none; }
+  .estate-hero { padding-top: 55px; }
+  .estate-hero h1 { font-size: 3.45rem; }
+  .estate-hero-visual { min-height: 350px; transform: scale(.9); transform-origin: top left; width: 111%; }
+  .estate-trust-strip { display: grid; grid-template-columns: 1fr 1fr; font-size: .55rem; }
+  .estate-workflow-grid { grid-template-columns: 1fr; }
+  .estate-workflow-grid article, .estate-workflow-grid article + article { padding: 22px 0; border-right: 0 !important; border-top: 1px solid var(--estate-line); }
+  .estate-workflow-grid article:first-child { border-top: 0; }
+  .estate-portal-footer { display: grid; }
+  .estate-auth-shell { width: min(100% - 32px, 470px); }
+  .estate-auth-card { padding: 24px; }
+  .estate-auth-card h1, .estate-auth-card h2 { font-size: 2rem; }
+}

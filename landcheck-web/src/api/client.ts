@@ -7,6 +7,7 @@ const isLocalHost = (value: string) =>
 const GREEN_AUTH_STORAGE_KEY = "landcheck_green_auth";
 const WORK_AUTH_STORAGE_KEY = "landcheck_work_auth";
 const SURVEY_AUTH_STORAGE_KEY = "landcheck_survey_auth";
+const ESTATE_AUTH_STORAGE_KEY = "landcheck_estate_auth";
 
 const configuredApiUrl = String(import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
 let configuredApiHost = "";
@@ -65,6 +66,7 @@ const resolveWebClientLabel = (pathname: string, greenSession: StoredSession | n
   const sponsorSession = greenSession?.auth_mode === "sponsor_user" || greenSession?.appMode === "green_sponsor";
   if (cleanPath.startsWith("/green-work")) return "green-work-web";
   if (cleanPath.startsWith("/survey-plan") || cleanPath.startsWith("/survey")) return "survey-plan-web";
+  if (cleanPath.startsWith("/estates")) return "estates-web";
   if (cleanPath.startsWith("/hazard-analysis") || cleanPath.startsWith("/flood")) return "flood-web";
   if (cleanPath.startsWith("/feedback")) return "feedback-web";
   if (cleanPath.startsWith("/green")) {
@@ -81,11 +83,16 @@ const attachLandCheckHeaders = (config: InternalAxiosRequestConfig) => {
   const greenSession = readStoredSession(GREEN_AUTH_STORAGE_KEY);
   const workSession = readStoredSession(WORK_AUTH_STORAGE_KEY);
   const surveySession = readStoredSession(SURVEY_AUTH_STORAGE_KEY);
+  const estateSession = readStoredSession(ESTATE_AUTH_STORAGE_KEY);
+  const requestPath = String(config.url || "").trim().toLowerCase();
+  const isEstateRequest = requestPath.startsWith("/estates") || requestPath.includes("/estates/");
   const isSurveyRoute =
     cleanPathname.startsWith("/survey-plan") ||
     cleanPathname.startsWith("/survey") ||
     cleanPathname.startsWith("/dashboard");
-  const activeSession = isSurveyRoute
+  const activeSession = isEstateRequest
+    ? estateSession
+    : isSurveyRoute
     ? surveySession
     : cleanPathname.startsWith("/green-work")
       ? workSession || greenSession

@@ -8,6 +8,7 @@ import GreenLoadingAnimation from "./components/GreenLoadingAnimation";
 import { getGreenAuthSession, isGreenAuthed, isSponsorGreenSession } from "./auth/greenAuth";
 import { isWorkAuthed } from "./auth/workAuth";
 import { isSurveyAuthed } from "./auth/surveyAuth";
+import { isEstateAuthed } from "./auth/estateAuth";
 import { CookieConsentProvider } from "./privacy/cookieConsent";
 import { lazyWithChunkRecovery, CHUNK_RECOVERY_STORAGE_KEY } from "./utils/lazyWithChunkRecovery";
 
@@ -37,6 +38,11 @@ const DonorImpactPage = lazyWithChunkRecovery(() => import("./pages/DonorImpactP
 const AppClaimRedirect = lazyWithChunkRecovery(() => import("./pages/AppClaimRedirect"));
 const SurveyAuthVerify = lazyWithChunkRecovery(() => import("./pages/SurveyAuthVerify"));
 const SurveyAuthCallback = lazyWithChunkRecovery(() => import("./pages/SurveyAuthCallback"));
+const Estates = lazyWithChunkRecovery(() => import("./pages/Estates"));
+const EstateFinance = lazyWithChunkRecovery(() => import("./pages/EstateFinance"));
+const EstateLanding = lazyWithChunkRecovery(() => import("./pages/EstateLanding"));
+const EstateLogin = lazyWithChunkRecovery(() => import("./pages/EstateLogin"));
+const EstateRegister = lazyWithChunkRecovery(() => import("./pages/EstateRegister"));
 
 type ChunkLoadBoundaryProps = {
   children: ReactNode;
@@ -149,6 +155,14 @@ function GreenProtectedRoute({ element }: { element: ReactElement }) {
 
 function SurveyProtectedRoute({ element }: { element: ReactElement }) {
   return isSurveyAuthed() ? element : <Navigate to="/survey" replace />;
+}
+
+function EstateProtectedRoute({ element }: { element: ReactElement }) {
+  return isEstateAuthed() ? element : <Navigate to="/estates/login" state={{ from: window.location.pathname }} replace />;
+}
+
+function EstateEntryRoute() {
+  return isEstateAuthed() ? <Navigate to="/estates/workspace" replace /> : <EstateLanding />;
 }
 
 function MerchantProtectedRoute({ element }: { element: ReactElement }) {
@@ -266,6 +280,13 @@ export default function App() {
               <Route path="/survey" element={<SurveyPlanLanding />} />
               <Route path="/survey/auth/verify" element={<SurveyAuthVerify />} />
               <Route path="/survey/auth/callback" element={<SurveyAuthCallback />} />
+              <Route path="/estates" element={<EstateEntryRoute />} />
+              <Route path="/estates/login" element={<EstateLogin />} />
+              <Route path="/estates/register" element={<EstateRegister />} />
+              <Route path="/estates/workspace" element={<EstateProtectedRoute element={<Estates />} />} />
+              <Route path="/estates/:estateId/map" element={<EstateProtectedRoute element={<Estates />} />} />
+              <Route path="/estates/payments" element={<EstateProtectedRoute element={<EstateFinance mode="payments" />} />} />
+              <Route path="/estates/documents" element={<EstateProtectedRoute element={<EstateFinance mode="documents" />} />} />
               <Route path="/flood" element={<FloodAnalysisLanding />} />
               <Route path="/career" element={<CareersPage />} />
               <Route path="/news" element={<NewsPage />} />
