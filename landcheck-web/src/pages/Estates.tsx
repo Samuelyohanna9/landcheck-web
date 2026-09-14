@@ -428,6 +428,7 @@ export default function Estates() {
   type AddPlotMethod = "draw" | "coordinates" | EstateLayoutMethod;
   const [addPlotMethod, setAddPlotMethod] = useState<AddPlotMethod>("draw");
   const [designSubdividePlotId, setDesignSubdividePlotId] = useState<number | null>(null);
+  const [designLayoutMethod, setDesignLayoutMethod] = useState<"subdivide" | "automatic">("automatic");
   const [plotDocumentFile, setPlotDocumentFile] = useState<File | null>(null);
   const [plotDocumentBusy, setPlotDocumentBusy] = useState(false);
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -1799,35 +1800,52 @@ export default function Estates() {
     if (activeTool === "layout") {
       const availablePlots = plots.filter((plot) => plot.commercial_status === "available");
       const targetSubdividePlotId = designSubdividePlotId ?? availablePlots[0]?.id ?? null;
+      const hasBoundary = Boolean(estateDetail?.boundary);
       return renderToolModal("Design your layout", "Turn a plot or the Estate boundary into many smaller plots.", (
         <>
-          {availablePlots.length > 0 && (
-            <div className="edash-info-card" style={{ flexDirection: "column", marginBottom: 16 }}>
-              <div className="edash-info-card-head"><span className="edash-status-row-title">Subdivide an existing plot</span></div>
-              <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>
-                Split one plot - for example a large "mother" parcel covering the whole Estate - into smaller plots. Each new plot is added to your Plots count and can be allocated to a customer.
-              </p>
-              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <select value={targetSubdividePlotId ?? ""} onChange={(event) => setDesignSubdividePlotId(Number(event.target.value))}>
-                  {availablePlots.map((plot) => <option key={plot.id} value={plot.id}>{plot.plot_number} - {Number(plot.area_sqm || 0).toLocaleString()} m²</option>)}
-                </select>
-                <input type="number" min="2" max="100" value={subdivisionCount} onChange={(event) => setSubdivisionCount(event.target.value)} style={{ width: 80, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
-                <button type="button" className="edash-btn-primary" disabled={subdivisionBusy || !targetSubdividePlotId} onClick={() => targetSubdividePlotId && void subdividePlotById(targetSubdividePlotId)}>{subdivisionBusy ? "Creating plots..." : "Split into plots"}</button>
-              </div>
-            </div>
+          <label className="edash-field" style={{ marginBottom: 16, maxWidth: 320 }}>
+            <span>Method</span>
+            <select value={designLayoutMethod} onChange={(event) => setDesignLayoutMethod(event.target.value as "subdivide" | "automatic")}>
+              <option value="automatic">Design automatically (Nigerian estate presets)</option>
+              <option value="subdivide">Subdivide a plot or the boundary evenly</option>
+            </select>
+          </label>
+
+          {designLayoutMethod === "subdivide" ? (
+            <>
+              {availablePlots.length > 0 && (
+                <div className="edash-info-card" style={{ flexDirection: "column", marginBottom: 16 }}>
+                  <div className="edash-info-card-head"><span className="edash-status-row-title">Subdivide an existing plot</span></div>
+                  <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>
+                    Split one plot - for example a large "mother" parcel covering the whole Estate - into smaller plots. Each new plot is added to your Plots count and can be allocated to a customer.
+                  </p>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <select value={targetSubdividePlotId ?? ""} onChange={(event) => setDesignSubdividePlotId(Number(event.target.value))}>
+                      {availablePlots.map((plot) => <option key={plot.id} value={plot.id}>{plot.plot_number} - {Number(plot.area_sqm || 0).toLocaleString()} m²</option>)}
+                    </select>
+                    <input type="number" min="2" max="100" value={subdivisionCount} onChange={(event) => setSubdivisionCount(event.target.value)} style={{ width: 80, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
+                    <button type="button" className="edash-btn-primary" disabled={subdivisionBusy || !targetSubdividePlotId} onClick={() => targetSubdividePlotId && void subdividePlotById(targetSubdividePlotId)}>{subdivisionBusy ? "Creating plots..." : "Split into plots"}</button>
+                  </div>
+                </div>
+              )}
+              {hasBoundary && plots.length === 0 && (
+                <div className="edash-info-card" style={{ flexDirection: "column", marginBottom: 16 }}>
+                  <div className="edash-info-card-head"><span className="edash-status-row-title">Split the Estate boundary into equal plots</span></div>
+                  <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>Fast: divide the whole boundary evenly. Best for uniform lots with no roads or open space.</p>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <input type="number" min="2" max="200" value={subdivisionCount} onChange={(event) => setSubdivisionCount(event.target.value)} style={{ width: 80, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
+                    <button type="button" className="edash-btn-primary" disabled={subdivisionBusy} onClick={() => void splitBoundaryIntoPlots()}>{subdivisionBusy ? "Creating..." : "Split boundary"}</button>
+                  </div>
+                </div>
+              )}
+              {availablePlots.length === 0 && !(hasBoundary && plots.length === 0) && (
+                <p className="edash-tab-empty">Add a plot or an Estate boundary first, then come back here to subdivide it.</p>
+              )}
+              <StatusBanner text={workflowMessage} tone={workflowMessageTone} />
+            </>
+          ) : (
+            <EstateLayoutDesigner boundaryPresent={hasBoundary} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} messageTone={layoutDesignerMessageTone} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} />
           )}
-          {estateDetail?.boundary && plots.length === 0 && (
-            <div className="edash-info-card" style={{ flexDirection: "column", marginBottom: 16 }}>
-              <div className="edash-info-card-head"><span className="edash-status-row-title">Split the Estate boundary into equal plots</span></div>
-              <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>Fast: divide the whole boundary evenly. Best for uniform lots with no roads or open space.</p>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input type="number" min="2" max="200" value={subdivisionCount} onChange={(event) => setSubdivisionCount(event.target.value)} style={{ width: 80, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
-                <button type="button" className="edash-btn-primary" disabled={subdivisionBusy} onClick={() => void splitBoundaryIntoPlots()}>{subdivisionBusy ? "Creating..." : "Split boundary"}</button>
-              </div>
-            </div>
-          )}
-          <StatusBanner text={workflowMessage} tone={workflowMessageTone} />
-          <EstateLayoutDesigner boundaryPresent={Boolean(estateDetail?.boundary)} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} messageTone={layoutDesignerMessageTone} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} />
         </>
       ));
     }
