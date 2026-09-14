@@ -4,11 +4,11 @@ import { clearEstateAuthSession } from "../auth/estateAuth";
 import { api, extractApiErrorMessage } from "../api/client";
 import { money } from "../components/estates/FinancialComponents";
 import CoordinateInput from "../components/CoordinateInput";
-import EstateLayoutImport, { type EstateLayoutMethod } from "../components/estates/EstateLayoutImport";
+import EstateLayoutImport, { type EstateLayoutMethod, LAYOUT_IMPORT_METHODS } from "../components/estates/EstateLayoutImport";
 import EstateLayoutDesigner from "../components/estates/EstateLayoutDesigner";
 import MapViewEnhanced from "../components/MapViewEnhanced";
 import { loadMapboxGl, loadMapboxGlCss, MAPBOX_TOKEN } from "../utils/mapboxLoader";
-import { toWGS84 } from "../utils/coordinateConverter";
+import { toWGS84, COORDINATE_SYSTEM_GROUPS } from "../utils/coordinateConverter";
 import { checkPolygonClosure } from "../utils/surveyGeometry";
 import EstateIcon from "../components/estates/EstateIcon";
 import EstateModal from "../components/estates/EstateModal";
@@ -25,6 +25,10 @@ const STATUS_COLORS = {
   developed: "#d1433f",
   on_hold: "#667085",
 } as const;
+
+const IMPORT_CRS_OPTIONS = COORDINATE_SYSTEM_GROUPS.flatMap((group) =>
+  group.systems.filter((system) => !system.epsgLabel.includes("/")).map((system) => ({ value: system.epsgLabel, label: `${system.name} (${system.epsgLabel})` }))
+);
 
 function relativeTime(value: string) {
   const then = new Date(value).getTime();
@@ -160,7 +164,9 @@ export default function Estates() {
   const [drawerTab, setDrawerTab] = useState<"overview" | "customer" | "survey" | "staking" | "documents" | "hazards" | "timeline">("overview");
   const [editingDevelopment, setEditingDevelopment] = useState(false);
   const [plotContextMenu, setPlotContextMenu] = useState<{ x: number; y: number; plotId: number } | null>(null);
-  const [activeTool, setActiveTool] = useState<"import" | "create-plot" | "layout" | "blocks" | "layers" | "qc" | null>(null);
+  const [activeTool, setActiveTool] = useState<"add-plot" | "layout" | "blocks" | "layers" | "qc" | null>(null);
+  type AddPlotMethod = "draw" | "coordinates" | EstateLayoutMethod;
+  const [addPlotMethod, setAddPlotMethod] = useState<AddPlotMethod>("draw");
   const [plotDocumentFile, setPlotDocumentFile] = useState<File | null>(null);
   const [plotDocumentBusy, setPlotDocumentBusy] = useState(false);
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -1420,20 +1426,28 @@ export default function Estates() {
   }
 
   function renderToolsBar() {
-    type ToolKey = "import" | "create-plot" | "layout" | "blocks" | "layers" | "qc";
-    const tools: Array<{ key: ToolKey; label: string; icon: import("../components/estates/EstateIcon").EstateIconName }> = [
-      { key: "import", label: "Import Land Data", icon: "upload" },
-      { key: "create-plot", label: "Create Plot", icon: "plus" },
-      { key: "layout", label: "Design Layout", icon: "map" },
+    type ToolKey = "add-plot" | "layout" | "blocks" | "layers" | "qc";
+    const hasBoundary = Boolean(estateDetail?.boundary);
+    const hasPlots = plots.length > 0;
+    const tools: Array<{ key: ToolKey; label: string; icon: import("../components/estates/EstateIcon").EstateIconName; locked?: string }> = [
+      { key: "add-plot", label: "Add Plot", icon: "plus" },
+      { key: "layout", label: "Design Layout", icon: "map", locked: hasBoundary ? undefined : "Add an Estate boundary first (draw a plot or import one) before designing a layout." },
       { key: "blocks", label: "Blocks", icon: "grid" },
-      { key: "layers", label: "Map Layers", icon: "layers" },
-      { key: "qc", label: "Geometry Check", icon: "check-circle" },
+      { key: "layers", label: "Map Layers", icon: "layers", locked: hasBoundary ? undefined : "Add an Estate boundary before mapping roads, drainage or other layers." },
+      { key: "qc", label: "Geometry Check", icon: "check-circle", locked: hasPlots ? undefined : "Add at least one plot before running a geometry check." },
     ];
     return (
       <div className="edash-tools-bar">
         {tools.map((tool) => (
-          <button key={tool.key} type="button" className="edash-tool-btn" onClick={() => setActiveTool(tool.key)}>
-            <EstateIcon name={tool.icon} />
+          <button
+            key={tool.key}
+            type="button"
+            className={`edash-tool-btn${tool.locked ? " edash-tool-btn--locked" : ""}`}
+            disabled={Boolean(tool.locked)}
+            title={tool.locked}
+            onClick={() => { if (!tool.locked) setActiveTool(tool.key); }}
+          >
+            <EstateIcon name={tool.locked ? "lock" : tool.icon} />
             {tool.label}
           </button>
         ))}
@@ -1456,36 +1470,66 @@ export default function Estates() {
   }
 
   function renderActiveToolModal() {
-    if (activeTool === "import") {
-      return renderToolModal("Import land data", "Pick the format you already have - we'll show a preview before adding plots.", (
-        <EstateLayoutImport
-          reviews={importReviews}
-          files={{ csv: csvFile, geojson: geojsonFile, dxf: dxfFile, "scanned-layout": scannedLayoutFile }}
-          onFileChange={handleLayoutFileChange}
-          onUpload={(method) => void uploadLayout(method)}
-          onDecision={(reviewId, status) => void decideImportReview(reviewId, status)}
-          onStartGeoreference={(file) => void startGeoreferenceImport(file)}
-          onOpenGeoreference={openGeoreferenceTool}
-          onImportFromGeoreference={(reviewId) => void importPlotsFromGeoreference(reviewId)}
-          message={layoutMessage}
-          busy={layoutUploadBusy}
-        />
-      ));
-    }
-    if (activeTool === "create-plot") {
-      return renderToolModal("Create a plot from coordinates", "Enter points manually or import a spreadsheet - the boundary appears on the map immediately.", (
+    if (activeTool === "add-plot") {
+      const isDrawOrCoordinates = addPlotMethod === "draw" || addPlotMethod === "coordinates";
+      const needsSourceCrs = addPlotMethod === "csv" || addPlotMethod === "dxf";
+      return renderToolModal("Add a plot", "Choose how you want to add this plot to the Estate register.", (
         <>
-          <label className="edash-field" style={{ marginBottom: 12, maxWidth: 260 }}><span>Plot number</span><input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="e.g. B-024" /></label>
-          <div className="edash-content-row edash-content-row--split">
-            <CoordinateInput title="Add plot boundary" subtitle="Choose a spreadsheet or enter the points manually." sidebar={<div className="edash-field-note"><strong style={{ color: "var(--edash-ink)" }}>Plot boundary</strong><br />Use the same coordinate workflow as Survey.</div>} points={plotInputPoints} onUpdatePoint={updatePlotInputPoint} onRemovePoint={removePlotInputPoint} onAddPoint={addPlotInputPoint} onBulkUpload={importPlotInputPoints} disabled={false} coordinateSystem={plotInputCoordinateSystem} onCoordinateSystemChange={setPlotInputCoordinateSystem} onReorderPoints={reorderPlotInputPoints} onClearAllPoints={() => setPlotInputPoints([])} />
-            <div>
-              <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.84rem" }}>Map preview</h3></div>
-              <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>Edit the boundary on the map or use the table.</p>
-              {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={plotInputMapPoints} onCoordinatesDrawn={handlePlotCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <p className="edash-tab-empty">Map preview is unavailable right now. You can still review the coordinates above.</p>}
-            </div>
+          <div className="edash-form-row" style={{ marginBottom: 16 }}>
+            <label className="edash-field" style={{ maxWidth: 320 }}>
+              <span>Method</span>
+              <select value={addPlotMethod} onChange={(event) => setAddPlotMethod(event.target.value as AddPlotMethod)}>
+                <option value="draw">Draw on the satellite map</option>
+                <option value="coordinates">Enter coordinates manually</option>
+                {LAYOUT_IMPORT_METHODS.map((item) => <option key={item.key} value={item.key}>{item.title} ({item.description})</option>)}
+              </select>
+            </label>
+            {needsSourceCrs && (
+              <label className="edash-field" style={{ maxWidth: 280 }}>
+                <span>Coordinate system</span>
+                <select value={importSourceCrs} onChange={(event) => setImportSourceCrs(event.target.value)}>
+                  {IMPORT_CRS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </label>
+            )}
           </div>
-          {workflowMessage && <p className="edash-tab-empty" style={{ textAlign: "left", padding: "8px 0" }} role="status">{workflowMessage}</p>}
-          <button type="button" className="edash-btn-primary" style={{ marginTop: 12 }} disabled={plotInputMapPoints.length < 3 || plotInputClosure === "self-intersecting"} onClick={() => void createPlotFromInput()}>{plotInputClosure === "self-intersecting" ? "Fix boundary first" : "Create plot"}</button>
+
+          {isDrawOrCoordinates ? (
+            <>
+              <label className="edash-field" style={{ marginBottom: 12, maxWidth: 260 }}><span>Plot number</span><input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="e.g. B-024" /></label>
+              {addPlotMethod === "draw" ? (
+                <div>
+                  <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>Trace the plot boundary directly on the satellite image, then confirm below.</p>
+                  {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={plotInputMapPoints} onCoordinatesDrawn={handlePlotCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <p className="edash-tab-empty">Map drawing is unavailable right now. Switch to "Enter coordinates manually" instead.</p>}
+                </div>
+              ) : (
+                <div className="edash-content-row edash-content-row--split">
+                  <CoordinateInput title="Add plot boundary" subtitle="Choose a spreadsheet or enter the points manually." sidebar={<div className="edash-field-note"><strong style={{ color: "var(--edash-ink)" }}>Plot boundary</strong><br />Use the same coordinate workflow as Survey.</div>} points={plotInputPoints} onUpdatePoint={updatePlotInputPoint} onRemovePoint={removePlotInputPoint} onAddPoint={addPlotInputPoint} onBulkUpload={importPlotInputPoints} disabled={false} coordinateSystem={plotInputCoordinateSystem} onCoordinateSystemChange={setPlotInputCoordinateSystem} onReorderPoints={reorderPlotInputPoints} onClearAllPoints={() => setPlotInputPoints([])} />
+                  <div>
+                    <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.84rem" }}>Map preview</h3></div>
+                    <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>Edit the boundary on the map or use the table.</p>
+                    {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={plotInputMapPoints} onCoordinatesDrawn={handlePlotCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <p className="edash-tab-empty">Map preview is unavailable right now. You can still review the coordinates above.</p>}
+                  </div>
+                </div>
+              )}
+              {workflowMessage && <p className="edash-tab-empty" style={{ textAlign: "left", padding: "8px 0" }} role="status">{workflowMessage}</p>}
+              <button type="button" className="edash-btn-primary" style={{ marginTop: 12 }} disabled={plotInputMapPoints.length < 3 || plotInputClosure === "self-intersecting"} onClick={() => void createPlotFromInput()}>{plotInputClosure === "self-intersecting" ? "Fix boundary first" : "Create plot"}</button>
+            </>
+          ) : (
+            <EstateLayoutImport
+              method={addPlotMethod as EstateLayoutMethod}
+              reviews={importReviews}
+              files={{ csv: csvFile, geojson: geojsonFile, dxf: dxfFile, "scanned-layout": scannedLayoutFile }}
+              onFileChange={handleLayoutFileChange}
+              onUpload={(method) => void uploadLayout(method)}
+              onDecision={(reviewId, status) => void decideImportReview(reviewId, status)}
+              onStartGeoreference={(file) => void startGeoreferenceImport(file)}
+              onOpenGeoreference={openGeoreferenceTool}
+              onImportFromGeoreference={(reviewId) => void importPlotsFromGeoreference(reviewId)}
+              message={layoutMessage}
+              busy={layoutUploadBusy}
+            />
+          )}
         </>
       ));
     }

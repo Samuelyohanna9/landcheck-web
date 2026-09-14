@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import EstateIcon from "./EstateIcon";
 
 export type EstateLayoutMethod = "csv" | "geojson" | "dxf" | "scanned-layout";
@@ -14,6 +14,7 @@ type ImportReview = {
 };
 
 type Props = {
+  method: EstateLayoutMethod;
   reviews: ImportReview[];
   files: Record<EstateLayoutMethod, File | null>;
   onFileChange: (method: EstateLayoutMethod, file: File | null) => void;
@@ -26,7 +27,7 @@ type Props = {
   busy?: boolean;
 };
 
-const METHODS: Array<{ key: EstateLayoutMethod; icon: import("./EstateIcon").EstateIconName; title: string; description: string; accept: string }> = [
+export const LAYOUT_IMPORT_METHODS: Array<{ key: EstateLayoutMethod; icon: import("./EstateIcon").EstateIconName; title: string; description: string; accept: string }> = [
   { key: "csv", icon: "documents", title: "Spreadsheet", description: "CSV or Excel-style coordinate rows", accept: ".csv,text/csv" },
   { key: "geojson", icon: "map", title: "GIS file", description: "Digital layout from your mapping software", accept: ".json,.geojson,application/geo+json" },
   { key: "dxf", icon: "development", title: "CAD drawing", description: "Digital drawing from your surveyor or designer", accept: ".dxf,application/dxf" },
@@ -86,36 +87,16 @@ function InvalidRowsList({ review }: { review: ImportReview }) {
   );
 }
 
-export default function EstateLayoutImport({ reviews, files, onFileChange, onUpload, onDecision, onStartGeoreference, onOpenGeoreference, onImportFromGeoreference, message, busy = false }: Props) {
-  const [method, setMethod] = useState<EstateLayoutMethod>("csv");
+export default function EstateLayoutImport({ method, reviews, files, onFileChange, onUpload, onDecision, onStartGeoreference, onOpenGeoreference, onImportFromGeoreference, message, busy = false }: Props) {
   const latest = reviews[0];
   const usableCount = latest?.candidates?.filter((candidate) => candidate.valid !== false && candidate.geometry?.type === "Polygon").length || 0;
-  const selectedMethod = METHODS.find((item) => item.key === method) || METHODS[0];
+  const selectedMethod = LAYOUT_IMPORT_METHODS.find((item) => item.key === method) || LAYOUT_IMPORT_METHODS[0];
   const file = files[method];
   const isGeoreferenceMethod = method === "scanned-layout";
   const georeferenceReview = reviews.find((review) => review.source_type === "raster" && review.session_id);
 
   return (
-    <div className="edash-card">
-      <div className="edash-card-inner">
-        <div className="edash-card-head">
-          <h3 className="edash-card-title">Upload your Estate plan</h3>
-          <span className="edash-step-badge">Choose a format</span>
-        </div>
-        <p className="edash-status-row-desc" style={{ marginBottom: 14 }}>Pick the format you already have. We will show you a preview before adding plots to your Estate.</p>
-
-        <div className="edash-method-tabs" role="tablist" aria-label="Layout source">
-          {METHODS.map((item) => (
-            <button key={item.key} type="button" role="tab" aria-selected={method === item.key} className={`edash-method-tab${method === item.key ? " active" : ""}`} onClick={() => setMethod(item.key)}>
-              <EstateIcon name={item.icon} />
-              <span>
-                <strong>{item.title}</strong>
-                <small>{item.description}</small>
-              </span>
-            </button>
-          ))}
-        </div>
-
+    <div>
         {isGeoreferenceMethod ? (
           georeferenceReview ? (
             <div className="edash-info-card" style={{ flexDirection: "column", marginTop: 4 }}>
@@ -179,7 +160,6 @@ export default function EstateLayoutImport({ reviews, files, onFileChange, onUpl
             )}
           </div>
         )}
-      </div>
     </div>
   );
 }
