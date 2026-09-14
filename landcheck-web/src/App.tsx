@@ -43,6 +43,15 @@ const EstateFinance = lazyWithChunkRecovery(() => import("./pages/EstateFinance"
 const EstateLanding = lazyWithChunkRecovery(() => import("./pages/EstateLanding"));
 const EstateLogin = lazyWithChunkRecovery(() => import("./pages/EstateLogin"));
 const EstateRegister = lazyWithChunkRecovery(() => import("./pages/EstateRegister"));
+const EstatePlotsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstatePlotsPage"));
+const EstateCustomersPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateCustomersPage"));
+const EstateSurveyPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateSurveyPage"));
+const EstateStakingPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateStakingPage"));
+const EstateDevelopmentPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateDevelopmentPage"));
+const EstateHazardsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateHazardsPage"));
+const EstateReportsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateReportsPage"));
+const EstateAuditPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateAuditPage"));
+const EstateSettingsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateSettingsPage"));
 
 type ChunkLoadBoundaryProps = {
   children: ReactNode;
@@ -284,7 +293,17 @@ export default function App() {
               <Route path="/estates/login" element={<EstateLogin />} />
               <Route path="/estates/register" element={<EstateRegister />} />
               <Route path="/estates/workspace" element={<EstateProtectedRoute element={<Estates />} />} />
+              <Route path="/estates/:estateId" element={<EstateProtectedRoute element={<Estates />} />} />
               <Route path="/estates/:estateId/map" element={<EstateProtectedRoute element={<Estates />} />} />
+              <Route path="/estates/:estateId/plots" element={<EstateProtectedRoute element={<EstatePlotsPage />} />} />
+              <Route path="/estates/:estateId/customers" element={<EstateProtectedRoute element={<EstateCustomersPage />} />} />
+              <Route path="/estates/:estateId/survey" element={<EstateProtectedRoute element={<EstateSurveyPage />} />} />
+              <Route path="/estates/:estateId/staking" element={<EstateProtectedRoute element={<EstateStakingPage />} />} />
+              <Route path="/estates/:estateId/development" element={<EstateProtectedRoute element={<EstateDevelopmentPage />} />} />
+              <Route path="/estates/:estateId/hazards" element={<EstateProtectedRoute element={<EstateHazardsPage />} />} />
+              <Route path="/estates/:estateId/reports" element={<EstateProtectedRoute element={<EstateReportsPage />} />} />
+              <Route path="/estates/:estateId/timeline" element={<EstateProtectedRoute element={<EstateAuditPage />} />} />
+              <Route path="/estates/:estateId/settings" element={<EstateProtectedRoute element={<EstateSettingsPage />} />} />
               <Route path="/estates/payments" element={<EstateProtectedRoute element={<EstateFinance mode="payments" />} />} />
               <Route path="/estates/documents" element={<EstateProtectedRoute element={<EstateFinance mode="documents" />} />} />
               <Route path="/flood" element={<FloodAnalysisLanding />} />
