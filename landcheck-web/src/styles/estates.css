@@ -251,6 +251,50 @@
 .estate-plot-create-button:disabled { background: #d9dfd7; color: #738178; cursor: not-allowed; }
 .estate-plot-input-message { grid-column: 1 / -1; margin: 0; padding: 11px 13px; border-left: 3px solid var(--workspace-teal); border-radius: 7px; background: rgba(8,127,118,.08); color: var(--workspace-ink) !important; font: 700 .78rem/1.5 "DM Sans", "Segoe UI", sans-serif; }
 .estate-plot-input-panel .coord-input-container { border-color: rgba(8,127,118,.2); box-shadow: 0 14px 28px rgba(16,45,43,.1); }
+.estate-layout-import { display: grid; grid-column: 1 / -1; gap: 20px; margin: 0; padding: 26px; border: 1px solid var(--workspace-line); border-radius: 20px; background: rgba(255,255,252,.94); box-shadow: 0 14px 38px rgba(16,45,43,.07); }
+.estate-layout-import-heading { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
+.estate-layout-import-heading h2 { margin: 5px 0 8px; color: var(--workspace-ink); font: 600 clamp(1.5rem, 2.4vw, 2.15rem) Georgia, "Times New Roman", serif; letter-spacing: -.045em; }
+.estate-layout-import-heading p:not(.workflow-eyebrow) { max-width: 680px; margin: 0; color: var(--workspace-muted); line-height: 1.55; }
+.estate-step-badge { flex: 0 0 auto; padding: 8px 12px; border-radius: 999px; background: rgba(8,127,118,.09); color: var(--workspace-teal); font: 800 .68rem "DM Sans", "Segoe UI", sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+.estate-layout-methods { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.estate-layout-methods button { display: grid; gap: 6px; min-height: 88px; padding: 14px; border: 1px solid var(--workspace-line); border-radius: 13px; background: #fbfcf8; color: var(--workspace-ink); text-align: left; cursor: pointer; transition: border-color .2s ease, background .2s ease, transform .2s ease; }
+.estate-layout-methods button:hover { border-color: rgba(8,127,118,.55); transform: translateY(-1px); }
+.estate-layout-methods button.is-selected { border-color: var(--workspace-teal); background: rgba(8,127,118,.08); box-shadow: inset 0 0 0 1px var(--workspace-teal); }
+.estate-layout-methods strong { font: 800 .78rem "DM Sans", "Segoe UI", sans-serif; }
+.estate-layout-methods span { color: var(--workspace-muted); font-size: .72rem; line-height: 1.35; }
+.estate-layout-upload { display: grid; grid-template-columns: minmax(210px, .8fr) minmax(0, 1.2fr); align-items: end; gap: 14px; padding: 16px; border-radius: 14px; background: #f1f5ee; }
+.estate-layout-upload label { display: grid; gap: 7px; color: var(--workspace-ink); font: 800 .7rem "DM Sans", "Segoe UI", sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.estate-layout-upload input[type=file] { min-height: 45px; padding: 11px 12px; border: 1px solid var(--workspace-line); border-radius: 9px; background: #fff; color: var(--workspace-ink); font: .82rem "DM Sans", "Segoe UI", sans-serif; letter-spacing: normal; text-transform: none; }
+.estate-layout-upload > div { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.estate-layout-upload p { margin: 0; color: var(--workspace-muted); font-size: .8rem; }
+.estate-layout-upload p strong { color: var(--workspace-ink); }
+.estate-layout-upload button, .estate-layout-review-actions button { min-height: 44px; padding: 11px 16px; border: 0; border-radius: 9px; background: var(--workspace-teal); color: #fff; font: 800 .72rem "DM Sans", "Segoe UI", sans-serif; cursor: pointer; }
+.estate-layout-upload button:hover, .estate-layout-review-actions button:hover { background: #075f59; }
+.estate-layout-upload button:disabled, .estate-layout-review-actions button:disabled { opacity: .52; cursor: not-allowed; }
+.estate-layout-message { margin: -4px 0 0; padding: 10px 12px; border-left: 3px solid var(--workspace-teal); border-radius: 7px; background: rgba(8,127,118,.08); color: var(--workspace-ink); font: 700 .76rem/1.5 "DM Sans", "Segoe UI", sans-serif; }
+.estate-layout-review { display: grid; grid-template-columns: minmax(250px, .72fr) minmax(300px, 1.28fr); gap: 18px; align-items: stretch; padding-top: 20px; border-top: 1px solid var(--workspace-line); }
+.estate-layout-review-copy { display: flex; flex-direction: column; align-items: start; justify-content: center; }
+.estate-layout-review h3 { margin: 5px 0 8px; color: var(--workspace-ink); font: 700 1.05rem "DM Sans", "Segoe UI", sans-serif; }
+.estate-layout-review p:not(.workflow-eyebrow) { margin: 0; color: var(--workspace-muted); font-size: .82rem; line-height: 1.55; }
+.estate-layout-review-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
+.estate-layout-review-actions button.is-secondary { border: 1px solid var(--workspace-line); background: transparent; color: var(--workspace-ink); }
+.estate-layout-review-actions button.is-secondary:hover { background: #f1f5ee; }
+.estate-layout-preview { min-height: 215px; padding: 12px; border: 1px solid rgba(8,127,118,.16); border-radius: 13px; background: #f4f7f0; }
+.estate-layout-preview svg { display: block; width: 100%; height: 190px; }
+.estate-layout-preview polygon { fill: rgba(35, 157, 112, .28); stroke: #087f76; stroke-width: .55; vector-effect: non-scaling-stroke; }
+.estate-layout-preview text { fill: var(--workspace-ink); font: 700 3px "DM Sans", sans-serif; text-anchor: middle; dominant-baseline: middle; }
+.estate-layout-preview > span { display: block; margin-top: 4px; color: var(--workspace-teal); font: 800 .66rem "DM Sans", "Segoe UI", sans-serif; text-align: right; }
+.estate-layout-preview-empty { display: grid; min-height: 190px; place-items: center; padding: 20px; border: 1px dashed rgba(8,127,118,.3); border-radius: 12px; color: var(--workspace-muted); font-size: .78rem; line-height: 1.5; text-align: center; }
+.estate-subdivision { display: grid; gap: 10px; margin: 18px 0; padding: 14px; border: 1px solid rgba(8,127,118,.16); border-radius: 12px; background: #f1f5ee; }
+.estate-subdivision summary { color: var(--workspace-teal); cursor: pointer; font: 800 .75rem "DM Sans", "Segoe UI", sans-serif; }
+.estate-subdivision p { margin: 0; color: var(--workspace-muted); font-size: .78rem; line-height: 1.45; }
+.estate-subdivision label { display: grid; gap: 6px; color: var(--workspace-ink); font: 800 .67rem "DM Sans", "Segoe UI", sans-serif; text-transform: uppercase; }
+.estate-subdivision input { width: 110px; min-height: 38px; padding: 8px 10px; border: 1px solid var(--workspace-line); border-radius: 8px; background: #fff; color: var(--workspace-ink); font: .85rem "DM Sans", "Segoe UI", sans-serif; }
+.estate-subdivision button { justify-self: start; min-height: 40px; padding: 9px 13px; border: 0; border-radius: 8px; background: var(--workspace-teal); color: #fff; font: 800 .7rem "DM Sans", "Segoe UI", sans-serif; cursor: pointer; }
+.estate-subdivision button:disabled { opacity: .55; cursor: not-allowed; }
+.estate-app > .estate-layout-import { order: 5; }
+.estate-app > .estate-layout-import + .estate-map-panel { order: 4; }
+.estate-app > .estate-legacy-layout-intake, .estate-app > .estate-legacy-review-queue { display: none; }
 @media (max-width: 980px) {
   .estates-shell { grid-template-columns: 205px minmax(0, 1fr); }
   .estates-shell > .estate-sidebar { width: 205px; }
@@ -285,6 +329,8 @@
   .estate-setup-simple > details > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .estate-plot-input-panel { grid-template-columns: 1fr; }
   .estate-plot-input-workbench { grid-template-columns: 1fr; }
+  .estate-layout-methods { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .estate-layout-review { grid-template-columns: 1fr; }
   .estate-app > .estate-map-panel .estate-map, .estate-app > .estate-map-panel .estate-map-fallback { min-height: 390px; height: 62vw; }
   .estates-toolbar { align-items: flex-start; flex-direction: column; gap: 14px; }
   .estate-create, .estate-setup { grid-template-columns: 1fr; padding: 22px; }
@@ -294,6 +340,11 @@
   .estate-setup-simple > details > div { grid-template-columns: 1fr; }
   .estate-setup-simple > details label:last-child { grid-column: 1; }
   .estate-plot-input-panel { padding: 16px; }
+  .estate-layout-import { padding: 18px; }
+  .estate-layout-import-heading, .estate-layout-upload > div { display: grid; grid-template-columns: 1fr; }
+  .estate-layout-upload { grid-template-columns: 1fr; }
+  .estate-layout-upload button { justify-self: start; }
+  .estate-layout-methods { grid-template-columns: 1fr; }
   .estate-plot-map-preview .map-enhanced-container { min-height: 340px; }
   .estate-setup > select, .estate-setup > input, .estate-setup > textarea, .estate-setup > button { grid-column: 1; }
   .estate-create > div { grid-column: 1; }
