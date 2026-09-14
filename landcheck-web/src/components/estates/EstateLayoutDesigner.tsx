@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import EstateIcon from "./EstateIcon";
 import Spinner from "./EstateSpinner";
+import { loadMapboxGl, loadMapboxGlCss, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
 
 type LayoutCriteria = {
   target_plot_area_sqm: number;
@@ -149,6 +150,91 @@ function LayoutPreview({ proposal }: { proposal: any }) {
   );
 }
 
+function walkCoordinates(coords: any, visit: (point: [number, number]) => void) {
+  if (!Array.isArray(coords)) return;
+  if (typeof coords[0] === "number") visit(coords as [number, number]);
+  else coords.forEach((item) => walkCoordinates(item, visit));
+}
+
+// Draws the draft layout on a real satellite map (built once per proposal, guarded by mapRef -
+// same construction pattern used for the main Estate map, including the position:absolute
+// !important CSS fix - mapbox-gl.css otherwise collapses the container to zero height) so users
+// can zoom, pan and go fullscreen to actually inspect a layout with hundreds of plots.
+function LayoutPreviewMap({ proposal }: { proposal: any }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<any>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current || !MAPBOX_TOKEN) return;
+    let cancelled = false;
+    void Promise.all([loadMapboxGl(), loadMapboxGlCss()]).then(([mapboxgl]) => {
+      if (cancelled || !containerRef.current || mapRef.current) return;
+      const map = new mapboxgl.Map({
+        container: containerRef.current,
+        style: "mapbox://styles/mapbox/satellite-streets-v12",
+        center: [7.4, 9.1],
+        zoom: 14,
+      });
+      map.addControl(new mapboxgl.NavigationControl(), "top-right");
+      mapRef.current = map;
+      const resizeObserver = new ResizeObserver(() => map.resize());
+      resizeObserver.observe(containerRef.current);
+      (map as any)._edashResizeObserver = resizeObserver;
+      map.on("style.load", () => {
+        map.resize();
+        const plotFeatures = (proposal?.candidates || []).map((candidate: any) => ({ type: "Feature", properties: { label: candidate.plot_number }, geometry: candidate.geometry }));
+        const roadFeatures = (proposal?.features || []).filter((feature: any) => feature.feature_type === "road").map((feature: any) => ({ type: "Feature", properties: {}, geometry: feature.geometry }));
+        const drainageFeatures = (proposal?.features || []).filter((feature: any) => feature.feature_type === "drainage").map((feature: any) => ({ type: "Feature", properties: {}, geometry: feature.geometry }));
+        const openSpaceFeatures = (proposal?.features || []).filter((feature: any) => feature.feature_type === "open_space").map((feature: any) => ({ type: "Feature", properties: {}, geometry: feature.geometry }));
+
+        map.addSource("preview-open-space", { type: "geojson", data: { type: "FeatureCollection", features: openSpaceFeatures } });
+        map.addLayer({ id: "preview-open-space-fill", type: "fill", source: "preview-open-space", paint: { "fill-color": "#78a85d", "fill-opacity": 0.35 } });
+
+        map.addSource("preview-drainage", { type: "geojson", data: { type: "FeatureCollection", features: drainageFeatures } });
+        map.addLayer({ id: "preview-drainage-fill", type: "fill", source: "preview-drainage", paint: { "fill-color": "#2a78d6", "fill-opacity": 0.35 } });
+
+        map.addSource("preview-plots", { type: "geojson", data: { type: "FeatureCollection", features: plotFeatures } });
+        map.addLayer({ id: "preview-plots-fill", type: "fill", source: "preview-plots", paint: { "fill-color": "#1e8a4c", "fill-opacity": 0.4 } });
+        map.addLayer({ id: "preview-plots-outline", type: "line", source: "preview-plots", paint: { "line-color": "#ffffff", "line-width": 1.2 } });
+        map.addLayer({ id: "preview-plots-labels", type: "symbol", source: "preview-plots", minzoom: 16, layout: { "text-field": ["get", "label"], "text-size": 10, "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"] }, paint: { "text-color": "#0f1e17", "text-halo-color": "#ffffff", "text-halo-width": 1.4 } });
+
+        map.addSource("preview-roads", { type: "geojson", data: { type: "FeatureCollection", features: roadFeatures } });
+        map.addLayer({ id: "preview-roads-line", type: "line", source: "preview-roads", paint: { "line-color": "#2b2f36", "line-width": 2.5 } });
+
+        const bounds = new mapboxgl.LngLatBounds();
+        [...plotFeatures, ...roadFeatures, ...drainageFeatures, ...openSpaceFeatures].forEach((feature) => walkCoordinates(feature.geometry?.coordinates, (point) => bounds.extend(point)));
+        if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 30 });
+      });
+    });
+    return () => { cancelled = true; (mapRef.current as any)?._edashResizeObserver?.disconnect(); mapRef.current?.remove(); mapRef.current = null; };
+  }, [proposal?.id]);
+
+  useEffect(() => {
+    const onFullscreenChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void wrapRef.current?.requestFullscreen();
+  };
+
+  if (!MAPBOX_TOKEN) return <LayoutPreview proposal={proposal} />;
+
+  return (
+    <div ref={wrapRef} className="edash-layout-preview-wrap">
+      <div ref={containerRef} className="edash-layout-preview-map" />
+      <button type="button" className="edash-map-ctrl-btn edash-layout-preview-fullscreen" title={isFullscreen ? "Exit fullscreen" : "Fullscreen"} onClick={toggleFullscreen}>
+        <EstateIcon name="expand" />
+      </button>
+      <span className="edash-layout-preview-count">{proposal.candidates?.length || 0} plots in this draft</span>
+    </div>
+  );
+}
+
 export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy = false, message, messageTone = "good", onGenerate, onDecision }: Props) {
   const [templateKey, setTemplateKey] = useState<LayoutTemplateKey>("standard");
   const [criteria, setCriteria] = useState<LayoutCriteria>({ ...DEFAULT_CRITERIA, ...LAYOUT_TEMPLATES.find((item) => item.key === "standard")!.criteria });
@@ -252,7 +338,7 @@ export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy =
             </div>
             <p className="edash-status-row-desc">{proposal.diagnostics?.estimated_plot_count || proposal.candidates?.length || 0} plots, about {Math.round(Number(proposal.diagnostics?.total_plot_area_sqm || 0)).toLocaleString()} m² of plot area.</p>
             <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>{proposal.diagnostics?.road_count || 0} access roads and {Number(proposal.diagnostics?.open_space_percent || 0).toFixed(1)}% open-space reserve.</p>
-            <LayoutPreview proposal={proposal} />
+            <LayoutPreviewMap proposal={proposal} />
             {proposal.status === "review_required" && (
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                 <button type="button" className="edash-btn-primary" disabled={busy} onClick={() => onDecision(proposal.id, "approved")}>Approve and add plots</button>
