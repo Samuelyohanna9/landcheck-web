@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import EstateIcon from "./EstateIcon";
 
 export type EstateLayoutMethod = "csv" | "geojson" | "dxf" | "scanned-layout";
 
@@ -6,8 +7,9 @@ type ImportReview = {
   id: number;
   source_type: string;
   status: string;
+  session_id?: string | null;
   candidate_count: number;
-  candidates?: Array<{ plot_number?: string; valid?: boolean; geometry?: { type?: string; coordinates?: number[][][] } }>;
+  candidates?: Array<{ row?: number; plot_number?: string; valid?: boolean; issues?: string[]; geometry?: { type?: string; coordinates?: number[][][] } }>;
   created_at?: string;
 };
 
@@ -17,15 +19,18 @@ type Props = {
   onFileChange: (method: EstateLayoutMethod, file: File | null) => void;
   onUpload: (method: EstateLayoutMethod) => void;
   onDecision: (reviewId: number, status: "approved" | "rejected") => void;
+  onStartGeoreference: (file: File) => void;
+  onOpenGeoreference: (sessionId: string) => void;
+  onImportFromGeoreference: (reviewId: number) => void;
   message?: string;
   busy?: boolean;
 };
 
-const METHODS: Array<{ key: EstateLayoutMethod; title: string; description: string; accept: string }> = [
-  { key: "csv", title: "Spreadsheet", description: "CSV or Excel-style coordinate rows", accept: ".csv,text/csv" },
-  { key: "geojson", title: "GIS file", description: "Digital layout from your mapping software", accept: ".json,.geojson,application/geo+json" },
-  { key: "dxf", title: "CAD drawing", description: "Digital drawing from your surveyor or designer", accept: ".dxf,application/dxf" },
-  { key: "scanned-layout", title: "Scanned plan", description: "PDF or image of a paper layout", accept: ".pdf,image/jpeg,image/png" },
+const METHODS: Array<{ key: EstateLayoutMethod; icon: import("./EstateIcon").EstateIconName; title: string; description: string; accept: string }> = [
+  { key: "csv", icon: "documents", title: "Spreadsheet", description: "CSV or Excel-style coordinate rows", accept: ".csv,text/csv" },
+  { key: "geojson", icon: "map", title: "GIS file", description: "Digital layout from your mapping software", accept: ".json,.geojson,application/geo+json" },
+  { key: "dxf", icon: "development", title: "CAD drawing", description: "Digital drawing from your surveyor or designer", accept: ".dxf,application/dxf" },
+  { key: "scanned-layout", icon: "image", title: "Scanned plan", description: "PDF or image of a paper layout", accept: ".pdf,image/jpeg,image/png" },
 ];
 
 function LayoutPreview({ review }: { review: ImportReview }) {
@@ -43,14 +48,12 @@ function LayoutPreview({ review }: { review: ImportReview }) {
       maxY: Math.max(...all.map(([, y]) => y)),
     };
   }, [polygons]);
-  if (!polygons.length || !bounds) {
-    return <div className="estate-layout-preview-empty">We found no plot shapes to preview yet. Review the file and try another layout if needed.</div>;
-  }
+  if (!polygons.length || !bounds) return null;
   const width = Math.max(bounds.maxX - bounds.minX, 0.000001);
   const height = Math.max(bounds.maxY - bounds.minY, 0.000001);
   const toSvg = ([x, y]: number[]) => [((x - bounds.minX) / width) * 92 + 4, 92 - ((y - bounds.minY) / height) * 84] as const;
   return (
-    <div className="estate-layout-preview" aria-label="Layout preview">
+    <div className="edash-layout-preview" aria-label="Layout preview">
       <svg viewBox="0 0 100 100" role="img" aria-label={`${polygons.length} plot layout preview`}>
         {polygons.map(({ ring, label }, index) => {
           const center = ring.reduce(([x, y], [pointX, pointY]) => [x + pointX / ring.length, y + pointY / ring.length], [0, 0]);
@@ -67,53 +70,116 @@ function LayoutPreview({ review }: { review: ImportReview }) {
   );
 }
 
-export default function EstateLayoutImport({ reviews, files, onFileChange, onUpload, onDecision, message, busy = false }: Props) {
+function InvalidRowsList({ review }: { review: ImportReview }) {
+  const invalid = (review.candidates || []).filter((candidate) => candidate.valid === false);
+  if (!invalid.length) return null;
+  return (
+    <div className="edash-issue-list">
+      <strong>{invalid.length} row{invalid.length === 1 ? "" : "s"} could not be used:</strong>
+      <ul>
+        {invalid.slice(0, 6).map((candidate, index) => (
+          <li key={index}>Row {candidate.row ?? index + 1}{candidate.plot_number ? ` (${candidate.plot_number})` : ""}: {candidate.issues?.[0] || "Invalid geometry"}</li>
+        ))}
+      </ul>
+      {invalid.length > 6 && <span>+{invalid.length - 6} more</span>}
+    </div>
+  );
+}
+
+export default function EstateLayoutImport({ reviews, files, onFileChange, onUpload, onDecision, onStartGeoreference, onOpenGeoreference, onImportFromGeoreference, message, busy = false }: Props) {
   const [method, setMethod] = useState<EstateLayoutMethod>("csv");
   const latest = reviews[0];
   const usableCount = latest?.candidates?.filter((candidate) => candidate.valid !== false && candidate.geometry?.type === "Polygon").length || 0;
   const selectedMethod = METHODS.find((item) => item.key === method) || METHODS[0];
   const file = files[method];
+  const isGeoreferenceMethod = method === "scanned-layout";
+  const georeferenceReview = reviews.find((review) => review.source_type === "raster" && review.session_id);
 
   return (
-    <section className="estate-layout-import">
-      <div className="estate-layout-import-heading">
-        <div>
-          <p className="workflow-eyebrow">Bring in your layout</p>
-          <h2>Upload your Estate plan</h2>
-          <p>Choose the format you already have. We will show you a preview before adding plots to your Estate.</p>
+    <div className="edash-card">
+      <div className="edash-card-inner">
+        <div className="edash-card-head">
+          <h3 className="edash-card-title">Upload your Estate plan</h3>
+          <span className="edash-step-badge">Choose a format</span>
         </div>
-        <span className="estate-step-badge">1 of 2</span>
-      </div>
-      <div className="estate-layout-methods" role="tablist" aria-label="Layout source">
-        {METHODS.map((item) => (
-          <button key={item.key} type="button" role="tab" aria-selected={method === item.key} className={method === item.key ? "is-selected" : ""} onClick={() => setMethod(item.key)}>
-            <strong>{item.title}</strong>
-            <span>{item.description}</span>
-          </button>
-        ))}
-      </div>
-      <div className="estate-layout-upload">
-        <label>
-          <span>{selectedMethod.title}</span>
-          <input type="file" accept={selectedMethod.accept} onChange={(event) => onFileChange(method, event.target.files?.[0] || null)} />
-        </label>
-        <div>
-          <p>{file ? <><strong>{file.name}</strong> is ready.</> : "Select your file to continue."}</p>
-          <button type="button" disabled={!file || busy} onClick={() => onUpload(method)}>{busy ? "Preparing preview..." : "Upload and preview"}</button>
+        <p className="edash-status-row-desc" style={{ marginBottom: 14 }}>Pick the format you already have. We will show you a preview before adding plots to your Estate.</p>
+
+        <div className="edash-method-tabs" role="tablist" aria-label="Layout source">
+          {METHODS.map((item) => (
+            <button key={item.key} type="button" role="tab" aria-selected={method === item.key} className={`edash-method-tab${method === item.key ? " active" : ""}`} onClick={() => setMethod(item.key)}>
+              <EstateIcon name={item.icon} />
+              <span>
+                <strong>{item.title}</strong>
+                <small>{item.description}</small>
+              </span>
+            </button>
+          ))}
         </div>
-      </div>
-      {message && <p className="estate-layout-message" role="status">{message}</p>}
-      {latest && (
-        <div className="estate-layout-review">
-          <div className="estate-layout-review-copy">
-            <p className="workflow-eyebrow">Step 2 · Review your layout</p>
-            <h3>{latest.status === "review_required" ? "Your layout is ready to check" : `Layout ${latest.status}`}</h3>
-            <p>{usableCount ? `${usableCount} plot${usableCount === 1 ? "" : "s"} found. Check the preview, then add them to your Estate.` : "No usable plots were found in this file."}</p>
-            {latest.status === "review_required" && <div className="estate-layout-review-actions"><button type="button" disabled={busy || usableCount === 0} onClick={() => onDecision(latest.id, "approved")}>Approve and add plots</button><button type="button" className="is-secondary" disabled={busy} onClick={() => onDecision(latest.id, "rejected")}>Discard</button></div>}
+
+        {isGeoreferenceMethod ? (
+          georeferenceReview ? (
+            <div className="edash-info-card" style={{ flexDirection: "column", marginTop: 4 }}>
+              <div className="edash-info-card-head"><span className="edash-status-row-title">Georeferencing in progress</span></div>
+              <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>
+                Place ground control points and trace each plot boundary in the georeference tool, then come back here to pull the finished plots into this Estate.
+              </p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button type="button" className="edash-btn-primary" onClick={() => onOpenGeoreference(georeferenceReview.session_id!)}>
+                  <EstateIcon name="map" /> Open georeference tool
+                </button>
+                <button type="button" className="edash-btn-outline" disabled={busy} onClick={() => onImportFromGeoreference(georeferenceReview.id)}>
+                  {busy ? "Importing..." : "Import digitized plots"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="edash-upload-dropzone">
+              <label className="edash-upload-dropzone-input">
+                <EstateIcon name="upload" />
+                <span>{file ? file.name : "Choose a scanned plan (PDF, JPG or PNG)"}</span>
+                <input type="file" accept={selectedMethod.accept} onChange={(event) => onFileChange(method, event.target.files?.[0] || null)} />
+              </label>
+              <p className="edash-status-row-desc">This opens the same georeferencing and digitizing tool Survey uses - place a few ground control points, trace each plot, then return here to import them.</p>
+              <button type="button" className="edash-btn-primary" disabled={!file || busy} onClick={() => file && onStartGeoreference(file)}>
+                {busy ? "Starting..." : "Start georeferencing"}
+              </button>
+            </div>
+          )
+        ) : (
+          <div className="edash-upload-dropzone">
+            <label className="edash-upload-dropzone-input">
+              <EstateIcon name="upload" />
+              <span>{file ? file.name : `Choose your ${selectedMethod.title.toLowerCase()} file`}</span>
+              <input type="file" accept={selectedMethod.accept} onChange={(event) => onFileChange(method, event.target.files?.[0] || null)} />
+            </label>
+            <button type="button" className="edash-btn-primary" disabled={!file || busy} onClick={() => onUpload(method)}>
+              {busy ? "Preparing preview..." : "Upload and preview"}
+            </button>
           </div>
-          {latest.status === "review_required" && <LayoutPreview review={latest} />}
-        </div>
-      )}
-    </section>
+        )}
+
+        {message && <p className="edash-tab-empty" style={{ padding: "8px 0", textAlign: "left" }}>{message}</p>}
+
+        {latest && !isGeoreferenceMethod && (
+          <div className="edash-info-card" style={{ flexDirection: "column", marginTop: 14 }}>
+            <div className="edash-info-card-head">
+              <span className="edash-status-row-title">{latest.status === "review_required" ? "Review your layout" : `Layout ${latest.status}`}</span>
+              <span className={`edash-status-pill tone-${usableCount ? "good" : "warn"}`}>{usableCount} usable</span>
+            </div>
+            <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>
+              {usableCount ? `${usableCount} plot${usableCount === 1 ? "" : "s"} found. Check the preview, then add them to your Estate.` : "No usable plots were found in this file - see the details below."}
+            </p>
+            <LayoutPreview review={latest} />
+            <InvalidRowsList review={latest} />
+            {latest.status === "review_required" && (
+              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                <button type="button" className="edash-btn-primary" disabled={busy || usableCount === 0} onClick={() => onDecision(latest.id, "approved")}>Approve and add plots</button>
+                <button type="button" className="edash-btn-outline" disabled={busy} onClick={() => onDecision(latest.id, "rejected")}>Discard</button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

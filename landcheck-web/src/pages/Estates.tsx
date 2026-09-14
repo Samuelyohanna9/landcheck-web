@@ -351,6 +351,42 @@ export default function Estates() {
     catch (error) { setLayoutMessage(await extractApiErrorMessage(error, "Import decision could not be saved.")); }
     finally { setLayoutUploadBusy(false); }
   };
+  const startGeoreferenceImport = async (file: File) => {
+    if (!estateId) return;
+    setLayoutUploadBusy(true);
+    setLayoutMessage("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("title_text", `${estateDetail?.name || "Estate"} layout scan`);
+      form.append("target_coordinate_system", "wgs84");
+      const session = (await api.post("/survey-georeference/sessions", form)).data.session;
+      await api.post(`/estates/${estateId}/import-reviews/from-georeference-session`, { survey_georeference_session_id: session.id });
+      await refreshImportReviews();
+      setLayoutMessage("Layout session created. Open the georeference tool to place control points and trace each plot.");
+    } catch (error) {
+      setLayoutMessage(await extractApiErrorMessage(error, "The scanned layout could not be started."));
+    } finally {
+      setLayoutUploadBusy(false);
+    }
+  };
+  const openGeoreferenceTool = (sessionId: string) => {
+    window.open(`/survey-plan?mode=georeference&session=${sessionId}`, "_blank", "noopener");
+  };
+  const importPlotsFromGeoreference = async (reviewId: number) => {
+    setLayoutUploadBusy(true);
+    setLayoutMessage("");
+    try {
+      const response = await api.post(`/estates/import-reviews/${reviewId}/import-from-georeference`, {});
+      setLayoutMessage(`${response.data.created_plots} plot(s) added from the georeferenced layout.`);
+      await refreshImportReviews();
+      if (response.data.created_plots > 0) window.location.reload();
+    } catch (error) {
+      setLayoutMessage(await extractApiErrorMessage(error, "Digitized plots could not be imported yet - make sure you saved the traced plots in the georeference tool first."));
+    } finally {
+      setLayoutUploadBusy(false);
+    }
+  };
   const handleLayoutFileChange = (method: EstateLayoutMethod, file: File | null) => {
     if (method === "csv") setCsvFile(file);
     else if (method === "geojson") setGeojsonFile(file);
@@ -1136,7 +1172,7 @@ export default function Estates() {
                       </div>
                       {financial && (
                         <>
-                          <div className="edash-overview-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+                          <div className="edash-overview-grid edash-overview-grid--3">
                             <div className="edash-overview-field"><span>Agreed</span><strong>{money(financial.financial.agreed_price)}</strong></div>
                             <div className="edash-overview-field"><span>Confirmed</span><strong>{money(financial.financial.confirmed_paid)}</strong></div>
                             <div className="edash-overview-field"><span>Outstanding</span><strong>{money(financial.financial.outstanding)}</strong></div>
@@ -1527,16 +1563,45 @@ export default function Estates() {
             <h2>Plot &amp; layout tools</h2>
             <p>Create plots, import a layout, manage blocks and spatial layers, and publish the approved Estate map.</p>
           </div>
-          <section id="plot-register" className="estate-plot-input-panel"><div><p className="workflow-eyebrow">Add one plot</p><h2>Create a plot from coordinates</h2><p>Import a CSV or Excel file or enter points manually. The boundary appears on the map immediately, where you can move points before adding it to the plot register.</p></div><label>Plot number<input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="e.g. B-024" /></label><div className="estate-plot-input-workbench"><CoordinateInput title="Add plot boundary" subtitle="Choose a spreadsheet or enter the points manually." sidebar={<div className="estate-coordinate-context"><strong>Plot boundary</strong><span>Use the same coordinate workflow as Survey.</span></div>} points={plotInputPoints} onUpdatePoint={updatePlotInputPoint} onRemovePoint={removePlotInputPoint} onAddPoint={addPlotInputPoint} onBulkUpload={importPlotInputPoints} disabled={false} coordinateSystem={plotInputCoordinateSystem} onCoordinateSystemChange={setPlotInputCoordinateSystem} onReorderPoints={reorderPlotInputPoints} onClearAllPoints={() => setPlotInputPoints([])} /><div className="estate-plot-map-preview"><div><p className="workflow-eyebrow">Map preview</p><h3>Check the plot location</h3><p>Edit the boundary on the map or use the table above.</p></div>{MAPBOX_TOKEN ? <MapViewEnhanced coordinates={plotInputMapPoints} onCoordinatesDrawn={handlePlotCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <div className="estate-map-fallback">Map preview is unavailable right now. You can still review the coordinates above.</div>}</div></div>{workflowMessage && <p className="estate-plot-input-message" role="status">{workflowMessage}</p>}<button type="button" className="estate-plot-create-button" disabled={plotInputMapPoints.length < 3 || plotInputClosure === "self-intersecting"} onClick={() => void createPlotFromInput()}>{plotInputClosure === "self-intersecting" ? "Fix boundary first" : "Create plot"}</button></section>
+          <div className="edash-card" id="plot-register">
+            <div className="edash-card-inner">
+              <div className="edash-card-head">
+                <h3 className="edash-card-title">Create a plot from coordinates</h3>
+              </div>
+              <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>Import a CSV or Excel file or enter points manually. The boundary appears on the map immediately, where you can move points before adding it to the plot register.</p>
+              <label className="edash-field" style={{ marginBottom: 12, maxWidth: 260 }}><span>Plot number</span><input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="e.g. B-024" /></label>
+              <div className="edash-content-row edash-content-row--split">
+                <CoordinateInput title="Add plot boundary" subtitle="Choose a spreadsheet or enter the points manually." sidebar={<div className="edash-field-note"><strong style={{ color: "var(--edash-ink)" }}>Plot boundary</strong><br />Use the same coordinate workflow as Survey.</div>} points={plotInputPoints} onUpdatePoint={updatePlotInputPoint} onRemovePoint={removePlotInputPoint} onAddPoint={addPlotInputPoint} onBulkUpload={importPlotInputPoints} disabled={false} coordinateSystem={plotInputCoordinateSystem} onCoordinateSystemChange={setPlotInputCoordinateSystem} onReorderPoints={reorderPlotInputPoints} onClearAllPoints={() => setPlotInputPoints([])} />
+                <div>
+                  <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.84rem" }}>Map preview</h3></div>
+                  <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>Edit the boundary on the map or use the table.</p>
+                  {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={plotInputMapPoints} onCoordinatesDrawn={handlePlotCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <p className="edash-tab-empty">Map preview is unavailable right now. You can still review the coordinates above.</p>}
+                </div>
+              </div>
+              {workflowMessage && <p className="edash-tab-empty" style={{ textAlign: "left", padding: "8px 0" }} role="status">{workflowMessage}</p>}
+              <button type="button" className="edash-btn-primary" style={{ marginTop: 12 }} disabled={plotInputMapPoints.length < 3 || plotInputClosure === "self-intersecting"} onClick={() => void createPlotFromInput()}>{plotInputClosure === "self-intersecting" ? "Fix boundary first" : "Create plot"}</button>
+            </div>
+          </div>
           <div id="layout-import">
-            <EstateLayoutImport reviews={importReviews} files={{ csv: csvFile, geojson: geojsonFile, dxf: dxfFile, "scanned-layout": scannedLayoutFile }} onFileChange={handleLayoutFileChange} onUpload={(method) => void uploadLayout(method)} onDecision={(reviewId, status) => void decideImportReview(reviewId, status)} message={layoutMessage} busy={layoutUploadBusy} />
+            <EstateLayoutImport
+              reviews={importReviews}
+              files={{ csv: csvFile, geojson: geojsonFile, dxf: dxfFile, "scanned-layout": scannedLayoutFile }}
+              onFileChange={handleLayoutFileChange}
+              onUpload={(method) => void uploadLayout(method)}
+              onDecision={(reviewId, status) => void decideImportReview(reviewId, status)}
+              onStartGeoreference={(file) => void startGeoreferenceImport(file)}
+              onOpenGeoreference={openGeoreferenceTool}
+              onImportFromGeoreference={(reviewId) => void importPlotsFromGeoreference(reviewId)}
+              message={layoutMessage}
+              busy={layoutUploadBusy}
+            />
           </div>
           {estateDetail?.boundary && plots.length === 0 && (
             <div className="edash-card" id="boundary-choice">
               <div className="edash-card-inner">
                 <div className="edash-card-head"><h3 className="edash-card-title">Turn the boundary into plots</h3></div>
                 <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>Your Estate boundary is ready. Choose how to create its plots.</p>
-                <div className="edash-content-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                <div className="edash-content-row edash-content-row--split">
                   <div className="edash-info-card" style={{ flexDirection: "column" }}>
                     <div className="edash-info-card-head"><span className="edash-status-row-title">Split into equal plots</span></div>
                     <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>Fast: divide the whole boundary evenly. Best for uniform lots with no roads or open space.</p>
@@ -1554,11 +1619,96 @@ export default function Estates() {
             </div>
           )}
           <EstateLayoutDesigner boundaryPresent={Boolean(estateDetail?.boundary)} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} />
-          {quality && <section id="estate-qc" className="estate-qc"><div><p className="workflow-eyebrow">Approve the Estate map</p><h2>{quality.review_required ? "Review required" : "Geometry ready"}</h2><p>{quality.plot_count} plots checked. {quality.issues.length} issue(s) detected.</p></div>{quality.issues.slice(0,8).map((issue:any,index:number) => <p key={`${issue.code}-${index}`} className={issue.severity}>{issue.message}</p>)}{dashboard && <div className="estate-publish-action"><p><strong>Register status:</strong> {dashboard.estate.status.replaceAll("_", " ")}</p><button type="button" disabled={dashboard.estate.status === "active" || quality.review_required || quality.plot_count === 0} onClick={() => void approveEstateMap()}>{dashboard.estate.status === "active" ? "Estate map published" : "Approve and publish map"}</button></div>}</section>}
-          <section className="estate-create estate-plot-import"><div><p className="workflow-eyebrow">Add parcel</p><h2>Coordinates or CSV rows</h2><p>Paste one <code>longitude, latitude</code> pair per line. Geometry is checked before saving.</p></div><input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="Plot number, e.g. B-024" /><textarea value={plotCoordinates} onChange={(event) => setPlotCoordinates(event.target.value)} placeholder="7.1234, 9.1234&#10;7.1238, 9.1234&#10;7.1238, 9.1238" /><button type="button" onClick={() => void createPlot()}>Add approved plot</button></section>
-          <section className="estate-create estate-plot-import"><div><p className="workflow-eyebrow">Map layer</p><h2>Road, drainage, open space, infrastructure</h2><p>Paste coordinate rows to add a visible operational layer.</p></div><select value={layerType} onChange={(event) => setLayerType(event.target.value)}><option value="road">Road</option><option value="drainage">Drainage</option><option value="open_space">Open space</option><option value="infrastructure">Infrastructure</option></select><input value={layerName} onChange={(event) => setLayerName(event.target.value)} placeholder="Layer name" /><textarea value={layerCoordinates} onChange={(event) => setLayerCoordinates(event.target.value)} placeholder="longitude, latitude per line" /><button type="button" onClick={() => void createLayer()}>Add layer</button></section>
-          {layerGeojson.features.length > 0 && <section className="estate-create estate-layer-editor"><div><p className="workflow-eyebrow">Spatial layer editor</p><h2>Correct detected infrastructure</h2><p>Select a layer, adjust its coordinate rows, then save. Archiving removes it from the operational map without deleting its audit trail.</p></div><select value={selectedLayerId} onChange={(event) => selectLayerForEdit(event.target.value)}><option value="">Select a layer</option>{layerGeojson.features.map((feature: any) => <option key={feature.id} value={feature.id}>{feature.properties.name || feature.properties.type} #{feature.id}</option>)}</select>{selectedLayerId && <><textarea value={layerEditCoordinates} onChange={(event) => setLayerEditCoordinates(event.target.value)} /><button type="button" onClick={() => void updateLayer()}>Save geometry</button><button type="button" onClick={() => void archiveLayer()}>Archive layer</button></>}</section>}
-          <section className="estate-create estate-block-editor"><div><p className="workflow-eyebrow">Estate structure</p><h2>Blocks</h2><p>Define block labels before assigning imported or manually created plots.</p></div><input value={blockLabel} onChange={(event) => setBlockLabel(event.target.value)} placeholder="Block label, e.g. B" /><input value={blockName} onChange={(event) => setBlockName(event.target.value)} placeholder="Block name (optional)" /><button type="button" onClick={() => void createBlock()}>Add block</button><p>{blocks.map((block) => `${block.label}${block.name ? ` - ${block.name}` : ""}`).join(" · ") || "No blocks yet."}</p></section>
+          {quality && (
+            <div className="edash-card" id="estate-qc">
+              <div className="edash-card-inner">
+                <div className="edash-card-head">
+                  <h3 className="edash-card-title">{quality.review_required ? "Review required" : "Geometry ready"}</h3>
+                  <span className={`edash-status-pill tone-${quality.review_required ? "warn" : "good"}`}>{quality.plot_count} plots checked</span>
+                </div>
+                <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>{quality.issues.length} issue(s) detected.</p>
+                {quality.issues.length > 0 && (
+                  <div className="edash-issue-list" style={{ marginBottom: 12 }}>
+                    <ul>
+                      {quality.issues.slice(0, 8).map((issue: any, index: number) => <li key={`${issue.code}-${index}`}>{issue.message}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {dashboard && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                    <span className="edash-status-row-desc"><strong style={{ color: "var(--edash-ink)" }}>Register status:</strong> {dashboard.estate.status.replaceAll("_", " ")}</span>
+                    <button type="button" className="edash-btn-primary" disabled={dashboard.estate.status === "active" || quality.review_required || quality.plot_count === 0} onClick={() => void approveEstateMap()}>
+                      {dashboard.estate.status === "active" ? "Estate map published" : "Approve and publish map"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <div className="edash-card">
+            <div className="edash-card-inner">
+              <div className="edash-card-head"><h3 className="edash-card-title">Add a parcel</h3></div>
+              <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>Paste one <code>longitude, latitude</code> pair per line. Geometry is checked before saving.</p>
+              <div className="edash-form-grid">
+                <label className="edash-field" style={{ maxWidth: 260 }}><span>Plot number</span><input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="e.g. B-024" /></label>
+                <label className="edash-field"><span>Coordinates</span><textarea value={plotCoordinates} onChange={(event) => setPlotCoordinates(event.target.value)} placeholder="7.1234, 9.1234&#10;7.1238, 9.1234&#10;7.1238, 9.1238" /></label>
+                <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => void createPlot()}>Add approved plot</button>
+              </div>
+            </div>
+          </div>
+          <div className="edash-card">
+            <div className="edash-card-inner">
+              <div className="edash-card-head"><h3 className="edash-card-title">Map layer</h3></div>
+              <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>Add a visible operational layer: road, drainage, open space or infrastructure.</p>
+              <div className="edash-form-grid">
+                <div className="edash-form-row">
+                  <label className="edash-field"><span>Layer type</span><select value={layerType} onChange={(event) => setLayerType(event.target.value)}><option value="road">Road</option><option value="drainage">Drainage</option><option value="open_space">Open space</option><option value="infrastructure">Infrastructure</option></select></label>
+                  <label className="edash-field"><span>Layer name</span><input value={layerName} onChange={(event) => setLayerName(event.target.value)} placeholder="Optional" /></label>
+                </div>
+                <label className="edash-field"><span>Coordinates</span><textarea value={layerCoordinates} onChange={(event) => setLayerCoordinates(event.target.value)} placeholder="longitude, latitude per line" /></label>
+                <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => void createLayer()}>Add layer</button>
+              </div>
+            </div>
+          </div>
+          {layerGeojson.features.length > 0 && (
+            <div className="edash-card">
+              <div className="edash-card-inner">
+                <div className="edash-card-head"><h3 className="edash-card-title">Spatial layer editor</h3></div>
+                <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>Select a layer, adjust its coordinate rows, then save. Archiving removes it from the operational map without deleting its audit trail.</p>
+                <div className="edash-form-grid">
+                  <label className="edash-field"><span>Layer</span>
+                    <select value={selectedLayerId} onChange={(event) => selectLayerForEdit(event.target.value)}>
+                      <option value="">Select a layer</option>
+                      {layerGeojson.features.map((feature: any) => <option key={feature.id} value={feature.id}>{feature.properties.name || feature.properties.type} #{feature.id}</option>)}
+                    </select>
+                  </label>
+                  {selectedLayerId && (
+                    <>
+                      <label className="edash-field"><span>Coordinates</span><textarea value={layerEditCoordinates} onChange={(event) => setLayerEditCoordinates(event.target.value)} /></label>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button type="button" className="edash-btn-primary" onClick={() => void updateLayer()}>Save geometry</button>
+                        <button type="button" className="edash-btn-outline" onClick={() => void archiveLayer()}>Archive layer</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="edash-card">
+            <div className="edash-card-inner">
+              <div className="edash-card-head"><h3 className="edash-card-title">Blocks</h3></div>
+              <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>Define block labels before assigning imported or manually created plots.</p>
+              <div className="edash-form-row" style={{ marginBottom: 12 }}>
+                <label className="edash-field"><span>Block label</span><input value={blockLabel} onChange={(event) => setBlockLabel(event.target.value)} placeholder="e.g. B" /></label>
+                <label className="edash-field"><span>Block name</span><input value={blockName} onChange={(event) => setBlockName(event.target.value)} placeholder="Optional" /></label>
+                <button type="button" className="edash-btn-primary" onClick={() => void createBlock()}>Add block</button>
+              </div>
+              <div className="edash-chip-row">
+                {blocks.length ? blocks.map((block) => <span key={block.id} className="edash-chip">{block.label}{block.name ? ` - ${block.name}` : ""}</span>) : <p className="edash-tab-empty" style={{ padding: 0 }}>No blocks yet.</p>}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </EstateShell>
