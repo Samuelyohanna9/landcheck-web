@@ -862,26 +862,6 @@
   font-weight: 600;
 }
 
-/* ─── Legacy workspace tools tucked below the dashboard ─── */
-.edash-legacy-tools {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 0 26px 40px;
-}
-
-.edash-legacy-tools-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-  padding-top: 6px;
-  border-top: 1px dashed var(--edash-border);
-}
-
-.edash-legacy-tools-head h2 { margin: 14px 0 0; font-size: 1rem; font-weight: 800; color: var(--edash-ink); }
-.edash-legacy-tools-head p { margin: 2px 0 0; color: var(--edash-muted); font-size: 0.8rem; }
-
 /* Layout modifiers - a real class (not an inline style) so every breakpoint below still applies;
    an inline `style` on the same element would win over every rule in this file, media queries
    included, and silently break the collapse on narrow screens. */
@@ -928,7 +908,6 @@
 
 @media (max-width: 520px) {
   .edash-overview-grid, .edash-overview-grid--2, .edash-overview-grid--3 { grid-template-columns: 1fr; }
-  .edash-method-tabs { grid-template-columns: 1fr; }
 }
 
 /* ─── Estate onboarding: pick or create an estate (no sidebar - nothing to navigate to yet) ─── */
@@ -1086,34 +1065,6 @@
   white-space: nowrap;
 }
 
-.edash-method-tabs {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.edash-method-tab {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  padding: 12px;
-  border: 1px solid var(--edash-border);
-  border-radius: var(--edash-radius-md);
-  background: #fff;
-  color: var(--edash-ink);
-  text-align: left;
-  cursor: pointer;
-}
-
-.edash-method-tab svg { width: 17px; height: 17px; margin-top: 1px; color: var(--edash-muted); flex-shrink: 0; }
-.edash-method-tab span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.edash-method-tab strong { font-size: 0.82rem; font-weight: 700; }
-.edash-method-tab small { color: var(--edash-muted); font-size: 0.72rem; line-height: 1.3; }
-.edash-method-tab.active { border-color: var(--edash-brand); background: var(--edash-brand-tint); }
-.edash-method-tab.active svg { color: var(--edash-brand-dark); }
-.edash-method-tab:hover:not(.active) { border-color: var(--edash-faint); }
-
 .edash-upload-dropzone {
   display: flex;
   flex-direction: column;
@@ -1240,6 +1191,17 @@
 .edash-tool-btn svg { width: 14px; height: 14px; color: var(--edash-brand); flex-shrink: 0; }
 .edash-tool-btn:hover { border-color: var(--edash-brand); background: var(--edash-brand-tint); color: var(--edash-brand-dark); }
 .edash-tool-btn:hover svg { color: var(--edash-brand-dark); }
+
+.edash-tool-btn--locked,
+.edash-tool-btn--locked:hover {
+  cursor: not-allowed;
+  color: var(--edash-muted);
+  background: var(--edash-surface);
+  border-color: var(--edash-border);
+  opacity: 0.65;
+}
+.edash-tool-btn--locked svg,
+.edash-tool-btn--locked:hover svg { color: var(--edash-muted); }
 
 /* ─── Modal overlay for on-demand tools (import, create plot, layout, blocks, layers, QC) ─── */
 .edash-modal-overlay {
