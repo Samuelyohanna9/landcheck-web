@@ -73,6 +73,152 @@ function getRingCentroid(ring: number[][]): [number, number] {
   return [sum[0] / ring.length, sum[1] / ring.length];
 }
 
+const ESTATE_CRS_TO_MAP_SYSTEM: Record<string, string> = {
+  "epsg:4326": "wgs84",
+  "epsg:32631": "utm_31n",
+  "epsg:32632": "utm_32n",
+  "epsg:32633": "utm_33n",
+  "epsg:26331": "minna_31",
+  "epsg:26332": "minna_32",
+  "epsg:26333": "minna_33",
+  "epsg:26391": "nigeria_west_belt",
+  "epsg:26392": "nigeria_mid_belt",
+  "epsg:26393": "nigeria_east_belt",
+};
+
+function estateMapCoordinateSystem(crs: string | null | undefined) {
+  const normalized = String(crs || "wgs84").trim().toLowerCase();
+  return ESTATE_CRS_TO_MAP_SYSTEM[normalized] || normalized;
+}
+
+function normalizeEstateMapGeometry(geometry: any, crs: string | null | undefined) {
+  if (!geometry?.coordinates) return geometry;
+  const sourceSystem = estateMapCoordinateSystem(crs);
+  const normalizeCoordinates = (coordinates: any): any => {
+    if (!Array.isArray(coordinates)) return coordinates;
+    if (coordinates.length >= 2 && coordinates.every((value) => typeof value === "number" && Number.isFinite(value))) {
+      const [x, y] = coordinates;
+      if (Math.abs(x) > 180 || Math.abs(y) > 90) {
+        // Some early Estate records stored UTM values in the WGS84 geometry column. Keep the
+        // saved data untouched, but make those legacy parcels visible on the web map.
+        const conversionSystem = sourceSystem === "wgs84" ? "wgs84_nigeria_meters" : sourceSystem;
+        return [...toWGS84(x, y, conversionSystem), ...coordinates.slice(2)];
+      }
+      return coordinates;
+    }
+    return coordinates.map(normalizeCoordinates);
+  };
+  return { ...geometry, coordinates: normalizeCoordinates(geometry.coordinates) };
+}
+
+function visitMapCoordinates(value: any, visitor: (coordinate: [number, number]) => void) {
+  if (!Array.isArray(value)) return;
+  if (value.length >= 2 && typeof value[0] === "number" && typeof value[1] === "number" && Number.isFinite(value[0]) && Number.isFinite(value[1])) {
+    visitor([value[0], value[1]]);
+    return;
+  }
+  value.forEach((item) => visitMapCoordinates(item, visitor));
+}
+
+function mapBoundsFor(features: any[], boundary?: any) {
+  const points: [number, number][] = [];
+  const collect = (geometry: any) => visitMapCoordinates(geometry?.coordinates, (coordinate) => points.push(coordinate));
+  collect(boundary);
+  features.forEach((feature) => collect(feature.geometry));
+  if (!points.length) return null;
+  const lngs = points.map(([lng]) => lng);
+  const lats = points.map(([, lat]) => lat);
+  return {
+    minLng: Math.min(...lngs),
+    maxLng: Math.max(...lngs),
+    minLat: Math.min(...lats),
+    maxLat: Math.max(...lats),
+  };
+}
+
+function polygonRings(geometry: any): number[][][] {
+  if (geometry?.type === "Polygon") return geometry.coordinates || [];
+  if (geometry?.type === "MultiPolygon") return (geometry.coordinates || []).flatMap((polygon: number[][][]) => polygon);
+  return [];
+}
+
+function svgMapPoints(ring: number[][], bounds: NonNullable<ReturnType<typeof mapBoundsFor>>) {
+  const width = 1000;
+  const height = 620;
+  const padding = 44;
+  const rangeLng = Math.max(bounds.maxLng - bounds.minLng, 0.000001);
+  const rangeLat = Math.max(bounds.maxLat - bounds.minLat, 0.000001);
+  const scale = Math.min((width - padding * 2) / rangeLng, (height - padding * 2) / rangeLat);
+  const offsetX = (width - rangeLng * scale) / 2;
+  const offsetY = (height - rangeLat * scale) / 2;
+  return ring
+    .filter((coordinate) => Number.isFinite(coordinate?.[0]) && Number.isFinite(coordinate?.[1]))
+    .map(([lng, lat]) => `${(offsetX + (lng - bounds.minLng) * scale).toFixed(2)},${(height - offsetY - (lat - bounds.minLat) * scale).toFixed(2)}`)
+    .join(" ");
+}
+
+function svgMapPoint(coordinate: [number, number], bounds: NonNullable<ReturnType<typeof mapBoundsFor>>) {
+  const points = svgMapPoints([coordinate], bounds).split(",");
+  return { x: Number(points[0]), y: Number(points[1]) };
+}
+
+function estatePlotColor(status: string | null | undefined) {
+  return STATUS_COLORS[String(status || "on_hold") as keyof typeof STATUS_COLORS] || STATUS_COLORS.on_hold;
+}
+
+function EstatePlotMapFallback({
+  features,
+  boundary,
+  message,
+  onSelect,
+}: {
+  features: any[];
+  boundary?: any;
+  message?: string;
+  onSelect: (plotId: number) => void;
+}) {
+  const bounds = mapBoundsFor(features, boundary);
+  if (!bounds) {
+    return <div className="edash-map-fallback">{message || "No plot geometry is available for this Estate yet."}</div>;
+  }
+  return (
+    <div className="edash-map-fallback edash-map-fallback-plot">
+      <svg viewBox="0 0 1000 620" role="img" aria-label="Estate plot map">
+        <rect width="1000" height="620" fill="#edf3ee" />
+        <path d="M0 80H1000 M0 180H1000 M0 280H1000 M0 380H1000 M0 480H1000 M120 0V620 M280 0V620 M440 0V620 M600 0V620 M760 0V620 M920 0V620" stroke="#d6e3da" strokeWidth="1" />
+        {polygonRings(boundary).map((ring, index) => <polygon key={`boundary-${index}`} points={svgMapPoints(ring, bounds)} fill="none" stroke="#087f76" strokeWidth="3" strokeDasharray="9 7" />)}
+        {features.flatMap((feature) => polygonRings(feature.geometry).map((ring, ringIndex) => {
+          const plotId = Number(feature.properties?.id ?? feature.id);
+          const center = getRingCentroid(ring);
+          const label = String(feature.properties?.plot_number || "");
+          const point = svgMapPoint(center, bounds);
+          return (
+            <g key={`${plotId}-${ringIndex}`}>
+              <polygon
+                points={svgMapPoints(ring, bounds)}
+                fill={estatePlotColor(feature.properties?.commercial_status)}
+                fillOpacity="0.62"
+                stroke="#ffffff"
+                strokeWidth="2"
+                vectorEffect="non-scaling-stroke"
+                role="button"
+                tabIndex={0}
+                aria-label={`Plot ${label}`}
+                onClick={() => Number.isFinite(plotId) && onSelect(plotId)}
+                onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onSelect(plotId); }}
+                style={{ cursor: "pointer" }}
+              />
+              <text x={point.x} y={point.y} textAnchor="middle" dominantBaseline="central" className="edash-map-fallback-label">{label}</text>
+            </g>
+          );
+        }))}
+        {!features.length && <text x="500" y="310" textAnchor="middle" className="edash-map-fallback-empty">No plots match these filters.</text>}
+      </svg>
+      {message && <span className="edash-map-fallback-note">{message}</span>}
+    </div>
+  );
+}
+
 function orderBoundaryPointIndexes(points: Array<{ lng: number; lat: number }>) {
   if (points.length < 3) return points.map((_, index) => index);
   const center = points.reduce((sum, point) => ({ lng: sum.lng + point.lng / points.length, lat: sum.lat + point.lat / points.length }), { lng: 0, lat: 0 });
@@ -187,6 +333,8 @@ export default function Estates() {
   const [plotDocumentBusy, setPlotDocumentBusy] = useState(false);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
+  const [mapError, setMapError] = useState("");
+  const [mapReady, setMapReady] = useState(false);
   const visiblePlotGeojson = useMemo(() => {
     const query = plotSearch.trim().toLowerCase();
     return {
@@ -199,6 +347,14 @@ export default function Estates() {
       }),
     };
   }, [plotGeojson, plotSearch, statusFilter, blockFilterId]);
+  const mapPlotGeojson = useMemo(() => ({
+    ...visiblePlotGeojson,
+    features: visiblePlotGeojson.features.map((feature: any) => ({
+      ...feature,
+      geometry: normalizeEstateMapGeometry(feature.geometry, estateDetail?.crs),
+    })),
+  }), [visiblePlotGeojson, estateDetail?.crs]);
+  const mapBoundary = useMemo(() => normalizeEstateMapGeometry(estateDetail?.boundary, estateDetail?.crs), [estateDetail?.boundary, estateDetail?.crs]);
   const plotInputMapPoints = useMemo(() => plotInputPoints.map((point) => {
     const [lng, lat] = toWGS84(Number(point.lng), Number(point.lat), plotInputCoordinateSystem);
     return { ...point, lng, lat };
@@ -489,8 +645,14 @@ export default function Estates() {
     Promise.all([api.get(`/estates/${estateId}/quality-check`), api.get(`/estates/${estateId}/activity`), api.get(`/estates/${estateId}/dashboard`)]).then(([qc, events, metrics]) => { setQuality(qc.data); setActivity(events.data || []); setDashboard(metrics.data); }).catch(() => { setQuality(null); setActivity([]); setDashboard(null); });
   }, [estateId]);
   useEffect(() => {
+    setMapError("");
+    setMapReady(false);
     if (!estateId || !mapContainer.current || !MAPBOX_TOKEN) return;
     let cancelled = false;
+    let mapLoaded = false;
+    const mapLoadTimeout = window.setTimeout(() => {
+      if (!mapLoaded && !cancelled) setMapError("The basemap is taking too long to load. Showing your plot layout instead.");
+    }, 10000);
     void Promise.all([loadMapboxGl(), loadMapboxGlCss()]).then(([mapboxgl]) => {
       if (cancelled || !mapContainer.current) return;
       (mapRef.current as any)?._edashResizeObserver?.disconnect();
@@ -505,15 +667,23 @@ export default function Estates() {
       const resizeObserver = new ResizeObserver(() => map.resize());
       resizeObserver.observe(mapContainer.current);
       (map as any)._edashResizeObserver = resizeObserver;
-      map.on("load", () => {
+      map.on("error", (event: any) => {
+        const sourceId = String(event?.sourceId || "");
+        if (!cancelled && (!mapLoaded || sourceId === "estate-plots" || sourceId === "estate-boundary")) {
+          setMapError("The map could not draw this layout. Showing your plot layout instead.");
+        }
+      });
+        map.on("load", () => {
+          mapLoaded = true;
+          window.clearTimeout(mapLoadTimeout);
         map.resize();
-        if (estateDetail?.boundary) {
-          const boundaryFeature = { type: "Feature", properties: {}, geometry: estateDetail.boundary };
+        if (mapBoundary) {
+          const boundaryFeature = { type: "Feature", properties: {}, geometry: mapBoundary };
           map.addSource("estate-boundary", { type: "geojson", data: boundaryFeature as any });
           map.addLayer({ id: "estate-boundary-fill", type: "fill", source: "estate-boundary", paint: { "fill-color": "#8bb59a", "fill-opacity": 0.08 } });
           map.addLayer({ id: "estate-boundary-outline", type: "line", source: "estate-boundary", paint: { "line-color": "#087f76", "line-width": 2, "line-dasharray": [2, 2] } });
         }
-        map.addSource("estate-plots", { type: "geojson", data: visiblePlotGeojson });
+        map.addSource("estate-plots", { type: "geojson", data: mapPlotGeojson });
         map.addLayer({
           id: "estate-plots-fill",
           type: "fill",
@@ -552,7 +722,7 @@ export default function Estates() {
           };
           walk(geometry.coordinates);
         };
-        visiblePlotGeojson.features.forEach((feature: any) => {
+        mapPlotGeojson.features.forEach((feature: any) => {
           const blockId = feature.properties?.block_id;
           if (blockId === undefined || blockId === null) return;
           collectVertices(feature.geometry, String(blockId));
@@ -574,7 +744,7 @@ export default function Estates() {
           paint: { "text-color": "#ffffff", "text-halo-color": "rgba(16,24,39,0.85)", "text-halo-width": 3 },
         });
 
-        const plotLabelFeatures = visiblePlotGeojson.features.map((feature: any) => {
+        const plotLabelFeatures = mapPlotGeojson.features.map((feature: any) => {
           const allocation = allocations.find((item) => item.plot_id === Number(feature.properties?.id));
           return {
             type: "Feature",
@@ -603,8 +773,8 @@ export default function Estates() {
           else if (geometry.type === "LineString") coordinates.forEach((coord: number[]) => bounds.extend(coord));
           else coordinates.forEach((part: any) => extendGeometry({ type: geometry.type === "Polygon" ? "LineString" : geometry.type === "MultiPolygon" ? "Polygon" : "LineString", coordinates: geometry.type === "Polygon" ? part : part }));
         };
-        if (estateDetail?.boundary) extendGeometry(estateDetail.boundary);
-        visiblePlotGeojson.features.forEach((feature: any) => extendGeometry(feature.geometry));
+        if (mapBoundary) extendGeometry(mapBoundary);
+        mapPlotGeojson.features.forEach((feature: any) => extendGeometry(feature.geometry));
         if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 46, maxZoom: 17 });
         const openPlotDrawer = (id: number) => {
           setSelectedPlotId(id);
@@ -646,10 +816,11 @@ export default function Estates() {
           setPlotContextMenu({ x: event.originalEvent.clientX, y: event.originalEvent.clientY, plotId: id });
         });
         map.on("mouseenter", "estate-plots-fill", () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", "estate-plots-fill", () => { map.getCanvas().style.cursor = ""; });
+        });
+        setMapReady(true);
       });
-    });
-    return () => { cancelled = true; (mapRef.current as any)?._edashResizeObserver?.disconnect(); mapRef.current?.remove(); mapRef.current = null; };
-  }, [estateId, estateDetail, visiblePlotGeojson, layerGeojson, allocations, mapStyleMode, blocks, layersVisible]);
+    return () => { cancelled = true; window.clearTimeout(mapLoadTimeout); (mapRef.current as any)?._edashResizeObserver?.disconnect(); mapRef.current?.remove(); mapRef.current = null; };
+  }, [estateId, estateDetail, mapBoundary, mapPlotGeojson, layerGeojson, allocations, mapStyleMode, blocks, layersVisible]);
   const selectAllocation = async (id: string) => {
     setAllocationId(id); setFinancial(null);
     if (!id) return;
@@ -718,7 +889,7 @@ export default function Estates() {
   const selectedSurvey = selectedAllocation && surveyRequests.find((item) => item.plot.id === selectedAllocation.plot_id);
   const selectedTask = selectedSurvey && stakingTasks.find((item) => item.survey_request_id === selectedSurvey.id);
 
-  const orderedPlotIds = visiblePlotGeojson.features.map((feature: any) => Number(feature.properties?.id));
+  const orderedPlotIds = mapPlotGeojson.features.map((feature: any) => Number(feature.properties?.id));
   const selectedPlotPosition = selectedPlot ? orderedPlotIds.indexOf(selectedPlot.id) : -1;
   const goToAdjacentPlot = (direction: 1 | -1) => {
     if (selectedPlotPosition < 0 || orderedPlotIds.length === 0) return;
@@ -734,7 +905,7 @@ export default function Estates() {
   const openTab = (tab: typeof drawerTab) => { setDrawerTab(tab); setEditingDevelopment(false); };
   const flyToSelectedPlot = () => {
     if (!mapRef.current || !selectedPlot) return;
-    const feature = visiblePlotGeojson.features.find((item: any) => Number(item.properties?.id) === selectedPlot.id);
+    const feature = mapPlotGeojson.features.find((item: any) => Number(item.properties?.id) === selectedPlot.id);
     const ring = feature?.geometry?.type === "Polygon" ? feature.geometry.coordinates[0] : null;
     if (!ring || ring.length === 0) return;
     const lngs = ring.map((coord: number[]) => coord[0]);
@@ -890,10 +1061,30 @@ export default function Estates() {
           </button>
         </div>
         <div className="edash-map-canvas-wrap">
-          {MAPBOX_TOKEN ? (
-            <div ref={mapContainer} className="edash-map-canvas" />
+          {MAPBOX_TOKEN && !mapError ? (
+            <>
+              {!mapReady && <EstatePlotMapFallback features={mapPlotGeojson.features} boundary={mapBoundary} message="Loading the interactive map..." onSelect={(plotId) => {
+                setSelectedPlotId(plotId);
+                setDrawerTab("overview");
+                const allocation = allocations.find((item) => item.plot_id === plotId);
+                if (allocation) void selectAllocation(String(allocation.id));
+                else { setAllocationId(""); setFinancial(null); }
+              }} />}
+              <div ref={mapContainer} className="edash-map-canvas" />
+            </>
           ) : (
-            <div className="edash-map-fallback">Map preview is unavailable right now. {visiblePlotGeojson.features.length} plot geometries are ready in this Estate.</div>
+            <EstatePlotMapFallback
+              features={mapPlotGeojson.features}
+              boundary={mapBoundary}
+              message={mapError || undefined}
+              onSelect={(plotId) => {
+                setSelectedPlotId(plotId);
+                setDrawerTab("overview");
+                const allocation = allocations.find((item) => item.plot_id === plotId);
+                if (allocation) void selectAllocation(String(allocation.id));
+                else { setAllocationId(""); setFinancial(null); }
+              }}
+            />
           )}
           <div className="edash-map-controls">
             <div className="edash-map-controls-group">
@@ -902,7 +1093,7 @@ export default function Estates() {
             </div>
             <button type="button" className="edash-map-controls-group edash-map-ctrl-btn" title="Fit to estate" onClick={() => {
               if (!mapRef.current) return;
-              const bounds = visiblePlotGeojson.features.reduce((acc: number[][] | null, feature: any) => {
+              const bounds = mapPlotGeojson.features.reduce((acc: number[][] | null, feature: any) => {
                 const ring = feature.geometry?.type === "Polygon" ? feature.geometry.coordinates[0] : [];
                 return ring.reduce((box: number[][] | null, coord: number[]) => {
                   if (!box) return [[coord[0], coord[1]], [coord[0], coord[1]]];
