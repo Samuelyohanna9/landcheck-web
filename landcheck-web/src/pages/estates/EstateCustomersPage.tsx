@@ -4,6 +4,7 @@ import { api, extractApiErrorMessage } from "../../api/client";
 import { money } from "../../components/estates/FinancialComponents";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
+import EstateModal from "../../components/estates/EstateModal";
 
 export default function EstateCustomersPage() {
   const { estateId } = useParams();
@@ -15,6 +16,7 @@ export default function EstateCustomersPage() {
   const [selectedId, setSelectedId] = useState("");
   const [detail, setDetail] = useState<any>(null);
   const [statement, setStatement] = useState<any>(null);
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [message, setMessage] = useState("");
@@ -31,6 +33,8 @@ export default function EstateCustomersPage() {
     const query = search.trim().toLowerCase();
     return customers.filter((customer) => !query || customer.name.toLowerCase().includes(query));
   }, [customers, search]);
+
+  const selectedCustomer = customers.find((customer) => String(customer.id) === selectedId);
 
   const chooseCustomer = async (id: string) => {
     setSelectedId(id);
@@ -53,7 +57,7 @@ export default function EstateCustomersPage() {
     if (!organizationId || !newName.trim()) { setMessage("Enter the customer name."); return; }
     try {
       await api.post(`/estates/organizations/${organizationId}/customers`, { full_name: newName.trim(), phone: newPhone.trim() || null });
-      setNewName(""); setNewPhone(""); setMessage("Customer added.");
+      setNewName(""); setNewPhone(""); setMessage(""); setShowAddCustomer(false);
       load();
     } catch (error) {
       setMessage(await extractApiErrorMessage(error, "Customer could not be created."));
@@ -67,7 +71,12 @@ export default function EstateCustomersPage() {
       <div className="edash-content-row">
         <div className="edash-card">
           <div className="edash-card-inner">
-            <div className="edash-card-head"><h3 className="edash-card-title">Customers ({filtered.length})</h3></div>
+            <div className="edash-card-head">
+              <h3 className="edash-card-title">Customers ({filtered.length})</h3>
+              <button type="button" className="edash-tool-btn" onClick={() => setShowAddCustomer(true)}>
+                <EstateIcon name="plus" /> Add customer
+              </button>
+            </div>
             {filtered.length ? (
               <div className="edash-activity-list">
                 {filtered.map((customer) => (
@@ -83,33 +92,44 @@ export default function EstateCustomersPage() {
                   </div>
                 ))}
               </div>
-            ) : <p className="edash-tab-empty">No customers yet.</p>}
+            ) : (
+              <p className="edash-tab-empty">No customers yet. Use "Add customer" to create your first one.</p>
+            )}
           </div>
         </div>
 
         <div className="edash-card">
           <div className="edash-card-inner">
-            <div className="edash-card-head"><h3 className="edash-card-title">Add customer</h3></div>
-            <label className="edash-overview-field" style={{ marginBottom: 8 }}><span>Full name</span><input value={newName} onChange={(event) => setNewName(event.target.value)} style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} /></label>
-            <label className="edash-overview-field" style={{ marginBottom: 8 }}><span>Phone (optional)</span><input value={newPhone} onChange={(event) => setNewPhone(event.target.value)} style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} /></label>
-            <button type="button" className="edash-btn-primary" onClick={() => void createCustomer()}>Add customer</button>
-            {message && <p className="edash-tab-empty" style={{ padding: "8px 0" }}>{message}</p>}
-
-            {detail && (
+            <div className="edash-card-head"><h3 className="edash-card-title">Financial detail</h3></div>
+            {!selectedCustomer ? (
+              <p className="edash-tab-empty">Select a customer to see their financial summary and statement.</p>
+            ) : (
               <>
-                <div className="edash-card-head" style={{ marginTop: 16 }}><h3 className="edash-card-title">Financial summary</h3></div>
-                <div className="edash-overview-grid edash-overview-grid--2">
-                  <div className="edash-overview-field"><span>Agreed</span><strong>{money(detail.totals?.agreed_price ?? detail.financial?.agreed_price ?? 0)}</strong></div>
-                  <div className="edash-overview-field"><span>Outstanding</span><strong>{money(detail.totals?.outstanding ?? detail.financial?.outstanding ?? 0)}</strong></div>
-                </div>
+                <p className="edash-info-card-name" style={{ marginBottom: 10 }}>{selectedCustomer.name}</p>
+                {detail ? (
+                  <div className="edash-overview-grid edash-overview-grid--2">
+                    <div className="edash-overview-field"><span>Agreed</span><strong>{money(detail.totals?.agreed_price ?? detail.financial?.agreed_price ?? 0)}</strong></div>
+                    <div className="edash-overview-field"><span>Outstanding</span><strong>{money(detail.totals?.outstanding ?? detail.financial?.outstanding ?? 0)}</strong></div>
+                  </div>
+                ) : <p className="edash-tab-empty">Loading...</p>}
+                {statement && (
+                  <button type="button" className="edash-btn-outline" style={{ marginTop: 12 }} onClick={() => window.print()}>Print statement</button>
+                )}
               </>
             )}
-            {statement && (
-              <button type="button" className="edash-btn-outline" style={{ marginTop: 8 }} onClick={() => window.print()}>Print statement</button>
-            )}
+            {message && <p className="edash-tab-empty" style={{ padding: "8px 0" }}>{message}</p>}
           </div>
         </div>
       </div>
+
+      {showAddCustomer && (
+        <EstateModal title="Add customer" subtitle="Create a customer record before reserving or allocating a plot to them." onClose={() => setShowAddCustomer(false)}>
+          <label className="edash-field" style={{ marginBottom: 12 }}><span>Full name</span><input value={newName} onChange={(event) => setNewName(event.target.value)} autoFocus /></label>
+          <label className="edash-field" style={{ marginBottom: 12 }}><span>Phone (optional)</span><input value={newPhone} onChange={(event) => setNewPhone(event.target.value)} /></label>
+          {message && <p className="edash-tab-empty" style={{ padding: "0 0 8px", textAlign: "left" }}>{message}</p>}
+          <button type="button" className="edash-btn-primary" onClick={() => void createCustomer()}>Add customer</button>
+        </EstateModal>
+      )}
     </EstateShell>
   );
 }

@@ -1168,6 +1168,15 @@
 .edash-issue-list li { margin: 2px 0; }
 .edash-issue-list > span { display: block; margin-top: 4px; font-weight: 600; }
 
+.edash-banner {
+  padding: 10px 14px;
+  border-radius: var(--edash-radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.edash-banner.tone-good { background: var(--edash-good-tint); color: var(--edash-good); }
+.edash-banner.tone-danger { background: var(--edash-danger-tint); color: var(--edash-danger); }
+
 /* Generic field/grid used by the remaining legacy workflow forms (plot creation, layers, blocks,
    allocation lookup, survey/staking delivery) once re-skinned onto the .edash card system. */
 .edash-form-grid { display: flex; flex-direction: column; gap: 12px; }
