@@ -13,6 +13,7 @@ import { checkPolygonClosure } from "../utils/surveyGeometry";
 import EstateIcon from "../components/estates/EstateIcon";
 import EstateModal from "../components/estates/EstateModal";
 import EstateShell from "../components/estates/EstateShell";
+import Spinner, { LoadingPanel } from "../components/estates/EstateSpinner";
 import "../styles/estates.css";
 import "../styles/estate-dashboard.css";
 
@@ -429,6 +430,14 @@ export default function Estates() {
   const [addPlotMethod, setAddPlotMethod] = useState<AddPlotMethod>("draw");
   const [designSubdividePlotId, setDesignSubdividePlotId] = useState<number | null>(null);
   const [designLayoutMethod, setDesignLayoutMethod] = useState<"subdivide" | "automatic">("automatic");
+  const [addPlotRepresents, setAddPlotRepresents] = useState<"plot" | "boundary">("plot");
+  const [importAsBoundary, setImportAsBoundary] = useState(false);
+  const [deletePlotConfirmText, setDeletePlotConfirmText] = useState("");
+  const [showDeletePlotConfirm, setShowDeletePlotConfirm] = useState(false);
+  const [deletePlotBusy, setDeletePlotBusy] = useState(false);
+  const [resetLayoutConfirmText, setResetLayoutConfirmText] = useState("");
+  const [showResetLayoutConfirm, setShowResetLayoutConfirm] = useState(false);
+  const [resetLayoutBusy, setResetLayoutBusy] = useState(false);
   const [plotDocumentFile, setPlotDocumentFile] = useState<File | null>(null);
   const [plotDocumentBusy, setPlotDocumentBusy] = useState(false);
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -522,6 +531,52 @@ export default function Estates() {
     if (plotInputClosure === "self-intersecting") { setWorkflowMessage("Order the boundary points before creating the plot.", "danger"); return; }
     try { await api.post(`/estates/${estateId}/plots`, { plot_number: plotNumber.trim(), geometry: { type: "Polygon", coordinates: [[...ring, ring[0]]] }, geometry_status: "approved" }); window.location.reload(); }
     catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Plot could not be created."), "danger"); }
+  };
+  const createEstateBoundaryFromInput = async () => {
+    if (!estateId) return;
+    if (plotInputPoints.length < 3) { setWorkflowMessage("Add at least three boundary points or import a coordinate file.", "danger"); return; }
+    const ring = plotInputMapPoints.map((point) => [point.lng, point.lat]);
+    if (ring.length < 3 || ring.some((point) => point.some((value) => !Number.isFinite(value)))) { setWorkflowMessage("Check the coordinate values before setting the boundary.", "danger"); return; }
+    if (plotInputClosure === "self-intersecting") { setWorkflowMessage("Order the boundary points before setting the boundary.", "danger"); return; }
+    try { await api.patch(`/estates/${estateId}`, { boundary: { type: "Polygon", coordinates: [[...ring, ring[0]]] } }); window.location.reload(); }
+    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Estate boundary could not be set."), "danger"); }
+  };
+  const useAsEstateBoundary = async (plotId: number) => {
+    if (!estateId) return;
+    const feature = plotGeojson.features.find((item: any) => Number(item.properties?.id) === plotId);
+    if (!feature?.geometry) { setWorkflowMessage("Could not find that plot's geometry.", "danger"); return; }
+    try {
+      await api.patch(`/estates/${estateId}`, { boundary: feature.geometry });
+      window.location.reload();
+    } catch (error) {
+      setWorkflowMessage(await extractApiErrorMessage(error, "Estate boundary could not be set."), "danger");
+    }
+  };
+  const deletePlot = async () => {
+    if (!estateId || !selectedPlot) return;
+    setDeletePlotBusy(true);
+    try {
+      await api.delete(`/estates/${estateId}/plots/${selectedPlot.id}`);
+      window.location.reload();
+    } catch (error) {
+      setShowDeletePlotConfirm(false);
+      setWorkflowMessage(await extractApiErrorMessage(error, "Plot could not be deleted."), "danger");
+    } finally {
+      setDeletePlotBusy(false);
+    }
+  };
+  const resetEstateLayout = async () => {
+    if (!estateId) return;
+    setResetLayoutBusy(true);
+    try {
+      await api.delete(`/estates/${estateId}/layout`);
+      window.location.reload();
+    } catch (error) {
+      setShowResetLayoutConfirm(false);
+      setWorkflowMessage(await extractApiErrorMessage(error, "Layout could not be reset."), "danger");
+    } finally {
+      setResetLayoutBusy(false);
+    }
   };
   const subdividePlotById = async (plotId: number) => {
     if (!estateId) return;
@@ -619,12 +674,13 @@ export default function Estates() {
     } catch (error) { setLayoutMessage(await extractApiErrorMessage(error, "Layout import could not be uploaded."), "danger"); }
     finally { setLayoutUploadBusy(false); }
   };
-  const decideImportReview = async (reviewId: number, status: "approved" | "rejected") => {
+  const decideImportReview = async (reviewId: number, status: "approved" | "rejected", asBoundary = false) => {
     setLayoutUploadBusy(true);
     setLayoutMessage("");
     try {
-      await api.post(`/estates/import-reviews/${reviewId}/decision`, { status });
-      await refreshImportReviews(); setLayoutMessage(status === "approved" ? "Plots added to your Estate register." : "Layout discarded.");
+      await api.post(`/estates/import-reviews/${reviewId}/decision`, { status, as_boundary: asBoundary });
+      await refreshImportReviews();
+      setLayoutMessage(status === "approved" ? (asBoundary ? "Estate boundary set. Open \"Design Layout\" to subdivide it or design a layout automatically." : "Plots added to your Estate register.") : "Layout discarded.");
       if (status === "approved") window.location.reload();
     }
     catch (error) { setLayoutMessage(await extractApiErrorMessage(error, "Import decision could not be saved."), "danger"); }
@@ -1295,7 +1351,7 @@ export default function Estates() {
                       <p className="edash-status-row-desc" style={{ margin: "8px 0" }}>Create smaller plots from this available plot. The new plots appear on the map and can be reserved or allocated.</p>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         <input type="number" min="2" max="100" value={subdivisionCount} onChange={(event) => setSubdivisionCount(event.target.value)} style={{ width: 80, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
-                        <button type="button" className="edash-btn-primary" disabled={subdivisionBusy} onClick={() => void subdividePlot()}>{subdivisionBusy ? "Creating plots..." : "Create plots"}</button>
+                        <button type="button" className="edash-btn-primary" disabled={subdivisionBusy} onClick={() => void subdividePlot()}>{subdivisionBusy ? <><Spinner size={13} /> Creating plots...</> : "Create plots"}</button>
                       </div>
                     </details>
                   )}
@@ -1417,6 +1473,10 @@ export default function Estates() {
                     </div>
                     <button type="button" className="edash-btn-outline edash-info-card-action" onClick={() => openTab("hazards")}>View Analysis</button>
                   </div>
+
+                  <button type="button" className="edash-btn-outline" style={{ color: "var(--edash-danger)", borderColor: "var(--edash-danger-tint)", alignSelf: "flex-start" }} onClick={() => setShowDeletePlotConfirm(true)}>
+                    Delete plot
+                  </button>
                 </div>
               )}
 
@@ -1758,8 +1818,23 @@ export default function Estates() {
 
           {isDrawOrCoordinates ? (
             <>
-              <label className="edash-field" style={{ marginBottom: 4, maxWidth: 260 }}><span>Plot number</span><input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="e.g. B-024" /></label>
-              <p className="edash-field-note" style={{ marginBottom: 12 }}>This creates one plot record for the area you outline. To turn a large area into many smaller plots afterwards, open "Design Layout" and subdivide it.</p>
+              <div className="edash-form-row" style={{ marginBottom: 4 }}>
+                <label className="edash-field" style={{ maxWidth: 320 }}>
+                  <span>This represents</span>
+                  <select value={addPlotRepresents} onChange={(event) => setAddPlotRepresents(event.target.value as "plot" | "boundary")}>
+                    <option value="plot">An individual plot</option>
+                    <option value="boundary">The Estate boundary (subdivide next)</option>
+                  </select>
+                </label>
+                {addPlotRepresents === "plot" && (
+                  <label className="edash-field" style={{ maxWidth: 260 }}><span>Plot number</span><input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="e.g. B-024" /></label>
+                )}
+              </div>
+              <p className="edash-field-note" style={{ marginBottom: 12 }}>
+                {addPlotRepresents === "plot"
+                  ? "This creates one plot record for the area you outline. To turn a large area into many smaller plots afterwards, open \"Design Layout\" and subdivide it."
+                  : "This sets the Estate's overall boundary - no plot is created yet. Afterwards, open \"Design Layout\" to subdivide it or design a layout automatically."}
+              </p>
               {addPlotMethod === "draw" ? (
                 <div>
                   <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>Trace the plot boundary directly on the satellite image, then confirm below.</p>
@@ -1776,7 +1851,15 @@ export default function Estates() {
                 </div>
               )}
               <StatusBanner text={workflowMessage} tone={workflowMessageTone} />
-              <button type="button" className="edash-btn-primary" style={{ marginTop: 12 }} disabled={plotInputMapPoints.length < 3 || plotInputClosure === "self-intersecting"} onClick={() => void createPlotFromInput()}>{plotInputClosure === "self-intersecting" ? "Fix boundary first" : "Create plot"}</button>
+              <button
+                type="button"
+                className="edash-btn-primary"
+                style={{ marginTop: 12 }}
+                disabled={plotInputMapPoints.length < 3 || plotInputClosure === "self-intersecting"}
+                onClick={() => void (addPlotRepresents === "boundary" ? createEstateBoundaryFromInput() : createPlotFromInput())}
+              >
+                {plotInputClosure === "self-intersecting" ? "Fix boundary first" : addPlotRepresents === "boundary" ? "Set as Estate boundary" : "Create plot"}
+              </button>
             </>
           ) : (
             <EstateLayoutImport
@@ -1785,13 +1868,15 @@ export default function Estates() {
               files={{ csv: csvFile, geojson: geojsonFile, dxf: dxfFile, "scanned-layout": scannedLayoutFile }}
               onFileChange={handleLayoutFileChange}
               onUpload={(method) => void uploadLayout(method)}
-              onDecision={(reviewId, status) => void decideImportReview(reviewId, status)}
+              onDecision={(reviewId, status) => void decideImportReview(reviewId, status, importAsBoundary)}
               onStartGeoreference={(file) => void startGeoreferenceImport(file)}
               onOpenGeoreference={openGeoreferenceTool}
               onImportFromGeoreference={(reviewId) => void importPlotsFromGeoreference(reviewId)}
               message={layoutMessage}
               messageTone={layoutMessageTone}
               busy={layoutUploadBusy}
+              asBoundary={importAsBoundary}
+              onAsBoundaryChange={setImportAsBoundary}
             />
           )}
         </>
@@ -1803,13 +1888,20 @@ export default function Estates() {
       const hasBoundary = Boolean(estateDetail?.boundary);
       return renderToolModal("Design your layout", "Turn a plot or the Estate boundary into many smaller plots.", (
         <>
-          <label className="edash-field" style={{ marginBottom: 16, maxWidth: 320 }}>
-            <span>Method</span>
-            <select value={designLayoutMethod} onChange={(event) => setDesignLayoutMethod(event.target.value as "subdivide" | "automatic")}>
-              <option value="automatic">Design automatically (Nigerian estate presets)</option>
-              <option value="subdivide">Subdivide a plot or the boundary evenly</option>
-            </select>
-          </label>
+          <div className="edash-form-row" style={{ marginBottom: 16, alignItems: "flex-end" }}>
+            <label className="edash-field" style={{ maxWidth: 320 }}>
+              <span>Method</span>
+              <select value={designLayoutMethod} onChange={(event) => setDesignLayoutMethod(event.target.value as "subdivide" | "automatic")}>
+                <option value="automatic">Design automatically (Nigerian estate presets)</option>
+                <option value="subdivide">Subdivide a plot or the boundary evenly</option>
+              </select>
+            </label>
+            {(plots.length > 0 || hasBoundary) && (
+              <button type="button" className="edash-btn-outline" style={{ color: "var(--edash-danger)", borderColor: "var(--edash-danger-tint)" }} onClick={() => setShowResetLayoutConfirm(true)}>
+                Reset layout
+              </button>
+            )}
+          </div>
 
           {designLayoutMethod === "subdivide" ? (
             <>
@@ -1824,7 +1916,7 @@ export default function Estates() {
                       {availablePlots.map((plot) => <option key={plot.id} value={plot.id}>{plot.plot_number} - {Number(plot.area_sqm || 0).toLocaleString()} m²</option>)}
                     </select>
                     <input type="number" min="2" max="100" value={subdivisionCount} onChange={(event) => setSubdivisionCount(event.target.value)} style={{ width: 80, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
-                    <button type="button" className="edash-btn-primary" disabled={subdivisionBusy || !targetSubdividePlotId} onClick={() => targetSubdividePlotId && void subdividePlotById(targetSubdividePlotId)}>{subdivisionBusy ? "Creating plots..." : "Split into plots"}</button>
+                    <button type="button" className="edash-btn-primary" disabled={subdivisionBusy || !targetSubdividePlotId} onClick={() => targetSubdividePlotId && void subdividePlotById(targetSubdividePlotId)}>{subdivisionBusy ? <><Spinner size={13} /> Creating plots...</> : "Split into plots"}</button>
                   </div>
                 </div>
               )}
@@ -1834,7 +1926,7 @@ export default function Estates() {
                   <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>Fast: divide the whole boundary evenly. Best for uniform lots with no roads or open space.</p>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <input type="number" min="2" max="200" value={subdivisionCount} onChange={(event) => setSubdivisionCount(event.target.value)} style={{ width: 80, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
-                    <button type="button" className="edash-btn-primary" disabled={subdivisionBusy} onClick={() => void splitBoundaryIntoPlots()}>{subdivisionBusy ? "Creating..." : "Split boundary"}</button>
+                    <button type="button" className="edash-btn-primary" disabled={subdivisionBusy} onClick={() => void splitBoundaryIntoPlots()}>{subdivisionBusy ? <><Spinner size={13} /> Creating...</> : "Split boundary"}</button>
                   </div>
                 </div>
               )}
@@ -1844,7 +1936,21 @@ export default function Estates() {
               <StatusBanner text={workflowMessage} tone={workflowMessageTone} />
             </>
           ) : (
-            <EstateLayoutDesigner boundaryPresent={hasBoundary} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} messageTone={layoutDesignerMessageTone} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} />
+            <>
+              {!hasBoundary && plots.length > 0 && (
+                <div className="edash-info-card" style={{ flexDirection: "column", marginBottom: 16 }}>
+                  <div className="edash-info-card-head"><span className="edash-status-row-title">No Estate boundary yet</span></div>
+                  <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>Automatic design needs an overall boundary to work within. Use one of your existing plots as the Estate boundary to unlock it.</p>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <select value={targetSubdividePlotId ?? ""} onChange={(event) => setDesignSubdividePlotId(Number(event.target.value))}>
+                      {plots.map((plot) => <option key={plot.id} value={plot.id}>{plot.plot_number} - {Number(plot.area_sqm || 0).toLocaleString()} m²</option>)}
+                    </select>
+                    <button type="button" className="edash-btn-primary" disabled={!targetSubdividePlotId} onClick={() => targetSubdividePlotId && void useAsEstateBoundary(targetSubdividePlotId)}>Use as Estate boundary</button>
+                  </div>
+                </div>
+              )}
+              <EstateLayoutDesigner boundaryPresent={hasBoundary} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} messageTone={layoutDesignerMessageTone} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} />
+            </>
           )}
         </>
       ));
@@ -1919,7 +2025,7 @@ export default function Estates() {
             </div>
           )}
         </>
-      ) : <p className="edash-tab-empty">Loading...</p>);
+      ) : <LoadingPanel label="Analyzing plot geometry..." />);
     }
     return null;
   }
@@ -2032,6 +2138,52 @@ export default function Estates() {
       {renderBottomRow()}
       {renderFooter()}
       {activeTool && renderActiveToolModal()}
+      {showDeletePlotConfirm && selectedPlot && (
+        <EstateModal title="Delete this plot?" subtitle="This permanently removes the plot record and cannot be undone." onClose={() => { setShowDeletePlotConfirm(false); setDeletePlotConfirmText(""); }}>
+          <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>
+            Type <strong style={{ color: "var(--edash-ink)" }}>{selectedPlot.plot_number}</strong> to confirm you want to permanently delete this plot.
+          </p>
+          <label className="edash-field" style={{ marginBottom: 14 }}>
+            <span>Plot number</span>
+            <input value={deletePlotConfirmText} onChange={(event) => setDeletePlotConfirmText(event.target.value)} placeholder={selectedPlot.plot_number} autoFocus />
+          </label>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              className="edash-btn-primary"
+              style={{ background: "var(--edash-danger)" }}
+              disabled={deletePlotBusy || deletePlotConfirmText.trim() !== selectedPlot.plot_number}
+              onClick={() => void deletePlot()}
+            >
+              {deletePlotBusy ? <><Spinner size={14} /> Deleting...</> : "Delete plot"}
+            </button>
+            <button type="button" className="edash-btn-outline" onClick={() => { setShowDeletePlotConfirm(false); setDeletePlotConfirmText(""); }}>Cancel</button>
+          </div>
+        </EstateModal>
+      )}
+      {showResetLayoutConfirm && (
+        <EstateModal title="Reset this Estate's layout?" subtitle="This permanently deletes every plot and clears the Estate boundary so you can start the layout over." onClose={() => { setShowResetLayoutConfirm(false); setResetLayoutConfirmText(""); }}>
+          <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>
+            Type the Estate name, <strong style={{ color: "var(--edash-ink)" }}>{estateDetail?.name}</strong>, to confirm. Any plot with a customer reservation or allocation will block this action.
+          </p>
+          <label className="edash-field" style={{ marginBottom: 14 }}>
+            <span>Estate name</span>
+            <input value={resetLayoutConfirmText} onChange={(event) => setResetLayoutConfirmText(event.target.value)} placeholder={estateDetail?.name} autoFocus />
+          </label>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              className="edash-btn-primary"
+              style={{ background: "var(--edash-danger)" }}
+              disabled={resetLayoutBusy || resetLayoutConfirmText.trim() !== (estateDetail?.name || "")}
+              onClick={() => void resetEstateLayout()}
+            >
+              {resetLayoutBusy ? <><Spinner size={14} /> Resetting...</> : "Reset layout"}
+            </button>
+            <button type="button" className="edash-btn-outline" onClick={() => { setShowResetLayoutConfirm(false); setResetLayoutConfirmText(""); }}>Cancel</button>
+          </div>
+        </EstateModal>
+      )}
     </EstateShell>
   );
 }
