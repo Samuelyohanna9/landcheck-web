@@ -265,6 +265,51 @@ function buildPlotLabelFeatures(features: any[], allocations: any[]) {
   });
 }
 
+function attachEstateMapLayers(map: any) {
+  map.addSource("estate-boundary", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  map.addLayer({ id: "estate-boundary-fill", type: "fill", source: "estate-boundary", paint: { "fill-color": "#8bb59a", "fill-opacity": 0.08 } });
+  map.addLayer({ id: "estate-boundary-outline", type: "line", source: "estate-boundary", paint: { "line-color": "#087f76", "line-width": 2, "line-dasharray": [2, 2] } });
+  map.addSource("estate-plots", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  map.addLayer({
+    id: "estate-plots-fill",
+    type: "fill",
+    source: "estate-plots",
+    paint: {
+      "fill-color": [
+        "match",
+        ["get", "commercial_status"],
+        "available", STATUS_COLORS.available,
+        "reserved", STATUS_COLORS.reserved,
+        "allocated", STATUS_COLORS.allocated,
+        "on_hold", STATUS_COLORS.on_hold,
+        STATUS_COLORS.on_hold,
+      ],
+      "fill-opacity": 0.6,
+    },
+  });
+  map.addLayer({ id: "estate-plots-outline", type: "line", source: "estate-plots", paint: { "line-color": "#ffffff", "line-width": 1.4 } });
+  map.addSource("estate-layers", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  map.addLayer({ id: "estate-layers-line", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "road", "#2b2f36", "drainage", "#287cb4", "#b77c2d"], "line-width": 3 } });
+  map.addLayer({ id: "estate-layers-fill", type: "fill", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": ["match", ["get", "type"], "open_space", "#78a85d", "infrastructure", "#b77c2d", "#287cb4"], "fill-opacity": 0.35 } });
+  map.addSource("estate-block-labels", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  map.addLayer({
+    id: "estate-block-labels",
+    type: "symbol",
+    source: "estate-block-labels",
+    layout: { "text-field": ["get", "label"], "text-size": 11, "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"] },
+    paint: { "text-color": "#ffffff", "text-halo-color": "rgba(16,24,39,0.85)", "text-halo-width": 3 },
+  });
+  map.addSource("estate-plot-labels", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  map.addLayer({
+    id: "estate-plot-labels",
+    type: "symbol",
+    source: "estate-plot-labels",
+    minzoom: 15,
+    layout: { "text-field": ["get", "label"], "text-size": 10, "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"] },
+    paint: { "text-color": ["case", ["get", "isCustomer"], "#ffffff", "#0f1e17"], "text-halo-color": ["case", ["get", "isCustomer"], "rgba(16,24,39,0.85)", "rgba(255,255,255,0.85)"], "text-halo-width": 2 },
+  });
+}
+
 function extendMapBounds(bounds: any, geometry: any) {
   if (!geometry) return;
   const coordinates = geometry.coordinates;
@@ -390,6 +435,7 @@ export default function Estates() {
   const mapInteractionRef = useRef<{ allocations: any[]; selectAllocation: (id: string) => void }>({ allocations: [], selectAllocation: () => {} });
   const [mapError, setMapError] = useState("");
   const [mapReady, setMapReady] = useState(false);
+  const [styleGeneration, setStyleGeneration] = useState(0);
   const visiblePlotGeojson = useMemo(() => {
     const query = plotSearch.trim().toLowerCase();
     return {
@@ -699,24 +745,26 @@ export default function Estates() {
     api.get(`/estates/${estateId}/blocks`).then((response) => setBlocks(response.data || [])).catch(() => setBlocks([]));
     Promise.all([api.get(`/estates/${estateId}/quality-check`), api.get(`/estates/${estateId}/activity`), api.get(`/estates/${estateId}/dashboard`)]).then(([qc, events, metrics]) => { setQuality(qc.data); setActivity(events.data || []); setDashboard(metrics.data); }).catch(() => { setQuality(null); setActivity([]); setDashboard(null); });
   }, [estateId]);
-  // Builds the mapboxgl.Map exactly once per estate/basemap-style change. Data (plots, boundary,
-  // layers, labels) is intentionally NOT a dependency here - it is synced into the already-built
-  // map by the effect below via source.setData(), so incoming API responses never tear down and
-  // reconstruct the WebGL map mid-load (that churn was starving the base style/tiles of a chance
-  // to finish loading, which is why the canvas stayed blank).
+  // Builds the mapboxgl.Map exactly ONCE per estate, guarded by mapRef.current the same way the
+  // already-reliable MapViewEnhanced/ProjectMap components do it - this is a stronger guarantee
+  // than a dependency array, since it physically refuses to construct a second map even if the
+  // effect re-runs for an unrelated reason. Data (plots, boundary, layers, labels) is synced into
+  // the already-built map by the effect below via source.setData(), and the basemap toggle calls
+  // map.setStyle() directly from its button handler - neither ever tears down/reconstructs the
+  // map, which was the earlier bug: rebuilding the WebGL map mid-load kept interrupting tile
+  // requests so "load" never had a chance to fire and the canvas stayed blank.
   useEffect(() => {
     setMapError("");
     setMapReady(false);
-    if (!estateId || !mapContainer.current || !MAPBOX_TOKEN) return;
+    if (!estateId || !mapContainer.current || !MAPBOX_TOKEN || mapRef.current) return;
     let cancelled = false;
     let mapLoaded = false;
+    let handlersAttached = false;
     const mapLoadTimeout = window.setTimeout(() => {
       if (!mapLoaded && !cancelled) setMapError("The basemap is taking too long to load. Showing your plot layout instead.");
     }, 10000);
     void Promise.all([loadMapboxGl(), loadMapboxGlCss()]).then(([mapboxgl]) => {
-      if (cancelled || !mapContainer.current) return;
-      (mapRef.current as any)?._edashResizeObserver?.disconnect();
-      mapRef.current?.remove();
+      if (cancelled || !mapContainer.current || mapRef.current) return;
       const map = new mapboxgl.Map({
         container: mapContainer.current,
         style: mapStyleMode === "satellite" ? "mapbox://styles/mapbox/satellite-streets-v12" : "mapbox://styles/mapbox/light-v11",
@@ -733,101 +781,68 @@ export default function Estates() {
           setMapError("The map could not draw this layout. Showing your plot layout instead.");
         }
       });
-      map.on("load", () => {
+      // "style.load" fires both on the very first style load AND after every future
+      // map.setStyle() call (the basemap toggle) - re-adding the layers here (instead of only in
+      // a one-shot "load" handler) means switching Map/Satellite never loses the plot layers.
+      map.on("style.load", () => {
         mapLoaded = true;
         window.clearTimeout(mapLoadTimeout);
         map.resize();
-        map.addSource("estate-boundary", { type: "geojson", data: { type: "FeatureCollection", features: [] } as any });
-        map.addLayer({ id: "estate-boundary-fill", type: "fill", source: "estate-boundary", paint: { "fill-color": "#8bb59a", "fill-opacity": 0.08 } });
-        map.addLayer({ id: "estate-boundary-outline", type: "line", source: "estate-boundary", paint: { "line-color": "#087f76", "line-width": 2, "line-dasharray": [2, 2] } });
-        map.addSource("estate-plots", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-        map.addLayer({
-          id: "estate-plots-fill",
-          type: "fill",
-          source: "estate-plots",
-          paint: {
-            "fill-color": [
-              "match",
-              ["get", "commercial_status"],
-              "available", STATUS_COLORS.available,
-              "reserved", STATUS_COLORS.reserved,
-              "allocated", STATUS_COLORS.allocated,
-              "on_hold", STATUS_COLORS.on_hold,
-              STATUS_COLORS.on_hold,
-            ],
-            "fill-opacity": mapStyleMode === "satellite" ? 0.62 : 0.5,
-          },
-        });
-        map.addLayer({ id: "estate-plots-outline", type: "line", source: "estate-plots", paint: { "line-color": "#ffffff", "line-width": 1.4 } });
-        map.addSource("estate-layers", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-        map.addLayer({ id: "estate-layers-line", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "road", "#2b2f36", "drainage", "#287cb4", "#b77c2d"], "line-width": 3 } });
-        map.addLayer({ id: "estate-layers-fill", type: "fill", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": ["match", ["get", "type"], "open_space", "#78a85d", "infrastructure", "#b77c2d", "#287cb4"], "fill-opacity": 0.35 } });
-        map.addSource("estate-block-labels", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-        map.addLayer({
-          id: "estate-block-labels",
-          type: "symbol",
-          source: "estate-block-labels",
-          layout: { "text-field": ["get", "label"], "text-size": 11, "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"] },
-          paint: { "text-color": "#ffffff", "text-halo-color": "rgba(16,24,39,0.85)", "text-halo-width": 3 },
-        });
-        map.addSource("estate-plot-labels", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-        map.addLayer({
-          id: "estate-plot-labels",
-          type: "symbol",
-          source: "estate-plot-labels",
-          minzoom: 15,
-          layout: { "text-field": ["get", "label"], "text-size": 10, "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"] },
-          paint: { "text-color": ["case", ["get", "isCustomer"], "#ffffff", "#0f1e17"], "text-halo-color": ["case", ["get", "isCustomer"], "rgba(16,24,39,0.85)", "rgba(255,255,255,0.85)"], "text-halo-width": 2 },
-        });
-        const openPlotDrawer = (id: number) => {
-          setSelectedPlotId(id);
-          setDrawerTab("overview");
-          const allocation = mapInteractionRef.current.allocations.find((item) => item.plot_id === id);
-          if (allocation) mapInteractionRef.current.selectAllocation(String(allocation.id));
-          else { setAllocationId(""); setFinancial(null); }
-        };
-        map.on("click", "estate-plots-fill", (event: any) => {
-          const id = Number(event.features?.[0]?.properties?.id);
-          const properties = event.features?.[0]?.properties || {};
-          const allocation = mapInteractionRef.current.allocations.find((item) => item.plot_id === id);
-          const container = document.createElement("div");
-          container.className = "edash-map-popup";
-          const title = document.createElement("strong");
-          title.textContent = properties.plot_number || "";
-          const status = document.createElement("span");
-          status.className = "edash-map-popup-status";
-          status.textContent = String(properties.commercial_status || "").replaceAll("_", " ");
-          const customerLine = document.createElement("p");
-          customerLine.textContent = allocation ? allocation.customer_name : "No customer yet";
-          container.append(title, status, customerLine);
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "edash-btn-primary edash-map-popup-btn";
-          button.textContent = "More details";
-          const popup = new mapboxgl.Popup({ closeButton: true, closeOnClick: true, offset: 12, maxWidth: "220px" })
-            .setLngLat(event.lngLat)
-            .setDOMContent(container)
-            .addTo(map);
-          button.onclick = () => { openPlotDrawer(id); popup.remove(); };
-          container.appendChild(button);
-        });
-        map.on("contextmenu", "estate-plots-fill", (event: any) => {
-          event.preventDefault();
-          event.originalEvent?.preventDefault();
-          const id = Number(event.features?.[0]?.properties?.id);
-          if (!Number.isFinite(id)) return;
-          setPlotContextMenu({ x: event.originalEvent.clientX, y: event.originalEvent.clientY, plotId: id });
-        });
-        map.on("mouseenter", "estate-plots-fill", () => { map.getCanvas().style.cursor = "pointer"; });
-        map.on("mouseleave", "estate-plots-fill", () => { map.getCanvas().style.cursor = ""; });
+        attachEstateMapLayers(map);
+        if (!handlersAttached) {
+          handlersAttached = true;
+          const openPlotDrawer = (id: number) => {
+            setSelectedPlotId(id);
+            setDrawerTab("overview");
+            const allocation = mapInteractionRef.current.allocations.find((item) => item.plot_id === id);
+            if (allocation) mapInteractionRef.current.selectAllocation(String(allocation.id));
+            else { setAllocationId(""); setFinancial(null); }
+          };
+          map.on("click", "estate-plots-fill", (event: any) => {
+            const id = Number(event.features?.[0]?.properties?.id);
+            const properties = event.features?.[0]?.properties || {};
+            const allocation = mapInteractionRef.current.allocations.find((item) => item.plot_id === id);
+            const container = document.createElement("div");
+            container.className = "edash-map-popup";
+            const title = document.createElement("strong");
+            title.textContent = properties.plot_number || "";
+            const status = document.createElement("span");
+            status.className = "edash-map-popup-status";
+            status.textContent = String(properties.commercial_status || "").replaceAll("_", " ");
+            const customerLine = document.createElement("p");
+            customerLine.textContent = allocation ? allocation.customer_name : "No customer yet";
+            container.append(title, status, customerLine);
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "edash-btn-primary edash-map-popup-btn";
+            button.textContent = "More details";
+            const popup = new mapboxgl.Popup({ closeButton: true, closeOnClick: true, offset: 12, maxWidth: "220px" })
+              .setLngLat(event.lngLat)
+              .setDOMContent(container)
+              .addTo(map);
+            button.onclick = () => { openPlotDrawer(id); popup.remove(); };
+            container.appendChild(button);
+          });
+          map.on("contextmenu", "estate-plots-fill", (event: any) => {
+            event.preventDefault();
+            event.originalEvent?.preventDefault();
+            const id = Number(event.features?.[0]?.properties?.id);
+            if (!Number.isFinite(id)) return;
+            setPlotContextMenu({ x: event.originalEvent.clientX, y: event.originalEvent.clientY, plotId: id });
+          });
+          map.on("mouseenter", "estate-plots-fill", () => { map.getCanvas().style.cursor = "pointer"; });
+          map.on("mouseleave", "estate-plots-fill", () => { map.getCanvas().style.cursor = ""; });
+        }
         setMapReady(true);
+        setStyleGeneration((value) => value + 1);
       });
     });
     return () => { cancelled = true; window.clearTimeout(mapLoadTimeout); (mapRef.current as any)?._edashResizeObserver?.disconnect(); mapRef.current?.remove(); mapRef.current = null; setMapReady(false); };
-  }, [estateId, mapStyleMode]);
+  }, [estateId]);
 
-  // Keeps the already-built map's sources in sync whenever the underlying data changes, without
-  // ever destroying/recreating the mapboxgl.Map instance itself.
+  // Keeps the already-built map's sources in sync whenever the underlying data (or a style
+  // reload, which wipes custom sources/layers) changes, without ever destroying/recreating the
+  // mapboxgl.Map instance itself.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
@@ -845,7 +860,7 @@ export default function Estates() {
       if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 46, maxZoom: 17 });
     });
     return () => { cancelled = true; };
-  }, [mapReady, mapBoundary, mapPlotGeojson, layerGeojson, allocations, blocks, layersVisible]);
+  }, [mapReady, styleGeneration, mapBoundary, mapPlotGeojson, layerGeojson, allocations, blocks, layersVisible]);
   const selectAllocation = async (id: string) => {
     setAllocationId(id); setFinancial(null);
     if (!id) return;
@@ -1064,8 +1079,8 @@ export default function Estates() {
       <div className="edash-card edash-map-card">
         <div className="edash-map-toolbar">
           <div className="edash-map-mode-tabs">
-            <button type="button" className={`edash-map-mode-tab${mapStyleMode === "map" ? " active" : ""}`} onClick={() => setMapStyleMode("map")}>Map</button>
-            <button type="button" className={`edash-map-mode-tab${mapStyleMode === "satellite" ? " active" : ""}`} onClick={() => setMapStyleMode("satellite")}>Satellite</button>
+            <button type="button" className={`edash-map-mode-tab${mapStyleMode === "map" ? " active" : ""}`} onClick={() => { setMapStyleMode("map"); mapRef.current?.setStyle("mapbox://styles/mapbox/light-v11"); }}>Map</button>
+            <button type="button" className={`edash-map-mode-tab${mapStyleMode === "satellite" ? " active" : ""}`} onClick={() => { setMapStyleMode("satellite"); mapRef.current?.setStyle("mapbox://styles/mapbox/satellite-streets-v12"); }}>Satellite</button>
             <button type="button" className={`edash-map-mode-tab${layersVisible ? " active" : ""}`} onClick={() => setLayersVisible((value) => !value)} title="Toggle roads, drainage and open space">Layers</button>
           </div>
           <label className="edash-map-search">
