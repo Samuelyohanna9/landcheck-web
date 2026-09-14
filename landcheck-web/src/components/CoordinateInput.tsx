@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, useState } from "react";
+import { memo, useMemo, useRef, useState, type ReactNode } from "react";
 import toast from "react-hot-toast";
 import { api } from "../api/client";
 import "../styles/coordinate-input.css";
@@ -99,6 +99,9 @@ type CoordinateSystem = {
 };
 
 type Props = {
+  sidebar?: ReactNode;
+  title?: string;
+  subtitle?: string;
   points: ManualPoint[];
   onUpdatePoint: (index: number, key: keyof ManualPoint, value: string | number | boolean) => void;
   onRemovePoint: (index: number) => void;
@@ -168,6 +171,9 @@ const getPlaceholders = (system: string): { x: string; y: string } => {
 };
 
 function CoordinateInput({
+  sidebar,
+  title,
+  subtitle,
   points,
   onUpdatePoint,
   onRemovePoint,
@@ -697,9 +703,10 @@ function CoordinateInput({
   return (
     <div className="coord-input-container">
       <div className="coord-header">
-        <h3 className="coord-title">Add boundary coordinates</h3>
-        <p className="coord-subtitle">Choose how you want to provide the survey coordinates.</p>
+        <h3 className="coord-title">{title || "Add boundary coordinates"}</h3>
+        <p className="coord-subtitle">{subtitle || "Choose how you want to provide the coordinates."}</p>
       </div>
+      {sidebar}
 
       <div className="coord-system-selector">
         <label className="coord-system-label" htmlFor="coord-system-select">
