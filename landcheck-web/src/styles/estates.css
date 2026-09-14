@@ -209,6 +209,40 @@
 .estate-app > .estate-create.estate-setup, .estate-app > .estate-grid, .estate-app > .estates-message { order: 3; }
 .estate-app > .estate-create.estate-allocation-action { grid-column: 2; order: 5; }
 .estate-app > .estate-create.estate-plot-import, .estate-app > .estate-create.estate-block-editor, .estate-app > .estate-create.estate-layer-editor { order: 6; }
+.estate-app > .estate-create.estate-setup { display: none; }
+.estate-app > .estate-existing-chooser { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 390px); align-items: end; gap: 18px; order: 3; margin: 0; padding: 22px 25px; border: 1px solid var(--workspace-line); border-radius: 18px; background: rgba(255,255,252,.9); box-shadow: 0 12px 30px rgba(16,45,43,.05); }
+.estate-existing-chooser h2 { margin: 4px 0 6px; color: var(--workspace-ink); font: 600 1.55rem Georgia, "Times New Roman", serif; letter-spacing: -.04em; }
+.estate-existing-chooser p:not(.workflow-eyebrow) { margin: 0; color: var(--workspace-muted); font-size: .82rem; }
+.estate-existing-chooser label { display: grid; gap: 7px; color: var(--workspace-ink); font: 800 .68rem "DM Sans", "Segoe UI", sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.estate-existing-chooser select { min-height: 46px; padding: 11px 13px; border: 1px solid var(--workspace-line); border-radius: 9px; background: #fff; color: var(--workspace-ink); font: .86rem "DM Sans", "Segoe UI", sans-serif; letter-spacing: normal; text-transform: none; }
+.estate-app > .estate-setup-simple { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; order: 3; padding: 28px; }
+.estate-setup-simple > label { display: grid; grid-column: span 4; gap: 7px; color: #dff0d8; font: 800 .68rem "DM Sans", "Segoe UI", sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.estate-setup-simple > label input, .estate-setup-simple > label select, .estate-setup-simple > label textarea { width: 100%; min-height: 48px; padding: 13px 14px; border: 1px solid rgba(223, 240, 216, .42); border-radius: 10px; background: rgba(248, 250, 239, .98); color: #173b31; font: 400 .88rem "DM Sans", "Segoe UI", sans-serif; letter-spacing: normal; text-transform: none; }
+.estate-setup-simple > label span { color: rgba(239,246,232,.65); font-size: .65rem; font-weight: 500; letter-spacing: normal; text-transform: none; }
+.estate-setup-simple > .estate-boundary-field { grid-column: span 6; }
+.estate-setup-simple > .estate-boundary-field textarea { min-height: 106px; resize: vertical; }
+.estate-setup-simple > details { grid-column: 1 / -1; border-top: 1px solid rgba(223, 240, 216, .2); padding-top: 14px; color: #dff0d8; }
+.estate-setup-simple > details summary { width: fit-content; color: #f0c66f; cursor: pointer; font: 800 .72rem "DM Sans", "Segoe UI", sans-serif; }
+.estate-setup-simple > details > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.estate-setup-simple > details label { display: grid; gap: 6px; color: rgba(239,246,232,.74); font: 700 .68rem "DM Sans", "Segoe UI", sans-serif; }
+.estate-setup-simple > details label input, .estate-setup-simple > details label textarea { min-height: 42px; padding: 10px; border: 1px solid rgba(223, 240, 216, .28); border-radius: 8px; background: rgba(248, 250, 239, .98); color: #173b31; font: .82rem "DM Sans", "Segoe UI", sans-serif; }
+.estate-setup-simple > details label:last-child { grid-column: span 2; }
+.estate-setup-simple > button { grid-column: span 2; min-height: 48px; align-self: end; }
+.estate-plot-input-panel { display: grid; grid-template-columns: minmax(180px, 250px) minmax(0, 1fr); gap: 18px; grid-column: 1 / -1; order: 6; margin: 0; padding: 24px; border: 1px solid rgba(8, 127, 118, .22); border-radius: 20px; background: rgba(255, 255, 252, .92); box-shadow: 0 14px 38px rgba(16,45,43,.07); }
+.estate-plot-input-panel > div:first-child { grid-column: 1 / -1; }
+.estate-plot-input-panel h2 { margin: 4px 0 7px; color: var(--workspace-ink); font: 600 clamp(1.5rem, 2.4vw, 2.1rem) Georgia, "Times New Roman", serif; letter-spacing: -.045em; }
+.estate-plot-input-panel p { max-width: 760px; margin: 0; color: var(--workspace-muted); line-height: 1.55; }
+.estate-plot-input-panel > label { display: grid; align-content: start; gap: 7px; color: var(--workspace-ink); font: 800 .7rem "DM Sans", "Segoe UI", sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.estate-plot-input-panel > label input { min-height: 44px; padding: 11px 12px; border: 1px solid var(--workspace-line); border-radius: 9px; background: #fff; color: var(--workspace-ink); font: .88rem "DM Sans", "Segoe UI", sans-serif; letter-spacing: normal; text-transform: none; }
+.estate-plot-input-panel > .coord-input-container { grid-column: 1 / -1; width: 100%; min-width: 0; }
+.estate-app > .estate-create.estate-plot-import:has(~ .estate-create.estate-plot-import) { display: none; }
+.estate-coordinate-context { display: grid; gap: 5px; padding: 10px 0; color: var(--workspace-ink); }
+.estate-coordinate-context strong { font: 800 .75rem "DM Sans", "Segoe UI", sans-serif; text-transform: uppercase; letter-spacing: .08em; }
+.estate-coordinate-context span { color: var(--workspace-muted); font-size: .78rem; font-weight: 500; letter-spacing: normal; text-transform: none; }
+.estate-plot-create-button { grid-column: 1 / -1; justify-self: start; min-height: 46px; padding: 12px 22px; border: 0; border-radius: 10px; background: #e7b75e; color: #18362e; font: 800 .76rem "DM Sans", "Segoe UI", sans-serif; cursor: pointer; }
+.estate-plot-create-button:hover:not(:disabled) { background: #f4ce82; transform: translateY(-1px); }
+.estate-plot-create-button:disabled { background: #d9dfd7; color: #738178; cursor: not-allowed; }
+.estate-plot-input-panel .coord-input-container { border-color: rgba(8,127,118,.2); box-shadow: 0 14px 28px rgba(16,45,43,.1); }
 @media (max-width: 980px) {
   .estates-shell { grid-template-columns: 205px minmax(0, 1fr); }
   .estates-shell > .estate-sidebar { width: 205px; }
@@ -239,9 +273,18 @@
   .estate-app > .estate-map-panel { grid-column: 1; grid-row: auto; min-height: 0; }
   .estate-app > .estate-metrics { grid-column: 1; grid-row: auto; }
   .estate-app > .estate-plot-record, .estate-app > .estate-allocation-panel, .estate-app > .estate-workflow-panel, .estate-app > .estate-create.estate-allocation-action { grid-column: 1; grid-row: auto; }
+  .estate-setup-simple > label, .estate-setup-simple > .estate-boundary-field { grid-column: span 6; }
+  .estate-setup-simple > details > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .estate-plot-input-panel { grid-template-columns: 1fr; }
   .estate-app > .estate-map-panel .estate-map, .estate-app > .estate-map-panel .estate-map-fallback { min-height: 390px; height: 62vw; }
   .estates-toolbar { align-items: flex-start; flex-direction: column; gap: 14px; }
   .estate-create, .estate-setup { grid-template-columns: 1fr; padding: 22px; }
+  .estate-setup-simple { grid-template-columns: 1fr; }
+  .estate-app > .estate-existing-chooser { grid-template-columns: 1fr; align-items: stretch; }
+  .estate-setup-simple > label, .estate-setup-simple > .estate-boundary-field, .estate-setup-simple > button { grid-column: 1; }
+  .estate-setup-simple > details > div { grid-template-columns: 1fr; }
+  .estate-setup-simple > details label:last-child { grid-column: 1; }
+  .estate-plot-input-panel { padding: 16px; }
   .estate-setup > select, .estate-setup > input, .estate-setup > textarea, .estate-setup > button { grid-column: 1; }
   .estate-create > div { grid-column: 1; }
   .estate-map-panel { grid-template-columns: 1fr; }
