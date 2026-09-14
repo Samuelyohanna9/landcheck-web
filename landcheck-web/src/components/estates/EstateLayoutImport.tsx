@@ -24,6 +24,7 @@ type Props = {
   onOpenGeoreference: (sessionId: string) => void;
   onImportFromGeoreference: (reviewId: number) => void;
   message?: string;
+  messageTone?: "good" | "danger";
   busy?: boolean;
 };
 
@@ -87,7 +88,7 @@ function InvalidRowsList({ review }: { review: ImportReview }) {
   );
 }
 
-export default function EstateLayoutImport({ method, reviews, files, onFileChange, onUpload, onDecision, onStartGeoreference, onOpenGeoreference, onImportFromGeoreference, message, busy = false }: Props) {
+export default function EstateLayoutImport({ method, reviews, files, onFileChange, onUpload, onDecision, onStartGeoreference, onOpenGeoreference, onImportFromGeoreference, message, messageTone = "good", busy = false }: Props) {
   const latest = reviews[0];
   const usableCount = latest?.candidates?.filter((candidate) => candidate.valid !== false && candidate.geometry?.type === "Polygon").length || 0;
   const selectedMethod = LAYOUT_IMPORT_METHODS.find((item) => item.key === method) || LAYOUT_IMPORT_METHODS[0];
@@ -139,7 +140,7 @@ export default function EstateLayoutImport({ method, reviews, files, onFileChang
           </div>
         )}
 
-        {message && <p className="edash-tab-empty" style={{ padding: "8px 0", textAlign: "left" }}>{message}</p>}
+        {message && <p className={`edash-banner tone-${messageTone}`} style={{ margin: "10px 0" }} role="status">{message}</p>}
 
         {latest && !isGeoreferenceMethod && (
           <div className="edash-info-card" style={{ flexDirection: "column", marginTop: 14 }}>
