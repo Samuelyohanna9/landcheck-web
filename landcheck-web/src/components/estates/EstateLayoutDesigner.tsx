@@ -21,6 +21,7 @@ type Props = {
   proposal: any | null;
   busy?: boolean;
   message?: string;
+  messageTone?: "good" | "danger";
   onGenerate: (criteria: LayoutCriteria) => void;
   onDecision: (proposalId: number, status: "approved" | "rejected") => void;
 };
@@ -81,7 +82,7 @@ function LayoutPreview({ proposal }: { proposal: any }) {
   );
 }
 
-export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy = false, message, onGenerate, onDecision }: Props) {
+export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy = false, message, messageTone = "good", onGenerate, onDecision }: Props) {
   const [criteria, setCriteria] = useState<LayoutCriteria>(DEFAULT_CRITERIA);
   const [open, setOpen] = useState(false);
   const setNumber = (key: keyof LayoutCriteria, value: string) => setCriteria((current) => ({ ...current, [key]: Number(value) }));
@@ -119,7 +120,7 @@ export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy =
           </details>
         )}
 
-        {message && <p className="edash-tab-empty" style={{ textAlign: "left", padding: "4px 0" }}>{message}</p>}
+        {message && <p className={`edash-banner tone-${messageTone}`} style={{ margin: "4px 0 10px" }} role="status">{message}</p>}
 
         {proposal && (
           <div className="edash-info-card" style={{ flexDirection: "column" }}>

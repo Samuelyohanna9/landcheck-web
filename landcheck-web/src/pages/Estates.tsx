@@ -30,6 +30,13 @@ const IMPORT_CRS_OPTIONS = COORDINATE_SYSTEM_GROUPS.flatMap((group) =>
   group.systems.filter((system) => !system.epsgLabel.includes("/")).map((system) => ({ value: system.epsgLabel, label: `${system.name} (${system.epsgLabel})` }))
 );
 
+type MessageTone = "good" | "danger";
+
+function StatusBanner({ text, tone = "good" }: { text: string; tone?: MessageTone }) {
+  if (!text) return null;
+  return <p className={`edash-banner tone-${tone}`} style={{ margin: "10px 0" }} role="status">{text}</p>;
+}
+
 function relativeTime(value: string) {
   const then = new Date(value).getTime();
   if (!Number.isFinite(then)) return "";
@@ -133,11 +140,17 @@ export default function Estates() {
   const [scannedLayoutFile, setScannedLayoutFile] = useState<File | null>(null);
   const [importSourceCrs, setImportSourceCrs] = useState("EPSG:4326");
   const [layoutUploadBusy, setLayoutUploadBusy] = useState(false);
-  const [layoutMessage, setLayoutMessage] = useState("");
+  const [layoutMessage, setLayoutMessageRaw] = useState("");
+  const [layoutMessageTone, setLayoutMessageTone] = useState<MessageTone>("good");
+  const setLayoutMessage = (text: string, tone: MessageTone = "good") => { setLayoutMessageRaw(text); setLayoutMessageTone(tone); };
   const [layoutProposal, setLayoutProposal] = useState<any>(null);
   const [layoutDesignerBusy, setLayoutDesignerBusy] = useState(false);
-  const [layoutDesignerMessage, setLayoutDesignerMessage] = useState("");
-  const [message, setMessage] = useState("Loading estates...");
+  const [layoutDesignerMessage, setLayoutDesignerMessageRaw] = useState("");
+  const [layoutDesignerMessageTone, setLayoutDesignerMessageTone] = useState<MessageTone>("good");
+  const setLayoutDesignerMessage = (text: string, tone: MessageTone = "good") => { setLayoutDesignerMessageRaw(text); setLayoutDesignerMessageTone(tone); };
+  const [message, setMessageRaw] = useState("Loading estates...");
+  const [messageTone, setMessageTone] = useState<MessageTone>("good");
+  const setMessage = (text: string, tone: MessageTone = "good") => { setMessageRaw(text); setMessageTone(tone); };
   const [allocations, setAllocations] = useState<any[]>([]);
   const [plots, setPlots] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
@@ -148,7 +161,9 @@ export default function Estates() {
   const [financial, setFinancial] = useState<any>(null);
   const [surveyRequests, setSurveyRequests] = useState<any[]>([]);
   const [stakingTasks, setStakingTasks] = useState<any[]>([]);
-  const [workflowMessage, setWorkflowMessage] = useState("");
+  const [workflowMessage, setWorkflowMessageRaw] = useState("");
+  const [workflowMessageTone, setWorkflowMessageTone] = useState<MessageTone>("good");
+  const setWorkflowMessage = (text: string, tone: MessageTone = "good") => { setWorkflowMessageRaw(text); setWorkflowMessageTone(tone); };
   const [stakingEvidence, setStakingEvidence] = useState<File | null>(null);
   const [plotGeojson, setPlotGeojson] = useState<any>({ type: "FeatureCollection", features: [] });
   const [layerGeojson, setLayerGeojson] = useState<any>({ type: "FeatureCollection", features: [] });
@@ -167,6 +182,7 @@ export default function Estates() {
   const [activeTool, setActiveTool] = useState<"add-plot" | "layout" | "blocks" | "layers" | "qc" | null>(null);
   type AddPlotMethod = "draw" | "coordinates" | EstateLayoutMethod;
   const [addPlotMethod, setAddPlotMethod] = useState<AddPlotMethod>("draw");
+  const [designSubdividePlotId, setDesignSubdividePlotId] = useState<number | null>(null);
   const [plotDocumentFile, setPlotDocumentFile] = useState<File | null>(null);
   const [plotDocumentBusy, setPlotDocumentBusy] = useState(false);
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -199,20 +215,20 @@ export default function Estates() {
         }));
         setEstates(enriched); setMessage(rows.length ? "" : "No estates yet. Create your first estate to get started.");
       })
-      .catch(async (error) => setMessage(await extractApiErrorMessage(error, "Estates are not available for this account.")));
+      .catch(async (error) => setMessage(await extractApiErrorMessage(error, "Estates are not available for this account."), "danger"));
   }, []);
   const createEstate = async () => {
-    if (!newEstateOrg || !newEstateName.trim()) { setMessage("Choose an organization and enter an Estate name."); return; }
+    if (!newEstateOrg || !newEstateName.trim()) { setMessage("Choose an organization and enter an Estate name.", "danger"); return; }
     const boundaryRows = parseCoordinateRows(newEstateBoundaryCoordinates);
-    if (newEstateBoundaryCoordinates.trim() && boundaryRows.length < 3) { setMessage("The Estate boundary needs at least three valid longitude, latitude rows."); return; }
+    if (newEstateBoundaryCoordinates.trim() && boundaryRows.length < 3) { setMessage("The Estate boundary needs at least three valid longitude, latitude rows.", "danger"); return; }
     const boundary = boundaryRows.length >= 3 ? { type: "Polygon", coordinates: [[...boundaryRows, boundaryRows[0]]] } : null;
     try { const response=await api.post(`/estates/organizations/${newEstateOrg}`, { name:newEstateName.trim(), location_text:newEstateLocation.trim() || null, crs:newEstateCrs.trim() || "EPSG:4326", datum:newEstateDatum.trim() || null, project_reference:newEstateProjectReference.trim() || null, project_owner:newEstateProjectOwner.trim() || null, ownership_details:newEstateOwnershipDetails.trim() || null, boundary }); window.location.assign(`/estates/${response.data.id}/map`); }
-    catch (error) { setMessage(await extractApiErrorMessage(error, "Estate could not be created.")); }
+    catch (error) { setMessage(await extractApiErrorMessage(error, "Estate could not be created."), "danger"); }
   };
   const approveEstateMap = async () => {
     if (!estateId) return;
     try { const response = await api.post(`/estates/${estateId}/approve-map`); setDashboard((current: any) => current ? { ...current, estate: { ...current.estate, status: response.data.status } } : current); setWorkflowMessage("Estate map approved and published as the operational plot register."); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Resolve the geometry issues before publishing the Estate map.")); }
+    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Resolve the geometry issues before publishing the Estate map."), "danger"); }
   };
   const updatePlotInputPoint = (index: number, field: string, value: string | number | boolean) => {
     setPlotInputPoints((current) => current.map((point, pointIndex) => pointIndex === index ? { ...point, [field]: value } : point));
@@ -229,7 +245,8 @@ export default function Estates() {
     const reordered = order.map((index) => plotInputPoints[index]);
     const reorderedMapPoints = order.map((index) => plotInputMapPoints[index]);
     setPlotInputPoints(reordered);
-    setWorkflowMessage(checkPolygonClosure(reorderedMapPoints.map((point) => [point.lng, point.lat] as [number, number])) === "closed" ? "Point order corrected. Review the boundary, then create the plot." : "The points still cross. Edit the point order manually before creating the plot.");
+    const closed = checkPolygonClosure(reorderedMapPoints.map((point) => [point.lng, point.lat] as [number, number])) === "closed";
+    setWorkflowMessage(closed ? "Point order corrected. Review the boundary, then create the plot." : "The points still cross. Edit the point order manually before creating the plot.", closed ? "good" : "danger");
   };
   const handlePlotCoordinatesDrawn = (points: Array<{ station: string; lng: number; lat: number }>) => {
     setPlotInputCoordinateSystem("wgs84");
@@ -240,37 +257,41 @@ export default function Estates() {
     setPlotInputPoints(points.map((point, index) => ({ ...point, station: point.station || `P${index + 1}`, is_boundary: true })));
   };
   const createPlotFromInput = async () => {
-    if (!estateId || !plotNumber.trim()) { setWorkflowMessage("Enter a plot number first."); return; }
-    if (plotInputPoints.length < 3) { setWorkflowMessage("Add at least three boundary points or import a coordinate file."); return; }
+    if (!estateId || !plotNumber.trim()) { setWorkflowMessage("Enter a plot number first.", "danger"); return; }
+    if (plotInputPoints.length < 3) { setWorkflowMessage("Add at least three boundary points or import a coordinate file.", "danger"); return; }
     const ring = plotInputMapPoints.map((point) => [point.lng, point.lat]);
-    if (ring.length < 3 || ring.some((point) => point.some((value) => !Number.isFinite(value)))) { setWorkflowMessage("Check the coordinate values before creating this plot."); return; }
-    if (plotInputClosure === "self-intersecting") { setWorkflowMessage("Order the boundary points before creating the plot."); return; }
+    if (ring.length < 3 || ring.some((point) => point.some((value) => !Number.isFinite(value)))) { setWorkflowMessage("Check the coordinate values before creating this plot.", "danger"); return; }
+    if (plotInputClosure === "self-intersecting") { setWorkflowMessage("Order the boundary points before creating the plot.", "danger"); return; }
     try { await api.post(`/estates/${estateId}/plots`, { plot_number: plotNumber.trim(), geometry: { type: "Polygon", coordinates: [[...ring, ring[0]]] }, geometry_status: "approved" }); window.location.reload(); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Plot could not be created.")); }
+    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Plot could not be created."), "danger"); }
   };
-  const subdividePlot = async () => {
-    if (!estateId || !selectedPlot) return;
+  const subdividePlotById = async (plotId: number) => {
+    if (!estateId) return;
     const splitCount = Number(subdivisionCount);
     if (!Number.isInteger(splitCount) || splitCount < 2 || splitCount > 100) {
-      setWorkflowMessage("Choose between 2 and 100 new plots.");
+      setWorkflowMessage("Choose between 2 and 100 new plots.", "danger");
       return;
     }
     setSubdivisionBusy(true);
     try {
-      const response = await api.post(`/estates/${estateId}/plots/${selectedPlot.id}/subdivide`, { split_count: splitCount });
+      const response = await api.post(`/estates/${estateId}/plots/${plotId}/subdivide`, { split_count: splitCount });
       setWorkflowMessage(`${response.data.created_count} plots created. They are ready to reserve or allocate.`);
       window.location.reload();
     } catch (error) {
-      setWorkflowMessage(await extractApiErrorMessage(error, "This plot could not be split."));
+      setWorkflowMessage(await extractApiErrorMessage(error, "This plot could not be split."), "danger");
     } finally {
       setSubdivisionBusy(false);
     }
+  };
+  const subdividePlot = async () => {
+    if (!selectedPlot) return;
+    await subdividePlotById(selectedPlot.id);
   };
   const splitBoundaryIntoPlots = async () => {
     if (!estateId || !estateDetail?.boundary) return;
     const splitCount = Number(subdivisionCount);
     if (!Number.isInteger(splitCount) || splitCount < 2 || splitCount > 200) {
-      setWorkflowMessage("Choose between 2 and 200 new plots.");
+      setWorkflowMessage("Choose between 2 and 200 new plots.", "danger");
       return;
     }
     setSubdivisionBusy(true);
@@ -280,46 +301,46 @@ export default function Estates() {
       setWorkflowMessage(`${response.data.created_count} plots created from the boundary. They are ready to reserve or allocate.`);
       window.location.reload();
     } catch (error) {
-      setWorkflowMessage(await extractApiErrorMessage(error, "The boundary could not be split into plots."));
+      setWorkflowMessage(await extractApiErrorMessage(error, "The boundary could not be split into plots."), "danger");
     } finally {
       setSubdivisionBusy(false);
     }
   };
   const createCustomer = async () => {
     const estate = estates.find((item) => item.id === Number(estateId));
-    if (!estate || !customerName.trim()) { setMessage("Enter the customer name."); return; }
+    if (!estate || !customerName.trim()) { setMessage("Enter the customer name.", "danger"); return; }
     try { const response = await api.post(`/estates/organizations/${estate.organization_id}/customers`, { full_name: customerName.trim(), phone: customerPhone.trim() || null }); setSelectedCustomerId(String(response.data.id)); setCustomerName(""); setCustomerPhone(""); window.location.reload(); }
-    catch (error) { setMessage(await extractApiErrorMessage(error, "Customer could not be created.")); }
+    catch (error) { setMessage(await extractApiErrorMessage(error, "Customer could not be created."), "danger"); }
   };
   const assignCustomer = async (allocate: boolean) => {
-    if (!estateId || !selectedPlot || !selectedCustomerId) { setMessage("Choose a parcel and customer first."); return; }
+    if (!estateId || !selectedPlot || !selectedCustomerId) { setMessage("Choose a parcel and customer first.", "danger"); return; }
     try { await api.post(`/estates/${estateId}/plots/${selectedPlot.id}/${allocate ? "allocate" : "reserve"}`, { customer_id: Number(selectedCustomerId), agreed_price: agreedPrice ? Number(agreedPrice) : null, payment_plan: paymentPlan.trim() || null }); window.location.reload(); }
-    catch (error) { setMessage(await extractApiErrorMessage(error, "Parcel action could not be completed.")); }
+    catch (error) { setMessage(await extractApiErrorMessage(error, "Parcel action could not be completed."), "danger"); }
   };
   const recordInspection = async () => {
     if (!selectedPlot) return;
     try { await api.post(`/estates/plots/${selectedPlot.id}/inspections`, { inspection_type: "site_visit", outcome: inspectionOutcome, notes: inspectionNotes || null }); setInspectionNotes(""); setWorkflowMessage("Field inspection recorded."); setInspections((await api.get(`/estates/plots/${selectedPlot.id}/inspections`)).data); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Inspection could not be recorded.")); }
+    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Inspection could not be recorded."), "danger"); }
   };
   useEffect(() => { const plot = plots.find((item) => item.id === selectedPlotId); if (!plot) { setInspections([]); return; } api.get(`/estates/plots/${plot.id}/inspections`).then((response) => setInspections(response.data || [])).catch(() => setInspections([])); }, [plots, selectedPlotId]);
   const loadHazards = async () => {
     if (!selectedPlot) return;
     try { const response = await api.post(`/estates/plots/${selectedPlot.id}/hazards/assess`); setHazards(response.data); if (estateId) setHazardDashboard((await api.get(`/estates/${estateId}/hazards`)).data); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Hazard screening could not be loaded.")); }
+    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Hazard screening could not be loaded."), "danger"); }
   };
   const createLayer = async () => {
     if (!estateId) return;
     const coordinates=layerCoordinates.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => line.split(/[\s,]+/).map(Number)).filter((point) => point.length >= 2 && point.every(Number.isFinite)).map(([lng,lat]) => [lng,lat]);
-    if (coordinates.length < 2) { setWorkflowMessage("Enter at least two longitude, latitude rows for the layer."); return; }
+    if (coordinates.length < 2) { setWorkflowMessage("Enter at least two longitude, latitude rows for the layer.", "danger"); return; }
     const polygon=layerType === "open_space";
     const geometry=polygon ? {type:"Polygon",coordinates:[[...coordinates,coordinates[0]]]} : {type:"LineString",coordinates};
     try { await api.post(`/estates/${estateId}/layers`, {feature_type:layerType,name:layerName || null,geometry}); window.location.reload(); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error,"Layer could not be saved.")); }
+    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error,"Layer could not be saved."), "danger"); }
   };
   const createBlock = async () => {
-    if (!estateId || !blockLabel.trim()) { setWorkflowMessage("Enter a block label first."); return; }
+    if (!estateId || !blockLabel.trim()) { setWorkflowMessage("Enter a block label first.", "danger"); return; }
     try { const response = await api.post(`/estates/${estateId}/blocks`, { label: blockLabel.trim(), name: blockName.trim() || null }); setBlocks((current) => [...current, response.data]); setBlockLabel(""); setBlockName(""); setWorkflowMessage("Block added to the estate register."); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Block could not be saved.")); }
+    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Block could not be saved."), "danger"); }
   };
   const refreshImportReviews = async () => {
     if (!estateId) return;
@@ -328,7 +349,7 @@ export default function Estates() {
   const uploadLayout = async (kind: "csv" | "geojson" | "dxf" | "scanned-layout") => {
     if (!estateId) return;
     const selected = kind === "csv" ? csvFile : kind === "geojson" ? geojsonFile : kind === "dxf" ? dxfFile : scannedLayoutFile;
-    if (!selected) { setLayoutMessage("Choose a file before uploading."); return; }
+    if (!selected) { setLayoutMessage("Choose a file before uploading.", "danger"); return; }
     const form = new FormData(); form.append("file", selected);
     setLayoutUploadBusy(true);
     setLayoutMessage("");
@@ -337,7 +358,7 @@ export default function Estates() {
       await api.post(`/estates/${estateId}/import-reviews/${kind}`, form, { params });
       await refreshImportReviews();
       setLayoutMessage("Your layout is ready to review below.");
-    } catch (error) { setLayoutMessage(await extractApiErrorMessage(error, "Layout import could not be uploaded.")); }
+    } catch (error) { setLayoutMessage(await extractApiErrorMessage(error, "Layout import could not be uploaded."), "danger"); }
     finally { setLayoutUploadBusy(false); }
   };
   const decideImportReview = async (reviewId: number, status: "approved" | "rejected") => {
@@ -348,7 +369,7 @@ export default function Estates() {
       await refreshImportReviews(); setLayoutMessage(status === "approved" ? "Plots added to your Estate register." : "Layout discarded.");
       if (status === "approved") window.location.reload();
     }
-    catch (error) { setLayoutMessage(await extractApiErrorMessage(error, "Import decision could not be saved.")); }
+    catch (error) { setLayoutMessage(await extractApiErrorMessage(error, "Import decision could not be saved."), "danger"); }
     finally { setLayoutUploadBusy(false); }
   };
   const startGeoreferenceImport = async (file: File) => {
@@ -365,7 +386,7 @@ export default function Estates() {
       await refreshImportReviews();
       setLayoutMessage("Layout session created. Open the georeference tool to place control points and trace each plot.");
     } catch (error) {
-      setLayoutMessage(await extractApiErrorMessage(error, "The scanned layout could not be started."));
+      setLayoutMessage(await extractApiErrorMessage(error, "The scanned layout could not be started."), "danger");
     } finally {
       setLayoutUploadBusy(false);
     }
@@ -382,7 +403,7 @@ export default function Estates() {
       await refreshImportReviews();
       if (response.data.created_plots > 0) window.location.reload();
     } catch (error) {
-      setLayoutMessage(await extractApiErrorMessage(error, "Digitized plots could not be imported yet - make sure you saved the traced plots in the georeference tool first."));
+      setLayoutMessage(await extractApiErrorMessage(error, "Digitized plots could not be imported yet - make sure you saved the traced plots in the georeference tool first."), "danger");
     } finally {
       setLayoutUploadBusy(false);
     }
@@ -402,7 +423,7 @@ export default function Estates() {
       setLayoutProposal(response.data);
       setLayoutDesignerMessage("Draft layout created. Review it before adding plots to the Estate.");
     } catch (error) {
-      setLayoutDesignerMessage(await extractApiErrorMessage(error, "The draft layout could not be created."));
+      setLayoutDesignerMessage(await extractApiErrorMessage(error, "The draft layout could not be created."), "danger");
     } finally {
       setLayoutDesignerBusy(false);
     }
@@ -416,7 +437,7 @@ export default function Estates() {
       if (status === "approved") window.location.reload();
       else setLayoutProposal((current: any) => current ? { ...current, status } : current);
     } catch (error) {
-      setLayoutDesignerMessage(await extractApiErrorMessage(error, "The layout decision could not be saved."));
+      setLayoutDesignerMessage(await extractApiErrorMessage(error, "The layout decision could not be saved."), "danger");
     } finally {
       setLayoutDesignerBusy(false);
     }
@@ -432,16 +453,16 @@ export default function Estates() {
     if (!estateId || !selectedLayerId) return;
     const feature = (layerGeojson.features || []).find((item: any) => String(item.id) === selectedLayerId);
     const points = layerEditCoordinates.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => line.split(/[\s,]+/).map(Number)).filter((point) => point.length >= 2 && point.every(Number.isFinite)).map(([lng, lat]) => [lng, lat]);
-    if (!feature || points.length < 2) { setWorkflowMessage("Enter at least two valid coordinate rows."); return; }
+    if (!feature || points.length < 2) { setWorkflowMessage("Enter at least two valid coordinate rows.", "danger"); return; }
     const isPolygon = feature.geometry.type === "Polygon";
     const ring = isPolygon && points[0].join() !== points[points.length - 1].join() ? [...points, points[0]] : points;
     try { await api.patch(`/estates/${estateId}/layers/${selectedLayerId}`, { geometry: isPolygon ? { type: "Polygon", coordinates: [ring] } : { type: "LineString", coordinates: points } }); setLayerGeojson((current: any) => ({ ...current, features: current.features.map((item: any) => item.id === Number(selectedLayerId) ? { ...item, geometry: isPolygon ? { type: "Polygon", coordinates: [ring] } : { type: "LineString", coordinates: points } } : item) })); setWorkflowMessage("Layer geometry updated."); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Layer could not be updated.")); }
+    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Layer could not be updated."), "danger"); }
   };
   const archiveLayer = async () => {
     if (!estateId || !selectedLayerId) return;
     try { await api.delete(`/estates/${estateId}/layers/${selectedLayerId}`); setLayerGeojson((current: any) => ({ ...current, features: current.features.filter((item: any) => item.id !== Number(selectedLayerId)) })); setSelectedLayerId(""); setLayerEditCoordinates(""); setWorkflowMessage("Layer archived."); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Layer could not be archived.")); }
+    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Layer could not be archived."), "danger"); }
   };
   useEffect(() => {
     if (!estateId) return;
@@ -472,6 +493,7 @@ export default function Estates() {
     let cancelled = false;
     void Promise.all([loadMapboxGl(), loadMapboxGlCss()]).then(([mapboxgl]) => {
       if (cancelled || !mapContainer.current) return;
+      (mapRef.current as any)?._edashResizeObserver?.disconnect();
       mapRef.current?.remove();
       const map = new mapboxgl.Map({
         container: mapContainer.current,
@@ -480,7 +502,11 @@ export default function Estates() {
         zoom: 12,
       });
       mapRef.current = map;
+      const resizeObserver = new ResizeObserver(() => map.resize());
+      resizeObserver.observe(mapContainer.current);
+      (map as any)._edashResizeObserver = resizeObserver;
       map.on("load", () => {
+        map.resize();
         if (estateDetail?.boundary) {
           const boundaryFeature = { type: "Feature", properties: {}, geometry: estateDetail.boundary };
           map.addSource("estate-boundary", { type: "geojson", data: boundaryFeature as any });
@@ -622,14 +648,14 @@ export default function Estates() {
         map.on("mouseenter", "estate-plots-fill", () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", "estate-plots-fill", () => { map.getCanvas().style.cursor = ""; });
       });
     });
-    return () => { cancelled = true; mapRef.current?.remove(); mapRef.current = null; };
+    return () => { cancelled = true; (mapRef.current as any)?._edashResizeObserver?.disconnect(); mapRef.current?.remove(); mapRef.current = null; };
   }, [estateId, estateDetail, visiblePlotGeojson, layerGeojson, allocations, mapStyleMode, blocks, layersVisible]);
   const selectAllocation = async (id: string) => {
     setAllocationId(id); setFinancial(null);
     if (!id) return;
     const allocation = allocations.find((item) => String(item.id) === id); if (allocation) setSelectedPlotId(allocation.plot_id);
     try { setFinancial((await api.get(`/estates/allocations/${id}/financial-detail`)).data); }
-    catch (error) { setMessage(await extractApiErrorMessage(error, "Allocation financial detail could not be loaded.")); }
+    catch (error) { setMessage(await extractApiErrorMessage(error, "Allocation financial detail could not be loaded."), "danger"); }
   };
   useEffect(() => {
     const plotParam = searchParams.get("plot");
@@ -649,12 +675,12 @@ export default function Estates() {
   const runWorkflow = async (label: string, action: () => Promise<unknown>) => {
     setWorkflowMessage("");
     try { await action(); await refreshWorkflow(); setWorkflowMessage(`${label} completed.`); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, `${label} could not be completed.`)); }
+    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, `${label} could not be completed.`), "danger"); }
   };
   const createOfficialSurveyPlan = async (plotId: number) => {
     setPlotContextMenu(null);
     const allocation = allocations.find((item) => item.plot_id === plotId);
-    if (!allocation) { setWorkflowMessage("Allocate this plot to a customer before creating its Official Survey Plan."); return; }
+    if (!allocation) { setWorkflowMessage("Allocate this plot to a customer before creating its Official Survey Plan.", "danger"); return; }
     setWorkflowMessage("");
     try {
       let survey = surveyRequests.find((item) => item.plot.id === plotId);
@@ -668,7 +694,7 @@ export default function Estates() {
       }
       navigate(`/survey-plan?mode=survey&estate_survey_plot=${survey.survey_working_plot_id || ""}`);
     } catch (error) {
-      setWorkflowMessage(await extractApiErrorMessage(error, "Official Survey Plan could not be created."));
+      setWorkflowMessage(await extractApiErrorMessage(error, "Official Survey Plan could not be created."), "danger");
     }
   };
   const downloadDgps = async (taskId: number) => {
@@ -677,15 +703,15 @@ export default function Estates() {
       const url = URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = url; link.download = `staking-task-${taskId}.csv`; link.click(); URL.revokeObjectURL(url);
-    } catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "DGPS CSV could not be downloaded.")); }
+    } catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "DGPS CSV could not be downloaded."), "danger"); }
   };
   const uploadStakingEvidence = async (taskId: number) => {
-    if (!stakingEvidence) { setWorkflowMessage("Choose a staking photo or field record first."); return; }
+    if (!stakingEvidence) { setWorkflowMessage("Choose a staking photo or field record first.", "danger"); return; }
     const form = new FormData(); form.append("file", stakingEvidence);
     try {
       await api.post("/estates/documents", form, { params: { entity_type: "staking_task", entity_id: taskId, document_type: "staking_record", description: "DGPS staking field evidence" } });
       setStakingEvidence(null); setWorkflowMessage("Staking evidence stored in the private Document Vault.");
-    } catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Staking evidence could not be uploaded.")); }
+    } catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Staking evidence could not be uploaded."), "danger"); }
   };
   const selectedAllocation = allocations.find((allocation) => String(allocation.id) === allocationId);
   const selectedPlot = plots.find((plot) => plot.id === (selectedPlotId || selectedAllocation?.plot_id));
@@ -728,7 +754,7 @@ export default function Estates() {
       setPlots((current) => current.map((plot) => (plot.id === selectedPlot.id ? { ...plot, development_status: status } : plot)));
       setEditingDevelopment(false);
     } catch (error) {
-      setWorkflowMessage(await extractApiErrorMessage(error, "Development status could not be saved."));
+      setWorkflowMessage(await extractApiErrorMessage(error, "Development status could not be saved."), "danger");
     }
   };
   const uploadPlotDocument = async () => {
@@ -741,7 +767,7 @@ export default function Estates() {
       setPlotDocumentFile(null);
       setWorkflowMessage("Document stored in the private Document Vault.");
     } catch (error) {
-      setWorkflowMessage(await extractApiErrorMessage(error, "Document could not be uploaded."));
+      setWorkflowMessage(await extractApiErrorMessage(error, "Document could not be uploaded."), "danger");
     } finally {
       setPlotDocumentBusy(false);
     }
@@ -1234,7 +1260,7 @@ export default function Estates() {
                       {selectedAllocation && <button type="button" className="edash-btn-primary" style={{ marginTop: 8 }} onClick={() => void runWorkflow("Survey preparation", () => api.post(`/estates/plots/${selectedAllocation.plot_id}/survey-requests`))}>Prepare Survey</button>}
                     </div>
                   )}
-                  {workflowMessage && <p className="edash-tab-empty" style={{ color: "var(--edash-good)" }}>{workflowMessage}</p>}
+                  <StatusBanner text={workflowMessage} tone={workflowMessageTone} />
                 </div>
               )}
 
@@ -1429,11 +1455,12 @@ export default function Estates() {
     type ToolKey = "add-plot" | "layout" | "blocks" | "layers" | "qc";
     const hasBoundary = Boolean(estateDetail?.boundary);
     const hasPlots = plots.length > 0;
+    const hasSpatialContext = hasBoundary || hasPlots;
     const tools: Array<{ key: ToolKey; label: string; icon: import("../components/estates/EstateIcon").EstateIconName; locked?: string }> = [
       { key: "add-plot", label: "Add Plot", icon: "plus" },
-      { key: "layout", label: "Design Layout", icon: "map", locked: hasBoundary ? undefined : "Add an Estate boundary first (draw a plot or import one) before designing a layout." },
+      { key: "layout", label: "Design Layout", icon: "map", locked: hasSpatialContext ? undefined : "Add a plot or Estate boundary first, then design or subdivide a layout." },
       { key: "blocks", label: "Blocks", icon: "grid" },
-      { key: "layers", label: "Map Layers", icon: "layers", locked: hasBoundary ? undefined : "Add an Estate boundary before mapping roads, drainage or other layers." },
+      { key: "layers", label: "Map Layers", icon: "layers", locked: hasSpatialContext ? undefined : "Add a plot or Estate boundary before mapping roads, drainage or other layers." },
       { key: "qc", label: "Geometry Check", icon: "check-circle", locked: hasPlots ? undefined : "Add at least one plot before running a geometry check." },
     ];
     return (
@@ -1496,7 +1523,8 @@ export default function Estates() {
 
           {isDrawOrCoordinates ? (
             <>
-              <label className="edash-field" style={{ marginBottom: 12, maxWidth: 260 }}><span>Plot number</span><input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="e.g. B-024" /></label>
+              <label className="edash-field" style={{ marginBottom: 4, maxWidth: 260 }}><span>Plot number</span><input value={plotNumber} onChange={(event) => setPlotNumber(event.target.value)} placeholder="e.g. B-024" /></label>
+              <p className="edash-field-note" style={{ marginBottom: 12 }}>This creates one plot record for the area you outline. To turn a large area into many smaller plots afterwards, open "Design Layout" and subdivide it.</p>
               {addPlotMethod === "draw" ? (
                 <div>
                   <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>Trace the plot boundary directly on the satellite image, then confirm below.</p>
@@ -1512,7 +1540,7 @@ export default function Estates() {
                   </div>
                 </div>
               )}
-              {workflowMessage && <p className="edash-tab-empty" style={{ textAlign: "left", padding: "8px 0" }} role="status">{workflowMessage}</p>}
+              <StatusBanner text={workflowMessage} tone={workflowMessageTone} />
               <button type="button" className="edash-btn-primary" style={{ marginTop: 12 }} disabled={plotInputMapPoints.length < 3 || plotInputClosure === "self-intersecting"} onClick={() => void createPlotFromInput()}>{plotInputClosure === "self-intersecting" ? "Fix boundary first" : "Create plot"}</button>
             </>
           ) : (
@@ -1527,6 +1555,7 @@ export default function Estates() {
               onOpenGeoreference={openGeoreferenceTool}
               onImportFromGeoreference={(reviewId) => void importPlotsFromGeoreference(reviewId)}
               message={layoutMessage}
+              messageTone={layoutMessageTone}
               busy={layoutUploadBusy}
             />
           )}
@@ -1534,11 +1563,28 @@ export default function Estates() {
       ));
     }
     if (activeTool === "layout") {
-      return renderToolModal("Design your layout", "Turn the Estate boundary into plots automatically, or split it evenly.", (
+      const availablePlots = plots.filter((plot) => plot.commercial_status === "available");
+      const targetSubdividePlotId = designSubdividePlotId ?? availablePlots[0]?.id ?? null;
+      return renderToolModal("Design your layout", "Turn a plot or the Estate boundary into many smaller plots.", (
         <>
+          {availablePlots.length > 0 && (
+            <div className="edash-info-card" style={{ flexDirection: "column", marginBottom: 16 }}>
+              <div className="edash-info-card-head"><span className="edash-status-row-title">Subdivide an existing plot</span></div>
+              <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>
+                Split one plot - for example a large "mother" parcel covering the whole Estate - into smaller plots. Each new plot is added to your Plots count and can be allocated to a customer.
+              </p>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <select value={targetSubdividePlotId ?? ""} onChange={(event) => setDesignSubdividePlotId(Number(event.target.value))}>
+                  {availablePlots.map((plot) => <option key={plot.id} value={plot.id}>{plot.plot_number} - {Number(plot.area_sqm || 0).toLocaleString()} m²</option>)}
+                </select>
+                <input type="number" min="2" max="100" value={subdivisionCount} onChange={(event) => setSubdivisionCount(event.target.value)} style={{ width: 80, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
+                <button type="button" className="edash-btn-primary" disabled={subdivisionBusy || !targetSubdividePlotId} onClick={() => targetSubdividePlotId && void subdividePlotById(targetSubdividePlotId)}>{subdivisionBusy ? "Creating plots..." : "Split into plots"}</button>
+              </div>
+            </div>
+          )}
           {estateDetail?.boundary && plots.length === 0 && (
             <div className="edash-info-card" style={{ flexDirection: "column", marginBottom: 16 }}>
-              <div className="edash-info-card-head"><span className="edash-status-row-title">Split into equal plots</span></div>
+              <div className="edash-info-card-head"><span className="edash-status-row-title">Split the Estate boundary into equal plots</span></div>
               <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>Fast: divide the whole boundary evenly. Best for uniform lots with no roads or open space.</p>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <input type="number" min="2" max="200" value={subdivisionCount} onChange={(event) => setSubdivisionCount(event.target.value)} style={{ width: 80, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
@@ -1546,7 +1592,8 @@ export default function Estates() {
               </div>
             </div>
           )}
-          <EstateLayoutDesigner boundaryPresent={Boolean(estateDetail?.boundary)} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} />
+          <StatusBanner text={workflowMessage} tone={workflowMessageTone} />
+          <EstateLayoutDesigner boundaryPresent={Boolean(estateDetail?.boundary)} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} messageTone={layoutDesignerMessageTone} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} />
         </>
       ));
     }
@@ -1705,7 +1752,7 @@ export default function Estates() {
             </div>
           )}
 
-          {message && <p className="edash-onboard-hint">{message}</p>}
+          {message && <p className={`edash-onboard-hint${messageTone === "danger" ? " tone-danger" : ""}`}>{message}</p>}
         </div>
       </div>
     );
@@ -1721,6 +1768,7 @@ export default function Estates() {
       recentActivity={activity}
     >
       {isMapView && renderToolsBar()}
+      {isMapView && message && <StatusBanner text={message} tone={messageTone} />}
       {renderStatsRow()}
       {isMapView ? (
         <div className="edash-content-row">

@@ -1001,6 +1001,7 @@
 .edash-onboard-existing select { flex: 1; }
 
 .edash-onboard-hint { color: var(--edash-faint); font-size: 0.78rem; text-align: center; }
+.edash-onboard-hint.tone-danger { color: var(--edash-danger); font-weight: 600; }
 
 /* ─── Map plot popup (mapboxgl.Popup DOM content) ─── */
 .edash-map-popup { display: flex; flex-direction: column; gap: 4px; font-family: "DM Sans", "Inter", sans-serif; }
