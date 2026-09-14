@@ -285,6 +285,29 @@
 .estate-layout-preview text { fill: var(--workspace-ink); font: 700 3px "DM Sans", sans-serif; text-anchor: middle; dominant-baseline: middle; }
 .estate-layout-preview > span { display: block; margin-top: 4px; color: var(--workspace-teal); font: 800 .66rem "DM Sans", "Segoe UI", sans-serif; text-align: right; }
 .estate-layout-preview-empty { display: grid; min-height: 190px; place-items: center; padding: 20px; border: 1px dashed rgba(8,127,118,.3); border-radius: 12px; color: var(--workspace-muted); font-size: .78rem; line-height: 1.5; text-align: center; }
+.estate-layout-designer { display: grid; grid-column: 1 / -1; gap: 18px; padding: 26px; border: 1px solid rgba(8,127,118,.2); border-radius: 20px; background: linear-gradient(135deg, rgba(236,246,233,.94), rgba(255,255,252,.96)); box-shadow: 0 14px 38px rgba(16,45,43,.07); }
+.estate-layout-designer-heading { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
+.estate-layout-designer h2 { margin: 5px 0 8px; color: var(--workspace-ink); font: 600 clamp(1.5rem, 2.4vw, 2.15rem) Georgia, "Times New Roman", serif; letter-spacing: -.045em; }
+.estate-layout-designer-heading p:not(.workflow-eyebrow) { max-width: 720px; margin: 0; color: var(--workspace-muted); line-height: 1.55; }
+.estate-layout-settings { padding: 16px; border: 1px solid var(--workspace-line); border-radius: 14px; background: rgba(255,255,252,.76); }
+.estate-layout-settings summary { color: var(--workspace-ink); cursor: pointer; font: 800 .82rem "DM Sans", "Segoe UI", sans-serif; }
+.estate-layout-criteria { display: grid; grid-template-columns: repeat(3, minmax(130px, 1fr)); gap: 12px; margin: 16px 0 10px; }
+.estate-layout-criteria label { display: grid; gap: 7px; color: var(--workspace-ink); font: 800 .68rem "DM Sans", "Segoe UI", sans-serif; letter-spacing: .03em; }
+.estate-layout-criteria input { min-height: 42px; padding: 9px 11px; border: 1px solid var(--workspace-line); border-radius: 9px; background: #fff; color: var(--workspace-ink); font: .84rem "DM Sans", "Segoe UI", sans-serif; }
+.estate-layout-helper { margin: 0 0 13px; color: var(--workspace-muted); font-size: .75rem; line-height: 1.5; }
+.estate-layout-settings > button { min-height: 43px; padding: 10px 16px; border: 0; border-radius: 9px; background: var(--workspace-teal); color: #fff; font: 800 .72rem "DM Sans", "Segoe UI", sans-serif; cursor: pointer; }
+.estate-layout-settings > button:disabled { opacity: .55; cursor: not-allowed; }
+.estate-layout-designer-review { display: grid; grid-template-columns: minmax(250px, .72fr) minmax(300px, 1.28fr); gap: 18px; align-items: stretch; padding-top: 20px; border-top: 1px solid var(--workspace-line); }
+.estate-layout-designer-review .estate-layout-review-copy { display: flex; flex-direction: column; align-items: start; justify-content: center; }
+.estate-layout-designer-review h3 { margin: 5px 0 8px; color: var(--workspace-ink); font: 700 1.05rem "DM Sans", "Segoe UI", sans-serif; }
+.estate-layout-designer-review p:not(.workflow-eyebrow) { margin: 0 0 6px; color: var(--workspace-muted); font-size: .82rem; line-height: 1.55; }
+.estate-layout-designer-review .estate-layout-review-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 13px; }
+.estate-layout-designer-review .estate-layout-review-actions button { min-height: 43px; padding: 10px 15px; border: 0; border-radius: 9px; background: var(--workspace-teal); color: #fff; font: 800 .72rem "DM Sans", "Segoe UI", sans-serif; cursor: pointer; }
+.estate-layout-designer-review .estate-layout-review-actions button.is-secondary { border: 1px solid var(--workspace-line); background: transparent; color: var(--workspace-ink); }
+.estate-layout-designer-review .estate-layout-review-actions button:disabled { opacity: .55; cursor: not-allowed; }
+.estate-layout-preview .estate-layout-road { fill: none; stroke: #2f4c4a; stroke-width: 1.35; vector-effect: non-scaling-stroke; }
+.estate-layout-preview .estate-layout-drainage { fill: rgba(49,128,180,.18); stroke: #3180b4; stroke-width: .55; vector-effect: non-scaling-stroke; }
+.estate-layout-preview .estate-layout-open-space { fill: rgba(108,165,91,.28); stroke: #6ca55b; stroke-width: .55; vector-effect: non-scaling-stroke; }
 .estate-subdivision { display: grid; gap: 10px; margin: 18px 0; padding: 14px; border: 1px solid rgba(8,127,118,.16); border-radius: 12px; background: #f1f5ee; }
 .estate-subdivision summary { color: var(--workspace-teal); cursor: pointer; font: 800 .75rem "DM Sans", "Segoe UI", sans-serif; }
 .estate-subdivision p { margin: 0; color: var(--workspace-muted); font-size: .78rem; line-height: 1.45; }
@@ -293,6 +316,7 @@
 .estate-subdivision button { justify-self: start; min-height: 40px; padding: 9px 13px; border: 0; border-radius: 8px; background: var(--workspace-teal); color: #fff; font: 800 .7rem "DM Sans", "Segoe UI", sans-serif; cursor: pointer; }
 .estate-subdivision button:disabled { opacity: .55; cursor: not-allowed; }
 .estate-app > .estate-layout-import { order: 5; }
+.estate-app > .estate-layout-designer { order: 5; }
 .estate-app > .estate-layout-import + .estate-map-panel { order: 4; }
 .estate-app > .estate-legacy-layout-intake, .estate-app > .estate-legacy-review-queue { display: none; }
 @media (max-width: 980px) {
@@ -331,6 +355,8 @@
   .estate-plot-input-workbench { grid-template-columns: 1fr; }
   .estate-layout-methods { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .estate-layout-review { grid-template-columns: 1fr; }
+  .estate-layout-designer-review { grid-template-columns: 1fr; }
+  .estate-layout-criteria { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .estate-app > .estate-map-panel .estate-map, .estate-app > .estate-map-panel .estate-map-fallback { min-height: 390px; height: 62vw; }
   .estates-toolbar { align-items: flex-start; flex-direction: column; gap: 14px; }
   .estate-create, .estate-setup { grid-template-columns: 1fr; padding: 22px; }
@@ -345,6 +371,9 @@
   .estate-layout-upload { grid-template-columns: 1fr; }
   .estate-layout-upload button { justify-self: start; }
   .estate-layout-methods { grid-template-columns: 1fr; }
+  .estate-layout-designer { padding: 18px; }
+  .estate-layout-designer-heading { display: grid; grid-template-columns: 1fr; }
+  .estate-layout-criteria { grid-template-columns: 1fr; }
   .estate-plot-map-preview .map-enhanced-container { min-height: 340px; }
   .estate-setup > select, .estate-setup > input, .estate-setup > textarea, .estate-setup > button { grid-column: 1; }
   .estate-create > div { grid-column: 1; }
