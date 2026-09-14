@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import EstateIcon from "./EstateIcon";
+import Spinner from "./EstateSpinner";
 
 export type EstateLayoutMethod = "csv" | "geojson" | "dxf" | "scanned-layout";
 
@@ -19,13 +20,15 @@ type Props = {
   files: Record<EstateLayoutMethod, File | null>;
   onFileChange: (method: EstateLayoutMethod, file: File | null) => void;
   onUpload: (method: EstateLayoutMethod) => void;
-  onDecision: (reviewId: number, status: "approved" | "rejected") => void;
+  onDecision: (reviewId: number, status: "approved" | "rejected", asBoundary?: boolean) => void;
   onStartGeoreference: (file: File) => void;
   onOpenGeoreference: (sessionId: string) => void;
   onImportFromGeoreference: (reviewId: number) => void;
   message?: string;
   messageTone?: "good" | "danger";
   busy?: boolean;
+  asBoundary?: boolean;
+  onAsBoundaryChange?: (value: boolean) => void;
 };
 
 export const LAYOUT_IMPORT_METHODS: Array<{ key: EstateLayoutMethod; icon: import("./EstateIcon").EstateIconName; title: string; description: string; accept: string }> = [
@@ -88,7 +91,7 @@ function InvalidRowsList({ review }: { review: ImportReview }) {
   );
 }
 
-export default function EstateLayoutImport({ method, reviews, files, onFileChange, onUpload, onDecision, onStartGeoreference, onOpenGeoreference, onImportFromGeoreference, message, messageTone = "good", busy = false }: Props) {
+export default function EstateLayoutImport({ method, reviews, files, onFileChange, onUpload, onDecision, onStartGeoreference, onOpenGeoreference, onImportFromGeoreference, message, messageTone = "good", busy = false, asBoundary = false, onAsBoundaryChange }: Props) {
   const latest = reviews[0];
   const usableCount = latest?.candidates?.filter((candidate) => candidate.valid !== false && candidate.geometry?.type === "Polygon").length || 0;
   const selectedMethod = LAYOUT_IMPORT_METHODS.find((item) => item.key === method) || LAYOUT_IMPORT_METHODS[0];
@@ -110,7 +113,7 @@ export default function EstateLayoutImport({ method, reviews, files, onFileChang
                   <EstateIcon name="map" /> Open georeference tool
                 </button>
                 <button type="button" className="edash-btn-outline" disabled={busy} onClick={() => onImportFromGeoreference(georeferenceReview.id)}>
-                  {busy ? "Importing..." : "Import digitized plots"}
+                  {busy ? <><Spinner size={13} /> Importing...</> : "Import digitized plots"}
                 </button>
               </div>
             </div>
@@ -123,7 +126,7 @@ export default function EstateLayoutImport({ method, reviews, files, onFileChang
               </label>
               <p className="edash-status-row-desc">This opens the same georeferencing and digitizing tool Survey uses - place a few ground control points, trace each plot, then return here to import them.</p>
               <button type="button" className="edash-btn-primary" disabled={!file || busy} onClick={() => file && onStartGeoreference(file)}>
-                {busy ? "Starting..." : "Start georeferencing"}
+                {busy ? <><Spinner size={13} /> Starting...</> : "Start georeferencing"}
               </button>
             </div>
           )
@@ -134,8 +137,14 @@ export default function EstateLayoutImport({ method, reviews, files, onFileChang
               <span>{file ? file.name : `Choose your ${selectedMethod.title.toLowerCase()} file`}</span>
               <input type="file" accept={selectedMethod.accept} onChange={(event) => onFileChange(method, event.target.files?.[0] || null)} />
             </label>
+            {onAsBoundaryChange && (
+              <label className="edash-toggle" style={{ marginTop: 2 }}>
+                <input type="checkbox" checked={asBoundary} onChange={(event) => onAsBoundaryChange(event.target.checked)} />
+                This file contains only the Estate boundary (one outline, not individual plots)
+              </label>
+            )}
             <button type="button" className="edash-btn-primary" disabled={!file || busy} onClick={() => onUpload(method)}>
-              {busy ? "Preparing preview..." : "Upload and preview"}
+              {busy ? <><Spinner size={13} /> Preparing preview...</> : "Upload and preview"}
             </button>
           </div>
         )}
@@ -149,14 +158,16 @@ export default function EstateLayoutImport({ method, reviews, files, onFileChang
               <span className={`edash-status-pill tone-${usableCount ? "good" : "warn"}`}>{usableCount} usable</span>
             </div>
             <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>
-              {usableCount ? `${usableCount} plot${usableCount === 1 ? "" : "s"} found. Check the preview, then add them to your Estate.` : "No usable plots were found in this file - see the details below."}
+              {asBoundary
+                ? (usableCount === 1 ? "1 shape found - it will become your Estate boundary." : usableCount > 1 ? `${usableCount} shapes found, but a boundary import needs exactly one outline. Uncheck the boundary option to add these as separate plots instead.` : "No usable shape was found in this file - see the details below.")
+                : (usableCount ? `${usableCount} plot${usableCount === 1 ? "" : "s"} found. Check the preview, then add them to your Estate.` : "No usable plots were found in this file - see the details below.")}
             </p>
             <LayoutPreview review={latest} />
             <InvalidRowsList review={latest} />
             {latest.status === "review_required" && (
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                <button type="button" className="edash-btn-primary" disabled={busy || usableCount === 0} onClick={() => onDecision(latest.id, "approved")}>Approve and add plots</button>
-                <button type="button" className="edash-btn-outline" disabled={busy} onClick={() => onDecision(latest.id, "rejected")}>Discard</button>
+                <button type="button" className="edash-btn-primary" disabled={busy || (asBoundary ? usableCount !== 1 : usableCount === 0)} onClick={() => onDecision(latest.id, "approved", asBoundary)}>{asBoundary ? "Set as Estate boundary" : "Approve and add plots"}</button>
+                <button type="button" className="edash-btn-outline" disabled={busy} onClick={() => onDecision(latest.id, "rejected", asBoundary)}>Discard</button>
               </div>
             )}
           </div>

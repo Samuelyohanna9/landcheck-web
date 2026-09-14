@@ -1,5 +1,6 @@
 import { useState } from "react";
 import EstateIcon from "./EstateIcon";
+import Spinner from "./EstateSpinner";
 
 type LayoutCriteria = {
   target_plot_area_sqm: number;
@@ -235,7 +236,7 @@ export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy =
 
                 <p className="edash-field-note">These are starting assumptions, not planning approval. Your qualified planner and the relevant planning authority remain responsible for confirming roads, drainage, access and plot standards before publishing.</p>
                 <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-start" }} disabled={busy} onClick={() => onGenerate(criteria)}>
-                  <EstateIcon name="plots" /> {busy ? "Creating draft..." : "Create draft layout"}
+                  {busy ? <><Spinner size={14} /> Creating draft...</> : <><EstateIcon name="plots" /> Create draft layout</>}
                 </button>
               </div>
             </details>
