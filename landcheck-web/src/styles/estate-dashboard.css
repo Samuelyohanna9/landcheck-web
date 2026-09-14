@@ -518,7 +518,11 @@
   background: #dfe6e0;
 }
 
-.edash-map-canvas { position: absolute; inset: 0; z-index: 1; }
+/* !important beats mapbox-gl.css's own ".mapboxgl-map { position: relative }" rule - mapbox-gl-js
+   adds that class to this same container div, and since that stylesheet loads dynamically at
+   runtime (after this one), it otherwise wins the cascade on equal specificity and silently
+   collapses this container to 0 height (inset does nothing once position isn't absolute/fixed). */
+.edash-map-canvas { position: absolute !important; inset: 0 !important; width: 100%; height: 100%; z-index: 1; }
 
 .edash-map-fallback {
   position: absolute;
