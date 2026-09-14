@@ -1,0 +1,3 @@
+export const money = (value: string | number, currency = "NGN") => new Intl.NumberFormat("en-NG", { style: "currency", currency }).format(Number(value || 0));
+export function PaymentStatusBadge({ status }: { status: string }) { return <span className={`payment-status ${status}`}>{status.replaceAll("_", " ")}</span>; }
+export function FinancialSummaryCards({ summary }: { summary: Record<string, string> }) { return <div className="financial-cards">{[["Agreed Price","agreed_price"],["Confirmed","confirmed_paid"],["Pending","pending_paid"],["Outstanding","outstanding"]].map(([label,key]) => <div key={key}><small>{label}</small><strong>{money(summary[key])}</strong></div>)}</div>; }

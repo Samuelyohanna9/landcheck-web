@@ -702,6 +702,7 @@ const GEOREFERENCE_STEPS = [
 export default function SurveyPlan() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const estateWorkspaceLoadedRef = useRef<string | null>(null);
   const { isLowBandwidth, manualLowBandwidth, setManualLowBandwidth } = useLowBandwidthMode();
   const deferredDraftMap = useDeferredMount(250);
   const [workflowMode, setWorkflowMode] = useState<WorkflowMode | null>(null);
@@ -1236,6 +1237,36 @@ export default function SurveyPlan() {
       setWorkflowMode(modeParam);
     }
   }, [draftHydrated, workflowMode, searchParams]);
+
+  // Estates materializes an approved parcel as an owned Survey plot. This explicit query parameter
+  // intentionally wins over a browser-local draft so a surveyor opens the parcel they were sent.
+  useEffect(() => {
+    const rawPlotId = searchParams.get("estate_survey_plot");
+    if (!draftHydrated || !rawPlotId || estateWorkspaceLoadedRef.current === rawPlotId) return;
+    const requestedPlotId = Number(rawPlotId);
+    if (!Number.isInteger(requestedPlotId) || requestedPlotId <= 0) return;
+    estateWorkspaceLoadedRef.current = rawPlotId;
+    api.get(`/plots/${requestedPlotId}/workspace`).then((response) => {
+      const workspace = response.data;
+      if (!Array.isArray(workspace.coordinates) || workspace.coordinates.length < 3) {
+        throw new Error("Survey plot has no usable boundary coordinates.");
+      }
+      setManualPoints(workspace.coordinates);
+      setCoordinateSystem("wgs84");
+      setPlotId(Number(workspace.plot_id));
+      setMeta({ ...buildDefaultPlotMeta(), ...(workspace.meta || {}) });
+      setWorkflowMode("survey");
+      setCurrentStep(2);
+      setFeatures(null);
+      setLastServerSyncAt(new Date().toISOString());
+      setLastServerSyncSignature(null);
+      setHasUnsyncedServerChanges(false);
+      toast.success("Estate parcel opened in the Survey workspace.");
+    }).catch(() => {
+      estateWorkspaceLoadedRef.current = null;
+      toast.error("The Estate parcel could not be opened in this Survey account.");
+    });
+  }, [draftHydrated, searchParams]);
 
   // Dashboard "Continue" links for a specific georeference session with
   // ?mode=georeference&session=<id> - loads that exact session instead of whatever's in this
