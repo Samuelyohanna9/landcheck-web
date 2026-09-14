@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { clearEstateAuthSession, getEstateAuthSession } from "../auth/estateAuth";
+import { clearEstateAuthSession } from "../auth/estateAuth";
 import { api, extractApiErrorMessage } from "../api/client";
 import { money } from "../components/estates/FinancialComponents";
 import CoordinateInput from "../components/CoordinateInput";
@@ -557,7 +557,6 @@ export default function Estates() {
   const selectedPlot = plots.find((plot) => plot.id === (selectedPlotId || selectedAllocation?.plot_id));
   const selectedSurvey = selectedAllocation && surveyRequests.find((item) => item.plot.id === selectedAllocation.plot_id);
   const selectedTask = selectedSurvey && stakingTasks.find((item) => item.survey_request_id === selectedSurvey.id);
-  const estateSession = getEstateAuthSession();
 
   const orderedPlotIds = visiblePlotGeojson.features.map((feature: any) => Number(feature.properties?.id));
   const selectedPlotPosition = selectedPlot ? orderedPlotIds.indexOf(selectedPlot.id) : -1;
@@ -1275,36 +1274,78 @@ export default function Estates() {
 
   if (!estateId) {
     return (
-      <main className="estates-shell">
-        <aside className="estate-sidebar">
-          <div className="estate-brand"><span className="estate-brand-mark">L</span><div><strong>LandCheck</strong><small>Estates</small></div></div>
-          <div className="estate-sidebar-estate"><small>ACTIVE ESTATE</small><strong>{estates[0]?.name || "Estate workspace"}</strong><span>{estates[0]?.location || "Choose an estate to begin"}</span></div>
-          <nav aria-label="Estate navigation">
-            <Link className="active" to="/estates/workspace"><span>⌂</span>Dashboard</Link>
-            <Link to="/estates/workspace"><span>▦</span>Map &amp; Plots</Link>
-            <Link to="/estates/workspace#plot-register"><span>▤</span>Plots</Link>
-            <Link to="/estates/payments"><span>♙</span>Customers</Link>
-            <Link to="/estates/payments"><span>₦</span>Sales &amp; Payments</Link>
-            <Link to="/estates/workspace"><span>⌖</span>Survey</Link>
-            <Link to="/estates/workspace"><span>⌁</span>Staking</Link>
-            <Link to="/estates/documents"><span>□</span>Documents</Link>
-            <Link to="/estates/workspace"><span>⌂</span>Development</Link>
-            <Link to="/estates/workspace"><span>△</span>Hazard Analysis</Link>
-            <Link to="/estates/workspace"><span>◷</span>Audit Timeline</Link>
-            <Link to="/estates/workspace"><span>⚙</span>Settings</Link>
-          </nav>
-          <div className="estate-sidebar-footer"><span>?</span>Help &amp; Support</div>
-        </aside>
-        <div className="estate-app">
-          <div className="estate-topbar"><div className="estate-breadcrumb"><span>Estates</span><b>›</b><strong>Workspace</strong></div><label className="estate-search"><span aria-hidden="true">⌕</span><input value={plotSearch} onChange={(event) => setPlotSearch(event.target.value)} placeholder="Search plots by number..." aria-label="Search plots by number" /></label><div className="estate-user"><span className="estate-avatar">{(estateSession?.user.organization_name || "E").slice(0, 1).toUpperCase()}</span><div><strong>{estateSession?.user.organization_name || "Estate team"}</strong><small>Estate workspace</small></div></div></div>
-          <header><span>LandCheck Estates</span><h1>Estate workspace</h1><p>Map-first parcel operations for layouts, plots, customers and delivery.</p></header>
-          {estates.length > 0 && <section className="estate-existing-chooser"><div><p className="workflow-eyebrow">Your estates</p><h2>Open an existing estate</h2><p>Choose an Estate to open its map and plot register.</p></div><label>Choose an estate<select defaultValue="" onChange={(event) => { if (event.target.value) navigate(`/estates/${event.target.value}/map`); }}><option value="">Select an estate</option>{estates.map((estate) => <option key={estate.id} value={estate.id}>{estate.name}{estate.location ? ` - ${estate.location}` : ""}</option>)}</select></label></section>}
-          {organizations.length > 0 && <section className="estate-create estate-setup-simple"><div><p className="workflow-eyebrow">Start here</p><h2>Create an estate</h2><p>Add the basics now. You can bring in the layout and plots after the Estate is created.</p></div><label>Your organisation<select value={newEstateOrg} onChange={(event) => setNewEstateOrg(event.target.value)}><option value="">Choose organisation</option>{organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}</select></label><label>Estate name<input value={newEstateName} onChange={(event) => setNewEstateName(event.target.value)} placeholder="e.g. Greenview Estate" /></label><label>Location<input value={newEstateLocation} onChange={(event) => setNewEstateLocation(event.target.value)} placeholder="City, state or area" /></label><label className="estate-boundary-field">Estate boundary <span>Optional - one longitude, latitude pair per line</span><textarea value={newEstateBoundaryCoordinates} onChange={(event) => setNewEstateBoundaryCoordinates(event.target.value)} placeholder="7.1234, 9.1234&#10;7.1238, 9.1234&#10;7.1238, 9.1238" /></label><details><summary>Project details (optional)</summary><div><label>Coordinate system<input value={newEstateCrs} onChange={(event) => setNewEstateCrs(event.target.value)} placeholder="EPSG:4326" /></label><label>Datum<input value={newEstateDatum} onChange={(event) => setNewEstateDatum(event.target.value)} placeholder="Datum" /></label><label>Project reference<input value={newEstateProjectReference} onChange={(event) => setNewEstateProjectReference(event.target.value)} placeholder="Reference" /></label><label>Developer or owner<input value={newEstateProjectOwner} onChange={(event) => setNewEstateProjectOwner(event.target.value)} placeholder="Name" /></label><label>Notes<textarea value={newEstateOwnershipDetails} onChange={(event) => setNewEstateOwnershipDetails(event.target.value)} placeholder="Ownership or project notes" /></label></div></details><button type="button" onClick={() => void createEstate()}>Create estate</button></section>}
-          <section className="estates-toolbar"><strong>{estateSession?.user.organization_name || "My estates"}</strong><div><Link to="/estates/workspace">Estate workspace</Link><button type="button" onClick={() => { clearEstateAuthSession(); navigate("/estates", { replace: true }); }}>Sign out</button></div></section>
-          {organizations.length > 0 && <section className="estate-create estate-setup"><div><p className="workflow-eyebrow">Step 1 · Create Estate</p><h2>Start the estate register</h2><p>Set the project context first. You can add the boundary and approved parcels through the layout review workflow.</p></div><select value={newEstateOrg} onChange={(event) => setNewEstateOrg(event.target.value)}><option value="">Organization</option>{organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}</select><input value={newEstateName} onChange={(event) => setNewEstateName(event.target.value)} placeholder="Estate name" /><input value={newEstateLocation} onChange={(event) => setNewEstateLocation(event.target.value)} placeholder="Location" /><input value={newEstateCrs} onChange={(event) => setNewEstateCrs(event.target.value)} placeholder="Coordinate system, e.g. EPSG:4326" /><input value={newEstateDatum} onChange={(event) => setNewEstateDatum(event.target.value)} placeholder="Datum (optional)" /><input value={newEstateProjectReference} onChange={(event) => setNewEstateProjectReference(event.target.value)} placeholder="Project reference (optional)" /><input value={newEstateProjectOwner} onChange={(event) => setNewEstateProjectOwner(event.target.value)} placeholder="Developer / owner (optional)" /><textarea value={newEstateOwnershipDetails} onChange={(event) => setNewEstateOwnershipDetails(event.target.value)} placeholder="Ownership or project details (optional)" /><textarea value={newEstateBoundaryCoordinates} onChange={(event) => setNewEstateBoundaryCoordinates(event.target.value)} placeholder="Estate boundary: longitude, latitude per line (optional)" /><button type="button" onClick={() => void createEstate()}>Create Estate</button></section>}
-          {message ? <p className="estates-message">{message}</p> : <section className="estate-grid">{estates.map((estate) => <article key={estate.id}><small>{estate.status.replaceAll("_", " ")}</small><h2>{estate.name}</h2><p>{estate.location || "Location pending"}</p>{estate.financial && <p className="estate-financial">Collected {money(estate.financial.confirmed_collections)}<br/>Outstanding {money(estate.financial.outstanding_balance)}</p>}<Link to={`/estates/${estate.id}/map`}>Open estate map</Link><Link to="/estates/payments">Payments and statements</Link></article>)}</section>}
+      <div className="edash-onboard">
+        <div className="edash-onboard-topbar">
+          <div className="edash-sidebar-brand" style={{ padding: 0 }}>
+            <span className="edash-sidebar-brand-mark"><EstateIcon name="house" /></span>
+            <div><strong>LandCheck</strong><small>Estates</small></div>
+          </div>
+          <button type="button" className="edash-btn-outline" onClick={() => { clearEstateAuthSession(); navigate("/estates", { replace: true }); }}>Sign out</button>
         </div>
-      </main>
+
+        <div className="edash-onboard-body">
+          <div className="edash-onboard-head">
+            <h1>{estates.length > 0 ? "Choose or create an estate" : "Create your first estate"}</h1>
+            <p>Map-first parcel operations for layouts, plots, customers and delivery.</p>
+          </div>
+
+          {estates.length > 0 && (
+            <div className="edash-card edash-onboard-card">
+              <div className="edash-card-inner">
+                <div className="edash-card-head"><h3 className="edash-card-title">Open an existing estate</h3></div>
+                <div className="edash-onboard-existing">
+                  <select className="edash-map-select" defaultValue="" onChange={(event) => { if (event.target.value) navigate(`/estates/${event.target.value}/map`); }}>
+                    <option value="">Select an estate</option>
+                    {estates.map((estate) => <option key={estate.id} value={estate.id}>{estate.name}{estate.location ? ` - ${estate.location}` : ""}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {estates.length > 0 && organizations.length > 0 && <p className="edash-onboard-divider">or create new</p>}
+
+          {organizations.length > 0 && (
+            <div className="edash-card edash-onboard-card">
+              <div className="edash-card-inner">
+                <div className="edash-card-head"><h3 className="edash-card-title">Create an estate</h3></div>
+                <div className="edash-onboard-field">
+                  <span>Organisation</span>
+                  <select value={newEstateOrg} onChange={(event) => setNewEstateOrg(event.target.value)}>
+                    <option value="">Choose organisation</option>
+                    {organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}
+                  </select>
+                </div>
+                <div className="edash-onboard-field">
+                  <span>Estate name</span>
+                  <input value={newEstateName} onChange={(event) => setNewEstateName(event.target.value)} placeholder="e.g. Greenview Estate" />
+                </div>
+                <div className="edash-onboard-field">
+                  <span>Location</span>
+                  <input value={newEstateLocation} onChange={(event) => setNewEstateLocation(event.target.value)} placeholder="City, state or area" />
+                </div>
+                <details className="edash-onboard-advanced">
+                  <summary>Advanced options</summary>
+                  <div>
+                    <div className="edash-onboard-field">
+                      <span>Estate boundary (optional)</span>
+                      <textarea value={newEstateBoundaryCoordinates} onChange={(event) => setNewEstateBoundaryCoordinates(event.target.value)} placeholder="7.1234, 9.1234&#10;7.1238, 9.1234&#10;7.1238, 9.1238" />
+                    </div>
+                    <div className="edash-onboard-field"><span>Coordinate system</span><input value={newEstateCrs} onChange={(event) => setNewEstateCrs(event.target.value)} placeholder="EPSG:4326" /></div>
+                    <div className="edash-onboard-field"><span>Datum</span><input value={newEstateDatum} onChange={(event) => setNewEstateDatum(event.target.value)} placeholder="Optional" /></div>
+                    <div className="edash-onboard-field"><span>Project reference</span><input value={newEstateProjectReference} onChange={(event) => setNewEstateProjectReference(event.target.value)} placeholder="Optional" /></div>
+                    <div className="edash-onboard-field"><span>Developer or owner</span><input value={newEstateProjectOwner} onChange={(event) => setNewEstateProjectOwner(event.target.value)} placeholder="Optional" /></div>
+                    <div className="edash-onboard-field"><span>Notes</span><textarea value={newEstateOwnershipDetails} onChange={(event) => setNewEstateOwnershipDetails(event.target.value)} placeholder="Ownership or project notes" /></div>
+                  </div>
+                </details>
+                <button type="button" className="edash-btn-primary edash-onboard-submit" onClick={() => void createEstate()}>Create estate</button>
+              </div>
+            </div>
+          )}
+
+          {message && <p className="edash-onboard-hint">{message}</p>}
+        </div>
+      </div>
     );
   }
 
