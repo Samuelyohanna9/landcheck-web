@@ -266,6 +266,19 @@ function buildPlotLabelFeatures(features: any[], allocations: any[]) {
   });
 }
 
+function buildLayerLabelFeatures(features: any[]) {
+  return features.filter((feature) => feature.properties?.name).map((feature: any) => {
+    const geometry = feature.geometry;
+    if (geometry?.type === "Polygon") {
+      return { type: "Feature", properties: { label: feature.properties.name, kind: "point" }, geometry: { type: "Point", coordinates: getRingCentroid(geometry.coordinates[0]) } };
+    }
+    if (geometry?.type === "LineString") {
+      return { type: "Feature", properties: { label: feature.properties.name, kind: "line" }, geometry };
+    }
+    return null;
+  }).filter(Boolean);
+}
+
 function attachEstateMapLayers(map: any) {
   map.addSource("estate-boundary", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
   map.addLayer({ id: "estate-boundary-fill", type: "fill", source: "estate-boundary", paint: { "fill-color": "#8bb59a", "fill-opacity": 0.08 } });
@@ -290,8 +303,19 @@ function attachEstateMapLayers(map: any) {
   });
   map.addLayer({ id: "estate-plots-outline", type: "line", source: "estate-plots", paint: { "line-color": "#ffffff", "line-width": 1.4 } });
   map.addSource("estate-layers", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  map.addLayer({ id: "estate-layers-line-casing", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": "#ffffff", "line-width": 5, "line-opacity": 0.9 } });
   map.addLayer({ id: "estate-layers-line", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "road", "#2b2f36", "drainage", "#287cb4", "#b77c2d"], "line-width": 3 } });
-  map.addLayer({ id: "estate-layers-fill", type: "fill", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": ["match", ["get", "type"], "open_space", "#78a85d", "infrastructure", "#b77c2d", "#287cb4"], "fill-opacity": 0.35 } });
+  map.addLayer({ id: "estate-layers-fill", type: "fill", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": ["match", ["get", "type"], "open_space", "#78a85d", "infrastructure", "#b77c2d", "#287cb4"], "fill-opacity": 0.4 } });
+  map.addLayer({ id: "estate-layers-fill-outline", type: "line", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "open_space", "#3f7a2c", "infrastructure", "#8a4f16", "#1c5aa8"], "line-width": 1.6 } });
+  map.addSource("estate-layer-labels", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  map.addLayer({
+    id: "estate-layer-labels",
+    type: "symbol",
+    source: "estate-layer-labels",
+    minzoom: 14,
+    layout: { "text-field": ["get", "label"], "text-size": 10.5, "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"], "symbol-placement": ["match", ["get", "kind"], "line", "line", "point"], "text-max-angle": 30 },
+    paint: { "text-color": "#0f1e17", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.6 },
+  });
   map.addSource("estate-block-labels", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
   map.addLayer({
     id: "estate-block-labels",
@@ -435,6 +459,12 @@ export default function Estates() {
   const [deletePlotConfirmText, setDeletePlotConfirmText] = useState("");
   const [showDeletePlotConfirm, setShowDeletePlotConfirm] = useState(false);
   const [deletePlotBusy, setDeletePlotBusy] = useState(false);
+  const [showEditPlotBoundary, setShowEditPlotBoundary] = useState(false);
+  const [editPlotPoints, setEditPlotPoints] = useState<Array<{ station: string; lng: number; lat: number }>>([]);
+  const [editPlotBusy, setEditPlotBusy] = useState(false);
+  const [editPlotMessage, setEditPlotMessageRaw] = useState("");
+  const [editPlotMessageTone, setEditPlotMessageTone] = useState<MessageTone>("good");
+  const setEditPlotMessage = (text: string, tone: MessageTone = "good") => { setEditPlotMessageRaw(text); setEditPlotMessageTone(tone); };
   const [resetLayoutConfirmText, setResetLayoutConfirmText] = useState("");
   const [showResetLayoutConfirm, setShowResetLayoutConfirm] = useState(false);
   const [resetLayoutBusy, setResetLayoutBusy] = useState(false);
@@ -564,6 +594,44 @@ export default function Estates() {
     } finally {
       setDeletePlotBusy(false);
     }
+  };
+  const openEditPlotBoundary = () => {
+    if (!selectedPlot) return;
+    const feature = plotGeojson.features.find((item: any) => Number(item.properties?.id) === selectedPlot.id);
+    const ring: number[][] = feature?.geometry?.type === "Polygon" ? feature.geometry.coordinates[0] : [];
+    const withoutClosingPoint = ring.length > 1 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1] ? ring.slice(0, -1) : ring;
+    setEditPlotPoints(withoutClosingPoint.map(([lng, lat], index) => ({ station: `P${index + 1}`, lng, lat })));
+    setEditPlotMessage("");
+    setShowEditPlotBoundary(true);
+  };
+  const savePlotBoundary = async () => {
+    if (!estateId || !selectedPlot) return;
+    if (editPlotPoints.length < 3) { setEditPlotMessage("Add at least three boundary points.", "danger"); return; }
+    const ring = editPlotPoints.map((point) => [point.lng, point.lat]);
+    if (checkPolygonClosure(ring as [number, number][]) === "self-intersecting") { setEditPlotMessage("This boundary crosses itself - adjust the vertices before saving.", "danger"); return; }
+    setEditPlotBusy(true);
+    try {
+      await api.patch(`/estates/${estateId}/plots/${selectedPlot.id}/geometry`, { geometry: { type: "Polygon", coordinates: [[...ring, ring[0]]] } });
+      window.location.reload();
+    } catch (error) {
+      setEditPlotMessage(await extractApiErrorMessage(error, "Plot boundary could not be saved."), "danger");
+    } finally {
+      setEditPlotBusy(false);
+    }
+  };
+  const handleEditPlotCoordinatesDrawn = (points: Array<{ station: string; lng: number; lat: number }>) => {
+    setEditPlotPoints(points);
+    setEditPlotMessage("Boundary updated from the map. Review it, then save.");
+  };
+  const parseCoordinateTextToPoints = (text: string) => text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line, index) => {
+    const [lng, lat] = line.split(/[\s,]+/).map(Number);
+    return { station: `P${index + 1}`, lng, lat };
+  }).filter((point) => Number.isFinite(point.lng) && Number.isFinite(point.lat));
+  const handleLayerCoordinatesDrawn = (points: Array<{ station: string; lng: number; lat: number }>) => {
+    setLayerCoordinates(points.map((point) => `${point.lng}, ${point.lat}`).join("\n"));
+  };
+  const handleLayerEditCoordinatesDrawn = (points: Array<{ station: string; lng: number; lat: number }>) => {
+    setLayerEditCoordinates(points.map((point) => `${point.lng}, ${point.lat}`).join("\n"));
   };
   const resetEstateLayout = async () => {
     if (!estateId) return;
@@ -907,6 +975,7 @@ export default function Estates() {
     (map.getSource("estate-boundary") as any)?.setData(mapBoundary ? { type: "Feature", properties: {}, geometry: mapBoundary } : { type: "FeatureCollection", features: [] });
     (map.getSource("estate-plots") as any)?.setData(mapPlotGeojson);
     (map.getSource("estate-layers") as any)?.setData(layersVisible ? layerGeojson : { type: "FeatureCollection", features: [] });
+    (map.getSource("estate-layer-labels") as any)?.setData({ type: "FeatureCollection", features: layersVisible ? buildLayerLabelFeatures(layerGeojson.features || []) : [] } as any);
     (map.getSource("estate-block-labels") as any)?.setData({ type: "FeatureCollection", features: buildBlockLabelFeatures(mapPlotGeojson.features, blocks) } as any);
     (map.getSource("estate-plot-labels") as any)?.setData({ type: "FeatureCollection", features: buildPlotLabelFeatures(mapPlotGeojson.features, allocations) } as any);
     void loadMapboxGl().then((mapboxgl) => {
@@ -1474,9 +1543,16 @@ export default function Estates() {
                     <button type="button" className="edash-btn-outline edash-info-card-action" onClick={() => openTab("hazards")}>View Analysis</button>
                   </div>
 
-                  <button type="button" className="edash-btn-outline" style={{ color: "var(--edash-danger)", borderColor: "var(--edash-danger-tint)", alignSelf: "flex-start" }} onClick={() => setShowDeletePlotConfirm(true)}>
-                    Delete plot
-                  </button>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {selectedPlot.commercial_status === "available" && (
+                      <button type="button" className="edash-btn-outline" onClick={() => openEditPlotBoundary()}>
+                        Edit boundary
+                      </button>
+                    )}
+                    <button type="button" className="edash-btn-outline" style={{ color: "var(--edash-danger)", borderColor: "var(--edash-danger-tint)" }} onClick={() => setShowDeletePlotConfirm(true)}>
+                      Delete plot
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -1978,6 +2054,12 @@ export default function Estates() {
               <label className="edash-field"><span>Layer name</span><input value={layerName} onChange={(event) => setLayerName(event.target.value)} placeholder="Optional" /></label>
             </div>
             <label className="edash-field"><span>Coordinates</span><textarea value={layerCoordinates} onChange={(event) => setLayerCoordinates(event.target.value)} placeholder="longitude, latitude per line" /></label>
+            {layerType === "open_space" && (
+              <div>
+                <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.8rem" }}>Or draw it on the map</h3></div>
+                {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={parseCoordinateTextToPoints(layerCoordinates)} onCoordinatesDrawn={handleLayerCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <p className="edash-tab-empty">Map drawing is unavailable right now.</p>}
+              </div>
+            )}
             <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => void createLayer()}>Add layer</button>
           </div>
           {layerGeojson.features.length > 0 && (
@@ -1992,6 +2074,12 @@ export default function Estates() {
               {selectedLayerId && (
                 <>
                   <label className="edash-field"><span>Coordinates</span><textarea value={layerEditCoordinates} onChange={(event) => setLayerEditCoordinates(event.target.value)} /></label>
+                  {layerGeojson.features.find((feature: any) => String(feature.id) === selectedLayerId)?.geometry?.type === "Polygon" && (
+                    <div>
+                      <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.8rem" }}>Or edit vertices on the map</h3></div>
+                      {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={parseCoordinateTextToPoints(layerEditCoordinates)} onCoordinatesDrawn={handleLayerEditCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <p className="edash-tab-empty">Map editing is unavailable right now.</p>}
+                    </div>
+                  )}
                   <div style={{ display: "flex", gap: 8 }}>
                     <button type="button" className="edash-btn-primary" onClick={() => void updateLayer()}>Save geometry</button>
                     <button type="button" className="edash-btn-outline" onClick={() => void archiveLayer()}>Archive layer</button>
@@ -2138,6 +2226,22 @@ export default function Estates() {
       {renderBottomRow()}
       {renderFooter()}
       {activeTool && renderActiveToolModal()}
+      {showEditPlotBoundary && selectedPlot && (
+        <EstateModal title={`Edit boundary - ${selectedPlot.plot_number}`} subtitle="Drag a vertex to reshape it, or click along an edge to add a new point. The area recalculates automatically when you save." onClose={() => setShowEditPlotBoundary(false)}>
+          {MAPBOX_TOKEN ? (
+            <MapViewEnhanced coordinates={editPlotPoints} onCoordinatesDrawn={handleEditPlotCoordinatesDrawn} coordinateSystem="wgs84" showToolbar />
+          ) : (
+            <p className="edash-tab-empty">Map editing is unavailable right now.</p>
+          )}
+          <StatusBanner text={editPlotMessage} tone={editPlotMessageTone} />
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <button type="button" className="edash-btn-primary" disabled={editPlotBusy || editPlotPoints.length < 3} onClick={() => void savePlotBoundary()}>
+              {editPlotBusy ? <><Spinner size={14} /> Saving...</> : "Save boundary"}
+            </button>
+            <button type="button" className="edash-btn-outline" onClick={() => setShowEditPlotBoundary(false)}>Cancel</button>
+          </div>
+        </EstateModal>
+      )}
       {showDeletePlotConfirm && selectedPlot && (
         <EstateModal title="Delete this plot?" subtitle="This permanently removes the plot record and cannot be undone." onClose={() => { setShowDeletePlotConfirm(false); setDeletePlotConfirmText(""); }}>
           <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>
