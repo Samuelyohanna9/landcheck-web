@@ -301,7 +301,10 @@ function attachEstateMapLayers(map: any) {
       "fill-opacity": 0.6,
     },
   });
-  map.addLayer({ id: "estate-plots-outline", type: "line", source: "estate-plots", paint: { "line-color": "#ffffff", "line-width": 1.4 } });
+  // A stark, thick white line between EVERY plot - including two plots that are truly touching
+  // with zero gap - reads visually as "there's a gap here" even when there isn't one. A thinner,
+  // lower-opacity line still shows the legal parcel division without implying separation.
+  map.addLayer({ id: "estate-plots-outline", type: "line", source: "estate-plots", paint: { "line-color": "#ffffff", "line-width": 0.75, "line-opacity": 0.65 } });
   map.addSource("estate-layers", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
   map.addLayer({ id: "estate-layers-line-casing", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": "#ffffff", "line-width": 5, "line-opacity": 0.9 } });
   map.addLayer({ id: "estate-layers-line", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "road", "#2b2f36", "drainage", "#287cb4", "#b77c2d"], "line-width": 3 } });
