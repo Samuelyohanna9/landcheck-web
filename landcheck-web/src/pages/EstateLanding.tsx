@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import SocialLinks from "../components/SocialLinks";
 import "../styles/estate-portal.css";
 
 const DEMO_MAILTO = "mailto:landchecktech@gmail.com?subject=LandCheck%20Estates%20demo%20request";
@@ -72,17 +73,55 @@ export default function EstateLanding() {
         <a href={DEMO_MAILTO} className="estate-button">Request a demo</a>
       </section>
 
-      <footer className="estate-portal-footer">
-        <Link to="/estates" className="estate-brand" aria-label="LandCheck Estates home">
-          <img src="/logo.svg" alt="LandCheck" width="126" height="35" />
-          <span>ESTATES</span>
-        </Link>
-        <nav className="estate-portal-footer-links" aria-label="Footer">
-          <a href="#platform">Platform</a>
-          <a href="mailto:landchecktech@gmail.com">Contact</a>
-          <Link to="/privacy">Privacy</Link>
-          <Link to="/estates/login">Sign in</Link>
-        </nav>
+      <footer className="estate-site-footer">
+        <div className="estate-site-footer-inner">
+          <div className="estate-site-footer-brand">
+            <Link to="/estates" className="estate-brand" aria-label="LandCheck Estates home">
+              <img src="/logo.svg" alt="LandCheck" width="100" height="34" loading="lazy" />
+              <span>ESTATES</span>
+            </Link>
+            <ul>
+              <li><a href="mailto:landchecktech@gmail.com">landchecktech@gmail.com</a></li>
+              <li>LandCheck Geospatial Technologies Limited</li>
+              <li><a href="https://landcheck.online" target="_blank" rel="noopener noreferrer">landcheck.online</a></li>
+            </ul>
+            <SocialLinks className="estate-site-footer-social" />
+          </div>
+
+          <div className="estate-site-footer-col">
+            <h2>Products</h2>
+            <ul>
+              <li><Link to="/estates/login">LandCheck Estates</Link></li>
+              <li><Link to="/green-partners">LandCheck Green</Link></li>
+              <li><Link to="/survey">Survey Plan</Link></li>
+              <li><Link to="/flood">Flood Risk Analysis</Link></li>
+            </ul>
+          </div>
+
+          <div className="estate-site-footer-col">
+            <h2>Tools</h2>
+            <ul>
+              <li><Link to="/survey-plan">Survey Plan Tool</Link></li>
+              <li><Link to="/hazard-analysis">Hazard Analysis</Link></li>
+              <li><a href="#platform">Estate platform</a></li>
+            </ul>
+          </div>
+
+          <div className="estate-site-footer-col">
+            <h2>Company</h2>
+            <ul>
+              <li><Link to="/career">Careers</Link></li>
+              <li><Link to="/news">News</Link></li>
+              <li><a href="mailto:landchecktech@gmail.com?subject=LandCheck%20Support">Support</a></li>
+              <li><Link to="/privacy">Privacy</Link></li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="estate-site-footer-bottom">
+          <span>All rights reserved. &copy; {new Date().getFullYear()} LandCheck Geospatial Technologies Limited</span>
+          <Link to="/estates/login">Sign in to Estates</Link>
+        </div>
       </footer>
     </main>
   );
