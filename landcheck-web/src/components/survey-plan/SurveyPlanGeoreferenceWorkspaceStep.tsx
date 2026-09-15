@@ -18,6 +18,7 @@ type Props = {
   sidebar: ReactNode;
   session: GeoreferenceSession;
   rasterObjectUrl: string | null;
+  imageLabel?: string;
   features: GeoreferenceFeature[];
   saving: boolean;
   onFeaturesChange: (features: GeoreferenceFeature[]) => void;
@@ -188,6 +189,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   sidebar,
   session,
   rasterObjectUrl,
+  imageLabel = "Survey plan",
   features,
   saving,
   onFeaturesChange,
@@ -1396,7 +1398,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
 
         <section className="geo-panel geo-panel-canvas" data-tab-panel="raster">
           <div className="geo-panel-heading">
-            <h2>Survey plan</h2>
+            <h2>{imageLabel}</h2>
             <p>
               {tool === "point"
                 ? "Each click saves a stake point immediately."
@@ -1461,7 +1463,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                     <img
                       ref={rasterImageRef}
                       src={rasterObjectUrl}
-                      alt={session.title_text || "Georeferenced raster"}
+                      alt={session.title_text || `${imageLabel} image`}
                       style={rasterLoadState === "loaded" ? undefined : { visibility: "hidden" }}
                       onLoad={(event) => {
                         const target = event.currentTarget;
@@ -1483,11 +1485,17 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                     />
                     {rasterLoadState !== "loaded" ? (
                       <div className="georef-empty-stage">
-                        <strong>{rasterLoadState === "error" ? "Survey plan could not be loaded." : "Loading survey plan…"}</strong>
+                        <strong>
+                          {rasterLoadState === "error" ? `${imageLabel} could not be loaded.` : `Loading ${imageLabel.toLowerCase()}…`}
+                        </strong>
                         <span>
                           {rasterLoadState === "error"
-                            ? "Reload the session, or start a new plan and re-upload the file."
-                            : "This can take a moment for large scans."}
+                            ? imageLabel === "Estate layout"
+                              ? "Reload the session or upload the layout again."
+                              : "Reload the session, or start a new plan and re-upload the file."
+                            : imageLabel === "Estate layout"
+                              ? "Preparing a clear tracing image…"
+                              : "This can take a moment for large scans."}
                         </span>
                       </div>
                     ) : null}

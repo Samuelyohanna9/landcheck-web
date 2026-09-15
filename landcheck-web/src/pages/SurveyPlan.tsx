@@ -1055,7 +1055,7 @@ export default function SurveyPlan() {
   const clearGeorefLocalState = useCallback(() => {
     setGeorefSession(null);
     setGeorefRasterObjectUrl((current) => {
-      if (current) {
+      if (current?.startsWith("blob:")) {
         URL.revokeObjectURL(current);
       }
       return null;
@@ -1073,7 +1073,7 @@ export default function SurveyPlan() {
 
   useEffect(() => {
     return () => {
-      if (georefRasterObjectUrl) {
+      if (georefRasterObjectUrl?.startsWith("blob:")) {
         URL.revokeObjectURL(georefRasterObjectUrl);
       }
     };
@@ -1097,18 +1097,28 @@ export default function SurveyPlan() {
   );
 
   const loadGeoreferenceRaster = useCallback(async (sessionId: string) => {
+    if (isEstateLayoutImport) {
+      const baseUrl = String(api.defaults.baseURL || "").replace(/\/+$/, "");
+      const nextUrl = `${baseUrl}/survey-georeference/sessions/${encodeURIComponent(sessionId)}/digitize-preview?v=${Date.now()}`;
+      setGeorefRasterObjectUrl((current) => {
+        if (current?.startsWith("blob:")) URL.revokeObjectURL(current);
+        return nextUrl;
+      });
+      return;
+    }
+
     const res = await api.get(`/survey-georeference/sessions/${encodeURIComponent(sessionId)}/raster`, {
       responseType: "blob",
       timeout: SLOW_NETWORK_TIMEOUT_MS,
     });
     const nextObjectUrl = URL.createObjectURL(res.data);
     setGeorefRasterObjectUrl((current) => {
-      if (current) {
+      if (current?.startsWith("blob:")) {
         URL.revokeObjectURL(current);
       }
       return nextObjectUrl;
     });
-  }, []);
+  }, [isEstateLayoutImport]);
 
   const loadGeoreferenceSession = useCallback(
     async (sessionId: string, options?: { preferredControlPointId?: string | null; silent?: boolean }) => {
@@ -1129,7 +1139,7 @@ export default function SurveyPlan() {
         setGeorefSessionLoading(false);
       }
     },
-    [applyGeoreferenceSession, loadGeoreferenceRaster]
+    [applyGeoreferenceSession, isEstateLayoutImport, loadGeoreferenceRaster]
   );
 
   useEffect(() => {
@@ -5499,6 +5509,7 @@ export default function SurveyPlan() {
               sidebar={null /* the new geo-h-stepper in renderGeoreferenceTopBar() replaces this for georeference */}
               session={georefSession}
               rasterObjectUrl={georefRasterObjectUrl}
+              imageLabel={isEstateLayoutImport ? "Estate layout" : undefined}
               features={georefFeatures}
               saving={georefSavingFeatures || georefEstateFinishing}
               onFeaturesChange={setGeorefFeatures}

@@ -26,14 +26,18 @@ export function getRasterStageMetrics(
 
   const containerWidth = stageEl.clientWidth;
   const containerHeight = stageEl.clientHeight;
-  const naturalWidth = imageEl.naturalWidth || sourceWidth || 0;
-  const naturalHeight = imageEl.naturalHeight || sourceHeight || 0;
+  // Estate digitization uses a resized source preview; drawing coordinates still belong to the
+  // original scan, so keep source dimensions as the pixel-space extent.
+  const naturalWidth = sourceWidth || imageEl.naturalWidth || 0;
+  const naturalHeight = sourceHeight || imageEl.naturalHeight || 0;
 
   if (!containerWidth || !containerHeight || !naturalWidth || !naturalHeight) {
     return null;
   }
 
-  const imageAspect = naturalWidth / naturalHeight;
+  const imageAspect = imageEl.naturalWidth > 0 && imageEl.naturalHeight > 0
+    ? imageEl.naturalWidth / imageEl.naturalHeight
+    : naturalWidth / naturalHeight;
   const containerAspect = containerWidth / containerHeight;
 
   let displayWidth = containerWidth;
