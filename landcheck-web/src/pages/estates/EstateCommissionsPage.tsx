@@ -13,6 +13,10 @@ export default function EstateCommissionsPage() {
   const [commissionReport, setCommissionReport] = useState<any[]>([]);
   const [commissionTiersBusy, setCommissionTiersBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [agents, setAgents] = useState<Array<{ id: number; subject_type: string; subject_id: string; role: string; is_active: boolean; display_name: string }>>([]);
+  const [newAgentName, setNewAgentName] = useState("");
+  const [newAgentRole, setNewAgentRole] = useState("sales");
+  const [agentBusy, setAgentBusy] = useState(false);
 
   const loadCommissionData = async (orgId: number) => {
     try {
@@ -28,6 +32,22 @@ export default function EstateCommissionsPage() {
     }
   };
 
+  const loadAgents = async (orgId: number) => {
+    try {
+      const [membersResponse, namesResponse] = await Promise.all([
+        api.get(`/estates/organizations/${orgId}/members`),
+        api.get(`/estates/organizations/${orgId}/sales-agents`),
+      ]);
+      const nameByKey = new Map((namesResponse.data || []).map((item: any) => [`${item.subject_type}::${item.subject_id}`, item.display_name]));
+      setAgents((membersResponse.data || []).map((member: any) => ({
+        ...member,
+        display_name: nameByKey.get(`${member.subject_type}::${member.subject_id}`) || member.subject_id,
+      })));
+    } catch {
+      setAgents([]);
+    }
+  };
+
   useEffect(() => {
     api.get("/estates").then((response) => {
       const first = (response.data || [])[0];
@@ -37,10 +57,36 @@ export default function EstateCommissionsPage() {
         if (first.organization_id) {
           setOrganizationId(first.organization_id);
           void loadCommissionData(first.organization_id);
+          void loadAgents(first.organization_id);
         }
       }
     }).catch(() => undefined);
   }, []);
+
+  const addAgent = async () => {
+    if (!organizationId || !newAgentName.trim()) return;
+    setAgentBusy(true);
+    try {
+      await api.post(`/estates/organizations/${organizationId}/members`, { subject_type: "manual_agent", subject_id: newAgentName.trim(), role_key: newAgentRole });
+      setNewAgentName("");
+      await loadAgents(organizationId);
+      setMessage(`${newAgentName.trim()} added.`);
+    } catch (error) {
+      setMessage(await extractApiErrorMessage(error, "Agent could not be added."));
+    } finally {
+      setAgentBusy(false);
+    }
+  };
+
+  const toggleAgentActive = async (member: { id: number; is_active: boolean }) => {
+    if (!organizationId) return;
+    try {
+      await api.patch(`/estates/organizations/${organizationId}/members/${member.id}`, { is_active: !member.is_active });
+      await loadAgents(organizationId);
+    } catch (error) {
+      setMessage(await extractApiErrorMessage(error, "Agent could not be updated."));
+    }
+  };
 
   const saveCommissionTiers = async () => {
     if (!organizationId) return;
@@ -65,6 +111,50 @@ export default function EstateCommissionsPage() {
         A single-level, volume-tiered commission ladder - the rate an agent earns steps up automatically once their cumulative Allocated (fully paid) sales cross a threshold, applied from the next sale onward. Past commissions never get recalculated when you edit the ladder.
       </p>
       {message && <p className="edash-tab-empty" style={{ padding: "0 0 12px" }}>{message}</p>}
+
+      <div className="edash-card" style={{ marginBottom: 16 }}>
+        <div className="edash-card-inner">
+          <div className="edash-card-head"><h3 className="edash-card-title">Sales agents</h3></div>
+          <p className="edash-field-note" style={{ marginBottom: 10 }}>Add anyone who should be selectable as a sales agent when reserving or allocating a plot - they don't need a LandCheck login, just a name to attribute sales and commission to.</p>
+          <div className="edash-form-row" style={{ marginBottom: 12, alignItems: "flex-end" }}>
+            <label className="edash-field" style={{ maxWidth: 240 }}>
+              <span>Name</span>
+              <input value={newAgentName} onChange={(event) => setNewAgentName(event.target.value)} placeholder="e.g. Chidinma Okafor" />
+            </label>
+            <label className="edash-field" style={{ maxWidth: 180 }}>
+              <span>Role</span>
+              <select value={newAgentRole} onChange={(event) => setNewAgentRole(event.target.value)}>
+                <option value="sales">Sales agent</option>
+                <option value="manager">Manager</option>
+                <option value="accounts">Accounts</option>
+                <option value="field_officer">Field officer</option>
+                <option value="surveyor">Surveyor</option>
+                <option value="viewer">Viewer</option>
+              </select>
+            </label>
+            <button type="button" className="edash-btn-primary" disabled={agentBusy || !newAgentName.trim()} onClick={() => void addAgent()}>
+              {agentBusy ? <><Spinner size={13} /> Adding...</> : "Add agent"}
+            </button>
+          </div>
+          {agents.length ? (
+            <div style={{ overflowX: "auto" }}>
+              <table className="edash-mini-table">
+                <thead><tr><th>Name</th><th>Role</th><th>Status</th><th /></tr></thead>
+                <tbody>
+                  {agents.map((member) => (
+                    <tr key={member.id}>
+                      <td>{member.display_name}</td>
+                      <td style={{ textTransform: "capitalize" }}>{member.role.replaceAll("_", " ")}</td>
+                      <td><span className={`edash-status-pill tone-${member.is_active ? "good" : "neutral"}`}>{member.is_active ? "Active" : "Inactive"}</span></td>
+                      <td><button type="button" className="edash-btn-outline" onClick={() => void toggleAgentActive(member)}>{member.is_active ? "Deactivate" : "Reactivate"}</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="edash-tab-empty">No agents or team members added yet.</p>}
+        </div>
+      </div>
 
       <div className="edash-card" style={{ marginBottom: 16 }}>
         <div className="edash-card-inner">
