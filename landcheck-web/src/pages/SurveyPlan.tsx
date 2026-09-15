@@ -4917,18 +4917,36 @@ export default function SurveyPlan() {
         {(isEstateLayoutImport ? GEOREFERENCE_STEPS.slice(0, 2) : GEOREFERENCE_STEPS).map((step) => {
           const completed = currentStep > step.id;
           const active = currentStep === step.id;
-          return (
-            <div key={`h_step_${step.id}`} className={`geo-h-step${active ? " active" : ""}${completed ? " completed" : ""}`}>
-              <span className="geo-h-step-marker">
-                {completed ? (
-                  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                ) : (
-                  step.id
-                )}
-              </span>
-              <span className="geo-h-step-label">{step.title === "Digitize Workspace" ? "Digitize" : step.title === "Export & Continue" ? "Export" : "Control points"}</span>
+          const label = step.title === "Digitize Workspace" ? "Digitize" : step.title === "Export & Continue" ? "Export" : "Control points";
+          const marker = (
+            <span className="geo-h-step-marker">
+              {completed ? (
+                <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                step.id
+              )}
+            </span>
+          );
+          const className = `geo-h-step${active ? " active" : ""}${completed ? " completed" : ""}`;
+          // Only a completed step is a real navigation target - jumping to the active step is a
+          // no-op, and a future step's data doesn't exist yet to jump to.
+          return completed ? (
+            <button
+              key={`h_step_${step.id}`}
+              type="button"
+              className={className}
+              onClick={() => goToStep(step.id)}
+              title={`Back to ${label}`}
+            >
+              {marker}
+              <span className="geo-h-step-label">{label}</span>
+            </button>
+          ) : (
+            <div key={`h_step_${step.id}`} className={className} aria-current={active ? "step" : undefined}>
+              {marker}
+              <span className="geo-h-step-label">{label}</span>
             </div>
           );
         })}

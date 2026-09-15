@@ -1612,50 +1612,71 @@
   transform: none;
 }
 
-/* Floating "type the coordinate right here" box for the Add-manually flow - positioned/edge-
-   flipped the same way as .georef-cursor-probe above, just with an interactive form instead of a
-   read-only label (pointer-events restored, clicks inside stopped from reaching the raster). */
-.georef-manual-entry-popup {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  z-index: 6;
-  cursor: default;
-}
-
+/* Small dot marking exactly which point on the raster the floating card (below) refers to - it
+   stays inside the zoomable/pannable stage so it tracks the point visually, but it's just an 8px
+   marker, never wide enough to be clipped by the stage's own overflow:hidden the way a full card
+   was. useFloatingCardAtPoint measures this element's on-screen position to place the card. */
 .georef-manual-entry-popup-reticle {
   position: absolute;
-  left: 50%;
-  top: 50%;
   width: 8px;
   height: 8px;
   border-radius: 999px;
   background: var(--geo-accent, #25c77a);
   border: 1px solid #ffffff;
-  box-shadow: 0 0 0 1px rgba(2, 6, 23, 0.5);
+  box-shadow: 0 0 0 1px rgba(2, 6, 23, 0.5), 0 0 0 6px rgba(37, 199, 122, 0.22);
   transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 30;
 }
 
-.georef-manual-entry-popup-body {
-  position: absolute;
-  left: calc(100% + 0.6rem);
-  top: 50%;
-  transform: translateY(-50%);
+/* The actual coordinate-entry / point-saved card. Portalled into document.body and positioned
+   with `position: fixed` from real viewport coordinates (via useFloatingCardAtPoint) rather than
+   being nested inside the raster stage - that stage pans/zooms with a CSS transform and clips
+   with overflow:hidden, both of which silently cut this card off (the original bug report: the
+   "Latitude" field was rendering past the visible edge of the canvas). Escaping into a portal
+   sidesteps both, the same fix already used for the ribbon's style pickers - see
+   useFloatingPopoverPosition.ts. */
+.georef-floating-card {
+  position: fixed;
+  z-index: 300;
   display: grid;
   gap: var(--geo-space-2, 8px);
-  width: 200px;
+  width: 236px;
+  max-width: calc(100vw - 16px);
   padding: var(--geo-space-3, 12px);
   border-radius: var(--geo-radius, 10px);
   border: 1px solid var(--geo-border-strong, rgba(148, 163, 184, 0.34));
-  background: var(--geo-surface-1, #112230);
-  box-shadow: 0 16px 32px rgba(2, 6, 23, 0.45);
+  background: color-mix(in srgb, var(--geo-surface-1, #112230) 88%, transparent);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  box-shadow: 0 20px 44px rgba(2, 6, 23, 0.5), 0 0 0 1px rgba(2, 6, 23, 0.25);
+  cursor: default;
+  animation: georef-card-in 0.16s ease-out;
 }
 
-.georef-manual-entry-popup-body strong {
+@media (prefers-reduced-motion: reduce) {
+  .georef-floating-card {
+    animation: none;
+  }
+}
+
+@keyframes georef-card-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.georef-floating-card strong {
   color: var(--geo-text-primary, #f8fafc);
   font-size: 12px;
 }
 
-.georef-manual-entry-popup-body label {
+.georef-floating-card label {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1664,7 +1685,7 @@
   font-weight: 700;
 }
 
-.georef-manual-entry-popup-body input {
+.georef-floating-card input {
   min-height: 34px;
   padding: 0 var(--geo-space-2, 8px);
   border-radius: var(--geo-radius, 8px);
@@ -1673,22 +1694,13 @@
   color: var(--geo-text-primary, #f8fafc);
   font-size: 13px;
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
-.georef-manual-entry-popup-body input:focus-visible {
+.georef-floating-card input:focus-visible {
   border-color: var(--geo-accent, #25c77a);
-  outline: none;
-}
-
-.georef-manual-entry-popup.is-right-edge .georef-manual-entry-popup-body {
-  left: auto;
-  right: calc(100% + 0.6rem);
-}
-
-.georef-manual-entry-popup.is-bottom-edge .georef-manual-entry-popup-body {
-  top: auto;
-  bottom: calc(100% + 0.5rem);
-  transform: none;
+  outline: 2px solid var(--geo-accent, #25c77a);
+  outline-offset: 1px;
 }
 
 .georef-manual-entry-popup-link {
@@ -1703,14 +1715,16 @@
   cursor: pointer;
 }
 
-/* "Point saved - what next" popup, same anchored-box shell as the entry popup, wider to fit its
-   own copy line plus the Continue-to-Digitize shortcut once 3+ points are ready. */
-.georef-confirm-popup .georef-manual-entry-popup-body {
-  width: 220px;
-  position: relative;
+.georef-manual-entry-popup-link:focus-visible {
+  outline: 2px solid var(--geo-accent, #25c77a);
+  outline-offset: 2px;
+  border-radius: 3px;
 }
 
-.georef-confirm-popup-close {
+/* "Point saved - what next" card reuses .georef-floating-card's shell wholesale (including its
+   `position: fixed`, which already establishes the containing block the close button below needs)
+   - only the close button itself is confirm-specific. */
+.georef-confirm-card-close {
   position: absolute;
   top: var(--geo-space-2, 8px);
   right: var(--geo-space-2, 8px);
@@ -1729,8 +1743,14 @@
   cursor: pointer;
 }
 
-.georef-confirm-popup-close:hover {
+.georef-confirm-card-close:hover {
   color: var(--geo-text-primary, #f8fafc);
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.georef-confirm-card-close:focus-visible {
+  outline: 2px solid var(--geo-accent, #25c77a);
+  outline-offset: 1px;
 }
 
 .georef-control-point-marker {
@@ -6626,7 +6646,7 @@ select.field-error {
   position: absolute;
   top: var(--geo-space-3);
   left: var(--geo-space-3);
-  z-index: 5;
+  z-index: 30;
   display: flex;
   align-items: center;
   gap: var(--geo-space-1);
@@ -6710,7 +6730,10 @@ select.field-error {
 }
 
 .geo-status-item em {
-  color: var(--geo-text-muted);
+  /* --geo-text-muted (#62768a on this bar's #16283a background) measures ~3.2:1 - under the
+     4.5:1 AA floor for text this small, which is exactly what made these labels hard to read.
+     --geo-text-secondary clears ~6.75:1 while staying visually secondary to the value beside it. */
+  color: var(--geo-text-secondary);
   font-style: normal;
   font-size: 0.66rem;
   font-weight: 700;
@@ -7173,9 +7196,28 @@ select.field-error {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-bottom: 8px;
+  padding: 0 0 8px;
+  border: none;
   border-bottom: 2px solid transparent;
+  background: none;
+  font: inherit;
   white-space: nowrap;
+}
+
+/* Only completed steps render as <button> (see SurveyPlan.tsx) - the active/future steps stay
+   plain <div>s, since neither is a real navigation target. */
+button.geo-h-step {
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+}
+
+button.geo-h-step:hover .geo-h-step-label {
+  color: var(--survey-text-primary, #f5efe2);
+}
+
+button.geo-h-step:focus-visible {
+  outline: 2px solid var(--survey-copper-500, #20a866);
+  outline-offset: 2px;
 }
 
 .geo-h-step-marker {
