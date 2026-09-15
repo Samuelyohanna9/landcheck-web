@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { api } from "../api/client";
 import { isSurveyAuthed } from "../auth/surveyAuth";
 import {
   prefetchSurveyPlanPreviewStep,
@@ -36,10 +37,41 @@ const socialLinks = [
 export default function SurveyPlanLanding() {
   const navigate = useNavigate();
   const [signInOpen, setSignInOpen] = useState(false);
+  const [totalPlotsGenerated, setTotalPlotsGenerated] = useState<number | null>(null);
   const signedIn = isSurveyAuthed();
 
   useEffect(() => {
     scheduleSurveyPlanIdlePrefetch();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const refreshPlotCount = async () => {
+      try {
+        const { data } = await api.get<{ total_plots_generated: number }>("/analytics/public-proof", {
+          headers: { "Cache-Control": "no-cache" },
+        });
+        const count = Number(data.total_plots_generated);
+        if (active && Number.isSafeInteger(count) && count >= 0) {
+          setTotalPlotsGenerated(count);
+        }
+      } catch {
+        if (active) setTotalPlotsGenerated(null);
+      }
+    };
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void refreshPlotCount();
+    };
+
+    void refreshPlotCount();
+    const interval = window.setInterval(() => void refreshPlotCount(), 60_000);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
   }, []);
 
   const warmSurveyEntry = () => {
@@ -77,7 +109,7 @@ export default function SurveyPlanLanding() {
             <img className="spl-hero-laptop" src="/survey-laptop-hand.png" alt="" />
           </div>
           <div className="spl-hero-screen" aria-hidden="true">
-            <img src="/georefrence%20preview.jpg" alt="" />
+            <img src="/survey%20%20plan%20preview.jpg" alt="" />
           </div>
           <div className="spl-hero-shade" />
           <div className="spl-shell spl-hero-shell">
@@ -92,6 +124,12 @@ export default function SurveyPlanLanding() {
                   Open survey workspace
                 </button>
               </div>
+              {totalPlotsGenerated !== null && (
+                <p className="spl-hero-proof" aria-live="polite">
+                  <strong>{totalPlotsGenerated.toLocaleString("en-NG")}</strong>
+                  <span>survey plots generated</span>
+                </p>
+              )}
             </div>
           </div>
         </section>

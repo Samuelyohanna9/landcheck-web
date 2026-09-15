@@ -129,8 +129,9 @@
   display: block;
   width: 62.5%;
   height: 57.5%;
-  object-fit: cover;
-  object-position: center 25%;
+  object-fit: contain;
+  object-position: center;
+  background: #dfe2e1;
 }
 
 .spl-hero-shade {
@@ -173,8 +174,7 @@
 .spl-hero-copy h1,
 .spl-section h2,
 .spl-workflow h2,
-.spl-scan-section h2,
-.spl-closing h2 {
+.spl-scan-section h2 {
   margin: 18px 0 0;
   font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   font-weight: 500;
@@ -203,6 +203,24 @@
   gap: 26px;
   align-items: center;
   margin-top: 32px;
+}
+
+.spl-hero-proof {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin: 26px 0 0;
+  color: rgba(246, 243, 233, 0.7);
+  font-size: 0.78rem;
+  letter-spacing: 0.025em;
+}
+
+.spl-hero-proof strong {
+  color: #82dfbf;
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
 }
 
 .spl-text-link {
@@ -234,21 +252,6 @@
 
 .spl-text-link--light:hover {
   color: #fff;
-}
-
-.spl-text-link--light-muted {
-  color: rgba(246, 243, 233, 0.78);
-}
-
-.spl-text-link--light-muted:hover {
-  color: #fff;
-}
-
-.spl-hero-note {
-  margin: 54px 0 0;
-  color: rgba(246, 243, 233, 0.58);
-  font-size: 0.75rem;
-  letter-spacing: 0.045em;
 }
 
 .spl-section {

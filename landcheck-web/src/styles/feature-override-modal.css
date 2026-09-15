@@ -1,4 +1,11 @@
 .feature-override-modal {
+  /* One canonical accent for every "this is active/selected" state in the CAD editor
+     (tool rail, status-bar toggles) - previously each used its own slightly different
+     ad hoc green rgba blend. */
+  --cad-accent: #10b981;
+  --cad-accent-strong: #34d399;
+  --cad-accent-ink: #052e22;
+  --cad-border: #30363d;
   position: fixed;
   inset: 0;
   z-index: 2000;
@@ -104,7 +111,7 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid transparent;
+  border: 1px solid var(--cad-border, #30363d);
   border-radius: 8px;
   background: transparent;
   color: #cbd5e1;
@@ -120,13 +127,13 @@
 
 .cad-icon-btn:hover {
   background: rgba(148, 163, 184, 0.12);
-  border-color: rgba(148, 163, 184, 0.22);
+  border-color: rgba(148, 163, 184, 0.32);
   color: #f8fafc;
 }
 
 .cad-icon-btn.active {
-  background: linear-gradient(180deg, rgba(22, 163, 74, 0.32), rgba(20, 83, 45, 0.55));
-  border-color: rgba(34, 197, 94, 0.55);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cad-accent, #10b981) 32%, transparent), color-mix(in srgb, var(--cad-accent-ink, #052e22) 70%, transparent));
+  border-color: var(--cad-accent, #10b981);
   color: #dcfce7;
 }
 
@@ -408,10 +415,15 @@
   color: #f8fafc;
 }
 
-/* ─── Left vertical drawing-tool rail (44px) ─── */
+/* ─── Left vertical drawing-tool rail (44px) ───
+   CAD canvas z-index scale (nothing was actually clipping before this, just tidying
+   the numbers onto a documented scale): 20s = floating canvas widgets (toolbar,
+   tooltips, HUD, traverse panel) that sit over the drawing surface; 30s = the tool
+   rail and its flyout, which sit over those; 40 = the right inspector panel, which
+   can cover both on narrow layouts. */
 .cad-tool-rail {
   grid-column: 1;
-  z-index: 6;
+  z-index: 30;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -446,7 +458,7 @@
   position: absolute;
   top: 0;
   left: calc(100% + 0.5rem);
-  z-index: 7;
+  z-index: 31;
   width: 160px;
   display: flex;
   flex-direction: column;
@@ -521,12 +533,12 @@
   position: absolute;
   top: 0.7rem;
   left: 0.7rem;
-  z-index: 5;
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: 0.15rem;
   padding: 0.22rem;
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border: 1px solid var(--cad-border, #30363d);
   border-radius: 10px;
   background: rgba(9, 15, 26, 0.86);
   backdrop-filter: blur(10px);
@@ -579,6 +591,11 @@
   overflow-x: auto;
   color: #cbd5e1;
   font-size: 0.72rem;
+  /* A CAD status bar's whole job is to be read at a glance while the cursor moves - a
+     fixed-width face plus tabular digits keeps every reading (cursor position, scale,
+     %) from shifting width as the numbers themselves change. */
+  font-family: var(--survey-font-mono, "IBM Plex Mono", "SFMono-Regular", monospace);
+  font-variant-numeric: tabular-nums;
 }
 
 .cad-status-bar-spacer {
@@ -600,7 +617,7 @@
 
 .cad-editor-inspector {
   position: relative;
-  z-index: 8;
+  z-index: 40;
   width: 280px;
   min-height: 0;
   display: flex;
@@ -1069,7 +1086,12 @@
   color: #e2e8f0;
   border-top: 1px solid rgba(148, 163, 184, 0.08);
   background: rgba(12, 18, 30, 0.52);
-  font-family: "JetBrains Mono", "SFMono-Regular", monospace;
+  /* This previously named "JetBrains Mono" directly, which is never actually loaded
+     anywhere in the app - it silently fell back to a system monospace. IBM Plex Mono
+     already is loaded (survey-tokens.css) for exactly this kind of coordinate/numeric
+     display, so route here instead of loading a second monospace face for no reason. */
+  font-family: var(--survey-font-mono, "IBM Plex Mono", "SFMono-Regular", monospace);
+  font-variant-numeric: tabular-nums;
 }
 
 .cad-coordinate-table tbody td:first-child {
@@ -1197,7 +1219,7 @@
   position: absolute;
   top: 16px;
   right: 16px;
-  z-index: 6;
+  z-index: 20;
   width: min(440px, calc(100% - 32px));
   max-height: calc(100% - 32px);
   display: flex;
@@ -1572,7 +1594,7 @@
 .cad-axis-label {
   fill: #dbe7f5;
   font-size: 10.5px;
-  font-family: "JetBrains Mono", "SFMono-Regular", monospace;
+  font-family: var(--survey-font-mono, "IBM Plex Mono", "SFMono-Regular", monospace);
   font-weight: 600;
   letter-spacing: 0.02em;
   user-select: none;
@@ -1637,19 +1659,20 @@
 }
 
 .cad-status-toggle {
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border: 1px solid var(--cad-border, #30363d);
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.82);
   color: #cbd5e1;
   padding: 0.28rem 0.6rem;
   font-size: 0.72rem;
   font-weight: 700;
+  font-family: inherit;
   cursor: pointer;
 }
 
 .cad-status-toggle.active {
-  border-color: rgba(34, 197, 94, 0.42);
-  background: rgba(20, 83, 45, 0.54);
+  border-color: var(--cad-accent, #10b981);
+  background: color-mix(in srgb, var(--cad-accent-ink, #052e22) 78%, transparent);
   color: #dcfce7;
 }
 
@@ -1657,7 +1680,7 @@
   position: absolute;
   top: 0.95rem;
   right: 1rem;
-  z-index: 2;
+  z-index: 20;
   max-width: 320px;
   padding: 0.4rem 0.68rem;
   border: 1px solid rgba(125, 211, 252, 0.16);
@@ -1673,7 +1696,7 @@
   position: absolute;
   top: 1rem;
   left: 1rem;
-  z-index: 2;
+  z-index: 20;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1752,7 +1775,7 @@
   position: absolute;
   left: 1rem;
   bottom: 1rem;
-  z-index: 2;
+  z-index: 20;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.65rem;
