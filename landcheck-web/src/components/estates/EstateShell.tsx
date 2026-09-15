@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import EstateIcon, { type EstateIconName } from "./EstateIcon";
 import EstateModal from "./EstateModal";
 import { clearEstateAuthSession, getEstateAuthSession } from "../../auth/estateAuth";
+import { prefetchMapboxCore } from "../../utils/mapboxLoader";
 import "../../styles/estate-dashboard.css";
 
 export type EstateNavKey =
@@ -86,6 +87,15 @@ export default function EstateShell({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [notifOpen, userMenuOpen]);
+
+  // The map bundle (mapbox-gl + its CSS) is a genuinely large download, and on a slow connection
+  // waiting for it to even START after clicking "Map & Plots" is most of the visible delay. Warming
+  // it in the background while someone is reading the Dashboard - the natural page before the map -
+  // means it's often already cached by the time they navigate there. loadMapboxGl()/loadMapboxGlCss()
+  // are memoized, so this is a no-op if the map has already been opened this session.
+  useEffect(() => {
+    if (activeKey === "dashboard") void prefetchMapboxCore();
+  }, [activeKey]);
 
   // The mobile nav drawer follows the same dismissal conventions as a modal - Escape closes it,
   // in addition to the backdrop click and picking a nav item.
