@@ -703,6 +703,13 @@ export default function SurveyPlan() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const estateWorkspaceLoadedRef = useRef<string | null>(null);
+  // This session was opened for one specific Estate-assigned plot (via ?estate_survey_plot=...),
+  // never removed from the URL for the life of the session - so it doubles as "are we in Estate
+  // mode" everywhere below, and return_estate_id/return_plot_id (set by the Estates dashboard
+  // when it links here) say where "back to Estate" should actually go.
+  const isEstateSurveySession = Boolean(searchParams.get("estate_survey_plot"));
+  const returnEstateId = searchParams.get("return_estate_id");
+  const returnPlotId = searchParams.get("return_plot_id");
   const { isLowBandwidth, manualLowBandwidth, setManualLowBandwidth } = useLowBandwidthMode();
   const deferredDraftMap = useDeferredMount(250);
   const [workflowMode, setWorkflowMode] = useState<WorkflowMode | null>(null);
@@ -1261,6 +1268,10 @@ export default function SurveyPlan() {
       setLastServerSyncAt(new Date().toISOString());
       setLastServerSyncSignature(null);
       setHasUnsyncedServerChanges(false);
+      // Whatever local draft the generic restore effect surfaced above belongs to a different,
+      // unrelated plot at this point - this Estate parcel just overwrote it, so that banner's
+      // "continuing your draft" text would be describing the wrong thing.
+      setShowDraftRecoveryBanner(false);
       toast.success("Estate parcel opened in the Survey workspace.");
     }).catch(() => {
       estateWorkspaceLoadedRef.current = null;
@@ -4905,9 +4916,11 @@ export default function SurveyPlan() {
               <path fillRule="evenodd" d="M10 9a4 4 0 100-8 4 4 0 000 8zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
             </svg>
           </button>
-          <button type="button" className="survey-top-bar-btn" onClick={handleStartNewPlan}>
-            New plan
-          </button>
+          {!isEstateSurveySession && (
+            <button type="button" className="survey-top-bar-btn" onClick={handleStartNewPlan}>
+              New plan
+            </button>
+          )}
         </div>
       </header>
       <nav className="survey-h-stepper" aria-label="Survey workflow progress">
@@ -5361,7 +5374,7 @@ export default function SurveyPlan() {
               onSaveFeatureOverride={handleSaveOverride}
               onRoadNamesSaved={handleRoadNamesSaved}
               isOnline={isOnline}
-              onBack={() => goToStep(1)}
+              onBack={isEstateSurveySession ? undefined : () => goToStep(1)}
               onContinue={() => goToStep(3)}
               previewType={previewType}
               onPreviewTypeChange={handlePreviewTypeChange}
@@ -5873,11 +5886,20 @@ export default function SurveyPlan() {
                   </svg>
                   Back to Preview
                 </button>
-                <button className="btn-primary" onClick={() => navigate("/")}>
+                <button
+                  className="btn-primary"
+                  onClick={() =>
+                    navigate(
+                      returnEstateId
+                        ? `/estates/${returnEstateId}/map${returnPlotId ? `?plot=${returnPlotId}` : ""}`
+                        : "/"
+                    )
+                  }
+                >
                   <svg viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  Complete & Return Home
+                  {returnEstateId ? "Complete & Return to Estate" : "Complete & Return Home"}
                 </button>
               </div>
             </div>
