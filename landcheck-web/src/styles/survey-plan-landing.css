@@ -99,7 +99,7 @@
 .spl-hero-device,
 .spl-hero-screen {
   position: absolute;
-  right: -3.5vw;
+  right: 0;
   bottom: -9%;
   width: min(80vw, 1220px);
   aspect-ratio: 3 / 2;
@@ -118,7 +118,6 @@
 
 .spl-hero-screen {
   z-index: 2;
-  left: auto;
   overflow: hidden;
   pointer-events: none;
 }
@@ -126,10 +125,10 @@
 .spl-hero-screen img {
   position: absolute;
   top: 9%;
-  left: 22%;
+  left: 21.9%;
   display: block;
-  width: 61.5%;
-  height: 57%;
+  width: 62.5%;
+  height: 57.5%;
   object-fit: cover;
   object-position: center 25%;
 }
@@ -184,9 +183,9 @@
 }
 
 .spl-hero-copy h1 {
-  max-width: 620px;
+  max-width: 520px;
   color: #f6f3e9;
-  font-size: clamp(3.3rem, 7.4vw, 6.4rem);
+  font-size: clamp(2.8rem, 5.2vw, 4.6rem);
   line-height: 0.98;
 }
 
@@ -194,8 +193,8 @@
   max-width: 460px;
   margin: 22px 0 0;
   color: rgba(246, 243, 233, 0.82);
-  font-size: clamp(0.98rem, 1.3vw, 1.1rem);
-  line-height: 1.75;
+  font-size: clamp(0.94rem, 1.05vw, 1rem);
+  line-height: 1.65;
 }
 
 .spl-hero-actions {
@@ -209,11 +208,10 @@
 .spl-text-link {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: fit-content;
-  padding: 0 0 6px;
+  padding: 0;
   border: 0;
-  border-bottom: 1px solid rgba(16, 42, 39, 0.52);
   background: none;
   color: var(--spl-ink);
   font: inherit;
@@ -223,31 +221,26 @@
   text-align: left;
   text-decoration: none;
   cursor: pointer;
-  transition: color 160ms ease, border-color 160ms ease;
+  transition: color 160ms ease;
 }
 
 .spl-text-link:hover {
-  border-color: #14866f;
   color: #14866f;
 }
 
 .spl-text-link--light {
-  border-color: #65d2b0;
   color: #f6f3e9;
 }
 
 .spl-text-link--light:hover {
-  border-color: #fff;
   color: #fff;
 }
 
 .spl-text-link--light-muted {
-  border-color: rgba(246, 243, 233, 0.4);
   color: rgba(246, 243, 233, 0.78);
 }
 
 .spl-text-link--light-muted:hover {
-  border-color: #fff;
   color: #fff;
 }
 
@@ -274,10 +267,9 @@
 }
 
 .spl-section h2,
-.spl-scan-section h2,
-.spl-closing h2 {
+.spl-scan-section h2 {
   color: var(--spl-ink);
-  font-size: clamp(2.5rem, 5vw, 4.4rem);
+  font-size: clamp(2.15rem, 3.8vw, 3.35rem);
   line-height: 1.03;
 }
 
@@ -285,12 +277,11 @@
 .spl-scan-copy > p {
   margin: 22px 0 0;
   color: var(--spl-muted);
-  font-size: 0.98rem;
-  line-height: 1.8;
+  font-size: 0.92rem;
+  line-height: 1.7;
 }
 
-.spl-capability-list,
-.spl-workflow-list {
+.spl-capability-list {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -305,22 +296,10 @@
 }
 
 .spl-capability-list li {
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
+  display: block;
 }
 
-.spl-list-number {
-  color: #16816e;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.13em;
-  line-height: 1.65;
-}
-
-.spl-capability-list h3,
-.spl-workflow-list h3 {
+.spl-capability-list h3 {
   margin: 0;
   color: var(--spl-ink);
   font-size: 1rem;
@@ -328,8 +307,7 @@
   line-height: 1.45;
 }
 
-.spl-capability-list p,
-.spl-workflow-list p {
+.spl-capability-list p {
   margin: 8px 0 0;
   color: var(--spl-muted);
   font-size: 0.88rem;
@@ -350,37 +328,16 @@
 
 .spl-workflow h2 {
   color: #f5f3eb;
-  font-size: clamp(2.5rem, 5vw, 4.2rem);
+  font-size: clamp(2.15rem, 3.8vw, 3.35rem);
   line-height: 1.05;
 }
 
-.spl-workflow-list {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 34px;
-  margin-top: 62px;
-}
-
-.spl-workflow-list li {
-  padding-right: 18px;
-}
-
-.spl-workflow-list .spl-list-number {
-  display: block;
-  margin-bottom: 20px;
-  color: #7bd8b5;
-}
-
-.spl-workflow-list h3 {
-  color: #f5f3eb;
-  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  font-size: 1.28rem;
-  font-weight: 500;
-}
-
-.spl-workflow-list p {
-  max-width: 240px;
-  color: rgba(245, 243, 235, 0.68);
+.spl-workflow-intro > p:last-child {
+  max-width: 560px;
+  margin: 20px auto 0;
+  color: rgba(245, 243, 235, 0.7);
+  font-size: 0.96rem;
+  line-height: 1.65;
 }
 
 .spl-scan-section {
@@ -405,21 +362,6 @@
 
 .spl-scan-copy .spl-text-link {
   margin-top: 28px;
-}
-
-.spl-closing {
-  display: flex;
-  min-height: 380px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 78px 24px;
-  text-align: center;
-}
-
-.spl-closing h2 {
-  max-width: 720px;
-  margin-bottom: 28px;
 }
 
 .spl-footer {
@@ -501,12 +443,12 @@
 @media (max-width: 1200px) {
   .spl-hero-device,
   .spl-hero-screen {
-    right: -28vw;
-    width: min(87vw, 1100px);
+    right: 0;
+    width: min(82vw, 1000px);
   }
 
   .spl-hero-copy {
-    width: min(500px, 46%);
+    width: min(460px, 46%);
   }
 }
 
@@ -518,7 +460,7 @@
 
   .spl-hero-device,
   .spl-hero-screen {
-    right: -34vw;
+    right: -10vw;
     bottom: -7%;
     width: min(100vw, 940px);
   }
@@ -531,11 +473,6 @@
   .spl-scan-layout {
     grid-template-columns: 1fr;
     gap: 48px;
-  }
-
-  .spl-workflow-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    row-gap: 42px;
   }
 
   .spl-footer-main {
@@ -576,10 +513,6 @@
     font-size: 0.72rem;
   }
 
-  .spl-nav-links > a:nth-child(-n + 2) {
-    display: none;
-  }
-
   .spl-shell {
     width: calc(100% - 40px);
   }
@@ -591,9 +524,9 @@
 
   .spl-hero-device,
   .spl-hero-screen {
-    right: -31vw;
+    right: -15vw;
     bottom: -1%;
-    width: 126vw;
+    width: 115vw;
   }
 
   .spl-hero-shade {
@@ -612,14 +545,14 @@
   }
 
   .spl-hero-copy h1 {
-    max-width: 480px;
-    font-size: clamp(3.15rem, 13vw, 4.4rem);
+    max-width: 420px;
+    font-size: clamp(2.7rem, 10vw, 3.7rem);
   }
 
   .spl-hero-summary {
     max-width: 440px;
     margin-top: 18px;
-    font-size: 0.94rem;
+    font-size: 0.92rem;
     line-height: 1.65;
   }
 
@@ -628,19 +561,12 @@
     margin-top: 24px;
   }
 
-  .spl-hero-note {
-    max-width: 260px;
-    margin-top: 30px;
-    line-height: 1.6;
-  }
-
   .spl-section {
     padding: 72px 0;
   }
 
   .spl-section h2,
   .spl-scan-section h2,
-  .spl-closing h2,
   .spl-workflow h2 {
     font-size: clamp(2.35rem, 10vw, 3.4rem);
   }
@@ -663,36 +589,8 @@
     text-align: left;
   }
 
-  .spl-workflow-list {
-    grid-template-columns: 1fr;
-    gap: 30px;
-    margin-top: 44px;
-  }
-
-  .spl-workflow-list li {
-    display: grid;
-    grid-template-columns: 34px 1fr;
-    column-gap: 14px;
-    padding: 0;
-  }
-
-  .spl-workflow-list .spl-list-number {
-    grid-row: span 2;
-    margin: 0;
-  }
-
-  .spl-workflow-list p {
-    grid-column: 2;
-    max-width: 360px;
-  }
-
   .spl-scan-section {
     padding: 72px 0;
-  }
-
-  .spl-closing {
-    min-height: 330px;
-    padding: 72px 20px;
   }
 
   .spl-footer {

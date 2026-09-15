@@ -12,28 +12,17 @@ const SignupGateModal = lazy(() => import("../components/SignupGateModal"));
 
 const capabilities = [
   {
-    title: "Survey plan production",
-    description: "Enter or import coordinates, review the geometry, and prepare a clear survey plan for delivery.",
+    title: "Prepare survey plans",
+    description: "Enter coordinates, check the parcel and prepare a clear plan.",
   },
   {
     title: "Georeference scanned plans",
-    description: "Align a scanned plan with control points, then trace boundaries and features against the map.",
+    description: "Align an existing drawing, then trace its boundaries on the map.",
   },
   {
-    title: "Parcel subdivision",
-    description: "Create and review child plots from a parent parcel, with areas and dimensions kept in view.",
+    title: "Subdivide and export",
+    description: "Create child parcels and export plans or CAD-ready files.",
   },
-  {
-    title: "Coordinate and drawing tools",
-    description: "Work with coordinate data, edit mapped features, and prepare CAD and PDF deliverables.",
-  },
-];
-
-const workflow = [
-  { title: "Bring in your data", detail: "Coordinates, a scanned plan, or an existing parcel." },
-  { title: "Check and edit", detail: "Review geometry and make corrections on the map." },
-  { title: "Prepare the plan", detail: "Set out the information needed for a professional drawing." },
-  { title: "Export your work", detail: "Create a shareable plan or CAD-ready file." },
 ];
 
 const socialLinks = [
@@ -71,8 +60,6 @@ export default function SurveyPlanLanding() {
           <span className="spl-brand-product">Survey</span>
         </Link>
         <nav className="spl-nav-links" aria-label="Survey navigation">
-          <a href="#capabilities">Capabilities</a>
-          <a href="#workflow">Workflow</a>
           {signedIn ? (
             <Link to="/dashboard">Dashboard</Link>
           ) : (
@@ -88,27 +75,23 @@ export default function SurveyPlanLanding() {
         <section className="spl-hero" aria-labelledby="spl-hero-title">
           <div className="spl-hero-device" aria-hidden="true">
             <img className="spl-hero-laptop" src="/survey-laptop-hand.png" alt="" />
-            <div className="spl-hero-screen">
-              <img src="/survey%20%20plan%20preview.jpg" alt="" />
-            </div>
+          </div>
+          <div className="spl-hero-screen" aria-hidden="true">
+            <img src="/georefrence%20preview.jpg" alt="" />
           </div>
           <div className="spl-hero-shade" />
           <div className="spl-shell spl-hero-shell">
             <div className="spl-hero-copy">
               <p className="spl-kicker">LandCheck Survey</p>
-              <h1 id="spl-hero-title">Survey work, clearly mapped.</h1>
+              <h1 id="spl-hero-title">Survey plans, made clear.</h1>
               <p className="spl-hero-summary">
-                Prepare survey plans, georeference scanned layouts and subdivide parcels in one browser workspace.
+                Prepare plans, georeference scans and subdivide parcels in one workspace.
               </p>
               <div className="spl-hero-actions">
                 <button type="button" className="spl-text-link spl-text-link--light" onMouseEnter={warmSurveyEntry} onClick={openWorkspace}>
-                  Open the survey workspace <span aria-hidden="true">↗</span>
+                  Open survey workspace
                 </button>
-                <a className="spl-text-link spl-text-link--light-muted" href="#capabilities">
-                  Explore capabilities
-                </a>
               </div>
-              <p className="spl-hero-note">Coordinate work, drafting and deliverables in one place.</p>
             </div>
           </div>
         </section>
@@ -117,40 +100,31 @@ export default function SurveyPlanLanding() {
           <div className="spl-shell spl-capabilities-layout">
             <div className="spl-section-intro">
               <p className="spl-section-kicker">A practical survey workspace</p>
-              <h2>From source data to a finished plan.</h2>
+              <h2>From source data to finished plan.</h2>
               <p>
-                Move from coordinates or a scanned drawing to checked geometry and a professional output without breaking the workflow into separate tools.
+                Bring in coordinates or a scanned drawing, check the geometry and prepare the final plan in one place.
               </p>
             </div>
-            <ol className="spl-capability-list">
-              {capabilities.map((item, index) => (
+            <ul className="spl-capability-list">
+              {capabilities.map((item) => (
                 <li key={item.title}>
-                  <span className="spl-list-number">0{index + 1}</span>
                   <div>
                     <h3>{item.title}</h3>
                     <p>{item.description}</p>
                   </div>
                 </li>
               ))}
-            </ol>
+            </ul>
           </div>
         </section>
 
-        <section id="workflow" className="spl-workflow">
+        <section className="spl-workflow">
           <div className="spl-shell">
             <div className="spl-workflow-intro">
-              <p className="spl-section-kicker">One connected process</p>
-              <h2>Bring in the work. Leave with a plan.</h2>
+              <p className="spl-section-kicker">One connected workspace</p>
+              <h2>Bring in the data. Finish the plan.</h2>
+              <p>Import coordinates or a scan, review the map, then prepare and export your work.</p>
             </div>
-            <ol className="spl-workflow-list">
-              {workflow.map((step, index) => (
-                <li key={step.title}>
-                  <span className="spl-list-number">0{index + 1}</span>
-                  <h3>{step.title}</h3>
-                  <p>{step.detail}</p>
-                </li>
-              ))}
-            </ol>
           </div>
         </section>
 
@@ -158,26 +132,19 @@ export default function SurveyPlanLanding() {
           <div className="spl-shell spl-scan-layout">
             <div>
               <p className="spl-section-kicker">For existing plans</p>
-              <h2>Make scanned work usable again.</h2>
+              <h2>Make scanned plans usable.</h2>
             </div>
             <div className="spl-scan-copy">
               <p>
-                Read beacon labels and coordinates from a scanned schedule with AI assistance, then review the results. For scanned drawings, align the image with control points and trace the features you need.
+                Align a scanned drawing to the map, then trace and review its boundaries.
               </p>
               <button type="button" className="spl-text-link" onMouseEnter={warmSurveyEntry} onClick={openWorkspace}>
-                Open georeferencing tools <span aria-hidden="true">↗</span>
+                Open georeferencing tools
               </button>
             </div>
           </div>
         </section>
 
-        <section className="spl-closing">
-          <p className="spl-section-kicker">LandCheck Survey</p>
-          <h2>Start your next survey in the browser.</h2>
-          <button type="button" className="spl-text-link" onMouseEnter={warmSurveyEntry} onClick={openWorkspace}>
-            Open the survey workspace <span aria-hidden="true">↗</span>
-          </button>
-        </section>
       </main>
 
       <footer className="spl-footer">

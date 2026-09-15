@@ -1901,28 +1901,52 @@
   line-height: 1.45;
 }
 
-.georef-coordinate-float {
+/* Compact on-canvas indicator of what's selected, replacing a full coordinate table that used to
+   float over the canvas here and cover the very shape it described (and collide with the cursor
+   probe tooltip). The full table now lives in the sidebar's "Selected feature" section - this
+   badge is just a pointer to it. */
+.georef-selected-feature-badge {
   position: absolute;
   right: 0.9rem;
   bottom: 0.9rem;
   z-index: 4;
-  width: min(340px, calc(100% - 1.8rem));
-  max-height: min(60%, 360px);
-  overflow: auto;
-  padding: 0.82rem;
-  border-radius: 18px;
-  border: 1px solid var(--survey-ink-border);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: calc(100% - 1.8rem);
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--survey-ink-border-strong);
   background: linear-gradient(180deg, rgba(11, 20, 32, 0.92), rgba(11, 20, 32, 0.82));
-  box-shadow: 0 20px 48px rgba(2, 6, 23, 0.34);
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.34);
   backdrop-filter: blur(14px);
+  color: var(--survey-text-primary);
+  font-size: 0.76rem;
+  cursor: pointer;
 }
 
-.georef-coordinate-float-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.72rem;
+.georef-selected-feature-badge strong {
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.georef-selected-feature-badge span {
+  color: var(--survey-text-secondary);
+  white-space: nowrap;
+}
+
+.georef-selected-feature-badge .georef-selected-feature-badge-hint {
+  padding-left: 0.4rem;
+  border-left: 1px solid var(--survey-ink-border-strong);
+  color: var(--survey-copper-400, #3ccf85);
+  font-weight: 700;
+}
+
+.georef-selected-feature-badge:hover {
+  border-color: var(--survey-copper-500, #20a866);
 }
 
 .georef-coordinate-float-close {
@@ -1944,20 +1968,6 @@
 .georef-coordinate-float-close:hover {
   background: rgba(247, 245, 238, 0.12);
   color: var(--survey-text-primary);
-}
-
-.georef-coordinate-float-head strong {
-  display: block;
-  color: var(--survey-text-primary);
-  font-size: 0.92rem;
-  font-weight: 800;
-}
-
-.georef-coordinate-float-head span {
-  display: block;
-  margin-top: 0.18rem;
-  color: var(--survey-text-secondary);
-  font-size: 0.74rem;
 }
 
 .georef-coordinate-mini-table-wrap {
@@ -4493,12 +4503,6 @@ select.field-error {
     grid-template-columns: 1fr;
   }
 
-  .georef-coordinate-float {
-    position: static;
-    width: 100%;
-    margin-top: 0.82rem;
-  }
-
   .georef-feature-register-head {
     flex-direction: column;
   }
@@ -6094,6 +6098,10 @@ select.field-error {
   overflow-wrap: anywhere;
 }
 
+.geo-section-hint strong {
+  color: var(--geo-text-primary, var(--survey-text-primary));
+}
+
 .georef-section-title-row {
   display: flex;
   align-items: center;
@@ -7007,10 +7015,6 @@ select.field-error {
 .georef-ai-feature-tag {
   color: var(--geo-teal-300, #7dd3c8);
   background: rgba(47, 158, 145, 0.18);
-}
-
-.geo-panel .georef-coordinate-float {
-  border-radius: var(--geo-radius);
 }
 
 /* ---------- Responsive: medium screens ---------- */
