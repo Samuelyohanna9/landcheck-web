@@ -96,7 +96,11 @@ export default function EstateLayoutImport({ method, reviews, files, onFileChang
   const selectedMethod = LAYOUT_IMPORT_METHODS.find((item) => item.key === method) || LAYOUT_IMPORT_METHODS[0];
   const file = files[method];
   const isGeoreferenceMethod = method === "scanned-layout";
-  const georeferenceReview = reviews.find((review) => Boolean(review.session_id));
+  // Only a still-open session should replace the upload option - once one is approved (its plots
+  // already added) it must fall through to the upload dropzone below, the same way CSV/GIS/CAD
+  // reviews never hide their own upload option. Without the status check here, uploading a second
+  // scanned plan after the first was ever completed was permanently impossible.
+  const georeferenceReview = reviews.find((review) => Boolean(review.session_id) && review.status === "review_required");
 
   return (
     <div>
