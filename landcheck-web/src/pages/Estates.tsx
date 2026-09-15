@@ -446,6 +446,9 @@ export default function Estates() {
   const [dgpsExportPlotId, setDgpsExportPlotId] = useState<number | null>(null);
   const [dgpsExportCoordinateSystem, setDgpsExportCoordinateSystem] = useState("wgs84_nigeria_meters");
   const [dgpsExportBusy, setDgpsExportBusy] = useState(false);
+  const [layoutExportCoordinateSystem, setLayoutExportCoordinateSystem] = useState("wgs84_nigeria_meters");
+  const [layoutPdfExportBusy, setLayoutPdfExportBusy] = useState(false);
+  const [layoutDgpsExportBusy, setLayoutDgpsExportBusy] = useState(false);
   const [workflowMessage, setWorkflowMessageRaw] = useState("");
   const [workflowMessageTone, setWorkflowMessageTone] = useState<MessageTone>("good");
   const setWorkflowMessage = (text: string, tone: MessageTone = "good") => { setWorkflowMessageRaw(text); setWorkflowMessageTone(tone); };
@@ -464,7 +467,7 @@ export default function Estates() {
   const [drawerTab, setDrawerTab] = useState<"overview" | "customer" | "survey" | "staking" | "documents" | "hazards" | "timeline">("overview");
   const [editingDevelopment, setEditingDevelopment] = useState(false);
   const [plotContextMenu, setPlotContextMenu] = useState<{ x: number; y: number; plotId: number } | null>(null);
-  const [activeTool, setActiveTool] = useState<"add-plot" | "layout" | "blocks" | "layers" | "qc" | null>(null);
+  const [activeTool, setActiveTool] = useState<"add-plot" | "layout" | "blocks" | "layers" | "qc" | "export-layout" | null>(null);
   type AddPlotMethod = "draw" | "coordinates" | EstateLayoutMethod;
   const [addPlotMethod, setAddPlotMethod] = useState<AddPlotMethod>("draw");
   const [designSubdividePlotId, setDesignSubdividePlotId] = useState<number | null>(null);
@@ -1141,6 +1144,34 @@ export default function Estates() {
       setMessage(await extractApiErrorMessage(error, "DGPS CSV could not be downloaded."), "danger");
     } finally {
       setDgpsExportBusy(false);
+    }
+  };
+  const downloadEstateLayoutPdf = async () => {
+    if (!estateId) return;
+    setLayoutPdfExportBusy(true);
+    try {
+      const response = await api.get(`/estates/${estateId}/exports/layout.pdf`, { responseType: "blob" });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url; link.download = `${estateDetail?.name || "estate"}-layout-plan.pdf`; link.click(); URL.revokeObjectURL(url);
+    } catch (error) {
+      setMessage(await extractApiErrorMessage(error, "The layout plan PDF could not be generated."), "danger");
+    } finally {
+      setLayoutPdfExportBusy(false);
+    }
+  };
+  const downloadEstateLayoutDgpsCsv = async (coordinateSystem: string) => {
+    if (!estateId) return;
+    setLayoutDgpsExportBusy(true);
+    try {
+      const response = await api.get(`/estates/${estateId}/exports/layout-dgps.csv`, { params: { coordinate_system: coordinateSystem }, responseType: "blob" });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url; link.download = `${estateDetail?.name || "estate"}-layout-dgps.csv`; link.click(); URL.revokeObjectURL(url);
+    } catch (error) {
+      setMessage(await extractApiErrorMessage(error, "The layout DGPS CSV could not be downloaded."), "danger");
+    } finally {
+      setLayoutDgpsExportBusy(false);
     }
   };
   const uploadStakingEvidence = async (taskId: number) => {
@@ -1955,7 +1986,7 @@ export default function Estates() {
   }
 
   function renderToolsBar() {
-    type ToolKey = "add-plot" | "layout" | "blocks" | "layers" | "qc";
+    type ToolKey = "add-plot" | "layout" | "blocks" | "layers" | "qc" | "export-layout";
     const hasBoundary = Boolean(estateDetail?.boundary);
     const hasPlots = plots.length > 0;
     const hasSpatialContext = hasBoundary || hasPlots;
@@ -1965,6 +1996,7 @@ export default function Estates() {
       { key: "blocks", label: "Blocks", icon: "grid" },
       { key: "layers", label: "Map Layers", icon: "layers", locked: hasSpatialContext ? undefined : "Add a plot or Estate boundary before mapping roads, drainage or other layers." },
       { key: "qc", label: "Geometry Check", icon: "check-circle", locked: hasPlots ? undefined : "Add at least one plot before running a geometry check." },
+      { key: "export-layout", label: "Export Layout", icon: "download", locked: hasPlots ? undefined : "Add at least one approved plot before exporting the whole layout." },
     ];
     return (
       <div className="edash-tools-bar">
@@ -2246,6 +2278,35 @@ export default function Estates() {
           )}
         </>
       ) : <LoadingPanel label="Analyzing plot geometry..." />);
+    }
+    if (activeTool === "export-layout") {
+      return renderToolModal("Export the whole layout", "Every approved plot, road, drainage reserve and open space in this Estate, exported at once.", (
+        <>
+          <div className="edash-info-card" style={{ marginBottom: 12 }}>
+            <span className="edash-info-card-icon"><EstateIcon name="map" /></span>
+            <div className="edash-info-card-body">
+              <p className="edash-info-card-name">Layout plan (PDF)</p>
+              <p className="edash-info-card-meta">A clean, single-page site layout plan - plots, roads, open space and drainage, labelled with plot numbers and areas.</p>
+            </div>
+            <button type="button" className="edash-btn-primary edash-info-card-action" disabled={layoutPdfExportBusy} onClick={() => void downloadEstateLayoutPdf()}>
+              {layoutPdfExportBusy ? <><Spinner size={13} /> Rendering...</> : "Download PDF"}
+            </button>
+          </div>
+          <div className="edash-info-card">
+            <span className="edash-info-card-icon"><EstateIcon name="download" /></span>
+            <div className="edash-info-card-body">
+              <p className="edash-info-card-name">Layout DGPS CSV</p>
+              <p className="edash-info-card-meta">Every plot's boundary vertices in one file for a whole-layout stakeout, station names prefixed by plot number.</p>
+              <div style={{ marginTop: 8, maxWidth: 280 }}>
+                <CoordinateSystemSelect value={layoutExportCoordinateSystem} onChange={setLayoutExportCoordinateSystem} />
+              </div>
+            </div>
+            <button type="button" className="edash-btn-outline edash-info-card-action" disabled={layoutDgpsExportBusy} onClick={() => void downloadEstateLayoutDgpsCsv(layoutExportCoordinateSystem)}>
+              {layoutDgpsExportBusy ? <><Spinner size={13} /> Exporting...</> : "Download CSV"}
+            </button>
+          </div>
+        </>
+      ));
     }
     return null;
   }
