@@ -167,6 +167,15 @@ function RoadNamesPanel({
     };
   }, [open, plotId, scaleText, paperSize, templateName]);
 
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
+
   const applyGroupUpdate = (key: string, updater: (g: FeatureGroup) => FeatureGroup) => {
     setRoadGroups((prev) => prev.map((g) => (g.key === key ? updater(g) : g)));
     setRiverGroups((prev) => prev.map((g) => (g.key === key ? updater(g) : g)));

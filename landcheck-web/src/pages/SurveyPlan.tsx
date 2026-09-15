@@ -2964,6 +2964,17 @@ export default function SurveyPlan() {
     void loadPreview(recommendation);
   }, [applyResolvedScaleState, loadPreview, scaleRecommendation]);
 
+  // Escape dismisses (same as "Cancel and choose manually") - never triggers the
+  // "Yes, render this plan" primary action.
+  useEffect(() => {
+    if (!scaleRecommendation) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setScaleRecommendation(null);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [scaleRecommendation]);
+
   useEffect(() => {
     if (workflowMode === "subdivision" && currentStep === 2 && previewType !== "survey") {
       setPreviewType("survey");
@@ -4970,7 +4981,7 @@ export default function SurveyPlan() {
             <path d="M10 3v2M10 15v2M3 10h2M15 10h2" />
             <circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none" />
           </svg>
-          <span>LandCheck Survey</span>
+          <span>{workflowMode === "subdivision" ? "LandCheck Subdivision" : "LandCheck Survey"}</span>
         </div>
         <span className="survey-top-bar-saved">
           {surveyLastSavedAt ? `Saved ${surveyLastSavedAt.toLocaleTimeString(undefined, { hour12: false })}` : "Unsaved"}
@@ -5008,11 +5019,14 @@ export default function SurveyPlan() {
           )}
         </div>
       </header>
-      <nav className="survey-h-stepper" aria-label="Survey workflow progress">
-        {SURVEY_STEPS.map((step) => {
+      <nav className="survey-h-stepper" aria-label={workflowMode === "subdivision" ? "Subdivision workflow progress" : "Survey workflow progress"}>
+        {activeSteps.map((step) => {
           const completed = currentStep > step.id;
           const active = currentStep === step.id;
-          const label = step.id === 1 ? "Add coordinates" : step.id === 2 ? "Confirm & prepare" : "Export";
+          const label =
+            workflowMode === "subdivision"
+              ? step.id === 1 ? "Mother parcel" : step.id === 2 ? "Preview & split" : "Export"
+              : step.id === 1 ? "Add coordinates" : step.id === 2 ? "Confirm & prepare" : "Export";
           return (
             <div key={`survey_h_step_${step.id}`} className={`survey-h-step${active ? " active" : ""}${completed ? " completed" : ""}`}>
               <span className="survey-h-step-marker">
@@ -5032,41 +5046,6 @@ export default function SurveyPlan() {
     </>
   );
 
-  const renderSidebarStepsCard = () => (
-    <div className="workflow-inline-card workflow-inline-card--sidebar">
-      <div className="workflow-inline-title">
-        {workflowMode === "survey"
-          ? "Survey Plan Production"
-          : workflowMode === "subdivision"
-            ? "Plot Subdivision"
-            : "Raster Georeferencing"}
-      </div>
-      <div className="workflow-inline-steps workflow-inline-steps--stack">
-        {activeSteps.map((step) => {
-          const completed = currentStep > step.id;
-          const active = currentStep === step.id;
-          return (
-            <div
-              key={`sidebar_step_${step.id}`}
-              className={`workflow-inline-step${active ? " active" : ""}${completed ? " completed" : ""}`}
-            >
-              <span className="workflow-inline-step-no">
-                {completed ? (
-                  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                ) : (
-                  step.id
-                )}
-              </span>
-              <span className="workflow-inline-step-label">{step.title}</span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-
   return (
     <div
       className={`survey-container${workflowMode ? " has-workflow" : ""}${
@@ -5081,7 +5060,7 @@ export default function SurveyPlan() {
       {/* Header */}
       {workflowMode === "georeference" ? (
         renderGeoreferenceTopBar()
-      ) : workflowMode === "survey" ? (
+      ) : workflowMode === "survey" || workflowMode === "subdivision" ? (
         renderSurveyTopBar()
       ) : (
       <header className="survey-header">
@@ -5119,14 +5098,10 @@ export default function SurveyPlan() {
             </svg>
             LandCheck Survey Studio
           </span>
-          <h1 className="survey-title">
-            {workflowMode === "subdivision" ? "Plot Subdivision" : "Survey Plan"}
-          </h1>
-          <p className="survey-subtitle">
-            {workflowMode === "subdivision"
-              ? "Break a parent parcel into production-ready lots with live review before export."
-              : "Choose the workflow that matches the production job you want to run."}
-          </p>
+          {/* Survey and Subdivision now render via renderSurveyTopBar() above once a mode is
+              chosen - this header only ever appears for the pre-selection screen. */}
+          <h1 className="survey-title">Survey Plan</h1>
+          <p className="survey-subtitle">Choose the workflow that matches the production job you want to run.</p>
         </div>
         <button className="reset-btn" onClick={handleStartNewPlan}>
           <svg viewBox="0 0 20 20" fill="currentColor">
@@ -5390,7 +5365,7 @@ export default function SurveyPlan() {
               />
             ) : (
               <SurveyPlanStepOnePanel
-                sidebar={workflowMode === "survey" ? null : renderSidebarStepsCard() /* the new survey-h-stepper in renderSurveyTopBar() replaces this for survey */}
+                sidebar={null /* the survey-h-stepper in renderSurveyTopBar() replaces this for both survey and subdivision */}
                 manualPoints={manualPoints}
                 onUpdatePoint={updatePoint}
                 onRemovePoint={removePoint}
@@ -5569,7 +5544,7 @@ export default function SurveyPlan() {
         {workflowMode === "subdivision" && currentStep === 2 && (
           <Suspense fallback={<div className="preview-card">Loading subdivision workspace...</div>}>
             <SurveyPlanSubdivisionPreviewStep
-              sidebar={renderSidebarStepsCard()}
+              sidebar={null /* the survey-h-stepper in renderSurveyTopBar() replaces this */}
               meta={meta}
               setMeta={setMeta}
               scaleDraft={scaleDraft}
@@ -6134,7 +6109,7 @@ export default function SurveyPlan() {
         {workflowMode === "subdivision" && currentStep === 3 && (
           <Suspense fallback={<div className="preview-card">Loading subdivision export workspace...</div>}>
             <SurveyPlanSubdivisionExportStep
-              sidebar={renderSidebarStepsCard()}
+              sidebar={null /* the survey-h-stepper in renderSurveyTopBar() replaces this */}
               meta={meta}
               latestSubdivisionBatchId={latestSubdivisionBatchId}
               subdivisionBatches={subdivisionBatches}

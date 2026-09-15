@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import ColorSwatchPicker from "./ColorSwatchPicker";
 import HatchPatternPicker from "./HatchPatternPicker";
 
@@ -86,6 +87,16 @@ function TextStyleRow({
 }
 
 function SurveyAppearancePanel(props: SurveyAppearancePanelProps) {
+  const { open, onClose } = props;
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
+
   return (
     <>
       <div

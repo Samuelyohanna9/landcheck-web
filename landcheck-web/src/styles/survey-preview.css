@@ -105,7 +105,9 @@
   gap: 0.35rem;
   padding: 0.2rem 0.34rem;
   background: linear-gradient(135deg, var(--survey-ink-800), var(--survey-ink-900));
-  border: 1px solid var(--survey-ink-border);
+  /* A crisp neutral micro-border reads as "precision instrument" - the previous
+     translucent green-tinted --survey-ink-border was soft/low-contrast here. */
+  border: 1px solid #30363d;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
   flex: 0 0 auto;
@@ -123,7 +125,7 @@
 .ribbon-select {
   background: rgba(11, 20, 32, 0.85);
   color: var(--survey-text-primary);
-  border: 1px solid var(--survey-ink-border);
+  border: 1px solid #30363d;
   border-radius: 7px;
   padding: 0.26rem 0.45rem;
   font-size: 0.76rem;
@@ -203,7 +205,8 @@
   background: linear-gradient(135deg, var(--survey-ink-800), var(--survey-ink-900));
   border: 1px solid var(--survey-ink-border-strong);
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
 }
 
 .beacon-style-option {
@@ -307,7 +310,8 @@
   background: linear-gradient(135deg, var(--survey-ink-800), var(--survey-ink-900));
   border: 1px solid var(--survey-ink-border-strong);
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
 }
 
 .north-arrow-style-option {
@@ -415,7 +419,8 @@
   background: linear-gradient(135deg, var(--survey-ink-800), var(--survey-ink-900));
   border: 1px solid var(--survey-ink-border-strong);
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
 }
 
 .color-palette-popover-label {
@@ -649,7 +654,8 @@
   background: linear-gradient(135deg, var(--survey-ink-800), var(--survey-ink-900));
   border: 1px solid var(--survey-ink-border-strong);
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
 }
 
 .hatch-pattern-option {

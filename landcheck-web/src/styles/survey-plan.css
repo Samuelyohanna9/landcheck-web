@@ -2554,109 +2554,6 @@
   border-radius: 10px;
 }
 
-.workflow-inline-card {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(11, 20, 32, 0.45);
-  border-radius: 10px;
-  padding: 0.34rem 0.46rem 0.38rem;
-}
-
-.workflow-inline-card--sidebar {
-  box-shadow: inset 0 0 0 1px var(--survey-copper-glow);
-}
-
-.workflow-inline-title {
-  margin: 0 0 0.24rem;
-  color: var(--survey-copper-300);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.workflow-inline-steps {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 0.3rem;
-  overflow-x: auto;
-  padding-bottom: 0.05rem;
-}
-
-.workflow-inline-steps--stack {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: stretch;
-  justify-content: space-between;
-  gap: 0.24rem;
-  overflow: hidden;
-  padding-bottom: 0.08rem;
-}
-
-.workflow-inline-steps--stack .workflow-inline-step {
-  width: auto;
-  min-width: 0;
-  flex: 1 1 0;
-  padding: 0.2rem 0.34rem;
-}
-
-.workflow-inline-steps--stack .workflow-inline-step-label {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.workflow-inline-step {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 0.34rem;
-  width: 100%;
-  min-width: 0;
-  padding: 0.2rem 0.34rem;
-  border-radius: 7px;
-  border: 1px solid var(--survey-ink-border-strong);
-  background: rgba(11, 20, 32, 0.45);
-  color: var(--survey-text-secondary);
-  font-size: 0.64rem;
-  line-height: 1;
-}
-
-.workflow-inline-step.active {
-  border-color: var(--survey-copper-500);
-  color: var(--survey-copper-300);
-}
-
-.workflow-inline-step.completed {
-  border-color: var(--survey-forest-500);
-  color: var(--survey-forest-400);
-}
-
-.workflow-inline-step-no {
-  width: 15px;
-  height: 15px;
-  flex: 0 0 15px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(22, 40, 58, 0.75);
-  color: inherit;
-  font-size: 0.56rem;
-  font-weight: 700;
-}
-
-.workflow-inline-step-no svg {
-  width: 10px;
-  height: 10px;
-}
-
-.workflow-inline-step-label {
-  white-space: nowrap;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .section-title {
   font-size: 1rem;
   font-weight: 600;
@@ -3041,10 +2938,12 @@ select.field-error {
 }
 
 .scale-presets {
-  display: flex;
+  /* 12 presets at 4 columns = 3 tidy full rows - a dense segmented control instead of
+     flex-wrap's ragged last row. */
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.375rem;
   margin-top: 0.5rem;
-  flex-wrap: wrap;
   min-width: 0;
 }
 
@@ -3061,6 +2960,7 @@ select.field-error {
 }
 
 .scale-preset-btn {
+  width: 100%;
   padding: 0.25rem 0.5rem;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -3997,6 +3897,13 @@ select.field-error {
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 9px;
   min-width: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.export-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.35);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .export-card--clean-copy {
@@ -4923,51 +4830,6 @@ select.field-error {
     line-height: 1.18;
   }
 
-  .workflow-inline-card {
-    padding: 0.32rem 0.36rem;
-  }
-
-  .workflow-inline-title {
-    font-size: 0.66rem;
-    margin-bottom: 0.14rem;
-  }
-
-  .workflow-inline-step {
-    padding: 0.2rem 0.2rem;
-    gap: 0.22rem;
-    font-size: 0.58rem;
-  }
-
-  .workflow-inline-step-no {
-    width: 13px;
-    height: 13px;
-    flex-basis: 13px;
-    font-size: 0.5rem;
-  }
-
-  .workflow-inline-step-label {
-    white-space: normal;
-    line-height: 1.05;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: center;
-  }
-
-  .workflow-inline-steps--stack {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.2rem;
-    overflow: hidden;
-    justify-content: stretch;
-  }
-
-  .workflow-inline-steps--stack .workflow-inline-step {
-    min-width: 0;
-    width: 100%;
-    flex: 1 1 auto;
-    justify-content: center;
-  }
-
   .survey-container.has-workflow .form-section {
     padding: 0.56rem 0.58rem;
   }
@@ -5029,15 +4891,6 @@ select.field-error {
   .stepper {
     padding-left: 0.38rem;
     padding-right: 0.38rem;
-  }
-
-  .workflow-inline-steps--stack .workflow-inline-step {
-    padding: 0.18rem 0.12rem;
-    gap: 0.18rem;
-  }
-
-  .workflow-inline-step-label {
-    font-size: 0.54rem;
   }
 
   .panel-right,
@@ -5528,7 +5381,6 @@ select.field-error {
   background: linear-gradient(180deg, rgba(13, 25, 36, 0.98) 0%, rgba(9, 18, 29, 0.98) 100%);
 }
 
-.workflow-inline-card,
 .form-section,
 .preview-card {
   border-radius: 22px;
@@ -5537,24 +5389,15 @@ select.field-error {
   box-shadow: 0 18px 36px rgba(3, 10, 18, 0.16);
 }
 
-.workflow-inline-card {
-  background: linear-gradient(135deg, rgba(20, 39, 47, 0.96) 0%, rgba(12, 27, 36, 0.98) 100%);
-}
-
-.workflow-inline-title,
 .section-title {
   color: var(--survey-text-primary, #fcfaf4);
   font-family: var(--survey-font-display, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif);
   letter-spacing: -0.02em;
-}
-
-.section-title {
   font-size: 1.05rem;
 }
 
 .form-section p,
 .preview-card p,
-.workflow-inline-step-label,
 .form-group label,
 .features-bar,
 .feature-chip {
@@ -7292,11 +7135,12 @@ button.geo-h-step:focus-visible {
 }
 
 /* =========================================================================
-   Survey-only app shell (56px header + 48px horizontal stepper) - structural
-   twin of .geo-top-bar/.geo-h-stepper above, but on the native-GIS navy/
-   emerald token set (--survey-gis-*) rather than the copper/parchment one,
-   per the brief's own exact palette. Subdivision is untouched (still the
-   older .survey-header + vertical workflow-inline-card sidebar stepper).
+   Survey/Subdivision app shell (56px header + 48px horizontal stepper) -
+   structural twin of .geo-top-bar/.geo-h-stepper above, but on the
+   native-GIS navy/emerald token set (--survey-gis-*) rather than the
+   copper/parchment one. Shared by both workflow modes (see
+   renderSurveyTopBar() in SurveyPlan.tsx) - Subdivision's older
+   .survey-header + vertical sidebar stepper was retired in favor of this.
    ========================================================================= */
 .survey-top-bar {
   display: flex;
