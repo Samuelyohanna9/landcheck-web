@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import SocialLinks from "../components/SocialLinks";
 import "../styles/estate-portal.css";
@@ -16,9 +17,30 @@ const connectedCapabilities = [
 const solutionAreas = ["Development", "Sales", "Finance", "Survey"];
 
 export default function EstateLanding() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = () => setMenuOpen(false);
+
+  // Escape closes the mobile drawer, matching the dismissal convention used everywhere else in
+  // the app (modals, the dashboard's own sidebar drawer).
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") closeMenu(); };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [menuOpen]);
+
   return (
     <main className="estate-portal">
       <header className="estate-portal-nav">
+        <button
+          type="button"
+          className="estate-nav-hamburger"
+          onClick={() => setMenuOpen(true)}
+          aria-label="Open navigation menu"
+          aria-expanded={menuOpen}
+        >
+          <span /><span /><span />
+        </button>
         <Link to="/estates" className="estate-brand" aria-label="LandCheck Estates home">
           <img src="/logo.svg" alt="LandCheck" width="138" height="38" />
           <span>ESTATES</span>
@@ -31,6 +53,20 @@ export default function EstateLanding() {
           <a href={DEMO_MAILTO} className="estate-nav-cta">Request a demo</a>
         </nav>
       </header>
+
+      <div className={`estate-mobile-overlay${menuOpen ? " estate-mobile-overlay--open" : ""}`} onClick={closeMenu} aria-hidden={!menuOpen}>
+        <nav className={`estate-mobile-drawer${menuOpen ? " estate-mobile-drawer--open" : ""}`} onClick={(event) => event.stopPropagation()} aria-label="Estate product navigation (mobile)">
+          <div className="estate-mobile-drawer-head">
+            <img src="/logo.svg" alt="LandCheck" width="120" height="33" />
+            <button type="button" className="estate-mobile-close" onClick={closeMenu} aria-label="Close navigation">&times;</button>
+          </div>
+          <a href="#platform" className="estate-mobile-item" onClick={closeMenu}>Platform</a>
+          <a href="#solutions" className="estate-mobile-item" onClick={closeMenu}>Solutions</a>
+          <a href="#demo" className="estate-mobile-item" onClick={closeMenu}>Pricing</a>
+          <Link to="/estates/login" className="estate-mobile-item" onClick={closeMenu}>Sign in</Link>
+          <a href={DEMO_MAILTO} className="estate-mobile-cta" onClick={closeMenu}>Request a demo</a>
+        </nav>
+      </div>
 
       <section className="estate-hero" aria-labelledby="estate-intro-title" role="img" aria-label="A planned residential estate with plots, homes and internal roads">
         <p className="estate-kicker estate-hero-kicker">LandCheck Estates</p>

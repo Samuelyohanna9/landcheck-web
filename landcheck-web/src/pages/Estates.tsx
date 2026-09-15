@@ -499,11 +499,12 @@ export default function Estates() {
   const [activity, setActivity] = useState<any[]>([]);
   const [dashboard, setDashboard] = useState<any>(null);
   const [estateDetail, setEstateDetail] = useState<any>(null);
-  // "map" (a compact vector style) is a far smaller first download than "satellite" (raster
-  // imagery tiles, often hundreds of KB each) - defaulting to it gets the map interactive much
-  // sooner on a slow connection. The toggle above the map still lets anyone switch to Satellite
-  // once they actually want that heavier view.
-  const [mapStyleMode, setMapStyleMode] = useState<"map" | "satellite">("map");
+  // Satellite is the requested default first view - the actual terrain/imagery is what a plot
+  // layout needs to be checked against. The mapbox-gl bundle itself is still prefetched from the
+  // Dashboard (see EstateShell's prefetchMapboxCore effect) to soften the heavier satellite-tile
+  // download on a slow connection; the toggle above the map still lets anyone switch to the
+  // lighter vector "Map" style if they want it.
+  const [mapStyleMode, setMapStyleMode] = useState<"map" | "satellite">("satellite");
   const [blockFilterId, setBlockFilterId] = useState("all");
   const [layersVisible, setLayersVisible] = useState(true);
   const [drawerTab, setDrawerTab] = useState<"overview" | "customer" | "survey" | "staking" | "documents" | "hazards" | "timeline">("overview");
