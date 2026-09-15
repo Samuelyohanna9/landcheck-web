@@ -365,10 +365,34 @@
 .edash-body--fill > .edash-tools-bar { flex-shrink: 0; padding: 1px 0; }
 .edash-body--fill > .edash-stats-row { flex-shrink: 0; gap: 10px; }
 .edash-body--fill > .edash-stats-row .edash-stat-card { padding: 7px 10px; }
-.edash-body--fill > .edash-content-row {
-  flex: 2.3;
-  min-height: 0;
+
+/* The map+drawer row and the Recent Activity/Estate Progress row are combined into one grid:
+   the drawer (right column) spans both, stretching down to cover the same vertical space the
+   left column's map card + its Recent Activity/Estate Progress row take up together - rather than
+   the drawer only matching the map card's height and leaving a gap beside the row below it. */
+.edash-map-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 16px;
   align-items: stretch;
+}
+.edash-map-grid-left {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  min-height: 0;
+}
+.edash-body--fill > .edash-map-grid {
+  flex: 1;
+  min-height: 0;
+}
+.edash-map-grid-left > .edash-map-card {
+  flex: 1;
+  min-height: 0;
+}
+.edash-map-grid-left > .edash-bottom-row {
+  flex-shrink: 0;
 }
 .edash-body--fill .edash-map-card,
 .edash-body--fill .edash-drawer {
@@ -380,37 +404,27 @@
 .edash-body--fill .edash-map-select { height: 29px; }
 .edash-body--fill .edash-map-canvas-wrap { min-height: 180px; }
 
-/* The Recent Activity/Estate Progress row brought back under the map - shares the remaining
-   height with the map+drawer row above instead of growing the page, so the map view still never
-   needs a page-level scroll. Each card caps its own inner list/legend with overflow instead.
-   Kept deliberately smaller than the map+drawer row above (flex 0.85 vs 2.6) since the map is the
-   primary tool here - these are a glanceable recap, not the main focus of this page. */
-.edash-body--fill > .edash-bottom-row {
-  flex: 1.15;
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row {
   min-height: 150px;
   max-height: 220px;
 }
-.edash-body--fill > .edash-bottom-row .edash-card-inner { padding: 9px 12px; overflow-y: auto; }
-.edash-body--fill > .edash-bottom-row .edash-card-head { margin-bottom: 5px; }
-.edash-body--fill > .edash-bottom-row .edash-activity-list { max-height: none; gap: 0; }
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-card-inner { padding: 9px 12px; overflow-y: auto; }
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-card-head { margin-bottom: 5px; }
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-activity-list { max-height: none; gap: 0; }
 
 /* Compact variants of the donut/legend/activity-list content specifically for this shrunken
    bottom row - the same components render larger and more spaced-out on the plain Dashboard page,
    where they have a full row of natural height to themselves. */
-.edash-body--fill > .edash-bottom-row .edash-progress-donut-row { gap: 10px; }
-.edash-body--fill > .edash-bottom-row .edash-progress-donut-row svg { width: 74px; height: 74px; }
-.edash-body--fill > .edash-bottom-row .edash-donut-legend { gap: 3px; }
-.edash-body--fill > .edash-bottom-row .edash-donut-legend-item { font-size: 0.68rem; }
-.edash-body--fill > .edash-bottom-row .edash-donut-legend-dot { width: 7px; height: 7px; }
-.edash-body--fill > .edash-bottom-row .edash-activity-item { padding: 5px 2px; gap: 8px; }
-.edash-body--fill > .edash-bottom-row .edash-activity-icon { width: 24px; height: 24px; }
-.edash-body--fill > .edash-bottom-row .edash-activity-icon svg { width: 11px; height: 11px; }
-.edash-body--fill > .edash-bottom-row .edash-activity-body strong { font-size: 0.74rem; }
-.edash-body--fill > .edash-bottom-row .edash-activity-body span { font-size: 0.66rem; }
-.edash-body--fill > .edash-bottom-row .edash-risk-list { gap: 6px; }
-.edash-body--fill > .edash-bottom-row .edash-risk-icon { width: 24px; height: 24px; }
-.edash-body--fill > .edash-bottom-row .edash-risk-icon svg { width: 12px; height: 12px; }
-.edash-body--fill > .edash-bottom-row .edash-risk-item span { font-size: 0.74rem; }
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-progress-donut-row { gap: 10px; }
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-progress-donut-row svg { width: 74px; height: 74px; }
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-donut-legend { gap: 3px; }
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-donut-legend-item { font-size: 0.68rem; }
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-donut-legend-dot { width: 7px; height: 7px; }
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-activity-item { padding: 5px 2px; gap: 8px; }
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-activity-icon { width: 24px; height: 24px; }
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-activity-icon svg { width: 11px; height: 11px; }
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-activity-body strong { font-size: 0.74rem; }
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-activity-body span { font-size: 0.66rem; }
 
 /* ─── Stats row ─── */
 .edash-stats-row {
@@ -1031,27 +1045,25 @@
 }
 
 @media (max-width: 1180px) {
-  .edash-content-row, .edash-content-row--split { grid-template-columns: 1fr; }
+  .edash-content-row, .edash-content-row--split, .edash-map-grid { grid-template-columns: 1fr; }
   .edash-drawer { min-height: 300px; }
-  /* Recent Activity / Estate Progress / Risk Overview deliberately stay in one 3-column row all
-     the way down - shrinking to fit (see the compact rules below and at 860px) reads better than
-     one of the three getting orphaned onto its own full-width row underneath the other two. */
-  /* Map+drawer stack into one column below this width - "stretch to share the row's height"
-     stops making sense once they're not in the same row, so fall back to the normal scrolling
-     page instead of risking content getting clipped with nowhere to scroll to see it. */
+  /* Map+drawer stack into one column below this width - "stretch to cover the same height as the
+     column beside it" stops making sense once they're not columns in the same row anymore, so
+     fall back to the normal scrolling page instead of risking content getting clipped with
+     nowhere to scroll to see it. */
   .edash-main--fill { overflow-y: auto; }
   .edash-body--fill { flex: initial; min-height: auto; padding-top: 22px; gap: 18px; }
   .edash-body--fill > .edash-tools-bar { padding: 4px 0; }
   .edash-body--fill > .edash-stats-row { gap: 14px; }
   .edash-body--fill > .edash-stats-row .edash-stat-card { padding: 9px 11px; }
-  .edash-body--fill > .edash-content-row { flex: initial; min-height: auto; align-items: start; }
+  .edash-body--fill > .edash-map-grid { flex: initial; min-height: auto; align-items: start; }
   .edash-body--fill .edash-drawer { min-height: 300px; }
   .edash-body--fill .edash-map-toolbar { padding: 12px 14px; gap: 10px; }
   .edash-body--fill .edash-map-mode-tab { padding: 6px 13px; }
   .edash-body--fill .edash-map-search,
   .edash-body--fill .edash-map-select { height: 34px; }
-  .edash-body--fill > .edash-bottom-row { flex: initial; min-height: auto; max-height: none; }
-  .edash-body--fill > .edash-bottom-row .edash-activity-list { max-height: 320px; }
+  .edash-body--fill .edash-map-grid-left > .edash-bottom-row { min-height: auto; max-height: none; }
+  .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-activity-list { max-height: 320px; }
   .edash-body--fill .edash-map-canvas-wrap { min-height: 420px; }
 }
 
