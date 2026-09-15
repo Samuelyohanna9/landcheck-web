@@ -22,27 +22,47 @@ function riskTone(riskClass: string | undefined) {
   return "neutral";
 }
 
-// The backend deliberately keeps River (a direct GloFAS river-flood model hit) and Floodplain (an
-// elevation-relative-to-drainage screening proxy, used as a fallback where there's no direct river
-// model coverage) as two independent signals rather than blending them into one score - a
-// combined figure was found to actively destroy specificity (see hazards.py's
-// _compute_flood_branches). Showing one bare "Flood: Severe" pill throws that nuance away and
-// reads scarier than the evidence actually supports, so both signals get their own column here,
-// matching how the full PDF report already presents them.
+// The backend keeps River (a direct GloFAS river-flood model hit), Floodplain (an elevation-
+// relative-to-drainage screening proxy, used as a fallback where there's no direct river model
+// coverage) and Rainfall (experimental - a same-city matched-pair test found it could not reliably
+// tell a documented flood zone from a well-drained one, AUC 0.361) as three independent signals
+// rather than blending them into one score - a combined figure was found to actively destroy
+// specificity (see hazards.py's _compute_flood_branches). Each gets its own column/row rather than
+// one bare "Flood" pill, and each shows its own 0-100 risk SCORE (not a calibrated probability of
+// an actual flood - these are heuristic susceptibility scores) instead of a word like "Severe",
+// which read scarier than a screening-level proxy's evidence actually supports.
+function percentOf(value: unknown): number | null {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
 function floodSignalSummary(assessments: any[]) {
-  const river = { assessed: 0, classes: {} as Record<string, number> };
-  const floodplain = { assessed: 0, classes: {} as Record<string, number> };
+  const make = () => ({ assessed: 0, classes: {} as Record<string, number>, percents: [] as number[] });
+  const river = make();
+  const floodplain = make();
+  const rainfall = make();
   for (const item of assessments || []) {
-    const summary = item.hazards?.flood?.result?.summary;
+    const result = item.hazards?.flood?.result;
+    const summary = result?.summary;
     if (!summary) continue;
-    const riverClass = summary.river_available === false ? "No Data" : (summary.river_class || "unavailable");
+    const riverAvailable = summary.river_available !== false;
     river.assessed += 1;
-    river.classes[riverClass] = (river.classes[riverClass] || 0) + 1;
-    const floodplainClass = summary.floodplain_class || "unavailable";
+    river.classes[riverAvailable ? (summary.river_class || "unavailable") : "No Data"] = (river.classes[riverAvailable ? (summary.river_class || "unavailable") : "No Data"] || 0) + 1;
+    if (riverAvailable) { const p = percentOf(result?.river?.risk_score); if (p !== null) river.percents.push(p); }
+
     floodplain.assessed += 1;
+    const floodplainClass = summary.floodplain_class || "unavailable";
     floodplain.classes[floodplainClass] = (floodplain.classes[floodplainClass] || 0) + 1;
+    const fp = percentOf(result?.floodplain?.risk_score);
+    if (fp !== null) floodplain.percents.push(fp);
+
+    if (result?.rainfall?.data_available !== false) {
+      rainfall.assessed += 1;
+      const rp = percentOf(result?.rainfall?.risk_score);
+      if (rp !== null) rainfall.percents.push(rp);
+    }
   }
-  return { river, floodplain };
+  return { river, floodplain, rainfall };
 }
 
 export default function EstateHazardsPage() {
@@ -123,42 +143,52 @@ export default function EstateHazardsPage() {
               <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>{dashboard.assessment_count || 0} assessment record(s) stored against this Estate.</p>
               <div className="edash-risk-list" style={{ marginBottom: 10 }}>
                 {(() => {
-                  const { river, floodplain } = floodSignalSummary(dashboard.assessments || []);
-                  const rows: Array<{ key: string; label: string; value: { assessed: number; classes: Record<string, number> } }> = [
+                  const { river, floodplain, rainfall } = floodSignalSummary(dashboard.assessments || []);
+                  const rows: Array<{ key: string; label: string; value: { assessed: number; classes: Record<string, number>; percents: number[] }; experimental?: boolean }> = [
                     { key: "river", label: "River (modelled)", value: river },
                     { key: "floodplain", label: "Floodplain (elevation)", value: floodplain },
+                    { key: "rainfall", label: "Rainfall (experimental)", value: rainfall, experimental: true },
                   ];
-                  if (dashboard.summary?.erosion) rows.push({ key: "erosion", label: "Erosion", value: dashboard.summary.erosion });
-                  return rows.map(({ key, label, value }) => {
+                  if (dashboard.summary?.erosion) rows.push({ key: "erosion", label: "Erosion", value: { ...dashboard.summary.erosion, percents: [] } });
+                  return rows.map(({ key, label, value, experimental }) => {
                     const classes = Object.keys(value.classes || {});
                     const worst = classes.find((entry) => riskTone(entry) === "danger") || classes.find((entry) => riskTone(entry) === "warn") || classes[0];
+                    const maxPct = value.percents.length ? Math.max(...value.percents) : null;
+                    const display = maxPct !== null ? `Up to ${maxPct}%` : (worst ? worst.replaceAll("_", " ") : (value.assessed ? "No data" : "Unscreened"));
                     return (
                       <div key={key} className="edash-risk-item">
                         <span className="edash-risk-icon"><EstateIcon name={key === "erosion" ? "erosion" : "flood"} /></span>
                         <span>{label} &middot; {value.assessed} assessed</span>
-                        <span className={`edash-status-pill tone-${worst ? riskTone(worst) : "neutral"}`}>{worst ? worst.replaceAll("_", " ") : "Unscreened"}</span>
+                        <span className={`edash-status-pill tone-${experimental ? "neutral" : (worst ? riskTone(worst) : "neutral")}`}>{display}</span>
                       </div>
                     );
                   });
                 })()}
               </div>
               <p className="edash-field-note" style={{ marginBottom: 16 }}>
-                River reflects a direct modelled river-flood hit (JRC/Copernicus GloFAS). Floodplain reflects the site's elevation relative to the surrounding drainage network - a screening-level proxy used mainly where there's no direct river-model coverage, not a confirmed flood-zone determination. Open a plot's Hazard tab for the full method and confidence notes.
+                Scores are 0-100 site-relative risk indicators, not calibrated probabilities of an actual flood - each signal is independent and shouldn't be summed or averaged together. River reflects a direct modelled river-flood hit (JRC/Copernicus GloFAS). Floodplain reflects elevation relative to the surrounding drainage network - a screening-level proxy used mainly where there's no direct river-model coverage. Rainfall is experimental: in testing it could not reliably tell a documented flood zone from a well-drained one, so it's shown for transparency only, never as confirmed risk evidence. Open a plot's Hazard tab for the full method and confidence notes.
               </p>
               <div className="edash-card-head"><h3 className="edash-card-title">Per-plot results</h3></div>
               {(dashboard.assessments || []).length ? (
                 <table className="edash-mini-table">
-                  <thead><tr><th>Plot</th><th>River</th><th>Floodplain</th><th>Erosion</th></tr></thead>
+                  <thead><tr><th>Plot</th><th>River</th><th>Floodplain</th><th>Rainfall (exp.)</th><th>Erosion</th></tr></thead>
                   <tbody>
                     {dashboard.assessments.map((item: any) => {
-                      const floodSummary = item.hazards?.flood?.result?.summary;
-                      const riverClass = floodSummary ? (floodSummary.river_available === false ? "No Data" : (floodSummary.river_class || "unavailable")) : (item.hazards?.flood ? "unavailable" : undefined);
+                      const floodResult = item.hazards?.flood?.result;
+                      const floodSummary = floodResult?.summary;
+                      const riverAvailable = floodSummary ? floodSummary.river_available !== false : false;
+                      const riverClass = floodSummary ? (riverAvailable ? (floodSummary.river_class || "unavailable") : "No Data") : (item.hazards?.flood ? "unavailable" : undefined);
+                      const riverPct = riverAvailable ? percentOf(floodResult?.river?.risk_score) : null;
                       const floodplainClass = floodSummary?.floodplain_class || (item.hazards?.flood ? item.hazards.flood.risk_class : undefined);
+                      const floodplainPct = percentOf(floodResult?.floodplain?.risk_score);
+                      const rainfallAvailable = floodResult?.rainfall?.data_available !== false;
+                      const rainfallPct = rainfallAvailable ? percentOf(floodResult?.rainfall?.risk_score) : null;
                       return (
                         <tr key={item.plot_id || "estate"}>
                           <td data-label="Plot">{item.plot_id ? `Plot ${item.plot_id}` : "Estate"}</td>
-                          <td data-label="River"><span className={`edash-status-pill tone-${riskTone(riverClass)}`}>{riverClass || "unavailable"}</span></td>
-                          <td data-label="Floodplain"><span className={`edash-status-pill tone-${riskTone(floodplainClass)}`}>{floodplainClass || "unavailable"}</span></td>
+                          <td data-label="River"><span className={`edash-status-pill tone-${riskTone(riverClass)}`}>{riverPct !== null ? `${riverPct}%` : (riverClass || "unavailable")}</span></td>
+                          <td data-label="Floodplain"><span className={`edash-status-pill tone-${riskTone(floodplainClass)}`}>{floodplainPct !== null ? `${floodplainPct}%` : (floodplainClass || "unavailable")}</span></td>
+                          <td data-label="Rainfall (exp.)"><span className="edash-status-pill tone-neutral">{rainfallPct !== null ? `${rainfallPct}%` : "unavailable"}</span></td>
                           <td data-label="Erosion"><span className={`edash-status-pill tone-${riskTone(item.hazards?.erosion?.risk_class)}`}>{item.hazards?.erosion?.risk_class || "unavailable"}</span></td>
                         </tr>
                       );

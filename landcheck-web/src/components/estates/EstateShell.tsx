@@ -69,12 +69,34 @@ export default function EstateShell({
   const [notifOpen, setNotifOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [seenActivityCount, setSeenActivityCount] = useState(0);
   const estateSession = getEstateAuthSession();
   const activeItem = estateNavItems.find((item) => item.key === activeKey);
   const notifRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const unreadCount = Math.max(0, recentActivity.length - seenActivityCount);
+
+  // Plain React state reset to 0 on every mount, which is every page load AND every login - so
+  // the badge looked "seen" only until the next navigation or refresh, then came right back. This
+  // persists the timestamp of the newest activity item the user has actually opened the dropdown
+  // on, so a genuinely-seen notification stays seen across reloads and future sessions.
+  const seenStorageKey = `edash_notif_seen_${estateId}`;
+  const [seenTimestamp, setSeenTimestamp] = useState<string | null>(() => {
+    try { return window.localStorage.getItem(seenStorageKey); } catch { return null; }
+  });
+  useEffect(() => {
+    try { setSeenTimestamp(window.localStorage.getItem(seenStorageKey)); } catch { setSeenTimestamp(null); }
+  }, [seenStorageKey]);
+  const latestActivityTimestamp = recentActivity.reduce<string | null>(
+    (latest, event) => (!latest || event.created_at > latest ? event.created_at : latest),
+    null,
+  );
+  const unreadCount = seenTimestamp
+    ? recentActivity.filter((event) => event.created_at > seenTimestamp).length
+    : recentActivity.length;
+  const markActivitySeen = () => {
+    if (!latestActivityTimestamp) return;
+    try { window.localStorage.setItem(seenStorageKey, latestActivityTimestamp); } catch { /* private mode or blocked storage - badge just won't persist as seen */ }
+    setSeenTimestamp(latestActivityTimestamp);
+  };
 
   // Without this, these dropdowns only ever close via their own toggle button - clicking
   // anywhere else on the page (including the other dropdown) leaves them stuck open.
@@ -159,7 +181,7 @@ export default function EstateShell({
               <button
                 type="button"
                 className="edash-icon-btn"
-                onClick={() => setNotifOpen((value) => { const next = !value; if (next) setSeenActivityCount(recentActivity.length); return next; })}
+                onClick={() => setNotifOpen((value) => { const next = !value; if (next) markActivitySeen(); return next; })}
                 aria-label="Recent updates"
               >
                 <EstateIcon name="bell" />
