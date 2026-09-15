@@ -457,6 +457,8 @@ export default function Estates() {
   const [dgpsExportBusy, setDgpsExportBusy] = useState(false);
   const [layoutExportCoordinateSystem, setLayoutExportCoordinateSystem] = useState("wgs84_nigeria_meters");
   const [layoutPdfExportBusy, setLayoutPdfExportBusy] = useState(false);
+  const [layoutPdfPaperSize, setLayoutPdfPaperSize] = useState("A3");
+  const [layoutPdfIncludeCustomerNames, setLayoutPdfIncludeCustomerNames] = useState(false);
   const [layoutDgpsExportBusy, setLayoutDgpsExportBusy] = useState(false);
   const [workflowMessage, setWorkflowMessageRaw] = useState("");
   const [workflowMessageTone, setWorkflowMessageTone] = useState<MessageTone>("good");
@@ -1155,14 +1157,14 @@ export default function Estates() {
       setDgpsExportBusy(false);
     }
   };
-  const downloadEstateLayoutPdf = async () => {
+  const downloadEstateLayoutPdf = async (paperSize: string, includeCustomerNames: boolean) => {
     if (!estateId) return;
     setLayoutPdfExportBusy(true);
     try {
-      const response = await api.get(`/estates/${estateId}/exports/layout.pdf`, { responseType: "blob" });
+      const response = await api.get(`/estates/${estateId}/exports/layout.pdf`, { params: { paper_size: paperSize, include_customer_names: includeCustomerNames }, responseType: "blob" });
       const url = URL.createObjectURL(response.data);
       const link = document.createElement("a");
-      link.href = url; link.download = `${estateDetail?.name || "estate"}-layout-plan.pdf`; link.click(); URL.revokeObjectURL(url);
+      link.href = url; link.download = `${estateDetail?.name || "estate"}-layout-plan-${paperSize}.pdf`; link.click(); URL.revokeObjectURL(url);
     } catch (error) {
       setMessage(await extractApiErrorMessage(error, "The layout plan PDF could not be generated."), "danger");
     } finally {
@@ -2296,8 +2298,23 @@ export default function Estates() {
             <div className="edash-info-card-body">
               <p className="edash-info-card-name">Layout plan (PDF)</p>
               <p className="edash-info-card-meta">A clean, single-page site layout plan - plots, roads, open space and drainage, labelled with plot numbers and areas.</p>
+              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
+                <label className="edash-field" style={{ maxWidth: 120, marginBottom: 0 }}>
+                  <span>Paper size</span>
+                  <select value={layoutPdfPaperSize} onChange={(event) => setLayoutPdfPaperSize(event.target.value)}>
+                    {["A0", "A1", "A2", "A3", "A4"].map((size) => <option key={size} value={size}>{size}</option>)}
+                  </select>
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", color: "var(--edash-muted)" }}>
+                  <input type="checkbox" checked={layoutPdfIncludeCustomerNames} onChange={(event) => setLayoutPdfIncludeCustomerNames(event.target.checked)} />
+                  Include customer names
+                </label>
+              </div>
+              <p className="edash-field-note" style={{ marginTop: 4 }}>
+                {layoutPdfIncludeCustomerNames ? "Each allocated/reserved plot will show its customer's name - for internal use." : "No customer names shown - safe for marketing, PR or public handouts."}
+              </p>
             </div>
-            <button type="button" className="edash-btn-primary edash-info-card-action" disabled={layoutPdfExportBusy} onClick={() => void downloadEstateLayoutPdf()}>
+            <button type="button" className="edash-btn-primary edash-info-card-action" disabled={layoutPdfExportBusy} onClick={() => void downloadEstateLayoutPdf(layoutPdfPaperSize, layoutPdfIncludeCustomerNames)}>
               {layoutPdfExportBusy ? <><Spinner size={13} /> Rendering...</> : "Download PDF"}
             </button>
           </div>
