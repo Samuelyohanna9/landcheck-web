@@ -118,9 +118,9 @@ export default function EstateHazardsPage() {
                   <tbody>
                     {dashboard.assessments.map((item: any) => (
                       <tr key={item.plot_id || "estate"}>
-                        <td>{item.plot_id ? `Plot ${item.plot_id}` : "Estate"}</td>
-                        <td><span className={`edash-status-pill tone-${riskTone(item.hazards?.flood?.risk_class)}`}>{item.hazards?.flood?.risk_class || "unavailable"}</span></td>
-                        <td><span className={`edash-status-pill tone-${riskTone(item.hazards?.erosion?.risk_class)}`}>{item.hazards?.erosion?.risk_class || "unavailable"}</span></td>
+                        <td data-label="Plot">{item.plot_id ? `Plot ${item.plot_id}` : "Estate"}</td>
+                        <td data-label="Flood"><span className={`edash-status-pill tone-${riskTone(item.hazards?.flood?.risk_class)}`}>{item.hazards?.flood?.risk_class || "unavailable"}</span></td>
+                        <td data-label="Erosion"><span className={`edash-status-pill tone-${riskTone(item.hazards?.erosion?.risk_class)}`}>{item.hazards?.erosion?.risk_class || "unavailable"}</span></td>
                       </tr>
                     ))}
                   </tbody>

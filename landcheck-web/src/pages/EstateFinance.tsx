@@ -211,9 +211,9 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
                   <tbody>
                     {documents.map((row) => (
                       <tr key={row.id}>
-                        <td>{row.filename}</td>
-                        <td>{row.type}</td>
-                        <td>{row.entity_type} #{row.entity_id}</td>
+                        <td data-label="File">{row.filename}</td>
+                        <td data-label="Type">{row.type}</td>
+                        <td data-label="Record">{row.entity_type} #{row.entity_id}</td>
                         <td><button type="button" className="edash-btn-outline" onClick={() => void download(`/estates/documents/${row.id}/download`, row.filename).catch((error) => fail(error, "Document could not be downloaded."))}>Download</button></td>
                       </tr>
                     ))}
@@ -235,7 +235,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
                 {["estate", "plot", "customer", "allocation", "payment"].map((value) => <option key={value} value={value}>{value}</option>)}
               </select>
             </label>
-            <label className="edash-field" style={{ marginBottom: 12 }}><span>Linked record ID</span><input value={entityId} onChange={(event) => setEntityId(event.target.value)} /></label>
+            <label className="edash-field" style={{ marginBottom: 12 }}><span>Linked record ID</span><input placeholder=" " value={entityId} onChange={(event) => setEntityId(event.target.value)} /></label>
             <label className="edash-field" style={{ marginBottom: 12 }}><span>Document type</span><input value={documentType} onChange={(event) => setDocumentType(event.target.value)} placeholder="e.g. receipt, allocation_letter" /></label>
             <button type="button" className="edash-btn-primary" onClick={() => void upload()}>Upload private document</button>
           </EstateModal>
@@ -275,7 +275,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
         <div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Filters</h3></div>
           <div className="edash-form-row">
-            <label className="edash-field"><span>Customer, plot or reference</span><input value={search} onChange={(event) => setSearch(event.target.value)} /></label>
+            <label className="edash-field"><span>Customer, plot or reference</span><input placeholder=" " value={search} onChange={(event) => setSearch(event.target.value)} /></label>
             <label className="edash-field"><span>Status</span>
               <select value={status} onChange={(event) => setStatus(event.target.value)}>
                 <option value="">All statuses</option>
@@ -315,7 +315,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
             </select>
           </label>
           {allocationDetail && <AllocationPanel detail={allocationDetail} />}
-          <label className="edash-field" style={{ marginBottom: 12 }}><span>Amount</span><input type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
+          <label className="edash-field" style={{ marginBottom: 12 }}><span>Amount</span><input placeholder=" " type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Date</span><input type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} /></label>
           <label className="edash-field" style={{ marginBottom: 12 }}>
             <span>Method</span>
@@ -326,7 +326,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
           {paymentMethod === "other" && (
             <label className="edash-field" style={{ marginBottom: 12 }}><span>Specify method</span><input value={paymentMethodOther} onChange={(event) => setPaymentMethodOther(event.target.value)} placeholder="e.g. Crypto, Barter" /></label>
           )}
-          <label className="edash-field" style={{ marginBottom: 12 }}><span>Reference</span><input value={reference} onChange={(event) => setReference(event.target.value)} /></label>
+          <label className="edash-field" style={{ marginBottom: 12 }}><span>Reference</span><input placeholder=" " value={reference} onChange={(event) => setReference(event.target.value)} /></label>
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Receipt</span><input type="file" onChange={(event) => setReceipt(event.target.files?.[0] || null)} /></label>
           <button type="button" className="edash-btn-primary" onClick={() => void record()}>Record payment</button>
         </EstateModal>
@@ -398,14 +398,14 @@ function CustomerAllocations({ detail }: { detail: any }) {
           <tbody>
             {detail.allocations.map((allocation: any) => (
               <tr key={allocation.allocation_id}>
-                <td>{allocation.estate.name}</td>
-                <td>{allocation.plot.number}</td>
-                <td>{money(allocation.agreed_price)}</td>
-                <td>{money(allocation.confirmed)}</td>
-                <td>{money(allocation.pending)}</td>
-                <td>{money(allocation.outstanding)}</td>
-                <td>{allocation.percentage}%</td>
-                <td>{allocation.payment_count}</td>
+                <td data-label="Estate">{allocation.estate.name}</td>
+                <td data-label="Plot">{allocation.plot.number}</td>
+                <td data-label="Agreed">{money(allocation.agreed_price)}</td>
+                <td data-label="Confirmed">{money(allocation.confirmed)}</td>
+                <td data-label="Pending">{money(allocation.pending)}</td>
+                <td data-label="Outstanding">{money(allocation.outstanding)}</td>
+                <td data-label="Progress">{allocation.percentage}%</td>
+                <td data-label="Payments">{allocation.payment_count}</td>
               </tr>
             ))}
           </tbody>
@@ -471,12 +471,12 @@ function CustomerStatement({ statement }: { statement: Statement }) {
                 <tbody>
                   {allocation.transactions.map((transaction: any, index: number) => (
                     <tr key={index}>
-                      <td>{new Date(transaction.date).toLocaleDateString()}</td>
-                      <td>{transaction.reference || "-"}</td>
-                      <td>{paymentMethodLabel(transaction.method)}</td>
-                      <td>{money(transaction.amount)}</td>
-                      <td><PaymentStatusBadge status={transaction.status} /></td>
-                      <td>{renderReceiptCell(transaction)}</td>
+                      <td data-label="Date">{new Date(transaction.date).toLocaleDateString()}</td>
+                      <td data-label="Reference">{transaction.reference || "-"}</td>
+                      <td data-label="Method">{paymentMethodLabel(transaction.method)}</td>
+                      <td data-label="Amount">{money(transaction.amount)}</td>
+                      <td data-label="Status"><PaymentStatusBadge status={transaction.status} /></td>
+                      <td data-label="Receipt">{renderReceiptCell(transaction)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -499,13 +499,13 @@ function PaymentTable({ rows, open, onConfirm }: { rows: Payment[]; open: (id: n
         <tbody>
           {rows.map((payment) => (
             <tr key={payment.id} style={{ cursor: "pointer" }} onClick={() => open(payment.id)}>
-              <td>{new Date(payment.date).toLocaleDateString()}</td>
-              <td>{payment.customer.name}</td>
-              <td>{payment.estate.name} / {payment.plot.number}</td>
-              <td>{money(payment.amount, payment.currency)}</td>
-              <td><PaymentStatusBadge status={payment.status} /></td>
-              <td>{paymentMethodLabel(payment.method)}</td>
-              <td>{payment.reference || "-"}</td>
+              <td data-label="Date">{new Date(payment.date).toLocaleDateString()}</td>
+              <td data-label="Customer">{payment.customer.name}</td>
+              <td data-label="Estate / Plot">{payment.estate.name} / {payment.plot.number}</td>
+              <td data-label="Amount">{money(payment.amount, payment.currency)}</td>
+              <td data-label="Status"><PaymentStatusBadge status={payment.status} /></td>
+              <td data-label="Method">{paymentMethodLabel(payment.method)}</td>
+              <td data-label="Reference">{payment.reference || "-"}</td>
               <td>
                 {payment.can_confirm && (
                   <button

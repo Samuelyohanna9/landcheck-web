@@ -1798,7 +1798,7 @@ export default function Estates() {
                               <thead><tr><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
                               <tbody>
                                 {financial.payments.slice(0, 8).map((payment: any) => (
-                                  <tr key={payment.id}><td>{payment.date}</td><td>{money(payment.amount)}</td><td style={{ textTransform: "capitalize" }}>{payment.status.replaceAll("_", " ")}</td></tr>
+                                  <tr key={payment.id}><td data-label="Date">{payment.date}</td><td data-label="Amount">{money(payment.amount)}</td><td data-label="Status" style={{ textTransform: "capitalize" }}>{payment.status.replaceAll("_", " ")}</td></tr>
                                 ))}
                               </tbody>
                             </table>
@@ -2627,15 +2627,15 @@ export default function Estates() {
         <EstateModal title="Add customer" onClose={() => setShowAddCustomer(false)}>
           <label className="edash-field" style={{ marginBottom: 12 }}>
             <span>Full name</span>
-            <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} autoFocus />
+            <input placeholder=" " value={customerName} onChange={(event) => setCustomerName(event.target.value)} autoFocus />
           </label>
           <label className="edash-field" style={{ marginBottom: 12 }}>
             <span>Phone (optional)</span>
-            <input value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} />
+            <input placeholder=" " value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} />
           </label>
           <label className="edash-field" style={{ marginBottom: 12 }}>
             <span>Email (optional - lifecycle updates are sent here)</span>
-            <input type="email" value={customerEmail} onChange={(event) => setCustomerEmail(event.target.value)} />
+            <input placeholder=" " type="email" value={customerEmail} onChange={(event) => setCustomerEmail(event.target.value)} />
           </label>
           <button type="button" className="edash-btn-primary" disabled={!customerName.trim()} onClick={() => void createCustomer()}>Add customer</button>
         </EstateModal>

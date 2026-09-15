@@ -88,6 +88,12 @@ const zoneBoundaryCollection = (system: string | undefined) => {
   };
 };
 
+// A touch screen (phone/tablet, no precise mouse pointer) gets noticeably larger vertex/midpoint
+// hit targets - Mapbox Draw's default sizing assumes a mouse, and dragging an 12px dot to reshape
+// a plot boundary with a fingertip is genuinely hard to hit accurately otherwise. Read once at
+// module load (a device's pointer type doesn't change mid-session) rather than per render.
+const IS_COARSE_POINTER = typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+
 const drawStyles = [
   {
     id: "gl-draw-polygon-fill-active",
@@ -140,7 +146,7 @@ const drawStyles = [
     type: "circle",
     filter: ["all", ["==", "active", "true"], ["==", "$type", "Point"]],
     paint: {
-      "circle-radius": 8,
+      "circle-radius": IS_COARSE_POINTER ? 13 : 8,
       "circle-color": "#21c77a",
       "circle-stroke-color": "#ffffff",
       "circle-stroke-width": 3,
@@ -151,7 +157,7 @@ const drawStyles = [
     type: "circle",
     filter: ["all", ["==", "active", "false"], ["==", "$type", "Point"]],
     paint: {
-      "circle-radius": 6,
+      "circle-radius": IS_COARSE_POINTER ? 10 : 6,
       "circle-color": "#178a56",
       "circle-stroke-color": "#ffffff",
       "circle-stroke-width": 2,
@@ -162,7 +168,7 @@ const drawStyles = [
     type: "circle",
     filter: ["all", ["==", "$type", "Point"], ["==", "meta", "midpoint"]],
     paint: {
-      "circle-radius": 5,
+      "circle-radius": IS_COARSE_POINTER ? 9 : 5,
       "circle-color": "#8fe6bb",
       "circle-stroke-color": "#ffffff",
       "circle-stroke-width": 2,
@@ -465,7 +471,7 @@ function MapViewEnhanced({
           type: "circle",
           source: "measure-points",
           paint: {
-            "circle-radius": 4,
+            "circle-radius": IS_COARSE_POINTER ? 7 : 4,
             "circle-color": "#e7a93b",
             "circle-stroke-color": "#ffffff",
             "circle-stroke-width": 1.5,
