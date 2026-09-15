@@ -95,33 +95,32 @@ function SurveyPlanGeoreferenceSetupStep({
   const [draftTitle, setDraftTitle] = useState("");
   const [draftFile, setDraftFile] = useState<File | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  // Drives the guided two-click "add a control point" sequence: null (idle) -> "awaiting-raster"
+  // Drives the single-path "add a control point" sequence: null (idle) -> "awaiting-raster"
   // (waiting for a click on the survey plan) -> "awaiting-map" (waiting for the matching map
-  // click) -> "saved" (brief confirmation, auto-clears) -> null. Read inside the Mapbox click
-  // listener via placementStageRef, since that listener is registered once in the mount effect
-  // and would otherwise see a stale value.
-  const [placementStage, setPlacementStage] = useState<"awaiting-raster" | "awaiting-map" | "saved" | null>(null);
+  // click, only entered via "Choose from map instead") -> null once the popup opens in
+  // "confirm" mode. Read inside the Mapbox click listener via placementStageRef, since that
+  // listener is registered once in the mount effect and would otherwise see a stale value.
+  const [placementStage, setPlacementStage] = useState<"awaiting-raster" | "awaiting-map" | null>(null);
   const placementStageRef = useRef<typeof placementStage>(null);
-  // Which surface the surveyor chose to match first for the point currently in progress - lets
-  // the raster/map click handlers below tell "this is the first of the pair" (advance to the
-  // other side) apart from "this is the second, completing click" (advance to "saved"),
-  // regardless of which side they started with. "manual" means: click the survey plan to place
-  // the pixel position, then type the real-world coordinate right there instead of clicking the
-  // map at all - see manualEntryPopup below.
-  const startedViaRef = useRef<"raster" | "map" | "manual">("raster");
-  const savedStageTimeoutRef = useRef<number | null>(null);
-  // A small inline coordinate-entry box anchored at the exact stage position the surveyor just
-  // clicked (in the same left%/top% coordinate space already used for markers/cursor probe) -
-  // "Add manually" places the pixel position by clicking, then types the ground X/Y right there
-  // instead of needing a second click on the map.
+  // A floating popup anchored at the stage position of the point currently being placed (in the
+  // same left%/top% coordinate space already used for markers/cursor probe). Two modes share it:
+  // "entry" is the coordinate-typing form shown right after a raster click (or reopened by
+  // "Choose from map instead" / "Edit"); "confirm" is the "Point saved - Next point / Edit /
+  // Continue to Digitize" popup shown once a point is complete, however it was completed.
   const [manualEntryPopup, setManualEntryPopup] = useState<{
     pointId: string;
     leftPercent: number;
     topPercent: number;
     x: string;
     y: string;
+    mode: "entry" | "confirm";
   } | null>(null);
   const [stageMetrics, setStageMetrics] = useState<RasterStageMetrics | null>(null);
+  // Mirrors of render-scope values the once-mounted Mapbox click listener needs (its mount effect
+  // has a stable dependency array, so anything it reads from render scope directly is captured
+  // stale forever) - same pattern as placementStageRef above.
+  const activePointImageRef = useRef<{ pointId: string; pixelX: number; pixelY: number } | null>(null);
+  const stageMetricsRef = useRef<RasterStageMetrics | null>(null);
   // Only one GCP's inputs are ever editable at a time - every other row shows compact read-only
   // values. Buffered as its own draft object (not committed field-by-field on blur like before)
   // so Save/Cancel can apply or discard the whole row's edits together.
@@ -357,17 +356,21 @@ function SurveyPlanGeoreferenceSetupStep({
   }, [placementStage]);
 
   useEffect(() => {
-    return () => {
-      if (savedStageTimeoutRef.current != null) window.clearTimeout(savedStageTimeoutRef.current);
-    };
-  }, []);
+    stageMetricsRef.current = stageMetrics;
+  }, [stageMetrics]);
+
+  useEffect(() => {
+    if (!activePoint) {
+      activePointImageRef.current = null;
+      return;
+    }
+    activePointImageRef.current = pointHasImage(activePoint)
+      ? { pointId: activePoint.id, pixelX: Number(activePoint.image_x), pixelY: Number(activePoint.image_y) }
+      : null;
+  }, [activePoint]);
 
   // A session/raster change mid-sequence means the point being placed no longer applies.
   useEffect(() => {
-    if (savedStageTimeoutRef.current != null) {
-      window.clearTimeout(savedStageTimeoutRef.current);
-      savedStageTimeoutRef.current = null;
-    }
     setPlacementStage(null);
     setManualEntryPopup(null);
   }, [session?.id]);
@@ -377,10 +380,12 @@ function SurveyPlanGeoreferenceSetupStep({
     onSelectControlPoint(controlPointId);
   };
 
-  const beginNewControlPoint = (side: "raster" | "map") => {
+  // The only way to start a point now: arm the survey-plan click. Everything after (typing the
+  // coordinate vs. choosing from the map, then confirming) follows from there.
+  const beginNewControlPoint = () => {
     onAddControlPoint();
-    startedViaRef.current = side;
-    setPlacementStage(side === "raster" ? "awaiting-raster" : "awaiting-map");
+    setManualEntryPopup(null);
+    setPlacementStage("awaiting-raster");
   };
 
   const cancelPendingPoint = () => {
@@ -390,16 +395,6 @@ function SurveyPlanGeoreferenceSetupStep({
     setPlacementStage(null);
   };
 
-  // "Add manually" places the pixel position with a normal click on the survey plan (handled in
-  // handleRasterClick below, tagged via startedViaRef.current === "manual"), then opens the
-  // floating coordinate box right at that clicked spot instead of requiring a second click on the
-  // map - see manualEntryPopup.
-  const beginManualControlPoint = () => {
-    onAddControlPoint();
-    startedViaRef.current = "manual";
-    setPlacementStage("awaiting-raster");
-  };
-
   const saveManualEntry = () => {
     if (!manualEntryPopup) return;
     const parsedX = Number.parseFloat(String(manualEntryPopup.x).trim().replace(",", "."));
@@ -407,12 +402,7 @@ function SurveyPlanGeoreferenceSetupStep({
     if (!Number.isFinite(parsedX) || !Number.isFinite(parsedY)) return;
     onUpdateControlPoint(manualEntryPopup.pointId, "ground_x", parsedX);
     onUpdateControlPoint(manualEntryPopup.pointId, "ground_y", parsedY);
-    setManualEntryPopup(null);
-    setPlacementStage("saved");
-    savedStageTimeoutRef.current = window.setTimeout(() => {
-      setPlacementStage(null);
-      savedStageTimeoutRef.current = null;
-    }, 1400);
+    setManualEntryPopup((current) => (current ? { ...current, mode: "confirm" } : current));
   };
 
   const cancelManualEntry = () => {
@@ -422,11 +412,45 @@ function SurveyPlanGeoreferenceSetupStep({
         onRemoveControlPoint(point.id);
       }
     }
+    setPlacementStage(null);
     setManualEntryPopup(null);
   };
 
   const updateManualEntryField = (field: "x" | "y", value: string) => {
     setManualEntryPopup((current) => (current ? { ...current, [field]: value } : current));
+  };
+
+  // "Choose from map instead", offered under the coordinate fields - swaps the typing form for a
+  // map click, using the existing Mapbox listener's "awaiting-map" branch to finish the point.
+  const chooseFromMapInstead = () => {
+    setManualEntryPopup(null);
+    setPlacementStage("awaiting-map");
+  };
+
+  // Reopens the same popup in "entry" mode, prefilled with the point's current ground values, so
+  // a mistake spotted right after saving can be fixed without starting the point over.
+  const editConfirmedPoint = () => {
+    setManualEntryPopup((current) => {
+      if (!current) return current;
+      const point = controlPoints.find((item) => item.id === current.pointId);
+      return {
+        ...current,
+        mode: "entry",
+        x: point && Number.isFinite(point.ground_x) ? String(point.ground_x) : current.x,
+        y: point && Number.isFinite(point.ground_y) ? String(point.ground_y) : current.y,
+      };
+    });
+  };
+
+  // "Next point" from the confirm popup - continues the same sequence without needing to press
+  // "Add control point" again.
+  const confirmNextPoint = () => {
+    setManualEntryPopup(null);
+    beginNewControlPoint();
+  };
+
+  const closeConfirmPopup = () => {
+    setManualEntryPopup(null);
   };
 
   const startEditPoint = (point: (typeof controlPoints)[number]) => {
@@ -498,19 +522,22 @@ function SurveyPlanGeoreferenceSetupStep({
       mapRef.current.on("load", () => {
         if (!mapRef.current) return;
         mapRef.current.on("click", (event: any) => {
+          if (placementStageRef.current !== "awaiting-map") return;
           onAssignMapPoint(Number(event.lngLat.lng), Number(event.lngLat.lat));
-          if (placementStageRef.current === "awaiting-map") {
-            if (startedViaRef.current === "map") {
-              // First click of the pair - now wait for the matching survey-plan point.
-              setPlacementStage("awaiting-raster");
-            } else {
-              // Started on the survey plan, this map click completes the pair.
-              setPlacementStage("saved");
-              savedStageTimeoutRef.current = window.setTimeout(() => {
-                setPlacementStage(null);
-                savedStageTimeoutRef.current = null;
-              }, 1400);
-            }
+          setPlacementStage(null);
+          const activeImage = activePointImageRef.current;
+          const stagePosition = activeImage
+            ? projectRasterPixelToStage(activeImage.pixelX, activeImage.pixelY, stageMetricsRef.current)
+            : null;
+          if (activeImage) {
+            setManualEntryPopup({
+              pointId: activeImage.pointId,
+              leftPercent: stagePosition?.leftPercent ?? 50,
+              topPercent: stagePosition?.topPercent ?? 50,
+              x: "",
+              y: "",
+              mode: "confirm",
+            });
           }
         });
         setMapReady(true);
@@ -808,29 +835,18 @@ function SurveyPlanGeoreferenceSetupStep({
     if (!pixel) return;
     onAssignImagePoint(pixel.pixelX, pixel.pixelY);
     if (placementStage === "awaiting-raster") {
-      if (startedViaRef.current === "manual") {
-        // Places the pixel position, then opens the coordinate box right at that spot instead of
-        // waiting for a map click.
-        const stagePosition = projectRasterPixelToStage(pixel.pixelX, pixel.pixelY, stageMetrics);
-        setManualEntryPopup({
-          pointId: activePoint.id,
-          leftPercent: stagePosition?.leftPercent ?? 50,
-          topPercent: stagePosition?.topPercent ?? 50,
-          x: "",
-          y: "",
-        });
-        setPlacementStage(null);
-      } else if (startedViaRef.current === "raster") {
-        // First click of the pair - now wait for the matching map location.
-        setPlacementStage("awaiting-map");
-      } else {
-        // Started on the map, this raster click completes the pair.
-        setPlacementStage("saved");
-        savedStageTimeoutRef.current = window.setTimeout(() => {
-          setPlacementStage(null);
-          savedStageTimeoutRef.current = null;
-        }, 1400);
-      }
+      // Places the pixel position, then opens the coordinate box right at that spot - the one
+      // path a new point ever starts on now.
+      const stagePosition = projectRasterPixelToStage(pixel.pixelX, pixel.pixelY, stageMetrics);
+      setManualEntryPopup({
+        pointId: activePoint.id,
+        leftPercent: stagePosition?.leftPercent ?? 50,
+        topPercent: stagePosition?.topPercent ?? 50,
+        x: "",
+        y: "",
+        mode: "entry",
+      });
+      setPlacementStage(null);
     }
   };
 
@@ -1147,53 +1163,29 @@ function SurveyPlanGeoreferenceSetupStep({
                   );
                 })}
                   </div>
-                  {placementStage === "awaiting-raster" || placementStage === "awaiting-map" ? (
+                  {placementStage === "awaiting-raster" ? (
                     <div className="georef-placement-status">
-                      <div className="georef-placement-track">
-                        <span className={activePoint && pointHasImage(activePoint) ? "is-done" : placementStage === "awaiting-raster" ? "is-active" : ""}>
-                          Survey plan point
-                        </span>
-                        <span className={activePoint && pointHasGround(activePoint) ? "is-done" : placementStage === "awaiting-map" ? "is-active" : ""}>
-                          {startedViaRef.current === "manual" ? "Type its coordinate" : "Matching map location"}
-                        </span>
-                        <span>Control point saved</span>
-                      </div>
-                      <p className="geo-section-hint">
-                        {placementStage === "awaiting-raster"
-                          ? startedViaRef.current === "manual"
-                            ? "Click the point on the survey plan, then type its coordinate."
-                            : "Select a point on the survey plan."
-                          : "Select the matching location on the map."}
-                      </p>
+                      <p className="geo-section-hint">Click the point on the survey plan.</p>
+                      <button type="button" className="geo-btn geo-btn-outline geo-btn-block" onClick={cancelPendingPoint}>
+                        Cancel
+                      </button>
+                    </div>
+                  ) : placementStage === "awaiting-map" ? (
+                    <div className="georef-placement-status">
+                      <p className="geo-section-hint">Click the matching location on the reference map.</p>
                       <button type="button" className="geo-btn geo-btn-outline geo-btn-block" onClick={cancelPendingPoint}>
                         {activePoint && (pointHasImage(activePoint) || pointHasGround(activePoint)) ? "Cancel point" : "Cancel"}
                       </button>
-                    </div>
-                  ) : placementStage === "saved" ? (
-                    <div className="georef-placement-status">
-                      <div className="georef-placement-track">
-                        <span className="is-done">Survey plan point</span>
-                        <span className="is-done">Matching map location</span>
-                        <span className="is-active">Control point saved</span>
-                      </div>
                     </div>
                   ) : (
                     <div className="georef-placement-choice">
                       <p className="geo-section-hint">
                         {controlPoints.length === 0
-                          ? "Start georeferencing by matching a point."
-                          : "Match another point - choose where to start."}
+                          ? "Start by adding a control point."
+                          : "More points improve accuracy - add another when you're ready."}
                       </p>
-                      <div className="georef-placement-choice-actions">
-                        <button type="button" className="geo-btn geo-btn-primary" onClick={() => beginNewControlPoint("raster")}>
-                          Match on survey plan
-                        </button>
-                        <button type="button" className="geo-btn geo-btn-outline" onClick={() => beginNewControlPoint("map")}>
-                          Match on map
-                        </button>
-                      </div>
-                      <button type="button" className="geo-btn geo-btn-outline geo-btn-block" onClick={beginManualControlPoint}>
-                        Add manually
+                      <button type="button" className="geo-btn geo-btn-primary geo-btn-block" onClick={beginNewControlPoint}>
+                        Add control point
                       </button>
                     </div>
                   )}
@@ -1229,12 +1221,10 @@ function SurveyPlanGeoreferenceSetupStep({
             <h2>Survey plan</h2>
             <p>
               {placementStage === "awaiting-raster"
-                ? startedViaRef.current === "manual"
-                  ? "Click the point, then type its coordinate."
-                  : "Select a point on the survey plan"
+                ? "Click the point on the survey plan."
                 : activePoint
                   ? `Selected: ${activePoint.label}`
-                  : "Start by matching a point on the plan."}
+                  : "Start by adding a control point."}
             </p>
           </div>
           <div className="geo-canvas-wrap">
@@ -1242,9 +1232,9 @@ function SurveyPlanGeoreferenceSetupStep({
               <button
                 type="button"
                 className="geo-canvas-tool-btn"
-                onClick={() => beginNewControlPoint("raster")}
+                onClick={beginNewControlPoint}
                 disabled={!session || placementStage !== null}
-                title="Add control point (match on survey plan)"
+                title="Add control point"
               >
                 <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -1341,7 +1331,7 @@ function SurveyPlanGeoreferenceSetupStep({
                         </span>
                       </span>
                     ) : null}
-                    {manualEntryPopup ? (
+                    {manualEntryPopup && manualEntryPopup.mode === "entry" ? (
                       <div
                         className={`georef-manual-entry-popup${manualEntryPopup.leftPercent > 62 ? " is-right-edge" : ""}${manualEntryPopup.topPercent > 62 ? " is-bottom-edge" : ""}`}
                         style={{ left: `${manualEntryPopup.leftPercent}%`, top: `${manualEntryPopup.topPercent}%` }}
@@ -1373,6 +1363,9 @@ function SurveyPlanGeoreferenceSetupStep({
                               }}
                             />
                           </label>
+                          <button type="button" className="georef-manual-entry-popup-link" onClick={chooseFromMapInstead}>
+                            Choose from map instead
+                          </button>
                           <div className="geo-composer-actions">
                             <button type="button" className="geo-btn geo-btn-outline" onClick={cancelManualEntry}>
                               Cancel
@@ -1389,6 +1382,40 @@ function SurveyPlanGeoreferenceSetupStep({
                               Save
                             </button>
                           </div>
+                        </div>
+                      </div>
+                    ) : null}
+                    {manualEntryPopup && manualEntryPopup.mode === "confirm" ? (
+                      <div
+                        className={`georef-manual-entry-popup georef-confirm-popup${manualEntryPopup.leftPercent > 62 ? " is-right-edge" : ""}${manualEntryPopup.topPercent > 62 ? " is-bottom-edge" : ""}`}
+                        style={{ left: `${manualEntryPopup.leftPercent}%`, top: `${manualEntryPopup.topPercent}%` }}
+                        onClick={(event) => event.stopPropagation()}
+                        onMouseDown={(event) => event.stopPropagation()}
+                      >
+                        <span className="georef-manual-entry-popup-reticle" aria-hidden="true" />
+                        <div className="georef-manual-entry-popup-body">
+                          <button type="button" className="georef-confirm-popup-close" aria-label="Close" onClick={closeConfirmPopup}>
+                            &times;
+                          </button>
+                          <strong>Point saved</strong>
+                          <p className="geo-section-hint">
+                            {controlPoints.filter((point) => pointIsReady(point)).length >= 3
+                              ? "More points improve accuracy - add another or continue when you're ready."
+                              : `Add ${Math.max(0, 3 - controlPoints.filter((point) => pointIsReady(point)).length)} more to continue.`}
+                          </p>
+                          <div className="geo-composer-actions">
+                            <button type="button" className="geo-btn geo-btn-outline" onClick={editConfirmedPoint}>
+                              Edit
+                            </button>
+                            <button type="button" className="geo-btn geo-btn-primary" onClick={confirmNextPoint}>
+                              Next point
+                            </button>
+                          </div>
+                          {controlPoints.filter((point) => pointIsReady(point)).length >= 3 ? (
+                            <button type="button" className="geo-btn geo-btn-primary geo-btn-block" onClick={onContinue}>
+                              Continue to Digitize
+                            </button>
+                          ) : null}
                         </div>
                       </div>
                     ) : null}
@@ -1431,10 +1458,8 @@ function SurveyPlanGeoreferenceSetupStep({
             <h2>Reference map</h2>
             <p>
               {placementStage === "awaiting-map"
-                ? "Select the matching location on the map"
-                : controlPoints.length === 0
-                  ? "Then select the same location on the map."
-                  : "Click the map to pair the selected point with a real coordinate."}
+                ? "Click the matching location on the map."
+                : "Used only when you choose \"Choose from map instead\" while entering a coordinate."}
             </p>
           </div>
           <div className="geo-map-surface" ref={mapContainerRef} />
