@@ -1208,6 +1208,29 @@
 }
 .edash-layout-preview-action svg { width: 14px; height: 14px; }
 .edash-layout-preview-action:disabled { opacity: 0.55; cursor: not-allowed; }
+.edash-layout-preview-road-width {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--edash-shadow-pop);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--edash-muted);
+}
+.edash-layout-preview-road-width input {
+  width: 40px;
+  border: none;
+  border-bottom: 1px solid var(--edash-border);
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--edash-ink);
+}
+.edash-layout-preview-road-width input:focus { outline: none; border-color: var(--edash-brand); }
 .edash-layout-preview-count {
   position: absolute;
   left: 10px;
