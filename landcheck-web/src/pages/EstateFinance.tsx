@@ -5,7 +5,7 @@ import EstateShell from "../components/estates/EstateShell";
 import EstateModal from "../components/estates/EstateModal";
 import EstateIcon from "../components/estates/EstateIcon";
 
-type Payment = { id: number; date: string; amount: string; currency: string; status: string; method: string; reference?: string; customer: { name: string }; estate: { name: string }; plot: { number: string } };
+type Payment = { id: number; date: string; amount: string; currency: string; status: string; method: string; reference?: string; customer: { name: string }; estate: { name: string }; plot: { number: string }; can_confirm?: boolean };
 type Allocation = { id: number; estate_name: string; plot_number: string; customer_name: string };
 type Customer = { id: number; name: string };
 type Detail = { payment: Payment & { notes?: string }; customer: { name: string }; estate: { name: string }; plot: { number: string }; financial: { agreed_price: string; confirmed: string; pending: string; outstanding: string }; capabilities: { can_confirm: boolean; can_void: boolean }; evidence: { id: number; filename: string }[] };
@@ -139,6 +139,16 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
       await load();
     } catch (error) {
       await fail(error, "Payment could not be recorded.");
+    }
+  };
+
+  const quickConfirm = async (id: number) => {
+    try {
+      await api.post(`/estates/payments/${id}/confirm`);
+      setNotice("Payment confirmed.");
+      await load();
+    } catch (error) {
+      await fail(error, "Payment could not be confirmed.");
     }
   };
 
@@ -288,7 +298,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
       <div className="edash-card">
         <div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Payments ({total})</h3></div>
-          <PaymentTable rows={payments} open={async (id) => { try { setDetail((await api.get(`/estates/payments/${id}`)).data); } catch (error) { await fail(error, "Payment detail could not be loaded."); } }} />
+          <PaymentTable rows={payments} open={async (id) => { try { setDetail((await api.get(`/estates/payments/${id}`)).data); } catch (error) { await fail(error, "Payment detail could not be loaded."); } }} onConfirm={quickConfirm} />
           <Pager page={page} total={total} change={setPage} />
         </div>
       </div>
@@ -454,12 +464,12 @@ function CustomerStatement({ statement }: { statement: Statement }) {
   );
 }
 
-function PaymentTable({ rows, open }: { rows: Payment[]; open: (id: number) => void }) {
+function PaymentTable({ rows, open, onConfirm }: { rows: Payment[]; open: (id: number) => void; onConfirm: (id: number) => void }) {
   if (!rows.length) return <p className="edash-tab-empty">No payments match this filter yet.</p>;
   return (
     <div style={{ overflowX: "auto" }}>
       <table className="edash-mini-table">
-        <thead><tr><th>Date</th><th>Customer</th><th>Estate / Plot</th><th>Amount</th><th>Status</th><th>Method</th><th>Reference</th></tr></thead>
+        <thead><tr><th>Date</th><th>Customer</th><th>Estate / Plot</th><th>Amount</th><th>Status</th><th>Method</th><th>Reference</th><th /></tr></thead>
         <tbody>
           {rows.map((payment) => (
             <tr key={payment.id} style={{ cursor: "pointer" }} onClick={() => open(payment.id)}>
@@ -470,6 +480,17 @@ function PaymentTable({ rows, open }: { rows: Payment[]; open: (id: number) => v
               <td><PaymentStatusBadge status={payment.status} /></td>
               <td>{paymentMethodLabel(payment.method)}</td>
               <td>{payment.reference || "-"}</td>
+              <td>
+                {payment.can_confirm && (
+                  <button
+                    type="button"
+                    className="edash-btn-primary"
+                    onClick={(event) => { event.stopPropagation(); onConfirm(payment.id); }}
+                  >
+                    Confirm
+                  </button>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
