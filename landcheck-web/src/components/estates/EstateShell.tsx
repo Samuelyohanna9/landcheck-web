@@ -5,7 +5,7 @@ import { clearEstateAuthSession, getEstateAuthSession } from "../../auth/estateA
 import "../../styles/estate-dashboard.css";
 
 export type EstateNavKey =
-  | "dashboard" | "map" | "plots" | "customers" | "payments" | "survey" | "staking"
+  | "dashboard" | "map" | "plots" | "customers" | "payments" | "commissions" | "survey" | "staking"
   | "documents" | "development" | "hazard" | "reports" | "audit" | "settings";
 
 export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: EstateIconName; path: (estateId: string) => string }> = [
@@ -14,6 +14,7 @@ export const estateNavItems: Array<{ key: EstateNavKey; label: string; icon: Est
   { key: "plots", label: "Plots", icon: "plots", path: (id) => `/estates/${id}/plots` },
   { key: "customers", label: "Customers", icon: "customers", path: (id) => `/estates/${id}/customers` },
   { key: "payments", label: "Sales & Payments", icon: "payments", path: () => "/estates/payments" },
+  { key: "commissions", label: "Commissions", icon: "wallet", path: () => "/estates/commissions" },
   { key: "survey", label: "Survey", icon: "survey", path: (id) => `/estates/${id}/survey` },
   { key: "staking", label: "Staking", icon: "staking", path: (id) => `/estates/${id}/staking` },
   { key: "documents", label: "Documents", icon: "documents", path: () => "/estates/documents" },
