@@ -1,9 +1,18 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
 import Spinner from "../../components/estates/EstateSpinner";
+
+type HazardJobStatus = {
+  id: string;
+  status: "queued" | "running" | "completed" | "failed";
+  stage: string | null;
+  progress_pct: number | null;
+  error_text: string | null;
+  result: any;
+};
 
 function riskTone(riskClass: string | undefined) {
   const value = (riskClass || "").toLowerCase();
@@ -19,6 +28,7 @@ export default function EstateHazardsPage() {
   const [dashboard, setDashboard] = useState<any>(null);
   const [activity, setActivity] = useState<any[]>([]);
   const [runBusy, setRunBusy] = useState(false);
+  const [jobProgress, setJobProgress] = useState<{ pct: number; stage: string } | null>(null);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -28,18 +38,39 @@ export default function EstateHazardsPage() {
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
   }, [estateId]);
 
+  // The whole-layout run screens every approved plot in the background (see hazards.py's async
+  // job pattern) rather than blocking one request for the whole estate's runtime, so this polls
+  // for status/progress instead of expecting the POST itself to return the finished result.
+  const pollHazardJob = useCallback(async (jobId: string): Promise<HazardJobStatus> => {
+    const startedAt = Date.now();
+    const timeoutMs = 5 * 60 * 1000;
+    const pollIntervalMs = 1200;
+    while (Date.now() - startedAt < timeoutMs) {
+      await new Promise((resolve) => window.setTimeout(resolve, pollIntervalMs));
+      const res = await api.get<HazardJobStatus>(`/hazards/jobs/${jobId}`);
+      const data = res.data;
+      setJobProgress({ pct: data.progress_pct ?? 0, stage: data.stage || "" });
+      if (data.status === "completed") return data;
+      if (data.status === "failed") throw new Error(data.error_text || "Analysis failed");
+    }
+    throw new Error("Analysis is taking longer than expected. Please try again.");
+  }, []);
+
   const runEstateHazardAnalysis = async () => {
     if (!estateId) return;
     setRunBusy(true);
     setMessage("");
+    setJobProgress({ pct: 0, stage: "Queued..." });
     try {
-      const response = await api.post(`/estates/${estateId}/hazards/assess-all`);
-      setDashboard(response.data);
+      const created = await api.post<HazardJobStatus>(`/estates/${estateId}/hazards/assess-all`);
+      const job = await pollHazardJob(created.data.id);
+      setDashboard(job.result);
       setMessage("Hazard analysis complete for the whole layout.");
     } catch (error) {
       setMessage(await extractApiErrorMessage(error, "Hazard analysis could not be run."));
     } finally {
       setRunBusy(false);
+      setJobProgress(null);
     }
   };
 
@@ -56,7 +87,7 @@ export default function EstateHazardsPage() {
             Runs flood and erosion screening for every approved plot in this Estate in one pass, instead of one plot at a time. Results below - and the Risk Overview on the Dashboard - update as soon as it finishes.
           </p>
           <button type="button" className="edash-btn-primary" disabled={runBusy} onClick={() => void runEstateHazardAnalysis()}>
-            {runBusy ? <><Spinner size={13} /> Analyzing layout...</> : "Run hazard analysis for entire layout"}
+            {runBusy ? <><Spinner size={13} /> {jobProgress?.stage || "Analyzing layout..."}</> : "Run hazard analysis for entire layout"}
           </button>
           {message && <p className="edash-tab-empty" style={{ padding: "10px 0 0" }}>{message}</p>}
         </div>
