@@ -67,6 +67,20 @@
 .estate-workflow-grid article > span { color: #198e89; font: 700 .7rem Arial, sans-serif; letter-spacing: .13em; }
 .estate-workflow-grid h3 { margin: 52px 0 11px; font-size: 1.35rem; font-weight: 400; }
 .estate-workflow-grid p { max-width: 210px; margin: 0; color: var(--estate-slate); font-size: .9rem; line-height: 1.55; }
+.estate-capabilities-section { max-width: 1260px; margin: auto; padding: 0 clamp(24px, 5vw, 72px) 120px; }
+.estate-capabilities-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--estate-line); border: 1px solid var(--estate-line); }
+.estate-capability-card { display: flex; flex-direction: column; gap: 14px; padding: 30px 26px; background: var(--estate-paper); }
+.estate-capability-icon { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; color: #167d7b; }
+.estate-capability-icon svg { width: 26px; height: 26px; }
+.estate-capability-card h3 { margin: 0; font-size: 1.2rem; font-weight: 400; }
+.estate-capability-card p { margin: 0; color: var(--estate-slate); font-size: .87rem; line-height: 1.6; }
+
+.estate-nigeria-section { max-width: 1260px; margin: auto; padding: 0 clamp(24px, 5vw, 72px) 130px; }
+.estate-nigeria-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 36px 60px; }
+.estate-nigeria-item { padding: 26px 0 0; border-top: 1px solid var(--estate-line); }
+.estate-nigeria-item h3 { margin: 0 0 9px; font-size: 1.15rem; font-weight: 400; color: var(--estate-ink); }
+.estate-nigeria-item p { margin: 0; color: var(--estate-slate); font-size: .89rem; line-height: 1.6; }
+
 .estate-intelligence-section { display: grid; grid-template-columns: 1.1fr .9fr; gap: 80px; align-items: center; padding: 100px max(24px, calc((100vw - 1116px) / 2)); background: var(--estate-navy); color: #eef3ed; }
 .estate-intelligence-section h2 { margin-bottom: 24px; color: #fff; }
 .estate-intelligence-section p:not(.estate-kicker) { max-width: 500px; color: #b9cbd0; line-height: 1.7; }
@@ -161,6 +175,8 @@
   .estate-workflow-grid article:nth-child(2) { border-right: 0; }
   .estate-workflow-grid article:nth-child(3), .estate-workflow-grid article:nth-child(4) { border-top: 1px solid var(--estate-line); }
   .estate-workflow-grid article:nth-child(3) { padding-left: 0; }
+  .estate-capabilities-grid { grid-template-columns: repeat(2, 1fr); }
+  .estate-nigeria-grid { grid-template-columns: 1fr; gap: 0; }
   .estate-intelligence-section { grid-template-columns: 1fr; gap: 45px; }
   .estate-auth-shell--register { grid-template-columns: 1fr; width: min(100% - 48px, 560px); }
   .estate-auth-shell--register .estate-register-intro, .estate-auth-shell--register .estate-auth-card { grid-column: 1; grid-row: auto; }
@@ -176,6 +192,7 @@
   .estate-workflow-grid { grid-template-columns: 1fr; }
   .estate-workflow-grid article, .estate-workflow-grid article + article { padding: 22px 0; border-right: 0 !important; border-top: 1px solid var(--estate-line); }
   .estate-workflow-grid article:first-child { border-top: 0; }
+  .estate-capabilities-grid { grid-template-columns: 1fr; }
   .estate-portal-footer { display: grid; }
   .estate-auth-shell { width: min(100% - 32px, 470px); }
   .estate-auth-card { padding: 24px; }
