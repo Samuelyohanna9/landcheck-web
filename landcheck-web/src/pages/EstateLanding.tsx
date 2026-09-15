@@ -31,19 +31,16 @@ export default function EstateLanding() {
         </nav>
       </header>
 
-      <section className="estate-introduction--centered" aria-labelledby="estate-intro-title">
-        <p className="estate-kicker">LandCheck Estates</p>
+      <section className="estate-hero" aria-labelledby="estate-intro-title" role="img" aria-label="A planned residential estate with plots, homes and internal roads">
+        <p className="estate-kicker estate-hero-kicker">LandCheck Estates</p>
         <h1 id="estate-intro-title">Manage every estate from one place.</h1>
-        <p className="estate-intro-summary-text">Design layouts, manage plots and buyers, track payments and commissions, and generate professional survey plans.</p>
+        <p className="estate-hero-summary">Design layouts, manage plots and buyers, track payments and commissions, and generate professional survey plans.</p>
         <div className="estate-intro-actions estate-intro-actions--centered">
           <a href={DEMO_MAILTO} className="estate-button">Request a demo</a>
-          <a href="#platform" className="estate-button estate-button--outline">View platform</a>
+          <a href="#platform" className="estate-button estate-button--outline-light">View platform</a>
         </div>
+        <p className="estate-hero-caption">One connected record for every plot.</p>
       </section>
-
-      <figure className="estate-landscape" role="img" aria-label="A planned residential estate with plots, homes and internal roads">
-        <figcaption><span>LANDCHECK ESTATES</span><span>One connected record for every plot.</span></figcaption>
-      </figure>
 
       <section className="estate-content-section" id="platform">
         <h2 className="estate-centered-heading">Everything connected to the plot.</h2>
