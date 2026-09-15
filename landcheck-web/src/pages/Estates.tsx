@@ -437,6 +437,7 @@ export default function Estates() {
   const [blockLabel, setBlockLabel] = useState("");
   const [blockName, setBlockName] = useState("");
   const [inspections, setInspections] = useState<any[]>([]);
+  const [plotTimeline, setPlotTimeline] = useState<any[]>([]);
   const [importReviews, setImportReviews] = useState<any[]>([]);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [geojsonFile, setGeojsonFile] = useState<File | null>(null);
@@ -787,6 +788,7 @@ export default function Estates() {
     catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Inspection could not be recorded."), "danger"); }
   };
   useEffect(() => { const plot = plots.find((item) => item.id === selectedPlotId); if (!plot) { setInspections([]); return; } api.get(`/estates/plots/${plot.id}/inspections`).then((response) => setInspections(response.data || [])).catch(() => setInspections([])); }, [plots, selectedPlotId]);
+  useEffect(() => { const plot = plots.find((item) => item.id === selectedPlotId); if (!plot) { setPlotTimeline([]); return; } api.get(`/estates/plots/${plot.id}/timeline`).then((response) => setPlotTimeline(response.data || [])).catch(() => setPlotTimeline([])); }, [plots, selectedPlotId]);
   const loadHazards = async () => {
     if (!selectedPlot) return;
     try { const response = await api.post(`/estates/plots/${selectedPlot.id}/hazards/assess`); setHazards(response.data); if (estateId) setHazardDashboard((await api.get(`/estates/${estateId}/hazards`)).data); }
@@ -1343,7 +1345,6 @@ export default function Estates() {
   });
   const donutCircumference = 2 * Math.PI * 15.9155;
   const allocatedFraction = dashboard ? (dashboard.statuses?.allocated || 0) / (dashboard.total_plots || 1) : 0;
-  const plotTimeline = selectedPlot ? activity.filter((event: any) => event.entity_type === "plot" && Number(event.entity_id) === selectedPlot.id) : [];
 
   function renderStatsRow() {
     if (!dashboard) return null;
