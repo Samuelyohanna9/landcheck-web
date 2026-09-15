@@ -50,6 +50,7 @@
 .estate-button--outline:hover { background: rgba(16, 42, 39, .06); transform: none; }
 .estate-portal .estate-button { min-height: 46px; padding: 0 17px; border-radius: 0; background: var(--estate-ink); font: 700 .78rem "Aptos", "Segoe UI", Arial, sans-serif; transition: background .18s ease; }
 .estate-portal .estate-button:hover { background: #176c58; transform: none; }
+.estate-portal .estate-button--outline { background: transparent; }
 .estate-portal .estate-button--outline:hover { background: rgba(16, 42, 39, .06); }
 .estate-portal .estate-button:disabled { cursor: wait; opacity: .65; }
 .estate-portal .estate-text-link { color: var(--estate-ink); font-size: .78rem; font-weight: 700; text-decoration: underline; text-decoration-color: #92aaa0; text-underline-offset: 5px; }
