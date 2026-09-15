@@ -2222,7 +2222,7 @@ export default function Estates() {
               </select>
               {(() => {
                 const selected = LAYOUT_IMPORT_METHODS.find((item) => item.key === addPlotMethod);
-                return selected ? <span className="edash-field-note" style={{ display: "block", marginTop: 4 }}>{selected.description}</span> : null;
+                return selected ? <p className="edash-field-note" style={{ marginTop: 4 }}>{selected.description}</p> : null;
               })()}
             </label>
             {needsSourceCrs && (
