@@ -1324,6 +1324,25 @@ export default function Estates() {
     if (["high", "severe", "critical"].includes(value)) return "danger";
     return "neutral";
   };
+  // River (a direct GloFAS river-flood model hit) and Floodplain (an elevation-relative-to-
+  // drainage screening proxy, the fallback where there's no direct river model coverage) are kept
+  // as two independent signals rather than one blended "Flood Risk" - see hazards.py's
+  // _compute_flood_branches docstring for why a combined score was found to destroy specificity.
+  const floodSignalSummary = (assessments: any[]) => {
+    const river = { assessed: 0, classes: {} as Record<string, number> };
+    const floodplain = { assessed: 0, classes: {} as Record<string, number> };
+    for (const item of assessments || []) {
+      const summary = item.hazards?.flood?.result?.summary;
+      if (!summary) continue;
+      const riverClass = summary.river_available === false ? "No Data" : (summary.river_class || "unavailable");
+      river.assessed += 1;
+      river.classes[riverClass] = (river.classes[riverClass] || 0) + 1;
+      const floodplainClass = summary.floodplain_class || "unavailable";
+      floodplain.assessed += 1;
+      floodplain.classes[floodplainClass] = (floodplain.classes[floodplainClass] || 0) + 1;
+    }
+    return { river, floodplain };
+  };
   const statusPillTone = (status: string | undefined) => {
     const value = (status || "").toLowerCase();
     if (["completed", "approved", "allocated", "active", "fully_paid", "confirmed"].includes(value)) return "good";
@@ -1571,9 +1590,16 @@ export default function Estates() {
     const developmentLabels: Record<string, string> = { not_started: "Not started", site_cleared: "Site cleared", foundation: "Foundation", under_construction: "Under construction", developed: "Developed" };
     const surveyLabel = selectedSurvey ? String(selectedSurvey.status).replaceAll("_", " ") : "Not started";
     const stakingLabel = selectedTask ? String(selectedTask.status).replaceAll("_", " ") : "Not started";
-    const hazardFlood = hazards?.flood?.summary?.floodplain_class || hazardDashboard?.assessments?.find((item: any) => item.plot_id === selectedPlot?.id)?.hazards?.flood?.risk_class;
-    const hazardErosion = hazards?.erosion?.risk_class || hazardDashboard?.assessments?.find((item: any) => item.plot_id === selectedPlot?.id)?.hazards?.erosion?.risk_class;
-    const hazardOverall = [hazardFlood, hazardErosion].filter(Boolean);
+    // River (a direct GloFAS river-flood model hit) and Floodplain (an elevation-relative-to-
+    // drainage screening proxy, the fallback where there's no direct river model coverage) are
+    // kept as two independent signals rather than one blended "Flood Risk" - a combined score was
+    // found to actively destroy specificity (see hazards.py's _compute_flood_branches docstring).
+    const plotHazardEntry = hazardDashboard?.assessments?.find((item: any) => item.plot_id === selectedPlot?.id);
+    const floodSummary = hazards?.flood?.summary || plotHazardEntry?.hazards?.flood?.result?.summary;
+    const hazardRiver = floodSummary ? (floodSummary.river_available === false ? "No Data" : floodSummary.river_class) : undefined;
+    const hazardFloodplain = floodSummary?.floodplain_class || plotHazardEntry?.hazards?.flood?.risk_class;
+    const hazardErosion = hazards?.erosion?.risk_class || plotHazardEntry?.hazards?.erosion?.risk_class;
+    const hazardOverall = [hazardRiver, hazardFloodplain, hazardErosion].filter((value) => value && value !== "No Data");
     const hazardOverallLabel = hazardOverall.length ? (hazardOverall.every((value) => riskTone(value) === "good") ? "Low Risk" : hazardOverall.some((value) => riskTone(value) === "danger") ? "High Risk" : "Moderate Risk") : "Not screened";
 
     return (
@@ -1935,8 +1961,13 @@ export default function Estates() {
                   <div className="edash-risk-list">
                     <div className="edash-risk-item">
                       <span className="edash-risk-icon"><EstateIcon name="flood" /></span>
-                      <span>Flood Risk</span>
-                      <span className={`edash-status-pill tone-${hazardFlood ? riskTone(hazardFlood) : "neutral"}`}>{hazardFlood ? hazardFlood.replaceAll("_", " ") : "Not screened"}</span>
+                      <span>River flood (modelled)</span>
+                      <span className={`edash-status-pill tone-${hazardRiver ? riskTone(hazardRiver) : "neutral"}`}>{hazardRiver ? hazardRiver.replaceAll("_", " ") : "Not screened"}</span>
+                    </div>
+                    <div className="edash-risk-item">
+                      <span className="edash-risk-icon"><EstateIcon name="flood" /></span>
+                      <span>Floodplain (elevation)</span>
+                      <span className={`edash-status-pill tone-${hazardFloodplain ? riskTone(hazardFloodplain) : "neutral"}`}>{hazardFloodplain ? hazardFloodplain.replaceAll("_", " ") : "Not screened"}</span>
                     </div>
                     <div className="edash-risk-item">
                       <span className="edash-risk-icon"><EstateIcon name="erosion" /></span>
@@ -1944,6 +1975,9 @@ export default function Estates() {
                       <span className={`edash-status-pill tone-${hazardErosion ? riskTone(hazardErosion) : "neutral"}`}>{hazardErosion ? hazardErosion.replaceAll("_", " ") : "Not screened"}</span>
                     </div>
                   </div>
+                  <p className="edash-field-note" style={{ margin: "10px 0 0" }}>
+                    River reflects a direct modelled river-flood hit (JRC/Copernicus GloFAS). Floodplain reflects this plot's elevation relative to the surrounding drainage network - a screening-level proxy used mainly where there's no direct river-model coverage, not a confirmed flood-zone determination.
+                  </p>
                   <button type="button" className="edash-btn-primary" style={{ marginTop: 12 }} onClick={() => void loadHazards()}>Run flood + erosion screening</button>
                 </div>
               )}
@@ -2050,21 +2084,30 @@ export default function Estates() {
               <Link className="edash-card-link" to={`/estates/${estateId}/hazards`}>View Details</Link>
             </div>
             <div className="edash-risk-list">
-              {Object.entries(hazardDashboard?.summary || {}).length ? (
-                Object.entries(hazardDashboard.summary).map(([type, value]: [string, any]) => {
-                  const classes: string[] = Object.keys(value.classes || {});
-                  const worst = classes.find((entry) => riskTone(entry) === "danger") || classes.find((entry) => riskTone(entry) === "warn") || classes[0];
-                  return (
-                    <div key={type} className="edash-risk-item">
-                      <span className="edash-risk-icon"><EstateIcon name={type === "flood" ? "flood" : "erosion"} /></span>
-                      <span style={{ textTransform: "capitalize" }}>{type} Risk</span>
-                      <span className={`edash-status-pill tone-${worst ? riskTone(worst) : "neutral"}`}>{worst ? worst.replaceAll("_", " ") : "Unscreened"}</span>
-                    </div>
-                  );
-                })
+              {hazardDashboard?.assessments?.length ? (
+                (() => {
+                  const { river, floodplain } = floodSignalSummary(hazardDashboard.assessments || []);
+                  const rows: Array<{ key: string; label: string; value: { assessed: number; classes: Record<string, number> } }> = [
+                    { key: "river", label: "River Flood", value: river },
+                    { key: "floodplain", label: "Floodplain", value: floodplain },
+                  ];
+                  if (hazardDashboard.summary?.erosion) rows.push({ key: "erosion", label: "Erosion", value: hazardDashboard.summary.erosion });
+                  return rows.map(({ key, label, value }) => {
+                    const classes = Object.keys(value.classes || {});
+                    const worst = classes.find((entry) => riskTone(entry) === "danger") || classes.find((entry) => riskTone(entry) === "warn") || classes[0];
+                    return (
+                      <div key={key} className="edash-risk-item">
+                        <span className="edash-risk-icon"><EstateIcon name={key === "erosion" ? "erosion" : "flood"} /></span>
+                        <span>{label}</span>
+                        <span className={`edash-status-pill tone-${worst ? riskTone(worst) : "neutral"}`}>{worst ? worst.replaceAll("_", " ") : "Unscreened"}</span>
+                      </div>
+                    );
+                  });
+                })()
               ) : (
                 <>
-                  <div className="edash-risk-item"><span className="edash-risk-icon"><EstateIcon name="flood" /></span><span>Flood Risk</span><span className="edash-status-pill tone-neutral">Not screened</span></div>
+                  <div className="edash-risk-item"><span className="edash-risk-icon"><EstateIcon name="flood" /></span><span>River Flood</span><span className="edash-status-pill tone-neutral">Not screened</span></div>
+                  <div className="edash-risk-item"><span className="edash-risk-icon"><EstateIcon name="flood" /></span><span>Floodplain</span><span className="edash-status-pill tone-neutral">Not screened</span></div>
                   <div className="edash-risk-item"><span className="edash-risk-icon"><EstateIcon name="erosion" /></span><span>Erosion Risk</span><span className="edash-status-pill tone-neutral">Not screened</span></div>
                 </>
               )}
