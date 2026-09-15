@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { api } from "../../api/client";
 import EstateIcon, { type EstateIconName } from "./EstateIcon";
 import EstateModal from "./EstateModal";
 import { clearEstateAuthSession, getEstateAuthSession } from "../../auth/estateAuth";
@@ -53,6 +54,7 @@ export default function EstateShell({
   onSearchChange,
   searchPlaceholder = "Search plots, customers, documents...",
   recentActivity = [],
+  skipBillingGate = false,
   children,
 }: {
   estateId: string;
@@ -62,6 +64,9 @@ export default function EstateShell({
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
   recentActivity?: Array<{ id: number | string; action: string; created_at: string }>;
+  /** The Billing page itself sets this - otherwise a Basic/past_due/cancelled organization would
+   * get redirected away from the one page that lets it fix that, looping forever. */
+  skipBillingGate?: boolean;
   children: ReactNode;
 }) {
   const navigate = useNavigate();
@@ -97,6 +102,22 @@ export default function EstateShell({
     try { window.localStorage.setItem(seenStorageKey, latestActivityTimestamp); } catch { /* private mode or blocked storage - badge just won't persist as seen */ }
     setSeenTimestamp(latestActivityTimestamp);
   };
+
+  // Every Estates page renders inside this shell, which makes it the one place to enforce "has a
+  // trialing/active subscription" without touching every individual page - mirrors how the
+  // backend enforces the same thing in one place (require_estate_access). The Billing page itself
+  // opts out via skipBillingGate, since it's the one page an unpaid organization must still reach.
+  useEffect(() => {
+    if (skipBillingGate) return;
+    const organizationId = estateSession?.user.organization_id;
+    if (!organizationId) return;
+    api.get("/estates/billing/status", { params: { organization_id: organizationId } })
+      .then((response) => {
+        if (!["trialing", "active"].includes(response.data?.status)) navigate("/estates/choose-plan", { replace: true });
+      })
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skipBillingGate, estateSession?.user.organization_id]);
 
   // Without this, these dropdowns only ever close via their own toggle button - clicking
   // anywhere else on the page (including the other dropdown) leaves them stuck open.

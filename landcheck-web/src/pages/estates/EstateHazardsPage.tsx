@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
@@ -13,6 +13,10 @@ type HazardJobStatus = {
   error_text: string | null;
   result: any;
 };
+
+function isUpgradeRequiredError(err: any): boolean {
+  return err?.response?.status === 402 && err?.response?.data?.detail?.code === "upgrade_required";
+}
 
 function riskTone(riskClass: string | undefined) {
   const value = (riskClass || "").toLowerCase();
@@ -73,11 +77,12 @@ export default function EstateHazardsPage() {
   const [runBusy, setRunBusy] = useState(false);
   const [jobProgress, setJobProgress] = useState<{ pct: number; stage: string } | null>(null);
   const [message, setMessage] = useState("");
+  const [upgradeRequired, setUpgradeRequired] = useState(false);
 
   useEffect(() => {
     if (!estateId) return;
     api.get(`/estates/${estateId}`).then((response) => setEstateName(response.data.name)).catch(() => undefined);
-    api.get(`/estates/${estateId}/hazards`).then((response) => setDashboard(response.data)).catch(() => setDashboard(null));
+    api.get(`/estates/${estateId}/hazards`).then((response) => { setDashboard(response.data); setUpgradeRequired(false); }).catch((err) => { setDashboard(null); setUpgradeRequired(isUpgradeRequiredError(err)); });
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
   }, [estateId]);
 
@@ -110,7 +115,8 @@ export default function EstateHazardsPage() {
       setDashboard(job.result);
       setMessage("Hazard analysis complete for the whole layout.");
     } catch (error) {
-      setMessage(await extractApiErrorMessage(error, "Hazard analysis could not be run."));
+      if (isUpgradeRequiredError(error)) setUpgradeRequired(true);
+      else setMessage(await extractApiErrorMessage(error, "Hazard analysis could not be run."));
     } finally {
       setRunBusy(false);
       setJobProgress(null);
@@ -118,6 +124,23 @@ export default function EstateHazardsPage() {
   };
 
   if (!estateId) return null;
+
+  if (upgradeRequired) {
+    return (
+      <EstateShell estateId={estateId} estateName={estateName} activeKey="hazard" recentActivity={activity}>
+        <div className="edash-card">
+          <div className="edash-card-inner" style={{ textAlign: "center", padding: "48px 24px" }}>
+            <span className="edash-risk-icon" style={{ margin: "0 auto 14px", width: 44, height: 44 }}><EstateIcon name="flood" /></span>
+            <h3 className="edash-card-title" style={{ fontSize: "1.1rem", marginBottom: 8 }}>Hazard analysis is a Plus plan feature</h3>
+            <p className="edash-status-row-desc" style={{ maxWidth: 440, margin: "0 auto 18px" }}>
+              Flood and erosion screening - including whole-layout analysis and the Risk Overview on your Dashboard - is available on the Plus plan.
+            </p>
+            <Link className="edash-btn-primary" style={{ display: "inline-flex" }} to="/estates/billing">Upgrade to Plus</Link>
+          </div>
+        </div>
+      </EstateShell>
+    );
+  }
 
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="hazard" recentActivity={activity}>

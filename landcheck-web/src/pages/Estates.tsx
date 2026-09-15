@@ -56,6 +56,10 @@ function relativeTime(value: string) {
 type Estate = { id: number; name: string; status: string; organization_id: number; location?: string | null; crs?: string; project_reference?: string | null; project_owner?: string | null; financial?: { confirmed_collections:string; outstanding_balance:string } };
 type EstateCoordinatePoint = { station: string; lng: number; lat: number; height?: number; is_boundary?: boolean };
 
+function isUpgradeRequiredError(err: any): boolean {
+  return err?.response?.status === 402 && err?.response?.data?.detail?.code === "upgrade_required";
+}
+
 function segmentsCross(a: { lng: number; lat: number }, b: { lng: number; lat: number }, c: { lng: number; lat: number }, d: { lng: number; lat: number }) {
   const orientation = (p: typeof a, q: typeof a, r: typeof a) => (q.lng - p.lng) * (r.lat - p.lat) - (q.lat - p.lat) * (r.lng - p.lng);
   const ab = orientation(a, b, c);
@@ -426,6 +430,7 @@ export default function Estates() {
   const [inspectionOutcome, setInspectionOutcome] = useState("observed");
   const [hazards, setHazards] = useState<any>(null);
   const [hazardDashboard, setHazardDashboard] = useState<any>(null);
+  const [hazardUpgradeRequired, setHazardUpgradeRequired] = useState(false);
   const [layerType, setLayerType] = useState("road");
   const [layerName, setLayerName] = useState("");
   const [layerCoordinates, setLayerCoordinates] = useState("");
@@ -809,7 +814,10 @@ export default function Estates() {
   const loadHazards = async () => {
     if (!selectedPlot) return;
     try { const response = await api.post(`/estates/plots/${selectedPlot.id}/hazards/assess`); setHazards(response.data); if (estateId) setHazardDashboard((await api.get(`/estates/${estateId}/hazards`)).data); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Hazard screening could not be loaded."), "danger"); }
+    catch (error) {
+      if (isUpgradeRequiredError(error)) setHazardUpgradeRequired(true);
+      else setWorkflowMessage(await extractApiErrorMessage(error, "Hazard screening could not be loaded."), "danger");
+    }
   };
   const createLayer = async () => {
     if (!estateId) return;
@@ -1010,7 +1018,7 @@ export default function Estates() {
     api.get(`/estates/${estateId}/layers.geojson`).then((response) => setLayerGeojson(response.data)).catch(() => setLayerGeojson({ type: "FeatureCollection", features: [] }));
     api.get(`/estates/${estateId}/import-reviews`).then((response) => setImportReviews(response.data || [])).catch(() => setImportReviews([]));
     api.get(`/estates/${estateId}/layout-proposals`).then((response) => setLayoutProposal((response.data || [])[0] || null)).catch(() => setLayoutProposal(null));
-    api.get(`/estates/${estateId}/hazards`).then((response) => setHazardDashboard(response.data)).catch(() => setHazardDashboard(null));
+    api.get(`/estates/${estateId}/hazards`).then((response) => { setHazardDashboard(response.data); setHazardUpgradeRequired(false); }).catch((err) => { setHazardDashboard(null); setHazardUpgradeRequired(isUpgradeRequiredError(err)); });
     api.get(`/estates/${estateId}/blocks`).then((response) => setBlocks(response.data || [])).catch(() => setBlocks([]));
     Promise.all([api.get(`/estates/${estateId}/quality-check`), api.get(`/estates/${estateId}/activity`), api.get(`/estates/${estateId}/dashboard`)]).then(([qc, events, metrics]) => { setQuality(qc.data); setActivity(events.data || []); setDashboard(metrics.data); }).catch(() => { setQuality(null); setActivity([]); setDashboard(null); });
   }, [estateId]);
@@ -1989,7 +1997,15 @@ export default function Estates() {
                 </div>
               )}
 
-              {drawerTab === "hazards" && (
+              {drawerTab === "hazards" && hazardUpgradeRequired && (
+                <div className="edash-tab-panel" style={{ textAlign: "center", padding: "30px 10px" }}>
+                  <span className="edash-risk-icon" style={{ margin: "0 auto 12px", width: 40, height: 40 }}><EstateIcon name="flood" /></span>
+                  <p className="edash-status-row-title" style={{ marginBottom: 6 }}>Hazard analysis is a Plus plan feature</p>
+                  <p className="edash-status-row-desc" style={{ marginBottom: 14 }}>Flood and erosion screening for this plot is available on the Plus plan.</p>
+                  <Link className="edash-btn-primary" style={{ display: "inline-flex" }} to="/estates/billing">Upgrade to Plus</Link>
+                </div>
+              )}
+              {drawerTab === "hazards" && !hazardUpgradeRequired && (
                 <div className="edash-tab-panel">
                   <div className="edash-risk-list">
                     <div className="edash-risk-item">
@@ -2122,7 +2138,13 @@ export default function Estates() {
               <Link className="edash-card-link" to={`/estates/${estateId}/hazards`}>View Details</Link>
             </div>
             <div className="edash-risk-list">
-              {hazardDashboard?.assessments?.length ? (
+              {hazardUpgradeRequired ? (
+                <div className="edash-risk-item" style={{ justifyContent: "space-between" }}>
+                  <span className="edash-risk-icon"><EstateIcon name="flood" /></span>
+                  <span>Flood &amp; erosion analysis</span>
+                  <Link className="edash-status-pill tone-neutral" to="/estates/billing" style={{ textDecoration: "none" }}>Upgrade to Plus</Link>
+                </div>
+              ) : hazardDashboard?.assessments?.length ? (
                 (() => {
                   const { river, floodplain, rainfall } = floodSignalSummary(hazardDashboard.assessments || []);
                   const rows: Array<{ key: string; label: string; value: { assessed: number; classes: Record<string, number>; percents: number[] }; experimental?: boolean }> = [

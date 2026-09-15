@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import SocialLinks from "../components/SocialLinks";
+import EstatePricingCards, { type EstateBillingCycle, type EstatePlanKey } from "../components/estates/EstatePricingCards";
 import "../styles/estate-portal.css";
 
 const DEMO_MAILTO = "mailto:landchecktech@gmail.com?subject=LandCheck%20Estates%20demo%20request";
@@ -17,8 +18,13 @@ const connectedCapabilities = [
 const solutionAreas = ["Development", "Sales", "Finance", "Survey"];
 
 export default function EstateLanding() {
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
+
+  // Picking a plan from the landing page (not yet signed in) sends a new visitor to register
+  // first - registration itself hands off to /estates/choose-plan once the account exists.
+  const selectPlanFromLanding = (_plan: EstatePlanKey, _cycle: EstateBillingCycle) => navigate("/estates/register");
 
   // Escape closes the mobile drawer, matching the dismissal convention used everywhere else in
   // the app (modals, the dashboard's own sidebar drawer).
@@ -48,7 +54,7 @@ export default function EstateLanding() {
         <nav className="estate-portal-nav-links" aria-label="Estate product navigation">
           <a href="#platform">Platform</a>
           <a href="#solutions">Solutions</a>
-          <a href="#demo">Pricing</a>
+          <a href="#pricing">Pricing</a>
           <Link to="/estates/login" className="estate-nav-login">Sign in</Link>
           <a href={DEMO_MAILTO} className="estate-nav-cta">Request a demo</a>
         </nav>
@@ -62,7 +68,7 @@ export default function EstateLanding() {
           </div>
           <a href="#platform" className="estate-mobile-item" onClick={closeMenu}>Platform</a>
           <a href="#solutions" className="estate-mobile-item" onClick={closeMenu}>Solutions</a>
-          <a href="#demo" className="estate-mobile-item" onClick={closeMenu}>Pricing</a>
+          <a href="#pricing" className="estate-mobile-item" onClick={closeMenu}>Pricing</a>
           <Link to="/estates/login" className="estate-mobile-item" onClick={closeMenu}>Sign in</Link>
           <a href={DEMO_MAILTO} className="estate-mobile-cta" onClick={closeMenu}>Request a demo</a>
         </nav>
@@ -91,6 +97,11 @@ export default function EstateLanding() {
         <ul className="estate-solutions-pills">
           {solutionAreas.map((item) => <li key={item}>{item}</li>)}
         </ul>
+      </section>
+
+      <section className="estate-content-section" id="pricing">
+        <h2 className="estate-centered-heading">Simple, transparent pricing.</h2>
+        <EstatePricingCards onSelectPlan={selectPlanFromLanding} ctaLabel={() => "Start free trial"} />
       </section>
 
       <section className="estate-centered-section">

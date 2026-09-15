@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
@@ -76,6 +76,15 @@ export default function EstateSettingsPage() {
   return (
     <EstateShell estateId={estateId} estateName={estateDetail?.name} activeKey="settings" recentActivity={activity}>
       {message && <p className="edash-tab-empty" style={{ textAlign: "left", padding: "4px 2px" }}>{message}</p>}
+      <div className="edash-card" style={{ marginBottom: 16 }}>
+        <div className="edash-card-inner">
+          <div className="edash-card-head">
+            <h3 className="edash-card-title">Billing &amp; plan</h3>
+            <Link className="edash-card-link" to="/estates/billing">Manage billing</Link>
+          </div>
+          <p className="edash-status-row-desc">View your current plan, trial or renewal date, payment method and billing history, or upgrade to Plus for flood and erosion hazard analysis.</p>
+        </div>
+      </div>
       <div className="edash-content-row edash-content-row--split">
         <div className="edash-card">
           <div className="edash-card-inner">

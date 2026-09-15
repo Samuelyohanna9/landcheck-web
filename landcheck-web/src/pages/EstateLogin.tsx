@@ -75,6 +75,7 @@ export default function EstateLogin() {
                 </button>
               </div>
             </label>
+            <Link to="/estates/forgot-password" className="estate-text-link" style={{ justifySelf: "start" }}>Forgot password?</Link>
             {error && <div className="estate-auth-error" role="alert">{error}</div>}
             <button className="estate-button" type="submit" disabled={busy}>{busy ? "Signing in..." : "Sign in"}</button>
           </form>

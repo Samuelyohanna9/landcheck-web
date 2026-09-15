@@ -117,6 +117,23 @@
 .estate-centered-section h2 { margin: 0; font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif; font-size: clamp(2rem, 4vw, 3rem); font-weight: 500; letter-spacing: -.04em; line-height: 1.12; text-wrap: balance; }
 .estate-centered-section p { max-width: 470px; margin: 16px auto 0; color: var(--estate-slate); font-size: .98rem; line-height: 1.66; }
 .estate-centered-section .estate-button { margin-top: 30px; }
+/* Pricing cards - shared by the landing page's pricing section and the post-signup choose-plan
+   screen (see EstatePricingCards.tsx), so plan copy/styling only ever lives in one place. */
+.estate-pricing { width: min(920px, calc(100% - 48px)); margin: 0 auto; }
+.estate-pricing-toggle { display: flex; justify-content: center; gap: 2px; margin: 0 auto 36px; width: fit-content; padding: 4px; border: 1px solid var(--estate-line); border-radius: 999px; background: #fff; }
+.estate-pricing-toggle button { padding: 9px 22px; border: 0; border-radius: 999px; background: transparent; color: var(--estate-slate); font: 700 .8rem Arial, sans-serif; cursor: pointer; transition: background .15s ease, color .15s ease; }
+.estate-pricing-toggle button.active { background: var(--estate-ink); color: #fff; }
+.estate-pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.estate-pricing-card { position: relative; display: flex; flex-direction: column; padding: 32px 28px; border: 1px solid var(--estate-line); border-radius: 4px; background: #fff; text-align: left; }
+.estate-pricing-card--featured { border-color: var(--estate-ink); box-shadow: 0 22px 50px rgba(16, 42, 39, .1); }
+.estate-pricing-badge { position: absolute; top: -13px; left: 28px; padding: 5px 12px; background: var(--estate-ink); color: #fff; font: 800 .62rem Arial, sans-serif; letter-spacing: .06em; text-transform: uppercase; border-radius: 999px; }
+.estate-pricing-card h3 { margin: 0; font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif; font-size: 1.6rem; font-weight: 500; }
+.estate-pricing-price { margin: 14px 0 0; font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif; font-size: 2.3rem; color: var(--estate-ink); }
+.estate-pricing-price span { font-family: Arial, sans-serif; font-size: .85rem; font-weight: 600; color: var(--estate-slate); }
+.estate-pricing-trial { margin: 6px 0 0; color: #16816e; font: 700 .74rem Arial, sans-serif; }
+.estate-pricing-features { list-style: none; margin: 22px 0 26px; padding: 0; display: grid; gap: 11px; flex: 1; }
+.estate-pricing-features li { padding-left: 22px; position: relative; color: var(--estate-slate); font-size: .86rem; line-height: 1.5; }
+.estate-pricing-features li::before { content: "\2713"; position: absolute; left: 0; color: #16816e; font-weight: 800; }
 .estate-outcomes-band { padding: clamp(58px, 8vw, 92px) 24px; background: #e4efe7; text-align: center; }
 .estate-outcomes-band p { max-width: 720px; margin: 0 auto; font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif; font-size: clamp(1.35rem, 2.6vw, 1.85rem); font-weight: 500; line-height: 1.5; color: var(--estate-ink); text-wrap: balance; }
 .estate-site-footer { padding: 60px 0 0; background: #091929; color: #fff; }
@@ -249,6 +266,8 @@
   .estate-centered-section h2 { font-size: clamp(1.7rem, 8vw, 2.4rem); }
   .estate-outcomes-band { padding: 44px 24px; }
   .estate-outcomes-band p { font-size: clamp(1.15rem, 6vw, 1.5rem); }
+  .estate-pricing-grid { grid-template-columns: 1fr; gap: 20px; }
+  .estate-pricing-card { padding: 26px 22px; }
   .estate-site-footer-inner { padding: 0 24px 38px; gap: 28px 20px; }
   .estate-site-footer-bottom { align-items: flex-start; flex-direction: column; padding: 18px 24px; }
 }
