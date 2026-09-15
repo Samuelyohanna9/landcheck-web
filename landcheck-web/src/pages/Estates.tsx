@@ -24,7 +24,7 @@ const STATUS_COLORS = {
   reserved: "#d69100",
   under_survey: "#d9622a",
   under_staking: "#6046a8",
-  developed: "#d1433f",
+  developed: "#0f8b8d",
   on_hold: "#667085",
 } as const;
 
