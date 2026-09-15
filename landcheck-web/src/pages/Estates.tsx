@@ -450,6 +450,7 @@ export default function Estates() {
   const [layoutMessageTone, setLayoutMessageTone] = useState<MessageTone>("good");
   const setLayoutMessage = (text: string, tone: MessageTone = "good") => { setLayoutMessageRaw(text); setLayoutMessageTone(tone); };
   const [layoutProposal, setLayoutProposal] = useState<any>(null);
+  const [pendingLayoutApproval, setPendingLayoutApproval] = useState<{ proposalId: number } | null>(null);
   const [layoutDesignerBusy, setLayoutDesignerBusy] = useState(false);
   const [layoutDesignerMessage, setLayoutDesignerMessageRaw] = useState("");
   const [layoutDesignerMessageTone, setLayoutDesignerMessageTone] = useState<MessageTone>("good");
@@ -888,12 +889,20 @@ export default function Estates() {
       setLayoutDesignerBusy(false);
     }
   };
-  const decideLayoutProposal = async (proposalId: number, status: "approved" | "rejected") => {
+  const decideLayoutProposal = async (proposalId: number, status: "approved" | "rejected", options?: { replaceExisting?: boolean }) => {
+    // Approving over an Estate that already has an approved layout would otherwise fail outright
+    // on the first clashing plot number - ask first, rather than let that confusing error be the
+    // only thing that happens when the user clicks Approve.
+    if (status === "approved" && plots.length > 0 && !options?.replaceExisting) {
+      setPendingLayoutApproval({ proposalId });
+      return;
+    }
     setLayoutDesignerBusy(true);
     setLayoutDesignerMessage("");
     try {
-      await api.post(`/estates/layout-proposals/${proposalId}/decision`, { status });
+      await api.post(`/estates/layout-proposals/${proposalId}/decision`, { status, replace_existing: Boolean(options?.replaceExisting) });
       setLayoutDesignerMessage(status === "approved" ? "The plots and shared spaces were added to the Estate map." : "Draft layout discarded.");
+      setPendingLayoutApproval(null);
       if (status === "approved") window.location.reload();
       else setLayoutProposal((current: any) => current ? { ...current, status } : current);
     } catch (error) {
@@ -2672,6 +2681,27 @@ export default function Estates() {
               {resetLayoutBusy ? <><Spinner size={14} /> Resetting...</> : "Reset layout"}
             </button>
             <button type="button" className="edash-btn-outline" onClick={() => { setShowResetLayoutConfirm(false); setResetLayoutConfirmText(""); }}>Cancel</button>
+          </div>
+        </EstateModal>
+      )}
+      {pendingLayoutApproval && (
+        <EstateModal
+          title="Replace the existing layout?"
+          subtitle="This Estate already has an approved layout. Approving this draft will replace it - every existing plot, road, open space and drainage layer will be deleted and replaced with this draft's."
+          onClose={() => setPendingLayoutApproval(null)}
+        >
+          <p className="edash-status-row-desc" style={{ marginBottom: 14 }}>Any plot with a customer reservation or allocation will block this and must be cleared first.</p>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              className="edash-btn-primary"
+              style={{ background: "var(--edash-danger)" }}
+              disabled={layoutDesignerBusy}
+              onClick={() => void decideLayoutProposal(pendingLayoutApproval.proposalId, "approved", { replaceExisting: true })}
+            >
+              {layoutDesignerBusy ? <><Spinner size={14} /> Replacing...</> : "Yes, replace layout"}
+            </button>
+            <button type="button" className="edash-btn-outline" onClick={() => setPendingLayoutApproval(null)}>Cancel</button>
           </div>
         </EstateModal>
       )}
