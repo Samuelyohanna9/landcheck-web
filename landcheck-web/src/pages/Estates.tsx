@@ -267,14 +267,20 @@ function buildPlotLabelFeatures(features: any[], allocations: any[]) {
   });
 }
 
+const LAYER_TYPE_FALLBACK_LABEL: Record<string, string> = { road: "Road", drainage: "Drainage", open_space: "Open space", infrastructure: "Infrastructure" };
+
 function buildLayerLabelFeatures(features: any[]) {
-  return features.filter((feature) => feature.properties?.name).map((feature: any) => {
+  // A manually drawn road/layer left unnamed still needs to read as a road on the map, not vanish
+  // entirely - fall back to a label derived from its type instead of requiring a typed-in name.
+  return features.map((feature: any) => {
+    const label = feature.properties?.name || LAYER_TYPE_FALLBACK_LABEL[feature.properties?.type] || null;
+    if (!label) return null;
     const geometry = feature.geometry;
     if (geometry?.type === "Polygon") {
-      return { type: "Feature", properties: { label: feature.properties.name, kind: "point" }, geometry: { type: "Point", coordinates: getRingCentroid(geometry.coordinates[0]) } };
+      return { type: "Feature", properties: { label, kind: "point" }, geometry: { type: "Point", coordinates: getRingCentroid(geometry.coordinates[0]) } };
     }
     if (geometry?.type === "LineString") {
-      return { type: "Feature", properties: { label: feature.properties.name, kind: "line" }, geometry };
+      return { type: "Feature", properties: { label, kind: "line" }, geometry };
     }
     return null;
   }).filter(Boolean);
@@ -309,8 +315,11 @@ function attachEstateMapLayers(map: any) {
   map.addSource("estate-layers", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
   map.addLayer({ id: "estate-layers-line-casing", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": "#ffffff", "line-width": 5, "line-opacity": 0.9 } });
   map.addLayer({ id: "estate-layers-line", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "road", "#2b2f36", "drainage", "#287cb4", "#b77c2d"], "line-width": 3 } });
-  map.addLayer({ id: "estate-layers-fill", type: "fill", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": ["match", ["get", "type"], "open_space", "#78a85d", "infrastructure", "#b77c2d", "#287cb4"], "fill-opacity": 0.4 } });
-  map.addLayer({ id: "estate-layers-fill-outline", type: "line", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "open_space", "#3f7a2c", "infrastructure", "#8a4f16", "#1c5aa8"], "line-width": 1.6 } });
+  // A hand-drawn road is often stored as a Polygon (a buffered corridor, not a bare centerline),
+  // so it must be matched here too - without an explicit "road" case it fell through to the same
+  // default blue as drainage, reading as water on the map instead of a road.
+  map.addLayer({ id: "estate-layers-fill", type: "fill", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": ["match", ["get", "type"], "road", "#2b2f36", "open_space", "#78a85d", "drainage", "#287cb4", "infrastructure", "#b77c2d", "#287cb4"], "fill-opacity": ["match", ["get", "type"], "road", 0.85, 0.4] } });
+  map.addLayer({ id: "estate-layers-fill-outline", type: "line", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "road", "#0f1216", "open_space", "#3f7a2c", "drainage", "#1c5aa8", "infrastructure", "#8a4f16", "#1c5aa8"], "line-width": 1.6 } });
   map.addSource("estate-layer-labels", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
   map.addLayer({
     id: "estate-layer-labels",
