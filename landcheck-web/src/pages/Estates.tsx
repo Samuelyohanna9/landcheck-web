@@ -837,6 +837,17 @@ export default function Estates() {
       throw error;
     }
   };
+  const addLayoutProposalFeature = async (proposalId: number, featureType: "road" | "open_space", geometry: any, widthM: number | undefined, plotCandidates: any[]) => {
+    setLayoutDesignerMessage("");
+    try {
+      const response = await api.post(`/estates/layout-proposals/${proposalId}/features`, { feature_type: featureType, geometry, width_m: widthM, plot_candidates: plotCandidates });
+      setLayoutProposal(response.data);
+      setLayoutDesignerMessage(`${featureType === "road" ? "Road" : "Open space"} added. ${response.data.candidates?.length || 0} plots remain in this draft.`);
+    } catch (error) {
+      setLayoutDesignerMessage(await extractApiErrorMessage(error, "That shape could not be added."), "danger");
+      throw error;
+    }
+  };
   const selectLayerForEdit = (id: string) => {
     setSelectedLayerId(id);
     const feature = (layerGeojson.features || []).find((item: any) => String(item.id) === id);
@@ -2038,7 +2049,7 @@ export default function Estates() {
                   </div>
                 </div>
               )}
-              <EstateLayoutDesigner boundaryPresent={hasBoundary} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} messageTone={layoutDesignerMessageTone} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} onEditCandidates={editLayoutProposalCandidates} />
+              <EstateLayoutDesigner boundaryPresent={hasBoundary} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} messageTone={layoutDesignerMessageTone} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} onEditCandidates={editLayoutProposalCandidates} onAddFeature={addLayoutProposalFeature} />
             </>
           )}
         </>

@@ -27,6 +27,7 @@ type Props = {
   onGenerate: (criteria: LayoutCriteria) => void;
   onDecision: (proposalId: number, status: "approved" | "rejected") => void;
   onEditCandidates?: (proposalId: number, plotCandidates: any[], featureCandidates?: any[]) => Promise<void>;
+  onAddFeature?: OnAddFeature;
 };
 
 const DEFAULT_CRITERIA: LayoutCriteria = {
@@ -206,22 +207,33 @@ function propagateVertexMove(candidates: Record<string, any>, editedId: string, 
   return affected;
 }
 
-function LayoutPreviewMap({ proposal, onEditCandidates }: { proposal: any; onEditCandidates?: (proposalId: number, plotCandidates: any[], featureCandidates?: any[]) => Promise<void> }) {
+type OnAddFeature = (proposalId: number, featureType: "road" | "open_space", geometry: any, widthM: number | undefined, plotCandidates: any[]) => Promise<void>;
+
+function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature }: { proposal: any; onEditCandidates?: (proposalId: number, plotCandidates: any[], featureCandidates?: any[]) => Promise<void>; onAddFeature?: OnAddFeature }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const drawRef = useRef<any>(null);
   const newFeatureTypeRef = useRef<"road" | "open_space" | null>(null);
   const workingCandidatesRef = useRef<Record<string, any>>({});
+  const [mapReady, setMapReady] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [pendingGeometry, setPendingGeometry] = useState<Record<string, any>>({});
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [newFeatures, setNewFeatures] = useState<Array<{ featureType: "road" | "open_space"; geometry: any }>>([]);
   const [savingEdits, setSavingEdits] = useState(false);
-  const hasEdits = Object.keys(pendingGeometry).length > 0 || deletedIds.size > 0 || newFeatures.length > 0;
+  const [addingFeature, setAddingFeature] = useState(false);
+  const [roadWidthM, setRoadWidthM] = useState(9);
+  const hasEdits = Object.keys(pendingGeometry).length > 0 || deletedIds.size > 0;
 
+  // Builds the map and its (initially empty) sources exactly once per proposal id - the same
+  // build/sync split used for the main Estate map, and for the same reason: populating a source
+  // from a closure captured once at construction time means later edits to the SAME proposal
+  // (same id, new candidates/features) would never reach the map. The effect below owns syncing
+  // live data into these sources via setData(), so this one only ever runs on a genuinely new
+  // proposal.
   useEffect(() => {
+    setMapReady(false);
     if (!containerRef.current || mapRef.current || !MAPBOX_TOKEN) return;
     let cancelled = false;
     void Promise.all([loadMapboxGl(), loadMapboxGlCss()]).then(([mapboxgl]) => {
@@ -239,32 +251,57 @@ function LayoutPreviewMap({ proposal, onEditCandidates }: { proposal: any; onEdi
       (map as any)._edashResizeObserver = resizeObserver;
       map.on("style.load", () => {
         map.resize();
-        const plotFeatures = (proposal?.candidates || []).map((candidate: any) => ({ type: "Feature", properties: { label: candidate.plot_number }, geometry: candidate.geometry }));
-        const roadFeatures = (proposal?.features || []).filter((feature: any) => feature.feature_type === "road").map((feature: any) => ({ type: "Feature", properties: {}, geometry: feature.geometry }));
-        const drainageFeatures = (proposal?.features || []).filter((feature: any) => feature.feature_type === "drainage").map((feature: any) => ({ type: "Feature", properties: {}, geometry: feature.geometry }));
-        const openSpaceFeatures = (proposal?.features || []).filter((feature: any) => feature.feature_type === "open_space").map((feature: any) => ({ type: "Feature", properties: {}, geometry: feature.geometry }));
-
-        map.addSource("preview-open-space", { type: "geojson", data: { type: "FeatureCollection", features: openSpaceFeatures } });
+        map.addSource("preview-open-space", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
         map.addLayer({ id: "preview-open-space-fill", type: "fill", source: "preview-open-space", paint: { "fill-color": "#78a85d", "fill-opacity": 0.35 } });
+        map.addLayer({ id: "preview-open-space-outline", type: "line", source: "preview-open-space", paint: { "line-color": "#3f7a2c", "line-width": 1.4 } });
+        map.addLayer({ id: "preview-open-space-labels", type: "symbol", source: "preview-open-space", layout: { "text-field": ["get", "label"], "text-size": 10.5, "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"] }, paint: { "text-color": "#0f1e17", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.6 } });
 
-        map.addSource("preview-drainage", { type: "geojson", data: { type: "FeatureCollection", features: drainageFeatures } });
+        map.addSource("preview-drainage", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
         map.addLayer({ id: "preview-drainage-fill", type: "fill", source: "preview-drainage", paint: { "fill-color": "#2a78d6", "fill-opacity": 0.35 } });
 
-        map.addSource("preview-plots", { type: "geojson", data: { type: "FeatureCollection", features: plotFeatures } });
+        map.addSource("preview-plots", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
         map.addLayer({ id: "preview-plots-fill", type: "fill", source: "preview-plots", paint: { "fill-color": "#1e8a4c", "fill-opacity": 0.4 } });
         map.addLayer({ id: "preview-plots-outline", type: "line", source: "preview-plots", paint: { "line-color": "#ffffff", "line-width": 1.2 } });
         map.addLayer({ id: "preview-plots-labels", type: "symbol", source: "preview-plots", minzoom: 16, layout: { "text-field": ["get", "label"], "text-size": 10, "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"] }, paint: { "text-color": "#0f1e17", "text-halo-color": "#ffffff", "text-halo-width": 1.4 } });
 
-        map.addSource("preview-roads", { type: "geojson", data: { type: "FeatureCollection", features: roadFeatures } });
-        map.addLayer({ id: "preview-roads-line", type: "line", source: "preview-roads", paint: { "line-color": "#2b2f36", "line-width": 2.5 } });
+        // Roads generated by the criteria-driven algorithm are plain LineString centrelines (no
+        // stored width); roads added by hand via "Add road" below are stored as real buffered
+        // Polygon corridors, since the user gave an actual width in metres. Both are rendered here
+        // so either source of road looks right.
+        map.addSource("preview-roads", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({ id: "preview-roads-fill", type: "fill", source: "preview-roads", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#2b2f36", "fill-opacity": 0.88 } });
+        map.addLayer({ id: "preview-roads-casing", type: "line", source: "preview-roads", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": "#ffffff", "line-width": 5, "line-opacity": 0.9 } });
+        map.addLayer({ id: "preview-roads-line", type: "line", source: "preview-roads", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": "#2b2f36", "line-width": 3 } });
+        map.addLayer({ id: "preview-roads-labels", type: "symbol", source: "preview-roads", minzoom: 15, layout: { "text-field": ["get", "label"], "text-size": 10, "symbol-placement": "line", "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"] }, paint: { "text-color": "#0f1e17", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.4 } });
 
-        const bounds = new mapboxgl.LngLatBounds();
-        [...plotFeatures, ...roadFeatures, ...drainageFeatures, ...openSpaceFeatures].forEach((feature) => walkCoordinates(feature.geometry?.coordinates, (point) => bounds.extend(point)));
-        if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 30 });
+        setMapReady(true);
       });
     });
     return () => { cancelled = true; (mapRef.current as any)?._edashResizeObserver?.disconnect(); mapRef.current?.remove(); mapRef.current = null; };
   }, [proposal?.id]);
+
+  // Keeps the map's sources in sync with the current proposal - runs on the very first ready
+  // state AND every time the parent hands us a proposal with new candidates/features (after a
+  // vertex-edit save or a road/open-space addition), without ever rebuilding the map itself.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const plotFeatures = (proposal?.candidates || []).map((candidate: any) => ({ type: "Feature", properties: { label: candidate.plot_number }, geometry: candidate.geometry }));
+    const roadFeatures = (proposal?.features || []).filter((feature: any) => feature.feature_type === "road").map((feature: any) => ({ type: "Feature", properties: { label: feature.name }, geometry: feature.geometry }));
+    const drainageFeatures = (proposal?.features || []).filter((feature: any) => feature.feature_type === "drainage").map((feature: any) => ({ type: "Feature", properties: {}, geometry: feature.geometry }));
+    const openSpaceFeatures = (proposal?.features || []).filter((feature: any) => feature.feature_type === "open_space").map((feature: any) => ({ type: "Feature", properties: { label: feature.name }, geometry: feature.geometry }));
+    (map.getSource("preview-open-space") as any)?.setData({ type: "FeatureCollection", features: openSpaceFeatures });
+    (map.getSource("preview-drainage") as any)?.setData({ type: "FeatureCollection", features: drainageFeatures });
+    (map.getSource("preview-plots") as any)?.setData({ type: "FeatureCollection", features: plotFeatures });
+    (map.getSource("preview-roads") as any)?.setData({ type: "FeatureCollection", features: roadFeatures });
+
+    void loadMapboxGl().then((mapboxgl) => {
+      if (mapRef.current !== map) return;
+      const fitBounds = new mapboxgl.LngLatBounds();
+      [...plotFeatures, ...roadFeatures, ...drainageFeatures, ...openSpaceFeatures].forEach((feature) => walkCoordinates(feature.geometry?.coordinates, (point) => fitBounds.extend(point)));
+      if (!fitBounds.isEmpty()) map.fitBounds(fitBounds, { padding: 30 });
+    });
+  }, [proposal, mapReady]);
 
   useEffect(() => {
     const onFullscreenChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -326,14 +363,30 @@ function LayoutPreviewMap({ proposal, onEditCandidates }: { proposal: any; onEdi
       // A create only counts as a new road/open space when it was started via the "Add road" /
       // "Add open space" buttons (which set this ref right before switching Draw into a drawing
       // mode) - otherwise ignore it, since simple_select's own vertex/midpoint dragging never
-      // fires draw.create, only draw.update.
+      // fires draw.create, only draw.update. Saving is immediate here (not staged like vertex
+      // edits) because carving the new shape's footprint out of every overlapping plot needs real
+      // projected-CRS geometry math, which only the backend can do accurately.
       const captureCreate = (event: any) => {
         const featureType = newFeatureTypeRef.current;
         newFeatureTypeRef.current = null;
-        if (!featureType) return;
-        (event.features || []).forEach((feature: any) => {
-          setNewFeatures((current) => [...current, { featureType, geometry: feature.geometry }]);
-        });
+        const feature = (event.features || [])[0];
+        if (!featureType || !feature) return;
+        try { draw.delete(feature.id); } catch { /* already gone */ }
+        if (!onAddFeature || !proposal?.id) return;
+        const plotCandidates = (proposal.candidates || [])
+          .filter((candidate: any) => !deletedIds.has(String(candidate.plot_number)))
+          .map((candidate: any) => {
+            const updated = workingCandidatesRef.current[String(candidate.plot_number)];
+            return updated ? { ...candidate, geometry: updated } : candidate;
+          });
+        setAddingFeature(true);
+        void onAddFeature(proposal.id, featureType, feature.geometry, featureType === "road" ? roadWidthM : undefined, plotCandidates)
+          .then(() => {
+            setPendingGeometry({});
+            setDeletedIds(new Set());
+            setEditing(false);
+          })
+          .finally(() => setAddingFeature(false));
       };
       map.on("draw.update", captureUpdate);
       map.on("draw.delete", captureDelete);
@@ -358,7 +411,6 @@ function LayoutPreviewMap({ proposal, onEditCandidates }: { proposal: any; onEdi
   const cancelEdits = () => {
     setPendingGeometry({});
     setDeletedIds(new Set());
-    setNewFeatures([]);
     setEditing(false);
   };
 
@@ -375,18 +427,11 @@ function LayoutPreviewMap({ proposal, onEditCandidates }: { proposal: any; onEdi
         const updatedGeometry = workingCandidatesRef.current[String(candidate.plot_number)];
         return updatedGeometry ? { ...candidate, geometry: updatedGeometry } : candidate;
       });
-    const addedFeatures = newFeatures.map((item, index) => ({
-      feature_type: item.featureType,
-      name: item.featureType === "road" ? `Road (added ${index + 1})` : "Open space (added)",
-      geometry: item.geometry,
-    }));
-    const mergedFeatures = addedFeatures.length ? [...(proposal.features || []), ...addedFeatures] : undefined;
     setSavingEdits(true);
     try {
-      await onEditCandidates(proposal.id, merged, mergedFeatures);
+      await onEditCandidates(proposal.id, merged);
       setPendingGeometry({});
       setDeletedIds(new Set());
-      setNewFeatures([]);
       setEditing(false);
     } finally {
       setSavingEdits(false);
@@ -402,16 +447,27 @@ function LayoutPreviewMap({ proposal, onEditCandidates }: { proposal: any; onEdi
         {onEditCandidates && proposal.status === "review_required" && (
           editing ? (
             <>
-              <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits} onClick={() => startDrawingFeature("road")} title="Draw a new road">
-                Add road
-              </button>
-              <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits} onClick={() => startDrawingFeature("open_space")} title="Draw a new open space">
-                Add open space
-              </button>
-              <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits || !hasEdits} onClick={() => void saveEdits()} title="Save changes">
+              {onAddFeature && (
+                <label className="edash-layout-preview-road-width" title="Width for the next road you draw">
+                  <span>Road</span>
+                  <input type="number" min="1" max="60" value={roadWidthM} disabled={addingFeature} onChange={(event) => setRoadWidthM(Number(event.target.value) || 9)} />
+                  <span>m</span>
+                </label>
+              )}
+              {onAddFeature && (
+                <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits || addingFeature} onClick={() => startDrawingFeature("road")} title="Draw a new road at the width set above">
+                  {addingFeature ? <Spinner size={13} /> : null} Add road
+                </button>
+              )}
+              {onAddFeature && (
+                <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits || addingFeature} onClick={() => startDrawingFeature("open_space")} title="Draw a new open space">
+                  Add open space
+                </button>
+              )}
+              <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits || addingFeature || !hasEdits} onClick={() => void saveEdits()} title="Save vertex/delete changes">
                 {savingEdits ? <Spinner size={13} /> : <EstateIcon name="check-circle" />} Save changes
               </button>
-              <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits} onClick={cancelEdits} title="Cancel editing">
+              <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits || addingFeature} onClick={cancelEdits} title="Cancel editing">
                 Cancel
               </button>
             </>
@@ -426,15 +482,17 @@ function LayoutPreviewMap({ proposal, onEditCandidates }: { proposal: any; onEdi
         </button>
       </div>
       <span className="edash-layout-preview-count">
-        {editing
-          ? `Drag a vertex to reshape - touching plots move together automatically${newFeatures.length ? ` · ${newFeatures.length} new feature(s) added` : ""}`
-          : `${proposal.candidates?.length || 0} plots in this draft`}
+        {addingFeature
+          ? "Carving the new shape out of overlapping plots..."
+          : editing
+            ? "Drag a vertex to reshape - touching plots move together automatically. Click \"Add road\" or \"Add open space\" to draw a new one."
+            : `${proposal.candidates?.length || 0} plots in this draft`}
       </span>
     </div>
   );
 }
 
-export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy = false, message, messageTone = "good", onGenerate, onDecision, onEditCandidates }: Props) {
+export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy = false, message, messageTone = "good", onGenerate, onDecision, onEditCandidates, onAddFeature }: Props) {
   const [templateKey, setTemplateKey] = useState<LayoutTemplateKey>("standard");
   const [criteria, setCriteria] = useState<LayoutCriteria>({ ...DEFAULT_CRITERIA, ...LAYOUT_TEMPLATES.find((item) => item.key === "standard")!.criteria });
   const [open, setOpen] = useState(false);
@@ -537,7 +595,7 @@ export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy =
             </div>
             <p className="edash-status-row-desc">{proposal.diagnostics?.estimated_plot_count || proposal.candidates?.length || 0} plots, about {Math.round(Number(proposal.diagnostics?.total_plot_area_sqm || 0)).toLocaleString()} m² of plot area.</p>
             <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>{proposal.diagnostics?.road_count || 0} access roads and {Number(proposal.diagnostics?.open_space_percent || 0).toFixed(1)}% open-space reserve.</p>
-            <LayoutPreviewMap proposal={proposal} onEditCandidates={onEditCandidates} />
+            <LayoutPreviewMap proposal={proposal} onEditCandidates={onEditCandidates} onAddFeature={onAddFeature} />
             {proposal.status === "review_required" && (
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                 <button type="button" className="edash-btn-primary" disabled={busy} onClick={() => onDecision(proposal.id, "approved")}>Approve and add plots</button>
