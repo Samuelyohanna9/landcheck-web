@@ -460,6 +460,19 @@ export default function Estates() {
   const [message, setMessageRaw] = useState("Loading estates...");
   const [messageTone, setMessageTone] = useState<MessageTone>("good");
   const setMessage = (text: string, tone: MessageTone = "good") => { setMessageRaw(text); setMessageTone(tone); };
+  // A handful of actions (reserve/allocate a plot) reload the whole page on success to refresh the
+  // many pieces of state that depend on it - which wipes out any setMessage() call made right
+  // before the reload. This relay lets such an action stash a message just before reloading, read
+  // back and shown once here on the next mount.
+  useEffect(() => {
+    const pending = sessionStorage.getItem("edash_pending_notice");
+    if (!pending) return;
+    sessionStorage.removeItem("edash_pending_notice");
+    try {
+      const { text, tone } = JSON.parse(pending);
+      if (text) setMessage(text, tone || "good");
+    } catch { /* malformed - ignore */ }
+  }, []);
   const [allocations, setAllocations] = useState<any[]>([]);
   const [plots, setPlots] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
@@ -781,6 +794,9 @@ export default function Estates() {
         form.append("file", amountPaidReceipt);
         try { await api.post(`/estates/payments/${response.data.initial_payment_id}/evidence`, form); }
         catch { /* the reservation/allocation itself already succeeded - a failed receipt upload shouldn't block it */ }
+      }
+      if (response.data.customer_notified) {
+        sessionStorage.setItem("edash_pending_notice", JSON.stringify({ text: `Plot ${allocate ? "allocated" : "reserved"}. A confirmation email has been sent to the customer.`, tone: "good" }));
       }
       window.location.reload();
     }
@@ -1143,9 +1159,14 @@ export default function Estates() {
     setSurveyRequests((surveys.data || []).filter((item: any) => item.estate.id === Number(estateId)));
     setStakingTasks((staking.data || []).filter((item: any) => item.estate_id === Number(estateId)));
   };
-  const runWorkflow = async (label: string, action: () => Promise<unknown>) => {
+  const runWorkflow = async (label: string, action: () => Promise<any>) => {
     setWorkflowMessage("");
-    try { await action(); await refreshWorkflow(); setWorkflowMessage(`${label} completed.`); }
+    try {
+      const result = await action();
+      await refreshWorkflow();
+      const notified = Boolean(result?.data?.customer_notified);
+      setWorkflowMessage(`${label} completed.${notified ? " A confirmation email has been sent to the customer." : ""}`);
+    }
     catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, `${label} could not be completed.`), "danger"); }
   };
   const createOfficialSurveyPlan = async (plotId: number) => {
@@ -1277,9 +1298,10 @@ export default function Estates() {
   const updateDevelopmentStatus = async (status: string) => {
     if (!selectedPlot) return;
     try {
-      await api.patch(`/estates/plots/${selectedPlot.id}/development-status`, { status });
+      const response = await api.patch(`/estates/plots/${selectedPlot.id}/development-status`, { status });
       setPlots((current) => current.map((plot) => (plot.id === selectedPlot.id ? { ...plot, development_status: status } : plot)));
       setEditingDevelopment(false);
+      if (response.data.customer_notified) setWorkflowMessage("Development status saved. A confirmation email has been sent to the customer.");
     } catch (error) {
       setWorkflowMessage(await extractApiErrorMessage(error, "Development status could not be saved."), "danger");
     }

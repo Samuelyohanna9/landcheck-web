@@ -43,6 +43,7 @@ const EstateFinance = lazyWithChunkRecovery(() => import("./pages/EstateFinance"
 const EstateLanding = lazyWithChunkRecovery(() => import("./pages/EstateLanding"));
 const EstateLogin = lazyWithChunkRecovery(() => import("./pages/EstateLogin"));
 const EstateRegister = lazyWithChunkRecovery(() => import("./pages/EstateRegister"));
+const PublicPlotView = lazyWithChunkRecovery(() => import("./pages/PublicPlotView"));
 const EstatePlotsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstatePlotsPage"));
 const EstateCustomersPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateCustomersPage"));
 const EstateCommissionsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateCommissionsPage"));
@@ -293,6 +294,7 @@ export default function App() {
               <Route path="/estates" element={<EstateEntryRoute />} />
               <Route path="/estates/login" element={<EstateLogin />} />
               <Route path="/estates/register" element={<EstateRegister />} />
+              <Route path="/estates/plot/:token" element={<PublicPlotView />} />
               <Route path="/estates/workspace" element={<EstateProtectedRoute element={<Estates />} />} />
               <Route path="/estates/:estateId" element={<EstateProtectedRoute element={<Estates />} />} />
               <Route path="/estates/:estateId/map" element={<EstateProtectedRoute element={<Estates />} />} />
