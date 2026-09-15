@@ -2304,7 +2304,7 @@ export default function Estates() {
         </EstateModal>
       )}
       {showResetLayoutConfirm && (
-        <EstateModal title="Reset this Estate's layout?" subtitle="This permanently deletes every plot and clears the Estate boundary so you can start the layout over." onClose={() => { setShowResetLayoutConfirm(false); setResetLayoutConfirmText(""); }}>
+        <EstateModal title="Reset this Estate's layout?" subtitle="This permanently deletes every plot, road, open space and drainage layer, and clears the Estate boundary, so you can start the layout over." onClose={() => { setShowResetLayoutConfirm(false); setResetLayoutConfirmText(""); }}>
           <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>
             Type the Estate name, <strong style={{ color: "var(--edash-ink)" }}>{estateDetail?.name}</strong>, to confirm. Any plot with a customer reservation or allocation will block this action.
           </p>
