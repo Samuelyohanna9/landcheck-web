@@ -1,6 +1,8 @@
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { api } from "../../api/client";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
+import { useFloatingCardAtPoint } from "../../utils/useFloatingPopoverPosition";
 import SurveyLoadingAnimation from "../SurveyLoadingAnimation";
 import CoordinateSystemSelect from "../CoordinateSystemSelect";
 import type { GeoreferenceSession, GeoreferenceTransform } from "../../types/surveyGeoreference";
@@ -92,6 +94,12 @@ function SurveyPlanGeoreferenceSetupStep({
   const controlPointRefs = useRef<Record<string, HTMLElement | null>>({});
   const editFirstFieldRef = useRef<HTMLInputElement | null>(null);
   const rowMenuRef = useRef<HTMLDivElement | null>(null);
+  // The floating coordinate/confirm card is portalled to document.body (see manualEntryPopup
+  // render below) so the canvas's own overflow:hidden/pan-zoom transform can never clip it;
+  // popupAnchorRef is the small in-stage reticle dot useFloatingCardAtPoint measures to know
+  // where on screen to place the card.
+  const popupAnchorRef = useRef<HTMLSpanElement | null>(null);
+  const popupCardRef = useRef<HTMLDivElement | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftFile, setDraftFile] = useState<File | null>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -115,6 +123,7 @@ function SurveyPlanGeoreferenceSetupStep({
     y: string;
     mode: "entry" | "confirm";
   } | null>(null);
+  const cardPosition = useFloatingCardAtPoint(popupAnchorRef, popupCardRef, Boolean(manualEntryPopup));
   const [stageMetrics, setStageMetrics] = useState<RasterStageMetrics | null>(null);
   // Mirrors of render-scope values the once-mounted Mapbox click listener needs (its mount effect
   // has a stable dependency array, so anything it reads from render scope directly is captured
@@ -146,6 +155,7 @@ function SurveyPlanGeoreferenceSetupStep({
   const pointHasGround = (point: (typeof controlPoints)[number]) =>
     Number.isFinite(point.ground_x) && Number.isFinite(point.ground_y) && (Math.abs(point.ground_x) > 0.0001 || Math.abs(point.ground_y) > 0.0001);
   const pointIsReady = (point: (typeof controlPoints)[number]) => pointHasImage(point) && pointHasGround(point);
+  const readyPointCount = controlPoints.filter((point) => pointIsReady(point)).length;
   const activePoint =
     controlPoints.find((item) => item.id === selectedControlPointId) || controlPoints[controlPoints.length - 1] || null;
   const solvedTransform = (session?.transform || null) as GeoreferenceTransform | null;
@@ -416,8 +426,33 @@ function SurveyPlanGeoreferenceSetupStep({
     setManualEntryPopup(null);
   };
 
+  // Strips anything that can't be part of a coordinate as it's typed (letters, stray symbols)
+  // while still allowing a leading minus and either "." or "," as the decimal separator.
+  const sanitizeCoordinateInput = (value: string) => value.replace(/[^0-9.,-]/g, "");
+
   const updateManualEntryField = (field: "x" | "y", value: string) => {
-    setManualEntryPopup((current) => (current ? { ...current, [field]: value } : current));
+    const sanitized = sanitizeCoordinateInput(value);
+    setManualEntryPopup((current) => (current ? { ...current, [field]: sanitized } : current));
+  };
+
+  // Lets a surveyor paste a coordinate pair copied elsewhere ("12.070967, 9.177424") straight into
+  // either field and have both fill in, instead of pasting into X then re-typing Y by hand. A bare
+  // comma with no following space is treated as a decimal separator (matching the "," -> "."
+  // handling already used when parsing a single field on save), not a delimiter - only whitespace,
+  // "; ", "/", or a comma immediately followed by whitespace ever split into two values.
+  const parseCoordinatePasteTokens = (text: string): [string, string] | null => {
+    const parts = text.trim().split(/,\s+|[\s;/]+/).map((token) => token.trim()).filter(Boolean);
+    if (parts.length !== 2) return null;
+    const isNumeric = (token: string) => Number.isFinite(Number.parseFloat(token.replace(",", ".")));
+    return isNumeric(parts[0]) && isNumeric(parts[1]) ? [parts[0], parts[1]] : null;
+  };
+
+  const handleCoordinatePaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
+    const pair = parseCoordinatePasteTokens(event.clipboardData.getData("text"));
+    if (!pair) return;
+    event.preventDefault();
+    const [x, y] = pair;
+    setManualEntryPopup((current) => (current ? { ...current, x, y } : current));
   };
 
   // "Choose from map instead", offered under the coordinate fields - swaps the typing form for a
@@ -452,6 +487,25 @@ function SurveyPlanGeoreferenceSetupStep({
   const closeConfirmPopup = () => {
     setManualEntryPopup(null);
   };
+
+  // Esc dismisses whatever's active - the coordinate form, the confirm popup, or an
+  // awaiting-raster/awaiting-map click that hasn't landed yet - without needing to reach for a
+  // Cancel button.
+  useEffect(() => {
+    if (!manualEntryPopup && !placementStage) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (manualEntryPopup?.mode === "confirm") {
+        closeConfirmPopup();
+      } else if (manualEntryPopup?.mode === "entry") {
+        cancelManualEntry();
+      } else if (placementStage) {
+        cancelPendingPoint();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [manualEntryPopup, placementStage]);
 
   const startEditPoint = (point: (typeof controlPoints)[number]) => {
     setRowMenuOpenId(null);
@@ -992,7 +1046,7 @@ function SurveyPlanGeoreferenceSetupStep({
                   <h3 className="geo-section-title georef-section-title-row">
                     <span>Control points</span>
                     <span className="geo-section-hint">
-                      {controlPoints.filter((point) => pointIsReady(point)).length}/{controlPoints.length} ready
+                      {readyPointCount}/{controlPoints.length} ready
                     </span>
                     <button
                       type="button"
@@ -1331,93 +1385,13 @@ function SurveyPlanGeoreferenceSetupStep({
                         </span>
                       </span>
                     ) : null}
-                    {manualEntryPopup && manualEntryPopup.mode === "entry" ? (
-                      <div
-                        className={`georef-manual-entry-popup${manualEntryPopup.leftPercent > 62 ? " is-right-edge" : ""}${manualEntryPopup.topPercent > 62 ? " is-bottom-edge" : ""}`}
+                    {manualEntryPopup ? (
+                      <span
+                        ref={popupAnchorRef}
+                        className="georef-manual-entry-popup-reticle"
                         style={{ left: `${manualEntryPopup.leftPercent}%`, top: `${manualEntryPopup.topPercent}%` }}
-                        onClick={(event) => event.stopPropagation()}
-                        onMouseDown={(event) => event.stopPropagation()}
-                      >
-                        <span className="georef-manual-entry-popup-reticle" aria-hidden="true" />
-                        <div className="georef-manual-entry-popup-body">
-                          <strong>Enter coordinate</strong>
-                          <label>
-                            {coordinateXLabel}
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              autoFocus
-                              value={manualEntryPopup.x}
-                              onChange={(event) => updateManualEntryField("x", event.target.value)}
-                            />
-                          </label>
-                          <label>
-                            {coordinateYLabel}
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              value={manualEntryPopup.y}
-                              onChange={(event) => updateManualEntryField("y", event.target.value)}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter") saveManualEntry();
-                              }}
-                            />
-                          </label>
-                          <button type="button" className="georef-manual-entry-popup-link" onClick={chooseFromMapInstead}>
-                            Choose from map instead
-                          </button>
-                          <div className="geo-composer-actions">
-                            <button type="button" className="geo-btn geo-btn-outline" onClick={cancelManualEntry}>
-                              Cancel
-                            </button>
-                            <button
-                              type="button"
-                              className="geo-btn geo-btn-primary"
-                              disabled={
-                                !Number.isFinite(Number.parseFloat(manualEntryPopup.x.replace(",", "."))) ||
-                                !Number.isFinite(Number.parseFloat(manualEntryPopup.y.replace(",", ".")))
-                              }
-                              onClick={saveManualEntry}
-                            >
-                              Save
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
-                    {manualEntryPopup && manualEntryPopup.mode === "confirm" ? (
-                      <div
-                        className={`georef-manual-entry-popup georef-confirm-popup${manualEntryPopup.leftPercent > 62 ? " is-right-edge" : ""}${manualEntryPopup.topPercent > 62 ? " is-bottom-edge" : ""}`}
-                        style={{ left: `${manualEntryPopup.leftPercent}%`, top: `${manualEntryPopup.topPercent}%` }}
-                        onClick={(event) => event.stopPropagation()}
-                        onMouseDown={(event) => event.stopPropagation()}
-                      >
-                        <span className="georef-manual-entry-popup-reticle" aria-hidden="true" />
-                        <div className="georef-manual-entry-popup-body">
-                          <button type="button" className="georef-confirm-popup-close" aria-label="Close" onClick={closeConfirmPopup}>
-                            &times;
-                          </button>
-                          <strong>Point saved</strong>
-                          <p className="geo-section-hint">
-                            {controlPoints.filter((point) => pointIsReady(point)).length >= 3
-                              ? "More points improve accuracy - add another or continue when you're ready."
-                              : `Add ${Math.max(0, 3 - controlPoints.filter((point) => pointIsReady(point)).length)} more to continue.`}
-                          </p>
-                          <div className="geo-composer-actions">
-                            <button type="button" className="geo-btn geo-btn-outline" onClick={editConfirmedPoint}>
-                              Edit
-                            </button>
-                            <button type="button" className="geo-btn geo-btn-primary" onClick={confirmNextPoint}>
-                              Next point
-                            </button>
-                          </div>
-                          {controlPoints.filter((point) => pointIsReady(point)).length >= 3 ? (
-                            <button type="button" className="geo-btn geo-btn-primary geo-btn-block" onClick={onContinue}>
-                              Continue to Digitize
-                            </button>
-                          ) : null}
-                        </div>
-                      </div>
+                        aria-hidden="true"
+                      />
                     ) : null}
                   </>
                 ) : (
@@ -1465,6 +1439,95 @@ function SurveyPlanGeoreferenceSetupStep({
           <div className="geo-map-surface" ref={mapContainerRef} />
         </section>
       </div>
+      {manualEntryPopup && cardPosition
+        ? createPortal(
+            <div
+              ref={popupCardRef}
+              className={`georef-floating-card${manualEntryPopup.mode === "confirm" ? " georef-confirm-card" : ""}`}
+              style={{ top: cardPosition.top, left: cardPosition.left }}
+              onClick={(event) => event.stopPropagation()}
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              {manualEntryPopup.mode === "entry" ? (
+                <>
+                  <strong>Enter coordinate</strong>
+                  <label>
+                    {coordinateXLabel}
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      autoFocus
+                      value={manualEntryPopup.x}
+                      onChange={(event) => updateManualEntryField("x", event.target.value)}
+                      onPaste={handleCoordinatePaste}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") saveManualEntry();
+                      }}
+                    />
+                  </label>
+                  <label>
+                    {coordinateYLabel}
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={manualEntryPopup.y}
+                      onChange={(event) => updateManualEntryField("y", event.target.value)}
+                      onPaste={handleCoordinatePaste}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") saveManualEntry();
+                      }}
+                    />
+                  </label>
+                  <button type="button" className="georef-manual-entry-popup-link" onClick={chooseFromMapInstead}>
+                    Choose from map instead
+                  </button>
+                  <div className="geo-composer-actions">
+                    <button type="button" className="geo-btn geo-btn-outline" onClick={cancelManualEntry}>
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="geo-btn geo-btn-primary"
+                      disabled={
+                        !Number.isFinite(Number.parseFloat(manualEntryPopup.x.replace(",", "."))) ||
+                        !Number.isFinite(Number.parseFloat(manualEntryPopup.y.replace(",", ".")))
+                      }
+                      onClick={saveManualEntry}
+                    >
+                      Save
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="georef-confirm-card-close" aria-label="Close" onClick={closeConfirmPopup}>
+                    &times;
+                  </button>
+                  <strong>Point saved</strong>
+                  <p className="geo-section-hint">
+                    {readyPointCount >= 3
+                      ? "More points improve accuracy - add another or continue when you're ready."
+                      : `Add ${Math.max(0, 3 - readyPointCount)} more to continue.`}
+                  </p>
+                  <div className="geo-composer-actions">
+                    <button type="button" className="geo-btn geo-btn-outline" onClick={editConfirmedPoint}>
+                      Edit
+                    </button>
+                    <button type="button" className="geo-btn geo-btn-primary" onClick={confirmNextPoint}>
+                      Next point
+                    </button>
+                  </div>
+                  {readyPointCount >= 3 ? (
+                    <button type="button" className="geo-btn geo-btn-primary geo-btn-block" onClick={onContinue}>
+                      Continue to Digitize
+                    </button>
+                  ) : null}
+                </>
+              )}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

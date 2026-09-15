@@ -49,3 +49,56 @@ export function useFloatingPopoverPosition(
 
   return position;
 }
+
+// For a floating card anchored beside an arbitrary point on a canvas - not a toolbar trigger with
+// a fixed spot near a screen edge, which is what the hook above assumes (it only ever places
+// below-and-clamped-horizontally). The georeferencing control-point popup can open anywhere across
+// a large, pannable/zoomable, overflow-clipped canvas, so it needs both axes to flip: right of the
+// point by default, left if that would run off-screen; vertically centered on the point, then
+// clamped to stay fully inside the viewport. Same `position: fixed` + portal-into-document.body
+// escape hatch as above, for the same overflow-clipping reason.
+export function useFloatingCardAtPoint(
+  anchorRef: RefObject<HTMLElement | null>,
+  cardRef: RefObject<HTMLElement | null>,
+  open: boolean,
+): FloatingPopoverPosition | null {
+  const [position, setPosition] = useState<FloatingPopoverPosition | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open || !anchorRef.current) {
+      setPosition(null);
+      return;
+    }
+
+    const updatePosition = () => {
+      const anchor = anchorRef.current;
+      if (!anchor) return;
+      const rect = anchor.getBoundingClientRect();
+      const cardWidth = cardRef.current?.offsetWidth ?? 236;
+      const cardHeight = cardRef.current?.offsetHeight ?? 180;
+      const gap = 16;
+      const anchorX = rect.left + rect.width / 2;
+      const anchorY = rect.top + rect.height / 2;
+
+      const fitsRight = anchorX + gap + cardWidth <= window.innerWidth - 8;
+      const left = fitsRight ? anchorX + gap : Math.max(8, anchorX - gap - cardWidth);
+      const top = Math.max(8, Math.min(anchorY - cardHeight / 2, window.innerHeight - cardHeight - 8));
+
+      setPosition({ top, left, triggerWidth: rect.width });
+    };
+
+    updatePosition();
+    // Re-run once the card has actually painted, so clamping/flipping uses its real rendered
+    // width and height instead of the estimated fallback above.
+    const raf = requestAnimationFrame(updatePosition);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, anchorRef, cardRef]);
+
+  return position;
+}
