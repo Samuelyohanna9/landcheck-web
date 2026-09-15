@@ -20,6 +20,9 @@ export default function EstateCommissionsPage() {
   const [newAgentRole, setNewAgentRole] = useState("sales");
   const [agentBusy, setAgentBusy] = useState(false);
   const [showAddAgent, setShowAddAgent] = useState(false);
+  const [agentDetail, setAgentDetail] = useState<any>(null);
+  const [agentDetailLoading, setAgentDetailLoading] = useState(false);
+  const [agentDetailError, setAgentDetailError] = useState("");
 
   const loadCommissionData = async (orgId: number) => {
     try {
@@ -82,6 +85,21 @@ export default function EstateCommissionsPage() {
     }
   };
 
+  const openAgentDetail = async (subjectType: string, subjectId: string) => {
+    if (!organizationId) return;
+    setAgentDetail({ subject_type: subjectType, subject_id: subjectId });
+    setAgentDetailLoading(true);
+    setAgentDetailError("");
+    try {
+      const response = await api.get(`/estates/organizations/${organizationId}/sales-agents/detail`, { params: { subject_type: subjectType, subject_id: subjectId } });
+      setAgentDetail(response.data);
+    } catch (error) {
+      setAgentDetailError(await extractApiErrorMessage(error, "Agent details could not be loaded."));
+    } finally {
+      setAgentDetailLoading(false);
+    }
+  };
+
   const toggleAgentActive = async (member: { id: number; is_active: boolean }) => {
     if (!organizationId) return;
     try {
@@ -132,10 +150,13 @@ export default function EstateCommissionsPage() {
                 <tbody>
                   {agents.map((member) => (
                     <tr key={member.id}>
-                      <td>{member.display_name}</td>
+                      <td style={{ cursor: "pointer" }} onClick={() => void openAgentDetail(member.subject_type, member.subject_id)}>{member.display_name}</td>
                       <td style={{ textTransform: "capitalize" }}>{member.role.replaceAll("_", " ")}</td>
                       <td><span className={`edash-status-pill tone-${member.is_active ? "good" : "neutral"}`}>{member.is_active ? "Active" : "Inactive"}</span></td>
-                      <td><button type="button" className="edash-btn-outline" onClick={() => void toggleAgentActive(member)}>{member.is_active ? "Deactivate" : "Reactivate"}</button></td>
+                      <td style={{ display: "flex", gap: 6 }}>
+                        <button type="button" className="edash-btn-outline" onClick={() => void openAgentDetail(member.subject_type, member.subject_id)}>View</button>
+                        <button type="button" className="edash-btn-outline" onClick={() => void toggleAgentActive(member)}>{member.is_active ? "Deactivate" : "Reactivate"}</button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -184,7 +205,7 @@ export default function EstateCommissionsPage() {
                 <thead><tr><th>Agent</th><th>Sales</th><th>Total volume</th><th>Total commission</th><th>Current tier</th></tr></thead>
                 <tbody>
                   {commissionReport.map((agent) => (
-                    <tr key={`${agent.subject_type}::${agent.subject_id}`}>
+                    <tr key={`${agent.subject_type}::${agent.subject_id}`} style={{ cursor: "pointer" }} onClick={() => void openAgentDetail(agent.subject_type, agent.subject_id)}>
                       <td>{agent.display_name}</td>
                       <td>{agent.sale_count}</td>
                       <td>{money(agent.total_volume)}</td>
@@ -219,6 +240,56 @@ export default function EstateCommissionsPage() {
           <button type="button" className="edash-btn-primary" disabled={agentBusy || !newAgentName.trim()} onClick={() => void addAgent()}>
             {agentBusy ? <><Spinner size={13} /> Adding...</> : "Add agent"}
           </button>
+        </EstateModal>
+      )}
+
+      {agentDetail && (
+        <EstateModal title={agentDetail.display_name || agentDetail.subject_id} subtitle={agentDetail.role ? agentDetail.role.replaceAll("_", " ") : undefined} onClose={() => setAgentDetail(null)}>
+          {agentDetailLoading ? (
+            <p className="edash-tab-empty" style={{ padding: "10px 0" }}><Spinner size={13} /> Loading...</p>
+          ) : agentDetailError ? (
+            <p className="edash-tab-empty" style={{ padding: "10px 0" }}>{agentDetailError}</p>
+          ) : (
+            <>
+              <div className="edash-overview-grid" style={{ marginBottom: 16 }}>
+                <div className="edash-overview-field"><span>Plots</span><strong>{agentDetail.summary?.plot_count ?? 0}</strong></div>
+                <div className="edash-overview-field"><span>Total volume</span><strong>{money(agentDetail.summary?.total_volume || 0)}</strong></div>
+                <div className="edash-overview-field"><span>Commission paid</span><strong>{money(agentDetail.summary?.total_commission_paid || 0)}</strong></div>
+                <div className="edash-overview-field"><span>Pending</span><strong>{agentDetail.summary?.pending_commission_count ?? 0}</strong></div>
+                <div className="edash-overview-field"><span>Current tier</span><strong>{agentDetail.summary?.current_tier || "-"}</strong></div>
+              </div>
+              {agentDetail.plots?.length ? (
+                <div style={{ overflowX: "auto" }}>
+                  <table className="edash-mini-table">
+                    <thead>
+                      <tr>
+                        <th>Plot</th><th>Estate</th><th>Customer</th><th>Status</th>
+                        <th>Agreed</th><th>Confirmed</th><th>Outstanding</th><th>Commission</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {agentDetail.plots.map((plot: any) => (
+                        <tr key={plot.allocation_id}>
+                          <td>{plot.plot_number}</td>
+                          <td>{plot.estate_name}</td>
+                          <td>{plot.customer_name}</td>
+                          <td><span className={`edash-status-pill tone-${plot.status === "allocated" ? "good" : "warn"}`}>{plot.status}</span></td>
+                          <td>{money(plot.agreed_price)}</td>
+                          <td>{money(plot.confirmed_paid)}</td>
+                          <td>{money(plot.outstanding)}</td>
+                          <td>
+                            {plot.status === "allocated"
+                              ? `${money(plot.commission_amount)}${plot.commission_tier_label ? ` (${plot.commission_tier_label})` : ""}`
+                              : "Pending allocation"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : <p className="edash-tab-empty">No plots tagged to this agent yet.</p>}
+            </>
+          )}
         </EstateModal>
       )}
     </EstateShell>
