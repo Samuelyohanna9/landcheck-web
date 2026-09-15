@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, extractApiErrorMessage } from "../api/client";
-import { FinancialSummaryCards, PaymentStatusBadge, money } from "../components/estates/FinancialComponents";
+import { FinancialSummaryCards, PaymentStatusBadge, money, PAYMENT_METHODS, paymentMethodLabel } from "../components/estates/FinancialComponents";
 import EstateShell from "../components/estates/EstateShell";
 import EstateModal from "../components/estates/EstateModal";
 import EstateIcon from "../components/estates/EstateIcon";
@@ -48,6 +48,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   const [amount, setAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(today());
   const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
+  const [paymentMethodOther, setPaymentMethodOther] = useState("");
   const [reference, setReference] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
 
@@ -123,8 +124,10 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
 
   const record = async () => {
     if (!allocationId || !amount) { setError("Select an allocation and enter an amount."); return; }
+    const resolvedMethod = paymentMethod === "other" ? paymentMethodOther.trim() : paymentMethod;
+    if (!resolvedMethod) { setError("Enter the payment method."); return; }
     try {
-      const made = await api.post(`/estates/allocations/${allocationId}/payments`, { amount, payment_date: paymentDate, payment_method: paymentMethod, reference_no: reference || null });
+      const made = await api.post(`/estates/allocations/${allocationId}/payments`, { amount, payment_date: paymentDate, payment_method: resolvedMethod, reference_no: reference || null });
       setNotice("Payment recorded and pending confirmation.");
       if (receipt) {
         const body = new FormData();
@@ -269,7 +272,12 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
                 <option value="voided">Voided</option>
               </select>
             </label>
-            <label className="edash-field"><span>Payment method</span><input value={method} onChange={(event) => setMethod(event.target.value)} /></label>
+            <label className="edash-field"><span>Payment method</span>
+              <select value={method} onChange={(event) => setMethod(event.target.value)}>
+                <option value="">All methods</option>
+                {PAYMENT_METHODS.filter((item) => item.value !== "other").map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </label>
             <label className="edash-field"><span>From</span><input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} /></label>
             <label className="edash-field"><span>To</span><input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} /></label>
             <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-end" }} onClick={() => { setPage(1); void load(); }}>Apply filters</button>
@@ -297,7 +305,15 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
           {allocationDetail && <AllocationPanel detail={allocationDetail} />}
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Amount</span><input type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Date</span><input type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} /></label>
-          <label className="edash-field" style={{ marginBottom: 12 }}><span>Method</span><input value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} /></label>
+          <label className="edash-field" style={{ marginBottom: 12 }}>
+            <span>Method</span>
+            <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}>
+              {PAYMENT_METHODS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+          </label>
+          {paymentMethod === "other" && (
+            <label className="edash-field" style={{ marginBottom: 12 }}><span>Specify method</span><input value={paymentMethodOther} onChange={(event) => setPaymentMethodOther(event.target.value)} placeholder="e.g. Crypto, Barter" /></label>
+          )}
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Reference</span><input value={reference} onChange={(event) => setReference(event.target.value)} /></label>
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Receipt</span><input type="file" onChange={(event) => setReceipt(event.target.files?.[0] || null)} /></label>
           <button type="button" className="edash-btn-primary" onClick={() => void record()}>Record payment</button>
@@ -387,6 +403,27 @@ function CustomerAllocations({ detail }: { detail: any }) {
   );
 }
 
+function renderReceiptCell(transaction: { id: number; receipts?: { id: number; filename: string }[] }) {
+  if (!transaction.receipts?.length) return <span style={{ color: "var(--edash-faint)" }}>-</span>;
+  return (
+    <div className="edash-chip-row">
+      {transaction.receipts.map((item) => (
+        <button
+          type="button"
+          key={item.id}
+          className="edash-chip"
+          style={{ cursor: "pointer", border: "none" }}
+          onClick={() =>
+            void download(`/estates/payments/${transaction.id}/evidence/${item.id}/download`, item.filename).catch(() => window.alert("Receipt could not be downloaded."))
+          }
+        >
+          {item.filename}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function CustomerStatement({ statement }: { statement: Statement }) {
   return (
     <div>
@@ -402,10 +439,10 @@ function CustomerStatement({ statement }: { statement: Statement }) {
           <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>Allocation date: {allocation.allocation_date || "-"}. Agreed price: {money(allocation.agreed_price)}{allocation.payment_plan ? ` · Payment plan: ${allocation.payment_plan}` : ""}</p>
           <div style={{ overflowX: "auto" }}>
             <table className="edash-mini-table">
-              <thead><tr><th>Date</th><th>Reference</th><th>Method</th><th>Amount</th><th>Status</th></tr></thead>
+              <thead><tr><th>Date</th><th>Reference</th><th>Method</th><th>Amount</th><th>Status</th><th>Receipt</th></tr></thead>
               <tbody>
                 {allocation.transactions.map((transaction: any, index: number) => (
-                  <tr key={index}><td>{transaction.date}</td><td>{transaction.reference || "-"}</td><td>{transaction.method}</td><td>{money(transaction.amount)}</td><td>{transaction.status}</td></tr>
+                  <tr key={index}><td>{transaction.date}</td><td>{transaction.reference || "-"}</td><td>{paymentMethodLabel(transaction.method)}</td><td>{money(transaction.amount)}</td><td>{transaction.status}</td><td>{renderReceiptCell(transaction)}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -431,7 +468,7 @@ function PaymentTable({ rows, open }: { rows: Payment[]; open: (id: number) => v
               <td>{payment.estate.name} / {payment.plot.number}</td>
               <td>{money(payment.amount, payment.currency)}</td>
               <td><PaymentStatusBadge status={payment.status} /></td>
-              <td>{payment.method}</td>
+              <td>{paymentMethodLabel(payment.method)}</td>
               <td>{payment.reference || "-"}</td>
             </tr>
           ))}

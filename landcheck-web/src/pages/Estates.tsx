@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { clearEstateAuthSession } from "../auth/estateAuth";
 import { api, extractApiErrorMessage } from "../api/client";
-import { money } from "../components/estates/FinancialComponents";
+import { money, PAYMENT_METHODS } from "../components/estates/FinancialComponents";
 import CoordinateInput from "../components/CoordinateInput";
 import EstateLayoutImport, { type EstateLayoutMethod, LAYOUT_IMPORT_METHODS } from "../components/estates/EstateLayoutImport";
 import EstateLayoutDesigner from "../components/estates/EstateLayoutDesigner";
@@ -400,6 +400,7 @@ export default function Estates() {
   const [agreedPrice, setAgreedPrice] = useState("");
   const [paymentPlan, setPaymentPlan] = useState("");
   const [amountPaidNow, setAmountPaidNow] = useState("");
+  const [amountPaidNowMethod, setAmountPaidNowMethod] = useState("bank_transfer");
   const [inspectionNotes, setInspectionNotes] = useState("");
   const [inspectionOutcome, setInspectionOutcome] = useState("observed");
   const [hazards, setHazards] = useState<any>(null);
@@ -736,7 +737,7 @@ export default function Estates() {
         agreed_price: agreedPrice ? Number(agreedPrice) : null,
         payment_plan: paymentPlan.trim() || null,
         initial_payment_amount: amountPaidNow ? Number(amountPaidNow) : null,
-        initial_payment_method: amountPaidNow ? "bank_transfer" : null,
+        initial_payment_method: amountPaidNow ? amountPaidNowMethod : null,
       });
       window.location.reload();
     }
@@ -1708,6 +1709,11 @@ export default function Estates() {
                       <input type="number" min="0" step="0.01" value={agreedPrice} onChange={(event) => setAgreedPrice(event.target.value)} placeholder="Agreed price (NGN)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
                       <input value={paymentPlan} onChange={(event) => setPaymentPlan(event.target.value)} placeholder="Payment plan (optional)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
                       <input type="number" min="0" step="0.01" value={amountPaidNow} onChange={(event) => setAmountPaidNow(event.target.value)} placeholder="Amount already paid, if any (NGN)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
+                      {Boolean(amountPaidNow) && (
+                        <select className="edash-map-select" style={{ width: "100%", marginBottom: 8 }} value={amountPaidNowMethod} onChange={(event) => setAmountPaidNowMethod(event.target.value)}>
+                          {PAYMENT_METHODS.filter((item) => item.value !== "other").map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                        </select>
+                      )}
                       {Boolean(agreedPrice) && (
                         <div className="edash-overview-grid edash-overview-grid--3" style={{ marginBottom: 8 }}>
                           <div className="edash-overview-field"><span>Agreed</span><strong>{money(Number(agreedPrice) || 0)}</strong></div>
@@ -1717,8 +1723,19 @@ export default function Estates() {
                       )}
                       <div style={{ display: "flex", gap: 8 }}>
                         <button type="button" className="edash-btn-outline" onClick={() => void assignCustomer(false)}>Reserve</button>
-                        <button type="button" className="edash-btn-primary" onClick={() => void assignCustomer(true)}>Allocate / sell</button>
+                        <button
+                          type="button"
+                          className="edash-btn-primary"
+                          disabled={Number(agreedPrice) > 0 && (Number(amountPaidNow) || 0) < Number(agreedPrice)}
+                          title={Number(agreedPrice) > 0 && (Number(amountPaidNow) || 0) < Number(agreedPrice) ? "Allocation is only available once the agreed price is fully paid - use Reserve until then." : undefined}
+                          onClick={() => void assignCustomer(true)}
+                        >
+                          Allocate / sell
+                        </button>
                       </div>
+                      <p className="edash-tab-empty" style={{ padding: "6px 0 0", textAlign: "left", fontSize: "0.78rem" }}>
+                        Allocation (the official, title-bearing status) is only available once fully paid - otherwise this reserves the plot, and it will automatically become Allocated the moment its balance is fully confirmed paid.
+                      </p>
                     </div>
                   )}
                 </div>
