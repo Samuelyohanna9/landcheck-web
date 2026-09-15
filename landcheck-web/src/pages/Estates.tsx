@@ -420,8 +420,10 @@ export default function Estates() {
   const [paymentPlan, setPaymentPlan] = useState("");
   const [amountPaidNow, setAmountPaidNow] = useState("");
   const [amountPaidNowMethod, setAmountPaidNowMethod] = useState("bank_transfer");
+  const [amountPaidReceipt, setAmountPaidReceipt] = useState<File | null>(null);
   const [salesAgentSubject, setSalesAgentSubject] = useState("");
   const [salesAgents, setSalesAgents] = useState<any[]>([]);
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [inspectionNotes, setInspectionNotes] = useState("");
   const [inspectionOutcome, setInspectionOutcome] = useState("observed");
   const [hazards, setHazards] = useState<any>(null);
@@ -760,7 +762,7 @@ export default function Estates() {
     if (!estateId || !selectedPlot || !selectedCustomerId) { setMessage("Choose a parcel and customer first.", "danger"); return; }
     try {
       const [agentSubjectType, agentSubjectId] = salesAgentSubject ? salesAgentSubject.split("::") : [null, null];
-      await api.post(`/estates/${estateId}/plots/${selectedPlot.id}/${allocate ? "allocate" : "reserve"}`, {
+      const response = await api.post(`/estates/${estateId}/plots/${selectedPlot.id}/${allocate ? "allocate" : "reserve"}`, {
         customer_id: Number(selectedCustomerId),
         agreed_price: agreedPrice ? Number(agreedPrice) : null,
         payment_plan: paymentPlan.trim() || null,
@@ -769,6 +771,12 @@ export default function Estates() {
         sales_agent_subject_type: agentSubjectType,
         sales_agent_subject_id: agentSubjectId,
       });
+      if (amountPaidReceipt && response.data.initial_payment_id) {
+        const form = new FormData();
+        form.append("file", amountPaidReceipt);
+        try { await api.post(`/estates/payments/${response.data.initial_payment_id}/evidence`, form); }
+        catch { /* the reservation/allocation itself already succeeded - a failed receipt upload shouldn't block it */ }
+      }
       window.location.reload();
     }
     catch (error) { setMessage(await extractApiErrorMessage(error, "Parcel action could not be completed."), "danger"); }
@@ -1774,11 +1782,10 @@ export default function Estates() {
                   ) : (
                     <div className="edash-tab-panel">
                       <p className="edash-tab-empty" style={{ padding: "10px 0" }}>This plot has no customer yet. Add one or choose an existing customer to reserve or allocate it.</p>
-                      <label className="edash-overview-field" style={{ marginBottom: 8 }}><span>New customer</span><input value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="Full name" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} /></label>
-                      <input value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} placeholder="Phone (optional)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
-                      <input type="email" value={customerEmail} onChange={(event) => setCustomerEmail(event.target.value)} placeholder="Email (optional - lifecycle updates are sent here)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
-                      <button type="button" className="edash-btn-outline" onClick={() => void createCustomer()}>Add customer</button>
-                      <select className="edash-map-select" style={{ margin: "10px 0", width: "100%" }} value={selectedCustomerId} onChange={(event) => setSelectedCustomerId(event.target.value)}>
+                      <button type="button" className="edash-tool-btn" style={{ marginBottom: 10 }} onClick={() => setShowAddCustomer(true)}>
+                        <EstateIcon name="plus" /> Add customer
+                      </button>
+                      <select className="edash-map-select" style={{ marginBottom: 10, width: "100%" }} value={selectedCustomerId} onChange={(event) => setSelectedCustomerId(event.target.value)}>
                         <option value="">Choose customer</option>
                         {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
                       </select>
@@ -1792,9 +1799,15 @@ export default function Estates() {
                       )}
                       <input type="number" min="0" step="0.01" value={amountPaidNow} onChange={(event) => setAmountPaidNow(event.target.value)} placeholder="Amount already paid, if any (NGN)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
                       {Boolean(amountPaidNow) && (
-                        <select className="edash-map-select" style={{ width: "100%", marginBottom: 8 }} value={amountPaidNowMethod} onChange={(event) => setAmountPaidNowMethod(event.target.value)}>
-                          {PAYMENT_METHODS.filter((item) => item.value !== "other").map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                        </select>
+                        <>
+                          <select className="edash-map-select" style={{ width: "100%", marginBottom: 8 }} value={amountPaidNowMethod} onChange={(event) => setAmountPaidNowMethod(event.target.value)}>
+                            {PAYMENT_METHODS.filter((item) => item.value !== "other").map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                          </select>
+                          <label className="edash-overview-field" style={{ marginBottom: 8 }}>
+                            <span>Receipt (optional)</span>
+                            <input type="file" accept="image/*,.pdf" onChange={(event) => setAmountPaidReceipt(event.target.files?.[0] || null)} />
+                          </label>
+                        </>
                       )}
                       {Boolean(agreedPrice) && (
                         <div className="edash-overview-grid edash-overview-grid--3" style={{ marginBottom: 8 }}>
@@ -2548,6 +2561,23 @@ export default function Estates() {
         </>
       )}
       {activeTool && renderActiveToolModal()}
+      {showAddCustomer && (
+        <EstateModal title="Add customer" onClose={() => setShowAddCustomer(false)}>
+          <label className="edash-field" style={{ marginBottom: 12 }}>
+            <span>Full name</span>
+            <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} autoFocus />
+          </label>
+          <label className="edash-field" style={{ marginBottom: 12 }}>
+            <span>Phone (optional)</span>
+            <input value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} />
+          </label>
+          <label className="edash-field" style={{ marginBottom: 12 }}>
+            <span>Email (optional - lifecycle updates are sent here)</span>
+            <input type="email" value={customerEmail} onChange={(event) => setCustomerEmail(event.target.value)} />
+          </label>
+          <button type="button" className="edash-btn-primary" disabled={!customerName.trim()} onClick={() => void createCustomer()}>Add customer</button>
+        </EstateModal>
+      )}
       {showEditPlotBoundary && selectedPlot && (
         <EstateModal title={`Edit boundary - ${selectedPlot.plot_number}`} subtitle="Drag a vertex to reshape it, or click along an edge to add a new point. The area recalculates automatically when you save." onClose={() => setShowEditPlotBoundary(false)}>
           {MAPBOX_TOKEN ? (
