@@ -24,6 +24,7 @@ import type {
 } from "../types/surveyGeoreference";
 import type { TechnicalReportFields } from "../components/survey-plan/TechnicalReportModal";
 import SurveyNetworkMotif from "../components/survey-plan/SurveyNetworkMotif";
+import CoordinateSystemSelect from "../components/CoordinateSystemSelect";
 import {
   clearSurveyPlanDraft,
   loadSurveyPlanDraft,
@@ -781,6 +782,9 @@ export default function SurveyPlan() {
   // Coordinates state
   const [manualPoints, setManualPoints] = useState<ManualPoint[]>(buildDefaultManualPoints);
   const [coordinateSystem, setCoordinateSystem] = useState("wgs84");
+  // Independent of the input coordinate system above - a plot can be entered in one system and
+  // still need to be staked out in another, so this is chosen at export time, not inherited.
+  const [dgpsExportCoordinateSystem, setDgpsExportCoordinateSystem] = useState("wgs84");
 
   // Plot state
   const loading = false;
@@ -5778,6 +5782,42 @@ export default function SurveyPlan() {
                       {renderDownloadButtonState(
                         "shapefile_zip",
                         "Download ZIP",
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* DGPS CSV - works for any plot with a saved boundary, not just one digitized
+                      via the georeference workflow or staked through Estates. */}
+                  <div className="export-card">
+                    <div className="export-icon topo">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                        <circle cx="12" cy="12" r="2.5" />
+                      </svg>
+                    </div>
+                    <div className="export-info">
+                      <h4>DGPS CSV</h4>
+                      <p>Boundary vertices for a DGPS receiver, in the coordinate system below</p>
+                      <div style={{ marginTop: "0.5rem", maxWidth: 260 }}>
+                        <CoordinateSystemSelect value={dgpsExportCoordinateSystem} onChange={setDgpsExportCoordinateSystem} />
+                      </div>
+                    </div>
+                    <button
+                      className="download-btn"
+                      disabled={Boolean(downloadLoadingKey)}
+                      onClick={() =>
+                        downloadWithGet(
+                          `/plots/${plotId}/exports/dgps.csv?coordinate_system=${encodeURIComponent(dgpsExportCoordinateSystem)}`,
+                          buildExportFilename(surveyPlanIdentitySegments(), "DGPS", "csv"),
+                          "dgps_csv"
+                        )
+                      }
+                    >
+                      {renderDownloadButtonState(
+                        "dgps_csv",
+                        "Download CSV",
                         <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       )}
                     </button>
