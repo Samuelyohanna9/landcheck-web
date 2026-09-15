@@ -1691,6 +1691,48 @@
   transform: none;
 }
 
+.georef-manual-entry-popup-link {
+  justify-self: start;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--geo-accent, #25c77a);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* "Point saved - what next" popup, same anchored-box shell as the entry popup, wider to fit its
+   own copy line plus the Continue-to-Digitize shortcut once 3+ points are ready. */
+.georef-confirm-popup .georef-manual-entry-popup-body {
+  width: 220px;
+  position: relative;
+}
+
+.georef-confirm-popup-close {
+  position: absolute;
+  top: var(--geo-space-2, 8px);
+  right: var(--geo-space-2, 8px);
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--geo-text-secondary, #9fb0c0);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.georef-confirm-popup-close:hover {
+  color: var(--geo-text-primary, #f8fafc);
+}
+
 .georef-control-point-marker {
   width: 22px;
   height: 22px;
