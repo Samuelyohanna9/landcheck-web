@@ -12,6 +12,7 @@ import { toWGS84, COORDINATE_SYSTEM_GROUPS } from "../utils/coordinateConverter"
 import { checkPolygonClosure } from "../utils/surveyGeometry";
 import EstateIcon from "../components/estates/EstateIcon";
 import EstateModal from "../components/estates/EstateModal";
+import CoordinateSystemSelect from "../components/CoordinateSystemSelect";
 import EstateShell from "../components/estates/EstateShell";
 import Spinner, { LoadingPanel } from "../components/estates/EstateSpinner";
 import "../styles/estates.css";
@@ -441,6 +442,9 @@ export default function Estates() {
   const [surveyRequests, setSurveyRequests] = useState<any[]>([]);
   const [stakingTasks, setStakingTasks] = useState<any[]>([]);
   const [preparingSurveyPlotId, setPreparingSurveyPlotId] = useState<number | null>(null);
+  const [dgpsExportPlotId, setDgpsExportPlotId] = useState<number | null>(null);
+  const [dgpsExportCoordinateSystem, setDgpsExportCoordinateSystem] = useState("wgs84_nigeria_meters");
+  const [dgpsExportBusy, setDgpsExportBusy] = useState(false);
   const [workflowMessage, setWorkflowMessageRaw] = useState("");
   const [workflowMessageTone, setWorkflowMessageTone] = useState<MessageTone>("good");
   const setWorkflowMessage = (text: string, tone: MessageTone = "good") => { setWorkflowMessageRaw(text); setWorkflowMessageTone(tone); };
@@ -1115,13 +1119,6 @@ export default function Estates() {
       setPreparingSurveyPlotId(null);
     }
   };
-  const downloadDgpsForPlot = async (plotId: number) => {
-    const survey = surveyRequests.find((item) => item.plot.id === plotId);
-    const task = survey && stakingTasks.find((item) => item.survey_request_id === survey.id);
-    if (!task) return;
-    setPlotContextMenu(null);
-    await downloadDgps(task.id);
-  };
   const downloadDgps = async (taskId: number) => {
     try {
       const response = await api.get(`/estates/staking-tasks/${taskId}/exports/dgps.csv`, { responseType: "blob" });
@@ -1129,6 +1126,21 @@ export default function Estates() {
       const link = document.createElement("a");
       link.href = url; link.download = `staking-task-${taskId}.csv`; link.click(); URL.revokeObjectURL(url);
     } catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "DGPS CSV could not be downloaded."), "danger"); }
+  };
+  const downloadPlotDgpsCsv = async (plotId: number, coordinateSystem: string) => {
+    if (!estateId) return;
+    setDgpsExportBusy(true);
+    try {
+      const response = await api.get(`/estates/${estateId}/plots/${plotId}/exports/dgps.csv`, { params: { coordinate_system: coordinateSystem }, responseType: "blob" });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url; link.download = `plot-${plotId}-dgps.csv`; link.click(); URL.revokeObjectURL(url);
+      setDgpsExportPlotId(null);
+    } catch (error) {
+      setMessage(await extractApiErrorMessage(error, "DGPS CSV could not be downloaded."), "danger");
+    } finally {
+      setDgpsExportBusy(false);
+    }
   };
   const uploadStakingEvidence = async (taskId: number) => {
     if (!stakingEvidence) { setWorkflowMessage("Choose a staking photo or field record first.", "danger"); return; }
@@ -1396,7 +1408,6 @@ export default function Estates() {
     const plot = plots.find((item) => item.id === plotContextMenu.plotId);
     const allocation = allocations.find((item) => item.plot_id === plotContextMenu.plotId);
     const survey = surveyRequests.find((item) => item.plot.id === plotContextMenu.plotId);
-    const stakingTask = survey && stakingTasks.find((item) => item.survey_request_id === survey.id);
     const preparingSurvey = preparingSurveyPlotId === plotContextMenu.plotId;
     return (
       <>
@@ -1418,19 +1429,9 @@ export default function Estates() {
           <button
             type="button"
             className="edash-context-menu-option"
-            disabled={!stakingTask}
-            title={
-              stakingTask
-                ? undefined
-                : !allocation
-                  ? "Allocate this plot to a customer first"
-                  : !survey?.materialized
-                    ? "Create the Official Survey Plan first - this can be blocked by the organization's minimum-confirmed-payment rule (see Estate Settings > Survey eligibility, or confirm a payment for this customer)"
-                    : "Start staking for this plot first to generate a DGPS export"
-            }
-            onClick={() => void downloadDgpsForPlot(plotContextMenu.plotId)}
+            onClick={() => { setDgpsExportPlotId(plotContextMenu.plotId); setPlotContextMenu(null); }}
           >
-            <EstateIcon name="download" /> DGPS Staking Export
+            <EstateIcon name="download" /> Export DGPS CSV
           </button>
           <button
             type="button"
@@ -2452,6 +2453,29 @@ export default function Estates() {
               {resetLayoutBusy ? <><Spinner size={14} /> Resetting...</> : "Reset layout"}
             </button>
             <button type="button" className="edash-btn-outline" onClick={() => { setShowResetLayoutConfirm(false); setResetLayoutConfirmText(""); }}>Cancel</button>
+          </div>
+        </EstateModal>
+      )}
+      {dgpsExportPlotId !== null && (
+        <EstateModal
+          title={`Export DGPS CSV - ${plots.find((item) => item.id === dgpsExportPlotId)?.plot_number || "Plot"}`}
+          subtitle="This plot's boundary is already subdivided, so every vertex is known - choose the coordinate system to export it in."
+          onClose={() => setDgpsExportPlotId(null)}
+        >
+          <label className="edash-field" style={{ marginBottom: 16 }}>
+            <span>Coordinate system</span>
+            <CoordinateSystemSelect value={dgpsExportCoordinateSystem} onChange={setDgpsExportCoordinateSystem} />
+          </label>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              className="edash-btn-primary"
+              disabled={dgpsExportBusy}
+              onClick={() => void downloadPlotDgpsCsv(dgpsExportPlotId, dgpsExportCoordinateSystem)}
+            >
+              {dgpsExportBusy ? <><Spinner size={14} /> Exporting...</> : "Download CSV"}
+            </button>
+            <button type="button" className="edash-btn-outline" onClick={() => setDgpsExportPlotId(null)}>Cancel</button>
           </div>
         </EstateModal>
       )}
