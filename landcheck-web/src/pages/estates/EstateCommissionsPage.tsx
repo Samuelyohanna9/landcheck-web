@@ -240,15 +240,15 @@ export default function EstateCommissionsPage() {
             <div key={index} className="edash-form-row" style={{ marginBottom: 8, alignItems: "flex-end" }}>
               <label className="edash-field" style={{ maxWidth: 160 }}>
                 <span>Label</span>
-                <input placeholder=" " value={tier.label} onChange={(event) => setCommissionTiers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} />
+                <input value={tier.label} onChange={(event) => setCommissionTiers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} />
               </label>
               <label className="edash-field" style={{ maxWidth: 200 }}>
                 <span>From cumulative sales (NGN)</span>
-                <input placeholder=" " type="number" min="0" value={tier.min_cumulative_sales} onChange={(event) => setCommissionTiers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, min_cumulative_sales: event.target.value } : item))} />
+                <input type="number" min="0" value={tier.min_cumulative_sales} onChange={(event) => setCommissionTiers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, min_cumulative_sales: event.target.value } : item))} />
               </label>
               <label className="edash-field" style={{ maxWidth: 120 }}>
                 <span>Rate (%)</span>
-                <input placeholder=" " type="number" min="0" max="100" step="0.1" value={tier.rate_percent} onChange={(event) => setCommissionTiers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, rate_percent: event.target.value } : item))} />
+                <input type="number" min="0" max="100" step="0.1" value={tier.rate_percent} onChange={(event) => setCommissionTiers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, rate_percent: event.target.value } : item))} />
               </label>
               <button type="button" className="edash-btn-outline" onClick={() => setCommissionTiers((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Remove</button>
             </div>
@@ -397,7 +397,7 @@ export default function EstateCommissionsPage() {
                                   <div className="edash-form-row" style={{ marginBottom: 8, alignItems: "flex-end" }}>
                                     <label className="edash-field" style={{ maxWidth: 150 }}>
                                       <span>Amount (NGN)</span>
-                                      <input placeholder=" " type="number" min="0" step="0.01" value={payoutAmount} onChange={(event) => setPayoutAmount(event.target.value)} />
+                                      <input type="number" min="0" step="0.01" value={payoutAmount} onChange={(event) => setPayoutAmount(event.target.value)} />
                                     </label>
                                     <label className="edash-field" style={{ maxWidth: 150 }}>
                                       <span>Date</span>
@@ -411,7 +411,7 @@ export default function EstateCommissionsPage() {
                                     </label>
                                     <label className="edash-field" style={{ maxWidth: 150 }}>
                                       <span>Reference (optional)</span>
-                                      <input placeholder=" " value={payoutReference} onChange={(event) => setPayoutReference(event.target.value)} />
+                                      <input value={payoutReference} onChange={(event) => setPayoutReference(event.target.value)} />
                                     </label>
                                   </div>
                                   <label className="edash-field" style={{ marginBottom: 8 }}>
