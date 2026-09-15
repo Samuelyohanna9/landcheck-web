@@ -2524,9 +2524,12 @@ export default function Estates() {
           {renderPlotDrawer()}
           {renderPlotContextMenu()}
         </div>
-      ) : null}
-      {renderBottomRow()}
-      {renderFooter()}
+      ) : (
+        <>
+          {renderBottomRow()}
+          {renderFooter()}
+        </>
+      )}
       {activeTool && renderActiveToolModal()}
       {showEditPlotBoundary && selectedPlot && (
         <EstateModal title={`Edit boundary - ${selectedPlot.plot_number}`} subtitle="Drag a vertex to reshape it, or click along an edge to add a new point. The area recalculates automatically when you save." onClose={() => setShowEditPlotBoundary(false)}>
