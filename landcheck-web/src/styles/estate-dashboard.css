@@ -6,7 +6,7 @@
    share this page before an estate is selected.
    ═══════════════════════════════════════════════════════════════ */
 
-.edash {
+.edash, .edash-onboard {
   --edash-bg: #f3f5f7;
   --edash-surface: #ffffff;
   --edash-border: #e4e8ec;
@@ -43,7 +43,9 @@
   --edash-radius-sm: 8px;
   --edash-shadow-card: 0 1px 2px rgba(16, 24, 39, 0.04), 0 8px 24px rgba(16, 24, 39, 0.05);
   --edash-shadow-pop: 0 12px 32px rgba(16, 24, 39, 0.14);
+}
 
+.edash {
   position: fixed;
   inset: 0;
   z-index: 500;
