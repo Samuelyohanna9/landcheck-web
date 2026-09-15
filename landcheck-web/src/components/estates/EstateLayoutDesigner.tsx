@@ -34,7 +34,9 @@ type Props = {
 const DEFAULT_CRITERIA: LayoutCriteria = {
   target_plot_area_sqm: 500,
   road_width_m: 10,
-  edge_reserve_m: 5,
+  // Plots start right at the Estate boundary by default - no automatic perimeter setback.
+  // A drainage reserve is still available below, but it's opt-in, not baked in as a margin.
+  edge_reserve_m: 0,
   drainage_reserve_m: 3,
   open_space_percent: 10,
   frontage_m: null,
@@ -42,7 +44,7 @@ const DEFAULT_CRITERIA: LayoutCriteria = {
   plot_prefix: "P",
   max_plots: 500,
   include_open_space: true,
-  include_drainage: true,
+  include_drainage: false,
   include_roads: true,
 };
 
@@ -68,7 +70,7 @@ const LAYOUT_TEMPLATES: LayoutTemplate[] = [
     density: "High density",
     plotSizeLabel: "300 m² plots (≈10 x 30m)",
     description: "Maximises plot yield for mass-housing and low-cost schemes, with narrower access roads and smaller reserves - similar to typical FHA-style estates.",
-    criteria: { target_plot_area_sqm: 300, frontage_m: 10, road_width_m: 9, edge_reserve_m: 3, drainage_reserve_m: 1.5, open_space_percent: 10 },
+    criteria: { target_plot_area_sqm: 300, frontage_m: 10, road_width_m: 9, edge_reserve_m: 0, drainage_reserve_m: 1.5, open_space_percent: 10 },
   },
   {
     key: "standard",
@@ -76,7 +78,7 @@ const LAYOUT_TEMPLATES: LayoutTemplate[] = [
     density: "Medium density",
     plotSizeLabel: "450 m² plots (≈15 x 30m)",
     description: "The most common private residential estate size in Nigeria - semi-detached and terrace duplexes on standard 12m internal roads.",
-    criteria: { target_plot_area_sqm: 450, frontage_m: 15, road_width_m: 12, edge_reserve_m: 4.5, drainage_reserve_m: 2, open_space_percent: 12 },
+    criteria: { target_plot_area_sqm: 450, frontage_m: 15, road_width_m: 12, edge_reserve_m: 0, drainage_reserve_m: 2, open_space_percent: 12 },
   },
   {
     key: "premium",
@@ -84,7 +86,7 @@ const LAYOUT_TEMPLATES: LayoutTemplate[] = [
     density: "Low density",
     plotSizeLabel: "650 m² plots (≈18 x 36m)",
     description: "Detached duplexes and bungalows with wider frontages, roomier roads and a larger open-space allowance.",
-    criteria: { target_plot_area_sqm: 650, frontage_m: 18, road_width_m: 15, edge_reserve_m: 6, drainage_reserve_m: 2.5, open_space_percent: 15 },
+    criteria: { target_plot_area_sqm: 650, frontage_m: 18, road_width_m: 15, edge_reserve_m: 0, drainage_reserve_m: 2.5, open_space_percent: 15 },
   },
   {
     key: "luxury",
@@ -92,7 +94,7 @@ const LAYOUT_TEMPLATES: LayoutTemplate[] = [
     density: "Very low density",
     plotSizeLabel: "1,000 m² plots (≈25 x 40m)",
     description: "Large detached plots for high-end gated estates, with boulevard-style internal roads and a generous green-space reserve.",
-    criteria: { target_plot_area_sqm: 1000, frontage_m: 25, road_width_m: 18, edge_reserve_m: 9, drainage_reserve_m: 3, open_space_percent: 18 },
+    criteria: { target_plot_area_sqm: 1000, frontage_m: 25, road_width_m: 18, edge_reserve_m: 0, drainage_reserve_m: 3, open_space_percent: 18 },
   },
   {
     key: "mixed_use",
@@ -100,7 +102,7 @@ const LAYOUT_TEMPLATES: LayoutTemplate[] = [
     density: "Medium density",
     plotSizeLabel: "600 m² plots, wide frontage",
     description: "Wider shop-frontage plots for residential-commercial use, with roads sized for higher traffic and on-street parking.",
-    criteria: { target_plot_area_sqm: 600, frontage_m: 20, road_width_m: 18, edge_reserve_m: 3, drainage_reserve_m: 2, open_space_percent: 8 },
+    criteria: { target_plot_area_sqm: 600, frontage_m: 20, road_width_m: 18, edge_reserve_m: 0, drainage_reserve_m: 2, open_space_percent: 8 },
   },
   {
     key: "custom",
@@ -713,6 +715,9 @@ export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy =
                     <label className="edash-field"><span>Estate edge reserve (m)</span><input type="number" min="0" value={criteria.edge_reserve_m} onChange={(event) => setNumber("edge_reserve_m", event.target.value)} /></label>
                     <label className="edash-field"><span>Drainage reserve (m)</span><input type="number" min="0" disabled={!criteria.include_drainage} value={criteria.drainage_reserve_m} onChange={(event) => setNumber("drainage_reserve_m", event.target.value)} /></label>
                   </div>
+                  <p className="edash-field-note">
+                    Edge reserve sets plots back from the Estate boundary by this many metres before generating the grid - 0 means plots start right at the boundary line. Drainage, if switched on, reserves a strip of this width running all the way around the perimeter for stormwater channels - it's real land set aside for drainage infrastructure, not extra empty space, and it isn't added unless you turn it on.
+                  </p>
                 </div>
 
                 <div className="edash-criteria-group">

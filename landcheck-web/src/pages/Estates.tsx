@@ -287,11 +287,21 @@ function buildLayerLabelFeatures(features: any[]) {
 }
 
 function attachEstateMapLayers(map: any) {
-  map.addSource("estate-boundary", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-  map.addLayer({ id: "estate-boundary-fill", type: "fill", source: "estate-boundary", paint: { "fill-color": "#8bb59a", "fill-opacity": 0.08 } });
-  map.addLayer({ id: "estate-boundary-outline", type: "line", source: "estate-boundary", paint: { "line-color": "#087f76", "line-width": 2, "line-dasharray": [2, 2] } });
-  map.addSource("estate-plots", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-  map.addLayer({
+  // Called again on every "style.load" (including after the Map/Satellite toggle's setStyle()),
+  // so it must be safe to run on a map that may already have some of these sources/layers -
+  // Mapbox's style diffing doesn't reliably guarantee a clean slate, and calling addSource/
+  // addLayer on an id that still exists throws, which was silently killing everything added
+  // after the first duplicate (the plots layer among them).
+  const addSourceOnce = (id: string, config: any) => { if (!map.getSource(id)) map.addSource(id, config); };
+  const addLayerOnce = (config: any) => { if (!map.getLayer(config.id)) map.addLayer(config); };
+
+  addSourceOnce("estate-boundary", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  // No fill here (it read as a solid "wasted space" band around the plots - it wasn't; that's the
+  // generated drainage reserve, its own separate blue layer below) - just a red outline matching
+  // the same surveying convention (red parent boundary, black subdivisions) as the exported plan.
+  addLayerOnce({ id: "estate-boundary-outline", type: "line", source: "estate-boundary", paint: { "line-color": "#d1332b", "line-width": 2.2 } });
+  addSourceOnce("estate-plots", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  addLayerOnce({
     id: "estate-plots-fill",
     type: "fill",
     source: "estate-plots",
@@ -311,17 +321,17 @@ function attachEstateMapLayers(map: any) {
   // A stark, thick white line between EVERY plot - including two plots that are truly touching
   // with zero gap - reads visually as "there's a gap here" even when there isn't one. A thinner,
   // lower-opacity line still shows the legal parcel division without implying separation.
-  map.addLayer({ id: "estate-plots-outline", type: "line", source: "estate-plots", paint: { "line-color": "#ffffff", "line-width": 0.75, "line-opacity": 0.65 } });
-  map.addSource("estate-layers", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-  map.addLayer({ id: "estate-layers-line-casing", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": "#ffffff", "line-width": 5, "line-opacity": 0.9 } });
-  map.addLayer({ id: "estate-layers-line", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "road", "#2b2f36", "drainage", "#287cb4", "#b77c2d"], "line-width": 3 } });
+  addLayerOnce({ id: "estate-plots-outline", type: "line", source: "estate-plots", paint: { "line-color": "#ffffff", "line-width": 0.75, "line-opacity": 0.65 } });
+  addSourceOnce("estate-layers", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  addLayerOnce({ id: "estate-layers-line-casing", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": "#ffffff", "line-width": 5, "line-opacity": 0.9 } });
+  addLayerOnce({ id: "estate-layers-line", type: "line", source: "estate-layers", filter: ["!=", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "road", "#2b2f36", "drainage", "#287cb4", "#b77c2d"], "line-width": 3 } });
   // A hand-drawn road is often stored as a Polygon (a buffered corridor, not a bare centerline),
   // so it must be matched here too - without an explicit "road" case it fell through to the same
   // default blue as drainage, reading as water on the map instead of a road.
-  map.addLayer({ id: "estate-layers-fill", type: "fill", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": ["match", ["get", "type"], "road", "#2b2f36", "open_space", "#78a85d", "drainage", "#287cb4", "infrastructure", "#b77c2d", "#287cb4"], "fill-opacity": ["match", ["get", "type"], "road", 0.85, 0.4] } });
-  map.addLayer({ id: "estate-layers-fill-outline", type: "line", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "road", "#0f1216", "open_space", "#3f7a2c", "drainage", "#1c5aa8", "infrastructure", "#8a4f16", "#1c5aa8"], "line-width": 1.6 } });
-  map.addSource("estate-layer-labels", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-  map.addLayer({
+  addLayerOnce({ id: "estate-layers-fill", type: "fill", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": ["match", ["get", "type"], "road", "#2b2f36", "open_space", "#78a85d", "drainage", "#287cb4", "infrastructure", "#b77c2d", "#287cb4"], "fill-opacity": ["match", ["get", "type"], "road", 0.85, 0.4] } });
+  addLayerOnce({ id: "estate-layers-fill-outline", type: "line", source: "estate-layers", filter: ["==", ["geometry-type"], "Polygon"], paint: { "line-color": ["match", ["get", "type"], "road", "#0f1216", "open_space", "#3f7a2c", "drainage", "#1c5aa8", "infrastructure", "#8a4f16", "#1c5aa8"], "line-width": 1.6 } });
+  addSourceOnce("estate-layer-labels", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  addLayerOnce({
     id: "estate-layer-labels",
     type: "symbol",
     source: "estate-layer-labels",
@@ -329,16 +339,16 @@ function attachEstateMapLayers(map: any) {
     layout: { "text-field": ["get", "label"], "text-size": 10.5, "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"], "symbol-placement": ["match", ["get", "kind"], "line", "line", "point"], "text-max-angle": 30 },
     paint: { "text-color": "#0f1e17", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.6 },
   });
-  map.addSource("estate-block-labels", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-  map.addLayer({
+  addSourceOnce("estate-block-labels", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  addLayerOnce({
     id: "estate-block-labels",
     type: "symbol",
     source: "estate-block-labels",
     layout: { "text-field": ["get", "label"], "text-size": 11, "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"] },
     paint: { "text-color": "#ffffff", "text-halo-color": "rgba(16,24,39,0.85)", "text-halo-width": 3 },
   });
-  map.addSource("estate-plot-labels", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-  map.addLayer({
+  addSourceOnce("estate-plot-labels", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  addLayerOnce({
     id: "estate-plot-labels",
     type: "symbol",
     source: "estate-plot-labels",
@@ -1345,9 +1355,8 @@ export default function Estates() {
       <div className="edash-card edash-map-card">
         <div className="edash-map-toolbar">
           <div className="edash-map-mode-tabs">
-            <button type="button" className={`edash-map-mode-tab${mapStyleMode === "map" ? " active" : ""}`} onClick={() => { setMapStyleMode("map"); mapRef.current?.setStyle("mapbox://styles/mapbox/light-v11"); }}>Map</button>
-            <button type="button" className={`edash-map-mode-tab${mapStyleMode === "satellite" ? " active" : ""}`} onClick={() => { setMapStyleMode("satellite"); mapRef.current?.setStyle("mapbox://styles/mapbox/satellite-streets-v12"); }}>Satellite</button>
-            <button type="button" className={`edash-map-mode-tab${layersVisible ? " active" : ""}`} onClick={() => setLayersVisible((value) => !value)} title="Toggle roads, drainage and open space">Roads & Open Space</button>
+            <button type="button" className={`edash-map-mode-tab${mapStyleMode === "map" ? " active" : ""}`} onClick={() => { setMapStyleMode("map"); mapRef.current?.setStyle("mapbox://styles/mapbox/light-v11", { diff: false }); }}>Map</button>
+            <button type="button" className={`edash-map-mode-tab${mapStyleMode === "satellite" ? " active" : ""}`} onClick={() => { setMapStyleMode("satellite"); mapRef.current?.setStyle("mapbox://styles/mapbox/satellite-streets-v12", { diff: false }); }}>Satellite</button>
           </div>
           <label className="edash-map-search">
             <EstateIcon name="search" />
