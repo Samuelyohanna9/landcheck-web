@@ -388,6 +388,7 @@ export default function Estates() {
   const [deleteEstateTarget, setDeleteEstateTarget] = useState<Estate | null>(null);
   const [deleteEstateConfirmText, setDeleteEstateConfirmText] = useState("");
   const [deleteEstateBusy, setDeleteEstateBusy] = useState(false);
+  const [deleteEstateAllocationWarning, setDeleteEstateAllocationWarning] = useState<string | null>(null);
   const [plotNumber, setPlotNumber] = useState("");
   const [plotInputPoints, setPlotInputPoints] = useState<EstateCoordinatePoint[]>([]);
   const [plotInputCoordinateSystem, setPlotInputCoordinateSystem] = useState("wgs84");
@@ -528,17 +529,23 @@ export default function Estates() {
     try { const response=await api.post(`/estates/organizations/${newEstateOrg}`, { name:newEstateName.trim(), location_text:newEstateLocation.trim() || null, crs:newEstateCrs.trim() || "EPSG:4326", datum:newEstateDatum.trim() || null, project_reference:newEstateProjectReference.trim() || null, project_owner:newEstateProjectOwner.trim() || null, ownership_details:newEstateOwnershipDetails.trim() || null, boundary }); window.location.assign(`/estates/${response.data.id}/map`); }
     catch (error) { setMessage(await extractApiErrorMessage(error, "Estate could not be created."), "danger"); }
   };
-  const deleteEstate = async () => {
+  const deleteEstate = async (force: boolean = false) => {
     if (!deleteEstateTarget) return;
     setDeleteEstateBusy(true);
     try {
-      await api.delete(`/estates/${deleteEstateTarget.id}`);
+      await api.delete(`/estates/${deleteEstateTarget.id}`, force ? { params: { force: true } } : undefined);
       setEstates((current) => current.filter((estate) => estate.id !== deleteEstateTarget.id));
+      setMessage(`"${deleteEstateTarget.name}" was deleted.`);
       setDeleteEstateTarget(null);
       setDeleteEstateConfirmText("");
-      setMessage(`"${deleteEstateTarget.name}" was deleted.`);
-    } catch (error) {
-      setMessage(await extractApiErrorMessage(error, "That Estate could not be deleted."), "danger");
+      setDeleteEstateAllocationWarning(null);
+    } catch (error: any) {
+      const detail = error?.response?.data?.detail;
+      if (error?.response?.status === 409 && detail && typeof detail === "object" && detail.requires_force) {
+        setDeleteEstateAllocationWarning(detail.message || `${detail.allocated_count} plot(s) in this Estate have a customer reservation or allocation.`);
+      } else {
+        setMessage(await extractApiErrorMessage(error, "That Estate could not be deleted."), "danger");
+      }
     } finally {
       setDeleteEstateBusy(false);
     }
@@ -2215,7 +2222,7 @@ export default function Estates() {
                         type="button"
                         className="edash-onboard-estate-delete"
                         title={`Delete ${estate.name}`}
-                        onClick={(event) => { event.stopPropagation(); setDeleteEstateTarget(estate); setDeleteEstateConfirmText(""); }}
+                        onClick={(event) => { event.stopPropagation(); setDeleteEstateTarget(estate); setDeleteEstateConfirmText(""); setDeleteEstateAllocationWarning(null); }}
                       >
                         <EstateIcon name="trash" />
                       </button>
@@ -2270,7 +2277,7 @@ export default function Estates() {
         </div>
 
         {deleteEstateTarget && (
-          <EstateModal title="Delete this Estate?" subtitle="This removes it from every list and picker. Plots, payments and documents are kept, not erased, and this is blocked if any plot has a customer reservation or allocation." onClose={() => { setDeleteEstateTarget(null); setDeleteEstateConfirmText(""); }}>
+          <EstateModal title="Delete this Estate?" subtitle="This removes it from every list and picker. Plots, payments and documents are kept, not erased." onClose={() => { setDeleteEstateTarget(null); setDeleteEstateConfirmText(""); setDeleteEstateAllocationWarning(null); }}>
             <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>
               Type <strong style={{ color: "var(--edash-ink)" }}>{deleteEstateTarget.name}</strong> to confirm.
             </p>
@@ -2278,17 +2285,34 @@ export default function Estates() {
               <span>Estate name</span>
               <input value={deleteEstateConfirmText} onChange={(event) => setDeleteEstateConfirmText(event.target.value)} placeholder={deleteEstateTarget.name} autoFocus />
             </label>
+            {deleteEstateAllocationWarning && (
+              <div style={{ marginBottom: 14 }}>
+                <StatusBanner text={`${deleteEstateAllocationWarning} Force deleting will hide this Estate anyway - the plots, allocations and payment records are kept, they just won't be reachable from here until the Estate is restored from the database.`} tone="danger" />
+              </div>
+            )}
             <div style={{ display: "flex", gap: 8 }}>
-              <button
-                type="button"
-                className="edash-btn-primary"
-                style={{ background: "var(--edash-danger)" }}
-                disabled={deleteEstateBusy || deleteEstateConfirmText.trim() !== deleteEstateTarget.name}
-                onClick={() => void deleteEstate()}
-              >
-                {deleteEstateBusy ? <><Spinner size={14} /> Deleting...</> : "Delete estate"}
-              </button>
-              <button type="button" className="edash-btn-outline" onClick={() => { setDeleteEstateTarget(null); setDeleteEstateConfirmText(""); }}>Cancel</button>
+              {deleteEstateAllocationWarning ? (
+                <button
+                  type="button"
+                  className="edash-btn-primary"
+                  style={{ background: "var(--edash-danger)" }}
+                  disabled={deleteEstateBusy || deleteEstateConfirmText.trim() !== deleteEstateTarget.name}
+                  onClick={() => void deleteEstate(true)}
+                >
+                  {deleteEstateBusy ? <><Spinner size={14} /> Deleting...</> : "Force delete anyway"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="edash-btn-primary"
+                  style={{ background: "var(--edash-danger)" }}
+                  disabled={deleteEstateBusy || deleteEstateConfirmText.trim() !== deleteEstateTarget.name}
+                  onClick={() => void deleteEstate(false)}
+                >
+                  {deleteEstateBusy ? <><Spinner size={14} /> Deleting...</> : "Delete estate"}
+                </button>
+              )}
+              <button type="button" className="edash-btn-outline" onClick={() => { setDeleteEstateTarget(null); setDeleteEstateConfirmText(""); setDeleteEstateAllocationWarning(null); }}>Cancel</button>
             </div>
           </EstateModal>
         )}
