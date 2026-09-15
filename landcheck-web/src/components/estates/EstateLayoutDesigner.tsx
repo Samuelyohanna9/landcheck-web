@@ -28,6 +28,7 @@ type Props = {
   onDecision: (proposalId: number, status: "approved" | "rejected") => void;
   onEditCandidates?: (proposalId: number, plotCandidates: any[], featureCandidates?: any[]) => Promise<void>;
   onAddFeature?: OnAddFeature;
+  onRemoveFeature?: OnRemoveFeature;
 };
 
 const DEFAULT_CRITERIA: LayoutCriteria = {
@@ -250,8 +251,9 @@ function nextPlotNumber(candidates: any[]): string {
 }
 
 type OnAddFeature = (proposalId: number, featureType: "road" | "open_space", geometry: any, widthM: number | undefined, plotCandidates: any[]) => Promise<void>;
+type OnRemoveFeature = (proposalId: number, featureIndex: number, plotCandidates: any[], featureCandidates: any[]) => Promise<void>;
 
-function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature }: { proposal: any; onEditCandidates?: (proposalId: number, plotCandidates: any[], featureCandidates?: any[]) => Promise<void>; onAddFeature?: OnAddFeature }) {
+function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature, onRemoveFeature }: { proposal: any; onEditCandidates?: (proposalId: number, plotCandidates: any[], featureCandidates?: any[]) => Promise<void>; onAddFeature?: OnAddFeature; onRemoveFeature?: OnRemoveFeature }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -276,11 +278,11 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature }: { propos
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [addedPlotNumbers, setAddedPlotNumbers] = useState<Set<string>>(new Set());
   const [featureEdits, setFeatureEdits] = useState<Record<number, any>>({});
-  const [deletedFeatureIndexes, setDeletedFeatureIndexes] = useState<Set<number>>(new Set());
   const [savingEdits, setSavingEdits] = useState(false);
   const [addingFeature, setAddingFeature] = useState(false);
+  const [removingFeature, setRemovingFeature] = useState(false);
   const [roadWidthM, setRoadWidthM] = useState(9);
-  const hasEdits = Object.keys(pendingGeometry).length > 0 || deletedIds.size > 0 || addedPlotNumbers.size > 0 || Object.keys(featureEdits).length > 0 || deletedFeatureIndexes.size > 0;
+  const hasEdits = Object.keys(pendingGeometry).length > 0 || deletedIds.size > 0 || addedPlotNumbers.size > 0 || Object.keys(featureEdits).length > 0;
 
   // Builds the map and its (initially empty) sources exactly once per proposal id - the same
   // build/sync split used for the main Estate map, and for the same reason: populating a source
@@ -432,51 +434,47 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature }: { propos
         if (Object.keys(touchedPlots).length) setPendingGeometry((current) => ({ ...current, ...touchedPlots }));
         if (Object.keys(touchedFeatures).length) setFeatureEdits((current) => ({ ...current, ...touchedFeatures }));
       };
+      // Deleting a plot is a local, staged edit like moving a vertex - "Save changes" applies it.
+      // Deleting a road/open space is immediate instead: giving its vacated space back to the
+      // plots that fronted it (see onRemoveFeature) needs the same real projected-CRS math as
+      // carving does when one is added, which only the backend can do. If both a plot and a
+      // feature are deleted in the same multi-select, the feature removal wins and is sent with
+      // the plot deletion already folded in, since it's about to refresh the whole preview anyway.
       const captureDelete = (event: any) => {
         const newlyDeletedPlots: string[] = [];
-        const newlyDeletedFeatures: number[] = [];
-        const restoredPlots: string[] = [];
+        let featureIndexToRemove: number | null = null;
         (event.features || []).forEach((feature: any) => {
           const id = String(feature.id);
           if (id.startsWith("plot:")) {
             const plotNumber = id.slice(5);
             delete workingCandidatesRef.current[plotNumber];
+            deletedIdsRef.current.add(plotNumber);
             newlyDeletedPlots.push(plotNumber);
-          } else if (id.startsWith("feat:")) {
-            const index = Number(id.slice(5));
-            newlyDeletedFeatures.push(index);
-            // Dynamic auto-adjust: restore every plot this road/open space carved or fully
-            // consumed back to how it looked before that feature ever existed, since the
-            // obstacle is now gone. Skipped for a plot the user separately, deliberately deleted
-            // - that stays deleted rather than reappearing behind their back.
-            const carvedPlots = workingFeaturesRef.current[index]?.carved_plots || [];
-            carvedPlots.forEach((entry: any) => {
-              const plotNumber = String(entry.plot_number);
-              if (deletedIdsRef.current.has(plotNumber)) return;
-              workingCandidatesRef.current[plotNumber] = entry.geometry;
-              // Only a fully-consumed plot (dropped out of proposal.candidates entirely) needs
-              // re-adding as an "extra" candidate at save time - one that was merely trimmed is
-              // still present there, so restoring its geometry here is enough; saveEdits' own
-              // pass over proposal.candidates already picks up whatever workingCandidatesRef
-              // holds for it, and double-adding it would duplicate the plot.
-              const stillListed = (proposal?.candidates || []).some((candidate: any) => String(candidate.plot_number) === plotNumber);
-              if (!stillListed) {
-                extraCandidateMetaRef.current[plotNumber] = entry;
-                restoredPlots.push(plotNumber);
-              }
-            });
+          } else if (id.startsWith("feat:") && featureIndexToRemove === null) {
+            featureIndexToRemove = Number(id.slice(5));
           }
         });
-        if (newlyDeletedPlots.length) {
-          newlyDeletedPlots.forEach((id) => deletedIdsRef.current.add(id));
-          setDeletedIds(new Set(deletedIdsRef.current));
-        }
-        if (newlyDeletedFeatures.length) setDeletedFeatureIndexes((current) => { const next = new Set(current); newlyDeletedFeatures.forEach((index) => next.add(index)); return next; });
-        if (restoredPlots.length) {
-          restoredPlots.forEach((plotNumber) => {
-            draw.add({ type: "Feature", id: `plot:${plotNumber}`, properties: { plot_number: plotNumber }, geometry: workingCandidatesRef.current[plotNumber] });
-          });
-          setAddedPlotNumbers((current) => { const next = new Set(current); restoredPlots.forEach((plotNumber) => next.add(plotNumber)); return next; });
+        if (newlyDeletedPlots.length) setDeletedIds(new Set(deletedIdsRef.current));
+
+        if (featureIndexToRemove !== null && onRemoveFeature && proposal?.id) {
+          const plotCandidates = Object.keys(workingCandidatesRef.current)
+            .filter((plotNumber) => !deletedIdsRef.current.has(plotNumber))
+            .map((plotNumber) => {
+              const original = (proposal.candidates || []).find((candidate: any) => String(candidate.plot_number) === plotNumber) || extraCandidateMetaRef.current[plotNumber];
+              const geometry = workingCandidatesRef.current[plotNumber];
+              return original ? { ...original, geometry } : { plot_number: plotNumber, geometry, valid: true, issues: [] };
+            });
+          const featureCandidates = (proposal.features || []).map((feature: any, index: number) => (featureEdits[index] ? { ...feature, geometry: featureEdits[index] } : feature));
+          setRemovingFeature(true);
+          void onRemoveFeature(proposal.id, featureIndexToRemove, plotCandidates, featureCandidates)
+            .then(() => {
+              setPendingGeometry({});
+              setDeletedIds(new Set());
+              setAddedPlotNumbers(new Set());
+              setFeatureEdits({});
+              setEditing(false);
+            })
+            .finally(() => setRemovingFeature(false));
         }
       };
       // A create only counts as a new road/open space/plot when it was started via one of the
@@ -520,7 +518,6 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature }: { propos
             setDeletedIds(new Set());
             setAddedPlotNumbers(new Set());
             setFeatureEdits({});
-            setDeletedFeatureIndexes(new Set());
             setEditing(false);
           })
           .finally(() => setAddingFeature(false));
@@ -550,7 +547,6 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature }: { propos
     setDeletedIds(new Set());
     setAddedPlotNumbers(new Set());
     setFeatureEdits({});
-    setDeletedFeatureIndexes(new Set());
     setEditing(false);
   };
 
@@ -574,8 +570,7 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature }: { propos
       merged.push(meta ? { ...meta, geometry } : { plot_number: plotNumber, geometry, valid: true, issues: [] });
     });
     const mergedFeatures = (proposal.features || [])
-      .map((feature: any, index: number) => (deletedFeatureIndexes.has(index) ? null : { ...feature, ...(featureEdits[index] ? { geometry: featureEdits[index] } : null) }))
-      .filter(Boolean);
+      .map((feature: any, index: number) => (featureEdits[index] ? { ...feature, geometry: featureEdits[index] } : feature));
     setSavingEdits(true);
     try {
       await onEditCandidates(proposal.id, merged, mergedFeatures);
@@ -583,7 +578,6 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature }: { propos
       setDeletedIds(new Set());
       setAddedPlotNumbers(new Set());
       setFeatureEdits({});
-      setDeletedFeatureIndexes(new Set());
       setEditing(false);
     } finally {
       setSavingEdits(false);
@@ -605,24 +599,24 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature }: { propos
               {onAddFeature && (
                 <label className="edash-layout-preview-road-width" title="Width for the next road you draw">
                   <span>Road</span>
-                  <input type="number" min="1" max="60" value={roadWidthM} disabled={addingFeature} onChange={(event) => setRoadWidthM(Number(event.target.value) || 9)} />
+                  <input type="number" min="1" max="60" value={roadWidthM} disabled={addingFeature || removingFeature} onChange={(event) => setRoadWidthM(Number(event.target.value) || 9)} />
                   <span>m</span>
                 </label>
               )}
               {onAddFeature && (
-                <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits || addingFeature} onClick={() => startDrawingFeature("road")} title="Draw a new road at the width set above">
+                <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits || addingFeature || removingFeature} onClick={() => startDrawingFeature("road")} title="Draw a new road at the width set above">
                   {addingFeature ? <Spinner size={13} /> : null} Add road
                 </button>
               )}
               {onAddFeature && (
-                <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits || addingFeature} onClick={() => startDrawingFeature("open_space")} title="Draw a new open space">
+                <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits || addingFeature || removingFeature} onClick={() => startDrawingFeature("open_space")} title="Draw a new open space">
                   Add open space
                 </button>
               )}
-              <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits || addingFeature || !hasEdits} onClick={() => void saveEdits()} title="Save plot/road/open-space changes">
+              <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits || addingFeature || removingFeature || !hasEdits} onClick={() => void saveEdits()} title="Save plot vertex/delete changes">
                 {savingEdits ? <Spinner size={13} /> : <EstateIcon name="check-circle" />} Save changes
               </button>
-              <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits || addingFeature} onClick={cancelEdits} title="Cancel editing">
+              <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits || addingFeature || removingFeature} onClick={cancelEdits} title="Cancel editing">
                 Cancel
               </button>
             </>
@@ -639,15 +633,17 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature }: { propos
       <span className="edash-layout-preview-count">
         {addingFeature
           ? "Carving the new shape out of overlapping plots..."
-          : editing
-            ? "Drag a vertex to reshape, or select a shape and press Delete/trash to remove it. \"Add plot\" snaps to touching neighbours."
-            : `${proposal.candidates?.length || 0} plots in this draft`}
+          : removingFeature
+            ? "Giving the vacated space back to the plots that fronted it..."
+            : editing
+              ? "Drag a vertex to reshape, or select a shape and press Delete/trash to remove it. \"Add plot\" snaps to touching neighbours."
+              : `${proposal.candidates?.length || 0} plots in this draft`}
       </span>
     </div>
   );
 }
 
-export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy = false, message, messageTone = "good", onGenerate, onDecision, onEditCandidates, onAddFeature }: Props) {
+export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy = false, message, messageTone = "good", onGenerate, onDecision, onEditCandidates, onAddFeature, onRemoveFeature }: Props) {
   const [templateKey, setTemplateKey] = useState<LayoutTemplateKey>("standard");
   const [criteria, setCriteria] = useState<LayoutCriteria>({ ...DEFAULT_CRITERIA, ...LAYOUT_TEMPLATES.find((item) => item.key === "standard")!.criteria });
   const [open, setOpen] = useState(false);
@@ -750,7 +746,7 @@ export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy =
             </div>
             <p className="edash-status-row-desc">{proposal.diagnostics?.estimated_plot_count || proposal.candidates?.length || 0} plots, about {Math.round(Number(proposal.diagnostics?.total_plot_area_sqm || 0)).toLocaleString()} m² of plot area.</p>
             <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>{proposal.diagnostics?.road_count || 0} access roads and {Number(proposal.diagnostics?.open_space_percent || 0).toFixed(1)}% open-space reserve.</p>
-            <LayoutPreviewMap proposal={proposal} onEditCandidates={onEditCandidates} onAddFeature={onAddFeature} />
+            <LayoutPreviewMap proposal={proposal} onEditCandidates={onEditCandidates} onAddFeature={onAddFeature} onRemoveFeature={onRemoveFeature} />
             {proposal.status === "review_required" && (
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                 <button type="button" className="edash-btn-primary" disabled={busy} onClick={() => onDecision(proposal.id, "approved")}>Approve and add plots</button>
