@@ -2552,7 +2552,7 @@ export default function Estates() {
             {renderPlotDrawer()}
             {renderPlotContextMenu()}
           </div>
-          {renderBottomRow(["activity", "progress"])}
+          {renderBottomRow()}
         </>
       ) : (
         <>
