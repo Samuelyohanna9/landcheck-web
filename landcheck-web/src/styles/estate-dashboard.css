@@ -1033,8 +1033,9 @@
 @media (max-width: 1180px) {
   .edash-content-row, .edash-content-row--split { grid-template-columns: 1fr; }
   .edash-drawer { min-height: 300px; }
-  .edash-bottom-row { grid-template-columns: 1fr 1fr; }
-  .edash-bottom-row > :last-child { grid-column: 1 / -1; }
+  /* Recent Activity / Estate Progress / Risk Overview deliberately stay in one 3-column row all
+     the way down - shrinking to fit (see the compact rules below and at 860px) reads better than
+     one of the three getting orphaned onto its own full-width row underneath the other two. */
   /* Map+drawer stack into one column below this width - "stretch to share the row's height"
      stops making sense once they're not in the same row, so fall back to the normal scrolling
      page instead of risking content getting clipped with nowhere to scroll to see it. */
@@ -1050,23 +1051,7 @@
   .edash-body--fill .edash-map-search,
   .edash-body--fill .edash-map-select { height: 34px; }
   .edash-body--fill > .edash-bottom-row { flex: initial; min-height: auto; max-height: none; }
-  .edash-body--fill > .edash-bottom-row .edash-card-inner { padding: 16px; overflow-y: visible; }
-  .edash-body--fill > .edash-bottom-row .edash-card-head { margin-bottom: 12px; }
-  .edash-body--fill > .edash-bottom-row .edash-activity-list { max-height: 320px; gap: 3px; }
-  .edash-body--fill > .edash-bottom-row .edash-progress-donut-row { gap: 18px; }
-  .edash-body--fill > .edash-bottom-row .edash-progress-donut-row svg { width: 118px; height: 118px; }
-  .edash-body--fill > .edash-bottom-row .edash-donut-legend { gap: 8px; }
-  .edash-body--fill > .edash-bottom-row .edash-donut-legend-item { font-size: 0.78rem; }
-  .edash-body--fill > .edash-bottom-row .edash-donut-legend-dot { width: 9px; height: 9px; }
-  .edash-body--fill > .edash-bottom-row .edash-activity-item { padding: 9px 2px; gap: 11px; }
-  .edash-body--fill > .edash-bottom-row .edash-activity-icon { width: 30px; height: 30px; }
-  .edash-body--fill > .edash-bottom-row .edash-activity-icon svg { width: 14px; height: 14px; }
-  .edash-body--fill > .edash-bottom-row .edash-activity-body strong { font-size: 0.8rem; }
-  .edash-body--fill > .edash-bottom-row .edash-activity-body span { font-size: 0.72rem; }
-  .edash-body--fill > .edash-bottom-row .edash-risk-list { gap: 10px; }
-  .edash-body--fill > .edash-bottom-row .edash-risk-icon { width: 30px; height: 30px; }
-  .edash-body--fill > .edash-bottom-row .edash-risk-icon svg { width: 15px; height: 15px; }
-  .edash-body--fill > .edash-bottom-row .edash-risk-item span { font-size: 0.82rem; }
+  .edash-body--fill > .edash-bottom-row .edash-activity-list { max-height: 320px; }
   .edash-body--fill .edash-map-canvas-wrap { min-height: 420px; }
 }
 
@@ -1087,8 +1072,32 @@
   .edash-menu-toggle { display: flex; }
   .edash-breadcrumb strong { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
   .edash-stats-row, .edash-stats-row--five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .edash-bottom-row { grid-template-columns: 1fr; }
-  .edash-bottom-row > :last-child { grid-column: auto; }
+  /* Recent Activity / Estate Progress / Risk Overview shrink to fit rather than stack - each
+     card's own content (icons, text, the donut) scales down further below so all three stay
+     legible side by side instead of one spilling onto its own full-width row underneath. Every
+     selector is duplicated with the .edash-body--fill prefix so it also wins (by specificity)
+     over that context's own compact rules, not just the plain Dashboard page's bottom row. */
+  .edash-bottom-row, .edash-body--fill > .edash-bottom-row { gap: 8px; }
+  .edash-bottom-row .edash-card-inner, .edash-body--fill > .edash-bottom-row .edash-card-inner { padding: 8px 9px; }
+  .edash-bottom-row .edash-card-head, .edash-body--fill > .edash-bottom-row .edash-card-head { margin-bottom: 5px; }
+  .edash-bottom-row .edash-card-title, .edash-body--fill > .edash-bottom-row .edash-card-title { font-size: 0.72rem; }
+  .edash-bottom-row .edash-card-link, .edash-body--fill > .edash-bottom-row .edash-card-link { font-size: 0.66rem; }
+  .edash-bottom-row .edash-progress-donut-row, .edash-body--fill > .edash-bottom-row .edash-progress-donut-row { gap: 6px; }
+  .edash-bottom-row .edash-progress-donut-row svg, .edash-body--fill > .edash-bottom-row .edash-progress-donut-row svg { width: 46px; height: 46px; }
+  .edash-bottom-row .edash-donut-legend, .edash-body--fill > .edash-bottom-row .edash-donut-legend { gap: 2px; }
+  .edash-bottom-row .edash-donut-legend-item, .edash-body--fill > .edash-bottom-row .edash-donut-legend-item { font-size: 0.58rem; gap: 4px; }
+  .edash-bottom-row .edash-donut-legend-dot, .edash-body--fill > .edash-bottom-row .edash-donut-legend-dot { width: 6px; height: 6px; }
+  .edash-bottom-row .edash-activity-list, .edash-body--fill > .edash-bottom-row .edash-activity-list,
+  .edash-bottom-row .edash-risk-list, .edash-body--fill > .edash-bottom-row .edash-risk-list { gap: 3px; }
+  .edash-bottom-row .edash-activity-item, .edash-body--fill > .edash-bottom-row .edash-activity-item { padding: 3px 1px; gap: 5px; }
+  .edash-bottom-row .edash-activity-icon, .edash-body--fill > .edash-bottom-row .edash-activity-icon,
+  .edash-bottom-row .edash-risk-icon, .edash-body--fill > .edash-bottom-row .edash-risk-icon { width: 18px; height: 18px; }
+  .edash-bottom-row .edash-activity-icon svg, .edash-body--fill > .edash-bottom-row .edash-activity-icon svg,
+  .edash-bottom-row .edash-risk-icon svg, .edash-body--fill > .edash-bottom-row .edash-risk-icon svg { width: 9px; height: 9px; }
+  .edash-bottom-row .edash-activity-body strong, .edash-body--fill > .edash-bottom-row .edash-activity-body strong,
+  .edash-bottom-row .edash-risk-item span, .edash-body--fill > .edash-bottom-row .edash-risk-item span { font-size: 0.6rem; }
+  .edash-bottom-row .edash-activity-body span, .edash-body--fill > .edash-bottom-row .edash-activity-body span { font-size: 0.54rem; }
+  .edash-bottom-row .edash-status-pill, .edash-body--fill > .edash-bottom-row .edash-status-pill { padding: 2px 6px; font-size: 0.58rem; }
   .edash-overview-grid--3 { grid-template-columns: 1fr 1fr; }
   .edash-search { display: none; }
   .edash-user-meta { display: none; }
