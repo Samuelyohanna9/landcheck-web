@@ -95,14 +95,15 @@
 
 /* The LandCheck wordmark (/logo.svg) bakes in a light "Land" and a green "Check" for display on a
    dark surface - dropped straight onto the (light) sidebar it would wash out, so it gets its own
-   small dark chip to sit on instead, matching how it already appears in the site's dark nav bars. */
+   small dark chip to sit on instead. Uses the dashboard's own brand green (not the site's navy)
+   so the chip reads as part of this product's palette rather than a mismatched dark box. */
 .edash-sidebar-brand-logo {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
   padding: 9px 13px;
   border-radius: 10px;
-  background: #0a1228;
+  background: var(--edash-brand-dark);
 }
 
 .edash-sidebar-brand-logo img { display: block; height: 22px; width: auto; }
