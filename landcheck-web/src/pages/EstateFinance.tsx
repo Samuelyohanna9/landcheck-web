@@ -128,13 +128,15 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     if (!resolvedMethod) { setError("Enter the payment method."); return; }
     try {
       const made = await api.post(`/estates/allocations/${allocationId}/payments`, { amount, payment_date: paymentDate, payment_method: resolvedMethod, reference_no: reference || null });
-      setNotice("Payment recorded and pending confirmation.");
+      let noticeText = "Payment recorded and pending confirmation.";
       if (receipt) {
         const body = new FormData();
         body.append("file", receipt);
-        try { await api.post(`/estates/payments/${made.data.id}/evidence`, body); setNotice("Payment recorded and receipt attached."); }
+        try { await api.post(`/estates/payments/${made.data.id}/evidence`, body); noticeText = "Payment recorded and receipt attached."; }
         catch (error) { await fail(error, "Payment was recorded, but the receipt upload failed."); }
       }
+      if (made.data.customer_notified) noticeText += " A confirmation email has been sent to the customer.";
+      setNotice(noticeText);
       setRecording(false);
       await load();
     } catch (error) {
@@ -144,8 +146,8 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
 
   const quickConfirm = async (id: number) => {
     try {
-      await api.post(`/estates/payments/${id}/confirm`);
-      setNotice("Payment confirmed.");
+      const response = await api.post(`/estates/payments/${id}/confirm`);
+      setNotice(`Payment confirmed.${response.data.customer_notified ? " A confirmation email has been sent to the customer." : ""}`);
       await load();
     } catch (error) {
       await fail(error, "Payment could not be confirmed.");
@@ -157,9 +159,9 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     const reason = kind === "void" ? window.prompt("Reason for voiding this payment:") : "";
     if (kind === "void" && !reason) return;
     try {
-      await api.post(`/estates/payments/${detail.payment.id}/${kind}`, kind === "void" ? { reason } : undefined);
+      const response = await api.post(`/estates/payments/${detail.payment.id}/${kind}`, kind === "void" ? { reason } : undefined);
       setDetail(null);
-      setNotice(`Payment ${kind}ed.`);
+      setNotice(`Payment ${kind}ed.${kind === "confirm" && response.data.customer_notified ? " A confirmation email has been sent to the customer." : ""}`);
       await load();
     } catch (error) {
       await fail(error, `Payment could not be ${kind}ed.`);
