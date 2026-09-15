@@ -1443,7 +1443,7 @@ function SurveyPlanGeoreferenceSetupStep({
         ? createPortal(
             <div
               ref={popupCardRef}
-              className={`georef-floating-card${manualEntryPopup.mode === "confirm" ? " georef-confirm-card" : ""}`}
+              className={`georef-workspace-redesign georef-floating-card${manualEntryPopup.mode === "confirm" ? " georef-confirm-card" : ""}`}
               style={{ top: cardPosition.top, left: cardPosition.left }}
               onClick={(event) => event.stopPropagation()}
               onMouseDown={(event) => event.stopPropagation()}

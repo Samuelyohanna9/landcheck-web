@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import NavBar from "../components/NavBar";
-import SocialLinks from "../components/SocialLinks";
+import { Suspense, lazy, useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { isSurveyAuthed } from "../auth/surveyAuth";
 import {
   prefetchSurveyPlanPreviewStep,
   prefetchSurveyPlanRoute,
@@ -9,201 +8,49 @@ import {
 } from "../utils/surveyPlanPrefetch";
 import "../styles/survey-plan-landing.css";
 
-type PreviewMode = {
-  id: "survey" | "georeference" | "subdivision";
-  title: string;
-  summary: string;
-};
+const SignupGateModal = lazy(() => import("../components/SignupGateModal"));
 
-type IconName =
-  | "bolt"
-  | "cloud"
-  | "flag"
-  | "doc"
-  | "pin"
-  | "cad"
-  | "grid"
-  | "image"
-  | "upload"
-  | "tripod"
-  | "compass"
-  | "target"
-  | "chevron"
-  | "paperplane"
-  | "sparkle"
-  | "check"
-  | "scan";
-
-const iconPaths: Record<Exclude<IconName, "flag">, string> = {
-  bolt: "M13 2 4 14h6l-1 8 9-12h-6l1-8Z",
-  cloud: "M7 18h10a4 4 0 0 0 .4-7.98A6 6 0 0 0 6.1 12.2 3.5 3.5 0 0 0 7 18Z",
-  doc: "M7 3h7l4 4v14H7V3Zm7 0v4h4M9.5 12.5h5M9.5 15.5h5M9.5 9.5h2",
-  pin: "M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Zm0-8.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
-  cad: "M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 3h6M17 14v6",
-  grid: "M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z",
-  image: "M4 5h16v14H4V5Zm3 10 4-5 3 3.5L17 10l3 5H7Zm1.5-6.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z",
-  upload: "M12 16V4m0 0-4 4m4-4 4 4M5 16v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3",
-  tripod: "M12 4 6 20m6-16 6 16M9 14h6M12 4v6M4 20h16",
-  compass: "M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm3.5 5.5-2 5.5-5.5 2 2-5.5 5.5-2Z",
-  target: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-4a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0-3.2a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z",
-  chevron: "m9 5 7 7-7 7",
-  paperplane: "m3 11 18-8-8 18-2.5-7.5L3 11Zm10.5 2.5L21 3",
-  sparkle: "M12 3v3.5M12 17.5V21M4.6 12H8M16 12h3.4M6.8 6.8l2.4 2.4M14.8 14.8l2.4 2.4M17.2 6.8l-2.4 2.4M9.2 14.8l-2.4 2.4",
-  check: "m5 13 4 4L19 7",
-  scan: "M4 8V5a1 1 0 0 1 1-1h3M20 8V5a1 1 0 0 0-1-1h-3M4 16v3a1 1 0 0 0 1 1h3M20 16v3a1 1 0 0 1-1 1h-3M4 12h16M8 9l4-2 4 2v6l-4 2-4-2V9Z",
-};
-
-function Icon({ name, className }: { name: IconName; className?: string }) {
-  if (name === "flag") {
-    return (
-      <span className={`spl-flag-icon ${className ?? ""}`} aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </span>
-    );
-  }
-  if (name === "sparkle") {
-    return <img src="/LandCheck_Survey_AI_Symbol.svg" alt="" className={className} aria-hidden="true" />;
-  }
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.7}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d={iconPaths[name]} />
-    </svg>
-  );
-}
-
-const heroTrustBadges: { icon: IconName; label: string }[] = [
-  { icon: "bolt", label: "Fast & Accurate" },
-  { icon: "cloud", label: "Cloud Based" },
-  { icon: "flag", label: "African Standards" },
-  { icon: "doc", label: "DWG & PDF Export" },
-];
-
-const previewModes: PreviewMode[] = [
+const capabilities = [
   {
-    id: "survey",
-    title: "Survey plan",
-    summary: "Coordinate to sheet.",
+    title: "Survey plan production",
+    description: "Enter or import coordinates, review the geometry, and prepare a clear survey plan for delivery.",
   },
   {
-    id: "georeference",
-    title: "Georeference",
-    summary: "Control to raster.",
+    title: "Georeference scanned plans",
+    description: "Align a scanned plan with control points, then trace boundaries and features against the map.",
   },
   {
-    id: "subdivision",
-    title: "Plot subdivision",
-    summary: "Parent to lots.",
+    title: "Parcel subdivision",
+    description: "Create and review child plots from a parent parcel, with areas and dimensions kept in view.",
+  },
+  {
+    title: "Coordinate and drawing tools",
+    description: "Work with coordinate data, edit mapped features, and prepare CAD and PDF deliverables.",
   },
 ];
 
-const aiPlanReaderPoints: { icon: IconName; text: string }[] = [
-  { icon: "scan", text: "Upload a photo or scan of an existing survey plan - AI reads every beacon coordinate and label automatically." },
-  { icon: "check", text: "Instantly checked for closure error, area mismatch, duplicate stations, and out-of-range coordinates before you trust it." },
-  { icon: "sparkle", text: "Extracted beacons land straight into the same review table as a CSV import - confirm and go, no retyping from a printout." },
+const workflow = [
+  { title: "Bring in your data", detail: "Coordinates, a scanned plan, or an existing parcel." },
+  { title: "Check and edit", detail: "Review geometry and make corrections on the map." },
+  { title: "Prepare the plan", detail: "Set out the information needed for a professional drawing." },
+  { title: "Export your work", detail: "Create a shareable plan or CAD-ready file." },
 ];
 
-const coreCapabilities: { icon: IconName; title: string; detail: string; isNew?: boolean }[] = [
-  { icon: "sparkle", title: "AI Plan Reader", detail: "Digitize any existing survey plan photo or scan - AI extracts and checks beacon coordinates for you.", isNew: true },
-  { icon: "pin", title: "Georeference", detail: "Georeference plans with Minna or WGS84 datum." },
-  { icon: "cad", title: "CAD & Survey Tools", detail: "Powerful CAD tools for survey drafting." },
-  { icon: "grid", title: "Plot Subdivision", detail: "Automatic subdivision and labeling." },
-  { icon: "doc", title: "Reports", detail: "Export professional reports and documents." },
-  { icon: "image", title: "Orthophoto Maps", detail: "View and download high resolution maps." },
-  { icon: "upload", title: "Export", detail: "Export to DWG, PDF and other formats." },
+const socialLinks = [
+  { label: "Instagram", href: "https://www.instagram.com/land.check/" },
+  { label: "Facebook", href: "https://www.facebook.com/landcheck/" },
+  { label: "YouTube", href: "https://www.youtube.com/@LandCheckGreen" },
+  { label: "TikTok", href: "https://www.tiktok.com/@landcheckgeo" },
+  { label: "LinkedIn", href: "https://www.linkedin.com/company/landcheck-geospatial/" },
 ];
-
-const productionRoutes: { icon: IconName; title: string; detail: string; action: string }[] = [
-  {
-    icon: "tripod",
-    title: "General Survey",
-    detail: "Cadastral, Topographic, Engineering survey",
-    action: "Open drafting workspace",
-  },
-  {
-    icon: "pin",
-    title: "Georeference",
-    detail: "Georeference existing plans and maps",
-    action: "Open raster workspace",
-  },
-  {
-    icon: "grid",
-    title: "Subdivision",
-    detail: "Divide land into plots and generate plans",
-    action: "Open subdivision workspace",
-  },
-  {
-    icon: "compass",
-    title: "Back Computation",
-    detail: "Compute missing sides, angles and coordinates",
-    action: "Open back computation workspace",
-  },
-];
-
-const screenPreviewAssets: Record<PreviewMode["id"], { src: string; alt: string }> = {
-  survey: {
-    src: "/survey  plan preview.jpg",
-    alt: "Preview of plotted survey plan output",
-  },
-  georeference: {
-    src: "/georefrence preview.jpg",
-    alt: "Preview of georeferenced raster and control workflow",
-  },
-  subdivision: {
-    src: "/subdivision_preview.jpg",
-    alt: "Preview of plot subdivision output",
-  },
-};
-
-function SurveyPreviewScene({ mode }: { mode: PreviewMode }) {
-  const activeAsset = screenPreviewAssets[mode.id];
-
-  return (
-    <div className="spl-laptop-stage" aria-label={`${mode.title} preview`}>
-      <img
-        className="spl-laptop-shell"
-        src="/survey-laptop-hand.png"
-        alt="Laptop displaying a survey preview"
-        loading="eager"
-      />
-      <div className="spl-laptop-display">
-        <figure className="spl-laptop-display-frame">
-          <img
-            key={activeAsset.src}
-            src={activeAsset.src}
-            alt={activeAsset.alt}
-            className={`spl-laptop-preview spl-laptop-preview--${mode.id}`}
-            loading="eager"
-          />
-        </figure>
-      </div>
-    </div>
-  );
-}
 
 export default function SurveyPlanLanding() {
   const navigate = useNavigate();
-  const [activePanel, setActivePanel] = useState(0);
+  const [signInOpen, setSignInOpen] = useState(false);
+  const signedIn = isSurveyAuthed();
 
   useEffect(() => {
     scheduleSurveyPlanIdlePrefetch();
-  }, []);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setActivePanel((current) => (current + 1) % previewModes.length);
-    }, 4200);
-    return () => window.clearInterval(timer);
   }, []);
 
   const warmSurveyEntry = () => {
@@ -211,238 +58,171 @@ export default function SurveyPlanLanding() {
     void prefetchSurveyPlanPreviewStep();
   };
 
-  const openSurvey = () => {
+  const openWorkspace = () => {
     warmSurveyEntry();
     navigate("/survey-plan");
   };
 
-  const activePreview = previewModes[activePanel];
-
   return (
     <div className="spl-page">
-      <NavBar fixed overlay activeRoute="/survey" ctaLabel="Open Survey Plan" ctaRoute="/survey-plan" />
+      <header className="spl-nav">
+        <Link to="/" className="spl-brand" aria-label="LandCheck home">
+          <span>LandCheck</span>
+          <span className="spl-brand-product">Survey</span>
+        </Link>
+        <nav className="spl-nav-links" aria-label="Survey navigation">
+          <a href="#capabilities">Capabilities</a>
+          <a href="#workflow">Workflow</a>
+          {signedIn ? (
+            <Link to="/dashboard">Dashboard</Link>
+          ) : (
+            <button type="button" onClick={() => setSignInOpen(true)}>Sign in</button>
+          )}
+          <button type="button" className="spl-nav-workspace" onMouseEnter={warmSurveyEntry} onClick={openWorkspace}>
+            Open workspace
+          </button>
+        </nav>
+      </header>
 
       <main>
-        <section className="spl-hero">
-          <div className="spl-hero-overlay" />
+        <section className="spl-hero" aria-labelledby="spl-hero-title">
+          <div className="spl-hero-device" aria-hidden="true">
+            <img className="spl-hero-laptop" src="/survey-laptop-hand.png" alt="" />
+            <div className="spl-hero-screen">
+              <img src="/survey%20%20plan%20preview.jpg" alt="" />
+            </div>
+          </div>
+          <div className="spl-hero-shade" />
           <div className="spl-shell spl-hero-shell">
             <div className="spl-hero-copy">
-              <span className="spl-kicker">LandCheck Survey Studio</span>
-              <h1>Survey plan. Georeference. Plot subdivision.</h1>
-              <p>One browser workspace for parcel production.</p>
+              <p className="spl-kicker">LandCheck Survey</p>
+              <h1 id="spl-hero-title">Survey work, clearly mapped.</h1>
+              <p className="spl-hero-summary">
+                Prepare survey plans, georeference scanned layouts and subdivide parcels in one browser workspace.
+              </p>
               <div className="spl-hero-actions">
-                <button
-                  type="button"
-                  className="spl-btn-primary"
-                  onMouseEnter={warmSurveyEntry}
-                  onFocus={warmSurveyEntry}
-                  onClick={openSurvey}
-                >
-                  Open Survey Plan
+                <button type="button" className="spl-text-link spl-text-link--light" onMouseEnter={warmSurveyEntry} onClick={openWorkspace}>
+                  Open the survey workspace <span aria-hidden="true">↗</span>
                 </button>
-                <a className="spl-btn-secondary" href="#survey-capabilities">
-                  View Features
+                <a className="spl-text-link spl-text-link--light-muted" href="#capabilities">
+                  Explore capabilities
                 </a>
               </div>
-              <div className="spl-hero-badges" aria-label="Survey capabilities">
-                {heroTrustBadges.map((badge) => (
-                  <span key={badge.label} className="spl-hero-badge">
-                    <Icon name={badge.icon} className="spl-hero-badge-icon" />
-                    {badge.label}
-                  </span>
-                ))}
-              </div>
+              <p className="spl-hero-note">Coordinate work, drafting and deliverables in one place.</p>
             </div>
           </div>
         </section>
 
-        <section className="spl-device-band">
-          <div className="spl-shell">
-            <div className="spl-device-shell">
-              <div className="spl-device-copy">
-                <span className="spl-section-kicker">Live preview</span>
-                <h2>{activePreview.title}</h2>
-                <p>{activePreview.summary}</p>
-                <div className="spl-device-labels" aria-hidden="true">
-                  {previewModes.map((mode, index) => (
-                    <span
-                      key={mode.id}
-                      className={`spl-device-label${index === activePanel ? " is-active" : ""}`}
-                    >
-                      {mode.title}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="spl-computer" aria-live="polite">
-                <div className="spl-computer-screen">
-                  <SurveyPreviewScene mode={activePreview} />
-                </div>
-                <div className="spl-geo-card" aria-hidden="true">
-                  <span className="spl-geo-card-icon">
-                    <Icon name="target" />
-                  </span>
-                  <div className="spl-geo-card-body">
-                    <strong>Georeferenced</strong>
-                    <span>UTM Zone 32N</span>
-                    <span>Minna Datum</span>
-                    <span className="spl-geo-card-pill">High Accuracy</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="survey-capabilities" className="spl-section spl-section--light">
-          <div className="spl-shell spl-section-shell">
+        <section id="capabilities" className="spl-section spl-capabilities">
+          <div className="spl-shell spl-capabilities-layout">
             <div className="spl-section-intro">
-              <span className="spl-section-kicker">Built for survey professionals</span>
-              <h2>Everything you need for survey production.</h2>
+              <p className="spl-section-kicker">A practical survey workspace</p>
+              <h2>From source data to a finished plan.</h2>
+              <p>
+                Move from coordinates or a scanned drawing to checked geometry and a professional output without breaking the workflow into separate tools.
+              </p>
             </div>
-
-            <div className="spl-capability-grid">
-              {coreCapabilities.map((item) => (
-                <article key={item.title} className={`spl-capability-card${item.isNew ? " spl-capability-card--new" : ""}`}>
-                  {item.isNew && <span className="spl-capability-card-badge">New</span>}
-                  <span className="spl-capability-card-icon">
-                    <Icon name={item.icon} />
-                  </span>
-                  <h3>{item.title}</h3>
-                  <p>{item.detail}</p>
-                </article>
+            <ol className="spl-capability-list">
+              {capabilities.map((item, index) => (
+                <li key={item.title}>
+                  <span className="spl-list-number">0{index + 1}</span>
+                  <div>
+                    <h3>{item.title}</h3>
+                    <p>{item.description}</p>
+                  </div>
+                </li>
               ))}
-            </div>
+            </ol>
           </div>
         </section>
 
-        <section className="spl-section spl-section--ai">
-          <div className="spl-shell spl-ai-shell">
-            <div className="spl-ai-copy">
-              <span className="spl-section-kicker spl-section-kicker--ai">AI-Powered · New</span>
-              <h2>Stop retyping beacon coordinates by hand.</h2>
-              <p className="spl-ai-lede">
-                Every surveyor has a drawer full of old plans that only exist on paper or as a flat photo.
-                The AI Plan Reader turns that photo into checked, editable coordinates in seconds.
+        <section id="workflow" className="spl-workflow">
+          <div className="spl-shell">
+            <div className="spl-workflow-intro">
+              <p className="spl-section-kicker">One connected process</p>
+              <h2>Bring in the work. Leave with a plan.</h2>
+            </div>
+            <ol className="spl-workflow-list">
+              {workflow.map((step, index) => (
+                <li key={step.title}>
+                  <span className="spl-list-number">0{index + 1}</span>
+                  <h3>{step.title}</h3>
+                  <p>{step.detail}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        <section className="spl-scan-section">
+          <div className="spl-shell spl-scan-layout">
+            <div>
+              <p className="spl-section-kicker">For existing plans</p>
+              <h2>Make scanned work usable again.</h2>
+            </div>
+            <div className="spl-scan-copy">
+              <p>
+                Read beacon labels and coordinates from a scanned schedule with AI assistance, then review the results. For scanned drawings, align the image with control points and trace the features you need.
               </p>
-              <ul className="spl-ai-points">
-                {aiPlanReaderPoints.map((point) => (
-                  <li key={point.text}>
-                    <span className="spl-ai-point-icon">
-                      <Icon name={point.icon} />
-                    </span>
-                    <span>{point.text}</span>
-                  </li>
-                ))}
-              </ul>
-              <button
-                type="button"
-                className="spl-btn-primary"
-                onMouseEnter={warmSurveyEntry}
-                onFocus={warmSurveyEntry}
-                onClick={openSurvey}
-              >
-                Try the AI Plan Reader
+              <button type="button" className="spl-text-link" onMouseEnter={warmSurveyEntry} onClick={openWorkspace}>
+                Open georeferencing tools <span aria-hidden="true">↗</span>
               </button>
             </div>
-            <div className="spl-ai-visual" aria-hidden="true">
-              <div className="spl-ai-visual-card">
-                <div className="spl-ai-visual-row">
-                  <span>PB1</span>
-                  <span>312,481.22</span>
-                  <span>124,905.60</span>
-                  <Icon name="check" className="spl-ai-visual-check" />
-                </div>
-                <div className="spl-ai-visual-row">
-                  <span>PB2</span>
-                  <span>312,560.05</span>
-                  <span>124,918.31</span>
-                  <Icon name="check" className="spl-ai-visual-check" />
-                </div>
-                <div className="spl-ai-visual-row spl-ai-visual-row--flag">
-                  <span>PB3</span>
-                  <span>312,602.90</span>
-                  <span>124,880.14</span>
-                  <span className="spl-ai-visual-flag">Low confidence</span>
-                </div>
-                <div className="spl-ai-visual-footer">Closure error: 0.04m &middot; 3 of 3 beacons read</div>
-              </div>
-            </div>
           </div>
         </section>
 
-        <section className="spl-section spl-section--paper">
-          <div className="spl-shell spl-section-shell">
-            <div className="spl-routes-panel">
-              <div className="spl-section-intro spl-section-intro--narrow spl-section-intro--center">
-                <span className="spl-section-kicker">Choose the job</span>
-                <h2>What would you like to do today?</h2>
-              </div>
-
-              <div className="spl-routes-grid">
-                {productionRoutes.map((route) => (
-                  <button
-                    type="button"
-                    key={route.title}
-                    className="spl-route-card"
-                    onMouseEnter={warmSurveyEntry}
-                    onFocus={warmSurveyEntry}
-                    onClick={openSurvey}
-                    aria-label={route.action}
-                  >
-                    <span className="spl-route-card-icon">
-                      <Icon name={route.icon} />
-                    </span>
-                    <span className="spl-route-card-body">
-                      <strong>{route.title}</strong>
-                      <span>{route.detail}</span>
-                    </span>
-                    <Icon name="chevron" className="spl-route-card-chevron" />
-                  </button>
-                ))}
-              </div>
-
-              <p className="spl-routes-tip">
-                <strong>Tip:</strong>&nbsp;You can switch jobs anytime from the dashboard.
-              </p>
-            </div>
-          </div>
+        <section className="spl-closing">
+          <p className="spl-section-kicker">LandCheck Survey</p>
+          <h2>Start your next survey in the browser.</h2>
+          <button type="button" className="spl-text-link" onMouseEnter={warmSurveyEntry} onClick={openWorkspace}>
+            Open the survey workspace <span aria-hidden="true">↗</span>
+          </button>
         </section>
-
-        <footer className="spl-footer">
-          <div className="spl-shell spl-footer-shell">
-            <div className="spl-footer-copy">
-              <span className="spl-footer-icon">
-                <Icon name="paperplane" />
-              </span>
-              <div>
-                <h2>Start the next survey job.</h2>
-                <p>LandCheck Survey. Fast, reliable, professional.</p>
-              </div>
-            </div>
-            <div className="spl-footer-actions">
-              <button
-                type="button"
-                className="spl-btn-primary"
-                onMouseEnter={warmSurveyEntry}
-                onFocus={warmSurveyEntry}
-                onClick={openSurvey}
-              >
-                Launch Survey Plan
-              </button>
-              <a className="spl-btn-secondary" href="mailto:landchecktech@gmail.com?subject=Survey%20Plan%20Support">
-                Learn More
-              </a>
-            </div>
-          </div>
-
-          <div className="spl-shell spl-footer-bottom">
-            <span>LandCheck Survey Plan for drafting, georeferencing, and subdivision.</span>
-            <SocialLinks className="spl-footer-social" />
-          </div>
-        </footer>
       </main>
+
+      <footer className="spl-footer">
+        <div className="spl-footer-main">
+          <div className="spl-footer-brand">
+            <Link to="/" className="spl-brand">
+              <span>LandCheck</span>
+              <span className="spl-brand-product">Survey</span>
+            </Link>
+            <a href="mailto:landchecktech@gmail.com">landchecktech@gmail.com</a>
+            <a href="https://landcheck.online" target="_blank" rel="noopener noreferrer">landcheck.online</a>
+            <span>LandCheck Geospatial Technologies Limited</span>
+          </div>
+          <div className="spl-footer-column">
+            <h2>Products</h2>
+            <Link to="/estates">LandCheck Estates</Link>
+            <Link to="/green-partners">LandCheck Green</Link>
+            <Link to="/survey">Survey Plan</Link>
+            <Link to="/flood">Flood Risk Analysis</Link>
+          </div>
+          <div className="spl-footer-column">
+            <h2>Tools</h2>
+            <Link to="/survey-plan">Survey workspace</Link>
+            <Link to="/hazard-analysis">Hazard analysis</Link>
+            <a href="mailto:landchecktech@gmail.com?subject=LandCheck%20Support">Support</a>
+            <Link to="/privacy">Privacy</Link>
+          </div>
+          <div className="spl-footer-column">
+            <h2>Social</h2>
+            {socialLinks.map((item) => (
+              <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer">{item.label}</a>
+            ))}
+          </div>
+        </div>
+        <div className="spl-footer-bottom">
+          <span>© {new Date().getFullYear()} LandCheck Geospatial Technologies Limited</span>
+          <Link to={signedIn ? "/dashboard" : "/survey-plan"}>{signedIn ? "Open dashboard" : "Open survey workspace"}</Link>
+        </div>
+      </footer>
+
+      {signInOpen && (
+        <Suspense fallback={null}>
+          <SignupGateModal isOpen={signInOpen} onClose={() => setSignInOpen(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }
