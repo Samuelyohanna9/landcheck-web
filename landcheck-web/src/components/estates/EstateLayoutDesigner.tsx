@@ -259,6 +259,16 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature }: { propos
   const newFeatureTypeRef = useRef<"road" | "open_space" | "plot" | null>(null);
   const workingCandidatesRef = useRef<Record<string, any>>({});
   const workingFeaturesRef = useRef<any[]>([]);
+  // Draw event handlers are attached once per edit session and must never read React state
+  // directly (that would close over whatever `deletedIds` was AT ATTACH TIME, not its latest
+  // value) - this ref is the live mirror they read from instead, updated in lockstep with the
+  // state setter everywhere deletedIds changes.
+  const deletedIdsRef = useRef<Set<string>>(new Set());
+  // Full original candidate objects (block_label etc.) for plot numbers that exist in the working
+  // set but not in proposal.candidates as-is - either a brand-new hand-drawn plot (no entry here,
+  // falls back to a bare candidate) or a plot restored after deleting the road/open space that had
+  // carved or fully consumed it (a real entry here, so its original metadata comes back too).
+  const extraCandidateMetaRef = useRef<Record<string, any>>({});
   const [mapReady, setMapReady] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -386,6 +396,8 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature }: { propos
       (proposal?.candidates || []).forEach((candidate: any) => { workingPlots[String(candidate.plot_number)] = JSON.parse(JSON.stringify(candidate.geometry)); });
       workingCandidatesRef.current = workingPlots;
       workingFeaturesRef.current = JSON.parse(JSON.stringify(proposal?.features || []));
+      deletedIdsRef.current = new Set();
+      extraCandidateMetaRef.current = {};
 
       const plotFeatures = (proposal?.candidates || []).map((candidate: any) => ({ type: "Feature", id: `plot:${candidate.plot_number}`, properties: { plot_number: candidate.plot_number }, geometry: candidate.geometry }));
       const otherFeatures = (proposal?.features || []).map((feature: any, index: number) => ({ type: "Feature", id: `feat:${index}`, properties: { feature_type: feature.feature_type }, geometry: feature.geometry }));
@@ -423,6 +435,7 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature }: { propos
       const captureDelete = (event: any) => {
         const newlyDeletedPlots: string[] = [];
         const newlyDeletedFeatures: number[] = [];
+        const restoredPlots: string[] = [];
         (event.features || []).forEach((feature: any) => {
           const id = String(feature.id);
           if (id.startsWith("plot:")) {
@@ -430,11 +443,41 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature }: { propos
             delete workingCandidatesRef.current[plotNumber];
             newlyDeletedPlots.push(plotNumber);
           } else if (id.startsWith("feat:")) {
-            newlyDeletedFeatures.push(Number(id.slice(5)));
+            const index = Number(id.slice(5));
+            newlyDeletedFeatures.push(index);
+            // Dynamic auto-adjust: restore every plot this road/open space carved or fully
+            // consumed back to how it looked before that feature ever existed, since the
+            // obstacle is now gone. Skipped for a plot the user separately, deliberately deleted
+            // - that stays deleted rather than reappearing behind their back.
+            const carvedPlots = workingFeaturesRef.current[index]?.carved_plots || [];
+            carvedPlots.forEach((entry: any) => {
+              const plotNumber = String(entry.plot_number);
+              if (deletedIdsRef.current.has(plotNumber)) return;
+              workingCandidatesRef.current[plotNumber] = entry.geometry;
+              // Only a fully-consumed plot (dropped out of proposal.candidates entirely) needs
+              // re-adding as an "extra" candidate at save time - one that was merely trimmed is
+              // still present there, so restoring its geometry here is enough; saveEdits' own
+              // pass over proposal.candidates already picks up whatever workingCandidatesRef
+              // holds for it, and double-adding it would duplicate the plot.
+              const stillListed = (proposal?.candidates || []).some((candidate: any) => String(candidate.plot_number) === plotNumber);
+              if (!stillListed) {
+                extraCandidateMetaRef.current[plotNumber] = entry;
+                restoredPlots.push(plotNumber);
+              }
+            });
           }
         });
-        if (newlyDeletedPlots.length) setDeletedIds((current) => { const next = new Set(current); newlyDeletedPlots.forEach((id) => next.add(id)); return next; });
+        if (newlyDeletedPlots.length) {
+          newlyDeletedPlots.forEach((id) => deletedIdsRef.current.add(id));
+          setDeletedIds(new Set(deletedIdsRef.current));
+        }
         if (newlyDeletedFeatures.length) setDeletedFeatureIndexes((current) => { const next = new Set(current); newlyDeletedFeatures.forEach((index) => next.add(index)); return next; });
+        if (restoredPlots.length) {
+          restoredPlots.forEach((plotNumber) => {
+            draw.add({ type: "Feature", id: `plot:${plotNumber}`, properties: { plot_number: plotNumber }, geometry: workingCandidatesRef.current[plotNumber] });
+          });
+          setAddedPlotNumbers((current) => { const next = new Set(current); restoredPlots.forEach((plotNumber) => next.add(plotNumber)); return next; });
+        }
       };
       // A create only counts as a new road/open space/plot when it was started via one of the
       // "Add ..." buttons (which set this ref right before switching Draw into a drawing mode) -
@@ -464,9 +507,9 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature }: { propos
         try { draw.delete(feature.id); } catch { /* already gone */ }
         if (!onAddFeature || !proposal?.id) return;
         const plotCandidates = Object.keys(workingCandidatesRef.current)
-          .filter((plotNumber) => !deletedIds.has(plotNumber))
+          .filter((plotNumber) => !deletedIdsRef.current.has(plotNumber))
           .map((plotNumber) => {
-            const original = (proposal.candidates || []).find((candidate: any) => String(candidate.plot_number) === plotNumber);
+            const original = (proposal.candidates || []).find((candidate: any) => String(candidate.plot_number) === plotNumber) || extraCandidateMetaRef.current[plotNumber];
             const geometry = workingCandidatesRef.current[plotNumber];
             return original ? { ...original, geometry } : { plot_number: plotNumber, geometry, valid: true, issues: [] };
           });
@@ -526,7 +569,9 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature }: { propos
       });
     addedPlotNumbers.forEach((plotNumber) => {
       const geometry = workingCandidatesRef.current[plotNumber];
-      if (geometry) merged.push({ plot_number: plotNumber, geometry, valid: true, issues: [] });
+      if (!geometry) return;
+      const meta = extraCandidateMetaRef.current[plotNumber];
+      merged.push(meta ? { ...meta, geometry } : { plot_number: plotNumber, geometry, valid: true, issues: [] });
     });
     const mergedFeatures = (proposal.features || [])
       .map((feature: any, index: number) => (deletedFeatureIndexes.has(index) ? null : { ...feature, ...(featureEdits[index] ? { geometry: featureEdits[index] } : null) }))
