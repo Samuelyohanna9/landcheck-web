@@ -1,183 +1,143 @@
-import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import "../styles/estate-portal.css";
 
 const workflow = [
-  ["01", "Bring in the layout", "Import survey coordinates, CSV, GeoJSON, DXF or a scanned plan."],
-  ["02", "Approve spatial truth", "Review plots, blocks, roads and geometry checks before publishing the register."],
-  ["03", "Run the commercial register", "Reserve plots, allocate buyers, track payments and keep documents against the parcel."],
-  ["04", "Deliver the plot", "Prepare Survey outputs and DGPS staking files, then track development from the web dashboard."],
+  ["01", "Bring in your layout", "Upload survey coordinates, a CAD or GIS drawing, a CSV, or a scanned plan."],
+  ["02", "Review the estate map", "Check plot boundaries, numbering, roads and shared spaces before approving the register."],
+  ["03", "Manage plots and buyers", "Track availability, reservations, allocations, customer details, payments and documents."],
+  ["04", "Prepare and deliver", "Create survey and staking outputs, then keep development progress with the plot."],
 ];
 
-const capabilities: Array<{ title: string; detail: string; icon: ReactNode }> = [
-  {
-    title: "Hazard analysis",
-    detail: "Screen flood risk, erosion susceptibility and general vulnerability for a single plot, or run the whole layout in one pass. Results update on the estate dashboard the moment it finishes - no separate report to go and chase down.",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M12 3.5 21 19.5H3L12 3.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-        <path d="M12 10v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-        <circle cx="12" cy="16.6" r="1" fill="currentColor" />
-      </svg>
-    ),
-  },
-  {
-    title: "Survey plan production",
-    detail: "Generate a clean, branded site layout plan straight from the approved plot register - red parent boundary, black subdivisions, a graphical scale bar, north arrow and legend, sized from A0 down to A4, with or without buyer names for marketing use.",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <rect x="4" y="3.5" width="16" height="17" rx="1.2" stroke="currentColor" strokeWidth="1.5" />
-        <circle cx="12" cy="12" r="4.6" stroke="currentColor" strokeWidth="1.4" />
-        <path d="m13.6 10-1.1 2.8-2.8 1.1 1.1-2.8 2.8-1.1Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    title: "DGPS export",
-    detail: "Export stakeout-ready coordinates for one plot or the whole layout at once, in Minna datum, Nigeria's UTM zones, or its West, Mid and East cadastral belts - whichever your field team already works in.",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M12 21s-6.5-5.6-6.5-10.8A6.5 6.5 0 0 1 12 3.5a6.5 6.5 0 0 1 6.5 6.7C18.5 15.4 12 21 12 21Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-        <circle cx="12" cy="10" r="2.1" stroke="currentColor" strokeWidth="1.4" />
-      </svg>
-    ),
-  },
-  {
-    title: "Commission tracking",
-    detail: "A single-level, volume-tiered commission ladder modelled on how Nigerian agencies actually pay their agents - rates step up automatically as an agent closes more, and every payout is recorded with a receipt, not a spreadsheet.",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <rect x="3.5" y="6.5" width="17" height="12" rx="1.6" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M3.5 10.5h17" stroke="currentColor" strokeWidth="1.5" />
-        <circle cx="16.5" cy="14.5" r="1.1" fill="currentColor" />
-      </svg>
-    ),
-  },
+const capabilities = [
+  ["Estate layout", "Bring in an existing plan, review its geometry and publish the approved plots to your estate register."],
+  ["Plot and customer records", "See each plot's status, buyer, agreed price, payment progress and documents together."],
+  ["Payments and documents", "Record and review payments, keep receipt evidence private, and open customer statements."],
+  ["Survey and staking", "Prepare survey work and export staking coordinates from the approved plot geometry."],
+  ["Land intelligence", "Review available terrain, flood and erosion screening alongside the estate map."],
 ];
 
-const nigeriaPoints = [
-  ["Priced in Naira", "Every contract price, collection and commission figure is in NGN throughout - never a converted placeholder."],
-  ["Nigerian coordinate systems", "Coordinate exports support Minna datum, Nigeria's UTM zones and its West, Mid and East cadastral belts, not just WGS84."],
-  ["A commission structure agents recognise", "Single-level and volume-tiered, matching documented Nigerian agency practice - not a multi-level recruiting structure."],
-  ["Reservation before allocation", "A plot can be held on a deposit and only becomes officially Allocated once fully paid, the way estates here actually sell."],
+const marketDetails = [
+  ["Local transactions", "Keep estate prices, payments and collections in Nigerian naira."],
+  ["Survey-aware", "Move from approved plot geometry into LandCheck Survey outputs when the work is ready."],
+  ["Office-first", "Manage the estate in the web workspace. Field evidence can support delivery, but it is not the daily operating flow."],
 ];
 
 export default function EstateLanding() {
   return (
     <main className="estate-portal">
-      <nav className="estate-portal-nav" aria-label="Estate product navigation">
-        <Link to="/estates" className="estate-wordmark"><span>LANDCHECK</span><strong>ESTATES</strong></Link>
-        <div className="estate-portal-nav-links">
-          <a href="#workflow">Workflow</a>
-          <a href="#capabilities">Capabilities</a>
-          <a href="#intelligence">Intelligence</a>
+      <header className="estate-portal-nav">
+        <Link to="/estates" className="estate-brand" aria-label="LandCheck Estates home">
+          <img src="/logo.svg" alt="LandCheck" width="138" height="38" />
+          <span>ESTATES</span>
+        </Link>
+        <nav className="estate-portal-nav-links" aria-label="Estate product navigation">
+          <a href="#workflow">How it works</a>
+          <a href="#capabilities">What you can do</a>
+          <a href="#intelligence">Land intelligence</a>
           <Link to="/estates/login" className="estate-nav-login">Sign in</Link>
-          <Link to="/estates/register" className="estate-button estate-button--small">Register company</Link>
-        </div>
-      </nav>
+          <Link to="/estates/register" className="estate-nav-cta">Create account</Link>
+        </nav>
+      </header>
 
-      <section className="estate-hero">
-        <div className="estate-hero-copy">
-          <p className="estate-kicker">The operating system for estate developers</p>
-          <h1>Turn a land layout into a working estate.</h1>
-          <p className="estate-hero-lede">
-            LandCheck Estates brings your survey data, approved plot register, hazard screening, survey plan production,
-            DGPS exports, customers, collections, commissions and delivery workflow into one web workspace.
-          </p>
-          <div className="estate-hero-actions">
-            <Link to="/estates/register" className="estate-button">Create your company workspace <span aria-hidden="true">-&gt;</span></Link>
-            <Link to="/estates/login" className="estate-text-link">Already registered? Sign in</Link>
-          </div>
-          <div className="estate-hero-proof"><span>Web-first</span><span>Parcel-centred</span><span>Survey-ready</span></div>
+      <section className="estate-introduction" aria-labelledby="estate-intro-title">
+        <div className="estate-intro-copy">
+          <p className="estate-kicker">LandCheck Estates</p>
+          <h1 id="estate-intro-title">From boundary to buyer to build.</h1>
         </div>
-        <div className="estate-hero-visual" aria-label="Estate operations overview">
-          <div className="estate-visual-grid" />
-          <div className="estate-map-card">
-            <div className="estate-map-card-top"><span>ESTATE REGISTER</span><b>LIVE</b></div>
-            <div className="estate-mini-map">
-              <i className="plot plot--available" /><i className="plot plot--sold" /><i className="plot plot--reserved" />
-              <i className="plot plot--available" /><i className="plot plot--sold" /><i className="plot plot--available" />
-              <span className="estate-road estate-road--one" /><span className="estate-road estate-road--two" />
-            </div>
-            <div className="estate-map-card-footer"><strong>Northfield Gardens</strong><span>248 plots - 3 blocks</span></div>
+        <div className="estate-intro-summary">
+          <p>Plan and run your estate from an approved map. Bring in your existing survey data, review the layout, then manage plots, customers, payments and delivery in one web workspace.</p>
+          <div className="estate-intro-actions">
+            <Link to="/estates/register" className="estate-button">Create a company account</Link>
+            <Link to="/estates/login" className="estate-text-link">Sign in to your workspace</Link>
           </div>
-          <div className="estate-float-card estate-float-card--cash"><small>COLLECTED</small><strong>NGN 84.6m</strong><span>Up 12.4% this quarter</span></div>
-          <div className="estate-float-card estate-float-card--queue"><small>DELIVERY QUEUE</small><strong>18 plots</strong><span>Awaiting staking</span></div>
         </div>
       </section>
 
-      <section className="estate-trust-strip">
-        <span>BUILT FOR PROPERTY DEVELOPERS</span>
-        <span>Survey data stays authoritative</span>
-        <span>Every action is auditable</span>
-        <span>No field app required for daily operations</span>
-      </section>
+      <figure className="estate-landscape" role="img" aria-label="A planned residential estate with plots, homes and internal roads">
+        <figcaption><span>LANDCHECK ESTATES</span><span>One clear register for every plot.</span></figcaption>
+      </figure>
 
-      <section className="estate-workflow-section" id="workflow">
+      <div className="estate-principles" aria-label="Product principles">
+        <span>Map-led planning</span>
+        <span>Parcel-centred records</span>
+        <span>Survey-ready delivery</span>
+        <span>Web-first operations</span>
+      </div>
+
+      <section className="estate-content-section" id="workflow">
         <div className="estate-section-heading">
-          <p className="estate-kicker">One connected workflow</p>
-          <h2>From boundary to buyer to build.</h2>
-          <p>Start with the land you already have. LandCheck keeps the parcel as the source of truth while your team moves the project forward.</p>
+          <p className="estate-kicker">A connected workflow</p>
+          <div>
+            <h2>Keep the land, the plan and the sale in step.</h2>
+            <p>Start with the survey or layout you already have. Each approved plot becomes the record your team can use as the project moves forward.</p>
+          </div>
         </div>
-        <div className="estate-workflow-grid">
+        <ol className="estate-workflow-list">
           {workflow.map(([number, title, detail]) => (
-            <article key={number}><span>{number}</span><h3>{title}</h3><p>{detail}</p></article>
+            <li key={number}>
+              <span className="estate-step-number">{number}</span>
+              <h3>{title}</h3>
+              <p>{detail}</p>
+            </li>
           ))}
-        </div>
+        </ol>
       </section>
 
-      <section className="estate-capabilities-section" id="capabilities">
+      <section className="estate-content-section estate-capabilities-section" id="capabilities">
         <div className="estate-section-heading">
-          <p className="estate-kicker">Purpose-built modules</p>
-          <h2>What actually gets a plot sold and delivered.</h2>
-          <p>Four capabilities most estate teams still run through separate consultants, spreadsheets and field trips - handled inside the same register instead.</p>
+          <p className="estate-kicker">The estate workspace</p>
+          <div>
+            <h2>Everything important stays with the plot.</h2>
+            <p>Give your team one place to see what a plot is, who it belongs to and what needs to happen next.</p>
+          </div>
         </div>
-        <div className="estate-capabilities-grid">
-          {capabilities.map((item) => (
-            <article key={item.title} className="estate-capability-card">
-              <span className="estate-capability-icon">{item.icon}</span>
-              <h3>{item.title}</h3>
-              <p>{item.detail}</p>
-            </article>
+        <dl className="estate-capability-list">
+          {capabilities.map(([title, detail], index) => (
+            <div key={title}>
+              <dt><span>{String(index + 1).padStart(2, "0")}</span>{title}</dt>
+              <dd>{detail}</dd>
+            </div>
           ))}
-        </div>
+        </dl>
       </section>
 
       <section className="estate-intelligence-section" id="intelligence">
-        <div>
-          <p className="estate-kicker">Land intelligence before commitment</p>
-          <h2>See constraints before they become expensive.</h2>
-          <p>Keep estate-level screening and plot-level screening separate. Review floodplain and low-lying susceptibility, erosion indicators, terrain and other available constraints alongside the operational map.</p>
-          <Link to="/estates/register" className="estate-text-link estate-text-link--light">Open an Estate workspace <span aria-hidden="true">-&gt;</span></Link>
+        <div className="estate-intelligence-copy">
+          <p className="estate-kicker">Understand the land</p>
+          <h2>See the site before making the next decision.</h2>
+          <p>Review available terrain and environmental screening at estate or plot level. Flood and erosion indicators stay distinct, so your team can understand what each result does and does not say.</p>
+          <Link to="/estates/register" className="estate-text-link estate-text-link--light">Open an Estate workspace <span aria-hidden="true">&rarr;</span></Link>
         </div>
-        <div className="estate-intelligence-list">
-          <div><b>LAND</b><span>Boundary - terrain - flood - erosion</span></div>
-          <div><b>PLANNING</b><span>Blocks - plots - roads - open spaces</span></div>
-          <div><b>COMMERCIAL</b><span>Customers - allocations - payments - commissions</span></div>
-          <div><b>DELIVERY</b><span>Survey - staking - development</span></div>
-        </div>
+        <dl className="estate-intelligence-list">
+          <div><dt>LAND</dt><dd>Boundary, terrain and screening</dd></div>
+          <div><dt>LAYOUT</dt><dd>Plots, roads and shared spaces</dd></div>
+          <div><dt>COMMERCIAL</dt><dd>Customers, payments and records</dd></div>
+          <div><dt>DELIVERY</dt><dd>Survey, staking and development</dd></div>
+        </dl>
       </section>
 
-      <section className="estate-nigeria-section" id="nigeria">
+      <section className="estate-content-section estate-market-section">
         <div className="estate-section-heading">
-          <p className="estate-kicker">Built for this market</p>
-          <h2>Not a general real-estate tool adapted after the fact.</h2>
-          <p>One of the first platforms built specifically around how Nigerian estate developers already operate, rather than a generic international product retrofitted with a Naira sign.</p>
+          <p className="estate-kicker">Made for estate teams</p>
+          <div>
+            <h2>Built around how your project actually moves.</h2>
+            <p>LandCheck Estates connects the approved map to the day-to-day work of selling and delivering plots.</p>
+          </div>
         </div>
-        <div className="estate-nigeria-grid">
-          {nigeriaPoints.map(([title, detail]) => (
-            <div key={title} className="estate-nigeria-item">
-              <h3>{title}</h3>
-              <p>{detail}</p>
-            </div>
+        <dl className="estate-market-list">
+          {marketDetails.map(([title, detail]) => (
+            <div key={title}><dt>{title}</dt><dd>{detail}</dd></div>
           ))}
-        </div>
+        </dl>
       </section>
 
       <footer className="estate-portal-footer">
-        <Link to="/estates" className="estate-wordmark"><span>LANDCHECK</span><strong>ESTATES</strong></Link>
-        <span>Spatial truth for property development.</span>
-        <Link to="/estates/login">Sign in to workspace</Link>
+        <Link to="/estates" className="estate-brand" aria-label="LandCheck Estates home">
+          <img src="/logo.svg" alt="LandCheck" width="126" height="35" />
+          <span>ESTATES</span>
+        </Link>
+        <span>Spatial records for property development.</span>
+        <Link to="/estates/login">Sign in to your workspace</Link>
       </footer>
     </main>
   );
