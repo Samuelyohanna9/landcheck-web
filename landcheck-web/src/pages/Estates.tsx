@@ -1955,8 +1955,10 @@ export default function Estates() {
   }
 
   function renderBottomRow(cards: Array<"activity" | "progress" | "risk"> = ["activity", "progress", "risk"]) {
+    const columnRatios: Record<"activity" | "progress" | "risk", number> = { activity: 1.15, progress: 0.85, risk: 0.85 };
+    const gridTemplateColumns = cards.map((key) => `minmax(0, ${columnRatios[key]}fr)`).join(" ");
     return (
-      <div className="edash-bottom-row">
+      <div className="edash-bottom-row" style={{ gridTemplateColumns }}>
         {cards.includes("activity") && (
         <div className="edash-card">
           <div className="edash-card-inner">
@@ -2547,14 +2549,14 @@ export default function Estates() {
       {isMapView && message && <StatusBanner text={message} tone={messageTone} />}
       {renderStatsRow()}
       {isMapView ? (
-        <>
-          <div className="edash-content-row">
+        <div className="edash-map-grid">
+          <div className="edash-map-grid-left">
             {renderMapPanel()}
-            {renderPlotDrawer()}
-            {renderPlotContextMenu()}
+            {renderBottomRow(["activity", "progress"])}
           </div>
-          {renderBottomRow()}
-        </>
+          {renderPlotDrawer()}
+          {renderPlotContextMenu()}
+        </div>
       ) : (
         <>
           {renderBottomRow()}

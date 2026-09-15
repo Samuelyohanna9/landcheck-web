@@ -68,10 +68,12 @@ export default function EstateShell({
   const [notifOpen, setNotifOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [seenActivityCount, setSeenActivityCount] = useState(0);
   const estateSession = getEstateAuthSession();
   const activeItem = estateNavItems.find((item) => item.key === activeKey);
   const notifRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const unreadCount = Math.max(0, recentActivity.length - seenActivityCount);
 
   // Without this, these dropdowns only ever close via their own toggle button - clicking
   // anywhere else on the page (including the other dropdown) leaves them stuck open.
@@ -135,9 +137,14 @@ export default function EstateShell({
           )}
           <div className="edash-topbar-right">
             <div style={{ position: "relative" }} ref={notifRef}>
-              <button type="button" className="edash-icon-btn" onClick={() => setNotifOpen((value) => !value)} aria-label="Recent updates">
+              <button
+                type="button"
+                className="edash-icon-btn"
+                onClick={() => setNotifOpen((value) => { const next = !value; if (next) setSeenActivityCount(recentActivity.length); return next; })}
+                aria-label="Recent updates"
+              >
                 <EstateIcon name="bell" />
-                {recentActivity.length > 0 && <span className="edash-notif-badge">{Math.min(recentActivity.length, 9)}</span>}
+                {unreadCount > 0 && <span className="edash-notif-badge">{Math.min(unreadCount, 9)}</span>}
               </button>
               {notifOpen && (
                 <div className="edash-card" style={{ position: "absolute", right: 0, top: 44, width: 300, zIndex: 20 }}>
