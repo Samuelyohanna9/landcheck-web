@@ -50,7 +50,8 @@ export type EstateIconName =
   | "activity"
   | "chart-donut"
   | "lock"
-  | "draw";
+  | "draw"
+  | "trash";
 
 export default function EstateIcon({ name, className = "" }: { name: EstateIconName; className?: string }) {
   switch (name) {
@@ -146,6 +147,8 @@ export default function EstateIcon({ name, className = "" }: { name: EstateIconN
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5.5" y="11" width="13" height="9" rx="1.8" stroke="currentColor" strokeWidth="1.5" /><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /><circle cx="12" cy="15.2" r="1.3" fill="currentColor" /></svg>;
     case "draw":
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 18.5 6.2 13 15 4.2a1.8 1.8 0 0 1 2.6 0l1.2 1.2a1.8 1.8 0 0 1 0 2.6L10 17l-5.5 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" /><path d="m13.3 6 3.7 3.7" stroke="currentColor" strokeWidth="1.4" /></svg>;
+    case "trash":
+      return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 7h14M9.5 7V5.2a1.2 1.2 0 0 1 1.2-1.2h2.6a1.2 1.2 0 0 1 1.2 1.2V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M7 7v12.3A1.7 1.7 0 0 0 8.7 21h6.6a1.7 1.7 0 0 0 1.7-1.7V7" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /><path d="M10.2 11v6M13.8 11v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>;
     case "image":
       return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="1.8" stroke="currentColor" strokeWidth="1.5" /><circle cx="9" cy="10" r="1.6" stroke="currentColor" strokeWidth="1.3" /><path d="m5.5 17.5 4.5-5 3.5 3.8 2.5-2.8 3 4" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" /></svg>;
     case "wallet":

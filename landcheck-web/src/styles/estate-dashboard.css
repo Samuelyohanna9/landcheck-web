@@ -1048,7 +1048,14 @@
 .edash-onboard-advanced[open] summary::before { content: "\2212 "; }
 .edash-onboard-advanced > div { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--edash-border-soft); }
 
-.edash-onboard-submit { width: 100%; height: 42px; font-size: 0.85rem; }
+.edash-onboard-submit {
+  width: 100%;
+  height: 42px;
+  font-size: 0.85rem;
+  position: sticky;
+  bottom: 14px;
+  box-shadow: var(--edash-shadow-pop);
+}
 
 .edash-onboard-divider {
   display: flex;
@@ -1066,6 +1073,46 @@
 
 .edash-onboard-existing { display: flex; gap: 8px; }
 .edash-onboard-existing select { flex: 1; }
+
+.edash-onboard-estate-list { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
+.edash-onboard-estate-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  border: 1px solid var(--edash-border);
+  border-radius: var(--edash-radius-sm);
+  background: #fff;
+  overflow: hidden;
+}
+.edash-onboard-estate-open {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+.edash-onboard-estate-open:hover { background: var(--edash-brand-tint); }
+.edash-onboard-estate-open strong { font-size: 0.85rem; color: var(--edash-ink); }
+.edash-onboard-estate-open span { font-size: 0.72rem; color: var(--edash-muted); }
+.edash-onboard-estate-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  border: none;
+  border-left: 1px solid var(--edash-border-soft);
+  background: none;
+  color: var(--edash-faint);
+  cursor: pointer;
+}
+.edash-onboard-estate-delete svg { width: 16px; height: 16px; }
+.edash-onboard-estate-delete:hover { background: var(--edash-danger-tint); color: var(--edash-danger); }
 
 .edash-onboard-hint { color: var(--edash-faint); font-size: 0.78rem; text-align: center; }
 .edash-onboard-hint.tone-danger { color: var(--edash-danger); font-weight: 600; }
