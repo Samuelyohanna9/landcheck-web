@@ -739,7 +739,11 @@
 }
 
 /* ─── Plot drawer ─── */
-.edash-drawer { display: flex; flex-direction: column; min-height: 420px; }
+/* align-self (not the parent's align-items) so the drawer always matches the map card's full
+   height whenever they're sharing a row, regardless of which align-items value is active at the
+   current viewport width - previously it only stretched in the map-view "fill" layout above
+   1180px, leaving a visible gap under it elsewhere. */
+.edash-drawer { display: flex; flex-direction: column; min-height: 420px; align-self: stretch; }
 
 .edash-drawer-empty {
   display: flex;
@@ -835,9 +839,13 @@
 
 .edash-drawer-body { flex: 1; padding: 14px 16px 18px; overflow-y: auto; }
 
+/* auto-fit instead of a fixed column count: each field claims at least 76px (comfortably fits
+   "Reserved", "625.86 m²", etc. at this font size without wrapping mid-word) and wraps onto a new
+   row once the drawer is too narrow to fit them all on one line, rather than every column being
+   squeezed below its content's natural width. */
 .edash-overview-grid {
   display: grid;
-  grid-template-columns: 1.3fr 0.85fr 1fr 0.95fr auto;
+  grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
   gap: 12px;
   padding: 12px;
   margin-bottom: 12px;
@@ -847,8 +855,8 @@
 }
 
 .edash-overview-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.edash-overview-field span { color: var(--edash-faint); font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
-.edash-overview-field strong { color: var(--edash-ink); font-size: 0.82rem; font-weight: 700; overflow-wrap: break-word; }
+.edash-overview-field span { color: var(--edash-faint); font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+.edash-overview-field strong { color: var(--edash-ink); font-size: 0.82rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .edash-overview-thumb {
   width: 52px;
@@ -858,6 +866,8 @@
   object-fit: cover;
   background: var(--edash-border-soft);
   border: 1px solid var(--edash-border);
+  justify-self: end;
+  align-self: center;
 }
 
 .edash-info-card {
@@ -1061,13 +1071,13 @@
   .edash-stats-row, .edash-stats-row--five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .edash-bottom-row { grid-template-columns: 1fr; }
   .edash-bottom-row > :last-child { grid-column: auto; }
-  .edash-overview-grid, .edash-overview-grid--3 { grid-template-columns: 1fr 1fr; }
+  .edash-overview-grid--3 { grid-template-columns: 1fr 1fr; }
   .edash-search { display: none; }
   .edash-user-meta { display: none; }
 }
 
 @media (max-width: 520px) {
-  .edash-overview-grid, .edash-overview-grid--2, .edash-overview-grid--3 { grid-template-columns: 1fr; }
+  .edash-overview-grid--2, .edash-overview-grid--3 { grid-template-columns: 1fr; }
 }
 
 /* ─── Estate onboarding: pick or create an estate (no sidebar - nothing to navigate to yet) ─── */
