@@ -1351,11 +1351,6 @@ export default function Estates() {
     ];
     return (
       <>
-        <div className="edash-section-head">
-          <button type="button" className="edash-btn-outline" onClick={flyToSelectedPlot} disabled={!selectedPlot}>
-            <EstateIcon name="map" /> View on Map
-          </button>
-        </div>
         <div className="edash-stats-row">
           {cards.map((card) => (
             <div key={card.label} className="edash-stat-card">
