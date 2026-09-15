@@ -80,15 +80,68 @@
 .estate-auth-shell { display: flex; flex-direction: column; justify-content: center; gap: 30px; min-height: 100vh; width: min(100% - 48px, 470px); margin: auto; padding: 40px 0; }
 .estate-auth-shell--register { display: grid; grid-template-columns: minmax(230px, 1fr) minmax(360px, 450px); gap: clamp(45px, 9vw, 130px); align-items: center; width: min(100% - 48px, 1030px); }
 .estate-auth-shell--register .estate-wordmark { grid-column: 1 / -1; align-self: start; }
-.estate-auth-card { padding: 34px; background: #fff; border: 1px solid var(--estate-line); box-shadow: 18px 22px 50px rgba(16, 36, 58, .1); }
+.estate-auth-card {
+  position: relative;
+  padding: 38px 34px 34px;
+  background: #fff;
+  border: 1px solid var(--estate-line);
+  box-shadow: 0 1px 2px rgba(16, 36, 58, .06), 22px 26px 60px rgba(16, 36, 58, .12);
+  overflow: hidden;
+}
+.estate-auth-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--estate-cyan), #167d7b 65%, var(--estate-gold));
+}
 .estate-auth-card h1, .estate-auth-card h2 { margin: 10px 0; font-size: 2.5rem; font-weight: 400; letter-spacing: -.04em; }
 .estate-auth-card > p:not(.estate-kicker) { color: var(--estate-slate); line-height: 1.6; }
 .estate-auth-card form { display: grid; gap: 16px; margin-top: 27px; }
 .estate-auth-card label { display: grid; gap: 7px; color: var(--estate-ink); font: 700 .7rem Arial, sans-serif; }
 .estate-auth-card label small { color: #81909b; font-weight: 400; }
-.estate-auth-card input { box-sizing: border-box; width: 100%; padding: 13px 12px; border: 1px solid #ccd6d6; background: #fbfcf8; color: var(--estate-ink); font: 1rem Georgia, serif; outline: 0; }
-.estate-auth-card input:focus { border-color: #208f8a; box-shadow: 0 0 0 3px rgba(32, 143, 138, .12); }
+.estate-auth-card input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 13px 12px;
+  border: 1px solid #ccd6d6;
+  background: #fbfcf8;
+  color: var(--estate-ink);
+  font: 1rem Georgia, serif;
+  outline: 0;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.estate-auth-card input:hover { border-color: #b7c4c4; }
+.estate-auth-card input:focus { border-color: #208f8a; background: #fff; box-shadow: 0 0 0 3px rgba(32, 143, 138, .14); }
+
+.estate-password-field { position: relative; display: flex; }
+.estate-password-field input { padding-right: 44px; }
+.estate-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  color: #8b99a2;
+  cursor: pointer;
+  transition: color .15s ease, background .15s ease;
+}
+.estate-password-toggle:hover { color: var(--estate-ink); background: rgba(16, 36, 58, .06); }
+.estate-password-toggle:focus-visible { outline: 2px solid #208f8a; outline-offset: 1px; }
+.estate-password-toggle svg { width: 19px; height: 19px; }
+
 .estate-auth-error { padding: 11px 12px; background: #fff0eb; border-left: 3px solid #c5533e; color: #9b392a; font: 600 .76rem Arial, sans-serif; line-height: 1.4; }
+.estate-auth-trust { display: flex; align-items: center; gap: 7px; margin: 18px 0 0; color: #8b99a2; font: 600 .68rem Arial, sans-serif; letter-spacing: .04em; }
+.estate-auth-trust svg { width: 13px; height: 13px; flex-shrink: 0; }
 .estate-auth-switch { margin: 23px 0 0 !important; color: #74828c !important; font: 600 .74rem Arial, sans-serif !important; }
 .estate-auth-switch a, .estate-auth-back { color: #167d7b; font-weight: 700; }
 .estate-auth-back { font: 600 .7rem Arial, sans-serif; text-decoration: none; }
