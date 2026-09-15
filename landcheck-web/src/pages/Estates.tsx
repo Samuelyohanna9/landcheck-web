@@ -385,6 +385,9 @@ export default function Estates() {
   const [newEstateOwnershipDetails, setNewEstateOwnershipDetails] = useState("");
   const [newEstateBoundaryCoordinates, setNewEstateBoundaryCoordinates] = useState("");
   const [newEstateOrg, setNewEstateOrg] = useState("");
+  const [deleteEstateTarget, setDeleteEstateTarget] = useState<Estate | null>(null);
+  const [deleteEstateConfirmText, setDeleteEstateConfirmText] = useState("");
+  const [deleteEstateBusy, setDeleteEstateBusy] = useState(false);
   const [plotNumber, setPlotNumber] = useState("");
   const [plotInputPoints, setPlotInputPoints] = useState<EstateCoordinatePoint[]>([]);
   const [plotInputCoordinateSystem, setPlotInputCoordinateSystem] = useState("wgs84");
@@ -524,6 +527,21 @@ export default function Estates() {
     const boundary = boundaryRows.length >= 3 ? { type: "Polygon", coordinates: [[...boundaryRows, boundaryRows[0]]] } : null;
     try { const response=await api.post(`/estates/organizations/${newEstateOrg}`, { name:newEstateName.trim(), location_text:newEstateLocation.trim() || null, crs:newEstateCrs.trim() || "EPSG:4326", datum:newEstateDatum.trim() || null, project_reference:newEstateProjectReference.trim() || null, project_owner:newEstateProjectOwner.trim() || null, ownership_details:newEstateOwnershipDetails.trim() || null, boundary }); window.location.assign(`/estates/${response.data.id}/map`); }
     catch (error) { setMessage(await extractApiErrorMessage(error, "Estate could not be created."), "danger"); }
+  };
+  const deleteEstate = async () => {
+    if (!deleteEstateTarget) return;
+    setDeleteEstateBusy(true);
+    try {
+      await api.delete(`/estates/${deleteEstateTarget.id}`);
+      setEstates((current) => current.filter((estate) => estate.id !== deleteEstateTarget.id));
+      setDeleteEstateTarget(null);
+      setDeleteEstateConfirmText("");
+      setMessage(`"${deleteEstateTarget.name}" was deleted.`);
+    } catch (error) {
+      setMessage(await extractApiErrorMessage(error, "That Estate could not be deleted."), "danger");
+    } finally {
+      setDeleteEstateBusy(false);
+    }
   };
   const approveEstateMap = async () => {
     if (!estateId) return;
@@ -2186,11 +2204,23 @@ export default function Estates() {
             <div className="edash-card edash-onboard-card">
               <div className="edash-card-inner">
                 <div className="edash-card-head"><h3 className="edash-card-title">Open an existing estate</h3></div>
-                <div className="edash-onboard-existing">
-                  <select className="edash-map-select" defaultValue="" onChange={(event) => { if (event.target.value) navigate(`/estates/${event.target.value}/map`); }}>
-                    <option value="">Select an estate</option>
-                    {estates.map((estate) => <option key={estate.id} value={estate.id}>{estate.name}{estate.location ? ` - ${estate.location}` : ""}</option>)}
-                  </select>
+                <div className="edash-onboard-estate-list">
+                  {estates.map((estate) => (
+                    <div key={estate.id} className="edash-onboard-estate-row">
+                      <button type="button" className="edash-onboard-estate-open" onClick={() => navigate(`/estates/${estate.id}/map`)}>
+                        <strong>{estate.name}</strong>
+                        {estate.location && <span>{estate.location}</span>}
+                      </button>
+                      <button
+                        type="button"
+                        className="edash-onboard-estate-delete"
+                        title={`Delete ${estate.name}`}
+                        onClick={(event) => { event.stopPropagation(); setDeleteEstateTarget(estate); setDeleteEstateConfirmText(""); }}
+                      >
+                        <EstateIcon name="trash" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -2238,6 +2268,30 @@ export default function Estates() {
 
           {message && <p className={`edash-onboard-hint${messageTone === "danger" ? " tone-danger" : ""}`}>{message}</p>}
         </div>
+
+        {deleteEstateTarget && (
+          <EstateModal title="Delete this Estate?" subtitle="This removes it from every list and picker. Plots, payments and documents are kept, not erased, and this is blocked if any plot has a customer reservation or allocation." onClose={() => { setDeleteEstateTarget(null); setDeleteEstateConfirmText(""); }}>
+            <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>
+              Type <strong style={{ color: "var(--edash-ink)" }}>{deleteEstateTarget.name}</strong> to confirm.
+            </p>
+            <label className="edash-field" style={{ marginBottom: 14 }}>
+              <span>Estate name</span>
+              <input value={deleteEstateConfirmText} onChange={(event) => setDeleteEstateConfirmText(event.target.value)} placeholder={deleteEstateTarget.name} autoFocus />
+            </label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                type="button"
+                className="edash-btn-primary"
+                style={{ background: "var(--edash-danger)" }}
+                disabled={deleteEstateBusy || deleteEstateConfirmText.trim() !== deleteEstateTarget.name}
+                onClick={() => void deleteEstate()}
+              >
+                {deleteEstateBusy ? <><Spinner size={14} /> Deleting...</> : "Delete estate"}
+              </button>
+              <button type="button" className="edash-btn-outline" onClick={() => { setDeleteEstateTarget(null); setDeleteEstateConfirmText(""); }}>Cancel</button>
+            </div>
+          </EstateModal>
+        )}
       </div>
     );
   }
