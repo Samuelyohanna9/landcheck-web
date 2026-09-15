@@ -19,6 +19,7 @@ export default function EstateCustomersPage() {
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
+  const [newEmail, setNewEmail] = useState("");
   const [message, setMessage] = useState("");
 
   const load = () => {
@@ -56,8 +57,8 @@ export default function EstateCustomersPage() {
   const createCustomer = async () => {
     if (!organizationId || !newName.trim()) { setMessage("Enter the customer name."); return; }
     try {
-      await api.post(`/estates/organizations/${organizationId}/customers`, { full_name: newName.trim(), phone: newPhone.trim() || null });
-      setNewName(""); setNewPhone(""); setMessage(""); setShowAddCustomer(false);
+      await api.post(`/estates/organizations/${organizationId}/customers`, { full_name: newName.trim(), phone: newPhone.trim() || null, email: newEmail.trim() || null });
+      setNewName(""); setNewPhone(""); setNewEmail(""); setMessage(""); setShowAddCustomer(false);
       load();
     } catch (error) {
       setMessage(await extractApiErrorMessage(error, "Customer could not be created."));
@@ -126,6 +127,7 @@ export default function EstateCustomersPage() {
         <EstateModal title="Add customer" subtitle="Create a customer record before reserving or allocating a plot to them." onClose={() => setShowAddCustomer(false)}>
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Full name</span><input value={newName} onChange={(event) => setNewName(event.target.value)} autoFocus /></label>
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Phone (optional)</span><input value={newPhone} onChange={(event) => setNewPhone(event.target.value)} /></label>
+          <label className="edash-field" style={{ marginBottom: 12 }}><span>Email (optional)</span><input type="email" value={newEmail} onChange={(event) => setNewEmail(event.target.value)} placeholder="Lifecycle updates are sent here" /></label>
           {message && <p className="edash-tab-empty" style={{ padding: "0 0 8px", textAlign: "left" }}>{message}</p>}
           <button type="button" className="edash-btn-primary" onClick={() => void createCustomer()}>Add customer</button>
         </EstateModal>

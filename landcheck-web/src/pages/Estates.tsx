@@ -394,9 +394,11 @@ export default function Estates() {
   const [plotInputCoordinateSystem, setPlotInputCoordinateSystem] = useState("wgs84");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [agreedPrice, setAgreedPrice] = useState("");
   const [paymentPlan, setPaymentPlan] = useState("");
+  const [amountPaidNow, setAmountPaidNow] = useState("");
   const [inspectionNotes, setInspectionNotes] = useState("");
   const [inspectionOutcome, setInspectionOutcome] = useState("observed");
   const [hazards, setHazards] = useState<any>(null);
@@ -719,12 +721,21 @@ export default function Estates() {
   const createCustomer = async () => {
     const estate = estates.find((item) => item.id === Number(estateId));
     if (!estate || !customerName.trim()) { setMessage("Enter the customer name.", "danger"); return; }
-    try { const response = await api.post(`/estates/organizations/${estate.organization_id}/customers`, { full_name: customerName.trim(), phone: customerPhone.trim() || null }); setSelectedCustomerId(String(response.data.id)); setCustomerName(""); setCustomerPhone(""); window.location.reload(); }
+    try { const response = await api.post(`/estates/organizations/${estate.organization_id}/customers`, { full_name: customerName.trim(), phone: customerPhone.trim() || null, email: customerEmail.trim() || null }); setSelectedCustomerId(String(response.data.id)); setCustomerName(""); setCustomerPhone(""); setCustomerEmail(""); window.location.reload(); }
     catch (error) { setMessage(await extractApiErrorMessage(error, "Customer could not be created."), "danger"); }
   };
   const assignCustomer = async (allocate: boolean) => {
     if (!estateId || !selectedPlot || !selectedCustomerId) { setMessage("Choose a parcel and customer first.", "danger"); return; }
-    try { await api.post(`/estates/${estateId}/plots/${selectedPlot.id}/${allocate ? "allocate" : "reserve"}`, { customer_id: Number(selectedCustomerId), agreed_price: agreedPrice ? Number(agreedPrice) : null, payment_plan: paymentPlan.trim() || null }); window.location.reload(); }
+    try {
+      await api.post(`/estates/${estateId}/plots/${selectedPlot.id}/${allocate ? "allocate" : "reserve"}`, {
+        customer_id: Number(selectedCustomerId),
+        agreed_price: agreedPrice ? Number(agreedPrice) : null,
+        payment_plan: paymentPlan.trim() || null,
+        initial_payment_amount: amountPaidNow ? Number(amountPaidNow) : null,
+        initial_payment_method: amountPaidNow ? "bank_transfer" : null,
+      });
+      window.location.reload();
+    }
     catch (error) { setMessage(await extractApiErrorMessage(error, "Parcel action could not be completed."), "danger"); }
   };
   const recordInspection = async () => {
@@ -1686,6 +1697,8 @@ export default function Estates() {
                     <div className="edash-tab-panel">
                       <p className="edash-tab-empty" style={{ padding: "10px 0" }}>This plot has no customer yet. Add one or choose an existing customer to reserve or allocate it.</p>
                       <label className="edash-overview-field" style={{ marginBottom: 8 }}><span>New customer</span><input value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="Full name" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} /></label>
+                      <input value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} placeholder="Phone (optional)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
+                      <input type="email" value={customerEmail} onChange={(event) => setCustomerEmail(event.target.value)} placeholder="Email (optional - lifecycle updates are sent here)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
                       <button type="button" className="edash-btn-outline" onClick={() => void createCustomer()}>Add customer</button>
                       <select className="edash-map-select" style={{ margin: "10px 0", width: "100%" }} value={selectedCustomerId} onChange={(event) => setSelectedCustomerId(event.target.value)}>
                         <option value="">Choose customer</option>
@@ -1693,6 +1706,14 @@ export default function Estates() {
                       </select>
                       <input type="number" min="0" step="0.01" value={agreedPrice} onChange={(event) => setAgreedPrice(event.target.value)} placeholder="Agreed price (NGN)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
                       <input value={paymentPlan} onChange={(event) => setPaymentPlan(event.target.value)} placeholder="Payment plan (optional)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
+                      <input type="number" min="0" step="0.01" value={amountPaidNow} onChange={(event) => setAmountPaidNow(event.target.value)} placeholder="Amount already paid, if any (NGN)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
+                      {Boolean(agreedPrice) && (
+                        <div className="edash-overview-grid edash-overview-grid--3" style={{ marginBottom: 8 }}>
+                          <div className="edash-overview-field"><span>Agreed</span><strong>{money(Number(agreedPrice) || 0)}</strong></div>
+                          <div className="edash-overview-field"><span>Paid now</span><strong>{money(Number(amountPaidNow) || 0)}</strong></div>
+                          <div className="edash-overview-field"><span>Remaining</span><strong>{money(Math.max(0, (Number(agreedPrice) || 0) - (Number(amountPaidNow) || 0)))}</strong></div>
+                        </div>
+                      )}
                       <div style={{ display: "flex", gap: 8 }}>
                         <button type="button" className="edash-btn-outline" onClick={() => void assignCustomer(false)}>Reserve</button>
                         <button type="button" className="edash-btn-primary" onClick={() => void assignCustomer(true)}>Allocate / sell</button>
