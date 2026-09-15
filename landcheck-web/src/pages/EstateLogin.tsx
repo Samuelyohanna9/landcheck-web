@@ -41,7 +41,10 @@ export default function EstateLogin() {
   return (
     <main className="estate-auth-page">
       <div className="estate-auth-shell">
-        <Link to="/estates" className="estate-wordmark"><span>LANDCHECK</span><strong>ESTATES</strong></Link>
+        <Link to="/estates" className="estate-auth-brand" aria-label="LandCheck Estates home">
+          <span className="estate-auth-brand-logo"><img src="/logo.svg" alt="LandCheck" width="520" height="140" /></span>
+          <span className="estate-auth-brand-tag">Estates</span>
+        </Link>
         <div className="estate-auth-card">
           <p className="estate-kicker">Company workspace</p>
           <h1>Sign in to Estates</h1>

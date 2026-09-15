@@ -43,7 +43,10 @@ export default function EstateRegister() {
     <main className="estate-auth-page">
       <div className="estate-auth-shell estate-auth-shell--register">
         <div className="estate-register-intro">
-          <Link to="/estates" className="estate-wordmark"><span>LANDCHECK</span><strong>ESTATES</strong></Link>
+          <Link to="/estates" className="estate-auth-brand" aria-label="LandCheck Estates home">
+            <span className="estate-auth-brand-logo"><img src="/logo.svg" alt="LandCheck" width="520" height="140" /></span>
+            <span className="estate-auth-brand-tag">Estates</span>
+          </Link>
           <p className="estate-kicker">Start with the land</p>
           <h1>Your company's estate workspace.</h1>
           <p>Register once, then invite your operating team around a shared parcel register. Your first account is the company owner.</p>

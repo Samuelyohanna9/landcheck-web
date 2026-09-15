@@ -45,7 +45,12 @@ export default function PublicPlotView() {
   return (
     <main className="estate-auth-page" style={{ minHeight: "100vh" }}>
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "40px 24px 60px" }}>
-        <Link to="/" className="estate-wordmark"><span>LANDCHECK</span><strong>ESTATES</strong></Link>
+        <div style={{ textAlign: "center" }}>
+          <Link to="/" className="estate-auth-brand" aria-label="LandCheck Estates home">
+            <span className="estate-auth-brand-logo"><img src="/logo.svg" alt="LandCheck" width="520" height="140" /></span>
+            <span className="estate-auth-brand-tag">Estates</span>
+          </Link>
+        </div>
 
         {loading && <p style={{ marginTop: 40, color: "var(--estate-slate)" }}>Loading your plot...</p>}
 
