@@ -74,12 +74,12 @@ export default function EstatePlotsPage() {
                 <tbody>
                   {filtered.map((plot) => (
                     <tr key={plot.id}>
-                      <td>{plot.plot_number}</td>
-                      <td>{blockLabel(plot.block_id)}</td>
-                      <td style={{ textTransform: "capitalize" }}>{plot.commercial_status.replaceAll("_", " ")}</td>
-                      <td style={{ textTransform: "capitalize" }}>{(plot.development_status || "not_started").replaceAll("_", " ")}</td>
-                      <td>{Number(plot.area_sqm || 0).toLocaleString()} m²</td>
-                      <td style={{ textTransform: "capitalize" }}>{plot.geometry_status}</td>
+                      <td data-label="Plot No.">{plot.plot_number}</td>
+                      <td data-label="Block">{blockLabel(plot.block_id)}</td>
+                      <td data-label="Status" style={{ textTransform: "capitalize" }}>{plot.commercial_status.replaceAll("_", " ")}</td>
+                      <td data-label="Development" style={{ textTransform: "capitalize" }}>{(plot.development_status || "not_started").replaceAll("_", " ")}</td>
+                      <td data-label="Area">{Number(plot.area_sqm || 0).toLocaleString()} m²</td>
+                      <td data-label="Geometry" style={{ textTransform: "capitalize" }}>{plot.geometry_status}</td>
                       <td>
                         <button type="button" className="edash-btn-outline" onClick={() => navigate(`/estates/${estateId}/map?plot=${plot.id}`)}>
                           <EstateIcon name="map" /> Open

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import EstateIcon from "./EstateIcon";
 
 export default function EstateModal({
@@ -12,6 +12,16 @@ export default function EstateModal({
   onClose: () => void;
   children: ReactNode;
 }) {
+  // Standard modal dismissal trio: click-outside (the overlay's own onClick, below), close button,
+  // and Escape - every modal in the app gets all three for free just by using this component.
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   return (
     <div className="edash-modal-overlay" onClick={onClose}>
       <div className="edash-modal" onClick={(event) => event.stopPropagation()}>

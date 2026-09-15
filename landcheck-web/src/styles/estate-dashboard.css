@@ -6,6 +6,11 @@
    share this page before an estate is selected.
    ═══════════════════════════════════════════════════════════════ */
 
+/* The font stack below previously named "DM Sans"/"Inter" without ever loading either - every
+   browser silently fell back to its OS default sans-serif the whole time. Loading Inter for real
+   here is what actually makes the typography system (weights, tabular figures) apply. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
 .edash, .edash-onboard {
   --edash-bg: #f3f5f7;
   --edash-surface: #ffffff;
@@ -53,10 +58,13 @@
   grid-template-columns: 244px minmax(0, 1fr);
   background: var(--edash-bg);
   color: var(--edash-ink);
-  font-family: "DM Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.45;
   overflow: hidden;
+  /* Every digit renders at a fixed width app-wide, so currency and metrics never shift or clip as
+     values change - set once here rather than chasing every individual number/table cell. */
+  font-variant-numeric: tabular-nums;
 }
 
 .edash * { box-sizing: border-box; }
@@ -73,6 +81,10 @@
   background: var(--edash-surface);
   overflow-y: auto;
 }
+
+/* Only relevant once the sidebar becomes an overlay drawer below 860px (see that media query) -
+   hidden by default so it can never appear as a stray dimming layer on desktop. */
+.edash-sidebar-backdrop { display: none; }
 
 .edash-sidebar-brand {
   display: flex;
@@ -491,9 +503,13 @@
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .edash-btn-outline:hover { border-color: var(--edash-brand); color: var(--edash-brand-dark); }
+.edash-btn-outline:active { transform: translateY(1px); }
+.edash-btn-outline:focus-visible { outline: 2px solid var(--edash-brand); outline-offset: 2px; }
+.edash-btn-outline:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 .edash-btn-outline svg { width: 14px; height: 14px; }
 
 .edash-btn-primary {
@@ -511,10 +527,13 @@
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .edash-btn-primary:hover { background: var(--edash-brand-dark); }
-.edash-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.edash-btn-primary:active { transform: translateY(1px); }
+.edash-btn-primary:focus-visible { outline: 2px solid var(--edash-brand-dark); outline-offset: 2px; }
+.edash-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 /* ─── Content row: map + drawer ─── */
 .edash-content-row {
@@ -975,6 +994,48 @@
 .edash-mini-table td { padding: 8px 8px; border-bottom: 1px solid var(--edash-border-soft); color: var(--edash-ink); font-weight: 600; }
 .edash-mini-table tr:last-child td { border-bottom: none; }
 
+/* Every .edash-mini-table in the app becomes a stacked list of cards below this width, instead of
+   a cramped table that needs horizontal scrolling to read. A <td> with a data-label attribute gets
+   a field caption in front of its value; one without still stacks cleanly, just without the
+   caption - so this applies safely everywhere immediately, and individual tables can be upgraded
+   with data-label attributes over time without anything breaking in the meantime. */
+@media (max-width: 700px) {
+  .edash-mini-table, .edash-mini-table thead, .edash-mini-table tbody, .edash-mini-table tr, .edash-mini-table td {
+    display: block;
+    width: 100%;
+  }
+  .edash-mini-table thead { display: none; }
+  .edash-mini-table tr {
+    margin-bottom: 10px;
+    padding: 4px 12px;
+    border: 1px solid var(--edash-border-soft);
+    border-radius: var(--edash-radius-md);
+    background: var(--edash-surface);
+    box-shadow: var(--edash-shadow-card);
+  }
+  .edash-mini-table tr:last-child { margin-bottom: 0; }
+  .edash-mini-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 8px 0;
+    text-align: right;
+  }
+  .edash-mini-table td:empty { display: none; }
+  .edash-mini-table td:last-child { border-bottom: none; }
+  .edash-mini-table td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    color: var(--edash-faint);
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: left;
+  }
+}
+
 .edash-timeline-list { display: flex; flex-direction: column; }
 .edash-timeline-item { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--edash-border-soft); }
 .edash-timeline-item:last-child { border-bottom: none; }
@@ -1081,6 +1142,18 @@
     box-shadow: var(--edash-shadow-pop);
   }
   .edash.is-sidebar-open .edash-sidebar { transform: translateX(0); }
+  .edash-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    background: rgba(16, 24, 39, 0.45);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .edash.is-sidebar-open .edash-sidebar-backdrop { opacity: 1; pointer-events: auto; }
   .edash-menu-toggle { display: flex; }
   .edash-breadcrumb strong { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
   .edash-stats-row, .edash-stats-row--five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1124,7 +1197,8 @@
   min-height: 100vh;
   background: var(--edash-bg);
   color: var(--edash-ink);
-  font-family: "DM Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
 .edash-onboard * { box-sizing: border-box; }
@@ -1268,7 +1342,7 @@
 .edash-onboard-hint.tone-danger { color: var(--edash-danger); font-weight: 600; }
 
 /* ─── Map plot popup (mapboxgl.Popup DOM content) ─── */
-.edash-map-popup { display: flex; flex-direction: column; gap: 4px; font-family: "DM Sans", "Inter", sans-serif; }
+.edash-map-popup { display: flex; flex-direction: column; gap: 4px; font-family: "Inter", sans-serif; }
 .edash-map-popup strong { font-size: 0.88rem; color: var(--edash-ink); }
 .edash-map-popup-status { font-size: 0.7rem; font-weight: 700; text-transform: capitalize; color: var(--edash-brand-dark); }
 .edash-map-popup p { margin: 2px 0 6px; font-size: 0.8rem; color: var(--edash-muted); }
@@ -1488,6 +1562,50 @@
 .edash-field select:disabled { background: var(--edash-neutral-tint); color: var(--edash-faint); cursor: not-allowed; }
 .edash-field-note { margin: 0; color: var(--edash-faint); font-size: 0.76rem; line-height: 1.4; }
 
+/* Floating labels: a .edash-field whose input carries a placeholder attribute (added app-wide to
+   text/email/number fields; selects, dates, files and checkboxes are untouched) floats its label
+   over the field like a placeholder until focused or filled, then relocates above it. The label
+   and input share one grid cell (row 2) so the overlap is correct regardless of the input's actual
+   rendered height - no guessed pixel offsets. :has() means this works with the existing markup
+   order (span before input) with no JSX restructuring. A field's own real hint text (e.g.
+   placeholder="Auto") stays invisible until focus, since the floating label sits in that same
+   spot until then. */
+.edash-field:has(> input[placeholder]) {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 15px auto;
+  row-gap: 2px;
+}
+.edash-field:has(> input[placeholder]) > input {
+  grid-row: 2;
+  grid-column: 1;
+}
+.edash-field:has(> input[placeholder]) > span {
+  grid-row: 2;
+  grid-column: 1;
+  align-self: center;
+  margin-left: 12px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--edash-faint);
+  text-transform: none;
+  letter-spacing: normal;
+  pointer-events: none;
+  transition: font-size 0.15s ease, font-weight 0.15s ease, color 0.15s ease;
+}
+.edash-field:has(> input[placeholder]:focus) > span,
+.edash-field:has(> input[placeholder]:not(:placeholder-shown)) > span {
+  grid-row: 1;
+  align-self: end;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--edash-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.edash-field:has(> input[placeholder]) > input::placeholder { opacity: 0; transition: opacity 0.15s ease; }
+.edash-field:has(> input[placeholder]:focus) > input::placeholder { opacity: 1; }
+
 .edash-layout-template-summary {
   display: flex;
   align-items: flex-start;
@@ -1558,11 +1676,14 @@
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
 .edash-tool-btn svg { width: 14px; height: 14px; color: var(--edash-brand); flex-shrink: 0; }
 .edash-tool-btn:hover { border-color: var(--edash-brand); background: var(--edash-brand-tint); color: var(--edash-brand-dark); }
 .edash-tool-btn:hover svg { color: var(--edash-brand-dark); }
+.edash-tool-btn:active { transform: translateY(1px); }
+.edash-tool-btn:focus-visible { outline: 2px solid var(--edash-brand); outline-offset: 2px; }
 
 .edash-tool-btn--locked,
 .edash-tool-btn--locked:hover {
@@ -1576,6 +1697,9 @@
 .edash-tool-btn--locked:hover svg { color: var(--edash-muted); }
 
 /* ─── Modal overlay for on-demand tools (import, create plot, layout, blocks, layers, QC) ─── */
+@keyframes edash-modal-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes edash-modal-rise-in { from { opacity: 0; transform: translateY(6px) scale(0.99); } to { opacity: 1; transform: none; } }
+
 .edash-modal-overlay {
   position: fixed;
   inset: 0;
@@ -1585,8 +1709,9 @@
   justify-content: center;
   padding: 5vh 20px;
   overflow-y: auto;
-  background: rgba(16, 24, 39, 0.5);
-  backdrop-filter: blur(2px);
+  background: rgba(16, 24, 39, 0.55);
+  backdrop-filter: blur(5px);
+  animation: edash-modal-fade-in 0.15s ease;
 }
 
 .edash-modal {
@@ -1596,6 +1721,11 @@
   background: var(--edash-surface);
   box-shadow: var(--edash-shadow-pop);
   overflow: hidden;
+  animation: edash-modal-rise-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edash-modal-overlay, .edash-modal { animation: none; }
 }
 
 .edash-modal-head {
@@ -1622,9 +1752,11 @@
   color: var(--edash-muted);
   cursor: pointer;
   flex-shrink: 0;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
-.edash-modal-close:hover { color: var(--edash-ink); border-color: var(--edash-faint); }
+.edash-modal-close:hover { color: var(--edash-ink); border-color: var(--edash-faint); background: var(--edash-neutral-tint); }
+.edash-modal-close:focus-visible { outline: 2px solid var(--edash-brand); outline-offset: 2px; }
 .edash-modal-close svg { width: 14px; height: 14px; }
 
 .edash-modal-body { max-height: 76vh; overflow-y: auto; padding: 20px; }

@@ -125,8 +125,8 @@ export default function EstateCustomersPage() {
 
       {showAddCustomer && (
         <EstateModal title="Add customer" subtitle="Create a customer record before reserving or allocating a plot to them." onClose={() => setShowAddCustomer(false)}>
-          <label className="edash-field" style={{ marginBottom: 12 }}><span>Full name</span><input value={newName} onChange={(event) => setNewName(event.target.value)} autoFocus /></label>
-          <label className="edash-field" style={{ marginBottom: 12 }}><span>Phone (optional)</span><input value={newPhone} onChange={(event) => setNewPhone(event.target.value)} /></label>
+          <label className="edash-field" style={{ marginBottom: 12 }}><span>Full name</span><input placeholder=" " value={newName} onChange={(event) => setNewName(event.target.value)} autoFocus /></label>
+          <label className="edash-field" style={{ marginBottom: 12 }}><span>Phone (optional)</span><input placeholder=" " value={newPhone} onChange={(event) => setNewPhone(event.target.value)} /></label>
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Email (optional)</span><input type="email" value={newEmail} onChange={(event) => setNewEmail(event.target.value)} placeholder="Lifecycle updates are sent here" /></label>
           {message && <p className="edash-tab-empty" style={{ padding: "0 0 8px", textAlign: "left" }}>{message}</p>}
           <button type="button" className="edash-btn-primary" onClick={() => void createCustomer()}>Add customer</button>

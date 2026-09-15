@@ -87,8 +87,20 @@ export default function EstateShell({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [notifOpen, userMenuOpen]);
 
+  // The mobile nav drawer follows the same dismissal conventions as a modal - Escape closes it,
+  // in addition to the backdrop click and picking a nav item.
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSidebarOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [sidebarOpen]);
+
   return (
     <div className={`edash${sidebarOpen ? " is-sidebar-open" : ""}`}>
+      <div className="edash-sidebar-backdrop" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
       <aside className="edash-sidebar">
         <div className="edash-sidebar-brand">
           <span className="edash-sidebar-brand-mark"><EstateIcon name="house" /></span>

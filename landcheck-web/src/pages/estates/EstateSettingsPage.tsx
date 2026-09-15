@@ -80,8 +80,8 @@ export default function EstateSettingsPage() {
         <div className="edash-card">
           <div className="edash-card-inner">
             <div className="edash-card-head"><h3 className="edash-card-title">Estate details</h3></div>
-            <label className="edash-field" style={{ marginBottom: 10 }}><span>Name</span><input value={name} onChange={(event) => setName(event.target.value)} /></label>
-            <label className="edash-field" style={{ marginBottom: 10 }}><span>Location</span><input value={location} onChange={(event) => setLocation(event.target.value)} /></label>
+            <label className="edash-field" style={{ marginBottom: 10 }}><span>Name</span><input placeholder=" " value={name} onChange={(event) => setName(event.target.value)} /></label>
+            <label className="edash-field" style={{ marginBottom: 10 }}><span>Location</span><input placeholder=" " value={location} onChange={(event) => setLocation(event.target.value)} /></label>
             <div className="edash-field" style={{ marginBottom: 12 }}><span>Coordinate system</span><strong style={{ color: "var(--edash-ink)" }}>{estateDetail?.crs || "EPSG:4326"}</strong></div>
             <button type="button" className="edash-btn-primary" onClick={() => void saveEstate()}>Save estate details</button>
           </div>
@@ -96,7 +96,7 @@ export default function EstateSettingsPage() {
             </label>
             <label className="edash-field" style={{ marginBottom: 12, maxWidth: 220 }}>
               <span>Minimum confirmed payment (%)</span>
-              <input type="number" min="0" max="100" step="1" value={rulePercentage} onChange={(event) => setRulePercentage(event.target.value)} />
+              <input placeholder=" " type="number" min="0" max="100" step="1" value={rulePercentage} onChange={(event) => setRulePercentage(event.target.value)} />
             </label>
             <button type="button" className="edash-btn-primary" onClick={() => void saveRule()}>Save rule</button>
           </div>

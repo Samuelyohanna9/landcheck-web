@@ -215,10 +215,10 @@ export default function EstateCommissionsPage() {
                 <tbody>
                   {agents.map((member) => (
                     <tr key={member.id}>
-                      <td style={{ cursor: "pointer" }} onClick={() => void openAgentDetail(member.subject_type, member.subject_id)}>{member.display_name}</td>
-                      <td style={{ textTransform: "capitalize" }}>{member.role.replaceAll("_", " ")}</td>
-                      <td>{member.current_tier_label ? `${member.current_tier_label} (${Number(member.current_tier_rate_percent).toFixed(1)}%)` : "-"}</td>
-                      <td><span className={`edash-status-pill tone-${member.is_active ? "good" : "neutral"}`}>{member.is_active ? "Active" : "Inactive"}</span></td>
+                      <td data-label="Name" style={{ cursor: "pointer" }} onClick={() => void openAgentDetail(member.subject_type, member.subject_id)}>{member.display_name}</td>
+                      <td data-label="Role" style={{ textTransform: "capitalize" }}>{member.role.replaceAll("_", " ")}</td>
+                      <td data-label="Current tier">{member.current_tier_label ? `${member.current_tier_label} (${Number(member.current_tier_rate_percent).toFixed(1)}%)` : "-"}</td>
+                      <td data-label="Status"><span className={`edash-status-pill tone-${member.is_active ? "good" : "neutral"}`}>{member.is_active ? "Active" : "Inactive"}</span></td>
                       <td style={{ display: "flex", gap: 6 }}>
                         <button type="button" className="edash-btn-outline" onClick={() => void openAgentDetail(member.subject_type, member.subject_id)}>View</button>
                         <button type="button" className="edash-btn-outline" onClick={() => void toggleAgentActive(member)}>{member.is_active ? "Deactivate" : "Reactivate"}</button>
@@ -240,15 +240,15 @@ export default function EstateCommissionsPage() {
             <div key={index} className="edash-form-row" style={{ marginBottom: 8, alignItems: "flex-end" }}>
               <label className="edash-field" style={{ maxWidth: 160 }}>
                 <span>Label</span>
-                <input value={tier.label} onChange={(event) => setCommissionTiers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} />
+                <input placeholder=" " value={tier.label} onChange={(event) => setCommissionTiers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} />
               </label>
               <label className="edash-field" style={{ maxWidth: 200 }}>
                 <span>From cumulative sales (NGN)</span>
-                <input type="number" min="0" value={tier.min_cumulative_sales} onChange={(event) => setCommissionTiers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, min_cumulative_sales: event.target.value } : item))} />
+                <input placeholder=" " type="number" min="0" value={tier.min_cumulative_sales} onChange={(event) => setCommissionTiers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, min_cumulative_sales: event.target.value } : item))} />
               </label>
               <label className="edash-field" style={{ maxWidth: 120 }}>
                 <span>Rate (%)</span>
-                <input type="number" min="0" max="100" step="0.1" value={tier.rate_percent} onChange={(event) => setCommissionTiers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, rate_percent: event.target.value } : item))} />
+                <input placeholder=" " type="number" min="0" max="100" step="0.1" value={tier.rate_percent} onChange={(event) => setCommissionTiers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, rate_percent: event.target.value } : item))} />
               </label>
               <button type="button" className="edash-btn-outline" onClick={() => setCommissionTiers((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Remove</button>
             </div>
@@ -272,13 +272,13 @@ export default function EstateCommissionsPage() {
                 <tbody>
                   {commissionReport.map((agent) => (
                     <tr key={`${agent.subject_type}::${agent.subject_id}`} style={{ cursor: "pointer" }} onClick={() => void openAgentDetail(agent.subject_type, agent.subject_id)}>
-                      <td>{agent.display_name}</td>
-                      <td>{agent.sale_count}</td>
-                      <td>{money(agent.total_volume)}</td>
-                      <td>{money(agent.total_commission)}</td>
-                      <td>{money(agent.total_paid_out)}</td>
-                      <td>{Number(agent.total_outstanding) > 0 ? <strong style={{ color: "var(--edash-warn, #b5790a)" }}>{money(agent.total_outstanding)}</strong> : money(0)}</td>
-                      <td>{agent.current_tier || "-"}</td>
+                      <td data-label="Agent">{agent.display_name}</td>
+                      <td data-label="Sales">{agent.sale_count}</td>
+                      <td data-label="Total volume">{money(agent.total_volume)}</td>
+                      <td data-label="Earned">{money(agent.total_commission)}</td>
+                      <td data-label="Paid out">{money(agent.total_paid_out)}</td>
+                      <td data-label="Outstanding">{Number(agent.total_outstanding) > 0 ? <strong style={{ color: "var(--edash-warn, #b5790a)" }}>{money(agent.total_outstanding)}</strong> : money(0)}</td>
+                      <td data-label="Current tier">{agent.current_tier || "-"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -344,13 +344,13 @@ export default function EstateCommissionsPage() {
                       {agentDetail.plots.map((plot: any) => (
                         <Fragment key={plot.allocation_id}>
                           <tr>
-                            <td>{plot.plot_number}</td>
-                            <td>{plot.estate_name}</td>
-                            <td>{plot.customer_name}</td>
-                            <td><span className={`edash-status-pill tone-${plot.status === "allocated" ? "good" : "warn"}`}>{plot.status}</span></td>
-                            <td>{money(plot.agreed_price)}</td>
-                            <td>{money(plot.confirmed_paid)}</td>
-                            <td>
+                            <td data-label="Plot">{plot.plot_number}</td>
+                            <td data-label="Estate">{plot.estate_name}</td>
+                            <td data-label="Customer">{plot.customer_name}</td>
+                            <td data-label="Status"><span className={`edash-status-pill tone-${plot.status === "allocated" ? "good" : "warn"}`}>{plot.status}</span></td>
+                            <td data-label="Agreed">{money(plot.agreed_price)}</td>
+                            <td data-label="Confirmed">{money(plot.confirmed_paid)}</td>
+                            <td data-label="Commission">
                               {plot.status === "allocated" ? (
                                 <>
                                   <div>{money(plot.commission_amount)}{plot.commission_tier_label ? <span className="edash-field-note"> ({plot.commission_tier_label})</span> : null}</div>
@@ -397,7 +397,7 @@ export default function EstateCommissionsPage() {
                                   <div className="edash-form-row" style={{ marginBottom: 8, alignItems: "flex-end" }}>
                                     <label className="edash-field" style={{ maxWidth: 150 }}>
                                       <span>Amount (NGN)</span>
-                                      <input type="number" min="0" step="0.01" value={payoutAmount} onChange={(event) => setPayoutAmount(event.target.value)} />
+                                      <input placeholder=" " type="number" min="0" step="0.01" value={payoutAmount} onChange={(event) => setPayoutAmount(event.target.value)} />
                                     </label>
                                     <label className="edash-field" style={{ maxWidth: 150 }}>
                                       <span>Date</span>
@@ -411,7 +411,7 @@ export default function EstateCommissionsPage() {
                                     </label>
                                     <label className="edash-field" style={{ maxWidth: 150 }}>
                                       <span>Reference (optional)</span>
-                                      <input value={payoutReference} onChange={(event) => setPayoutReference(event.target.value)} />
+                                      <input placeholder=" " value={payoutReference} onChange={(event) => setPayoutReference(event.target.value)} />
                                     </label>
                                   </div>
                                   <label className="edash-field" style={{ marginBottom: 8 }}>

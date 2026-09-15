@@ -66,9 +66,9 @@ export default function EstateDevelopmentPage() {
                 <tbody>
                   {plots.map((plot) => (
                     <tr key={plot.id}>
-                      <td>{plot.plot_number}</td>
-                      <td style={{ textTransform: "capitalize" }}>{plot.commercial_status.replaceAll("_", " ")}</td>
-                      <td>
+                      <td data-label="Plot No.">{plot.plot_number}</td>
+                      <td data-label="Commercial status" style={{ textTransform: "capitalize" }}>{plot.commercial_status.replaceAll("_", " ")}</td>
+                      <td data-label="Development status">
                         <select className="edash-map-select" value={plot.development_status || "not_started"} onChange={(event) => void updateStatus(plot.id, event.target.value)}>
                           {Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                         </select>
