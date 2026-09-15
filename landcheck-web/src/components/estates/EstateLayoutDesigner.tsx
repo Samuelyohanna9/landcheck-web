@@ -26,7 +26,7 @@ type Props = {
   messageTone?: "good" | "danger";
   onGenerate: (criteria: LayoutCriteria) => void;
   onDecision: (proposalId: number, status: "approved" | "rejected") => void;
-  onEditCandidates?: (proposalId: number, plotCandidates: any[]) => Promise<void>;
+  onEditCandidates?: (proposalId: number, plotCandidates: any[], featureCandidates?: any[]) => Promise<void>;
 };
 
 const DEFAULT_CRITERIA: LayoutCriteria = {
@@ -163,17 +163,63 @@ function walkCoordinates(coords: any, visit: (point: [number, number]) => void) 
 // can zoom, pan and go fullscreen to actually inspect a layout with hundreds of plots.
 const EDITABLE_PLOT_LAYERS = ["preview-plots-fill", "preview-plots-outline", "preview-plots-labels"];
 
-function LayoutPreviewMap({ proposal, onEditCandidates }: { proposal: any; onEditCandidates?: (proposalId: number, plotCandidates: any[]) => Promise<void> }) {
+// Shared-vertex ("topology-aware") editing: a grid-generated layout's neighbouring plots meet at
+// numerically identical coordinates, so a moved vertex is propagated to every OTHER candidate that
+// has a vertex at the vertex's pre-edit location, keeping touching plots touching instead of
+// opening a gap or an overlap. This only fires for a plain vertex drag (ring length unchanged) -
+// dragging a midpoint to insert a new vertex has no matching "from" coordinate to propagate from,
+// so that case is left as a plot-local edit.
+const VERTEX_MATCH_EPSILON = 1e-7; // ~1cm at the equator
+
+function findMovedVertex(oldRing: number[][], newRing: number[][]): { from: [number, number]; to: [number, number] } | null {
+  if (!oldRing || !newRing || oldRing.length !== newRing.length) return null;
+  for (let index = 0; index < oldRing.length; index += 1) {
+    const [ox, oy] = oldRing[index];
+    const [nx, ny] = newRing[index];
+    if (Math.abs(ox - nx) > VERTEX_MATCH_EPSILON || Math.abs(oy - ny) > VERTEX_MATCH_EPSILON) {
+      return { from: [ox, oy], to: [nx, ny] };
+    }
+  }
+  return null;
+}
+
+function setClosedRingVertex(ring: number[][], index: number, coordinate: [number, number]) {
+  ring[index] = coordinate;
+  if (index === 0) ring[ring.length - 1] = coordinate;
+  else if (index === ring.length - 1) ring[0] = coordinate;
+}
+
+function propagateVertexMove(candidates: Record<string, any>, editedId: string, from: [number, number], to: [number, number]): string[] {
+  const affected: string[] = [];
+  Object.entries(candidates).forEach(([plotNumber, geometry]) => {
+    if (plotNumber === editedId || geometry?.type !== "Polygon") return;
+    const ring: number[][] = geometry.coordinates[0];
+    let changed = false;
+    ring.forEach((coordinate, index) => {
+      if (Math.abs(coordinate[0] - from[0]) < VERTEX_MATCH_EPSILON && Math.abs(coordinate[1] - from[1]) < VERTEX_MATCH_EPSILON) {
+        setClosedRingVertex(ring, index, to);
+        changed = true;
+      }
+    });
+    if (changed) affected.push(plotNumber);
+  });
+  return affected;
+}
+
+function LayoutPreviewMap({ proposal, onEditCandidates }: { proposal: any; onEditCandidates?: (proposalId: number, plotCandidates: any[], featureCandidates?: any[]) => Promise<void> }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const drawRef = useRef<any>(null);
+  const newFeatureTypeRef = useRef<"road" | "open_space" | null>(null);
+  const workingCandidatesRef = useRef<Record<string, any>>({});
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [pendingGeometry, setPendingGeometry] = useState<Record<string, any>>({});
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [newFeatures, setNewFeatures] = useState<Array<{ featureType: "road" | "open_space"; geometry: any }>>([]);
   const [savingEdits, setSavingEdits] = useState(false);
-  const hasEdits = Object.keys(pendingGeometry).length > 0 || deletedIds.size > 0;
+  const hasEdits = Object.keys(pendingGeometry).length > 0 || deletedIds.size > 0 || newFeatures.length > 0;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current || !MAPBOX_TOKEN) return;
@@ -243,28 +289,61 @@ function LayoutPreviewMap({ proposal, onEditCandidates }: { proposal: any; onEdi
       draw.set({ type: "FeatureCollection", features: plotFeatures });
       EDITABLE_PLOT_LAYERS.forEach((id) => { try { map.setLayoutProperty(id, "visibility", "none"); } catch { /* layer not ready yet */ } });
 
+      // Deep-cloned working copy that both this edit session's vertex propagation and the final
+      // save read from - mutated in place as neighbours get dragged along, never touching the
+      // `proposal` prop itself (so "Cancel" is just discarding this ref and leaving the map).
+      const working: Record<string, any> = {};
+      (proposal?.candidates || []).forEach((candidate: any) => { working[String(candidate.plot_number)] = JSON.parse(JSON.stringify(candidate.geometry)); });
+      workingCandidatesRef.current = working;
+
       const captureUpdate = (event: any) => {
-        setPendingGeometry((current) => {
-          const next = { ...current };
-          (event.features || []).forEach((feature: any) => { next[String(feature.id)] = feature.geometry; });
-          return next;
+        const touched: Record<string, any> = {};
+        (event.features || []).forEach((feature: any) => {
+          const id = String(feature.id);
+          const previousGeometry = workingCandidatesRef.current[id];
+          touched[id] = feature.geometry;
+          workingCandidatesRef.current[id] = feature.geometry;
+          const moved = feature.geometry?.type === "Polygon" ? findMovedVertex(previousGeometry?.coordinates?.[0], feature.geometry.coordinates[0]) : null;
+          if (moved) {
+            const affectedIds = propagateVertexMove(workingCandidatesRef.current, id, moved.from, moved.to);
+            affectedIds.forEach((affectedId) => {
+              const updatedGeometry = workingCandidatesRef.current[affectedId];
+              touched[affectedId] = updatedGeometry;
+              draw.add({ type: "Feature", id: affectedId, properties: { plot_number: affectedId }, geometry: updatedGeometry });
+            });
+          }
         });
+        setPendingGeometry((current) => ({ ...current, ...touched }));
       };
       const captureDelete = (event: any) => {
+        (event.features || []).forEach((feature: any) => { delete workingCandidatesRef.current[String(feature.id)]; });
         setDeletedIds((current) => {
           const next = new Set(current);
           (event.features || []).forEach((feature: any) => next.add(String(feature.id)));
           return next;
         });
       };
+      // A create only counts as a new road/open space when it was started via the "Add road" /
+      // "Add open space" buttons (which set this ref right before switching Draw into a drawing
+      // mode) - otherwise ignore it, since simple_select's own vertex/midpoint dragging never
+      // fires draw.create, only draw.update.
+      const captureCreate = (event: any) => {
+        const featureType = newFeatureTypeRef.current;
+        newFeatureTypeRef.current = null;
+        if (!featureType) return;
+        (event.features || []).forEach((feature: any) => {
+          setNewFeatures((current) => [...current, { featureType, geometry: feature.geometry }]);
+        });
+      };
       map.on("draw.update", captureUpdate);
       map.on("draw.delete", captureDelete);
-      (map as any)._edashDrawHandlers = { captureUpdate, captureDelete };
+      map.on("draw.create", captureCreate);
+      (map as any)._edashDrawHandlers = { captureUpdate, captureDelete, captureCreate };
     });
     return () => {
       cancelled = true;
       const handlers = (map as any)?._edashDrawHandlers;
-      if (handlers) { map.off("draw.update", handlers.captureUpdate); map.off("draw.delete", handlers.captureDelete); }
+      if (handlers) { map.off("draw.update", handlers.captureUpdate); map.off("draw.delete", handlers.captureDelete); map.off("draw.create", handlers.captureCreate); }
       if (drawRef.current) { try { map.removeControl(drawRef.current); } catch { /* map already gone */ } }
       drawRef.current = null;
       EDITABLE_PLOT_LAYERS.forEach((id) => { try { map.setLayoutProperty(id, "visibility", "visible"); } catch { /* layer not ready */ } });
@@ -279,7 +358,13 @@ function LayoutPreviewMap({ proposal, onEditCandidates }: { proposal: any; onEdi
   const cancelEdits = () => {
     setPendingGeometry({});
     setDeletedIds(new Set());
+    setNewFeatures([]);
     setEditing(false);
+  };
+
+  const startDrawingFeature = (featureType: "road" | "open_space") => {
+    newFeatureTypeRef.current = featureType;
+    drawRef.current?.changeMode(featureType === "road" ? "draw_line_string" : "draw_polygon");
   };
 
   const saveEdits = async () => {
@@ -287,14 +372,21 @@ function LayoutPreviewMap({ proposal, onEditCandidates }: { proposal: any; onEdi
     const merged = (proposal.candidates || [])
       .filter((candidate: any) => !deletedIds.has(String(candidate.plot_number)))
       .map((candidate: any) => {
-        const updatedGeometry = pendingGeometry[String(candidate.plot_number)];
+        const updatedGeometry = workingCandidatesRef.current[String(candidate.plot_number)];
         return updatedGeometry ? { ...candidate, geometry: updatedGeometry } : candidate;
       });
+    const addedFeatures = newFeatures.map((item, index) => ({
+      feature_type: item.featureType,
+      name: item.featureType === "road" ? `Road (added ${index + 1})` : "Open space (added)",
+      geometry: item.geometry,
+    }));
+    const mergedFeatures = addedFeatures.length ? [...(proposal.features || []), ...addedFeatures] : undefined;
     setSavingEdits(true);
     try {
-      await onEditCandidates(proposal.id, merged);
+      await onEditCandidates(proposal.id, merged, mergedFeatures);
       setPendingGeometry({});
       setDeletedIds(new Set());
+      setNewFeatures([]);
       setEditing(false);
     } finally {
       setSavingEdits(false);
@@ -310,6 +402,12 @@ function LayoutPreviewMap({ proposal, onEditCandidates }: { proposal: any; onEdi
         {onEditCandidates && proposal.status === "review_required" && (
           editing ? (
             <>
+              <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits} onClick={() => startDrawingFeature("road")} title="Draw a new road">
+                Add road
+              </button>
+              <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits} onClick={() => startDrawingFeature("open_space")} title="Draw a new open space">
+                Add open space
+              </button>
               <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" disabled={savingEdits || !hasEdits} onClick={() => void saveEdits()} title="Save changes">
                 {savingEdits ? <Spinner size={13} /> : <EstateIcon name="check-circle" />} Save changes
               </button>
@@ -318,8 +416,8 @@ function LayoutPreviewMap({ proposal, onEditCandidates }: { proposal: any; onEdi
               </button>
             </>
           ) : (
-            <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" onClick={() => setEditing(true)} title="Edit plot vertices">
-              Edit plots
+            <button type="button" className="edash-map-ctrl-btn edash-layout-preview-action" onClick={() => setEditing(true)} title="Edit plots, or add roads and open space">
+              Edit layout
             </button>
           )
         )}
@@ -327,7 +425,11 @@ function LayoutPreviewMap({ proposal, onEditCandidates }: { proposal: any; onEdi
           <EstateIcon name="expand" />
         </button>
       </div>
-      <span className="edash-layout-preview-count">{editing ? "Drag a vertex to reshape, drag a midpoint to add one, or select and delete a plot" : `${proposal.candidates?.length || 0} plots in this draft`}</span>
+      <span className="edash-layout-preview-count">
+        {editing
+          ? `Drag a vertex to reshape - touching plots move together automatically${newFeatures.length ? ` · ${newFeatures.length} new feature(s) added` : ""}`
+          : `${proposal.candidates?.length || 0} plots in this draft`}
+      </span>
     </div>
   );
 }

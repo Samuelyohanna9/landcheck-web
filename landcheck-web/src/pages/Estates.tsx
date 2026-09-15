@@ -824,10 +824,12 @@ export default function Estates() {
       setLayoutDesignerBusy(false);
     }
   };
-  const editLayoutProposalCandidates = async (proposalId: number, plotCandidates: any[]) => {
+  const editLayoutProposalCandidates = async (proposalId: number, plotCandidates: any[], featureCandidates?: any[]) => {
     setLayoutDesignerMessage("");
     try {
-      const response = await api.patch(`/estates/layout-proposals/${proposalId}`, { plot_candidates: plotCandidates });
+      const payload: Record<string, unknown> = { plot_candidates: plotCandidates };
+      if (featureCandidates) payload.feature_candidates = featureCandidates;
+      const response = await api.patch(`/estates/layout-proposals/${proposalId}`, payload);
       setLayoutProposal(response.data);
       setLayoutDesignerMessage(`Saved. ${response.data.candidates?.length || 0} plots in this draft now.`);
     } catch (error) {
