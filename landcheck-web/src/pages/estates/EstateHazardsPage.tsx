@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { api } from "../../api/client";
+import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
+import Spinner from "../../components/estates/EstateSpinner";
 
 function riskTone(riskClass: string | undefined) {
   const value = (riskClass || "").toLowerCase();
@@ -17,6 +18,8 @@ export default function EstateHazardsPage() {
   const [estateName, setEstateName] = useState("");
   const [dashboard, setDashboard] = useState<any>(null);
   const [activity, setActivity] = useState<any[]>([]);
+  const [runBusy, setRunBusy] = useState(false);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (!estateId) return;
@@ -25,10 +28,39 @@ export default function EstateHazardsPage() {
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
   }, [estateId]);
 
+  const runEstateHazardAnalysis = async () => {
+    if (!estateId) return;
+    setRunBusy(true);
+    setMessage("");
+    try {
+      const response = await api.post(`/estates/${estateId}/hazards/assess-all`);
+      setDashboard(response.data);
+      setMessage("Hazard analysis complete for the whole layout.");
+    } catch (error) {
+      setMessage(await extractApiErrorMessage(error, "Hazard analysis could not be run."));
+    } finally {
+      setRunBusy(false);
+    }
+  };
+
   if (!estateId) return null;
 
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="hazard" recentActivity={activity}>
+      <div className="edash-card" style={{ marginBottom: 16 }}>
+        <div className="edash-card-inner">
+          <div className="edash-card-head">
+            <h3 className="edash-card-title">Whole-layout hazard analysis</h3>
+          </div>
+          <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>
+            Runs flood and erosion screening for every approved plot in this Estate in one pass, instead of one plot at a time. Results below - and the Risk Overview on the Dashboard - update as soon as it finishes.
+          </p>
+          <button type="button" className="edash-btn-primary" disabled={runBusy} onClick={() => void runEstateHazardAnalysis()}>
+            {runBusy ? <><Spinner size={13} /> Analyzing layout...</> : "Run hazard analysis for entire layout"}
+          </button>
+          {message && <p className="edash-tab-empty" style={{ padding: "10px 0 0" }}>{message}</p>}
+        </div>
+      </div>
       <div className="edash-card">
         <div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Site intelligence summary</h3></div>

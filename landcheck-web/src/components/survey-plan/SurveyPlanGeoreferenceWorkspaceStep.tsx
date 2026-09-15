@@ -24,6 +24,8 @@ type Props = {
   onSaveFeatures: () => void | Promise<void>;
   onBack: () => void;
   onContinue: () => void;
+  continueLabel?: string;
+  continuing?: boolean;
 };
 
 const toolLabels: Record<DraftTool, string> = {
@@ -192,6 +194,8 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   onSaveFeatures,
   onBack,
   onContinue,
+  continueLabel = "Review & export",
+  continuing = false,
 }: Props) {
   const imageViewportRef = useRef<HTMLDivElement | null>(null);
   const imageStageRef = useRef<HTMLDivElement | null>(null);
@@ -1722,11 +1726,11 @@ function SurveyPlanGeoreferenceWorkspaceStep({
         <button
           type="button"
           className="geo-btn geo-btn-primary geo-btn-cta"
-          disabled={features.length === 0}
+          disabled={features.length === 0 || continuing}
           onClick={onContinue}
           title={features.length === 0 ? "Digitize at least one boundary before continuing" : undefined}
         >
-          Review &amp; export →
+          {continuing ? "Saving plots and returning..." : continueLabel}
         </button>
       </div>
 

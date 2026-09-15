@@ -711,9 +711,17 @@ export default function SurveyPlan() {
   const isEstateSurveySession = Boolean(searchParams.get("estate_survey_plot"));
   const returnEstateId = searchParams.get("return_estate_id");
   const returnPlotId = searchParams.get("return_plot_id");
+  const returnImportReviewId = searchParams.get("return_import_review_id");
+  const isEstateLayoutImport = Boolean(
+    searchParams.get("session")?.trim() &&
+    Number.isInteger(Number(returnEstateId)) && Number(returnEstateId) > 0 &&
+    Number.isInteger(Number(returnImportReviewId)) && Number(returnImportReviewId) > 0,
+  );
+  const [workflowMode, setWorkflowMode] = useState<WorkflowMode | null>(() =>
+    isEstateLayoutImport && searchParams.get("mode") === "georeference" ? "georeference" : null,
+  );
   const { isLowBandwidth, manualLowBandwidth, setManualLowBandwidth } = useLowBandwidthMode();
   const deferredDraftMap = useDeferredMount(250);
-  const [workflowMode, setWorkflowMode] = useState<WorkflowMode | null>(null);
   const [signupGateOpen, setSignupGateOpen] = useState(false);
   const [pendingGateDownload, setPendingGateDownload] = useState<PendingSurveyDownload | null>(null);
   const openSignupGate = useCallback((download: PendingSurveyDownload) => {
@@ -728,7 +736,7 @@ export default function SurveyPlan() {
     workflowMode === "subdivision"
       ? SUBDIVISION_STEPS
       : workflowMode === "georeference"
-        ? GEOREFERENCE_STEPS
+        ? isEstateLayoutImport ? GEOREFERENCE_STEPS.slice(0, 2) : GEOREFERENCE_STEPS
         : SURVEY_STEPS;
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [restoredDraftUpdatedAt, setRestoredDraftUpdatedAt] = useState<string | null>(null);
@@ -911,10 +919,11 @@ export default function SurveyPlan() {
   const [georefFeatures, setGeorefFeatures] = useState<GeoreferenceFeature[]>([]);
   const [georefTargetCoordinateSystem, setGeorefTargetCoordinateSystem] = useState("wgs84");
   const [georefSelectedControlPointId, setGeorefSelectedControlPointId] = useState<string | null>(null);
-  const [georefSessionLoading, setGeorefSessionLoading] = useState(false);
+  const [georefSessionLoading, setGeorefSessionLoading] = useState(isEstateLayoutImport);
   const [georefUploading, setGeorefUploading] = useState(false);
   const [georefSolving, setGeorefSolving] = useState(false);
   const [georefSavingFeatures, setGeorefSavingFeatures] = useState(false);
+  const [georefEstateFinishing, setGeorefEstateFinishing] = useState(false);
   const [georefLastSavedAt, setGeorefLastSavedAt] = useState<Date | null>(null);
   // Mirrors georefLastSavedAt's "Last saved HH:MM:SS" pattern for the new Survey-only top bar -
   // but set from the existing debounced local-draft autosave effect below rather than an explicit
@@ -1145,11 +1154,13 @@ export default function SurveyPlan() {
           Boolean(saved.featureEditorOpen) &&
           (restoredWorkflowMode === "survey" || restoredWorkflowMode === "subdivision") &&
           restoredStep >= 2;
-        setRestoredDraftUpdatedAt(record.updatedAt || null);
-        setShowDraftRecoveryBanner(true);
+        if (!isEstateLayoutImport) {
+          setRestoredDraftUpdatedAt(record.updatedAt || null);
+          setShowDraftRecoveryBanner(true);
+        }
         restoreActionsAppliedRef.current = false;
-        if (saved.workflowMode) setWorkflowMode(saved.workflowMode);
-        setCurrentStep(restoredStep);
+        if (saved.workflowMode && !isEstateLayoutImport) setWorkflowMode(saved.workflowMode);
+        if (!isEstateLayoutImport) setCurrentStep(restoredStep);
         setPendingFeatureEditorRestore(shouldRestoreFeatureEditor);
         if (Array.isArray(saved.manualPoints) && saved.manualPoints.length >= 3) setManualPoints(saved.manualPoints);
         if (saved.coordinateSystem) setCoordinateSystem(saved.coordinateSystem);
@@ -1213,7 +1224,7 @@ export default function SurveyPlan() {
         setHasUnsyncedServerChanges(Boolean(saved.hasUnsyncedServerChanges || (saved.plotId && !restoredSyncSignature)));
         const savedGeorefSessionId =
           typeof saved.georefSessionId === "string" ? saved.georefSessionId.trim() : "";
-        if (savedGeorefSessionId) {
+        if (savedGeorefSessionId && !isEstateLayoutImport) {
           try {
             await loadGeoreferenceSession(savedGeorefSessionId, {
               preferredControlPointId: saved.georefSelectedControlPointId || null,
@@ -1236,18 +1247,23 @@ export default function SurveyPlan() {
     return () => {
       active = false;
     };
-  }, [clearGeorefLocalState, loadGeoreferenceSession]);
+  }, [clearGeorefLocalState, isEstateLayoutImport, loadGeoreferenceSession]);
 
-  // Dashboard's quick-tools row links here with ?mode=survey|subdivision|georeference - only
-  // applied once a restored draft (if any) has had a chance to set its own mode first, so a
-  // returning user's in-progress work always wins over the link that got them here.
+  // Estate layout imports must open the requested tool even when Survey has a different local draft.
+  // Other links continue to respect a user's restored Survey workflow.
   useEffect(() => {
-    if (!draftHydrated || workflowMode) return;
+    if (!draftHydrated) return;
     const modeParam = searchParams.get("mode");
+    if (isEstateLayoutImport && modeParam === "georeference") {
+      setWorkflowMode("georeference");
+      setCurrentStep(1);
+      return;
+    }
+    if (workflowMode) return;
     if (modeParam === "survey" || modeParam === "subdivision" || modeParam === "georeference") {
       setWorkflowMode(modeParam);
     }
-  }, [draftHydrated, workflowMode, searchParams]);
+  }, [draftHydrated, workflowMode, searchParams, isEstateLayoutImport]);
 
   // Estates materializes an approved parcel as an owned Survey plot. This explicit query parameter
   // intentionally wins over a browser-local draft so a surveyor opens the parcel they were sent.
@@ -1290,10 +1306,12 @@ export default function SurveyPlan() {
     if (!draftHydrated || workflowMode !== "georeference") return;
     const sessionParam = searchParams.get("session");
     if (!sessionParam || georefSession?.id === sessionParam) return;
-    loadGeoreferenceSession(sessionParam, { silent: true }).catch(() => {
+    loadGeoreferenceSession(sessionParam, { silent: true }).then((session) => {
+      if (isEstateLayoutImport) setCurrentStep(session.transform ? 2 : 1);
+    }).catch(() => {
       toast.error("Could not open that georeference session.");
     });
-  }, [draftHydrated, workflowMode, searchParams, georefSession?.id, loadGeoreferenceSession]);
+  }, [draftHydrated, workflowMode, searchParams, georefSession?.id, loadGeoreferenceSession, isEstateLayoutImport]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -3275,6 +3293,39 @@ export default function SurveyPlan() {
     }
   }, [applyGeoreferenceSession, georefFeatures, georefSelectedControlPointId, georefSession?.id]);
 
+  const handleFinishEstateGeoreference = useCallback(async () => {
+    if (!isEstateLayoutImport || !georefSession?.id || !returnEstateId || !returnImportReviewId) return;
+    if (!georefFeatures.some((feature) => feature.feature_type === "polygon")) {
+      toast.error("Trace at least one plot boundary before finishing.");
+      return;
+    }
+    setGeorefEstateFinishing(true);
+    try {
+      const saved = await api.post(`/survey-georeference/sessions/${encodeURIComponent(georefSession.id)}/features`, {
+        features: georefFeatures,
+      });
+      const session = saved.data?.session as GeoreferenceSession;
+      applyGeoreferenceSession(session, georefSelectedControlPointId);
+      setGeorefLastSavedAt(new Date());
+      const imported = await api.post(`/estates/import-reviews/${encodeURIComponent(returnImportReviewId)}/import-from-georeference`, {});
+      toast.success(`${Number(imported.data?.created_plots || 0)} plot(s) added to the Estate.`);
+      navigate(`/estates/${encodeURIComponent(returnEstateId)}/map`, { replace: true });
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "The plots could not be added to the Estate. Your georeferenced work is saved; you can reopen it and try again."));
+    } finally {
+      setGeorefEstateFinishing(false);
+    }
+  }, [
+    applyGeoreferenceSession,
+    georefFeatures,
+    georefSelectedControlPointId,
+    georefSession?.id,
+    isEstateLayoutImport,
+    navigate,
+    returnEstateId,
+    returnImportReviewId,
+  ]);
+
   const handleDownloadGeoreferenceCsv = useCallback(async () => {
     if (!isSurveyAuthed()) {
       openSignupGate({ type: "georeference-csv" });
@@ -4812,7 +4863,7 @@ export default function SurveyPlan() {
             <path d="M10 3v2M10 15v2M3 10h2M15 10h2" />
             <circle cx="10" cy="10" r="1.6" fill="currentColor" stroke="none" />
           </svg>
-          <span>LandCheck Survey</span>
+          <span>{isEstateLayoutImport ? "LandCheck Estates" : "LandCheck Survey"}</span>
         </div>
         <span className="geo-top-bar-saved">
           {georefLastSavedAt
@@ -4845,13 +4896,15 @@ export default function SurveyPlan() {
               <path fillRule="evenodd" d="M10 9a4 4 0 100-8 4 4 0 000 8zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
             </svg>
           </button>
-          <button type="button" className="geo-top-bar-btn" onClick={handleStartNewPlan}>
-            Start new plan
-          </button>
+          {!isEstateLayoutImport && (
+            <button type="button" className="geo-top-bar-btn" onClick={handleStartNewPlan}>
+              Start new plan
+            </button>
+          )}
         </div>
       </header>
       <nav className="geo-h-stepper" aria-label="Georeference workflow progress">
-        {GEOREFERENCE_STEPS.map((step) => {
+        {(isEstateLayoutImport ? GEOREFERENCE_STEPS.slice(0, 2) : GEOREFERENCE_STEPS).map((step) => {
           const completed = currentStep > step.id;
           const active = currentStep === step.id;
           return (
@@ -5447,13 +5500,19 @@ export default function SurveyPlan() {
               session={georefSession}
               rasterObjectUrl={georefRasterObjectUrl}
               features={georefFeatures}
-              saving={georefSavingFeatures}
+              saving={georefSavingFeatures || georefEstateFinishing}
               onFeaturesChange={setGeorefFeatures}
               onSaveFeatures={handleSaveGeoreferenceFeatures}
               onBack={() => goToStep(1)}
+              continueLabel={isEstateLayoutImport ? "Finish and return to Estate" : undefined}
+              continuing={georefEstateFinishing}
               onContinue={() => {
                 if (!georefFeatures.length) {
                   toast.error("Save at least one digitized feature first.");
+                  return;
+                }
+                if (isEstateLayoutImport) {
+                  void handleFinishEstateGeoreference();
                   return;
                 }
                 goToStep(3);

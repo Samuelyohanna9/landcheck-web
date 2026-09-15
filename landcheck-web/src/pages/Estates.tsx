@@ -848,22 +848,14 @@ export default function Estates() {
       setLayoutUploadBusy(false);
     }
   };
-  const openGeoreferenceTool = (sessionId: string) => {
-    window.open(`/survey-plan?mode=georeference&session=${sessionId}`, "_blank", "noopener");
-  };
-  const importPlotsFromGeoreference = async (reviewId: number) => {
-    setLayoutUploadBusy(true);
-    setLayoutMessage("");
-    try {
-      const response = await api.post(`/estates/import-reviews/${reviewId}/import-from-georeference`, {});
-      setLayoutMessage(`${response.data.created_plots} plot(s) added from the georeferenced layout.`);
-      await refreshImportReviews();
-      if (response.data.created_plots > 0) window.location.reload();
-    } catch (error) {
-      setLayoutMessage(await extractApiErrorMessage(error, "Digitized plots could not be imported yet - make sure you saved the traced plots in the georeference tool first."), "danger");
-    } finally {
-      setLayoutUploadBusy(false);
-    }
+  const openGeoreferenceTool = (sessionId: string, reviewId: number) => {
+    const params = new URLSearchParams({
+      mode: "georeference",
+      session: sessionId,
+      return_estate_id: String(estateId),
+      return_import_review_id: String(reviewId),
+    });
+    navigate(`/survey-plan?${params.toString()}`);
   };
   const handleLayoutFileChange = (method: EstateLayoutMethod, file: File | null) => {
     if (method === "csv") setCsvFile(file);
@@ -1242,6 +1234,15 @@ export default function Estates() {
     else { setAllocationId(""); setFinancial(null); }
   };
   const selectedBlock = selectedPlot ? blocks.find((block) => block.id === selectedPlot.block_id) : undefined;
+  const buildPlotThumbUrl = (geometry: any): string | null => {
+    if (!MAPBOX_TOKEN || !geometry) return null;
+    const overlay = encodeURIComponent(JSON.stringify({
+      type: "Feature",
+      properties: { fill: "#1e8a4c", "fill-opacity": 0.35, stroke: "#1e8a4c", "stroke-width": 2 },
+      geometry,
+    }));
+    return `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static/geojson(${overlay})/auto/104x104@2x?padding=20&access_token=${MAPBOX_TOKEN}`;
+  };
   const openTab = (tab: typeof drawerTab) => { setDrawerTab(tab); setEditingDevelopment(false); };
   const flyToSelectedPlot = () => {
     if (!mapRef.current || !selectedPlot) return;
@@ -1589,7 +1590,15 @@ export default function Estates() {
                     <div className="edash-overview-field"><span>Block</span><strong>{selectedBlock?.label || "--"}</strong></div>
                     <div className="edash-overview-field"><span>Plot No.</span><strong>{selectedPlot.plot_number}</strong></div>
                     <div className="edash-overview-field"><span>Area</span><strong>{Number(selectedPlot.area_sqm || 0).toLocaleString()} m²</strong></div>
-                    <div className="edash-overview-thumb" aria-hidden="true" />
+                    {(() => {
+                      const feature = plotGeojson.features.find((item: any) => Number(item.properties?.id) === selectedPlot.id);
+                      const thumbUrl = buildPlotThumbUrl(feature?.geometry);
+                      return thumbUrl ? (
+                        <img className="edash-overview-thumb" src={thumbUrl} alt={`Plot ${selectedPlot.plot_number} on the map`} />
+                      ) : (
+                        <div className="edash-overview-thumb" aria-hidden="true" />
+                      );
+                    })()}
                   </div>
 
                   {selectedPlot.commercial_status === "available" && (
@@ -1936,9 +1945,10 @@ export default function Estates() {
     );
   }
 
-  function renderBottomRow() {
+  function renderBottomRow(cards: Array<"activity" | "progress" | "risk"> = ["activity", "progress", "risk"]) {
     return (
       <div className="edash-bottom-row">
+        {cards.includes("activity") && (
         <div className="edash-card">
           <div className="edash-card-inner">
             <div className="edash-card-head">
@@ -1960,7 +1970,9 @@ export default function Estates() {
             ) : <p className="edash-tab-empty">No activity recorded yet.</p>}
           </div>
         </div>
+        )}
 
+        {cards.includes("progress") && (
         <div className="edash-card">
           <div className="edash-card-inner">
             <div className="edash-card-head"><h3 className="edash-card-title">Estate Progress</h3></div>
@@ -1994,7 +2006,9 @@ export default function Estates() {
             ) : <p className="edash-tab-empty">No plots mapped yet.</p>}
           </div>
         </div>
+        )}
 
+        {cards.includes("risk") && (
         <div className="edash-card">
           <div className="edash-card-inner">
             <div className="edash-card-head">
@@ -2028,6 +2042,7 @@ export default function Estates() {
             </div>
           </div>
         </div>
+        )}
       </div>
     );
   }
@@ -2152,7 +2167,6 @@ export default function Estates() {
               onDecision={(reviewId, status) => void decideImportReview(reviewId, status, importAsBoundary)}
               onStartGeoreference={(file) => void startGeoreferenceImport(file)}
               onOpenGeoreference={openGeoreferenceTool}
-              onImportFromGeoreference={(reviewId) => void importPlotsFromGeoreference(reviewId)}
               message={layoutMessage}
               messageTone={layoutMessageTone}
               busy={layoutUploadBusy}
@@ -2259,12 +2273,13 @@ export default function Estates() {
               <label className="edash-field"><span>Layer name</span><input value={layerName} onChange={(event) => setLayerName(event.target.value)} placeholder="Optional" /></label>
             </div>
             <label className="edash-field"><span>Coordinates</span><textarea value={layerCoordinates} onChange={(event) => setLayerCoordinates(event.target.value)} placeholder="longitude, latitude per line" /></label>
-            {layerType === "open_space" && (
-              <div>
-                <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.8rem" }}>Or draw it on the map</h3></div>
-                {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={parseCoordinateTextToPoints(layerCoordinates)} onCoordinatesDrawn={handleLayerCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <p className="edash-tab-empty">Map drawing is unavailable right now.</p>}
-              </div>
-            )}
+            <div>
+              <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.8rem" }}>Or draw it on the map</h3></div>
+              <p className="edash-field-note" style={{ marginBottom: 8 }}>
+                {layerType === "open_space" ? "Draws a closed polygon (an area)." : "Draws an open line (a centreline) - use this for a road, drainage run or infrastructure corridor."}
+              </p>
+              {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={parseCoordinateTextToPoints(layerCoordinates)} onCoordinatesDrawn={handleLayerCoordinatesDrawn} coordinateSystem="wgs84" showToolbar drawShape={layerType === "open_space" ? "polygon" : "line"} /> : <p className="edash-tab-empty">Map drawing is unavailable right now.</p>}
+            </div>
             <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => void createLayer()}>Add layer</button>
           </div>
           {layerGeojson.features.length > 0 && (
@@ -2279,12 +2294,16 @@ export default function Estates() {
               {selectedLayerId && (
                 <>
                   <label className="edash-field"><span>Coordinates</span><textarea value={layerEditCoordinates} onChange={(event) => setLayerEditCoordinates(event.target.value)} /></label>
-                  {layerGeojson.features.find((feature: any) => String(feature.id) === selectedLayerId)?.geometry?.type === "Polygon" && (
-                    <div>
-                      <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.8rem" }}>Or edit vertices on the map</h3></div>
-                      {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={parseCoordinateTextToPoints(layerEditCoordinates)} onCoordinatesDrawn={handleLayerEditCoordinatesDrawn} coordinateSystem="wgs84" showToolbar /> : <p className="edash-tab-empty">Map editing is unavailable right now.</p>}
-                    </div>
-                  )}
+                  {(() => {
+                    const editingGeometryType = layerGeojson.features.find((feature: any) => String(feature.id) === selectedLayerId)?.geometry?.type;
+                    if (editingGeometryType !== "Polygon" && editingGeometryType !== "LineString") return null;
+                    return (
+                      <div>
+                        <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.8rem" }}>Or edit vertices on the map</h3></div>
+                        {MAPBOX_TOKEN ? <MapViewEnhanced coordinates={parseCoordinateTextToPoints(layerEditCoordinates)} onCoordinatesDrawn={handleLayerEditCoordinatesDrawn} coordinateSystem="wgs84" showToolbar drawShape={editingGeometryType === "Polygon" ? "polygon" : "line"} /> : <p className="edash-tab-empty">Map editing is unavailable right now.</p>}
+                      </div>
+                    );
+                  })()}
                   <div style={{ display: "flex", gap: 8 }}>
                     <button type="button" className="edash-btn-primary" onClick={() => void updateLayer()}>Save geometry</button>
                     <button type="button" className="edash-btn-outline" onClick={() => void archiveLayer()}>Archive layer</button>
@@ -2519,11 +2538,14 @@ export default function Estates() {
       {isMapView && message && <StatusBanner text={message} tone={messageTone} />}
       {renderStatsRow()}
       {isMapView ? (
-        <div className="edash-content-row">
-          {renderMapPanel()}
-          {renderPlotDrawer()}
-          {renderPlotContextMenu()}
-        </div>
+        <>
+          <div className="edash-content-row">
+            {renderMapPanel()}
+            {renderPlotDrawer()}
+            {renderPlotContextMenu()}
+          </div>
+          {renderBottomRow(["activity", "progress"])}
+        </>
       ) : (
         <>
           {renderBottomRow()}

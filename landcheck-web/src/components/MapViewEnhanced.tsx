@@ -30,6 +30,11 @@ type Props = {
   // without that data being forced into (and distorting) the boundary ring.
   viewMode?: "boundary" | "spot_heights";
   spotHeightPoints?: SpotHeightPoint[];
+  // "polygon" (default) is today's exact behavior. "line" switches the freehand-draw empty-state
+  // button to Mapbox Draw's "draw_line_string" mode instead, and accepts an open LineString result
+  // from onCoordinatesDrawn instead of requiring a closed ring - for drawing something like a road
+  // centerline rather than an area.
+  drawShape?: "polygon" | "line";
   // Opt-in: the compact Select/Fit/Basemap/Layers/Measure/Full-screen toolbar plus the contextual
   // (only-when-selected) delete action and the restrained empty-state message. This component is
   // shared with Hazard Analysis, which has no such toolbar and relies on Mapbox Draw's own
@@ -174,6 +179,7 @@ function MapViewEnhanced({
   viewMode = "boundary",
   spotHeightPoints,
   showToolbar = false,
+  drawShape = "polygon",
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -314,19 +320,23 @@ function MapViewEnhanced({
     }
 
     const geom = data.features[0].geometry;
-    if (geom.type !== "Polygon") {
+    let vertices: number[][];
+    if (geom.type === "Polygon") {
+      const ring = geom.coordinates[0] as number[][];
+      vertices =
+        ring.length > 3 &&
+        ring[0][0] === ring[ring.length - 1][0] &&
+        ring[0][1] === ring[ring.length - 1][1]
+          ? ring.slice(0, -1)
+          : ring;
+    } else if (geom.type === "LineString") {
+      // A line has no closing vertex to strip - every drawn point is kept as-is.
+      vertices = geom.coordinates as number[][];
+    } else {
       return;
     }
 
-    const ring = geom.coordinates[0] as number[][];
-    const cleaned =
-      ring.length > 3 &&
-      ring[0][0] === ring[ring.length - 1][0] &&
-      ring[0][1] === ring[ring.length - 1][1]
-        ? ring.slice(0, -1)
-        : ring;
-
-    const points: Point[] = cleaned.map((coord, index) => ({
+    const points: Point[] = vertices.map((coord, index) => ({
       station: String.fromCharCode(65 + index),
       lng: coord[0],
       lat: coord[1],
@@ -417,6 +427,21 @@ function MapViewEnhanced({
             "line-color": "#21c77a",
             "line-width": 3,
           },
+        });
+
+        // drawShape="line": a confirmed centerline (a road, say) preview - kept as its own open
+        // LineString source/layer rather than reusing plot-polygon, which always closes its ring
+        // and would otherwise draw a 3+ point line as a misleading triangle/polygon shape.
+        map.addSource("plot-line-preview", {
+          type: "geojson",
+          data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [] } },
+        });
+        map.addLayer({
+          id: "plot-line-preview-line",
+          type: "line",
+          source: "plot-line-preview",
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: { "line-color": "#21c77a", "line-width": 4 },
         });
 
         // Measure tool - a plain line + point source, populated only while mapTool === "measure"
@@ -747,18 +772,31 @@ function MapViewEnhanced({
       }
     }
 
-    if (validCoords.length === 0) {
+    const clearPolygonSource = () => {
       const source = map.getSource("plot-polygon") as any;
       if (source) {
         source.setData({
           type: "Feature",
           properties: {},
-          geometry: {
-            type: "Polygon",
-            coordinates: [[]],
-          },
+          geometry: { type: "Polygon", coordinates: [[]] },
         });
       }
+    };
+
+    const clearLinePreviewSource = () => {
+      const source = map.getSource("plot-line-preview") as any;
+      if (source) {
+        source.setData({
+          type: "Feature",
+          properties: {},
+          geometry: { type: "LineString", coordinates: [] },
+        });
+      }
+    };
+
+    if (validCoords.length === 0) {
+      clearPolygonSource();
+      clearLinePreviewSource();
       return;
     }
 
@@ -777,7 +815,33 @@ function MapViewEnhanced({
       markersRef.current.push(marker);
     });
 
-    if (validCoords.length >= 3) {
+    if (drawShape === "line") {
+      clearPolygonSource();
+
+      if (validCoords.length >= 2) {
+        const lineCoords = validCoords.map((c) => [c.lng, c.lat]);
+        const source = map.getSource("plot-line-preview") as any;
+        if (source) {
+          source.setData({
+            type: "Feature",
+            properties: {},
+            geometry: { type: "LineString", coordinates: lineCoords },
+          });
+        }
+
+        const bounds = new mapboxgl.LngLatBounds();
+        validCoords.forEach((c) => bounds.extend([c.lng, c.lat]));
+
+        map.fitBounds(bounds, {
+          padding: 80,
+          maxZoom: 18,
+          duration: 1000,
+        });
+      } else {
+        clearLinePreviewSource();
+      }
+    } else if (validCoords.length >= 3) {
+      clearLinePreviewSource();
       const ringCoords = validCoords.map((c) => [c.lng, c.lat]);
       ringCoords.push(ringCoords[0]);
 
@@ -802,6 +866,7 @@ function MapViewEnhanced({
         duration: 1000,
       });
     } else {
+      clearLinePreviewSource();
       const source = map.getSource("plot-polygon") as any;
       if (source) {
         source.setData({
@@ -824,7 +889,7 @@ function MapViewEnhanced({
         });
       }
     }
-  }, [coordinates, mapReady]);
+  }, [coordinates, mapReady, drawShape]);
 
   // Manual re-trigger for the same fitBounds the [coordinates] effect above already does
   // automatically on every import/edit - useful after a surveyor has panned/zoomed away and wants
@@ -843,12 +908,14 @@ function MapViewEnhanced({
   // Freehand polygon drawing (Mapbox Draw's own "draw_polygon" mode) is preserved but no longer
   // has a permanently-visible button - it's reachable only from the empty-state's "Draw on map"
   // link, since the page's primary boundary-creation paths are AI/CSV/manual entry in the sidebar.
+  // drawShape="line" switches this to "draw_line_string" instead, for tracing something like a
+  // road centerline rather than an enclosed area.
   const startFreehandDraw = useCallback(() => {
     const draw = drawRef.current;
     if (!draw || typeof draw.changeMode !== "function") return;
     setMapTool("select");
-    draw.changeMode("draw_polygon");
-  }, []);
+    draw.changeMode(drawShape === "line" ? "draw_line_string" : "draw_polygon");
+  }, [drawShape]);
 
   const handleDeleteSelection = useCallback(() => {
     const draw = drawRef.current;
@@ -1038,12 +1105,12 @@ function MapViewEnhanced({
         </div>
       )}
 
-      {hasValidCoords && validCoords.length < 3 && (
+      {hasValidCoords && validCoords.length < (drawShape === "line" ? 2 : 3) && (
         <div className="map-warning">
           <svg viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
           </svg>
-          <span>Need at least 3 points to form a polygon</span>
+          <span>{drawShape === "line" ? "Need at least 2 points to form a line" : "Need at least 3 points to form a polygon"}</span>
         </div>
       )}
 
