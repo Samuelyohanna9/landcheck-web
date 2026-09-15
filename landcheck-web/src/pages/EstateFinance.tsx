@@ -9,7 +9,7 @@ type Payment = { id: number; date: string; amount: string; currency: string; sta
 type Allocation = { id: number; estate_name: string; plot_number: string; customer_name: string };
 type Customer = { id: number; name: string };
 type Detail = { payment: Payment & { notes?: string }; customer: { name: string }; estate: { name: string }; plot: { number: string }; financial: { agreed_price: string; confirmed: string; pending: string; outstanding: string }; capabilities: { can_confirm: boolean; can_void: boolean }; evidence: { id: number; filename: string }[] };
-type Statement = { organization: { name: string }; customer: { name: string; reference?: string }; statement_date: string; allocations: any[] };
+type Statement = { organization: { name: string }; customer: { id: number; name: string; reference?: string }; statement_date: string; allocations: any[] };
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -435,9 +435,22 @@ function renderReceiptCell(transaction: { id: number; receipts?: { id: number; f
 }
 
 function CustomerStatement({ statement }: { statement: Statement }) {
+  const [busy, setBusy] = useState(false);
+  const downloadPdf = async () => {
+    setBusy(true);
+    try {
+      await download(`/estates/customers/${statement.customer.id}/statement.pdf`, `${statement.customer.name || "customer"}-payment-statement.pdf`);
+    } catch {
+      window.alert("The statement PDF could not be downloaded.");
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <div>
-      <button type="button" className="edash-btn-outline" style={{ marginBottom: 12 }} onClick={() => window.print()}>Print statement</button>
+      <button type="button" className="edash-btn-primary" style={{ marginBottom: 12 }} disabled={busy} onClick={() => void downloadPdf()}>
+        {busy ? "Preparing..." : "Download statement (PDF)"}
+      </button>
       <p className="edash-status-row-desc" style={{ marginBottom: 12 }}>
         {statement.organization.name}<br />
         {statement.customer.name} {statement.customer.reference ? `(${statement.customer.reference})` : ""}<br />
@@ -446,17 +459,28 @@ function CustomerStatement({ statement }: { statement: Statement }) {
       {statement.allocations.map((allocation) => (
         <div key={allocation.allocation_id} style={{ marginBottom: 16 }}>
           <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.86rem" }}>{allocation.estate} / {allocation.plot}</h3></div>
-          <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>Allocation date: {allocation.allocation_date || "-"}. Agreed price: {money(allocation.agreed_price)}{allocation.payment_plan ? ` · Payment plan: ${allocation.payment_plan}` : ""}</p>
-          <div style={{ overflowX: "auto" }}>
-            <table className="edash-mini-table">
-              <thead><tr><th>Date</th><th>Reference</th><th>Method</th><th>Amount</th><th>Status</th><th>Receipt</th></tr></thead>
-              <tbody>
-                {allocation.transactions.map((transaction: any, index: number) => (
-                  <tr key={index}><td>{transaction.date}</td><td>{transaction.reference || "-"}</td><td>{paymentMethodLabel(transaction.method)}</td><td>{money(transaction.amount)}</td><td>{transaction.status}</td><td>{renderReceiptCell(transaction)}</td></tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>
+            Allocation date: {allocation.allocation_date ? new Date(allocation.allocation_date).toLocaleDateString() : "Not yet allocated"}. Agreed price: {money(allocation.agreed_price)}{allocation.payment_plan ? ` · Payment plan: ${allocation.payment_plan}` : ""}
+          </p>
+          {allocation.transactions.length ? (
+            <div style={{ overflowX: "auto" }}>
+              <table className="edash-mini-table">
+                <thead><tr><th>Date</th><th>Reference</th><th>Method</th><th>Amount</th><th>Status</th><th>Receipt</th></tr></thead>
+                <tbody>
+                  {allocation.transactions.map((transaction: any, index: number) => (
+                    <tr key={index}>
+                      <td>{new Date(transaction.date).toLocaleDateString()}</td>
+                      <td>{transaction.reference || "-"}</td>
+                      <td>{paymentMethodLabel(transaction.method)}</td>
+                      <td>{money(transaction.amount)}</td>
+                      <td><PaymentStatusBadge status={transaction.status} /></td>
+                      <td>{renderReceiptCell(transaction)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="edash-tab-empty" style={{ padding: "6px 0" }}>No payments recorded against this plot yet.</p>}
           <p className="edash-status-row-desc" style={{ marginTop: 8 }}>Confirmed total: {money(allocation.confirmed_paid)}. Pending total: {money(allocation.pending_paid)}. Outstanding balance: {money(allocation.outstanding)}.</p>
         </div>
       ))}
