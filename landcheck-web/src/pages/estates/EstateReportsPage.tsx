@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { api } from "../../api/client";
+import { api, extractApiErrorMessage } from "../../api/client";
 import { money } from "../../components/estates/FinancialComponents";
 import EstateShell from "../../components/estates/EstateShell";
+import Spinner from "../../components/estates/EstateSpinner";
 
 export default function EstateReportsPage() {
   const { estateId } = useParams();
@@ -11,6 +12,8 @@ export default function EstateReportsPage() {
   const [quality, setQuality] = useState<any>(null);
   const [hazards, setHazards] = useState<any>(null);
   const [activity, setActivity] = useState<any[]>([]);
+  const [reportBusy, setReportBusy] = useState(false);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (!estateId) return;
@@ -21,13 +24,32 @@ export default function EstateReportsPage() {
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
   }, [estateId]);
 
+  const downloadReport = async () => {
+    if (!estateId) return;
+    setReportBusy(true);
+    setMessage("");
+    try {
+      const response = await api.get(`/estates/${estateId}/exports/report.pdf`, { responseType: "blob" });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url; link.download = `${estateName || "estate"}-performance-report.pdf`; link.click(); URL.revokeObjectURL(url);
+    } catch (error) {
+      setMessage(await extractApiErrorMessage(error, "The report PDF could not be generated."));
+    } finally {
+      setReportBusy(false);
+    }
+  };
+
   if (!estateId) return null;
 
   return (
     <EstateShell estateId={estateId} estateName={estateName} activeKey="reports" recentActivity={activity}>
       <div className="edash-section-head">
-        <button type="button" className="edash-btn-outline" onClick={() => window.print()}>Print report</button>
+        <button type="button" className="edash-btn-primary" disabled={reportBusy} onClick={() => void downloadReport()}>
+          {reportBusy ? <><Spinner size={13} /> Generating...</> : "Download report (PDF)"}
+        </button>
       </div>
+      {message && <p className="edash-tab-empty" style={{ padding: "0 0 12px" }}>{message}</p>}
       <div className="edash-bottom-row">
         <div className="edash-card">
           <div className="edash-card-inner">
@@ -66,7 +88,7 @@ export default function EstateReportsPage() {
         </div>
       </div>
       <p className="edash-tab-empty" style={{ textAlign: "left", padding: "6px 2px" }}>
-        This report reflects the figures currently stored for this Estate - it is not a generated PDF document. Use Print to save a copy.
+        The figures below reflect what's currently on file for this Estate. "Download report" generates a full branded PDF - covering inventory, financials, a layout snapshot, geometry/hazard status and recent activity - suitable for sharing with investors, partners or your board.
       </p>
     </EstateShell>
   );

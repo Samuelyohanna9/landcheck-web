@@ -93,7 +93,7 @@ export default function EstateShell({
           ))}
         </nav>
         <div className="edash-sidebar-footer">
-          <EstateIcon name="help" />
+          <span className="edash-nav-icon"><EstateIcon name="help" /></span>
           Help &amp; Support
         </div>
       </aside>

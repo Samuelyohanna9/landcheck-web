@@ -161,12 +161,13 @@
 .edash-sidebar-footer {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  padding: 11px;
+  gap: 11px;
+  margin-top: 8px;
+  padding: 9px 11px;
   border-top: 1px solid var(--edash-border-soft);
+  border-radius: var(--edash-radius-sm);
   color: var(--edash-muted);
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
 }
@@ -352,12 +353,13 @@
 .edash-body--fill {
   flex: 1;
   min-height: 0;
+  padding-top: 14px;
   padding-bottom: 14px;
-  gap: 12px;
+  gap: 10px;
 }
 .edash-body--fill > .edash-stats-row { flex-shrink: 0; }
 .edash-body--fill > .edash-content-row {
-  flex: 1;
+  flex: 1.8;
   min-height: 0;
   align-items: stretch;
 }
@@ -365,7 +367,18 @@
 .edash-body--fill .edash-drawer {
   min-height: 0;
 }
-.edash-body--fill .edash-map-canvas-wrap { min-height: 220px; }
+.edash-body--fill .edash-map-canvas-wrap { min-height: 200px; }
+
+/* The Recent Activity/Estate Progress row brought back under the map - shares the remaining
+   height with the map+drawer row above instead of growing the page, so the map view still never
+   needs a page-level scroll. Each card caps its own inner list/legend with overflow instead. */
+.edash-body--fill > .edash-bottom-row {
+  flex: 1;
+  min-height: 150px;
+  max-height: 230px;
+}
+.edash-body--fill > .edash-bottom-row .edash-card-inner { padding: 12px 14px; overflow-y: auto; }
+.edash-body--fill > .edash-bottom-row .edash-activity-list { max-height: none; }
 
 /* ─── Stats row ─── */
 .edash-stats-row {
@@ -801,7 +814,7 @@
 
 .edash-overview-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr auto;
+  grid-template-columns: 1.3fr 0.85fr 1fr 0.95fr auto;
   gap: 12px;
   padding: 12px;
   margin-bottom: 12px;
@@ -812,16 +825,15 @@
 
 .edash-overview-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .edash-overview-field span { color: var(--edash-faint); font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
-.edash-overview-field strong { color: var(--edash-ink); font-size: 0.82rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.edash-overview-field strong { color: var(--edash-ink); font-size: 0.82rem; font-weight: 700; overflow-wrap: break-word; }
 
 .edash-overview-thumb {
   width: 52px;
   height: 52px;
   border-radius: 9px;
   flex-shrink: 0;
-  background:
-    linear-gradient(135deg, rgba(30,138,76,.24), transparent 60%),
-    repeating-linear-gradient(45deg, #cfd8ce, #cfd8ce 4px, #dbe3da 4px, #dbe3da 8px);
+  object-fit: cover;
+  background: var(--edash-border-soft);
   border: 1px solid var(--edash-border);
 }
 
@@ -983,6 +995,9 @@
   .edash-body--fill { flex: initial; min-height: auto; }
   .edash-body--fill > .edash-content-row { flex: initial; min-height: auto; align-items: start; }
   .edash-body--fill .edash-drawer { min-height: 300px; }
+  .edash-body--fill > .edash-bottom-row { flex: initial; min-height: auto; max-height: none; }
+  .edash-body--fill > .edash-bottom-row .edash-card-inner { overflow-y: visible; }
+  .edash-body--fill > .edash-bottom-row .edash-activity-list { max-height: 320px; }
   .edash-body--fill .edash-map-canvas-wrap { min-height: 420px; }
 }
 

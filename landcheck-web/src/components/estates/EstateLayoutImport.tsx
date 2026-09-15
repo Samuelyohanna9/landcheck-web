@@ -22,8 +22,7 @@ type Props = {
   onUpload: (method: EstateLayoutMethod) => void;
   onDecision: (reviewId: number, status: "approved" | "rejected", asBoundary?: boolean) => void;
   onStartGeoreference: (file: File) => void;
-  onOpenGeoreference: (sessionId: string) => void;
-  onImportFromGeoreference: (reviewId: number) => void;
+  onOpenGeoreference: (sessionId: string, reviewId: number) => void;
   message?: string;
   messageTone?: "good" | "danger";
   busy?: boolean;
@@ -35,7 +34,7 @@ export const LAYOUT_IMPORT_METHODS: Array<{ key: EstateLayoutMethod; icon: impor
   { key: "csv", icon: "documents", title: "Spreadsheet", description: "CSV or Excel-style coordinate rows", accept: ".csv,text/csv" },
   { key: "geojson", icon: "map", title: "GIS file", description: "Digital layout from your mapping software", accept: ".json,.geojson,application/geo+json" },
   { key: "dxf", icon: "development", title: "CAD drawing", description: "Digital drawing from your surveyor or designer", accept: ".dxf,application/dxf" },
-  { key: "scanned-layout", icon: "image", title: "Scanned plan", description: "PDF or image of a paper layout", accept: ".pdf,image/jpeg,image/png" },
+  { key: "scanned-layout", icon: "image", title: "Scanned plan", description: "Image of a paper layout", accept: ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" },
 ];
 
 function LayoutPreview({ review }: { review: ImportReview }) {
@@ -91,40 +90,39 @@ function InvalidRowsList({ review }: { review: ImportReview }) {
   );
 }
 
-export default function EstateLayoutImport({ method, reviews, files, onFileChange, onUpload, onDecision, onStartGeoreference, onOpenGeoreference, onImportFromGeoreference, message, messageTone = "good", busy = false, asBoundary = false, onAsBoundaryChange }: Props) {
+export default function EstateLayoutImport({ method, reviews, files, onFileChange, onUpload, onDecision, onStartGeoreference, onOpenGeoreference, message, messageTone = "good", busy = false, asBoundary = false, onAsBoundaryChange }: Props) {
   const latest = reviews[0];
   const usableCount = latest?.candidates?.filter((candidate) => candidate.valid !== false && candidate.geometry?.type === "Polygon").length || 0;
   const selectedMethod = LAYOUT_IMPORT_METHODS.find((item) => item.key === method) || LAYOUT_IMPORT_METHODS[0];
   const file = files[method];
   const isGeoreferenceMethod = method === "scanned-layout";
-  const georeferenceReview = reviews.find((review) => review.source_type === "raster" && review.session_id);
+  const georeferenceReview = reviews.find((review) => Boolean(review.session_id));
 
   return (
     <div>
         {isGeoreferenceMethod ? (
           georeferenceReview ? (
             <div className="edash-info-card" style={{ flexDirection: "column", marginTop: 4 }}>
-              <div className="edash-info-card-head"><span className="edash-status-row-title">Georeferencing in progress</span></div>
+              <div className="edash-info-card-head"><span className="edash-status-row-title">{georeferenceReview.status === "approved" ? "Layout added" : "Georeferencing in progress"}</span></div>
               <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>
-                Place ground control points and trace each plot boundary in the georeference tool, then come back here to pull the finished plots into this Estate.
+                {georeferenceReview.status === "approved"
+                  ? "Your digitized plots have been added to this Estate."
+                  : "Place control points and trace the plot boundaries. When you finish, LandCheck will add the plots to this Estate and bring you back here."}
               </p>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button type="button" className="edash-btn-primary" onClick={() => onOpenGeoreference(georeferenceReview.session_id!)}>
-                  <EstateIcon name="map" /> Open georeference tool
+              {georeferenceReview.status !== "approved" && (
+                <button type="button" className="edash-btn-primary" disabled={busy} onClick={() => onOpenGeoreference(georeferenceReview.session_id!, georeferenceReview.id)}>
+                  {busy ? <><Spinner size={13} /> Opening...</> : <><EstateIcon name="map" /> Continue georeferencing</>}
                 </button>
-                <button type="button" className="edash-btn-outline" disabled={busy} onClick={() => onImportFromGeoreference(georeferenceReview.id)}>
-                  {busy ? <><Spinner size={13} /> Importing...</> : "Import digitized plots"}
-                </button>
-              </div>
+              )}
             </div>
           ) : (
             <div className="edash-upload-dropzone">
               <label className="edash-upload-dropzone-input">
                 <EstateIcon name="upload" />
-                <span>{file ? file.name : "Choose a scanned plan (PDF, JPG or PNG)"}</span>
+                <span>{file ? file.name : "Choose a scanned plan image (JPG, PNG or WEBP)"}</span>
                 <input type="file" accept={selectedMethod.accept} onChange={(event) => onFileChange(method, event.target.files?.[0] || null)} />
               </label>
-              <p className="edash-status-row-desc">This opens the same georeferencing and digitizing tool Survey uses - place a few ground control points, trace each plot, then return here to import them.</p>
+              <p className="edash-status-row-desc">Set the plan's position, trace its plot boundaries, and finish to add them to this Estate.</p>
               <button type="button" className="edash-btn-primary" disabled={!file || busy} onClick={() => file && onStartGeoreference(file)}>
                 {busy ? <><Spinner size={13} /> Starting...</> : "Start georeferencing"}
               </button>
