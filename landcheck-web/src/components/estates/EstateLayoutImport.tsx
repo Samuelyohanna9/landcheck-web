@@ -108,18 +108,29 @@ export default function EstateLayoutImport({ method, reviews, files, onFileChang
           georeferenceReview ? (
             <div style={{ boxSizing: "border-box", display: "block", width: "100%", marginTop: 4, padding: 13, border: "1px solid var(--edash-border-soft)", borderRadius: "var(--edash-radius-md)", background: "#fff" }}>
               <div style={{ display: "block", width: "100%" }}>
-                <span className="edash-status-row-title" style={{ display: "block", width: "100%" }}>{georeferenceReview.status === "approved" ? "Layout added" : "Georeferencing in progress"}</span>
+                <span className="edash-status-row-title" style={{ display: "block", width: "100%" }}>Georeferencing in progress</span>
               </div>
               <p className="edash-status-row-desc" style={{ display: "block", width: "100%", marginTop: 3, marginBottom: 10, whiteSpace: "normal" }}>
-                {georeferenceReview.status === "approved"
-                  ? "Your digitized plots have been added to this Estate."
-                  : "Place control points and trace the plot boundaries. When you finish, LandCheck will add the plots to this Estate and bring you back here."}
+                Place control points and trace the plot boundaries. When you finish, LandCheck will add the plots to this Estate and bring you back here.
               </p>
-              {georeferenceReview.status !== "approved" && (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button type="button" className="edash-btn-primary" style={{ display: "inline-flex", width: "auto" }} disabled={busy} onClick={() => onOpenGeoreference(georeferenceReview.session_id!, georeferenceReview.id)}>
                   {busy ? <><Spinner size={13} /> Opening...</> : <><EstateIcon name="map" /> Continue georeferencing</>}
                 </button>
-              )}
+                <button
+                  type="button"
+                  className="edash-btn-outline"
+                  style={{ display: "inline-flex", width: "auto" }}
+                  disabled={busy}
+                  onClick={() => {
+                    if (!window.confirm("Discard this in-progress scan and start afresh? Anything already placed on it will be lost.")) return;
+                    onDecision(georeferenceReview.id, "rejected");
+                    onFileChange(method, null);
+                  }}
+                >
+                  Discard and start afresh
+                </button>
+              </div>
             </div>
           ) : (
             <div className="edash-upload-dropzone">
