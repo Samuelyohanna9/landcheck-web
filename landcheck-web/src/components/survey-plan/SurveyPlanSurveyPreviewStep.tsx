@@ -130,7 +130,10 @@ type Props = {
   }) => Promise<boolean>;
   onRoadNamesSaved?: () => void;
   isOnline: boolean;
-  onBack: () => void;
+  // Omitted when this plot's coordinates were fixed by whatever brought the surveyor here (an
+  // Estate-assigned plot, in practice) rather than typed in on Step 1 - going "back" to re-enter
+  // them wouldn't do anything reversible, so the button itself doesn't render.
+  onBack?: () => void;
   onContinue: () => void;
   previewType: PreviewType;
   onPreviewTypeChange: (type: PreviewType) => void;
@@ -803,16 +806,18 @@ function SurveyPlanSurveyPreviewStep({
         </div>
 
         <div className="action-bar">
-          <button className="btn-outline" onClick={onBack}>
-            <svg viewBox="0 0 20 20" fill="currentColor">
-              <path
-                fillRule="evenodd"
-                d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Back to Coordinates
-          </button>
+          {onBack && (
+            <button className="btn-outline" onClick={onBack}>
+              <svg viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Back to Coordinates
+            </button>
+          )}
           <button className="btn-primary" onClick={() => requireTemplate(onContinue)}>
             Continue to Export
             <svg viewBox="0 0 20 20" fill="currentColor">

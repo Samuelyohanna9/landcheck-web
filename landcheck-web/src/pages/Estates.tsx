@@ -1097,7 +1097,7 @@ export default function Estates() {
         survey = { ...survey, ...started.data };
       }
       setPlotContextMenu(null);
-      navigate(`/survey-plan?mode=survey&estate_survey_plot=${survey.survey_working_plot_id || ""}`);
+      navigate(`/survey-plan?mode=survey&estate_survey_plot=${survey.survey_working_plot_id || ""}&return_estate_id=${estateId}&return_plot_id=${plotId}`);
     } catch (error) {
       setMessage(await extractApiErrorMessage(error, "Official Survey Plan could not be created."), "danger");
     } finally {
@@ -1408,7 +1408,15 @@ export default function Estates() {
             type="button"
             className="edash-context-menu-option"
             disabled={!stakingTask}
-            title={stakingTask ? undefined : "Start staking for this plot first to generate a DGPS export"}
+            title={
+              stakingTask
+                ? undefined
+                : !allocation
+                  ? "Allocate this plot to a customer first"
+                  : !survey?.materialized
+                    ? "Create the Official Survey Plan first - this can be blocked by the organization's minimum-confirmed-payment rule (see Estate Settings > Survey eligibility, or confirm a payment for this customer)"
+                    : "Start staking for this plot first to generate a DGPS export"
+            }
             onClick={() => void downloadDgpsForPlot(plotContextMenu.plotId)}
           >
             <EstateIcon name="download" /> DGPS Staking Export
@@ -1706,7 +1714,7 @@ export default function Estates() {
                         </div>
                       </div>
                       {!selectedSurvey.materialized && <button type="button" className="edash-btn-primary" onClick={() => void runWorkflow("Survey workspace", () => api.post(`/estates/survey-requests/${selectedSurvey.id}/start`))}>Open Survey preparation</button>}
-                      {selectedSurvey.materialized && <Link className="edash-btn-outline" style={{ display: "inline-flex", marginRight: 8 }} to={`/survey-plan?mode=survey&estate_survey_plot=${selectedSurvey.survey_working_plot_id || ""}`}>Open approved plot in Survey</Link>}
+                      {selectedSurvey.materialized && <Link className="edash-btn-outline" style={{ display: "inline-flex", marginRight: 8 }} to={`/survey-plan?mode=survey&estate_survey_plot=${selectedSurvey.survey_working_plot_id || ""}&return_estate_id=${estateId}&return_plot_id=${selectedSurvey.plot.id}`}>Open approved plot in Survey</Link>}
                       {selectedSurvey.materialized && selectedSurvey.status !== "completed" && <button type="button" className="edash-btn-primary" onClick={() => void runWorkflow("Survey completion", () => api.post(`/estates/survey-requests/${selectedSurvey.id}/complete`))}>Mark Survey complete</button>}
                     </>
                   ) : (
