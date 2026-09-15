@@ -2028,6 +2028,11 @@
   line-height: 1.5;
 }
 
+.georef-empty-stage .geo-btn {
+  margin-top: 0.5rem;
+  pointer-events: auto;
+}
+
 .georef-export-summary {
   display: grid;
   align-content: flex-start;

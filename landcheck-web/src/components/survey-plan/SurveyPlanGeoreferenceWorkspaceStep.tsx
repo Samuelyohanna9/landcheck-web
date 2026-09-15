@@ -213,6 +213,13 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   const [draftPixels, setDraftPixels] = useState<{ x: number; y: number }[]>([]);
   const [stageMetrics, setStageMetrics] = useState<RasterStageMetrics | null>(null);
   const [rasterLoadState, setRasterLoadState] = useState<"loading" | "loaded" | "error">("loading");
+  // Estates' preview image is generated on demand (R2 fetch + resize), and a plain <img> has no
+  // built-in timeout - left alone, a slow/stuck request left the surveyor staring at "Loading..."
+  // forever with no way out. This bounds the wait and offers an explicit retry, which forces a
+  // genuinely fresh request (not a stale/stuck one) via a cache-busting query param.
+  const [rasterLoadTimedOut, setRasterLoadTimedOut] = useState(false);
+  const [rasterRetryToken, setRasterRetryToken] = useState(0);
+  const RASTER_LOAD_TIMEOUT_MS = 20000;
   const [imageZoom, setImageZoom] = useState(MIN_STAGE_ZOOM);
   const [imagePan, setImagePan] = useState({ x: 0, y: 0 });
   const [draggingStage, setDraggingStage] = useState(false);
@@ -469,7 +476,28 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     dragStateRef.current = null;
     suppressNextStageClickRef.current = false;
     setRasterLoadState(rasterObjectUrl ? "loading" : "error");
+    setRasterLoadTimedOut(false);
   }, [session.id, rasterObjectUrl]);
+
+  useEffect(() => {
+    if (rasterLoadState !== "loading") return undefined;
+    const timeoutId = window.setTimeout(() => setRasterLoadTimedOut(true), RASTER_LOAD_TIMEOUT_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [rasterLoadState, rasterObjectUrl, rasterRetryToken]);
+
+  // Same URL plus a cache-busting param, forced fresh rather than reusing whatever request may
+  // still be stuck in flight.
+  const effectiveRasterUrl = useMemo(() => {
+    if (!rasterObjectUrl) return null;
+    if (!rasterRetryToken) return rasterObjectUrl;
+    return `${rasterObjectUrl}${rasterObjectUrl.includes("?") ? "&" : "?"}retry=${rasterRetryToken}`;
+  }, [rasterObjectUrl, rasterRetryToken]);
+
+  const retryRasterLoad = () => {
+    setRasterLoadTimedOut(false);
+    setRasterLoadState("loading");
+    setRasterRetryToken((current) => current + 1);
+  };
 
   const mapFeatureCollection = useMemo(() => {
     const pointFeatures: any[] = [];
@@ -1458,20 +1486,22 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                 onMouseLeave={() => setCursorSample(null)}
                 style={{ transform: `translate(${imagePan.x}px, ${imagePan.y}px) scale(${imageZoom})` }}
               >
-                {rasterObjectUrl ? (
+                {effectiveRasterUrl ? (
                   <>
                     <img
                       ref={rasterImageRef}
-                      src={rasterObjectUrl}
+                      src={effectiveRasterUrl}
                       alt={session.title_text || `${imageLabel} image`}
                       style={rasterLoadState === "loaded" ? undefined : { visibility: "hidden" }}
                       onLoad={(event) => {
                         const target = event.currentTarget;
                         if (target.naturalWidth <= 0 || target.naturalHeight <= 0) {
                           setRasterLoadState("error");
+                          setRasterLoadTimedOut(false);
                           return;
                         }
                         setRasterLoadState("loaded");
+                        setRasterLoadTimedOut(false);
                         setStageMetrics(
                           getRasterStageMetrics(
                             imageStageRef.current,
@@ -1481,22 +1511,43 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                           ),
                         );
                       }}
-                      onError={() => setRasterLoadState("error")}
+                      onError={() => {
+                        setRasterLoadState("error");
+                        setRasterLoadTimedOut(false);
+                      }}
                     />
                     {rasterLoadState !== "loaded" ? (
                       <div className="georef-empty-stage">
                         <strong>
-                          {rasterLoadState === "error" ? `${imageLabel} could not be loaded.` : `Loading ${imageLabel.toLowerCase()}…`}
+                          {rasterLoadState === "error"
+                            ? `${imageLabel} could not be loaded.`
+                            : rasterLoadTimedOut
+                              ? `${imageLabel} is taking longer than expected.`
+                              : `Loading ${imageLabel.toLowerCase()}…`}
                         </strong>
                         <span>
                           {rasterLoadState === "error"
                             ? imageLabel === "Estate layout"
                               ? "Reload the session or upload the layout again."
                               : "Reload the session, or start a new plan and re-upload the file."
-                            : imageLabel === "Estate layout"
-                              ? "Preparing a clear tracing image…"
-                              : "This can take a moment for large scans."}
+                            : rasterLoadTimedOut
+                              ? "This can happen on a slow connection or a busy server - try again."
+                              : imageLabel === "Estate layout"
+                                ? "Preparing a clear tracing image…"
+                                : "This can take a moment for large scans."}
                         </span>
+                        {rasterLoadState === "error" || rasterLoadTimedOut ? (
+                          <button
+                            type="button"
+                            className="geo-btn geo-btn-primary"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              retryRasterLoad();
+                            }}
+                          >
+                            Retry
+                          </button>
+                        ) : null}
                       </div>
                     ) : null}
                     <svg className="georef-image-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
