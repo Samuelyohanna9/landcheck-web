@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import EstateIcon, { type EstateIconName } from "./EstateIcon";
+import EstateModal from "./EstateModal";
 import { clearEstateAuthSession, getEstateAuthSession } from "../../auth/estateAuth";
 import "../../styles/estate-dashboard.css";
 
@@ -66,8 +67,23 @@ export default function EstateShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const estateSession = getEstateAuthSession();
   const activeItem = estateNavItems.find((item) => item.key === activeKey);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Without this, these dropdowns only ever close via their own toggle button - clicking
+  // anywhere else on the page (including the other dropdown) leaves them stuck open.
+  useEffect(() => {
+    if (!notifOpen && !userMenuOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notifOpen && notifRef.current && !notifRef.current.contains(event.target as Node)) setNotifOpen(false);
+      if (userMenuOpen && userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) setUserMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [notifOpen, userMenuOpen]);
 
   return (
     <div className={`edash${sidebarOpen ? " is-sidebar-open" : ""}`}>
@@ -92,10 +108,10 @@ export default function EstateShell({
             </Link>
           ))}
         </nav>
-        <div className="edash-sidebar-footer">
+        <button type="button" className="edash-sidebar-footer" onClick={() => setShowHelp(true)}>
           <span className="edash-nav-icon"><EstateIcon name="help" /></span>
           Help &amp; Support
-        </div>
+        </button>
       </aside>
       <div className={`edash-main${activeKey === "map" ? " edash-main--fill" : ""}`}>
         <div className="edash-topbar">
@@ -118,7 +134,7 @@ export default function EstateShell({
             <div className="edash-toolbar-spacer" style={{ flex: 1 }} />
           )}
           <div className="edash-topbar-right">
-            <div style={{ position: "relative" }}>
+            <div style={{ position: "relative" }} ref={notifRef}>
               <button type="button" className="edash-icon-btn" onClick={() => setNotifOpen((value) => !value)} aria-label="Recent updates">
                 <EstateIcon name="bell" />
                 {recentActivity.length > 0 && <span className="edash-notif-badge">{Math.min(recentActivity.length, 9)}</span>}
@@ -144,11 +160,14 @@ export default function EstateShell({
                     ) : (
                       <p style={{ color: "var(--edash-faint)", fontSize: "0.8rem" }}>No activity yet.</p>
                     )}
+                    <Link className="edash-card-link" style={{ display: "block", marginTop: 10, textAlign: "center" }} to={`/estates/${estateId}/timeline`} onClick={() => setNotifOpen(false)}>
+                      View all activity
+                    </Link>
                   </div>
                 </div>
               )}
             </div>
-            <div style={{ position: "relative" }}>
+            <div style={{ position: "relative" }} ref={userMenuRef}>
               <div className="edash-user" onClick={() => setUserMenuOpen((value) => !value)}>
                 <span className="edash-user-avatar">{(estateSession?.user.full_name || estateSession?.user.organization_name || "E").slice(0, 1).toUpperCase()}</span>
                 <div className="edash-user-meta">
@@ -179,6 +198,19 @@ export default function EstateShell({
         </div>
         <div className={`edash-body${activeKey === "map" ? " edash-body--fill" : ""}`}>{children}</div>
       </div>
+      {showHelp && (
+        <EstateModal title="Help & Support" subtitle="We usually reply within one business day." onClose={() => setShowHelp(false)}>
+          <p className="edash-status-row-desc" style={{ marginBottom: 14 }}>
+            Stuck on something, found a bug, or want a hand setting up an Estate? Email us and include your organization name and, if relevant, the plot or estate you're working on.
+          </p>
+          <a className="edash-btn-primary" style={{ display: "inline-flex", marginBottom: 8 }} href="mailto:landchecktech@gmail.com?subject=LandCheck%20Estates%20Support">
+            <EstateIcon name="mail" /> Email landchecktech@gmail.com
+          </a>
+          <p className="edash-field-note">
+            For hazard or geometry questions, the Audit Timeline and Reports pages often have the detail our team will ask for first.
+          </p>
+        </EstateModal>
+      )}
     </div>
   );
 }

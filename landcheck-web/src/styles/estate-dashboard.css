@@ -162,13 +162,18 @@
   display: flex;
   align-items: center;
   gap: 11px;
+  width: 100%;
   margin-top: 8px;
   padding: 9px 11px;
+  border: none;
   border-top: 1px solid var(--edash-border-soft);
   border-radius: var(--edash-radius-sm);
+  background: transparent;
   color: var(--edash-muted);
+  font: inherit;
   font-size: 0.85rem;
   font-weight: 600;
+  text-align: left;
   cursor: pointer;
 }
 
