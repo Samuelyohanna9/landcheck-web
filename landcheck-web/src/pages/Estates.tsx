@@ -420,6 +420,12 @@ export default function Estates() {
   const [paymentPlan, setPaymentPlan] = useState("");
   const [amountPaidNow, setAmountPaidNow] = useState("");
   const [amountPaidNowMethod, setAmountPaidNowMethod] = useState("bank_transfer");
+  const [salesAgentSubject, setSalesAgentSubject] = useState("");
+  const [salesAgents, setSalesAgents] = useState<any[]>([]);
+  const [commissionTiers, setCommissionTiers] = useState<any[]>([]);
+  const [commissionTiersUsingDefaults, setCommissionTiersUsingDefaults] = useState(true);
+  const [commissionReport, setCommissionReport] = useState<any[]>([]);
+  const [commissionTiersBusy, setCommissionTiersBusy] = useState(false);
   const [inspectionNotes, setInspectionNotes] = useState("");
   const [inspectionOutcome, setInspectionOutcome] = useState("observed");
   const [hazards, setHazards] = useState<any>(null);
@@ -488,7 +494,7 @@ export default function Estates() {
   const [drawerTab, setDrawerTab] = useState<"overview" | "customer" | "survey" | "staking" | "documents" | "hazards" | "timeline">("overview");
   const [editingDevelopment, setEditingDevelopment] = useState(false);
   const [plotContextMenu, setPlotContextMenu] = useState<{ x: number; y: number; plotId: number } | null>(null);
-  const [activeTool, setActiveTool] = useState<"add-plot" | "layout" | "blocks" | "layers" | "qc" | "export-layout" | null>(null);
+  const [activeTool, setActiveTool] = useState<"add-plot" | "layout" | "blocks" | "layers" | "qc" | "export-layout" | "commissions" | null>(null);
   type AddPlotMethod = "draw" | "coordinates" | EstateLayoutMethod;
   const [addPlotMethod, setAddPlotMethod] = useState<AddPlotMethod>("draw");
   const [designSubdividePlotId, setDesignSubdividePlotId] = useState<number | null>(null);
@@ -756,12 +762,15 @@ export default function Estates() {
   const assignCustomer = async (allocate: boolean) => {
     if (!estateId || !selectedPlot || !selectedCustomerId) { setMessage("Choose a parcel and customer first.", "danger"); return; }
     try {
+      const [agentSubjectType, agentSubjectId] = salesAgentSubject ? salesAgentSubject.split("::") : [null, null];
       await api.post(`/estates/${estateId}/plots/${selectedPlot.id}/${allocate ? "allocate" : "reserve"}`, {
         customer_id: Number(selectedCustomerId),
         agreed_price: agreedPrice ? Number(agreedPrice) : null,
         payment_plan: paymentPlan.trim() || null,
         initial_payment_amount: amountPaidNow ? Number(amountPaidNow) : null,
         initial_payment_method: amountPaidNow ? amountPaidNowMethod : null,
+        sales_agent_subject_type: agentSubjectType,
+        sales_agent_subject_id: agentSubjectId,
       });
       window.location.reload();
     }
@@ -952,7 +961,14 @@ export default function Estates() {
   };
   useEffect(() => {
     if (!estateId) return;
-    api.get(`/estates/${estateId}`).then((response) => { setEstateDetail(response.data); setImportSourceCrs(response.data.crs || "EPSG:4326"); }).catch(() => setEstateDetail(null));
+    api.get(`/estates/${estateId}`).then((response) => {
+      setEstateDetail(response.data);
+      setImportSourceCrs(response.data.crs || "EPSG:4326");
+      const organizationId = response.data.organization_id;
+      if (organizationId) {
+        api.get(`/estates/organizations/${organizationId}/sales-agents`).then((agentsResponse) => setSalesAgents(agentsResponse.data || [])).catch(() => setSalesAgents([]));
+      }
+    }).catch(() => setEstateDetail(null));
     api.get("/estates/selectors", { params: { estate_id: estateId } })
       .then((response) => { setAllocations(response.data.allocations || []); setPlots(response.data.plots || []); setCustomers(response.data.customers || []); })
       .catch(() => { setAllocations([]); setPlots([]); setCustomers([]); });
@@ -1193,6 +1209,38 @@ export default function Estates() {
       setMessage(await extractApiErrorMessage(error, "The layout DGPS CSV could not be downloaded."), "danger");
     } finally {
       setLayoutDgpsExportBusy(false);
+    }
+  };
+  const loadCommissionData = async () => {
+    const organizationId = estateDetail?.organization_id;
+    if (!organizationId) return;
+    try {
+      const [tiersResponse, reportResponse] = await Promise.all([
+        api.get(`/estates/organizations/${organizationId}/commission-tiers`),
+        api.get(`/estates/organizations/${organizationId}/commissions`),
+      ]);
+      setCommissionTiers((tiersResponse.data.tiers || []).map((tier: any) => ({ label: tier.label, min_cumulative_sales: tier.min_cumulative_sales, rate_percent: tier.rate_percent })));
+      setCommissionTiersUsingDefaults(Boolean(tiersResponse.data.using_defaults));
+      setCommissionReport(reportResponse.data.agents || []);
+    } catch (error) {
+      setMessage(await extractApiErrorMessage(error, "Commission data could not be loaded."), "danger");
+    }
+  };
+  const saveCommissionTiers = async () => {
+    const organizationId = estateDetail?.organization_id;
+    if (!organizationId) return;
+    setCommissionTiersBusy(true);
+    try {
+      const response = await api.put(`/estates/organizations/${organizationId}/commission-tiers`, {
+        tiers: commissionTiers.map((tier) => ({ label: tier.label, min_cumulative_sales: Number(tier.min_cumulative_sales) || 0, rate_percent: Number(tier.rate_percent) || 0 })),
+      });
+      setCommissionTiers((response.data.tiers || []).map((tier: any) => ({ label: tier.label, min_cumulative_sales: tier.min_cumulative_sales, rate_percent: tier.rate_percent })));
+      setCommissionTiersUsingDefaults(false);
+      setMessage("Commission tiers saved.");
+    } catch (error) {
+      setMessage(await extractApiErrorMessage(error, "Commission tiers could not be saved."), "danger");
+    } finally {
+      setCommissionTiersBusy(false);
     }
   };
   const uploadStakingEvidence = async (taskId: number) => {
@@ -1759,6 +1807,12 @@ export default function Estates() {
                       </select>
                       <input type="number" min="0" step="0.01" value={agreedPrice} onChange={(event) => setAgreedPrice(event.target.value)} placeholder="Agreed price (NGN)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
                       <input value={paymentPlan} onChange={(event) => setPaymentPlan(event.target.value)} placeholder="Payment plan (optional)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
+                      {salesAgents.length > 0 && (
+                        <select className="edash-map-select" style={{ width: "100%", marginBottom: 8 }} value={salesAgentSubject} onChange={(event) => setSalesAgentSubject(event.target.value)}>
+                          <option value="">No sales agent (skip commission tracking)</option>
+                          {salesAgents.map((agent) => <option key={`${agent.subject_type}::${agent.subject_id}`} value={`${agent.subject_type}::${agent.subject_id}`}>{agent.display_name} ({agent.role})</option>)}
+                        </select>
+                      )}
                       <input type="number" min="0" step="0.01" value={amountPaidNow} onChange={(event) => setAmountPaidNow(event.target.value)} placeholder="Amount already paid, if any (NGN)" style={{ padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)", width: "100%", marginBottom: 8 }} />
                       {Boolean(amountPaidNow) && (
                         <select className="edash-map-select" style={{ width: "100%", marginBottom: 8 }} value={amountPaidNowMethod} onChange={(event) => setAmountPaidNowMethod(event.target.value)}>
@@ -2006,7 +2060,7 @@ export default function Estates() {
   }
 
   function renderToolsBar() {
-    type ToolKey = "add-plot" | "layout" | "blocks" | "layers" | "qc" | "export-layout";
+    type ToolKey = "add-plot" | "layout" | "blocks" | "layers" | "qc" | "export-layout" | "commissions";
     const hasBoundary = Boolean(estateDetail?.boundary);
     const hasPlots = plots.length > 0;
     const hasSpatialContext = hasBoundary || hasPlots;
@@ -2017,6 +2071,7 @@ export default function Estates() {
       { key: "layers", label: "Map Layers", icon: "layers", locked: hasSpatialContext ? undefined : "Add a plot or Estate boundary before mapping roads, drainage or other layers." },
       { key: "qc", label: "Geometry Check", icon: "check-circle", locked: hasPlots ? undefined : "Add at least one plot before running a geometry check." },
       { key: "export-layout", label: "Export Layout", icon: "download", locked: hasPlots ? undefined : "Add at least one approved plot before exporting the whole layout." },
+      { key: "commissions", label: "Commissions", icon: "wallet" },
     ];
     return (
       <div className="edash-tools-bar">
@@ -2027,7 +2082,7 @@ export default function Estates() {
             className={`edash-tool-btn${tool.locked ? " edash-tool-btn--locked" : ""}`}
             disabled={Boolean(tool.locked)}
             title={tool.locked}
-            onClick={() => { if (!tool.locked) setActiveTool(tool.key); }}
+            onClick={() => { if (tool.locked) return; setActiveTool(tool.key); if (tool.key === "commissions") void loadCommissionData(); }}
           >
             <EstateIcon name={tool.locked ? "lock" : tool.icon} />
             {tool.label}
@@ -2340,6 +2395,57 @@ export default function Estates() {
               {layoutDgpsExportBusy ? <><Spinner size={13} /> Exporting...</> : "Download CSV"}
             </button>
           </div>
+        </>
+      ));
+    }
+    if (activeTool === "commissions") {
+      return renderToolModal("Sales commissions", "A single-level, volume-tiered commission ladder - the rate an agent earns steps up automatically once their cumulative Allocated (fully paid) sales cross a threshold, applied from the next sale onward. Past commissions never get recalculated when you edit the ladder.", (
+        <>
+          <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.9rem" }}>Commission ladder</h3></div>
+          {commissionTiersUsingDefaults && <p className="edash-field-note" style={{ marginBottom: 8 }}>Showing starter defaults - save to make these this organization's actual ladder.</p>}
+          {commissionTiers.map((tier, index) => (
+            <div key={index} className="edash-form-row" style={{ marginBottom: 8, alignItems: "flex-end" }}>
+              <label className="edash-field" style={{ maxWidth: 160 }}>
+                <span>Label</span>
+                <input value={tier.label} onChange={(event) => setCommissionTiers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} />
+              </label>
+              <label className="edash-field" style={{ maxWidth: 200 }}>
+                <span>From cumulative sales (NGN)</span>
+                <input type="number" min="0" value={tier.min_cumulative_sales} onChange={(event) => setCommissionTiers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, min_cumulative_sales: event.target.value } : item))} />
+              </label>
+              <label className="edash-field" style={{ maxWidth: 120 }}>
+                <span>Rate (%)</span>
+                <input type="number" min="0" max="100" step="0.1" value={tier.rate_percent} onChange={(event) => setCommissionTiers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, rate_percent: event.target.value } : item))} />
+              </label>
+              <button type="button" className="edash-btn-outline" onClick={() => setCommissionTiers((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Remove</button>
+            </div>
+          ))}
+          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+            <button type="button" className="edash-btn-outline" onClick={() => setCommissionTiers((current) => [...current, { label: `Tier ${current.length + 1}`, min_cumulative_sales: "0", rate_percent: "5" }])}>Add tier</button>
+            <button type="button" className="edash-btn-primary" disabled={commissionTiersBusy || commissionTiers.length === 0} onClick={() => void saveCommissionTiers()}>
+              {commissionTiersBusy ? <><Spinner size={13} /> Saving...</> : "Save tiers"}
+            </button>
+          </div>
+
+          <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.9rem" }}>Agent commissions</h3></div>
+          {commissionReport.length ? (
+            <div style={{ overflowX: "auto" }}>
+              <table className="edash-mini-table">
+                <thead><tr><th>Agent</th><th>Sales</th><th>Total volume</th><th>Total commission</th><th>Current tier</th></tr></thead>
+                <tbody>
+                  {commissionReport.map((agent) => (
+                    <tr key={`${agent.subject_type}::${agent.subject_id}`}>
+                      <td>{agent.display_name}</td>
+                      <td>{agent.sale_count}</td>
+                      <td>{money(agent.total_volume)}</td>
+                      <td>{money(agent.total_commission)}</td>
+                      <td>{agent.current_tier || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="edash-tab-empty">No fully-paid sales tagged with a sales agent yet.</p>}
         </>
       ));
     }
