@@ -353,13 +353,15 @@
 .edash-body--fill {
   flex: 1;
   min-height: 0;
-  padding-top: 14px;
-  padding-bottom: 14px;
-  gap: 10px;
+  padding-top: 8px;
+  padding-bottom: 10px;
+  gap: 7px;
 }
-.edash-body--fill > .edash-stats-row { flex-shrink: 0; }
+.edash-body--fill > .edash-tools-bar { flex-shrink: 0; padding: 1px 0; }
+.edash-body--fill > .edash-stats-row { flex-shrink: 0; gap: 10px; }
+.edash-body--fill > .edash-stats-row .edash-stat-card { padding: 7px 10px; }
 .edash-body--fill > .edash-content-row {
-  flex: 1.8;
+  flex: 2.6;
   min-height: 0;
   align-items: stretch;
 }
@@ -367,17 +369,24 @@
 .edash-body--fill .edash-drawer {
   min-height: 0;
 }
-.edash-body--fill .edash-map-canvas-wrap { min-height: 200px; }
+.edash-body--fill .edash-map-toolbar { padding: 7px 12px; gap: 8px; }
+.edash-body--fill .edash-map-mode-tab { padding: 5px 11px; }
+.edash-body--fill .edash-map-search,
+.edash-body--fill .edash-map-select { height: 29px; }
+.edash-body--fill .edash-map-canvas-wrap { min-height: 180px; }
 
 /* The Recent Activity/Estate Progress row brought back under the map - shares the remaining
    height with the map+drawer row above instead of growing the page, so the map view still never
-   needs a page-level scroll. Each card caps its own inner list/legend with overflow instead. */
+   needs a page-level scroll. Each card caps its own inner list/legend with overflow instead.
+   Kept deliberately smaller than the map+drawer row above (flex 0.85 vs 2.6) since the map is the
+   primary tool here - these are a glanceable recap, not the main focus of this page. */
 .edash-body--fill > .edash-bottom-row {
-  flex: 1;
-  min-height: 150px;
-  max-height: 230px;
+  flex: 0.85;
+  min-height: 130px;
+  max-height: 190px;
 }
-.edash-body--fill > .edash-bottom-row .edash-card-inner { padding: 12px 14px; overflow-y: auto; }
+.edash-body--fill > .edash-bottom-row .edash-card-inner { padding: 10px 12px; overflow-y: auto; }
+.edash-body--fill > .edash-bottom-row .edash-card-head { margin-bottom: 6px; }
 .edash-body--fill > .edash-bottom-row .edash-activity-list { max-height: none; }
 
 /* ─── Stats row ─── */
@@ -992,11 +1001,18 @@
      stops making sense once they're not in the same row, so fall back to the normal scrolling
      page instead of risking content getting clipped with nowhere to scroll to see it. */
   .edash-main--fill { overflow-y: auto; }
-  .edash-body--fill { flex: initial; min-height: auto; }
+  .edash-body--fill { flex: initial; min-height: auto; padding-top: 22px; gap: 18px; }
+  .edash-body--fill > .edash-tools-bar { padding: 4px 0; }
+  .edash-body--fill > .edash-stats-row { gap: 14px; }
+  .edash-body--fill > .edash-stats-row .edash-stat-card { padding: 9px 11px; }
   .edash-body--fill > .edash-content-row { flex: initial; min-height: auto; align-items: start; }
   .edash-body--fill .edash-drawer { min-height: 300px; }
+  .edash-body--fill .edash-map-toolbar { padding: 12px 14px; gap: 10px; }
+  .edash-body--fill .edash-map-mode-tab { padding: 6px 13px; }
+  .edash-body--fill .edash-map-search,
+  .edash-body--fill .edash-map-select { height: 34px; }
   .edash-body--fill > .edash-bottom-row { flex: initial; min-height: auto; max-height: none; }
-  .edash-body--fill > .edash-bottom-row .edash-card-inner { overflow-y: visible; }
+  .edash-body--fill > .edash-bottom-row .edash-card-inner { padding: 16px; overflow-y: visible; }
   .edash-body--fill > .edash-bottom-row .edash-activity-list { max-height: 320px; }
   .edash-body--fill .edash-map-canvas-wrap { min-height: 420px; }
 }
