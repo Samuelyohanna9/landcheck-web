@@ -235,7 +235,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
                 {["estate", "plot", "customer", "allocation", "payment"].map((value) => <option key={value} value={value}>{value}</option>)}
               </select>
             </label>
-            <label className="edash-field" style={{ marginBottom: 12 }}><span>Linked record ID</span><input placeholder=" " value={entityId} onChange={(event) => setEntityId(event.target.value)} /></label>
+            <label className="edash-field" style={{ marginBottom: 12 }}><span>Linked record ID</span><input value={entityId} onChange={(event) => setEntityId(event.target.value)} /></label>
             <label className="edash-field" style={{ marginBottom: 12 }}><span>Document type</span><input value={documentType} onChange={(event) => setDocumentType(event.target.value)} placeholder="e.g. receipt, allocation_letter" /></label>
             <button type="button" className="edash-btn-primary" onClick={() => void upload()}>Upload private document</button>
           </EstateModal>
@@ -275,7 +275,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
         <div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Filters</h3></div>
           <div className="edash-form-row">
-            <label className="edash-field"><span>Customer, plot or reference</span><input placeholder=" " value={search} onChange={(event) => setSearch(event.target.value)} /></label>
+            <label className="edash-field"><span>Customer, plot or reference</span><input value={search} onChange={(event) => setSearch(event.target.value)} /></label>
             <label className="edash-field"><span>Status</span>
               <select value={status} onChange={(event) => setStatus(event.target.value)}>
                 <option value="">All statuses</option>
@@ -315,7 +315,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
             </select>
           </label>
           {allocationDetail && <AllocationPanel detail={allocationDetail} />}
-          <label className="edash-field" style={{ marginBottom: 12 }}><span>Amount</span><input placeholder=" " type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
+          <label className="edash-field" style={{ marginBottom: 12 }}><span>Amount</span><input type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Date</span><input type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} /></label>
           <label className="edash-field" style={{ marginBottom: 12 }}>
             <span>Method</span>
@@ -326,7 +326,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
           {paymentMethod === "other" && (
             <label className="edash-field" style={{ marginBottom: 12 }}><span>Specify method</span><input value={paymentMethodOther} onChange={(event) => setPaymentMethodOther(event.target.value)} placeholder="e.g. Crypto, Barter" /></label>
           )}
-          <label className="edash-field" style={{ marginBottom: 12 }}><span>Reference</span><input placeholder=" " value={reference} onChange={(event) => setReference(event.target.value)} /></label>
+          <label className="edash-field" style={{ marginBottom: 12 }}><span>Reference</span><input value={reference} onChange={(event) => setReference(event.target.value)} /></label>
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Receipt</span><input type="file" onChange={(event) => setReceipt(event.target.files?.[0] || null)} /></label>
           <button type="button" className="edash-btn-primary" onClick={() => void record()}>Record payment</button>
         </EstateModal>

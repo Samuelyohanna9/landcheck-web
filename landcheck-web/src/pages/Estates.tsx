@@ -2627,15 +2627,15 @@ export default function Estates() {
         <EstateModal title="Add customer" onClose={() => setShowAddCustomer(false)}>
           <label className="edash-field" style={{ marginBottom: 12 }}>
             <span>Full name</span>
-            <input placeholder=" " value={customerName} onChange={(event) => setCustomerName(event.target.value)} autoFocus />
+            <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} autoFocus />
           </label>
           <label className="edash-field" style={{ marginBottom: 12 }}>
             <span>Phone (optional)</span>
-            <input placeholder=" " value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} />
+            <input value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} />
           </label>
           <label className="edash-field" style={{ marginBottom: 12 }}>
             <span>Email (optional - lifecycle updates are sent here)</span>
-            <input placeholder=" " type="email" value={customerEmail} onChange={(event) => setCustomerEmail(event.target.value)} />
+            <input type="email" value={customerEmail} onChange={(event) => setCustomerEmail(event.target.value)} />
           </label>
           <button type="button" className="edash-btn-primary" disabled={!customerName.trim()} onClick={() => void createCustomer()}>Add customer</button>
         </EstateModal>

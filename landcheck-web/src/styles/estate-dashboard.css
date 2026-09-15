@@ -384,7 +384,7 @@
    the drawer only matching the map card's height and leaving a gap beside the row below it. */
 .edash-map-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-columns: minmax(0, 1fr) 340px;
   gap: 16px;
   align-items: stretch;
 }
@@ -414,11 +414,11 @@
 .edash-body--fill .edash-map-mode-tab { padding: 5px 11px; }
 .edash-body--fill .edash-map-search,
 .edash-body--fill .edash-map-select { height: 29px; }
-.edash-body--fill .edash-map-canvas-wrap { min-height: 180px; }
+.edash-body--fill .edash-map-canvas-wrap { min-height: 320px; }
 
 .edash-body--fill .edash-map-grid-left > .edash-bottom-row {
-  min-height: 150px;
-  max-height: 220px;
+  min-height: 110px;
+  max-height: 160px;
 }
 .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-card-inner { padding: 9px 12px; overflow-y: auto; }
 .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-card-head { margin-bottom: 5px; }
@@ -1561,50 +1561,6 @@
 .edash-field input:disabled,
 .edash-field select:disabled { background: var(--edash-neutral-tint); color: var(--edash-faint); cursor: not-allowed; }
 .edash-field-note { margin: 0; color: var(--edash-faint); font-size: 0.76rem; line-height: 1.4; }
-
-/* Floating labels: a .edash-field whose input carries a placeholder attribute (added app-wide to
-   text/email/number fields; selects, dates, files and checkboxes are untouched) floats its label
-   over the field like a placeholder until focused or filled, then relocates above it. The label
-   and input share one grid cell (row 2) so the overlap is correct regardless of the input's actual
-   rendered height - no guessed pixel offsets. :has() means this works with the existing markup
-   order (span before input) with no JSX restructuring. A field's own real hint text (e.g.
-   placeholder="Auto") stays invisible until focus, since the floating label sits in that same
-   spot until then. */
-.edash-field:has(> input[placeholder]) {
-  display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: 15px auto;
-  row-gap: 2px;
-}
-.edash-field:has(> input[placeholder]) > input {
-  grid-row: 2;
-  grid-column: 1;
-}
-.edash-field:has(> input[placeholder]) > span {
-  grid-row: 2;
-  grid-column: 1;
-  align-self: center;
-  margin-left: 12px;
-  font-size: 0.84rem;
-  font-weight: 500;
-  color: var(--edash-faint);
-  text-transform: none;
-  letter-spacing: normal;
-  pointer-events: none;
-  transition: font-size 0.15s ease, font-weight 0.15s ease, color 0.15s ease;
-}
-.edash-field:has(> input[placeholder]:focus) > span,
-.edash-field:has(> input[placeholder]:not(:placeholder-shown)) > span {
-  grid-row: 1;
-  align-self: end;
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: var(--edash-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-.edash-field:has(> input[placeholder]) > input::placeholder { opacity: 0; transition: opacity 0.15s ease; }
-.edash-field:has(> input[placeholder]:focus) > input::placeholder { opacity: 1; }
 
 .edash-layout-template-summary {
   display: flex;

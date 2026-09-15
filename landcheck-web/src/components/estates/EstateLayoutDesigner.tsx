@@ -689,7 +689,7 @@ export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy =
                 <div className="edash-criteria-group">
                   <h4>Plot &amp; frontage</h4>
                   <div className="edash-form-row">
-                    <label className="edash-field"><span>Target plot size (m²)</span><input placeholder=" " type="number" min="100" value={criteria.target_plot_area_sqm} onChange={(event) => setNumber("target_plot_area_sqm", event.target.value)} /></label>
+                    <label className="edash-field"><span>Target plot size (m²)</span><input type="number" min="100" value={criteria.target_plot_area_sqm} onChange={(event) => setNumber("target_plot_area_sqm", event.target.value)} /></label>
                     <label className="edash-field"><span>Frontage (m)</span><input type="number" min="5" value={criteria.frontage_m ?? ""} placeholder="Auto" onChange={(event) => setCriteria((current) => ({ ...current, frontage_m: event.target.value === "" ? null : Number(event.target.value) }))} /></label>
                   </div>
                 </div>
@@ -700,8 +700,8 @@ export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy =
                     <label className="edash-toggle"><input type="checkbox" checked={criteria.include_roads} onChange={(event) => setCriteria((current) => ({ ...current, include_roads: event.target.checked }))} /> Include roads</label>
                   </div>
                   <div className="edash-form-row">
-                    <label className="edash-field"><span>Road width (m)</span><input placeholder=" " type="number" min="4" disabled={!criteria.include_roads} value={criteria.road_width_m} onChange={(event) => setNumber("road_width_m", event.target.value)} /></label>
-                    <label className="edash-field"><span>Orientation (°)</span><input placeholder=" " type="number" min="-180" max="180" value={criteria.orientation_deg} onChange={(event) => setNumber("orientation_deg", event.target.value)} /></label>
+                    <label className="edash-field"><span>Road width (m)</span><input type="number" min="4" disabled={!criteria.include_roads} value={criteria.road_width_m} onChange={(event) => setNumber("road_width_m", event.target.value)} /></label>
+                    <label className="edash-field"><span>Orientation (°)</span><input type="number" min="-180" max="180" value={criteria.orientation_deg} onChange={(event) => setNumber("orientation_deg", event.target.value)} /></label>
                   </div>
                   <p className="edash-field-note">9-12m suits internal residential streets; 15-18m suits premium or commercial-frontage estates. Orientation favours north-south facades, the common preference for cross-ventilation in Nigeria's climate.</p>
                 </div>
@@ -712,8 +712,8 @@ export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy =
                     <label className="edash-toggle"><input type="checkbox" checked={criteria.include_drainage} onChange={(event) => setCriteria((current) => ({ ...current, include_drainage: event.target.checked }))} /> Include drainage</label>
                   </div>
                   <div className="edash-form-row">
-                    <label className="edash-field"><span>Estate edge reserve (m)</span><input placeholder=" " type="number" min="0" value={criteria.edge_reserve_m} onChange={(event) => setNumber("edge_reserve_m", event.target.value)} /></label>
-                    <label className="edash-field"><span>Drainage reserve (m)</span><input placeholder=" " type="number" min="0" disabled={!criteria.include_drainage} value={criteria.drainage_reserve_m} onChange={(event) => setNumber("drainage_reserve_m", event.target.value)} /></label>
+                    <label className="edash-field"><span>Estate edge reserve (m)</span><input type="number" min="0" value={criteria.edge_reserve_m} onChange={(event) => setNumber("edge_reserve_m", event.target.value)} /></label>
+                    <label className="edash-field"><span>Drainage reserve (m)</span><input type="number" min="0" disabled={!criteria.include_drainage} value={criteria.drainage_reserve_m} onChange={(event) => setNumber("drainage_reserve_m", event.target.value)} /></label>
                   </div>
                   <p className="edash-field-note">
                     Edge reserve sets plots back from the Estate boundary by this many metres before generating the grid - 0 means plots start right at the boundary line. Drainage, if switched on, reserves a strip of this width running all the way around the perimeter for stormwater channels - it's real land set aside for drainage infrastructure, not extra empty space, and it isn't added unless you turn it on.
@@ -726,12 +726,12 @@ export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy =
                     <label className="edash-toggle"><input type="checkbox" checked={criteria.include_open_space} onChange={(event) => setCriteria((current) => ({ ...current, include_open_space: event.target.checked }))} /> Include open space</label>
                   </div>
                   <div className="edash-form-row">
-                    <label className="edash-field"><span>Open space (%)</span><input placeholder=" " type="number" min="0" max="40" disabled={!criteria.include_open_space} value={criteria.open_space_percent} onChange={(event) => setNumber("open_space_percent", event.target.value)} /></label>
-                    <label className="edash-field"><span>Plot label prefix</span><input placeholder=" " value={criteria.plot_prefix} onChange={(event) => setCriteria((current) => ({ ...current, plot_prefix: event.target.value }))} /></label>
+                    <label className="edash-field"><span>Open space (%)</span><input type="number" min="0" max="40" disabled={!criteria.include_open_space} value={criteria.open_space_percent} onChange={(event) => setNumber("open_space_percent", event.target.value)} /></label>
+                    <label className="edash-field"><span>Plot label prefix</span><input value={criteria.plot_prefix} onChange={(event) => setCriteria((current) => ({ ...current, plot_prefix: event.target.value }))} /></label>
                   </div>
                 </div>
 
-                <label className="edash-field" style={{ maxWidth: 220 }}><span>Maximum plots to generate</span><input placeholder=" " type="number" min="2" max="5000" value={criteria.max_plots} onChange={(event) => setNumber("max_plots", event.target.value)} /></label>
+                <label className="edash-field" style={{ maxWidth: 220 }}><span>Maximum plots to generate</span><input type="number" min="2" max="5000" value={criteria.max_plots} onChange={(event) => setNumber("max_plots", event.target.value)} /></label>
 
                 <p className="edash-field-note">These are starting assumptions, not planning approval. Your qualified planner and the relevant planning authority remain responsible for confirming roads, drainage, access and plot standards before publishing.</p>
                 <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-start" }} disabled={busy} onClick={() => onGenerate(criteria)}>
