@@ -15,6 +15,8 @@ const naira = (value: number) => `₦${value.toLocaleString()}`;
 const PLAN_FEATURES: Record<EstatePlanKey, string[]> = {
   basic: [
     "Estate, plot and block management",
+    "Automatic layout design",
+    "Scanned plan georeferencing and AI-assisted digitising",
     "Customers, reservations and allocations",
     "Payments, receipts and customer statements",
     "Sales-agent commission ladder and payouts",
