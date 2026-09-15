@@ -45,6 +45,7 @@ const EstateLogin = lazyWithChunkRecovery(() => import("./pages/EstateLogin"));
 const EstateRegister = lazyWithChunkRecovery(() => import("./pages/EstateRegister"));
 const EstatePlotsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstatePlotsPage"));
 const EstateCustomersPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateCustomersPage"));
+const EstateCommissionsPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateCommissionsPage"));
 const EstateSurveyPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateSurveyPage"));
 const EstateStakingPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateStakingPage"));
 const EstateDevelopmentPage = lazyWithChunkRecovery(() => import("./pages/estates/EstateDevelopmentPage"));
@@ -305,6 +306,7 @@ export default function App() {
               <Route path="/estates/:estateId/timeline" element={<EstateProtectedRoute element={<EstateAuditPage />} />} />
               <Route path="/estates/:estateId/settings" element={<EstateProtectedRoute element={<EstateSettingsPage />} />} />
               <Route path="/estates/payments" element={<EstateProtectedRoute element={<EstateFinance mode="payments" />} />} />
+              <Route path="/estates/commissions" element={<EstateProtectedRoute element={<EstateCommissionsPage />} />} />
               <Route path="/estates/documents" element={<EstateProtectedRoute element={<EstateFinance mode="documents" />} />} />
               <Route path="/flood" element={<FloodAnalysisLanding />} />
               <Route path="/career" element={<CareersPage />} />
