@@ -402,6 +402,10 @@
 .edash-body--fill > .edash-bottom-row .edash-activity-icon svg { width: 11px; height: 11px; }
 .edash-body--fill > .edash-bottom-row .edash-activity-body strong { font-size: 0.74rem; }
 .edash-body--fill > .edash-bottom-row .edash-activity-body span { font-size: 0.66rem; }
+.edash-body--fill > .edash-bottom-row .edash-risk-list { gap: 6px; }
+.edash-body--fill > .edash-bottom-row .edash-risk-icon { width: 24px; height: 24px; }
+.edash-body--fill > .edash-bottom-row .edash-risk-icon svg { width: 12px; height: 12px; }
+.edash-body--fill > .edash-bottom-row .edash-risk-item span { font-size: 0.74rem; }
 
 /* ─── Stats row ─── */
 .edash-stats-row {
@@ -496,7 +500,7 @@
 /* ─── Content row: map + drawer ─── */
 .edash-content-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 380px;
   gap: 16px;
   align-items: start;
 }
@@ -1049,6 +1053,10 @@
   .edash-body--fill > .edash-bottom-row .edash-activity-icon svg { width: 14px; height: 14px; }
   .edash-body--fill > .edash-bottom-row .edash-activity-body strong { font-size: 0.8rem; }
   .edash-body--fill > .edash-bottom-row .edash-activity-body span { font-size: 0.72rem; }
+  .edash-body--fill > .edash-bottom-row .edash-risk-list { gap: 10px; }
+  .edash-body--fill > .edash-bottom-row .edash-risk-icon { width: 30px; height: 30px; }
+  .edash-body--fill > .edash-bottom-row .edash-risk-icon svg { width: 15px; height: 15px; }
+  .edash-body--fill > .edash-bottom-row .edash-risk-item span { font-size: 0.82rem; }
   .edash-body--fill .edash-map-canvas-wrap { min-height: 420px; }
 }
 
