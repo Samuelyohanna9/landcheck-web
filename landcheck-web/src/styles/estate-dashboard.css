@@ -361,7 +361,7 @@
 .edash-body--fill > .edash-stats-row { flex-shrink: 0; gap: 10px; }
 .edash-body--fill > .edash-stats-row .edash-stat-card { padding: 7px 10px; }
 .edash-body--fill > .edash-content-row {
-  flex: 2.6;
+  flex: 2.3;
   min-height: 0;
   align-items: stretch;
 }
@@ -381,13 +381,27 @@
    Kept deliberately smaller than the map+drawer row above (flex 0.85 vs 2.6) since the map is the
    primary tool here - these are a glanceable recap, not the main focus of this page. */
 .edash-body--fill > .edash-bottom-row {
-  flex: 0.85;
-  min-height: 130px;
-  max-height: 190px;
+  flex: 1.15;
+  min-height: 150px;
+  max-height: 220px;
 }
-.edash-body--fill > .edash-bottom-row .edash-card-inner { padding: 10px 12px; overflow-y: auto; }
-.edash-body--fill > .edash-bottom-row .edash-card-head { margin-bottom: 6px; }
-.edash-body--fill > .edash-bottom-row .edash-activity-list { max-height: none; }
+.edash-body--fill > .edash-bottom-row .edash-card-inner { padding: 9px 12px; overflow-y: auto; }
+.edash-body--fill > .edash-bottom-row .edash-card-head { margin-bottom: 5px; }
+.edash-body--fill > .edash-bottom-row .edash-activity-list { max-height: none; gap: 0; }
+
+/* Compact variants of the donut/legend/activity-list content specifically for this shrunken
+   bottom row - the same components render larger and more spaced-out on the plain Dashboard page,
+   where they have a full row of natural height to themselves. */
+.edash-body--fill > .edash-bottom-row .edash-progress-donut-row { gap: 10px; }
+.edash-body--fill > .edash-bottom-row .edash-progress-donut-row svg { width: 74px; height: 74px; }
+.edash-body--fill > .edash-bottom-row .edash-donut-legend { gap: 3px; }
+.edash-body--fill > .edash-bottom-row .edash-donut-legend-item { font-size: 0.68rem; }
+.edash-body--fill > .edash-bottom-row .edash-donut-legend-dot { width: 7px; height: 7px; }
+.edash-body--fill > .edash-bottom-row .edash-activity-item { padding: 5px 2px; gap: 8px; }
+.edash-body--fill > .edash-bottom-row .edash-activity-icon { width: 24px; height: 24px; }
+.edash-body--fill > .edash-bottom-row .edash-activity-icon svg { width: 11px; height: 11px; }
+.edash-body--fill > .edash-bottom-row .edash-activity-body strong { font-size: 0.74rem; }
+.edash-body--fill > .edash-bottom-row .edash-activity-body span { font-size: 0.66rem; }
 
 /* ─── Stats row ─── */
 .edash-stats-row {
@@ -1013,7 +1027,18 @@
   .edash-body--fill .edash-map-select { height: 34px; }
   .edash-body--fill > .edash-bottom-row { flex: initial; min-height: auto; max-height: none; }
   .edash-body--fill > .edash-bottom-row .edash-card-inner { padding: 16px; overflow-y: visible; }
-  .edash-body--fill > .edash-bottom-row .edash-activity-list { max-height: 320px; }
+  .edash-body--fill > .edash-bottom-row .edash-card-head { margin-bottom: 12px; }
+  .edash-body--fill > .edash-bottom-row .edash-activity-list { max-height: 320px; gap: 3px; }
+  .edash-body--fill > .edash-bottom-row .edash-progress-donut-row { gap: 18px; }
+  .edash-body--fill > .edash-bottom-row .edash-progress-donut-row svg { width: 118px; height: 118px; }
+  .edash-body--fill > .edash-bottom-row .edash-donut-legend { gap: 8px; }
+  .edash-body--fill > .edash-bottom-row .edash-donut-legend-item { font-size: 0.78rem; }
+  .edash-body--fill > .edash-bottom-row .edash-donut-legend-dot { width: 9px; height: 9px; }
+  .edash-body--fill > .edash-bottom-row .edash-activity-item { padding: 9px 2px; gap: 11px; }
+  .edash-body--fill > .edash-bottom-row .edash-activity-icon { width: 30px; height: 30px; }
+  .edash-body--fill > .edash-bottom-row .edash-activity-icon svg { width: 14px; height: 14px; }
+  .edash-body--fill > .edash-bottom-row .edash-activity-body strong { font-size: 0.8rem; }
+  .edash-body--fill > .edash-bottom-row .edash-activity-body span { font-size: 0.72rem; }
   .edash-body--fill .edash-map-canvas-wrap { min-height: 420px; }
 }
 

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { api, extractApiErrorMessage } from "../../api/client";
 import { money } from "../../components/estates/FinancialComponents";
 import EstateShell from "../../components/estates/EstateShell";
+import EstateIcon from "../../components/estates/EstateIcon";
+import EstateModal from "../../components/estates/EstateModal";
 import Spinner from "../../components/estates/EstateSpinner";
 
 export default function EstateCommissionsPage() {
@@ -17,6 +19,7 @@ export default function EstateCommissionsPage() {
   const [newAgentName, setNewAgentName] = useState("");
   const [newAgentRole, setNewAgentRole] = useState("sales");
   const [agentBusy, setAgentBusy] = useState(false);
+  const [showAddAgent, setShowAddAgent] = useState(false);
 
   const loadCommissionData = async (orgId: number) => {
     try {
@@ -68,9 +71,10 @@ export default function EstateCommissionsPage() {
     setAgentBusy(true);
     try {
       await api.post(`/estates/organizations/${organizationId}/members`, { subject_type: "manual_agent", subject_id: newAgentName.trim(), role_key: newAgentRole });
-      setNewAgentName("");
-      await loadAgents(organizationId);
       setMessage(`${newAgentName.trim()} added.`);
+      setNewAgentName("");
+      setShowAddAgent(false);
+      await loadAgents(organizationId);
     } catch (error) {
       setMessage(await extractApiErrorMessage(error, "Agent could not be added."));
     } finally {
@@ -114,28 +118,13 @@ export default function EstateCommissionsPage() {
 
       <div className="edash-card" style={{ marginBottom: 16 }}>
         <div className="edash-card-inner">
-          <div className="edash-card-head"><h3 className="edash-card-title">Sales agents</h3></div>
-          <p className="edash-field-note" style={{ marginBottom: 10 }}>Add anyone who should be selectable as a sales agent when reserving or allocating a plot - they don't need a LandCheck login, just a name to attribute sales and commission to.</p>
-          <div className="edash-form-row" style={{ marginBottom: 12, alignItems: "flex-end" }}>
-            <label className="edash-field" style={{ maxWidth: 240 }}>
-              <span>Name</span>
-              <input value={newAgentName} onChange={(event) => setNewAgentName(event.target.value)} placeholder="e.g. Chidinma Okafor" />
-            </label>
-            <label className="edash-field" style={{ maxWidth: 180 }}>
-              <span>Role</span>
-              <select value={newAgentRole} onChange={(event) => setNewAgentRole(event.target.value)}>
-                <option value="sales">Sales agent</option>
-                <option value="manager">Manager</option>
-                <option value="accounts">Accounts</option>
-                <option value="field_officer">Field officer</option>
-                <option value="surveyor">Surveyor</option>
-                <option value="viewer">Viewer</option>
-              </select>
-            </label>
-            <button type="button" className="edash-btn-primary" disabled={agentBusy || !newAgentName.trim()} onClick={() => void addAgent()}>
-              {agentBusy ? <><Spinner size={13} /> Adding...</> : "Add agent"}
+          <div className="edash-card-head">
+            <h3 className="edash-card-title">Sales agents</h3>
+            <button type="button" className="edash-tool-btn" onClick={() => setShowAddAgent(true)}>
+              <EstateIcon name="plus" /> Add agent
             </button>
           </div>
+          <p className="edash-field-note" style={{ marginBottom: 10 }}>Add anyone who should be selectable as a sales agent when reserving or allocating a plot - they don't need a LandCheck login, just a name to attribute sales and commission to.</p>
           {agents.length ? (
             <div style={{ overflowX: "auto" }}>
               <table className="edash-mini-table">
@@ -209,6 +198,29 @@ export default function EstateCommissionsPage() {
           ) : <p className="edash-tab-empty">No fully-paid sales tagged with a sales agent yet.</p>}
         </div>
       </div>
+
+      {showAddAgent && (
+        <EstateModal title="Add agent" subtitle="They don't need a LandCheck login - just a name to attribute sales and commission to." onClose={() => setShowAddAgent(false)}>
+          <label className="edash-field" style={{ marginBottom: 12 }}>
+            <span>Name</span>
+            <input value={newAgentName} onChange={(event) => setNewAgentName(event.target.value)} placeholder="e.g. Chidinma Okafor" autoFocus />
+          </label>
+          <label className="edash-field" style={{ marginBottom: 12 }}>
+            <span>Role</span>
+            <select value={newAgentRole} onChange={(event) => setNewAgentRole(event.target.value)}>
+              <option value="sales">Sales agent</option>
+              <option value="manager">Manager</option>
+              <option value="accounts">Accounts</option>
+              <option value="field_officer">Field officer</option>
+              <option value="surveyor">Surveyor</option>
+              <option value="viewer">Viewer</option>
+            </select>
+          </label>
+          <button type="button" className="edash-btn-primary" disabled={agentBusy || !newAgentName.trim()} onClick={() => void addAgent()}>
+            {agentBusy ? <><Spinner size={13} /> Adding...</> : "Add agent"}
+          </button>
+        </EstateModal>
+      )}
     </EstateShell>
   );
 }
