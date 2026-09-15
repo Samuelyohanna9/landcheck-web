@@ -45,11 +45,11 @@ const APP_MOBILE_JSON_LD = {
 
 const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: string }> = {
   "/": {
-    title: "LandCheck Nigeria | Survey Plan, Flood Risk & Tree Monitoring Platform",
+    title: "LandCheck Nigeria | Survey Plans, Estate Management & Flood Risk",
     description:
-      "LandCheck is Nigeria's geospatial intelligence platform for survey plan production, flood risk analysis, and GPS tree monitoring with audit-ready reports.",
+      "LandCheck brings together survey plan production, estate planning and plot management, flood and erosion analysis, and GPS-verified tree monitoring for teams in Nigeria.",
     keywords:
-      "survey plan Nigeria, flood risk analysis Nigeria, tree monitoring app Nigeria, geospatial platform Nigeria, LandCheck Nigeria, land survey Nigeria, GPS monitoring Nigeria",
+      "survey plan Nigeria, estate management software Nigeria, real estate development software Nigeria, plot management Nigeria, flood risk analysis Nigeria, tree monitoring app Nigeria, geospatial platform Nigeria, LandCheck Nigeria",
     canonicalPath: "/",
     ogType: "website",
     ogImage: DEFAULT_OG_IMAGE,
@@ -76,6 +76,45 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
           "name": "Flood Risk & Land Hazard Analysis Nigeria",
           "url": "https://landcheck.online/flood",
         },
+        {
+          "@type": "ListItem",
+          "position": 4,
+          "name": "LandCheck Estates | Estate Planning & Plot Management",
+          "url": "https://landcheck.online/estates",
+        },
+      ],
+    },
+  },
+
+  "/estates": {
+    title: "LandCheck Estates | Estate Planning & Plot Management Software Nigeria",
+    description:
+      "Plan and manage property developments in Nigeria with LandCheck Estates. Import estate layouts, manage plots and buyers, track payments and commissions, and prepare survey and staking outputs.",
+    keywords:
+      "estate management software Nigeria, real estate development software Nigeria, estate layout design Nigeria, plot management software, estate plot sales, land development platform Nigeria, estate mapping, georeference estate layout, customer allocation, plot payment tracking, survey plan software, DGPS staking coordinates",
+    canonicalPath: "/estates",
+    ogType: "website",
+    ogImage: `${SITE_ORIGIN}/estates.jpg`,
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "@id": `${SITE_ORIGIN}/estates#software`,
+      "name": "LandCheck Estates",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "url": `${SITE_ORIGIN}/estates`,
+      "description":
+        "A web workspace for property developers to bring in estate layouts, review and manage plots, track customers and payments, and prepare survey and staking outputs.",
+      "provider": { "@id": `${SITE_ORIGIN}/#organization` },
+      "areaServed": { "@type": "Country", "name": "Nigeria" },
+      "featureList": [
+        "Estate layout import and georeferencing",
+        "Automatic estate layout design",
+        "Map-based plot register and availability tracking",
+        "Customer reservations and allocations",
+        "Payment, receipt, statement, and commission tracking",
+        "Survey plan and DGPS staking outputs",
+        "Estate and plot-level terrain, flood, and erosion screening",
       ],
     },
   },

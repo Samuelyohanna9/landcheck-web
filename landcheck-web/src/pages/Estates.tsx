@@ -2218,8 +2218,12 @@ export default function Estates() {
               <select value={addPlotMethod} onChange={(event) => setAddPlotMethod(event.target.value as AddPlotMethod)}>
                 <option value="draw">Draw on the satellite map</option>
                 <option value="coordinates">Enter coordinates manually</option>
-                {LAYOUT_IMPORT_METHODS.map((item) => <option key={item.key} value={item.key}>{item.title} ({item.description})</option>)}
+                {LAYOUT_IMPORT_METHODS.map((item) => <option key={item.key} value={item.key}>{item.title}</option>)}
               </select>
+              {(() => {
+                const selected = LAYOUT_IMPORT_METHODS.find((item) => item.key === addPlotMethod);
+                return selected ? <span className="edash-field-note" style={{ display: "block", marginTop: 4 }}>{selected.description}</span> : null;
+              })()}
             </label>
             {needsSourceCrs && (
               <label className="edash-field" style={{ maxWidth: 280 }}>

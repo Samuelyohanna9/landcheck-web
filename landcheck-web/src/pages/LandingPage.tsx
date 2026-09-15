@@ -50,6 +50,13 @@ const products = [
     route: "/flood",
     bgClass: "lp-prod-flood-bg",
   },
+  {
+    key: "estates",
+    title: "LandCheck Estates",
+    description: "Import or georeference layouts, manage mapped plots and buyers, track payments and commissions, and prepare survey and staking outputs.",
+    route: "/estates",
+    bgClass: "lp-prod-estates-bg",
+  },
 ];
 
 export default function LandingPage() {
@@ -364,7 +371,7 @@ export default function LandingPage() {
                 </svg>
               </div>
               <div className="lp-stat-text">
-                <strong>3</strong>
+                <strong>4</strong>
                 <span>
                   Integrated
                   <br />
@@ -627,6 +634,11 @@ export default function LandingPage() {
           <div className="lp-footer-col">
             <h3>Products</h3>
             <ul>
+              <li>
+                <button type="button" onClick={() => navigate("/estates")}>
+                  LandCheck Estates
+                </button>
+              </li>
               <li>
                 <button type="button" onClick={() => navigate("/green-partners")}>
                   LandCheck Green
