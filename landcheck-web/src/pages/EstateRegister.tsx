@@ -31,7 +31,7 @@ export default function EstateRegister() {
     setBusy(true);
     try {
       await registerEstate({ organization_name: company, organization_slug: slug, full_name: fullName, email, password });
-      navigate("/estates/workspace", { replace: true });
+      navigate("/estates/choose-plan", { replace: true });
     } catch (err) {
       setError(await extractApiErrorMessage(err, "Registration failed. Please review the details and try again."));
     } finally {
