@@ -396,6 +396,7 @@ export default function Estates() {
   const [searchParams] = useSearchParams();
   const [estates, setEstates] = useState<Estate[]>([]);
   const [organizations, setOrganizations] = useState<any[]>([]);
+  const [organizationsLoaded, setOrganizationsLoaded] = useState(false);
   const [newEstateName, setNewEstateName] = useState("");
   const [newEstateLocation, setNewEstateLocation] = useState("");
   const [newEstateCrs, setNewEstateCrs] = useState("EPSG:4326");
@@ -405,6 +406,8 @@ export default function Estates() {
   const [newEstateOwnershipDetails, setNewEstateOwnershipDetails] = useState("");
   const [newEstateBoundaryCoordinates, setNewEstateBoundaryCoordinates] = useState("");
   const [newEstateOrg, setNewEstateOrg] = useState("");
+  const [selectedExistingEstateId, setSelectedExistingEstateId] = useState("");
+  const [showCreateEstate, setShowCreateEstate] = useState(false);
   const [deleteEstateTarget, setDeleteEstateTarget] = useState<Estate | null>(null);
   const [deleteEstateConfirmText, setDeleteEstateConfirmText] = useState("");
   const [deleteEstateBusy, setDeleteEstateBusy] = useState(false);
@@ -547,7 +550,7 @@ export default function Estates() {
   }).filter((point) => Number.isFinite(point.lng) && Number.isFinite(point.lat)), [plotInputPoints, plotInputCoordinateSystem]);
   const plotInputClosure = useMemo(() => checkPolygonClosure(plotInputMapPoints.map((point) => [point.lng, point.lat] as [number, number])), [plotInputMapPoints]);
   useEffect(() => {
-    api.get("/estates/foundation/access").then((response) => { const rows=response.data.organizations || []; setOrganizations(rows); if (rows.length === 1) setNewEstateOrg(String(rows[0].id)); }).catch(() => setOrganizations([]));
+    api.get("/estates/foundation/access").then((response) => { const rows=response.data.organizations || []; setOrganizations(rows); if (rows.length === 1) setNewEstateOrg(String(rows[0].id)); }).catch(() => setOrganizations([])).finally(() => setOrganizationsLoaded(true));
     api.get("/estates")
       .then((response) => response.data)
       .then(async (rows) => {
@@ -573,6 +576,7 @@ export default function Estates() {
     try {
       await api.delete(`/estates/${deleteEstateTarget.id}`, force ? { params: { force: true } } : undefined);
       setEstates((current) => current.filter((estate) => estate.id !== deleteEstateTarget.id));
+      if (selectedExistingEstateId === String(deleteEstateTarget.id)) setSelectedExistingEstateId("");
       setMessage(`"${deleteEstateTarget.name}" was deleted.`);
       setDeleteEstateTarget(null);
       setDeleteEstateConfirmText("");
@@ -1244,6 +1248,7 @@ export default function Estates() {
     else { setAllocationId(""); setFinancial(null); }
   };
   const selectedBlock = selectedPlot ? blocks.find((block) => block.id === selectedPlot.block_id) : undefined;
+  const selectedExistingEstate = estates.find((estate) => String(estate.id) === selectedExistingEstateId);
   const buildPlotThumbUrl = (geometry: any): string | null => {
     if (!MAPBOX_TOKEN || !geometry) return null;
     const overlay = encodeURIComponent(JSON.stringify({
@@ -2419,46 +2424,73 @@ export default function Estates() {
 
         <div className="edash-onboard-body">
           <div className="edash-onboard-head">
-            <h1>{estates.length > 0 ? "Choose or create an estate" : "Create your first estate"}</h1>
-            <p>Map-first parcel operations for layouts, plots, customers and delivery.</p>
+            <h1>Choose an estate</h1>
+            <p>Open an existing Estate or add a new one to get started.</p>
           </div>
 
           {estates.length > 0 && (
             <div className="edash-card edash-onboard-card">
               <div className="edash-card-inner">
-                <div className="edash-card-head"><h3 className="edash-card-title">Open an existing estate</h3></div>
-                <div className="edash-onboard-estate-list">
-                  {estates.map((estate) => (
-                    <div key={estate.id} className="edash-onboard-estate-row">
-                      <button type="button" className="edash-onboard-estate-open" onClick={() => navigate(`/estates/${estate.id}/map`)}>
-                        <strong>{estate.name}</strong>
-                        {estate.location && <span>{estate.location}</span>}
-                      </button>
+                <div className="edash-onboard-field">
+                  <span id="existing-estate-select-label">Existing Estate</span>
+                  <div className="edash-onboard-existing">
+                    <select aria-labelledby="existing-estate-select-label" value={selectedExistingEstateId} onChange={(event) => setSelectedExistingEstateId(event.target.value)}>
+                      <option value="">Select an Estate</option>
+                      {estates.map((estate) => (
+                        <option key={estate.id} value={estate.id}>
+                          {estate.name}{estate.location ? ` - ${estate.location}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="button" className="edash-btn-primary" disabled={!selectedExistingEstate} onClick={() => selectedExistingEstate && navigate(`/estates/${selectedExistingEstate.id}/map`)}>
+                      Open Estate
+                    </button>
+                    {selectedExistingEstate && (
                       <button
                         type="button"
                         className="edash-onboard-estate-delete"
-                        title={`Delete ${estate.name}`}
-                        onClick={(event) => { event.stopPropagation(); setDeleteEstateTarget(estate); setDeleteEstateConfirmText(""); setDeleteEstateAllocationWarning(null); }}
+                        aria-label={`Delete ${selectedExistingEstate.name}`}
+                        title={`Delete ${selectedExistingEstate.name}`}
+                        onClick={() => { setDeleteEstateTarget(selectedExistingEstate); setDeleteEstateConfirmText(""); setDeleteEstateAllocationWarning(null); }}
                       >
                         <EstateIcon name="trash" />
                       </button>
-                    </div>
-                  ))}
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {estates.length > 0 && organizations.length > 0 && <p className="edash-onboard-divider">or create new</p>}
+          {estates.length === 0 && message !== "Loading estates..." && (
+            <div className="edash-info-card edash-onboard-card">
+              <span className="edash-info-card-icon"><EstateIcon name="house" /></span>
+              <div className="edash-info-card-body">
+                <p className="edash-info-card-name">No Estates yet</p>
+                <p className="edash-info-card-meta">Add your first Estate to begin managing its layout and plots.</p>
+              </div>
+            </div>
+          )}
 
-          {organizations.length > 0 && (
-            <div className="edash-card edash-onboard-card">
+          <button
+            type="button"
+            className="edash-btn-outline edash-onboard-add"
+            aria-expanded={showCreateEstate}
+            aria-controls="new-estate-form"
+            onClick={() => setShowCreateEstate((open) => !open)}
+          >
+            <EstateIcon name={showCreateEstate ? "close" : "plus"} />
+            {showCreateEstate ? "Close" : "Add new estate"}
+          </button>
+
+          {showCreateEstate && organizations.length > 0 && (
+            <div id="new-estate-form" className="edash-card edash-onboard-card">
               <div className="edash-card-inner">
-                <div className="edash-card-head"><h3 className="edash-card-title">Create an estate</h3></div>
+                <div className="edash-card-head"><h3 className="edash-card-title">New Estate details</h3></div>
                 <div className="edash-onboard-field">
-                  <span>Organisation</span>
+                  <span>Company</span>
                   <select value={newEstateOrg} onChange={(event) => setNewEstateOrg(event.target.value)}>
-                    <option value="">Choose organisation</option>
+                    <option value="">Choose company</option>
                     {organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}
                   </select>
                 </div>
@@ -2471,7 +2503,7 @@ export default function Estates() {
                   <input value={newEstateLocation} onChange={(event) => setNewEstateLocation(event.target.value)} placeholder="City, state or area" />
                 </div>
                 <details className="edash-onboard-advanced">
-                  <summary>Advanced options</summary>
+                  <summary>More details (optional)</summary>
                   <div>
                     <div className="edash-onboard-field">
                       <span>Estate boundary (optional)</span>
@@ -2484,12 +2516,17 @@ export default function Estates() {
                     <div className="edash-onboard-field"><span>Notes</span><textarea value={newEstateOwnershipDetails} onChange={(event) => setNewEstateOwnershipDetails(event.target.value)} placeholder="Ownership or project notes" /></div>
                   </div>
                 </details>
-                <button type="button" className="edash-btn-primary edash-onboard-submit" onClick={() => void createEstate()}>Create estate</button>
+                <button type="button" className="edash-btn-primary edash-onboard-submit" onClick={() => void createEstate()}>Create Estate</button>
               </div>
             </div>
           )}
 
-          {message && <p className={`edash-onboard-hint${messageTone === "danger" ? " tone-danger" : ""}`}>{message}</p>}
+          {showCreateEstate && !organizationsLoaded && <p className="edash-onboard-hint">Loading company access...</p>}
+          {showCreateEstate && organizationsLoaded && organizations.length === 0 && (
+            <p className="edash-onboard-hint tone-danger">No company workspace is available for your account. Ask your organization administrator for access.</p>
+          )}
+
+          {message && message !== "Loading estates..." && <p className={`edash-onboard-hint${messageTone === "danger" ? " tone-danger" : ""}`}>{message}</p>}
         </div>
 
         {deleteEstateTarget && (

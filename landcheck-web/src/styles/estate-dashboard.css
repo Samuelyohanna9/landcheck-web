@@ -1215,6 +1215,14 @@
 
 .edash-onboard-existing { display: flex; gap: 8px; }
 .edash-onboard-existing select { flex: 1; }
+.edash-onboard-add { width: 100%; min-height: 42px; justify-content: center; }
+
+@media (max-width: 520px) {
+  .edash-onboard-body { padding: 36px 16px 48px; }
+  .edash-onboard-existing { flex-wrap: wrap; }
+  .edash-onboard-existing select { flex-basis: 100%; min-width: 0; }
+  .edash-onboard-existing .edash-btn-primary { flex: 1; }
+}
 
 .edash-onboard-estate-list { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
 .edash-onboard-estate-row {
