@@ -1347,7 +1347,7 @@ export default function Estates() {
           <div className="edash-map-mode-tabs">
             <button type="button" className={`edash-map-mode-tab${mapStyleMode === "map" ? " active" : ""}`} onClick={() => { setMapStyleMode("map"); mapRef.current?.setStyle("mapbox://styles/mapbox/light-v11"); }}>Map</button>
             <button type="button" className={`edash-map-mode-tab${mapStyleMode === "satellite" ? " active" : ""}`} onClick={() => { setMapStyleMode("satellite"); mapRef.current?.setStyle("mapbox://styles/mapbox/satellite-streets-v12"); }}>Satellite</button>
-            <button type="button" className={`edash-map-mode-tab${layersVisible ? " active" : ""}`} onClick={() => setLayersVisible((value) => !value)} title="Toggle roads, drainage and open space">Layers</button>
+            <button type="button" className={`edash-map-mode-tab${layersVisible ? " active" : ""}`} onClick={() => setLayersVisible((value) => !value)} title="Toggle roads, drainage and open space">Roads & Open Space</button>
           </div>
           <label className="edash-map-search">
             <EstateIcon name="search" />
@@ -1415,7 +1415,7 @@ export default function Estates() {
             }}>
               <EstateIcon name="locate" />
             </button>
-            <button type="button" className={`edash-map-controls-group edash-map-ctrl-btn${layersVisible ? " active" : ""}`} title="Toggle layers" onClick={() => setLayersVisible((value) => !value)}>
+            <button type="button" className={`edash-map-controls-group edash-map-ctrl-btn${layersVisible ? " active" : ""}`} title="Toggle roads & open space" onClick={() => setLayersVisible((value) => !value)}>
               <EstateIcon name="layers" />
             </button>
             <button type="button" className="edash-map-controls-group edash-map-ctrl-btn" title="Fullscreen" onClick={() => mapContainer.current?.parentElement?.requestFullscreen?.()}>
