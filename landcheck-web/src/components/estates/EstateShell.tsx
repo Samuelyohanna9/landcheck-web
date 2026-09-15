@@ -103,11 +103,8 @@ export default function EstateShell({
       <div className="edash-sidebar-backdrop" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
       <aside className="edash-sidebar">
         <div className="edash-sidebar-brand">
-          <span className="edash-sidebar-brand-mark"><EstateIcon name="house" /></span>
-          <div>
-            <strong>LandCheck</strong>
-            <small>Estates</small>
-          </div>
+          <span className="edash-sidebar-brand-logo"><img src="/logo.svg" alt="LandCheck" width="520" height="140" /></span>
+          <small className="edash-sidebar-brand-tag">Estates</small>
         </div>
         <nav className="edash-nav" aria-label="Estate navigation">
           {estateNavItems.map((item) => (

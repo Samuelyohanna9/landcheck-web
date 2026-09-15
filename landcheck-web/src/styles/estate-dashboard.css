@@ -89,36 +89,30 @@
 .edash-sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   padding: 4px 8px 20px;
 }
 
-.edash-sidebar-brand-mark {
-  display: flex;
+/* The LandCheck wordmark (/logo.svg) bakes in a light "Land" and a green "Check" for display on a
+   dark surface - dropped straight onto the (light) sidebar it would wash out, so it gets its own
+   small dark chip to sit on instead, matching how it already appears in the site's dark nav bars. */
+.edash-sidebar-brand-logo {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  background: linear-gradient(160deg, var(--edash-brand) 0%, var(--edash-brand-dark) 100%);
-  color: #fff;
-  font-size: 15px;
+  flex-shrink: 0;
+  padding: 9px 13px;
+  border-radius: 10px;
+  background: #0a1228;
 }
 
-.edash-sidebar-brand strong {
-  display: block;
-  font-size: 0.92rem;
-  font-weight: 800;
-  color: var(--edash-ink);
-  letter-spacing: -0.01em;
-}
+.edash-sidebar-brand-logo img { display: block; height: 22px; width: auto; }
 
-.edash-sidebar-brand small {
-  display: block;
-  margin-top: 1px;
+.edash-sidebar-brand-tag {
   color: var(--edash-brand);
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .edash-nav {

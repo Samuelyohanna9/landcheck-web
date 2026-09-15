@@ -2438,8 +2438,8 @@ export default function Estates() {
       <div className="edash-onboard">
         <div className="edash-onboard-topbar">
           <div className="edash-sidebar-brand" style={{ padding: 0 }}>
-            <span className="edash-sidebar-brand-mark"><EstateIcon name="house" /></span>
-            <div><strong>LandCheck</strong><small>Estates</small></div>
+            <span className="edash-sidebar-brand-logo"><img src="/logo.svg" alt="LandCheck" width="520" height="140" /></span>
+            <small className="edash-sidebar-brand-tag">Estates</small>
           </div>
           <button type="button" className="edash-btn-outline" onClick={() => { clearEstateAuthSession(); navigate("/estates", { replace: true }); }}>Sign out</button>
         </div>
