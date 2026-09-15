@@ -207,6 +207,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   const dragStateRef = useRef<{ startX: number; startY: number; panX: number; panY: number; moved: boolean } | null>(null);
   const suppressNextStageClickRef = useRef(false);
   const suppressNextAutoSelectRef = useRef(false);
+  const selectedFeatureSectionRef = useRef<HTMLDivElement | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [tool, setTool] = useState<DraftTool>("polygon");
   const [draftLabel, setDraftLabel] = useState("Primary parcel");
@@ -1128,6 +1129,17 @@ function SurveyPlanGeoreferenceWorkspaceStep({
     }
   };
 
+  // The full coordinate table lives in the sidebar (not floating over the canvas, which used to
+  // cover the very shape it was describing - see the on-canvas badge below). On a narrow screen
+  // the sidebar is a separate tab, so jump there first; on any width, scroll it into view.
+  const jumpToSelectedFeatureTable = () => {
+    setActiveMobileTab("tools");
+    setLeftPanelCollapsed(false);
+    window.requestAnimationFrame(() => {
+      selectedFeatureSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  };
+
   return (
     <div className={`step-panel georef-step-panel georef-workspace-redesign${leftPanelCollapsed ? " left-collapsed" : ""}`} data-active-tab={activeMobileTab}>
       <div
@@ -1379,6 +1391,57 @@ function SurveyPlanGeoreferenceWorkspaceStep({
               )}
             </div>
 
+            {selectedStageFeature ? (
+              <div className="geo-section" ref={selectedFeatureSectionRef}>
+                <h3 className="geo-section-title georef-section-title-row">
+                  <span>Selected feature</span>
+                  <span className="georef-quality-pill">
+                    {selectedStageFeature.feature_type === "point" ? "Dot" : selectedStageFeature.feature_type}
+                  </span>
+                  <button
+                    type="button"
+                    className="georef-coordinate-float-close"
+                    style={{ marginLeft: "auto" }}
+                    onClick={() => setSelectedFeatureId(null)}
+                    aria-label="Deselect feature"
+                    title="Deselect"
+                  >
+                    &times;
+                  </button>
+                </h3>
+                <p className="geo-section-hint">
+                  <strong>{selectedStageFeature.label}</strong>
+                  {" - "}
+                  {selectedStageFeature.feature_type === "point"
+                    ? "Stake point coordinates"
+                    : `${selectedFeatureCoordinateRows.length} saved coordinate${selectedFeatureCoordinateRows.length === 1 ? "" : "s"}`}
+                </p>
+                <div className="georef-coordinate-mini-table-wrap">
+                  <table className="georef-coordinate-mini-table">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>{coordinateXLabel}</th>
+                        <th>{coordinateYLabel}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedFeatureCoordinateRows.map((point) => (
+                        <tr
+                          key={`${selectedStageFeature.id}-mini-coord-${point.index}`}
+                          title={`Lon ${formatWgs84Coordinate(point.lng)} | Lat ${formatWgs84Coordinate(point.lat)}`}
+                        >
+                          <td>{selectedStageFeature.feature_type === "point" ? selectedStageFeature.label : `P${point.index + 1}`}</td>
+                          <td>{formatGridCoordinate(point.targetX, projectedGroundSystem)}</td>
+                          <td>{formatGridCoordinate(point.targetY, projectedGroundSystem)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
+
             <div className="geo-ai-card">
               <div className="geo-ai-card-head">
                 <img src="/LandCheck_Survey_AI_Symbol.svg" alt="" className="geo-ai-card-icon" aria-hidden="true" />
@@ -1625,53 +1688,15 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                 )}
               </div>
               {selectedStageFeature ? (
-                <aside className="georef-coordinate-float">
-                  <div className="georef-coordinate-float-head">
-                    <div>
-                      <strong>{selectedStageFeature.label}</strong>
-                      <span>
-                        {selectedStageFeature.feature_type === "point"
-                          ? "Stake point coordinates"
-                          : `${selectedFeatureCoordinateRows.length} saved coordinate${selectedFeatureCoordinateRows.length === 1 ? "" : "s"}`}
-                      </span>
-                    </div>
-                    <span className="georef-quality-pill">
-                      {selectedStageFeature.feature_type === "point" ? "Dot" : selectedStageFeature.feature_type}
-                    </span>
-                    <button
-                      type="button"
-                      className="georef-coordinate-float-close"
-                      onClick={() => setSelectedFeatureId(null)}
-                      aria-label="Close coordinate panel"
-                      title="Close"
-                    >
-                      &times;
-                    </button>
-                  </div>
-                  <div className="georef-coordinate-mini-table-wrap">
-                    <table className="georef-coordinate-mini-table">
-                      <thead>
-                        <tr>
-                          <th>ID</th>
-                          <th>{coordinateXLabel}</th>
-                          <th>{coordinateYLabel}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedFeatureCoordinateRows.map((point) => (
-                          <tr
-                            key={`${selectedStageFeature.id}-mini-coord-${point.index}`}
-                            title={`Lon ${formatWgs84Coordinate(point.lng)} | Lat ${formatWgs84Coordinate(point.lat)}`}
-                          >
-                            <td>{selectedStageFeature.feature_type === "point" ? selectedStageFeature.label : `P${point.index + 1}`}</td>
-                            <td>{formatGridCoordinate(point.targetX, projectedGroundSystem)}</td>
-                            <td>{formatGridCoordinate(point.targetY, projectedGroundSystem)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </aside>
+                <button type="button" className="georef-selected-feature-badge" onClick={jumpToSelectedFeatureTable}>
+                  <strong>{selectedStageFeature.label}</strong>
+                  <span>
+                    {selectedStageFeature.feature_type === "point"
+                      ? "stake point"
+                      : `${selectedFeatureCoordinateRows.length} pt${selectedFeatureCoordinateRows.length === 1 ? "" : "s"}`}
+                  </span>
+                  <span className="georef-selected-feature-badge-hint">View coordinates</span>
+                </button>
               ) : null}
             </div>
           </div>
