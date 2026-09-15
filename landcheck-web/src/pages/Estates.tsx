@@ -504,7 +504,11 @@ export default function Estates() {
   const [activity, setActivity] = useState<any[]>([]);
   const [dashboard, setDashboard] = useState<any>(null);
   const [estateDetail, setEstateDetail] = useState<any>(null);
-  const [mapStyleMode, setMapStyleMode] = useState<"map" | "satellite">("satellite");
+  // "map" (a compact vector style) is a far smaller first download than "satellite" (raster
+  // imagery tiles, often hundreds of KB each) - defaulting to it gets the map interactive much
+  // sooner on a slow connection. The toggle above the map still lets anyone switch to Satellite
+  // once they actually want that heavier view.
+  const [mapStyleMode, setMapStyleMode] = useState<"map" | "satellite">("map");
   const [blockFilterId, setBlockFilterId] = useState("all");
   const [layersVisible, setLayersVisible] = useState(true);
   const [drawerTab, setDrawerTab] = useState<"overview" | "customer" | "survey" | "staking" | "documents" | "hazards" | "timeline">("overview");

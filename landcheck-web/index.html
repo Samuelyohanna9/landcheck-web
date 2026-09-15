@@ -22,6 +22,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="dns-prefetch" href="https://api.landcheck.online" />
+    <!-- Estates map: overlaps the DNS/TLS handshake with everything else the page is already
+         doing, shaving a round trip off the first style/tile request - meaningful on the high-
+         latency mobile networks common in Nigeria. -->
+    <link rel="preconnect" href="https://api.mapbox.com" crossorigin />
+    <link rel="dns-prefetch" href="https://api.mapbox.com" />
 
     <title>LandCheck Nigeria | Survey Plan, Flood Risk & Tree Monitoring</title>
     <meta
