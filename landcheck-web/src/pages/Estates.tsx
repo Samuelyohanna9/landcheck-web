@@ -56,10 +56,6 @@ function relativeTime(value: string) {
 type Estate = { id: number; name: string; status: string; organization_id: number; location?: string | null; crs?: string; project_reference?: string | null; project_owner?: string | null; financial?: { confirmed_collections:string; outstanding_balance:string } };
 type EstateCoordinatePoint = { station: string; lng: number; lat: number; height?: number; is_boundary?: boolean };
 
-function parseCoordinateRows(value: string): number[][] {
-  return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => line.split(/[\s,]+/).map(Number)).filter((point) => point.length >= 2 && point.every(Number.isFinite)).map(([x, y]) => [x, y]);
-}
-
 function segmentsCross(a: { lng: number; lat: number }, b: { lng: number; lat: number }, c: { lng: number; lat: number }, d: { lng: number; lat: number }) {
   const orientation = (p: typeof a, q: typeof a, r: typeof a) => (q.lng - p.lng) * (r.lat - p.lat) - (q.lat - p.lat) * (r.lng - p.lng);
   const ab = orientation(a, b, c);
@@ -404,7 +400,6 @@ export default function Estates() {
   const [newEstateProjectReference, setNewEstateProjectReference] = useState("");
   const [newEstateProjectOwner, setNewEstateProjectOwner] = useState("");
   const [newEstateOwnershipDetails, setNewEstateOwnershipDetails] = useState("");
-  const [newEstateBoundaryCoordinates, setNewEstateBoundaryCoordinates] = useState("");
   const [newEstateOrg, setNewEstateOrg] = useState("");
   const [selectedExistingEstateId, setSelectedExistingEstateId] = useState("");
   const [showCreateEstate, setShowCreateEstate] = useState(false);
@@ -581,10 +576,7 @@ export default function Estates() {
   }, []);
   const createEstate = async () => {
     if (!newEstateOrg || !newEstateName.trim()) { setMessage("Choose an organization and enter an Estate name.", "danger"); return; }
-    const boundaryRows = parseCoordinateRows(newEstateBoundaryCoordinates);
-    if (newEstateBoundaryCoordinates.trim() && boundaryRows.length < 3) { setMessage("The Estate boundary needs at least three valid longitude, latitude rows.", "danger"); return; }
-    const boundary = boundaryRows.length >= 3 ? { type: "Polygon", coordinates: [[...boundaryRows, boundaryRows[0]]] } : null;
-    try { const response=await api.post(`/estates/organizations/${newEstateOrg}`, { name:newEstateName.trim(), location_text:newEstateLocation.trim() || null, crs:newEstateCrs.trim() || "EPSG:4326", datum:newEstateDatum.trim() || null, project_reference:newEstateProjectReference.trim() || null, project_owner:newEstateProjectOwner.trim() || null, ownership_details:newEstateOwnershipDetails.trim() || null, boundary }); window.location.assign(`/estates/${response.data.id}/map`); }
+    try { const response=await api.post(`/estates/organizations/${newEstateOrg}`, { name:newEstateName.trim(), location_text:newEstateLocation.trim() || null, crs:newEstateCrs.trim() || "EPSG:4326", datum:newEstateDatum.trim() || null, project_reference:newEstateProjectReference.trim() || null, project_owner:newEstateProjectOwner.trim() || null, ownership_details:newEstateOwnershipDetails.trim() || null, boundary: null }); window.location.assign(`/estates/${response.data.id}/map`); }
     catch (error) { setMessage(await extractApiErrorMessage(error, "Estate could not be created."), "danger"); }
   };
   const deleteEstate = async (force: boolean = false) => {
@@ -2532,10 +2524,11 @@ export default function Estates() {
                   <summary>More details (optional)</summary>
                   <div>
                     <div className="edash-onboard-field">
-                      <span>Estate boundary (optional)</span>
-                      <textarea value={newEstateBoundaryCoordinates} onChange={(event) => setNewEstateBoundaryCoordinates(event.target.value)} placeholder="7.1234, 9.1234&#10;7.1238, 9.1234&#10;7.1238, 9.1238" />
+                      <span>Coordinate system</span>
+                      <select value={newEstateCrs} onChange={(event) => setNewEstateCrs(event.target.value)}>
+                        {IMPORT_CRS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                      </select>
                     </div>
-                    <div className="edash-onboard-field"><span>Coordinate system</span><input value={newEstateCrs} onChange={(event) => setNewEstateCrs(event.target.value)} placeholder="EPSG:4326" /></div>
                     <div className="edash-onboard-field"><span>Datum</span><input value={newEstateDatum} onChange={(event) => setNewEstateDatum(event.target.value)} placeholder="Optional" /></div>
                     <div className="edash-onboard-field"><span>Project reference</span><input value={newEstateProjectReference} onChange={(event) => setNewEstateProjectReference(event.target.value)} placeholder="Optional" /></div>
                     <div className="edash-onboard-field"><span>Developer or owner</span><input value={newEstateProjectOwner} onChange={(event) => setNewEstateProjectOwner(event.target.value)} placeholder="Optional" /></div>
