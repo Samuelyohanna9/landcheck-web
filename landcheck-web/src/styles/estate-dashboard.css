@@ -915,7 +915,11 @@
   border: 1px solid var(--edash-border-soft);
   border-radius: var(--edash-radius-md);
   background: #fff;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
 }
+.edash-info-card > * { min-width: 0; }
 
 .edash-info-card-icon {
   display: flex;

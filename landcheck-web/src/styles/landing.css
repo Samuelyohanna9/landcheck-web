@@ -629,6 +629,11 @@
   background-color: #050e2a;
 }
 
+.lp-prod-estates-bg {
+  background-image: url("/estates.jpg");
+  background-color: #173e31;
+}
+
 .lp-prod-green-bg {
   background: url("/background-sponsor.png") center / cover no-repeat;
   background-color: #062006;
@@ -682,7 +687,7 @@
 
 .lp-prod-card:hover .lp-prod-content p,
 .lp-prod-card:focus-within .lp-prod-content p {
-  max-height: 80px;
+  max-height: 130px;
   opacity: 1;
 }
 
@@ -1418,7 +1423,7 @@
   .lp-prod-card { min-height: 280px; }
 
   .lp-prod-card .lp-prod-content p {
-    max-height: 80px;
+    max-height: 130px;
     opacity: 1;
   }
 
