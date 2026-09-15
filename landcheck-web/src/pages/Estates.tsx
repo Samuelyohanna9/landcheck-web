@@ -438,6 +438,7 @@ export default function Estates() {
   const [financial, setFinancial] = useState<any>(null);
   const [surveyRequests, setSurveyRequests] = useState<any[]>([]);
   const [stakingTasks, setStakingTasks] = useState<any[]>([]);
+  const [preparingSurveyPlotId, setPreparingSurveyPlotId] = useState<number | null>(null);
   const [workflowMessage, setWorkflowMessageRaw] = useState("");
   const [workflowMessageTone, setWorkflowMessageTone] = useState<MessageTone>("good");
   const setWorkflowMessage = (text: string, tone: MessageTone = "good") => { setWorkflowMessageRaw(text); setWorkflowMessageTone(tone); };
@@ -1081,10 +1082,10 @@ export default function Estates() {
     catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, `${label} could not be completed.`), "danger"); }
   };
   const createOfficialSurveyPlan = async (plotId: number) => {
-    setPlotContextMenu(null);
     const allocation = allocations.find((item) => item.plot_id === plotId);
-    if (!allocation) { setWorkflowMessage("Allocate this plot to a customer before creating its Official Survey Plan.", "danger"); return; }
-    setWorkflowMessage("");
+    if (!allocation) { setWorkflowMessage("Allocate this plot to a customer before creating its Official Survey Plan.", "danger"); setPlotContextMenu(null); return; }
+    setMessage("");
+    setPreparingSurveyPlotId(plotId);
     try {
       let survey = surveyRequests.find((item) => item.plot.id === plotId);
       if (!survey) {
@@ -1095,10 +1096,20 @@ export default function Estates() {
         const started = await api.post(`/estates/survey-requests/${survey.id}/start`);
         survey = { ...survey, ...started.data };
       }
+      setPlotContextMenu(null);
       navigate(`/survey-plan?mode=survey&estate_survey_plot=${survey.survey_working_plot_id || ""}`);
     } catch (error) {
-      setWorkflowMessage(await extractApiErrorMessage(error, "Official Survey Plan could not be created."), "danger");
+      setMessage(await extractApiErrorMessage(error, "Official Survey Plan could not be created."), "danger");
+    } finally {
+      setPreparingSurveyPlotId(null);
     }
+  };
+  const downloadDgpsForPlot = async (plotId: number) => {
+    const survey = surveyRequests.find((item) => item.plot.id === plotId);
+    const task = survey && stakingTasks.find((item) => item.survey_request_id === survey.id);
+    if (!task) return;
+    setPlotContextMenu(null);
+    await downloadDgps(task.id);
   };
   const downloadDgps = async (taskId: number) => {
     try {
@@ -1374,6 +1385,8 @@ export default function Estates() {
     const plot = plots.find((item) => item.id === plotContextMenu.plotId);
     const allocation = allocations.find((item) => item.plot_id === plotContextMenu.plotId);
     const survey = surveyRequests.find((item) => item.plot.id === plotContextMenu.plotId);
+    const stakingTask = survey && stakingTasks.find((item) => item.survey_request_id === survey.id);
+    const preparingSurvey = preparingSurveyPlotId === plotContextMenu.plotId;
     return (
       <>
         <div style={{ position: "fixed", inset: 0, zIndex: 29 }} onClick={() => setPlotContextMenu(null)} onContextMenu={(event) => { event.preventDefault(); setPlotContextMenu(null); }} />
@@ -1385,11 +1398,20 @@ export default function Estates() {
           <button
             type="button"
             className="edash-context-menu-option"
-            disabled={!allocation}
+            disabled={!allocation || preparingSurvey}
             title={allocation ? undefined : "Allocate this plot to a customer first"}
             onClick={() => void createOfficialSurveyPlan(plotContextMenu.plotId)}
           >
-            <EstateIcon name="survey" /> {survey?.materialized ? "Open Official Survey Plan" : "Create Official Survey Plan"}
+            {preparingSurvey ? <><Spinner size={13} /> Preparing...</> : <><EstateIcon name="survey" /> {survey?.materialized ? "Open Official Survey Plan" : "Create Official Survey Plan"}</>}
+          </button>
+          <button
+            type="button"
+            className="edash-context-menu-option"
+            disabled={!stakingTask}
+            title={stakingTask ? undefined : "Start staking for this plot first to generate a DGPS export"}
+            onClick={() => void downloadDgpsForPlot(plotContextMenu.plotId)}
+          >
+            <EstateIcon name="download" /> DGPS Staking Export
           </button>
           <button
             type="button"
