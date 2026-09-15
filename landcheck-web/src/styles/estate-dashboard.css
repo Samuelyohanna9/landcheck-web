@@ -182,6 +182,11 @@
   overflow-y: auto;
 }
 
+/* Map view: nothing in this column scrolls as a whole - the topbar stays put and edash-body
+   below fills the remaining height exactly, so the map itself can grow to fill the page instead
+   of just sitting at a fixed min-height with everything scrolling past it. */
+.edash-main--fill { overflow-y: hidden; }
+
 .edash-topbar {
   position: sticky;
   top: 0;
@@ -340,6 +345,28 @@
   padding: 22px 26px 30px;
 }
 
+/* Map view: this column becomes the full remaining viewport height, and only its last child (the
+   map+drawer row) is allowed to grow into whatever's left after the tools bar/banner/stats row -
+   those keep their natural size, so the map gets everything else instead of the page just growing
+   taller and needing a page-level scroll. */
+.edash-body--fill {
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 14px;
+  gap: 12px;
+}
+.edash-body--fill > .edash-stats-row { flex-shrink: 0; }
+.edash-body--fill > .edash-content-row {
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+}
+.edash-body--fill .edash-map-card,
+.edash-body--fill .edash-drawer {
+  min-height: 0;
+}
+.edash-body--fill .edash-map-canvas-wrap { min-height: 220px; }
+
 /* ─── Stats row ─── */
 .edash-stats-row {
   display: grid;
@@ -349,9 +376,9 @@
 
 .edash-stat-card {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 15px 14px;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
   border: 1px solid var(--edash-border);
   border-radius: var(--edash-radius-md);
   background: var(--edash-surface);
@@ -363,13 +390,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   flex-shrink: 0;
 }
 
-.edash-stat-icon svg { width: 18px; height: 18px; }
+.edash-stat-icon svg { width: 14px; height: 14px; }
 
 .edash-stat-icon.tone-neutral { background: #eef0f3; color: #445066; }
 .edash-stat-icon.tone-available { background: #e6f6ec; color: var(--edash-status-available); }
@@ -378,10 +405,10 @@
 .edash-stat-icon.tone-survey { background: #fdece2; color: var(--edash-status-survey); }
 .edash-stat-icon.tone-staking { background: #eee8fa; color: var(--edash-status-staking); }
 
-.edash-stat-body { min-width: 0; }
-.edash-stat-label { margin: 0 0 3px; color: var(--edash-muted); font-size: 0.74rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.edash-stat-value { margin: 0; color: var(--edash-ink); font-size: 1.48rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
-.edash-stat-sub { display: block; margin-top: 4px; color: var(--edash-faint); font-size: 0.74rem; font-weight: 700; }
+.edash-stat-body { min-width: 0; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.edash-stat-label { margin: 0; width: 100%; color: var(--edash-muted); font-size: 0.66rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; order: -1; }
+.edash-stat-value { margin: 0; color: var(--edash-ink); font-size: 1.08rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.edash-stat-sub { display: block; color: var(--edash-faint); font-size: 0.66rem; font-weight: 700; white-space: nowrap; }
 .edash-stat-sub.positive { color: var(--edash-status-available); }
 
 /* ─── Section head with a right-aligned action ─── */
@@ -949,6 +976,14 @@
   .edash-drawer { min-height: 300px; }
   .edash-bottom-row { grid-template-columns: 1fr 1fr; }
   .edash-bottom-row > :last-child { grid-column: 1 / -1; }
+  /* Map+drawer stack into one column below this width - "stretch to share the row's height"
+     stops making sense once they're not in the same row, so fall back to the normal scrolling
+     page instead of risking content getting clipped with nowhere to scroll to see it. */
+  .edash-main--fill { overflow-y: auto; }
+  .edash-body--fill { flex: initial; min-height: auto; }
+  .edash-body--fill > .edash-content-row { flex: initial; min-height: auto; align-items: start; }
+  .edash-body--fill .edash-drawer { min-height: 300px; }
+  .edash-body--fill .edash-map-canvas-wrap { min-height: 420px; }
 }
 
 @media (max-width: 860px) {

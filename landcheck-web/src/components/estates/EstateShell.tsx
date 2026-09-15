@@ -97,7 +97,7 @@ export default function EstateShell({
           Help &amp; Support
         </div>
       </aside>
-      <div className="edash-main">
+      <div className={`edash-main${activeKey === "map" ? " edash-main--fill" : ""}`}>
         <div className="edash-topbar">
           <button type="button" className="edash-menu-toggle" onClick={() => setSidebarOpen((value) => !value)} aria-label="Toggle navigation">
             <EstateIcon name="menu" />
@@ -177,7 +177,7 @@ export default function EstateShell({
             </div>
           </div>
         </div>
-        <div className="edash-body">{children}</div>
+        <div className={`edash-body${activeKey === "map" ? " edash-body--fill" : ""}`}>{children}</div>
       </div>
     </div>
   );
