@@ -762,7 +762,6 @@ export default function GreenPartnersLanding() {
                 {supportingPhotoMoments.map((moment) => (
                   <article key={moment.title} className="gp-photo-side-card">
                     <img src={moment.imageSrc} alt={moment.title} loading="lazy" decoding="async" />
-                    <div className="gp-photo-side-card__overlay" />
                     <div className="gp-photo-side-card__body">
                       {moment.label ? <span>{moment.label}</span> : null}
                       <h3>{moment.title}</h3>
