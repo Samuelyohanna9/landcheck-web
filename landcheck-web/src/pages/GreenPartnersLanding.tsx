@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import "../styles/green-partners.css";
 import "../styles/public-landing.css";
 import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
@@ -13,36 +13,14 @@ const greenPartnersFeaturedStory = getArticleBySlug("song-school-planting-day")!
 const FeaturedStorySpotlight = lazyWithChunkRecovery(() => import("../components/FeaturedStorySpotlight"));
 
 type PartnerOrg = { name: string; logo: string | null };
-type MediaFit = "cover" | "contain";
 type PhotoMoment = {
   imageSrc: string;
   title: string;
   label?: string;
 };
 
-type GreenModel = {
-  id: string;
-  heroLabel: string;
-  heroStatement: string;
-  heroSupport: string;
-  heroImage: string;
-  selectorTitle: string;
-  title: string;
-  summary: string;
-  detail: string;
-  bullets: string[];
-  href: string;
-  cta: string;
-  desktopImage: string;
-  phoneImage: string;
-  desktopFit: MediaFit;
-  phoneFit: MediaFit;
-  accentLabel: string;
-};
-
 const INSTAGRAM_REEL_URL = "https://www.instagram.com/reels/DbPXG1RsLrY/";
 const INSTAGRAM_REEL_EMBED_URL = "https://www.instagram.com/reel/DbPXG1RsLrY/embed";
-const BROCHURE_PDF_SRC = "/lc-green-corporate-brochure.pdf";
 const DEFERRED_SECTION_STYLE = { contentVisibility: "auto" as const, containIntrinsicSize: "960px" };
 
 const photoAsset = (fileName: string) => encodeURI(`/${fileName}`);
@@ -59,81 +37,6 @@ const modelCarouselNextIcon = (
   </svg>
 );
 
-const greenModels: GreenModel[] = [
-  {
-    id: "field",
-    heroLabel: "For NGOs & Partners",
-    heroStatement: "NGO Workspace",
-    heroSupport: "Assign planting and maintenance tasks to staff, monitor progress, and export reports.",
-    heroImage: "/agent planting 2.JPG",
-    selectorTitle: "NGO Campaign Workspace",
-    title: "Empower NGOs to coordinate planting campaigns, assign staff tasks, and track field syncs.",
-    summary: "Assign planting and maintenance tasks to staff, monitor progress, and export reports.",
-    detail: "A robust operations hub built for NGOs. Oversee forestry teams using the offline-first LC Green mobile app, schedule task reminders, track remote activities in real time, and download ready-made executive summaries.",
-    bullets: [
-      "Staff task assignment",
-      "Offline-first mobile sync",
-      "Live maintenance updates",
-      "Ready-made report exports",
-    ],
-    href: "/green/login/field",
-    cta: "Access NGO workspace",
-    desktopImage: "/screenshotlandche green 2.png",
-    phoneImage: "/screenshot phone-green.jpg",
-    desktopFit: "contain",
-    phoneFit: "contain",
-    accentLabel: "NGO Workspace",
-  },
-  {
-    id: "csr",
-    heroLabel: "For Corporate CSR",
-    heroStatement: "CSR Dashboards",
-    heroSupport: "Partner with us to fund restoration projects and view live evidence of work done.",
-    heroImage: "/ecf-partnership.jpeg",
-    selectorTitle: "Corporate CSR Dashboards",
-    title: "Partner with us to fund restoration projects and view live evidence of work done.",
-    summary: "Fund forestry initiatives and access live verification dashboards for stakeholders.",
-    detail: "Tailored for corporate ESG and CSR programs. Sponsor designated forest sectors, track seedling progress, and view verified field evidence—including coordinates, high-resolution photographs, and auditor timestamps—live on your custom company dashboard.",
-    bullets: [
-      "Verified evidence dashboard",
-      "Corporate CSR funding",
-      "Quality assurance queue",
-    ],
-    href: "/green-work/login",
-    cta: "Launch CSR dashboard",
-    desktopImage: "/Screenshot landcheck report.png",
-    phoneImage: "/Screenshot landcheck report 2.png",
-    desktopFit: "contain",
-    phoneFit: "contain",
-    accentLabel: "CSR Dashboard",
-  },
-  {
-    id: "public",
-    heroLabel: "For Public Sponsors",
-    heroStatement: "Tree Sponsorships",
-    heroSupport: "Fund a tree online and receive live location logs, digital certificates, and green points.",
-    heroImage: "/thumpnail_public.jpg",
-    selectorTitle: "Public Sponsorship Portal",
-    title: "Fund a tree online and receive live location logs, digital certificates, and green points.",
-    summary: "Anyone can sponsor trees instantly and track real-time field planting activities.",
-    detail: "A public portal designed for individual sponsors. Purchase a tree planting online, watch our certified field agents complete the work, and receive interactive map coordinates, growth feeds, personalized digital certificates, and green points.",
-    bullets: [
-      "Instant sponsor checkouts",
-      "Personalized certificates",
-      "Green points & live updates",
-    ],
-    href: "/sponsor",
-    cta: "Sponsor a tree now",
-    desktopImage: "/info_web.webp",
-    phoneImage: "/sponsor-tree-app.jpeg",
-    desktopFit: "contain",
-    phoneFit: "contain",
-    accentLabel: "Public Portal",
-  },
-];
-
-// whyPillars removed
-
 const photoEvidencePoints = [
   "Captured with GPS at the moment of planting.",
   "Each seedling carries a sponsor-linked QR identity.",
@@ -143,6 +46,11 @@ const photoEvidencePoints = [
 ];
 
 const photoMoments: PhotoMoment[] = [
+  {
+    imageSrc: photoAsset("tree_adamawa.JPG"),
+    label: "Live field delivery in Adamawa",
+    title: "Real planting work, disciplined capture, and verified reporting in one system.",
+  },
   {
     imageSrc: photoAsset("song-4.jpeg"),
     label: "Song school planting",
@@ -205,11 +113,11 @@ const photoMoments: PhotoMoment[] = [
   },
 ];
 
-const premiumProofCards = [
+const deliveryRoutes = [
   {
     eyebrow: "Partner organisations",
     title: "Field delivery",
-    summary: "Assign work, capture field evidence, and keep planting operations disciplined from one route.",
+    summary: "Assign work and capture GPS-verified field evidence.",
     imageSrc: photoAsset("agent planting 1.JPG"),
     href: "/green/login/field",
     cta: "Explore route",
@@ -217,7 +125,7 @@ const premiumProofCards = [
   {
     eyebrow: "Corporate reporting",
     title: "Verified reporting",
-    summary: "Give donor and CSR teams clean review control, live dashboards, and board-ready records.",
+    summary: "Live dashboards and board-ready records for donors.",
     imageSrc: "/ecf-partnership.jpeg",
     href: "/green-work/login",
     cta: "Explore route",
@@ -225,7 +133,7 @@ const premiumProofCards = [
   {
     eyebrow: "Public sponsorship",
     title: "Sponsor journeys",
-    summary: "Let supporters fund real trees online and follow credible field proof as each record grows.",
+    summary: "Fund a real tree online and follow its proof.",
     imageSrc: "/thumpnail_public.jpg",
     href: "/sponsor",
     cta: "Explore route",
@@ -256,66 +164,14 @@ const workflowSteps = [
 ] as const;
 
 
-const dueDiligenceAssets = [
-  {
-    eyebrow: "Capability Statement",
-    title: "Download the corporate capability brochure",
-    detail: "Review our technology stack, service level agreements, and enterprise-grade delivery models.",
-    imageSrc: "/Screenshot lndcheck work.png",
-    href: BROCHURE_PDF_SRC,
-    cta: "Download brochure",
-    download: true,
-  },
-  {
-    eyebrow: "Impact Report Template",
-    title: "Preview a verified audit-ready impact report",
-    detail: "See how field photographs, coordinates, and seedling survival statistics compile into CSR-compliant PDFs.",
-    imageSrc: "/Screenshot landcheck report.png",
-    href: "/lc-green-csr-sample-report.pdf",
-    cta: "Download sample report",
-    download: true,
-  },
-];
-
-
-
 export default function GreenPartnersLanding() {
   const { isLowBandwidth } = useLowBandwidthMode();
   const showFeaturedStory = useDeferredMount(900);
-  const modelCarouselTrackRef = useRef<HTMLDivElement | null>(null);
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
-  const [activeModelId, setActiveModelId] = useState(greenModels[0].id);
-  const [isModelAutoCyclePaused, setIsModelAutoCyclePaused] = useState(false);
-  const [isCompactModelCarousel, setIsCompactModelCarousel] = useState(false);
-  const [modelSlideIndex, setModelSlideIndex] = useState(0);
-  const [modelSlideExtent, setModelSlideExtent] = useState(0);
-  const [isModelTrackTransitionEnabled, setIsModelTrackTransitionEnabled] = useState(true);
   const [photoStartIndex, setPhotoStartIndex] = useState(0);
   const availablePhotoMoments = useMemo(
     () => (isLowBandwidth ? photoMoments.slice(0, 4) : photoMoments),
     [isLowBandwidth],
-  );
-  const loopedGreenModels = useMemo(
-    () =>
-      [...greenModels, ...greenModels].map((model, index) => ({
-        ...model,
-        renderKey: `${model.id}-${index}`,
-        baseIndex: index % greenModels.length,
-        isDuplicate: index >= greenModels.length,
-      })),
-    [],
-  );
-  const visibleModelCards = useMemo(
-    () =>
-      isCompactModelCarousel
-        ? greenModels.map((model, index) => ({
-            ...model,
-            renderKey: `${model.id}-${index}`,
-            baseIndex: index,
-            isDuplicate: false,
-          }))
-        : loopedGreenModels,
-    [isCompactModelCarousel, loopedGreenModels],
   );
   const visiblePhotoMoments = useMemo(() => {
     if (availablePhotoMoments.length <= 4) return availablePhotoMoments;
@@ -324,90 +180,6 @@ export default function GreenPartnersLanding() {
       (_, index) => availablePhotoMoments[(photoStartIndex + index) % availablePhotoMoments.length],
     );
   }, [availablePhotoMoments, photoStartIndex]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const track = modelCarouselTrackRef.current;
-    if (!track) return;
-
-    const syncModelLayout = () => {
-      const isCompact = window.innerWidth <= 720;
-      setIsCompactModelCarousel(isCompact);
-      if (isCompact) {
-        setModelSlideExtent(0);
-        return;
-      }
-
-      const firstCard = track.querySelector<HTMLElement>(".gp-model-carousel__card");
-      if (!firstCard) return;
-      const trackStyles = window.getComputedStyle(track);
-      const gap = Number.parseFloat(trackStyles.gap || trackStyles.columnGap || "14") || 0;
-      const width = firstCard.getBoundingClientRect().width;
-      // This section renders with content-visibility: auto (DEFERRED_SECTION_STYLE), so it isn't
-      // actually laid out until it scrolls into view. Measuring on mount alone can catch it still
-      // collapsed/placeholder-sized, permanently baking a wrong slide distance into the carousel's
-      // transform - which showed up as the active card sliding almost entirely out of view,
-      // leaving just a sliver visible. Skip zero/garbage measurements here...
-      if (width > 0) {
-        setModelSlideExtent(width + gap);
-      }
-    };
-
-    syncModelLayout();
-    window.addEventListener("resize", syncModelLayout);
-
-    // ...and re-measure via ResizeObserver, which fires again once content-visibility reveals
-    // the section and it gets its real layout - not just on window resize.
-    let observer: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== "undefined") {
-      observer = new ResizeObserver(() => syncModelLayout());
-      observer.observe(track);
-    }
-
-    return () => {
-      window.removeEventListener("resize", syncModelLayout);
-      observer?.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
-    const nextModel = greenModels[modelSlideIndex % greenModels.length];
-    if (nextModel && nextModel.id !== activeModelId) {
-      setActiveModelId(nextModel.id);
-    }
-  }, [activeModelId, modelSlideIndex]);
-
-  useEffect(() => {
-    if (isCompactModelCarousel || isModelAutoCyclePaused || greenModels.length <= 1) return;
-    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    const cycleTimer = window.setInterval(() => {
-      setIsModelTrackTransitionEnabled(true);
-      setModelSlideIndex((currentIndex) => currentIndex + 1);
-    }, 4800);
-
-    return () => window.clearInterval(cycleTimer);
-  }, [isCompactModelCarousel, isModelAutoCyclePaused]);
-
-  useEffect(() => {
-    if (isCompactModelCarousel || modelSlideIndex !== greenModels.length) return;
-    if (typeof window === "undefined") {
-      setIsModelTrackTransitionEnabled(false);
-      setModelSlideIndex(0);
-      setIsModelTrackTransitionEnabled(true);
-      return;
-    }
-
-    const resetTimer = window.setTimeout(() => {
-      setIsModelTrackTransitionEnabled(false);
-      setModelSlideIndex(0);
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => setIsModelTrackTransitionEnabled(true));
-      });
-    }, 880);
-
-    return () => window.clearTimeout(resetTimer);
-  }, [isCompactModelCarousel, modelSlideIndex]);
 
   useEffect(() => {
     setPhotoStartIndex(0);
@@ -450,22 +222,8 @@ export default function GreenPartnersLanding() {
     ).flat();
   }, [partners]);
 
-  const activeModel = greenModels.find((model) => model.id === activeModelId) || greenModels[0];
-  const modelTrackStyle =
-    !isCompactModelCarousel && modelSlideExtent > 0
-      ? {
-          transform: `translate3d(-${modelSlideIndex * modelSlideExtent}px, 0, 0)`,
-          transition: isModelTrackTransitionEnabled ? "transform 880ms cubic-bezier(0.22, 1, 0.36, 1)" : "none",
-        }
-      : undefined;
   const featuredPhotoMoment = visiblePhotoMoments[0];
   const supportingPhotoMoments = visiblePhotoMoments.slice(1);
-
-  function handleModelCardSelect(baseIndex: number) {
-    setIsModelTrackTransitionEnabled(true);
-    setModelSlideIndex(baseIndex);
-    setActiveModelId(greenModels[baseIndex].id);
-  }
 
   const renderPartnerLogo = (
     org: PartnerOrg & { renderKey: string },
@@ -526,7 +284,7 @@ export default function GreenPartnersLanding() {
 
             <div className="gp-new-hero-stats">
               <div className="gp-new-hero-stat-item">
-                <strong>{greenModels.length}</strong>
+                <strong>{deliveryRoutes.length}</strong>
                 <span>Delivery models</span>
               </div>
               <div className="gp-new-hero-stat-item">
@@ -552,45 +310,6 @@ export default function GreenPartnersLanding() {
         </Suspense>
       ) : null}
 
-      <section className="gp-premium-proof-stage" style={DEFERRED_SECTION_STYLE}>
-        <div className="gp-shell">
-          <div className="gp-section-intro gp-section-intro--center">
-            <span className="gp-section-eyebrow">Three delivery routes</span>
-            <h2>One platform. Three clear ways to deliver impact.</h2>
-            <p>Each route is built around a real operating need, with less dashboard noise and more usable evidence.</p>
-          </div>
-
-          <div className="gp-premium-proof-editorial">
-            <figure className="gp-premium-proof-feature">
-              <img
-                src={photoAsset("tree_adamawa.JPG")}
-                alt="LandCheck Green field planting work in Adamawa"
-                loading="lazy"
-                decoding="async"
-              />
-              <figcaption>
-                <span className="gp-premium-proof-feature-kicker">Live field delivery in Adamawa</span>
-                <p>
-                  Real planting work, disciplined capture, and verified reporting in one operating system for NGOs,
-                  corporate programmes, and public supporters.
-                </p>
-              </figcaption>
-            </figure>
-
-            <div className="gp-premium-proof-list">
-              {premiumProofCards.map((card) => (
-                <article key={card.title} className="gp-premium-proof-item">
-                  <span className="gp-premium-proof-item-eyebrow">{card.eyebrow}</span>
-                  <h3>{card.title}</h3>
-                  <p>{card.summary}</p>
-                  <a href={card.href}>{card.cta}</a>
-                </article>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section className="gp-workflow-stage" style={DEFERRED_SECTION_STYLE}>
         <div className="gp-shell">
           <div className="gp-section-intro gp-section-intro--center">
@@ -614,96 +333,20 @@ export default function GreenPartnersLanding() {
       <section id="platform-routes" className="gp-model-stage" style={DEFERRED_SECTION_STYLE}>
         <div className="gp-shell">
           <div className="gp-section-intro gp-section-intro--center">
-            <span className="gp-section-eyebrow">Choose your model</span>
-            <h2>Choose the LC Green model that matches how you work</h2>
-            <p>
-              One platform, three routes, each designed for a specific operating job.
-            </p>
+            <span className="gp-section-eyebrow">Choose your route</span>
+            <h2>Three ways to work with LandCheck Green</h2>
           </div>
 
-          <div
-            className="gp-model-grid"
-            onMouseEnter={() => setIsModelAutoCyclePaused(true)}
-            onMouseLeave={() => setIsModelAutoCyclePaused(false)}
-            onFocusCapture={() => setIsModelAutoCyclePaused(true)}
-            onBlurCapture={() => setIsModelAutoCyclePaused(false)}
-          >
-            <div className="gp-model-carousel">
-              <div
-                ref={modelCarouselTrackRef}
-                className={`gp-model-carousel__track${isModelAutoCyclePaused ? " is-paused" : ""}`}
-                style={modelTrackStyle}
-              >
-                {visibleModelCards.map((model) => (
-                  <button
-                    key={model.renderKey}
-                    type="button"
-                    data-model-id={model.id}
-                    className={`gp-model-carousel__card${model.id === activeModel.id ? " is-active" : ""}`}
-                    style={{ backgroundImage: `url("${model.heroImage}")` }}
-                    onClick={() => handleModelCardSelect(model.baseIndex)}
-                    aria-hidden={model.isDuplicate ? true : undefined}
-                    tabIndex={model.isDuplicate ? -1 : 0}
-                  >
-                    <span className="gp-model-carousel__overlay" aria-hidden="true" />
-                    <span className="gp-model-carousel__content">
-                      <span className="gp-model-carousel__eyebrow">{model.heroLabel}</span>
-                      <strong>{model.heroStatement}</strong>
-                      <span className="gp-model-carousel__rule" aria-hidden="true" />
-                      <span className="gp-model-carousel__desc">{model.heroSupport}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="gp-model-showcase">
-              <div className="gp-model-showcase__header">
-                <span className="gp-model-accent">{activeModel.accentLabel}</span>
-                <h3>{activeModel.selectorTitle}</h3>
-                <p>{activeModel.detail}</p>
-              </div>
-
-              <div className="gp-device-stage">
-                <div className="gp-laptop-showcase" aria-label={`${activeModel.selectorTitle} preview`}>
-                  <img
-                    className="gp-laptop-showcase__shell"
-                    src="/survey-laptop-hand.png"
-                    alt="Laptop displaying a LandCheck Green workspace preview"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  <div className="gp-laptop-showcase__screen">
-                    <figure className={`gp-laptop-preview-frame gp-laptop-preview-frame--${activeModel.id}`}>
-                      <img
-                        src={activeModel.desktopImage}
-                        alt={activeModel.selectorTitle}
-                        className={`gp-laptop-preview-image ${
-                          activeModel.desktopFit === "contain"
-                            ? "gp-laptop-preview-image--contain"
-                            : "gp-laptop-preview-image--cover"
-                        }`}
-                        width="1400"
-                        height="900"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    </figure>
-                  </div>
-                </div>
-              </div>
-
-              <div className="gp-model-showcase__footer">
-                <ul>
-                  {activeModel.bullets.map((bullet) => (
-                    <li key={bullet}>
-                      <span>{bullet}</span>
-                    </li>
-                  ))}
-                </ul>
-                <a href={activeModel.href}>{activeModel.cta}</a>
-              </div>
-            </div>
+          <div className="gp-route-grid">
+            {deliveryRoutes.map((route) => (
+              <article key={route.title} className="gp-route-card">
+                <img src={route.imageSrc} alt={route.title} loading="lazy" decoding="async" />
+                <span className="gp-route-card__eyebrow">{route.eyebrow}</span>
+                <h3>{route.title}</h3>
+                <p>{route.summary}</p>
+                <a href={route.href}>{route.cta}</a>
+              </article>
+            ))}
           </div>
         </div>
       </section>
@@ -819,33 +462,6 @@ export default function GreenPartnersLanding() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="gp-budget-stage" style={DEFERRED_SECTION_STYLE}>
-        <div className="gp-shell">
-          <div className="gp-section-intro gp-section-intro--center">
-            <span className="gp-section-eyebrow">Documentation and demos</span>
-            <h2>Evaluate the LandCheck platform</h2>
-            <p>Review the core materials a partner, donor, or CSR manager needs before onboarding.</p>
-          </div>
-          <div className="gp-asset-grid">
-            {dueDiligenceAssets.map((asset) => (
-              <article key={asset.title} className="gp-asset-card">
-                {"imageSrc" in asset ? (
-                  <div className="gp-asset-card__media">
-                      <img src={asset.imageSrc} alt={asset.title} loading="lazy" decoding="async" />
-                  </div>
-                ) : null}
-                <span className="gp-asset-card__eyebrow">{asset.eyebrow}</span>
-                <h3>{asset.title}</h3>
-                <p>{asset.detail}</p>
-                <a href={asset.href} download={asset.download}>
-                  {asset.cta}
-                </a>
-              </article>
-            ))}
           </div>
         </div>
       </section>
