@@ -295,14 +295,15 @@ export default function LandingPage() {
             Environmental monitoring, tree planting sponsorship, field operations, survey plans, and flood risk in one platform.
           </p>
           <div className="lp-hero-ctas">
-            <button type="button" className="lp-hero-btn-primary" onClick={() => navigate("/green-partners")}>
-              LANDCHECK GREEN
+            <button
+              type="button"
+              className="lp-hero-btn-primary"
+              onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              Our products
             </button>
-            <button type="button" className="lp-hero-btn-outline" onClick={() => navigate("/survey")}>
-              SURVEY PLAN
-            </button>
-            <button type="button" className="lp-hero-btn-outline" onClick={() => navigate("/flood")}>
-              FLOOD ANALYSIS
+            <button type="button" className="lp-hero-btn-outline" onClick={() => navigate("/sponsor")}>
+              Sponsor a tree planting
             </button>
           </div>
         </div>
@@ -422,13 +423,6 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            className="lp-intro-cta"
-            onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth" })}
-          >
-            EXPLORE OUR PRODUCTS
-          </button>
         </div>
       </section>
 

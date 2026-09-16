@@ -401,31 +401,6 @@
   line-height: 1.45;
 }
 
-.lp-intro-cta {
-  display: inline-flex;
-  align-items: center;
-  background: #22c55e;
-  color: #fff;
-  border: 1px solid #22c55e;
-  border-radius: 2px;
-  padding: 12px 28px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
-  font-family: inherit;
-  box-shadow: 0 8px 22px rgba(34, 197, 94, 0.22);
-}
-
-.lp-intro-cta::after { content: " →"; }
-
-.lp-intro-cta:hover {
-  background: #16a34a;
-  border-color: #16a34a;
-  transform: translateY(-1px);
-}
-
 /* ── Who We Serve ── */
 .lp-targets-section {
   background-color: #0e2b4a;
@@ -1376,25 +1351,35 @@
   }
 }
 
-/* Unified public-route CTAs: equal visual weight so visitors can choose any route - solid brand
-   green, sharp rectangular corners, same treatment every solid CTA on this page uses (see
-   .lp-intro-cta, .lp-sponsor-btn-primary, .lp-contact-cta). */
+/* Keep the hero focused: one primary route and one quieter secondary route. */
 .lp-hero-btn-primary,
 .lp-hero-btn-outline {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 160px;
-  background: #22c55e;
-  color: #fff;
-  border: 1px solid #22c55e;
   border-radius: 2px;
   padding: 11px 20px;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   transition: transform 0.15s, background 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.lp-hero-btn-primary {
+  background: #22c55e;
+  color: #fff;
+  border: 1px solid #22c55e;
   box-shadow: 0 10px 28px rgba(34, 197, 94, 0.28);
+}
+
+.lp-hero-btn-outline {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: none;
 }
 
 .lp-hero-btn-primary::after,
@@ -1402,10 +1387,15 @@
   content: " →";
 }
 
-.lp-hero-btn-primary:hover,
-.lp-hero-btn-outline:hover {
+.lp-hero-btn-primary:hover {
   background: #16a34a;
   border-color: #16a34a;
   box-shadow: 0 14px 32px rgba(34, 197, 94, 0.36);
+  transform: translateY(-1px);
+}
+
+.lp-hero-btn-outline:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #fff;
   transform: translateY(-1px);
 }
