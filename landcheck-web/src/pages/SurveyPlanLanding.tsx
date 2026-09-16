@@ -12,18 +12,95 @@ import "../styles/public-landing.css";
 
 const SignupGateModal = lazy(() => import("../components/SignupGateModal"));
 
-const capabilities = [
+const asset = (fileName: string) => encodeURI(`/${fileName}`);
+
+const featureHighlights = [
   {
-    title: "Prepare survey plans",
-    description: "Enter coordinates, check the parcel and prepare a clear plan.",
+    title: "AI Coordinate Scan",
+    description: "Extract coordinates from scanned plans with high accuracy.",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 8V5a1 1 0 011-1h3M20 8V5a1 1 0 00-1-1h-3M4 16v3a1 1 0 001 1h3M20 16v3a1 1 0 01-1 1h-3" />
+        <path d="M3 12h18" />
+      </svg>
+    ),
   },
   {
-    title: "Georeference scanned plans",
-    description: "Align an existing drawing, then trace its boundaries on the map.",
+    title: "Georeference Layouts",
+    description: "Align scanned drawings to real world coordinates.",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="8" />
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+      </svg>
+    ),
   },
   {
-    title: "Subdivide and export",
-    description: "Create child parcels and export plans or CAD-ready files.",
+    title: "Automatic Subdivision",
+    description: "Create child parcels and update boundaries instantly.",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="8" height="8" rx="1" />
+        <rect x="13" y="3" width="8" height="8" rx="1" />
+        <rect x="3" y="13" width="8" height="8" rx="1" />
+        <rect x="13" y="13" width="8" height="8" rx="1" />
+      </svg>
+    ),
+  },
+  {
+    title: "PDF & DWG Export",
+    description: "Generate survey plans, reports and CAD files.",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 3h7l4 4v14a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z" />
+        <path d="M14 3v4h4M9 15l1.8 3 1.7-2.4L14.2 18" />
+      </svg>
+    ),
+  },
+];
+
+const workflowSteps = [
+  {
+    step: "1",
+    title: "Import your data",
+    description: "Enter coordinates or upload a scanned drawing in common formats (CSV, DXF, JPG, PNG).",
+    image: null as string | null,
+  },
+  {
+    step: "2",
+    title: "Review and edit",
+    description: "Check geometry, adjust boundaries and add details on the map.",
+    image: asset("survey  plan preview.jpg"),
+  },
+  {
+    step: "3",
+    title: "Export professional outputs",
+    description: "Generate survey plans and export to PDF, DWG or GIS formats.",
+    image: asset("subdivision_preview.jpg"),
+  },
+];
+
+const workspaceAudiences = [
+  {
+    title: "Survey practices",
+    description: "Deliver accurate plans, faster.",
+    points: [
+      "Standardized outputs (PDF, DWG, GIS)",
+      "Faster plot delivery",
+      "Organize client and project records",
+      "Work with your team in one workspace",
+    ],
+  },
+  {
+    title: "Real-estate teams",
+    description: "Turn land data into progress.",
+    points: [
+      "Validate and manage land parcels",
+      "Track customer and payment records",
+      "Collaborate with surveyors",
+      "Keep a central record of all projects",
+    ],
   },
 ];
 
@@ -115,6 +192,10 @@ export default function SurveyPlanLanding() {
           <span /><span /><span />
         </button>
         <nav className="spl-nav-links" aria-label="Survey navigation">
+          <a href="#features">Features</a>
+          <a href="#workflow">Workflow</a>
+          <a href="#for-surveyors">For Surveyors</a>
+          <a href="#for-estates">For Estates</a>
           {signedIn ? (
             <Link to="/dashboard">Dashboard</Link>
           ) : (
@@ -132,6 +213,10 @@ export default function SurveyPlanLanding() {
             <img src="/logo.svg" alt="LandCheck" width="112" height="32" />
             <button type="button" className="spl-mobile-close" onClick={closeMenu} aria-label="Close navigation">&times;</button>
           </div>
+          <a href="#features" className="spl-mobile-item" onClick={closeMenu}>Features</a>
+          <a href="#workflow" className="spl-mobile-item" onClick={closeMenu}>Workflow</a>
+          <a href="#for-surveyors" className="spl-mobile-item" onClick={closeMenu}>For Surveyors</a>
+          <a href="#for-estates" className="spl-mobile-item" onClick={closeMenu}>For Estates</a>
           {signedIn ? (
             <Link to="/dashboard" className="spl-mobile-item" onClick={closeMenu}>Dashboard</Link>
           ) : (
@@ -160,44 +245,109 @@ export default function SurveyPlanLanding() {
           <div className="spl-shell spl-hero-shell">
             <div className="spl-hero-copy">
               <p className="spl-kicker">LandCheck Survey</p>
-              <h1 id="spl-hero-title">Survey plans, made simple.</h1>
+              <h1 id="spl-hero-title">Professional survey plans. Ready in minutes.</h1>
               <p className="spl-hero-summary">
-                Prepare plans, georeference scans and subdivide parcels in one workspace.
+                Convert coordinates or scanned layouts into accurate, export-ready survey plans - from one connected workspace.
               </p>
               <div className="spl-hero-actions">
-                <button type="button" className="spl-text-link spl-text-link--light" onMouseEnter={warmSurveyEntry} onClick={openWorkspace}>
+                <button type="button" className="spl-hero-btn-primary" onMouseEnter={warmSurveyEntry} onClick={openWorkspace}>
                   Open survey workspace
                 </button>
+                <a href="#workflow" className="spl-hero-btn-outline">See how it works</a>
               </div>
-              {totalPlotsGenerated !== null && (
-                <p className="spl-hero-proof" aria-live="polite">
-                  <strong>{totalPlotsGenerated.toLocaleString("en-NG")}</strong>
-                  <span>survey plots generated</span>
-                </p>
-              )}
+              <div className="spl-hero-stats">
+                {totalPlotsGenerated !== null && (
+                  <div className="spl-hero-stat">
+                    <strong>{totalPlotsGenerated.toLocaleString("en-NG")}</strong>
+                    <span>survey plots generated</span>
+                  </div>
+                )}
+                <div className="spl-hero-stat">
+                  <strong>Faster</strong>
+                  <span>from data to plan</span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        <section id="capabilities" className="spl-section spl-capabilities">
-          <div className="spl-shell spl-capabilities-layout">
-            <div className="spl-section-intro">
-              <p className="spl-section-kicker">A practical survey workspace</p>
-              <h2>From source data to finished plan.</h2>
+        <section id="features" className="spl-section spl-features">
+          <div className="spl-shell spl-features-grid">
+            {featureHighlights.map((item) => (
+              <div className="spl-feature-card" key={item.title}>
+                <span className="spl-feature-icon" aria-hidden="true">{item.icon}</span>
+                <h3>{item.title}</h3>
+                <p>{item.description}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="workflow" className="spl-section spl-capabilities">
+          <div className="spl-shell">
+            <div className="spl-section-intro spl-section-intro--center">
+              <p className="spl-section-kicker">A simpler way to work</p>
+              <h2>From field data to finished plan.</h2>
               <p>
                 Bring in coordinates or a scanned drawing, check the geometry and prepare the final plan in one place.
               </p>
             </div>
-            <ul className="spl-capability-list">
-              {capabilities.map((item) => (
-                <li key={item.title}>
-                  <div>
-                    <h3>{item.title}</h3>
-                    <p>{item.description}</p>
+            <ul className="spl-step-list">
+              {workflowSteps.map((item) => (
+                <li key={item.title} className="spl-step-card">
+                  <div className="spl-step-visual">
+                    {item.image ? (
+                      <img src={item.image} alt="" loading="lazy" decoding="async" />
+                    ) : (
+                      <span className="spl-step-number" aria-hidden="true">{item.step}</span>
+                    )}
                   </div>
+                  <h3>{item.title}</h3>
+                  <p>{item.description}</p>
                 </li>
               ))}
             </ul>
+          </div>
+        </section>
+
+        <section className="spl-scan-section">
+          <div className="spl-shell">
+            <div className="spl-section-intro spl-section-intro--center">
+              <p className="spl-section-kicker">For existing plans</p>
+              <h2>Turn scanned layouts into usable spatial data.</h2>
+              <p>
+                Georeference your scanned drawings, trace boundaries and convert them into accurate, editable parcels.
+              </p>
+            </div>
+            <figure className="spl-scan-figure">
+              <img src={asset("georefrence preview.jpg")} alt="A scanned plot layout aligned to its real-world satellite position during georeferencing" loading="lazy" decoding="async" />
+            </figure>
+            <button type="button" className="spl-btn-primary" onMouseEnter={warmSurveyEntry} onClick={openWorkspace}>
+              Open georeferencing tools
+            </button>
+          </div>
+        </section>
+
+        <section id="for-surveyors" className="spl-section spl-audiences">
+          <div className="spl-shell">
+            <div className="spl-section-intro spl-section-intro--center">
+              <p className="spl-section-kicker">Built for professionals</p>
+              <h2>One workspace for every land project.</h2>
+              <p>Whether you run a survey practice or manage a real-estate portfolio, LandCheck gives you the tools to work faster and with confidence.</p>
+            </div>
+            <div className="spl-audience-grid">
+              {workspaceAudiences.map((audience) => (
+                <div className="spl-audience-card" key={audience.title} id={audience.title === "Real-estate teams" ? "for-estates" : undefined}>
+                  <h3>{audience.title}</h3>
+                  <p>{audience.description}</p>
+                  <ul>
+                    {audience.points.map((point) => (
+                      <li key={point}>{point}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -207,22 +357,8 @@ export default function SurveyPlanLanding() {
               <p className="spl-section-kicker">One connected workspace</p>
               <h2>Bring in the data. Finish the plan.</h2>
               <p>Import coordinates or a scan, review the map, then prepare and export your work.</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="spl-scan-section">
-          <div className="spl-shell spl-scan-layout">
-            <div>
-              <p className="spl-section-kicker">For existing plans</p>
-              <h2>Make scanned plans usable.</h2>
-            </div>
-            <div className="spl-scan-copy">
-              <p>
-                Align a scanned drawing to the map, then trace and review its boundaries.
-              </p>
-              <button type="button" className="spl-text-link" onMouseEnter={warmSurveyEntry} onClick={openWorkspace}>
-                Open georeferencing tools
+              <button type="button" className="spl-hero-btn-primary" onMouseEnter={warmSurveyEntry} onClick={openWorkspace}>
+                Start a survey plan
               </button>
             </div>
           </div>
@@ -253,6 +389,11 @@ export default function SurveyPlanLanding() {
             <Link to="/survey-plan">Survey workspace</Link>
             <Link to="/hazard-analysis">Hazard analysis</Link>
             <a href="mailto:landchecktech@gmail.com?subject=LandCheck%20Support">Support</a>
+          </div>
+          <div className="spl-footer-column">
+            <h2>For</h2>
+            <a href="#for-surveyors">For Surveyors</a>
+            <a href="#for-estates">For Estates</a>
             <Link to="/privacy">Privacy</Link>
           </div>
           <div className="spl-footer-column">

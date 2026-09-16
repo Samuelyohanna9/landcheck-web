@@ -335,50 +335,88 @@
   font-variant-numeric: tabular-nums;
 }
 
-.spl-text-link {
+.spl-hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  margin-top: 34px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(246, 243, 233, 0.14);
+}
+
+.spl-hero-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.spl-hero-stat strong {
+  color: #82dfbf;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.spl-hero-stat span {
+  color: rgba(246, 243, 233, 0.62);
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+}
+
+.spl-hero-btn-primary,
+.spl-hero-btn-outline,
+.spl-btn-primary {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  width: fit-content;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--spl-ink);
+  padding: 13px 22px;
+  border: 1px solid transparent;
+  border-radius: 2px;
   font: inherit;
-  font-size: 0.87rem;
+  font-size: 0.85rem;
   font-weight: 700;
-  line-height: 1.4;
-  text-align: left;
   text-decoration: none;
   cursor: pointer;
-  transition: color 160ms ease;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 
-.spl-text-link:hover {
-  color: #14866f;
+.spl-hero-btn-primary,
+.spl-btn-primary {
+  background: #1f8c58;
+  border-color: #1f8c58;
+  color: #fff;
 }
 
-.spl-text-link--light {
+.spl-hero-btn-primary:hover,
+.spl-btn-primary:hover {
+  background: #197549;
+  border-color: #197549;
+}
+
+.spl-hero-btn-outline {
+  background: transparent;
+  border-color: rgba(246, 243, 233, 0.35);
   color: #f6f3e9;
 }
 
-.spl-text-link--light:hover {
-  color: #fff;
+.spl-hero-btn-outline:hover {
+  border-color: rgba(246, 243, 233, 0.7);
+  background: rgba(246, 243, 233, 0.06);
 }
 
 .spl-section {
   padding: clamp(84px, 11vw, 142px) 0;
 }
 
-.spl-capabilities-layout {
-  display: grid;
-  grid-template-columns: minmax(250px, 0.8fr) minmax(0, 1.2fr);
-  gap: clamp(48px, 9vw, 130px);
-  align-items: start;
-}
-
 .spl-section-intro {
   max-width: 450px;
+}
+
+.spl-section-intro--center {
+  max-width: 620px;
+  margin: 0 auto 48px;
+  text-align: center;
 }
 
 .spl-section h2,
@@ -389,32 +427,113 @@
 }
 
 .spl-section-intro > p:last-child,
-.spl-scan-copy > p {
+.spl-section-intro--center > p:last-child {
   margin: 22px 0 0;
   color: var(--spl-muted);
   font-size: 0.92rem;
   line-height: 1.7;
 }
 
-.spl-capability-list {
+/* ── Feature highlights row ── */
+.spl-features {
+  padding: clamp(56px, 7vw, 84px) 0;
+  background: var(--spl-paper);
+  border-bottom: 1px solid var(--spl-line);
+}
+
+.spl-features-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(24px, 4vw, 48px);
+}
+
+.spl-feature-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.spl-feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  background: rgba(31, 140, 88, 0.1);
+  color: #1f8c58;
+}
+
+.spl-feature-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.spl-feature-card h3 {
+  margin: 0;
+  color: var(--spl-ink);
+  font-size: 0.96rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.spl-feature-card p {
+  margin: 0;
+  color: var(--spl-muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+/* ── From field data to finished plan (step cards) ── */
+.spl-step-list {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.spl-capability-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 42px;
-  row-gap: 46px;
-  padding-top: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(24px, 4vw, 40px);
 }
 
-.spl-capability-list li {
+.spl-step-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.spl-step-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 4 / 3;
+  margin-bottom: 18px;
+  overflow: hidden;
+  border: 1px solid var(--spl-line);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.spl-step-visual img {
   display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.spl-capability-list h3 {
+.spl-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  background: rgba(31, 140, 88, 0.1);
+  color: #1f8c58;
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-size: 1.4rem;
+  font-weight: 500;
+}
+
+.spl-step-card h3 {
   margin: 0;
   color: var(--spl-ink);
   font-size: 1rem;
@@ -422,7 +541,7 @@
   line-height: 1.45;
 }
 
-.spl-capability-list p {
+.spl-step-card p {
   margin: 8px 0 0;
   color: var(--spl-muted);
   font-size: 0.88rem;
@@ -447,7 +566,7 @@
   line-height: 1.1;
 }
 
-.spl-workflow-intro > p:last-child {
+.spl-workflow-intro > p:last-of-type {
   max-width: 560px;
   margin: 20px auto 0;
   color: rgba(245, 243, 235, 0.7);
@@ -455,28 +574,84 @@
   line-height: 1.65;
 }
 
+.spl-workflow-intro > button {
+  margin-top: 30px;
+}
+
+/* ── Turn scanned layouts into usable spatial data ── */
 .spl-scan-section {
   padding: clamp(82px, 10vw, 132px) 0;
   background: #e7efe8;
+  text-align: center;
 }
 
-.spl-scan-layout {
+.spl-scan-figure {
+  margin: 0 0 32px;
+}
+
+.spl-scan-figure img {
+  display: block;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  border: 1px solid var(--spl-line);
+  border-radius: 4px;
+}
+
+/* ── One workspace for every land project ── */
+.spl-audience-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.7fr);
-  gap: clamp(48px, 10vw, 150px);
-  align-items: center;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(24px, 4vw, 40px);
 }
 
-.spl-scan-layout h2 {
-  max-width: 600px;
+.spl-audience-card {
+  padding: clamp(24px, 3vw, 34px);
+  border: 1px solid var(--spl-line);
+  border-radius: 4px;
+  background: #fff;
 }
 
-.spl-scan-copy > p {
-  margin-top: 0;
+.spl-audience-card h3 {
+  margin: 0;
+  color: var(--spl-ink);
+  font-size: 1.1rem;
+  font-weight: 700;
 }
 
-.spl-scan-copy .spl-text-link {
-  margin-top: 28px;
+.spl-audience-card > p {
+  margin: 6px 0 0;
+  color: var(--spl-muted);
+  font-size: 0.9rem;
+}
+
+.spl-audience-card ul {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+.spl-audience-card li {
+  position: relative;
+  padding-left: 26px;
+  color: var(--spl-ink);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.spl-audience-card li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.15em;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #1f8c58;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='white'%3E%3Cpath fill-rule='evenodd' d='M16.7 5.3a1 1 0 010 1.4l-7 7a1 1 0 01-1.4 0l-3-3a1 1 0 111.4-1.4L8.3 11.6l6.3-6.3a1 1 0 011.4 0z' clip-rule='evenodd'/%3E%3C/svg%3E") center / 12px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='white'%3E%3Cpath fill-rule='evenodd' d='M16.7 5.3a1 1 0 010 1.4l-7 7a1 1 0 01-1.4 0l-3-3a1 1 0 111.4-1.4L8.3 11.6l6.3-6.3a1 1 0 011.4 0z' clip-rule='evenodd'/%3E%3C/svg%3E") center / 12px no-repeat;
 }
 
 .spl-footer {
@@ -487,9 +662,9 @@
 
 .spl-footer-main {
   display: grid;
-  grid-template-columns: 2fr repeat(3, 1fr);
+  grid-template-columns: 2fr repeat(4, 1fr);
   gap: 44px;
-  width: min(1200px, calc(100% - 64px));
+  width: min(1280px, calc(100% - 64px));
   margin: 0 auto;
   padding-bottom: 52px;
 }
@@ -621,22 +796,23 @@
     max-width: 100%;
   }
 
-  .spl-capabilities-layout,
-  .spl-scan-layout {
+  .spl-features-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 32px;
+  }
+
+  .spl-step-list,
+  .spl-audience-grid {
     grid-template-columns: 1fr;
-    gap: 48px;
+    gap: 32px;
   }
 
   .spl-footer-main {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .spl-footer-brand {
     grid-column: 1 / -1;
-  }
-
-  .spl-footer-column:last-child {
-    grid-column: auto;
   }
 }
 
@@ -701,14 +877,13 @@
     font-size: clamp(1.6rem, 7vw, 2rem);
   }
 
-  .spl-capabilities-layout,
-  .spl-scan-layout {
-    gap: 38px;
-  }
-
-  .spl-capability-list {
+  .spl-features-grid {
     grid-template-columns: 1fr;
     row-gap: 28px;
+  }
+
+  .spl-audience-card {
+    padding: 22px;
   }
 
   .spl-workflow {
