@@ -302,8 +302,9 @@ function buildBlockLabelFeatures(features: any[], blocks: any[]) {
 }
 
 function buildPlotLabelFeatures(features: any[], allocations: any[]) {
+  const allocationsByPlotId = new Map(allocations.map((item) => [Number(item.plot_id), item]));
   return features.map((feature: any) => {
-    const allocation = allocations.find((item) => item.plot_id === Number(feature.properties?.id));
+    const allocation = allocationsByPlotId.get(Number(feature.properties?.id));
     return {
       type: "Feature",
       properties: {
@@ -553,6 +554,7 @@ export default function Estates() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [plotSearch, setPlotSearch] = useState("");
   const [quality, setQuality] = useState<any>(null);
+  const [qualityLoading, setQualityLoading] = useState(false);
   const [activity, setActivity] = useState<any[]>([]);
   const [dashboard, setDashboard] = useState<any>(null);
   const [estateDetail, setEstateDetail] = useState<any>(null);
@@ -627,12 +629,15 @@ export default function Estates() {
     api.get("/estates/foundation/access").then((response) => { const rows=response.data.organizations || []; setOrganizations(rows); if (rows.length === 1) setNewEstateOrg(String(rows[0].id)); }).catch(() => setOrganizations([])).finally(() => setOrganizationsLoaded(true));
     api.get("/estates")
       .then((response) => response.data)
-      .then(async (rows) => {
-        const enriched = await Promise.all(rows.map(async (estate: Estate) => {
+      .then((rows) => {
+        // Show the estate picker immediately. Financial totals are supplementary and must not
+        // hold the whole dashboard behind one request per estate.
+        setEstates(rows);
+        setMessage(rows.length ? "" : "No estates yet. Create your first estate to get started.");
+        void Promise.all(rows.map(async (estate: Estate) => {
           try { return { ...estate, financial: (await api.get(`/estates/${estate.id}/financial-summary`)).data }; }
           catch { return estate; }
-        }));
-        setEstates(enriched); setMessage(rows.length ? "" : "No estates yet. Create your first estate to get started.");
+        })).then((enriched) => setEstates(enriched));
       })
       .catch(async (error) => setMessage(await extractApiErrorMessage(error, "Estates are not available for this account."), "danger"));
   }, []);
@@ -667,6 +672,13 @@ export default function Estates() {
     if (!estateId) return;
     try { const response = await api.post(`/estates/${estateId}/approve-map`); setDashboard((current: any) => current ? { ...current, estate: { ...current.estate, status: response.data.status } } : current); toast.success("Estate map approved and published as the operational plot register."); }
     catch (error) { toast.error(await extractApiErrorMessage(error, "Resolve the geometry issues before publishing the Estate map.")); }
+  };
+  const loadQualityCheck = async () => {
+    if (!estateId || qualityLoading) return;
+    setQualityLoading(true);
+    try { setQuality((await api.get(`/estates/${estateId}/quality-check`)).data); }
+    catch { setQuality(null); toast.error("The geometry check could not be completed."); }
+    finally { setQualityLoading(false); }
   };
   const updatePlotInputPoint = (index: number, field: string, value: string | number | boolean) => {
     setPlotInputPoints((current) => current.map((point, pointIndex) => pointIndex === index ? { ...point, [field]: value } : point));
@@ -1085,11 +1097,11 @@ export default function Estates() {
       .then((response) => { setAllocations(response.data.allocations || []); setPlots(response.data.plots || []); setCustomers(response.data.customers || []); })
       .catch(() => { setAllocations([]); setPlots([]); setCustomers([]); });
     Promise.all([
-      api.get("/estates/survey-requests"),
-      api.get("/estates/staking-tasks"),
+      api.get("/estates/survey-requests", { params: { estate_id: estateId } }),
+      api.get("/estates/staking-tasks", { params: { estate_id: estateId } }),
     ]).then(([surveys, staking]) => {
-      setSurveyRequests((surveys.data || []).filter((item: any) => item.estate.id === Number(estateId)));
-      setStakingTasks((staking.data || []).filter((item: any) => item.estate_id === Number(estateId)));
+      setSurveyRequests(surveys.data || []);
+      setStakingTasks(staking.data || []);
     }).catch(() => {
       setSurveyRequests([]);
       setStakingTasks([]);
@@ -1100,7 +1112,8 @@ export default function Estates() {
     api.get(`/estates/${estateId}/layout-proposals`).then((response) => setLayoutProposal((response.data || [])[0] || null)).catch(() => setLayoutProposal(null));
     api.get(`/estates/${estateId}/hazards`).then((response) => { setHazardDashboard(response.data); setHazardUpgradeRequired(false); }).catch((err) => { setHazardDashboard(null); setHazardUpgradeRequired(isUpgradeRequiredError(err)); });
     api.get(`/estates/${estateId}/blocks`).then((response) => setBlocks(response.data || [])).catch(() => setBlocks([]));
-    Promise.all([api.get(`/estates/${estateId}/quality-check`), api.get(`/estates/${estateId}/activity`), api.get(`/estates/${estateId}/dashboard`)]).then(([qc, events, metrics]) => { setQuality(qc.data); setActivity(events.data || []); setDashboard(metrics.data); }).catch(() => { setQuality(null); setActivity([]); setDashboard(null); });
+    api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
+    api.get(`/estates/${estateId}/dashboard`).then((response) => setDashboard(response.data)).catch(() => setDashboard(null));
   }, [estateId]);
   // Builds the mapboxgl.Map exactly ONCE per estate, guarded by mapRef.current the same way the
   // already-reliable MapViewEnhanced/ProjectMap components do it - this is a stronger guarantee
@@ -1240,9 +1253,12 @@ export default function Estates() {
   }, [searchParams, allocations]);
   const refreshWorkflow = async () => {
     if (!estateId) return;
-    const [surveys, staking] = await Promise.all([api.get("/estates/survey-requests"), api.get("/estates/staking-tasks")]);
-    setSurveyRequests((surveys.data || []).filter((item: any) => item.estate.id === Number(estateId)));
-    setStakingTasks((staking.data || []).filter((item: any) => item.estate_id === Number(estateId)));
+    const [surveys, staking] = await Promise.all([
+      api.get("/estates/survey-requests", { params: { estate_id: estateId } }),
+      api.get("/estates/staking-tasks", { params: { estate_id: estateId } }),
+    ]);
+    setSurveyRequests(surveys.data || []);
+    setStakingTasks(staking.data || []);
   };
   const runWorkflow = async (label: string, action: () => Promise<any>) => {
     try {
@@ -2359,7 +2375,7 @@ export default function Estates() {
             className={`edash-tool-btn${tool.locked ? " edash-tool-btn--locked" : ""}`}
             disabled={Boolean(tool.locked)}
             title={tool.locked}
-            onClick={() => { if (!tool.locked) setActiveTool(tool.key); }}
+            onClick={() => { if (!tool.locked) { setActiveTool(tool.key); if (tool.key === "qc") void loadQualityCheck(); } }}
           >
             <EstateIcon name={tool.locked ? "lock" : tool.icon} />
             {tool.label}
@@ -2723,7 +2739,7 @@ export default function Estates() {
             </div>
           )}
         </>
-      ) : <LoadingPanel label="Analyzing plot geometry..." />);
+      ) : qualityLoading ? <LoadingPanel label="Checking plot geometry..." /> : <LoadingPanel label="Open the geometry check to review this Estate." />);
     }
     if (activeTool === "export-layout") {
       return renderToolModal("Export the whole layout", "Every approved plot, road, drainage reserve and open space in this Estate, exported at once.", (
