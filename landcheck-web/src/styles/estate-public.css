@@ -137,6 +137,7 @@
 .estate-public-intro .estate-public-tagline { color: #e1f2e6; }
 .estate-public-intro .estate-public-location, .estate-public-intro .estate-public-description { color: rgba(255,255,255,.82); }
 .estate-public-intro .estate-public-description { max-width: 620px; }
+.estate-public-payment-plan-summary { max-width: 720px; margin: 16px 0 0; color: rgba(255,255,255,.82); font-size: .82rem; }
 .estate-public-intro .estate-public-text-link { color: #fff; border-color: rgba(255,255,255,.7); }
 .estate-public-tagline { max-width: 670px; margin: 20px 0 0; color: var(--estate-public-brand-dark); font-size: clamp(1.05rem, 2vw, 1.45rem); font-weight: 700; letter-spacing: -.02em; }
 .estate-public-intro-link { display: inline-block; margin-top: 28px; padding-bottom: 4px; border-bottom: 1px solid currentColor; }
@@ -152,6 +153,9 @@
 .estate-public-plot-row small + small { margin-top: 4px; }
 .estate-public-plot-price { color: var(--estate-public-brand-dark) !important; font-weight: 750; }
 .estate-public-plot-detail dl { grid-template-columns: 1.35fr .8fr 1fr; }
+.estate-public-payment-plan { margin: 18px 0; padding-top: 14px; border-top: 1px solid var(--estate-public-border); }
+.estate-public-payment-plan-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 6px 0; color: var(--estate-public-muted); font-size: .78rem; }
+.estate-public-payment-plan-row strong { color: var(--estate-public-ink); }
 .estate-public-information, .estate-public-contact { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); align-items: start; gap: clamp(28px, 8vw, 110px); max-width: 1280px; margin: 0 auto; padding: clamp(48px, 7vw, 86px) clamp(18px, 4vw, 64px); border-top: 1px solid var(--estate-public-border); }
 .estate-public-information h2, .estate-public-contact h2 { max-width: 560px; margin: 0; font-size: clamp(1.65rem, 3vw, 3rem); letter-spacing: -.045em; line-height: 1.06; }
 .estate-public-information p, .estate-public-contact p { max-width: 600px; margin: 0; color: var(--estate-public-muted); line-height: 1.7; }
@@ -192,4 +196,5 @@
   .estate-public-reservation-layout { padding: 58px 16px 75px; }
   .estate-public-reservation-layout .estate-public-form { padding: 18px; }
   .estate-public-reservation-summary dl { margin-top: 30px; }
+  .estate-public-reservation-summary .estate-public-payment-plan { margin-top: 28px; }
 }

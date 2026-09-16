@@ -26,6 +26,7 @@ export default function EstateSettingsPage() {
   const [publicLogoPath, setPublicLogoPath] = useState<string | null>(null);
   const [publicLogoFile, setPublicLogoFile] = useState<File | null>(null);
   const [publicShowPrices, setPublicShowPrices] = useState(true);
+  const [paymentPlan, setPaymentPlan] = useState<Array<{ label: string; percentage: string }>>([]);
   const [publicCanPublish, setPublicCanPublish] = useState(false);
   const [publicUrlPath, setPublicUrlPath] = useState<string | null>(null);
 
@@ -49,6 +50,7 @@ export default function EstateSettingsPage() {
         setPublicPhone(publicPage.public_contact_phone || "");
         setPublicLogoPath(publicPage.public_logo_path || null);
         setPublicShowPrices(publicPage.public_show_prices !== false);
+        setPaymentPlan((publicPage.payment_plan || []).map((item: { label?: string; percentage?: string | number }) => ({ label: item.label || "", percentage: String(item.percentage ?? "") })));
         setPublicCanPublish(Boolean(publicPage.can_publish));
         setPublicUrlPath(publicPage.public_url_path || null);
       } catch { /* public showcase is optional until its migration is deployed */ }
@@ -83,6 +85,11 @@ export default function EstateSettingsPage() {
   };
 
   const savePublicPage = async () => {
+    const cleanedPaymentPlan = paymentPlan.map((item) => ({ label: item.label.trim(), percentage: Number(item.percentage) }));
+    if (cleanedPaymentPlan.some((item) => !item.label || !Number.isFinite(item.percentage) || item.percentage <= 0) || (cleanedPaymentPlan.length > 0 && cleanedPaymentPlan.reduce((total, item) => total + item.percentage, 0) !== 100)) {
+      toast.error("Payment plan percentages must add up to 100%.");
+      return;
+    }
     try {
       const response = await api.patch(`/estates/${estateId}/public-settings`, {
         public_enabled: publicEnabled,
@@ -90,6 +97,7 @@ export default function EstateSettingsPage() {
         public_tagline: publicTagline.trim() || null,
         public_contact_phone: publicPhone.trim() || null,
         public_show_prices: publicShowPrices,
+        payment_plan: cleanedPaymentPlan.length ? cleanedPaymentPlan : null,
       });
       setPublicUrlPath(response.data.public_url_path || null);
       if (publicLogoFile) {
@@ -103,6 +111,10 @@ export default function EstateSettingsPage() {
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The public Estate page could not be saved."));
     }
+  };
+
+  const updatePaymentPlan = (index: number, field: "label" | "percentage", value: string) => {
+    setPaymentPlan((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item));
   };
 
   const addBlock = async () => {
@@ -149,6 +161,11 @@ export default function EstateSettingsPage() {
           {publicLogoPath && <p className="edash-field-note" style={{ margin: "8px 0" }}>Company logo uploaded and visible on the public page.</p>}
           <label className="edash-field" style={{ margin: "10px 0" }}><span>About this Estate</span><textarea rows={3} value={publicDescription} onChange={(event) => setPublicDescription(event.target.value)} placeholder="Tell buyers what makes this Estate worth considering" /></label>
           <label className="edash-toggle" style={{ marginBottom: 14 }}><input type="checkbox" checked={publicShowPrices} onChange={(event) => setPublicShowPrices(event.target.checked)} /> Show plot prices publicly</label>
+          <div className="edash-public-payment-plan">
+            <div className="edash-card-head" style={{ marginBottom: 5 }}><div><h4 className="edash-card-title" style={{ fontSize: "1rem" }}>Payment plan for buyers</h4><p className="edash-field-note">Optional. Show buyers how the agreed price can be paid in stages.</p></div><button type="button" className="edash-tool-btn" onClick={() => setPaymentPlan((current) => [...current, { label: "", percentage: "" }])}>+ Add stage</button></div>
+            {paymentPlan.map((item, index) => <div className="edash-public-payment-plan-row" key={`${index}-${item.label}`}><input aria-label={`Payment stage ${index + 1} name`} value={item.label} onChange={(event) => updatePaymentPlan(index, "label", event.target.value)} placeholder={index === 0 ? "Initial payment" : "Next payment"} /><input aria-label={`Payment stage ${index + 1} percentage`} type="number" min="1" max="100" step="1" value={item.percentage} onChange={(event) => updatePaymentPlan(index, "percentage", event.target.value)} placeholder="%" /><button type="button" className="edash-tool-btn" onClick={() => setPaymentPlan((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Remove</button></div>)}
+            {paymentPlan.length > 0 && <p className="edash-field-note" style={{ color: paymentPlan.reduce((total, item) => total + (Number(item.percentage) || 0), 0) === 100 ? "var(--edash-brand)" : "var(--edash-danger)" }}>Total: {paymentPlan.reduce((total, item) => total + (Number(item.percentage) || 0), 0)}%</p>}
+          </div>
           <button type="button" className="edash-btn-primary" disabled={publicEnabled && !publicCanPublish} onClick={() => void savePublicPage()}>Save and publish page</button>
         </div>
       </div>
