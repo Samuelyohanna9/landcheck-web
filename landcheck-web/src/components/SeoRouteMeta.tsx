@@ -89,9 +89,9 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
   "/estates": {
     title: "LandCheck Estates | Estate Planning & Plot Management Software Nigeria",
     description:
-      "Plan and manage property developments in Nigeria with LandCheck Estates. Import estate layouts, manage plots and buyers, track payments and commissions, and prepare survey and staking outputs.",
+      "Plan and manage property developments in Nigeria with LandCheck Estates. Import estate layouts from CSV, GIS files, CAD drawings, or scanned paper plans, digitize plots plus roads, drainage, and open space, manage buyers and payments, and prepare survey and staking outputs.",
     keywords:
-      "estate management software Nigeria, real estate development software Nigeria, estate layout design Nigeria, plot management software, estate plot sales, land development platform Nigeria, estate mapping, georeference estate layout, customer allocation, plot payment tracking, survey plan software, DGPS staking coordinates",
+      "estate management software Nigeria, real estate development software Nigeria, estate layout design Nigeria, plot management software, estate plot sales, land development platform Nigeria, estate mapping, georeference estate layout, scanned survey plan digitizing, CAD DXF estate import, estate road and open space mapping, UTM coordinate system Nigeria, customer allocation, plot payment tracking, survey plan software, DGPS staking coordinates, estate development tracking, estate audit trail",
     canonicalPath: "/estates",
     ogType: "website",
     ogImage: `${SITE_ORIGIN}/estates.jpg`,
@@ -104,17 +104,20 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots"> & { robots?: strin
       "operatingSystem": "Web",
       "url": `${SITE_ORIGIN}/estates`,
       "description":
-        "A web workspace for property developers to bring in estate layouts, review and manage plots, track customers and payments, and prepare survey and staking outputs.",
+        "A web workspace for property developers to bring in estate layouts from CSV, GIS, CAD, or scanned plans, digitize plots and layout features, review and manage plots and customers, track payments, and prepare survey and staking outputs.",
       "provider": { "@id": `${SITE_ORIGIN}/#organization` },
       "areaServed": { "@type": "Country", "name": "Nigeria" },
       "featureList": [
-        "Estate layout import and georeferencing",
+        "Import estate layouts from CSV, GIS/GeoJSON, CAD (DXF), or scanned paper plans",
+        "Georeference scanned plans and digitize plot boundaries, roads, drainage, and open space",
+        "Support for multiple Nigerian coordinate systems and UTM zones",
         "Automatic estate layout design",
         "Map-based plot register and availability tracking",
         "Customer reservations and allocations",
         "Payment, receipt, statement, and commission tracking",
         "Survey plan and DGPS staking outputs",
         "Estate and plot-level terrain, flood, and erosion screening",
+        "Development progress tracking and full audit trail",
       ],
     },
   },
