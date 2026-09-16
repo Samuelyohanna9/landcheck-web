@@ -37,14 +37,6 @@ const modelCarouselNextIcon = (
   </svg>
 );
 
-const photoEvidencePoints = [
-  "Captured with GPS at the moment of planting.",
-  "Each seedling carries a sponsor-linked QR identity.",
-  "AI screens every photo for duplicates and GPS/timestamp mismatches before it reaches a reviewer.",
-  "AI tree health checks estimate crown condition from field photos between visits.",
-  "Reviewed by named field supervisors before approval.",
-];
-
 const photoMoments: PhotoMoment[] = [
   {
     imageSrc: photoAsset("tree_adamawa.JPG"),
@@ -77,6 +69,11 @@ const photoMoments: PhotoMoment[] = [
     title: "A supervisor photographs and confirms placement before planting.",
   },
   {
+    imageSrc: photoAsset("yola south planting 1.JPG"),
+    label: "Yola South planting",
+    title: "Field agents plant trees across a Yola South project site.",
+  },
+  {
     imageSrc: photoAsset("yola south planting2.JPG"),
     label: "QR identity",
     title: "Every seedling carries a scannable QR tag from the nursery onward.",
@@ -100,6 +97,11 @@ const photoMoments: PhotoMoment[] = [
     imageSrc: photoAsset("fufore planting-New Model school fufore3.JPG"),
     label: "Live planting",
     title: "Trees planted on school grounds.",
+  },
+  {
+    imageSrc: photoAsset("fufore.JPG"),
+    label: "Fufore campus",
+    title: "First trees planted at the new Fufore school campus.",
   },
   {
     imageSrc: photoAsset("sangere girei 1.JPG"),
@@ -362,11 +364,6 @@ export default function GreenPartnersLanding() {
                   Every image below comes from active LandCheck Green planting work in Song, Yola South, Fufore, and
                   Girei, Adamawa State.
                 </p>
-                <ul className="gp-photo-points">
-                  {photoEvidencePoints.map((point) => (
-                    <li key={point}>{point}</li>
-                  ))}
-                </ul>
               </article>
 
               <div className="gp-photo-stage-controls">

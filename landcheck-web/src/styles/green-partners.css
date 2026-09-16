@@ -600,29 +600,11 @@
   line-height: 1.76;
 }
 
-.gp-photo-points {
-  margin: 1.4rem 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.9rem;
-}
 
-.gp-photo-points li {
-  position: relative;
-  padding: 0.78rem 0.9rem 0.78rem 1rem;
-  border-left: 3px solid rgba(39, 164, 98, 0.78);
-  border-radius: 0 14px 14px 0;
-  background: rgba(255, 255, 255, 0.74);
-  color: #26463a;
-  font-size: 0.92rem;
-  font-weight: 700;
-  line-height: 1.5;
-}
 
-.gp-photo-points li::before {
-  content: none;
-}
+
+
+
 
 .gp-photo-card__media {
   aspect-ratio: 0.82 / 1;
@@ -2323,16 +2305,9 @@
     rgba(255, 255, 255, 0.045);
 }
 
-.green-partners-page .gp-photo-points li {
-  border-left-color: #5fd794;
-  background: rgba(255, 255, 255, 0.08);
-  color: #eef7f1;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
 
-.green-partners-page .gp-photo-points li::before {
-  content: none;
-}
+
+
 
 .green-partners-page .gp-photo-card__body h3 {
   color: #ffffff;
@@ -2717,42 +2692,15 @@
   gap: 20px;
 }
 
-.green-partners-page .gp-photo-points {
-  gap: 0;
-  margin-top: 1.4rem;
-}
 
-.green-partners-page .gp-photo-points li {
-  position: relative;
-  padding: 14px 0 14px 18px;
-  border: none;
-  border-top: 1px solid rgba(17, 53, 33, 0.08);
-  border-left: none;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  color: #526b5d;
-}
 
-.green-partners-page .gp-photo-points li:first-child {
-  padding-top: 0;
-  border-top: none;
-}
 
-.green-partners-page .gp-photo-points li::before {
-  content: "";
-  position: absolute;
-  top: 21px;
-  left: 0;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #238b58;
-}
 
-.green-partners-page .gp-photo-points li:first-child::before {
-  top: 6px;
-}
+
+
+
+
+
 
 .green-partners-page .gp-photo-card__body {
   padding: 1rem 1.1rem 1.2rem;
@@ -3067,26 +3015,13 @@
   line-height: 1.25;
 }
 
-.green-partners-page .gp-photo-points {
-  gap: 0;
-}
 
-.green-partners-page .gp-photo-points li {
-  padding: 14px 0;
-  border-top: 1px solid rgba(17, 53, 33, 0.08);
-  color: #355244;
-  background: transparent;
-  box-shadow: none;
-}
 
-.green-partners-page .gp-photo-points li::before {
-  display: none;
-}
 
-.green-partners-page .gp-photo-points li:first-child {
-  padding-top: 0;
-  border-top: none;
-}
+
+
+
+
 
 /* Three delivery routes: plain image + short text, no card frame - same treatment as the
    evidence photos above. */
