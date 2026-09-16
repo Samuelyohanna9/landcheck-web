@@ -295,18 +295,18 @@
 }
 
 .spl-hero-copy h1 {
-  max-width: 520px;
+  max-width: 480px;
   color: #f6f3e9;
-  font-size: clamp(2.8rem, 5.2vw, 4.6rem);
-  line-height: 0.98;
+  font-size: clamp(2.1rem, 3.2vw, 3.1rem);
+  line-height: 1.05;
 }
 
 .spl-hero-summary {
   max-width: 460px;
-  margin: 22px 0 0;
+  margin: 18px 0 0;
   color: rgba(246, 243, 233, 0.82);
-  font-size: clamp(0.94rem, 1.05vw, 1rem);
-  line-height: 1.65;
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 .spl-hero-actions {
@@ -384,8 +384,8 @@
 .spl-section h2,
 .spl-scan-section h2 {
   color: var(--spl-ink);
-  font-size: clamp(2.15rem, 3.8vw, 3.35rem);
-  line-height: 1.03;
+  font-size: clamp(1.7rem, 2.7vw, 2.3rem);
+  line-height: 1.1;
 }
 
 .spl-section-intro > p:last-child,
@@ -443,8 +443,8 @@
 
 .spl-workflow h2 {
   color: #f5f3eb;
-  font-size: clamp(2.15rem, 3.8vw, 3.35rem);
-  line-height: 1.05;
+  font-size: clamp(1.7rem, 2.7vw, 2.3rem);
+  line-height: 1.1;
 }
 
 .spl-workflow-intro > p:last-child {
@@ -647,30 +647,27 @@
   }
 
   .spl-hero {
-    min-height: 620px;
+    min-height: 0;
     align-items: flex-start;
   }
 
-  /* Full-height backdrop, same reasoning and same flush-right anchor as the 900px breakpoint
-     above - sized off the hero's own height rather than viewport width, so the image always
-     reaches all the way up behind the text instead of leaving a solid-color gap above it. */
+  /* Below this width there isn't room for the photo to read as a backdrop without
+     colliding with the text on top of it (a fixed-aspect-ratio image sized off the
+     hero's height gets far wider than the viewport and its crop lands under the
+     text) - simplest reliable fix is to drop the overlay treatment entirely and
+     stack a plain solid-colour text block above a plain photo strip instead. */
   .spl-hero-device,
   .spl-hero-screen {
-    top: 0;
-    right: 0;
-    width: auto;
-    height: 100%;
+    display: none;
   }
 
   .spl-hero-shade {
-    background:
-      linear-gradient(180deg, #091725 0%, rgba(9, 23, 37, 0.94) 34%, rgba(9, 23, 37, 0.32) 67%, rgba(9, 23, 37, 0.14) 100%),
-      linear-gradient(90deg, rgba(9, 23, 37, 0.62), transparent 78%);
+    display: none;
   }
 
   .spl-hero-shell {
-    padding-top: 74px;
-    padding-bottom: 0;
+    padding-top: 40px;
+    padding-bottom: 32px;
   }
 
   .spl-hero-copy {
@@ -678,30 +675,30 @@
   }
 
   .spl-hero-copy h1 {
-    max-width: 420px;
-    font-size: clamp(2.7rem, 10vw, 3.7rem);
+    max-width: 100%;
+    font-size: clamp(1.9rem, 8vw, 2.4rem);
   }
 
   .spl-hero-summary {
-    max-width: 440px;
-    margin-top: 18px;
+    max-width: 100%;
+    margin-top: 14px;
     font-size: 0.92rem;
-    line-height: 1.65;
+    line-height: 1.6;
   }
 
   .spl-hero-actions {
     gap: 20px;
-    margin-top: 24px;
+    margin-top: 20px;
   }
 
   .spl-section {
-    padding: 72px 0;
+    padding: 56px 0;
   }
 
   .spl-section h2,
   .spl-scan-section h2,
   .spl-workflow h2 {
-    font-size: clamp(2.35rem, 10vw, 3.4rem);
+    font-size: clamp(1.6rem, 7vw, 2rem);
   }
 
   .spl-capabilities-layout,
