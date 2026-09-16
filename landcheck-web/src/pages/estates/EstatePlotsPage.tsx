@@ -15,6 +15,7 @@ type PlotFeature = {
     commercial_status: string;
     development_status?: string;
     geometry_status: string;
+    public_address?: string | null;
     area_sqm?: number;
     asking_price?: string | null;
     block_id?: number | null;
@@ -34,6 +35,9 @@ export default function EstatePlotsPage() {
   const [editingPriceId, setEditingPriceId] = useState<number | null>(null);
   const [priceDraft, setPriceDraft] = useState("");
   const [priceBusy, setPriceBusy] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
+  const [addressDraft, setAddressDraft] = useState("");
+  const [addressBusy, setAddressBusy] = useState(false);
 
   useEffect(() => {
     if (!estateId) return;
@@ -62,6 +66,20 @@ export default function EstatePlotsPage() {
       toast.error(await extractApiErrorMessage(error, "The public price could not be saved."));
     } finally {
       setPriceBusy(false);
+    }
+  };
+
+  const saveAddress = async (plotId: number) => {
+    setAddressBusy(true);
+    try {
+      const response = await api.patch(`/estates/plots/${plotId}/public-address`, { public_address: addressDraft.trim() || null });
+      setPlots((current) => current.map((plot) => plot.id === plotId ? { ...plot, public_address: response.data.public_address } : plot));
+      setEditingAddressId(null);
+      toast.success("Plot address saved.");
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "The plot address could not be saved."));
+    } finally {
+      setAddressBusy(false);
     }
   };
 
@@ -94,7 +112,7 @@ export default function EstatePlotsPage() {
             <div style={{ overflowX: "auto" }}>
               <table className="edash-mini-table">
                 <thead>
-                  <tr><th>Plot No.</th><th>Block</th><th>Status</th><th>Development</th><th>Area</th><th>Public price</th><th>Geometry</th><th /></tr>
+                  <tr><th>Plot No.</th><th>Block</th><th>Status</th><th>Development</th><th>Area</th><th>Plot address</th><th>Public price</th><th>Geometry</th><th /></tr>
                 </thead>
                 <tbody>
                   {filtered.map((plot) => (
@@ -104,6 +122,13 @@ export default function EstatePlotsPage() {
                       <td data-label="Status" style={{ textTransform: "capitalize" }}>{plot.commercial_status.replaceAll("_", " ")}</td>
                       <td data-label="Development" style={{ textTransform: "capitalize" }}>{(plot.development_status || "not_started").replaceAll("_", " ")}</td>
                       <td data-label="Area">{formatArea(Number(plot.area_sqm || 0), unitSystem)}</td>
+                      <td data-label="Plot address">
+                        {editingAddressId === plot.id ? (
+                          <span className="edash-inline-price-editor"><input value={addressDraft} onChange={(event) => setAddressDraft(event.target.value)} aria-label={`Address for Plot ${plot.plot_number}`} placeholder="Street or plot address" /><button type="button" className="edash-card-link" disabled={addressBusy} onClick={() => void saveAddress(plot.id)}>Save</button><button type="button" className="edash-card-link" onClick={() => setEditingAddressId(null)}>Cancel</button></span>
+                        ) : (
+                          <span className="edash-inline-price"><span>{plot.public_address || "Not set"}</span><button type="button" className="edash-card-link" onClick={() => { setEditingAddressId(plot.id); setAddressDraft(plot.public_address || ""); }}>{plot.public_address ? "Edit" : "Add address"}</button></span>
+                        )}
+                      </td>
                       <td data-label="Public price">
                         {editingPriceId === plot.id ? (
                           <span className="edash-inline-price-editor"><input type="number" min="0" step="1000" value={priceDraft} onChange={(event) => setPriceDraft(event.target.value)} aria-label={`Price for Plot ${plot.plot_number}`} /><button type="button" className="edash-card-link" disabled={priceBusy} onClick={() => void savePrice(plot.id)}>Save</button><button type="button" className="edash-card-link" onClick={() => setEditingPriceId(null)}>Cancel</button></span>
