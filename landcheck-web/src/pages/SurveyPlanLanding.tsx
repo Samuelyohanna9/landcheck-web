@@ -38,8 +38,21 @@ const socialLinks = [
 export default function SurveyPlanLanding() {
   const navigate = useNavigate();
   const [signInOpen, setSignInOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [totalPlotsGenerated, setTotalPlotsGenerated] = useState<number | null>(null);
   const signedIn = isSurveyAuthed();
+  const closeMenu = () => setMenuOpen(false);
+
+  // Escape closes the mobile drawer, matching the dismissal convention used on the other landing
+  // pages' own collapsible nav (EstateLanding, the main site's NavBar).
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeMenu();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [menuOpen]);
 
   useEffect(() => {
     scheduleSurveyPlanIdlePrefetch();
@@ -92,6 +105,15 @@ export default function SurveyPlanLanding() {
           <img src="/logo.svg" alt="LandCheck" width="130" height="38" />
           <span className="spl-brand-product">Survey</span>
         </Link>
+        <button
+          type="button"
+          className="spl-nav-hamburger"
+          onClick={() => setMenuOpen(true)}
+          aria-label="Open navigation menu"
+          aria-expanded={menuOpen}
+        >
+          <span /><span /><span />
+        </button>
         <nav className="spl-nav-links" aria-label="Survey navigation">
           {signedIn ? (
             <Link to="/dashboard">Dashboard</Link>
@@ -103,6 +125,28 @@ export default function SurveyPlanLanding() {
           </button>
         </nav>
       </header>
+
+      <div className={`spl-mobile-overlay${menuOpen ? " spl-mobile-overlay--open" : ""}`} onClick={closeMenu} aria-hidden={!menuOpen}>
+        <nav className={`spl-mobile-drawer${menuOpen ? " spl-mobile-drawer--open" : ""}`} onClick={(event) => event.stopPropagation()} aria-label="Survey navigation (mobile)">
+          <div className="spl-mobile-drawer-head">
+            <img src="/logo.svg" alt="LandCheck" width="112" height="32" />
+            <button type="button" className="spl-mobile-close" onClick={closeMenu} aria-label="Close navigation">&times;</button>
+          </div>
+          {signedIn ? (
+            <Link to="/dashboard" className="spl-mobile-item" onClick={closeMenu}>Dashboard</Link>
+          ) : (
+            <button type="button" className="spl-mobile-item" onClick={() => { closeMenu(); setSignInOpen(true); }}>Sign in</button>
+          )}
+          <button
+            type="button"
+            className="spl-mobile-cta"
+            onMouseEnter={warmSurveyEntry}
+            onClick={() => { closeMenu(); openWorkspace(); }}
+          >
+            Open workspace
+          </button>
+        </nav>
+      </div>
 
       <main>
         <section className="spl-hero" aria-labelledby="spl-hero-title">
