@@ -41,7 +41,11 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [estateId]);
+  useEffect(() => {
+    load();
+    const timer = window.setInterval(load, 30000);
+    return () => window.clearInterval(timer);
+  }, [estateId]);
 
   const updateStatus = async (requestId: number, status: ReservationRequest["status"]) => {
     setUpdatingId(requestId);
