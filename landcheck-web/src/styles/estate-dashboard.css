@@ -2102,7 +2102,32 @@
 .edash-modal-body > .edash-card { box-shadow: none; border: none; }
 .edash-modal-body > .edash-card > .edash-card-inner { padding: 0; }
 
+.edash-survey-station-options { display: grid; gap: 10px; }
+.edash-survey-station-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--edash-border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.edash-survey-station-option.is-selected { border-color: var(--edash-brand); background: var(--edash-brand-tint); }
+.edash-survey-station-option input { margin-top: 3px; accent-color: var(--edash-brand); }
+.edash-survey-station-option span { display: grid; gap: 3px; }
+.edash-survey-station-option strong { color: var(--edash-ink); font-size: 0.86rem; }
+.edash-survey-station-option small { color: var(--edash-muted); font-size: 0.76rem; line-height: 1.4; }
+.edash-survey-station-editor { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--edash-border); }
+.edash-survey-station-editor-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; color: var(--edash-muted); font-size: 0.78rem; }
+.edash-survey-station-editor-head strong { color: var(--edash-ink); }
+.edash-survey-station-row { display: grid; grid-template-columns: 80px minmax(0, 1fr); align-items: center; gap: 10px; margin-top: 8px; color: var(--edash-muted); font-size: 0.78rem; }
+.edash-survey-station-row input { min-width: 0; }
+.edash-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
 @media (max-width: 640px) {
   .edash-modal-overlay { padding: 0; align-items: stretch; }
   .edash-modal { max-width: none; border-radius: 0; min-height: 100vh; }
+  .edash-survey-station-row { grid-template-columns: 68px minmax(0, 1fr); }
+  .edash-modal-actions { justify-content: stretch; }
+  .edash-modal-actions > button { flex: 1; }
 }

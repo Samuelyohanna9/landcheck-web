@@ -700,6 +700,16 @@ const GEOREFERENCE_STEPS = [
   { id: 3, title: "Export & Continue", description: "Download DGPS CSV and continue into Survey Plan" },
 ];
 
+function parseStationNames(value: string | null): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map((item) => String(item || "").trim()).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function SurveyPlan() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1288,7 +1298,11 @@ export default function SurveyPlan() {
       if (!Array.isArray(workspace.coordinates) || workspace.coordinates.length < 3) {
         throw new Error("Survey plot has no usable boundary coordinates.");
       }
-      setManualPoints(workspace.coordinates);
+      const requestedStationNames = parseStationNames(searchParams.get("station_names"));
+      setManualPoints(workspace.coordinates.map((point: ManualPoint, index: number) => ({
+        ...point,
+        station: requestedStationNames[index] || point.station,
+      })));
       setCoordinateSystem("wgs84");
       setPlotId(Number(workspace.plot_id));
       setMeta({ ...buildDefaultPlotMeta(), ...(workspace.meta || {}) });

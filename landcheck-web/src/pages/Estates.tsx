@@ -59,6 +59,21 @@ function relativeTime(value: string) {
 
 type Estate = { id: number; name: string; status: string; organization_id: number; location?: string | null; crs?: string; project_reference?: string | null; project_owner?: string | null; financial?: { confirmed_collections:string; outstanding_balance:string } };
 type EstateCoordinatePoint = { station: string; lng: number; lat: number; height?: number; is_boundary?: boolean };
+type SurveyStationSelection = {
+  plotId: number;
+  currentNames: string[];
+  loading: boolean;
+};
+
+function surveyStationName(index: number): string {
+  let name = "";
+  let value = index;
+  do {
+    name = String.fromCharCode(65 + (value % 26)) + name;
+    value = Math.floor(value / 26) - 1;
+  } while (value >= 0);
+  return name;
+}
 
 function isUpgradeRequiredError(err: any): boolean {
   return err?.response?.status === 402 && err?.response?.data?.detail?.code === "upgrade_required";
@@ -492,6 +507,9 @@ export default function Estates() {
   const [surveyRequests, setSurveyRequests] = useState<any[]>([]);
   const [stakingTasks, setStakingTasks] = useState<any[]>([]);
   const [preparingSurveyPlotId, setPreparingSurveyPlotId] = useState<number | null>(null);
+  const [surveyStationSelection, setSurveyStationSelection] = useState<SurveyStationSelection | null>(null);
+  const [surveyStationMode, setSurveyStationMode] = useState<"current" | "custom">("current");
+  const [customSurveyStationNames, setCustomSurveyStationNames] = useState<string[]>([]);
   const [dgpsExportPlotId, setDgpsExportPlotId] = useState<number | null>(null);
   const [dgpsExportCoordinateSystem, setDgpsExportCoordinateSystem] = useState("wgs84_nigeria_meters");
   const [dgpsExportBusy, setDgpsExportBusy] = useState(false);
@@ -1200,9 +1218,64 @@ export default function Estates() {
     }
     catch (error) { toast.error(await extractApiErrorMessage(error, `${label} could not be completed.`)); }
   };
-  const createOfficialSurveyPlan = async (plotId: number) => {
+  const getCurrentSurveyStationNames = (plotId: number) => {
+    const feature = plotGeojson.features.find((item: any) => Number(item.properties?.id) === plotId);
+    const geometry = feature?.geometry;
+    const ring = geometry?.type === "Polygon" ? geometry.coordinates?.[0] || [] : [];
+    const openRing = ring.length > 1 && ring[0]?.[0] === ring[ring.length - 1]?.[0] && ring[0]?.[1] === ring[ring.length - 1]?.[1]
+      ? ring.slice(0, -1)
+      : ring;
+    return Array.from({ length: Math.max(openRing.length, 3) }, (_, index) => surveyStationName(index));
+  };
+  const openSurveyStationSelection = (plotId: number) => {
     const allocation = allocations.find((item) => item.plot_id === plotId);
-    if (!allocation) { toast.error("Allocate this plot to a customer before creating its Official Survey Plan."); setPlotContextMenu(null); return; }
+    if (!allocation) {
+      toast.error("Allocate this plot to a customer before creating its Official Survey Plan.");
+      setPlotContextMenu(null);
+      return;
+    }
+    const survey = surveyRequests.find((item) => item.plot.id === plotId);
+    const fallbackNames = getCurrentSurveyStationNames(plotId);
+    setPlotContextMenu(null);
+    setSurveyStationMode("current");
+    setCustomSurveyStationNames(fallbackNames);
+    setSurveyStationSelection({
+      plotId,
+      currentNames: fallbackNames,
+      loading: Boolean(survey?.survey_working_plot_id),
+    });
+    if (!survey?.survey_working_plot_id) return;
+    claimEstateSurveyRequestSession(survey.id).then(() => api.get(`/plots/${survey.survey_working_plot_id}/workspace`)).then((response) => {
+      const names = (response.data?.coordinates || [])
+        .filter((point: any) => point?.is_boundary !== false)
+        .map((point: any) => String(point?.station || "").trim())
+        .filter(Boolean);
+      if (names.length >= 3) {
+        setSurveyStationSelection((current) => current?.plotId === plotId ? { ...current, currentNames: names, loading: false } : current);
+        setCustomSurveyStationNames(names);
+      } else {
+        setSurveyStationSelection((current) => current?.plotId === plotId ? { ...current, loading: false } : current);
+      }
+    }).catch(() => {
+      setSurveyStationSelection((current) => current?.plotId === plotId ? { ...current, loading: false } : current);
+    });
+  };
+  const createOfficialSurveyPlan = async () => {
+    const selection = surveyStationSelection;
+    if (!selection) return;
+    const stationNames = (surveyStationMode === "custom" ? customSurveyStationNames : selection.currentNames)
+      .map((name) => name.trim());
+    if (stationNames.length < 3 || stationNames.some((name) => !name)) {
+      toast.error("Enter a name for every survey station.");
+      return;
+    }
+    if (new Set(stationNames.map((name) => name.toLowerCase())).size !== stationNames.length) {
+      toast.error("Each survey station must have a different name.");
+      return;
+    }
+    const plotId = selection.plotId;
+    const allocation = allocations.find((item) => item.plot_id === plotId);
+    if (!allocation) { toast.error("Allocate this plot to a customer before creating its Official Survey Plan."); return; }
     setPreparingSurveyPlotId(plotId);
     try {
       let survey = surveyRequests.find((item) => item.plot.id === plotId);
@@ -1215,8 +1288,15 @@ export default function Estates() {
         survey = { ...survey, ...started.data };
       }
       await claimEstateSurveyRequestSession(survey.id);
-      setPlotContextMenu(null);
-      navigate(`/survey-plan?mode=survey&estate_survey_plot=${survey.survey_working_plot_id || ""}&return_estate_id=${estateId}&return_plot_id=${plotId}`);
+      const params = new URLSearchParams({
+        mode: "survey",
+        estate_survey_plot: String(survey.survey_working_plot_id || ""),
+        return_estate_id: String(estateId),
+        return_plot_id: String(plotId),
+        station_names: JSON.stringify(stationNames),
+      });
+      setSurveyStationSelection(null);
+      navigate(`/survey-plan?${params.toString()}`);
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "Official Survey Plan could not be created."));
     } finally {
@@ -1598,7 +1678,7 @@ export default function Estates() {
             className="edash-context-menu-option"
             disabled={!allocation || preparingSurvey}
             title={allocation ? undefined : "Allocate this plot to a customer first"}
-            onClick={() => void createOfficialSurveyPlan(plotContextMenu.plotId)}
+            onClick={() => openSurveyStationSelection(plotContextMenu.plotId)}
           >
             {preparingSurvey ? <><Spinner size={13} /> Preparing...</> : <><EstateIcon name="survey" /> {survey?.materialized ? "Open Official Survey Plan" : "Create Official Survey Plan"}</>}
           </button>
@@ -1970,14 +2050,7 @@ export default function Estates() {
                           type="button"
                           className="edash-btn-outline"
                           style={{ display: "inline-flex", marginRight: 8 }}
-                          onClick={() => void (async () => {
-                            try {
-                              await claimEstateSurveyRequestSession(selectedSurvey.id);
-                              navigate(`/survey-plan?mode=survey&estate_survey_plot=${selectedSurvey.survey_working_plot_id || ""}&return_estate_id=${estateId}&return_plot_id=${selectedSurvey.plot.id}`);
-                            } catch (error) {
-                              toast.error(await extractApiErrorMessage(error, "Could not open this plot in Survey."));
-                            }
-                          })()}
+                          onClick={() => openSurveyStationSelection(selectedSurvey.plot.id)}
                         >
                           Open approved plot in Survey
                         </button>
@@ -2265,6 +2338,56 @@ export default function Estates() {
     return (
       <EstateModal title={title} subtitle={subtitle} onClose={() => setActiveTool(null)}>
         {content}
+      </EstateModal>
+    );
+  }
+
+  function renderSurveyStationSelectionModal() {
+    if (!surveyStationSelection) return null;
+    const stationNames = surveyStationMode === "custom" ? customSurveyStationNames : surveyStationSelection.currentNames;
+    return (
+      <EstateModal
+        title="Choose survey station names"
+        subtitle="These names will appear on the Survey Plan and its coordinate schedule."
+        onClose={() => setSurveyStationSelection(null)}
+      >
+        <div className="edash-survey-station-options" role="radiogroup" aria-label="Survey station naming">
+          <label className={`edash-survey-station-option${surveyStationMode === "current" ? " is-selected" : ""}`}>
+            <input type="radio" name="survey-station-mode" checked={surveyStationMode === "current"} onChange={() => setSurveyStationMode("current")} />
+            <span>
+              <strong>Use current station names</strong>
+              <small>{surveyStationSelection.loading ? "Loading saved names..." : surveyStationSelection.currentNames.join(", ")}</small>
+            </span>
+          </label>
+          <label className={`edash-survey-station-option${surveyStationMode === "custom" ? " is-selected" : ""}`}>
+            <input type="radio" name="survey-station-mode" checked={surveyStationMode === "custom"} onChange={() => setSurveyStationMode("custom")} />
+            <span>
+              <strong>Use custom station names</strong>
+              <small>Edit every boundary station before opening the Survey Plan.</small>
+            </span>
+          </label>
+        </div>
+        {surveyStationMode === "custom" && (
+          <div className="edash-survey-station-editor">
+            <div className="edash-survey-station-editor-head"><strong>Station names</strong><span>{stationNames.length} boundary points</span></div>
+            {customSurveyStationNames.map((name, index) => (
+              <label className="edash-survey-station-row" key={`${surveyStationSelection.plotId}-${index}`}>
+                <span>Point {index + 1}</span>
+                <input
+                  value={name}
+                  onChange={(event) => setCustomSurveyStationNames((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))}
+                  placeholder={surveyStationSelection.currentNames[index] || surveyStationName(index)}
+                />
+              </label>
+            ))}
+          </div>
+        )}
+        <div className="edash-modal-actions">
+          <button type="button" className="edash-btn-outline" onClick={() => setSurveyStationSelection(null)}>Cancel</button>
+          <button type="button" className="edash-btn-primary" disabled={surveyStationSelection.loading || preparingSurveyPlotId === surveyStationSelection.plotId} onClick={() => void createOfficialSurveyPlan()}>
+            {preparingSurveyPlotId === surveyStationSelection.plotId ? <><Spinner size={14} /> Opening...</> : "Continue to Survey Plan"}
+          </button>
+        </div>
       </EstateModal>
     );
   }
@@ -2814,6 +2937,7 @@ export default function Estates() {
           {renderFooter()}
         </>
       )}
+      {surveyStationSelection && renderSurveyStationSelectionModal()}
       {activeTool && renderActiveToolModal()}
       {showAddCustomer && (
         <EstateModal title="Add customer" onClose={() => setShowAddCustomer(false)}>
