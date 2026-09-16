@@ -17,6 +17,7 @@ const SurveyPlan = lazyWithChunkRecovery(() => import("./pages/SurveyPlan"));
 const Dashboard = lazyWithChunkRecovery(() => import("./pages/Dashboard"));
 const Feedback = lazyWithChunkRecovery(() => import("./pages/Feedback"));
 const AdminDashboard = lazyWithChunkRecovery(() => import("./pages/AdminDashboard"));
+const EstateAdminDashboard = lazyWithChunkRecovery(() => import("./pages/EstateAdminDashboard"));
 const HazardAnalysis = lazyWithChunkRecovery(() => import("./pages/HazardAnalysis"));
 const Green = lazyWithChunkRecovery(() => import("./pages/Green"));
 const GreenLogin = lazyWithChunkRecovery(() => import("./pages/GreenLogin"));
@@ -334,6 +335,7 @@ export default function App() {
               <Route path="/dashboard" element={<SurveyProtectedRoute element={<Dashboard />} />} />
               <Route path="/feedback" element={<Feedback />} />
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/estate-admin" element={<EstateAdminDashboard />} />
             </Routes>
           </Suspense>
         </ChunkLoadBoundary>
