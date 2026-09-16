@@ -3329,7 +3329,13 @@ export default function SurveyPlan() {
       applyGeoreferenceSession(session, georefSelectedControlPointId);
       setGeorefLastSavedAt(new Date());
       const imported = await api.post(`/estates/import-reviews/${encodeURIComponent(returnImportReviewId)}/import-from-georeference`, {});
-      toast.success(`${Number(imported.data?.created_plots || 0)} plot(s) added to the Estate.`);
+      const createdPlots = Number(imported.data?.created_plots || 0);
+      const createdFeatures = Number(imported.data?.created_features || 0);
+      toast.success(
+        createdFeatures > 0
+          ? `${createdPlots} plot(s) and ${createdFeatures} layout feature(s) added to the Estate.`
+          : `${createdPlots} plot(s) added to the Estate.`
+      );
       navigate(`/estates/${encodeURIComponent(returnEstateId)}/map`, { replace: true });
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The plots could not be added to the Estate. Your georeferenced work is saved; you can reopen it and try again."));

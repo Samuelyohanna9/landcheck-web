@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { api } from "../../api/client";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
 import { useFloatingCardAtPoint } from "../../utils/useFloatingPopoverPosition";
+import { useFullscreenToggle } from "../../utils/useFullscreenToggle";
 import SurveyLoadingAnimation from "../SurveyLoadingAnimation";
 import CoordinateSystemSelect from "../CoordinateSystemSelect";
 import type { GeoreferenceSession, GeoreferenceTransform } from "../../types/surveyGeoreference";
@@ -100,6 +101,7 @@ function SurveyPlanGeoreferenceSetupStep({
   // where on screen to place the card.
   const popupAnchorRef = useRef<HTMLSpanElement | null>(null);
   const popupCardRef = useRef<HTMLDivElement | null>(null);
+  const canvasPanelRef = useRef<HTMLElement | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftFile, setDraftFile] = useState<File | null>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -124,6 +126,7 @@ function SurveyPlanGeoreferenceSetupStep({
     mode: "entry" | "confirm";
   } | null>(null);
   const cardPosition = useFloatingCardAtPoint(popupAnchorRef, popupCardRef, Boolean(manualEntryPopup));
+  const { isFullscreen, toggleFullscreen } = useFullscreenToggle(canvasPanelRef);
   const [stageMetrics, setStageMetrics] = useState<RasterStageMetrics | null>(null);
   // Mirrors of render-scope values the once-mounted Mapbox click listener needs (its mount effect
   // has a stable dependency array, so anything it reads from render scope directly is captured
@@ -1270,7 +1273,7 @@ function SurveyPlanGeoreferenceSetupStep({
           )}
         </aside>
 
-        <section className="geo-panel geo-panel-canvas" data-tab-panel="raster">
+        <section className="geo-panel geo-panel-canvas" data-tab-panel="raster" ref={canvasPanelRef}>
           <div className="geo-panel-heading">
             <h2>Survey plan</h2>
             <p>
@@ -1321,6 +1324,24 @@ function SurveyPlanGeoreferenceSetupStep({
                 disabled={!rasterObjectUrl || (imageZoom === MIN_STAGE_ZOOM && imagePan.x === 0 && imagePan.y === 0)}
               >
                 Fit
+              </button>
+              <span className="geo-canvas-toolbar-divider" aria-hidden="true" />
+              <button
+                type="button"
+                className="geo-canvas-tool-btn"
+                onClick={toggleFullscreen}
+                title={isFullscreen ? "Exit full screen" : "Full screen"}
+                aria-label={isFullscreen ? "Exit full screen" : "Full screen"}
+              >
+                {isFullscreen ? (
+                  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M13 3a1 1 0 011 1v3a1 1 0 01-2 0V5.414l-2.293 2.293a1 1 0 01-1.414-1.414L10.586 4H8a1 1 0 010-2h4a1 1 0 011 1zM3 13a1 1 0 011-1h3a1 1 0 010 2H5.414l2.293 2.293a1 1 0 01-1.414 1.414L4 15.414V17a1 1 0 01-2 0v-4a1 1 0 011-1z" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M3 3a1 1 0 00-1 1v4a1 1 0 002 0V5.414l2.793 2.793a1 1 0 001.414-1.414L5.414 4H8a1 1 0 000-2H4a1 1 0 00-1 1zm14 14a1 1 0 001-1v-4a1 1 0 00-2 0v2.586l-2.793-2.793a1 1 0 00-1.414 1.414L14.586 16H12a1 1 0 000 2h4a1 1 0 001-1z" />
+                  </svg>
+                )}
               </button>
             </div>
             <div className="georef-image-stage-viewport" ref={imageViewportRef} onWheel={handleStageWheel}>

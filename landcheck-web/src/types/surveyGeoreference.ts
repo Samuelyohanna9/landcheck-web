@@ -46,6 +46,10 @@ export type GeoreferenceFeature = {
   label: string;
   feature_type: "point" | "line" | "polygon";
   is_primary?: boolean;
+  // What this feature MEANS on the Estate dashboard, separate from feature_type (what shape it
+  // is) - unset means "plot boundary" for a polygon, or "discard at import" for a point/line. Set
+  // it to turn the feature into an Estate layout feature (EstateSpatialFeature) instead of a plot.
+  category?: "road" | "drainage" | "open_space" | "infrastructure" | null;
   pixels: { x: number; y: number }[];
   target_coordinates: [number, number][];
   wgs84_coordinates: [number, number][];

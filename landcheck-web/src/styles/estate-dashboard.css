@@ -1560,6 +1560,11 @@
 .edash-field input:disabled,
 .edash-field select:disabled { background: var(--edash-neutral-tint); color: var(--edash-faint); cursor: not-allowed; }
 .edash-field-note { margin: 0; color: var(--edash-faint); font-size: 0.76rem; line-height: 1.4; }
+/* Same look as .edash-field span, but standalone - for a label placed as a SIBLING of a custom
+   control (like CoordinateSystemSelect) rather than wrapping it. .edash-field span matches any
+   span at any depth, which previously bled into a wrapped custom control's own internal spans
+   (its selected-value text, dropdown option labels, etc.) and mangled their typography. */
+.edash-field-label { display: block; margin-bottom: 5px; font-size: 0.72rem; font-weight: 700; color: var(--edash-muted); text-transform: uppercase; letter-spacing: 0.03em; }
 
 .edash-layout-template-summary {
   display: flex;

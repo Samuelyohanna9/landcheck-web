@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import "../styles/flood-landing.css";
+import "../styles/public-landing.css";
 import NavBar from "../components/NavBar";
 import SocialLinks from "../components/SocialLinks";
 
@@ -117,7 +118,7 @@ export default function FloodAnalysisLanding() {
   const navigate = useNavigate();
 
   return (
-    <div className="fal-page">
+    <div className="fal-page public-landing">
       {/* Navigation */}
       <NavBar fixed activeRoute="/flood" ctaLabel="Run Analysis" ctaRoute="/hazard-analysis" />
       <main>
