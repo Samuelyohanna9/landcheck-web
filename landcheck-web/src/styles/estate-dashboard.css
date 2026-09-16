@@ -195,10 +195,14 @@
   overflow-y: auto;
 }
 
-/* Map view: nothing in this column scrolls as a whole - the topbar stays put and edash-body
-   below fills the remaining height exactly, so the map itself can grow to fill the page instead
-   of just sitting at a fixed min-height with everything scrolling past it. */
-.edash-main--fill { overflow-y: hidden; }
+/* The map view still tries to fill the viewport exactly (map/stats/bottom-row all sized to fit
+   without scrolling) since that's the nicer result whenever there's room for it - but forcing
+   that on every screen meant content that genuinely didn't fit (the Estate Progress legend on a
+   shorter screen) had nowhere to go and got clipped outright, with the compaction/internal-scroll
+   tricks that were meant to prevent that turning out too fragile in practice. A plain scrollbar as
+   the fallback is simpler and always works: `.edash-topbar` is `position: sticky`, so it stays put
+   at the top exactly as before even once this column can scroll. */
+.edash-main--fill { overflow-y: auto; }
 
 .edash-topbar {
   position: sticky;
@@ -418,20 +422,14 @@
    shrink - down to a much smaller floor than its own preferred content height - means it's this
    row, not the browser window's edge, that absorbs the squeeze; whatever its content doesn't fit
    in the space it's actually given still reaches the user, via the card's own internal scroll. */
+/* Sized to its natural content (the donut + full 6-row legend) rather than forced into a fixed
+   box - with the page itself free to scroll (see .edash-main--fill above), there's no need to
+   compress this into a tiny internally-scrolling strip just to avoid growing the page; simple,
+   predictable sizing beats a clever fit that turns into a second nested scrollbar. */
 .edash-body--fill .edash-map-grid-left > .edash-bottom-row {
-  flex-shrink: 1;
-  min-height: 56px;
-  max-height: 190px;
-  overflow: hidden;
+  min-height: 130px;
 }
-/* Without an explicit height on the card itself, "align-items: stretch" only sets its box size -
-   it doesn't stop the card's own content (the donut + a 6-row legend) from growing past that box
-   when there isn't quite enough room, since nothing upstream of `.edash-card-inner`'s overflow-y
-   actually clips at that size. Matching height all the way down turns that "quietly overflow past
-   the row, half the legend cut off with no way to reach it" into "scroll the last row or two into
-   view within the card" instead. */
-.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-card { height: 100%; min-height: 0; }
-.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-card-inner { height: 100%; min-height: 0; padding: 9px 12px; overflow-y: auto; }
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-card-inner { padding: 9px 12px; }
 .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-card-head { margin-bottom: 5px; }
 .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-activity-list { max-height: none; gap: 0; }
 
@@ -1150,13 +1148,10 @@
   .edash-body--fill .edash-map-canvas-wrap { min-height: 420px; }
 }
 
-/* Height-based compaction for the map view: the page itself never gets a scrollbar here (only the
-   drawer's own body scrolls internally, and the sidebar nav shrinks rather than scrolls - see
-   below) - so on a short viewport, everything that ISN'T the map canvas has to give up height
-   first. Three graduated tiers keep the map itself usable for as long as possible instead of one
-   abrupt jump: tighten padding/gaps, then shrink the Recent Activity/Estate Progress row's own
-   ceiling, then (only on genuinely short screens) collapse it to a single compact line so the map
-   and drawer keep the bulk of the space. */
+/* Height-based compaction for the map view: tightens up the chrome (sidebar nav, topbar, toolbar,
+   stats cards) on a shorter screen so the map keeps as much height as possible before the page
+   ever needs to scroll - but it's just a nice-to-have now, not something that has to add up to a
+   guaranteed fit, since .edash-main--fill scrolling is the real fallback if it still doesn't. */
 @media (max-height: 900px) {
   .edash-sidebar { padding: 14px 12px 10px; }
   .edash-sidebar-brand { padding: 2px 6px 12px; }
@@ -1166,7 +1161,6 @@
   .edash-topbar { height: 54px; }
   .edash-body--fill { padding-top: 5px; padding-bottom: 6px; gap: 5px; }
   .edash-body--fill > .edash-stats-row .edash-stat-card { padding: 6px 9px; }
-  .edash-body--fill .edash-map-grid-left > .edash-bottom-row { min-height: 90px; max-height: 130px; }
   .edash-body--fill .edash-map-canvas-wrap { min-height: 260px; }
   .edash-body--fill .edash-drawer { min-height: 320px; }
 }
@@ -1183,27 +1177,8 @@
   .edash-sidebar-footer { padding: 5px 10px; font-size: 0.8rem; }
   .edash-topbar { height: 48px; }
   .edash-body--fill .edash-map-toolbar { padding: 5px 10px; gap: 6px; }
-  .edash-body--fill .edash-map-grid-left > .edash-bottom-row { min-height: 74px; max-height: 96px; }
-  .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-card-inner { padding: 6px 10px; }
-  .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-progress-donut-row svg { width: 54px; height: 54px; }
   .edash-body--fill .edash-map-canvas-wrap { min-height: 230px; }
   .edash-body--fill .edash-drawer { min-height: 280px; }
-}
-
-/* Last resort on a genuinely short screen: the Recent Activity/Estate Progress row's own content
-   (a donut chart plus a legend, a scrolling activity list) can't compact any further without
-   becoming illegible, so it collapses to a single-line summary strip instead - the map keeps
-   almost the full column, and the two live-updating panels are one click away on "View All" /
-   the Dashboard page rather than permanently on screen. */
-@media (max-height: 620px) {
-  .edash-body--fill .edash-map-grid-left > .edash-bottom-row { min-height: 0; max-height: none; }
-  .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-progress-donut-row,
-  .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-activity-list {
-    display: none;
-  }
-  .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-card-inner { padding: 5px 10px; overflow: visible; }
-  .edash-body--fill .edash-map-canvas-wrap { min-height: 200px; }
-  .edash-body--fill .edash-drawer { min-height: 240px; }
 }
 
 @media (max-width: 860px) {
@@ -1269,6 +1244,38 @@
 @media (max-width: 520px) {
   .edash-overview-grid--2, .edash-overview-grid--3 { grid-template-columns: 1fr; }
   .edash-stats-row, .edash-stats-row--five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.edash-public-leads { margin-bottom: 16px; }
+.edash-public-leads-subtitle { margin: 4px 0 0; color: var(--edash-muted); font-size: .76rem; }
+.edash-public-leads-count { padding: 5px 9px; border-radius: 999px; background: var(--edash-brand-tint); color: var(--edash-brand-dark); font-size: .7rem; font-weight: 800; white-space: nowrap; }
+.edash-public-lead-list { display: grid; gap: 8px; }
+.edash-public-lead { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 12px; border: 1px solid var(--edash-border-soft); border-radius: var(--edash-radius-md); background: #fafbfc; }
+.edash-public-lead-main { min-width: 0; }
+.edash-public-lead-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: 9px; }
+.edash-public-lead-title strong { color: var(--edash-ink); font-size: .83rem; }
+.edash-public-lead-title span { color: var(--edash-brand-dark); font-size: .75rem; font-weight: 750; }
+.edash-public-lead-contact { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; font-size: .74rem; }
+.edash-public-lead-contact a { color: var(--edash-muted); text-decoration: none; }
+.edash-public-lead-contact a:hover { color: var(--edash-brand-dark); text-decoration: underline; }
+.edash-public-lead-main p { margin: 7px 0 0; color: var(--edash-muted); font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; }
+.edash-public-lead-main small { display: block; margin-top: 7px; color: var(--edash-faint); font-size: .68rem; }
+.edash-public-lead-actions { display: flex; align-items: flex-end; flex-direction: column; gap: 8px; flex-shrink: 0; }
+.edash-public-lead-actions select { max-width: 116px; min-height: 30px; padding: 0 8px; border: 1px solid var(--edash-border); border-radius: 7px; background: #fff; color: var(--edash-ink); font-size: .7rem; }
+.edash-public-lead-status { padding: 4px 8px; border-radius: 999px; font-size: .66rem; font-weight: 800; }
+.edash-public-lead-status.is-new { background: var(--edash-warn-tint); color: var(--edash-warn); }
+.edash-public-lead-status.is-contacted { background: var(--edash-info-tint); color: var(--edash-info); }
+.edash-public-lead-status.is-converted { background: var(--edash-good-tint); color: var(--edash-good); }
+.edash-public-lead-status.is-declined { background: var(--edash-danger-tint); color: var(--edash-danger); }
+.edash-public-leads-more { margin: 12px 0 0; color: var(--edash-faint); font-size: .72rem; }
+.edash-public-settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.edash-inline-price, .edash-inline-price-editor { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.edash-inline-price-editor input { width: 112px; min-height: 30px; padding: 3px 7px; border: 1px solid var(--edash-border); border-radius: 6px; color: var(--edash-ink); }
+.edash-inline-price-editor input:focus { border-color: var(--edash-brand); outline: 2px solid var(--edash-brand-tint); }
+@media (max-width: 560px) {
+  .edash-public-lead { flex-direction: column; gap: 10px; }
+  .edash-public-lead-actions { align-items: flex-start; flex-direction: row; width: 100%; }
+  .edash-public-settings-grid { grid-template-columns: 1fr; }
 }
 
 /* ─── Estate onboarding: pick or create an estate (no sidebar - nothing to navigate to yet) ─── */

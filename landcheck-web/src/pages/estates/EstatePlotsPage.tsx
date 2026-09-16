@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { api } from "../../api/client";
+import toast from "react-hot-toast";
+import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
+import { money } from "../../components/estates/FinancialComponents";
 import { formatArea, type UnitSystem } from "../../utils/unitFormat";
 
 type PlotFeature = {
@@ -14,6 +16,7 @@ type PlotFeature = {
     development_status?: string;
     geometry_status: string;
     area_sqm?: number;
+    asking_price?: string | null;
     block_id?: number | null;
   };
 };
@@ -28,6 +31,9 @@ export default function EstatePlotsPage() {
   const [activity, setActivity] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [editingPriceId, setEditingPriceId] = useState<number | null>(null);
+  const [priceDraft, setPriceDraft] = useState("");
+  const [priceBusy, setPriceBusy] = useState(false);
 
   useEffect(() => {
     if (!estateId) return;
@@ -44,6 +50,20 @@ export default function EstatePlotsPage() {
   }, [estateId]);
 
   const blockLabel = (blockId?: number | null) => blocks.find((block) => block.id === blockId)?.label || "--";
+
+  const savePrice = async (plotId: number) => {
+    setPriceBusy(true);
+    try {
+      const response = await api.patch(`/estates/plots/${plotId}/public-price`, { asking_price: priceDraft.trim() ? Number(priceDraft) : null });
+      setPlots((current) => current.map((plot) => plot.id === plotId ? { ...plot, asking_price: response.data.asking_price } : plot));
+      setEditingPriceId(null);
+      toast.success("Public price saved.");
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "The public price could not be saved."));
+    } finally {
+      setPriceBusy(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -74,7 +94,7 @@ export default function EstatePlotsPage() {
             <div style={{ overflowX: "auto" }}>
               <table className="edash-mini-table">
                 <thead>
-                  <tr><th>Plot No.</th><th>Block</th><th>Status</th><th>Development</th><th>Area</th><th>Geometry</th><th /></tr>
+                  <tr><th>Plot No.</th><th>Block</th><th>Status</th><th>Development</th><th>Area</th><th>Public price</th><th>Geometry</th><th /></tr>
                 </thead>
                 <tbody>
                   {filtered.map((plot) => (
@@ -84,6 +104,13 @@ export default function EstatePlotsPage() {
                       <td data-label="Status" style={{ textTransform: "capitalize" }}>{plot.commercial_status.replaceAll("_", " ")}</td>
                       <td data-label="Development" style={{ textTransform: "capitalize" }}>{(plot.development_status || "not_started").replaceAll("_", " ")}</td>
                       <td data-label="Area">{formatArea(Number(plot.area_sqm || 0), unitSystem)}</td>
+                      <td data-label="Public price">
+                        {editingPriceId === plot.id ? (
+                          <span className="edash-inline-price-editor"><input type="number" min="0" step="1000" value={priceDraft} onChange={(event) => setPriceDraft(event.target.value)} aria-label={`Price for Plot ${plot.plot_number}`} /><button type="button" className="edash-card-link" disabled={priceBusy} onClick={() => void savePrice(plot.id)}>Save</button><button type="button" className="edash-card-link" onClick={() => setEditingPriceId(null)}>Cancel</button></span>
+                        ) : (
+                          <span className="edash-inline-price"><span>{plot.asking_price ? money(plot.asking_price) : "Not set"}</span><button type="button" className="edash-card-link" onClick={() => { setEditingPriceId(plot.id); setPriceDraft(plot.asking_price || ""); }}>{plot.asking_price ? "Edit" : "Set price"}</button></span>
+                        )}
+                      </td>
                       <td data-label="Geometry" style={{ textTransform: "capitalize" }}>{plot.geometry_status}</td>
                       <td>
                         <button type="button" className="edash-btn-outline" onClick={() => navigate(`/estates/${estateId}/map?plot=${plot.id}`)}>

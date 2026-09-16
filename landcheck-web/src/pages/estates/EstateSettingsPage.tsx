@@ -19,6 +19,13 @@ export default function EstateSettingsPage() {
   const [ruleEnabled, setRuleEnabled] = useState(false);
   const [rulePercentage, setRulePercentage] = useState("0");
   const [activity, setActivity] = useState<any[]>([]);
+  const [publicEnabled, setPublicEnabled] = useState(false);
+  const [publicSlug, setPublicSlug] = useState("");
+  const [publicDescription, setPublicDescription] = useState("");
+  const [publicPhone, setPublicPhone] = useState("");
+  const [publicShowPrices, setPublicShowPrices] = useState(true);
+  const [publicCanPublish, setPublicCanPublish] = useState(false);
+  const [publicUrlPath, setPublicUrlPath] = useState<string | null>(null);
 
   const load = () => {
     if (!estateId) return;
@@ -32,6 +39,16 @@ export default function EstateSettingsPage() {
         setRuleEnabled(Boolean(rule.is_enabled));
         setRulePercentage(String(rule.percentage || "0"));
       } catch { /* eligibility rule is optional */ }
+      try {
+        const publicPage = (await api.get(`/estates/${estateId}/public-settings`)).data;
+        setPublicEnabled(Boolean(publicPage.public_enabled));
+        setPublicSlug(publicPage.public_slug || "");
+        setPublicDescription(publicPage.public_description || "");
+        setPublicPhone(publicPage.public_contact_phone || "");
+        setPublicShowPrices(publicPage.public_show_prices !== false);
+        setPublicCanPublish(Boolean(publicPage.can_publish));
+        setPublicUrlPath(publicPage.public_url_path || null);
+      } catch { /* public showcase is optional until its migration is deployed */ }
     }).catch(() => setEstateDetail(null));
     api.get(`/estates/${estateId}/blocks`).then((response) => setBlocks(response.data || [])).catch(() => setBlocks([]));
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
@@ -62,6 +79,23 @@ export default function EstateSettingsPage() {
     }
   };
 
+  const savePublicPage = async () => {
+    try {
+      const response = await api.patch(`/estates/${estateId}/public-settings`, {
+        public_enabled: publicEnabled,
+        public_slug: publicSlug.trim().toLowerCase() || null,
+        public_description: publicDescription.trim() || null,
+        public_contact_phone: publicPhone.trim() || null,
+        public_show_prices: publicShowPrices,
+      });
+      setPublicSlug(response.data.public_slug || "");
+      setPublicUrlPath(response.data.public_url_path || null);
+      toast.success(publicEnabled ? "Public Estate page published." : "Public Estate page saved.");
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "The public Estate page could not be saved."));
+    }
+  };
+
   const addBlock = async () => {
     if (!blockLabel.trim()) return;
     try {
@@ -85,6 +119,23 @@ export default function EstateSettingsPage() {
             <Link className="edash-card-link" to="/estates/billing">Manage billing</Link>
           </div>
           <p className="edash-status-row-desc">View your current plan, trial or renewal date, payment method and billing history, or upgrade to Plus for flood and erosion hazard analysis.</p>
+        </div>
+      </div>
+      <div className="edash-card" style={{ marginBottom: 16 }}>
+        <div className="edash-card-inner">
+          <div className="edash-card-head">
+            <div><h3 className="edash-card-title">Public Estate page</h3><p className="edash-status-row-desc" style={{ marginTop: 4 }}>Share a live map of your approved plots so buyers can view availability and request a reservation.</p></div>
+            {publicUrlPath && publicEnabled && <a className="edash-card-link" href={publicUrlPath} target="_blank" rel="noreferrer">Open public page</a>}
+          </div>
+          <label className="edash-toggle" style={{ marginBottom: 12 }}><input type="checkbox" checked={publicEnabled} onChange={(event) => setPublicEnabled(event.target.checked)} /> Publish this Estate page</label>
+          {!publicCanPublish && <p className="edash-field-note" style={{ marginBottom: 12 }}>Approve at least one plot on the Estate map before publishing.</p>}
+          <div className="edash-public-settings-grid">
+            <label className="edash-field"><span>Public web address</span><input value={publicSlug} onChange={(event) => setPublicSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))} placeholder="greenview-estate" /></label>
+            <label className="edash-field"><span>Contact phone</span><input value={publicPhone} onChange={(event) => setPublicPhone(event.target.value)} placeholder="Phone for enquiries" /></label>
+          </div>
+          <label className="edash-field" style={{ margin: "10px 0" }}><span>Short introduction</span><textarea rows={3} value={publicDescription} onChange={(event) => setPublicDescription(event.target.value)} placeholder="A short description buyers should know about this Estate" /></label>
+          <label className="edash-toggle" style={{ marginBottom: 14 }}><input type="checkbox" checked={publicShowPrices} onChange={(event) => setPublicShowPrices(event.target.checked)} /> Show plot prices publicly</label>
+          <button type="button" className="edash-btn-primary" disabled={publicEnabled && !publicCanPublish} onClick={() => void savePublicPage()}>Save public page</button>
         </div>
       </div>
       <div className="edash-content-row edash-content-row--split">
