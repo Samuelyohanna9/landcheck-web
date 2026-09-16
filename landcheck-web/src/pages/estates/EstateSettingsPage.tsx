@@ -20,7 +20,6 @@ export default function EstateSettingsPage() {
   const [rulePercentage, setRulePercentage] = useState("0");
   const [activity, setActivity] = useState<any[]>([]);
   const [publicEnabled, setPublicEnabled] = useState(false);
-  const [publicSlug, setPublicSlug] = useState("");
   const [publicDescription, setPublicDescription] = useState("");
   const [publicPhone, setPublicPhone] = useState("");
   const [publicShowPrices, setPublicShowPrices] = useState(true);
@@ -42,7 +41,6 @@ export default function EstateSettingsPage() {
       try {
         const publicPage = (await api.get(`/estates/${estateId}/public-settings`)).data;
         setPublicEnabled(Boolean(publicPage.public_enabled));
-        setPublicSlug(publicPage.public_slug || "");
         setPublicDescription(publicPage.public_description || "");
         setPublicPhone(publicPage.public_contact_phone || "");
         setPublicShowPrices(publicPage.public_show_prices !== false);
@@ -83,12 +81,10 @@ export default function EstateSettingsPage() {
     try {
       const response = await api.patch(`/estates/${estateId}/public-settings`, {
         public_enabled: publicEnabled,
-        public_slug: publicSlug.trim().toLowerCase() || null,
         public_description: publicDescription.trim() || null,
         public_contact_phone: publicPhone.trim() || null,
         public_show_prices: publicShowPrices,
       });
-      setPublicSlug(response.data.public_slug || "");
       setPublicUrlPath(response.data.public_url_path || null);
       toast.success(publicEnabled ? "Public Estate page published." : "Public Estate page saved.");
     } catch (error) {
@@ -130,7 +126,7 @@ export default function EstateSettingsPage() {
           <label className="edash-toggle" style={{ marginBottom: 12 }}><input type="checkbox" checked={publicEnabled} onChange={(event) => setPublicEnabled(event.target.checked)} /> Publish this Estate page</label>
           {!publicCanPublish && <p className="edash-field-note" style={{ marginBottom: 12 }}>Approve at least one plot on the Estate map before publishing.</p>}
           <div className="edash-public-settings-grid">
-            <label className="edash-field"><span>Public web address</span><input value={publicSlug} onChange={(event) => setPublicSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))} placeholder="greenview-estate" /></label>
+            <div className="edash-field"><span>Page address</span><strong style={{ color: "var(--edash-ink)" }}>{publicUrlPath || "Created automatically when you publish"}</strong></div>
             <label className="edash-field"><span>Contact phone</span><input value={publicPhone} onChange={(event) => setPublicPhone(event.target.value)} placeholder="Phone for enquiries" /></label>
           </div>
           <label className="edash-field" style={{ margin: "10px 0" }}><span>Short introduction</span><textarea rows={3} value={publicDescription} onChange={(event) => setPublicDescription(event.target.value)} placeholder="A short description buyers should know about this Estate" /></label>
