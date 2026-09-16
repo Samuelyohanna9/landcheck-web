@@ -37,9 +37,7 @@ const PROJECT_THUMBNAIL_SRC = "/thumpnail_public.webp";
 
 type ProofPhoto = {
   src: string;
-  heading: string;
-  description: string;
-  location?: string;
+  caption: string;
 };
 
 const GALLERY_IMAGES = [
@@ -50,77 +48,16 @@ const GALLERY_IMAGES = [
 ];
 
 const PROOF_PHOTOS: ProofPhoto[] = [
-  {
-    src: "/song-4.jpeg",
-    heading: "Pupils watched the new tree go into the ground in Song",
-    location: "Song LGA, Adamawa",
-    description:
-      "On 27 July, LandCheck Green teams planted across school grounds in Song while pupils watched the protection basket being set around the new seedling.",
-  },
-  {
-    src: "/song-3.jpeg",
-    heading: "Model School Song joined the latest planting round",
-    location: "Model School Song",
-    description:
-      "One of the stops on the Song planting route was Model School Song, where field teams recorded another school-side planting with live evidence.",
-  },
-  {
-    src: "/song-1.jpeg",
-    heading: "Teachers, pupils, and field staff closed the Song planting day together",
-    location: "Song LGA, Adamawa",
-    description:
-      "The Song planting round covered Model School Song, G.R.A. Nursery and Primary School, and Atiku Primary Secondary School on 27 July.",
-  },
-  {
-    src: "/fufore.JPG",
-    heading: "First trees planted at the new Fufore school campus",
-    location: "Fufore, Adamawa",
-    description:
-      "The Principal of Model School Fufore welcomed the first trees ever planted on this new campus, the first afforestation effort there since construction began.",
-  },
-  {
-    src: "/yola south planting2.JPG",
-    heading: "Sponsor QR tags are attached before planting",
-    location: "Yola South, Adamawa",
-   
-    description:
-      "Each seedling carries a scannable QR tag linking it to your name and your contributions to climate action.",
-  },
-  {
-    src: "/seeds.JPG",
-    heading: "Nursery seedlings are prepared for field deployment",
-    location: "Nursery staging",
-    
-    description: "Seedlings are staged and inspected at the nursery before field agents take them out for planting.",
-  },
-  {
-    src: "/sangere girei 1.JPG",
-    heading: "Community members take part in local restoration",
-    location: "Sangere, Girei",
-    
-    description: "Local community members participate in the planting of new trees.",
-  },
-  {
-    src: "/fufore planting-New Model school fufore3.JPG",
-    heading: "Field teams plant directly on school grounds",
-    location: "Model School Fufore",
-    
-    description: "Field agents plant new trees side by side on school grounds.",
-  },
-  {
-    src: "/yola south plantin3.JPG",
-    heading: "Health facility grounds receive new tree cover",
-    location: "Jabbi PHC, Yola South",
-   
-    description: "Tree planting at Jabbi Primary Health Care Authority.",
-  },
-  {
-    src: "/sabgere girei 2.JPG",
-    heading: "Traditional leadership joins the verification visit",
-    location: "Sangere, Girei",
-    
-    description: "The local chief and our agent during the planting of new trees.",
-  },
+  { src: "/song-4.jpeg", caption: "A new tree planted while pupils watch, Song" },
+  { src: "/song-3.jpeg", caption: "Model School Song joins the planting round" },
+  { src: "/song-1.jpeg", caption: "Teachers and pupils close the Song planting day" },
+  { src: "/fufore.JPG", caption: "First trees planted at the new Fufore campus" },
+  { src: "/yola south planting2.JPG", caption: "QR tags are attached before planting" },
+  { src: "/seeds.JPG", caption: "Nursery seedlings staged for field deployment" },
+  { src: "/sangere girei 1.JPG", caption: "Community members join local restoration in Girei" },
+  { src: "/fufore planting-New Model school fufore3.JPG", caption: "Field teams plant across Model School Fufore" },
+  { src: "/yola south plantin3.JPG", caption: "New tree cover at a Yola South clinic" },
+  { src: "/sabgere girei 2.JPG", caption: "Traditional leadership joins the verification visit" },
 ];
 
 const TREE_QUANTITY_TIERS = [1, 5, 10, 25, 50] as const;
@@ -245,14 +182,12 @@ export default function GreenPublicSponsor() {
   const [showOrderLookup, setShowOrderLookup] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
-  const [activeProofIndex, setActiveProofIndex] = useState(0);
   const [openAccordions, setOpenAccordions] = useState<Set<string>>(() => new Set(["about", "approval"]));
   const [suggestedQuantityNote, setSuggestedQuantityNote] = useState<number | null>(null);
   const visibleProofPhotos = useMemo(
     () => (isLowBandwidth ? PROOF_PHOTOS.slice(0, 3) : PROOF_PHOTOS),
     [isLowBandwidth],
   );
-  const featuredProofPhoto = visibleProofPhotos[activeProofIndex] || visibleProofPhotos[0] || null;
   const visibleGalleryImages = useMemo(
     () => (isLowBandwidth ? GALLERY_IMAGES.slice(0, 2) : GALLERY_IMAGES),
     [isLowBandwidth],
@@ -274,10 +209,6 @@ export default function GreenPublicSponsor() {
       .then(setImpactStats)
       .catch(() => {});
   }, []);
-
-  useEffect(() => {
-    setActiveProofIndex((current) => Math.min(current, Math.max(visibleProofPhotos.length - 1, 0)));
-  }, [visibleProofPhotos.length]);
 
   useEffect(() => {
     setGalleryIndex((current) => Math.min(current, Math.max(visibleGalleryImages.length - 1, 0)));
@@ -589,64 +520,18 @@ export default function GreenPublicSponsor() {
         <section className="gps-proof-gallery" style={DEFERRED_SECTION_STYLE}>
           <div className="gps-proof-gallery-shell">
             <div className="gps-proof-gallery-intro">
-              <h2>Field evidence from live planting work</h2>
-              <span className="gps-proof-gallery-sub">Real project images, verified from the field and linked to active planting records.</span>
+              <span className="gps-proof-gallery-kicker">Field evidence</span>
+              <h2>Real planting work, verified from the ground</h2>
             </div>
 
-            {featuredProofPhoto ? (
-              <div className="gps-proof-editorial">
-                <figure className="gps-proof-feature">
-                  <img src={photoAsset(featuredProofPhoto.src)} alt={featuredProofPhoto.description} loading="lazy" decoding="async" />
-                  <figcaption>
-                    <div className="gps-proof-feature-meta">
-                      {featuredProofPhoto.location ? <span className="gps-proof-feature-chip">{featuredProofPhoto.location}</span> : null}
-                      <span className="gps-proof-feature-chip">Verified field record</span>
-                    </div>
-                    <h3>{featuredProofPhoto.heading}</h3>
-                    <p>{featuredProofPhoto.description}</p>
-                  </figcaption>
+            <div className="gps-proof-grid">
+              {visibleProofPhotos.map((photo) => (
+                <figure className="gps-proof-photo" key={photo.src}>
+                  <img src={photoAsset(photo.src)} alt={photo.caption} loading="lazy" decoding="async" />
+                  <figcaption>{photo.caption}</figcaption>
                 </figure>
-
-                <div className="gps-proof-selector" aria-label="Field photo evidence">
-                  {visibleProofPhotos.map((photo, index) => (
-                    <button
-                      key={photo.src}
-                      type="button"
-                      className={`gps-proof-selector-item${index === activeProofIndex ? " is-active" : ""}`}
-                      onMouseEnter={() => setActiveProofIndex(index)}
-                      onFocus={() => setActiveProofIndex(index)}
-                      onClick={() => setActiveProofIndex(index)}
-                      aria-pressed={index === activeProofIndex}
-                      aria-expanded={index === activeProofIndex}
-                    >
-                      <span className="gps-proof-selector-summary">
-                        <span className="gps-proof-selector-thumb">
-                          <img src={photoAsset(photo.src)} alt={photo.heading} loading="lazy" decoding="async" />
-                        </span>
-                        <span className="gps-proof-selector-copy">
-                          {photo.location ? <span className="gps-proof-selector-location">{photo.location}</span> : null}
-                          <strong>{photo.heading}</strong>
-                        </span>
-                      </span>
-                      {index === activeProofIndex ? (
-                        <span className="gps-proof-selector-inline-detail">
-                          <span className="gps-proof-selector-inline-image">
-                            <img src={photoAsset(photo.src)} alt={photo.description} loading="lazy" decoding="async" />
-                          </span>
-                          <span className="gps-proof-selector-inline-copy">
-                            <span className="gps-proof-feature-meta">
-                              {photo.location ? <span className="gps-proof-feature-chip">{photo.location}</span> : null}
-                              <span className="gps-proof-feature-chip">Verified field record</span>
-                            </span>
-                            <span className="gps-proof-selector-inline-desc">{photo.description}</span>
-                          </span>
-                        </span>
-                      ) : null}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
+              ))}
+            </div>
           </div>
         </section>
       )}

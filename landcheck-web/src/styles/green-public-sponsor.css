@@ -1364,214 +1364,73 @@
   text-align: center;
 }
 
+.gps-proof-gallery-kicker {
+  display: block;
+  margin: 0 0 10px;
+  font: 700 0.72rem Arial, sans-serif !important;
+  letter-spacing: 0.19em !important;
+  text-transform: uppercase;
+  color: #27a462 !important;
+}
+
 .gps-proof-gallery-intro h2 {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif !important;
   font-size: clamp(2rem, 3.8vw, 2.85rem) !important;
-  font-weight: 800 !important;
+  font-weight: 500 !important;
   letter-spacing: -0.04em !important;
   color: #0d2319 !important;
-  margin: 0 0 6px !important;
+  margin: 0 !important;
   line-height: 1.15 !important;
 }
 
-.gps-proof-gallery-sub {
-  display: block;
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-  font-size: clamp(0.95rem, 1.8vw, 1.12rem) !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.01em !important;
-  color: #27a462 !important;
-  margin: 0 !important;
-}
 
-.gps-proof-strip {
-  display: flex;
-  align-items: stretch;
-  gap: 4px;
-  height: 440px;
-  border-radius: 26px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 26px 58px rgba(0, 0, 0, 0.3);
-}
 
-.gps-proof-panel {
-  position: relative;
-  flex: 1 1 0%;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: none;
-  cursor: pointer;
-  overflow: hidden;
-  background: #08150e;
-  text-align: left;
-  font-family: inherit;
-  transition: flex-grow 550ms cubic-bezier(0.16, 1, 0.3, 1);
-}
 
-.gps-proof-panel:not(.is-active) { flex-grow: 1; }
-.gps-proof-panel.is-active { flex-grow: 7; }
 
-.gps-proof-panel img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-  object-position: top center;
-  transition: transform 550ms cubic-bezier(0.16, 1, 0.3, 1);
-}
 
-.gps-proof-panel.is-active img {
-  transform: scale(1.03);
-}
 
-.gps-proof-panel-scrim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(0deg, rgba(5, 13, 9, 0.92) 0%, rgba(5, 13, 9, 0.1) 55%, rgba(5, 13, 9, 0.35) 100%);
-}
 
-.gps-proof-panel-accent {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 5px;
-  background: #3fae74;
-  transform: scaleY(0);
-  transform-origin: bottom;
-  transition: transform 400ms ease 150ms;
-}
 
-.gps-proof-panel.is-active .gps-proof-panel-accent { transform: scaleY(1); }
 
-.gps-proof-panel-body {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 20px 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
 
-.gps-proof-panel.is-active .gps-proof-panel-body { padding-left: 28px; }
 
-.gps-proof-panel-location {
-  display: inline-flex;
-  width: fit-content;
-  color: #8ff0b8;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
 
-.gps-proof-panel-heading {
-  color: #ffffff;
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-  font-weight: 800 !important;
-  font-size: 1.02rem;
-  line-height: 1.28;
-  letter-spacing: -0.01em;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
-}
 
-.gps-proof-panel.is-active .gps-proof-panel-heading {
-  font-size: 1.5rem;
-}
 
-.gps-proof-panel-desc {
-  color: rgba(255, 255, 255, 0.84);
-  font-size: 0.92rem;
-  line-height: 1.65;
-  max-width: 620px;
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: max-height 400ms ease, opacity 300ms ease 80ms;
-}
 
-.gps-proof-panel.is-active .gps-proof-panel-desc {
-  max-height: 140px;
-  opacity: 1;
-  margin-top: 4px;
-}
 
-@media (max-width: 900px) {
-  .gps-proof-strip { height: 380px; }
-  .gps-proof-panel.is-active { flex-grow: 4; }
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 @media (max-width: 640px) {
   .gps-proof-gallery { padding: 0 16px; }
-  .gps-proof-strip {
-    display: flex !important;
-    flex-direction: row !important;
-    height: 360px !important;
-    gap: 3px !important;
-    border-radius: 16px !important;
-  }
-  .gps-proof-panel {
-    height: 100% !important;
-    flex-grow: 0.5 !important;
-    min-width: 0 !important;
-    transition: flex-grow 550ms cubic-bezier(0.16, 1, 0.3, 1) !important;
-  }
-  .gps-proof-panel:not(.is-active) {
-    flex-grow: 0.5 !important;
-  }
-  .gps-proof-panel.is-active {
-    flex-grow: 12 !important;
-  }
-  .gps-proof-panel-body {
-    left: 0 !important;
-    right: 0 !important;
-    width: auto !important;
-    padding: 14px 12px !important;
-    transform: translateZ(0);
-    will-change: opacity;
-  }
-  .gps-proof-panel:not(.is-active) .gps-proof-panel-body {
-    opacity: 0 !important;
-    pointer-events: none !important;
-    transition: opacity 150ms ease !important;
-  }
-  .gps-proof-panel.is-active .gps-proof-panel-body {
-    opacity: 1 !important;
-    transition: opacity 300ms ease 200ms !important;
-    padding-left: 14px !important;
-    padding-right: 14px !important;
-  }
-  .gps-proof-panel-location {
-    font-size: 0.62rem !important;
-    margin-bottom: 4px !important;
-    white-space: normal !important;
-  }
-  .gps-proof-panel-heading {
-    font-size: 0.84rem !important;
-    line-height: 1.3 !important;
-  }
-  .gps-proof-panel.is-active .gps-proof-panel-heading {
-    font-size: 1.08rem !important;
-  }
-  .gps-proof-panel-desc {
-    font-size: 0.78rem !important;
-    line-height: 1.48 !important;
-  }
-  .gps-proof-panel.is-active .gps-proof-panel-desc {
-    max-height: 180px !important;
-    margin-top: 4px !important;
-    opacity: 1 !important;
-  }
-  .gps-proof-panel-accent {
-    display: none !important;
-  }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 }
 
 /* ─── How it works ──────────────────────────────────────────────── */
@@ -1846,23 +1705,13 @@
   text-align: left;
 }
 
-.gps-proof-strip {
-  gap: 8px;
-  border: none;
-  box-shadow: none;
-}
 
-.gps-proof-panel {
-  border-radius: 24px;
-}
 
-.gps-proof-panel-body {
-  padding: 20px;
-}
 
-.gps-proof-panel.is-active .gps-proof-panel-body {
-  padding-left: 20px;
-}
+
+
+
+
 
 .gps-how-it-works {
   text-align: left;
@@ -1939,13 +1788,9 @@
     margin-bottom: 20px;
   }
 
-  .gps-proof-strip {
-    gap: 4px;
-  }
+  
 
-  .gps-proof-panel {
-    border-radius: 18px;
-  }
+  
 
   .gps-how-it-works {
     text-align: left;
@@ -1979,181 +1824,94 @@
   color: #f5fbf7 !important;
 }
 
-.gps-proof-gallery-sub {
+.gps-proof-gallery-kicker {
   color: #6fe09b !important;
 }
 
-.gps-proof-editorial {
+/* Plain evidence photos: no card frame, no chips, no scrim - just the photo and a short
+   caption underneath, matching the LC Green landing page's evidence-photo treatment. */
+.gps-proof-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.88fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 22px;
-  align-items: start;
 }
 
-.gps-proof-feature {
+.gps-proof-photo {
   margin: 0;
-  overflow: hidden;
-  border: 1px solid rgba(219, 245, 227, 0.1);
-  border-radius: 30px;
-  background: rgba(9, 18, 14, 0.92);
-  box-shadow: 0 22px 42px rgba(4, 14, 8, 0.24);
 }
 
-.gps-proof-feature img {
+.gps-proof-photo img {
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 11;
+  aspect-ratio: 4 / 3;
   object-fit: cover;
+  border-radius: 4px;
 }
 
-.gps-proof-feature figcaption {
-  display: grid;
-  gap: 12px;
-  padding: 24px 26px 28px;
+.gps-proof-photo figcaption {
+  margin-top: 10px;
+  color: rgba(233, 242, 236, 0.78);
+  font-size: 0.88rem;
+  line-height: 1.4;
 }
 
-.gps-proof-feature-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+@media (max-width: 900px) {
+  .gps-proof-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.gps-proof-feature-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid rgba(219, 245, 227, 0.14);
-  border-radius: 999px;
-  color: rgba(219, 245, 227, 0.86);
-  font-size: 0.73rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+@media (max-width: 520px) {
+  .gps-proof-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
-.gps-proof-feature h3 {
-  margin: 0;
-  color: #ffffff;
-  font-size: clamp(1.65rem, 2vw, 2.2rem);
-  line-height: 1.02;
-  letter-spacing: -0.04em;
-  text-wrap: balance;
-}
 
-.gps-proof-feature p {
-  margin: 0;
-  max-width: 58ch;
-  color: rgba(226, 241, 231, 0.84);
-  font-size: 0.97rem;
-  line-height: 1.72;
-}
 
-.gps-proof-selector {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
 
-.gps-proof-selector-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 12px;
-  border: 1px solid rgba(219, 245, 227, 0.08);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.03);
-  color: inherit;
-  text-align: left;
-  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
-}
 
-.gps-proof-selector-item:hover,
-.gps-proof-selector-item:focus-visible {
-  transform: translateY(-1px);
-  border-color: rgba(132, 227, 171, 0.3);
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 16px 34px rgba(7, 16, 11, 0.18);
-}
 
-.gps-proof-selector-item.is-active {
-  border-color: rgba(132, 227, 171, 0.34);
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 18px 36px rgba(7, 16, 11, 0.2);
-}
 
-.gps-proof-selector-summary {
-  display: grid;
-  grid-template-columns: 94px minmax(0, 1fr);
-  gap: 14px;
-  align-items: center;
-}
 
-.gps-proof-selector-thumb {
-  display: block;
-  overflow: hidden;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.06);
-  aspect-ratio: 4 / 5;
-}
 
-.gps-proof-selector-thumb img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
 
-.gps-proof-selector-copy {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-}
 
-.gps-proof-selector-inline-detail {
-  display: none;
-}
 
-.gps-proof-selector-inline-image {
-  display: block;
-  overflow: hidden;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.06);
-  aspect-ratio: 16 / 10;
-}
 
-.gps-proof-selector-inline-image img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
 
-.gps-proof-selector-inline-copy {
-  display: grid;
-  gap: 10px;
-}
 
-.gps-proof-selector-inline-desc {
-  color: rgba(226, 241, 231, 0.84);
-  font-size: 0.94rem;
-  line-height: 1.65;
-}
 
-.gps-proof-selector-location {
-  color: rgba(132, 227, 171, 0.82);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
 
-.gps-proof-selector-copy strong {
-  color: #ffffff;
-  font-size: 1rem;
-  line-height: 1.35;
-  text-wrap: balance;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 .gps-how-step {
   padding-top: 18px;
@@ -2170,53 +1928,6 @@
   max-width: none;
 }
 
-@media (max-width: 960px) {
-  .gps-proof-editorial {
-    grid-template-columns: 1fr;
-  }
-}
 
-@media (max-width: 640px) {
-  .gps-proof-feature {
-    display: none;
-  }
 
-  .gps-proof-editorial {
-    gap: 16px;
-  }
 
-  .gps-proof-feature figcaption {
-    padding: 18px;
-  }
-
-  .gps-proof-selector {
-    gap: 14px;
-  }
-
-  .gps-proof-selector-item {
-    padding: 12px;
-    border-radius: 26px;
-  }
-
-  .gps-proof-selector-summary {
-    grid-template-columns: 82px minmax(0, 1fr);
-    gap: 12px;
-  }
-
-  .gps-proof-feature h3 {
-    font-size: 1.45rem;
-  }
-
-  .gps-proof-selector-item.is-active .gps-proof-selector-inline-detail {
-    display: grid;
-    gap: 12px;
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid rgba(219, 245, 227, 0.1);
-  }
-
-  .gps-proof-selector-copy strong {
-    font-size: 1.18rem;
-    line-height: 1.28;
-  }
-}
