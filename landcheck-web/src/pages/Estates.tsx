@@ -132,6 +132,35 @@ function normalizeEstateMapGeometry(geometry: any, crs: string | null | undefine
   return { ...geometry, coordinates: normalizeCoordinates(geometry.coordinates) };
 }
 
+function geographicRingAreaSqm(ring: any[]): number {
+  const points = (ring || []).filter((point) => Array.isArray(point) && Number.isFinite(point[0]) && Number.isFinite(point[1]));
+  if (points.length < 3) return 0;
+  const earthRadiusM = 6371008.8;
+  let sum = 0;
+  for (let index = 0; index < points.length; index += 1) {
+    const current = points[index];
+    const next = points[(index + 1) % points.length];
+    const longitudeDelta = (((Number(next[0]) - Number(current[0]) + 540) % 360) - 180) * Math.PI / 180;
+    const currentLatitude = Number(current[1]) * Math.PI / 180;
+    const nextLatitude = Number(next[1]) * Math.PI / 180;
+    sum += longitudeDelta * (2 + Math.sin(currentLatitude) + Math.sin(nextLatitude));
+  }
+  return Math.abs(sum * earthRadiusM ** 2 / 2);
+}
+
+function geometryAreaSqm(geometry: any): number | null {
+  if (geometry?.type === "Polygon") {
+    const rings = geometry.coordinates || [];
+    if (!rings.length) return null;
+    return Math.max(0, geographicRingAreaSqm(rings[0]) - rings.slice(1).reduce((total: number, ring: any[]) => total + geographicRingAreaSqm(ring), 0));
+  }
+  if (geometry?.type === "MultiPolygon") {
+    const area = (geometry.coordinates || []).reduce((total: number, polygon: any[]) => total + (geometryAreaSqm({ type: "Polygon", coordinates: polygon }) || 0), 0);
+    return area || null;
+  }
+  return null;
+}
+
 function visitMapCoordinates(value: any, visitor: (coordinate: [number, number]) => void) {
   if (!Array.isArray(value)) return;
   if (value.length >= 2 && typeof value[0] === "number" && typeof value[1] === "number" && Number.isFinite(value[0]) && Number.isFinite(value[1])) {
@@ -583,6 +612,12 @@ export default function Estates() {
     })),
   }), [visiblePlotGeojson, estateDetail?.crs]);
   const mapBoundary = useMemo(() => normalizeEstateMapGeometry(estateDetail?.boundary, estateDetail?.crs), [estateDetail?.boundary, estateDetail?.crs]);
+  const boundaryAreaSqm = useMemo(() => {
+    const calculated = geometryAreaSqm(mapBoundary);
+    if (calculated && calculated > 0) return calculated;
+    const stored = Number(estateDetail?.approximate_area_sqm);
+    return Number.isFinite(stored) && stored > 0 ? stored : null;
+  }, [mapBoundary, estateDetail?.approximate_area_sqm]);
   const plotInputMapPoints = useMemo(() => plotInputPoints.map((point) => {
     const [lng, lat] = toWGS84(Number(point.lng), Number(point.lat), plotInputCoordinateSystem);
     return { ...point, lng, lat };
@@ -2595,7 +2630,7 @@ export default function Estates() {
                   </div>
                 </div>
               )}
-              <EstateLayoutDesigner boundaryPresent={hasBoundary} proposal={layoutProposal} busy={layoutDesignerBusy} unitSystem={unitSystem} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} onEditCandidates={editLayoutProposalCandidates} onAddFeature={addLayoutProposalFeature} onRemoveFeature={removeLayoutProposalFeature} />
+              <EstateLayoutDesigner boundaryPresent={hasBoundary} boundaryAreaSqm={boundaryAreaSqm} proposal={layoutProposal} busy={layoutDesignerBusy} unitSystem={unitSystem} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} onEditCandidates={editLayoutProposalCandidates} onAddFeature={addLayoutProposalFeature} onRemoveFeature={removeLayoutProposalFeature} />
             </>
           )}
         </>

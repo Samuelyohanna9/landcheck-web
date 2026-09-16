@@ -21,6 +21,7 @@ type LayoutCriteria = {
 
 type Props = {
   boundaryPresent: boolean;
+  boundaryAreaSqm?: number | null;
   proposal: any | null;
   busy?: boolean;
   message?: string;
@@ -664,7 +665,7 @@ function LayoutPreviewMap({ proposal, unitSystem = "m", onEditCandidates, onAddF
   );
 }
 
-export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy = false, message, messageTone = "good", unitSystem = "m", onGenerate, onDecision, onEditCandidates, onAddFeature, onRemoveFeature }: Props) {
+export default function EstateLayoutDesigner({ boundaryPresent, boundaryAreaSqm, proposal, busy = false, message, messageTone = "good", unitSystem = "m", onGenerate, onDecision, onEditCandidates, onAddFeature, onRemoveFeature }: Props) {
   const [templateKey, setTemplateKey] = useState<LayoutTemplateKey>("standard");
   const [criteria, setCriteria] = useState<LayoutCriteria>({ ...DEFAULT_CRITERIA, ...LAYOUT_TEMPLATES.find((item) => item.key === "standard")!.criteria });
   const [open, setOpen] = useState(false);
@@ -697,6 +698,13 @@ export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy =
 
         {boundaryPresent && (
           <>
+            <div className="edash-layout-boundary-area" aria-label="Estate boundary area">
+              <div>
+                <span>Estate boundary</span>
+                <strong>{boundaryAreaSqm ? formatArea(boundaryAreaSqm, unitSystem) : "Area not available"}</strong>
+              </div>
+              <small>Total land area available for this layout</small>
+            </div>
             <label className="edash-field" style={{ marginBottom: 10, maxWidth: 360 }}>
               <span>Layout template</span>
               <select value={templateKey} onChange={(event) => applyTemplate(event.target.value as LayoutTemplateKey)}>
