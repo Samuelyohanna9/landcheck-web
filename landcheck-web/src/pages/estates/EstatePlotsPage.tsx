@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
+import { formatArea, type UnitSystem } from "../../utils/unitFormat";
 
 type PlotFeature = {
   id: number;
@@ -21,6 +22,7 @@ export default function EstatePlotsPage() {
   const { estateId } = useParams();
   const navigate = useNavigate();
   const [estateName, setEstateName] = useState("");
+  const [unitSystem, setUnitSystem] = useState<UnitSystem>("m");
   const [plots, setPlots] = useState<PlotFeature["properties"][]>([]);
   const [blocks, setBlocks] = useState<Array<{ id: number; label: string; name?: string }>>([]);
   const [activity, setActivity] = useState<any[]>([]);
@@ -29,7 +31,10 @@ export default function EstatePlotsPage() {
 
   useEffect(() => {
     if (!estateId) return;
-    api.get(`/estates/${estateId}`).then((response) => setEstateName(response.data.name)).catch(() => undefined);
+    api.get(`/estates/${estateId}`).then((response) => {
+      setEstateName(response.data.name);
+      setUnitSystem(response.data.unit_system === "ft" ? "ft" : "m");
+    }).catch(() => undefined);
     api.get(`/estates/${estateId}/plots.geojson`).then((response) => {
       const features = (response.data?.features || []) as PlotFeature[];
       setPlots(features.map((feature) => feature.properties));
@@ -78,7 +83,7 @@ export default function EstatePlotsPage() {
                       <td data-label="Block">{blockLabel(plot.block_id)}</td>
                       <td data-label="Status" style={{ textTransform: "capitalize" }}>{plot.commercial_status.replaceAll("_", " ")}</td>
                       <td data-label="Development" style={{ textTransform: "capitalize" }}>{(plot.development_status || "not_started").replaceAll("_", " ")}</td>
-                      <td data-label="Area">{Number(plot.area_sqm || 0).toLocaleString()} m²</td>
+                      <td data-label="Area">{formatArea(Number(plot.area_sqm || 0), unitSystem)}</td>
                       <td data-label="Geometry" style={{ textTransform: "capitalize" }}>{plot.geometry_status}</td>
                       <td>
                         <button type="button" className="edash-btn-outline" onClick={() => navigate(`/estates/${estateId}/map?plot=${plot.id}`)}>
