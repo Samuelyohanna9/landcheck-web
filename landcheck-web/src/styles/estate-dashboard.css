@@ -848,24 +848,31 @@
 
 .edash-drawer-view-map { width: 100%; justify-content: center; margin-bottom: 12px; }
 
+/* A 340px-wide drawer can't fit all 7 tabs (Overview through Timeline) at once without either
+   wrapping (which used to just clip the last one or two off-screen) - this scrolls horizontally
+   instead, and unlike a hidden-scrollbar pattern, keeps a thin visible track so it's obvious there
+   are more tabs to the right instead of it looking like the row is simply cut off. */
 .edash-drawer-tabs {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   padding: 0 10px;
   border-bottom: 1px solid var(--edash-border-soft);
   overflow-x: auto;
-  scrollbar-width: none;
+  scrollbar-width: thin;
 }
 
-.edash-drawer-tabs::-webkit-scrollbar { display: none; }
+.edash-drawer-tabs::-webkit-scrollbar { height: 4px; }
+.edash-drawer-tabs::-webkit-scrollbar-track { background: transparent; }
+.edash-drawer-tabs::-webkit-scrollbar-thumb { background: var(--edash-border); border-radius: 999px; }
 
 .edash-drawer-tab {
-  padding: 9px 8px;
+  flex-shrink: 0;
+  padding: 8px 6px;
   border: none;
   border-bottom: 2px solid transparent;
   background: transparent;
   color: var(--edash-muted);
-  font-size: 0.76rem;
+  font-size: 0.71rem;
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
@@ -1128,33 +1135,60 @@
   .edash-body--fill .edash-map-canvas-wrap { min-height: 420px; }
 }
 
-/* First stage of height-based compaction: buys back room for the map canvas by tightening
-   padding/gaps and the bottom row's own ceiling before giving up on "fill the exact viewport
-   height" entirely (see the more aggressive max-height: 760px fallback below). */
+/* Height-based compaction for the map view: the page itself never gets a scrollbar here (only the
+   drawer's own body scrolls internally, and the sidebar nav shrinks rather than scrolls - see
+   below) - so on a short viewport, everything that ISN'T the map canvas has to give up height
+   first. Three graduated tiers keep the map itself usable for as long as possible instead of one
+   abrupt jump: tighten padding/gaps, then shrink the Recent Activity/Estate Progress row's own
+   ceiling, then (only on genuinely short screens) collapse it to a single compact line so the map
+   and drawer keep the bulk of the space. */
 @media (max-height: 900px) {
+  .edash-sidebar { padding: 14px 12px 10px; }
+  .edash-sidebar-brand { padding: 2px 6px 12px; }
+  .edash-nav-item { padding: 6px 10px; }
+  .edash-nav-divider { margin: 6px 4px; }
+  .edash-sidebar-footer { margin-top: 4px; padding: 6px 10px; }
+  .edash-topbar { height: 54px; }
   .edash-body--fill { padding-top: 5px; padding-bottom: 6px; gap: 5px; }
   .edash-body--fill > .edash-stats-row .edash-stat-card { padding: 6px 9px; }
   .edash-body--fill .edash-map-grid-left > .edash-bottom-row { min-height: 90px; max-height: 130px; }
   .edash-body--fill .edash-map-canvas-wrap { min-height: 260px; }
+  .edash-body--fill .edash-drawer { min-height: 320px; }
 }
 
-/* A short-but-wide window (browser not maximized, a small-height laptop display, a landscape
-   tablet) never triggers the width breakpoint above, yet the map view's "fill the exact viewport
-   height" bet fails there the same way: the Recent Activity/Estate Progress row keeps its fixed
-   minimum height regardless of how little room is left, which can squeeze the map canvas below
-   the height it needs and push its own zoom/layer controls out of the clipped, non-scrolling
-   viewport entirely - "the estate progress moves up" and the map loses functionality with no way
-   to scroll down to it. Falling back to natural sizing + a real scrollbar (the same fallback the
-   width breakpoint already uses) fixes this without giving up the side-by-side map/drawer layout
-   that width still has room for. */
 @media (max-height: 760px) {
-  .edash-main--fill { overflow-y: auto; }
-  .edash-body--fill { flex: initial; min-height: auto; }
-  .edash-body--fill > .edash-map-grid { flex: initial; min-height: auto; align-items: start; }
-  .edash-body--fill .edash-drawer { min-height: 320px; }
-  .edash-body--fill .edash-map-canvas-wrap { min-height: 340px; }
-  .edash-body--fill .edash-map-grid-left > .edash-bottom-row { min-height: auto; max-height: none; }
-  .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-activity-list { max-height: 320px; }
+  .edash-sidebar { padding: 10px 12px 8px; }
+  .edash-sidebar-brand { padding: 2px 6px 8px; }
+  .edash-sidebar-brand-logo { padding: 6px 10px; }
+  .edash-sidebar-brand-logo img { height: 18px; }
+  .edash-nav { gap: 0; }
+  .edash-nav-item { padding: 5px 10px; font-size: 0.8rem; }
+  .edash-nav-icon, .edash-nav-icon svg { width: 15px; height: 15px; }
+  .edash-nav-divider { margin: 4px 4px; }
+  .edash-sidebar-footer { padding: 5px 10px; font-size: 0.8rem; }
+  .edash-topbar { height: 48px; }
+  .edash-body--fill .edash-map-toolbar { padding: 5px 10px; gap: 6px; }
+  .edash-body--fill .edash-map-grid-left > .edash-bottom-row { min-height: 74px; max-height: 96px; }
+  .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-card-inner { padding: 6px 10px; }
+  .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-progress-donut-row svg { width: 54px; height: 54px; }
+  .edash-body--fill .edash-map-canvas-wrap { min-height: 230px; }
+  .edash-body--fill .edash-drawer { min-height: 280px; }
+}
+
+/* Last resort on a genuinely short screen: the Recent Activity/Estate Progress row's own content
+   (a donut chart plus a legend, a scrolling activity list) can't compact any further without
+   becoming illegible, so it collapses to a single-line summary strip instead - the map keeps
+   almost the full column, and the two live-updating panels are one click away on "View All" /
+   the Dashboard page rather than permanently on screen. */
+@media (max-height: 620px) {
+  .edash-body--fill .edash-map-grid-left > .edash-bottom-row { min-height: 0; max-height: none; }
+  .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-progress-donut-row,
+  .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-activity-list {
+    display: none;
+  }
+  .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-card-inner { padding: 5px 10px; overflow: visible; }
+  .edash-body--fill .edash-map-canvas-wrap { min-height: 200px; }
+  .edash-body--fill .edash-drawer { min-height: 240px; }
 }
 
 @media (max-width: 860px) {
