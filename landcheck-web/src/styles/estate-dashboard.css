@@ -420,7 +420,7 @@
 .edash-body--fill .edash-map-mode-tab { padding: 5px 11px; }
 .edash-body--fill .edash-map-search,
 .edash-body--fill .edash-map-select { height: 29px; }
-.edash-body--fill .edash-map-canvas-wrap { min-height: 320px; }
+.edash-body--fill .edash-map-canvas-wrap { min-height: 520px; }
 
 /* flex-shrink: 0 (the base rule above, meant for contexts where the page can just scroll) is
    exactly why this used to overflow the viewport instead of fitting: with the map canvas already
@@ -1168,7 +1168,7 @@
   .edash-topbar { height: 54px; }
   .edash-body--fill { padding-top: 5px; padding-bottom: 6px; gap: 5px; }
   .edash-body--fill > .edash-stats-row .edash-stat-card { padding: 6px 9px; }
-  .edash-body--fill .edash-map-canvas-wrap { min-height: 260px; }
+  .edash-body--fill .edash-map-canvas-wrap { min-height: 360px; }
   .edash-body--fill .edash-drawer { min-height: 320px; }
 }
 
@@ -1184,7 +1184,7 @@
   .edash-sidebar-footer { padding: 5px 10px; font-size: 0.8rem; }
   .edash-topbar { height: 48px; }
   .edash-body--fill .edash-map-toolbar { padding: 5px 10px; gap: 6px; }
-  .edash-body--fill .edash-map-canvas-wrap { min-height: 230px; }
+  .edash-body--fill .edash-map-canvas-wrap { min-height: 300px; }
   .edash-body--fill .edash-drawer { min-height: 280px; }
 }
 
