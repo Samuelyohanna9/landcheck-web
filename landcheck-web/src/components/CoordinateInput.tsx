@@ -133,9 +133,8 @@ type Props = {
   // which enforces the "at least 3 boundary points" rule per row and would just get stuck at 3
   // instead of actually clearing. Without this prop, "Clear" isn't shown.
   onClearAllPoints?: () => void;
-  // Estate's Add Plot flow uses a compact, direct-entry table. Other consumers keep the Survey
-  // coordinate editor and its existing upload/manual workflow.
-  compactManualEntry?: boolean;
+  // Estate's manual Add Plot flow uses only the direct-entry form, with no upload-method controls.
+  manualEntryOnly?: boolean;
 };
 
 // Flattened view of COORDINATE_SYSTEM_GROUPS - kept for the "currently selected" lookup below;
@@ -192,7 +191,7 @@ function CoordinateInput({
   onAiPlotParsed,
   onReorderPoints,
   onClearAllPoints,
-  compactManualEntry = false,
+  manualEntryOnly = false,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const aiFileInputRef = useRef<HTMLInputElement>(null);
@@ -231,15 +230,17 @@ function CoordinateInput({
   // exist, the coordinate-preview table takes over regardless of which method produced them.
   // Defaults to AI when that method is actually available for this caller (Survey Plan), otherwise
   // CSV - so a caller without onImportedMetadata (e.g. Hazard Analysis) never lands on an empty tab.
-  const [inputMethod, setInputMethod] = useState<"ai" | "csv" | "manual">(onImportedMetadata ? "ai" : "csv");
+  const [inputMethod, setInputMethod] = useState<"ai" | "csv" | "manual">(
+    manualEntryOnly ? "manual" : onImportedMetadata ? "ai" : "csv"
+  );
   // True while the card-based point editor (the pre-existing showPointList UI below) is open -
   // set true by choosing Manual Entry (so typing the first few points doesn't immediately bounce
   // to a read-only table) or by the preview table's "Edit coordinates" action; set false by the
   // editor's own "Done" button, which returns to the coordinate-preview table.
-  const [previewEditing, setPreviewEditing] = useState(false);
+  const [previewEditing, setPreviewEditing] = useState(manualEntryOnly);
   const [coordSystemDetailsOpen, setCoordSystemDetailsOpen] = useState(false);
-  const showEditor = previewEditing;
-  const showMethodTabs = points.length === 0 && !previewEditing;
+  const showEditor = manualEntryOnly || previewEditing;
+  const showMethodTabs = !manualEntryOnly && points.length === 0 && !previewEditing;
 
   const openManualEntry = () => {
     setPreviewEditing(true);
@@ -712,10 +713,10 @@ function CoordinateInput({
       <div className="coord-header">
         <h3 className="coord-title">{title || "Add boundary coordinates"}</h3>
         <p className="coord-subtitle">
-          {compactManualEntry && showEditor ? "Enter each boundary station below." : subtitle || "Choose how you want to provide the coordinates."}
+          {manualEntryOnly && showEditor ? "Enter each boundary station below." : subtitle || "Choose how you want to provide the coordinates."}
         </p>
       </div>
-      {!(compactManualEntry && showEditor) && sidebar}
+      {!(manualEntryOnly && showEditor) && sidebar}
 
       <div className="coord-system-selector">
         <label className="coord-system-label" htmlFor="coord-system-select">
@@ -799,7 +800,7 @@ function CoordinateInput({
               className={`coord-method-tab ${inputMethod === "manual" ? "active" : ""}`}
               onClick={() => {
                 setInputMethod("manual");
-                if (compactManualEntry) openManualEntry();
+                if (manualEntryOnly) openManualEntry();
               }}
             >
               <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -921,7 +922,7 @@ function CoordinateInput({
           )}
 
       {inputMethod === "manual" && (
-            compactManualEntry ? null : (
+            manualEntryOnly ? null : (
               <div className="coord-method-panel">
                 <h4>Manual entry</h4>
                 <p>Enter coordinate stations individually.</p>
@@ -1123,7 +1124,7 @@ function CoordinateInput({
 
       {showEditor && (
       <>
-      {compactManualEntry ? (
+      {manualEntryOnly ? (
       <div className="coord-manual-simple">
         <div className="coord-manual-simple-grid" aria-label="Plot boundary coordinates">
           <div className="coord-manual-simple-head">
@@ -1144,8 +1145,8 @@ function CoordinateInput({
               <input
                 type="number"
                 step="any"
-                value={point.lng || ""}
-                onChange={(event) => onUpdatePoint(index, "lng", parseFloat(event.target.value) || 0)}
+                value={Number.isFinite(point.lng) ? point.lng : ""}
+                onChange={(event) => onUpdatePoint(index, "lng", event.target.value.trim() === "" ? Number.NaN : Number(event.target.value))}
                 onBlur={(event) => {
                   if (!isProjected) return;
                   const parsed = parseFloat(event.target.value);
@@ -1158,8 +1159,8 @@ function CoordinateInput({
               <input
                 type="number"
                 step="any"
-                value={point.lat || ""}
-                onChange={(event) => onUpdatePoint(index, "lat", parseFloat(event.target.value) || 0)}
+                value={Number.isFinite(point.lat) ? point.lat : ""}
+                onChange={(event) => onUpdatePoint(index, "lat", event.target.value.trim() === "" ? Number.NaN : Number(event.target.value))}
                 onBlur={(event) => {
                   if (!isProjected) return;
                   const parsed = parseFloat(event.target.value);
@@ -1176,9 +1177,6 @@ function CoordinateInput({
           <button type="button" className="coord-manual-add-btn" onClick={onAddPoint} disabled={disabled} aria-label="Add station" title="Add station">
             <span aria-hidden="true">+</span>
             <span>Add station</span>
-          </button>
-          <button type="button" className="coord-editor-done-btn" onClick={() => setPreviewEditing(false)}>
-            Done
           </button>
         </div>
       </div>

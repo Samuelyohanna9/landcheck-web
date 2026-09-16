@@ -620,7 +620,7 @@ export default function Estates() {
     setPlotInputPoints((current) => current.map((point, pointIndex) => pointIndex === index ? { ...point, [field]: value } : point));
   };
   const addPlotInputPoint = () => {
-    setPlotInputPoints((current) => [...current, { station: `P${current.length + 1}`, lng: 0, lat: 0, is_boundary: true }]);
+    setPlotInputPoints((current) => [...current, { station: `P${current.length + 1}`, lng: Number.NaN, lat: Number.NaN, is_boundary: true }]);
   };
   const removePlotInputPoint = (index: number) => {
     setPlotInputPoints((current) => current.filter((_, pointIndex) => pointIndex !== index));
@@ -2246,7 +2246,17 @@ export default function Estates() {
           <div className="edash-form-row" style={{ marginBottom: 16 }}>
             <label className="edash-field" style={{ maxWidth: 320 }}>
               <span>Method</span>
-              <select value={addPlotMethod} onChange={(event) => setAddPlotMethod(event.target.value as AddPlotMethod)}>
+              <select value={addPlotMethod} onChange={(event) => {
+                const method = event.target.value as AddPlotMethod;
+                setAddPlotMethod(method);
+                if (method === "coordinates") {
+                  setPlotInputPoints((current) => current.length ? current : [
+                    { station: "A", lng: Number.NaN, lat: Number.NaN, is_boundary: true },
+                    { station: "B", lng: Number.NaN, lat: Number.NaN, is_boundary: true },
+                    { station: "C", lng: Number.NaN, lat: Number.NaN, is_boundary: true },
+                  ]);
+                }
+              }}>
                 <option value="draw">Draw on the satellite map</option>
                 <option value="coordinates">Enter coordinates manually</option>
                 {LAYOUT_IMPORT_METHODS.map((item) => <option key={item.key} value={item.key}>{item.title}</option>)}
@@ -2312,7 +2322,7 @@ export default function Estates() {
                 </div>
               ) : (
                 <div className="edash-content-row edash-content-row--split">
-                  <CoordinateInput title="Add plot boundary" subtitle="Choose a spreadsheet or enter the points manually." sidebar={<div className="edash-field-note"><strong style={{ color: "var(--edash-ink)" }}>Plot boundary</strong><br />Enter each corner as a station with its coordinates.</div>} points={plotInputPoints} onUpdatePoint={updatePlotInputPoint} onRemovePoint={removePlotInputPoint} onAddPoint={addPlotInputPoint} onBulkUpload={importPlotInputPoints} disabled={false} coordinateSystem={plotInputCoordinateSystem} onCoordinateSystemChange={setPlotInputCoordinateSystem} onReorderPoints={reorderPlotInputPoints} onClearAllPoints={() => setPlotInputPoints([])} compactManualEntry />
+                  <CoordinateInput title="Plot boundary coordinates" subtitle="Enter one row for each boundary corner." points={plotInputPoints} onUpdatePoint={updatePlotInputPoint} onRemovePoint={removePlotInputPoint} onAddPoint={addPlotInputPoint} onBulkUpload={importPlotInputPoints} disabled={false} coordinateSystem={plotInputCoordinateSystem} onCoordinateSystemChange={setPlotInputCoordinateSystem} onReorderPoints={reorderPlotInputPoints} manualEntryOnly />
                   <div>
                     <div className="edash-card-head"><h3 className="edash-card-title" style={{ fontSize: "0.84rem" }}>Map preview</h3></div>
                     <p className="edash-status-row-desc" style={{ marginBottom: 8 }}>Edit the boundary on the map or use the table.</p>
