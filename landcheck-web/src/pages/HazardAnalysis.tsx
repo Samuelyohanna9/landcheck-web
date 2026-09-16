@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { lazyWithChunkRecovery } from "../utils/lazyWithChunkRecovery";
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
@@ -7,8 +7,25 @@ import CoordinateInput from "../components/CoordinateInput";
 import HazardInteractiveOverlay, { type HazardInteractiveMeta } from "../components/HazardInteractiveOverlay";
 import HazardProgressOverlay from "../components/HazardProgressOverlay";
 import HazardLoadingAnimation from "../components/HazardLoadingAnimation";
+import HazardBottomSheet, { type HazardSheetSnap } from "../components/HazardBottomSheet";
 import { fromWGS84, toWGS84 } from "../utils/coordinateConverter";
 import "../styles/hazard-analysis.css";
+
+// Below this width the left column doesn't render inline at all - HazardBottomSheet takes over
+// (see the matching `@media (max-width: 1024px)` rule in hazard-analysis.css).
+const MOBILE_BREAKPOINT_PX = 1024;
+
+function useIsMobileViewport(breakpointPx: number): boolean {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= breakpointPx);
+  useEffect(() => {
+    const query = window.matchMedia(`(max-width: ${breakpointPx}px)`);
+    const handle = () => setIsMobile(query.matches);
+    handle();
+    query.addEventListener("change", handle);
+    return () => query.removeEventListener("change", handle);
+  }, [breakpointPx]);
+  return isMobile;
+}
 
 type HazardJobStatus = {
   id: string;
@@ -315,6 +332,79 @@ const riskChipClass = (riskClass: string) => {
   return normalized;
 };
 
+// A compact radial gauge for a single 0-100 risk score - color follows the exact same tier class
+// as the .risk-chip badge beside it (low/moderate/high/severe/experimental/no-data), so the ring
+// and the text tag never disagree. `value` null renders an empty ring with a "—", for the
+// data_available === false case (never fabricates a ring for a score that wasn't computed).
+function RiskGauge({ value, tierClass, size = 56 }: { value: number | null; tierClass: string; size?: number }) {
+  const radius = 24;
+  const circumference = 2 * Math.PI * radius;
+  const pct = value == null ? 0 : Math.max(0, Math.min(100, value));
+  const offset = circumference * (1 - pct / 100);
+  return (
+    <div className={`risk-gauge risk-gauge--${tierClass}`} style={{ width: size, height: size }}>
+      <svg viewBox="0 0 56 56" className="risk-gauge-svg">
+        <circle className="risk-gauge-track" cx={28} cy={28} r={radius} />
+        {value != null && (
+          <circle
+            className="risk-gauge-fill"
+            cx={28} cy={28} r={radius}
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            transform="rotate(-90 28 28)"
+          />
+        )}
+      </svg>
+      <span className="risk-gauge-label">{value == null ? "—" : `${Math.round(value)}%`}</span>
+    </div>
+  );
+}
+
+// LULC's class breakdown is a true part-of-whole composition (classes sum to ~100% of the
+// sampled area) - a donut fits that job in a way the flood/erosion scores above don't (those are
+// independent 0-100 readings, not slices of one whole). Reuses the exact colors the backend
+// already assigns per class (class_areas[].color), so this and the segmented bars below it never
+// disagree on which color means which land cover class.
+function LulcDonut({ items, size = 148 }: { items: { label: string; pct: number; color: string }[]; size?: number }) {
+  const radius = 60;
+  const circumference = 2 * Math.PI * radius;
+  const total = items.reduce((sum, item) => sum + item.pct, 0) || 1;
+  let cursor = 0;
+  const dominant = items.reduce((best, item) => (item.pct > (best?.pct ?? -1) ? item : best), items[0]);
+  return (
+    <div className="lulc-donut" style={{ width: size, height: size }}>
+      <svg viewBox="0 0 144 144" className="lulc-donut-svg">
+        <circle className="lulc-donut-track" cx={72} cy={72} r={radius} />
+        {items.map((item) => {
+          const fraction = item.pct / total;
+          const dash = fraction * circumference;
+          // 2px surface gap between adjacent segments, per the dataviz mark spec - stroke-
+          // dasharray's own two-value form (dash, gap) can't add a fixed-px gap independent of
+          // segment size, so a small constant is subtracted from the visible dash instead.
+          const visibleDash = Math.max(0, dash - 2);
+          const el = (
+            <circle
+              key={item.label}
+              className="lulc-donut-segment"
+              cx={72} cy={72} r={radius}
+              stroke={item.color}
+              strokeDasharray={`${visibleDash} ${circumference - visibleDash}`}
+              strokeDashoffset={-cursor}
+              transform="rotate(-90 72 72)"
+            />
+          );
+          cursor += dash;
+          return el;
+        })}
+      </svg>
+      <div className="lulc-donut-center">
+        <strong>{Math.round(dominant?.pct ?? 0)}%</strong>
+        <span>{dominant?.label ?? "—"}</span>
+      </div>
+    </div>
+  );
+}
+
 function ComponentBars({ items }: { items: { label: string; value: number; color: string }[] }) {
   return (
     <div className="risk-components">
@@ -356,6 +446,29 @@ function HazardSources({ references }: { references?: HazardReference[] }) {
   );
 }
 
+// Swaps between the desktop always-visible left column and the mobile draggable bottom sheet
+// without the setup/insight JSX itself needing to exist in two places - the map behind it in
+// .hazard-right stays mounted either way.
+function LeftPanelsWrapper({
+  isMobile, children, headline, subline, snap, onSnapChange,
+}: {
+  isMobile: boolean;
+  children: ReactNode;
+  headline: ReactNode;
+  subline?: ReactNode;
+  snap: HazardSheetSnap;
+  onSnapChange: (snap: HazardSheetSnap) => void;
+}) {
+  if (isMobile) {
+    return (
+      <HazardBottomSheet headline={headline} subline={subline} snap={snap} onSnapChange={onSnapChange}>
+        {children}
+      </HazardBottomSheet>
+    );
+  }
+  return <div className="hazard-left">{children}</div>;
+}
+
 export default function HazardAnalysis() {
   const navigate = useNavigate();
   const [hazardType, setHazardType] = useState<HazardType>("flood");
@@ -384,6 +497,11 @@ export default function HazardAnalysis() {
   const [designRainfallMm, setDesignRainfallMm] = useState<string>("");
   const [shapefileLoading, setShapefileLoading] = useState(false);
   const shapefileInputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobileViewport(MOBILE_BREAKPOINT_PX);
+  const [sheetSnap, setSheetSnap] = useState<HazardSheetSnap>("half");
+  // The canvas defaults to the result view once one exists, but this lets the user flip back to
+  // the live drawing map (e.g. to tweak the boundary) without losing the result underneath it.
+  const [showLiveMap, setShowLiveMap] = useState(false);
 
   // Analysis runs as a background job (see hazards.py's async job endpoints) rather than one long
   // synchronous request, since the real work (several Earth Engine calls + local rendering) can
@@ -591,6 +709,8 @@ export default function HazardAnalysis() {
       if (hazardType === "flood") setFloodResult(job.result);
       else if (hazardType === "erosion") setErosionResult(job.result);
       else setLulcResult(job.result);
+      setShowLiveMap(false);
+      if (isMobile) setSheetSnap("half");
       toast.success(`${HAZARD_LABELS[hazardType]} analysis complete`);
     } catch (err) {
       console.error(err);
@@ -744,21 +864,21 @@ export default function HazardAnalysis() {
           <button
             type="button"
             className={`hazard-type-tab ${hazardType === "flood" ? "active" : ""}`}
-            onClick={() => setHazardType("flood")}
+            onClick={() => { setHazardType("flood"); setShowLiveMap(false); }}
           >
             Flood Risk
           </button>
           <button
             type="button"
             className={`hazard-type-tab ${hazardType === "erosion" ? "active" : ""}`}
-            onClick={() => setHazardType("erosion")}
+            onClick={() => { setHazardType("erosion"); setShowLiveMap(false); }}
           >
             Erosion Risk
           </button>
           <button
             type="button"
             className={`hazard-type-tab ${hazardType === "lulc" ? "active" : ""}`}
-            onClick={() => setHazardType("lulc")}
+            onClick={() => { setHazardType("lulc"); setShowLiveMap(false); }}
           >
             Land Use Land Cover
           </button>
@@ -766,7 +886,22 @@ export default function HazardAnalysis() {
       </header>
 
       <div className="hazard-content">
-        <div className="hazard-left">
+        <LeftPanelsWrapper
+          isMobile={isMobile}
+          snap={sheetSnap}
+          onSnapChange={setSheetSnap}
+          headline={`${HAZARD_LABELS[hazardType]}${hazardType !== "lulc" ? " Risk" : ""}`}
+          subline={
+            hazardType === "flood" && floodResult
+              ? floodResult.summary.floodplain_class
+              : hazardType === "erosion" && erosionResult
+                ? (erosionResult.data_available === false ? "No data" : `${erosionResult.risk_class} risk`)
+                : hazardType === "lulc" && lulcResult?.dominant_class
+                  ? `${lulcResult.dominant_class} dominant`
+                  : "Run an analysis to see results"
+          }
+        >
+        <div className="hazard-setup-rail">
           {hazardType !== "lulc" && (
             <div className="hazard-card">
               <h3>Analysis Mode</h3>
@@ -997,7 +1132,9 @@ export default function HazardAnalysis() {
               </label>
             )}
           </div>
+        </div>
 
+        <div className="hazard-insight-panel">
           {hazardType === "flood" && floodResult && (
             <>
               {/* Card 1: Flood Screening Summary - three independent evidence lines, deliberately
@@ -1027,210 +1164,216 @@ export default function HazardAnalysis() {
                 <p className="hazard-note">{floodResult.summary.recommendation}</p>
               </div>
 
-              {/* Card 2: River Flood Risk detail. */}
+              {/* Cards 2-4 used to be three separate always-visible cards (River/Floodplain/
+                  Rainfall) - now one card with an internal tab strip driven by floodMapView, the
+                  same state that already picks which engine the map canvas shows, so the detail
+                  card and the map never disagree about which engine is on screen. */}
               <div className="hazard-card">
-                <h3>River Flood Risk</h3>
-                <div className="risk-score">
-                  <div>
-                    <span className="risk-label">Risk Score</span>
-                    <span className="risk-value">{floodResult.river.data_available === false ? "—" : `${floodResult.river.risk_score}%`}</span>
-                  </div>
-                  <span className={`risk-chip ${riskChipClass(floodResult.river.risk_class)}`}>{floodResult.river.risk_class}</span>
+                <div className="hazard-mode-tabs">
+                  <button type="button" className={`hazard-mode-tab ${floodMapView === "river" ? "active" : ""}`} onClick={() => setFloodMapView("river")}>River Flood Risk</button>
+                  <button type="button" className={`hazard-mode-tab ${floodMapView === "floodplain" ? "active" : ""}`} onClick={() => setFloodMapView("floodplain")}>Floodplain Susceptibility</button>
+                  <button type="button" className={`hazard-mode-tab ${floodMapView === "rainfall" ? "active" : ""}`} onClick={() => setFloodMapView("rainfall")}>Rainfall Susceptibility</button>
                 </div>
-                {!!floodResult.river.buildings_total && floodResult.river.data_available !== false && (
-                  <div className="hazard-buildings-callout">
-                    <strong>{floodResult.river.buildings_threatened}</strong> of <strong>{floodResult.river.buildings_total}</strong> buildings sit in the flood zone
-                  </div>
-                )}
-                {floodResult.river.data_available !== false ? (
-                  <div className="risk-stat-grid">
-                    <div className="risk-stat-card">
-                      <strong>{floodResult.river.mean_depth_m}</strong>
-                      <span>Mean Depth (m)</span>
-                    </div>
-                    <div className="risk-stat-card">
-                      <strong>{floodResult.river.max_depth_m}</strong>
-                      <span>Max Depth (m)</span>
-                    </div>
-                    <div className="risk-stat-card">
-                      <strong>{floodResult.river.inundation_percent}%</strong>
-                      <span>Inundation</span>
-                    </div>
-                    <div className="risk-stat-card">
-                      <strong>{floodResult.river.distance_to_river_m ?? "N/A"}</strong>
-                      <span>Dist. to River (m)</span>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="hazard-warning">No modelled GloFAS river-flood inundation was detected at this location.</p>
-                )}
-                {floodResult.river.data_available !== false && riverComponentItems.length > 0 && (
+
+                {floodMapView === "river" && (
                   <>
-                    <h4 className="risk-components-title">Score components</h4>
-                    <ComponentBars items={riverComponentItems} />
+                    <div className="risk-score">
+                      <RiskGauge value={floodResult.river.data_available === false ? null : floodResult.river.risk_score} tierClass={riskChipClass(floodResult.river.risk_class)} />
+                      <div className="risk-score-meta">
+                        <span className="risk-label">Risk Score</span>
+                        <span className={`risk-chip ${riskChipClass(floodResult.river.risk_class)}`}>{floodResult.river.risk_class}</span>
+                      </div>
+                    </div>
+                    {!!floodResult.river.buildings_total && floodResult.river.data_available !== false && (
+                      <div className="hazard-buildings-callout">
+                        <strong>{floodResult.river.buildings_threatened}</strong> of <strong>{floodResult.river.buildings_total}</strong> buildings sit in the flood zone
+                      </div>
+                    )}
+                    {floodResult.river.data_available !== false ? (
+                      <div className="risk-stat-grid">
+                        <div className="risk-stat-card">
+                          <strong>{floodResult.river.mean_depth_m}</strong>
+                          <span>Mean Depth (m)</span>
+                        </div>
+                        <div className="risk-stat-card">
+                          <strong>{floodResult.river.max_depth_m}</strong>
+                          <span>Max Depth (m)</span>
+                        </div>
+                        <div className="risk-stat-card">
+                          <strong>{floodResult.river.inundation_percent}%</strong>
+                          <span>Inundation</span>
+                        </div>
+                        <div className="risk-stat-card">
+                          <strong>{floodResult.river.distance_to_river_m ?? "N/A"}</strong>
+                          <span>Dist. to River (m)</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="hazard-warning">No modelled GloFAS river-flood inundation was detected at this location.</p>
+                    )}
+                    {floodResult.river.data_available !== false && riverComponentItems.length > 0 && (
+                      <>
+                        <h4 className="risk-components-title">Score components</h4>
+                        <ComponentBars items={riverComponentItems} />
+                      </>
+                    )}
+                    {floodResult.river.note && <p className="hazard-note">{floodResult.river.note}</p>}
+                    {floodResult.river.local_elevation_used && floodResult.river.relative_elevation_m != null && (
+                      <p className="hazard-insight">
+                        Site elevation note: your surveyed points average{" "}
+                        {Math.abs(floodResult.river.relative_elevation_m).toFixed(1)} m{" "}
+                        {floodResult.river.relative_elevation_m < -0.3 ? "below" : floodResult.river.relative_elevation_m > 0.3 ? "above" : "close to"}{" "}
+                        the surrounding terrain
+                        {floodResult.river.relative_elevation_m < -0.3 ? " — low-lying sites are more prone to ponding and slow drainage." : "."}
+                      </p>
+                    )}
+                    <ConfidencePanel confidence={floodResult.river.confidence} />
+                    <details className="hazard-method">
+                      <summary>How this is computed</summary>
+                      <p>{floodResult.river.method}</p>
+                      <p>Return period: {floodResult.river.return_period} years.</p>
+                      <p>Analysis buffer: {floodResult.buffer_m} m around the plot.</p>
+                      <p>Screening only — verify with local surveys and authorities.</p>
+                      <HazardSources references={floodResult.river.references} />
+                    </details>
+                    <div className="hazard-export-row">
+                      <button className="btn-outline" onClick={downloadPdf} disabled={pdfLoading}>
+                        {pdfLoading ? "Preparing..." : "Download PDF Report"}
+                      </button>
+                      <button className="btn-outline" onClick={() => downloadGis("river")} disabled={gisLoading}>
+                        {gisLoading ? "Preparing..." : "Export River GIS Data"}
+                      </button>
+                    </div>
                   </>
                 )}
-                {floodResult.river.note && <p className="hazard-note">{floodResult.river.note}</p>}
-                {floodResult.river.local_elevation_used && floodResult.river.relative_elevation_m != null && (
-                  <p className="hazard-insight">
-                    Site elevation note: your surveyed points average{" "}
-                    {Math.abs(floodResult.river.relative_elevation_m).toFixed(1)} m{" "}
-                    {floodResult.river.relative_elevation_m < -0.3 ? "below" : floodResult.river.relative_elevation_m > 0.3 ? "above" : "close to"}{" "}
-                    the surrounding terrain
-                    {floodResult.river.relative_elevation_m < -0.3 ? " — low-lying sites are more prone to ponding and slow drainage." : "."}
-                  </p>
-                )}
-                <ConfidencePanel confidence={floodResult.river.confidence} />
-                <div className="hazard-method">
-                  <h4>How this is computed</h4>
-                  <p>{floodResult.river.method}</p>
-                  <p>Return period: {floodResult.river.return_period} years.</p>
-                  <p>Analysis buffer: {floodResult.buffer_m} m around the plot.</p>
-                  <p>Screening only — verify with local surveys and authorities.</p>
-                  <HazardSources references={floodResult.river.references} />
-                </div>
-                <div className="hazard-export-row">
-                  <button className="btn-outline" onClick={downloadPdf} disabled={pdfLoading}>
-                    {pdfLoading ? "Preparing..." : "Download PDF Report"}
-                  </button>
-                  <button className="btn-outline" onClick={() => downloadGis("river")} disabled={gisLoading}>
-                    {gisLoading ? "Preparing..." : "Export River GIS Data"}
-                  </button>
-                </div>
-              </div>
 
-              {/* Card 3: Floodplain Susceptibility detail - the always-available fallback signal
-                  (MERIT Hydro HAND) for locations, like above, where GloFAS has no direct river-
-                  depth coverage but the site still sits close to the regional drainage network. */}
-              <div className="hazard-card">
-                <h3>Floodplain Susceptibility</h3>
-                <div className="risk-score">
-                  <div>
-                    <span className="risk-label">Risk Score</span>
-                    <span className="risk-value">{floodResult.floodplain.risk_score}%</span>
-                  </div>
-                  <span className={`risk-chip ${riskChipClass(floodResult.floodplain.risk_class)}`}>{floodResult.floodplain.risk_class}</span>
-                </div>
-                {!!floodResult.floodplain.buildings_total && (
-                  <div className="hazard-buildings-callout">
-                    <strong>{floodResult.floodplain.buildings_threatened}</strong> of <strong>{floodResult.floodplain.buildings_total}</strong> buildings sit on susceptible ground
-                  </div>
-                )}
-                <div className="risk-stat-grid">
-                  <div className="risk-stat-card">
-                    <strong>{floodResult.floodplain.hand_median_m ?? "N/A"}</strong>
-                    <span>Median HAND (m)</span>
-                  </div>
-                  <div className="risk-stat-card">
-                    <strong>{floodResult.floodplain.hand_p10_m ?? "N/A"}</strong>
-                    <span>HAND P10 (m)</span>
-                  </div>
-                  <div className="risk-stat-card">
-                    <strong>{floodResult.floodplain.distance_to_major_river_m ?? "N/A"}</strong>
-                    <span>Dist. to Major River (m)</span>
-                  </div>
-                  <div className="risk-stat-card">
-                    <strong>{floodResult.floodplain.upstream_area_km2 ?? "N/A"}</strong>
-                    <span>Upstream Area (km²)</span>
-                  </div>
-                </div>
-                {floodResult.floodplain.note && <p className="hazard-note">{floodResult.floodplain.note}</p>}
-                <ConfidencePanel confidence={floodResult.floodplain.confidence} />
-                <div className="hazard-method">
-                  <h4>How this is computed</h4>
-                  <p>{floodResult.floodplain.method}</p>
-                  <p>Height Above Nearest Drainage is a provisional, pre-validation modelling signal — a documented judgment call, not a peer-reviewed universal threshold.</p>
-                  <p>Screening only — verify with local surveys and authorities.</p>
-                  <HazardSources references={floodResult.floodplain.references} />
-                </div>
-                <div className="hazard-export-row">
-                  <button className="btn-outline" onClick={() => downloadGis("floodplain")} disabled={gisLoading}>
-                    {gisLoading ? "Preparing..." : "Export Floodplain GIS Data"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Card 4: Surface-Water / Rainfall Flood Risk detail - EXPERIMENTAL. A blind
-                  validation (Phase 4) found this branch does not reliably discriminate flood-prone
-                  from well-drained sites, so its badge is a neutral "Experimental" tag rather than
-                  a colored risk tier - the underlying score/components stay visible below for
-                  transparency, but are never presented as validated risk evidence. */}
-              <div className="hazard-card">
-                <h3>Surface-Water / Rainfall Flood Risk</h3>
-                <div className="risk-score">
-                  <div>
-                    <span className="risk-label">Risk Score</span>
-                    <span className="risk-value">{floodResult.rainfall.risk_score}%</span>
-                  </div>
-                  <span className="risk-chip experimental">Experimental</span>
-                </div>
-                {!!floodResult.rainfall.buildings_total && (
-                  <div className="hazard-buildings-callout">
-                    <strong>{floodResult.rainfall.buildings_threatened}</strong> of <strong>{floodResult.rainfall.buildings_total}</strong> buildings sit on susceptible ground
-                  </div>
-                )}
-                <div className="risk-stat-grid">
-                  <div className="risk-stat-card">
-                    <strong>{floodResult.rainfall.design_rainfall_mm ?? "N/A"}</strong>
-                    <span>Design Rainfall (mm)</span>
-                  </div>
-                  <div className="risk-stat-card">
-                    <strong>{floodResult.rainfall.hydrologic_soil_group ?? "N/A"}</strong>
-                    <span>Soil Group</span>
-                  </div>
-                  <div className="risk-stat-card">
-                    <strong>{floodResult.rainfall.impervious_fraction_pct ?? "N/A"}%</strong>
-                    <span>Impervious Surface (parcel)</span>
-                  </div>
-                  <div className="risk-stat-card">
-                    <strong>{floodResult.rainfall.neighborhood_impervious_fraction_pct ?? "N/A"}%</strong>
-                    <span>Impervious Surface (300m context)</span>
-                  </div>
-                  <div className="risk-stat-card">
-                    <strong>{floodResult.rainfall.susceptibility_pct ?? "N/A"}%</strong>
-                    <span>Terrain Susceptibility</span>
-                  </div>
-                </div>
-                <p className="hazard-note hazard-note--context">
-                  Impervious surface is shown for context only — it sets the site type used in the runoff
-                  estimate below, but does not independently add to the risk score.
-                </p>
-                {rainfallComponentItems.length > 0 && (
+                {floodMapView === "floodplain" && (
                   <>
-                    <h4 className="risk-components-title">Score components</h4>
-                    <ComponentBars items={rainfallComponentItems} />
+                    <div className="risk-score">
+                      <RiskGauge value={floodResult.floodplain.risk_score} tierClass={riskChipClass(floodResult.floodplain.risk_class)} />
+                      <div className="risk-score-meta">
+                        <span className="risk-label">Risk Score</span>
+                        <span className={`risk-chip ${riskChipClass(floodResult.floodplain.risk_class)}`}>{floodResult.floodplain.risk_class}</span>
+                      </div>
+                    </div>
+                    {!!floodResult.floodplain.buildings_total && (
+                      <div className="hazard-buildings-callout">
+                        <strong>{floodResult.floodplain.buildings_threatened}</strong> of <strong>{floodResult.floodplain.buildings_total}</strong> buildings sit on susceptible ground
+                      </div>
+                    )}
+                    <div className="risk-stat-grid">
+                      <div className="risk-stat-card">
+                        <strong>{floodResult.floodplain.hand_median_m ?? "N/A"}</strong>
+                        <span>Median HAND (m)</span>
+                      </div>
+                      <div className="risk-stat-card">
+                        <strong>{floodResult.floodplain.hand_p10_m ?? "N/A"}</strong>
+                        <span>HAND P10 (m)</span>
+                      </div>
+                      <div className="risk-stat-card">
+                        <strong>{floodResult.floodplain.distance_to_major_river_m ?? "N/A"}</strong>
+                        <span>Dist. to Major River (m)</span>
+                      </div>
+                      <div className="risk-stat-card">
+                        <strong>{floodResult.floodplain.upstream_area_km2 ?? "N/A"}</strong>
+                        <span>Upstream Area (km²)</span>
+                      </div>
+                    </div>
+                    {floodResult.floodplain.note && <p className="hazard-note">{floodResult.floodplain.note}</p>}
+                    <ConfidencePanel confidence={floodResult.floodplain.confidence} />
+                    <details className="hazard-method">
+                      <summary>How this is computed</summary>
+                      <p>{floodResult.floodplain.method}</p>
+                      <p>Height Above Nearest Drainage is a provisional, pre-validation modelling signal — a documented judgment call, not a peer-reviewed universal threshold.</p>
+                      <p>Screening only — verify with local surveys and authorities.</p>
+                      <HazardSources references={floodResult.floodplain.references} />
+                    </details>
+                    <div className="hazard-export-row">
+                      <button className="btn-outline" onClick={() => downloadGis("floodplain")} disabled={gisLoading}>
+                        {gisLoading ? "Preparing..." : "Export Floodplain GIS Data"}
+                      </button>
+                    </div>
                   </>
                 )}
-                {floodResult.rainfall.scs_runoff && (
-                  <div className="risk-stat-grid">
-                    <div className="risk-stat-card">
-                      <strong>{floodResult.rainfall.scs_runoff.curve_number}</strong>
-                      <span>Curve Number</span>
+
+                {floodMapView === "rainfall" && (
+                  <>
+                    <div className="risk-score">
+                      <RiskGauge value={floodResult.rainfall.risk_score} tierClass="experimental" />
+                      <div className="risk-score-meta">
+                        <span className="risk-label">Risk Score</span>
+                        <span className="risk-chip experimental">Experimental</span>
+                      </div>
                     </div>
-                    <div className="risk-stat-card">
-                      <strong>{floodResult.rainfall.scs_runoff.runoff_mm}</strong>
-                      <span>Runoff (mm)</span>
+                    {!!floodResult.rainfall.buildings_total && (
+                      <div className="hazard-buildings-callout">
+                        <strong>{floodResult.rainfall.buildings_threatened}</strong> of <strong>{floodResult.rainfall.buildings_total}</strong> buildings sit on susceptible ground
+                      </div>
+                    )}
+                    <div className="risk-stat-grid">
+                      <div className="risk-stat-card">
+                        <strong>{floodResult.rainfall.design_rainfall_mm ?? "N/A"}</strong>
+                        <span>Design Rainfall (mm)</span>
+                      </div>
+                      <div className="risk-stat-card">
+                        <strong>{floodResult.rainfall.hydrologic_soil_group ?? "N/A"}</strong>
+                        <span>Soil Group</span>
+                      </div>
+                      <div className="risk-stat-card">
+                        <strong>{floodResult.rainfall.impervious_fraction_pct ?? "N/A"}%</strong>
+                        <span>Impervious Surface (parcel)</span>
+                      </div>
+                      <div className="risk-stat-card">
+                        <strong>{floodResult.rainfall.neighborhood_impervious_fraction_pct ?? "N/A"}%</strong>
+                        <span>Impervious Surface (300m context)</span>
+                      </div>
+                      <div className="risk-stat-card">
+                        <strong>{floodResult.rainfall.susceptibility_pct ?? "N/A"}%</strong>
+                        <span>Terrain Susceptibility</span>
+                      </div>
                     </div>
-                    <div className="risk-stat-card">
-                      <strong>{Math.round(floodResult.rainfall.scs_runoff.runoff_coefficient * 100)}%</strong>
-                      <span>Runoff Coefficient</span>
+                    <p className="hazard-note hazard-note--context">
+                      Impervious surface is shown for context only — it sets the site type used in the runoff
+                      estimate below, but does not independently add to the risk score.
+                    </p>
+                    {rainfallComponentItems.length > 0 && (
+                      <>
+                        <h4 className="risk-components-title">Score components</h4>
+                        <ComponentBars items={rainfallComponentItems} />
+                      </>
+                    )}
+                    {floodResult.rainfall.scs_runoff && (
+                      <div className="risk-stat-grid">
+                        <div className="risk-stat-card">
+                          <strong>{floodResult.rainfall.scs_runoff.curve_number}</strong>
+                          <span>Curve Number</span>
+                        </div>
+                        <div className="risk-stat-card">
+                          <strong>{floodResult.rainfall.scs_runoff.runoff_mm}</strong>
+                          <span>Runoff (mm)</span>
+                        </div>
+                        <div className="risk-stat-card">
+                          <strong>{Math.round(floodResult.rainfall.scs_runoff.runoff_coefficient * 100)}%</strong>
+                          <span>Runoff Coefficient</span>
+                        </div>
+                      </div>
+                    )}
+                    {floodResult.rainfall.note && <p className="hazard-note hazard-note--proxy">{floodResult.rainfall.note}</p>}
+                    <ConfidencePanel confidence={floodResult.rainfall.confidence} />
+                    <details className="hazard-method">
+                      <summary>How this is computed</summary>
+                      <p>{floodResult.rainfall.method}</p>
+                      <p>Analysis buffer: {floodResult.buffer_m} m around the plot.</p>
+                      <p>Susceptibility assessment only — not a prediction that a specific future storm will flood the property.</p>
+                      <HazardSources references={floodResult.rainfall.references} />
+                    </details>
+                    <div className="hazard-export-row">
+                      <button className="btn-outline" onClick={() => downloadGis("rainfall")} disabled={gisLoading}>
+                        {gisLoading ? "Preparing..." : "Export Rainfall GIS Data"}
+                      </button>
                     </div>
-                  </div>
+                  </>
                 )}
-                {floodResult.rainfall.note && <p className="hazard-note hazard-note--proxy">{floodResult.rainfall.note}</p>}
-                <ConfidencePanel confidence={floodResult.rainfall.confidence} />
-                <div className="hazard-method">
-                  <h4>How this is computed</h4>
-                  <p>{floodResult.rainfall.method}</p>
-                  <p>Analysis buffer: {floodResult.buffer_m} m around the plot.</p>
-                  <p>Susceptibility assessment only — not a prediction that a specific future storm will flood the property.</p>
-                  <HazardSources references={floodResult.rainfall.references} />
-                </div>
-                <div className="hazard-export-row">
-                  <button className="btn-outline" onClick={() => downloadGis("rainfall")} disabled={gisLoading}>
-                    {gisLoading ? "Preparing..." : "Export Rainfall GIS Data"}
-                  </button>
-                </div>
               </div>
             </>
           )}
@@ -1239,11 +1382,11 @@ export default function HazardAnalysis() {
             <div className="hazard-card">
               <h3>Erosion Risk Summary</h3>
               <div className="risk-score">
-                <div>
+                <RiskGauge value={erosionResult.data_available === false ? null : erosionResult.risk_score} tierClass={riskChipClass(erosionResult.risk_class)} />
+                <div className="risk-score-meta">
                   <span className="risk-label">Risk Score</span>
-                  <span className="risk-value">{erosionResult.data_available === false ? "—" : `${erosionResult.risk_score}%`}</span>
+                  <span className={`risk-chip ${riskChipClass(erosionResult.risk_class)}`}>{erosionResult.risk_class}</span>
                 </div>
-                <span className={`risk-chip ${riskChipClass(erosionResult.risk_class)}`}>{erosionResult.risk_class}</span>
               </div>
               {!!erosionResult.buildings_total && erosionResult.data_available !== false && (
                 <div className="hazard-buildings-callout">
@@ -1316,13 +1459,13 @@ export default function HazardAnalysis() {
                 </p>
               )}
               <ConfidencePanel confidence={erosionResult.confidence} dataGaps={erosionResult.local_data_gaps} />
-              <div className="hazard-method">
-                <h4>How this is computed</h4>
+              <details className="hazard-method">
+                <summary>How this is computed</summary>
                 <p>{erosionResult.method}</p>
                 <p>Analysis buffer: {erosionResult.buffer_m} m around the plot.</p>
                 <p>Screening only — verify with a geotechnical survey before development.</p>
                 <HazardSources references={erosionResult.references} />
-              </div>
+              </details>
               <div className="hazard-export-row">
                 <button className="btn-outline" onClick={downloadPdf} disabled={pdfLoading}>
                   {pdfLoading ? "Preparing..." : "Download PDF Report"}
@@ -1346,9 +1489,12 @@ export default function HazardAnalysis() {
               {lulcResult.data_available !== false && lulcResult.class_areas.length > 0 && (
                 <>
                   <h4 className="risk-components-title">Land cover breakdown</h4>
-                  <ComponentBars
-                    items={lulcResult.class_areas.map((c) => ({ label: c.label, value: c.pct / 100, color: c.color }))}
-                  />
+                  <div className="lulc-breakdown">
+                    <LulcDonut items={lulcResult.class_areas.map((c) => ({ label: c.label, pct: c.pct, color: c.color }))} />
+                    <ComponentBars
+                      items={lulcResult.class_areas.map((c) => ({ label: c.label, value: c.pct / 100, color: c.color }))}
+                    />
+                  </div>
                 </>
               )}
               {lulcResult.data_available === false && (
@@ -1357,8 +1503,8 @@ export default function HazardAnalysis() {
                 </p>
               )}
               <p className="hazard-note">{lulcResult.note}</p>
-              <div className="hazard-method">
-                <h4>How this is computed</h4>
+              <details className="hazard-method">
+                <summary>How this is computed</summary>
                 <p>
                   Land cover is classified from Esri's 10m Annual Land Cover dataset (Sentinel-2-derived, via
                   Impact Observatory), sampled over the plot boundary. The map's hillshade terrain background
@@ -1367,7 +1513,7 @@ export default function HazardAnalysis() {
                 <p>Analysis buffer: {lulcResult.buffer_m} m around the plot (map context only).</p>
                 <p>Informational summary only — land cover is not a risk score.</p>
                 <HazardSources references={lulcResult.references} />
-              </div>
+              </details>
               <div className="hazard-export-row">
                 <button className="btn-outline" onClick={downloadPdf} disabled={pdfLoading}>
                   {pdfLoading ? "Preparing..." : "Download PDF Report"}
@@ -1376,75 +1522,71 @@ export default function HazardAnalysis() {
             </div>
           )}
         </div>
+        </LeftPanelsWrapper>
 
         <div className="hazard-right">
-          <div className="hazard-map">
-            <Suspense fallback={<div className="hazard-empty"><HazardLoadingAnimation label="Loading map..." size="small" /></div>}>
-              <MapViewEnhanced coordinates={mapCoordinates} onCoordinatesDrawn={handleCoordinatesFromMap} />
-            </Suspense>
-          </div>
-          <div className="hazard-overlay">
-            <h3>{hazardType === "lulc" ? "Land Cover" : `${HAZARD_LABELS[hazardType]} Risk`} Overlay</h3>
-            {hazardType === "flood" && floodResult && (
-              <div className="hazard-type-tabs hazard-flood-map-tabs">
-                <button
-                  type="button"
-                  className={`hazard-type-tab ${floodMapView === "river" ? "active" : ""}`}
-                  onClick={() => setFloodMapView("river")}
-                >
-                  River
+          <div className="hazard-canvas">
+            <div className="hazard-canvas-controls">
+              {hazardType === "flood" && floodResult && !showLiveMap ? (
+                <div className="hazard-type-tabs hazard-flood-map-tabs">
+                  <button type="button" className={`hazard-type-tab ${floodMapView === "river" ? "active" : ""}`} onClick={() => setFloodMapView("river")}>River</button>
+                  <button type="button" className={`hazard-type-tab ${floodMapView === "floodplain" ? "active" : ""}`} onClick={() => setFloodMapView("floodplain")}>Floodplain</button>
+                  <button type="button" className={`hazard-type-tab ${floodMapView === "rainfall" ? "active" : ""}`} onClick={() => setFloodMapView("rainfall")}>Rainfall</button>
+                  <button type="button" className={`hazard-type-tab ${floodView3D ? "active" : ""}`} onClick={() => setFloodView3D((v) => !v)}>3D View</button>
+                </div>
+              ) : showLiveMap || !result ? (
+                // No label chip here while the live map is showing - MapViewEnhanced's own
+                // Satellite/Vector switch already occupies this same top-left corner, and a second
+                // floating chip on top of it would collide rather than add information.
+                <span />
+              ) : (
+                <span className="hazard-canvas-label">{`${hazardType === "lulc" ? "Land Cover" : `${HAZARD_LABELS[hazardType]} Risk`} Overlay`}</span>
+              )}
+              {result && (
+                <button type="button" className="hazard-canvas-toggle" onClick={() => setShowLiveMap((v) => !v)}>
+                  {showLiveMap ? "View Result" : "Edit Boundary"}
                 </button>
-                <button
-                  type="button"
-                  className={`hazard-type-tab ${floodMapView === "floodplain" ? "active" : ""}`}
-                  onClick={() => setFloodMapView("floodplain")}
-                >
-                  Floodplain
-                </button>
-                <button
-                  type="button"
-                  className={`hazard-type-tab ${floodMapView === "rainfall" ? "active" : ""}`}
-                  onClick={() => setFloodMapView("rainfall")}
-                >
-                  Rainfall
-                </button>
-                <button
-                  type="button"
-                  className={`hazard-type-tab ${floodView3D ? "active" : ""}`}
-                  onClick={() => setFloodView3D((v) => !v)}
-                >
-                  3D View
-                </button>
+              )}
+            </div>
+
+            {showLiveMap || !result ? (
+              <div className="hazard-canvas-map">
+                <Suspense fallback={<div className="hazard-empty"><HazardLoadingAnimation label="Loading map..." size="small" /></div>}>
+                  <MapViewEnhanced coordinates={mapCoordinates} onCoordinatesDrawn={handleCoordinatesFromMap} basemapToggle />
+                </Suspense>
               </div>
-            )}
-            {hazardType === "flood" && floodResult && floodView3D ? (
-              <Suspense fallback={<div className="hazard-empty"><HazardLoadingAnimation label="Loading 3D view..." size="small" /></div>}>
-                <HazardFlood3DView
-                  key={floodMapView}
-                  overlaySrc={displayOverlay}
-                  interactive={displayInteractive}
-                  engineLabel={floodMapView === "rainfall" ? "Rainfall susceptibility" : floodMapView === "floodplain" ? "Floodplain susceptibility" : "River flood"}
-                  riskClass={activeFloodEngine?.risk_class}
-                  waterDepthM={flood3DWater.depthM}
-                  waterDepthModelled={flood3DWater.modelled}
-                  waterDataAvailable={flood3DWater.dataAvailable}
-                />
-              </Suspense>
-            ) : displayOverlay ? (
-              <>
-                {/* Both hazard maps now bake their own legend, scale bar, and north arrow into
-                    the rendered image, so the separate CSS/JSON-driven ones are no longer shown. */}
-                <HazardInteractiveOverlay
-                  src={displayOverlay}
-                  alt={`${hazardType} risk overlay`}
-                  interactive={displayInteractive}
-                />
-                <div className="hazard-buffer">Buffer: {displayBufferM} m</div>
-              </>
-            ) : hazardType === "flood" && floodResult && floodMapView === "river" ? (
-              <div className="hazard-empty">No modelled GloFAS coverage — no river-flood map to show for this location.</div>
             ) : (
-              <div className="hazard-empty">Run analysis to see overlay</div>
+              <div className="hazard-canvas-result">
+                {hazardType === "flood" && floodResult && floodView3D ? (
+                  <Suspense fallback={<div className="hazard-empty"><HazardLoadingAnimation label="Loading 3D view..." size="small" /></div>}>
+                    <HazardFlood3DView
+                      key={floodMapView}
+                      overlaySrc={displayOverlay}
+                      interactive={displayInteractive}
+                      engineLabel={floodMapView === "rainfall" ? "Rainfall susceptibility" : floodMapView === "floodplain" ? "Floodplain susceptibility" : "River flood"}
+                      riskClass={activeFloodEngine?.risk_class}
+                      waterDepthM={flood3DWater.depthM}
+                      waterDepthModelled={flood3DWater.modelled}
+                      waterDataAvailable={flood3DWater.dataAvailable}
+                    />
+                  </Suspense>
+                ) : displayOverlay ? (
+                  <>
+                    {/* Both hazard maps now bake their own legend, scale bar, and north arrow into
+                        the rendered image, so the separate CSS/JSON-driven ones are no longer shown. */}
+                    <HazardInteractiveOverlay
+                      src={displayOverlay}
+                      alt={`${hazardType} risk overlay`}
+                      interactive={displayInteractive}
+                    />
+                    <div className="hazard-buffer">Buffer: {displayBufferM} m</div>
+                  </>
+                ) : hazardType === "flood" && floodResult && floodMapView === "river" ? (
+                  <div className="hazard-empty">No modelled GloFAS coverage — no river-flood map to show for this location.</div>
+                ) : (
+                  <div className="hazard-empty">Run analysis to see overlay</div>
+                )}
+              </div>
             )}
           </div>
         </div>

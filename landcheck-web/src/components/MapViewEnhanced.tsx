@@ -42,6 +42,13 @@ type Props = {
   // built-in controls stay exactly as they were by default, and only get replaced by the new
   // toolbar when a caller explicitly opts in (Survey Plan Production does).
   showToolbar?: boolean;
+  // Lighter-weight than showToolbar: renders only the Satellite/Vector switch (same glass toolbar
+  // chrome, same basemapStyle state), without pulling in the rest of the toolbar or disabling
+  // Mapbox Draw's own built-in polygon/trash controls the way showToolbar does. For a caller like
+  // Hazard Analysis that wants a basemap toggle but must keep Draw's default create/clear
+  // interaction exactly as it is today. Ignored when showToolbar is already true (that already
+  // includes the same switch).
+  basemapToggle?: boolean;
 };
 
 // Nigeria spans UTM zones 31N-33N, split at fixed meridians - picking the wrong zone for a
@@ -185,6 +192,7 @@ function MapViewEnhanced({
   viewMode = "boundary",
   spotHeightPoints,
   showToolbar = false,
+  basemapToggle = false,
   drawShape = "polygon",
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -1075,6 +1083,19 @@ function MapViewEnhanced({
           </div>
         )}
       </div>
+      )}
+
+      {!showToolbar && basemapToggle && (
+        <div className="map-toolbar map-toolbar--minimal" role="toolbar" aria-label="Basemap style">
+          <div className="map-basemap-switch" role="group" aria-label="Basemap style">
+            <button type="button" className={basemapStyle === "satellite" ? "active" : ""} onClick={() => setBasemapStyle("satellite")} disabled={disabled}>
+              Satellite
+            </button>
+            <button type="button" className={basemapStyle === "vector" ? "active" : ""} onClick={() => setBasemapStyle("vector")} disabled={disabled}>
+              Vector
+            </button>
+          </div>
+        </div>
       )}
 
       {showToolbar && hasDrawSelection && mapTool !== "measure" && (
