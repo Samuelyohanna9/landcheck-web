@@ -1722,14 +1722,14 @@ export default function Estates() {
 
                   <div className="edash-info-card" style={{ flexDirection: "column" }}>
                     <div className="edash-info-card-head"><span className="edash-status-row-title">Site notes</span></div>
-                    <div style={{ display: "flex", gap: 8, margin: "6px 0" }}>
-                      <select className="edash-map-select" value={inspectionOutcome} onChange={(event) => setInspectionOutcome(event.target.value)}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "6px 0" }}>
+                      <select className="edash-map-select" style={{ minWidth: 0 }} value={inspectionOutcome} onChange={(event) => setInspectionOutcome(event.target.value)}>
                         <option value="observed">Observed</option>
                         <option value="passed">Passed</option>
                         <option value="attention_required">Attention required</option>
                         <option value="failed">Failed</option>
                       </select>
-                      <input value={inspectionNotes} onChange={(event) => setInspectionNotes(event.target.value)} placeholder="Optional site note" style={{ flex: 1, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
+                      <input value={inspectionNotes} onChange={(event) => setInspectionNotes(event.target.value)} placeholder="Optional site note" style={{ flex: "1 1 140px", minWidth: 0, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
                       <button type="button" className="edash-btn-outline" onClick={() => void recordInspection()}>Save</button>
                     </div>
                     {inspections.slice(0, 4).map((inspection) => (
