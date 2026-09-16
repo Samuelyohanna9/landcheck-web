@@ -120,6 +120,20 @@ export const exchangeSurveyGoogleCode = async (code: string) => {
   return session;
 };
 
+// The Survey working plot behind an Estate survey request is owned by a real Survey account (see
+// the backend's _resolve_survey_owner_user_id), not shared/anonymous - opening it only works if
+// this browser's Survey session already belongs to that exact account, which is rarely true (a
+// different team member or device may have started it, or this browser may have an unrelated
+// Survey session active already). Rather than let that surface as "could not be opened in this
+// Survey account", this replaces whatever Survey session exists here with the correct one for the
+// plot's actual owner before handing off - call it right before navigating to /survey-plan.
+export const claimEstateSurveyRequestSession = async (surveyRequestId: number) => {
+  const res = await api.post<{ survey_session: SurveySessionResponse }>(`/estates/survey-requests/${surveyRequestId}/survey-session`);
+  const session = normalizeSurveySession(res.data?.survey_session || {});
+  setSurveyAuthSession(session);
+  return session;
+};
+
 export const startSurveyGoogleSignIn = () => {
   if (typeof window === "undefined") return;
   const baseURL = String(api.defaults.baseURL || "").replace(/\/+$/, "");

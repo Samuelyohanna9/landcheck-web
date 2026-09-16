@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { clearEstateAuthSession } from "../auth/estateAuth";
+import { claimEstateSurveyRequestSession } from "../auth/surveyAuth";
 import { api, extractApiErrorMessage } from "../api/client";
 import { money, PAYMENT_METHODS } from "../components/estates/FinancialComponents";
 import CoordinateInput from "../components/CoordinateInput";
@@ -1204,6 +1205,7 @@ export default function Estates() {
         const started = await api.post(`/estates/survey-requests/${survey.id}/start`);
         survey = { ...survey, ...started.data };
       }
+      await claimEstateSurveyRequestSession(survey.id);
       setPlotContextMenu(null);
       navigate(`/survey-plan?mode=survey&estate_survey_plot=${survey.survey_working_plot_id || ""}&return_estate_id=${estateId}&return_plot_id=${plotId}`);
     } catch (error) {
@@ -1954,7 +1956,23 @@ export default function Estates() {
                         </div>
                       </div>
                       {!selectedSurvey.materialized && <button type="button" className="edash-btn-primary" onClick={() => void runWorkflow("Survey workspace", () => api.post(`/estates/survey-requests/${selectedSurvey.id}/start`))}>Open Survey preparation</button>}
-                      {selectedSurvey.materialized && <Link className="edash-btn-outline" style={{ display: "inline-flex", marginRight: 8 }} to={`/survey-plan?mode=survey&estate_survey_plot=${selectedSurvey.survey_working_plot_id || ""}&return_estate_id=${estateId}&return_plot_id=${selectedSurvey.plot.id}`}>Open approved plot in Survey</Link>}
+                      {selectedSurvey.materialized && (
+                        <button
+                          type="button"
+                          className="edash-btn-outline"
+                          style={{ display: "inline-flex", marginRight: 8 }}
+                          onClick={() => void (async () => {
+                            try {
+                              await claimEstateSurveyRequestSession(selectedSurvey.id);
+                              navigate(`/survey-plan?mode=survey&estate_survey_plot=${selectedSurvey.survey_working_plot_id || ""}&return_estate_id=${estateId}&return_plot_id=${selectedSurvey.plot.id}`);
+                            } catch (error) {
+                              toast.error(await extractApiErrorMessage(error, "Could not open this plot in Survey."));
+                            }
+                          })()}
+                        >
+                          Open approved plot in Survey
+                        </button>
+                      )}
                       {selectedSurvey.materialized && selectedSurvey.status !== "completed" && <button type="button" className="edash-btn-primary" onClick={() => void runWorkflow("Survey completion", () => api.post(`/estates/survey-requests/${selectedSurvey.id}/complete`))}>Mark Survey complete</button>}
                     </>
                   ) : (
