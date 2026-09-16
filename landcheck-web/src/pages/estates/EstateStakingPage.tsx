@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
@@ -9,7 +10,6 @@ export default function EstateStakingPage() {
   const [estateName, setEstateName] = useState("");
   const [tasks, setTasks] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
-  const [message, setMessage] = useState("");
 
   const load = () => {
     if (!estateId) return;
@@ -20,8 +20,8 @@ export default function EstateStakingPage() {
   useEffect(load, [estateId]);
 
   const run = async (label: string, action: () => Promise<unknown>) => {
-    try { await action(); setMessage(`${label} completed.`); load(); }
-    catch (error) { setMessage(await extractApiErrorMessage(error, `${label} could not be completed.`)); }
+    try { await action(); toast.success(`${label} completed.`); load(); }
+    catch (error) { toast.error(await extractApiErrorMessage(error, `${label} could not be completed.`)); }
   };
 
   const downloadDgps = async (taskId: number) => {
@@ -30,7 +30,7 @@ export default function EstateStakingPage() {
       const url = URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = url; link.download = `staking-task-${taskId}.csv`; link.click(); URL.revokeObjectURL(url);
-    } catch (error) { setMessage(await extractApiErrorMessage(error, "DGPS CSV could not be downloaded.")); }
+    } catch (error) { toast.error(await extractApiErrorMessage(error, "DGPS CSV could not be downloaded.")); }
   };
 
   if (!estateId) return null;
@@ -40,7 +40,6 @@ export default function EstateStakingPage() {
       <div className="edash-card">
         <div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Staking tasks ({tasks.length})</h3></div>
-          {message && <p className="edash-tab-empty" style={{ padding: "4px 0" }}>{message}</p>}
           {tasks.length ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {tasks.map((task) => (

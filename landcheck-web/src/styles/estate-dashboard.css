@@ -1100,10 +1100,11 @@
 .edash-stats-row--five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 
 /* ─── Responsive ─── */
-@media (max-width: 1320px) {
-  .edash-stats-row, .edash-stats-row--five { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-
+/* The stats row stays a single row all the way down to the sidebar-collapse breakpoint (860px,
+   below) - cards shrink via their own minmax(0, 1fr) tracks instead of wrapping to a second row,
+   which used to happen as early as 1320px (i.e. on most laptop screens) and pushed the map/drawer
+   panel beside it down to a fraction of its height for no reason. Only genuinely narrow (tablet
+   and phone) widths below drop to fewer columns. */
 @media (max-width: 1180px) {
   .edash-content-row, .edash-content-row--split, .edash-map-grid { grid-template-columns: 1fr; }
   .edash-drawer { min-height: 300px; }
@@ -1155,7 +1156,7 @@
   .edash.is-sidebar-open .edash-sidebar-backdrop { opacity: 1; pointer-events: auto; }
   .edash-menu-toggle { display: flex; }
   .edash-breadcrumb strong { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
-  .edash-stats-row, .edash-stats-row--five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .edash-stats-row, .edash-stats-row--five { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   /* Recent Activity / Estate Progress / Risk Overview shrink to fit rather than stack - each
      card's own content (icons, text, the donut) scales down further below so all three stay
      legible side by side instead of one spilling onto its own full-width row underneath. Every
@@ -1189,6 +1190,7 @@
 
 @media (max-width: 520px) {
   .edash-overview-grid--2, .edash-overview-grid--3 { grid-template-columns: 1fr; }
+  .edash-stats-row, .edash-stats-row--five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* ─── Estate onboarding: pick or create an estate (no sidebar - nothing to navigate to yet) ─── */

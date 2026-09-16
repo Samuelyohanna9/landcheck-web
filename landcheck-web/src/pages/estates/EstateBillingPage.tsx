@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import { getEstateAuthSession } from "../../auth/estateAuth";
 import EstateShell from "../../components/estates/EstateShell";
@@ -44,8 +45,6 @@ export default function EstateBillingPage() {
   const [charges, setCharges] = useState<Charge[]>([]);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
 
   useEffect(() => {
     api.get("/estates").then((response) => {
@@ -64,7 +63,7 @@ export default function EstateBillingPage() {
       setStatus(statusResponse.data);
       setCharges(chargesResponse.data || []);
     } catch (err) {
-      setError(await extractApiErrorMessage(err, "Billing details could not be loaded."));
+      toast.error(await extractApiErrorMessage(err, "Billing details could not be loaded."));
     }
   };
 
@@ -73,14 +72,13 @@ export default function EstateBillingPage() {
   const upgrade = async (planKey: EstatePlanKey) => {
     if (!organizationId) return;
     setBusy(true);
-    setError("");
     try {
       await api.post("/estates/billing/change-plan", { plan_key: planKey }, { params: { organization_id: organizationId } });
-      setMessage(`You're now on the ${ESTATE_PLANS[planKey].label} plan.`);
+      toast.success(`You're now on the ${ESTATE_PLANS[planKey].label} plan.`);
       setShowUpgrade(false);
       await load();
     } catch (err) {
-      setError(await extractApiErrorMessage(err, "Plan could not be changed."));
+      toast.error(await extractApiErrorMessage(err, "Plan could not be changed."));
     } finally {
       setBusy(false);
     }
@@ -89,13 +87,12 @@ export default function EstateBillingPage() {
   const cancel = async () => {
     if (!organizationId || !window.confirm("Cancel your subscription? You'll keep access until the end of your current billing period.")) return;
     setBusy(true);
-    setError("");
     try {
       await api.post("/estates/billing/cancel", {}, { params: { organization_id: organizationId } });
-      setMessage("Your subscription has been cancelled.");
+      toast.success("Your subscription has been cancelled.");
       await load();
     } catch (err) {
-      setError(await extractApiErrorMessage(err, "Subscription could not be cancelled."));
+      toast.error(await extractApiErrorMessage(err, "Subscription could not be cancelled."));
     } finally {
       setBusy(false);
     }
@@ -108,8 +105,6 @@ export default function EstateBillingPage() {
       <div className="edash-card" style={{ marginBottom: 16 }}>
         <div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Billing &amp; plan</h3></div>
-          {message && <p className="edash-tab-empty" style={{ padding: "0 0 10px" }}>{message}</p>}
-          {error && <p className="edash-tab-empty" style={{ padding: "0 0 10px" }}>{error}</p>}
           {!status ? (
             <p className="edash-tab-empty"><Spinner size={13} /> Loading...</p>
           ) : (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import { money } from "../../components/estates/FinancialComponents";
 import EstateShell from "../../components/estates/EstateShell";
@@ -13,7 +14,6 @@ export default function EstateReportsPage() {
   const [hazards, setHazards] = useState<any>(null);
   const [activity, setActivity] = useState<any[]>([]);
   const [reportBusy, setReportBusy] = useState(false);
-  const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (!estateId) return;
@@ -27,14 +27,13 @@ export default function EstateReportsPage() {
   const downloadReport = async () => {
     if (!estateId) return;
     setReportBusy(true);
-    setMessage("");
     try {
       const response = await api.get(`/estates/${estateId}/exports/report.pdf`, { responseType: "blob" });
       const url = URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = url; link.download = `${estateName || "estate"}-performance-report.pdf`; link.click(); URL.revokeObjectURL(url);
     } catch (error) {
-      setMessage(await extractApiErrorMessage(error, "The report PDF could not be generated."));
+      toast.error(await extractApiErrorMessage(error, "The report PDF could not be generated."));
     } finally {
       setReportBusy(false);
     }
@@ -49,7 +48,6 @@ export default function EstateReportsPage() {
           {reportBusy ? <><Spinner size={13} /> Generating...</> : "Download report (PDF)"}
         </button>
       </div>
-      {message && <p className="edash-tab-empty" style={{ padding: "0 0 12px" }}>{message}</p>}
       <div className="edash-bottom-row">
         <div className="edash-card">
           <div className="edash-card-inner">

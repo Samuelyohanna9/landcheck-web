@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 
@@ -16,7 +17,6 @@ export default function EstateDevelopmentPage() {
   const [estateName, setEstateName] = useState("");
   const [plots, setPlots] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
-  const [message, setMessage] = useState("");
 
   const load = () => {
     if (!estateId) return;
@@ -30,8 +30,9 @@ export default function EstateDevelopmentPage() {
     try {
       await api.patch(`/estates/plots/${plotId}/development-status`, { status });
       setPlots((current) => current.map((plot) => (plot.id === plotId ? { ...plot, development_status: status } : plot)));
+      toast.success("Development status updated.");
     } catch (error) {
-      setMessage(await extractApiErrorMessage(error, "Development status could not be saved."));
+      toast.error(await extractApiErrorMessage(error, "Development status could not be saved."));
     }
   };
 
@@ -58,7 +59,6 @@ export default function EstateDevelopmentPage() {
       <div className="edash-card">
         <div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Development status by plot</h3></div>
-          {message && <p className="edash-tab-empty" style={{ padding: "4px 0" }}>{message}</p>}
           {plots.length ? (
             <div style={{ overflowX: "auto" }}>
               <table className="edash-mini-table">

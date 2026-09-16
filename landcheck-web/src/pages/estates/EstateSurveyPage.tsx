@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
@@ -10,7 +11,6 @@ export default function EstateSurveyPage() {
   const [estateName, setEstateName] = useState("");
   const [requests, setRequests] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
-  const [message, setMessage] = useState("");
 
   const load = () => {
     if (!estateId) return;
@@ -21,8 +21,8 @@ export default function EstateSurveyPage() {
   useEffect(load, [estateId]);
 
   const run = async (label: string, action: () => Promise<unknown>) => {
-    try { await action(); setMessage(`${label} completed.`); load(); }
-    catch (error) { setMessage(await extractApiErrorMessage(error, `${label} could not be completed.`)); }
+    try { await action(); toast.success(`${label} completed.`); load(); }
+    catch (error) { toast.error(await extractApiErrorMessage(error, `${label} could not be completed.`)); }
   };
 
   if (!estateId) return null;
@@ -32,7 +32,6 @@ export default function EstateSurveyPage() {
       <div className="edash-card">
         <div className="edash-card-inner">
           <div className="edash-card-head"><h3 className="edash-card-title">Survey requests ({requests.length})</h3></div>
-          {message && <p className="edash-tab-empty" style={{ padding: "4px 0" }}>{message}</p>}
           {requests.length ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {requests.map((item) => (

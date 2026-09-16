@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import { money, PAYMENT_METHODS } from "../../components/estates/FinancialComponents";
 import EstateShell from "../../components/estates/EstateShell";
@@ -43,7 +44,6 @@ export default function EstateCommissionsPage() {
   const [payoutNotes, setPayoutNotes] = useState("");
   const [payoutReceipt, setPayoutReceipt] = useState<File | null>(null);
   const [payoutBusy, setPayoutBusy] = useState(false);
-  const [payoutError, setPayoutError] = useState("");
 
   const loadCommissionData = async (orgId: number) => {
     try {
@@ -95,12 +95,12 @@ export default function EstateCommissionsPage() {
     setAgentBusy(true);
     try {
       await api.post(`/estates/organizations/${organizationId}/members`, { subject_type: "manual_agent", subject_id: newAgentName.trim(), role_key: newAgentRole });
-      setMessage(`${newAgentName.trim()} added.`);
+      toast.success(`${newAgentName.trim()} added.`);
       setNewAgentName("");
       setShowAddAgent(false);
       await loadAgents(organizationId);
     } catch (error) {
-      setMessage(await extractApiErrorMessage(error, "Agent could not be added."));
+      toast.error(await extractApiErrorMessage(error, "Agent could not be added."));
     } finally {
       setAgentBusy(false);
     }
@@ -130,9 +130,10 @@ export default function EstateCommissionsPage() {
     if (!organizationId) return;
     try {
       await api.patch(`/estates/organizations/${organizationId}/members/${member.id}`, { is_active: !member.is_active });
+      toast.success(member.is_active ? "Agent deactivated." : "Agent reactivated.");
       await loadAgents(organizationId);
     } catch (error) {
-      setMessage(await extractApiErrorMessage(error, "Agent could not be updated."));
+      toast.error(await extractApiErrorMessage(error, "Agent could not be updated."));
     }
   };
 
@@ -145,9 +146,9 @@ export default function EstateCommissionsPage() {
       });
       setCommissionTiers((response.data.tiers || []).map((tier: any) => ({ label: tier.label, min_cumulative_sales: tier.min_cumulative_sales, rate_percent: tier.rate_percent })));
       setCommissionTiersUsingDefaults(false);
-      setMessage("Commission tiers saved.");
+      toast.success("Commission tiers saved.");
     } catch (error) {
-      setMessage(await extractApiErrorMessage(error, "Commission tiers could not be saved."));
+      toast.error(await extractApiErrorMessage(error, "Commission tiers could not be saved."));
     } finally {
       setCommissionTiersBusy(false);
     }
@@ -161,13 +162,11 @@ export default function EstateCommissionsPage() {
     setPayoutReference("");
     setPayoutNotes("");
     setPayoutReceipt(null);
-    setPayoutError("");
   };
 
   const submitPayout = async () => {
     if (!payoutAllocationId) return;
     setPayoutBusy(true);
-    setPayoutError("");
     try {
       const response = await api.post(`/estates/allocations/${payoutAllocationId}/commission-payout`, {
         amount: payoutAmount ? Number(payoutAmount) : null,
@@ -183,10 +182,10 @@ export default function EstateCommissionsPage() {
         catch { /* the payout itself already succeeded - a failed receipt upload shouldn't undo it */ }
       }
       setPayoutAllocationId(null);
-      setMessage("Commission payout recorded.");
+      toast.success("Commission payout recorded.");
       await refreshAfterPayout();
     } catch (error) {
-      setPayoutError(await extractApiErrorMessage(error, "Payout could not be recorded."));
+      toast.error(await extractApiErrorMessage(error, "Payout could not be recorded."));
     } finally {
       setPayoutBusy(false);
     }
@@ -418,7 +417,6 @@ export default function EstateCommissionsPage() {
                                     <span>Receipt / proof of payment (optional)</span>
                                     <input type="file" accept="image/*,.pdf" onChange={(event) => setPayoutReceipt(event.target.files?.[0] || null)} />
                                   </label>
-                                  {payoutError && <p className="edash-tab-empty" style={{ padding: "0 0 8px", textAlign: "left" }}>{payoutError}</p>}
                                   <div style={{ display: "flex", gap: 8 }}>
                                     <button type="button" className="edash-btn-primary" disabled={payoutBusy || !payoutAmount} onClick={() => void submitPayout()}>
                                       {payoutBusy ? <><Spinner size={13} /> Recording...</> : "Record payment"}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
@@ -18,7 +19,6 @@ export default function EstateSettingsPage() {
   const [ruleEnabled, setRuleEnabled] = useState(false);
   const [rulePercentage, setRulePercentage] = useState("0");
   const [activity, setActivity] = useState<any[]>([]);
-  const [message, setMessage] = useState("");
 
   const load = () => {
     if (!estateId) return;
@@ -41,10 +41,10 @@ export default function EstateSettingsPage() {
   const saveEstate = async () => {
     try {
       await api.patch(`/estates/${estateId}`, { name: name.trim(), location_text: location.trim() || null, unit_system: unitSystem });
-      setMessage("Estate details saved.");
+      toast.success("Estate details saved.");
       load();
     } catch (error) {
-      setMessage(await extractApiErrorMessage(error, "Estate details could not be saved."));
+      toast.error(await extractApiErrorMessage(error, "Estate details could not be saved."));
     }
   };
 
@@ -56,9 +56,9 @@ export default function EstateSettingsPage() {
         percentage: Number(rulePercentage || 0),
         description: "Minimum confirmed payment percentage before Survey preparation",
       });
-      setMessage("Survey eligibility rule saved.");
+      toast.success("Survey eligibility rule saved.");
     } catch (error) {
-      setMessage(await extractApiErrorMessage(error, "Survey eligibility could not be saved."));
+      toast.error(await extractApiErrorMessage(error, "Survey eligibility could not be saved."));
     }
   };
 
@@ -68,8 +68,9 @@ export default function EstateSettingsPage() {
       const response = await api.post(`/estates/${estateId}/blocks`, { label: blockLabel.trim(), name: blockName.trim() || null });
       setBlocks((current) => [...current, response.data]);
       setBlockLabel(""); setBlockName(""); setShowAddBlock(false);
+      toast.success("Block added.");
     } catch (error) {
-      setMessage(await extractApiErrorMessage(error, "Block could not be saved."));
+      toast.error(await extractApiErrorMessage(error, "Block could not be saved."));
     }
   };
 
@@ -77,7 +78,6 @@ export default function EstateSettingsPage() {
 
   return (
     <EstateShell estateId={estateId} estateName={estateDetail?.name} activeKey="settings" recentActivity={activity}>
-      {message && <p className="edash-tab-empty" style={{ textAlign: "left", padding: "4px 2px" }}>{message}</p>}
       <div className="edash-card" style={{ marginBottom: 16 }}>
         <div className="edash-card-inner">
           <div className="edash-card-head">

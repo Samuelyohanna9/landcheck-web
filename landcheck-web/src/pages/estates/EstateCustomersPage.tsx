@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import { money } from "../../components/estates/FinancialComponents";
 import EstateShell from "../../components/estates/EstateShell";
@@ -55,13 +56,14 @@ export default function EstateCustomersPage() {
   };
 
   const createCustomer = async () => {
-    if (!organizationId || !newName.trim()) { setMessage("Enter the customer name."); return; }
+    if (!organizationId || !newName.trim()) { toast.error("Enter the customer name."); return; }
     try {
       await api.post(`/estates/organizations/${organizationId}/customers`, { full_name: newName.trim(), phone: newPhone.trim() || null, email: newEmail.trim() || null });
-      setNewName(""); setNewPhone(""); setNewEmail(""); setMessage(""); setShowAddCustomer(false);
+      setNewName(""); setNewPhone(""); setNewEmail(""); setShowAddCustomer(false);
+      toast.success("Customer added.");
       load();
     } catch (error) {
-      setMessage(await extractApiErrorMessage(error, "Customer could not be created."));
+      toast.error(await extractApiErrorMessage(error, "Customer could not be created."));
     }
   };
 
@@ -128,7 +130,6 @@ export default function EstateCustomersPage() {
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Full name</span><input value={newName} onChange={(event) => setNewName(event.target.value)} autoFocus /></label>
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Phone (optional)</span><input value={newPhone} onChange={(event) => setNewPhone(event.target.value)} /></label>
           <label className="edash-field" style={{ marginBottom: 12 }}><span>Email (optional)</span><input type="email" value={newEmail} onChange={(event) => setNewEmail(event.target.value)} placeholder="Lifecycle updates are sent here" /></label>
-          {message && <p className="edash-tab-empty" style={{ padding: "0 0 8px", textAlign: "left" }}>{message}</p>}
           <button type="button" className="edash-btn-primary" onClick={() => void createCustomer()}>Add customer</button>
         </EstateModal>
       )}
