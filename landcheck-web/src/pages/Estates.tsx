@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import { clearEstateAuthSession } from "../auth/estateAuth";
 import { api, extractApiErrorMessage } from "../api/client";
 import { money, PAYMENT_METHODS } from "../components/estates/FinancialComponents";
@@ -459,23 +460,23 @@ export default function Estates() {
   const [layoutProposal, setLayoutProposal] = useState<any>(null);
   const [pendingLayoutApproval, setPendingLayoutApproval] = useState<{ proposalId: number } | null>(null);
   const [layoutDesignerBusy, setLayoutDesignerBusy] = useState(false);
-  const [layoutDesignerMessage, setLayoutDesignerMessageRaw] = useState("");
-  const [layoutDesignerMessageTone, setLayoutDesignerMessageTone] = useState<MessageTone>("good");
-  const setLayoutDesignerMessage = (text: string, tone: MessageTone = "good") => { setLayoutDesignerMessageRaw(text); setLayoutDesignerMessageTone(tone); };
   const [message, setMessageRaw] = useState("Loading estates...");
   const [messageTone, setMessageTone] = useState<MessageTone>("good");
   const setMessage = (text: string, tone: MessageTone = "good") => { setMessageRaw(text); setMessageTone(tone); };
-  // A handful of actions (reserve/allocate a plot) reload the whole page on success to refresh the
-  // many pieces of state that depend on it - which wipes out any setMessage() call made right
-  // before the reload. This relay lets such an action stash a message just before reloading, read
-  // back and shown once here on the next mount.
+  // A handful of actions (reserve/allocate a plot, create a plot, subdivide, etc.) reload the whole
+  // page on success to refresh the many pieces of state that depend on it - which wipes out any
+  // toast fired right before the reload. This relay lets such an action stash a message just before
+  // reloading, read back and shown once here as a toast on the next mount.
+  const stashPendingNotice = (text: string, tone: MessageTone = "good") => {
+    try { sessionStorage.setItem("edash_pending_notice", JSON.stringify({ text, tone })); } catch { /* storage unavailable - the toast is simply skipped after reload */ }
+  };
   useEffect(() => {
     const pending = sessionStorage.getItem("edash_pending_notice");
     if (!pending) return;
     sessionStorage.removeItem("edash_pending_notice");
     try {
       const { text, tone } = JSON.parse(pending);
-      if (text) setMessage(text, tone || "good");
+      if (text) (tone === "danger" ? toast.error : toast.success)(text);
     } catch { /* malformed - ignore */ }
   }, []);
   const [allocations, setAllocations] = useState<any[]>([]);
@@ -497,9 +498,6 @@ export default function Estates() {
   const [layoutPdfPaperSize, setLayoutPdfPaperSize] = useState("A3");
   const [layoutPdfIncludeCustomerNames, setLayoutPdfIncludeCustomerNames] = useState(false);
   const [layoutDgpsExportBusy, setLayoutDgpsExportBusy] = useState(false);
-  const [workflowMessage, setWorkflowMessageRaw] = useState("");
-  const [workflowMessageTone, setWorkflowMessageTone] = useState<MessageTone>("good");
-  const setWorkflowMessage = (text: string, tone: MessageTone = "good") => { setWorkflowMessageRaw(text); setWorkflowMessageTone(tone); };
   const [stakingEvidence, setStakingEvidence] = useState<File | null>(null);
   const [plotGeojson, setPlotGeojson] = useState<any>({ type: "FeatureCollection", features: [] });
   const [layerGeojson, setLayerGeojson] = useState<any>({ type: "FeatureCollection", features: [] });
@@ -534,9 +532,6 @@ export default function Estates() {
   const [showEditPlotBoundary, setShowEditPlotBoundary] = useState(false);
   const [editPlotPoints, setEditPlotPoints] = useState<Array<{ station: string; lng: number; lat: number }>>([]);
   const [editPlotBusy, setEditPlotBusy] = useState(false);
-  const [editPlotMessage, setEditPlotMessageRaw] = useState("");
-  const [editPlotMessageTone, setEditPlotMessageTone] = useState<MessageTone>("good");
-  const setEditPlotMessage = (text: string, tone: MessageTone = "good") => { setEditPlotMessageRaw(text); setEditPlotMessageTone(tone); };
   const [resetLayoutConfirmText, setResetLayoutConfirmText] = useState("");
   const [showResetLayoutConfirm, setShowResetLayoutConfirm] = useState(false);
   const [resetLayoutBusy, setResetLayoutBusy] = useState(false);
@@ -587,9 +582,9 @@ export default function Estates() {
       .catch(async (error) => setMessage(await extractApiErrorMessage(error, "Estates are not available for this account."), "danger"));
   }, []);
   const createEstate = async () => {
-    if (!newEstateOrg || !newEstateName.trim()) { setMessage("Choose an organization and enter an Estate name.", "danger"); return; }
+    if (!newEstateOrg || !newEstateName.trim()) { toast.error("Choose an organization and enter an Estate name."); return; }
     try { const response=await api.post(`/estates/organizations/${newEstateOrg}`, { name:newEstateName.trim(), location_text:newEstateLocation.trim() || null, crs:newEstateCrs.trim() || "EPSG:4326", datum:newEstateDatum.trim() || null, project_reference:newEstateProjectReference.trim() || null, project_owner:newEstateProjectOwner.trim() || null, ownership_details:newEstateOwnershipDetails.trim() || null, boundary: null }); window.location.assign(`/estates/${response.data.id}/map`); }
-    catch (error) { setMessage(await extractApiErrorMessage(error, "Estate could not be created."), "danger"); }
+    catch (error) { toast.error(await extractApiErrorMessage(error, "Estate could not be created.")); }
   };
   const deleteEstate = async (force: boolean = false) => {
     if (!deleteEstateTarget) return;
@@ -598,7 +593,7 @@ export default function Estates() {
       await api.delete(`/estates/${deleteEstateTarget.id}`, force ? { params: { force: true } } : undefined);
       setEstates((current) => current.filter((estate) => estate.id !== deleteEstateTarget.id));
       if (selectedExistingEstateId === String(deleteEstateTarget.id)) setSelectedExistingEstateId("");
-      setMessage(`"${deleteEstateTarget.name}" was deleted.`);
+      toast.success(`"${deleteEstateTarget.name}" was deleted.`);
       setDeleteEstateTarget(null);
       setDeleteEstateConfirmText("");
       setDeleteEstateAllocationWarning(null);
@@ -607,7 +602,7 @@ export default function Estates() {
       if (error?.response?.status === 409 && detail && typeof detail === "object" && detail.requires_force) {
         setDeleteEstateAllocationWarning(detail.message || `${detail.allocated_count} plot(s) in this Estate have a customer reservation or allocation.`);
       } else {
-        setMessage(await extractApiErrorMessage(error, "That Estate could not be deleted."), "danger");
+        toast.error(await extractApiErrorMessage(error, "That Estate could not be deleted."));
       }
     } finally {
       setDeleteEstateBusy(false);
@@ -615,8 +610,8 @@ export default function Estates() {
   };
   const approveEstateMap = async () => {
     if (!estateId) return;
-    try { const response = await api.post(`/estates/${estateId}/approve-map`); setDashboard((current: any) => current ? { ...current, estate: { ...current.estate, status: response.data.status } } : current); setWorkflowMessage("Estate map approved and published as the operational plot register."); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Resolve the geometry issues before publishing the Estate map."), "danger"); }
+    try { const response = await api.post(`/estates/${estateId}/approve-map`); setDashboard((current: any) => current ? { ...current, estate: { ...current.estate, status: response.data.status } } : current); toast.success("Estate map approved and published as the operational plot register."); }
+    catch (error) { toast.error(await extractApiErrorMessage(error, "Resolve the geometry issues before publishing the Estate map.")); }
   };
   const updatePlotInputPoint = (index: number, field: string, value: string | number | boolean) => {
     setPlotInputPoints((current) => current.map((point, pointIndex) => pointIndex === index ? { ...point, [field]: value } : point));
@@ -634,43 +629,44 @@ export default function Estates() {
     const reorderedMapPoints = order.map((index) => plotInputMapPoints[index]);
     setPlotInputPoints(reordered);
     const closed = checkPolygonClosure(reorderedMapPoints.map((point) => [point.lng, point.lat] as [number, number])) === "closed";
-    setWorkflowMessage(closed ? "Point order corrected. Review the boundary, then create the plot." : "The points still cross. Edit the point order manually before creating the plot.", closed ? "good" : "danger");
+    (closed ? toast.success : toast.error)(closed ? "Point order corrected. Review the boundary, then create the plot." : "The points still cross. Edit the point order manually before creating the plot.");
   };
   const handlePlotCoordinatesDrawn = (points: Array<{ station: string; lng: number; lat: number }>) => {
     setPlotInputCoordinateSystem("wgs84");
     setPlotInputPoints(points.map((point) => ({ ...point, is_boundary: true })));
-    setWorkflowMessage("Boundary updated from the map. Review it, then create the plot.");
+    toast.success("Boundary updated from the map. Review it, then create the plot.");
   };
   const importPlotInputPoints = (points: EstateCoordinatePoint[]) => {
     setPlotInputPoints(points.map((point, index) => ({ ...point, station: point.station || `P${index + 1}`, is_boundary: true })));
   };
   const createPlotFromInput = async () => {
-    if (!estateId || !plotNumber.trim()) { setWorkflowMessage("Enter a plot number first.", "danger"); return; }
-    if (plotInputPoints.length < 3) { setWorkflowMessage("Add at least three boundary points or import a coordinate file.", "danger"); return; }
+    if (!estateId || !plotNumber.trim()) { toast.error("Enter a plot number first."); return; }
+    if (plotInputPoints.length < 3) { toast.error("Add at least three boundary points or import a coordinate file."); return; }
     const ring = plotInputMapPoints.map((point) => [point.lng, point.lat]);
-    if (ring.length < 3 || ring.some((point) => point.some((value) => !Number.isFinite(value)))) { setWorkflowMessage("Check the coordinate values before creating this plot.", "danger"); return; }
-    if (plotInputClosure === "self-intersecting") { setWorkflowMessage("Order the boundary points before creating the plot.", "danger"); return; }
-    try { await api.post(`/estates/${estateId}/plots`, { plot_number: plotNumber.trim(), geometry: { type: "Polygon", coordinates: [[...ring, ring[0]]] }, geometry_status: "approved" }); window.location.reload(); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Plot could not be created."), "danger"); }
+    if (ring.length < 3 || ring.some((point) => point.some((value) => !Number.isFinite(value)))) { toast.error("Check the coordinate values before creating this plot."); return; }
+    if (plotInputClosure === "self-intersecting") { toast.error("Order the boundary points before creating the plot."); return; }
+    try { await api.post(`/estates/${estateId}/plots`, { plot_number: plotNumber.trim(), geometry: { type: "Polygon", coordinates: [[...ring, ring[0]]] }, geometry_status: "approved" }); stashPendingNotice("Plot created."); window.location.reload(); }
+    catch (error) { toast.error(await extractApiErrorMessage(error, "Plot could not be created.")); }
   };
   const createEstateBoundaryFromInput = async () => {
     if (!estateId) return;
-    if (plotInputPoints.length < 3) { setWorkflowMessage("Add at least three boundary points or import a coordinate file.", "danger"); return; }
+    if (plotInputPoints.length < 3) { toast.error("Add at least three boundary points or import a coordinate file."); return; }
     const ring = plotInputMapPoints.map((point) => [point.lng, point.lat]);
-    if (ring.length < 3 || ring.some((point) => point.some((value) => !Number.isFinite(value)))) { setWorkflowMessage("Check the coordinate values before setting the boundary.", "danger"); return; }
-    if (plotInputClosure === "self-intersecting") { setWorkflowMessage("Order the boundary points before setting the boundary.", "danger"); return; }
-    try { await api.patch(`/estates/${estateId}`, { boundary: { type: "Polygon", coordinates: [[...ring, ring[0]]] } }); window.location.reload(); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Estate boundary could not be set."), "danger"); }
+    if (ring.length < 3 || ring.some((point) => point.some((value) => !Number.isFinite(value)))) { toast.error("Check the coordinate values before setting the boundary."); return; }
+    if (plotInputClosure === "self-intersecting") { toast.error("Order the boundary points before setting the boundary."); return; }
+    try { await api.patch(`/estates/${estateId}`, { boundary: { type: "Polygon", coordinates: [[...ring, ring[0]]] } }); stashPendingNotice("Estate boundary set."); window.location.reload(); }
+    catch (error) { toast.error(await extractApiErrorMessage(error, "Estate boundary could not be set.")); }
   };
   const useAsEstateBoundary = async (plotId: number) => {
     if (!estateId) return;
     const feature = plotGeojson.features.find((item: any) => Number(item.properties?.id) === plotId);
-    if (!feature?.geometry) { setWorkflowMessage("Could not find that plot's geometry.", "danger"); return; }
+    if (!feature?.geometry) { toast.error("Could not find that plot's geometry."); return; }
     try {
       await api.patch(`/estates/${estateId}`, { boundary: feature.geometry });
+      stashPendingNotice("Estate boundary set.");
       window.location.reload();
     } catch (error) {
-      setWorkflowMessage(await extractApiErrorMessage(error, "Estate boundary could not be set."), "danger");
+      toast.error(await extractApiErrorMessage(error, "Estate boundary could not be set."));
     }
   };
   const deletePlot = async () => {
@@ -678,10 +674,11 @@ export default function Estates() {
     setDeletePlotBusy(true);
     try {
       await api.delete(`/estates/${estateId}/plots/${selectedPlot.id}`);
+      stashPendingNotice("Plot deleted.");
       window.location.reload();
     } catch (error) {
       setShowDeletePlotConfirm(false);
-      setWorkflowMessage(await extractApiErrorMessage(error, "Plot could not be deleted."), "danger");
+      toast.error(await extractApiErrorMessage(error, "Plot could not be deleted."));
     } finally {
       setDeletePlotBusy(false);
     }
@@ -692,27 +689,27 @@ export default function Estates() {
     const ring: number[][] = feature?.geometry?.type === "Polygon" ? feature.geometry.coordinates[0] : [];
     const withoutClosingPoint = ring.length > 1 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1] ? ring.slice(0, -1) : ring;
     setEditPlotPoints(withoutClosingPoint.map(([lng, lat], index) => ({ station: `P${index + 1}`, lng, lat })));
-    setEditPlotMessage("");
     setShowEditPlotBoundary(true);
   };
   const savePlotBoundary = async () => {
     if (!estateId || !selectedPlot) return;
-    if (editPlotPoints.length < 3) { setEditPlotMessage("Add at least three boundary points.", "danger"); return; }
+    if (editPlotPoints.length < 3) { toast.error("Add at least three boundary points."); return; }
     const ring = editPlotPoints.map((point) => [point.lng, point.lat]);
-    if (checkPolygonClosure(ring as [number, number][]) === "self-intersecting") { setEditPlotMessage("This boundary crosses itself - adjust the vertices before saving.", "danger"); return; }
+    if (checkPolygonClosure(ring as [number, number][]) === "self-intersecting") { toast.error("This boundary crosses itself - adjust the vertices before saving."); return; }
     setEditPlotBusy(true);
     try {
       await api.patch(`/estates/${estateId}/plots/${selectedPlot.id}/geometry`, { geometry: { type: "Polygon", coordinates: [[...ring, ring[0]]] } });
+      stashPendingNotice("Plot boundary saved.");
       window.location.reload();
     } catch (error) {
-      setEditPlotMessage(await extractApiErrorMessage(error, "Plot boundary could not be saved."), "danger");
+      toast.error(await extractApiErrorMessage(error, "Plot boundary could not be saved."));
     } finally {
       setEditPlotBusy(false);
     }
   };
   const handleEditPlotCoordinatesDrawn = (points: Array<{ station: string; lng: number; lat: number }>) => {
     setEditPlotPoints(points);
-    setEditPlotMessage("Boundary updated from the map. Review it, then save.");
+    toast.success("Boundary updated from the map. Review it, then save.");
   };
   const parseCoordinateTextToPoints = (text: string) => text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line, index) => {
     const [lng, lat] = line.split(/[\s,]+/).map(Number);
@@ -729,10 +726,11 @@ export default function Estates() {
     setResetLayoutBusy(true);
     try {
       await api.delete(`/estates/${estateId}/layout`);
+      stashPendingNotice("Layout reset.");
       window.location.reload();
     } catch (error) {
       setShowResetLayoutConfirm(false);
-      setWorkflowMessage(await extractApiErrorMessage(error, "Layout could not be reset."), "danger");
+      toast.error(await extractApiErrorMessage(error, "Layout could not be reset."));
     } finally {
       setResetLayoutBusy(false);
     }
@@ -741,16 +739,16 @@ export default function Estates() {
     if (!estateId) return;
     const splitCount = Number(subdivisionCount);
     if (!Number.isInteger(splitCount) || splitCount < 2 || splitCount > 100) {
-      setWorkflowMessage("Choose between 2 and 100 new plots.", "danger");
+      toast.error("Choose between 2 and 100 new plots.");
       return;
     }
     setSubdivisionBusy(true);
     try {
       const response = await api.post(`/estates/${estateId}/plots/${plotId}/subdivide`, { split_count: splitCount });
-      setWorkflowMessage(`${response.data.created_count} plots created. They are ready to reserve or allocate.`);
+      stashPendingNotice(`${response.data.created_count} plots created. They are ready to reserve or allocate.`);
       window.location.reload();
     } catch (error) {
-      setWorkflowMessage(await extractApiErrorMessage(error, "This plot could not be split."), "danger");
+      toast.error(await extractApiErrorMessage(error, "This plot could not be split."));
     } finally {
       setSubdivisionBusy(false);
     }
@@ -763,29 +761,29 @@ export default function Estates() {
     if (!estateId || !estateDetail?.boundary) return;
     const splitCount = Number(subdivisionCount);
     if (!Number.isInteger(splitCount) || splitCount < 2 || splitCount > 200) {
-      setWorkflowMessage("Choose between 2 and 200 new plots.", "danger");
+      toast.error("Choose between 2 and 200 new plots.");
       return;
     }
     setSubdivisionBusy(true);
     try {
       const created = await api.post(`/estates/${estateId}/plots`, { plot_number: "WHOLE", geometry: estateDetail.boundary, geometry_status: "approved" });
       const response = await api.post(`/estates/${estateId}/plots/${created.data.id}/subdivide`, { split_count: splitCount });
-      setWorkflowMessage(`${response.data.created_count} plots created from the boundary. They are ready to reserve or allocate.`);
+      stashPendingNotice(`${response.data.created_count} plots created from the boundary. They are ready to reserve or allocate.`);
       window.location.reload();
     } catch (error) {
-      setWorkflowMessage(await extractApiErrorMessage(error, "The boundary could not be split into plots."), "danger");
+      toast.error(await extractApiErrorMessage(error, "The boundary could not be split into plots."));
     } finally {
       setSubdivisionBusy(false);
     }
   };
   const createCustomer = async () => {
     const estate = estates.find((item) => item.id === Number(estateId));
-    if (!estate || !customerName.trim()) { setMessage("Enter the customer name.", "danger"); return; }
-    try { const response = await api.post(`/estates/organizations/${estate.organization_id}/customers`, { full_name: customerName.trim(), phone: customerPhone.trim() || null, email: customerEmail.trim() || null }); setSelectedCustomerId(String(response.data.id)); setCustomerName(""); setCustomerPhone(""); setCustomerEmail(""); window.location.reload(); }
-    catch (error) { setMessage(await extractApiErrorMessage(error, "Customer could not be created."), "danger"); }
+    if (!estate || !customerName.trim()) { toast.error("Enter the customer name."); return; }
+    try { const response = await api.post(`/estates/organizations/${estate.organization_id}/customers`, { full_name: customerName.trim(), phone: customerPhone.trim() || null, email: customerEmail.trim() || null }); setSelectedCustomerId(String(response.data.id)); setCustomerName(""); setCustomerPhone(""); setCustomerEmail(""); stashPendingNotice("Customer added."); window.location.reload(); }
+    catch (error) { toast.error(await extractApiErrorMessage(error, "Customer could not be created.")); }
   };
   const assignCustomer = async (allocate: boolean) => {
-    if (!estateId || !selectedPlot || !selectedCustomerId) { setMessage("Choose a parcel and customer first.", "danger"); return; }
+    if (!estateId || !selectedPlot || !selectedCustomerId) { toast.error("Choose a parcel and customer first."); return; }
     try {
       const [agentSubjectType, agentSubjectId] = salesAgentSubject ? salesAgentSubject.split("::") : [null, null];
       const response = await api.post(`/estates/${estateId}/plots/${selectedPlot.id}/${allocate ? "allocate" : "reserve"}`, {
@@ -803,41 +801,39 @@ export default function Estates() {
         try { await api.post(`/estates/payments/${response.data.initial_payment_id}/evidence`, form); }
         catch { /* the reservation/allocation itself already succeeded - a failed receipt upload shouldn't block it */ }
       }
-      if (response.data.customer_notified) {
-        sessionStorage.setItem("edash_pending_notice", JSON.stringify({ text: `Plot ${allocate ? "allocated" : "reserved"}. A confirmation email has been sent to the customer.`, tone: "good" }));
-      }
+      stashPendingNotice(`Plot ${allocate ? "allocated" : "reserved"}.${response.data.customer_notified ? " A confirmation email has been sent to the customer." : ""}`);
       window.location.reload();
     }
-    catch (error) { setMessage(await extractApiErrorMessage(error, "Parcel action could not be completed."), "danger"); }
+    catch (error) { toast.error(await extractApiErrorMessage(error, "Parcel action could not be completed.")); }
   };
   const recordInspection = async () => {
     if (!selectedPlot) return;
-    try { await api.post(`/estates/plots/${selectedPlot.id}/inspections`, { inspection_type: "site_visit", outcome: inspectionOutcome, notes: inspectionNotes || null }); setInspectionNotes(""); setWorkflowMessage("Field inspection recorded."); setInspections((await api.get(`/estates/plots/${selectedPlot.id}/inspections`)).data); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Inspection could not be recorded."), "danger"); }
+    try { await api.post(`/estates/plots/${selectedPlot.id}/inspections`, { inspection_type: "site_visit", outcome: inspectionOutcome, notes: inspectionNotes || null }); setInspectionNotes(""); toast.success("Field inspection recorded."); setInspections((await api.get(`/estates/plots/${selectedPlot.id}/inspections`)).data); }
+    catch (error) { toast.error(await extractApiErrorMessage(error, "Inspection could not be recorded.")); }
   };
   useEffect(() => { const plot = plots.find((item) => item.id === selectedPlotId); if (!plot) { setInspections([]); return; } api.get(`/estates/plots/${plot.id}/inspections`).then((response) => setInspections(response.data || [])).catch(() => setInspections([])); }, [plots, selectedPlotId]);
   useEffect(() => { const plot = plots.find((item) => item.id === selectedPlotId); if (!plot) { setPlotTimeline([]); return; } api.get(`/estates/plots/${plot.id}/timeline`).then((response) => setPlotTimeline(response.data || [])).catch(() => setPlotTimeline([])); }, [plots, selectedPlotId]);
   const loadHazards = async () => {
     if (!selectedPlot) return;
-    try { const response = await api.post(`/estates/plots/${selectedPlot.id}/hazards/assess`); setHazards(response.data); if (estateId) setHazardDashboard((await api.get(`/estates/${estateId}/hazards`)).data); }
+    try { const response = await api.post(`/estates/plots/${selectedPlot.id}/hazards/assess`); setHazards(response.data); if (estateId) setHazardDashboard((await api.get(`/estates/${estateId}/hazards`)).data); toast.success("Hazard screening completed."); }
     catch (error) {
       if (isUpgradeRequiredError(error)) setHazardUpgradeRequired(true);
-      else setWorkflowMessage(await extractApiErrorMessage(error, "Hazard screening could not be loaded."), "danger");
+      else toast.error(await extractApiErrorMessage(error, "Hazard screening could not be loaded."));
     }
   };
   const createLayer = async () => {
     if (!estateId) return;
     const coordinates=layerCoordinates.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => line.split(/[\s,]+/).map(Number)).filter((point) => point.length >= 2 && point.every(Number.isFinite)).map(([lng,lat]) => [lng,lat]);
-    if (coordinates.length < 2) { setWorkflowMessage("Enter at least two longitude, latitude rows for the layer.", "danger"); return; }
+    if (coordinates.length < 2) { toast.error("Enter at least two longitude, latitude rows for the layer."); return; }
     const polygon=layerType === "open_space";
     const geometry=polygon ? {type:"Polygon",coordinates:[[...coordinates,coordinates[0]]]} : {type:"LineString",coordinates};
-    try { await api.post(`/estates/${estateId}/layers`, {feature_type:layerType,name:layerName || null,geometry}); window.location.reload(); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error,"Layer could not be saved."), "danger"); }
+    try { await api.post(`/estates/${estateId}/layers`, {feature_type:layerType,name:layerName || null,geometry}); stashPendingNotice("Layer added."); window.location.reload(); }
+    catch (error) { toast.error(await extractApiErrorMessage(error,"Layer could not be saved.")); }
   };
   const createBlock = async () => {
-    if (!estateId || !blockLabel.trim()) { setWorkflowMessage("Enter a block label first.", "danger"); return; }
-    try { const response = await api.post(`/estates/${estateId}/blocks`, { label: blockLabel.trim(), name: blockName.trim() || null }); setBlocks((current) => [...current, response.data]); setBlockLabel(""); setBlockName(""); setWorkflowMessage("Block added to the estate register."); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Block could not be saved."), "danger"); }
+    if (!estateId || !blockLabel.trim()) { toast.error("Enter a block label first."); return; }
+    try { const response = await api.post(`/estates/${estateId}/blocks`, { label: blockLabel.trim(), name: blockName.trim() || null }); setBlocks((current) => [...current, response.data]); setBlockLabel(""); setBlockName(""); toast.success("Block added to the estate register."); }
+    catch (error) { toast.error(await extractApiErrorMessage(error, "Block could not be saved.")); }
   };
   const refreshImportReviews = async () => {
     if (!estateId) return;
@@ -846,7 +842,7 @@ export default function Estates() {
   const uploadLayout = async (kind: "csv" | "geojson" | "dxf" | "scanned-layout") => {
     if (!estateId) return;
     const selected = kind === "csv" ? csvFile : kind === "geojson" ? geojsonFile : kind === "dxf" ? dxfFile : scannedLayoutFile;
-    if (!selected) { setLayoutMessage("Choose a file before uploading.", "danger"); return; }
+    if (!selected) { setLayoutMessage("Choose a file before uploading.", "danger"); toast.error("Choose a file before uploading."); return; }
     const form = new FormData(); form.append("file", selected);
     setLayoutUploadBusy(true);
     setLayoutMessage("");
@@ -855,7 +851,12 @@ export default function Estates() {
       await api.post(`/estates/${estateId}/import-reviews/${kind}`, form, { params });
       await refreshImportReviews();
       setLayoutMessage("Your layout is ready to review below.");
-    } catch (error) { setLayoutMessage(await extractApiErrorMessage(error, "Layout import could not be uploaded."), "danger"); }
+      toast.success("Your layout is ready to review below.");
+    } catch (error) {
+      const text = await extractApiErrorMessage(error, "Layout import could not be uploaded.");
+      setLayoutMessage(text, "danger");
+      toast.error(text);
+    }
     finally { setLayoutUploadBusy(false); }
   };
   const decideImportReview = async (reviewId: number, status: "approved" | "rejected", asBoundary = false) => {
@@ -864,10 +865,16 @@ export default function Estates() {
     try {
       await api.post(`/estates/import-reviews/${reviewId}/decision`, { status, as_boundary: asBoundary });
       await refreshImportReviews();
-      setLayoutMessage(status === "approved" ? (asBoundary ? "Estate boundary set. Open \"Design Layout\" to subdivide it or design a layout automatically." : "Plots added to your Estate register.") : "Layout discarded.");
-      if (status === "approved") window.location.reload();
+      const text = status === "approved" ? (asBoundary ? "Estate boundary set. Open \"Design Layout\" to subdivide it or design a layout automatically." : "Plots added to your Estate register.") : "Layout discarded.";
+      setLayoutMessage(text);
+      if (status === "approved") { stashPendingNotice(text); window.location.reload(); }
+      else toast.success(text);
     }
-    catch (error) { setLayoutMessage(await extractApiErrorMessage(error, "Import decision could not be saved."), "danger"); }
+    catch (error) {
+      const text = await extractApiErrorMessage(error, "Import decision could not be saved.");
+      setLayoutMessage(text, "danger");
+      toast.error(text);
+    }
     finally { setLayoutUploadBusy(false); }
   };
   const startGeoreferenceImport = async (file: File) => {
@@ -882,9 +889,13 @@ export default function Estates() {
       const session = (await api.post("/survey-georeference/sessions", form)).data.session;
       await api.post(`/estates/${estateId}/import-reviews/from-georeference-session`, { survey_georeference_session_id: session.id });
       await refreshImportReviews();
-      setLayoutMessage("Layout session created. Open the georeference tool to place control points and trace each plot.");
+      const text = "Layout session created. Open the georeference tool to place control points and trace each plot.";
+      setLayoutMessage(text);
+      toast.success(text);
     } catch (error) {
-      setLayoutMessage(await extractApiErrorMessage(error, "The scanned layout could not be started."), "danger");
+      const text = await extractApiErrorMessage(error, "The scanned layout could not be started.");
+      setLayoutMessage(text, "danger");
+      toast.error(text);
     } finally {
       setLayoutUploadBusy(false);
     }
@@ -907,13 +918,12 @@ export default function Estates() {
   const generateLayoutProposal = async (criteria: Record<string, unknown>) => {
     if (!estateId) return;
     setLayoutDesignerBusy(true);
-    setLayoutDesignerMessage("");
     try {
       const response = await api.post(`/estates/${estateId}/layout-proposals`, criteria);
       setLayoutProposal(response.data);
-      setLayoutDesignerMessage("Draft layout created. Review it before adding plots to the Estate.");
+      toast.success("Draft layout created. Review it before adding plots to the Estate.");
     } catch (error) {
-      setLayoutDesignerMessage(await extractApiErrorMessage(error, "The draft layout could not be created."), "danger");
+      toast.error(await extractApiErrorMessage(error, "The draft layout could not be created."));
     } finally {
       setLayoutDesignerBusy(false);
     }
@@ -927,51 +937,51 @@ export default function Estates() {
       return;
     }
     setLayoutDesignerBusy(true);
-    setLayoutDesignerMessage("");
     try {
       await api.post(`/estates/layout-proposals/${proposalId}/decision`, { status, replace_existing: Boolean(options?.replaceExisting) });
-      setLayoutDesignerMessage(status === "approved" ? "The plots and shared spaces were added to the Estate map." : "Draft layout discarded.");
       setPendingLayoutApproval(null);
-      if (status === "approved") window.location.reload();
-      else setLayoutProposal((current: any) => current ? { ...current, status } : current);
+      if (status === "approved") {
+        stashPendingNotice("The plots and shared spaces were added to the Estate map.");
+        window.location.reload();
+      } else {
+        toast.success("Draft layout discarded.");
+        setLayoutProposal((current: any) => current ? { ...current, status } : current);
+      }
     } catch (error) {
-      setLayoutDesignerMessage(await extractApiErrorMessage(error, "The layout decision could not be saved."), "danger");
+      toast.error(await extractApiErrorMessage(error, "The layout decision could not be saved."));
     } finally {
       setLayoutDesignerBusy(false);
     }
   };
   const editLayoutProposalCandidates = async (proposalId: number, plotCandidates: any[], featureCandidates?: any[]) => {
-    setLayoutDesignerMessage("");
     try {
       const payload: Record<string, unknown> = { plot_candidates: plotCandidates };
       if (featureCandidates) payload.feature_candidates = featureCandidates;
       const response = await api.patch(`/estates/layout-proposals/${proposalId}`, payload);
       setLayoutProposal(response.data);
-      setLayoutDesignerMessage(`Saved. ${response.data.candidates?.length || 0} plots in this draft now.`);
+      toast.success(`Saved. ${response.data.candidates?.length || 0} plots in this draft now.`);
     } catch (error) {
-      setLayoutDesignerMessage(await extractApiErrorMessage(error, "Your changes could not be saved."), "danger");
+      toast.error(await extractApiErrorMessage(error, "Your changes could not be saved."));
       throw error;
     }
   };
   const addLayoutProposalFeature = async (proposalId: number, featureType: "road" | "open_space", geometry: any, widthM: number | undefined, plotCandidates: any[]) => {
-    setLayoutDesignerMessage("");
     try {
       const response = await api.post(`/estates/layout-proposals/${proposalId}/features`, { feature_type: featureType, geometry, width_m: widthM, plot_candidates: plotCandidates });
       setLayoutProposal(response.data);
-      setLayoutDesignerMessage(`${featureType === "road" ? "Road" : "Open space"} added. ${response.data.candidates?.length || 0} plots remain in this draft.`);
+      toast.success(`${featureType === "road" ? "Road" : "Open space"} added. ${response.data.candidates?.length || 0} plots remain in this draft.`);
     } catch (error) {
-      setLayoutDesignerMessage(await extractApiErrorMessage(error, "That shape could not be added."), "danger");
+      toast.error(await extractApiErrorMessage(error, "That shape could not be added."));
       throw error;
     }
   };
   const removeLayoutProposalFeature = async (proposalId: number, featureIndex: number, plotCandidates: any[], featureCandidates: any[]) => {
-    setLayoutDesignerMessage("");
     try {
       const response = await api.post(`/estates/layout-proposals/${proposalId}/remove-feature`, { feature_index: featureIndex, plot_candidates: plotCandidates, feature_candidates: featureCandidates });
       setLayoutProposal(response.data);
-      setLayoutDesignerMessage(`Removed. ${response.data.candidates?.length || 0} plots in this draft now.`);
+      toast.success(`Removed. ${response.data.candidates?.length || 0} plots in this draft now.`);
     } catch (error) {
-      setLayoutDesignerMessage(await extractApiErrorMessage(error, "That shape could not be removed."), "danger");
+      toast.error(await extractApiErrorMessage(error, "That shape could not be removed."));
       throw error;
     }
   };
@@ -986,16 +996,16 @@ export default function Estates() {
     if (!estateId || !selectedLayerId) return;
     const feature = (layerGeojson.features || []).find((item: any) => String(item.id) === selectedLayerId);
     const points = layerEditCoordinates.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => line.split(/[\s,]+/).map(Number)).filter((point) => point.length >= 2 && point.every(Number.isFinite)).map(([lng, lat]) => [lng, lat]);
-    if (!feature || points.length < 2) { setWorkflowMessage("Enter at least two valid coordinate rows.", "danger"); return; }
+    if (!feature || points.length < 2) { toast.error("Enter at least two valid coordinate rows."); return; }
     const isPolygon = feature.geometry.type === "Polygon";
     const ring = isPolygon && points[0].join() !== points[points.length - 1].join() ? [...points, points[0]] : points;
-    try { await api.patch(`/estates/${estateId}/layers/${selectedLayerId}`, { geometry: isPolygon ? { type: "Polygon", coordinates: [ring] } : { type: "LineString", coordinates: points } }); setLayerGeojson((current: any) => ({ ...current, features: current.features.map((item: any) => item.id === Number(selectedLayerId) ? { ...item, geometry: isPolygon ? { type: "Polygon", coordinates: [ring] } : { type: "LineString", coordinates: points } } : item) })); setWorkflowMessage("Layer geometry updated."); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Layer could not be updated."), "danger"); }
+    try { await api.patch(`/estates/${estateId}/layers/${selectedLayerId}`, { geometry: isPolygon ? { type: "Polygon", coordinates: [ring] } : { type: "LineString", coordinates: points } }); setLayerGeojson((current: any) => ({ ...current, features: current.features.map((item: any) => item.id === Number(selectedLayerId) ? { ...item, geometry: isPolygon ? { type: "Polygon", coordinates: [ring] } : { type: "LineString", coordinates: points } } : item) })); toast.success("Layer geometry updated."); }
+    catch (error) { toast.error(await extractApiErrorMessage(error, "Layer could not be updated.")); }
   };
   const archiveLayer = async () => {
     if (!estateId || !selectedLayerId) return;
-    try { await api.delete(`/estates/${estateId}/layers/${selectedLayerId}`); setLayerGeojson((current: any) => ({ ...current, features: current.features.filter((item: any) => item.id !== Number(selectedLayerId)) })); setSelectedLayerId(""); setLayerEditCoordinates(""); setWorkflowMessage("Layer archived."); }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Layer could not be archived."), "danger"); }
+    try { await api.delete(`/estates/${estateId}/layers/${selectedLayerId}`); setLayerGeojson((current: any) => ({ ...current, features: current.features.filter((item: any) => item.id !== Number(selectedLayerId)) })); setSelectedLayerId(""); setLayerEditCoordinates(""); toast.success("Layer archived."); }
+    catch (error) { toast.error(await extractApiErrorMessage(error, "Layer could not be archived.")); }
   };
   useEffect(() => {
     if (!estateId) return;
@@ -1171,19 +1181,17 @@ export default function Estates() {
     setStakingTasks((staking.data || []).filter((item: any) => item.estate_id === Number(estateId)));
   };
   const runWorkflow = async (label: string, action: () => Promise<any>) => {
-    setWorkflowMessage("");
     try {
       const result = await action();
       await refreshWorkflow();
       const notified = Boolean(result?.data?.customer_notified);
-      setWorkflowMessage(`${label} completed.${notified ? " A confirmation email has been sent to the customer." : ""}`);
+      toast.success(`${label} completed.${notified ? " A confirmation email has been sent to the customer." : ""}`);
     }
-    catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, `${label} could not be completed.`), "danger"); }
+    catch (error) { toast.error(await extractApiErrorMessage(error, `${label} could not be completed.`)); }
   };
   const createOfficialSurveyPlan = async (plotId: number) => {
     const allocation = allocations.find((item) => item.plot_id === plotId);
-    if (!allocation) { setWorkflowMessage("Allocate this plot to a customer before creating its Official Survey Plan.", "danger"); setPlotContextMenu(null); return; }
-    setMessage("");
+    if (!allocation) { toast.error("Allocate this plot to a customer before creating its Official Survey Plan."); setPlotContextMenu(null); return; }
     setPreparingSurveyPlotId(plotId);
     try {
       let survey = surveyRequests.find((item) => item.plot.id === plotId);
@@ -1198,7 +1206,7 @@ export default function Estates() {
       setPlotContextMenu(null);
       navigate(`/survey-plan?mode=survey&estate_survey_plot=${survey.survey_working_plot_id || ""}&return_estate_id=${estateId}&return_plot_id=${plotId}`);
     } catch (error) {
-      setMessage(await extractApiErrorMessage(error, "Official Survey Plan could not be created."), "danger");
+      toast.error(await extractApiErrorMessage(error, "Official Survey Plan could not be created."));
     } finally {
       setPreparingSurveyPlotId(null);
     }
@@ -1209,7 +1217,7 @@ export default function Estates() {
       const url = URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = url; link.download = `staking-task-${taskId}.csv`; link.click(); URL.revokeObjectURL(url);
-    } catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "DGPS CSV could not be downloaded."), "danger"); }
+    } catch (error) { toast.error(await extractApiErrorMessage(error, "DGPS CSV could not be downloaded.")); }
   };
   const downloadPlotDgpsCsv = async (plotId: number, coordinateSystem: string) => {
     if (!estateId) return;
@@ -1255,12 +1263,12 @@ export default function Estates() {
     }
   };
   const uploadStakingEvidence = async (taskId: number) => {
-    if (!stakingEvidence) { setWorkflowMessage("Choose a staking photo or field record first.", "danger"); return; }
+    if (!stakingEvidence) { toast.error("Choose a staking photo or field record first."); return; }
     const form = new FormData(); form.append("file", stakingEvidence);
     try {
       await api.post("/estates/documents", form, { params: { entity_type: "staking_task", entity_id: taskId, document_type: "staking_record", description: "DGPS staking field evidence" } });
-      setStakingEvidence(null); setWorkflowMessage("Staking evidence stored in the private Document Vault.");
-    } catch (error) { setWorkflowMessage(await extractApiErrorMessage(error, "Staking evidence could not be uploaded."), "danger"); }
+      setStakingEvidence(null); toast.success("Staking evidence stored in the private Document Vault.");
+    } catch (error) { toast.error(await extractApiErrorMessage(error, "Staking evidence could not be uploaded.")); }
   };
   const selectedAllocation = allocations.find((allocation) => String(allocation.id) === allocationId);
   const selectedPlot = plots.find((plot) => plot.id === (selectedPlotId || selectedAllocation?.plot_id));
@@ -1312,9 +1320,9 @@ export default function Estates() {
       const response = await api.patch(`/estates/plots/${selectedPlot.id}/development-status`, { status });
       setPlots((current) => current.map((plot) => (plot.id === selectedPlot.id ? { ...plot, development_status: status } : plot)));
       setEditingDevelopment(false);
-      if (response.data.customer_notified) setWorkflowMessage("Development status saved. A confirmation email has been sent to the customer.");
+      toast.success(`Development status updated.${response.data.customer_notified ? " A confirmation email has been sent to the customer." : ""}`);
     } catch (error) {
-      setWorkflowMessage(await extractApiErrorMessage(error, "Development status could not be saved."), "danger");
+      toast.error(await extractApiErrorMessage(error, "Development status could not be saved."));
     }
   };
   const uploadPlotDocument = async () => {
@@ -1325,9 +1333,9 @@ export default function Estates() {
     try {
       await api.post("/estates/documents", form, { params: { entity_type: "plot", entity_id: selectedPlot.id, document_type: "plot_record", description: `Uploaded from the plot drawer for ${selectedPlot.plot_number}` } });
       setPlotDocumentFile(null);
-      setWorkflowMessage("Document stored in the private Document Vault.");
+      toast.success("Document stored in the private Document Vault.");
     } catch (error) {
-      setWorkflowMessage(await extractApiErrorMessage(error, "Document could not be uploaded."), "danger");
+      toast.error(await extractApiErrorMessage(error, "Document could not be uploaded."));
     } finally {
       setPlotDocumentBusy(false);
     }
@@ -1955,7 +1963,6 @@ export default function Estates() {
                       {selectedAllocation && <button type="button" className="edash-btn-primary" style={{ marginTop: 8 }} onClick={() => void runWorkflow("Survey preparation", () => api.post(`/estates/plots/${selectedAllocation.plot_id}/survey-requests`))}>Prepare Survey</button>}
                     </div>
                   )}
-                  <StatusBanner text={workflowMessage} tone={workflowMessageTone} />
                 </div>
               )}
 
@@ -2332,7 +2339,6 @@ export default function Estates() {
                   </div>
                 </div>
               )}
-              <StatusBanner text={workflowMessage} tone={workflowMessageTone} />
               <button
                 type="button"
                 className="edash-btn-primary"
@@ -2414,7 +2420,6 @@ export default function Estates() {
               {availablePlots.length === 0 && !(hasBoundary && plots.length === 0) && (
                 <p className="edash-tab-empty">Add a plot or an Estate boundary first, then come back here to subdivide it.</p>
               )}
-              <StatusBanner text={workflowMessage} tone={workflowMessageTone} />
             </>
           ) : (
             <>
@@ -2430,7 +2435,7 @@ export default function Estates() {
                   </div>
                 </div>
               )}
-              <EstateLayoutDesigner boundaryPresent={hasBoundary} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} messageTone={layoutDesignerMessageTone} unitSystem={unitSystem} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} onEditCandidates={editLayoutProposalCandidates} onAddFeature={addLayoutProposalFeature} onRemoveFeature={removeLayoutProposalFeature} />
+              <EstateLayoutDesigner boundaryPresent={hasBoundary} proposal={layoutProposal} busy={layoutDesignerBusy} unitSystem={unitSystem} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} onEditCandidates={editLayoutProposalCandidates} onAddFeature={addLayoutProposalFeature} onRemoveFeature={removeLayoutProposalFeature} />
             </>
           )}
         </>
@@ -2796,7 +2801,6 @@ export default function Estates() {
           ) : (
             <p className="edash-tab-empty">Map editing is unavailable right now.</p>
           )}
-          <StatusBanner text={editPlotMessage} tone={editPlotMessageTone} />
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             <button type="button" className="edash-btn-primary" disabled={editPlotBusy || editPlotPoints.length < 3} onClick={() => void savePlotBoundary()}>
               {editPlotBusy ? <><Spinner size={14} /> Saving...</> : "Save boundary"}
