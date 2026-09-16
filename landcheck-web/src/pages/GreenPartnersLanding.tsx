@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import "../styles/green-partners.css";
+import "../styles/public-landing.css";
 import { fetchPublicPartnerOrganizations } from "../api/greenSponsor";
 import NavBar from "../components/NavBar";
 import SocialLinks from "../components/SocialLinks";
@@ -493,7 +494,7 @@ export default function GreenPartnersLanding() {
   );
 
   return (
-    <div className="green-partners-page">
+    <div className="green-partners-page public-landing">
       <NavBar
         fixed
         overlay

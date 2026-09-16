@@ -1,0 +1,21 @@
+.public-landing {
+  --public-font-body: "Aptos", "Segoe UI", Arial, sans-serif;
+  --public-font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-family: var(--public-font-body) !important;
+}
+
+.public-landing h1,
+.public-landing h2,
+.public-landing h3,
+.public-landing h4 {
+  font-family: var(--public-font-display) !important;
+  font-weight: 500 !important;
+  text-wrap: balance;
+}
+
+.public-landing :is([class*="kicker"], [class*="eyebrow"]) {
+  font-family: var(--public-font-body) !important;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}

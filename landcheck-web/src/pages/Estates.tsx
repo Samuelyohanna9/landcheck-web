@@ -446,6 +446,10 @@ export default function Estates() {
   const [geojsonFile, setGeojsonFile] = useState<File | null>(null);
   const [dxfFile, setDxfFile] = useState<File | null>(null);
   const [scannedLayoutFile, setScannedLayoutFile] = useState<File | null>(null);
+  // What the georeference session's ground control points will actually be entered in - was
+  // previously hardcoded to "wgs84" with no way for the uploader to choose, silently mismatching
+  // whatever coordinate system their own survey data was really in.
+  const [scannedLayoutCrs, setScannedLayoutCrs] = useState("wgs84");
   const [importSourceCrs, setImportSourceCrs] = useState("EPSG:4326");
   const [layoutUploadBusy, setLayoutUploadBusy] = useState(false);
   const [layoutMessage, setLayoutMessageRaw] = useState("");
@@ -872,7 +876,7 @@ export default function Estates() {
       const form = new FormData();
       form.append("file", file);
       form.append("title_text", `${estateDetail?.name || "Estate"} layout scan`);
-      form.append("target_coordinate_system", "wgs84");
+      form.append("target_coordinate_system", scannedLayoutCrs);
       const session = (await api.post("/survey-georeference/sessions", form)).data.session;
       await api.post(`/estates/${estateId}/import-reviews/from-georeference-session`, { survey_georeference_session_id: session.id });
       await refreshImportReviews();
@@ -2312,6 +2316,8 @@ export default function Estates() {
               onDecision={(reviewId, status) => void decideImportReview(reviewId, status, importAsBoundary)}
               onStartGeoreference={(file) => void startGeoreferenceImport(file)}
               onOpenGeoreference={openGeoreferenceTool}
+              scannedLayoutCrs={scannedLayoutCrs}
+              onScannedLayoutCrsChange={setScannedLayoutCrs}
               message={layoutMessage}
               messageTone={layoutMessageTone}
               busy={layoutUploadBusy}

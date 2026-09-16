@@ -8,6 +8,7 @@ import {
   scheduleSurveyPlanIdlePrefetch,
 } from "../utils/surveyPlanPrefetch";
 import "../styles/survey-plan-landing.css";
+import "../styles/public-landing.css";
 
 const SignupGateModal = lazy(() => import("../components/SignupGateModal"));
 
@@ -85,10 +86,10 @@ export default function SurveyPlanLanding() {
   };
 
   return (
-    <div className="spl-page">
+    <div className="spl-page public-landing">
       <header className="spl-nav">
         <Link to="/" className="spl-brand" aria-label="LandCheck home">
-          <span>LandCheck</span>
+          <img src="/logo.svg" alt="LandCheck" width="130" height="38" />
           <span className="spl-brand-product">Survey</span>
         </Link>
         <nav className="spl-nav-links" aria-label="Survey navigation">
@@ -189,7 +190,7 @@ export default function SurveyPlanLanding() {
         <div className="spl-footer-main">
           <div className="spl-footer-brand">
             <Link to="/" className="spl-brand">
-              <span>LandCheck</span>
+              <img src="/logo.svg" alt="LandCheck" width="100" height="34" loading="lazy" />
               <span className="spl-brand-product">Survey</span>
             </Link>
             <a href="mailto:landchecktech@gmail.com">landchecktech@gmail.com</a>

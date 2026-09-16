@@ -1412,6 +1412,32 @@
   stroke-width: 0.12;
 }
 
+/* The first vertex of an in-progress polygon draft, once it has enough points to close - clicking
+   back on it finishes the shape instead of adding another point (see handleStageClick's
+   auto-close check). Pulses so this "click here to finish" affordance is actually noticeable. */
+.georef-stage-vertex.is-closable {
+  fill: #22c55e;
+  stroke: #ffffff;
+  stroke-width: 0.18;
+  animation: georef-closable-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes georef-closable-pulse {
+  0%, 100% {
+    r: 0.55;
+  }
+  50% {
+    r: 0.95;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .georef-stage-vertex.is-closable {
+    animation: none;
+    r: 0.75;
+  }
+}
+
 .georef-stage-point {
   fill: #ef4444;
   stroke: #ffffff;
@@ -6478,6 +6504,18 @@ select.field-error {
 .geo-panel-canvas {
   padding: var(--geo-space-3);
   gap: var(--geo-space-3);
+}
+
+/* Full screen toggle (see useFullscreenToggle.ts) - the browser already stretches the fullscreen
+   element to fill the viewport; this just drops the in-grid framing (border/rounding/margin) for
+   a clean edge-to-edge look instead of a bordered rectangle floating in a black letterbox. */
+.geo-panel-canvas:fullscreen {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: var(--geo-space-4);
+  border: none;
+  border-radius: 0;
 }
 
 .geo-panel-heading--canvas {

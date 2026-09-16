@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import SocialLinks from "../components/SocialLinks";
 import EstatePricingCards, { type EstateBillingCycle, type EstatePlanKey } from "../components/estates/EstatePricingCards";
 import "../styles/estate-portal.css";
+import "../styles/public-landing.css";
 
 const DEMO_MAILTO = "mailto:landchecktech@gmail.com?subject=LandCheck%20Estates%20demo%20request";
 
@@ -36,7 +37,7 @@ export default function EstateLanding() {
   }, [menuOpen]);
 
   return (
-    <main className="estate-portal">
+    <main className="estate-portal public-landing">
       <header className="estate-portal-nav">
         <button
           type="button"

@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { api } from "../../api/client";
 import SurveyLoadingAnimation from "../SurveyLoadingAnimation";
 import { loadMapboxGl, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
+import { useFullscreenToggle } from "../../utils/useFullscreenToggle";
 import { getCoordinateSystemLabel, isProjectedCoordinateSystem, mercatorToWGS84, toWGS84 } from "../../utils/coordinateConverter";
 import type { GeoreferenceFeature, GeoreferenceSession, GeoreferenceTransform } from "../../types/surveyGeoreference";
 import {
@@ -208,9 +209,14 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   const suppressNextStageClickRef = useRef(false);
   const suppressNextAutoSelectRef = useRef(false);
   const selectedFeatureSectionRef = useRef<HTMLDivElement | null>(null);
+  const canvasPanelRef = useRef<HTMLElement | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [tool, setTool] = useState<DraftTool>("polygon");
   const [draftLabel, setDraftLabel] = useState("Primary parcel");
+  // What the NEXT completed feature means on the Estate dashboard (see GeoreferenceFeature.category)
+  // - unlike draftLabel, this isn't reset per tool switch, since tracing several Road segments in
+  // a row with the line tool shouldn't require reselecting "Road" every time.
+  const [draftCategory, setDraftCategory] = useState<GeoreferenceFeature["category"]>(null);
   const [draftPixels, setDraftPixels] = useState<{ x: number; y: number }[]>([]);
   const [stageMetrics, setStageMetrics] = useState<RasterStageMetrics | null>(null);
   const [rasterLoadState, setRasterLoadState] = useState<"loading" | "loaded" | "error">("loading");
@@ -221,6 +227,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
   const [rasterLoadTimedOut, setRasterLoadTimedOut] = useState(false);
   const [rasterRetryToken, setRasterRetryToken] = useState(0);
   const RASTER_LOAD_TIMEOUT_MS = 20000;
+  const { isFullscreen, toggleFullscreen } = useFullscreenToggle(canvasPanelRef);
   const [imageZoom, setImageZoom] = useState(MIN_STAGE_ZOOM);
   const [imagePan, setImagePan] = useState({ x: 0, y: 0 });
   const [draggingStage, setDraggingStage] = useState(false);
@@ -976,6 +983,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           id: nextFeatureId,
           label: draftLabel || `Stake point ${features.filter((item) => item.feature_type === "point").length + 1}`,
           feature_type: "point",
+          category: draftCategory || null,
           pixels: [{ x: pixelX, y: pixelY }],
           target_coordinates: [transformed.target],
           wgs84_coordinates: [transformed.wgs84],
@@ -983,6 +991,22 @@ function SurveyPlanGeoreferenceWorkspaceStep({
       ]);
       setSelectedFeatureId(nextFeatureId);
       return;
+    }
+    // Clicking back near where a polygon draft started closes it immediately, the same way any
+    // "trace the boundary" tool works - no separate "Finish" click needed. Tolerance scales with
+    // the shape's own current size (not a fixed pixel radius) so it works sensibly at any zoom
+    // level and for both a small plot and a large one, without needing to reverse-engineer the
+    // stage's current screen-to-image-pixel scale factor.
+    if (tool === "polygon" && draftPixels.length >= 3) {
+      const first = draftPixels[0];
+      const xs = draftPixels.map((point) => point.x);
+      const ys = draftPixels.map((point) => point.y);
+      const extent = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 1);
+      const snapRadius = Math.max(extent * 0.03, 6);
+      if (Math.hypot(pixelX - first.x, pixelY - first.y) <= snapRadius) {
+        completeDraftFeature();
+        return;
+      }
     }
     setDraftPixels((current) => [...current, { x: pixelX, y: pixelY }]);
     setSelectedFeatureId("draft");
@@ -1008,7 +1032,11 @@ function SurveyPlanGeoreferenceWorkspaceStep({
         id: nextFeatureId,
         label: draftLabel || toolLabels[tool],
         feature_type: tool,
-        is_primary: tool === "polygon" && !features.some((item) => item.feature_type === "polygon" && item.is_primary),
+        // A categorized polygon (Open space, etc.) is a layout feature, not a plot - it must
+        // never inherit "primary parcel" status, and shouldn't count against an existing
+        // uncategorized polygon's own primary flag either.
+        is_primary: tool === "polygon" && !draftCategory && !features.some((item) => item.feature_type === "polygon" && item.is_primary && !item.category),
+        category: draftCategory || null,
         pixels: draftPixels,
         target_coordinates: nextCoordinatesTarget,
         wgs84_coordinates: nextCoordinatesWgs84,
@@ -1229,6 +1257,26 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                   onChange={(event) => setDraftLabel(event.target.value)}
                   placeholder="Primary parcel"
                 />
+                <label className="geo-field-label" htmlFor="geo-feature-category-select">
+                  Category (optional)
+                </label>
+                <select
+                  id="geo-feature-category-select"
+                  className="geo-field-input"
+                  value={draftCategory || ""}
+                  onChange={(event) => setDraftCategory((event.target.value || null) as GeoreferenceFeature["category"])}
+                >
+                  <option value="">Plot boundary / none</option>
+                  <option value="road">Road</option>
+                  <option value="drainage">Drainage</option>
+                  <option value="open_space">Open space</option>
+                  <option value="infrastructure">Infrastructure</option>
+                </select>
+                <p className="geo-section-hint">
+                  Leave as "none" for a plot boundary or a plain stake/alignment point. Choosing a
+                  category turns this feature into an Estate layout feature (shown on the
+                  dashboard map) instead of a plot.
+                </p>
                 <div className="geo-composer-actions">
                   <button
                     type="button"
@@ -1487,7 +1535,7 @@ function SurveyPlanGeoreferenceWorkspaceStep({
           </div>
         </aside>
 
-        <section className="geo-panel geo-panel-canvas" data-tab-panel="raster">
+        <section className="geo-panel geo-panel-canvas" data-tab-panel="raster" ref={canvasPanelRef}>
           <div className="geo-panel-heading">
             <h2>{imageLabel}</h2>
             <p>
@@ -1537,6 +1585,24 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                 disabled={imageZoom === MIN_STAGE_ZOOM && imagePan.x === 0 && imagePan.y === 0}
               >
                 Fit
+              </button>
+              <span className="geo-canvas-toolbar-divider" aria-hidden="true" />
+              <button
+                type="button"
+                className="geo-canvas-tool-btn"
+                onClick={toggleFullscreen}
+                title={isFullscreen ? "Exit full screen" : "Full screen"}
+                aria-label={isFullscreen ? "Exit full screen" : "Full screen"}
+              >
+                {isFullscreen ? (
+                  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M13 3a1 1 0 011 1v3a1 1 0 01-2 0V5.414l-2.293 2.293a1 1 0 01-1.414-1.414L10.586 4H8a1 1 0 010-2h4a1 1 0 011 1zM3 13a1 1 0 011-1h3a1 1 0 010 2H5.414l2.293 2.293a1 1 0 01-1.414 1.414L4 15.414V17a1 1 0 01-2 0v-4a1 1 0 011-1z" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M3 3a1 1 0 00-1 1v4a1 1 0 002 0V5.414l2.793 2.793a1 1 0 001.414-1.414L5.414 4H8a1 1 0 000-2H4a1 1 0 00-1 1zm14 14a1 1 0 001-1v-4a1 1 0 00-2 0v2.586l-2.793-2.793a1 1 0 00-1.414 1.414L14.586 16H12a1 1 0 000 2h4a1 1 0 001-1z" />
+                  </svg>
+                )}
               </button>
             </div>
             <div className="georef-image-stage-viewport" ref={imageViewportRef} onWheel={handleStageWheel}>
@@ -1622,7 +1688,13 @@ function SurveyPlanGeoreferenceWorkspaceStep({
                               <polygon className="georef-stage-polygon-fill" points={feature.pathPoints} />
                               <polyline className="georef-stage-polygon-line" points={`${feature.pathPoints} ${feature.points[0]?.leftPercent},${feature.points[0]?.topPercent}`} />
                               {feature.points.map((point) => (
-                                <circle key={`${feature.id}-vertex-${point.index}`} className="georef-stage-vertex" cx={point.leftPercent} cy={point.topPercent} r={0.45} />
+                                <circle
+                                  key={`${feature.id}-vertex-${point.index}`}
+                                  className={`georef-stage-vertex${feature.draft && point.index === 0 && feature.points.length >= 3 ? " is-closable" : ""}`}
+                                  cx={point.leftPercent}
+                                  cy={point.topPercent}
+                                  r={0.45}
+                                />
                               ))}
                             </g>
                           );
