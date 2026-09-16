@@ -1303,6 +1303,13 @@
 .edash-public-lead-status.is-declined { background: var(--edash-danger-tint); color: var(--edash-danger); }
 .edash-public-leads-more { margin: 12px 0 0; color: var(--edash-faint); font-size: .72rem; }
 .edash-public-settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.edash-public-payment-plan { margin: 12px 0 14px; padding-top: 12px; border-top: 1px solid var(--edash-border); }
+.edash-public-payment-plan-row { display: grid; grid-template-columns: minmax(0, 1fr) 100px auto; align-items: center; gap: 8px; margin-top: 8px; }
+.edash-public-payment-plan-row input { min-height: 34px; min-width: 0; padding: 6px 9px; border: 1px solid var(--edash-border); border-radius: 7px; background: #fff; color: var(--edash-ink); font: inherit; font-size: .78rem; }
+.edash-public-payment-plan-row button { border: 0; background: transparent; color: var(--edash-muted); font-size: .72rem; }
+.edash-public-payment-plan-row button:hover { color: var(--edash-danger); }
+.edash-public-lead-convert { min-height: 30px; padding: 5px 9px; font-size: .68rem; white-space: nowrap; }
+.edash-public-lead-converted { color: var(--edash-good); font-size: .68rem; }
 .edash-inline-price, .edash-inline-price-editor { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .edash-inline-price-editor input { width: 112px; min-height: 30px; padding: 3px 7px; border: 1px solid var(--edash-border); border-radius: 6px; color: var(--edash-ink); }
 .edash-inline-price-editor input:focus { border-color: var(--edash-brand); outline: 2px solid var(--edash-brand-tint); }
@@ -1325,6 +1332,8 @@
   .edash-public-lead { flex-direction: column; gap: 10px; }
   .edash-public-lead-actions { align-items: flex-start; flex-direction: row; width: 100%; }
   .edash-public-settings-grid { grid-template-columns: 1fr; }
+  .edash-public-payment-plan-row { grid-template-columns: minmax(0, 1fr) 82px; }
+  .edash-public-payment-plan-row button { justify-self: start; }
   .edash-plot-listing-defaults-grid { grid-template-columns: 1fr; }
 }
 

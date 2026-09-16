@@ -12,6 +12,8 @@ type ReservationRequest = {
   email: string | null;
   message: string | null;
   status: "new" | "contacted" | "converted" | "declined";
+  customer_id: number | null;
+  allocation_id: number | null;
   created_at: string;
 };
 
@@ -31,6 +33,7 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
   const [requests, setRequests] = useState<ReservationRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [migratingId, setMigratingId] = useState<number | null>(null);
   const role = getEstateAuthSession()?.user.role_key;
   const canUpdate = role === "owner" || role === "manager" || role === "sales";
 
@@ -60,6 +63,19 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
     }
   };
 
+  const migrateToCustomer = async (requestId: number) => {
+    setMigratingId(requestId);
+    try {
+      const response = await api.post(`/estates/reservation-requests/${requestId}/convert`, {});
+      setRequests((current) => current.map((item) => item.id === requestId ? response.data : item));
+      toast.success("Customer created and plot reserved.");
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "The request could not be added to customers."));
+    } finally {
+      setMigratingId(null);
+    }
+  };
+
   return (
     <section className="edash-card edash-public-leads">
       <div className="edash-card-inner">
@@ -82,7 +98,8 @@ export default function EstateReservationRequests({ estateId }: { estateId: stri
                 </div>
                 <div className="edash-public-lead-actions">
                   <span className={`edash-public-lead-status is-${item.status}`}>{statusLabels[item.status]}</span>
-                  {canUpdate && <select aria-label={`Update request from ${item.full_name}`} disabled={updatingId === item.id} value={item.status} onChange={(event) => void updateStatus(item.id, event.target.value as ReservationRequest["status"])}><option value="new">New</option><option value="contacted">Contacted</option><option value="converted">Converted</option><option value="declined">Declined</option></select>}
+                  {canUpdate && item.status !== "converted" && <><select aria-label={`Update request from ${item.full_name}`} disabled={updatingId === item.id || migratingId === item.id} value={item.status} onChange={(event) => void updateStatus(item.id, event.target.value as ReservationRequest["status"])}><option value="new">New</option><option value="contacted">Contacted</option><option value="declined">Declined</option></select><button type="button" className="edash-btn-primary edash-public-lead-convert" disabled={migratingId === item.id} onClick={() => void migrateToCustomer(item.id)}>{migratingId === item.id ? "Adding..." : "Add to customers & reserve"}</button></>}
+                  {item.status === "converted" && <small className="edash-public-lead-converted">Customer and reservation created</small>}
                 </div>
               </article>
             ))}
