@@ -411,8 +411,16 @@
 .edash-body--fill .edash-map-select { height: 29px; }
 .edash-body--fill .edash-map-canvas-wrap { min-height: 320px; }
 
+/* flex-shrink: 0 (the base rule above, meant for contexts where the page can just scroll) is
+   exactly why this used to overflow the viewport instead of fitting: with the map canvas already
+   at its own non-negotiable floor, this row refusing to shrink at all meant there was nowhere left
+   for the excess height to go except past the bottom of the (non-scrolling) page. Letting it
+   shrink - down to a much smaller floor than its own preferred content height - means it's this
+   row, not the browser window's edge, that absorbs the squeeze; whatever its content doesn't fit
+   in the space it's actually given still reaches the user, via the card's own internal scroll. */
 .edash-body--fill .edash-map-grid-left > .edash-bottom-row {
-  min-height: 130px;
+  flex-shrink: 1;
+  min-height: 56px;
   max-height: 190px;
   overflow: hidden;
 }
