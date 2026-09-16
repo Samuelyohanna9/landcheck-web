@@ -128,8 +128,15 @@
 .estate-public-menu-contact { display: flex; flex-direction: column; gap: 4px; padding: 8px 15px 12px; border-top: 1px solid var(--estate-public-border); }
 .estate-public-menu-contact a { padding: 0; color: var(--estate-public-brand-dark); font-size: .72rem; }
 .estate-public-menu-button { display: none; border: 0; background: transparent; color: var(--estate-public-ink); font-size: .8rem; font-weight: 800; cursor: pointer; }
-.estate-public-intro { padding-top: clamp(60px, 9vw, 120px); padding-bottom: clamp(38px, 6vw, 72px); }
-.estate-public-intro h1 { max-width: 920px; font-size: clamp(3rem, 7vw, 6.8rem); }
+.estate-public-intro { position: relative; display: flex; min-height: 440px; max-width: none; margin: 0; padding: clamp(68px, 9vw, 120px) clamp(18px, 4vw, 64px); flex-direction: column; align-items: center; justify-content: center; overflow: hidden; background-image: linear-gradient(180deg, rgba(7, 24, 31, .32), rgba(7, 24, 31, .72)), url("/realestate_public.jpg"); background-position: center 56%; background-size: cover; text-align: center; }
+.estate-public-intro::before { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(7, 24, 31, .26), transparent 50%, rgba(7, 24, 31, .2)); content: ""; }
+.estate-public-intro > * { position: relative; z-index: 1; }
+.estate-public-intro .estate-public-kicker { color: #b7e5c7; }
+.estate-public-intro h1 { max-width: 920px; color: #fff; font-size: clamp(3rem, 7vw, 6.8rem); }
+.estate-public-intro .estate-public-tagline { color: #e1f2e6; }
+.estate-public-intro .estate-public-location, .estate-public-intro .estate-public-description { color: rgba(255,255,255,.82); }
+.estate-public-intro .estate-public-description { max-width: 620px; }
+.estate-public-intro .estate-public-text-link { color: #fff; border-color: rgba(255,255,255,.7); }
 .estate-public-tagline { max-width: 670px; margin: 20px 0 0; color: var(--estate-public-brand-dark); font-size: clamp(1.05rem, 2vw, 1.45rem); font-weight: 700; letter-spacing: -.02em; }
 .estate-public-intro-link { display: inline-block; margin-top: 28px; padding-bottom: 4px; border-bottom: 1px solid currentColor; }
 .estate-public-map-shell { position: relative; overflow: hidden; border-radius: 12px; }
