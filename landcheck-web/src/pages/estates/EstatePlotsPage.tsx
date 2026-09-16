@@ -38,6 +38,25 @@ export default function EstatePlotsPage() {
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
   const [addressDraft, setAddressDraft] = useState("");
   const [addressBusy, setAddressBusy] = useState(false);
+  const [sharedAddress, setSharedAddress] = useState("");
+  const [priceMode, setPriceMode] = useState<"uniform" | "custom">("uniform");
+  const [uniformPrice, setUniformPrice] = useState("");
+  const [listingDefaultsBusy, setListingDefaultsBusy] = useState<"address" | "price" | null>(null);
+
+  const syncListingDefaults = (rows: PlotFeature["properties"][]) => {
+    const addresses = [...new Set(rows.map((plot) => plot.public_address?.trim()).filter(Boolean))] as string[];
+    setSharedAddress(addresses.length === 1 ? addresses[0] : "");
+    const prices = rows.map((plot) => plot.asking_price?.trim() || null);
+    const uniquePrices = [...new Set(prices.filter(Boolean))] as string[];
+    const hasUniformPrice = uniquePrices.length === 1 && prices.every((price) => price === uniquePrices[0]);
+    if (uniquePrices.length === 0 || hasUniformPrice) {
+      setPriceMode("uniform");
+      setUniformPrice(uniquePrices[0] || "");
+    } else {
+      setPriceMode("custom");
+      setUniformPrice("");
+    }
+  };
 
   useEffect(() => {
     if (!estateId) return;
@@ -47,7 +66,9 @@ export default function EstatePlotsPage() {
     }).catch(() => undefined);
     api.get(`/estates/${estateId}/plots.geojson`).then((response) => {
       const features = (response.data?.features || []) as PlotFeature[];
-      setPlots(features.map((feature) => feature.properties));
+      const rows = features.map((feature) => feature.properties);
+      setPlots(rows);
+      syncListingDefaults(rows);
     }).catch(() => setPlots([]));
     api.get(`/estates/${estateId}/blocks`).then((response) => setBlocks(response.data || [])).catch(() => setBlocks([]));
     api.get(`/estates/${estateId}/activity`).then((response) => setActivity(response.data || [])).catch(() => setActivity([]));
@@ -83,6 +104,36 @@ export default function EstatePlotsPage() {
     }
   };
 
+  const applyListingDefaults = async (kind: "address" | "price") => {
+    if (kind === "price" && (!uniformPrice.trim() || !Number.isFinite(Number(uniformPrice)) || Number(uniformPrice) <= 0)) {
+      toast.error("Enter a valid uniform price first.");
+      return;
+    }
+    setListingDefaultsBusy(kind);
+    try {
+      const response = await api.patch(`/estates/${estateId}/plot-listing-defaults`, {
+        apply_address: kind === "address",
+        public_address: kind === "address" ? (sharedAddress.trim() || null) : undefined,
+        apply_price: kind === "price",
+        asking_price: kind === "price" ? Number(uniformPrice) : undefined,
+      });
+      if (kind === "address") {
+        const value = response.data.public_address || null;
+        setSharedAddress(value || "");
+        setPlots((current) => current.map((plot) => ({ ...plot, public_address: value })));
+        toast.success(`Address applied to ${response.data.updated_plots} plot(s).`);
+      } else {
+        const value = response.data.asking_price || null;
+        setPlots((current) => current.map((plot) => ({ ...plot, asking_price: value })));
+        toast.success(`Uniform price applied to ${response.data.updated_plots} plot(s).`);
+      }
+    } catch (error) {
+      toast.error(await extractApiErrorMessage(error, "The listing defaults could not be applied."));
+    } finally {
+      setListingDefaultsBusy(null);
+    }
+  };
+
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return plots.filter((plot) => {
@@ -107,6 +158,36 @@ export default function EstatePlotsPage() {
               <option value="allocated">Allocated</option>
               <option value="on_hold">On hold</option>
             </select>
+          </div>
+          <div className="edash-plot-listing-defaults">
+            <div className="edash-plot-listing-defaults-copy">
+              <strong>Public listing details</strong>
+              <span>Set shared details once, then customise individual plots only when needed.</span>
+            </div>
+            <div className="edash-plot-listing-defaults-grid">
+              <div className="edash-plot-default-field">
+                <label htmlFor="shared-plot-address">Shared plot address</label>
+                <div className="edash-plot-default-action">
+                  <input id="shared-plot-address" value={sharedAddress} onChange={(event) => setSharedAddress(event.target.value)} placeholder="e.g. Greenview Estate, Phase 1" />
+                  <button type="button" className="edash-card-link" disabled={listingDefaultsBusy !== null} onClick={() => void applyListingDefaults("address")}>{listingDefaultsBusy === "address" ? "Applying..." : `Apply to all ${plots.length}`}</button>
+                </div>
+              </div>
+              <fieldset className="edash-plot-default-field edash-plot-pricing-field">
+                <legend>Public pricing</legend>
+                <div className="edash-plot-price-modes">
+                  <label><input type="radio" name="plot-price-mode" checked={priceMode === "uniform"} onChange={() => setPriceMode("uniform")} /> Uniform</label>
+                  <label><input type="radio" name="plot-price-mode" checked={priceMode === "custom"} onChange={() => setPriceMode("custom")} /> Custom</label>
+                </div>
+                {priceMode === "uniform" ? (
+                  <div className="edash-plot-default-action">
+                    <input type="number" min="0" step="1000" value={uniformPrice} onChange={(event) => setUniformPrice(event.target.value)} placeholder="Enter one price" aria-label="Uniform public plot price" />
+                    <button type="button" className="edash-card-link" disabled={listingDefaultsBusy !== null || !uniformPrice.trim()} onClick={() => void applyListingDefaults("price")}>{listingDefaultsBusy === "price" ? "Applying..." : `Apply to all ${plots.length}`}</button>
+                  </div>
+                ) : (
+                  <span className="edash-field-note">Set prices individually in the register below.</span>
+                )}
+              </fieldset>
+            </div>
           </div>
           {filtered.length ? (
             <div style={{ overflowX: "auto" }}>
