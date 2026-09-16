@@ -634,6 +634,9 @@
 
 .edash-map-toolbar-spacer { flex: 1; min-width: 4px; }
 
+.edash-map-toolbar .edash-icon-btn { width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; }
+.edash-map-toolbar .edash-icon-btn svg { width: 14px; height: 14px; }
+
 .edash-map-canvas-wrap {
   position: relative;
   min-height: 420px;
