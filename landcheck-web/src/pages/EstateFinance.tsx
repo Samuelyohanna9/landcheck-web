@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../api/client";
 import { FinancialSummaryCards, PaymentStatusBadge, money, PAYMENT_METHODS, paymentMethodLabel } from "../components/estates/FinancialComponents";
 import EstateShell from "../components/estates/EstateShell";
@@ -31,8 +32,6 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [summary, setSummary] = useState<any>(null);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
@@ -62,7 +61,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   const [entityId, setEntityId] = useState("");
   const [file, setFile] = useState<File | null>(null);
 
-  const fail = async (error: unknown, message: string) => setError(await extractApiErrorMessage(error, message));
+  const fail = async (error: unknown, message: string) => toast.error(await extractApiErrorMessage(error, message));
 
   const setup = async () => {
     const [selectors, totals] = await Promise.all([api.get("/estates/selectors"), api.get("/estates/financial-summary")]);
@@ -123,9 +122,9 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   };
 
   const record = async () => {
-    if (!allocationId || !amount) { setError("Select an allocation and enter an amount."); return; }
+    if (!allocationId || !amount) { toast.error("Select an allocation and enter an amount."); return; }
     const resolvedMethod = paymentMethod === "other" ? paymentMethodOther.trim() : paymentMethod;
-    if (!resolvedMethod) { setError("Enter the payment method."); return; }
+    if (!resolvedMethod) { toast.error("Enter the payment method."); return; }
     try {
       const made = await api.post(`/estates/allocations/${allocationId}/payments`, { amount, payment_date: paymentDate, payment_method: resolvedMethod, reference_no: reference || null });
       let noticeText = "Payment recorded and pending confirmation.";
@@ -136,7 +135,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
         catch (error) { await fail(error, "Payment was recorded, but the receipt upload failed."); }
       }
       if (made.data.customer_notified) noticeText += " A confirmation email has been sent to the customer.";
-      setNotice(noticeText);
+      toast.success(noticeText);
       setRecording(false);
       await load();
     } catch (error) {
@@ -147,7 +146,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   const quickConfirm = async (id: number) => {
     try {
       const response = await api.post(`/estates/payments/${id}/confirm`);
-      setNotice(`Payment confirmed.${response.data.customer_notified ? " A confirmation email has been sent to the customer." : ""}`);
+      toast.success(`Payment confirmed.${response.data.customer_notified ? " A confirmation email has been sent to the customer." : ""}`);
       await load();
     } catch (error) {
       await fail(error, "Payment could not be confirmed.");
@@ -161,7 +160,7 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     try {
       const response = await api.post(`/estates/payments/${detail.payment.id}/${kind}`, kind === "void" ? { reason } : undefined);
       setDetail(null);
-      setNotice(`Payment ${kind}ed.${kind === "confirm" && response.data.customer_notified ? " A confirmation email has been sent to the customer." : ""}`);
+      toast.success(`Payment ${kind}ed.${kind === "confirm" && response.data.customer_notified ? " A confirmation email has been sent to the customer." : ""}`);
       await load();
     } catch (error) {
       await fail(error, `Payment could not be ${kind}ed.`);
@@ -169,12 +168,12 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
   };
 
   const upload = async () => {
-    if (!file || !documentType || !entityType || !entityId) { setError("Select a file and complete its linked record fields."); return; }
+    if (!file || !documentType || !entityType || !entityId) { toast.error("Select a file and complete its linked record fields."); return; }
     try {
       const body = new FormData();
       body.append("file", file);
       await api.post("/estates/documents", body, { params: { entity_type: entityType, entity_id: entityId, document_type: documentType } });
-      setNotice("Private document uploaded.");
+      toast.success("Private document uploaded.");
       setFile(null);
       setShowUpload(false);
       await load();
@@ -183,19 +182,11 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
     }
   };
 
-  const messages = (
-    <>
-      {notice && <p className="edash-banner tone-good" style={{ marginBottom: 10 }}>{notice}</p>}
-      {error && <p className="edash-banner tone-danger" style={{ marginBottom: 10 }}>{error}</p>}
-    </>
-  );
-
   if (!sidebarEstateId) return null;
 
   if (mode === "documents") {
     return (
       <EstateShell estateId={sidebarEstateId} estateName={sidebarEstateName} activeKey="documents">
-        {messages}
         <div className="edash-card">
           <div className="edash-card-inner">
             <div className="edash-card-head">
@@ -257,7 +248,6 @@ export default function EstateFinance({ mode }: { mode: "payments" | "documents"
           <div className="edash-overview-field"><span>Outstanding</span><strong>{money(summary.outstanding)}</strong></div>
         </div>
       )}
-      {messages}
 
       <div className="edash-card" style={{ marginBottom: 16 }}>
         <div className="edash-card-inner">

@@ -62,22 +62,22 @@ const featureHighlights = [
 
 const workflowSteps = [
   {
-    step: "1",
-    title: "Import your data",
-    description: "Enter coordinates or upload a scanned drawing in common formats (CSV, DXF, JPG, PNG).",
-    image: null as string | null,
-  },
-  {
-    step: "2",
-    title: "Review and edit",
-    description: "Check geometry, adjust boundaries and add details on the map.",
+    title: "Professional survey plans",
+    description: "Prepare clear, client-ready survey plans from coordinates or approved parcel data.",
     image: asset("survey  plan preview.jpg"),
+    imageAlt: "Professional survey plan with a plotted parcel, dimensions and coordinate schedule",
   },
   {
-    step: "3",
-    title: "Export professional outputs",
-    description: "Generate survey plans and export to PDF, DWG or GIS formats.",
+    title: "Automatic land subdivision",
+    description: "Turn a larger parcel into consistent child plots using your selected layout rules.",
     image: asset("subdivision_preview.jpg"),
+    imageAlt: "Survey plan showing a parcel divided into smaller plots",
+  },
+  {
+    title: "Georeference and AI digitisation",
+    description: "Align scanned layouts, extract coordinate data and trace editable boundaries on a real-world map.",
+    image: asset("georefrence preview.jpg"),
+    imageAlt: "Scanned estate layout aligned with its real-world satellite position",
   },
 ];
 
@@ -239,7 +239,7 @@ export default function SurveyPlanLanding() {
             <img className="spl-hero-laptop" src="/survey-laptop-hand.png" alt="" />
           </div>
           <div className="spl-hero-screen" aria-hidden="true">
-            <img src="/survey%20%20plan%20preview.jpg" alt="" />
+            <img src={asset("survey  plan preview.jpg")} alt="" />
           </div>
           <div className="spl-hero-shade" />
           <div className="spl-shell spl-hero-shell">
@@ -287,20 +287,16 @@ export default function SurveyPlanLanding() {
           <div className="spl-shell">
             <div className="spl-section-intro spl-section-intro--center">
               <p className="spl-section-kicker">A simpler way to work</p>
-              <h2>From field data to finished plan.</h2>
+              <h2>Tools for every survey plan.</h2>
               <p>
-                Bring in coordinates or a scanned drawing, check the geometry and prepare the final plan in one place.
+                Bring in your data, shape the land and prepare a professional final plan in one place.
               </p>
             </div>
             <ul className="spl-step-list">
               {workflowSteps.map((item) => (
                 <li key={item.title} className="spl-step-card">
                   <div className="spl-step-visual">
-                    {item.image ? (
-                      <img src={item.image} alt="" loading="lazy" decoding="async" />
-                    ) : (
-                      <span className="spl-step-number" aria-hidden="true">{item.step}</span>
-                    )}
+                    <img src={item.image} alt={item.imageAlt} loading="lazy" decoding="async" />
                   </div>
                   <h3>{item.title}</h3>
                   <p>{item.description}</p>

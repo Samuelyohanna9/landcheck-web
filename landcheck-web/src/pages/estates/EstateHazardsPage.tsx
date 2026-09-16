@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import { api, extractApiErrorMessage } from "../../api/client";
 import EstateShell from "../../components/estates/EstateShell";
 import EstateIcon from "../../components/estates/EstateIcon";
@@ -76,7 +77,6 @@ export default function EstateHazardsPage() {
   const [activity, setActivity] = useState<any[]>([]);
   const [runBusy, setRunBusy] = useState(false);
   const [jobProgress, setJobProgress] = useState<{ pct: number; stage: string } | null>(null);
-  const [message, setMessage] = useState("");
   const [upgradeRequired, setUpgradeRequired] = useState(false);
 
   useEffect(() => {
@@ -107,16 +107,15 @@ export default function EstateHazardsPage() {
   const runEstateHazardAnalysis = async () => {
     if (!estateId) return;
     setRunBusy(true);
-    setMessage("");
     setJobProgress({ pct: 0, stage: "Queued..." });
     try {
       const created = await api.post<HazardJobStatus>(`/estates/${estateId}/hazards/assess-all`);
       const job = await pollHazardJob(created.data.id);
       setDashboard(job.result);
-      setMessage("Hazard analysis complete for the whole layout.");
+      toast.success("Hazard analysis complete for the whole layout.");
     } catch (error) {
       if (isUpgradeRequiredError(error)) setUpgradeRequired(true);
-      else setMessage(await extractApiErrorMessage(error, "Hazard analysis could not be run."));
+      else toast.error(await extractApiErrorMessage(error, "Hazard analysis could not be run."));
     } finally {
       setRunBusy(false);
       setJobProgress(null);
@@ -155,7 +154,6 @@ export default function EstateHazardsPage() {
           <button type="button" className="edash-btn-primary" disabled={runBusy} onClick={() => void runEstateHazardAnalysis()}>
             {runBusy ? <><Spinner size={13} /> {jobProgress?.stage || "Analyzing layout..."}</> : "Run hazard analysis for entire layout"}
           </button>
-          {message && <p className="edash-tab-empty" style={{ padding: "10px 0 0" }}>{message}</p>}
         </div>
       </div>
       <div className="edash-card">

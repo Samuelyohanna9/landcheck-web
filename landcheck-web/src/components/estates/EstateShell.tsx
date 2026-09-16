@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import { api } from "../../api/client";
 import EstateIcon, { type EstateIconName } from "./EstateIcon";
 import EstateModal from "./EstateModal";
@@ -153,6 +154,7 @@ export default function EstateShell({
 
   return (
     <div className={`edash${sidebarOpen ? " is-sidebar-open" : ""}`}>
+      <Toaster position="top-right" />
       <div className="edash-sidebar-backdrop" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
       <aside className="edash-sidebar">
         <div className="edash-sidebar-brand">
