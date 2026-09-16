@@ -1956,6 +1956,26 @@
 }
 .edash-layout-template-summary p { margin: 0; color: var(--edash-ink); font-size: 0.8rem; line-height: 1.45; }
 
+.edash-layout-boundary-area {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--edash-border-soft);
+  border-bottom: 1px solid var(--edash-border-soft);
+}
+.edash-layout-boundary-area > div { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.edash-layout-boundary-area span,
+.edash-layout-boundary-area small { color: var(--edash-muted); font-size: 0.75rem; font-weight: 700; }
+.edash-layout-boundary-area strong { color: var(--edash-ink); font-size: 1rem; }
+.edash-layout-boundary-area small { font-weight: 600; text-align: right; }
+@media (max-width: 560px) {
+  .edash-layout-boundary-area { align-items: flex-start; flex-direction: column; gap: 5px; }
+  .edash-layout-boundary-area small { text-align: left; }
+}
+
 .edash-criteria-groups { display: flex; flex-direction: column; gap: 16px; }
 .edash-criteria-group {
   padding: 12px 14px;
