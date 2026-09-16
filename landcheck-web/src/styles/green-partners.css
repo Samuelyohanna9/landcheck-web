@@ -148,7 +148,7 @@
   min-height: 56px;
   padding: 0 1.4rem;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 2px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -163,17 +163,12 @@
   transform: translateY(-2px);
 }
 
-.gp-btn--primary {
-  background: linear-gradient(135deg, #2ab061 0%, #1e874c 100%);
-  color: #f7fff9;
-  box-shadow: 0 20px 34px rgba(24, 97, 54, 0.32);
-}
-
+.gp-btn--primary,
 .gp-btn--secondary {
-  background: rgba(255, 255, 255, 0.08);
-  color: #f5fbf7;
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 14px 30px rgba(9, 18, 14, 0.14);
+  background: #1f8c58;
+  color: #ffffff;
+  border-color: #1f8c58;
+  box-shadow: 0 10px 24px rgba(24, 97, 54, 0.22);
 }
 
 .gp-hero-route-stack {
@@ -1176,28 +1171,11 @@
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
   gap: 2.5rem;
   padding: 3.5rem 4rem;
-  border-radius: 36px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(135deg, #0a1e16 0%, #0d281e 100%);
-  box-shadow: 
-    0 24px 64px rgba(9, 25, 18, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  border: none;
+  background: #0d281e;
   position: relative;
-  overflow: hidden;
   align-items: center;
-}
-
-.gp-footer-panel::before {
-  content: "";
-  position: absolute;
-  top: -50%;
-  right: -20%;
-  width: 340px;
-  height: 340px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(42, 176, 97, 0.16) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
 }
 
 .gp-footer-panel h2 {
@@ -1233,30 +1211,6 @@
   display: flex;
   gap: 0.95rem;
   flex-wrap: wrap;
-}
-
-.gp-footer-buttons .gp-btn--primary {
-  background: linear-gradient(135deg, #2ab061 0%, #1f8c58 100%);
-  color: #ffffff;
-  box-shadow: 0 12px 24px rgba(42, 176, 97, 0.25);
-  border: none;
-}
-
-.gp-footer-buttons .gp-btn--primary:hover {
-  background: linear-gradient(135deg, #2fc46d 0%, #229c62 100%);
-  box-shadow: 0 16px 32px rgba(42, 176, 97, 0.35);
-}
-
-.gp-footer-buttons .gp-btn--secondary {
-  background: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: none;
-}
-
-.gp-footer-buttons .gp-btn--secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .gp-footer-link {
@@ -2315,50 +2269,7 @@
   background: #197549 !important;
 }
 
-/* Secondary Button ("Sponsor a Tree") contrast correction on light backgrounds */
-.green-partners-page .gp-btn--secondary {
-  background: rgba(31, 140, 88, 0.06) !important;
-  color: #1f8c58 !important;
-  border-color: rgba(31, 140, 88, 0.32) !important;
-  box-shadow: 0 8px 24px rgba(31, 140, 88, 0.05) !important;
-}
-
-.green-partners-page .gp-btn--secondary:hover {
-  background: rgba(31, 140, 88, 0.12) !important;
-  border-color: #1f8c58 !important;
-  color: #15653b !important;
-  box-shadow: 0 12px 28px rgba(31, 140, 88, 0.08) !important;
-}
-
 @media (max-width: 768px) {
-  /* Photo moments horizontal scroller */
-  .gp-photo-grid {
-    display: flex !important;
-    overflow-x: auto !important;
-    scroll-snap-type: x mandatory !important;
-    gap: 16px !important;
-    padding: 10px 4px 20px !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: none !important;
-  }
-  .gp-photo-grid::-webkit-scrollbar {
-    display: none !important;
-  }
-  .gp-photo-card {
-    flex: 0 0 280px !important;
-    scroll-snap-align: center !important;
-    border-radius: 20px !important;
-    box-shadow: 0 10px 24px rgba(20, 51, 39, 0.05) !important;
-  }
-  .gp-photo-card__media {
-    aspect-ratio: 1.25 / 1 !important;
-  }
-  .gp-photo-lead {
-    flex: 0 0 82vw !important;
-    scroll-snap-align: center !important;
-    padding: 1.5rem !important;
-  }
-
   .gp-photo-carousel__arrow {
     display: flex;
     position: absolute;
@@ -2500,19 +2411,6 @@
 
 .green-partners-page .gp-new-hero-stat-item span {
   color: rgba(233, 242, 236, 0.6);
-}
-
-.green-partners-page .gp-btn--secondary {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #f5fbf7 !important;
-  border-color: rgba(255, 255, 255, 0.22) !important;
-  box-shadow: none !important;
-}
-
-.green-partners-page .gp-btn--secondary:hover {
-  background: rgba(255, 255, 255, 0.14) !important;
-  border-color: rgba(255, 255, 255, 0.4) !important;
-  color: #ffffff !important;
 }
 
 @media (max-width: 1240px) {
@@ -3082,42 +2980,6 @@
   }
 }
 
-/* Unified public CTAs: equal emphasis for route choices across Green partner pages */
-.gp-btn--primary,
-.gp-btn--secondary {
-  background: linear-gradient(135deg, #2ab061 0%, #1f8c58 100%) !important;
-  color: #ffffff !important;
-  border-color: transparent !important;
-  box-shadow: 0 16px 32px rgba(24, 97, 54, 0.24) !important;
-}
-
-.gp-btn--primary:hover,
-.gp-btn--secondary:hover {
-  background: linear-gradient(135deg, #31bf6c 0%, #229c62 100%) !important;
-  box-shadow: 0 20px 36px rgba(24, 97, 54, 0.3) !important;
-}
-
-.green-partners-page .gp-new-hero-actions .gp-btn--primary,
-.green-partners-page .gp-new-hero-actions .gp-btn--secondary,
-.green-partners-page .gp-footer-buttons .gp-btn--primary,
-.green-partners-page .gp-footer-buttons .gp-btn--secondary {
-  background: linear-gradient(135deg, #2ab061 0%, #1f8c58 100%) !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(217, 245, 228, 0.16) !important;
-  border-color: rgba(217, 245, 228, 0.16) !important;
-  box-shadow: 0 16px 32px rgba(24, 97, 54, 0.24) !important;
-}
-
-.green-partners-page .gp-new-hero-actions .gp-btn--primary:hover,
-.green-partners-page .gp-new-hero-actions .gp-btn--secondary:hover,
-.green-partners-page .gp-footer-buttons .gp-btn--primary:hover,
-.green-partners-page .gp-footer-buttons .gp-btn--secondary:hover {
-  background: linear-gradient(135deg, #31bf6c 0%, #229c62 100%) !important;
-  color: #ffffff !important;
-  border-color: rgba(233, 247, 238, 0.22) !important;
-  box-shadow: 0 20px 36px rgba(24, 97, 54, 0.3) !important;
-}
-
 /* 2026 editorial simplification: fewer boxed surfaces, clearer hierarchy */
 .green-partners-page {
   background:
@@ -3157,19 +3019,22 @@
   font-size: 1.02rem;
 }
 
+/* Unified public CTAs: solid brand green, sharp rectangular corners, equal emphasis for every
+   route choice (hero, footer, proof-stage) - one definition instead of the half-dozen conflicting
+   !important overrides this used to need across dark and light backgrounds alike. */
 .green-partners-page .gp-btn--primary,
 .green-partners-page .gp-btn--secondary {
-  background: linear-gradient(135deg, #2ab061 0%, #1f8c58 100%) !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(217, 245, 228, 0.16) !important;
-  box-shadow: 0 16px 32px rgba(24, 97, 54, 0.24) !important;
+  background: #1f8c58;
+  color: #ffffff;
+  border-color: #1f8c58;
+  box-shadow: 0 10px 24px rgba(24, 97, 54, 0.22);
 }
 
 .green-partners-page .gp-btn--primary:hover,
 .green-partners-page .gp-btn--secondary:hover {
-  background: linear-gradient(135deg, #31bf6c 0%, #229c62 100%) !important;
-  border-color: rgba(233, 247, 238, 0.22) !important;
-  box-shadow: 0 20px 36px rgba(24, 97, 54, 0.3) !important;
+  background: #197549;
+  border-color: #197549;
+  box-shadow: 0 14px 28px rgba(24, 97, 54, 0.3);
 }
 
 .green-partners-page .gp-premium-proof-grid {
@@ -3250,9 +3115,9 @@
 .green-partners-page .gp-photo-card,
 .green-partners-page .gp-proof-showcase,
 .green-partners-page .gp-asset-card {
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(17, 53, 33, 0.08);
-  box-shadow: 0 14px 34px rgba(16, 34, 23, 0.08);
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .green-partners-page .gp-model-showcase__header h3,
@@ -3360,9 +3225,11 @@
 }
 
 .green-partners-page .gp-demo-embed {
-  background: #ffffff;
-  border: 1px solid rgba(17, 53, 33, 0.08);
-  box-shadow: 0 14px 30px rgba(16, 34, 23, 0.08);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
 }
 
 .green-partners-page .gp-demo-linkout {
@@ -3387,10 +3254,10 @@
 }
 
 .green-partners-page .gp-asset-card__media {
-  border-radius: 18px;
-  overflow: hidden;
-  border: 1px solid rgba(17, 53, 33, 0.08);
-  background: #eef4ef;
+  border-radius: 0;
+  overflow: visible;
+  border: none;
+  background: transparent;
 }
 
 .green-partners-page .gp-workflow-grid {
@@ -3456,7 +3323,7 @@
 .green-partners-page .gp-footer-panel {
   background: #183c28;
   border: none;
-  box-shadow: 0 18px 40px rgba(8, 22, 14, 0.18);
+  box-shadow: none;
 }
 
 @media (max-width: 1024px) {
@@ -3518,13 +3385,11 @@
   align-items: start;
 }
 
+/* Plain evidence photo - no card frame around it, just the image with its caption in normal flow
+   underneath (figcaption already sat below the image in markup; it only needed the surrounding
+   card removed). */
 .green-partners-page .gp-premium-proof-feature {
   margin: 0;
-  border: 1px solid rgba(17, 53, 33, 0.08);
-  border-radius: 32px;
-  overflow: hidden;
-  background: #ffffff;
-  box-shadow: 0 18px 42px rgba(15, 33, 22, 0.08);
 }
 
 .green-partners-page .gp-premium-proof-feature img {
@@ -3535,7 +3400,7 @@
 }
 
 .green-partners-page .gp-premium-proof-feature figcaption {
-  padding: 24px 28px 28px;
+  padding: 20px 0 0;
 }
 
 .green-partners-page .gp-premium-proof-feature-kicker {
@@ -3651,53 +3516,33 @@
   align-items: stretch;
 }
 
+/* Plain evidence photos: no card frame, no dark scrim over the image, no text floating on top of
+   it - just the photo, then its caption as normal plain text underneath. */
 .green-partners-page .gp-photo-feature,
 .green-partners-page .gp-photo-side-card {
-  position: relative;
   margin: 0;
-  overflow: hidden;
-  border-radius: 32px;
-  background: #dfe9e1;
-  box-shadow: 0 18px 42px rgba(15, 33, 22, 0.1);
-}
-
-.green-partners-page .gp-photo-feature {
-  min-height: 560px;
 }
 
 .green-partners-page .gp-photo-feature img,
 .green-partners-page .gp-photo-side-card img {
   display: block;
   width: 100%;
-  height: 100%;
+  aspect-ratio: 4 / 3;
   object-fit: cover;
-}
-
-.green-partners-page .gp-photo-feature::after,
-.green-partners-page .gp-photo-side-card__overlay {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(10, 20, 15, 0.06) 0%, rgba(10, 20, 15, 0.74) 100%);
 }
 
 .green-partners-page .gp-photo-feature figcaption,
 .green-partners-page .gp-photo-side-card__body {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 1;
-  padding: 24px;
-  color: #ffffff;
+  padding: 16px 0 0;
+  color: #102217;
 }
 
 .green-partners-page .gp-photo-lead {
-  padding: 2rem 2.1rem;
-  background: rgba(255, 255, 255, 0.97);
-  border: 1px solid rgba(17, 53, 33, 0.08);
-  border-radius: 32px;
-  box-shadow: 0 14px 34px rgba(16, 34, 23, 0.08);
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .green-partners-page .gp-photo-lead h2 {
@@ -3712,7 +3557,7 @@
 .green-partners-page .gp-photo-side-card__body span {
   display: inline-flex;
   align-items: center;
-  color: rgba(220, 247, 229, 0.88);
+  color: #1f8c58;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -3721,12 +3566,12 @@
 
 .green-partners-page .gp-photo-feature figcaption h3,
 .green-partners-page .gp-photo-side-card__body h3 {
-  margin: 12px 0 0;
-  color: #ffffff;
+  margin: 10px 0 0;
+  color: #102217;
   font-family: "Fraunces", serif;
-  font-size: clamp(1.8rem, 2vw, 2.55rem);
-  line-height: 1.02;
-  letter-spacing: -0.04em;
+  font-size: clamp(1.4rem, 2vw, 1.9rem);
+  line-height: 1.2;
+  letter-spacing: -0.03em;
   text-wrap: balance;
 }
 
@@ -3734,10 +3579,6 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
-}
-
-.green-partners-page .gp-photo-side-card {
-  min-height: 270px;
 }
 
 .green-partners-page .gp-photo-side-card__body h3 {
@@ -3771,10 +3612,6 @@
   .green-partners-page .gp-photo-editorial {
     grid-template-columns: 1fr;
   }
-
-  .green-partners-page .gp-photo-feature {
-    min-height: 420px;
-  }
 }
 
 @media (max-width: 720px) {
@@ -3789,16 +3626,6 @@
 
   .green-partners-page .gp-photo-side-grid {
     grid-template-columns: 1fr;
-  }
-
-  .green-partners-page .gp-photo-feature {
-    min-height: 340px;
-  }
-
-  .green-partners-page .gp-premium-proof-feature figcaption,
-  .green-partners-page .gp-photo-feature figcaption,
-  .green-partners-page .gp-photo-side-card__body {
-    padding: 18px;
   }
 
   .green-partners-page .gp-model-carousel {

@@ -1612,13 +1612,21 @@
   background: var(--edash-neutral-tint);
 }
 
+/* A solid, high-contrast bar - not a soft tint - so the currently-selected row reads the same way
+   a native <select>'s own highlighted option does everywhere else on the dashboard (e.g. the
+   Method field right above this one), just in the dashboard's own brand color instead of the
+   browser's default blue. */
 .edash-modal .cs-select-option.is-selected {
-  background: var(--edash-brand-tint);
-  color: var(--edash-brand);
+  background: var(--edash-brand);
+  color: #fff;
 }
 
 .edash-modal .cs-select-option-epsg {
   color: var(--edash-faint);
+}
+
+.edash-modal .cs-select-option.is-selected .cs-select-option-epsg {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .edash-layout-template-summary {
