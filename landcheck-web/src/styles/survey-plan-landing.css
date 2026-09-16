@@ -575,15 +575,22 @@
 
 @media (max-width: 900px) {
   .spl-hero {
-    min-height: 760px;
+    min-height: 640px;
     align-items: flex-start;
   }
 
+  /* Below this width the laptop photo needs to read as a full backdrop the text sits on top of,
+     not a smaller graphic parked underneath a solid-color text block - so it's sized off the
+     hero's own height (edge-to-edge top-to-bottom) instead of viewport width, with the excess
+     width cropped by .spl-hero's overflow:hidden. Anchored flush right (right: 0), same edge the
+     desktop rule above anchors to, so the same portion of the photo (laptop/hand) stays in frame
+     rather than guessing a new crop offset for a much wider rendered image. */
   .spl-hero-device,
   .spl-hero-screen {
-    right: -10vw;
-    bottom: -7%;
-    width: min(100vw, 940px);
+    top: 0;
+    right: 0;
+    width: auto;
+    height: 100%;
   }
 
   .spl-hero-copy {
@@ -640,15 +647,19 @@
   }
 
   .spl-hero {
-    min-height: 800px;
+    min-height: 620px;
     align-items: flex-start;
   }
 
+  /* Full-height backdrop, same reasoning and same flush-right anchor as the 900px breakpoint
+     above - sized off the hero's own height rather than viewport width, so the image always
+     reaches all the way up behind the text instead of leaving a solid-color gap above it. */
   .spl-hero-device,
   .spl-hero-screen {
-    right: -15vw;
-    bottom: -1%;
-    width: 115vw;
+    top: 0;
+    right: 0;
+    width: auto;
+    height: 100%;
   }
 
   .spl-hero-shade {
