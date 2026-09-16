@@ -1306,10 +1306,26 @@
 .edash-inline-price, .edash-inline-price-editor { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .edash-inline-price-editor input { width: 112px; min-height: 30px; padding: 3px 7px; border: 1px solid var(--edash-border); border-radius: 6px; color: var(--edash-ink); }
 .edash-inline-price-editor input:focus { border-color: var(--edash-brand); outline: 2px solid var(--edash-brand-tint); }
+.edash-plot-listing-defaults { margin: 0 0 18px; padding: 14px 16px; border-top: 1px solid var(--edash-border); border-bottom: 1px solid var(--edash-border); }
+.edash-plot-listing-defaults-copy { display: flex; flex-direction: column; gap: 3px; margin-bottom: 12px; }
+.edash-plot-listing-defaults-copy strong { color: var(--edash-ink); font-size: .86rem; }
+.edash-plot-listing-defaults-copy span, .edash-plot-default-field > .edash-field-note { color: var(--edash-muted); font-size: .74rem; }
+.edash-plot-listing-defaults-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(260px, 1fr); gap: 14px; }
+.edash-plot-default-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.edash-plot-default-field label, .edash-plot-default-field legend { color: var(--edash-muted); font-size: .7rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.edash-plot-default-field input[type="text"], .edash-plot-default-field input[type="number"], .edash-plot-default-action input { min-height: 32px; min-width: 0; padding: 6px 9px; border: 1px solid var(--edash-border); border-radius: 7px; background: #fff; color: var(--edash-ink); font: inherit; font-size: .78rem; }
+.edash-plot-default-action { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.edash-plot-default-action input { flex: 1; width: 100%; }
+.edash-plot-default-action .edash-card-link { flex-shrink: 0; white-space: nowrap; }
+.edash-plot-pricing-field { border: 0; padding: 0; margin: 0; }
+.edash-plot-price-modes { display: flex; gap: 14px; margin-bottom: 6px; }
+.edash-plot-price-modes label { display: flex; align-items: center; gap: 5px; color: var(--edash-ink); font-size: .78rem; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.edash-plot-price-modes input { accent-color: var(--edash-brand); }
 @media (max-width: 560px) {
   .edash-public-lead { flex-direction: column; gap: 10px; }
   .edash-public-lead-actions { align-items: flex-start; flex-direction: row; width: 100%; }
   .edash-public-settings-grid { grid-template-columns: 1fr; }
+  .edash-plot-listing-defaults-grid { grid-template-columns: 1fr; }
 }
 
 /* ─── Estate onboarding: pick or create an estate (no sidebar - nothing to navigate to yet) ─── */
