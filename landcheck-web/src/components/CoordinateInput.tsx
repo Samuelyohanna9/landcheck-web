@@ -133,6 +133,9 @@ type Props = {
   // which enforces the "at least 3 boundary points" rule per row and would just get stuck at 3
   // instead of actually clearing. Without this prop, "Clear" isn't shown.
   onClearAllPoints?: () => void;
+  // Estate's Add Plot flow uses a compact, direct-entry table. Other consumers keep the Survey
+  // coordinate editor and its existing upload/manual workflow.
+  compactManualEntry?: boolean;
 };
 
 // Flattened view of COORDINATE_SYSTEM_GROUPS - kept for the "currently selected" lookup below;
@@ -189,6 +192,7 @@ function CoordinateInput({
   onAiPlotParsed,
   onReorderPoints,
   onClearAllPoints,
+  compactManualEntry = false,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const aiFileInputRef = useRef<HTMLInputElement>(null);
@@ -707,9 +711,11 @@ function CoordinateInput({
     <div className="coord-input-container">
       <div className="coord-header">
         <h3 className="coord-title">{title || "Add boundary coordinates"}</h3>
-        <p className="coord-subtitle">{subtitle || "Choose how you want to provide the coordinates."}</p>
+        <p className="coord-subtitle">
+          {compactManualEntry && showEditor ? "Enter each boundary station below." : subtitle || "Choose how you want to provide the coordinates."}
+        </p>
       </div>
-      {sidebar}
+      {!(compactManualEntry && showEditor) && sidebar}
 
       <div className="coord-system-selector">
         <label className="coord-system-label" htmlFor="coord-system-select">
@@ -791,7 +797,10 @@ function CoordinateInput({
               role="tab"
               aria-selected={inputMethod === "manual"}
               className={`coord-method-tab ${inputMethod === "manual" ? "active" : ""}`}
-              onClick={() => setInputMethod("manual")}
+              onClick={() => {
+                setInputMethod("manual");
+                if (compactManualEntry) openManualEntry();
+              }}
             >
               <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M10 4a1 1 0 011 1v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4V5a1 1 0 011-1z" />
@@ -911,14 +920,16 @@ function CoordinateInput({
             </div>
           )}
 
-          {inputMethod === "manual" && (
-            <div className="coord-method-panel">
-              <h4>Manual entry</h4>
-              <p>Enter coordinate stations individually.</p>
-              <button type="button" className="coord-method-action-btn" onClick={openManualEntry} disabled={disabled}>
-                Enter manually
-              </button>
-            </div>
+      {inputMethod === "manual" && (
+            compactManualEntry ? null : (
+              <div className="coord-method-panel">
+                <h4>Manual entry</h4>
+                <p>Enter coordinate stations individually.</p>
+                <button type="button" className="coord-method-action-btn" onClick={openManualEntry} disabled={disabled}>
+                  Enter manually
+                </button>
+              </div>
+            )
           )}
         </>
       )}
@@ -1112,6 +1123,67 @@ function CoordinateInput({
 
       {showEditor && (
       <>
+      {compactManualEntry ? (
+      <div className="coord-manual-simple">
+        <div className="coord-manual-simple-grid" aria-label="Plot boundary coordinates">
+          <div className="coord-manual-simple-head">
+            <span>Station name</span>
+            <span>{xLabel}</span>
+            <span>{yLabel}</span>
+          </div>
+          {points.map((point, index) => (
+            <div className="coord-manual-simple-row" key={index}>
+              <input
+                type="text"
+                value={point.station}
+                onChange={(event) => onUpdatePoint(index, "station", event.target.value)}
+                placeholder={String.fromCharCode(65 + (index % 26))}
+                disabled={disabled}
+                aria-label={`Station name for point ${index + 1}`}
+              />
+              <input
+                type="number"
+                step="any"
+                value={point.lng || ""}
+                onChange={(event) => onUpdatePoint(index, "lng", parseFloat(event.target.value) || 0)}
+                onBlur={(event) => {
+                  if (!isProjected) return;
+                  const parsed = parseFloat(event.target.value);
+                  if (Number.isFinite(parsed)) onUpdatePoint(index, "lng", Math.round(parsed * 1000) / 1000);
+                }}
+                placeholder={placeholders.x}
+                disabled={disabled}
+                aria-label={`${xLabel} for point ${index + 1}`}
+              />
+              <input
+                type="number"
+                step="any"
+                value={point.lat || ""}
+                onChange={(event) => onUpdatePoint(index, "lat", parseFloat(event.target.value) || 0)}
+                onBlur={(event) => {
+                  if (!isProjected) return;
+                  const parsed = parseFloat(event.target.value);
+                  if (Number.isFinite(parsed)) onUpdatePoint(index, "lat", Math.round(parsed * 1000) / 1000);
+                }}
+                placeholder={placeholders.y}
+                disabled={disabled}
+                aria-label={`${yLabel} for point ${index + 1}`}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="coord-manual-simple-actions">
+          <button type="button" className="coord-manual-add-btn" onClick={onAddPoint} disabled={disabled} aria-label="Add station" title="Add station">
+            <span aria-hidden="true">+</span>
+            <span>Add station</span>
+          </button>
+          <button type="button" className="coord-editor-done-btn" onClick={() => setPreviewEditing(false)}>
+            Done
+          </button>
+        </div>
+      </div>
+      ) : (
+      <>
       <div className="coord-list-wrapper">
         {(() => {
           // Without point roles enabled, every point counts toward the minimum - matches this
@@ -1236,6 +1308,8 @@ function CoordinateInput({
           Done
         </button>
       </div>
+      </>
+      )}
       </>
       )}
 

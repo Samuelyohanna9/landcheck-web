@@ -1751,6 +1751,36 @@
   border-radius: var(--edash-radius-sm);
 }
 
+.edash-modal .coord-manual-simple-head {
+  color: var(--edash-muted);
+}
+
+.edash-modal .coord-manual-simple-row input {
+  border-color: var(--edash-border);
+  border-radius: var(--edash-radius-sm);
+  background: #fff;
+  color: var(--edash-ink);
+  font-family: inherit;
+}
+
+.edash-modal .coord-manual-simple-row input:focus {
+  border-color: var(--edash-brand);
+  box-shadow: 0 0 0 3px var(--edash-brand-tint);
+}
+
+.edash-modal .coord-manual-add-btn {
+  border-radius: var(--edash-radius-sm);
+  border-color: var(--edash-brand);
+  background: var(--edash-brand-tint);
+  color: var(--edash-brand);
+  font-family: inherit;
+}
+
+.edash-modal .coord-manual-add-btn:hover:not(:disabled) {
+  background: var(--edash-brand);
+  color: #fff;
+}
+
 .edash-modal .coord-method-tab,
 .edash-modal .coord-method-action-btn,
 .edash-modal .coord-preview-stat,

@@ -1097,6 +1097,85 @@
   flex: 1;
 }
 
+.coord-manual-simple {
+  padding: 0.75rem 1rem 0.9rem;
+}
+
+.coord-manual-simple-grid {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.coord-manual-simple-head,
+.coord-manual-simple-row {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.8fr) repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.coord-manual-simple-head {
+  padding: 0 0.15rem 0.2rem;
+  color: var(--survey-gis-text-secondary, #9aaba2);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.coord-manual-simple-row input {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 0.65rem;
+  border: 1px solid var(--survey-gis-divider, rgba(214, 223, 210, 0.16));
+  border-radius: 8px;
+  background: var(--survey-gis-raised-bg, rgba(247, 245, 238, 0.04));
+  color: var(--survey-gis-text-primary, #f7f8f3);
+  font: inherit;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.coord-manual-simple-row input:focus {
+  outline: none;
+  border-color: var(--survey-gis-primary, #3ccf85);
+  box-shadow: 0 0 0 2px var(--survey-gis-primary-tint, rgba(60, 207, 133, 0.14));
+}
+
+.coord-manual-simple-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.coord-manual-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 38px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--survey-gis-primary, #3ccf85);
+  border-radius: 8px;
+  background: var(--survey-gis-primary-tint, rgba(60, 207, 133, 0.14));
+  color: var(--survey-gis-primary, #3ccf85);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.coord-manual-add-btn span:first-child {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.coord-manual-add-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .coord-editor-done-btn {
   margin-left: auto;
   padding: 0.5rem 1rem;
@@ -1121,5 +1200,25 @@
 
   .coord-preview-actions {
     flex-direction: column;
+  }
+
+  .coord-manual-simple {
+    padding-inline: 0.75rem;
+  }
+
+  .coord-manual-simple-head,
+  .coord-manual-simple-row {
+    grid-template-columns: minmax(76px, 0.7fr) repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .coord-manual-simple-head {
+    font-size: 0.56rem;
+    letter-spacing: 0.025em;
+  }
+
+  .coord-manual-simple-row input {
+    padding-inline: 0.4rem;
+    font-size: 0.74rem;
   }
 }
