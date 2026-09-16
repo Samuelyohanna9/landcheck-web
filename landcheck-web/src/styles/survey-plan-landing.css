@@ -574,27 +574,51 @@
 }
 
 @media (max-width: 900px) {
+  /* Below this width there isn't room for the photo to read as a full backdrop the text
+     sits on top of - sizing it off the hero's height at a fixed 3:2 aspect ratio makes it
+     render far wider than the viewport, and the crop then lands under the text instead of
+     beside it. Instead, stack the laptop photo (still composited with the scan-preview
+     "screen" image on top of it, via the shared grid cell) as a plain block above a normal
+     text block below it - sized by width like any other photo, so it can't blow up. */
   .spl-hero {
-    min-height: 640px;
-    align-items: flex-start;
+    display: grid;
+    grid-template-rows: auto auto;
+    min-height: 0;
   }
 
-  /* Below this width the laptop photo needs to read as a full backdrop the text sits on top of,
-     not a smaller graphic parked underneath a solid-color text block - so it's sized off the
-     hero's own height (edge-to-edge top-to-bottom) instead of viewport width, with the excess
-     width cropped by .spl-hero's overflow:hidden. Anchored flush right (right: 0), same edge the
-     desktop rule above anchors to, so the same portion of the photo (laptop/hand) stays in frame
-     rather than guessing a new crop offset for a much wider rendered image. */
   .spl-hero-device,
   .spl-hero-screen {
-    top: 0;
-    right: 0;
-    width: auto;
-    height: 100%;
+    position: relative;
+    grid-column: 1;
+    grid-row: 1;
+    inset: auto;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    width: 100%;
+    height: auto;
+  }
+
+  .spl-hero-shade {
+    display: none;
+  }
+
+  .spl-hero-shell {
+    grid-column: 1;
+    grid-row: 2;
+    padding: 32px 0 48px;
   }
 
   .spl-hero-copy {
-    width: min(470px, 52%);
+    width: 100%;
+  }
+
+  .spl-hero-copy h1 {
+    max-width: 100%;
+  }
+
+  .spl-hero-summary {
+    max-width: 100%;
   }
 
   .spl-capabilities-layout,
@@ -646,32 +670,8 @@
     width: calc(100% - 40px);
   }
 
-  .spl-hero {
-    min-height: 0;
-    align-items: flex-start;
-  }
-
-  /* Below this width there isn't room for the photo to read as a backdrop without
-     colliding with the text on top of it (a fixed-aspect-ratio image sized off the
-     hero's height gets far wider than the viewport and its crop lands under the
-     text) - simplest reliable fix is to drop the overlay treatment entirely and
-     stack a plain solid-colour text block above a plain photo strip instead. */
-  .spl-hero-device,
-  .spl-hero-screen {
-    display: none;
-  }
-
-  .spl-hero-shade {
-    display: none;
-  }
-
   .spl-hero-shell {
-    padding-top: 40px;
-    padding-bottom: 32px;
-  }
-
-  .spl-hero-copy {
-    width: 100%;
+    padding: 24px 0 40px;
   }
 
   .spl-hero-copy h1 {
