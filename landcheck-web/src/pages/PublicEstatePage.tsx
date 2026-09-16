@@ -83,13 +83,21 @@ function featureCollection(estate: PublicEstate) {
     features: estate.plots.map((plot) => ({
       type: "Feature",
       id: plot.id,
-      properties: { status: plot.status, plot_number: plot.plot_number },
+      properties: {
+        status: plot.status,
+        plot_number: plot.plot_number,
+        plot_label: [
+          plot.plot_number,
+          plot.area_sqm ? formatArea(plot.area_sqm) : null,
+          estate.show_prices && plot.price ? money(plot.price) : null,
+        ].filter(Boolean).join("\n"),
+      },
       geometry: plot.geometry,
     })),
   };
 }
 
-function PublicEstateMap({ estate, selectedPlotId, onSelect, onReserve }: { estate: PublicEstate; selectedPlotId: number | null; onSelect: (plotId: number) => void; onReserve: (plotId: number) => void }) {
+function PublicEstateMap({ estate, selectedPlotId, onSelect, onReserve }: { estate: PublicEstate; selectedPlotId: number | null; onSelect: (plotId: number | null) => void; onReserve: (plotId: number) => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const onSelectRef = useRef(onSelect);
@@ -108,11 +116,15 @@ function PublicEstateMap({ estate, selectedPlotId, onSelect, onReserve }: { esta
         map.addSource("public-estate-plots", { type: "geojson", data: featureCollection(estate) });
         map.addLayer({ id: "public-estate-plot-fill", type: "fill", source: "public-estate-plots", paint: { "fill-color": ["match", ["get", "status"], "available", statusColors.available, "reserved", statusColors.reserved, "allocated", statusColors.allocated, "on_hold", statusColors.on_hold, "under_survey", statusColors.under_survey, "under_staking", statusColors.under_staking, "developed", statusColors.developed, statusColors.on_hold], "fill-opacity": 0.66 } });
         map.addLayer({ id: "public-estate-plot-line", type: "line", source: "public-estate-plots", paint: { "line-color": "#ffffff", "line-width": 1.5, "line-opacity": 0.9 } });
-        map.addLayer({ id: "public-estate-plot-label", type: "symbol", source: "public-estate-plots", layout: { "text-field": ["get", "plot_number"], "text-size": 12, "text-allow-overlap": false }, paint: { "text-color": "#ffffff", "text-halo-color": "#102033", "text-halo-width": 1.2 } });
+        map.addLayer({ id: "public-estate-plot-label", type: "symbol", source: "public-estate-plots", layout: { "text-field": ["get", "plot_label"], "text-size": 10, "text-line-height": 1.1, "text-max-width": 9, "text-allow-overlap": false }, paint: { "text-color": "#ffffff", "text-halo-color": "#102033", "text-halo-width": 1.2 } });
         map.addLayer({ id: "public-estate-plot-selected", type: "line", source: "public-estate-plots", paint: { "line-color": "#ffffff", "line-width": 4, "line-opacity": 1 }, filter: ["==", ["id"], -1] });
         map.on("click", "public-estate-plot-fill", (event: any) => {
           const id = Number(event.features?.[0]?.id);
           if (Number.isFinite(id)) onSelectRef.current(id);
+        });
+        map.on("click", (event: any) => {
+          const features = map.queryRenderedFeatures(event.point, { layers: ["public-estate-plot-fill"] });
+          if (!features.length) onSelectRef.current(null);
         });
         map.on("mouseenter", "public-estate-plot-fill", () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", "public-estate-plot-fill", () => { map.getCanvas().style.cursor = ""; });
@@ -157,7 +169,7 @@ export default function PublicEstatePage() {
     api.get(`/estates/public/${slug}`).then((response) => {
       const value = response.data as PublicEstate;
       setEstate(value);
-      setSelectedPlotId(value.plots[0]?.id ?? null);
+      setSelectedPlotId(null);
     }).catch(async (err) => setError(await extractApiErrorMessage(err, "This Estate page is not available."))).finally(() => setLoading(false));
   }, [slug]);
 
