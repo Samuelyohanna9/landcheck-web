@@ -2236,6 +2236,11 @@ export default function Estates() {
     if (activeTool === "add-plot") {
       const isDrawOrCoordinates = addPlotMethod === "draw" || addPlotMethod === "coordinates";
       const needsSourceCrs = addPlotMethod === "csv" || addPlotMethod === "dxf";
+      // "Coordinates" and "scanned-layout" need the full named-system list (COORDINATE_SYSTEM_GROUPS
+      // - wgs84/utm_31n/etc.), not the reduced EPSG-string set CSV/DXF reprojection uses - but the
+      // field itself renders in the exact same shared position/style as that one, one picker per
+      // method, never two at once.
+      const needsNamedCrs = addPlotMethod === "coordinates" || addPlotMethod === "scanned-layout";
       return renderToolModal("Add a plot", "Choose how you want to add this plot to the Estate register.", (
         <>
           <div className="edash-form-row" style={{ marginBottom: 16 }}>
@@ -2256,6 +2261,26 @@ export default function Estates() {
                 <span>Coordinate system</span>
                 <select value={importSourceCrs} onChange={(event) => setImportSourceCrs(event.target.value)}>
                   {IMPORT_CRS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </label>
+            )}
+            {needsNamedCrs && (
+              <label className="edash-field" style={{ maxWidth: 280 }}>
+                <span>Coordinate system</span>
+                <select
+                  value={addPlotMethod === "scanned-layout" ? scannedLayoutCrs : plotInputCoordinateSystem}
+                  onChange={(event) => {
+                    if (addPlotMethod === "scanned-layout") setScannedLayoutCrs(event.target.value);
+                    else setPlotInputCoordinateSystem(event.target.value);
+                  }}
+                >
+                  {COORDINATE_SYSTEM_GROUPS.map((group) => (
+                    <optgroup key={group.country} label={group.country}>
+                      {group.systems.map((system) => (
+                        <option key={system.key} value={system.key}>{system.name} ({system.epsgLabel})</option>
+                      ))}
+                    </optgroup>
+                  ))}
                 </select>
               </label>
             )}
@@ -2316,8 +2341,6 @@ export default function Estates() {
               onDecision={(reviewId, status) => void decideImportReview(reviewId, status, importAsBoundary)}
               onStartGeoreference={(file) => void startGeoreferenceImport(file)}
               onOpenGeoreference={openGeoreferenceTool}
-              scannedLayoutCrs={scannedLayoutCrs}
-              onScannedLayoutCrsChange={setScannedLayoutCrs}
               message={layoutMessage}
               messageTone={layoutMessageTone}
               busy={layoutUploadBusy}

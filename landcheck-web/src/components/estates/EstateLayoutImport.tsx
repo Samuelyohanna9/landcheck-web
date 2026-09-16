@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import CoordinateSystemSelect from "../CoordinateSystemSelect";
 import EstateIcon from "./EstateIcon";
 import Spinner from "./EstateSpinner";
 
@@ -29,10 +28,6 @@ type Props = {
   busy?: boolean;
   asBoundary?: boolean;
   onAsBoundaryChange?: (value: boolean) => void;
-  // The coordinate system the georeference session's ground control points will be entered in -
-  // scanned-layout only. Previously hardcoded to "wgs84" server-side with no way to change it.
-  scannedLayoutCrs?: string;
-  onScannedLayoutCrsChange?: (value: string) => void;
 };
 
 export const LAYOUT_IMPORT_METHODS: Array<{ key: EstateLayoutMethod; icon: import("./EstateIcon").EstateIconName; title: string; description: string; accept: string }> = [
@@ -95,7 +90,7 @@ function InvalidRowsList({ review }: { review: ImportReview }) {
   );
 }
 
-export default function EstateLayoutImport({ method, reviews, files, onFileChange, onUpload, onDecision, onStartGeoreference, onOpenGeoreference, message, messageTone = "good", busy = false, asBoundary = false, onAsBoundaryChange, scannedLayoutCrs = "wgs84", onScannedLayoutCrsChange }: Props) {
+export default function EstateLayoutImport({ method, reviews, files, onFileChange, onUpload, onDecision, onStartGeoreference, onOpenGeoreference, message, messageTone = "good", busy = false, asBoundary = false, onAsBoundaryChange }: Props) {
   const latest = reviews[0];
   const usableCount = latest?.candidates?.filter((candidate) => candidate.valid !== false && candidate.geometry?.type === "Polygon").length || 0;
   const selectedMethod = LAYOUT_IMPORT_METHODS.find((item) => item.key === method) || LAYOUT_IMPORT_METHODS[0];
@@ -145,15 +140,6 @@ export default function EstateLayoutImport({ method, reviews, files, onFileChang
                 <input type="file" accept={selectedMethod.accept} onChange={(event) => onFileChange(method, event.target.files?.[0] || null)} />
               </label>
               <p className="edash-status-row-desc">Set the plan's position, trace its plot boundaries, and finish to add them to this Estate.</p>
-              {onScannedLayoutCrsChange && (
-                <div style={{ marginTop: 4, marginBottom: 10, maxWidth: 320 }}>
-                  <label className="edash-field-label" htmlFor="scanned-layout-crs-select">Coordinate system</label>
-                  <CoordinateSystemSelect id="scanned-layout-crs-select" value={scannedLayoutCrs} onChange={onScannedLayoutCrsChange} disabled={busy} />
-                  <p className="edash-field-note" style={{ marginTop: 4 }}>
-                    This is the coordinate system you'll use when entering control point coordinates while georeferencing this scan.
-                  </p>
-                </div>
-              )}
               <button type="button" className="edash-btn-primary" disabled={!file || busy} onClick={() => file && onStartGeoreference(file)}>
                 {busy ? <><Spinner size={13} /> Starting...</> : "Start georeferencing"}
               </button>
