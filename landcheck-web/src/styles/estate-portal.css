@@ -226,9 +226,8 @@
 .estate-register-intro > p:not(.estate-kicker) { max-width: 380px; color: var(--estate-slate); line-height: 1.7; }
 .estate-register-points { display: grid; gap: 13px; margin-top: 34px; color: #496371; font: 700 .75rem Arial, sans-serif; }
 .estate-register-points b { display: inline-grid; place-items: center; width: 27px; height: 27px; margin-right: 8px; background: #d8ebe2; color: #167d7b; font-size: .6rem; }
-.estate-auth-shell--register .estate-auth-card { grid-column: 2; }
-.estate-auth-shell--register .estate-register-intro { grid-column: 1; grid-row: 2; }
-.estate-auth-shell--register .estate-auth-brand { grid-row: 1; }
+.estate-auth-shell--register .estate-auth-card { grid-column: 2; grid-row: 1; }
+.estate-auth-shell--register .estate-register-intro { grid-column: 1; grid-row: 1; }
 
 @media (max-width: 850px) {
   .estate-portal-nav { justify-content: flex-start; }
