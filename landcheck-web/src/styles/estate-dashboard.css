@@ -335,6 +335,26 @@
 
 .edash-user:hover { background: var(--edash-neutral-tint); }
 
+.edash-company-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border: 1px solid var(--edash-border);
+  border-radius: 9px;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.edash-company-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .edash-user-avatar {
   display: flex;
   align-items: center;
@@ -572,7 +592,7 @@
 
 .edash-map-toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
@@ -606,8 +626,8 @@
   align-items: center;
   gap: 7px;
   height: 34px;
-  min-width: 170px;
-  flex: 1 1 190px;
+  min-width: 60px;
+  flex: 1 1 80px;
   padding: 0 11px;
   border: 1px solid var(--edash-border);
   border-radius: 9px;
@@ -621,6 +641,7 @@
 
 .edash-map-select {
   height: 34px;
+  width: 104px;
   padding: 0 9px;
   border: 1px solid var(--edash-border);
   border-radius: 9px;
@@ -1249,6 +1270,9 @@
   .edash-overview-grid--3 { grid-template-columns: 1fr 1fr; }
   .edash-search { display: none; }
   .edash-user-meta { display: none; }
+  .edash-map-toolbar { flex-wrap: wrap; }
+  .edash-map-search { flex: 1 1 190px; min-width: 170px; }
+  .edash-map-select { width: auto; }
 }
 
 @media (max-width: 520px) {

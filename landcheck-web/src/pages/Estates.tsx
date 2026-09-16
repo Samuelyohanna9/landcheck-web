@@ -1014,6 +1014,15 @@ export default function Estates() {
     api.get(`/estates/${estateId}`).then((response) => {
       setEstateDetail(response.data);
       setImportSourceCrs(response.data.crs || "EPSG:4326");
+      // The Estate's own registered CRS (set at Estate creation, e.g. a Nigerian UTM/Minna belt) is
+      // the coordinate system its survey plans and DGPS exports should agree on - seed every picker
+      // from it so drawing, entering coordinates, importing files, and exporting DGPS data all start
+      // out on the same system by default instead of each one guessing its own generic fallback.
+      const estateMapSystem = estateMapCoordinateSystem(response.data.crs);
+      setPlotInputCoordinateSystem(estateMapSystem);
+      setScannedLayoutCrs(estateMapSystem);
+      setDgpsExportCoordinateSystem(estateMapSystem);
+      setLayoutExportCoordinateSystem(estateMapSystem);
       const organizationId = response.data.organization_id;
       if (organizationId) {
         api.get(`/estates/organizations/${organizationId}/sales-agents`).then((agentsResponse) => setSalesAgents(agentsResponse.data || [])).catch(() => setSalesAgents([]));
@@ -2264,11 +2273,14 @@ export default function Estates() {
     if (activeTool === "add-plot") {
       const isDrawOrCoordinates = addPlotMethod === "draw" || addPlotMethod === "coordinates";
       const needsSourceCrs = addPlotMethod === "csv" || addPlotMethod === "dxf";
-      // "Coordinates" and "scanned-layout" need the full named-system list (COORDINATE_SYSTEM_GROUPS
-      // - wgs84/utm_31n/etc.), not the reduced EPSG-string set CSV/DXF reprojection uses - but the
-      // field itself renders in the exact same shared position/style as that one, one picker per
-      // method, never two at once.
-      const needsNamedCrs = addPlotMethod === "coordinates" || addPlotMethod === "scanned-layout";
+      // "Draw", "coordinates" and "scanned-layout" all need the full named-system list
+      // (COORDINATE_SYSTEM_GROUPS - wgs84/utm_31n/etc.), not the reduced EPSG-string set CSV/DXF
+      // reprojection uses - but the field itself renders in the exact same shared position/style as
+      // that one, one picker per method, never two at once. Drawing on the satellite map always
+      // captures WGS84 vertices from Mapbox (no reprojection needed for the geometry itself), but the
+      // picker still matters here: it's what this plot's DGPS export and Survey Plan handoff default
+      // to afterwards, so every creation method - not just manual entry - should record and confirm it.
+      const needsNamedCrs = addPlotMethod === "draw" || addPlotMethod === "coordinates" || addPlotMethod === "scanned-layout";
       return renderToolModal("Add a plot", "Choose how you want to add this plot to the Estate register.", (
         <>
           <div className="edash-form-row" style={{ marginBottom: 16 }}>
@@ -2308,8 +2320,14 @@ export default function Estates() {
                 <select
                   value={addPlotMethod === "scanned-layout" ? scannedLayoutCrs : plotInputCoordinateSystem}
                   onChange={(event) => {
-                    if (addPlotMethod === "scanned-layout") setScannedLayoutCrs(event.target.value);
-                    else setPlotInputCoordinateSystem(event.target.value);
+                    const nextCrs = event.target.value;
+                    if (addPlotMethod === "scanned-layout") setScannedLayoutCrs(nextCrs);
+                    else setPlotInputCoordinateSystem(nextCrs);
+                    // Keeps the plot(s) this action creates consistent with what Survey Plan and the
+                    // DGPS export pickers default to afterwards, rather than three independent choices
+                    // that happen to start out matching but can silently drift apart.
+                    setDgpsExportCoordinateSystem(nextCrs);
+                    setLayoutExportCoordinateSystem(nextCrs);
                   }}
                 >
                   {COORDINATE_SYSTEM_GROUPS.map((group) => (

@@ -28,7 +28,7 @@ const shouldOverrideLocalConfiguredApi = Boolean(
   configuredApiUrl && configuredApiHost && isLocalHost(configuredApiHost) && browserHost && !isLocalHost(browserHost),
 );
 
-const API_URL = (shouldOverrideLocalConfiguredApi ? defaultApiUrl : configuredApiUrl || defaultApiUrl).replace(/\/+$/, "");
+export const API_URL = (shouldOverrideLocalConfiguredApi ? defaultApiUrl : configuredApiUrl || defaultApiUrl).replace(/\/+$/, "");
 
 export const api = axios.create({
   baseURL: API_URL,

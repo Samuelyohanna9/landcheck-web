@@ -21,7 +21,10 @@ export default function EstateSettingsPage() {
   const [activity, setActivity] = useState<any[]>([]);
   const [publicEnabled, setPublicEnabled] = useState(false);
   const [publicDescription, setPublicDescription] = useState("");
+  const [publicTagline, setPublicTagline] = useState("");
   const [publicPhone, setPublicPhone] = useState("");
+  const [publicLogoPath, setPublicLogoPath] = useState<string | null>(null);
+  const [publicLogoFile, setPublicLogoFile] = useState<File | null>(null);
   const [publicShowPrices, setPublicShowPrices] = useState(true);
   const [publicCanPublish, setPublicCanPublish] = useState(false);
   const [publicUrlPath, setPublicUrlPath] = useState<string | null>(null);
@@ -42,7 +45,9 @@ export default function EstateSettingsPage() {
         const publicPage = (await api.get(`/estates/${estateId}/public-settings`)).data;
         setPublicEnabled(Boolean(publicPage.public_enabled));
         setPublicDescription(publicPage.public_description || "");
+        setPublicTagline(publicPage.public_tagline || "");
         setPublicPhone(publicPage.public_contact_phone || "");
+        setPublicLogoPath(publicPage.public_logo_path || null);
         setPublicShowPrices(publicPage.public_show_prices !== false);
         setPublicCanPublish(Boolean(publicPage.can_publish));
         setPublicUrlPath(publicPage.public_url_path || null);
@@ -82,10 +87,18 @@ export default function EstateSettingsPage() {
       const response = await api.patch(`/estates/${estateId}/public-settings`, {
         public_enabled: publicEnabled,
         public_description: publicDescription.trim() || null,
+        public_tagline: publicTagline.trim() || null,
         public_contact_phone: publicPhone.trim() || null,
         public_show_prices: publicShowPrices,
       });
       setPublicUrlPath(response.data.public_url_path || null);
+      if (publicLogoFile) {
+        const formData = new FormData();
+        formData.append("file", publicLogoFile);
+        const logoResponse = await api.post(`/estates/${estateId}/public-logo`, formData);
+        setPublicLogoPath(logoResponse.data.logo_path || null);
+        setPublicLogoFile(null);
+      }
       toast.success(publicEnabled ? "Public Estate page published." : "Public Estate page saved.");
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The public Estate page could not be saved."));
@@ -129,9 +142,14 @@ export default function EstateSettingsPage() {
             <div className="edash-field"><span>Page address</span><strong style={{ color: "var(--edash-ink)" }}>{publicUrlPath || "Created automatically when you publish"}</strong></div>
             <label className="edash-field"><span>Contact phone</span><input value={publicPhone} onChange={(event) => setPublicPhone(event.target.value)} placeholder="Phone for enquiries" /></label>
           </div>
-          <label className="edash-field" style={{ margin: "10px 0" }}><span>Short introduction</span><textarea rows={3} value={publicDescription} onChange={(event) => setPublicDescription(event.target.value)} placeholder="A short description buyers should know about this Estate" /></label>
+          <div className="edash-public-settings-grid" style={{ marginTop: 10 }}>
+            <label className="edash-field"><span>Trust line</span><input value={publicTagline} onChange={(event) => setPublicTagline(event.target.value)} placeholder="Verified land | C of O documentation available" /></label>
+            <label className="edash-field"><span>Company logo</span><input type="file" accept="image/png,image/jpeg" onChange={(event) => setPublicLogoFile(event.target.files?.[0] || null)} /></label>
+          </div>
+          {publicLogoPath && <p className="edash-field-note" style={{ margin: "8px 0" }}>Company logo uploaded and visible on the public page.</p>}
+          <label className="edash-field" style={{ margin: "10px 0" }}><span>About this Estate</span><textarea rows={3} value={publicDescription} onChange={(event) => setPublicDescription(event.target.value)} placeholder="Tell buyers what makes this Estate worth considering" /></label>
           <label className="edash-toggle" style={{ marginBottom: 14 }}><input type="checkbox" checked={publicShowPrices} onChange={(event) => setPublicShowPrices(event.target.checked)} /> Show plot prices publicly</label>
-          <button type="button" className="edash-btn-primary" disabled={publicEnabled && !publicCanPublish} onClick={() => void savePublicPage()}>Save public page</button>
+          <button type="button" className="edash-btn-primary" disabled={publicEnabled && !publicCanPublish} onClick={() => void savePublicPage()}>Save and publish page</button>
         </div>
       </div>
       <div className="edash-content-row edash-content-row--split">

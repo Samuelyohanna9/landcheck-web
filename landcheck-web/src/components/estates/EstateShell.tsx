@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import { api } from "../../api/client";
+import { API_URL, api } from "../../api/client";
 import EstateIcon, { type EstateIconName } from "./EstateIcon";
 import EstateModal from "./EstateModal";
 import { clearEstateAuthSession, getEstateAuthSession } from "../../auth/estateAuth";
@@ -75,6 +75,7 @@ export default function EstateShell({
   const [notifOpen, setNotifOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [companyLogoPath, setCompanyLogoPath] = useState<string | null>(null);
   const estateSession = getEstateAuthSession();
   const activeItem = estateNavItems.find((item) => item.key === activeKey);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -119,6 +120,24 @@ export default function EstateShell({
       .catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [skipBillingGate, estateSession?.user.organization_id]);
+
+  // The company logo is configured once in Estate settings and reused throughout the workspace.
+  // Keep the account avatar for the signed-in person; the adjacent mark identifies the company.
+  useEffect(() => {
+    let mounted = true;
+    api.get(`/estates/${estateId}/public-settings`)
+      .then((response) => {
+        if (mounted) setCompanyLogoPath(response.data?.public_logo_path || null);
+      })
+      .catch(() => {
+        if (mounted) setCompanyLogoPath(null);
+      });
+    return () => { mounted = false; };
+  }, [estateId]);
+
+  const companyLogoUrl = companyLogoPath
+    ? (companyLogoPath.startsWith("http") ? companyLogoPath : `${API_URL}${companyLogoPath}`)
+    : null;
 
   // Without this, these dropdowns only ever close via their own toggle button - clicking
   // anywhere else on the page (including the other dropdown) leaves them stuck open.
@@ -240,6 +259,11 @@ export default function EstateShell({
             </div>
             <div style={{ position: "relative" }} ref={userMenuRef}>
               <div className="edash-user" onClick={() => setUserMenuOpen((value) => !value)}>
+                {companyLogoUrl && (
+                  <span className="edash-company-logo" title="Company logo">
+                    <img src={companyLogoUrl} alt={`${estateSession?.user.organization_name || "Company"} logo`} />
+                  </span>
+                )}
                 <span className="edash-user-avatar">{(estateSession?.user.full_name || estateSession?.user.organization_name || "E").slice(0, 1).toUpperCase()}</span>
                 <div className="edash-user-meta">
                   <strong>{estateSession?.user.full_name || estateSession?.user.organization_name || "Estate team"}</strong>
