@@ -570,7 +570,7 @@ export default function Estates() {
   const [drawerTab, setDrawerTab] = useState<"overview" | "customer" | "survey" | "staking" | "documents" | "hazards" | "timeline">("overview");
   const [editingDevelopment, setEditingDevelopment] = useState(false);
   const [plotContextMenu, setPlotContextMenu] = useState<{ x: number; y: number; plotId: number } | null>(null);
-  const [activeTool, setActiveTool] = useState<"add-plot" | "layout" | "blocks" | "layers" | "qc" | "export-layout" | null>(null);
+  const [activeTool, setActiveTool] = useState<"add-plot" | "layout" | "blocks" | "layers" | "export-layout" | null>(null);
   type AddPlotMethod = "draw" | "coordinates" | EstateLayoutMethod;
   const [addPlotMethod, setAddPlotMethod] = useState<AddPlotMethod>("draw");
   const [designSubdividePlotId, setDesignSubdividePlotId] = useState<number | null>(null);
@@ -812,8 +812,10 @@ export default function Estates() {
     setSubdivisionBusy(true);
     try {
       const response = await api.post(`/estates/${estateId}/plots/${plotId}/subdivide`, { split_count: splitCount });
-      stashPendingNotice(`${response.data.created_count} plots created. They are ready to reserve or allocate.`);
-      window.location.reload();
+      await refreshEstateLayoutData();
+      setQuality(null);
+      void loadQualityCheck();
+      toast.success(`${response.data.created_count} plots created. Check the geometry below before publishing.`);
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "This plot could not be split."));
     } finally {
@@ -835,8 +837,10 @@ export default function Estates() {
     try {
       const created = await api.post(`/estates/${estateId}/plots`, { plot_number: "WHOLE", geometry: estateDetail.boundary, geometry_status: "approved" });
       const response = await api.post(`/estates/${estateId}/plots/${created.data.id}/subdivide`, { split_count: splitCount });
-      stashPendingNotice(`${response.data.created_count} plots created from the boundary. They are ready to reserve or allocate.`);
-      window.location.reload();
+      await refreshEstateLayoutData();
+      setQuality(null);
+      void loadQualityCheck();
+      toast.success(`${response.data.created_count} plots created from the boundary. Check the geometry below before publishing.`);
     } catch (error) {
       toast.error(await extractApiErrorMessage(error, "The boundary could not be split into plots."));
     } finally {
@@ -1008,8 +1012,10 @@ export default function Estates() {
       await api.post(`/estates/layout-proposals/${proposalId}/decision`, { status, replace_existing: Boolean(options?.replaceExisting) });
       setPendingLayoutApproval(null);
       if (status === "approved") {
-        stashPendingNotice("The plots and shared spaces were added to the Estate map.");
-        window.location.reload();
+        await refreshEstateLayoutData();
+        setQuality(null);
+        void loadQualityCheck();
+        toast.success("The plots and shared spaces were added. Check the geometry below before publishing.");
       } else {
         toast.success("Draft layout discarded.");
         setLayoutProposal((current: any) => current ? { ...current, status } : current);
@@ -1257,6 +1263,31 @@ export default function Estates() {
       api.get("/estates/survey-requests", { params: { estate_id: estateId } }),
       api.get("/estates/staking-tasks", { params: { estate_id: estateId } }),
     ]);
+    setSurveyRequests(surveys.data || []);
+    setStakingTasks(staking.data || []);
+  };
+  const refreshEstateLayoutData = async () => {
+    if (!estateId) return;
+    const [selectors, plotsMap, layersMap, blockRows, events, metrics, proposals, surveys, staking] = await Promise.all([
+      api.get("/estates/selectors", { params: { estate_id: estateId } }),
+      api.get(`/estates/${estateId}/plots.geojson`),
+      api.get(`/estates/${estateId}/layers.geojson`),
+      api.get(`/estates/${estateId}/blocks`),
+      api.get(`/estates/${estateId}/activity`),
+      api.get(`/estates/${estateId}/dashboard`),
+      api.get(`/estates/${estateId}/layout-proposals`),
+      api.get("/estates/survey-requests", { params: { estate_id: estateId } }),
+      api.get("/estates/staking-tasks", { params: { estate_id: estateId } }),
+    ]);
+    setAllocations(selectors.data.allocations || []);
+    setPlots(selectors.data.plots || []);
+    setCustomers(selectors.data.customers || []);
+    setPlotGeojson(plotsMap.data);
+    setLayerGeojson(layersMap.data);
+    setBlocks(blockRows.data || []);
+    setActivity(events.data || []);
+    setDashboard(metrics.data);
+    setLayoutProposal((proposals.data || [])[0] || null);
     setSurveyRequests(surveys.data || []);
     setStakingTasks(staking.data || []);
   };
@@ -2354,7 +2385,7 @@ export default function Estates() {
   }
 
   function renderToolsBar() {
-    type ToolKey = "add-plot" | "layout" | "blocks" | "layers" | "qc" | "export-layout";
+    type ToolKey = "add-plot" | "layout" | "blocks" | "layers" | "export-layout";
     const hasBoundary = Boolean(estateDetail?.boundary);
     const hasPlots = plots.length > 0;
     const hasSpatialContext = hasBoundary || hasPlots;
@@ -2363,7 +2394,6 @@ export default function Estates() {
       { key: "layout", label: "Design Layout", icon: "map", locked: hasSpatialContext ? undefined : "Add a plot or Estate boundary first, then design or subdivide a layout." },
       { key: "blocks", label: "Blocks", icon: "grid" },
       { key: "layers", label: "Map Layers", icon: "layers", locked: hasSpatialContext ? undefined : "Add a plot or Estate boundary before mapping roads, drainage or other layers." },
-      { key: "qc", label: "Geometry Check", icon: "check-circle", locked: hasPlots ? undefined : "Add at least one plot before running a geometry check." },
       { key: "export-layout", label: "Export Layout", icon: "download", locked: hasPlots ? undefined : "Add at least one approved plot before exporting the whole layout." },
     ];
     return (
@@ -2375,7 +2405,7 @@ export default function Estates() {
             className={`edash-tool-btn${tool.locked ? " edash-tool-btn--locked" : ""}`}
             disabled={Boolean(tool.locked)}
             title={tool.locked}
-            onClick={() => { if (!tool.locked) { setActiveTool(tool.key); if (tool.key === "qc") void loadQualityCheck(); } }}
+            onClick={() => { if (!tool.locked) setActiveTool(tool.key); }}
           >
             <EstateIcon name={tool.locked ? "lock" : tool.icon} />
             {tool.label}
@@ -2390,6 +2420,44 @@ export default function Estates() {
       <EstateModal title={title} subtitle={subtitle} onClose={() => setActiveTool(null)}>
         {content}
       </EstateModal>
+    );
+  }
+
+  function renderLayoutApprovalStep() {
+    if (!plots.length) return null;
+    const issueCount = quality?.issues?.length || 0;
+    const published = dashboard?.estate?.status === "active";
+    return (
+      <div className="edash-layout-final-step" style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid var(--edash-border)" }}>
+        <div className="edash-card-head">
+          <div>
+            <span className="edash-step-badge">Last step</span>
+            <h3 className="edash-card-title" style={{ marginTop: 8 }}>Check and approve the layout</h3>
+          </div>
+          {quality && <span className={`edash-status-pill tone-${quality.review_required ? "warn" : "good"}`}>{quality.review_required ? "Review required" : "Ready to publish"}</span>}
+        </div>
+        <p className="edash-status-row-desc">Run one final geometry check after georeferencing, digitising or designing plots. Fix any issues before making this Estate map active.</p>
+        {qualityLoading ? (
+          <LoadingPanel label="Checking plot geometry..." />
+        ) : quality ? (
+          <>
+            <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>{quality.plot_count} plots checked. {issueCount} issue{issueCount === 1 ? "" : "s"} found.</p>
+            {issueCount > 0 && (
+              <div className="edash-issue-list" style={{ marginBottom: 12 }}>
+                <ul>{quality.issues.slice(0, 8).map((issue: any, index: number) => <li key={`${issue.code}-${index}`}>{issue.message}</li>)}</ul>
+              </div>
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <button type="button" className="edash-btn-outline" onClick={() => void loadQualityCheck()}>Run check again</button>
+              <button type="button" className="edash-btn-primary" disabled={published || quality.review_required || quality.plot_count === 0} onClick={() => void approveEstateMap()}>
+                {published ? "Estate map published" : "Approve and publish map"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <button type="button" className="edash-btn-primary" onClick={() => void loadQualityCheck()}>Check layout</button>
+        )}
+      </div>
     );
   }
 
@@ -2584,7 +2652,7 @@ export default function Estates() {
       const availablePlots = plots.filter((plot) => plot.commercial_status === "available");
       const targetSubdividePlotId = designSubdividePlotId ?? availablePlots[0]?.id ?? null;
       const hasBoundary = Boolean(estateDetail?.boundary);
-      return renderToolModal("Design your layout", "Turn a plot or the Estate boundary into many smaller plots.", (
+      return renderToolModal("Design your layout", "Create or subdivide plots, then check and approve the layout before publishing.", (
         <>
           <div className="edash-form-row" style={{ marginBottom: 16, alignItems: "flex-end" }}>
             <label className="edash-field" style={{ maxWidth: 320 }}>
@@ -2649,6 +2717,7 @@ export default function Estates() {
               <EstateLayoutDesigner boundaryPresent={hasBoundary} boundaryAreaSqm={boundaryAreaSqm} proposal={layoutProposal} busy={layoutDesignerBusy} unitSystem={unitSystem} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} onEditCandidates={editLayoutProposalCandidates} onAddFeature={addLayoutProposalFeature} onRemoveFeature={removeLayoutProposalFeature} />
             </>
           )}
+          {renderLayoutApprovalStep()}
         </>
       ));
     }
@@ -2716,30 +2785,6 @@ export default function Estates() {
           )}
         </>
       ));
-    }
-    if (activeTool === "qc") {
-      return renderToolModal("Geometry check", "Review issues before you approve and publish the Estate map.", quality ? (
-        <>
-          <div className="edash-card-head">
-            <h3 className="edash-card-title">{quality.review_required ? "Review required" : "Geometry ready"}</h3>
-            <span className={`edash-status-pill tone-${quality.review_required ? "warn" : "good"}`}>{quality.plot_count} plots checked</span>
-          </div>
-          <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>{quality.issues.length} issue(s) detected.</p>
-          {quality.issues.length > 0 && (
-            <div className="edash-issue-list" style={{ marginBottom: 12 }}>
-              <ul>{quality.issues.slice(0, 8).map((issue: any, index: number) => <li key={`${issue.code}-${index}`}>{issue.message}</li>)}</ul>
-            </div>
-          )}
-          {dashboard && (
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <span className="edash-status-row-desc"><strong style={{ color: "var(--edash-ink)" }}>Register status:</strong> {dashboard.estate.status.replaceAll("_", " ")}</span>
-              <button type="button" className="edash-btn-primary" disabled={dashboard.estate.status === "active" || quality.review_required || quality.plot_count === 0} onClick={() => void approveEstateMap()}>
-                {dashboard.estate.status === "active" ? "Estate map published" : "Approve and publish map"}
-              </button>
-            </div>
-          )}
-        </>
-      ) : qualityLoading ? <LoadingPanel label="Checking plot geometry..." /> : <LoadingPanel label="Open the geometry check to review this Estate." />);
     }
     if (activeTool === "export-layout") {
       return renderToolModal("Export the whole layout", "Every approved plot, road, drainage reserve and open space in this Estate, exported at once.", (
