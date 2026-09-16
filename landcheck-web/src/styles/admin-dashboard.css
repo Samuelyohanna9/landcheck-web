@@ -1171,3 +1171,194 @@
     min-width: 760px;
   }
 }
+
+/* Estate Admin */
+.estate-admin-container {
+  background: linear-gradient(135deg, #071b2c 0%, #102c3d 100%);
+}
+
+.estate-admin-content {
+  max-width: 1440px;
+}
+
+.estate-admin-content .section-head {
+  align-items: center;
+}
+
+.estate-admin-refresh {
+  flex: 0 0 auto;
+  padding: 0.65rem 1rem;
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #6ee7b7;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.estate-admin-refresh:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.estate-admin-error {
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 10px;
+  background: rgba(127, 29, 29, 0.3);
+  color: #fecaca;
+}
+
+.estate-admin-section {
+  min-width: 0;
+}
+
+.estate-admin-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.36);
+}
+
+.estate-admin-table {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: collapse;
+}
+
+.estate-admin-table th,
+.estate-admin-table td {
+  padding: 0.9rem 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+  vertical-align: top;
+  color: #e2e8f0;
+  font-size: 0.82rem;
+}
+
+.estate-admin-table th {
+  background: rgba(15, 23, 42, 0.72);
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.estate-admin-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.estate-admin-row:hover,
+.estate-admin-row.is-expanded {
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.estate-admin-row:last-child td {
+  border-bottom: 0;
+}
+
+.estate-admin-table td strong,
+.estate-admin-table td > span {
+  display: block;
+}
+
+.estate-admin-table td strong {
+  color: #f8fafc;
+  font-size: 0.88rem;
+}
+
+.estate-admin-muted {
+  margin-top: 0.25rem;
+  color: #94a3b8;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.estate-admin-status {
+  display: inline-block !important;
+  width: fit-content;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.14);
+  color: #cbd5e1 !important;
+  font-size: 0.72rem !important;
+  font-weight: 700;
+}
+
+.estate-admin-status--active,
+.estate-admin-status--trialing {
+  background: rgba(16, 185, 129, 0.16);
+  color: #6ee7b7 !important;
+}
+
+.estate-admin-status--past_due {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fbbf24 !important;
+}
+
+.estate-admin-status--canceled,
+.estate-admin-status--expired {
+  background: rgba(248, 113, 113, 0.14);
+  color: #fca5a5 !important;
+}
+
+.estate-admin-detail-row td {
+  padding: 0;
+  background: rgba(2, 16, 28, 0.56);
+}
+
+.estate-admin-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(130px, 1fr));
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.estate-admin-detail-grid > div {
+  min-height: 88px;
+  padding: 0.85rem;
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.estate-admin-detail-grid span,
+.estate-admin-detail-grid strong,
+.estate-admin-detail-grid small {
+  display: block;
+}
+
+.estate-admin-detail-grid span {
+  color: #94a3b8;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.estate-admin-detail-grid strong {
+  margin-top: 0.35rem;
+  color: #f8fafc;
+  font-size: 0.86rem;
+}
+
+.estate-admin-detail-grid small {
+  margin-top: 0.28rem;
+  color: #94a3b8;
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 800px) {
+  .estate-admin-content .section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .estate-admin-refresh {
+    width: 100%;
+  }
+
+  .estate-admin-detail-grid {
+    grid-template-columns: repeat(2, minmax(145px, 1fr));
+  }
+}
