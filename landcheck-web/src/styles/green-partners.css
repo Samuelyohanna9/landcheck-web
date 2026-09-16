@@ -145,15 +145,15 @@
 }
 
 .gp-btn {
-  min-height: 56px;
-  padding: 0 1.4rem;
+  min-height: 42px;
+  padding: 0 1.15rem;
   border: 1px solid transparent;
   border-radius: 2px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.95rem;
-  font-weight: 800;
+  font-size: 0.82rem;
+  font-weight: 700;
   text-decoration: none;
   cursor: pointer;
   transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease;
@@ -710,9 +710,9 @@
 .gp-proof-content h2 {
   margin: 0.8rem 0 0;
   font-family: "Fraunces", serif;
-  font-size: clamp(2rem, 3vw, 2.8rem);
-  line-height: 1.08;
-  letter-spacing: -0.04em;
+  font-size: clamp(1.6rem, 2.4vw, 2.1rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
   color: #123127;
 }
 
@@ -936,9 +936,9 @@
   z-index: 1;
   position: relative;
   font-family: "Fraunces", serif;
-  font-size: clamp(2.3rem, 3.5vw, 3.4rem);
-  line-height: 1.05;
-  letter-spacing: -0.04em;
+  font-size: clamp(1.7rem, 2.7vw, 2.3rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
 }
 
 .gp-footer-panel p {
@@ -1272,7 +1272,7 @@
 
   .gp-section-intro h2,
   .gp-footer-panel h2 {
-    font-size: clamp(1.9rem, 11vw, 2.8rem);
+    font-size: clamp(1.5rem, 7vw, 1.9rem);
   }
 
   .gp-hero-copy h1 {
@@ -1322,14 +1322,16 @@
   .gp-hero-actions,
   .gp-proof-actions,
   .gp-footer-panel__actions {
-    flex-direction: column;
-    align-items: stretch;
+    justify-content: center;
   }
 
   .gp-btn,
 .gp-proof-actions a,
 .gp-footer-panel__actions a {
-    width: 100%;
+    flex: 0 1 auto;
+    min-height: 40px;
+    padding: 0 1rem;
+    font-size: 0.78rem;
   }
 
   .gp-footer-buttons {
@@ -1406,17 +1408,17 @@
 
 .gp-new-hero-copy h1 {
   font-family: "Fraunces", serif;
-  font-size: clamp(2.8rem, 4.8vw, 4.5rem);
-  line-height: 1.05;
-  letter-spacing: -0.05em;
+  font-size: clamp(2rem, 3.4vw, 3rem);
+  line-height: 1.12;
+  letter-spacing: -0.03em;
   color: #0e2017;
   margin: 0 0 1.2rem;
 }
 
 .gp-new-hero-subheadline {
   color: #526b5d;
-  font-size: 1.15rem;
-  line-height: 1.65;
+  font-size: 0.98rem;
+  line-height: 1.6;
   max-width: 540px;
   margin: 0 0 2rem;
 }
@@ -1438,7 +1440,7 @@
 .gp-new-hero-stat-item strong {
   display: block;
   font-family: "Fraunces", serif;
-  font-size: 1.85rem;
+  font-size: 1.5rem;
   color: #0e2017;
   line-height: 1.1;
   margin-bottom: 0.25rem;
@@ -1700,11 +1702,13 @@
     padding-top: 1.5rem;
   }
   .gp-new-hero-actions {
-    flex-direction: column;
-    align-items: stretch;
+    justify-content: center;
   }
   .gp-new-hero-actions .gp-btn {
-    width: 100%;
+    flex: 0 1 auto;
+    min-height: 40px;
+    padding: 0 1rem;
+    font-size: 0.78rem;
   }
   .gp-features-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -2601,15 +2605,15 @@
 
 .green-partners-page .gp-section-intro h2 {
   color: #102217;
-  font-size: clamp(2.2rem, 4vw, 3.4rem);
-  line-height: 1.08;
-  letter-spacing: -0.045em;
+  font-size: clamp(1.7rem, 2.7vw, 2.3rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
 }
 
 .green-partners-page .gp-section-intro p {
   max-width: 42rem;
   color: #526b5d;
-  font-size: 1.02rem;
+  font-size: 0.95rem;
 }
 
 /* Unified public CTAs: solid brand green, sharp rectangular corners, equal emphasis for every

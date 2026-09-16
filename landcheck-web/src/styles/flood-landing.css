@@ -463,9 +463,9 @@
   background: #e07b00;
   color: #fff;
   border: none;
-  border-radius: 9px;
-  padding: 14px 30px;
-  font-size: 1rem;
+  border-radius: 2px;
+  padding: 11px 22px;
+  font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s, transform 0.15s;
@@ -518,9 +518,9 @@
   background: #fff;
   color: #0e2b4a;
   border: none;
-  border-radius: 9px;
-  padding: 13px 24px;
-  font-size: 0.95rem;
+  border-radius: 2px;
+  padding: 11px 20px;
+  font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -617,7 +617,13 @@
   .fal-nav-links { display: none; }
 
   .fal-hero-content { padding: 48px 20px; }
-  .fal-hero-ctas { flex-direction: column; align-items: center; }
+
+  .fal-hero-btn-primary,
+  .fal-hero-btn-outline {
+    min-width: 0;
+    padding: 10px 16px;
+    font-size: 0.76rem;
+  }
 
   .fal-risk-levels {
     grid-template-columns: repeat(2, 1fr) !important;
@@ -632,29 +638,31 @@
   }
 }
 
-/* Match hero route CTAs so no route is visually deprioritized */
+/* Match hero route CTAs so no route is visually deprioritized - solid rectangular buttons,
+   sized to sit side by side rather than as oversized stacked pills. */
 .fal-hero-btn-primary,
 .fal-hero-btn-outline {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 220px;
+  min-width: 160px;
   gap: 8px;
-  background: linear-gradient(135deg, #db7c10 0%, #bf6400 100%);
+  background: #e07b00;
   color: #fff;
-  border: 1px solid rgba(255, 228, 198, 0.22);
-  border-radius: 999px;
-  padding: 13px 26px;
-  font-size: 1rem;
+  border: 1px solid #e07b00;
+  border-radius: 2px;
+  padding: 11px 20px;
+  font-size: 0.82rem;
   font-weight: 700;
   text-decoration: none;
-  box-shadow: 0 16px 34px rgba(117, 57, 6, 0.24);
+  box-shadow: 0 10px 24px rgba(117, 57, 6, 0.2);
   transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
 }
 
 .fal-hero-btn-primary:hover,
 .fal-hero-btn-outline:hover {
-  background: linear-gradient(135deg, #eb8b1c 0%, #cd6f06 100%);
+  background: #c96e00;
+  border-color: #c96e00;
   transform: translateY(-1px);
-  box-shadow: 0 20px 38px rgba(117, 57, 6, 0.3);
+  box-shadow: 0 14px 28px rgba(117, 57, 6, 0.26);
 }

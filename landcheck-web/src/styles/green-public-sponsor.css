@@ -354,10 +354,10 @@
 
 .gps-hero-text-panel h1 {
   font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  font-size: clamp(2.6rem, 4.6vw, 3.75rem);
+  font-size: clamp(2rem, 3.4vw, 3rem);
   font-weight: 500;
-  line-height: 1.05;
-  letter-spacing: -0.05em;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
   margin: 8px 0;
   color: var(--gps-text);
   max-width: 560px;
@@ -1112,8 +1112,8 @@
 .gps-primary-btn {
   border: none;
   border-radius: 999px;
-  padding: 15px 22px;
-  font-size: 15px;
+  padding: 12px 20px;
+  font-size: 14px;
   font-weight: 700;
   color: #ffffff;
   background: var(--gps-brand);
@@ -1127,8 +1127,8 @@
 .gps-secondary-btn {
   border: 1.5px solid rgba(255, 255, 255, 0.22);
   border-radius: 999px;
-  padding: 12px 20px;
-  font-size: 14px;
+  padding: 11px 18px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--gps-text);
   background: rgba(255, 255, 255, 0.06);
@@ -1375,9 +1375,9 @@
 
 .gps-proof-gallery-intro h2 {
   font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif !important;
-  font-size: clamp(2rem, 3.8vw, 2.85rem) !important;
+  font-size: clamp(1.7rem, 2.7vw, 2.3rem) !important;
   font-weight: 500 !important;
-  letter-spacing: -0.04em !important;
+  letter-spacing: -0.03em !important;
   color: #0d2319 !important;
   margin: 0 !important;
   line-height: 1.15 !important;
