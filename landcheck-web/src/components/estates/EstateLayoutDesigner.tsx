@@ -850,7 +850,7 @@ export default function EstateLayoutDesigner({ boundaryPresent, boundaryAreaSqm,
             <LayoutPreviewMap proposal={proposal} unitSystem={unitSystem} onEditCandidates={onEditCandidates} onAddFeature={onAddFeature} onRemoveFeature={onRemoveFeature} />
             {proposal.status === "review_required" && (
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                <button type="button" className="edash-btn-primary" disabled={busy} onClick={() => onDecision(proposal.id, "approved")}>Approve and add plots</button>
+                <button type="button" className="edash-btn-primary" disabled={busy} onClick={() => onDecision(proposal.id, "approved")}>Add plots and continue</button>
                 <button type="button" className="edash-btn-outline" disabled={busy} onClick={() => onDecision(proposal.id, "rejected")}>Discard</button>
               </div>
             )}
