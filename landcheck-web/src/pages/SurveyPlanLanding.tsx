@@ -160,7 +160,7 @@ export default function SurveyPlanLanding() {
           <div className="spl-shell spl-hero-shell">
             <div className="spl-hero-copy">
               <p className="spl-kicker">LandCheck Survey</p>
-              <h1 id="spl-hero-title">Survey plans, made clear.</h1>
+              <h1 id="spl-hero-title">Survey plans, made simple.</h1>
               <p className="spl-hero-summary">
                 Prepare plans, georeference scans and subdivide parcels in one workspace.
               </p>
