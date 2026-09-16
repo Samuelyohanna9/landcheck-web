@@ -1629,6 +1629,146 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
+/* CoordinateInput ("Enter coordinates manually") is shared with the dark Survey builder, where
+   its own theme belongs - re-themed here to this dashboard's light look, the same reasoning as
+   the CoordinateSystemSelect overrides above. Its own coordinate-system section is hidden
+   entirely: the Estate "Add a plot" modal shows ONE coordinate-system field, in the same shared
+   position/style as every other method (see the top-of-modal picker in Estates.tsx), instead of
+   duplicating a second picker inside this component. Two layers of override are needed because
+   this component itself mixes two eras of styling - some classes read --survey-gis-* tokens
+   (redefining those here re-themes them in bulk), others hardcode dark rgba values directly with
+   no token at all (those need explicit per-class overrides). */
+.edash-modal .coord-input-container {
+  --survey-gis-divider: var(--edash-border);
+  --survey-gis-raised-bg: #fff;
+  --survey-gis-panel-bg: #fff;
+  --survey-gis-hover-bg: var(--edash-neutral-tint);
+  --survey-gis-text-primary: var(--edash-ink);
+  --survey-gis-text-secondary: var(--edash-muted);
+  --survey-gis-primary: var(--edash-brand);
+  --survey-gis-primary-tint: var(--edash-brand-tint);
+  --survey-gis-primary-hover: var(--edash-brand);
+  --survey-gis-error: var(--edash-danger);
+  --survey-gis-warning: var(--edash-warn);
+}
+
+.edash-modal .coord-system-selector {
+  display: none;
+}
+
+.edash-modal .coord-input-container {
+  border-color: var(--edash-border);
+  background: #fff;
+  box-shadow: none;
+}
+
+.edash-modal .coord-header,
+.edash-modal .coord-footer {
+  border-color: var(--edash-border);
+  background: #fff;
+}
+
+.edash-modal .coord-title {
+  color: var(--edash-ink);
+  font-family: inherit;
+}
+
+.edash-modal .coord-subtitle,
+.edash-modal .coord-tip,
+.edash-modal .upload-hint {
+  color: var(--edash-muted);
+}
+
+.edash-modal .coord-field-label {
+  color: var(--edash-muted);
+}
+
+.edash-modal .station-input,
+.edash-modal .coord-input {
+  border-color: var(--edash-border);
+  border-radius: var(--edash-radius-sm);
+  background: #fff;
+  color: var(--edash-ink);
+  font-family: inherit;
+}
+
+.edash-modal .station-input:hover:not(:disabled),
+.edash-modal .coord-input:hover:not(:disabled) {
+  border-color: var(--edash-brand);
+}
+
+.edash-modal .station-input:focus,
+.edash-modal .coord-input:focus {
+  border-color: var(--edash-brand);
+  box-shadow: 0 0 0 3px var(--edash-brand-tint);
+}
+
+.edash-modal .coord-point-card {
+  border-color: var(--edash-border);
+  border-radius: var(--edash-radius-sm);
+  background: #fff;
+}
+
+.edash-modal .coord-point-card:hover {
+  border-color: var(--edash-brand);
+  background: #fff;
+}
+
+.edash-modal .row-number {
+  border-radius: var(--edash-radius-sm);
+  background: var(--edash-brand-tint);
+  color: var(--edash-brand);
+  font-family: inherit;
+}
+
+.edash-modal .remove-btn {
+  border-color: var(--edash-border);
+  border-radius: var(--edash-radius-sm);
+  color: var(--edash-muted);
+}
+
+.edash-modal .remove-btn:hover:not(:disabled) {
+  background: var(--edash-danger-tint);
+  border-color: var(--edash-danger);
+  color: var(--edash-danger);
+}
+
+.edash-modal .add-point-btn {
+  border-radius: var(--edash-radius-sm);
+  border-color: var(--edash-brand);
+  background: var(--edash-brand-tint);
+  color: var(--edash-brand);
+  font-family: inherit;
+}
+
+.edash-modal .add-point-btn:hover:not(:disabled) {
+  background: var(--edash-brand);
+  border-color: var(--edash-brand);
+  color: #fff;
+}
+
+.edash-modal .coord-editor-done-btn {
+  border-radius: var(--edash-radius-sm);
+}
+
+.edash-modal .coord-method-tab,
+.edash-modal .coord-method-action-btn,
+.edash-modal .coord-preview-stat,
+.edash-modal .coord-status-pill,
+.edash-modal .coord-preview-table-wrap,
+.edash-modal .coord-preview-row-btn {
+  border-radius: var(--edash-radius-sm);
+}
+
+.edash-modal .coord-method-action-btn {
+  color: #fff;
+}
+
+.edash-modal .coord-method-action-btn--outline,
+.edash-modal .coord-method-action-btn--danger {
+  color: var(--edash-ink);
+}
+
 .edash-layout-template-summary {
   display: flex;
   align-items: flex-start;
