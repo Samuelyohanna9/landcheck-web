@@ -1128,6 +1128,35 @@
   .edash-body--fill .edash-map-canvas-wrap { min-height: 420px; }
 }
 
+/* First stage of height-based compaction: buys back room for the map canvas by tightening
+   padding/gaps and the bottom row's own ceiling before giving up on "fill the exact viewport
+   height" entirely (see the more aggressive max-height: 760px fallback below). */
+@media (max-height: 900px) {
+  .edash-body--fill { padding-top: 5px; padding-bottom: 6px; gap: 5px; }
+  .edash-body--fill > .edash-stats-row .edash-stat-card { padding: 6px 9px; }
+  .edash-body--fill .edash-map-grid-left > .edash-bottom-row { min-height: 90px; max-height: 130px; }
+  .edash-body--fill .edash-map-canvas-wrap { min-height: 260px; }
+}
+
+/* A short-but-wide window (browser not maximized, a small-height laptop display, a landscape
+   tablet) never triggers the width breakpoint above, yet the map view's "fill the exact viewport
+   height" bet fails there the same way: the Recent Activity/Estate Progress row keeps its fixed
+   minimum height regardless of how little room is left, which can squeeze the map canvas below
+   the height it needs and push its own zoom/layer controls out of the clipped, non-scrolling
+   viewport entirely - "the estate progress moves up" and the map loses functionality with no way
+   to scroll down to it. Falling back to natural sizing + a real scrollbar (the same fallback the
+   width breakpoint already uses) fixes this without giving up the side-by-side map/drawer layout
+   that width still has room for. */
+@media (max-height: 760px) {
+  .edash-main--fill { overflow-y: auto; }
+  .edash-body--fill { flex: initial; min-height: auto; }
+  .edash-body--fill > .edash-map-grid { flex: initial; min-height: auto; align-items: start; }
+  .edash-body--fill .edash-drawer { min-height: 320px; }
+  .edash-body--fill .edash-map-canvas-wrap { min-height: 340px; }
+  .edash-body--fill .edash-map-grid-left > .edash-bottom-row { min-height: auto; max-height: none; }
+  .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-activity-list { max-height: 320px; }
+}
+
 @media (max-width: 860px) {
   .edash { grid-template-columns: 1fr; }
   .edash-sidebar {
