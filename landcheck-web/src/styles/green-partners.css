@@ -2948,8 +2948,21 @@
 .green-partners-page .gp-photo-side-card img {
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
   object-fit: cover;
+  object-position: top center;
+}
+
+/* Most field photos are portrait mobile shots of people standing with a seedling - a wide 4:3 crop
+   centered on the middle of the frame was cutting off faces and, since it showed mostly the
+   mid-torso band, making the branded vest/logo look oversized relative to everything else. A
+   taller box keeps the crop closer to the source photo's own shape, so it needs far less cropping
+   and shows people head-to-waist instead of chest-only. */
+.green-partners-page .gp-photo-feature img {
+  aspect-ratio: 3 / 4;
+}
+
+.green-partners-page .gp-photo-side-card img {
+  aspect-ratio: 4 / 3;
 }
 
 .green-partners-page .gp-photo-feature figcaption,

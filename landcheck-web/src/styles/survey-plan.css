@@ -2795,6 +2795,36 @@
   color: #fcd34d;
 }
 
+/* Keep the template notice and selector together; on compact preview panels it must never share
+   a grid row with the Title field. */
+.template-selector-group {
+  grid-column: 1 / -1 !important;
+  min-width: 0;
+}
+
+.template-selector-group .template-label-row {
+  min-width: 0;
+}
+
+.template-selector-group .template-picker-badge {
+  max-width: min(100%, 320px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  .template-selector-group .template-label-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .template-selector-group .template-picker-badge {
+    max-width: 100%;
+    white-space: normal;
+    text-align: left;
+  }
+}
+
 .template-hint {
   display: block;
   margin-top: 0.45rem;
