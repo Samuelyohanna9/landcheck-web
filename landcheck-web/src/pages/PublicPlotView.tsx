@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, extractApiErrorMessage } from "../api/client";
 import { MAPBOX_TOKEN } from "../utils/mapboxLoader";
+import { formatArea, type UnitSystem } from "../utils/unitFormat";
 import "../styles/estate-portal.css";
 
 type PlotView = {
   customer_name: string | null;
   plot_number: string;
   area_sqm: number | null;
+  unit_system?: UnitSystem;
   status: string;
   estate_name: string | null;
   organization_name: string | null;
@@ -68,7 +70,7 @@ export default function PublicPlotView() {
             <h1 style={{ fontSize: "2.1rem" }}>Plot {view.plot_number}</h1>
             <p style={{ marginBottom: 4 }}>
               {view.customer_name ? <>Allocated to <strong style={{ color: "var(--estate-ink)" }}>{view.customer_name}</strong></> : "Your plot"}
-              {view.area_sqm ? <> · {view.area_sqm.toLocaleString(undefined, { maximumFractionDigits: 0 })} m&sup2;</> : ""}
+              {view.area_sqm ? <> · {formatArea(view.area_sqm, view.unit_system === "ft" ? "ft" : "m")}</> : ""}
               {" · "}<span style={{ textTransform: "capitalize" }}>{view.status}</span>
             </p>
 

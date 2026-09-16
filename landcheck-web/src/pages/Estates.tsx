@@ -10,6 +10,7 @@ import MapViewEnhanced from "../components/MapViewEnhanced";
 import { loadMapboxGl, loadMapboxGlCss, MAPBOX_TOKEN } from "../utils/mapboxLoader";
 import { toWGS84, COORDINATE_SYSTEM_GROUPS } from "../utils/coordinateConverter";
 import { checkPolygonClosure } from "../utils/surveyGeometry";
+import { formatArea, type UnitSystem } from "../utils/unitFormat";
 import EstateIcon from "../components/estates/EstateIcon";
 import EstateModal from "../components/estates/EstateModal";
 import CoordinateSystemSelect from "../components/CoordinateSystemSelect";
@@ -508,6 +509,7 @@ export default function Estates() {
   const [activity, setActivity] = useState<any[]>([]);
   const [dashboard, setDashboard] = useState<any>(null);
   const [estateDetail, setEstateDetail] = useState<any>(null);
+  const unitSystem: UnitSystem = estateDetail?.unit_system === "ft" ? "ft" : "m";
   // Satellite is the requested default first view - the actual terrain/imagery is what a plot
   // layout needs to be checked against. The mapbox-gl bundle itself is still prefetched from the
   // Dashboard (see EstateShell's prefetchMapboxCore effect) to soften the heavier satellite-tile
@@ -1427,7 +1429,7 @@ export default function Estates() {
     const total = dashboard.total_plots || 0;
     const pct = (value: number) => (total > 0 ? `${((value / total) * 100).toFixed(1)}%` : "0%");
     const cards: Array<{ label: string; value: number; sub: string; icon: import("../components/estates/EstateIcon").EstateIconName; tone: string }> = [
-      { label: "Total Plots", value: total, sub: `${Number(dashboard.mapped_area_sqm || 0).toLocaleString()} m² mapped`, icon: "grid", tone: "neutral" },
+      { label: "Total Plots", value: total, sub: `${formatArea(Number(dashboard.mapped_area_sqm || 0), unitSystem)} mapped`, icon: "grid", tone: "neutral" },
       { label: "Allocated", value: dashboard.statuses?.allocated || 0, sub: pct(dashboard.statuses?.allocated || 0), icon: "person", tone: "allocated" },
       { label: "Available", value: dashboard.statuses?.available || 0, sub: pct(dashboard.statuses?.available || 0), icon: "house", tone: "available" },
       { label: "Reserved", value: dashboard.statuses?.reserved || 0, sub: pct(dashboard.statuses?.reserved || 0), icon: "clock", tone: "reserved" },
@@ -1667,7 +1669,7 @@ export default function Estates() {
                   <button type="button" className="edash-drawer-nav-btn" onClick={() => { setSelectedPlotId(null); setAllocationId(""); setFinancial(null); }} aria-label="Close"><EstateIcon name="close" /></button>
                 </div>
               </div>
-              <p className="edash-drawer-sub">{selectedBlock ? `Block ${selectedBlock.label}` : "Unassigned block"} &middot; {Number(selectedPlot.area_sqm || 0).toLocaleString()} m²</p>
+              <p className="edash-drawer-sub">{selectedBlock ? `Block ${selectedBlock.label}` : "Unassigned block"} &middot; {formatArea(Number(selectedPlot.area_sqm || 0), unitSystem)}</p>
               <button type="button" className="edash-btn-outline edash-drawer-view-map" onClick={flyToSelectedPlot}>
                 <EstateIcon name="map" /> View on Map
               </button>
@@ -1687,7 +1689,7 @@ export default function Estates() {
                     <div className="edash-overview-field"><span>Status</span><strong style={{ textTransform: "capitalize" }}>{String(statusValue || "").replaceAll("_", " ")}</strong></div>
                     <div className="edash-overview-field"><span>Block</span><strong>{selectedBlock?.label || "--"}</strong></div>
                     <div className="edash-overview-field"><span>Plot No.</span><strong>{selectedPlot.plot_number}</strong></div>
-                    <div className="edash-overview-field"><span>Area</span><strong>{Number(selectedPlot.area_sqm || 0).toLocaleString()} m²</strong></div>
+                    <div className="edash-overview-field"><span>Area</span><strong>{formatArea(Number(selectedPlot.area_sqm || 0), unitSystem)}</strong></div>
                     {(() => {
                       const feature = plotGeojson.features.find((item: any) => Number(item.properties?.id) === selectedPlot.id);
                       const thumbUrl = buildPlotThumbUrl(feature?.geometry);
@@ -2392,7 +2394,7 @@ export default function Estates() {
                   </p>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                     <select value={targetSubdividePlotId ?? ""} onChange={(event) => setDesignSubdividePlotId(Number(event.target.value))}>
-                      {availablePlots.map((plot) => <option key={plot.id} value={plot.id}>{plot.plot_number} - {Number(plot.area_sqm || 0).toLocaleString()} m²</option>)}
+                      {availablePlots.map((plot) => <option key={plot.id} value={plot.id}>{plot.plot_number} - {formatArea(Number(plot.area_sqm || 0), unitSystem)}</option>)}
                     </select>
                     <input type="number" min="2" max="100" value={subdivisionCount} onChange={(event) => setSubdivisionCount(event.target.value)} style={{ width: 80, padding: 8, borderRadius: 8, border: "1px solid var(--edash-border)" }} />
                     <button type="button" className="edash-btn-primary" disabled={subdivisionBusy || !targetSubdividePlotId} onClick={() => targetSubdividePlotId && void subdividePlotById(targetSubdividePlotId)}>{subdivisionBusy ? <><Spinner size={13} /> Creating plots...</> : "Split into plots"}</button>
@@ -2422,13 +2424,13 @@ export default function Estates() {
                   <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>Automatic design needs an overall boundary to work within. Use one of your existing plots as the Estate boundary to unlock it.</p>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                     <select value={targetSubdividePlotId ?? ""} onChange={(event) => setDesignSubdividePlotId(Number(event.target.value))}>
-                      {plots.map((plot) => <option key={plot.id} value={plot.id}>{plot.plot_number} - {Number(plot.area_sqm || 0).toLocaleString()} m²</option>)}
+                      {plots.map((plot) => <option key={plot.id} value={plot.id}>{plot.plot_number} - {formatArea(Number(plot.area_sqm || 0), unitSystem)}</option>)}
                     </select>
                     <button type="button" className="edash-btn-primary" disabled={!targetSubdividePlotId} onClick={() => targetSubdividePlotId && void useAsEstateBoundary(targetSubdividePlotId)}>Use as Estate boundary</button>
                   </div>
                 </div>
               )}
-              <EstateLayoutDesigner boundaryPresent={hasBoundary} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} messageTone={layoutDesignerMessageTone} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} onEditCandidates={editLayoutProposalCandidates} onAddFeature={addLayoutProposalFeature} onRemoveFeature={removeLayoutProposalFeature} />
+              <EstateLayoutDesigner boundaryPresent={hasBoundary} proposal={layoutProposal} busy={layoutDesignerBusy} message={layoutDesignerMessage} messageTone={layoutDesignerMessageTone} unitSystem={unitSystem} onGenerate={(criteria) => void generateLayoutProposal(criteria)} onDecision={(proposalId, status) => void decideLayoutProposal(proposalId, status)} onEditCandidates={editLayoutProposalCandidates} onAddFeature={addLayoutProposalFeature} onRemoveFeature={removeLayoutProposalFeature} />
             </>
           )}
         </>

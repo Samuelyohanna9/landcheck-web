@@ -112,7 +112,7 @@ export default function EstateLanding() {
       </section>
 
       <div className="estate-outcomes-band">
-        <p>Fewer allocation errors. Faster documentation. Clearer management oversight.</p>
+        <p> Faster documentation. Clearer management oversight.</p>
       </div>
 
       <section className="estate-centered-section" id="demo">

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import EstateIcon from "./EstateIcon";
 import Spinner from "./EstateSpinner";
 import { loadMapboxDraw, loadMapboxDrawCss, loadMapboxGl, loadMapboxGlCss, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
+import { areaUnitLabel, formatArea, sqftToSqm, sqmToSqft, type UnitSystem } from "../../utils/unitFormat";
 
 type LayoutCriteria = {
   target_plot_area_sqm: number;
@@ -24,6 +25,7 @@ type Props = {
   busy?: boolean;
   message?: string;
   messageTone?: "good" | "danger";
+  unitSystem?: UnitSystem;
   onGenerate: (criteria: LayoutCriteria) => void;
   onDecision: (proposalId: number, status: "approved" | "rejected") => void;
   onEditCandidates?: (proposalId: number, plotCandidates: any[], featureCandidates?: any[]) => Promise<void>;
@@ -255,7 +257,7 @@ function nextPlotNumber(candidates: any[]): string {
 type OnAddFeature = (proposalId: number, featureType: "road" | "open_space", geometry: any, widthM: number | undefined, plotCandidates: any[]) => Promise<void>;
 type OnRemoveFeature = (proposalId: number, featureIndex: number, plotCandidates: any[], featureCandidates: any[]) => Promise<void>;
 
-function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature, onRemoveFeature }: { proposal: any; onEditCandidates?: (proposalId: number, plotCandidates: any[], featureCandidates?: any[]) => Promise<void>; onAddFeature?: OnAddFeature; onRemoveFeature?: OnRemoveFeature }) {
+function LayoutPreviewMap({ proposal, unitSystem = "m", onEditCandidates, onAddFeature, onRemoveFeature }: { proposal: any; unitSystem?: UnitSystem; onEditCandidates?: (proposalId: number, plotCandidates: any[], featureCandidates?: any[]) => Promise<void>; onAddFeature?: OnAddFeature; onRemoveFeature?: OnRemoveFeature }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -348,7 +350,7 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature, onRemoveFe
     if (!map || !mapReady) return;
     const plotFeatures = (proposal?.candidates || []).map((candidate: any) => ({
       type: "Feature",
-      properties: { label: `${candidate.plot_number}\n${Math.round(Number(candidate.area_sqm || 0)).toLocaleString()} m²` },
+      properties: { label: `${candidate.plot_number}\n${formatArea(Number(candidate.area_sqm || 0), unitSystem)}` },
       geometry: candidate.geometry,
     }));
     const roadFeatures = (proposal?.features || []).filter((feature: any) => feature.feature_type === "road").map((feature: any) => ({
@@ -369,7 +371,7 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature, onRemoveFe
       [...plotFeatures, ...roadFeatures, ...drainageFeatures, ...openSpaceFeatures].forEach((feature) => walkCoordinates(feature.geometry?.coordinates, (point) => fitBounds.extend(point)));
       if (!fitBounds.isEmpty()) map.fitBounds(fitBounds, { padding: 30 });
     });
-  }, [proposal, mapReady]);
+  }, [proposal, mapReady, unitSystem]);
 
   useEffect(() => {
     const onFullscreenChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -645,12 +647,19 @@ function LayoutPreviewMap({ proposal, onEditCandidates, onAddFeature, onRemoveFe
   );
 }
 
-export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy = false, message, messageTone = "good", onGenerate, onDecision, onEditCandidates, onAddFeature, onRemoveFeature }: Props) {
+export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy = false, message, messageTone = "good", unitSystem = "m", onGenerate, onDecision, onEditCandidates, onAddFeature, onRemoveFeature }: Props) {
   const [templateKey, setTemplateKey] = useState<LayoutTemplateKey>("standard");
   const [criteria, setCriteria] = useState<LayoutCriteria>({ ...DEFAULT_CRITERIA, ...LAYOUT_TEMPLATES.find((item) => item.key === "standard")!.criteria });
   const [open, setOpen] = useState(false);
   const setNumber = (key: keyof LayoutCriteria, value: string) => setCriteria((current) => ({ ...current, [key]: Number(value) }));
   const selectedTemplate = LAYOUT_TEMPLATES.find((item) => item.key === templateKey) || LAYOUT_TEMPLATES[0];
+  // Target plot size is always stored/submitted in sqm - only the display/entry value converts,
+  // so the wire payload and backend validation never need to know about the estate's unit choice.
+  const targetSizeDisplay = unitSystem === "ft" ? Math.round(sqmToSqft(criteria.target_plot_area_sqm)) : criteria.target_plot_area_sqm;
+  const handleTargetSizeChange = (value: string) => {
+    const parsed = Number(value);
+    setCriteria((current) => ({ ...current, target_plot_area_sqm: unitSystem === "ft" ? sqftToSqm(parsed) : parsed }));
+  };
 
   const applyTemplate = (key: LayoutTemplateKey) => {
     setTemplateKey(key);
@@ -689,7 +698,7 @@ export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy =
                 <div className="edash-criteria-group">
                   <h4>Plot &amp; frontage</h4>
                   <div className="edash-form-row">
-                    <label className="edash-field"><span>Target plot size (m²)</span><input type="number" min="100" value={criteria.target_plot_area_sqm} onChange={(event) => setNumber("target_plot_area_sqm", event.target.value)} /></label>
+                    <label className="edash-field"><span>Target plot size ({areaUnitLabel(unitSystem)})</span><input type="number" min="100" value={targetSizeDisplay} onChange={(event) => handleTargetSizeChange(event.target.value)} /></label>
                     <label className="edash-field"><span>Frontage (m)</span><input type="number" min="5" value={criteria.frontage_m ?? ""} placeholder="Auto" onChange={(event) => setCriteria((current) => ({ ...current, frontage_m: event.target.value === "" ? null : Number(event.target.value) }))} /></label>
                   </div>
                 </div>
@@ -749,9 +758,9 @@ export default function EstateLayoutDesigner({ boundaryPresent, proposal, busy =
             <div className="edash-info-card-head">
               <span className="edash-status-row-title">{proposal.status === "review_required" ? "Your draft layout is ready" : `Layout ${proposal.status}`}</span>
             </div>
-            <p className="edash-status-row-desc">{proposal.diagnostics?.estimated_plot_count || proposal.candidates?.length || 0} plots, about {Math.round(Number(proposal.diagnostics?.total_plot_area_sqm || 0)).toLocaleString()} m² of plot area.</p>
+            <p className="edash-status-row-desc">{proposal.diagnostics?.estimated_plot_count || proposal.candidates?.length || 0} plots, about {formatArea(Number(proposal.diagnostics?.total_plot_area_sqm || 0), unitSystem)} of plot area.</p>
             <p className="edash-status-row-desc" style={{ marginBottom: 10 }}>{proposal.diagnostics?.road_count || 0} access roads and {Number(proposal.diagnostics?.open_space_percent || 0).toFixed(1)}% open-space reserve.</p>
-            <LayoutPreviewMap proposal={proposal} onEditCandidates={onEditCandidates} onAddFeature={onAddFeature} onRemoveFeature={onRemoveFeature} />
+            <LayoutPreviewMap proposal={proposal} unitSystem={unitSystem} onEditCandidates={onEditCandidates} onAddFeature={onAddFeature} onRemoveFeature={onRemoveFeature} />
             {proposal.status === "review_required" && (
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                 <button type="button" className="edash-btn-primary" disabled={busy} onClick={() => onDecision(proposal.id, "approved")}>Approve and add plots</button>

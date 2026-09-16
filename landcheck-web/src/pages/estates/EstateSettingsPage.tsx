@@ -10,6 +10,7 @@ export default function EstateSettingsPage() {
   const [estateDetail, setEstateDetail] = useState<any>(null);
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
+  const [unitSystem, setUnitSystem] = useState<"m" | "ft">("m");
   const [blocks, setBlocks] = useState<Array<{ id: number; label: string; name?: string }>>([]);
   const [showAddBlock, setShowAddBlock] = useState(false);
   const [blockLabel, setBlockLabel] = useState("");
@@ -25,6 +26,7 @@ export default function EstateSettingsPage() {
       setEstateDetail(response.data);
       setName(response.data.name || "");
       setLocation(response.data.location_text || "");
+      setUnitSystem(response.data.unit_system === "ft" ? "ft" : "m");
       try {
         const rule = (await api.get(`/estates/organizations/${response.data.organization_id}/survey-eligibility`)).data;
         setRuleEnabled(Boolean(rule.is_enabled));
@@ -38,7 +40,7 @@ export default function EstateSettingsPage() {
 
   const saveEstate = async () => {
     try {
-      await api.patch(`/estates/${estateId}`, { name: name.trim(), location_text: location.trim() || null });
+      await api.patch(`/estates/${estateId}`, { name: name.trim(), location_text: location.trim() || null, unit_system: unitSystem });
       setMessage("Estate details saved.");
       load();
     } catch (error) {
@@ -91,7 +93,14 @@ export default function EstateSettingsPage() {
             <div className="edash-card-head"><h3 className="edash-card-title">Estate details</h3></div>
             <label className="edash-field" style={{ marginBottom: 10 }}><span>Name</span><input value={name} onChange={(event) => setName(event.target.value)} /></label>
             <label className="edash-field" style={{ marginBottom: 10 }}><span>Location</span><input value={location} onChange={(event) => setLocation(event.target.value)} /></label>
-            <div className="edash-field" style={{ marginBottom: 12 }}><span>Coordinate system</span><strong style={{ color: "var(--edash-ink)" }}>{estateDetail?.crs || "EPSG:4326"}</strong></div>
+            <div className="edash-field" style={{ marginBottom: 10 }}><span>Coordinate system</span><strong style={{ color: "var(--edash-ink)" }}>{estateDetail?.crs || "EPSG:4326"}</strong></div>
+            <label className="edash-field" style={{ marginBottom: 12, maxWidth: 220 }}>
+              <span>Measurement units</span>
+              <select value={unitSystem} onChange={(event) => setUnitSystem(event.target.value === "ft" ? "ft" : "m")}>
+                <option value="m">Meters (m, m²)</option>
+                <option value="ft">Feet (ft, ft²)</option>
+              </select>
+            </label>
             <button type="button" className="edash-btn-primary" onClick={() => void saveEstate()}>Save estate details</button>
           </div>
         </div>
