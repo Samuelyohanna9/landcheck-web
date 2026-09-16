@@ -412,10 +412,18 @@
 .edash-body--fill .edash-map-canvas-wrap { min-height: 320px; }
 
 .edash-body--fill .edash-map-grid-left > .edash-bottom-row {
-  min-height: 110px;
-  max-height: 160px;
+  min-height: 130px;
+  max-height: 190px;
+  overflow: hidden;
 }
-.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-card-inner { padding: 9px 12px; overflow-y: auto; }
+/* Without an explicit height on the card itself, "align-items: stretch" only sets its box size -
+   it doesn't stop the card's own content (the donut + a 6-row legend) from growing past that box
+   when there isn't quite enough room, since nothing upstream of `.edash-card-inner`'s overflow-y
+   actually clips at that size. Matching height all the way down turns that "quietly overflow past
+   the row, half the legend cut off with no way to reach it" into "scroll the last row or two into
+   view within the card" instead. */
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-card { height: 100%; min-height: 0; }
+.edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-card-inner { height: 100%; min-height: 0; padding: 9px 12px; overflow-y: auto; }
 .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-card-head { margin-bottom: 5px; }
 .edash-body--fill .edash-map-grid-left > .edash-bottom-row .edash-activity-list { max-height: none; gap: 0; }
 
