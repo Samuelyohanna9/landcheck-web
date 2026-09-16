@@ -1566,6 +1566,61 @@
    (its selected-value text, dropdown option labels, etc.) and mangled their typography. */
 .edash-field-label { display: block; margin-bottom: 5px; font-size: 0.72rem; font-weight: 700; color: var(--edash-muted); text-transform: uppercase; letter-spacing: 0.03em; }
 
+/* CoordinateSystemSelect is shared with the dark Survey/Georeference tool, where its default
+   dark styling belongs - re-themed here to this dashboard's own light input/dropdown look
+   instead of forking a second copy of the component just for color differences. */
+.edash-modal .cs-select-trigger {
+  border-radius: var(--edash-radius-sm);
+  border-color: var(--edash-border);
+  background: #fff;
+  color: var(--edash-ink);
+}
+
+.edash-modal .cs-select-trigger:hover:not(:disabled) {
+  border-color: var(--edash-brand);
+}
+
+.edash-modal .cs-select-trigger:focus-visible {
+  border-color: var(--edash-brand);
+  box-shadow: 0 0 0 3px var(--edash-brand-tint);
+}
+
+.edash-modal .cs-select-caret {
+  color: var(--edash-muted);
+}
+
+.edash-modal .cs-select-panel {
+  border-radius: var(--edash-radius-sm);
+  border-color: var(--edash-border);
+  background: #fff;
+  box-shadow: 0 16px 32px rgba(16, 24, 39, 0.16);
+}
+
+.edash-modal .cs-select-group + .cs-select-group {
+  border-top-color: var(--edash-border);
+}
+
+.edash-modal .cs-select-group-label {
+  color: var(--edash-muted);
+}
+
+.edash-modal .cs-select-option {
+  color: var(--edash-ink);
+}
+
+.edash-modal .cs-select-option:hover {
+  background: var(--edash-neutral-tint);
+}
+
+.edash-modal .cs-select-option.is-selected {
+  background: var(--edash-brand-tint);
+  color: var(--edash-brand);
+}
+
+.edash-modal .cs-select-option-epsg {
+  color: var(--edash-faint);
+}
+
 .edash-layout-template-summary {
   display: flex;
   align-items: flex-start;
