@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import EstateIcon from "./EstateIcon";
 import Spinner from "./EstateSpinner";
 import { loadMapboxDraw, loadMapboxDrawCss, loadMapboxGl, loadMapboxGlCss, MAPBOX_TOKEN } from "../../utils/mapboxLoader";
-import { areaUnitLabel, formatArea, metersToFeet, sqftToSqm, sqmToSqft, type UnitSystem } from "../../utils/unitFormat";
+import { areaUnitLabel, feetToMeters, formatArea, metersToFeet, sqftToSqm, sqmToSqft, type UnitSystem } from "../../utils/unitFormat";
 
 type LayoutCriteria = {
   target_plot_area_sqm: number;
@@ -669,6 +669,8 @@ export default function EstateLayoutDesigner({ boundaryPresent, boundaryAreaSqm,
   const [templateKey, setTemplateKey] = useState<LayoutTemplateKey>("standard");
   const [criteria, setCriteria] = useState<LayoutCriteria>({ ...DEFAULT_CRITERIA, ...LAYOUT_TEMPLATES.find((item) => item.key === "standard")!.criteria });
   const [open, setOpen] = useState(false);
+  const [customWidthInput, setCustomWidthInput] = useState("");
+  const [customDepthInput, setCustomDepthInput] = useState("");
   const setNumber = (key: keyof LayoutCriteria, value: string) => setCriteria((current) => ({ ...current, [key]: Number(value) }));
   const selectedTemplate = LAYOUT_TEMPLATES.find((item) => item.key === templateKey) || LAYOUT_TEMPLATES[0];
   // Target plot size is always stored/submitted in sqm - only the display/entry value converts,
@@ -678,6 +680,43 @@ export default function EstateLayoutDesigner({ boundaryPresent, boundaryAreaSqm,
     const parsed = Number(value);
     setCriteria((current) => ({ ...current, target_plot_area_sqm: unitSystem === "ft" ? sqftToSqm(parsed) : parsed }));
   };
+
+  const dimensionToMeters = (value: string) => unitSystem === "ft" ? feetToMeters(Number(value)) : Number(value);
+  const syncCustomDimensions = () => {
+    const widthM = Number(criteria.frontage_m) > 0 ? Number(criteria.frontage_m) : Math.sqrt(Number(criteria.target_plot_area_sqm) || 0);
+    const depthM = widthM > 0 ? Number(criteria.target_plot_area_sqm) / widthM : 0;
+    setCustomWidthInput(widthM > 0 ? String(unitSystem === "ft" ? Math.round(metersToFeet(widthM)) : Number(widthM.toFixed(2))) : "");
+    setCustomDepthInput(depthM > 0 ? String(unitSystem === "ft" ? Math.round(metersToFeet(depthM)) : Number(depthM.toFixed(2))) : "");
+  };
+
+  useEffect(() => {
+    if (templateKey === "custom") syncCustomDimensions();
+  }, [templateKey, unitSystem]);
+
+  const updateCustomDimension = (dimension: "width" | "depth", value: string) => {
+    if (dimension === "width") setCustomWidthInput(value);
+    else setCustomDepthInput(value);
+    const widthM = dimension === "width" ? dimensionToMeters(value) : dimensionToMeters(customWidthInput);
+    const depthM = dimension === "depth" ? dimensionToMeters(value) : dimensionToMeters(customDepthInput);
+    if (!Number.isFinite(widthM) || !Number.isFinite(depthM) || widthM <= 0 || depthM <= 0) return;
+    setCriteria((current) => ({ ...current, frontage_m: widthM, target_plot_area_sqm: widthM * depthM }));
+  };
+
+  const estimatedPlotCount = (() => {
+    const estateArea = Number(boundaryAreaSqm || 0);
+    const plotArea = Number(criteria.target_plot_area_sqm || 0);
+    const frontage = Number(criteria.frontage_m || 0);
+    if (!Number.isFinite(estateArea) || estateArea <= 0 || !Number.isFinite(plotArea) || plotArea <= 0) return null;
+    const openSpaceFactor = criteria.include_open_space ? Math.max(0.1, 1 - Number(criteria.open_space_percent || 0) / 100) : 1;
+    const roadAllowance = criteria.include_roads && frontage > 0 ? Number(criteria.road_width_m || 0) * frontage / 2 : 0;
+    const estimate = Math.floor((estateArea * openSpaceFactor) / (plotArea + roadAllowance));
+    return Math.max(0, Math.min(5000, estimate));
+  })();
+
+  useEffect(() => {
+    if (!estimatedPlotCount || estimatedPlotCount < 1) return;
+    setCriteria((current) => current.max_plots === estimatedPlotCount ? current : { ...current, max_plots: estimatedPlotCount });
+  }, [estimatedPlotCount]);
 
   const applyTemplate = (key: LayoutTemplateKey) => {
     setTemplateKey(key);
@@ -717,14 +756,37 @@ export default function EstateLayoutDesigner({ boundaryPresent, boundaryAreaSqm,
               <p>{selectedTemplate.description}</p>
             </div>
 
+            {templateKey === "custom" && (
+              <div className="edash-custom-plot-size">
+                <div>
+                  <strong>Plot dimensions</strong>
+                  <p>Enter the size people normally use, such as 50 × 100 {unitSystem === "ft" ? "ft" : "m"}.</p>
+                </div>
+                <div className="edash-custom-plot-size-fields">
+                  <label className="edash-field"><span>Width / frontage ({unitSystem})</span><input type="number" min="1" value={customWidthInput} onChange={(event) => updateCustomDimension("width", event.target.value)} placeholder="50" /></label>
+                  <span className="edash-custom-plot-size-by">×</span>
+                  <label className="edash-field"><span>Depth ({unitSystem})</span><input type="number" min="1" value={customDepthInput} onChange={(event) => updateCustomDimension("depth", event.target.value)} placeholder="100" /></label>
+                  <span className="edash-custom-plot-size-unit">{unitSystem}</span>
+                </div>
+                <p className="edash-field-note">Plot area: <strong>{formatArea(Number(criteria.target_plot_area_sqm || 0), unitSystem)}</strong></p>
+              </div>
+            )}
+
+            {estimatedPlotCount !== null && (
+              <div className="edash-layout-yield" role="status">
+                <strong>About {estimatedPlotCount.toLocaleString()} plots can fit this boundary</strong>
+                <span>Based on the selected plot size, roads and open-space allowance. The generated draft will use this estimate and show the actual count for review.</span>
+              </div>
+            )}
+
             <details open={open || !proposal} onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)} className="edash-onboard-advanced" style={{ marginTop: 12, marginBottom: 14 }}>
               <summary>Fine-tune the criteria</summary>
               <div className="edash-criteria-groups">
                 <div className="edash-criteria-group">
                   <h4>Plot &amp; frontage</h4>
                   <div className="edash-form-row">
-                    <label className="edash-field"><span>Target plot size ({areaUnitLabel(unitSystem)})</span><input type="number" min="100" value={targetSizeDisplay} onChange={(event) => handleTargetSizeChange(event.target.value)} /></label>
-                    <label className="edash-field"><span>Frontage (m)</span><input type="number" min="5" value={criteria.frontage_m ?? ""} placeholder="Auto" onChange={(event) => setCriteria((current) => ({ ...current, frontage_m: event.target.value === "" ? null : Number(event.target.value) }))} /></label>
+                    {templateKey !== "custom" && <label className="edash-field"><span>Target plot size ({areaUnitLabel(unitSystem)})</span><input type="number" min="100" value={targetSizeDisplay} onChange={(event) => handleTargetSizeChange(event.target.value)} /></label>}
+                    {templateKey !== "custom" && <label className="edash-field"><span>Frontage (m)</span><input type="number" min="5" value={criteria.frontage_m ?? ""} placeholder="Auto" onChange={(event) => setCriteria((current) => ({ ...current, frontage_m: event.target.value === "" ? null : Number(event.target.value) }))} /></label>}
                   </div>
                 </div>
 
@@ -765,10 +827,10 @@ export default function EstateLayoutDesigner({ boundaryPresent, boundaryAreaSqm,
                   </div>
                 </div>
 
-                <label className="edash-field" style={{ maxWidth: 220 }}><span>Maximum plots to generate</span><input type="number" min="2" max="5000" value={criteria.max_plots} onChange={(event) => setNumber("max_plots", event.target.value)} /></label>
+                {estimatedPlotCount === null && <p className="edash-field-note">The number of plots will be estimated after the Estate boundary area is available.</p>}
 
                 <p className="edash-field-note">These are starting assumptions, not planning approval. Your qualified planner and the relevant planning authority remain responsible for confirming roads, drainage, access and plot standards before publishing.</p>
-                <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-start" }} disabled={busy} onClick={() => onGenerate(criteria)}>
+                <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-start" }} disabled={busy} onClick={() => onGenerate(estimatedPlotCount ? { ...criteria, max_plots: estimatedPlotCount } : criteria)}>
                   {busy ? <><Spinner size={14} /> Creating draft...</> : <><EstateIcon name="plots" /> Create draft layout</>}
                 </button>
               </div>
