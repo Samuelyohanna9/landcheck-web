@@ -10,6 +10,10 @@ const DEMO_MAILTO = "mailto:landchecktech@gmail.com?subject=LandCheck%20Estates%
 const connectedCapabilities = [
   "Automatic layout design",
   "Georeference and digitise",
+  "Customer-facing Estate website",
+  "Live satellite map of approved plots",
+  "Online plot reservations",
+  "Reservation alerts for your team",
   "Customers and allocations",
   "Payments and commissions",
   "Professional survey plans",

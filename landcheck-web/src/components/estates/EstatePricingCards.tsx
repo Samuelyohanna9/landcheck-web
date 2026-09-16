@@ -17,6 +17,7 @@ const PLAN_FEATURES: Record<EstatePlanKey, string[]> = {
     "Estate, plot and block management",
     "Automatic layout design",
     "Scanned plan georeferencing and AI-assisted digitising",
+    "Customer website with live map, reservations and availability updates",
     "Customers, reservations and allocations",
     "Payments, receipts and customer statements",
     "Sales-agent commission ladder and payouts",
