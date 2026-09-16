@@ -400,12 +400,17 @@
 }
 .edash-map-grid-left > .edash-map-card {
   flex: 1;
-  min-height: 0;
 }
 .edash-map-grid-left > .edash-bottom-row {
   flex-shrink: 0;
 }
-.edash-body--fill .edash-map-card,
+/* Deliberately NOT min-height: 0 (unlike the drawer) - the map card's own floor is its content's
+   minimum (the toolbar plus .edash-map-canvas-wrap's min-height below), and it should hold that
+   floor even when the bottom row wants more room than is left. Overriding it to 0 previously let
+   the flex algorithm shrink the map first (since it was the only item explicitly told it was
+   allowed to go to nothing) instead of letting the page grow taller and scroll, which is what
+   actually shrank the map down to a sliver rather than the intended "map keeps its size, the page
+   scrolls past whatever doesn't fit" behavior. */
 .edash-body--fill .edash-drawer {
   min-height: 0;
 }
