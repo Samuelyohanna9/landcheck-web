@@ -9,6 +9,7 @@ Allow: /flood
 Allow: /survey
 Allow: /news
 Allow: /career
+Allow: /estates$
 
 # Disallow noindex tool alias routes (canonical points to primary)
 Disallow: /hazard-analysis
@@ -23,5 +24,8 @@ Disallow: /green/login/field
 Disallow: /green/login$
 Disallow: /dashboard
 Disallow: /admin
+
+# Estate dashboard is authenticated - only the /estates marketing page is public
+Disallow: /estates/
 
 Sitemap: https://landcheck.online/sitemap.xml
