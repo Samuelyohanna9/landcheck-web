@@ -443,7 +443,6 @@ export default function LandingPage() {
         <div className="lp-targets-list">
           {targets.map((item) => (
             <div key={item} className="lp-target-item">
-              <span className="lp-target-num-bullet"></span>
               <h3>{item}</h3>
             </div>
           ))}
@@ -540,9 +539,6 @@ export default function LandingPage() {
                 onClick={() => navigate("/sponsor")}
               >
                 Sponsor a Tree
-                <svg viewBox="0 0 24 24" fill="none" width="16" height="16" aria-hidden="true">
-                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
               </button>
               <a
                 href="https://play.google.com/store/apps/details?id=online.landcheck.mobile"
