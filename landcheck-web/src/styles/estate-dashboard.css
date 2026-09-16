@@ -387,16 +387,18 @@
   gap: 16px;
   align-items: stretch;
 }
+/* Not min-height: 0 - as a CSS Grid item, that would let it opt out of contributing its actual
+   content height (the map's own floor plus the bottom row) to the grid row's auto-sizing, which
+   is exactly what was still collapsing the map even after the fix below: the row ended up sized
+   off the much shorter drawer/placeholder column instead of this one. */
 .edash-map-grid-left {
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-width: 0;
-  min-height: 0;
 }
 .edash-body--fill > .edash-map-grid {
   flex: 1;
-  min-height: 0;
 }
 .edash-map-grid-left > .edash-map-card {
   flex: 1;
