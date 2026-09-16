@@ -1,0 +1,118 @@
+.estate-public-app {
+  --estate-public-bg: #f3f5f7;
+  --estate-public-surface: #ffffff;
+  --estate-public-ink: #101827;
+  --estate-public-muted: #6b7685;
+  --estate-public-faint: #98a2b0;
+  --estate-public-border: #e4e8ec;
+  --estate-public-brand: #1a8f5a;
+  --estate-public-brand-dark: #0f6e44;
+  min-height: 100vh;
+  background: var(--estate-public-bg);
+  color: var(--estate-public-ink);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.estate-public-app *, .estate-public-app *::before, .estate-public-app *::after { box-sizing: border-box; }
+.estate-public-app button, .estate-public-app input, .estate-public-app select, .estate-public-app textarea { font: inherit; }
+.estate-public-header { min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px clamp(18px, 4vw, 64px); background: #fff; border-bottom: 1px solid var(--estate-public-border); }
+.estate-public-brand { display: inline-flex; align-items: center; gap: 7px; color: var(--estate-public-ink); text-decoration: none; font-weight: 800; white-space: nowrap; }
+.estate-public-brand img { display: block; width: 124px; height: auto; }
+.estate-public-brand span { color: var(--estate-public-brand); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
+.estate-public-header-meta { display: flex; align-items: center; gap: 18px; color: var(--estate-public-muted); font-size: .78rem; }
+.estate-public-header-meta a, .estate-public-text-link { color: var(--estate-public-brand-dark); font-weight: 750; text-decoration: none; }
+.estate-public-header-meta a:hover, .estate-public-text-link:hover { text-decoration: underline; }
+.estate-public-intro { max-width: 1280px; padding: clamp(44px, 7vw, 86px) clamp(18px, 4vw, 64px) 32px; margin: 0 auto; }
+.estate-public-kicker { margin: 0 0 10px; color: var(--estate-public-brand); font-size: .68rem; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+.estate-public-intro h1 { max-width: 850px; margin: 0; font-size: clamp(2.2rem, 5vw, 4.8rem); letter-spacing: -.055em; line-height: .98; }
+.estate-public-location { margin: 14px 0 0; color: var(--estate-public-muted); font-size: 1rem; }
+.estate-public-description { max-width: 650px; margin: 18px 0 0; color: var(--estate-public-muted); line-height: 1.7; }
+.estate-public-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 1280px; margin: 0 auto 30px; padding: 0 clamp(18px, 4vw, 64px); }
+.estate-public-metrics > div { min-height: 100px; padding: 20px 24px; border-top: 1px solid var(--estate-public-border); border-bottom: 1px solid var(--estate-public-border); background: rgba(255,255,255,.62); }
+.estate-public-metrics > div + div { border-left: 1px solid var(--estate-public-border); }
+.estate-public-metrics strong { display: block; color: var(--estate-public-ink); font-size: 1.65rem; line-height: 1; }
+.estate-public-metrics span { display: block; margin-top: 8px; color: var(--estate-public-muted); font-size: .78rem; }
+.estate-public-workspace { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(330px, .75fr); gap: 18px; max-width: 1280px; margin: 0 auto; padding: 0 clamp(18px, 4vw, 64px) 70px; }
+.estate-public-map-column, .estate-public-inventory, .estate-public-form-wrap { border: 1px solid var(--estate-public-border); border-radius: 18px; background: var(--estate-public-surface); box-shadow: 0 8px 24px rgba(16,24,39,.05); }
+.estate-public-map-column { min-width: 0; padding: 18px; }
+.estate-public-inventory { min-width: 0; padding: 18px; display: flex; flex-direction: column; }
+.estate-public-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+.estate-public-section-head h2 { margin: 0; color: var(--estate-public-ink); font-size: 1.25rem; letter-spacing: -.025em; }
+.estate-public-section-head > strong { color: var(--estate-public-muted); font-size: .86rem; }
+.estate-public-map-note { padding-top: 2px; color: var(--estate-public-muted); font-size: .78rem; }
+.estate-public-map { min-height: 560px; width: 100%; overflow: hidden; border-radius: 12px; background: #dce5e0; }
+.estate-public-map .mapboxgl-canvas { outline: none; }
+.estate-public-map-fallback { min-height: 560px; display: grid; place-items: center; padding: 30px; border-radius: 12px; background: linear-gradient(135deg, #e5eee9, #d6e1da); color: var(--estate-public-muted); text-align: center; line-height: 1.6; }
+.estate-public-legend { display: flex; flex-wrap: wrap; gap: 12px 18px; padding: 14px 2px 0; color: var(--estate-public-muted); font-size: .75rem; }
+.estate-public-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.estate-public-legend i { width: 9px; height: 9px; border-radius: 50%; }
+.estate-public-filters { display: grid; grid-template-columns: 1fr 116px; gap: 8px; margin-bottom: 12px; }
+.estate-public-filters input, .estate-public-filters select, .estate-public-form input, .estate-public-form textarea { width: 100%; border: 1px solid var(--estate-public-border); border-radius: 8px; background: #fff; color: var(--estate-public-ink); outline: none; }
+.estate-public-filters input, .estate-public-filters select { min-height: 39px; padding: 0 10px; font-size: .78rem; }
+.estate-public-filters input:focus, .estate-public-filters select:focus, .estate-public-form input:focus, .estate-public-form textarea:focus { border-color: var(--estate-public-brand); box-shadow: 0 0 0 3px rgba(26,143,90,.12); }
+.estate-public-plot-list { min-height: 0; max-height: 430px; overflow-y: auto; border-top: 1px solid var(--estate-public-border); border-bottom: 1px solid var(--estate-public-border); }
+.estate-public-plot-row { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 8px; border: 0; border-bottom: 1px solid #edf0f3; background: transparent; color: var(--estate-public-ink); text-align: left; cursor: pointer; }
+.estate-public-plot-row:last-child { border-bottom: 0; }
+.estate-public-plot-row:hover, .estate-public-plot-row.is-selected { background: #f2f8f4; }
+.estate-public-plot-row strong { display: block; font-size: .82rem; }
+.estate-public-plot-row small { display: block; margin-top: 3px; color: var(--estate-public-muted); font-size: .72rem; }
+.estate-public-status { flex-shrink: 0; font-size: .7rem; font-weight: 800; }
+.estate-public-empty { padding: 20px 8px; color: var(--estate-public-muted); font-size: .8rem; }
+.estate-public-plot-detail { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--estate-public-border); }
+.estate-public-detail-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.estate-public-detail-top h3 { margin: 0; font-size: 1.35rem; letter-spacing: -.03em; }
+.estate-public-status-pill { display: inline-flex; align-items: center; padding: 5px 8px; border-radius: 999px; font-size: .68rem; font-weight: 800; }
+.estate-public-plot-detail dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0; }
+.estate-public-plot-detail dl > div { min-width: 0; }
+.estate-public-plot-detail dt { color: var(--estate-public-muted); font-size: .68rem; }
+.estate-public-plot-detail dd { margin: 3px 0 0; color: var(--estate-public-ink); font-size: .82rem; font-weight: 750; overflow-wrap: anywhere; }
+.estate-public-primary { width: 100%; min-height: 43px; padding: 0 16px; border: 1px solid var(--estate-public-brand); border-radius: 8px; background: var(--estate-public-brand); color: #fff; font-size: .8rem; font-weight: 800; cursor: pointer; }
+.estate-public-primary:hover { background: var(--estate-public-brand-dark); border-color: var(--estate-public-brand-dark); }
+.estate-public-primary:disabled { cursor: wait; opacity: .65; }
+.estate-public-unavailable, .estate-public-success { margin: 0; color: var(--estate-public-muted); font-size: .78rem; line-height: 1.5; }
+.estate-public-success { color: var(--estate-public-brand-dark); font-weight: 700; }
+.estate-public-form-wrap { max-width: 700px; margin: 0 auto 70px; padding: 24px; }
+.estate-public-form-head { display: flex; justify-content: space-between; gap: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--estate-public-border); }
+.estate-public-form-head h2 { margin: 0; font-size: 1.45rem; letter-spacing: -.03em; }
+.estate-public-form-head p:not(.estate-public-kicker) { margin: 7px 0 0; color: var(--estate-public-muted); font-size: .82rem; }
+.estate-public-close { width: 32px; height: 32px; border: 1px solid var(--estate-public-border); border-radius: 50%; background: #fff; color: var(--estate-public-muted); font-size: 1.3rem; line-height: 1; cursor: pointer; }
+.estate-public-form { display: grid; gap: 13px; padding-top: 18px; }
+.estate-public-form label { display: grid; gap: 6px; color: var(--estate-public-ink); font-size: .78rem; font-weight: 700; }
+.estate-public-form label span { color: var(--estate-public-faint); font-weight: 500; }
+.estate-public-form input { min-height: 42px; padding: 0 11px; }
+.estate-public-form textarea { padding: 10px 11px; resize: vertical; }
+.estate-public-form-error { margin: 0; padding: 10px 12px; border-radius: 8px; background: #fbeaea; color: #a83232; font-size: .78rem; }
+.estate-public-form-note { margin: -3px 0 0; color: var(--estate-public-faint); font-size: .7rem; line-height: 1.5; }
+.estate-public-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; max-width: 1280px; margin: 0 auto; padding: 26px clamp(18px, 4vw, 64px); border-top: 1px solid var(--estate-public-border); color: var(--estate-public-muted); font-size: .72rem; }
+.estate-public-loading, .estate-public-message { max-width: 680px; margin: 0 auto; padding: 80px 24px; }
+.estate-public-message h1 { margin: 60px 0 12px; font-size: 2rem; letter-spacing: -.04em; }
+.estate-public-message p { color: var(--estate-public-muted); }
+
+@media (max-width: 900px) {
+  .estate-public-workspace { grid-template-columns: 1fr; }
+  .estate-public-map { min-height: min(70vw, 560px); }
+  .estate-public-map-fallback { min-height: min(70vw, 560px); }
+  .estate-public-plot-list { max-height: 300px; }
+}
+
+@media (max-width: 600px) {
+  .estate-public-header { align-items: flex-start; padding: 14px 16px; }
+  .estate-public-header-meta { align-items: flex-end; flex-direction: column; gap: 4px; text-align: right; }
+  .estate-public-header-meta span { display: none; }
+  .estate-public-brand img { width: 111px; }
+  .estate-public-intro { padding: 42px 16px 26px; }
+  .estate-public-intro h1 { font-size: clamp(2.15rem, 12vw, 3.3rem); }
+  .estate-public-metrics { grid-template-columns: repeat(2, 1fr); padding: 0 16px; }
+  .estate-public-metrics > div { min-height: 82px; padding: 15px; }
+  .estate-public-metrics > div:nth-child(3) { border-left: 0; border-top: 0; }
+  .estate-public-metrics > div:nth-child(4) { border-top: 0; }
+  .estate-public-workspace { padding: 0 16px 46px; }
+  .estate-public-map-column, .estate-public-inventory { padding: 13px; border-radius: 14px; }
+  .estate-public-map { min-height: 74vw; max-height: 440px; }
+  .estate-public-map-fallback { min-height: 74vw; }
+  .estate-public-section-head h2 { font-size: 1.05rem; }
+  .estate-public-plot-detail dl { gap: 5px; }
+  .estate-public-form-wrap { margin: 0 16px 46px; padding: 18px; border-radius: 14px; }
+  .estate-public-footer { align-items: flex-start; flex-direction: column; padding: 22px 16px; }
+}

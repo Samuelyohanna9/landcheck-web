@@ -16,6 +16,7 @@ import EstateIcon from "../components/estates/EstateIcon";
 import EstateModal from "../components/estates/EstateModal";
 import CoordinateSystemSelect from "../components/CoordinateSystemSelect";
 import EstateShell from "../components/estates/EstateShell";
+import EstateReservationRequests from "../components/estates/EstateReservationRequests";
 import Spinner, { LoadingPanel } from "../components/estates/EstateSpinner";
 import "../styles/estates.css";
 import "../styles/estate-dashboard.css";
@@ -2003,10 +2004,10 @@ export default function Estates() {
                     <span>Upload a document for this plot</span>
                     <input type="file" onChange={(event) => setPlotDocumentFile(event.target.files?.[0] || null)} />
                   </label>
-                  <button type="button" className="edash-btn-primary" disabled={!plotDocumentFile || plotDocumentBusy} onClick={() => void uploadPlotDocument()}>
+                  <button type="button" className="edash-btn-primary" style={{ alignSelf: "flex-start" }} disabled={!plotDocumentFile || plotDocumentBusy} onClick={() => void uploadPlotDocument()}>
                     <EstateIcon name="upload" /> {plotDocumentBusy ? "Uploading..." : "Upload document"}
                   </button>
-                  <Link className="edash-btn-outline" style={{ display: "inline-flex", marginTop: 10 }} to="/estates/documents">Open the full Document Vault</Link>
+                  <Link className="edash-btn-outline" style={{ display: "inline-flex", alignSelf: "flex-start", marginTop: 10 }} to="/estates/documents">Open the full Document Vault</Link>
                 </div>
               )}
 
@@ -2772,6 +2773,7 @@ export default function Estates() {
         </div>
       ) : (
         <>
+          <EstateReservationRequests estateId={estateId} />
           {renderBottomRow()}
           {renderFooter()}
         </>
