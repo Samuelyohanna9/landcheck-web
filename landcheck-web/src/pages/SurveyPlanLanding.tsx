@@ -306,24 +306,6 @@ export default function SurveyPlanLanding() {
           </div>
         </section>
 
-        <section className="spl-scan-section">
-          <div className="spl-shell">
-            <div className="spl-section-intro spl-section-intro--center">
-              <p className="spl-section-kicker">For existing plans</p>
-              <h2>Turn scanned layouts into usable spatial data.</h2>
-              <p>
-                Georeference your scanned drawings, trace boundaries and convert them into accurate, editable parcels.
-              </p>
-            </div>
-            <figure className="spl-scan-figure">
-              <img src={asset("georefrence preview.jpg")} alt="A scanned plot layout aligned to its real-world satellite position during georeferencing" loading="lazy" decoding="async" />
-            </figure>
-            <button type="button" className="spl-btn-primary" onMouseEnter={warmSurveyEntry} onClick={openWorkspace}>
-              Open georeferencing tools
-            </button>
-          </div>
-        </section>
-
         <section id="for-surveyors" className="spl-section spl-audiences">
           <div className="spl-shell">
             <div className="spl-section-intro spl-section-intro--center">

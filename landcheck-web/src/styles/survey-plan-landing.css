@@ -285,8 +285,7 @@
 
 .spl-hero-copy h1,
 .spl-section h2,
-.spl-workflow h2,
-.spl-scan-section h2 {
+.spl-workflow h2 {
   margin: 18px 0 0;
   font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   font-weight: 500;
@@ -419,8 +418,7 @@
   text-align: center;
 }
 
-.spl-section h2,
-.spl-scan-section h2 {
+.spl-section h2 {
   color: var(--spl-ink);
   font-size: clamp(1.7rem, 2.7vw, 2.3rem);
   line-height: 1.1;
@@ -578,26 +576,6 @@
 
 .spl-workflow-intro > button {
   margin-top: 30px;
-}
-
-/* ── Turn scanned layouts into usable spatial data ── */
-.spl-scan-section {
-  padding: clamp(82px, 10vw, 132px) 0;
-  background: #e7efe8;
-  text-align: center;
-}
-
-.spl-scan-figure {
-  margin: 0 0 32px;
-}
-
-.spl-scan-figure img {
-  display: block;
-  width: 100%;
-  max-width: 980px;
-  margin: 0 auto;
-  border: 1px solid var(--spl-line);
-  border-radius: 4px;
 }
 
 /* ── One workspace for every land project ── */
@@ -879,7 +857,6 @@
   }
 
   .spl-section h2,
-  .spl-scan-section h2,
   .spl-workflow h2 {
     font-size: clamp(1.6rem, 7vw, 2rem);
   }
@@ -899,10 +876,6 @@
 
   .spl-workflow-intro {
     text-align: left;
-  }
-
-  .spl-scan-section {
-    padding: 72px 0;
   }
 
   .spl-footer {
