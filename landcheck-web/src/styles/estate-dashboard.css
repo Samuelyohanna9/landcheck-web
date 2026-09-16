@@ -379,7 +379,7 @@
    the drawer only matching the map card's height and leaving a gap beside the row below it. */
 .edash-map-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-columns: minmax(0, 1fr) 380px;
   gap: 16px;
   align-items: stretch;
 }
@@ -856,31 +856,26 @@
 
 .edash-drawer-view-map { width: 100%; justify-content: center; margin-bottom: 12px; }
 
-/* A 340px-wide drawer can't fit all 7 tabs (Overview through Timeline) at once without either
-   wrapping (which used to just clip the last one or two off-screen) - this scrolls horizontally
-   instead, and unlike a hidden-scrollbar pattern, keeps a thin visible track so it's obvious there
-   are more tabs to the right instead of it looking like the row is simply cut off. */
+/* Even at the drawer's widened 380px, 7 tabs (Overview through Timeline) at a legible size still
+   don't all fit on one line - rather than a horizontal scrollbar (easy to miss, awkward to use on
+   a plain click-drag), whatever doesn't fit wraps onto a second line instead, so every tab stays
+   permanently visible with no scrolling in either direction. */
 .edash-drawer-tabs {
   display: flex;
-  gap: 2px;
-  padding: 0 10px;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+  padding: 6px 10px 0;
   border-bottom: 1px solid var(--edash-border-soft);
-  overflow-x: auto;
-  scrollbar-width: thin;
 }
 
-.edash-drawer-tabs::-webkit-scrollbar { height: 4px; }
-.edash-drawer-tabs::-webkit-scrollbar-track { background: transparent; }
-.edash-drawer-tabs::-webkit-scrollbar-thumb { background: var(--edash-border); border-radius: 999px; }
-
 .edash-drawer-tab {
-  flex-shrink: 0;
-  padding: 8px 6px;
+  padding: 6px 7px;
   border: none;
   border-bottom: 2px solid transparent;
+  border-radius: var(--edash-radius-sm) var(--edash-radius-sm) 0 0;
   background: transparent;
   color: var(--edash-muted);
-  font-size: 0.71rem;
+  font-size: 0.7rem;
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
@@ -889,7 +884,11 @@
 .edash-drawer-tab.active { color: var(--edash-brand-dark); border-bottom-color: var(--edash-brand); }
 .edash-drawer-tab:hover:not(.active) { color: var(--edash-ink); }
 
-.edash-drawer-body { flex: 1; padding: 14px 16px 18px; overflow-y: auto; }
+/* overflow-x is explicit (not left to default "visible") because a lone overflow-y: auto next to
+   an implicit overflow-x otherwise gets silently promoted to auto too by the CSS overflow spec -
+   which is how one unwrapped flex row (a <select> + input + button that don't fit) turned into a
+   horizontal scrollbar for the entire drawer body instead of just wrapping or shrinking in place. */
+.edash-drawer-body { flex: 1; padding: 14px 16px 18px; overflow-x: hidden; overflow-y: auto; }
 
 /* auto-fit instead of a fixed column count: each field claims at least 76px (comfortably fits
    "Reserved", "625.86 m²", etc. at this font size without wrapping mid-word) and wraps onto a new
