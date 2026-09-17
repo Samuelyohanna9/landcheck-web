@@ -20,16 +20,17 @@ import {
 } from "../api/greenSponsor";
 import { claimGreenSponsorGuestAccount } from "../auth/greenAuth";
 import GpsIcon from "../components/GpsIcon";
+import SponsorTreeShowcase from "../components/SponsorTreeShowcase";
 import SocialLinks from "../components/SocialLinks";
 import "../styles/green-public-sponsor.css";
 import "../styles/public-landing.css";
+import "../styles/sponsor-tree-showcase.css";
 import { useDeferredMount } from "../hooks/useDeferredMount";
 import { useLowBandwidthMode } from "../hooks/useLowBandwidthMode";
 
 const photoAsset = (fileName: string) => encodeURI(fileName);
 const PlantyAssistant = lazyWithChunkRecovery(() => import("../components/PlantyAssistant"));
 
-const SPONSOR_BACKGROUND = "/sponsor_landing_page.jpg";
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=online.landcheck.mobile";
 const GUEST_CHECKOUT_STORAGE_KEY = "lc_guest_checkout_pending";
 const DEFERRED_SECTION_STYLE = { contentVisibility: "auto" as const, containIntrinsicSize: "900px" };
@@ -473,42 +474,9 @@ export default function GreenPublicSponsor() {
         </>
       )}
 
-      {/* ─── Hero (browsing view only — hidden once a project/checkout or payment-return view is active) ─── */}
+      {/* Sponsor showcase, visible while browsing */}
       {!selectedProject && !returnState && (
-      <section className="gps-hero">
-        <div className="gps-hero-text-panel">
-          <h1>Sponsor a verified tree, <span className="gps-hero-accent">follow the proof</span></h1>
-
-          <p className="gps-hero-summary">
-            Sponsor a real planting project and receive certificate delivery, verified map evidence, and field updates from the ground.
-          </p>
-
-          <div className="gps-hero-ctas">
-            <button type="button" className="gps-primary-btn" onClick={() => document.getElementById("gps-projects")?.scrollIntoView({ behavior: "smooth" })}>
-              Choose a Project
-            </button>
-            <button type="button" className="gps-hero-secondary-btn" onClick={() => document.querySelector(".gps-how-it-works")?.scrollIntoView({ behavior: "smooth" })}>
-              See How It Works
-            </button>
-          </div>
-          <p className="gps-hero-support-note">
-            No account is required to sponsor. Pay first, then decide later if you want a full dashboard.
-          </p>
-        </div>
-
-        <div className="gps-hero-media-wrap">
-          <div
-            className="gps-hero-media-panel gps-hero-media-panel--a"
-            style={{ backgroundImage: `url(${isLowBandwidth ? PROJECT_THUMBNAIL_SRC : SPONSOR_BACKGROUND})` }}
-          />
-          {!isLowBandwidth ? (
-            <div
-              className="gps-hero-media-panel gps-hero-media-panel--b"
-              style={{ backgroundImage: `url(${photoAsset("seeds.JPG")})` }}
-            />
-          ) : null}
-        </div>
-      </section>
+      <SponsorTreeShowcase />
       )}
 
       {/* ─── Photo proof — real field evidence, not stock photography ─── */}
