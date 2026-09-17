@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { isSurveyAuthed } from "../auth/surveyAuth";
 import { NAV_GROUPS } from "../components/NavBar";
+import SocialLinks from "../components/SocialLinks";
 import {
   prefetchSurveyPlanPreviewStep,
   prefetchSurveyPlanRoute,
@@ -103,14 +104,6 @@ const workspaceAudiences = [
       "Keep a central record of all projects",
     ],
   },
-];
-
-const socialLinks = [
-  { label: "Instagram", href: "https://www.instagram.com/land.check/" },
-  { label: "Facebook", href: "https://www.facebook.com/landcheck/" },
-  { label: "YouTube", href: "https://www.youtube.com/@LandCheckGreen" },
-  { label: "TikTok", href: "https://www.tiktok.com/@landcheckgeo" },
-  { label: "LinkedIn", href: "https://www.linkedin.com/company/landcheck-geospatial/" },
 ];
 
 export default function SurveyPlanLanding() {
@@ -428,9 +421,7 @@ export default function SurveyPlanLanding() {
           </div>
           <div className="spl-footer-column">
             <h2>Social</h2>
-            {socialLinks.map((item) => (
-              <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer">{item.label}</a>
-            ))}
+            <SocialLinks className="spl-footer-social" />
           </div>
         </div>
         <div className="spl-footer-bottom">
