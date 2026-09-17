@@ -3131,3 +3131,30 @@
     transform: translate3d(calc(-3 * (var(--gp-model-card-width) + var(--gp-model-gap))), 0, 0);
   }
 }
+
+/* Keep the partner landing page on the shared public landing typography system. */
+.green-partners-page,
+.green-partners-page .lc-nav,
+.green-partners-page .lc-nav button,
+.green-partners-page .lc-nav a {
+  font-family: var(--public-font-body) !important;
+}
+
+.green-partners-page .gp-new-hero-copy h1,
+.green-partners-page .gp-section-intro h2,
+.green-partners-page .gp-photo-lead h2,
+.green-partners-page .gp-proof-content h2,
+.green-partners-page .gp-workflow-card h3,
+.green-partners-page .gp-route-card h3,
+.green-partners-page .gp-photo-feature figcaption h3,
+.green-partners-page .gp-photo-side-card__body h3,
+.green-partners-page .gp-footer-panel h2 {
+  font-family: var(--public-font-display) !important;
+  font-weight: 500 !important;
+}
+
+.green-partners-page .gp-new-hero-stat-item strong,
+.green-partners-page .gp-proof-strip-card strong {
+  font-family: var(--public-font-body) !important;
+  font-weight: 700 !important;
+}
