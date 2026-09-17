@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { claimDraftSurveyPlots, hasPendingSurveyDownload, exchangeSurveyGoogleCode } from "../auth/surveyAuth";
+import {
+  claimDraftHazardJobs,
+  claimDraftSurveyPlots,
+  hasPendingHazardRun,
+  hasPendingSurveyDownload,
+  exchangeSurveyGoogleCode,
+} from "../auth/surveyAuth";
 import "../styles/signup-gate-modal.css";
 
 export default function SurveyAuthCallback() {
@@ -20,8 +26,15 @@ export default function SurveyAuthCallback() {
     (async () => {
       try {
         await exchangeSurveyGoogleCode(code);
-        await claimDraftSurveyPlots();
-        navigate(hasPendingSurveyDownload() ? "/survey-plan?resume=1" : "/dashboard", { replace: true });
+        await Promise.all([claimDraftSurveyPlots(), claimDraftHazardJobs()]);
+        navigate(
+          hasPendingSurveyDownload()
+            ? "/survey-plan?resume=1"
+            : hasPendingHazardRun()
+              ? "/hazard-analysis?resume=1"
+              : "/dashboard",
+          { replace: true },
+        );
       } catch {
         setStatus("error");
       }

@@ -267,3 +267,86 @@ export const claimDraftSurveyPlots = async () => {
   ]);
   return plots;
 };
+
+const PENDING_HAZARD_RUN_KEY = "landcheck_hazard_pending_run";
+const PENDING_HAZARD_RUN_MAX_AGE_MS = 30 * 60 * 1000;
+
+// Sibling of PendingSurveyDownload above, but for Hazard Analysis's own gate: the exact request
+// body a second (login-required) analysis run needs, so it can fire automatically the moment
+// sign-in completes instead of asking the user to click "Run Analysis" again. Kept as its own
+// type/storage key rather than folded into PendingSurveyDownload's union - "replay a download"
+// and "replay an analysis run" are different enough actions to keep separate.
+export type PendingHazardRun = {
+  hazardType: "flood" | "erosion" | "lulc";
+  requestBody: Record<string, unknown>;
+};
+
+export const setPendingHazardRun = (run: PendingHazardRun) => {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(PENDING_HAZARD_RUN_KEY, JSON.stringify({ run, createdAt: Date.now() }));
+};
+
+export const hasPendingHazardRun = (): boolean => {
+  if (typeof window === "undefined") return false;
+  return Boolean(window.localStorage.getItem(PENDING_HAZARD_RUN_KEY));
+};
+
+export const consumePendingHazardRun = (): PendingHazardRun | null => {
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage.getItem(PENDING_HAZARD_RUN_KEY);
+  window.localStorage.removeItem(PENDING_HAZARD_RUN_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { run?: PendingHazardRun; createdAt?: number };
+    if (!parsed?.run || !parsed?.createdAt) return null;
+    if (Date.now() - parsed.createdAt > PENDING_HAZARD_RUN_MAX_AGE_MS) return null;
+    return parsed.run;
+  } catch {
+    return null;
+  }
+};
+
+// Every hazard analysis job id created anonymously by this browser (from the
+// `landcheck_hazard_anon_jobs` draft) - claimed the same way and at the same points as plot ids.
+export const claimAnonymousHazardJobs = async (jobIds: string[]) => {
+  if (!jobIds.length) return [] as string[];
+  const session = getSurveyAuthSession();
+  if (!session) return [] as string[];
+  try {
+    const res = await api.post<{ claimed: string[] }>(
+      "/hazards/claim",
+      { job_ids: jobIds },
+      { headers: { Authorization: `Bearer ${session.access_token}` } },
+    );
+    return res.data?.claimed || [];
+  } catch {
+    return [] as string[];
+  }
+};
+
+const HAZARD_ANON_JOBS_STORAGE_KEY = "landcheck_hazard_anon_jobs";
+
+const readDraftHazardJobIds = (): string[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(HAZARD_ANON_JOBS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as string[];
+    return parsed.filter((id) => typeof id === "string" && id);
+  } catch {
+    return [];
+  }
+};
+
+// Convenience wrapper used by every sign-in completion path, mirroring claimDraftSurveyPlots -
+// claims whatever hazard analysis job ids this browser ran anonymously before signing in.
+export const claimDraftHazardJobs = async () => claimAnonymousHazardJobs(readDraftHazardJobIds());
+
+// Called by HazardAnalysis.tsx right after each anonymous run completes, so there's something to
+// claim once the user eventually signs in (at the latest, the free run that got them there).
+export const rememberAnonymousHazardJob = (jobId: string) => {
+  if (typeof window === "undefined" || !jobId) return;
+  const existing = readDraftHazardJobIds();
+  if (existing.includes(jobId)) return;
+  window.localStorage.setItem(HAZARD_ANON_JOBS_STORAGE_KEY, JSON.stringify([...existing, jobId]));
+};

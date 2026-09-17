@@ -4,6 +4,7 @@ import "../styles/csv-preview-modal.css";
 import "../styles/signup-gate-modal.css";
 import OtpBoxInput from "./OtpBoxInput";
 import {
+  claimDraftHazardJobs,
   claimDraftSurveyPlots,
   hasPendingSurveyDownload,
   requestSurveyMagicLink,
@@ -21,9 +22,20 @@ type Props = {
   // for a plain "sign in" entry point (e.g. the nav bar) that isn't resuming anything - the auth
   // pages fall back to sending the user to /dashboard in that case.
   pendingDownload?: PendingSurveyDownload;
+  // The four props below let a second caller (Hazard Analysis, gating a 2nd anonymous analysis
+  // run rather than a download) reuse this exact modal with its own copy/resume target, without
+  // touching Survey Plan's own default behavior at all - every one of them is optional and
+  // Survey Plan passes none of them.
+  hasPendingAction?: boolean;
+  onBeforeAuth?: () => void;
+  readyTitle?: string;
+  readyIntro?: string;
+  resumePath?: string;
 };
 
-export default function SignupGateModal({ isOpen, onClose, pendingDownload }: Props) {
+export default function SignupGateModal({
+  isOpen, onClose, pendingDownload, hasPendingAction, onBeforeAuth, readyTitle, readyIntro, resumePath,
+}: Props) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -35,8 +47,11 @@ export default function SignupGateModal({ isOpen, onClose, pendingDownload }: Pr
 
   if (!isOpen) return null;
 
+  const isReady = hasPendingAction ?? Boolean(pendingDownload);
+
   const handleGoogle = () => {
     if (pendingDownload) setPendingSurveyDownload(pendingDownload);
+    onBeforeAuth?.();
     startSurveyGoogleSignIn();
   };
 
@@ -51,6 +66,7 @@ export default function SignupGateModal({ isOpen, onClose, pendingDownload }: Pr
     setSending(true);
     try {
       if (pendingDownload) setPendingSurveyDownload(pendingDownload);
+      onBeforeAuth?.();
       await requestSurveyMagicLink(cleanEmail);
       setSent(true);
     } catch {
@@ -61,8 +77,12 @@ export default function SignupGateModal({ isOpen, onClose, pendingDownload }: Pr
   };
 
   const finishSignIn = async () => {
-    await claimDraftSurveyPlots();
+    await Promise.all([claimDraftSurveyPlots(), claimDraftHazardJobs()]);
     onClose();
+    if (hasPendingAction != null) {
+      navigate(hasPendingAction ? resumePath || "/dashboard" : "/dashboard");
+      return;
+    }
     navigate(hasPendingSurveyDownload() ? "/survey-plan?resume=1" : "/dashboard");
   };
 
@@ -89,7 +109,7 @@ export default function SignupGateModal({ isOpen, onClose, pendingDownload }: Pr
     <div className="csv-modal-overlay" onClick={onClose}>
       <div className="csv-modal signup-gate-modal" onClick={(e) => e.stopPropagation()}>
         <div className="csv-modal-header">
-          <h3>{pendingDownload ? "Your survey plan is ready" : "Sign in to LandCheck Survey"}</h3>
+          <h3>{isReady ? readyTitle || "Your survey plan is ready" : "Sign in to LandCheck Survey"}</h3>
           <button className="csv-modal-close" onClick={onClose}>
             &times;
           </button>
@@ -101,7 +121,8 @@ export default function SignupGateModal({ isOpen, onClose, pendingDownload }: Pr
               <p>
                 We sent a link and a 6-digit code to <strong>{email.trim()}</strong>. Click the link, or enter the
                 code below
-                {pendingDownload ? " — either one picks up right where you left off." : "."}
+                {isReady ? " — either one picks up right where you left off." : "."} Don't see it? Check your spam
+                or junk folder.
               </p>
 
               <form className="otp-form" onSubmit={handleOtpSubmit}>
@@ -115,8 +136,8 @@ export default function SignupGateModal({ isOpen, onClose, pendingDownload }: Pr
           ) : (
             <>
               <p className="signup-gate-intro">
-                {pendingDownload
-                  ? "Create a free account to download and keep your project. No long forms — just continue with Google or email."
+                {isReady
+                  ? readyIntro || "Create a free account to download and keep your project. No long forms — just continue with Google or email."
                   : "Sign in to see your saved projects. No long forms — just continue with Google or email."}
               </p>
 
