@@ -556,10 +556,6 @@ export default function GreenPartnersLanding() {
             <p className="gp-footer-copyright">
               © {new Date().getFullYear()} LandCheck Technology Ltd. All rights reserved.
             </p>
-            <div className="gp-footer-status">
-              <span className="gp-status-indicator"></span>
-              <span>Platform Status: Active</span>
-            </div>
           </div>
         </div>
       </footer>

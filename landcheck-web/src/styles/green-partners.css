@@ -38,8 +38,7 @@
   text-transform: uppercase;
 }
 
-.gp-section-intro h2,
-.gp-footer-panel h2 {
+.gp-section-intro h2 {
   margin: 0;
   font-family: "Fraunces", serif;
   font-size: clamp(2.1rem, 3.4vw, 3.5rem);
@@ -935,7 +934,8 @@
   color: #ffffff;
   z-index: 1;
   position: relative;
-  font-family: "Fraunces", serif;
+  /* font-family/weight come from .public-landing h1-h4 (public-landing.css) - the same serif
+     every other page's headings use, not this page's own Fraunces. */
   font-size: clamp(1.7rem, 2.7vw, 2.3rem);
   line-height: 1.15;
   letter-spacing: -0.03em;
@@ -1044,9 +1044,9 @@
 }
 
 .gp-footer-col h4 {
-  font-family: "Outfit", sans-serif;
+  /* font-family/weight come from .public-landing h1-h4 (public-landing.css), matching the
+     footer column labels on the Estate/main landing pages instead of this page's own fonts. */
   font-size: 0.82rem;
-  font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #95ecab;
@@ -1087,21 +1087,6 @@
 
 .gp-footer-copyright {
   margin: 0;
-}
-
-.gp-footer-status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.gp-status-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #2ab061;
-  box-shadow: 0 0 8px rgba(42, 176, 97, 0.6);
-  display: inline-block;
 }
 
 @media (max-width: 1240px) {

@@ -182,9 +182,9 @@
 
 /* White-square badge variant (Green Partners) */
 .lc-nav-brand--badge {
-  width: 50px;
-  height: 50px;
-  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   border: 1px solid rgba(203, 236, 212, 0.28);
   background: rgba(255, 255, 255, 0.98);
   display: inline-grid;
@@ -192,10 +192,10 @@
 }
 
 .lc-nav-brand--badge img {
-  width: 33px;
-  height: 33px;
+  width: 26px;
+  height: 26px;
   object-fit: contain;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 /* ── Desktop nav links ──────────────────────────────────── */
