@@ -446,8 +446,13 @@ function WorkItemOptions({
         onClick={() => setOpen((current) => !current)}
       >
         <span>Options</span>
-        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <svg className="workspace-project-options-chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path d="M5 7.5 10 12.5l5-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <svg className="workspace-project-options-dots" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <circle cx="10" cy="4" r="1.5" />
+          <circle cx="10" cy="10" r="1.5" />
+          <circle cx="10" cy="16" r="1.5" />
         </svg>
       </button>
       {open && (
@@ -753,6 +758,18 @@ export default function Dashboard() {
         <div className="header-right">
           <button
             type="button"
+            className="workspace-mobile-notifications"
+            aria-label="Notifications"
+            title="Notifications"
+            onClick={() => toast("No new notifications.")}
+          >
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M5 8.5a5 5 0 0110 0c0 5 2 5 2 6H3c0-1 2-1 2-6z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+              <path d="M8 17h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+          <button
+            type="button"
             className="support-btn"
             title="Ask a question or report a problem"
             aria-label="Help and support"
@@ -774,22 +791,24 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="work-category-tabs" role="tablist" aria-label="Filter by project type">
-        {(["all", ...CATEGORY_ORDER] as CategoryFilter[]).map((category) => (
-          <button
-            key={category}
-            type="button"
-            role="tab"
-            aria-selected={categoryFilter === category}
-            className={`work-category-tab${categoryFilter === category ? " is-active" : ""}`}
-            title={category === "all" ? "Show every project type" : CATEGORY_META[category as WorkflowCategory].tooltip}
-            onClick={() => setCategoryFilter(category)}
-          >
-            <span className={`work-category-tab-dot ${category === "all" ? "" : CATEGORY_META[category as WorkflowCategory].accentClass}`} />
-            {category === "all" ? "All Work" : CATEGORY_META[category as WorkflowCategory].label}
-            <span className="work-category-tab-count">{categoryCounts[category]}</span>
-          </button>
-        ))}
+      <div className="workspace-category-scroll">
+        <div className="work-category-tabs" role="tablist" aria-label="Filter by project type">
+          {(["all", ...CATEGORY_ORDER] as CategoryFilter[]).map((category) => (
+            <button
+              key={category}
+              type="button"
+              role="tab"
+              aria-selected={categoryFilter === category}
+              className={`work-category-tab${categoryFilter === category ? " is-active" : ""}`}
+              title={category === "all" ? "Show every project type" : CATEGORY_META[category as WorkflowCategory].tooltip}
+              onClick={() => setCategoryFilter(category)}
+            >
+              <span className={`work-category-tab-dot ${category === "all" ? "" : CATEGORY_META[category as WorkflowCategory].accentClass}`} />
+              {category === "all" ? "All Work" : CATEGORY_META[category as WorkflowCategory].label}
+              <span className="work-category-tab-count">{categoryCounts[category]}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="plots-section">
@@ -810,6 +829,22 @@ export default function Dashboard() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
+              {selectablePagedIds.length > 0 && (
+                <button
+                  type="button"
+                  className="workspace-select-toggle"
+                  aria-label={allOnPageSelected ? "Clear selection on this page" : "Select all on this page"}
+                  aria-pressed={allOnPageSelected}
+                  title={allOnPageSelected ? "Clear selection on this page" : "Select all on this page"}
+                  onClick={toggleSelectAllOnPage}
+                >
+                  <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <rect x="3" y="3" width="14" height="14" rx="3" stroke="currentColor" strokeWidth="1.5" />
+                    {allOnPageSelected && <path d="m6.5 10 2.2 2.2 4.8-5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />}
+                  </svg>
+                  <span>Select</span>
+                </button>
+              )}
             </div>
             <div className="workspace-status-filter" role="tablist" aria-label="Filter by status">
               {(["all", "completed", "draft"] as StatusFilter[]).map((filter) => (
@@ -872,6 +907,19 @@ export default function Dashboard() {
                   <div
                     key={item.key}
                     className={`workspace-project-row${isSelectable && selectedIds.has(item.plotId as number) ? " is-selected" : ""}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open ${item.title}`}
+                    onClick={(event) => {
+                      if ((event.target as HTMLElement).closest("button, input, label, a")) return;
+                      openItem(item);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" && event.key !== " ") return;
+                      if ((event.target as HTMLElement).closest("button, input, label, a")) return;
+                      event.preventDefault();
+                      openItem(item);
+                    }}
                   >
                     {isSelectable ? (
                       <label className="workspace-checkbox workspace-project-checkbox">
