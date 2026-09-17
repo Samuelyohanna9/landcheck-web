@@ -2,7 +2,7 @@ import { api } from "../api/client";
 import { getGreenAuthSession } from "../auth/greenAuth";
 import { getWorkAuthSession } from "../auth/workAuth";
 
-export const PRIVACY_CONSENT_VERSION = "2026-03-23-v1";
+export const PRIVACY_CONSENT_VERSION = "2026-09-17-v2";
 export const PRIVACY_POLICY_PATH = "/privacy";
 const PRIVACY_STORAGE_PREFIX = "landcheck_privacy_consent";
 
@@ -33,11 +33,12 @@ const PRIVACY_SCOPE_COPY: Record<PrivacyScope, ScopeCopy> = {
   public_site_notice: {
     title: "Public site notice",
     summary:
-      "LandCheck stores essential browser data for navigation, loads map content, and handles contact interactions on the public site.",
+      "LandCheck stores essential browser data for navigation, loads map content, and handles contact and Estate reservation interactions on public sites.",
     bullets: [
       "Essential browser storage keeps navigation and interface choices working.",
+      "Published Estate pages may show plot information selected by the estate company, including availability, area, address, and price.",
       "Map views may load third-party map content while you browse public pages.",
-      "If you contact LandCheck, your message details may be retained for follow-up and service improvement.",
+      "If you send a contact or reservation request, its details are routed to the relevant company or LandCheck team for follow-up. No payment is taken on a public Estate reservation page.",
     ],
     legalBasis: "consent",
   },
