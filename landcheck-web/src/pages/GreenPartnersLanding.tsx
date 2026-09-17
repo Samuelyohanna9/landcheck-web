@@ -499,7 +499,7 @@ export default function GreenPartnersLanding() {
                 <a className="gp-btn gp-btn--primary" href="/green-work/login">
                   Start Your Project
                 </a>
-                <a className="gp-btn gp-btn--secondary" href="mailto:landchecktech@gmail.com?subject=LandCheck%20Green%20Corporate%20Partnership">
+                <a className="gp-btn gp-btn--secondary" href="mailto:admin@landcheck.online?subject=LandCheck%20Green%20Corporate%20Partnership">
                   Schedule a Demo
                 </a>
               </div>

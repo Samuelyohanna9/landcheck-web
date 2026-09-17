@@ -156,7 +156,7 @@ export default function NavBar({
             );
           })}
           <a
-            href="mailto:landchecktech@gmail.com?subject=LandCheck%20Support"
+            href="mailto:support@landcheck.online?subject=LandCheck%20Support"
             className="lc-nav-link"
           >
             Support
@@ -230,7 +230,7 @@ export default function NavBar({
           ))}
 
           <a
-            href="mailto:landchecktech@gmail.com?subject=LandCheck%20Support"
+            href="mailto:support@landcheck.online?subject=LandCheck%20Support"
             className="lc-mobile-item"
             onClick={() => setOpen(false)}
           >

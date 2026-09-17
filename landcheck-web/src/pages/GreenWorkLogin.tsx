@@ -199,7 +199,7 @@ export default function GreenWorkLogin() {
               </label>
               <a
                 className="work-login-forgot"
-                href="mailto:landchecktech@gmail.com?subject=LandCheck%20Work%20Password%20Reset"
+                href="mailto:support@landcheck.online?subject=LandCheck%20Work%20Password%20Reset"
               >
                 Forgot password?
               </a>
@@ -219,7 +219,7 @@ export default function GreenWorkLogin() {
 
           <a
             className="work-login-outline-btn"
-            href="mailto:landchecktech@gmail.com?subject=LandCheck%20Work%20Access"
+            href="mailto:admin@landcheck.online?subject=LandCheck%20Work%20Access"
           >
             Request organisation access
           </a>

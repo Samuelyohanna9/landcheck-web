@@ -144,7 +144,7 @@ export default function PrivacyPolicy() {
         <section className="privacy-policy-section">
           <h2>Contact</h2>
           <p>LandCheck Geospatial Technologies Limited</p>
-          <p>Email: landchecktech@gmail.com</p>
+          <p>Email: admin@landcheck.online</p>
           <p>For privacy, access, correction, or deletion requests, contact the address above and reference your organization, estate, project, or reservation.</p>
         </section>
       </main>
@@ -155,7 +155,7 @@ export default function PrivacyPolicy() {
           <span>ESTATES</span>
         </Link>
         <span>LandCheck Geospatial Technologies Limited</span>
-        <a href="mailto:landchecktech@gmail.com">landchecktech@gmail.com</a>
+        <a href="mailto:admin@landcheck.online">admin@landcheck.online</a>
       </footer>
     </div>
   );

@@ -498,7 +498,7 @@ export default function LandingPage() {
         <div className="lp-contact-inner">
           <h3>To request more information about our products</h3>
           <a
-            href="mailto:landchecktech@gmail.com?subject=LandCheck%20Products%20Enquiry"
+            href="mailto:admin@landcheck.online?subject=LandCheck%20Products%20Enquiry"
             className="lp-contact-cta"
           >
             CONTACT US
@@ -515,7 +515,7 @@ export default function LandingPage() {
             <img src="/logo.svg" alt="LandCheck" className="lp-footer-logo" width="100" height="34" loading="lazy" />
             <ul>
               <li>
-                <a href="mailto:landchecktech@gmail.com">landchecktech@gmail.com</a>
+                <a href="mailto:admin@landcheck.online">admin@landcheck.online</a>
               </li>
               <li>LandCheck Geospatial Technologies Limited</li>
             </ul>
@@ -595,7 +595,7 @@ export default function LandingPage() {
                 </button>
               </li>
               <li>
-                <a href="mailto:landchecktech@gmail.com?subject=LandCheck%20Support">
+                <a href="mailto:support@landcheck.online?subject=LandCheck%20Support">
                   Support
                 </a>
               </li>

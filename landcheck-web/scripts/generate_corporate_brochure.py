@@ -274,7 +274,7 @@ def build_brochure() -> bytes:
         text(MARGIN + 18, contact_heading_baseline - 18, "F3", 10.4, "landcheck.online/green-partners", 0.174, 0.367, 0.289)
     )
     content.append(
-        text(MARGIN + 230, contact_heading_baseline - 18, "F3", 10.4, "landchecktech@gmail.com", 0.174, 0.367, 0.289)
+        text(MARGIN + 230, contact_heading_baseline - 18, "F3", 10.4, "admin@landcheck.online", 0.174, 0.367, 0.289)
     )
     content.append(
         text(
