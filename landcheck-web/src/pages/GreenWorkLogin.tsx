@@ -154,7 +154,7 @@ export default function GreenWorkLogin() {
           <h1>Welcome back</h1>
           <p className="work-login-card-sub">Sign in to continue to your workspace.</p>
 
-          <form className="work-login-form" onSubmit={onSubmit}>
+          <form className="work-login-form" onSubmit={onSubmit} aria-busy={loading}>
             <label htmlFor="work-login-username">Username</label>
             <input
               id="work-login-username"
@@ -163,6 +163,7 @@ export default function GreenWorkLogin() {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter your work username"
               autoComplete="username"
+              required
             />
 
             <label htmlFor="work-login-password">Password</label>
@@ -174,6 +175,7 @@ export default function GreenWorkLogin() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
                 autoComplete="current-password"
+                required
               />
               <button
                 type="button"
