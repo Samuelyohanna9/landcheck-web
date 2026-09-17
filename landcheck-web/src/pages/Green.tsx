@@ -2634,7 +2634,7 @@ export default function Green() {
 
   const handleFieldTouchStart = (event: TouchEvent<HTMLElement>) => {
     if (activeSection !== null || pullRefreshing) return;
-    const scrollTop = document.scrollingElement?.scrollTop || window.scrollY || 0;
+    const scrollTop = event.currentTarget.scrollTop;
     if (scrollTop > 0) return;
     pullStartYRef.current = event.touches[0]?.clientY ?? null;
   };
