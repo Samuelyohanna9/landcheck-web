@@ -92,6 +92,16 @@ export default function EstateLanding() {
 
       <section className="estate-content-section" id="platform">
         <h2 className="estate-centered-heading">Everything connected to the plot.</h2>
+        <div className="estate-screenshot-grid">
+          <figure className="estate-screenshot">
+            <img src="/estate-dashboard-map.jpg" alt="LandCheck Estates dashboard showing an estate's map, plots and activity" loading="lazy" />
+            <figcaption>Live satellite map of every plot</figcaption>
+          </figure>
+          <figure className="estate-screenshot">
+            <img src="/estate-dashboard-layout-designer.jpg" alt="LandCheck Estates automatic layout design tool" loading="lazy" />
+            <figcaption>Automatic layout design</figcaption>
+          </figure>
+        </div>
         <div className="estate-connected-grid">
           {connectedCapabilities.map((item) => <span key={item}>{item}</span>)}
         </div>
