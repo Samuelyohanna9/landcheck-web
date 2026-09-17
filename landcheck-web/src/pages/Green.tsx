@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
 import { lazyWithChunkRecovery } from "../utils/lazyWithChunkRecovery";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -6,6 +6,7 @@ import { api, BACKEND_URL } from "../api/client";
 import { clearGreenAuthed, getGreenAuthSession } from "../auth/greenAuth";
 import type { TreeInspectData } from "../components/TreeMap";
 import GreenLoadingAnimation from "../components/GreenLoadingAnimation";
+import { GreenGlyph } from "../components/GreenGlyph";
 import {
   cacheProjectDetailOffline,
   cacheProjectTreesOffline,
@@ -296,6 +297,11 @@ const formatCurrencyAmount = (amount: number | null | undefined, currency = "NGN
     return `${String(currency || "NGN").toUpperCase()} ${numeric.toLocaleString()}`;
   }
 };
+const triggerFieldHaptic = () => {
+  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+    navigator.vibrate(12);
+  }
+};
 const toTitle = (value: string | null | undefined) =>
   String(value || "")
     .trim()
@@ -326,11 +332,11 @@ const getWorkflowLabels = (profile?: WorkflowProfile | string | null) => {
       recordsTitle: "Plot Records",
       totalLabel: "Total Plots",
       healthyLabel: "Good",
-      healthyHelper: "Healthy + active",
+      healthyHelper: "Active",
       attentionLabel: "Needs Support",
-      attentionHelper: "Attention + damaged",
+      attentionHelper: "Action required",
       deadLabel: "Inactive",
-      deadHelper: "Removed + inactive",
+      deadHelper: "Inactive",
       ownerLabel: "Farmer",
       cropLabel: "Primary Crop",
       cropDistributionTitle: "Crop Distribution",
@@ -341,7 +347,7 @@ const getWorkflowLabels = (profile?: WorkflowProfile | string | null) => {
       mapTitle: "Project plot map",
       projectCardMetricLabel: "My plots",
       impactEyebrow: "Programme evidence",
-      impactMessage: "Your mapped farms and field visits are building trusted programme evidence for every farmer you support.",
+      impactMessage: "Mapped farms and field visits stay in one trusted field record.",
       survivalTitle: "Overall Field Condition",
       emptyRecordsTitle: "No plot records yet",
       emptyRecordsSubtitle: "Save a farm plot record first and it will appear here.",
@@ -360,11 +366,11 @@ const getWorkflowLabels = (profile?: WorkflowProfile | string | null) => {
       recordsTitle: "Site Records",
       totalLabel: "Total Sites",
       healthyLabel: "Stable",
-      healthyHelper: "Stable + completed",
+      healthyHelper: "Stable",
       attentionLabel: "Needs Action",
-      attentionHelper: "Repair + urgent follow-up",
+      attentionHelper: "Action required",
       deadLabel: "Closed",
-      deadHelper: "Closed + inactive",
+      deadHelper: "Closed",
       ownerLabel: "Beneficiary",
       cropLabel: "Asset Type",
       cropDistributionTitle: "Asset Distribution",
@@ -375,7 +381,7 @@ const getWorkflowLabels = (profile?: WorkflowProfile | string | null) => {
       mapTitle: "Project site map",
       projectCardMetricLabel: "My sites",
       impactEyebrow: "Recovery evidence",
-      impactMessage: "Your mapped sites and relief visits are building trusted recovery evidence for every response area.",
+      impactMessage: "Mapped sites and relief visits stay in one trusted recovery record.",
       survivalTitle: "Overall Site Condition",
       emptyRecordsTitle: "No site records yet",
       emptyRecordsSubtitle: "Save an assessed site record first and it will appear here.",
@@ -393,11 +399,11 @@ const getWorkflowLabels = (profile?: WorkflowProfile | string | null) => {
     recordsTitle: "Tree Records",
     totalLabel: "Total Trees",
     healthyLabel: "Healthy",
-    healthyHelper: "Healthy + alive",
+    healthyHelper: "Active",
     attentionLabel: "Attention",
-    attentionHelper: "Attention + damaged",
+    attentionHelper: "Action required",
     deadLabel: "Dead",
-    deadHelper: "Dead + removed",
+    deadHelper: "Removed",
     ownerLabel: "Custodian",
     cropLabel: "Species",
     cropDistributionTitle: "Species Distribution",
@@ -408,7 +414,7 @@ const getWorkflowLabels = (profile?: WorkflowProfile | string | null) => {
     mapTitle: "Project tree map",
     projectCardMetricLabel: "My trees",
     impactEyebrow: "Verified climate action",
-    impactMessage: "Your tree records, field photos, and care updates are building a verified climate story.",
+    impactMessage: "Field records, GPS evidence, and care updates build a verified climate record.",
     survivalTitle: "Overall Survival Rate",
     emptyRecordsTitle: "No tree records yet",
     emptyRecordsSubtitle: "Save a planting or existing-tree record first and it will appear here.",
@@ -786,20 +792,11 @@ const toDisplayPhotoUrl = (url: string | null | undefined) => {
 };
 
 function HomeIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M3 11.5L12 4l9 7.5V20H3z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-    </svg>
-  );
+  return <GreenGlyph name="map" />;
 }
 
 function UserIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" strokeWidth="2" />
-      <path d="M4 20c1.4-3.1 4.3-5 8-5s6.6 1.9 8 5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
+  return <GreenGlyph name="person" />;
 }
 
 function PlusIcon() {
@@ -811,166 +808,62 @@ function PlusIcon() {
 }
 
 function TaskTileIcon() {
-  return (
-    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
-      <rect x="16" y="10" width="32" height="44" rx="4" fill="#ffffff" stroke="#1b3b32" strokeWidth="3" />
-      <rect x="24" y="6" width="16" height="8" rx="3" fill="#8fc9cc" stroke="#1b3b32" strokeWidth="2" />
-      <path d="M22 22h20M22 30h20M22 38h14" stroke="#82a3ad" strokeWidth="3" strokeLinecap="round" />
-      <path
-        d="M40 42l10-10c1-1 2-1 3 0l2 2c1 1 1 2 0 3L45 47l-7 2z"
-        fill="#f8bb4b"
-        stroke="#944f16"
-        strokeWidth="2"
-      />
-    </svg>
-  );
+  return <GreenGlyph name="receipt" />;
 }
 
 function MapTileIcon() {
-  return (
-    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
-      <path d="M11 14l13-3 15 4 14-4v39l-14 3-15-4-13 4z" fill="#def4dd" stroke="#2b5548" strokeWidth="3" />
-      <path d="M24 11v38M39 15v38" stroke="#2b5548" strokeWidth="2" />
-      <circle cx="32" cy="28" r="8" fill="#6bc14f" stroke="#2b5548" strokeWidth="2" />
-      <path d="M32 20v16M24 28h16" stroke="#eaffea" strokeWidth="2" />
-    </svg>
-  );
+  return <GreenGlyph name="map" />;
 }
 
 function TreeTileIcon() {
-  return (
-    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" className="green-premium-tree-svg">
-      <ellipse cx="32" cy="54" rx="16" ry="3.5" fill="rgba(19, 49, 38, 0.12)" />
-      <path d="M32 54V34" stroke="#5c3f25" strokeWidth="4" strokeLinecap="round" />
-      <path d="M32 44l-6-6" stroke="#5c3f25" strokeWidth="3" strokeLinecap="round" />
-      <path d="M32 40l6-6" stroke="#5c3f25" strokeWidth="3" strokeLinecap="round" />
-      <path d="M26 38l-4-2" stroke="#5c3f25" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M38 34l4-2" stroke="#5c3f25" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M32 12C20 24 16 38 18 42c2 4 10 6 14 6s12-2 14-6c2-4-2-18-14-30z" fill="#135132" opacity="0.85" />
-      <path d="M32 14C22 25 18 37 20 40c1.5 3 8 4.5 12 4.5s10.5-1.5 12-4.5c2-3-2-15-12-26z" fill="#1e7e4c" />
-      <path d="M32 14c-5 8-8 17-8 21 0 3 4 4.5 8 4.5s8-1.5 8-4.5c0-4-3-13-8-21z" fill="#42b876" opacity="0.9" />
-      <path d="M32 17c-2 5-3.5 11-3.5 13.5 0 2 2.5 3 3.5 3s3.5-1 3.5-3c0-2.5-1.5-8.5-3.5-13.5z" fill="#86efac" opacity="0.8" />
-    </svg>
-  );
+  return <GreenGlyph name="leaf" className="green-premium-tree-svg" />;
 }
 
 function ReviewTileIcon() {
-  return (
-    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
-      <path d="M16 10h26l10 10v34H16z" fill="#ffffff" stroke="#1b3b32" strokeWidth="3" />
-      <path d="M42 10v12h10" fill="none" stroke="#1b3b32" strokeWidth="3" strokeLinejoin="round" />
-      <path d="M24 28h20M24 36h16" stroke="#6b7f76" strokeWidth="3" strokeLinecap="round" />
-      <path d="M24 46l6 6 12-14" fill="none" stroke="#2ea653" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+  return <GreenGlyph name="check-circle" />;
 }
 
 function WalletIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18a2 2 0 0 1 2 2v1.5H8.5A2.5 2.5 0 0 0 6 11v5.5A2.5 2.5 0 0 0 8.5 19H20v.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 19.5z" fill="none" stroke="currentColor" strokeWidth="2" />
-      <path d="M8.5 8.5H21v9H8.5A1.5 1.5 0 0 1 7 16V10a1.5 1.5 0 0 1 1.5-1.5Z" fill="none" stroke="currentColor" strokeWidth="2" />
-      <circle cx="16.5" cy="13" r="1.25" fill="currentColor" />
-    </svg>
-  );
+  return <GreenGlyph name="briefcase" />;
 }
 
 function LocationIcon() {
-  return (
-    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" className="green-premium-location-svg">
-      <ellipse cx="32" cy="54" rx="12" ry="3" fill="rgba(19, 49, 38, 0.12)" />
-      <path d="M32 54c8-4 14-16 14-23a14 14 0 1 0-28 0c0 7 6 19 14 23z" fill="#1e7e4c" stroke="#135132" strokeWidth="2.5" strokeLinejoin="round" />
-      <circle cx="32" cy="31" r="5" fill="#ffffff" />
-      <path d="M32 20a11 11 0 0 1 11 11" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
+  return <GreenGlyph name="pin" className="green-premium-location-svg" />;
 }
 
 function GreetingIcon({ kind }: { kind: "morning" | "afternoon" | "evening" }) {
-  if (kind === "evening") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path
-          d="M16.8 3.6a8.9 8.9 0 1 0 3.6 16.9 9.6 9.6 0 1 1-3.6-16.9Z"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
-  if (kind === "afternoon") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <circle cx="12" cy="12" r="4.6" fill="none" stroke="currentColor" strokeWidth="2" />
-        <path
-          d="M12 2.4v2.2M12 19.4v2.2M4.7 4.7l1.6 1.6M17.7 17.7l1.6 1.6M2.4 12h2.2M19.4 12h2.2M4.7 19.3l1.6-1.6M17.7 6.3l1.6-1.6"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M5 15a5 5 0 1 1 9.6-1.9A4.6 4.6 0 1 1 17 22H7a4 4 0 0 1-2-7Z" fill="none" stroke="currentColor" strokeWidth="2" />
-      <path d="M12 2.6v2.1M4.8 9.1l1.8.9M19.2 9.1l-1.8.9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
+  return <GreenGlyph name={kind === "evening" ? "moon" : "sun"} />;
 }
 
 function MetricHealthyIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path
-        d="M12 20.5 5.6 14.2a4.4 4.4 0 0 1 6.2-6.2l.2.2.2-.2a4.4 4.4 0 1 1 6.2 6.2Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
+  return <GreenGlyph name="status-check" />;
 }
 
 function MetricAttentionIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M12 4.2 21 20H3Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-      <path d="M12 9v5.2M12 17.2h.01" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
+  return <GreenGlyph name="status-alert" />;
 }
 
 function MetricDeadIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <circle cx="12" cy="12" r="8.6" fill="none" stroke="currentColor" strokeWidth="2" />
-      <path d="m8.7 8.7 6.6 6.6m0-6.6-6.6 6.6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
+  return <GreenGlyph name="status-dead" />;
 }
 
 function LeafGlyphIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path
-        d="M19.5 4.5c-5 0-10.3 2.5-12.7 6.2-1.9 2.8-1.7 6 1 7.7 2.6 1.6 6 .8 8.2-1.4 3.2-3.2 3.5-8.6 3.5-12.5Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <path d="M7.8 16.8c1.9-2.2 4.2-4.1 7-5.8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
+  return <GreenGlyph name="leaf" />;
 }
 
 export default function Green() {
   const navigate = useNavigate();
+  useEffect(() => {
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    if (!themeMeta) return;
+    const colorScheme = window.matchMedia("(prefers-color-scheme: dark)");
+    const syncThemeColor = () => {
+      themeMeta.setAttribute("content", colorScheme.matches ? "#0F172A" : "#F8FAFC");
+    };
+    syncThemeColor();
+    colorScheme.addEventListener?.("change", syncThemeColor);
+    return () => colorScheme.removeEventListener?.("change", syncThemeColor);
+  }, []);
   const greenAuthSession = useMemo(() => getGreenAuthSession(), []);
   const greenAuthUser = greenAuthSession?.user || null;
   const normalizeOrgLifecycleStatus = (value: unknown) => String(value || "").trim().toLowerCase();
@@ -1065,6 +958,10 @@ export default function Green() {
   const [syncConflictCount, setSyncConflictCount] = useState(0);
   const [syncInProgress, setSyncInProgress] = useState(false);
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator === "undefined" ? true : navigator.onLine);
+  const [pullRefreshDistance, setPullRefreshDistance] = useState(0);
+  const [pullRefreshing, setPullRefreshing] = useState(false);
+  const pullStartYRef = useRef<number | null>(null);
+  const pullDistanceRef = useRef(0);
   const [treeHeightDraftById, setTreeHeightDraftById] = useState<Record<number, string>>({});
   const [savingTreeHeightId, setSavingTreeHeightId] = useState<number | null>(null);
   const [treeAgeMonthsDraftById, setTreeAgeMonthsDraftById] = useState<Record<number, string>>({});
@@ -2400,6 +2297,7 @@ export default function Green() {
     ) {
       return;
     }
+    triggerFieldHaptic();
     const treePayload = {
       project_id: activeProject.id,
       lng: Number((batchAreaCentroid?.lng ?? newTree.lng) || 0),
@@ -2705,6 +2603,61 @@ export default function Green() {
     setTaskGpsLoadingId(null);
   };
 
+  const refreshFieldDashboard = async () => {
+    if (pullRefreshing) return;
+    if (!navigator.onLine) {
+      toast.error("Reconnect to refresh field data.");
+      return;
+    }
+    setPullRefreshing(true);
+    triggerFieldHaptic();
+    try {
+      await loadProjects();
+      await loadUsers();
+      if (activeProject) {
+        await loadProjectDetail(activeProject.id);
+        if (activeUser) {
+          await Promise.all([
+            loadMyTasks(),
+            loadWorkOrders(activeProject.id, activeUser),
+          ]);
+        }
+      }
+      toast.success("Field data refreshed");
+    } catch {
+      toast.error("Could not refresh field data");
+    } finally {
+      setPullRefreshing(false);
+      setPullRefreshDistance(0);
+    }
+  };
+
+  const handleFieldTouchStart = (event: TouchEvent<HTMLElement>) => {
+    if (activeSection !== null || pullRefreshing) return;
+    const scrollTop = document.scrollingElement?.scrollTop || window.scrollY || 0;
+    if (scrollTop > 0) return;
+    pullStartYRef.current = event.touches[0]?.clientY ?? null;
+  };
+
+  const handleFieldTouchMove = (event: TouchEvent<HTMLElement>) => {
+    if (pullStartYRef.current === null || pullRefreshing) return;
+    const currentY = event.touches[0]?.clientY ?? pullStartYRef.current;
+    const distance = Math.max(0, Math.min(currentY - pullStartYRef.current, 72));
+    pullDistanceRef.current = distance;
+    setPullRefreshDistance(distance);
+  };
+
+  const handleFieldTouchEnd = () => {
+    const shouldRefresh = pullDistanceRef.current >= 54;
+    pullStartYRef.current = null;
+    pullDistanceRef.current = 0;
+    if (shouldRefresh) {
+      void refreshFieldDashboard();
+      return;
+    }
+    setPullRefreshDistance(0);
+  };
+
   const isPlantingMetadataTask = (task: any) => {
     const taskType = normalizeTaskState(task?.task_type);
     return taskType === "planting" || taskType === "existing_inventory_intake";
@@ -2867,6 +2820,7 @@ export default function Green() {
       toast.dismiss(loadingId);
       return;
     }
+    triggerFieldHaptic();
     try {
       await saveTaskTreeMetadata(task);
       await api.post(`/green/tasks/${taskId}/submit`, submitPayload);
@@ -3498,7 +3452,22 @@ export default function Green() {
         </div>
       )}
 
-      <main className="green-shell">
+      <main
+        className="green-shell"
+        onTouchStart={handleFieldTouchStart}
+        onTouchMove={handleFieldTouchMove}
+        onTouchEnd={handleFieldTouchEnd}
+      >
+        {(pullRefreshDistance > 0 || pullRefreshing) && (
+          <div
+            className={`green-pull-refresh-indicator ${pullRefreshing ? "is-loading" : ""}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="green-pull-refresh-icon" aria-hidden="true">{pullRefreshing ? "..." : "v"}</span>
+            <span>{pullRefreshing ? "Refreshing field data" : pullRefreshDistance >= 54 ? "Release to refresh" : "Pull to refresh"}</span>
+          </div>
+        )}
         {(activeSection !== null || true) && (
           <>
         {activeSection === null && (
@@ -3656,14 +3625,14 @@ export default function Green() {
           </div>
 
           <div className="green-overview-survival-panel">
-            <div className="green-survival-gauge" style={{ background: `conic-gradient(#34a853 ${survivalRate}%, #e8ece8 ${survivalRate}% 100%)` }}>
+            <div className="green-survival-gauge" style={{ background: `conic-gradient(#10b981 ${survivalRate}%, #e2e8f0 ${survivalRate}% 100%)` }}>
               <div className="green-survival-gauge-inner">
                 <strong>{survivalRate}%</strong>
               </div>
             </div>
             <div className="green-overview-survival-copy">
               <h3>{workflowLabels.survivalTitle}</h3>
-              <p>Based on current {workflowLabels.entitySingular.toLowerCase()} status</p>
+              <p>Current status</p>
             </div>
             <div className="green-overview-survival-badge">
               <strong>{survivalQualityLabel}</strong>
@@ -3785,11 +3754,7 @@ export default function Green() {
             </span>
             <span className="green-overview-proof-eyebrow">{workflowLabels.impactEyebrow}</span>
           </div>
-          <h3>
-            {activeWorkflowProfile === "green"
-              ? "Great job. Your tree records, field photos, and care updates are building a verified climate story."
-              : workflowLabels.impactMessage}
-          </h3>
+          <h3>{workflowLabels.impactMessage}</h3>
           <span className="green-overview-proof-float" aria-hidden="true">
             {activeWorkflowProfile === "green" ? <TreeTileIcon /> : <LocationIcon />}
           </span>
