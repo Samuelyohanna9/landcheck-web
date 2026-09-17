@@ -11,6 +11,11 @@
     radial-gradient(circle at 20% 90%, rgba(31, 140, 88, 0.04) 0%, transparent 45%);
   color: #143225;
   font-family: "Manrope", sans-serif;
+  /* This page's own dark-green hero/footer tone and mint accent, so the shared nav dropdown
+     (navbar.css) matches this page instead of the generic navy every other page falls back to. */
+  --lc-dropdown-bg: #0d1f16;
+  --lc-dropdown-border: rgba(149, 236, 171, 0.28);
+  --lc-dropdown-hover: rgba(149, 236, 171, 0.16);
 }
 
 .gp-shell {

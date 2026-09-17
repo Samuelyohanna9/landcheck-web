@@ -9,7 +9,9 @@ const SignupGateModal = lazyWithChunkRecovery(() => import("./SignupGateModal"))
 
 // Grouped into dropdowns (was one flat row of 5+ links) so the bar reads cleanly instead of
 // spelling out every product and every company page across the top of every LandCheck page.
-const NAV_GROUPS = [
+// Exported so pages with their own hand-built nav (Survey Plan's landing page) can render the
+// exact same Products/Company groups instead of maintaining a second copy of this list.
+export const NAV_GROUPS = [
   {
     label: "Products",
     items: [
