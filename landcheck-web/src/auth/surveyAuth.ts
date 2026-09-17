@@ -6,6 +6,11 @@ export type SurveyAuthUser = {
   id: number;
   email: string;
   full_name?: string | null;
+  role?: string | null;
+  role_name?: string | null;
+  organization_name?: string | null;
+  plan_name?: string | null;
+  credits_remaining?: number | null;
 };
 
 export type SurveyAuthSession = {

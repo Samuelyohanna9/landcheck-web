@@ -785,6 +785,13 @@ export default function Dashboard() {
             <ProfileAvatarMenu
               email={session.user.email}
               fullName={session.user.full_name}
+              role={session.user.role_name || session.user.role}
+              organizationName={session.user.organization_name}
+              planName={session.user.plan_name}
+              credits={session.user.credits_remaining}
+              onContactSupport={() => setSupportOpen(true)}
+              onSystemStatus={() => toast("Live system status is available from support@landcheck.online.")}
+              onTopUp={() => setSupportOpen(true)}
               onSignOut={handleSignOut}
             />
           )}

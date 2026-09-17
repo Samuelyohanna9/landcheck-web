@@ -2389,3 +2389,60 @@
     bottom: auto;
   }
 }
+
+/* Keep the workspace shell in sync with the account menu appearance toggle. */
+:root[data-workspace-theme="light"] .workspace-container {
+  background:
+    repeating-linear-gradient(0deg, rgba(100, 116, 139, 0.055) 0, rgba(100, 116, 139, 0.055) 1px, transparent 1px, transparent 48px),
+    repeating-linear-gradient(90deg, rgba(100, 116, 139, 0.045) 0, rgba(100, 116, 139, 0.045) 1px, transparent 1px, transparent 48px),
+    linear-gradient(160deg, #f8fafc 0%, #eef6f2 100%);
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .dashboard-header {
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom-color: rgba(148, 163, 184, 0.25);
+}
+
+:root[data-workspace-theme="light"] .workspace-container .header-left h1,
+:root[data-workspace-theme="light"] .workspace-container .workspace-project-title,
+:root[data-workspace-theme="light"] .workspace-container .workspace-project-action {
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .work-category-tabs,
+:root[data-workspace-theme="light"] .workspace-container .workspace-toolbar,
+:root[data-workspace-theme="light"] .workspace-container .workspace-project-row,
+:root[data-workspace-theme="light"] .workspace-container .workspace-status-filter {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: #dbe4ea;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .workspace-search input {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .workspace-project-row:hover,
+:root[data-workspace-theme="light"] .workspace-container .work-category-tab:hover,
+:root[data-workspace-theme="light"] .workspace-container .workspace-status-filter-btn:hover {
+  background: #eef7f2;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .workspace-project-meta,
+:root[data-workspace-theme="light"] .workspace-container .workspace-status-filter-btn,
+:root[data-workspace-theme="light"] .workspace-container .work-category-tab,
+:root[data-workspace-theme="light"] .workspace-container .workspace-select-all-row {
+  color: #64748b;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .work-category-tab.is-active,
+:root[data-workspace-theme="light"] .workspace-container .workspace-status-filter-btn.is-active {
+  background: #e5f6ed;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .workspace-project-action {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
