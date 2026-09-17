@@ -83,6 +83,58 @@
   }
 }
 
+/* ── Nav dropdowns (Products / Company) ─────────────────── */
+.lc-nav-group {
+  position: relative;
+}
+
+.lc-nav-group-caret {
+  width: 11px;
+  height: 11px;
+  margin-left: 3px;
+  transition: transform 0.15s ease;
+}
+
+.lc-nav-group > button[aria-expanded="true"] .lc-nav-group-caret {
+  transform: rotate(180deg);
+}
+
+.lc-nav-group-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 200px;
+  padding: 6px;
+  background: #0a1228;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+}
+
+/* Own solid background regardless of the overlay nav's transparent/oversized link styling, since
+   this floats over whatever hero content sits below the bar. */
+.lc-nav-group-menu button,
+.lc-nav--overlay .lc-nav-group-menu button {
+  justify-content: flex-start;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-shadow: none;
+}
+
+.lc-nav-group-menu button:hover,
+.lc-nav--overlay .lc-nav-group-menu button:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+}
+
 /* ── Hamburger (left, mobile only) ─────────────────────── */
 .lc-nav-hamburger {
   display: none;
@@ -268,6 +320,20 @@
 .lc-mobile-close:hover {
   color: #fff;
   background: rgba(255, 255, 255, 0.08);
+}
+
+.lc-mobile-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.lc-mobile-group-label {
+  padding: 14px 24px 4px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .lc-mobile-item {

@@ -1,4 +1,4 @@
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { prefetchSurveyPlanPreviewStep, prefetchSurveyPlanRoute } from "../utils/surveyPlanPrefetch";
 import { isSurveyAuthed } from "../auth/surveyAuth";
@@ -7,12 +7,24 @@ import "../styles/navbar.css";
 
 const SignupGateModal = lazyWithChunkRecovery(() => import("./SignupGateModal"));
 
-const NAV_ITEMS = [
-  { label: "LandCheck Green", route: "/green-partners" },
-  { label: "Survey Plan", route: "/survey" },
-  { label: "Flood Analysis", route: "/flood" },
-  { label: "Career", route: "/career" },
-  { label: "News", route: "/news" },
+// Grouped into dropdowns (was one flat row of 5+ links) so the bar reads cleanly instead of
+// spelling out every product and every company page across the top of every LandCheck page.
+const NAV_GROUPS = [
+  {
+    label: "Products",
+    items: [
+      { label: "LandCheck Green", route: "/green-partners" },
+      { label: "Survey Plan", route: "/survey" },
+      { label: "Flood Analysis", route: "/flood" },
+    ],
+  },
+  {
+    label: "Company",
+    items: [
+      { label: "Career", route: "/career" },
+      { label: "News", route: "/news" },
+    ],
+  },
 ] as const;
 
 interface NavBarProps {
@@ -44,6 +56,8 @@ export default function NavBar({
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const desktopNavRef = useRef<HTMLElement>(null);
   const showDashboardLink = isSurveyAuthed();
   // Only surfaced on Survey-related pages - Survey has its own separate account system from
   // Green/Work, so a "Sign in" link here would be out of place on the Green/Flood nav bars.
@@ -58,6 +72,22 @@ export default function NavBar({
     navigate(route);
     setOpen(false);
   };
+
+  // Closes an open dropdown on an outside click or Escape - same dismissal convention used by
+  // the Estate landing page's own mobile drawer and Dashboard's "New Work" menu.
+  useEffect(() => {
+    if (!openGroup) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (desktopNavRef.current && !desktopNavRef.current.contains(event.target as Node)) setOpenGroup(null);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setOpenGroup(null); };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openGroup]);
 
   return (
     <>
@@ -85,19 +115,43 @@ export default function NavBar({
         </button>
 
         {/* Desktop links */}
-        <nav className="lc-nav-desktop" aria-label="Main navigation">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.route}
-              type="button"
-              className={activeRoute === item.route ? "lc-nav-item-active" : undefined}
-              onMouseEnter={item.route === "/survey" ? warmSurveyPlanEntry : undefined}
-              onFocus={item.route === "/survey" ? warmSurveyPlanEntry : undefined}
-              onClick={() => navigate(item.route)}
-            >
-              {item.label}
-            </button>
-          ))}
+        <nav className="lc-nav-desktop" aria-label="Main navigation" ref={desktopNavRef}>
+          {NAV_GROUPS.map((group) => {
+            const groupActive = group.items.some((item) => item.route === activeRoute);
+            return (
+              <div key={group.label} className="lc-nav-group">
+                <button
+                  type="button"
+                  className={groupActive ? "lc-nav-item-active" : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={openGroup === group.label}
+                  onClick={() => setOpenGroup((prev) => (prev === group.label ? null : group.label))}
+                >
+                  {group.label}
+                  <svg className="lc-nav-group-caret" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                {openGroup === group.label && (
+                  <div className="lc-nav-group-menu" role="menu">
+                    {group.items.map((item) => (
+                      <button
+                        key={item.route}
+                        type="button"
+                        role="menuitem"
+                        className={activeRoute === item.route ? "lc-nav-item-active" : undefined}
+                        onMouseEnter={item.route === "/survey" ? warmSurveyPlanEntry : undefined}
+                        onFocus={item.route === "/survey" ? warmSurveyPlanEntry : undefined}
+                        onClick={() => { navigate(item.route); setOpenGroup(null); }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
           <a
             href="mailto:landchecktech@gmail.com?subject=LandCheck%20Support"
             className="lc-nav-link"
@@ -154,17 +208,22 @@ export default function NavBar({
             </button>
           </div>
 
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.route}
-              type="button"
-              className={`lc-mobile-item${activeRoute === item.route ? " lc-mobile-item--active" : ""}`}
-              onFocus={item.route === "/survey" ? warmSurveyPlanEntry : undefined}
-              onTouchStart={item.route === "/survey" ? warmSurveyPlanEntry : undefined}
-              onClick={() => handleNav(item.route)}
-            >
-              {item.label}
-            </button>
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} className="lc-mobile-group">
+              <span className="lc-mobile-group-label">{group.label}</span>
+              {group.items.map((item) => (
+                <button
+                  key={item.route}
+                  type="button"
+                  className={`lc-mobile-item${activeRoute === item.route ? " lc-mobile-item--active" : ""}`}
+                  onFocus={item.route === "/survey" ? warmSurveyPlanEntry : undefined}
+                  onTouchStart={item.route === "/survey" ? warmSurveyPlanEntry : undefined}
+                  onClick={() => handleNav(item.route)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           ))}
 
           <a
