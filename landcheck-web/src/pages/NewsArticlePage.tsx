@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import "../styles/inner-pages.css";
 import "../styles/news.css";
+import "../styles/public-landing.css";
 import NavBar from "../components/NavBar";
 import SocialLinks from "../components/SocialLinks";
 import { getArticleBySlug, newsArticles } from "../data/newsArticles";
@@ -18,7 +19,7 @@ export default function NewsArticlePage() {
 
   if (!article) {
     return (
-      <div className="ip-page np-page">
+      <div className="ip-page np-page public-landing">
         <NavBar activeRoute="/news" />
         <main>
           <section className="np-page-header">
@@ -48,7 +49,7 @@ export default function NewsArticlePage() {
   };
 
   return (
-    <div className="ip-page np-page">
+    <div className="ip-page np-page public-landing">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <NavBar activeRoute="/news" />
 

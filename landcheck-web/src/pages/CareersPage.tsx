@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import "../styles/inner-pages.css";
 import "../styles/careers.css";
+import "../styles/public-landing.css";
 import NavBar from "../components/NavBar";
 import SocialLinks from "../components/SocialLinks";
 
@@ -8,7 +9,7 @@ export default function CareersPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="ip-page">
+    <div className="ip-page public-landing">
       <NavBar activeRoute="/career" />
 
       <main>

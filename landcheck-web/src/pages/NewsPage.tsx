@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import "../styles/inner-pages.css";
 import "../styles/news.css";
+import "../styles/public-landing.css";
 import NavBar from "../components/NavBar";
 import SocialLinks from "../components/SocialLinks";
 import { newsArticles } from "../data/newsArticles";
@@ -49,7 +50,7 @@ export default function NewsPage() {
   const [featured, ...secondarySponsorStories] = sponsorStories;
 
   return (
-    <div className="ip-page np-page">
+    <div className="ip-page np-page public-landing">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <NavBar activeRoute="/news" />
 
