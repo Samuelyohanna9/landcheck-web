@@ -14,6 +14,7 @@ const NAV_GROUPS = [
     label: "Products",
     items: [
       { label: "LandCheck Green", route: "/green-partners" },
+      { label: "LandCheck Estates", route: "/estates" },
       { label: "Survey Plan", route: "/survey" },
       { label: "Flood Analysis", route: "/flood" },
     ],
