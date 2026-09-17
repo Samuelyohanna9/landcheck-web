@@ -668,3 +668,31 @@
     width: 100%;
   }
 }
+
+/* Keep policy content and Green consent prompts on the Estate landing typography system. */
+.privacy-policy-page,
+.privacy-banner,
+.privacy-modal-card {
+  --privacy-body-font: "Aptos", "Segoe UI", Arial, sans-serif;
+  --privacy-display-font: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-family: var(--privacy-body-font) !important;
+}
+
+.privacy-policy-page :where(p, li, a, button, input, textarea, select, label, span, time, small),
+.privacy-banner :where(p, li, a, button, input, textarea, select, label, span, time, small),
+.privacy-modal-card :where(p, li, a, button, input, textarea, select, label, span, time, small) {
+  font-family: var(--privacy-body-font) !important;
+}
+
+.privacy-policy-page :where(h1, h2, h3, h4, h5, h6),
+.privacy-modal-card :where(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--privacy-display-font) !important;
+  font-weight: 500;
+  letter-spacing: -.04em;
+}
+
+.privacy-policy-header h1,
+.privacy-policy-section h2,
+.privacy-modal-card h2 {
+  font-family: var(--privacy-display-font) !important;
+}
