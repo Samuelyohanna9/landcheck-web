@@ -168,7 +168,87 @@ const georefStatusLabel = (status: string) => {
   return "Draft";
 };
 
-function NewWorkMenu({ onNavigate }: { onNavigate: (category: WorkflowCategory) => void }) {
+function WorkflowChooserModal({
+  isOpen,
+  onClose,
+  onNavigate,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onNavigate: (category: WorkflowCategory) => void;
+}) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      className="workspace-create-modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="workspace-create-modal" role="dialog" aria-modal="true" aria-labelledby="create-work-title">
+        <div className="workspace-create-modal-header">
+          <div>
+            <span className="workspace-create-modal-kicker">Start a workflow</span>
+            <h2 id="create-work-title">What do you want to create?</h2>
+          </div>
+          <button type="button" className="workspace-create-modal-close" aria-label="Close workflow chooser" onClick={onClose}>
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="m5 5 10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+        <div className="workspace-create-options-grid">
+          {CATEGORY_ORDER.map((category) => (
+            <button
+              key={category}
+              type="button"
+              className="workspace-create-option"
+              onClick={() => onNavigate(category)}
+            >
+              <span className="workspace-create-option-icon">
+                <WorkflowIcon category={category} />
+              </span>
+              <span className="workspace-create-option-copy">
+                <span className={`work-badge ${CATEGORY_META[category].accentClass}`}>
+                  {CATEGORY_META[category].short}
+                </span>
+                <strong>{CATEGORY_META[category].newLabel}</strong>
+                <small>{CATEGORY_META[category].newTooltip}</small>
+              </span>
+              <svg className="workspace-create-option-arrow" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M4 10h11M11 5l5 5-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function NewWorkMenu({
+  onNavigate,
+  onOpenChooser,
+}: {
+  onNavigate: (category: WorkflowCategory) => void;
+  onOpenChooser: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -196,13 +276,14 @@ function NewWorkMenu({ onNavigate }: { onNavigate: (category: WorkflowCategory) 
         <button
           type="button"
           className="new-plot-btn new-work-primary"
-          title={CATEGORY_META.survey_plan.newTooltip}
-          onClick={() => onNavigate("survey_plan")}
+          title="Choose a workflow to start"
+          aria-haspopup="dialog"
+          onClick={onOpenChooser}
         >
           <svg viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
           </svg>
-          New Survey Plan
+          Create New
         </button>
         <button
           type="button"
@@ -238,7 +319,7 @@ function NewWorkMenu({ onNavigate }: { onNavigate: (category: WorkflowCategory) 
                   <span className={`work-badge ${CATEGORY_META[category].accentClass}`}>
                     {CATEGORY_META[category].short}
                   </span>
-                  {CATEGORY_META[category].newLabel}
+                  <span className="new-work-option-title">{CATEGORY_META[category].newLabel}</span>
                 </button>
               ))}
             </div>,
@@ -403,10 +484,16 @@ export default function Dashboard() {
   const [supportOpen, setSupportOpen] = useState(false);
   const [deletingGeorefId, setDeletingGeorefId] = useState<string | null>(null);
   const [plotTags, setPlotTags] = useState<Record<number, string>>({});
+  const [createWorkOpen, setCreateWorkOpen] = useState(false);
 
   const warmSurveyPlanEntry = () => {
     void prefetchSurveyPlanRoute();
     void prefetchSurveyPlanPreviewStep();
+  };
+
+  const openWorkChooser = () => {
+    warmSurveyPlanEntry();
+    setCreateWorkOpen(true);
   };
 
   const loadWork = () => {
@@ -676,7 +763,7 @@ export default function Dashboard() {
             </svg>
             <span>Help</span>
           </button>
-          <NewWorkMenu onNavigate={goToNewWork} />
+          <NewWorkMenu onNavigate={goToNewWork} onOpenChooser={openWorkChooser} />
           {session?.user && (
             <ProfileAvatarMenu
               email={session.user.email}
@@ -904,17 +991,26 @@ export default function Dashboard() {
         <button
           type="button"
           className="dashboard-fab"
-          aria-label="Create a new survey plan"
+          aria-label="Create new work"
           onMouseEnter={warmSurveyPlanEntry}
           onFocus={warmSurveyPlanEntry}
           onTouchStart={warmSurveyPlanEntry}
-          onClick={() => goToNewWork("survey_plan")}
+          onClick={openWorkChooser}
         >
           <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
           </svg>
         </button>
       )}
+
+      <WorkflowChooserModal
+        isOpen={createWorkOpen}
+        onClose={() => setCreateWorkOpen(false)}
+        onNavigate={(category) => {
+          setCreateWorkOpen(false);
+          goToNewWork(category);
+        }}
+      />
 
       <SupportModal isOpen={supportOpen} onClose={() => setSupportOpen(false)} />
     </div>
