@@ -193,11 +193,6 @@ export default function GreenPublicSponsor() {
     () => (isLowBandwidth ? GALLERY_IMAGES.slice(0, 2) : GALLERY_IMAGES),
     [isLowBandwidth],
   );
-  const loadingProjectSkeletons = useMemo(
-    () => Array.from({ length: isLowBandwidth ? 2 : 3 }, (_, index) => index),
-    [isLowBandwidth],
-  );
-
   const toggleAccordion = (key: string) => {
     setOpenAccordions((current) => {
       const next = new Set(current);
@@ -620,7 +615,7 @@ export default function GreenPublicSponsor() {
           <section className="gps-return-panel">
             {checkingPayment ? (
               <div className="gps-return-status pending">
-                <div className="gps-spinner" />
+                <p className="gps-loading-status">Checking payment status...</p>
                 <h2>Confirming your payment...</h2>
                 <p>This only takes a moment.</p>
               </div>
@@ -736,23 +731,7 @@ export default function GreenPublicSponsor() {
               </p>
               {error && !loadingProjects && projects.length === 0 && <p className="gps-error">{error}</p>}
               {loadingProjects ? (
-                <div className="gps-project-skeleton-grid" aria-hidden="true">
-                  {loadingProjectSkeletons.map((index) => (
-                    <div key={index} className="gps-project-skeleton-card">
-                      <div className="gps-project-skeleton-photo" />
-                      <div className="gps-project-skeleton-body">
-                        <div className="gps-project-skeleton-line gps-project-skeleton-line-title" />
-                        <div className="gps-project-skeleton-line" />
-                        <div className="gps-project-skeleton-line gps-project-skeleton-line-short" />
-                        <div className="gps-project-skeleton-tags">
-                          <span className="gps-project-skeleton-pill" />
-                          <span className="gps-project-skeleton-pill" />
-                        </div>
-                        <div className="gps-project-skeleton-button" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <p className="gps-loading">Loading projects...</p>
               ) : projects.length === 0 ? (
                 <div className="gps-empty">No public projects are open for sponsorship right now. Please check back soon.</div>
               ) : (
