@@ -2404,19 +2404,17 @@
   --workspace-emerald: #047857;
   --workspace-emerald-hover: #059669;
   --workspace-amber: #b45309;
-  background:
-    repeating-linear-gradient(0deg, rgba(100, 116, 139, 0.055) 0, rgba(100, 116, 139, 0.055) 1px, transparent 1px, transparent 48px),
-    repeating-linear-gradient(90deg, rgba(100, 116, 139, 0.045) 0, rgba(100, 116, 139, 0.045) 1px, transparent 1px, transparent 48px),
-    linear-gradient(160deg, #f8fafc 0%, #eef6f2 100%);
+  background: #f3f5f7;
   color: #0f172a;
 }
 
 :root[data-workspace-theme="light"] .workspace-container .dashboard-header {
   background: rgba(255, 255, 255, 0.92);
-  border-bottom-color: rgba(148, 163, 184, 0.25);
+  border-bottom-color: #e4e8ec;
 }
 
 :root[data-workspace-theme="light"] .workspace-container .header-left h1,
+:root[data-workspace-theme="light"] .workspace-container .plots-section-head h2,
 :root[data-workspace-theme="light"] .workspace-container .workspace-project-title,
 :root[data-workspace-theme="light"] .workspace-container .workspace-project-action {
   color: #0f172a;
@@ -2426,8 +2424,14 @@
 :root[data-workspace-theme="light"] .workspace-container .workspace-toolbar,
 :root[data-workspace-theme="light"] .workspace-container .workspace-project-row,
 :root[data-workspace-theme="light"] .workspace-container .workspace-status-filter {
-  background: rgba(255, 255, 255, 0.78);
-  border-color: #dbe4ea;
+  background: #ffffff;
+  border-color: #e4e8ec;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .work-category-tabs,
+:root[data-workspace-theme="light"] .workspace-container .workspace-toolbar,
+:root[data-workspace-theme="light"] .workspace-container .workspace-project-row {
+  box-shadow: 0 1px 2px rgba(16, 24, 39, 0.04), 0 8px 24px rgba(16, 24, 39, 0.05);
 }
 
 :root[data-workspace-theme="light"] .workspace-container .workspace-search input {
@@ -2438,7 +2442,7 @@
 :root[data-workspace-theme="light"] .workspace-container .workspace-project-row:hover,
 :root[data-workspace-theme="light"] .workspace-container .work-category-tab:hover,
 :root[data-workspace-theme="light"] .workspace-container .workspace-status-filter-btn:hover {
-  background: #eef7f2;
+  background: #f7faf8;
 }
 
 :root[data-workspace-theme="light"] .workspace-container .workspace-project-meta,
@@ -2457,6 +2461,73 @@
 :root[data-workspace-theme="light"] .workspace-container .workspace-project-action {
   background: #ffffff;
   border-color: #cbd5e1;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .support-btn {
+  background: #ffffff;
+  border-color: #e4e8ec;
+  color: #6b7685;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .support-btn:hover {
+  background: #f7f8fa;
+  border-color: #cbd5e1;
+  color: #101827;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .workspace-search input {
+  background: #f7f8fa;
+  border-color: #edf0f3;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .workspace-status-filter {
+  border-left-color: #e4e8ec;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .workspace-status-filter-btn {
+  color: #526579;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .workspace-select-all-row {
+  color: #526579;
+}
+
+:root[data-workspace-theme="light"] .workspace-new-work-popover {
+  background: #ffffff;
+  border-color: #e4e8ec;
+  box-shadow: 0 12px 32px rgba(16, 24, 39, 0.14);
+}
+
+:root[data-workspace-theme="light"] .workspace-new-work-popover .new-work-option {
+  color: #101827;
+}
+
+:root[data-workspace-theme="light"] .workspace-new-work-popover .new-work-option:hover,
+:root[data-workspace-theme="light"] .workspace-new-work-popover .new-work-option:focus-visible {
+  background: #eef0f3;
+}
+
+:root[data-workspace-theme="light"] .workspace-new-work-popover .new-work-option-title {
+  color: #101827;
+}
+
+:root[data-workspace-theme="light"] .workspace-new-work-popover .work-badge-survey,
+:root[data-workspace-theme="light"] .workspace-new-work-popover .work-badge-subdivision {
+  background: #e6f6ec;
+  border-color: #cdeedb;
+  color: #0f6e44;
+}
+
+:root[data-workspace-theme="light"] .workspace-new-work-popover .work-badge-georeference {
+  background: #eaf2fc;
+  border-color: #cfe0f7;
+  color: #2a78d6;
+}
+
+:root[data-workspace-theme="light"] .workspace-new-work-popover .work-badge-hazard {
+  background: #fbf1de;
+  border-color: #f0d9a9;
+  color: #9a6500;
 }
 
 :root[data-workspace-theme="light"] .workspace-container .dashboard-logo-land {
