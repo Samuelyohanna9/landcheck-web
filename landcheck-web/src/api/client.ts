@@ -89,7 +89,8 @@ const attachLandCheckHeaders = (config: InternalAxiosRequestConfig) => {
   const isSurveyRoute =
     cleanPathname.startsWith("/survey-plan") ||
     cleanPathname.startsWith("/survey") ||
-    cleanPathname.startsWith("/dashboard");
+    cleanPathname.startsWith("/dashboard") ||
+    cleanPathname.startsWith("/hazard-analysis");
   const activeSession = isEstateRequest
     ? estateSession
     : isSurveyRoute

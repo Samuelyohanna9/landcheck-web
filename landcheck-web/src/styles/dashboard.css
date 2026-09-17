@@ -212,6 +212,13 @@
   color: var(--survey-spot-height);
 }
 
+/* Matches Hazard Analysis's own brand orange (hazard-analysis.css), so the badge here reads as
+   the same tool rather than an arbitrary new color. */
+.work-badge-hazard {
+  background: rgba(224, 123, 0, 0.16);
+  color: #fb923c;
+}
+
 /* Category filter tabs */
 .work-category-tabs {
   display: flex;
@@ -273,6 +280,10 @@
 
 .work-category-tab-dot.work-badge-georeference {
   background: var(--survey-spot-height);
+}
+
+.work-category-tab-dot.work-badge-hazard {
+  background: #fb923c;
 }
 
 .work-category-tab-count {

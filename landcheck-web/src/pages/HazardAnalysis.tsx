@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { lazyWithChunkRecovery } from "../utils/lazyWithChunkRecovery";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { api } from "../api/client";
 import CoordinateInput from "../components/CoordinateInput";
@@ -8,8 +8,23 @@ import HazardInteractiveOverlay, { type HazardInteractiveMeta } from "../compone
 import HazardProgressOverlay from "../components/HazardProgressOverlay";
 import HazardLoadingAnimation from "../components/HazardLoadingAnimation";
 import HazardBottomSheet, { type HazardSheetSnap } from "../components/HazardBottomSheet";
+import SignupGateModal from "../components/SignupGateModal";
+import {
+  consumePendingHazardRun,
+  isSurveyAuthed,
+  rememberAnonymousHazardJob,
+  setPendingHazardRun,
+} from "../auth/surveyAuth";
 import { fromWGS84, toWGS84 } from "../utils/coordinateConverter";
 import "../styles/hazard-analysis.css";
+
+// One free anonymous run per browser (not a counter - the rule is "1 free, then sign in"), then
+// every further run requires a Survey account. Each hazard run is real backend compute (Earth
+// Engine calls via a background job), unlike Survey Plan's free-form client-side drawing, so
+// unlimited anonymous runs is a real cost/abuse gap Survey Plan itself doesn't have.
+const HAZARD_ANON_RUN_USED_KEY = "landcheck_hazard_anon_run_used";
+const hasUsedFreeHazardRun = () => typeof window !== "undefined" && window.localStorage.getItem(HAZARD_ANON_RUN_USED_KEY) === "1";
+const markFreeHazardRunUsed = () => { if (typeof window !== "undefined") window.localStorage.setItem(HAZARD_ANON_RUN_USED_KEY, "1"); };
 
 // Below this width the left column doesn't render inline at all - HazardBottomSheet takes over
 // (see the matching `@media (max-width: 1024px)` rule in hazard-analysis.css).
@@ -29,6 +44,7 @@ function useIsMobileViewport(breakpointPx: number): boolean {
 
 type HazardJobStatus = {
   id: string;
+  hazard_type?: "flood" | "erosion" | "lulc";
   status: "queued" | "running" | "completed" | "failed";
   stage: string | null;
   progress_pct: number | null;
@@ -471,6 +487,8 @@ function LeftPanelsWrapper({
 
 export default function HazardAnalysis() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [gateOpen, setGateOpen] = useState(false);
   const [hazardType, setHazardType] = useState<HazardType>("flood");
   const [manualPoints, setManualPoints] = useState<ManualPoint[]>([
     { station: "A", lng: 0, lat: 0 },
@@ -696,30 +714,107 @@ export default function HazardAnalysis() {
     URL.revokeObjectURL(url);
   };
 
-  const runAnalysis = async () => {
-    if (!finalCoords) {
-      toast.error("Enter at least 3 valid coordinate points");
-      return;
-    }
+  // Shared by both the normal "Run Analysis" click and the post-login auto-resume below, so they
+  // can't drift apart. Takes the hazard type explicitly (not the outer hazardType state) since the
+  // resume path calls this in the same tick as setHazardType(pending.hazardType), before that
+  // state update has actually landed.
+  const executeAnalysis = async (targetHazardType: HazardType, requestBody: Record<string, unknown>) => {
     try {
       setLoading(true);
       setJobProgress({ pct: 0, stage: "Starting analysis..." });
-      const created = await api.post<HazardJobStatus>(`/hazards/${hazardType}/analyze`, buildHazardJobBody("preview"));
+      const created = await api.post<HazardJobStatus>(`/hazards/${targetHazardType}/analyze`, requestBody);
       const job = await pollHazardJob(created.data.id);
-      if (hazardType === "flood") setFloodResult(job.result);
-      else if (hazardType === "erosion") setErosionResult(job.result);
+      if (targetHazardType === "flood") setFloodResult(job.result);
+      else if (targetHazardType === "erosion") setErosionResult(job.result);
       else setLulcResult(job.result);
       setShowLiveMap(false);
       if (isMobile) setSheetSnap("half");
-      toast.success(`${HAZARD_LABELS[hazardType]} analysis complete`);
+      if (!isSurveyAuthed()) {
+        // First free run - remember it so signing in later still lets it show up in "Recent
+        // Work" (claimDraftHazardJobs runs on every sign-in completion path).
+        markFreeHazardRunUsed();
+        rememberAnonymousHazardJob(created.data.id);
+      }
+      toast.success(`${HAZARD_LABELS[targetHazardType]} analysis complete`);
     } catch (err) {
       console.error(err);
-      toast.error(err instanceof Error ? err.message : `Failed to run ${HAZARD_LABELS[hazardType]} analysis`);
+      toast.error(err instanceof Error ? err.message : `Failed to run ${HAZARD_LABELS[targetHazardType]} analysis`);
     } finally {
       setLoading(false);
       setJobProgress(null);
     }
   };
+
+  const runAnalysis = async () => {
+    if (!finalCoords) {
+      toast.error("Enter at least 3 valid coordinate points");
+      return;
+    }
+    const requestBody = buildHazardJobBody("preview");
+    if (!isSurveyAuthed() && hasUsedFreeHazardRun()) {
+      // The free run is spent - save exactly what would have been sent so it can fire
+      // automatically the instant sign-in completes, then open the same Google/email modal
+      // Survey Plan's own export gate uses.
+      setPendingHazardRun({ hazardType, requestBody });
+      setGateOpen(true);
+      return;
+    }
+    await executeAnalysis(hazardType, requestBody);
+  };
+
+  // Runs once, right after a login triggered by this page's own gate completes (see
+  // SignupGateModal's resumePath="/hazard-analysis?resume=1") - mirrors SurveyPlan.tsx's own
+  // resume=1 auto-replay effect.
+  const resumedOnce = useRef(false);
+  useEffect(() => {
+    if (resumedOnce.current) return;
+    resumedOnce.current = true;
+    if (searchParams.get("resume") !== "1") return;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("resume");
+        return next;
+      },
+      { replace: true },
+    );
+    const pending = consumePendingHazardRun();
+    if (!pending) return;
+    setHazardType(pending.hazardType);
+    void executeAnalysis(pending.hazardType, pending.requestBody);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Opening a saved report from the dashboard ("Open" on a Hazard Analysis row) - loads that
+  // job's already-computed result straight from the job record, no new analysis run involved.
+  const loadedJobOnce = useRef(false);
+  useEffect(() => {
+    if (loadedJobOnce.current) return;
+    loadedJobOnce.current = true;
+    const jobId = searchParams.get("job");
+    if (!jobId) return;
+    (async () => {
+      try {
+        const res = await api.get<HazardJobStatus>(`/hazards/jobs/${jobId}`);
+        const job = res.data;
+        if (job.status !== "completed" || !job.result) {
+          toast.error(job.status === "failed" ? "This analysis failed to complete." : "This analysis hasn't finished yet.");
+          return;
+        }
+        const type = job.hazard_type;
+        if (type === "flood") setFloodResult(job.result);
+        else if (type === "erosion") setErosionResult(job.result);
+        else if (type === "lulc") setLulcResult(job.result);
+        else return;
+        setHazardType(type);
+        setShowLiveMap(false);
+        if (isMobile) setSheetSnap("half");
+      } catch {
+        toast.error("Could not load this saved report.");
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const downloadPdf = async () => {
     if (!finalCoords) return;
@@ -855,6 +950,15 @@ export default function HazardAnalysis() {
         progressPct={jobProgress?.pct ?? 0}
         stageText={jobProgress?.stage ?? ""}
         hazardType={hazardType}
+      />
+
+      <SignupGateModal
+        isOpen={gateOpen}
+        onClose={() => setGateOpen(false)}
+        hasPendingAction
+        readyTitle="Your free analysis is ready"
+        readyIntro="Create a free account to keep running analyses and save your reports. No long forms — just continue with Google or email."
+        resumePath="/hazard-analysis?resume=1"
       />
 
       <header className="hazard-header">

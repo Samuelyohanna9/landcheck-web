@@ -10,7 +10,7 @@ import "../styles/survey-tokens.css";
 import "../styles/dashboard.css";
 import { prefetchSurveyPlanPreviewStep, prefetchSurveyPlanRoute } from "../utils/surveyPlanPrefetch";
 
-type WorkflowCategory = "survey_plan" | "subdivision" | "georeference";
+type WorkflowCategory = "survey_plan" | "subdivision" | "georeference" | "hazard_analysis";
 
 type MyPlot = {
   plot_id: number;
@@ -37,6 +37,13 @@ type MyGeorefSession = {
   finalized_at: string | null;
 };
 
+type MyHazardJob = {
+  job_id: string;
+  hazard_type: "flood" | "erosion" | "lulc";
+  status: "queued" | "running" | "completed" | "failed";
+  created_at: string | null;
+};
+
 type StatusFilter = "all" | "completed" | "draft";
 type CategoryFilter = "all" | WorkflowCategory;
 
@@ -50,6 +57,7 @@ type WorkItem = {
   statusLabel: string;
   plotId?: number;
   sessionId?: string;
+  hazardJobId?: string;
 };
 
 const CATEGORY_META: Record<
@@ -80,9 +88,29 @@ const CATEGORY_META: Record<
     newTooltip: "Align a scanned map or photo to real-world coordinates.",
     accentClass: "work-badge-georeference",
   },
+  hazard_analysis: {
+    label: "Hazard Analysis",
+    short: "Hazard",
+    tooltip: "A flood, erosion, or land cover risk screening for a plot.",
+    newLabel: "New Hazard Analysis",
+    newTooltip: "Screen a plot for flood, erosion, or land cover risk.",
+    accentClass: "work-badge-hazard",
+  },
 };
 
-const CATEGORY_ORDER: WorkflowCategory[] = ["survey_plan", "subdivision", "georeference"];
+const CATEGORY_ORDER: WorkflowCategory[] = ["survey_plan", "subdivision", "georeference", "hazard_analysis"];
+
+const HAZARD_TYPE_LABEL: Record<MyHazardJob["hazard_type"], string> = {
+  flood: "Flood Risk Analysis",
+  erosion: "Erosion Risk Analysis",
+  lulc: "Land Cover Analysis",
+};
+
+const hazardJobStatusLabel = (status: MyHazardJob["status"]) => {
+  if (status === "completed") return "Completed";
+  if (status === "failed") return "Failed";
+  return "In Progress";
+};
 
 const PAGE_SIZE = 8;
 
@@ -272,6 +300,7 @@ export default function Dashboard() {
   const session = getSurveyAuthSession();
   const [plots, setPlots] = useState<MyPlot[]>([]);
   const [georefSessions, setGeorefSessions] = useState<MyGeorefSession[]>([]);
+  const [hazardJobs, setHazardJobs] = useState<MyHazardJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -289,13 +318,16 @@ export default function Dashboard() {
 
   const loadWork = () => {
     setLoading(true);
-    return Promise.allSettled([api.get("/plots/mine"), api.get("/survey-georeference/sessions/mine")]).then(
-      ([plotsRes, georefRes]) => {
-        setPlots(plotsRes.status === "fulfilled" ? plotsRes.value.data?.plots || [] : []);
-        setGeorefSessions(georefRes.status === "fulfilled" ? georefRes.value.data?.sessions || [] : []);
-        setLoading(false);
-      },
-    );
+    return Promise.allSettled([
+      api.get("/plots/mine"),
+      api.get("/survey-georeference/sessions/mine"),
+      api.get("/hazards/mine"),
+    ]).then(([plotsRes, georefRes, hazardRes]) => {
+      setPlots(plotsRes.status === "fulfilled" ? plotsRes.value.data?.plots || [] : []);
+      setGeorefSessions(georefRes.status === "fulfilled" ? georefRes.value.data?.sessions || [] : []);
+      setHazardJobs(hazardRes.status === "fulfilled" ? hazardRes.value.data?.jobs || [] : []);
+      setLoading(false);
+    });
   };
 
   useEffect(() => {
@@ -332,15 +364,31 @@ export default function Dashboard() {
       statusLabel: georefStatusLabel(s.status),
       sessionId: s.session_id,
     }));
-    return [...plotItems, ...georefItems].sort((a, b) => {
+    const hazardItems: WorkItem[] = hazardJobs.map((j) => ({
+      key: `hazard-${j.job_id}`,
+      category: "hazard_analysis" as const,
+      title: HAZARD_TYPE_LABEL[j.hazard_type] || "Hazard Analysis",
+      subtitle: null,
+      createdAt: j.created_at,
+      statusBucket: j.status === "completed" ? "completed" : "draft",
+      statusLabel: hazardJobStatusLabel(j.status),
+      hazardJobId: j.job_id,
+    }));
+    return [...plotItems, ...georefItems, ...hazardItems].sort((a, b) => {
       const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return bTime - aTime;
     });
-  }, [plots, georefSessions]);
+  }, [plots, georefSessions, hazardJobs]);
 
   const categoryCounts = useMemo(() => {
-    const counts: Record<CategoryFilter, number> = { all: items.length, survey_plan: 0, subdivision: 0, georeference: 0 };
+    const counts: Record<CategoryFilter, number> = {
+      all: items.length,
+      survey_plan: 0,
+      subdivision: 0,
+      georeference: 0,
+      hazard_analysis: 0,
+    };
     items.forEach((item) => {
       counts[item.category] += 1;
     });
@@ -374,6 +422,10 @@ export default function Dashboard() {
   };
 
   const goToNewWork = (category: WorkflowCategory) => {
+    if (category === "hazard_analysis") {
+      navigate("/hazard-analysis");
+      return;
+    }
     warmSurveyPlanEntry();
     if (category === "survey_plan") {
       navigate("/survey-plan");
@@ -383,6 +435,10 @@ export default function Dashboard() {
   };
 
   const openItem = (item: WorkItem) => {
+    if (item.category === "hazard_analysis" && item.hazardJobId) {
+      navigate(`/hazard-analysis?job=${encodeURIComponent(item.hazardJobId)}`);
+      return;
+    }
     if (item.category === "georeference" && item.sessionId) {
       navigate(`/survey-plan?mode=georeference&session=${encodeURIComponent(item.sessionId)}`);
       return;
@@ -630,10 +686,20 @@ export default function Dashboard() {
                     </span>
                     <button
                       className="workspace-project-action"
-                      title={item.statusBucket === "completed" ? "Open the finished document" : "Continue this draft"}
+                      title={
+                        item.category === "hazard_analysis"
+                          ? "Open this analysis report"
+                          : item.statusBucket === "completed"
+                            ? "Open the finished document"
+                            : "Continue this draft"
+                      }
                       onClick={() => openItem(item)}
                     >
-                      {item.category === "georeference" ? "Open" : item.statusBucket === "completed" ? "Open" : "Continue"}
+                      {item.category === "georeference" || item.category === "hazard_analysis"
+                        ? "Open"
+                        : item.statusBucket === "completed"
+                          ? "Open"
+                          : "Continue"}
                     </button>
                     {item.category === "georeference" && item.sessionId && (
                       <button
