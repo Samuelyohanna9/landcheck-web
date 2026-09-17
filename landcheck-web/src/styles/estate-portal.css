@@ -230,8 +230,9 @@
 .estate-auth-shell--register .estate-register-intro { grid-column: 1; grid-row: 1; }
 
 @media (max-width: 850px) {
-  .estate-portal-nav { justify-content: flex-start; }
-  .estate-nav-hamburger { display: flex; }
+  .estate-portal-nav { justify-content: space-between; }
+  .estate-nav-hamburger { display: flex; order: 2; margin-right: 0; }
+  .estate-brand { order: 1; }
   .estate-portal-nav-links { display: none; }
   .estate-hero h1 { font-size: clamp(2.6rem, 6.4vw, 3.9rem); }
   .estate-solutions-section h2, .estate-centered-section h2 { max-width: 600px; }
