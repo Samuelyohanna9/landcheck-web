@@ -939,7 +939,7 @@ export default function GreenPublicSponsor() {
           </div>
           <div className="gps-footer-col">
             <strong>Contact</strong>
-            <a href="mailto:landchecktech@gmail.com">landchecktech@gmail.com</a>
+            <a href="mailto:admin@landcheck.online">admin@landcheck.online</a>
           </div>
         </div>
         <div className="gps-footer-bottom">

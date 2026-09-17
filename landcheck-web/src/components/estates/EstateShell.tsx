@@ -298,8 +298,8 @@ export default function EstateShell({
           <p className="edash-status-row-desc" style={{ marginBottom: 14 }}>
             Stuck on something, found a bug, or want a hand setting up an Estate? Email us and include your organization name and, if relevant, the plot or estate you're working on.
           </p>
-          <a className="edash-btn-primary" style={{ display: "inline-flex", marginBottom: 8 }} href="mailto:landchecktech@gmail.com?subject=LandCheck%20Estates%20Support">
-            <EstateIcon name="mail" /> Email landchecktech@gmail.com
+          <a className="edash-btn-primary" style={{ display: "inline-flex", marginBottom: 8 }} href="mailto:support@landcheck.online?subject=LandCheck%20Estates%20Support">
+            <EstateIcon name="mail" /> Email support@landcheck.online
           </a>
           <p className="edash-field-note">
             For hazard or geometry questions, the Audit Timeline and Reports pages often have the detail our team will ask for first.

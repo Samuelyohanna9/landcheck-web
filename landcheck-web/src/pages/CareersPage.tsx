@@ -89,10 +89,10 @@ export default function CareersPage() {
             </p>
             <p>Send your CV and a short note about what you'd like to work on to:</p>
             <a
-              href="mailto:landchecktech@gmail.com?subject=Career%20Enquiry%20-%20LandCheck"
+              href="mailto:admin@landcheck.online?subject=Career%20Enquiry%20-%20LandCheck"
               className="cp-email-cta"
             >
-              landchecktech@gmail.com
+              admin@landcheck.online
             </a>
             <p className="cp-email-hint">
               Subject: Career Enquiry — [Your Name / Role of Interest]

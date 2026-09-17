@@ -272,7 +272,7 @@ function SurveyPreview({
         </div>
         <a
           className="template-news-ticker-contact"
-          href="mailto:landchecktech@gmail.com?subject=Survey%20Plan%20Template%20Request"
+          href="mailto:admin@landcheck.online?subject=Survey%20Plan%20Template%20Request"
         >
           Request a template &rarr;
         </a>

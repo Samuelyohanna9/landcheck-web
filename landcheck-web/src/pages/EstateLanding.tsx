@@ -5,7 +5,7 @@ import EstatePricingCards, { type EstateBillingCycle, type EstatePlanKey } from 
 import "../styles/estate-portal.css";
 import "../styles/public-landing.css";
 
-const DEMO_MAILTO = "mailto:landchecktech@gmail.com?subject=LandCheck%20Estates%20demo%20request";
+const DEMO_MAILTO = "mailto:admin@landcheck.online?subject=LandCheck%20Estates%20demo%20request";
 
 const connectedCapabilities = [
   "Automatic layout design",
@@ -143,7 +143,7 @@ export default function EstateLanding() {
               <span>ESTATES</span>
             </Link>
             <ul>
-              <li><a href="mailto:landchecktech@gmail.com">landchecktech@gmail.com</a></li>
+              <li><a href="mailto:admin@landcheck.online">admin@landcheck.online</a></li>
               <li>LandCheck Geospatial Technologies Limited</li>
               <li><a href="https://landcheck.online" target="_blank" rel="noopener noreferrer">landcheck.online</a></li>
             </ul>
@@ -174,7 +174,7 @@ export default function EstateLanding() {
             <ul>
               <li><Link to="/career">Careers</Link></li>
               <li><Link to="/news">News</Link></li>
-              <li><a href="mailto:landchecktech@gmail.com?subject=LandCheck%20Support">Support</a></li>
+              <li><a href="mailto:support@landcheck.online?subject=LandCheck%20Support">Support</a></li>
               <li><Link to="/privacy">Privacy</Link></li>
             </ul>
           </div>

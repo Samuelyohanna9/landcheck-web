@@ -403,7 +403,7 @@ export default function SurveyPlanLanding() {
               <img src="/logo.svg" alt="LandCheck" width="100" height="34" loading="lazy" />
               <span className="spl-brand-product">Survey</span>
             </Link>
-            <a href="mailto:landchecktech@gmail.com">landchecktech@gmail.com</a>
+            <a href="mailto:admin@landcheck.online">admin@landcheck.online</a>
             <a href="https://landcheck.online" target="_blank" rel="noopener noreferrer">landcheck.online</a>
             <span>LandCheck Geospatial Technologies Limited</span>
           </div>
@@ -418,7 +418,7 @@ export default function SurveyPlanLanding() {
             <h2>Tools</h2>
             <Link to="/survey-plan">Survey workspace</Link>
             <Link to="/hazard-analysis">Hazard analysis</Link>
-            <a href="mailto:landchecktech@gmail.com?subject=LandCheck%20Support">Support</a>
+            <a href="mailto:support@landcheck.online?subject=LandCheck%20Support">Support</a>
           </div>
           <div className="spl-footer-column">
             <h2>For</h2>

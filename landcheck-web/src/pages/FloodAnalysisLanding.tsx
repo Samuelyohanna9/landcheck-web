@@ -311,9 +311,9 @@ export default function FloodAnalysisLanding() {
             </button>
             <a
               className="fal-footer-email-btn"
-              href="mailto:landchecktech@gmail.com?subject=LandCheck%20Flood%20Risk%20Enquiry"
+              href="mailto:admin@landcheck.online?subject=LandCheck%20Flood%20Risk%20Enquiry"
             >
-              landchecktech@gmail.com
+              admin@landcheck.online
             </a>
           </div>
         </div>
