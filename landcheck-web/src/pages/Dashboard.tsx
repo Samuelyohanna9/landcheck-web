@@ -301,7 +301,7 @@ function NewWorkMenu({
       </div>
       {open && position
         ? createPortal(
-            <div ref={popoverRef} className="new-work-popover" style={{ top: position.top, left: position.left }}>
+            <div ref={popoverRef} className="new-work-popover workspace-new-work-popover" style={{ top: position.top, left: position.left }}>
               {CATEGORY_ORDER.map((category) => (
                 <button
                   key={category}

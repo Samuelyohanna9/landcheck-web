@@ -2029,3 +2029,88 @@
   from { opacity: 0; transform: translateY(100%); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Portaled surfaces sit outside .workspace-container, so they need their own tokens. */
+.workspace-create-modal-backdrop {
+  --workspace-border: rgba(148, 163, 184, 0.16);
+  --workspace-ink: #f3f6f8;
+  --workspace-muted: #9aaaba;
+  --workspace-emerald: #21c77a;
+}
+
+.workspace-create-modal h2,
+.workspace-create-option-copy strong {
+  color: #f3f6f8;
+}
+
+.workspace-create-option-copy small {
+  color: #9aaaba;
+}
+
+.workspace-new-work-popover {
+  width: min(360px, calc(100vw - 24px));
+  min-width: 0;
+  padding: 8px;
+  box-sizing: border-box;
+  background: rgba(7, 18, 29, 0.97);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.workspace-new-work-popover .new-work-option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  box-sizing: border-box;
+  gap: 10px;
+  padding: 9px 10px;
+  color: #f3f6f8;
+  white-space: nowrap;
+}
+
+.workspace-new-work-popover .new-work-option:hover,
+.workspace-new-work-popover .new-work-option:focus-visible {
+  background: #162a3b;
+  outline: none;
+}
+
+.workspace-new-work-popover .new-work-option-icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  color: #6ee7b7;
+}
+
+.workspace-new-work-popover .work-badge {
+  flex: 0 0 auto;
+  font-size: 0.62rem;
+}
+
+.workspace-new-work-popover .work-badge-survey,
+.workspace-new-work-popover .work-badge-subdivision {
+  background: rgba(33, 199, 122, 0.14);
+  border-color: rgba(33, 199, 122, 0.22);
+  color: #6ee7b7;
+}
+
+.workspace-new-work-popover .work-badge-georeference {
+  background: rgba(96, 165, 250, 0.14);
+  border-color: rgba(96, 165, 250, 0.24);
+  color: #93c5fd;
+}
+
+.workspace-new-work-popover .work-badge-hazard {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.24);
+  color: #fbbf24;
+}
+
+.workspace-new-work-popover .new-work-option-title {
+  flex: 1 1 auto;
+  color: #f3f6f8;
+}
