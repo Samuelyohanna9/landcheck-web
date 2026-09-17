@@ -60,7 +60,7 @@ export default function SponsorTreeShowcase() {
           </ul>
           <div className="lp-sponsor-ctas">
             <button type="button" className="lp-sponsor-btn-primary" onClick={openProjects}>
-              Sponsor a Tree
+              Sponsor
             </button>
             <a
               href="https://play.google.com/store/apps/details?id=online.landcheck.mobile"
