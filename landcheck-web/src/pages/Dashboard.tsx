@@ -751,7 +751,8 @@ export default function Dashboard() {
       <header className="dashboard-header">
         <div className="header-left">
           <button className="dashboard-logo-btn" onClick={() => navigate("/")} aria-label="Go to LandCheck home">
-            <img src="/logo.svg" alt="LandCheck" width="132" height="36" />
+            <span className="dashboard-logo-mark" aria-hidden="true"><img src="/logo.svg" alt="" /></span>
+            <span className="dashboard-logo-wordmark" aria-hidden="true"><span className="dashboard-logo-land">Land</span> <span className="dashboard-logo-check">Check</span></span>
           </button>
           <h1>{greetingForNow()}, {displayName}</h1>
         </div>
@@ -788,10 +789,7 @@ export default function Dashboard() {
               role={session.user.role_name || session.user.role}
               organizationName={session.user.organization_name}
               planName={session.user.plan_name}
-              credits={session.user.credits_remaining}
               onContactSupport={() => setSupportOpen(true)}
-              onSystemStatus={() => toast("Live system status is available from support@landcheck.online.")}
-              onTopUp={() => setSupportOpen(true)}
               onSignOut={handleSignOut}
             />
           )}

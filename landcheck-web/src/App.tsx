@@ -30,6 +30,7 @@ const GreenPartnersLanding = lazyWithChunkRecovery(() => import("./pages/GreenPa
 const GreenPublicSponsor = lazyWithChunkRecovery(() => import("./pages/GreenPublicSponsor"));
 const GreenFootprintCalculator = lazyWithChunkRecovery(() => import("./pages/GreenFootprintCalculator"));
 const SurveyPlanLanding = lazyWithChunkRecovery(() => import("./pages/SurveyPlanLanding"));
+const SurveyGuides = lazyWithChunkRecovery(() => import("./pages/SurveyGuides"));
 const FloodAnalysisLanding = lazyWithChunkRecovery(() => import("./pages/FloodAnalysisLanding"));
 const CareersPage = lazyWithChunkRecovery(() => import("./pages/CareersPage"));
 const NewsPage = lazyWithChunkRecovery(() => import("./pages/NewsPage"));
@@ -247,7 +248,7 @@ function RouteLoadingFallback() {
   const { pathname } = useLocation();
   const path = pathname.toLowerCase().replace(/\/+$/, "") || "/";
 
-  if (["/survey", "/flood", "/green-partners"].includes(path)) return null;
+  if (["/survey", "/survey/guides", "/flood", "/green-partners"].includes(path)) return null;
 
   let Animation: typeof SurveyLoadingAnimation | null = null;
   if (path.startsWith("/survey")) {
@@ -295,6 +296,7 @@ export default function App() {
               <Route path="/green-work/login" element={<GreenWorkLogin />} />
               <Route path="/green-work" element={<WorkProtectedRoute element={<GreenWork />} />} />
               <Route path="/survey" element={<SurveyPlanLanding />} />
+              <Route path="/survey/guides" element={<SurveyGuides />} />
               <Route path="/survey/auth/verify" element={<SurveyAuthVerify />} />
               <Route path="/survey/auth/callback" element={<SurveyAuthCallback />} />
               <Route path="/estates" element={<EstateEntryRoute />} />

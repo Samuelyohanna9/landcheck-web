@@ -2393,6 +2393,17 @@
 
 /* Keep the workspace shell in sync with the account menu appearance toggle. */
 :root[data-workspace-theme="light"] .workspace-container {
+  --workspace-bg: #f8fafc;
+  --workspace-surface: rgba(255, 255, 255, 0.92);
+  --workspace-raised: #ffffff;
+  --workspace-hover: #eef7f2;
+  --workspace-border: #dbe4ea;
+  --workspace-border-strong: #cbd5e1;
+  --workspace-ink: #0f172a;
+  --workspace-muted: #475569;
+  --workspace-emerald: #047857;
+  --workspace-emerald-hover: #059669;
+  --workspace-amber: #b45309;
   background:
     repeating-linear-gradient(0deg, rgba(100, 116, 139, 0.055) 0, rgba(100, 116, 139, 0.055) 1px, transparent 1px, transparent 48px),
     repeating-linear-gradient(90deg, rgba(100, 116, 139, 0.045) 0, rgba(100, 116, 139, 0.045) 1px, transparent 1px, transparent 48px),
@@ -2446,4 +2457,110 @@
 :root[data-workspace-theme="light"] .workspace-container .workspace-project-action {
   background: #ffffff;
   border-color: #cbd5e1;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .dashboard-logo-land {
+  color: #0f172a;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .dashboard-logo-check {
+  color: #059669;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .workspace-search input::placeholder {
+  color: #64748b;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .plots-count-badge {
+  background: #d1fae5;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .work-badge-survey,
+:root[data-workspace-theme="light"] .workspace-container .work-badge-subdivision {
+  background: #d1fae5;
+  border-color: #a7f3d0;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .work-badge-georeference {
+  background: #dbeafe;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .work-badge-hazard {
+  background: #fef3c7;
+  border-color: #fcd34d;
+  color: #b45309;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .workspace-status-completed {
+  background: #d1fae5;
+  color: #047857;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .workspace-status-draft {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+:root[data-workspace-theme="light"] .workspace-container .workspace-project-row {
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+:root[data-workspace-theme="light"] .workspace-container .workspace-project-row:hover {
+  border-color: #a7f3d0;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.09);
+}
+
+.workspace-container .dashboard-logo-btn {
+  gap: 8px;
+}
+
+.workspace-container .dashboard-logo-mark {
+  display: block;
+  width: 31px;
+  height: 31px;
+  flex: 0 0 31px;
+  overflow: hidden;
+}
+
+.workspace-container .dashboard-logo-mark img {
+  display: block;
+  width: 201px;
+  max-width: none;
+  height: 54px;
+  transform: translate(-9px, -9px);
+}
+
+.workspace-container .dashboard-logo-wordmark {
+  color: #f1f5f9;
+  font-family: var(--survey-font-body);
+  font-size: 0.95rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.workspace-container .dashboard-logo-check {
+  color: #22c55e;
+}
+
+@media (max-width: 768px) {
+  .workspace-container .dashboard-logo-mark {
+    width: 29px;
+    height: 29px;
+    flex-basis: 29px;
+  }
+
+  .workspace-container .dashboard-logo-mark img {
+    width: 188px;
+    height: 50px;
+    transform: translate(-8px, -8px);
+  }
+
+  .workspace-container .dashboard-logo-wordmark {
+    font-size: 0.88rem;
+  }
 }
